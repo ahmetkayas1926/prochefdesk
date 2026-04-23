@@ -1,0 +1,100 @@
+/* ================================================================
+   ProChefDesk — mobile.css
+   Mobile-specific overrides, landscape adjustments, touch targets
+   ================================================================ */
+
+/* ---------- BOTH PORTRAIT & LANDSCAPE MOBILE ---------- */
+@media (max-width: 899px) {
+  /* Hide sidenav trigger on smaller screens — use bottom nav */
+  /* Actually keep it for accessing secondary tools */
+
+  /* Larger touch targets on mobile */
+  .btn-sm { min-height: 38px; }
+  .icon-btn { width: 42px; height: 42px; }
+
+  /* Adjusted padding */
+  .view { padding: 12px 12px 24px; }
+  .page-header { margin-bottom: 16px; }
+  .card-body { padding: 14px; }
+
+  /* Better grid for small screens */
+  .grid { gap: 10px; }
+}
+
+/* ---------- MOBILE PORTRAIT (narrow) ---------- */
+@media (max-width: 639px) and (orientation: portrait) {
+  .field-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .page-header-actions {
+    width: 100%;
+  }
+  .page-header-actions .btn { flex: 1; }
+}
+
+/* ---------- MOBILE LANDSCAPE ---------- */
+@media (max-width: 899px) and (orientation: landscape) and (max-height: 500px) {
+  /* Shorten topbar, remove bottom nav in landscape to save vertical space */
+  :root {
+    --topbar-h: 48px;
+    --bottomnav-h: 56px;
+  }
+  .modal-panel {
+    max-height: calc(100dvh - 16px);
+  }
+  /* Two-column layouts for forms */
+  .field-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  /* Event planner, menu builder benefit from horizontal space */
+  .view { padding: 10px 12px; }
+}
+
+/* ---------- PREVENT TEXT SELECTION ON DRAGGABLE / TAPPABLE ---------- */
+.btn, .bn-item, .sidenav-item, .tab, .chip, .list-item,
+.card-hover, .icon-btn, .switch, .cropper-frame, .cropper-handle,
+.topbar-brand, .modal-header, .tutorial-bubble button {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* ---------- iOS INPUT FIX: prevent zoom on focus ---------- */
+@supports (-webkit-touch-callout: none) {
+  input:not([type="file"]), textarea, select {
+    font-size: 16px !important;
+  }
+}
+
+/* ---------- HAPTIC VISUAL FEEDBACK ---------- */
+@media (hover: none) and (pointer: coarse) {
+  /* touch devices: remove hover states that look "stuck" */
+  .card-hover:hover { border-color: var(--border); background: var(--surface); box-shadow: none; }
+  .list-item:hover { border-color: var(--border); background: var(--surface); }
+  .btn-secondary:hover { background: var(--surface-2); }
+  .btn-ghost:hover { background: transparent; }
+
+  /* but keep active states strong */
+  .card-hover:active { background: var(--brand-50); border-color: var(--brand-300); }
+  .list-item:active { background: var(--brand-50); border-color: var(--brand-300); }
+}
+
+/* ---------- LIST/TAP FEEDBACK ---------- */
+.tappable {
+  -webkit-tap-highlight-color: transparent;
+  transition: background var(--dur-fast) var(--ease);
+}
+.tappable:active { background: var(--surface-2); }
+
+/* ---------- BOTTOM SHEET GESTURE HINTS ---------- */
+/* The modal-panel grab handle is already in components.css */
+
+/* ---------- AVOID WIDE TABLES ON MOBILE ---------- */
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}

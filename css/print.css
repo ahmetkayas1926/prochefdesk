@@ -1,0 +1,300 @@
+/* ================================================================
+   ProChefDesk — print.css
+   Print styles for menus, kitchen cards, shopping lists, recipes.
+   All print-only layouts use .print-page wrapper.
+   ================================================================ */
+
+/* ---------- PRINTABLE PAGE (for on-screen preview too) ---------- */
+.print-page {
+  background: white;
+  color: black;
+  width: 210mm;
+  min-height: 297mm;
+  padding: 15mm;
+  margin: 0 auto 20px;
+  box-shadow: var(--shadow-md);
+  border-radius: var(--r-sm);
+  font-family: var(--font);
+  box-sizing: border-box;
+  position: relative;
+  page-break-after: always;
+  break-after: page;
+}
+.print-page.landscape {
+  width: 297mm;
+  min-height: 210mm;
+}
+.print-page:last-child {
+  page-break-after: auto;
+  break-after: auto;
+}
+
+/* On small screens, scale down for preview */
+@media (max-width: 899px) {
+  .print-page {
+    width: 100%;
+    min-height: auto;
+    padding: 12mm;
+  }
+}
+
+.print-wrap {
+  background: var(--surface-2);
+  padding: 16px 0;
+  margin: 0 -16px;
+}
+
+/* ---------- MENU LAYOUT ---------- */
+.menu-page {
+  font-family: Georgia, 'Times New Roman', serif;
+}
+.menu-header {
+  text-align: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #000;
+}
+.menu-title {
+  font-size: 36px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  margin: 0 0 6px;
+  color: #000;
+}
+.menu-subtitle {
+  font-size: 13px;
+  color: #555;
+  font-style: italic;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.menu-section {
+  margin-bottom: 20px;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+.menu-section-title {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-align: center;
+  margin: 0 0 12px;
+  color: #000;
+  position: relative;
+  padding: 6px 0;
+}
+.menu-section-title::before,
+.menu-section-title::after {
+  content: '—';
+  margin: 0 10px;
+  color: #999;
+}
+.menu-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 8px 0;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+.menu-item-info { flex: 1; min-width: 0; }
+.menu-item-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #000;
+  margin-bottom: 2px;
+}
+.menu-item-desc {
+  font-size: 12px;
+  color: #555;
+  font-style: italic;
+  line-height: 1.4;
+}
+.menu-item-dots {
+  flex: 0 1 40px;
+  border-bottom: 1px dotted #999;
+  margin-bottom: 6px;
+  min-width: 20px;
+}
+.menu-item-price {
+  font-size: 16px;
+  font-weight: 700;
+  color: #000;
+  white-space: nowrap;
+}
+.menu-footer {
+  text-align: center;
+  font-size: 11px;
+  color: #777;
+  margin-top: 24px;
+  padding-top: 12px;
+  border-top: 1px solid #ddd;
+  font-style: italic;
+}
+
+/* ---------- KITCHEN CARD LAYOUT ---------- */
+.kcard-page { padding: 12mm; }
+.kcard-header {
+  display: flex;
+  gap: 12mm;
+  margin-bottom: 8mm;
+  border-bottom: 2px solid #000;
+  padding-bottom: 6mm;
+}
+.kcard-photo {
+  width: 50mm;
+  height: 50mm;
+  flex-shrink: 0;
+  background-size: cover;
+  background-position: center;
+  background-color: #f0f0f0;
+  border-radius: 3mm;
+}
+.kcard-head-body { flex: 1; min-width: 0; }
+.kcard-title {
+  font-size: 22pt;
+  font-weight: 800;
+  margin: 0 0 4px;
+  letter-spacing: -0.01em;
+}
+.kcard-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 11pt;
+  color: #333;
+  margin-top: 6px;
+}
+.kcard-meta-item {
+  display: inline-flex;
+  gap: 4px;
+}
+.kcard-meta-item strong { color: #000; }
+
+.kcard-grid {
+  display: grid;
+  grid-template-columns: 70mm 1fr;
+  gap: 8mm;
+}
+.kcard-ings-label,
+.kcard-method-label {
+  font-size: 10pt;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin: 0 0 4mm;
+  padding-bottom: 2mm;
+  border-bottom: 1px solid #000;
+}
+.kcard-ings { font-size: 11pt; }
+.kcard-ing-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 0;
+  border-bottom: 1px dotted #ccc;
+  gap: 6px;
+}
+.kcard-ing-name { }
+.kcard-ing-amt { font-family: var(--font-mono); white-space: nowrap; color: #333; }
+
+.kcard-method { font-size: 11pt; line-height: 1.6; white-space: pre-wrap; }
+.kcard-footer {
+  margin-top: 8mm;
+  padding-top: 4mm;
+  border-top: 1px solid #000;
+  font-size: 10pt;
+  color: #555;
+  display: flex;
+  justify-content: space-between;
+}
+
+/* ---------- SHOPPING LIST LAYOUT ---------- */
+.shop-page { padding: 15mm; }
+.shop-header {
+  margin-bottom: 8mm;
+  padding-bottom: 4mm;
+  border-bottom: 2px solid #000;
+}
+.shop-title {
+  font-size: 24pt;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+.shop-subtitle {
+  font-size: 11pt;
+  color: #555;
+  margin-top: 4px;
+}
+.shop-group {
+  margin-bottom: 8mm;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+.shop-group-title {
+  font-size: 12pt;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #333;
+  margin: 0 0 3mm;
+  padding-bottom: 2mm;
+  border-bottom: 1px solid #999;
+}
+.shop-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 11pt;
+  border-bottom: 1px dotted #ddd;
+}
+.shop-cb {
+  width: 14px; height: 14px;
+  border: 1.5px solid #000;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.shop-name { flex: 1; min-width: 0; }
+.shop-amt { font-family: var(--font-mono); color: #333; white-space: nowrap; }
+.shop-note { font-size: 10pt; color: #777; font-style: italic; }
+
+/* ---------- PRINT MEDIA RULES ---------- */
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+  @page :first {
+    margin: 0;
+  }
+  html, body {
+    margin: 0 !important; padding: 0 !important;
+    background: white !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  body * { visibility: hidden; }
+  .print-wrap, .print-wrap * { visibility: visible; }
+  .print-wrap {
+    position: absolute;
+    left: 0; top: 0;
+    width: 100%;
+    padding: 0; margin: 0;
+    background: white;
+  }
+  .print-page {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    width: auto !important;
+    min-height: auto !important;
+    border: 0;
+  }
+  .print-hide, .topbar, .bottomnav, .sidenav, .modal-stack, .toast-host, .splash,
+  .tutorial, .offline-banner {
+    display: none !important;
+  }
+}
