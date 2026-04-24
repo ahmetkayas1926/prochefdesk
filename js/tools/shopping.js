@@ -421,7 +421,7 @@
 
     closeBtn.addEventListener('click', function () { m.close(); });
     printBtn.innerHTML = PCD.icon('print',16) + ' <span>' + t('print') + '</span>';
-    printBtn.addEventListener('click', function () { window.print(); });
+    printBtn.addEventListener('click', function () { const wrap = body.querySelector('.print-wrap'); if (wrap) PCD.print(wrap.innerHTML); else window.print(); });
   }
 
   PCD.tools = PCD.tools || {};

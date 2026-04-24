@@ -83,9 +83,6 @@
         requestAnimationFrame(function () { root.classList.add('open'); });
         modal._isOpen = true;
 
-        // Push history entry so back-button closes it
-        if (PCD.router) PCD.router.pushModal(id);
-
         // Focus first input if any
         setTimeout(function () {
           const inp = panel.querySelector('input:not([type=hidden]), textarea, select, button');
@@ -93,26 +90,26 @@
         }, 250);
       },
 
-      close: function (opts) {
-        opts = opts || {};
+      close: function () {
         if (!modal._isOpen) return;
         modal._isOpen = false;
         root.classList.remove('open');
         // Remove from stack
         const idx = stack.indexOf(modal);
         if (idx >= 0) stack.splice(idx, 1);
-        // Pop history entry (unless called from popstate itself)
-        if (!opts.skipHistory && PCD.router) {
-          PCD.router.popModal();
-        }
         // Unlock scroll if no modals left
         if (stack.length === 0) {
           document.documentElement.style.overflow = '';
         }
-        // Remove from DOM after transition
+        // Fire onClose SYNCHRONOUSLY so callers' resolve() runs immediately
+        // (previously delayed by 250ms which caused race conditions)
+        if (typeof modal._onClose === 'function') {
+          try { modal._onClose(); } catch (e) { PCD.error && PCD.error(e); }
+          modal._onClose = null;
+        }
+        // Remove from DOM after transition finishes
         setTimeout(function () {
           if (root.parentNode) root.parentNode.removeChild(root);
-          if (typeof modal._onClose === 'function') modal._onClose();
         }, 250);
       },
 
@@ -147,14 +144,14 @@
     },
 
     // Close the top modal (called by router on back button)
-    closeTop: function (opts) {
+    closeTop: function () {
       if (stack.length === 0) return false;
-      stack[stack.length - 1].close(opts);
+      stack[stack.length - 1].close();
       return true;
     },
 
     closeAll: function () {
-      stack.slice().forEach(function (m) { m.close({ skipHistory: true }); });
+      stack.slice().forEach(function (m) { m.close(); });
     },
 
     isOpen: function () { return stack.length > 0; },

@@ -110,7 +110,7 @@
       ${upcomingEvent ? `
         <div class="card card-hover mb-4" data-action="view-event" data-eid="${upcomingEvent.id}" style="padding:14px;background:linear-gradient(135deg,var(--brand-50),var(--brand-100));border-color:var(--brand-300);cursor:pointer;">
           <div class="flex items-center gap-3">
-            <div style="font-size:28px;flex-shrink:0;">🎉</div>
+            <div style="flex-shrink:0;color:var(--brand-700);">${PCD.icon('calendar', 28)}</div>
             <div style="flex:1;min-width:0;">
               <div class="text-muted text-sm" style="font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--brand-700);">Upcoming event</div>
               <div style="font-weight:700;font-size:15px;letter-spacing:-0.01em;">${PCD.escapeHtml(upcomingEvent.name)}</div>
@@ -126,15 +126,15 @@
         </div>
         <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));">
           <button class="card card-hover" data-action="new-recipe" style="padding:16px;text-align:center;border:1px solid var(--border);">
-            <div style="font-size:28px;margin-bottom:6px;">🍳</div>
+            <div style="margin-bottom:6px;display:flex;justify-content:center;color:var(--brand-600);">${PCD.icon('book-open', 28)}</div>
             <div style="font-weight:600;font-size:13px;">${t('new_recipe')}</div>
           </button>
           <button class="card card-hover" data-action="new-ingredient" style="padding:16px;text-align:center;border:1px solid var(--border);">
-            <div style="font-size:28px;margin-bottom:6px;">🥕</div>
+            <div style="margin-bottom:6px;display:flex;justify-content:center;color:var(--brand-600);">${PCD.icon('carrot', 28)}</div>
             <div style="font-weight:600;font-size:13px;">${t('new_ingredient')}</div>
           </button>
           <button class="card card-hover" data-action="all-tools" style="padding:16px;text-align:center;border:1px solid var(--border);">
-            <div style="font-size:28px;margin-bottom:6px;">🛠️</div>
+            <div style="margin-bottom:6px;display:flex;justify-content:center;color:var(--brand-600);">${PCD.icon('grid', 28)}</div>
             <div style="font-weight:600;font-size:13px;">${t('nav_tools')}</div>
           </button>
         </div>

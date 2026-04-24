@@ -2,8 +2,8 @@
 <html lang="en" data-theme="light" data-dir="ltr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-<meta name="theme-color" content="#ea580c">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#16a34a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -11,10 +11,15 @@
 <title>ProChefDesk — Kitchen OS for Professional Chefs</title>
 
 <!-- Favicon (inline SVG, no external dependency) -->
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23ea580c'/%3E%3Ctext x='50' y='68' font-size='56' text-anchor='middle' fill='white' font-family='system-ui' font-weight='800'%3EPC%3C/text%3E%3C/svg%3E">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%2316a34a'/%3E%3Ctext x='50' y='68' font-size='56' text-anchor='middle' fill='white' font-family='system-ui' font-weight='800'%3EPC%3C/text%3E%3C/svg%3E">
 
 <!-- PWA manifest -->
-<link rel="manifest" href="data:application/json,%7B%22name%22%3A%22ProChefDesk%22%2C%22short_name%22%3A%22ProChefDesk%22%2C%22start_url%22%3A%22%2F%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23ffffff%22%2C%22theme_color%22%3A%22%23ea580c%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%2C%253Csvg%2520xmlns%253D%2527http%253A%252F%252Fwww.w3.org%252F2000%252Fsvg%2527%2520viewBox%253D%25270%25200%2520100%2520100%2527%253E%253Crect%2520width%253D%2527100%2527%2520height%253D%2527100%2527%2520rx%253D%252722%2527%2520fill%253D%2527%2523ea580c%2527%252F%253E%253C%252Fsvg%253E%22%2C%22sizes%22%3A%22192x192%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%7D%5D%7D">
+<link rel="manifest" href="data:application/json,%7B%22name%22%3A%22ProChefDesk%22%2C%22short_name%22%3A%22ProChefDesk%22%2C%22start_url%22%3A%22%2F%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23ffffff%22%2C%22theme_color%22%3A%22%2316a34a%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%2C%253Csvg%2520xmlns%253D%2527http%253A%252F%252Fwww.w3.org%252F2000%252Fsvg%2527%2520viewBox%253D%25270%25200%2520100%2520100%2527%253E%253Crect%2520width%253D%2527100%2527%2520height%253D%2527100%2527%2520rx%253D%252722%2527%2520fill%253D%2527%252316a34a%2527%252F%253E%253C%252Fsvg%253E%22%2C%22sizes%22%3A%22192x192%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%7D%5D%7D">
+
+<!-- Google Fonts - Inter -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
 <!-- Stylesheets: cache-bust with ?v=1.0.0 on deploy -->
 <link rel="stylesheet" href="css/core.css?v=1.0.0">
@@ -144,6 +149,7 @@
 <script src="js/i18n/phase2.js?v=1.0.0"></script>
 <script src="js/i18n/phase3.js?v=1.0.0"></script>
 <script src="js/i18n/phase4.js?v=1.0.0"></script>
+<script src="js/i18n/phase4-1.js?v=1.0.0"></script>
 <script src="js/core/allergens-db.js?v=1.0.0"></script>
 <script src="js/core/cloud.js?v=1.0.0"></script>
 <script src="js/core/auth.js?v=1.0.0"></script>
@@ -176,12 +182,11 @@
 <script src="js/tools/suppliers.js?v=1.0.0"></script>
 <script src="js/tools/events.js?v=1.0.0"></script>
 <!-- Phase 4 tools -->
-<script src="js/tools/nutrition.js?v=1.0.0"></script>
 <script src="js/tools/allergens.js?v=1.0.0"></script>
 <script src="js/tools/yield.js?v=1.0.0"></script>
 <script src="js/tools/whatif.js?v=1.0.0"></script>
-<script src="js/tools/menu_matrix.js?v=1.0.0"></script>
 <script src="js/tools/team.js?v=1.0.0"></script>
+<script src="js/tools/checklist.js?v=1.0.0"></script>
 <script src="js/tools/tools-hub.js?v=1.0.0"></script>
 
 <!-- Bootstrap -->

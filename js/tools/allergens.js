@@ -224,7 +224,7 @@
       body: body, footer: footer, size: 'xl', closable: true,
     });
     closeBtn.addEventListener('click', function () { m.close(); });
-    printBtn.addEventListener('click', function () { window.print(); });
+    printBtn.addEventListener('click', function () { const wrap = body.querySelector('.print-wrap'); if (wrap) PCD.print(wrap.innerHTML); else window.print(); });
   }
 
   function render_list(view) { render(view); }

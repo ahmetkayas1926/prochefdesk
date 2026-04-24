@@ -175,24 +175,40 @@
             <button class="icon-btn" data-secdel title="${PCD.i18n.t('delete')}">${PCD.icon('trash',18)}</button>
           </div>
           <div class="section-items flex flex-col gap-1" data-sidx="${sIdx}"></div>
-          <button class="btn btn-ghost btn-sm mt-2" data-addrec="${sec.id}">+ ${PCD.i18n.t('menu_add_item')}</button>
+          <div class="flex gap-2 mt-2">
+            <button class="btn btn-ghost btn-sm" data-addrec="${sec.id}" style="flex:1;">+ ${PCD.i18n.t('menu_add_item')}</button>
+            <button class="btn btn-ghost btn-sm" data-addmanual="${sec.id}" style="flex:1;">✎ ${PCD.i18n.t('menu_add_manual') || 'Manual'}</button>
+          </div>
         `;
         const itemsEl = secEl.querySelector('.section-items');
         (sec.items || []).forEach(function (it, iIdx) {
-          const r = PCD.store.getRecipe(it.recipeId);
-          const name = r ? r.name : '(removed recipe)';
+          const isManual = !it.recipeId;
+          const r = it.recipeId ? PCD.store.getRecipe(it.recipeId) : null;
+          const name = isManual ? (it.customName || '') : (r ? r.name : '(removed recipe)');
           const defaultPrice = r && r.salePrice ? r.salePrice : '';
           const row = PCD.el('div', {
             style: { display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 8px', background: 'var(--surface-2)', borderRadius: 'var(--r-sm)' }
           });
-          row.innerHTML = `
-            <div style="flex:1;min-width:0;">
-              <div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${PCD.escapeHtml(name)}</div>
-              <input type="text" class="input" data-itemdesc="${sIdx}:${iIdx}" value="${PCD.escapeHtml(it.description || '')}" placeholder="${PCD.i18n.t('menu_item_desc_ph')}" style="padding:4px 8px;min-height:26px;font-size:12px;margin-top:4px;">
-            </div>
-            <input type="number" class="input" data-itemprice="${sIdx}:${iIdx}" value="${it.price || defaultPrice}" placeholder="${defaultPrice}" step="0.01" min="0" style="width:70px;padding:4px 8px;min-height:26px;font-size:13px;">
-            <button class="icon-btn" data-itemdel="${sIdx}:${iIdx}">${PCD.icon('x',14)}</button>
-          `;
+          // Manual items: editable name field. Recipe items: static name.
+          if (isManual) {
+            row.innerHTML = `
+              <div style="flex:1;min-width:0;">
+                <input type="text" class="input" data-itemname="${sIdx}:${iIdx}" value="${PCD.escapeHtml(name)}" placeholder="${PCD.i18n.t('menu_item_name_ph') || 'Dish name'}" style="padding:4px 8px;min-height:26px;font-size:14px;font-weight:600;">
+                <input type="text" class="input" data-itemdesc="${sIdx}:${iIdx}" value="${PCD.escapeHtml(it.description || '')}" placeholder="${PCD.i18n.t('menu_item_desc_ph')}" style="padding:4px 8px;min-height:26px;font-size:12px;margin-top:4px;">
+              </div>
+              <input type="number" class="input" data-itemprice="${sIdx}:${iIdx}" value="${it.price || ''}" placeholder="0" step="0.01" min="0" style="width:70px;padding:4px 8px;min-height:26px;font-size:13px;">
+              <button class="icon-btn" data-itemdel="${sIdx}:${iIdx}">${PCD.icon('x',14)}</button>
+            `;
+          } else {
+            row.innerHTML = `
+              <div style="flex:1;min-width:0;">
+                <div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${PCD.escapeHtml(name)}</div>
+                <input type="text" class="input" data-itemdesc="${sIdx}:${iIdx}" value="${PCD.escapeHtml(it.description || '')}" placeholder="${PCD.i18n.t('menu_item_desc_ph')}" style="padding:4px 8px;min-height:26px;font-size:12px;margin-top:4px;">
+              </div>
+              <input type="number" class="input" data-itemprice="${sIdx}:${iIdx}" value="${it.price || defaultPrice}" placeholder="${defaultPrice}" step="0.01" min="0" style="width:70px;padding:4px 8px;min-height:26px;font-size:13px;">
+              <button class="icon-btn" data-itemdel="${sIdx}:${iIdx}">${PCD.icon('x',14)}</button>
+            `;
+          }
           itemsEl.appendChild(row);
         });
         secListEl.appendChild(secEl);
@@ -245,40 +261,84 @@
         });
         if (items.length === 0) { PCD.toast.warning(t('no_recipes_yet')); return; }
         const sec = data.sections.find(function (s) { return s.id === sid; });
-        const selected = (sec.items || []).map(function (it) { return it.recipeId; });
+        const selected = (sec.items || []).filter(function (it) { return it.recipeId; }).map(function (it) { return it.recipeId; });
         PCD.picker.open({
           title: t('menu_add_item'),
           items: items, multi: true, selected: selected,
         }).then(function (selIds) {
           if (!selIds) return;
-          const existingMap = {};
-          (sec.items || []).forEach(function (it) { existingMap[it.recipeId] = it; });
-          sec.items = selIds.map(function (id) {
-            if (existingMap[id]) return existingMap[id];
+          // Keep existing recipe items, update set. Manual items preserved separately.
+          const existingByRecipe = {};
+          const manualItems = [];
+          (sec.items || []).forEach(function (it) {
+            if (it.recipeId) existingByRecipe[it.recipeId] = it;
+            else manualItems.push(it);
+          });
+          const newRecipeItems = selIds.map(function (id) {
+            if (existingByRecipe[id]) return existingByRecipe[id];
             return { id: PCD.uid('mi'), recipeId: id, description: '', price: null };
           });
+          sec.items = newRecipeItems.concat(manualItems);
           render();
         });
       });
 
+      // Manual item: add blank line that chef fills in directly
+      PCD.on(body, 'click', '[data-addmanual]', function () {
+        const sid = this.getAttribute('data-addmanual');
+        const sec = data.sections.find(function (s) { return s.id === sid; });
+        if (!sec) return;
+        sec.items = (sec.items || []).concat([{
+          id: PCD.uid('mi'),
+          recipeId: null,
+          customName: '',
+          description: '',
+          price: null,
+        }]);
+        render();
+        // Focus the new name input
+        setTimeout(function () {
+          const inputs = body.querySelectorAll('[data-itemname]');
+          if (inputs.length) inputs[inputs.length - 1].focus();
+        }, 50);
+      });
+
+      // Manual item name input
+      PCD.on(body, 'input', '[data-itemname]', PCD.debounce(function () {
+        const parts = this.getAttribute('data-itemname').split(':').map(Number);
+        const sIdx = parts[0], iIdx = parts[1];
+        if (data.sections[sIdx] && data.sections[sIdx].items[iIdx]) {
+          data.sections[sIdx].items[iIdx].customName = this.value;
+        }
+      }, 300));
+
       // Item description
       PCD.on(body, 'input', '[data-itemdesc]', PCD.debounce(function () {
-        const [sIdx, iIdx] = this.getAttribute('data-itemdesc').split(':').map(Number);
-        data.sections[sIdx].items[iIdx].description = this.value;
+        const parts = this.getAttribute('data-itemdesc').split(':').map(Number);
+        const sIdx = parts[0], iIdx = parts[1];
+        if (data.sections[sIdx] && data.sections[sIdx].items[iIdx]) {
+          data.sections[sIdx].items[iIdx].description = this.value;
+        }
       }, 300));
 
       // Item price
       PCD.on(body, 'input', '[data-itemprice]', PCD.debounce(function () {
-        const [sIdx, iIdx] = this.getAttribute('data-itemprice').split(':').map(Number);
-        data.sections[sIdx].items[iIdx].price = this.value === '' ? null : parseFloat(this.value);
-        render();
+        const parts = this.getAttribute('data-itemprice').split(':').map(Number);
+        const sIdx = parts[0], iIdx = parts[1];
+        if (data.sections[sIdx] && data.sections[sIdx].items[iIdx]) {
+          data.sections[sIdx].items[iIdx].price = this.value === '' ? null : parseFloat(this.value);
+          render();
+        }
       }, 400));
 
       // Item delete
       PCD.on(body, 'click', '[data-itemdel]', function () {
-        const [sIdx, iIdx] = this.getAttribute('data-itemdel').split(':').map(Number);
-        data.sections[sIdx].items.splice(iIdx, 1);
-        render();
+        const parts = this.getAttribute('data-itemdel').split(':').map(Number);
+        const sIdx = parts[0], iIdx = parts[1];
+        if (data.sections[sIdx]) {
+          data.sections[sIdx].items.splice(iIdx, 1);
+          render();
+        }
       });
     }
 
@@ -402,7 +462,7 @@
     });
 
     closeBtn.addEventListener('click', function () { m.close(); });
-    printBtn.addEventListener('click', function () { window.print(); });
+    printBtn.addEventListener('click', function () { const wrap = body.querySelector('.print-wrap'); if (wrap) PCD.print(wrap.innerHTML); else window.print(); });
   }
 
   PCD.tools = PCD.tools || {};

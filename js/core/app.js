@@ -55,12 +55,11 @@
       PCD.router.register('suppliers', PCD.tools.suppliers.render);
       PCD.router.register('events', PCD.tools.events.render);
       // Phase 4
-      PCD.router.register('nutrition', PCD.tools.nutrition.render);
       PCD.router.register('allergens', PCD.tools.allergens.render);
       PCD.router.register('yield', PCD.tools.yield_calc.render);
       PCD.router.register('whatif', PCD.tools.whatif.render);
-      PCD.router.register('menu_engineering', PCD.tools.menuMatrix.render);
       PCD.router.register('team', PCD.tools.team.render);
+      PCD.router.register('checklist', PCD.tools.checklist.render);
 
       // 7) Start router + render initial view
       PCD.router.start();
@@ -198,33 +197,32 @@
 
     const sections = [
       { title: null, items: [
-        { key: 'dashboard', icon: '🏠', route: 'dashboard' },
-        { key: 'recipes',   icon: '📖', route: 'recipes' },
-        { key: 'ingredients', icon: '🥕', route: 'ingredients' },
+        { key: 'dashboard', icon: 'home', route: 'dashboard' },
+        { key: 'recipes',   icon: 'book-open', route: 'recipes' },
+        { key: 'ingredients', icon: 'carrot', route: 'ingredients' },
       ]},
       { title: 'Service', items: [
-        { key: 'menus',          icon: '📋', route: 'menus' },
-        { key: 'kitchen_cards',  icon: '🗂️', route: 'kitchen_cards' },
-        { key: 'portion',        icon: '⚖️', route: 'portion' },
+        { key: 'menus',          icon: 'menu', route: 'menus' },
+        { key: 'kitchen_cards',  icon: 'id-card', route: 'kitchen_cards' },
+        { key: 'portion',        icon: 'scale', route: 'portion' },
       ]},
       { title: 'Operations', items: [
-        { key: 'inventory',      icon: '📦', route: 'inventory' },
-        { key: 'waste',          icon: '♻️', route: 'waste' },
-        { key: 'suppliers',      icon: '🚚', route: 'suppliers' },
-        { key: 'shopping',       icon: '🛒', route: 'shopping' },
-        { key: 'events',         icon: '🎉', route: 'events' },
+        { key: 'inventory',      icon: 'package', route: 'inventory' },
+        { key: 'waste',          icon: 'recycle', route: 'waste' },
+        { key: 'suppliers',      icon: 'truck', route: 'suppliers' },
+        { key: 'shopping',       icon: 'shopping-cart', route: 'shopping' },
+        { key: 'events',         icon: 'calendar', route: 'events' },
+        { key: 'checklist',      icon: 'check-square', route: 'checklist' },
       ]},
       { title: 'Analytics', items: [
-        { key: 'nutrition',        icon: '🥗', route: 'nutrition' },
-        { key: 'allergens',        icon: '⚠️', route: 'allergens' },
-        { key: 'menu_engineering', icon: '📊', route: 'menu_engineering' },
-        { key: 'whatif',           icon: '🔮', route: 'whatif' },
-        { key: 'yield',            icon: '🧮', route: 'yield' },
-        { key: 'team',             icon: '👥', route: 'team' },
+        { key: 'allergens',        icon: 'alert-triangle', route: 'allergens' },
+        { key: 'whatif',           icon: 'activity', route: 'whatif' },
+        { key: 'yield',            icon: 'percent', route: 'yield' },
+        { key: 'team',             icon: 'users', route: 'team' },
       ]},
       { title: t('nav_tools'), items: [
-        { key: 'tools',          icon: '🛠️', route: 'tools' },
-        { key: 'account',        icon: '👤', route: 'account' },
+        { key: 'tools',          icon: 'grid', route: 'tools' },
+        { key: 'account',        icon: 'user', route: 'account' },
       ]},
     ];
 
@@ -237,7 +235,10 @@
           class: 'sidenav-item',
           'data-nav': it.route,
         });
-        b.innerHTML = '<span class="sidenav-item-icon">' + it.icon + '</span>' +
+        // If icon is short name (no emoji chars), render as SVG via PCD.icon
+        const isIconName = typeof it.icon === 'string' && /^[a-z\-]+$/.test(it.icon);
+        const iconHtml = isIconName ? PCD.icon(it.icon, 18) : it.icon;
+        b.innerHTML = '<span class="sidenav-item-icon">' + iconHtml + '</span>' +
                       '<span>' + t('t_' + it.key + '_title') + '</span>';
         container.appendChild(b);
       });

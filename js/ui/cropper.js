@@ -280,41 +280,47 @@
 
       // -------- APPLY --------
       applyBtn.addEventListener('click', function () {
-        // Map crop (stage coords) back to natural image coords
-        const scale = state.imgDisplayW / (state.rotation % 180 === 0 ? state.naturalW : state.naturalH);
-        const cx = (state.crop.x - state.imgOffsetX) / scale;
-        const cy = (state.crop.y - state.imgOffsetY) / scale;
-        const cw = state.crop.w / scale;
-        const ch = state.crop.h / scale;
+        try {
+          // Map crop (stage coords) back to natural image coords
+          const scale = state.imgDisplayW / (state.rotation % 180 === 0 ? state.naturalW : state.naturalH);
+          const cx = (state.crop.x - state.imgOffsetX) / scale;
+          const cy = (state.crop.y - state.imgOffsetY) / scale;
+          const cw = state.crop.w / scale;
+          const ch = state.crop.h / scale;
 
-        const canvas = document.createElement('canvas');
-        // For rotation, output canvas matches crop dimensions (after rotation applied).
-        // We draw rotated image first, then extract crop.
-        const rot = state.rotation;
-        const nw = state.naturalW, nh = state.naturalH;
-        // Create offscreen canvas with rotated image
-        const off = document.createElement('canvas');
-        off.width = (rot % 180 === 0) ? nw : nh;
-        off.height = (rot % 180 === 0) ? nh : nw;
-        const offCtx = off.getContext('2d');
-        offCtx.translate(off.width / 2, off.height / 2);
-        offCtx.rotate(rot * Math.PI / 180);
-        offCtx.drawImage(state.img || imgEl, -nw / 2, -nh / 2, nw, nh);
+          const canvas = document.createElement('canvas');
+          const rot = state.rotation;
+          const nw = state.naturalW, nh = state.naturalH;
+          const off = document.createElement('canvas');
+          off.width = (rot % 180 === 0) ? nw : nh;
+          off.height = (rot % 180 === 0) ? nh : nw;
+          const offCtx = off.getContext('2d');
+          offCtx.translate(off.width / 2, off.height / 2);
+          offCtx.rotate(rot * Math.PI / 180);
+          offCtx.drawImage(state.img || imgEl, -nw / 2, -nh / 2, nw, nh);
 
-        // Now extract crop from this rotated canvas
-        const maxOutW = 1200;
-        const outW = Math.min(maxOutW, Math.round(cw));
-        const outH = Math.round(outW * (ch / cw));
-        canvas.width = outW;
-        canvas.height = outH;
-        const ctx = canvas.getContext('2d');
-        ctx.imageSmoothingQuality = 'high';
-        ctx.drawImage(off, cx, cy, cw, ch, 0, 0, outW, outH);
+          const maxOutW = 1200;
+          const outW = Math.min(maxOutW, Math.round(cw));
+          const outH = Math.round(outW * (ch / cw));
+          canvas.width = outW;
+          canvas.height = outH;
+          const ctx = canvas.getContext('2d');
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(off, cx, cy, cw, ch, 0, 0, outW, outH);
 
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-        modal._onClose = null;
-        modal.close();
-        resolve(dataUrl);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          // Detach onClose so closing doesn't trigger resolve(null)
+          modal._onClose = null;
+          window.removeEventListener('resize', resize);
+          modal.close();
+          resolve(dataUrl);
+        } catch (err) {
+          PCD.error && PCD.error('crop apply failed:', err);
+          modal._onClose = null;
+          window.removeEventListener('resize', resize);
+          modal.close();
+          resolve(null);
+        }
       });
 
       cancelBtn.addEventListener('click', function () {
@@ -324,7 +330,7 @@
       // Recalc on resize
       const resize = PCD.debounce(layoutImage, 200);
       window.addEventListener('resize', resize);
-      // Clean up on close
+      // Cleanup on close (resize listener)
       const origOnClose = modal._onClose;
       modal._onClose = function () {
         window.removeEventListener('resize', resize);
