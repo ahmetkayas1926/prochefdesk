@@ -73,7 +73,16 @@
       let visible = sorted;
       if (filter) {
         const q = filter.toLowerCase();
-        visible = sorted.filter(function (r) { return (r.name || '').toLowerCase().indexOf(q) >= 0; });
+        const ingMap = {};
+        PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
+        visible = sorted.filter(function (r) {
+          if ((r.name || '').toLowerCase().indexOf(q) >= 0) return true;
+          // Search by ingredient content too
+          return (r.ingredients || []).some(function (ri) {
+            const ing = ingMap[ri.ingredientId];
+            return ing && (ing.name || '').toLowerCase().indexOf(q) >= 0;
+          });
+        });
       }
       if (visible.length === 0 && !filter) {
         listEl.innerHTML = `
@@ -211,6 +220,54 @@
       openPreview(rid);
     });
 
+    // Long-press / right-click for quick actions (mobile + desktop)
+    PCD.longPress(listEl, '[data-rid]', function (el) {
+      const rid = el.getAttribute('data-rid');
+      const r = PCD.store.getRecipe(rid);
+      if (!r) return;
+      PCD.actionSheet({
+        title: r.name,
+        actions: [
+          { icon: 'edit', label: PCD.i18n.t('act_edit'), onClick: function () { openEditor(rid); } },
+          { icon: 'copy', label: PCD.i18n.t('act_duplicate'), onClick: function () {
+            const copy = PCD.clone(r);
+            delete copy.id; delete copy.createdAt; delete copy.updatedAt;
+            copy.name = copy.name + ' (Copy)';
+            const saved = PCD.store.upsertRecipe(copy);
+            PCD.toast.success('Duplicated');
+            renderList(view);
+            setTimeout(function () { openEditor(saved.id); }, 200);
+          }},
+          { icon: 'share', label: PCD.i18n.t('act_share'), onClick: function () { openPreview(rid); } },
+          { icon: 'grid', label: PCD.i18n.t('act_show_qr'), onClick: function () {
+            const ingMap = currentIngMap();
+            const lines = [r.name, ''];
+            lines.push((r.servings || 1) + ' servings');
+            lines.push('');
+            lines.push('Ingredients:');
+            (r.ingredients || []).forEach(function (ri) {
+              const ing = ingMap[ri.ingredientId];
+              lines.push('• ' + (ing ? ing.name : '(removed)') + ' — ' + PCD.fmtNumber(ri.amount) + ' ' + (ri.unit || ''));
+            });
+            if (r.steps) { lines.push(''); lines.push('Method:'); lines.push(r.steps); }
+            PCD.qr.show({ title: r.name, subtitle: 'Recipe QR', text: lines.join('\n') });
+          }},
+          { icon: 'trash', label: PCD.i18n.t('act_delete'), danger: true, onClick: function () {
+            const backup = PCD.clone(r);
+            PCD.store.deleteRecipe(rid);
+            renderList(view);
+            PCD.toast.success('Deleted', 5000, {
+              action: { label: 'UNDO', onClick: function () {
+                PCD.store.upsertRecipe(backup);
+                PCD.toast.success('Restored');
+                renderList(view);
+              }}
+            });
+          }},
+        ]
+      });
+    });
+
     paint();
   }
 
@@ -263,10 +320,17 @@
         <div style="white-space:pre-wrap;line-height:1.7;font-size:15px;color:var(--text-2);">${PCD.escapeHtml(r.plating)}</div>` : ''}
     `;
 
-    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
-    const editBtn = PCD.el('button', { class: 'btn btn-primary', text: t('edit'), style: { flex: '1' } });
-    const deleteBtn = PCD.el('button', { class: 'btn btn-outline', text: t('delete'), style: { color: 'var(--danger)' } });
+    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
+    const editBtn = PCD.el('button', { class: 'btn btn-primary', text: t('edit'), style: { flex: '1', minWidth: '100px' } });
+    const duplicateBtn = PCD.el('button', { class: 'btn btn-outline', title: 'Duplicate' });
+    duplicateBtn.innerHTML = PCD.icon('copy', 16);
+    const shareBtn = PCD.el('button', { class: 'btn btn-outline', title: 'Share' });
+    shareBtn.innerHTML = PCD.icon('share', 16);
+    const deleteBtn = PCD.el('button', { class: 'btn btn-outline', title: t('delete'), style: { color: 'var(--danger)' } });
+    deleteBtn.innerHTML = PCD.icon('trash', 16);
     footer.appendChild(deleteBtn);
+    footer.appendChild(shareBtn);
+    footer.appendChild(duplicateBtn);
     footer.appendChild(editBtn);
 
     const m = PCD.modal.open({ title: r.name, body: body, footer: footer, size: 'md', closable: true });
@@ -275,21 +339,133 @@
       m.close();
       setTimeout(function () { openEditor(rid); }, 280);
     });
-    deleteBtn.addEventListener('click', function () {
-      PCD.modal.confirm({
-        icon: '🗑', iconKind: 'danger', danger: true,
-        title: t('confirm_delete'), text: t('confirm_delete_desc'),
-        okText: t('delete')
-      }).then(function (ok) {
-        if (!ok) return;
-        PCD.store.deleteRecipe(rid);
-        PCD.toast.success(t('item_deleted'));
-        m.close();
-        // re-render current view
+
+    duplicateBtn.addEventListener('click', function () {
+      const original = PCD.store.getRecipe(rid);
+      if (!original) return;
+      const copy = PCD.clone(original);
+      delete copy.id;
+      delete copy.createdAt;
+      delete copy.updatedAt;
+      copy.name = copy.name + ' (Copy)';
+      const saved = PCD.store.upsertRecipe(copy);
+      PCD.toast.success('Recipe duplicated');
+      m.close();
+      setTimeout(function () {
         const view = PCD.$('#view');
         if (PCD.router.currentView() === 'recipes') renderList(view);
-        else if (PCD.router.currentView() === 'dashboard') PCD.tools.dashboard.render(view);
+        // Open new one for editing
+        setTimeout(function () { openEditor(saved.id); }, 200);
+      }, 150);
+    });
+
+    shareBtn.addEventListener('click', function () {
+      const ingMap = {};
+      PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
+      const lines = [r.name, ''];
+      lines.push(t('recipe_servings') + ': ' + (r.servings || 1));
+      if (r.salePrice) lines.push(t('sale_price') + ': ' + PCD.fmtMoney(r.salePrice));
+      lines.push('');
+      lines.push(t('recipe_ingredients') + ':');
+      (r.ingredients || []).forEach(function (ri) {
+        const ing = ingMap[ri.ingredientId];
+        lines.push('• ' + (ing ? ing.name : '(removed)') + ' — ' + PCD.fmtNumber(ri.amount) + ' ' + (ri.unit || ''));
       });
+      if (r.steps) {
+        lines.push('');
+        lines.push('Method:');
+        lines.push(r.steps);
+      }
+      openRecipeShareSheet({ title: r.name, text: lines.join('\n'), recipe: r, ingMap: ingMap });
+    });
+
+    deleteBtn.addEventListener('click', function () {
+      // Soft delete with undo
+      const original = PCD.store.getRecipe(rid);
+      if (!original) return;
+      const backup = PCD.clone(original);
+      PCD.store.deleteRecipe(rid);
+      m.close();
+      const view = PCD.$('#view');
+      if (PCD.router.currentView() === 'recipes') renderList(view);
+      else if (PCD.router.currentView() === 'dashboard') PCD.tools.dashboard.render(view);
+      PCD.toast.success(t('item_deleted'), 5000, {
+        action: {
+          label: 'UNDO',
+          onClick: function () {
+            PCD.store.upsertRecipe(backup);
+            PCD.toast.success('Restored');
+            const v = PCD.$('#view');
+            if (PCD.router.currentView() === 'recipes') renderList(v);
+            else if (PCD.router.currentView() === 'dashboard') PCD.tools.dashboard.render(v);
+          }
+        }
+      });
+    });
+  }
+
+  // Share sheet for a recipe
+  function openRecipeShareSheet(opts) {
+    const body = PCD.el('div');
+    body.innerHTML =
+      '<div class="field"><label class="field-label">Message</label>' +
+      '<textarea class="textarea" id="rShareText" rows="10" style="font-family:var(--font-mono);font-size:13px;">' + PCD.escapeHtml(opts.text) + '</textarea></div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-top:12px">' +
+        '<button class="btn btn-outline" id="rShWa" style="flex-direction:column;height:auto;padding:12px 4px;gap:4px">' +
+          '<div style="color:#25D366">' + PCD.icon('message-circle', 22) + '</div>' +
+          '<div style="font-weight:600;font-size:12px">WhatsApp</div></button>' +
+        '<button class="btn btn-outline" id="rShEmail" style="flex-direction:column;height:auto;padding:12px 4px;gap:4px">' +
+          '<div style="color:#EA4335">' + PCD.icon('mail', 22) + '</div>' +
+          '<div style="font-weight:600;font-size:12px">Email</div></button>' +
+        '<button class="btn btn-outline" id="rShPrint" style="flex-direction:column;height:auto;padding:12px 4px;gap:4px">' +
+          '<div style="color:var(--brand-600)">' + PCD.icon('print', 22) + '</div>' +
+          '<div style="font-weight:600;font-size:12px">Print/PDF</div></button>' +
+        '<button class="btn btn-outline" id="rShCopy" style="flex-direction:column;height:auto;padding:12px 4px;gap:4px">' +
+          '<div style="color:var(--text-2)">' + PCD.icon('copy', 22) + '</div>' +
+          '<div style="font-weight:600;font-size:12px">Copy</div></button>' +
+      '</div>';
+
+    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('btn_close') });
+    const footer = PCD.el('div', { style: { display: 'flex', width: '100%' } });
+    footer.appendChild(closeBtn);
+    const m = PCD.modal.open({ title: 'Share · ' + opts.title, body: body, footer: footer, size: 'md', closable: true });
+
+    function getText() { return PCD.$('#rShareText', body).value; }
+    closeBtn.addEventListener('click', function () { m.close(); });
+    PCD.$('#rShWa', body).addEventListener('click', function () {
+      window.open('https://wa.me/?text=' + encodeURIComponent(getText()), '_blank');
+      m.close();
+    });
+    PCD.$('#rShEmail', body).addEventListener('click', function () {
+      window.location.href = 'mailto:?subject=' + encodeURIComponent(opts.title) + '&body=' + encodeURIComponent(getText());
+      m.close();
+    });
+    PCD.$('#rShPrint', body).addEventListener('click', function () {
+      const r = opts.recipe;
+      const ingMap = opts.ingMap;
+      const rows = (r.ingredients || []).map(function (ri) {
+        const ing = ingMap[ri.ingredientId];
+        return '<tr><td>' + PCD.escapeHtml(ing ? ing.name : '(removed)') + '</td><td style="text-align:right">' + PCD.fmtNumber(ri.amount) + ' ' + PCD.escapeHtml(ri.unit || '') + '</td></tr>';
+      }).join('');
+      const html =
+        '<div style="max-width:680px;margin:0 auto">' +
+        (r.photo ? '<img src="' + r.photo + '" style="width:100%;max-height:300px;object-fit:cover;border-radius:8px;margin-bottom:16px">' : '') +
+        '<h1>' + PCD.escapeHtml(r.name) + '</h1>' +
+        '<div style="color:#666;font-size:12px;margin-bottom:16px">' + (r.servings || 1) + ' servings</div>' +
+        '<h3 style="margin-top:16px">Ingredients</h3>' +
+        '<table>' + rows + '</table>' +
+        (r.steps ? '<h3 style="margin-top:16px">Method</h3><pre>' + PCD.escapeHtml(r.steps) + '</pre>' : '') +
+        '</div>';
+      PCD.print(html, r.name);
+      m.close();
+    });
+    PCD.$('#rShCopy', body).addEventListener('click', function () {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(getText()).then(function () {
+          PCD.toast.success('Copied');
+          m.close();
+        });
+      }
     });
   }
 
@@ -335,7 +511,12 @@
             ${!data.photo ? '<div class="text-center text-muted"><div style="font-size:32px;margin-bottom:4px;">📷</div><div class="text-sm">' + t('recipe_photo_hint') + '</div></div>' : ''}
             ${data.photo ? '<button type="button" id="removePhoto" class="icon-btn" style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.6);color:white;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/></svg></button>' : ''}
           </div>
-          <input type="file" id="photoInput" accept="image/*" style="display:none;">
+          <div class="flex gap-2 mt-2" id="photoActions" style="display:${data.photo ? 'none' : 'flex'};">
+            <button type="button" class="btn btn-outline btn-sm" id="cameraBtn" style="flex:1;">${PCD.icon('camera', 16)} Camera</button>
+            <button type="button" class="btn btn-outline btn-sm" id="galleryBtn" style="flex:1;">${PCD.icon('image', 16)} Gallery</button>
+          </div>
+          <input type="file" id="photoCamera" accept="image/*" capture="environment" style="display:none;">
+          <input type="file" id="photoGallery" accept="image/*" style="display:none;">
         </div>
 
         <div class="field">
@@ -372,6 +553,14 @@
             <div class="section-title">${t('recipe_ingredients')}</div>
             <button type="button" class="btn btn-outline btn-sm" id="addIngBtn">+ ${t('add')}</button>
           </div>
+
+          <!-- Quick-add autocomplete -->
+          <div style="position:relative;margin-bottom:10px;">
+            <input type="text" class="input" id="quickIngInput" placeholder="Quick add — type ingredient name..." autocomplete="off" style="padding-inline-start:36px;">
+            <div style="position:absolute;inset-inline-start:10px;top:50%;transform:translateY(-50%);color:var(--text-3);pointer-events:none;">${PCD.icon('search', 16)}</div>
+            <div id="quickIngDD" style="display:none;position:absolute;top:100%;inset-inline-start:0;inset-inline-end:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);box-shadow:var(--shadow-lg);max-height:240px;overflow-y:auto;z-index:5;margin-top:4px;"></div>
+          </div>
+
           <div id="ingList"></div>
           <div class="text-sm text-muted mt-2" style="font-size:12px;">${t('recipe_ingredients_hint')}</div>
         </div>
@@ -454,11 +643,16 @@
 
     function wireEditor() {
       const photoZone = PCD.$('#photoZone', body);
-      const photoInput = PCD.$('#photoInput', body);
+      const photoCamera = PCD.$('#photoCamera', body);
+      const photoGallery = PCD.$('#photoGallery', body);
+      const cameraBtn = PCD.$('#cameraBtn', body);
+      const galleryBtn = PCD.$('#galleryBtn', body);
 
+      // Photo zone: default to gallery (desktop-friendly)
       photoZone.addEventListener('click', function (e) {
         if (e.target.closest('#removePhoto')) return;
-        photoInput.click();
+        if (e.target.closest('#cameraBtn') || e.target.closest('#galleryBtn')) return;
+        if (photoGallery) photoGallery.click();
       });
       const removeBtn = PCD.$('#removePhoto', body);
       if (removeBtn) removeBtn.addEventListener('click', function (e) {
@@ -466,7 +660,17 @@
         data.photo = null;
         renderEditor();
       });
-      photoInput.addEventListener('change', function (e) {
+
+      if (cameraBtn) cameraBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (photoCamera) photoCamera.click();
+      });
+      if (galleryBtn) galleryBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (photoGallery) photoGallery.click();
+      });
+
+      function handlePhotoFile(e) {
         const f = e.target.files && e.target.files[0];
         if (!f) return;
         const reader = new FileReader();
@@ -479,7 +683,11 @@
           });
         };
         reader.readAsDataURL(f);
-      });
+        // Reset input so selecting same file again fires change
+        e.target.value = '';
+      }
+      if (photoCamera) photoCamera.addEventListener('change', handlePhotoFile);
+      if (photoGallery) photoGallery.addEventListener('change', handlePhotoFile);
 
       PCD.$('#addIngBtn', body).addEventListener('click', function () {
         const items = PCD.store.listIngredients().map(function (i) {
@@ -557,6 +765,82 @@
         clearTimeout(wireEditor._t3);
         wireEditor._t3 = setTimeout(renderEditor, 300);
       });
+
+      // ===== QUICK-ADD AUTOCOMPLETE =====
+      const qInput = PCD.$('#quickIngInput', body);
+      const qDD = PCD.$('#quickIngDD', body);
+      if (qInput && qDD) {
+        function renderDD(query) {
+          const q = (query || '').toLowerCase().trim();
+          if (!q) { qDD.style.display = 'none'; qDD.innerHTML = ''; return; }
+          const allIngs = PCD.store.listIngredients();
+          const alreadyInRecipe = new Set((data.ingredients || []).map(function (ri) { return ri.ingredientId; }));
+          const matches = allIngs.filter(function (i) {
+            return (i.name || '').toLowerCase().indexOf(q) >= 0 && !alreadyInRecipe.has(i.id);
+          }).slice(0, 8);
+
+          // If no existing ingredient matches, offer "create new"
+          const createOption = { id: '__new__', name: 'Create new: "' + query.trim() + '"', isCreate: true };
+
+          let html = '';
+          matches.forEach(function (i) {
+            html += '<div data-pick="' + i.id + '" style="padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
+              '<div style="flex:1;min-width:0;"><div style="font-weight:600;">' + PCD.escapeHtml(i.name) + '</div>' +
+              '<div class="text-muted" style="font-size:11px;">' + PCD.fmtMoney(i.pricePerUnit || 0) + '/' + (i.unit || '') + '</div></div>' +
+              '</div>';
+          });
+          // Always show "create new" at the bottom if query has content
+          html += '<div data-pick="__new__" data-name="' + PCD.escapeHtml(query.trim()) + '" style="padding:10px 12px;cursor:pointer;background:var(--brand-50);color:var(--brand-700);font-weight:600;font-size:13px;">' +
+            PCD.icon('plus', 14) + ' Create "' + PCD.escapeHtml(query.trim()) + '"</div>';
+          qDD.innerHTML = html;
+          qDD.style.display = 'block';
+        }
+
+        qInput.addEventListener('input', function () { renderDD(this.value); });
+        qInput.addEventListener('focus', function () { if (this.value) renderDD(this.value); });
+        // close on outside click
+        document.addEventListener('click', function (e) {
+          if (!e.target.closest || (!e.target.closest('#quickIngInput') && !e.target.closest('#quickIngDD'))) {
+            if (qDD) qDD.style.display = 'none';
+          }
+        });
+
+        PCD.on(qDD, 'click', '[data-pick]', function () {
+          const id = this.getAttribute('data-pick');
+          if (id === '__new__') {
+            const newName = this.getAttribute('data-name') || qInput.value.trim();
+            if (!newName) return;
+            // Create new ingredient with default unit + pricePerUnit=0
+            const newIng = PCD.store.upsertIngredient({
+              name: newName, unit: 'g', pricePerUnit: 0, category: 'cat_other'
+            });
+            data.ingredients = (data.ingredients || []).concat([{ ingredientId: newIng.id, amount: 100, unit: newIng.unit }]);
+            PCD.toast.success('Added "' + newName + '" — set its price in Ingredients');
+          } else {
+            const ing = PCD.store.getIngredient(id);
+            if (!ing) return;
+            data.ingredients = (data.ingredients || []).concat([{ ingredientId: id, amount: 100, unit: ing.unit || 'g' }]);
+          }
+          qInput.value = '';
+          qDD.style.display = 'none';
+          renderEditor();
+          setTimeout(function () {
+            const fresh = PCD.$('#quickIngInput', body);
+            if (fresh) fresh.focus();
+          }, 50);
+        });
+
+        // Enter key: pick first match
+        qInput.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            const first = qDD.querySelector('[data-pick]');
+            if (first) first.click();
+          } else if (e.key === 'Escape') {
+            qDD.style.display = 'none';
+          }
+        });
+      }
     }
 
     renderEditor();

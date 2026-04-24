@@ -188,9 +188,8 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 /* ---------- APP LAYOUT ---------- */
 .app {
   display: grid;
-  grid-template-rows: auto 1fr auto;
-  min-height: 100vh;
-  min-height: 100dvh; /* dynamic viewport — correct on mobile */
+  grid-template-rows: auto auto auto;
+  /* No min-height — let content define height. Body scrolls naturally. */
 }
 
 /* ---------- TOPBAR ---------- */

@@ -53,16 +53,35 @@
     while (node && node.firstChild) node.removeChild(node.firstChild);
   };
 
+  // Delegated event binding. Prevents duplicate listeners on the same
+  // (node, event, selector) triple — safe to call repeatedly from render functions.
   PCD.on = function (node, ev, sel, handler) {
-    // delegated event. If sel is function, sel is handler.
     if (typeof sel === 'function') {
+      // Direct listener — use a tag to prevent re-binding same function
+      node.__pcdListeners = node.__pcdListeners || {};
+      const key = ev + ':direct:' + (sel.__pcdId || (sel.__pcdId = Math.random().toString(36).slice(2)));
+      if (node.__pcdListeners[key]) return;
+      node.__pcdListeners[key] = true;
       node.addEventListener(ev, sel);
       return;
     }
+    // Delegated — one listener per (ev, sel) pair on this node
+    node.__pcdDelegated = node.__pcdDelegated || {};
+    const key = ev + ':' + sel;
+    if (node.__pcdDelegated[key]) {
+      // Already has delegation for this pair — just swap the handler
+      node.__pcdDelegated[key] = handler;
+      return;
+    }
+    node.__pcdDelegated[key] = handler;
     node.addEventListener(ev, function (e) {
       let t = e.target;
       while (t && t !== node) {
-        if (t.matches && t.matches(sel)) { handler.call(t, e); return; }
+        if (t.matches && t.matches(sel)) {
+          const currentHandler = node.__pcdDelegated[key];
+          if (currentHandler) currentHandler.call(t, e);
+          return;
+        }
         t = t.parentNode;
       }
     });
@@ -305,28 +324,185 @@
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="' + size + '" height="' + size + '">' + body + '</svg>';
   };
 
-  // Print helper: takes inner HTML of a .print-wrap, mounts directly to body,
-  // calls window.print(), then cleans up. Bypasses modal visibility issues.
-  PCD.print = function (printWrapHtml) {
-    // Remove any existing print host
-    const existing = document.getElementById('printHost');
+  // Print helper — popup window on desktop, iframe modal on mobile.
+  // Takes a full HTML string or just the body content (wraps if needed).
+  PCD.print = function (htmlOrContent, title) {
+    title = title || 'Print';
+
+    // If input looks like partial content (no <!DOCTYPE>), wrap it
+    let fullHtml = htmlOrContent;
+    if (!/^<!DOCTYPE|^<html/i.test(htmlOrContent.trim())) {
+      fullHtml = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' +
+        title + '</title>' +
+        '<style>' +
+        'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:24px;color:#000;background:#fff;margin:0}' +
+        '@page{margin:15mm;size:A4}' +
+        'h1,h2,h3{margin:0 0 8px}' +
+        'table{width:100%;border-collapse:collapse}' +
+        'td,th{padding:6px 10px;text-align:left;border-bottom:1px solid #ddd}' +
+        'th{background:#f5f5f5;font-size:11px;text-transform:uppercase;letter-spacing:0.04em}' +
+        'pre{white-space:pre-wrap;font-family:inherit;font-size:13px;line-height:1.8}' +
+        '.no-print{display:flex;gap:10px;padding:12px 16px;margin-bottom:16px;border-bottom:2px solid #16a34a;align-items:center;flex-wrap:wrap}' +
+        '@media print{.no-print{display:none !important}body{padding:0}}' +
+        '</style></head><body>' +
+        htmlOrContent +
+        '</body></html>';
+    }
+
+    // Inject print button at top (skipped when printing)
+    const printableHtml = fullHtml.replace(
+      /<body[^>]*>/,
+      '$&<div class="no-print"><button onclick="window.print()" style="padding:8px 18px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer">Print / Save as PDF</button><button onclick="window.close()" style="padding:8px 14px;background:#f0f0f0;color:#333;border:none;border-radius:6px;font-size:13px;cursor:pointer">Close</button><span style="font-size:11px;color:#888">Tip: pick "Save as PDF" in the print dialog</span></div>'
+    );
+
+    // Try popup (desktop / allowing browsers)
+    let w = null;
+    try {
+      w = window.open('', '_blank', 'width=900,height=750,scrollbars=yes');
+      if (w && w.document && w.document.write) {
+        w.document.write(printableHtml);
+        w.document.close();
+        w.focus();
+        return;
+      }
+    } catch (e) { w = null; }
+
+    // Fallback: in-app full-screen iframe modal (mobile / popup-blocked)
+    const existing = document.getElementById('pcd-print-modal');
     if (existing) existing.remove();
+    const modal = document.createElement('div');
+    modal.id = 'pcd-print-modal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;background:#fff';
+    modal.innerHTML =
+      '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid #e5e5e5;flex-shrink:0;background:#fff">' +
+        '<span style="font-size:14px;font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + PCD.escapeHtml(title) + '</span>' +
+        '<button id="pcd-print-close" style="background:none;border:none;font-size:24px;cursor:pointer;color:#666;padding:0 4px;line-height:1">×</button>' +
+      '</div>' +
+      '<iframe id="pcd-print-frame" style="flex:1;border:none;background:#fff;width:100%"></iframe>' +
+      '<div style="padding:10px 14px;display:flex;gap:8px;border-top:1px solid #e5e5e5;flex-shrink:0;background:#fff">' +
+        '<button id="pcd-print-go" style="flex:1;padding:12px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">Print / Save as PDF</button>' +
+        '<button id="pcd-print-close2" style="padding:12px 18px;background:#f0f0f0;color:#333;border:1px solid #ddd;border-radius:8px;font-size:13px;cursor:pointer">Close</button>' +
+      '</div>';
+    document.body.appendChild(modal);
+    document.getElementById('pcd-print-close').onclick = function () { modal.remove(); };
+    document.getElementById('pcd-print-close2').onclick = function () { modal.remove(); };
+    document.getElementById('pcd-print-go').onclick = function () {
+      const f = document.getElementById('pcd-print-frame');
+      if (f && f.contentWindow) f.contentWindow.print();
+    };
+    const frame = document.getElementById('pcd-print-frame');
+    if (frame) {
+      frame.contentDocument.open();
+      frame.contentDocument.write(fullHtml); // no print button needed here
+      frame.contentDocument.close();
+    }
+  };
+
+  // Action sheet — bottom sheet on mobile, center modal on desktop.
+  // opts: { title?, actions: [{icon?, label, onClick, danger?}] }
+  PCD.actionSheet = function (opts) {
+    opts = opts || {};
+    const actions = opts.actions || [];
     const host = document.createElement('div');
-    host.id = 'printHost';
-    host.className = 'print-wrap';
-    host.innerHTML = printWrapHtml;
+    host.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.5);display:flex;align-items:flex-end;justify-content:center;opacity:0;transition:opacity .2s ease;';
+    const panel = document.createElement('div');
+    panel.style.cssText = 'background:var(--surface);width:100%;max-width:480px;border-radius:var(--r-xl) var(--r-xl) 0 0;padding:8px 0 calc(8px + env(safe-area-inset-bottom));transform:translateY(100%);transition:transform .25s ease;';
+    let html = '';
+    if (opts.title) {
+      html += '<div style="padding:12px 16px 8px;font-weight:700;font-size:14px;color:var(--text-2);border-bottom:1px solid var(--border);">' + PCD.escapeHtml(opts.title) + '</div>';
+    }
+    actions.forEach(function (a, idx) {
+      const color = a.danger ? 'var(--danger)' : 'var(--text)';
+      html += '<button data-idx="' + idx + '" style="display:flex;align-items:center;gap:14px;width:100%;padding:14px 18px;border:0;background:transparent;color:' + color + ';font-size:15px;font-weight:500;text-align:start;cursor:pointer;">' +
+        (a.icon ? '<span style="display:inline-flex;flex-shrink:0;">' + (typeof a.icon === 'string' && a.icon.indexOf('<') < 0 ? PCD.icon(a.icon, 20) : a.icon) + '</span>' : '') +
+        '<span>' + PCD.escapeHtml(a.label) + '</span>' +
+        '</button>';
+    });
+    html += '<div style="height:6px;"></div>';
+    html += '<button data-idx="cancel" style="display:flex;align-items:center;justify-content:center;width:calc(100% - 24px);margin:0 12px;padding:14px;border:0;background:var(--surface-2);color:var(--text-2);font-size:15px;font-weight:600;border-radius:var(--r-md);cursor:pointer;">Cancel</button>';
+    panel.innerHTML = html;
+    host.appendChild(panel);
     document.body.appendChild(host);
-    // Add body class that CSS uses to hide everything else
-    document.body.classList.add('is-printing');
-    // Let browser paint then print
-    setTimeout(function () {
-      try { window.print(); } catch (e) {}
-      // Cleanup after print dialog closes
-      setTimeout(function () {
-        document.body.classList.remove('is-printing');
-        if (host.parentNode) host.parentNode.removeChild(host);
+    // Trigger animation
+    requestAnimationFrame(function () {
+      host.style.opacity = '1';
+      panel.style.transform = 'translateY(0)';
+    });
+
+    function close() {
+      host.style.opacity = '0';
+      panel.style.transform = 'translateY(100%)';
+      setTimeout(function () { if (host.parentNode) host.parentNode.removeChild(host); }, 250);
+    }
+    host.addEventListener('click', function (e) {
+      if (e.target === host) { close(); return; }
+      const btn = e.target.closest('[data-idx]');
+      if (!btn) return;
+      const idx = btn.getAttribute('data-idx');
+      if (idx === 'cancel') { close(); return; }
+      const action = actions[parseInt(idx, 10)];
+      close();
+      if (action && action.onClick) setTimeout(action.onClick, 120);
+    });
+    return { close: close };
+  };
+
+  // Long-press + right-click helper. Calls onAction with (element, event).
+  // Attach to a parent element with a selector.
+  PCD.longPress = function (parent, selector, onAction) {
+    if (!parent || parent.__pcdLongPress) return;
+    parent.__pcdLongPress = true;
+    let pressTimer = null;
+    let pressedEl = null;
+    let startX = 0, startY = 0;
+
+    parent.addEventListener('contextmenu', function (e) {
+      const el = e.target.closest(selector);
+      if (!el) return;
+      e.preventDefault();
+      onAction(el, e);
+    });
+
+    parent.addEventListener('touchstart', function (e) {
+      const el = e.target.closest(selector);
+      if (!el) return;
+      pressedEl = el;
+      const touch = e.touches[0];
+      startX = touch.clientX;
+      startY = touch.clientY;
+      clearTimeout(pressTimer);
+      pressTimer = setTimeout(function () {
+        if (pressedEl === el) {
+          // Haptic
+          try { if (navigator.vibrate) navigator.vibrate(30); } catch (e) {}
+          onAction(el, e);
+          pressedEl = null; // Prevent click-after
+        }
       }, 500);
-    }, 100);
+    }, { passive: true });
+
+    parent.addEventListener('touchmove', function (e) {
+      if (!pressTimer) return;
+      const touch = e.touches[0];
+      const dx = Math.abs(touch.clientX - startX);
+      const dy = Math.abs(touch.clientY - startY);
+      if (dx > 10 || dy > 10) {
+        clearTimeout(pressTimer);
+        pressTimer = null;
+        pressedEl = null;
+      }
+    }, { passive: true });
+
+    parent.addEventListener('touchend', function () {
+      clearTimeout(pressTimer);
+      pressTimer = null;
+      pressedEl = null;
+    });
+    parent.addEventListener('touchcancel', function () {
+      clearTimeout(pressTimer);
+      pressTimer = null;
+      pressedEl = null;
+    });
   };
 
 })();

@@ -451,9 +451,12 @@
 
     const printBtn = PCD.el('button', { class: 'btn btn-primary' });
     printBtn.innerHTML = PCD.icon('print',16) + ' <span>' + t('print') + '</span>';
+    const qrBtn = PCD.el('button', { class: 'btn btn-outline' });
+    qrBtn.innerHTML = PCD.icon('grid',16) + ' <span>QR</span>';
     const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('close') });
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
     footer.appendChild(closeBtn);
+    footer.appendChild(qrBtn);
     footer.appendChild(printBtn);
 
     const m = PCD.modal.open({
@@ -463,6 +466,30 @@
 
     closeBtn.addEventListener('click', function () { m.close(); });
     printBtn.addEventListener('click', function () { const wrap = body.querySelector('.print-wrap'); if (wrap) PCD.print(wrap.innerHTML); else window.print(); });
+    qrBtn.addEventListener('click', function () {
+      // Build plain-text menu for QR payload (text mode - works with any scanner)
+      const lines = [menu.name || 'Menu'];
+      if (menu.subtitle) lines.push(menu.subtitle);
+      lines.push('');
+      (menu.sections || []).forEach(function (sec) {
+        if (!sec.items || sec.items.length === 0) return;
+        lines.push('— ' + sec.name + ' —');
+        sec.items.forEach(function (it) {
+          const r = it.recipeId ? PCD.store.getRecipe(it.recipeId) : null;
+          const name = it.customName || (r ? r.name : '(removed)');
+          const price = (it.price !== undefined && it.price !== null && it.price !== '') ? Number(it.price) : (r && r.salePrice ? r.salePrice : null);
+          let line = '• ' + name;
+          if (!menu.hidePrices && price) line += ' — ' + PCD.fmtMoney(price);
+          lines.push(line);
+        });
+        lines.push('');
+      });
+      PCD.qr.show({
+        title: menu.name || 'Menu',
+        subtitle: 'Scan to view',
+        text: lines.join('\n')
+      });
+    });
   }
 
   PCD.tools = PCD.tools || {};

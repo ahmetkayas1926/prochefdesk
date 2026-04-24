@@ -102,6 +102,7 @@
         shoppingLists: state.shoppingLists,
         team: state.team,
         costHistory: state.costHistory,
+        pendingStockCount: state.pendingStockCount,
       };
 
       supabase.from('user_data').upsert({

@@ -293,6 +293,133 @@
     });
   }
 
+  // ============ PWA INSTALL BANNER ============
+  let _deferredInstallPrompt = null;
+  window.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault();
+    _deferredInstallPrompt = e;
+    showInstallBanner();
+  });
+  window.addEventListener('appinstalled', function () {
+    _deferredInstallPrompt = null;
+    const b = document.getElementById('pcd-install-banner');
+    if (b) b.remove();
+    try { localStorage.setItem('pcd_pwa_installed', '1'); } catch (e) {}
+  });
+
+  function showInstallBanner() {
+    try {
+      if (localStorage.getItem('pcd_pwa_banner_dismissed') === '1') return;
+      if (localStorage.getItem('pcd_pwa_installed') === '1') return;
+    } catch (e) {}
+    if (document.getElementById('pcd-install-banner')) return;
+    const banner = document.createElement('div');
+    banner.id = 'pcd-install-banner';
+    banner.style.cssText = 'position:fixed;bottom:16px;inset-inline-start:16px;inset-inline-end:16px;max-width:420px;margin:0 auto;background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow-lg);border-radius:var(--r-md);padding:12px 14px;z-index:90;display:flex;align-items:center;gap:12px;animation:slideUp .3s ease;';
+    banner.innerHTML =
+      '<div style="width:40px;height:40px;border-radius:var(--r-sm);background:linear-gradient(135deg,var(--brand-500),var(--brand-700));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0;">PC</div>' +
+      '<div style="flex:1;min-width:0;">' +
+        '<div style="font-weight:700;font-size:14px;">Install ProChefDesk</div>' +
+        '<div class="text-muted" style="font-size:12px;">Add to home screen for faster access</div>' +
+      '</div>' +
+      '<button id="pcd-install-btn" class="btn btn-primary btn-sm" style="flex-shrink:0;">Install</button>' +
+      '<button id="pcd-install-dismiss" class="icon-btn" style="flex-shrink:0;width:32px;height:32px;" aria-label="Dismiss">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/></svg>' +
+      '</button>';
+    document.body.appendChild(banner);
+
+    document.getElementById('pcd-install-btn').onclick = function () {
+      if (_deferredInstallPrompt) {
+        _deferredInstallPrompt.prompt();
+        _deferredInstallPrompt.userChoice.then(function () {
+          _deferredInstallPrompt = null;
+          banner.remove();
+        });
+      }
+    };
+    document.getElementById('pcd-install-dismiss').onclick = function () {
+      try { localStorage.setItem('pcd_pwa_banner_dismissed', '1'); } catch (e) {}
+      banner.remove();
+    };
+  }
+
+  // ============ OFFLINE DETECTION ============
+  function updateOfflineStatus() {
+    const existing = document.getElementById('pcd-offline-banner');
+    if (!navigator.onLine) {
+      if (existing) return;
+      const b = document.createElement('div');
+      b.id = 'pcd-offline-banner';
+      b.className = 'offline-banner';
+      b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 1l22 22M16.72 11.06A10.94 10.94 0 0119 12.55M5 12.55a10.94 10.94 0 015.17-2.39M10.71 5.05A16 16 0 0122.58 9M1.42 9a15.91 15.91 0 014.7-2.88M8.53 16.11a6 6 0 016.95 0M12 20h.01" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+        '<span>You are offline — changes will sync when you reconnect</span>';
+      document.body.appendChild(b);
+    } else {
+      if (existing) existing.remove();
+    }
+  }
+  window.addEventListener('online', updateOfflineStatus);
+  window.addEventListener('offline', updateOfflineStatus);
+  // Initial check
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    setTimeout(updateOfflineStatus, 1000);
+  }
+
+  // ============ KEYBOARD SHORTCUTS (desktop) ============
+  document.addEventListener('keydown', function (e) {
+    // Ignore if typing in input/textarea/select (except for Esc which always works)
+    const tag = (e.target && e.target.tagName || '').toUpperCase();
+    const inField = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (e.target && e.target.isContentEditable);
+
+    // Esc: close top modal (already handled by popstate on back button too)
+    if (e.key === 'Escape') {
+      if (PCD.modal && PCD.modal.isOpen()) {
+        e.preventDefault();
+        PCD.modal.closeTop();
+      }
+      return;
+    }
+
+    if (inField) return;
+
+    // Ctrl/Cmd + K: focus search (context-aware: go to recipes page and focus search)
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      const cur = PCD.router.currentView();
+      const search = document.querySelector('#recipeSearch, #ingSearch, input[type=search]');
+      if (search) {
+        search.focus();
+      } else {
+        PCD.router.go('recipes');
+        setTimeout(function () {
+          const s = document.querySelector('#recipeSearch, input[type=search]');
+          if (s) s.focus();
+        }, 200);
+      }
+      return;
+    }
+
+    // "n" → new recipe (if on recipes page)
+    if (e.key === 'n' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      const cur = PCD.router.currentView();
+      if (cur === 'recipes') {
+        const btn = document.getElementById('newRecipeBtn');
+        if (btn) { e.preventDefault(); btn.click(); }
+      } else if (cur === 'ingredients') {
+        const btn = document.getElementById('newIngBtn');
+        if (btn) { e.preventDefault(); btn.click(); }
+      }
+      return;
+    }
+
+    // "/" → focus search
+    if (e.key === '/' && !e.ctrlKey && !e.metaKey) {
+      const search = document.querySelector('#recipeSearch, #ingSearch, input[type=search]');
+      if (search) { e.preventDefault(); search.focus(); }
+      return;
+    }
+  });
+
   // Boot on DOMContentLoaded
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', boot);

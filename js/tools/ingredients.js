@@ -105,10 +105,25 @@
           const thumb = PCD.el('div', { class: 'list-item-thumb' });
           thumb.textContent = (i.name || '?').charAt(0).toUpperCase();
           const bodyDiv = PCD.el('div', { class: 'list-item-body' });
+          // Compute price trend indicator if priceHistory exists
+          const hist = (i.priceHistory || []).slice();
+          let trendHtml = '';
+          if (hist.length >= 1) {
+            // Latest history entry's price vs current
+            const last = hist[hist.length - 1];
+            const cur = Number(i.pricePerUnit) || 0;
+            const prev = Number(last.price) || 0;
+            if (prev && cur && prev !== cur) {
+              const up = cur > prev;
+              trendHtml = '<span data-hist="' + i.id + '" style="color:' + (up ? 'var(--danger)' : 'var(--success)') + ';font-weight:700;cursor:pointer;font-size:11px;" title="Price history">' +
+                (up ? '▲' : '▼') + ' ' + Math.abs(((cur-prev)/prev)*100).toFixed(0) + '%</span>';
+            }
+          }
           bodyDiv.innerHTML = `
             <div class="list-item-title">${PCD.escapeHtml(i.name)}</div>
             <div class="list-item-meta">
               <span>${PCD.fmtMoney(i.pricePerUnit)} / ${i.unit}</span>
+              ${trendHtml ? '<span>·</span>' + trendHtml : ''}
               ${i.supplier ? '<span>·</span><span>' + PCD.escapeHtml(i.supplier) + '</span>' : ''}
             </div>
           `;
@@ -177,8 +192,14 @@
       paint();
     }, 150));
 
+    PCD.on(listEl, 'click', '[data-hist]', function (e) {
+      e.stopPropagation();
+      openPriceHistory(this.getAttribute('data-hist'));
+    });
+
     PCD.on(listEl, 'click', '[data-iid]', function (e) {
       if (e.target.closest('.select-cb-i')) return;
+      if (e.target.closest('[data-hist]')) return;
       if (selectMode) {
         const cb = this.querySelector('.select-cb-i');
         if (cb) { cb.checked = !cb.checked; cb.dispatchEvent(new Event('change')); }
@@ -188,6 +209,70 @@
     });
 
     paint();
+  }
+
+  function openPriceHistory(iid) {
+    const ing = PCD.store.getIngredient(iid);
+    if (!ing) return;
+    const hist = (ing.priceHistory || []).slice();
+    // Prepend current price as "now"
+    const now = { at: ing.updatedAt || new Date().toISOString(), price: ing.pricePerUnit, current: true };
+    const series = hist.concat([now]).slice(-10);
+
+    const body = PCD.el('div');
+    if (series.length < 2) {
+      body.innerHTML = '<div class="empty"><div class="empty-desc">No price history yet. Price changes will be tracked automatically.</div></div>';
+    } else {
+      // Simple SVG line chart
+      const W = 540, H = 160, pad = 24;
+      const prices = series.map(function (s) { return s.price || 0; });
+      const min = Math.min.apply(null, prices);
+      const max = Math.max.apply(null, prices);
+      const range = max - min || 1;
+      const step = (W - pad * 2) / (series.length - 1);
+      let path = '';
+      let dots = '';
+      series.forEach(function (s, i) {
+        const x = pad + i * step;
+        const y = H - pad - ((s.price - min) / range) * (H - pad * 2);
+        path += (i === 0 ? 'M' : ' L') + x.toFixed(1) + ',' + y.toFixed(1);
+        dots += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="3" fill="var(--brand-600)"/>';
+      });
+      const rows = series.slice().reverse().map(function (s, idx) {
+        const realIdx = series.length - 1 - idx;
+        const prev = realIdx > 0 ? series[realIdx - 1].price : null;
+        const change = prev !== null ? s.price - prev : 0;
+        const up = change > 0;
+        const color = change === 0 ? 'var(--text-3)' : (up ? 'var(--danger)' : 'var(--success)');
+        const arrow = change === 0 ? '—' : (up ? '▲' : '▼');
+        const d = new Date(s.at);
+        return '<tr><td style="padding:6px 10px;font-size:12px;color:var(--text-3);">' + PCD.fmtDate(d, {month:'short',day:'numeric',year:'numeric'}) + '</td>' +
+          '<td style="padding:6px 10px;font-family:var(--font-mono);font-weight:600;">' + PCD.fmtMoney(s.price) + '/' + ing.unit + '</td>' +
+          '<td style="padding:6px 10px;color:' + color + ';font-weight:600;font-size:12px;">' + arrow + (change !== 0 ? ' ' + PCD.fmtMoney(Math.abs(change)) : '') + '</td></tr>';
+      }).join('');
+      body.innerHTML =
+        '<div style="padding:8px 0;margin-bottom:12px;">' +
+          '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block;">' +
+            '<path d="' + path + '" fill="none" stroke="var(--brand-600)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+            dots +
+          '</svg>' +
+        '</div>' +
+        '<table style="width:100%;border-collapse:collapse;border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden;">' +
+          '<thead><tr><th style="text-align:left;padding:6px 10px;font-size:10px;color:var(--text-3);background:var(--surface-2);border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:0.04em;">Date</th>' +
+          '<th style="text-align:left;padding:6px 10px;font-size:10px;color:var(--text-3);background:var(--surface-2);border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:0.04em;">Price</th>' +
+          '<th style="text-align:left;padding:6px 10px;font-size:10px;color:var(--text-3);background:var(--surface-2);border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:0.04em;">Change</th></tr></thead>' +
+          '<tbody>' + rows + '</tbody>' +
+        '</table>';
+    }
+
+    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('btn_close') });
+    const footer = PCD.el('div', { style: { display: 'flex', width: '100%' } });
+    footer.appendChild(closeBtn);
+    const m = PCD.modal.open({
+      title: ing.name + ' — Price History',
+      body: body, footer: footer, size: 'md', closable: true
+    });
+    closeBtn.addEventListener('click', function () { m.close(); });
   }
 
   function openEditor(iid, callback) {

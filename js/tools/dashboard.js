@@ -76,9 +76,64 @@
       upcomingEvent = upcoming[0] || null;
     }
 
+    // Compute recipe stats for trend + top widgets (ingMap already built above)
+    const myRecipes = recipes.filter(function (r) { return !r.isSample; });
+    const recipeStats = myRecipes.map(function (r) {
+      const cost = PCD.recipes && PCD.recipes.computeFoodCost ? PCD.recipes.computeFoodCost(r, ingMap) : 0;
+      const cps = r.servings ? cost / r.servings : cost;
+      const margin = (r.salePrice && r.salePrice > 0) ? r.salePrice - cps : null;
+      return { r: r, cost: cost, cps: cps, margin: margin };
+    });
+    const topExpensive = recipeStats.slice().sort(function (a, b) { return b.cps - a.cps; }).slice(0, 3);
+    const topMargin = recipeStats.filter(function (s) { return s.margin !== null; }).sort(function (a, b) { return b.margin - a.margin; }).slice(0, 3);
+
+    // Food cost trend: last N recipes by updatedAt
+    const trendData = myRecipes
+      .filter(function (r) { return r.salePrice && r.salePrice > 0; })
+      .slice()
+      .sort(function (a, b) { return (a.updatedAt || '').localeCompare(b.updatedAt || ''); })
+      .slice(-8)
+      .map(function (r) {
+        const cost = PCD.recipes && PCD.recipes.computeFoodCost ? PCD.recipes.computeFoodCost(r, ingMap) : 0;
+        const cps = r.servings ? cost / r.servings : cost;
+        const pct = r.salePrice > 0 ? (cps / r.salePrice) * 100 : 0;
+        return { name: r.name, pct: pct };
+      });
+
     const greeting = user && user.name
       ? `${t('dashboard_title')}, ${PCD.escapeHtml(user.name.split(' ')[0])}`
       : t('dashboard_title');
+
+    // Build trend SVG
+    let trendSvg = '';
+    if (trendData.length >= 2) {
+      const W = 560, H = 130, pad = 20;
+      const vals = trendData.map(function (d) { return d.pct; });
+      const min = Math.min.apply(null, vals.concat([20]));
+      const max = Math.max.apply(null, vals.concat([50]));
+      const range = max - min || 1;
+      const step = (W - pad * 2) / (trendData.length - 1);
+      let path = '';
+      let dots = '';
+      trendData.forEach(function (d, i) {
+        const x = pad + i * step;
+        const y = H - pad - ((d.pct - min) / range) * (H - pad * 2);
+        path += (i === 0 ? 'M' : ' L') + x.toFixed(1) + ',' + y.toFixed(1);
+        const color = d.pct <= 35 ? 'var(--success)' : d.pct <= 45 ? 'var(--warning)' : 'var(--danger)';
+        dots += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="4" fill="' + color + '"><title>' + PCD.escapeHtml(d.name) + ': ' + d.pct.toFixed(1) + '%</title></circle>';
+      });
+      trendSvg =
+        '<div class="card mb-4" style="padding:14px 16px;">' +
+          '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;">' +
+            '<div style="font-weight:700;font-size:14px;">Food cost trend · last ' + trendData.length + ' recipes</div>' +
+            '<div class="text-muted" style="font-size:11px;">Green ≤ 35% · Amber ≤ 45% · Red &gt;</div>' +
+          '</div>' +
+          '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block;">' +
+            '<path d="' + path + '" fill="none" stroke="var(--brand-600)" stroke-width="2"/>' +
+            dots +
+          '</svg>' +
+        '</div>';
+    }
 
     view.innerHTML = `
       <div class="page-header">
@@ -106,6 +161,31 @@
           <div class="stat-value" style="${lowStockCount > 0 ? 'color:var(--warning);' : ''}">${lowStockCount}</div>
         </div>
       </div>
+
+      ${trendSvg}
+
+      ${(topExpensive.length > 0 || topMargin.length > 0) ? `
+        <div class="grid mb-4" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));gap:12px;">
+          ${topExpensive.length > 0 ? `
+            <div class="card" style="padding:14px;">
+              <div style="font-weight:700;font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:10px;">Most Expensive Recipes</div>
+              ${topExpensive.map(function (s) { return '<div data-rid="' + s.r.id + '" style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);cursor:pointer;">' +
+                '<span style="font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + PCD.escapeHtml(s.r.name) + '</span>' +
+                '<span style="font-weight:700;color:var(--danger);white-space:nowrap;">' + PCD.fmtMoney(s.cps) + '</span>' +
+              '</div>'; }).join('')}
+            </div>
+          ` : ''}
+          ${topMargin.length > 0 ? `
+            <div class="card" style="padding:14px;">
+              <div style="font-weight:700;font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:10px;">Best Margin Recipes</div>
+              ${topMargin.map(function (s) { return '<div data-rid="' + s.r.id + '" style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);cursor:pointer;">' +
+                '<span style="font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + PCD.escapeHtml(s.r.name) + '</span>' +
+                '<span style="font-weight:700;color:var(--success);white-space:nowrap;">' + PCD.fmtMoney(s.margin) + '</span>' +
+              '</div>'; }).join('')}
+            </div>
+          ` : ''}
+        </div>
+      ` : ''}
 
       ${upcomingEvent ? `
         <div class="card card-hover mb-4" data-action="view-event" data-eid="${upcomingEvent.id}" style="padding:14px;background:linear-gradient(135deg,var(--brand-50),var(--brand-100));border-color:var(--brand-300);cursor:pointer;">

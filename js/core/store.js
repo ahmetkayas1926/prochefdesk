@@ -46,6 +46,7 @@
     shoppingLists: {}, // phase 2 shopping lists
     team: [],
     costHistory: [],   // price change log
+    pendingStockCount: null, // { countedAt, countedBy, counts: {iid:num}, status } - awaits approval
 
     // sync meta (not the data itself)
     _meta: {

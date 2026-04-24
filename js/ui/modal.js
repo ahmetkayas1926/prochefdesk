@@ -31,9 +31,18 @@
     else if (title instanceof Node) titleEl.appendChild(title);
     header.appendChild(titleEl);
     if (closable) {
-      const closeBtn = PCD.el('button', { class: 'icon-btn', 'aria-label': 'Close' });
+      const closeBtn = PCD.el('button', { class: 'icon-btn', 'aria-label': 'Close', type: 'button' });
       closeBtn.innerHTML = PCD.icon('x', 20);
-      closeBtn.addEventListener('click', function () { modal.close(); });
+      // Make SVG child transparent to pointer events so clicks always hit the button
+      closeBtn.style.cursor = 'pointer';
+      Array.from(closeBtn.querySelectorAll('svg, svg *')).forEach(function (el) {
+        el.style.pointerEvents = 'none';
+      });
+      closeBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        modal.close();
+      });
       header.appendChild(closeBtn);
     }
     panel.appendChild(header);
@@ -55,9 +64,24 @@
 
     root.appendChild(panel);
 
-    // Click on backdrop closes
-    root.addEventListener('click', function (e) {
-      if (e.target === root && closable) modal.close();
+    // Click on backdrop closes — use mousedown+mouseup pair to avoid
+    // accidental close when text selection ends outside the panel.
+    let backdropDown = false;
+    root.addEventListener('mousedown', function (e) {
+      backdropDown = (e.target === root);
+    });
+    root.addEventListener('mouseup', function (e) {
+      if (!closable) return;
+      // Only close if BOTH mousedown and mouseup happened on backdrop
+      if (backdropDown && e.target === root) {
+        modal.close();
+      }
+      backdropDown = false;
+    });
+    // Touch support — on touch devices click works fine since no drag
+    root.addEventListener('touchend', function (e) {
+      if (!closable) return;
+      if (e.target === root) modal.close();
     });
 
     // Prevent background scroll while modal open
@@ -93,6 +117,10 @@
       close: function () {
         if (!modal._isOpen) return;
         modal._isOpen = false;
+        // Immediately disable pointer events so the closing modal doesn't
+        // swallow clicks during the 250ms transition. This fixes the
+        // "need 3 clicks to close" bug on fast clicks.
+        root.style.pointerEvents = 'none';
         root.classList.remove('open');
         // Remove from stack
         const idx = stack.indexOf(modal);
@@ -102,7 +130,6 @@
           document.documentElement.style.overflow = '';
         }
         // Fire onClose SYNCHRONOUSLY so callers' resolve() runs immediately
-        // (previously delayed by 250ms which caused race conditions)
         if (typeof modal._onClose === 'function') {
           try { modal._onClose(); } catch (e) { PCD.error && PCD.error(e); }
           modal._onClose = null;

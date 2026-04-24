@@ -82,13 +82,24 @@
               </div>
             </div>
             <!-- Haptic -->
-            <div class="flex items-center justify-between" style="padding:14px 16px;">
+            <div class="flex items-center justify-between" style="padding:14px 16px;border-bottom:1px solid var(--border);">
               <div style="flex:1;">
                 <div style="font-weight:600;">${t('haptic_feedback')}</div>
                 <div class="text-muted text-sm">${PCD.isMobile() ? '' : '(mobile only)'}</div>
               </div>
               <label class="switch">
                 <input type="checkbox" id="prefHaptic" ${haptic ? 'checked' : ''}>
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+            <!-- Require approval for stock counts -->
+            <div class="flex items-center justify-between" style="padding:14px 16px;">
+              <div style="flex:1;">
+                <div style="font-weight:600;">Stock count approval</div>
+                <div class="text-muted text-sm">Require head chef approval for stock counts</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="prefRequireApproval" ${prefs.requireCountApproval ? 'checked' : ''}>
                 <span class="switch-slider"></span>
               </label>
             </div>
@@ -113,7 +124,28 @@
             <button class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;border-bottom:1px solid var(--border);" id="exportDataBtn">
               <div>
                 <div style="font-weight:600;">${t('export_data')}</div>
-                <div class="text-muted text-sm">JSON file</div>
+                <div class="text-muted text-sm">Full JSON backup</div>
+              </div>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;border-bottom:1px solid var(--border);" id="importDataBtn">
+              <div>
+                <div style="font-weight:600;">Import Backup</div>
+                <div class="text-muted text-sm">Restore from JSON</div>
+              </div>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;border-bottom:1px solid var(--border);" id="exportRecipesBtn">
+              <div>
+                <div style="font-weight:600;">Export Recipes (CSV)</div>
+                <div class="text-muted text-sm">For spreadsheet / accounting</div>
+              </div>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;border-bottom:1px solid var(--border);" id="exportIngredientsBtn">
+              <div>
+                <div style="font-weight:600;">Export Ingredients (CSV)</div>
+                <div class="text-muted text-sm">Price list / inventory</div>
               </div>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
@@ -182,6 +214,11 @@
     PCD.$('#prefHaptic', view).addEventListener('change', function () {
       PCD.store.set('prefs.haptic', this.checked);
     });
+    const approvalInp = PCD.$('#prefRequireApproval', view);
+    if (approvalInp) approvalInp.addEventListener('change', function () {
+      PCD.store.set('prefs.requireCountApproval', this.checked);
+      PCD.toast.success(this.checked ? 'Approval enabled' : 'Approval disabled');
+    });
 
     const syncBtn = PCD.$('#syncNowBtn', view);
     if (syncBtn) syncBtn.addEventListener('click', function () {
@@ -205,6 +242,78 @@
       };
       PCD.download(JSON.stringify(payload, null, 2), 'prochefdesk-backup-' + new Date().toISOString().slice(0, 10) + '.json', 'application/json');
       PCD.toast.success('Exported');
+    });
+
+    const importBtn = PCD.$('#importDataBtn', view);
+    if (importBtn) importBtn.addEventListener('click', function () {
+      // File picker
+      const inp = document.createElement('input');
+      inp.type = 'file';
+      inp.accept = '.json,application/json';
+      inp.onchange = function (e) {
+        const f = e.target.files && e.target.files[0];
+        if (!f) return;
+        const reader = new FileReader();
+        reader.onload = function (evt) {
+          try {
+            const parsed = JSON.parse(evt.target.result);
+            const data = parsed.data || parsed;
+            PCD.modal.confirm({
+              icon: '⚠️', iconKind: 'warning', danger: true,
+              title: 'Import will REPLACE all current data',
+              text: 'This cannot be undone. Your current recipes, ingredients, menus, etc. will be replaced with the backup contents. Continue?',
+              okText: 'Replace everything'
+            }).then(function (ok) {
+              if (!ok) return;
+              // Merge restore — replace top-level keys
+              Object.keys(data).forEach(function (k) {
+                if (k !== '_meta') PCD.store.set(k, data[k]);
+              });
+              PCD.toast.success('Backup restored — reloading...');
+              setTimeout(function () { window.location.reload(); }, 800);
+            });
+          } catch (err) {
+            PCD.toast.error('Invalid backup file: ' + err.message);
+          }
+        };
+        reader.readAsText(f);
+      };
+      inp.click();
+    });
+
+    const expRec = PCD.$('#exportRecipesBtn', view);
+    if (expRec) expRec.addEventListener('click', function () {
+      const recipes = PCD.store.listRecipes();
+      if (!recipes.length) { PCD.toast.info('No recipes to export'); return; }
+      const ingMap = {};
+      PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
+      const rows = [['Name', 'Category', 'Servings', 'Food Cost', 'Cost/Serving', 'Sale Price', 'Food Cost %', 'Prep Time', 'Cook Time', 'Ingredients']];
+      recipes.forEach(function (r) {
+        const cost = PCD.recipes.computeFoodCost(r, ingMap);
+        const cps = (r.servings ? cost / r.servings : cost);
+        const fcp = (r.salePrice && r.salePrice > 0) ? ((cps / r.salePrice) * 100) : '';
+        const ingList = (r.ingredients || []).map(function (ri) {
+          const ing = ingMap[ri.ingredientId];
+          return (ing ? ing.name : '(removed)') + ':' + PCD.fmtNumber(ri.amount) + (ri.unit || '');
+        }).join('; ');
+        rows.push([r.name, r.category || '', r.servings || '', cost.toFixed(2), cps.toFixed(2), r.salePrice || '', fcp ? fcp.toFixed(1) : '', r.prepTime || '', r.cookTime || '', ingList]);
+      });
+      const csv = rows.map(function (r) { return r.map(function (c) { return '"' + String(c == null ? '' : c).replace(/"/g, '""') + '"'; }).join(','); }).join('\n');
+      PCD.download(csv, 'recipes-' + new Date().toISOString().slice(0, 10) + '.csv', 'text/csv');
+      PCD.toast.success('Recipes exported (' + recipes.length + ')');
+    });
+
+    const expIng = PCD.$('#exportIngredientsBtn', view);
+    if (expIng) expIng.addEventListener('click', function () {
+      const ings = PCD.store.listIngredients();
+      if (!ings.length) { PCD.toast.info('No ingredients to export'); return; }
+      const rows = [['Name', 'Price', 'Unit', 'Category', 'Supplier']];
+      ings.forEach(function (i) {
+        rows.push([i.name, i.pricePerUnit || 0, i.unit || '', i.category || '', i.supplier || '']);
+      });
+      const csv = rows.map(function (r) { return r.map(function (c) { return '"' + String(c == null ? '' : c).replace(/"/g, '""') + '"'; }).join(','); }).join('\n');
+      PCD.download(csv, 'ingredients-' + new Date().toISOString().slice(0, 10) + '.csv', 'text/csv');
+      PCD.toast.success('Ingredients exported (' + ings.length + ')');
     });
 
     PCD.$('#demoToggleBtn', view).addEventListener('click', function () {

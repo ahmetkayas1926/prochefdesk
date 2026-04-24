@@ -61,11 +61,20 @@
   }
 
   // Get recipe's allergen set (union of all ingredient allergens)
+  // Accepts ingredients as array OR map keyed by id — tolerant API.
   function recipeAllergens(recipe, ingredients) {
     const set = {};
     if (!recipe || !recipe.ingredients) return [];
-    const ingMap = {};
-    ingredients.forEach(function (i) { ingMap[i.id] = i; });
+    // Normalize to map
+    let ingMap;
+    if (Array.isArray(ingredients)) {
+      ingMap = {};
+      ingredients.forEach(function (i) { ingMap[i.id] = i; });
+    } else if (ingredients && typeof ingredients === 'object') {
+      ingMap = ingredients;
+    } else {
+      ingMap = {};
+    }
 
     recipe.ingredients.forEach(function (ri) {
       const ing = ingMap[ri.ingredientId];

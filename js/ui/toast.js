@@ -18,16 +18,29 @@
     }
   }
 
-  function show(msg, kind, duration) {
+  function show(msg, kind, duration, opts) {
     const h = host();
-    if (!h) return;
+    if (!h) return null;
+    opts = opts || {};
     const el = PCD.el('div', { class: 'toast toast-' + (kind || 'info') });
-    el.innerHTML = icon(kind || 'info') + '<span>' + PCD.escapeHtml(msg) + '</span>';
+    el.innerHTML = icon(kind || 'info') + '<span style="flex:1;">' + PCD.escapeHtml(msg) + '</span>';
+    if (opts.action) {
+      const actionBtn = PCD.el('button', {
+        style: { background: 'transparent', border: '1px solid rgba(255,255,255,0.3)', color: 'inherit', padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', marginInlineStart: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' },
+        text: opts.action.label || 'UNDO'
+      });
+      actionBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        try { opts.action.onClick(); } catch (err) {}
+        el.classList.remove('show');
+        setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 240);
+      });
+      el.appendChild(actionBtn);
+    }
     h.appendChild(el);
-    // trigger transition
     requestAnimationFrame(function () { el.classList.add('show'); });
-    const dur = duration || (kind === 'error' ? 4500 : 2500);
-    setTimeout(function () {
+    const dur = duration || (kind === 'error' ? 4500 : (opts.action ? 5000 : 2500));
+    const timer = setTimeout(function () {
       el.classList.remove('show');
       setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 240);
     }, dur);
@@ -35,13 +48,21 @@
     if (kind === 'error') PCD.haptic('error');
     else if (kind === 'success') PCD.haptic('success');
     else PCD.haptic('tick');
+
+    return {
+      dismiss: function () {
+        clearTimeout(timer);
+        el.classList.remove('show');
+        setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 240);
+      }
+    };
   }
 
   PCD.toast = {
-    success: function (m, d) { show(m, 'success', d); },
-    error:   function (m, d) { show(m, 'error', d); },
-    warning: function (m, d) { show(m, 'warning', d); },
-    info:    function (m, d) { show(m, 'info', d); },
+    success: function (m, d, o) { return show(m, 'success', d, o); },
+    error:   function (m, d, o) { return show(m, 'error', d, o); },
+    warning: function (m, d, o) { return show(m, 'warning', d, o); },
+    info:    function (m, d, o) { return show(m, 'info', d, o); },
     show:    show,
   };
 })();
