@@ -34,15 +34,17 @@
       const closeBtn = PCD.el('button', { class: 'icon-btn', 'aria-label': 'Close', type: 'button' });
       closeBtn.innerHTML = PCD.icon('x', 20);
       closeBtn.style.cursor = 'pointer';
-      // Bind handler with capture phase to fire before any other listener
+      // Bind handler — close in next microtask so this click event finishes
+      // (and won't reach elements behind the modal once body.position changes)
       const closeHandler = function (e) {
         if (!modal._isOpen) return;
         e.preventDefault();
         e.stopPropagation();
-        modal.close();
+        // Defer close so the click event completes its dispatch first
+        setTimeout(function () { modal.close(); }, 0);
       };
       closeBtn.addEventListener('click', closeHandler);
-      // Also bind to pointerdown for instant response (fixes "needs 2 clicks" on slow renders)
+      // Also catch pointerdown to lock state immediately
       closeBtn.addEventListener('pointerdown', function (e) {
         if (!modal._isOpen) return;
         e.preventDefault();
@@ -79,14 +81,17 @@
       if (!closable) return;
       // Only close if BOTH mousedown and mouseup happened on backdrop
       if (backdropDown && e.target === root) {
-        modal.close();
+        // Defer so this click event finishes before body.position changes
+        setTimeout(function () { modal.close(); }, 0);
       }
       backdropDown = false;
     });
     // Touch support — on touch devices click works fine since no drag
     root.addEventListener('touchend', function (e) {
       if (!closable) return;
-      if (e.target === root) modal.close();
+      if (e.target === root) {
+        setTimeout(function () { modal.close(); }, 0);
+      }
     });
 
     // Prevent background scroll while modal open

@@ -43,22 +43,16 @@
       PCD.router.register('recipes', PCD.tools.recipes.render);
       PCD.router.register('ingredients', PCD.tools.ingredients.render);
       PCD.router.register('account', PCD.tools.account.render);
-      PCD.router.register('tools', PCD.tools.toolsHub.render);
-      // Phase 2
+      // Service
       PCD.router.register('menus', PCD.tools.menus.render);
       PCD.router.register('kitchen_cards', PCD.tools.kitchenCards.render);
       PCD.router.register('shopping', PCD.tools.shopping.render);
       PCD.router.register('portion', PCD.tools.portion.render);
-      // Phase 3
+      // Operations
       PCD.router.register('inventory', PCD.tools.inventory.render);
       PCD.router.register('waste', PCD.tools.waste.render);
       PCD.router.register('suppliers', PCD.tools.suppliers.render);
       PCD.router.register('events', PCD.tools.events.render);
-      // Phase 4
-      PCD.router.register('allergens', PCD.tools.allergens.render);
-      PCD.router.register('yield', PCD.tools.yield_calc.render);
-      PCD.router.register('whatif', PCD.tools.whatif.render);
-      PCD.router.register('team', PCD.tools.team.render);
       PCD.router.register('checklist', PCD.tools.checklist.render);
 
       // 7) Start router + render initial view
@@ -198,31 +192,28 @@
     const sections = [
       { title: null, items: [
         { key: 'dashboard', icon: 'home', route: 'dashboard' },
-        { key: 'recipes',   icon: 'book-open', route: 'recipes' },
+      ]},
+      { title: 'Library', items: [
+        { key: 'recipes',     icon: 'book-open', route: 'recipes' },
         { key: 'ingredients', icon: 'carrot', route: 'ingredients' },
+        { key: 'menus',       icon: 'menu', route: 'menus' },
       ]},
-      { title: 'Service', items: [
-        { key: 'menus',          icon: 'menu', route: 'menus' },
-        { key: 'kitchen_cards',  icon: 'id-card', route: 'kitchen_cards' },
-        { key: 'portion',        icon: 'scale', route: 'portion' },
+      { title: 'Kitchen', items: [
+        { key: 'kitchen_cards', icon: 'id-card', route: 'kitchen_cards' },
+        { key: 'portion',       icon: 'scale', route: 'portion' },
+        { key: 'checklist',     icon: 'check-square', route: 'checklist' },
+        { key: 'waste',         icon: 'recycle', route: 'waste' },
       ]},
-      { title: 'Operations', items: [
-        { key: 'inventory',      icon: 'package', route: 'inventory' },
-        { key: 'waste',          icon: 'recycle', route: 'waste' },
-        { key: 'suppliers',      icon: 'truck', route: 'suppliers' },
-        { key: 'shopping',       icon: 'shopping-cart', route: 'shopping' },
-        { key: 'events',         icon: 'calendar', route: 'events' },
-        { key: 'checklist',      icon: 'check-square', route: 'checklist' },
+      { title: 'Sourcing', items: [
+        { key: 'inventory', icon: 'package', route: 'inventory' },
+        { key: 'suppliers', icon: 'truck', route: 'suppliers' },
+        { key: 'shopping',  icon: 'shopping-cart', route: 'shopping' },
       ]},
-      { title: 'Analytics', items: [
-        { key: 'allergens',        icon: 'alert-triangle', route: 'allergens' },
-        { key: 'whatif',           icon: 'activity', route: 'whatif' },
-        { key: 'yield',            icon: 'percent', route: 'yield' },
-        { key: 'team',             icon: 'users', route: 'team' },
+      { title: 'Catering', items: [
+        { key: 'events',  icon: 'calendar', route: 'events' },
       ]},
-      { title: t('nav_tools'), items: [
-        { key: 'tools',          icon: 'grid', route: 'tools' },
-        { key: 'account',        icon: 'user', route: 'account' },
+      { title: null, items: [
+        { key: 'account', icon: 'user', route: 'account' },
       ]},
     ];
 

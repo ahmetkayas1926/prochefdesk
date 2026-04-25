@@ -30,7 +30,7 @@
           <div class="page-subtitle">${ings.length} items</div>
         </div>
         <div class="page-header-actions">
-          ${ings.length > 0 ? `<button class="btn btn-outline btn-sm" id="toggleSelIng">${t('select_mode')}</button>` : ''}
+          ${ings.length > 0 ? `<button class="btn btn-outline btn-sm" id="toggleSelIng">${PCD.icon('check-square',14)} ${t('select_mode')}</button>` : ''}
           <button class="btn btn-outline btn-sm" id="importBtn" title="${t('ingredients_import_title') || 'Bulk import'}">${PCD.icon('upload',14)} ${t('ingredients_import') || 'Import'}</button>
           <button class="btn btn-primary" id="newIngBtn">${PCD.icon('plus',14)} ${t('new_ingredient')}</button>
         </div>
@@ -315,6 +315,19 @@
         <label class="field-label">${t('ingredient_supplier')}</label>
         <input type="text" class="input" id="ingSupplier" value="${PCD.escapeHtml(data.supplier || '')}">
       </div>
+      <div class="field">
+        <label class="field-label">Yield % (optional)</label>
+        <div class="input-group">
+          <input type="number" class="input" id="ingYield" value="${data.yieldPercent || ''}" step="1" min="1" max="100" placeholder="100">
+          <span class="input-group-addon">%</span>
+        </div>
+        <div class="field-hint">After trim/peel/clean. e.g. Chicken thigh boneless = 75%, Salmon fillet = 88%. Leaves blank = no trim loss.</div>
+        ${data.pricePerUnit && data.yieldPercent && data.yieldPercent < 100 ? `
+          <div class="text-sm mt-2" style="padding:8px 10px;background:var(--brand-50);border-radius:var(--r-sm);color:var(--brand-700);font-weight:600;">
+            True cost (EP): ${PCD.fmtMoney((data.pricePerUnit / (data.yieldPercent / 100)))} / ${data.unit}
+          </div>
+        ` : ''}
+      </div>
 
       ${existing && existing.priceHistory && existing.priceHistory.length > 0 ? `
         <div class="section">
@@ -377,6 +390,11 @@
       data.unit = PCD.$('#ingUnit', body).value;
       data.pricePerUnit = parseFloat(PCD.$('#ingPrice', body).value) || 0;
       data.supplier = PCD.$('#ingSupplier', body).value.trim();
+      const yld = PCD.$('#ingYield', body);
+      if (yld) {
+        const v = parseFloat(yld.value);
+        data.yieldPercent = (!isNaN(v) && v > 0 && v <= 100) ? v : null;
+      }
 
       if (!data.name) {
         PCD.toast.error(t('ingredient_name') + ' ' + t('required'));

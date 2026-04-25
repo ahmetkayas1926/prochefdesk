@@ -581,6 +581,12 @@
         </div>
 
         <div class="field">
+          <label class="field-label">Allergens</label>
+          <div class="text-muted text-sm mb-2" style="font-size:12px;">Auto-detected from ingredients. Click to override.</div>
+          <div id="allergenChips" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+        </div>
+
+        <div class="field">
           <label class="field-label">${t('recipe_steps')}</label>
           <textarea class="textarea" id="recipeSteps" rows="8" placeholder="${t('recipe_steps_placeholder')}">${PCD.escapeHtml(data.steps || '')}</textarea>
         </div>
@@ -591,8 +597,55 @@
         </div>
       `;
 
+      renderAllergenChips();
       renderIngList();
       wireEditor();
+    }
+
+    function renderAllergenChips() {
+      const wrap = PCD.$('#allergenChips', body);
+      if (!wrap) return;
+      const ingMap = currentIngMap();
+      const auto = (PCD.allergensDB && PCD.allergensDB.recipeAllergens)
+        ? PCD.allergensDB.recipeAllergens(data, ingMap)
+        : [];
+      const manual = data.allergens || [];
+      const all = (PCD.allergensDB && PCD.allergensDB.list) || [];
+      wrap.innerHTML = '';
+      all.forEach(function (a) {
+        const isAuto = auto.indexOf(a.key) >= 0;
+        const isManual = manual.indexOf(a.key) >= 0;
+        const active = isAuto || isManual;
+        const chip = PCD.el('button', {
+          type: 'button',
+          'data-allerg': a.key,
+          style: {
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
+            padding: '6px 10px',
+            border: '1.5px solid ' + (active ? 'var(--brand-600)' : 'var(--border)'),
+            background: active ? 'var(--brand-50)' : 'var(--surface)',
+            color: active ? 'var(--brand-700)' : 'var(--text-3)',
+            borderRadius: '999px',
+            fontSize: '12px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            opacity: isAuto && !isManual ? '1' : (active ? '1' : '0.55')
+          },
+        });
+        chip.innerHTML = (a.icon || '') + ' ' + (a.label_en || a.key) + (isAuto ? ' <span style="font-size:9px;opacity:0.6;">(auto)</span>' : '');
+        wrap.appendChild(chip);
+      });
+      // Click to toggle manual override
+      PCD.on(wrap, 'click', '[data-allerg]', function () {
+        const key = this.getAttribute('data-allerg');
+        if (!data.allergens) data.allergens = [];
+        const idx = data.allergens.indexOf(key);
+        if (idx >= 0) data.allergens.splice(idx, 1);
+        else data.allergens.push(key);
+        renderAllergenChips();
+      });
     }
 
     function renderIngList() {

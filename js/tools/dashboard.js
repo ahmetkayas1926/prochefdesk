@@ -15,6 +15,11 @@
       if (!ing) return;
       const amt = Number(ri.amount) || 0;
       let price = Number(ing.pricePerUnit) || 0;
+      // Apply yield% if defined (e.g. chicken bone-in 70% → true cost = price / 0.7)
+      const yld = Number(ing.yieldPercent);
+      if (yld && yld > 0 && yld < 100) {
+        price = price / (yld / 100);
+      }
       // Convert units if needed
       if (ri.unit && ing.unit && ri.unit !== ing.unit) {
         try {
@@ -31,6 +36,7 @@
   PCD.recipes = PCD.recipes || {};
   PCD.recipes.computeFoodCost = computeFoodCost;
 
+  // ============ TODAY-FOCUSED DASHBOARD ============
   function render(view) {
     const t = PCD.i18n.t;
     const user = PCD.store.get('user');
@@ -39,248 +45,246 @@
     const ingMap = {};
     ings.forEach(function (i) { ingMap[i.id] = i; });
 
-    // Stats
-    let avgFoodCost = null;
-    let totalFoodCostPct = 0, pctCount = 0;
-    recipes.forEach(function (r) {
-      const cost = computeFoodCost(r, ingMap);
-      if (r.salePrice && r.salePrice > 0) {
-        const costPerServing = cost / (r.servings || 1);
-        const pricePerServing = r.salePrice;
-        const pct = (costPerServing / pricePerServing) * 100;
-        totalFoodCostPct += pct;
-        pctCount++;
-      }
-    });
-    if (pctCount > 0) avgFoodCost = totalFoodCostPct / pctCount;
+    // Greeting with time-of-day awareness
+    const hour = new Date().getHours();
+    const greet = hour < 12 ? 'Good morning' : (hour < 18 ? 'Good afternoon' : 'Good evening');
+    const firstName = (user && user.name) ? user.name.split(' ')[0] : '';
+    const headline = greet + (firstName ? ', ' + PCD.escapeHtml(firstName) : '');
+    const todayStr = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
 
-    // Phase 3 stats: low stock count
-    let lowStockCount = 0;
+    // === Cards data ===
+    // 1) Pending stock count approval
+    const pending = PCD.store.get('pendingStockCount');
+
+    // 2) Today's / upcoming event (next 7 days)
+    const events = PCD.store.listTable ? PCD.store.listTable('events') : [];
+    const today = new Date(); today.setHours(0,0,0,0);
+    const sevenAhead = new Date(today.getTime() + 7 * 86400000);
+    const upcomingEvents = events.filter(function (e) {
+      if (!e.date) return false;
+      if (e.status === 'cancelled' || e.status === 'done') return false;
+      const d = new Date(e.date);
+      return d >= today && d < sevenAhead;
+    }).sort(function (a, b) { return (a.date || '').localeCompare(b.date || ''); });
+    const nextEvent = upcomingEvents[0] || null;
+
+    // 3) Active checklists (in progress)
+    const sessions = PCD.store._read('checklistSessions') || [];
+    const activeSessions = sessions.filter(function (s) { return !s.completedAt; });
+
+    // 4) Low stock count + critical items
+    const invAll = PCD.store._read('inventory') || {};
+    let lowStockItems = [];
     if (PCD.tools && PCD.tools.inventory && PCD.tools.inventory.computeStatus) {
-      const invAll = PCD.store._read('inventory') || {};
       ings.forEach(function (i) {
         const row = invAll[i.id];
         const s = PCD.tools.inventory.computeStatus(row);
-        if (s === 'low' || s === 'critical' || s === 'out') lowStockCount++;
+        if (s === 'low' || s === 'critical' || s === 'out') {
+          lowStockItems.push({ ing: i, status: s });
+        }
+      });
+    }
+    const criticalStock = lowStockItems.filter(function (x) { return x.status === 'critical' || x.status === 'out'; });
+
+    // 5) Today's waste cost
+    const waste = PCD.store._read('waste') || [];
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const todayWaste = waste.filter(function (w) { return (w.at || '').slice(0, 10) === todayIso; });
+    const todayWasteCost = todayWaste.reduce(function (sum, w) { return sum + (w.cost || 0); }, 0);
+
+    // 6) Stats summary (always shown small at top)
+    const stats = {
+      recipes: recipes.length,
+      ingredients: ings.length,
+      menus: PCD.store.listTable ? PCD.store.listTable('menus').length : 0,
+    };
+
+    // === Build cards HTML ===
+    const cards = [];
+
+    // CARD: Pending approval (HIGHEST priority)
+    if (pending && pending.status === 'pending') {
+      cards.push({
+        priority: 1,
+        html:
+          '<div class="dash-card priority-warn" data-action="view-inventory" style="cursor:pointer;">' +
+            '<div class="dash-card-icon" style="background:#fef3c7;color:#92400e;">' + PCD.icon('clock', 22) + '</div>' +
+            '<div class="dash-card-body">' +
+              '<div class="dash-card-title">Stock count awaits approval</div>' +
+              '<div class="dash-card-desc">By ' + PCD.escapeHtml(pending.countedBy) + ' · ' + PCD.fmtRelTime(pending.countedAt) + ' · ' + Object.keys(pending.counts || {}).length + ' items</div>' +
+            '</div>' +
+            '<div class="dash-card-cta">Review →</div>' +
+          '</div>'
       });
     }
 
-    // Phase 3 stats: upcoming event
-    let upcomingEvent = null;
-    if (PCD.store.listTable) {
-      const events = PCD.store.listTable('events');
-      const nowIso = new Date().toISOString().slice(0, 10);
-      const upcoming = events.filter(function (e) {
-        return e.date && e.date >= nowIso && e.status !== 'cancelled' && e.status !== 'done';
-      }).sort(function (a, b) { return (a.date || '').localeCompare(b.date || ''); });
-      upcomingEvent = upcoming[0] || null;
-    }
-
-    // Compute recipe stats for trend + top widgets (ingMap already built above)
-    const myRecipes = recipes.filter(function (r) { return !r.isSample; });
-    const recipeStats = myRecipes.map(function (r) {
-      const cost = PCD.recipes && PCD.recipes.computeFoodCost ? PCD.recipes.computeFoodCost(r, ingMap) : 0;
-      const cps = r.servings ? cost / r.servings : cost;
-      const margin = (r.salePrice && r.salePrice > 0) ? r.salePrice - cps : null;
-      return { r: r, cost: cost, cps: cps, margin: margin };
-    });
-    const topExpensive = recipeStats.slice().sort(function (a, b) { return b.cps - a.cps; }).slice(0, 3);
-    const topMargin = recipeStats.filter(function (s) { return s.margin !== null; }).sort(function (a, b) { return b.margin - a.margin; }).slice(0, 3);
-
-    // Food cost trend: last N recipes by updatedAt
-    const trendData = myRecipes
-      .filter(function (r) { return r.salePrice && r.salePrice > 0; })
-      .slice()
-      .sort(function (a, b) { return (a.updatedAt || '').localeCompare(b.updatedAt || ''); })
-      .slice(-8)
-      .map(function (r) {
-        const cost = PCD.recipes && PCD.recipes.computeFoodCost ? PCD.recipes.computeFoodCost(r, ingMap) : 0;
-        const cps = r.servings ? cost / r.servings : cost;
-        const pct = r.salePrice > 0 ? (cps / r.salePrice) * 100 : 0;
-        return { name: r.name, pct: pct };
-      });
-
-    const greeting = user && user.name
-      ? `${t('dashboard_title')}, ${PCD.escapeHtml(user.name.split(' ')[0])}`
-      : t('dashboard_title');
-
-    // Build trend SVG
-    let trendSvg = '';
-    if (trendData.length >= 2) {
-      const W = 560, H = 130, pad = 20;
-      const vals = trendData.map(function (d) { return d.pct; });
-      const min = Math.min.apply(null, vals.concat([20]));
-      const max = Math.max.apply(null, vals.concat([50]));
-      const range = max - min || 1;
-      const step = (W - pad * 2) / (trendData.length - 1);
-      let path = '';
-      let dots = '';
-      trendData.forEach(function (d, i) {
-        const x = pad + i * step;
-        const y = H - pad - ((d.pct - min) / range) * (H - pad * 2);
-        path += (i === 0 ? 'M' : ' L') + x.toFixed(1) + ',' + y.toFixed(1);
-        const color = d.pct <= 35 ? 'var(--success)' : d.pct <= 45 ? 'var(--warning)' : 'var(--danger)';
-        dots += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="4" fill="' + color + '"><title>' + PCD.escapeHtml(d.name) + ': ' + d.pct.toFixed(1) + '%</title></circle>';
-      });
-      trendSvg =
-        '<div class="card mb-4" style="padding:14px 16px;">' +
-          '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;">' +
-            '<div style="font-weight:700;font-size:14px;">Food cost trend · last ' + trendData.length + ' recipes</div>' +
-            '<div class="text-muted" style="font-size:11px;">Green ≤ 35% · Amber ≤ 45% · Red &gt;</div>' +
-          '</div>' +
-          '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block;">' +
-            '<path d="' + path + '" fill="none" stroke="var(--brand-600)" stroke-width="2"/>' +
-            dots +
-          '</svg>' +
-        '</div>';
-    }
-
-    view.innerHTML = `
-      <div class="page-header">
-        <div class="page-header-text">
-          <div class="page-title">${greeting}</div>
-          <div class="page-subtitle">${t('dashboard_subtitle')}</div>
-        </div>
-      </div>
-
-      <div class="grid grid-2 mb-4" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));">
-        <div class="stat">
-          <div class="stat-label">${t('stat_recipes')}</div>
-          <div class="stat-value">${recipes.length}</div>
-        </div>
-        <div class="stat">
-          <div class="stat-label">${t('stat_ingredients')}</div>
-          <div class="stat-value">${ings.length}</div>
-        </div>
-        <div class="stat">
-          <div class="stat-label">${t('stat_avg_food_cost')}</div>
-          <div class="stat-value">${avgFoodCost !== null ? PCD.fmtPercent(avgFoodCost, 0) : '—'}</div>
-        </div>
-        <div class="stat${lowStockCount > 0 ? ' card-hover' : ''}" ${lowStockCount > 0 ? 'data-action="view-inventory" style="cursor:pointer;"' : ''}>
-          <div class="stat-label">${t('stat_low_stock')}</div>
-          <div class="stat-value" style="${lowStockCount > 0 ? 'color:var(--warning);' : ''}">${lowStockCount}</div>
-        </div>
-      </div>
-
-      ${trendSvg}
-
-      ${(topExpensive.length > 0 || topMargin.length > 0) ? `
-        <div class="grid mb-4" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));gap:12px;">
-          ${topExpensive.length > 0 ? `
-            <div class="card" style="padding:14px;">
-              <div style="font-weight:700;font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:10px;">Most Expensive Recipes</div>
-              ${topExpensive.map(function (s) { return '<div data-rid="' + s.r.id + '" style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);cursor:pointer;">' +
-                '<span style="font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + PCD.escapeHtml(s.r.name) + '</span>' +
-                '<span style="font-weight:700;color:var(--danger);white-space:nowrap;">' + PCD.fmtMoney(s.cps) + '</span>' +
-              '</div>'; }).join('')}
-            </div>
-          ` : ''}
-          ${topMargin.length > 0 ? `
-            <div class="card" style="padding:14px;">
-              <div style="font-weight:700;font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:10px;">Best Margin Recipes</div>
-              ${topMargin.map(function (s) { return '<div data-rid="' + s.r.id + '" style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);cursor:pointer;">' +
-                '<span style="font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + PCD.escapeHtml(s.r.name) + '</span>' +
-                '<span style="font-weight:700;color:var(--success);white-space:nowrap;">' + PCD.fmtMoney(s.margin) + '</span>' +
-              '</div>'; }).join('')}
-            </div>
-          ` : ''}
-        </div>
-      ` : ''}
-
-      ${upcomingEvent ? `
-        <div class="card card-hover mb-4" data-action="view-event" data-eid="${upcomingEvent.id}" style="padding:14px;background:linear-gradient(135deg,var(--brand-50),var(--brand-100));border-color:var(--brand-300);cursor:pointer;">
-          <div class="flex items-center gap-3">
-            <div style="flex-shrink:0;color:var(--brand-700);">${PCD.icon('calendar', 28)}</div>
-            <div style="flex:1;min-width:0;">
-              <div class="text-muted text-sm" style="font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--brand-700);">Upcoming event</div>
-              <div style="font-weight:700;font-size:15px;letter-spacing:-0.01em;">${PCD.escapeHtml(upcomingEvent.name)}</div>
-              <div class="text-muted text-sm">${PCD.fmtDate(upcomingEvent.date, {weekday:'short', month:'short', day:'numeric'})}${upcomingEvent.guestCount ? ' · ' + upcomingEvent.guestCount + ' guests' : ''}</div>
-            </div>
-          </div>
-        </div>
-      ` : ''}
-
-      <div class="section">
-        <div class="section-header">
-          <div class="section-title">${t('quick_actions')}</div>
-        </div>
-        <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));">
-          <button class="card card-hover" data-action="new-recipe" style="padding:16px;text-align:center;border:1px solid var(--border);">
-            <div style="margin-bottom:6px;display:flex;justify-content:center;color:var(--brand-600);">${PCD.icon('book-open', 28)}</div>
-            <div style="font-weight:600;font-size:13px;">${t('new_recipe')}</div>
-          </button>
-          <button class="card card-hover" data-action="new-ingredient" style="padding:16px;text-align:center;border:1px solid var(--border);">
-            <div style="margin-bottom:6px;display:flex;justify-content:center;color:var(--brand-600);">${PCD.icon('carrot', 28)}</div>
-            <div style="font-weight:600;font-size:13px;">${t('new_ingredient')}</div>
-          </button>
-          <button class="card card-hover" data-action="all-tools" style="padding:16px;text-align:center;border:1px solid var(--border);">
-            <div style="margin-bottom:6px;display:flex;justify-content:center;color:var(--brand-600);">${PCD.icon('grid', 28)}</div>
-            <div style="font-weight:600;font-size:13px;">${t('nav_tools')}</div>
-          </button>
-        </div>
-      </div>
-
-      <div class="section">
-        <div class="section-header">
-          <div class="section-title">${t('recent_recipes')}</div>
-          ${recipes.length > 0 ? `<button class="btn btn-ghost btn-sm" data-action="view-recipes">${t('view')} →</button>` : ''}
-        </div>
-        <div id="dashRecentRecipes" class="flex flex-col gap-2"></div>
-      </div>
-    `;
-
-    const listEl = PCD.$('#dashRecentRecipes', view);
-    const recentRecipes = recipes.slice().sort(function (a, b) {
-      return (b.updatedAt || '').localeCompare(a.updatedAt || '');
-    }).slice(0, 5);
-
-    if (recentRecipes.length === 0) {
-      listEl.innerHTML = `
-        <div class="empty">
-          <div class="empty-icon">🍽️</div>
-          <div class="empty-title">${t('no_recipes_yet')}</div>
-          <div class="empty-desc">${t('no_recipes_yet_desc')}</div>
-          <div class="empty-action"><button class="btn btn-primary" data-action="new-recipe">+ ${t('new_recipe')}</button></div>
-        </div>
-      `;
-    } else {
-      recentRecipes.forEach(function (r) {
-        const cost = computeFoodCost(r, ingMap);
-        const row = PCD.el('div', { class: 'list-item', 'data-rid': r.id });
-        const thumb = PCD.el('div', { class: 'list-item-thumb' });
-        if (r.photo) thumb.style.backgroundImage = 'url(' + r.photo + ')';
-        else thumb.textContent = '🍽️';
-        const body = PCD.el('div', { class: 'list-item-body' });
-        body.innerHTML = `
-          <div class="list-item-title">${PCD.escapeHtml(r.name)}</div>
-          <div class="list-item-meta">
-            <span>${t(r.category || 'cat_main')}</span>
-            <span>·</span>
-            <span>${r.servings || 1} ${t('recipe_servings').toLowerCase()}</span>
-            ${cost > 0 ? '<span>·</span><span>' + PCD.fmtMoney(cost) + '</span>' : ''}
-          </div>
-        `;
-        row.appendChild(thumb);
-        row.appendChild(body);
-        listEl.appendChild(row);
+    // CARD: Today's event
+    if (nextEvent) {
+      const evDate = new Date(nextEvent.date);
+      const isToday = nextEvent.date === todayIso;
+      const dayLabel = isToday ? 'Today' : (nextEvent.date === new Date(today.getTime() + 86400000).toISOString().slice(0, 10) ? 'Tomorrow' : evDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }));
+      cards.push({
+        priority: isToday ? 1 : 3,
+        html:
+          '<div class="dash-card priority-' + (isToday ? 'now' : 'soon') + '" data-action="view-event" data-eid="' + nextEvent.id + '" style="cursor:pointer;">' +
+            '<div class="dash-card-icon" style="background:var(--brand-50);color:var(--brand-700);">' + PCD.icon('calendar', 22) + '</div>' +
+            '<div class="dash-card-body">' +
+              '<div class="dash-card-title">' + PCD.escapeHtml(nextEvent.name) + '</div>' +
+              '<div class="dash-card-desc">' + dayLabel + (nextEvent.guestCount ? ' · ' + nextEvent.guestCount + ' guests' : '') + (nextEvent.venue ? ' · ' + PCD.escapeHtml(nextEvent.venue) : '') + '</div>' +
+            '</div>' +
+            '<div class="dash-card-cta">Open →</div>' +
+          '</div>'
       });
     }
 
-    // Wire up
+    // CARD: Active checklists
+    if (activeSessions.length > 0) {
+      const s = activeSessions[0];
+      const total = (s.items || []).length;
+      const done = (s.items || []).filter(function (i) { return i.done || i.value || i.result; }).length;
+      const pct = total ? Math.round((done / total) * 100) : 0;
+      cards.push({
+        priority: 2,
+        html:
+          '<div class="dash-card" data-action="view-checklist" style="cursor:pointer;">' +
+            '<div class="dash-card-icon" style="background:#dbeafe;color:#1e40af;">' + PCD.icon('check-square', 22) + '</div>' +
+            '<div class="dash-card-body">' +
+              '<div class="dash-card-title">' + activeSessions.length + ' checklist' + (activeSessions.length === 1 ? '' : 's') + ' in progress</div>' +
+              '<div class="dash-card-desc">' + PCD.escapeHtml(s.templateName || 'Session') + ' · ' + done + '/' + total + ' (' + pct + '%)</div>' +
+            '</div>' +
+            '<div class="dash-card-cta">Continue →</div>' +
+          '</div>'
+      });
+    }
+
+    // CARD: Critical stock
+    if (criticalStock.length > 0) {
+      const sample = criticalStock.slice(0, 3).map(function (x) { return x.ing.name; }).join(', ');
+      const more = criticalStock.length > 3 ? ' +' + (criticalStock.length - 3) + ' more' : '';
+      cards.push({
+        priority: 1,
+        html:
+          '<div class="dash-card priority-warn" data-action="view-inventory" style="cursor:pointer;">' +
+            '<div class="dash-card-icon" style="background:#fee2e2;color:#991b1b;">' + PCD.icon('alert-triangle', 22) + '</div>' +
+            '<div class="dash-card-body">' +
+              '<div class="dash-card-title">' + criticalStock.length + ' item' + (criticalStock.length === 1 ? '' : 's') + ' need ordering now</div>' +
+              '<div class="dash-card-desc">' + PCD.escapeHtml(sample) + more + '</div>' +
+            '</div>' +
+            '<div class="dash-card-cta">Order →</div>' +
+          '</div>'
+      });
+    } else if (lowStockItems.length > 0) {
+      cards.push({
+        priority: 3,
+        html:
+          '<div class="dash-card" data-action="view-inventory" style="cursor:pointer;">' +
+            '<div class="dash-card-icon" style="background:#fef3c7;color:#92400e;">' + PCD.icon('package', 22) + '</div>' +
+            '<div class="dash-card-body">' +
+              '<div class="dash-card-title">' + lowStockItems.length + ' item' + (lowStockItems.length === 1 ? '' : 's') + ' running low</div>' +
+              '<div class="dash-card-desc">Below par level — plan to reorder soon</div>' +
+            '</div>' +
+            '<div class="dash-card-cta">Review →</div>' +
+          '</div>'
+      });
+    }
+
+    // CARD: Today's waste cost (if any)
+    if (todayWasteCost > 0) {
+      cards.push({
+        priority: 3,
+        html:
+          '<div class="dash-card" data-action="view-waste" style="cursor:pointer;">' +
+            '<div class="dash-card-icon" style="background:#fee2e2;color:#991b1b;">' + PCD.icon('recycle', 22) + '</div>' +
+            '<div class="dash-card-body">' +
+              '<div class="dash-card-title">Today\'s waste: ' + PCD.fmtMoney(todayWasteCost) + '</div>' +
+              '<div class="dash-card-desc">' + todayWaste.length + ' entr' + (todayWaste.length === 1 ? 'y' : 'ies') + ' logged today</div>' +
+            '</div>' +
+            '<div class="dash-card-cta">Log →</div>' +
+          '</div>'
+      });
+    }
+
+    // Sort by priority
+    cards.sort(function (a, b) { return a.priority - b.priority; });
+
+    // === Render ===
+    view.innerHTML =
+      '<style>' +
+        '.dash-greet { font-size: 28px; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 4px; color: var(--text); }' +
+        '.dash-date { font-size: 14px; color: var(--text-3); margin-bottom: 24px; text-transform: capitalize; }' +
+        '.dash-card { display: flex; align-items: center; gap: 14px; padding: 14px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface); margin-bottom: 10px; transition: all .15s ease; }' +
+        '.dash-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); border-color: var(--brand-300); }' +
+        '.dash-card.priority-warn { border-left: 4px solid #f59e0b; }' +
+        '.dash-card.priority-now { border-left: 4px solid var(--brand-600); background: linear-gradient(135deg, var(--brand-50), var(--surface)); }' +
+        '.dash-card.priority-soon { border-left: 4px solid var(--brand-300); }' +
+        '.dash-card-icon { width: 44px; height: 44px; border-radius: var(--r-md); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }' +
+        '.dash-card-body { flex: 1; min-width: 0; }' +
+        '.dash-card-title { font-weight: 700; font-size: 15px; letter-spacing: -0.01em; margin-bottom: 2px; }' +
+        '.dash-card-desc { font-size: 13px; color: var(--text-3); }' +
+        '.dash-card-cta { font-weight: 700; font-size: 12px; color: var(--brand-700); white-space: nowrap; flex-shrink: 0; text-transform: uppercase; letter-spacing: 0.04em; }' +
+        '.dash-empty { padding: 32px 16px; text-align: center; border: 1px dashed var(--border-strong); border-radius: var(--r-md); color: var(--text-3); }' +
+        '.dash-empty-title { font-size: 16px; font-weight: 600; color: var(--text-2); margin-bottom: 4px; }' +
+        '.dash-quick { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-top: 24px; }' +
+        '.dash-quick button { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface); cursor: pointer; transition: all .15s ease; }' +
+        '.dash-quick button:hover { border-color: var(--brand-600); background: var(--brand-50); }' +
+        '.dash-quick button .icn { color: var(--brand-600); }' +
+        '.dash-quick button .lbl { font-weight: 600; font-size: 14px; color: var(--text); }' +
+        '.dash-stats { display: flex; gap: 14px; margin-top: 24px; padding: 14px 16px; background: var(--surface-2); border-radius: var(--r-md); flex-wrap: wrap; }' +
+        '.dash-stat { display: flex; flex-direction: column; gap: 2px; }' +
+        '.dash-stat-num { font-size: 18px; font-weight: 700; color: var(--text); }' +
+        '.dash-stat-lbl { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em; }' +
+      '</style>' +
+
+      '<h1 class="dash-greet">' + headline + '</h1>' +
+      '<div class="dash-date">' + todayStr + '</div>' +
+
+      // Action cards (today's focus)
+      (cards.length > 0
+        ? '<div>' + cards.map(function (c) { return c.html; }).join('') + '</div>'
+        : '<div class="dash-empty">' +
+            '<div class="dash-empty-title">All clear today ✓</div>' +
+            '<div>Nothing pressing — start cooking or planning ahead</div>' +
+          '</div>'
+      ) +
+
+      // Quick actions
+      '<div class="dash-quick">' +
+        '<button data-action="new-recipe"><span class="icn">' + PCD.icon('book-open', 20) + '</span><span class="lbl">New recipe</span></button>' +
+        '<button data-action="new-event"><span class="icn">' + PCD.icon('calendar', 20) + '</span><span class="lbl">New event</span></button>' +
+        '<button data-action="log-waste"><span class="icn">' + PCD.icon('recycle', 20) + '</span><span class="lbl">Log waste</span></button>' +
+        '<button data-action="start-checklist"><span class="icn">' + PCD.icon('check-square', 20) + '</span><span class="lbl">Start checklist</span></button>' +
+        '<button data-action="count-stock"><span class="icn">' + PCD.icon('package', 20) + '</span><span class="lbl">Count stock</span></button>' +
+      '</div>' +
+
+      // Library stats (small footer)
+      '<div class="dash-stats">' +
+        '<div class="dash-stat"><div class="dash-stat-num">' + stats.recipes + '</div><div class="dash-stat-lbl">Recipes</div></div>' +
+        '<div class="dash-stat"><div class="dash-stat-num">' + stats.ingredients + '</div><div class="dash-stat-lbl">Ingredients</div></div>' +
+        '<div class="dash-stat"><div class="dash-stat-num">' + stats.menus + '</div><div class="dash-stat-lbl">Menus</div></div>' +
+      '</div>';
+
+    // Wire actions
     PCD.on(view, 'click', '[data-action="new-recipe"]', function () {
-      PCD.tools.recipes.openEditor();
+      if (PCD.tools.recipes && PCD.tools.recipes.openEditor) PCD.tools.recipes.openEditor();
     });
-    PCD.on(view, 'click', '[data-action="new-ingredient"]', function () {
-      PCD.tools.ingredients.openEditor();
+    PCD.on(view, 'click', '[data-action="new-event"]', function () {
+      PCD.router.go('events');
+      setTimeout(function () { if (PCD.tools.events && PCD.tools.events.openEditor) PCD.tools.events.openEditor(); }, 200);
     });
-    PCD.on(view, 'click', '[data-action="all-tools"]', function () {
-      PCD.router.go('tools');
+    PCD.on(view, 'click', '[data-action="log-waste"]', function () {
+      PCD.router.go('waste');
     });
-    PCD.on(view, 'click', '[data-action="view-recipes"]', function () {
-      PCD.router.go('recipes');
+    PCD.on(view, 'click', '[data-action="start-checklist"]', function () {
+      PCD.router.go('checklist');
+    });
+    PCD.on(view, 'click', '[data-action="count-stock"]', function () {
+      PCD.router.go('inventory');
     });
     PCD.on(view, 'click', '[data-action="view-inventory"]', function () {
       PCD.router.go('inventory');
+    });
+    PCD.on(view, 'click', '[data-action="view-checklist"]', function () {
+      PCD.router.go('checklist');
     });
     PCD.on(view, 'click', '[data-action="view-event"]', function () {
       const eid = this.getAttribute('data-eid');
@@ -289,9 +293,8 @@
         if (PCD.tools.events && PCD.tools.events.openEditor) PCD.tools.events.openEditor(eid);
       }, 200);
     });
-    PCD.on(view, 'click', '[data-rid]', function () {
-      const rid = this.getAttribute('data-rid');
-      PCD.tools.recipes.openPreview(rid);
+    PCD.on(view, 'click', '[data-action="view-waste"]', function () {
+      PCD.router.go('waste');
     });
   }
 

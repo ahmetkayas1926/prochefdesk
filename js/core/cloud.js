@@ -100,7 +100,6 @@
         checklistSessions: state.checklistSessions,
         canvases: state.canvases,
         shoppingLists: state.shoppingLists,
-        team: state.team,
         costHistory: state.costHistory,
         pendingStockCount: state.pendingStockCount,
       };

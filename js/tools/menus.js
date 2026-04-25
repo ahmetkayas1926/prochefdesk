@@ -163,6 +163,10 @@
           <input type="checkbox" id="menuHidePrice" ${data.hidePrices ? 'checked' : ''}>
           <span>${t('menu_hide_price')}</span>
         </div>
+        <div class="checkbox">
+          <input type="checkbox" id="menuHideAllergens" ${data.hideAllergens ? 'checked' : ''}>
+          <span>Hide allergen icons</span>
+        </div>
       `;
 
       // Render sections
@@ -232,6 +236,8 @@
       PCD.$('#menuSubtitle', body).addEventListener('input', function () { data.subtitle = this.value; });
       PCD.$('#menuFooter', body).addEventListener('input', function () { data.footer = this.value; });
       PCD.$('#menuHidePrice', body).addEventListener('change', function () { data.hidePrices = this.checked; render(); });
+      const hideAllergEl = PCD.$('#menuHideAllergens', body);
+      if (hideAllergEl) hideAllergEl.addEventListener('change', function () { data.hideAllergens = this.checked; render(); });
 
       // Section name
       PCD.on(body, 'input', '[data-secname]', PCD.debounce(function () {
@@ -435,49 +441,167 @@
     PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
     PCD.store.listRecipes().forEach(function (r) { recipeMap[r.id] = r; });
 
-    let sectionsHtml = '';
+    // Build sections HTML using a simple, professional layout
+    let sectionsBody = '';
     (menu.sections || []).forEach(function (sec) {
       if (!sec.items || sec.items.length === 0) return;
-      sectionsHtml += '<div class="menu-section">';
-      sectionsHtml += '<div class="menu-section-title">' + PCD.escapeHtml(sec.name) + '</div>';
+      sectionsBody += '<div class="m-section">';
+      sectionsBody += '<div class="m-section-title">' + PCD.escapeHtml(sec.name || '') + '</div>';
+      sectionsBody += '<div class="m-items">';
       sec.items.forEach(function (it) {
-        // Support both recipe-linked AND manual items (customName)
         const r = it.recipeId ? recipeMap[it.recipeId] : null;
         const isManual = !it.recipeId;
-        // Skip only if BOTH recipe missing AND no custom name (truly empty)
         if (!r && !isManual) return;
         if (isManual && !(it.customName || '').trim()) return;
-
         const itemName = isManual ? (it.customName || '') : (r ? r.name : '(removed)');
         const price = (it.price !== undefined && it.price !== null && it.price !== '') ? Number(it.price) : (r && r.salePrice ? r.salePrice : 0);
         const desc = it.description || (r && r.plating) || '';
-        sectionsHtml += '<div class="menu-item">' +
-          '<div class="menu-item-info">' +
-            '<div class="menu-item-name">' + PCD.escapeHtml(itemName) + '</div>' +
-            (desc ? '<div class="menu-item-desc">' + PCD.escapeHtml(desc) + '</div>' : '') +
-          '</div>';
-        if (!menu.hidePrices && price > 0) {
-          sectionsHtml += '<div class="menu-item-dots"></div>' +
-            '<div class="menu-item-price">' + PCD.fmtMoney(price) + '</div>';
+
+        // EU FIC 1169/2011 — allergen icons next to dish name (legal requirement)
+        let allergenIcons = '';
+        if (r && PCD.allergensDB && PCD.allergensDB.recipeAllergens && !menu.hideAllergens) {
+          const tags = PCD.allergensDB.recipeAllergens(r, ingMap);
+          if (tags && tags.length > 0) {
+            const allList = PCD.allergensDB.list || [];
+            allergenIcons = ' <span class="m-allerg" title="Allergens: ' + tags.join(', ') + '">' +
+              tags.slice(0, 6).map(function (key) {
+                const a = allList.find(function (x) { return x.key === key; });
+                return a ? a.icon : '';
+              }).filter(Boolean).join(' ') +
+              '</span>';
+          }
         }
-        sectionsHtml += '</div>';
+
+        sectionsBody += '<div class="m-item">';
+        sectionsBody += '<div class="m-item-row"><div class="m-item-name">' + PCD.escapeHtml(itemName) + allergenIcons + '</div>';
+        sectionsBody += '<div class="m-item-leader"></div>';
+        if (!menu.hidePrices && price > 0) {
+          sectionsBody += '<div class="m-item-price">' + PCD.fmtMoney(price) + '</div>';
+        }
+        sectionsBody += '</div>';
+        if (desc) sectionsBody += '<div class="m-item-desc">' + PCD.escapeHtml(desc) + '</div>';
+        sectionsBody += '</div>';
       });
-      sectionsHtml += '</div>';
+      sectionsBody += '</div></div>';
     });
 
+    // Inline-styled HTML works in both modal preview AND print window
+    const styledHtml =
+      '<style>' +
+        '@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap");' +
+        '.m-page {' +
+          'background: #fff; color: #1a1a1a;' +
+          'max-width: 580px; margin: 0 auto; padding: 48px 56px;' +
+          'font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;' +
+          'font-weight: 300;' +
+        '}' +
+        '.m-header { text-align: center; margin-bottom: 36px; padding-bottom: 0; }' +
+        '.m-title {' +
+          'font-family: "Cormorant Garamond", Georgia, serif;' +
+          'font-size: 44px; font-weight: 500;' +
+          'letter-spacing: 0.02em;' +
+          'margin: 0 0 8px; color: #111;' +
+          'line-height: 1.1;' +
+        '}' +
+        '.m-subtitle {' +
+          'font-size: 11px; color: #888;' +
+          'letter-spacing: 0.24em;' +
+          'text-transform: uppercase; font-weight: 400;' +
+          'margin-bottom: 24px;' +
+        '}' +
+        '.m-divider {' +
+          'width: 60px; height: 1px;' +
+          'background: #c5a572;' +
+          'margin: 18px auto 0;' +
+        '}' +
+        '.m-section { margin: 30px 0 24px; break-inside: avoid; page-break-inside: avoid; }' +
+        '.m-section-title {' +
+          'font-family: "Cormorant Garamond", Georgia, serif;' +
+          'font-size: 22px; font-weight: 500;' +
+          'letter-spacing: 0.18em;' +
+          'text-transform: uppercase;' +
+          'text-align: center;' +
+          'color: #111;' +
+          'margin: 0 0 22px;' +
+          'position: relative;' +
+        '}' +
+        '.m-section-title::before,' +
+        '.m-section-title::after {' +
+          'content: "";' +
+          'display: inline-block;' +
+          'width: 24px; height: 1px;' +
+          'background: #c5a572;' +
+          'vertical-align: middle;' +
+          'margin: 0 16px;' +
+        '}' +
+        '.m-items { display: flex; flex-direction: column; gap: 16px; }' +
+        '.m-item { break-inside: avoid; page-break-inside: avoid; }' +
+        '.m-item-row {' +
+          'display: flex; align-items: baseline; gap: 0;' +
+        '}' +
+        '.m-item-name {' +
+          'font-family: "Cormorant Garamond", Georgia, serif;' +
+          'font-size: 18px; font-weight: 600;' +
+          'color: #111;' +
+          'letter-spacing: 0.02em;' +
+          'flex-shrink: 0;' +
+        '}' +
+        '.m-allerg {' +
+          'font-size: 11px;' +
+          'margin-inline-start: 6px;' +
+          'opacity: 0.7;' +
+          'letter-spacing: 0.06em;' +
+          'vertical-align: middle;' +
+        '}' +
+        '.m-item-leader {' +
+          'flex: 1;' +
+          'border-bottom: 1px dotted #c5a572;' +
+          'margin: 0 8px 4px;' +
+          'min-width: 30px;' +
+          'opacity: 0.6;' +
+        '}' +
+        '.m-item-price {' +
+          'font-family: "Cormorant Garamond", Georgia, serif;' +
+          'font-size: 18px; font-weight: 600;' +
+          'color: #c5a572;' +
+          'flex-shrink: 0;' +
+          'white-space: nowrap;' +
+        '}' +
+        '.m-item-desc {' +
+          'font-size: 12px; color: #666;' +
+          'font-style: italic;' +
+          'margin-top: 4px;' +
+          'line-height: 1.5;' +
+          'max-width: 90%;' +
+          'font-weight: 300;' +
+        '}' +
+        '.m-footer {' +
+          'text-align: center;' +
+          'font-size: 11px; color: #888;' +
+          'letter-spacing: 0.12em;' +
+          'text-transform: uppercase;' +
+          'margin-top: 40px;' +
+          'padding-top: 20px;' +
+          'border-top: 1px solid #e8e8e8;' +
+          'font-weight: 400;' +
+        '}' +
+        '@media print {' +
+          '@page { size: A4; margin: 0; }' +
+          '.m-page { padding: 18mm 22mm; max-width: 100%; }' +
+        '}' +
+      '</style>' +
+      '<div class="m-page">' +
+        '<div class="m-header">' +
+          '<h1 class="m-title">' + PCD.escapeHtml(menu.name || t('untitled')) + '</h1>' +
+          (menu.subtitle ? '<div class="m-subtitle">' + PCD.escapeHtml(menu.subtitle) + '</div>' : '') +
+          '<div class="m-divider"></div>' +
+        '</div>' +
+        sectionsBody +
+        (menu.footer ? '<div class="m-footer">' + PCD.escapeHtml(menu.footer) + '</div>' : '') +
+      '</div>';
+
     const body = PCD.el('div');
-    body.innerHTML = `
-      <div class="print-wrap">
-        <div class="print-page menu-page">
-          <div class="menu-header">
-            <h1 class="menu-title">${PCD.escapeHtml(menu.name || t('untitled'))}</h1>
-            ${menu.subtitle ? '<div class="menu-subtitle">' + PCD.escapeHtml(menu.subtitle) + '</div>' : ''}
-          </div>
-          ${sectionsHtml}
-          ${menu.footer ? '<div class="menu-footer">' + PCD.escapeHtml(menu.footer) + '</div>' : ''}
-        </div>
-      </div>
-    `;
+    body.innerHTML = styledHtml;
 
     const printBtn = PCD.el('button', { class: 'btn btn-primary' });
     printBtn.innerHTML = PCD.icon('print',16) + ' <span>' + t('print') + '</span>';
@@ -495,7 +619,10 @@
     });
 
     closeBtn.addEventListener('click', function () { m.close(); });
-    printBtn.addEventListener('click', function () { const wrap = body.querySelector('.print-wrap'); if (wrap) PCD.print(wrap.innerHTML); else window.print(); });
+    printBtn.addEventListener('click', function () {
+      // Pass full styled HTML — works in popup window because CSS is inline
+      PCD.print(styledHtml, menu.name || 'Menu');
+    });
     qrBtn.addEventListener('click', function () {
       // Build plain-text menu for QR payload (text mode - works with any scanner)
       const lines = [menu.name || 'Menu'];
