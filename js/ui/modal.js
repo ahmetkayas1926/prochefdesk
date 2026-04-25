@@ -33,15 +33,20 @@
     if (closable) {
       const closeBtn = PCD.el('button', { class: 'icon-btn', 'aria-label': 'Close', type: 'button' });
       closeBtn.innerHTML = PCD.icon('x', 20);
-      // Make SVG child transparent to pointer events so clicks always hit the button
       closeBtn.style.cursor = 'pointer';
-      Array.from(closeBtn.querySelectorAll('svg, svg *')).forEach(function (el) {
-        el.style.pointerEvents = 'none';
-      });
-      closeBtn.addEventListener('click', function (e) {
+      // Bind handler with capture phase to fire before any other listener
+      const closeHandler = function (e) {
+        if (!modal._isOpen) return;
         e.preventDefault();
         e.stopPropagation();
         modal.close();
+      };
+      closeBtn.addEventListener('click', closeHandler);
+      // Also bind to pointerdown for instant response (fixes "needs 2 clicks" on slow renders)
+      closeBtn.addEventListener('pointerdown', function (e) {
+        if (!modal._isOpen) return;
+        e.preventDefault();
+        e.stopPropagation();
       });
       header.appendChild(closeBtn);
     }

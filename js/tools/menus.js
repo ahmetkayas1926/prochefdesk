@@ -167,10 +167,19 @@
 
       // Render sections
       const secListEl = PCD.$('#sectionsList', body);
+      const totalSections = (data.sections || []).length;
       (data.sections || []).forEach(function (sec, sIdx) {
         const secEl = PCD.el('div', { class: 'card', 'data-sid': sec.id, style: { padding: '12px' } });
+        const isFirst = sIdx === 0;
+        const isLast = sIdx === totalSections - 1;
         secEl.innerHTML = `
           <div class="flex items-center gap-2 mb-2">
+            <button class="icon-btn" data-secup="${sIdx}" ${isFirst ? 'disabled style="opacity:0.3;"' : 'title="Move section up"'}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M18 15l-6-6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="icon-btn" data-secdown="${sIdx}" ${isLast ? 'disabled style="opacity:0.3;"' : 'title="Move section down"'}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
             <input type="text" class="input" data-secname value="${PCD.escapeHtml(sec.name || '')}" placeholder="${PCD.i18n.t('menu_section_name')}" style="flex:1;font-weight:600;">
             <button class="icon-btn" data-secdel title="${PCD.i18n.t('delete')}">${PCD.icon('trash',18)}</button>
           </div>
@@ -233,6 +242,21 @@
       }, 300));
 
       // Section delete
+      PCD.on(body, 'click', '[data-secup]', function () {
+        const idx = parseInt(this.getAttribute('data-secup'), 10);
+        if (idx <= 0) return;
+        const sections = data.sections;
+        [sections[idx - 1], sections[idx]] = [sections[idx], sections[idx - 1]];
+        render();
+      });
+      PCD.on(body, 'click', '[data-secdown]', function () {
+        const idx = parseInt(this.getAttribute('data-secdown'), 10);
+        if (idx >= data.sections.length - 1) return;
+        const sections = data.sections;
+        [sections[idx], sections[idx + 1]] = [sections[idx + 1], sections[idx]];
+        render();
+      });
+
       PCD.on(body, 'click', '[data-secdel]', function () {
         const secEl = this.closest('[data-sid]');
         const sid = secEl.getAttribute('data-sid');
@@ -417,13 +441,19 @@
       sectionsHtml += '<div class="menu-section">';
       sectionsHtml += '<div class="menu-section-title">' + PCD.escapeHtml(sec.name) + '</div>';
       sec.items.forEach(function (it) {
-        const r = recipeMap[it.recipeId];
-        if (!r) return;
-        const price = (it.price !== undefined && it.price !== null && it.price !== '') ? Number(it.price) : (r.salePrice || 0);
-        const desc = it.description || r.plating || '';
+        // Support both recipe-linked AND manual items (customName)
+        const r = it.recipeId ? recipeMap[it.recipeId] : null;
+        const isManual = !it.recipeId;
+        // Skip only if BOTH recipe missing AND no custom name (truly empty)
+        if (!r && !isManual) return;
+        if (isManual && !(it.customName || '').trim()) return;
+
+        const itemName = isManual ? (it.customName || '') : (r ? r.name : '(removed)');
+        const price = (it.price !== undefined && it.price !== null && it.price !== '') ? Number(it.price) : (r && r.salePrice ? r.salePrice : 0);
+        const desc = it.description || (r && r.plating) || '';
         sectionsHtml += '<div class="menu-item">' +
           '<div class="menu-item-info">' +
-            '<div class="menu-item-name">' + PCD.escapeHtml(r.name) + '</div>' +
+            '<div class="menu-item-name">' + PCD.escapeHtml(itemName) + '</div>' +
             (desc ? '<div class="menu-item-desc">' + PCD.escapeHtml(desc) + '</div>' : '') +
           '</div>';
         if (!menu.hidePrices && price > 0) {

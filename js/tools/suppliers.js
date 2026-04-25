@@ -1,22 +1,14 @@
 /* ================================================================
-   ProChefDesk — suppliers.js (v1.4.1 - rewrite)
+   ProChefDesk — suppliers.js (v1.9 - inline UX)
 
-   WAREHOUSE SCENARIO:
-   - Each supplier has a list of products (added manually)
-   - Chef opens supplier → sees full product list with quantity inputs
-   - Fills what they need, taps Send Order
-   - Picks delivery date (Today / Tomorrow / Custom)
-   - Template message generated and opens in WhatsApp / SMS / Email
-
-   DATA MODEL:
-   - suppliers table: {
-       id, name, category,
-       phone, whatsapp, email, notes,
-       products: [{ id, name, unit }]   // manually entered by chef
-     }
-   - When a product is added to a supplier, we also upsert it to the
-     Ingredients table (pricePerUnit=0 if new) so it can be used in
-     recipes later. Same-name ingredients are linked, not duplicated.
+   USER FLOW (simplified per your feedback):
+   - Supplier list page shows ALL suppliers expanded
+   - Under each supplier name: their products as a list
+   - Each product has a quantity input next to its name
+   - One "Send Order" button at the supplier card top-right
+   - Tap Send → if contact exists, opens directly (WhatsApp/SMS/Email)
+   - If no contact → "Share via" sheet (WhatsApp / SMS / Gmail / Copy)
+   - Editor still available via tap on supplier header
    ================================================================ */
 
 (function () {
@@ -25,7 +17,10 @@
   const CATS = ['Produce', 'Meat & Poultry', 'Seafood', 'Dairy', 'Dry Goods', 'Beverages', 'Cleaning', 'Other'];
   const UNITS = ['kg', 'g', 'l', 'ml', 'pcs', 'box', 'case', 'bag', 'bunch', 'tray'];
 
-  // ============ MAIN LIST VIEW ============
+  // In-memory quantities — keyed by supplierId then productId
+  // Persists during the session, reset on page reload (intentional)
+  const draftQty = {};
+
   function render(view) {
     const t = PCD.i18n.t;
     const suppliers = PCD.store.listTable('suppliers').slice().sort(function (a, b) {
@@ -52,8 +47,8 @@
         <div class="empty">
           <div class="empty-icon" style="color:var(--brand-600);">${PCD.icon('truck',48)}</div>
           <div class="empty-title">${t('supplier_empty') || 'No suppliers yet'}</div>
-          <div class="empty-desc">${t('supplier_empty_desc') || 'Add your regular suppliers and products for quick ordering from storage.'}</div>
-          <div class="empty-action"><button class="btn btn-primary" id="emptyNewBtn">${PCD.icon('plus',16)} ${t('supplier_new') || 'Add supplier'}</button></div>
+          <div class="empty-desc">Add your suppliers and the products you buy from each. Quantities, send orders — all from one screen.</div>
+          <div class="empty-action"><button class="btn btn-primary" id="emptyNewBtn">${PCD.icon('plus',16)} Add supplier</button></div>
         </div>
       `;
       PCD.$('#emptyNewBtn', listEl).addEventListener('click', function () { openEditor(); });
@@ -65,6 +60,7 @@
         if (!byCat[c]) byCat[c] = [];
         byCat[c].push(s);
       });
+
       CATS.forEach(function (cat) {
         if (!byCat[cat]) return;
         const section = PCD.el('div', { style: { marginBottom: '20px' } });
@@ -72,24 +68,9 @@
           style: { fontSize: '12px', fontWeight: '700', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' },
           text: cat
         }));
-        const grid = PCD.el('div', { class: 'flex flex-col gap-2' });
+        const grid = PCD.el('div', { class: 'flex flex-col gap-3' });
         byCat[cat].forEach(function (s) {
-          const productCount = (s.products || []).length;
-          const row = PCD.el('div', { class: 'card card-hover', 'data-sid': s.id, style: { padding: '12px' } });
-          row.innerHTML = `
-            <div class="flex items-center gap-3">
-              <div class="list-item-thumb" style="background:var(--brand-50);color:var(--brand-700);">${PCD.icon('truck',20)}</div>
-              <div style="flex:1;min-width:0;">
-                <div style="font-weight:700;font-size:15px;letter-spacing:-0.01em;">${PCD.escapeHtml(s.name || 'Untitled')}</div>
-                <div class="text-muted text-sm">
-                  ${productCount} ${productCount === 1 ? 'product' : 'products'}
-                  ${s.phone ? ' · ' + PCD.escapeHtml(s.phone) : ''}
-                </div>
-              </div>
-              <button class="btn btn-primary btn-sm" data-order="${s.id}" onclick="event.stopPropagation();">${PCD.icon('send',14)} ${t('supplier_order') || 'Order'}</button>
-            </div>
-          `;
-          grid.appendChild(row);
+          grid.appendChild(buildSupplierCard(s));
         });
         section.appendChild(grid);
         listEl.appendChild(section);
@@ -97,273 +78,216 @@
     }
 
     PCD.$('#newSupBtn', view).addEventListener('click', function () { openEditor(); });
-    PCD.on(listEl, 'click', '[data-order]', function (e) {
+
+    // Wire actions via delegation
+    PCD.on(listEl, 'click', '[data-edit-sup]', function (e) {
       e.stopPropagation();
-      openOrderSheet(this.getAttribute('data-order'));
+      openEditor(this.getAttribute('data-edit-sup'));
     });
-    PCD.on(listEl, 'click', '[data-sid]', function (e) {
-      if (e.target.closest('[data-order]')) return;
-      openEditor(this.getAttribute('data-sid'));
+    PCD.on(listEl, 'click', '[data-send-sup]', function (e) {
+      e.stopPropagation();
+      sendOrderFlow(this.getAttribute('data-send-sup'));
+    });
+    PCD.on(listEl, 'input', '[data-pqty]', function () {
+      const sid = this.getAttribute('data-sid');
+      const pid = this.getAttribute('data-pqty');
+      if (!draftQty[sid]) draftQty[sid] = {};
+      draftQty[sid][pid] = this.value;
+      // Visual feedback
+      const row = this.closest('[data-prow]');
+      if (row) row.style.background = (this.value && parseFloat(this.value) > 0) ? 'var(--brand-50)' : 'var(--surface)';
+      // Update count
+      const card = this.closest('[data-sid-card]');
+      if (card) updateFilledCount(card, sid);
+    });
+    PCD.on(listEl, 'change', '[data-punit]', function () {
+      const sid = this.getAttribute('data-sid');
+      const pid = this.getAttribute('data-punit');
+      if (!draftQty[sid]) draftQty[sid] = {};
+      // Store unit override under special key
+      draftQty[sid]['_unit_' + pid] = this.value;
     });
   }
 
-  // ============ ORDER SHEET (warehouse scenario) ============
-  function openOrderSheet(sid) {
-    const t = PCD.i18n.t;
+  function buildSupplierCard(s) {
+    const card = PCD.el('div', {
+      class: 'card',
+      'data-sid-card': s.id,
+      style: { padding: '14px', overflow: 'hidden' }
+    });
+    const products = s.products || [];
+
+    // Header — name + edit + send
+    const filled = countFilled(s.id, products);
+    const header = PCD.el('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: products.length ? '10px' : '0' } });
+    header.innerHTML =
+      '<div style="width:40px;height:40px;border-radius:8px;background:var(--brand-50);color:var(--brand-700);display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + PCD.icon('truck', 22) + '</div>' +
+      '<div style="flex:1;min-width:0;">' +
+        '<div style="font-weight:700;font-size:15px;letter-spacing:-0.01em;">' + PCD.escapeHtml(s.name || 'Untitled') + '</div>' +
+        '<div class="text-muted" style="font-size:12px;" data-filled-count="' + s.id + '">' +
+          products.length + ' ' + (products.length === 1 ? 'product' : 'products') +
+          (filled > 0 ? ' · <span style="color:var(--brand-700);font-weight:700;">' + filled + ' to order</span>' : '') +
+        '</div>' +
+      '</div>' +
+      '<button class="icon-btn" data-edit-sup="' + s.id + '" title="Edit" style="flex-shrink:0;">' + PCD.icon('edit', 18) + '</button>' +
+      (products.length > 0 ? '<button class="btn btn-primary btn-sm" data-send-sup="' + s.id + '" style="flex-shrink:0;">' + PCD.icon('send', 14) + ' Send' + (filled > 0 ? ' (' + filled + ')' : '') + '</button>' : '');
+    card.appendChild(header);
+
+    // Products list inline
+    if (products.length > 0) {
+      const list = PCD.el('div', { style: { display: 'flex', flexDirection: 'column', gap: '4px' } });
+      products.forEach(function (p) {
+        const q = (draftQty[s.id] && draftQty[s.id][p.id]) || '';
+        const customUnit = (draftQty[s.id] && draftQty[s.id]['_unit_' + p.id]) || p.unit || 'kg';
+        const row = PCD.el('div', {
+          'data-prow': p.id,
+          style: {
+            display: 'flex', alignItems: 'center', gap: '8px',
+            padding: '8px 10px', border: '1px solid var(--border)',
+            borderRadius: 'var(--r-sm)',
+            background: (q && parseFloat(q) > 0) ? 'var(--brand-50)' : 'var(--surface)'
+          }
+        });
+        row.innerHTML =
+          '<div style="flex:1;min-width:0;font-weight:500;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + PCD.escapeHtml(p.name) + '</div>' +
+          '<input type="number" class="input" data-pqty="' + p.id + '" data-sid="' + s.id + '" value="' + PCD.escapeHtml(q) + '" step="0.1" min="0" placeholder="0" style="width:70px;text-align:center;font-weight:600;font-family:var(--font-mono);padding:4px 8px;min-height:32px;">' +
+          '<select class="select" data-punit="' + p.id + '" data-sid="' + s.id + '" style="width:65px;padding:4px 6px;min-height:32px;font-size:12px;flex-shrink:0;">' +
+            UNITS.map(function (u) { return '<option value="' + u + '"' + (customUnit === u ? ' selected' : '') + '>' + u + '</option>'; }).join('') +
+          '</select>';
+        list.appendChild(row);
+      });
+      card.appendChild(list);
+    } else {
+      const noProducts = PCD.el('div', {
+        class: 'text-muted text-sm',
+        style: { padding: '8px 0', fontSize: '13px', fontStyle: 'italic' },
+        text: 'No products yet — tap edit to add the items you buy from this supplier.'
+      });
+      card.appendChild(noProducts);
+    }
+
+    return card;
+  }
+
+  function countFilled(sid, products) {
+    if (!draftQty[sid]) return 0;
+    let n = 0;
+    products.forEach(function (p) {
+      const v = draftQty[sid][p.id];
+      if (v && parseFloat(v) > 0) n++;
+    });
+    return n;
+  }
+
+  function updateFilledCount(card, sid) {
     const supplier = PCD.store.getFromTable('suppliers', sid);
     if (!supplier) return;
-    // Clone products list; track quantities per product
-    const products = (supplier.products || []).slice();
-    const quantities = {};
-    products.forEach(function (p) { quantities[p.id] = { amount: '', unit: p.unit || 'kg' }; });
-
-    const body = PCD.el('div');
-
-    function updateRowBg(inputEl) {
-      const row = inputEl.closest('[data-prow]');
-      if (row) row.style.background = (inputEl.value && parseFloat(inputEl.value) > 0) ? 'var(--brand-50)' : 'var(--surface)';
+    const filled = countFilled(sid, supplier.products || []);
+    const total = (supplier.products || []).length;
+    const countEl = card.querySelector('[data-filled-count]');
+    if (countEl) {
+      countEl.innerHTML = total + ' ' + (total === 1 ? 'product' : 'products') +
+        (filled > 0 ? ' · <span style="color:var(--brand-700);font-weight:700;">' + filled + ' to order</span>' : '');
     }
-
-    function renderBody() {
-      const filled = Object.keys(quantities).filter(function (k) { return quantities[k].amount && parseFloat(quantities[k].amount) > 0; }).length;
-
-      body.innerHTML = `
-        <div class="mb-3" style="padding:12px;background:var(--brand-50);border-radius:var(--r-md);">
-          <div style="font-weight:700;">${PCD.escapeHtml(supplier.name)}</div>
-          <div class="text-muted text-sm" id="filledHint">${filled} ${filled === 1 ? 'item' : 'items'} filled · ${products.length} total</div>
-        </div>
-
-        ${products.length === 0 ? `
-          <div class="empty" style="padding:24px;">
-            <div class="empty-desc">No products in this supplier's list yet.</div>
-            <div class="empty-desc" style="margin-top:8px;font-size:13px;">Tap the supplier card to edit and add products they carry.</div>
-          </div>
-        ` : `
-          <div class="flex flex-col gap-1" id="prodList"></div>
-          <button class="btn btn-ghost btn-sm mt-2" id="quickAddBtn" style="width:100%;">${PCD.icon('plus',14)} Add product on the fly</button>
-        `}
-      `;
-
-      const prodEl = PCD.$('#prodList', body);
-      if (prodEl) {
-        products.forEach(function (p) {
-          const q = quantities[p.id];
-          const row = PCD.el('div', {
-            'data-prow': p.id,
-            style: { display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', background: (q.amount && parseFloat(q.amount) > 0) ? 'var(--brand-50)' : 'var(--surface)' }
-          });
-          row.innerHTML = `
-            <div style="flex:1;min-width:0;">
-              <div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${PCD.escapeHtml(p.name)}</div>
-            </div>
-            <input type="number" class="input" data-qty="${p.id}" value="${q.amount}" step="0.1" min="0" placeholder="0" style="width:70px;padding:6px 8px;min-height:34px;font-size:14px;text-align:center;font-weight:600;">
-            <select class="select" data-unit="${p.id}" style="width:65px;padding:6px;min-height:34px;font-size:13px;">
-              ${UNITS.map(function(u){return '<option value="'+u+'"'+(q.unit===u?' selected':'')+'>'+u+'</option>';}).join('')}
-            </select>
-          `;
-          prodEl.appendChild(row);
-        });
-      }
-
-      // Wire quick add
-      const quickAddBtn = PCD.$('#quickAddBtn', body);
-      if (quickAddBtn) quickAddBtn.addEventListener('click', function () { quickAddProduct(supplier, products, quantities, renderBody); });
+    const sendBtn = card.querySelector('[data-send-sup]');
+    if (sendBtn) {
+      sendBtn.innerHTML = PCD.icon('send', 14) + ' Send' + (filled > 0 ? ' (' + filled + ')' : '');
     }
-
-    renderBody();
-
-    // Live input handlers
-    PCD.on(body, 'input', '[data-qty]', function () {
-      const id = this.getAttribute('data-qty');
-      if (quantities[id]) quantities[id].amount = this.value;
-      updateRowBg(this);
-      // update filled count
-      const filled = Object.keys(quantities).filter(function (k) { return quantities[k].amount && parseFloat(quantities[k].amount) > 0; }).length;
-      const hint = PCD.$('#filledHint', body);
-      if (hint) hint.textContent = filled + (filled === 1 ? ' item' : ' items') + ' filled · ' + products.length + ' total';
-    });
-    PCD.on(body, 'change', '[data-unit]', function () {
-      const id = this.getAttribute('data-unit');
-      if (quantities[id]) quantities[id].unit = this.value;
-    });
-
-    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') });
-    const nextBtn = PCD.el('button', { class: 'btn btn-primary', style: { flex: '1' } });
-    nextBtn.innerHTML = PCD.icon('send', 16) + ' <span>Next: Delivery date</span>';
-    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
-    footer.appendChild(cancelBtn);
-    footer.appendChild(nextBtn);
-
-    const m = PCD.modal.open({
-      title: (t('supplier_order') || 'Order') + ' · ' + supplier.name,
-      body: body, footer: footer, size: 'md', closable: true
-    });
-
-    cancelBtn.addEventListener('click', function () { m.close(); });
-    nextBtn.addEventListener('click', function () {
-      const filled = products.filter(function (p) {
-        const q = quantities[p.id];
-        return q && q.amount && parseFloat(q.amount) > 0;
-      });
-      if (filled.length === 0) {
-        PCD.toast.warning('Enter quantities for at least one product');
-        return;
-      }
-      m.close();
-      setTimeout(function () { openDeliveryDatePicker(supplier, filled, quantities); }, 200);
-    });
   }
 
-  // ============ QUICK ADD PRODUCT (on-the-fly during order) ============
-  function quickAddProduct(supplier, products, quantities, rerender) {
-    const body = PCD.el('div');
-    body.innerHTML = `
-      <div class="field">
-        <label class="field-label">Product name *</label>
-        <input type="text" class="input" id="qpName" placeholder="e.g. Tomato">
-      </div>
-      <div class="field">
-        <label class="field-label">Unit</label>
-        <select class="select" id="qpUnit">
-          ${UNITS.map(function(u){return '<option value="'+u+'">'+u+'</option>';}).join('')}
-        </select>
-      </div>
-    `;
-    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('cancel') });
-    const saveBtn = PCD.el('button', { class: 'btn btn-primary', text: 'Add', style: { flex: '1' } });
-    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
-    footer.appendChild(cancelBtn);
-    footer.appendChild(saveBtn);
-
-    const m = PCD.modal.open({ title: 'Quick add', body: body, footer: footer, size: 'sm', closable: true });
-    setTimeout(function () { const i = PCD.$('#qpName', body); if (i) i.focus(); }, 50);
-    cancelBtn.addEventListener('click', function () { m.close(); });
-    saveBtn.addEventListener('click', function () {
-      const name = (PCD.$('#qpName', body).value || '').trim();
-      const unit = PCD.$('#qpUnit', body).value;
-      if (!name) { PCD.toast.error('Name required'); return; }
-      const id = PCD.uid('p');
-      const newProduct = { id: id, name: name, unit: unit };
-      // Persist to supplier
-      supplier.products = (supplier.products || []).concat([newProduct]);
-      PCD.store.upsertInTable('suppliers', supplier, 'sup');
-      // Also upsert as ingredient
-      syncProductToIngredients(name, unit);
-      // Push to current local arrays
-      products.push(newProduct);
-      quantities[id] = { amount: '', unit: unit };
-      m.close();
-      setTimeout(rerender, 150);
+  // ============ SEND ORDER FLOW ============
+  function sendOrderFlow(sid) {
+    const supplier = PCD.store.getFromTable('suppliers', sid);
+    if (!supplier) return;
+    const products = supplier.products || [];
+    const dq = draftQty[sid] || {};
+    const filled = products.filter(function (p) {
+      const v = dq[p.id];
+      return v && parseFloat(v) > 0;
     });
+    if (filled.length === 0) {
+      PCD.toast.warning('Enter quantities for at least one product first');
+      return;
+    }
+    // Pick delivery date first, then build message + open share sheet
+    openDeliveryDate(supplier, filled);
   }
 
-  // ============ DELIVERY DATE PICKER ============
-  function openDeliveryDatePicker(supplier, items, quantities) {
-    const t = PCD.i18n.t;
-    const body = PCD.el('div');
-
-    // Default: tomorrow
+  function openDeliveryDate(supplier, items) {
     const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
     const dayAfter = new Date(); dayAfter.setDate(dayAfter.getDate() + 2);
-
     function iso(d) { return d.toISOString().slice(0, 10); }
     function dayName(d) {
-      const opts = { weekday: 'short', month: 'short', day: 'numeric' };
-      return d.toLocaleDateString(PCD.i18n.getLocale ? PCD.i18n.getLocale() : 'en', opts);
+      return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
     }
+    let selected = iso(tomorrow);
 
-    let selectedDate = iso(tomorrow);
+    const body = PCD.el('div');
+    body.innerHTML =
+      '<div style="font-weight:600;margin-bottom:12px;">When do you need delivery?</div>' +
+      '<div class="flex flex-col gap-2">' +
+        '<label class="card card-hover" style="padding:12px;display:flex;align-items:center;gap:10px;cursor:pointer;">' +
+          '<input type="radio" name="dlv" value="' + iso(tomorrow) + '" checked style="accent-color:var(--brand-600);">' +
+          '<div style="flex:1;"><div style="font-weight:600;">Tomorrow</div><div class="text-muted text-sm">' + dayName(tomorrow) + '</div></div>' +
+        '</label>' +
+        '<label class="card card-hover" style="padding:12px;display:flex;align-items:center;gap:10px;cursor:pointer;">' +
+          '<input type="radio" name="dlv" value="' + iso(dayAfter) + '" style="accent-color:var(--brand-600);">' +
+          '<div style="flex:1;"><div style="font-weight:600;">Day after tomorrow</div><div class="text-muted text-sm">' + dayName(dayAfter) + '</div></div>' +
+        '</label>' +
+        '<label class="card" style="padding:12px;display:flex;align-items:center;gap:10px;cursor:pointer;">' +
+          '<input type="radio" name="dlv" value="custom" style="accent-color:var(--brand-600);">' +
+          '<div style="flex:1;"><div style="font-weight:600;">Custom date</div>' +
+            '<input type="date" id="customDate" min="' + iso(new Date()) + '" class="input mt-1" style="padding:6px 8px;font-size:13px;">' +
+          '</div>' +
+        '</label>' +
+      '</div>' +
+      '<div class="field mt-3"><label class="field-label">Notes (optional)</label>' +
+      '<input type="text" id="dlvNotes" class="input" placeholder="e.g. Before 10am, back entrance"></div>';
 
-    body.innerHTML = `
-      <div style="font-weight:600;margin-bottom:12px;">Delivery date</div>
-      <div class="flex flex-col gap-2">
-        <label class="card card-hover" style="padding:12px;display:flex;align-items:center;gap:10px;cursor:pointer;" data-preset="${iso(tomorrow)}">
-          <input type="radio" name="dlvDate" value="${iso(tomorrow)}" checked style="accent-color:var(--brand-600);">
-          <div style="flex:1;">
-            <div style="font-weight:600;">Tomorrow</div>
-            <div class="text-muted text-sm">${dayName(tomorrow)}</div>
-          </div>
-        </label>
-        <label class="card card-hover" style="padding:12px;display:flex;align-items:center;gap:10px;cursor:pointer;" data-preset="${iso(dayAfter)}">
-          <input type="radio" name="dlvDate" value="${iso(dayAfter)}" style="accent-color:var(--brand-600);">
-          <div style="flex:1;">
-            <div style="font-weight:600;">Day after tomorrow</div>
-            <div class="text-muted text-sm">${dayName(dayAfter)}</div>
-          </div>
-        </label>
-        <label class="card" style="padding:12px;display:flex;align-items:center;gap:10px;cursor:pointer;" data-preset="custom">
-          <input type="radio" name="dlvDate" value="custom" style="accent-color:var(--brand-600);">
-          <div style="flex:1;">
-            <div style="font-weight:600;">Custom date</div>
-            <input type="date" class="input mt-1" id="customDate" min="${iso(new Date())}" style="padding:6px 8px;font-size:13px;">
-          </div>
-        </label>
-      </div>
-
-      <div class="field mt-3">
-        <label class="field-label">Additional notes (optional)</label>
-        <input type="text" class="input" id="orderNotes" placeholder="e.g. Before 10am, back entrance">
-      </div>
-    `;
-
-    PCD.on(body, 'change', 'input[name=dlvDate]', function () {
+    PCD.on(body, 'change', 'input[name=dlv]', function () {
       if (this.value === 'custom') {
         const cd = PCD.$('#customDate', body).value;
-        selectedDate = cd || iso(tomorrow);
+        selected = cd || iso(tomorrow);
       } else {
-        selectedDate = this.value;
+        selected = this.value;
       }
     });
     PCD.$('#customDate', body).addEventListener('change', function () {
-      // Auto-select custom radio when user picks a date
-      const r = body.querySelector('input[name=dlvDate][value=custom]');
+      const r = body.querySelector('input[name=dlv][value=custom]');
       if (r) r.checked = true;
-      selectedDate = this.value;
+      selected = this.value;
     });
 
-    const backBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('btn_back') });
-    const sendBtn = PCD.el('button', { class: 'btn btn-primary', style: { flex: '1' } });
-    sendBtn.innerHTML = PCD.icon('send', 16) + ' <span>Send Order</span>';
+    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: 'Cancel' });
+    const nextBtn = PCD.el('button', { class: 'btn btn-primary', style: { flex: '1' } });
+    nextBtn.innerHTML = PCD.icon('send', 14) + ' <span>Next</span>';
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
-    footer.appendChild(backBtn);
-    footer.appendChild(sendBtn);
-
-    const m = PCD.modal.open({
-      title: 'Delivery date · ' + supplier.name,
-      body: body, footer: footer, size: 'sm', closable: true
-    });
-
-    backBtn.addEventListener('click', function () {
+    footer.appendChild(cancelBtn);
+    footer.appendChild(nextBtn);
+    const m = PCD.modal.open({ title: 'Send order to ' + supplier.name, body: body, footer: footer, size: 'sm', closable: true });
+    cancelBtn.addEventListener('click', function () { m.close(); });
+    nextBtn.addEventListener('click', function () {
+      const notes = (PCD.$('#dlvNotes', body).value || '').trim();
       m.close();
-      // Go back to order sheet with same quantities — fresh call, loses state intentionally
-      setTimeout(function () { openOrderSheet(supplier.id); }, 200);
-    });
-    sendBtn.addEventListener('click', function () {
-      const notes = PCD.$('#orderNotes', body).value.trim();
-      m.close();
-      setTimeout(function () { openChannelPicker(supplier, items, quantities, selectedDate, notes); }, 200);
+      setTimeout(function () { openShareSheet(supplier, items, selected, notes); }, 200);
     });
   }
 
-  // ============ CHANNEL PICKER (WA / SMS / Email) ============
-  function openChannelPicker(supplier, items, quantities, deliveryDate, notes) {
-    const t = PCD.i18n.t;
+  function buildMessage(supplier, items, deliveryDate, notes) {
+    const dq = draftQty[supplier.id] || {};
+    const dateStr = new Date(deliveryDate).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
     const user = PCD.store.get('user') || {};
     const userName = user.name || user.email || '';
 
-    // Format date nicely
-    const dateObj = new Date(deliveryDate);
-    const dateStr = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-
-    // Build message
     const lines = [];
     lines.push('Hi ' + (supplier.name || 'team') + ',');
     lines.push('');
-    lines.push('I would like to place an order for delivery on ' + dateStr + ':');
+    lines.push('I would like to order the following for delivery on ' + dateStr + ':');
     lines.push('');
     items.forEach(function (it) {
-      const q = quantities[it.id];
-      lines.push('• ' + it.name + ' — ' + q.amount + ' ' + q.unit);
+      const qty = dq[it.id];
+      const unit = dq['_unit_' + it.id] || it.unit || '';
+      lines.push('• ' + it.name + ' — ' + qty + ' ' + unit);
     });
     if (notes) {
       lines.push('');
@@ -371,85 +295,112 @@
     }
     lines.push('');
     lines.push('Thanks,');
-    lines.push('Best regards,');
     if (userName) lines.push(userName);
-    const message = lines.join('\n');
+    return lines.join('\n');
+  }
 
-    const body = PCD.el('div');
+  function openShareSheet(supplier, items, deliveryDate, notes) {
+    const message = buildMessage(supplier, items, deliveryDate, notes);
     const phoneClean = (supplier.phone || '').replace(/\D/g, '');
     const waNumber = (supplier.whatsapp || supplier.phone || '').replace(/\D/g, '');
     const email = supplier.email || '';
+    const hasAnyContact = phoneClean || waNumber || email;
 
-    body.innerHTML = `
-      <div class="mb-3">
-        <label class="field-label" style="font-size:12px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;">Message preview · editable</label>
-        <textarea class="textarea" id="orderMsg" rows="12" style="font-family:var(--font-mono);font-size:13px;white-space:pre;">${PCD.escapeHtml(message)}</textarea>
-        <div class="text-muted text-sm mt-1">${items.length} items · Delivery: ${dateStr}</div>
-      </div>
+    // If user device supports Web Share API and any contact info, prefer native share
+    // otherwise show our 4-button sheet
+    const body = PCD.el('div');
+    body.innerHTML =
+      '<div class="field"><label class="field-label">Message (editable)</label>' +
+      '<textarea class="textarea" id="shareMsg" rows="10" style="font-family:var(--font-mono);font-size:13px;white-space:pre;">' + PCD.escapeHtml(message) + '</textarea></div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-top:14px;">' +
+        '<button class="btn btn-outline" id="shWa" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;">' +
+          '<div style="color:#25D366;">' + PCD.icon('message-circle', 24) + '</div>' +
+          '<div style="font-weight:600;font-size:12px;">WhatsApp</div>' +
+          (!waNumber ? '<div class="text-muted" style="font-size:10px;">No number</div>' : '') +
+        '</button>' +
+        '<button class="btn btn-outline" id="shSms" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;">' +
+          '<div style="color:var(--brand-600);">' + PCD.icon('phone', 24) + '</div>' +
+          '<div style="font-weight:600;font-size:12px;">SMS</div>' +
+          (!phoneClean ? '<div class="text-muted" style="font-size:10px;">No number</div>' : '') +
+        '</button>' +
+        '<button class="btn btn-outline" id="shEmail" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;">' +
+          '<div style="color:#EA4335;">' + PCD.icon('mail', 24) + '</div>' +
+          '<div style="font-weight:600;font-size:12px;">Email</div>' +
+          (!email ? '<div class="text-muted" style="font-size:10px;">No address</div>' : '') +
+        '</button>' +
+        '<button class="btn btn-outline" id="shMore" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;">' +
+          '<div style="color:var(--text-2);">' + PCD.icon('share', 24) + '</div>' +
+          '<div style="font-weight:600;font-size:12px;">More...</div>' +
+        '</button>' +
+      '</div>' +
+      (!hasAnyContact ? '<div class="text-muted text-sm mt-3" style="text-align:center;font-size:12px;">No contact saved for this supplier — choose a channel above to send.</div>' : '');
 
-      <div style="font-weight:600;font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">Choose channel</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
-        <button class="btn btn-outline" id="sendWa" ${!waNumber ? 'disabled' : ''} style="flex-direction:column;height:auto;padding:14px 8px;gap:6px;">
-          <div style="color:#25D366;">${PCD.icon('message-circle', 24)}</div>
-          <div style="font-weight:600;font-size:13px;">WhatsApp</div>
-          ${!waNumber ? '<div class="text-muted" style="font-size:10px;">No number</div>' : ''}
-        </button>
-        <button class="btn btn-outline" id="sendSms" ${!phoneClean ? 'disabled' : ''} style="flex-direction:column;height:auto;padding:14px 8px;gap:6px;">
-          <div style="color:var(--brand-600);">${PCD.icon('phone', 24)}</div>
-          <div style="font-weight:600;font-size:13px;">SMS</div>
-          ${!phoneClean ? '<div class="text-muted" style="font-size:10px;">No number</div>' : ''}
-        </button>
-        <button class="btn btn-outline" id="sendEmail" ${!email ? 'disabled' : ''} style="flex-direction:column;height:auto;padding:14px 8px;gap:6px;">
-          <div style="color:#EA4335;">${PCD.icon('mail', 24)}</div>
-          <div style="font-weight:600;font-size:13px;">Email</div>
-          ${!email ? '<div class="text-muted" style="font-size:10px;">No email</div>' : ''}
-        </button>
-      </div>
-    `;
+    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: 'Close' });
+    const footer = PCD.el('div', { style: { display: 'flex', width: '100%' } });
+    footer.appendChild(cancelBtn);
+    const m = PCD.modal.open({ title: 'Send to ' + supplier.name, body: body, footer: footer, size: 'md', closable: true });
 
-    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('close') });
-    const copyBtn = PCD.el('button', { class: 'btn btn-outline' });
-    copyBtn.innerHTML = PCD.icon('copy', 14) + ' <span>Copy</span>';
-    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
-    footer.appendChild(closeBtn);
-    footer.appendChild(copyBtn);
+    function getMsg() { return PCD.$('#shareMsg', body).value; }
+    cancelBtn.addEventListener('click', function () { m.close(); });
 
-    const m = PCD.modal.open({
-      title: 'Send Order', body: body, footer: footer, size: 'md', closable: true
-    });
-
-    closeBtn.addEventListener('click', function () { m.close(); });
-    copyBtn.addEventListener('click', function () {
-      const msg = PCD.$('#orderMsg', body).value;
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(msg).then(function () { PCD.toast.success('Copied'); });
-      }
-    });
-
-    function currentMsg() { return PCD.$('#orderMsg', body).value; }
-
-    const waBtn = PCD.$('#sendWa', body);
-    if (waBtn && !waBtn.disabled) waBtn.addEventListener('click', function () {
-      const url = 'https://wa.me/' + waNumber + '?text=' + encodeURIComponent(currentMsg());
+    PCD.$('#shWa', body).addEventListener('click', function () {
+      const url = waNumber
+        ? 'https://wa.me/' + waNumber + '?text=' + encodeURIComponent(getMsg())
+        : 'https://wa.me/?text=' + encodeURIComponent(getMsg());
       window.open(url, '_blank');
+      onSentSuccess(supplier);
       m.close();
     });
-    const smsBtn = PCD.$('#sendSms', body);
-    if (smsBtn && !smsBtn.disabled) smsBtn.addEventListener('click', function () {
-      const url = 'sms:' + supplier.phone + '?&body=' + encodeURIComponent(currentMsg());
+    PCD.$('#shSms', body).addEventListener('click', function () {
+      const url = phoneClean
+        ? 'sms:' + supplier.phone + '?&body=' + encodeURIComponent(getMsg())
+        : 'sms:?&body=' + encodeURIComponent(getMsg());
       window.location.href = url;
+      onSentSuccess(supplier);
       m.close();
     });
-    const emailBtn = PCD.$('#sendEmail', body);
-    if (emailBtn && !emailBtn.disabled) emailBtn.addEventListener('click', function () {
-      const subject = 'Order · delivery ' + new Date(deliveryDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      const url = 'mailto:' + email + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(currentMsg());
+    PCD.$('#shEmail', body).addEventListener('click', function () {
+      const subject = 'Order request — delivery ' + new Date(deliveryDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      const url = email
+        ? 'mailto:' + email + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(getMsg())
+        : 'mailto:?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(getMsg());
       window.location.href = url;
+      onSentSuccess(supplier);
       m.close();
+    });
+    PCD.$('#shMore', body).addEventListener('click', function () {
+      const txt = getMsg();
+      // Use Web Share API if available (system share sheet)
+      if (navigator.share) {
+        navigator.share({
+          title: 'Order for ' + supplier.name,
+          text: txt
+        }).then(function () {
+          onSentSuccess(supplier);
+          m.close();
+        }).catch(function () {
+          // user cancelled - ignore
+        });
+      } else if (navigator.clipboard) {
+        navigator.clipboard.writeText(txt).then(function () {
+          PCD.toast.success('Copied to clipboard — paste it anywhere');
+        });
+      }
     });
   }
 
-  // ============ SUPPLIER EDITOR (with products list) ============
+  function onSentSuccess(supplier) {
+    // Clear quantities for this supplier — they were sent
+    delete draftQty[supplier.id];
+    PCD.toast.success('Order sent to ' + supplier.name);
+    // Re-render so the badge clears
+    setTimeout(function () {
+      const v = PCD.$('#view');
+      if (v && PCD.router.currentView() === 'suppliers') render(v);
+    }, 600);
+  }
+
+  // ============ EDITOR ============
   function openEditor(sid) {
     const t = PCD.i18n.t;
     const existing = sid ? PCD.store.getFromTable('suppliers', sid) : null;
@@ -464,31 +415,31 @@
     function renderEditor() {
       body.innerHTML = `
         <div class="field">
-          <label class="field-label">${t('supplier_name') || 'Name'} *</label>
+          <label class="field-label">Name *</label>
           <input type="text" class="input" id="sName" value="${PCD.escapeHtml(data.name || '')}" placeholder="e.g. Perth Fresh Produce">
         </div>
         <div class="field">
-          <label class="field-label">${t('supplier_category') || 'Category'}</label>
+          <label class="field-label">Category</label>
           <select class="select" id="sCat">
             ${CATS.map(function (c) { return '<option value="' + c + '"' + (data.category === c ? ' selected' : '') + '>' + c + '</option>'; }).join('')}
           </select>
         </div>
         <div class="field-row">
           <div class="field">
-            <label class="field-label">${t('supplier_phone') || 'Phone'}</label>
+            <label class="field-label">Phone</label>
             <input type="tel" class="input" id="sPhone" value="${PCD.escapeHtml(data.phone || '')}" placeholder="+61 ...">
           </div>
           <div class="field">
-            <label class="field-label">${t('supplier_whatsapp') || 'WhatsApp'}</label>
-            <input type="tel" class="input" id="sWa" value="${PCD.escapeHtml(data.whatsapp || '')}" placeholder="${t('supplier_wa_hint') || 'Leave empty to use phone'}">
+            <label class="field-label">WhatsApp</label>
+            <input type="tel" class="input" id="sWa" value="${PCD.escapeHtml(data.whatsapp || '')}" placeholder="Leave empty to use phone">
           </div>
         </div>
         <div class="field">
-          <label class="field-label">${t('supplier_email') || 'Email'}</label>
+          <label class="field-label">Email</label>
           <input type="email" class="input" id="sEmail" value="${PCD.escapeHtml(data.email || '')}" placeholder="orders@supplier.com">
         </div>
         <div class="field">
-          <label class="field-label">${t('supplier_notes') || 'Notes'}</label>
+          <label class="field-label">Notes</label>
           <textarea class="textarea" id="sNotes" rows="2" placeholder="Delivery days, min order, etc.">${PCD.escapeHtml(data.notes || '')}</textarea>
         </div>
 
@@ -500,28 +451,24 @@
 
       const listEl = PCD.$('#productsList', body);
       data.products.forEach(function (p, idx) {
-        const row = PCD.el('div', {
-          style: { display: 'flex', gap: '6px', alignItems: 'center' }
-        });
+        const row = PCD.el('div', { style: { display: 'flex', gap: '6px', alignItems: 'center' } });
         row.innerHTML = `
           <input type="text" class="input" data-pname="${idx}" value="${PCD.escapeHtml(p.name || '')}" placeholder="Product name" style="flex:1;">
           <select class="select" data-punit="${idx}" style="width:75px;">
-            ${UNITS.map(function(u){return '<option value="'+u+'"'+(p.unit===u?' selected':'')+'>'+u+'</option>';}).join('')}
+            ${UNITS.map(function (u) { return '<option value="' + u + '"' + (p.unit === u ? ' selected' : '') + '>' + u + '</option>'; }).join('')}
           </select>
           <button class="icon-btn" data-pdel="${idx}">${PCD.icon('x', 16)}</button>
         `;
         listEl.appendChild(row);
       });
 
-      // Header inputs
+      // Direct event handlers (no debounce - save on every keystroke)
       PCD.$('#sName', body).addEventListener('input', function () { data.name = this.value; });
       PCD.$('#sCat', body).addEventListener('change', function () { data.category = this.value; });
       PCD.$('#sPhone', body).addEventListener('input', function () { data.phone = this.value; });
       PCD.$('#sWa', body).addEventListener('input', function () { data.whatsapp = this.value; });
       PCD.$('#sEmail', body).addEventListener('input', function () { data.email = this.value; });
       PCD.$('#sNotes', body).addEventListener('input', function () { data.notes = this.value; });
-
-      // Products
       PCD.$('#addProdBtn', body).addEventListener('click', function () {
         data.products.push({ id: PCD.uid('p'), name: '', unit: 'kg' });
         renderEditor();
@@ -530,10 +477,10 @@
           if (inputs.length) inputs[inputs.length - 1].focus();
         }, 30);
       });
-      PCD.on(body, 'input', '[data-pname]', PCD.debounce(function () {
+      PCD.on(body, 'input', '[data-pname]', function () {
         const idx = parseInt(this.getAttribute('data-pname'), 10);
         if (data.products[idx]) data.products[idx].name = this.value;
-      }, 300));
+      });
       PCD.on(body, 'change', '[data-punit]', function () {
         const idx = parseInt(this.getAttribute('data-punit'), 10);
         if (data.products[idx]) data.products[idx].unit = this.value;
@@ -557,7 +504,7 @@
     footer.appendChild(saveBtn);
 
     const m = PCD.modal.open({
-      title: existing ? (existing.name || 'Supplier') : (t('supplier_new') || 'New Supplier'),
+      title: existing ? (existing.name || 'Supplier') : 'New Supplier',
       body: body, footer: footer, size: 'md', closable: true
     });
 
@@ -578,23 +525,34 @@
       });
     });
     saveBtn.addEventListener('click', function () {
-      const name = (PCD.$('#sName', body).value || '').trim();
-      if (!name) { PCD.toast.error('Name required'); return; }
-      data.name = name;
-      // Filter empty products and ensure IDs
-      data.products = (data.products || []).filter(function (p) { return p.name && p.name.trim(); }).map(function (p) {
-        if (!p.id) p.id = PCD.uid('p');
-        p.name = p.name.trim();
-        return p;
+      // Read fresh from DOM (safety net)
+      data.name = (PCD.$('#sName', body).value || '').trim();
+      if (!data.name) { PCD.toast.error('Name required'); return; }
+      data.category = PCD.$('#sCat', body).value;
+      data.phone = (PCD.$('#sPhone', body).value || '').trim();
+      data.whatsapp = (PCD.$('#sWa', body).value || '').trim();
+      data.email = (PCD.$('#sEmail', body).value || '').trim();
+      data.notes = (PCD.$('#sNotes', body).value || '').trim();
+      // Read products from DOM
+      const newProducts = [];
+      body.querySelectorAll('[data-pname]').forEach(function (inp, idx) {
+        const name = (inp.value || '').trim();
+        if (!name) return;
+        const unitSel = body.querySelector('[data-punit="' + idx + '"]');
+        const unit = unitSel ? unitSel.value : 'kg';
+        const orig = data.products[idx];
+        newProducts.push({ id: orig && orig.id || PCD.uid('p'), name: name, unit: unit });
       });
+      data.products = newProducts;
+
       if (existing) data.id = existing.id;
       const saved = PCD.store.upsertInTable('suppliers', data, 'sup');
-      // Sync products to Ingredients table
+      // Sync products to Ingredients table (auto-create with price=0)
       let synced = 0;
       data.products.forEach(function (p) {
         if (syncProductToIngredients(p.name, p.unit)) synced++;
       });
-      PCD.toast.success(t('saved') + (synced > 0 ? ' · ' + synced + ' product' + (synced === 1 ? '' : 's') + ' linked to ingredients' : ''));
+      PCD.toast.success(t('saved') + (synced > 0 ? ' · ' + synced + ' new ingredient(s)' : ''));
       m.close();
       setTimeout(function () {
         const v = PCD.$('#view');
@@ -603,20 +561,14 @@
     });
   }
 
-  // ============ SYNC PRODUCT TO INGREDIENTS ============
-  // If same-name ingredient exists → no-op (keep existing data).
-  // If not → add with pricePerUnit=0 so chef can fill in later.
   function syncProductToIngredients(name, unit) {
     if (!name) return false;
     const existing = PCD.store.listIngredients().find(function (i) {
       return (i.name || '').toLowerCase() === name.toLowerCase();
     });
-    if (existing) return false; // don't overwrite
+    if (existing) return false;
     PCD.store.upsertIngredient({
-      name: name,
-      unit: unit || 'kg',
-      pricePerUnit: 0,
-      category: 'cat_other',
+      name: name, unit: unit || 'kg', pricePerUnit: 0, category: 'cat_other',
     });
     return true;
   }

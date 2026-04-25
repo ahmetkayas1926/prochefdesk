@@ -1,7 +1,20 @@
 /* ================================================================
-   ProChefDesk — kitchen_cards.js
-   Kitchen Cards: A4 printable cards for the line. Takes a recipe +
-   target yield/station/prep-by, prints beautifully on A4.
+   ProChefDesk — kitchen_cards.js (v1.9 - REDESIGN)
+
+   USER REQUEST:
+   "A4 yatay kağıt boyutunda. Tek bir A4 kağıdında 10-12 veya daha
+   fazla veya daha az (recipenin uzunluğuna ve kısalığına göre)
+   recipe sığabiliyordu. Sadece yemeğin adı, malzemeler miktarları,
+   hemen altında talimat. Sous chef bir A4 kağıdına 10-15 recipe
+   sığdırıyor. Bunu yazdırıyor. Sonra laminant kaplatıyor. Mutfağa
+   bırakıyor. Şefler gidip istedikleri recipeyi A4'te buluyor."
+
+   APPROACH:
+   - Pick which recipes to include
+   - Render as 2-3 column compact layout on A4 landscape
+   - Each recipe block: name (bold) → ingredients (one-line) → method
+   - Auto-scale font and columns based on recipe count
+   - Print directly via PCD.print() — no per-card editing
    ================================================================ */
 
 (function () {
@@ -10,254 +23,223 @@
 
   function render(view) {
     const t = PCD.i18n.t;
-    const cards = PCD.store.listTable('canvases').sort(function (a, b) {
-      return (b.updatedAt || '').localeCompare(a.updatedAt || '');
+    const recipes = PCD.store.listRecipes().sort(function (a, b) {
+      return (a.name || '').localeCompare(b.name || '');
     });
 
     view.innerHTML = `
       <div class="page-header">
         <div class="page-header-text">
-          <div class="page-title">${t('kitchen_cards_title')}</div>
-          <div class="page-subtitle">${cards.length} ${cards.length === 1 ? 'card' : 'cards'}</div>
-        </div>
-        <div class="page-header-actions">
-          <button class="btn btn-primary" id="newKCardBtn">+ ${t('new_kcard')}</button>
+          <div class="page-title">Kitchen Cards</div>
+          <div class="page-subtitle">Compact A4 sheets — 10-15 recipes per page for the kitchen</div>
         </div>
       </div>
-      <div id="kcardList"></div>
+      <div id="kcBody"></div>
     `;
 
-    const listEl = PCD.$('#kcardList', view);
-    if (cards.length === 0) {
-      listEl.innerHTML = `
+    const bodyEl = PCD.$('#kcBody', view);
+
+    if (recipes.length === 0) {
+      bodyEl.innerHTML = `
         <div class="empty">
-          <div class="empty-icon">🗂️</div>
-          <div class="empty-title">${t('no_kcards_yet')}</div>
-          <div class="empty-desc">${t('no_kcards_yet_desc')}</div>
-          <div class="empty-action"><button class="btn btn-primary" id="emptyNewKCard">+ ${t('new_kcard')}</button></div>
+          <div class="empty-icon" style="color:var(--brand-600);">${PCD.icon('id-card', 48)}</div>
+          <div class="empty-title">No recipes yet</div>
+          <div class="empty-desc">Create some recipes first, then come back here to build a kitchen reference sheet.</div>
         </div>
       `;
-      const b = PCD.$('#emptyNewKCard', listEl);
-      if (b) b.addEventListener('click', function () { openEditor(); });
-    } else {
-      const grid = PCD.el('div', { class: 'grid', style: { gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' } });
-      cards.forEach(function (c) {
-        const r = c.recipeId ? PCD.store.getRecipe(c.recipeId) : null;
-        const cell = PCD.el('div', { class: 'card card-hover', 'data-cid': c.id, style: { padding: '12px' } });
-        cell.innerHTML = `
-          <div class="list-item-thumb" style="width:100%;height:100px;margin-bottom:10px;border-radius:var(--r-md);${r && r.photo ? 'background-image:url(' + PCD.escapeHtml(r.photo) + ');background-size:cover;background-position:center;' : ''}">${r && r.photo ? '' : '🗂️'}</div>
-          <div style="font-weight:700;font-size:14px;letter-spacing:-0.01em;">${PCD.escapeHtml(c.name || (r ? r.name : t('untitled')))}</div>
-          <div class="text-muted text-sm">${c.station || '—'} · ${c.yield || ''}p</div>
-        `;
-        grid.appendChild(cell);
-      });
-      listEl.appendChild(grid);
+      return;
     }
 
-    PCD.$('#newKCardBtn', view).addEventListener('click', function () { openEditor(); });
-    PCD.on(listEl, 'click', '[data-cid]', function () {
-      openEditor(this.getAttribute('data-cid'));
-    });
-  }
+    // Selected set
+    const selected = new Set(recipes.map(function (r) { return r.id; })); // default: all
+    let columns = 3;
+    let showMethod = true;
 
-  function openEditor(cid) {
-    const t = PCD.i18n.t;
-    const existing = cid ? PCD.store.getFromTable('canvases', cid) : null;
-    const data = existing ? PCD.clone(existing) : {
-      recipeId: null, name: '', yield: null, station: '', prepBy: '',
-    };
+    function renderBody() {
+      bodyEl.innerHTML = `
+        <div class="card mb-3" style="padding:14px;">
+          <div style="font-weight:700;margin-bottom:10px;">Sheet options</div>
 
-    const body = PCD.el('div');
+          <div class="flex items-center gap-2 mb-2" style="flex-wrap:wrap;">
+            <span class="text-muted text-sm" style="margin-inline-end:4px;">Columns:</span>
+            <button class="btn btn-secondary btn-sm ${columns===2?'btn-primary':''}" data-cols="2">2</button>
+            <button class="btn btn-secondary btn-sm ${columns===3?'btn-primary':''}" data-cols="3">3</button>
+            <button class="btn btn-secondary btn-sm ${columns===4?'btn-primary':''}" data-cols="4">4</button>
+            <span class="text-muted text-sm" style="margin-inline-start:12px;margin-inline-end:4px;">Show method:</span>
+            <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;">
+              <input type="checkbox" id="showMethod" ${showMethod ? 'checked' : ''} style="accent-color:var(--brand-600);">
+            </label>
+          </div>
 
-    function render() {
-      const r = data.recipeId ? PCD.store.getRecipe(data.recipeId) : null;
-      body.innerHTML = `
-        <div class="field">
-          <label class="field-label">${t('kcard_choose_recipe')} *</label>
-          <button class="btn btn-outline btn-block" id="pickBtn" style="justify-content:flex-start;">
-            ${r ? PCD.escapeHtml(r.name) : t('kcard_choose_recipe') + ' →'}
-          </button>
+          <div class="flex items-center gap-2 mt-3" style="flex-wrap:wrap;">
+            <button class="btn btn-outline btn-sm" id="selectAllBtn">Select all</button>
+            <button class="btn btn-outline btn-sm" id="selectNoneBtn">Select none</button>
+            <span class="text-muted text-sm" style="margin-inline-start:auto;">${selected.size} of ${recipes.length} selected</span>
+            <button class="btn btn-primary" id="printSheetBtn" ${selected.size === 0 ? 'disabled' : ''}>${PCD.icon('print', 14)} <span>Print sheet</span></button>
+          </div>
         </div>
 
-        ${r ? `
-          <div class="field">
-            <label class="field-label">${t('kcard_portions')} / ${t('kcard_yield')}</label>
-            <input type="number" class="input" id="kcYield" value="${data.yield || r.servings || 4}" min="1">
-            <div class="field-hint">${t('kcard_scale_to')}: original ${r.servings || 1}p</div>
-          </div>
-
-          <div class="field-row">
-            <div class="field">
-              <label class="field-label">${t('kcard_station')}</label>
-              <input type="text" class="input" id="kcStation" value="${PCD.escapeHtml(data.station || '')}" placeholder="Hot / Cold / Pastry">
-            </div>
-            <div class="field">
-              <label class="field-label">${t('kcard_prep_by')}</label>
-              <input type="text" class="input" id="kcPrepBy" value="${PCD.escapeHtml(data.prepBy || '')}" placeholder="Chef's name">
-            </div>
-          </div>
-        ` : '<div class="text-muted text-sm">Pick a recipe to configure card</div>'}
+        <div class="card" style="padding:6px 0;">
+          <div id="recipeList"></div>
+        </div>
       `;
 
-      PCD.$('#pickBtn', body).addEventListener('click', function () {
-        const items = PCD.store.listRecipes().map(function (r) {
-          return { id: r.id, name: r.name, meta: (r.servings || 1) + 'p', thumb: r.photo || '' };
+      const listEl = PCD.$('#recipeList', bodyEl);
+      recipes.forEach(function (r) {
+        const isSelected = selected.has(r.id);
+        const row = PCD.el('label', {
+          style: {
+            display: 'flex', alignItems: 'center', gap: '10px',
+            padding: '10px 14px',
+            cursor: 'pointer',
+            borderBottom: '1px solid var(--border)',
+            background: isSelected ? 'var(--brand-50)' : 'var(--surface)'
+          }
         });
-        if (items.length === 0) { PCD.toast.warning(t('no_recipes_yet')); return; }
-        PCD.picker.open({
-          title: t('kcard_choose_recipe'),
-          items: items, multi: false, selected: data.recipeId ? [data.recipeId] : []
-        }).then(function (sel) {
-          if (sel && sel.length) {
-            data.recipeId = sel[0];
-            const r2 = PCD.store.getRecipe(data.recipeId);
-            data.name = r2.name;
-            if (!data.yield) data.yield = r2.servings || 4;
-            render();
+        row.innerHTML =
+          '<input type="checkbox" data-rid="' + r.id + '"' + (isSelected ? ' checked' : '') + ' style="width:18px;height:18px;accent-color:var(--brand-600);flex-shrink:0;">' +
+          '<div style="flex:1;min-width:0;">' +
+            '<div style="font-weight:600;font-size:14px;">' + PCD.escapeHtml(r.name) + '</div>' +
+            '<div class="text-muted" style="font-size:12px;">' +
+              ((r.ingredients || []).length) + ' ingredient' + ((r.ingredients || []).length === 1 ? '' : 's') +
+              (r.servings ? ' · ' + r.servings + ' servings' : '') +
+            '</div>' +
+          '</div>';
+        listEl.appendChild(row);
+      });
+
+      // Wire
+      PCD.on(bodyEl, 'click', '[data-cols]', function () {
+        columns = parseInt(this.getAttribute('data-cols'), 10);
+        renderBody();
+      });
+      PCD.$('#showMethod', bodyEl).addEventListener('change', function () {
+        showMethod = this.checked;
+      });
+      PCD.$('#selectAllBtn', bodyEl).addEventListener('click', function () {
+        recipes.forEach(function (r) { selected.add(r.id); });
+        renderBody();
+      });
+      PCD.$('#selectNoneBtn', bodyEl).addEventListener('click', function () {
+        selected.clear();
+        renderBody();
+      });
+      PCD.on(bodyEl, 'change', 'input[type=checkbox][data-rid]', function () {
+        const rid = this.getAttribute('data-rid');
+        if (this.checked) selected.add(rid); else selected.delete(rid);
+        // Update count without full re-render
+        const countEl = bodyEl.querySelector('.text-muted.text-sm[style*="margin-inline-start"]');
+        const printBtn = PCD.$('#printSheetBtn', bodyEl);
+        if (printBtn) printBtn.disabled = selected.size === 0;
+        // Update row bg
+        const row = this.closest('label');
+        if (row) row.style.background = this.checked ? 'var(--brand-50)' : 'var(--surface)';
+        // Update count text
+        const counts = bodyEl.querySelectorAll('.text-muted');
+        counts.forEach(function (el) {
+          if (el.textContent && el.textContent.indexOf('of ' + recipes.length + ' selected') >= 0) {
+            el.textContent = selected.size + ' of ' + recipes.length + ' selected';
           }
         });
       });
-
-      const yEl = PCD.$('#kcYield', body);
-      if (yEl) yEl.addEventListener('input', function () { data.yield = parseInt(this.value, 10) || null; });
-      const sEl = PCD.$('#kcStation', body);
-      if (sEl) sEl.addEventListener('input', function () { data.station = this.value; });
-      const pEl = PCD.$('#kcPrepBy', body);
-      if (pEl) pEl.addEventListener('input', function () { data.prepBy = this.value; });
-    }
-
-    render();
-
-    const saveBtn = PCD.el('button', { class: 'btn btn-primary', text: t('save'), style: { flex: '1' } });
-    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') });
-    const printBtn = PCD.el('button', { class: 'btn btn-outline' });
-    printBtn.innerHTML = PCD.icon('print',16) + ' ' + t('kcard_print');
-    let deleteBtn = null;
-    if (existing) {
-      deleteBtn = PCD.el('button', { class: 'btn btn-ghost', text: t('delete'), style: { color: 'var(--danger)' } });
-    }
-    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
-    if (deleteBtn) footer.appendChild(deleteBtn);
-    footer.appendChild(cancelBtn);
-    footer.appendChild(printBtn);
-    footer.appendChild(saveBtn);
-
-    const m = PCD.modal.open({
-      title: existing ? (existing.name || t('untitled')) : t('new_kcard'),
-      body: body, footer: footer, size: 'md', closable: true
-    });
-
-    cancelBtn.addEventListener('click', function () { m.close(); });
-    if (deleteBtn) deleteBtn.addEventListener('click', function () {
-      PCD.modal.confirm({
-        icon: '🗑', iconKind: 'danger', danger: true,
-        title: t('confirm_delete'), text: t('confirm_delete_desc'),
-        okText: t('delete')
-      }).then(function (ok) {
-        if (!ok) return;
-        PCD.store.deleteFromTable('canvases', existing.id);
-        PCD.toast.success(t('item_deleted'));
-        m.close();
-        const v = PCD.$('#view');
-        if (PCD.router.currentView() === 'kitchen_cards') render(v);
+      PCD.$('#printSheetBtn', bodyEl).addEventListener('click', function () {
+        if (selected.size === 0) return;
+        printSheet(recipes.filter(function (r) { return selected.has(r.id); }), columns, showMethod);
       });
-    });
-    printBtn.addEventListener('click', function () {
-      if (!data.recipeId) { PCD.toast.error(t('kcard_choose_recipe')); return; }
-      const saved = existing
-        ? PCD.store.upsertInTable('canvases', Object.assign({}, existing, data), 'c')
-        : PCD.store.upsertInTable('canvases', data, 'c');
-      m.close();
-      setTimeout(function () { openPrintView(saved.id); }, 280);
-    });
-    saveBtn.addEventListener('click', function () {
-      if (!data.recipeId) { PCD.toast.error(t('kcard_choose_recipe')); return; }
-      if (existing) data.id = existing.id;
-      PCD.store.upsertInTable('canvases', data, 'c');
-      PCD.toast.success(t('saved'));
-      m.close();
-      setTimeout(function () {
-        const v = PCD.$('#view');
-        if (PCD.router.currentView() === 'kitchen_cards') render(v);
-      }, 250);
-    });
+    }
+
+    renderBody();
   }
 
-  // ============ PRINT VIEW ============
-  function openPrintView(cid) {
-    const t = PCD.i18n.t;
-    const card = PCD.store.getFromTable('canvases', cid);
-    if (!card || !card.recipeId) return;
-    const r = PCD.store.getRecipe(card.recipeId);
-    if (!r) return;
+  function printSheet(recipes, columns, showMethod) {
     const ingMap = {};
     PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
 
-    const yield_ = card.yield || r.servings || 1;
-    const factor = yield_ / (r.servings || 1);
-    const cost = PCD.recipes.computeFoodCost(r, ingMap) * factor;
-    const cps = cost / yield_;
+    // Build compact recipe blocks
+    let blocksHtml = '';
+    recipes.forEach(function (r) {
+      // Inline ingredients: "ingredient1 100g · ingredient2 50g · ..."
+      const ingList = (r.ingredients || []).map(function (ri) {
+        const ing = ingMap[ri.ingredientId];
+        const name = ing ? ing.name : '?';
+        return PCD.escapeHtml(name) + ' <span class="amt">' + PCD.fmtNumber(ri.amount) + ' ' + PCD.escapeHtml(ri.unit || '') + '</span>';
+      }).join(' &nbsp;·&nbsp; ');
 
-    let ingsHtml = '';
-    (r.ingredients || []).forEach(function (ri) {
-      const ing = ingMap[ri.ingredientId];
-      const name = ing ? ing.name : '(?)';
-      const amt = (ri.amount || 0) * factor;
-      ingsHtml += '<div class="kcard-ing-row">' +
-        '<span class="kcard-ing-name">' + PCD.escapeHtml(name) + '</span>' +
-        '<span class="kcard-ing-amt">' + PCD.fmtNumber(amt) + ' ' + (ri.unit || '') + '</span>' +
+      const method = (r.steps || '').trim();
+
+      blocksHtml +=
+        '<div class="kc-block">' +
+          '<div class="kc-name">' + PCD.escapeHtml(r.name || '') + (r.servings ? ' <span class="kc-servings">(' + r.servings + 'p)</span>' : '') + '</div>' +
+          '<div class="kc-ings">' + ingList + '</div>' +
+          (showMethod && method ? '<div class="kc-method">' + PCD.escapeHtml(method) + '</div>' : '') +
+        '</div>';
+    });
+
+    // A4 landscape, multi-column layout
+    const html =
+      '<style>' +
+        '@page { size: A4 landscape; margin: 8mm; }' +
+        'body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, sans-serif; color: #000; background: #fff; }' +
+        '.kc-sheet {' +
+          ' column-count: ' + columns + ';' +
+          ' column-gap: 10px;' +
+          ' column-rule: 1px solid #ccc;' +
+        '}' +
+        '.kc-block {' +
+          ' break-inside: avoid;' +
+          ' page-break-inside: avoid;' +
+          ' margin-bottom: 8px;' +
+          ' padding: 6px 8px;' +
+          ' border-bottom: 1px solid #e0e0e0;' +
+        '}' +
+        '.kc-name {' +
+          ' font-weight: 800;' +
+          ' font-size: 11pt;' +
+          ' margin-bottom: 2px;' +
+          ' color: #16a34a;' +
+        '}' +
+        '.kc-servings { font-weight: 500; color: #666; font-size: 9pt; }' +
+        '.kc-ings {' +
+          ' font-size: 8.5pt;' +
+          ' line-height: 1.4;' +
+          ' color: #333;' +
+          ' margin-bottom: 3px;' +
+        '}' +
+        '.kc-ings .amt {' +
+          ' font-weight: 700;' +
+          ' color: #000;' +
+          ' white-space: nowrap;' +
+        '}' +
+        '.kc-method {' +
+          ' font-size: 8pt;' +
+          ' line-height: 1.45;' +
+          ' color: #444;' +
+          ' white-space: pre-wrap;' +
+          ' margin-top: 2px;' +
+        '}' +
+        '.kc-header {' +
+          ' column-span: all;' +
+          ' margin-bottom: 6px;' +
+          ' padding-bottom: 4px;' +
+          ' border-bottom: 2px solid #16a34a;' +
+          ' display: flex;' +
+          ' justify-content: space-between;' +
+          ' align-items: baseline;' +
+        '}' +
+        '.kc-header h1 { margin: 0; font-size: 14pt; }' +
+        '.kc-header .meta { font-size: 9pt; color: #666; }' +
+      '</style>' +
+      '<div class="kc-sheet">' +
+        '<div class="kc-header">' +
+          '<h1>Kitchen Reference</h1>' +
+          '<div class="meta">' + recipes.length + ' recipes · ' + new Date().toLocaleDateString() + '</div>' +
+        '</div>' +
+        blocksHtml +
       '</div>';
-    });
 
-    const body = PCD.el('div');
-    body.innerHTML = `
-      <div class="print-wrap">
-        <div class="print-page kcard-page">
-          <div class="kcard-header">
-            <div class="kcard-photo" style="${r.photo ? 'background-image:url(' + PCD.escapeHtml(r.photo) + ');' : ''}"></div>
-            <div class="kcard-head-body">
-              <h1 class="kcard-title">${PCD.escapeHtml(r.name)}</h1>
-              <div class="kcard-meta">
-                <span class="kcard-meta-item"><strong>${t('kcard_yield')}:</strong> ${yield_}p</span>
-                ${card.station ? '<span class="kcard-meta-item"><strong>' + t('kcard_station') + ':</strong> ' + PCD.escapeHtml(card.station) + '</span>' : ''}
-                ${(r.prepTime || r.cookTime) ? '<span class="kcard-meta-item"><strong>Time:</strong> ' + ((r.prepTime || 0) + (r.cookTime || 0)) + 'min</span>' : ''}
-                <span class="kcard-meta-item"><strong>${t('cost_per_serving')}:</strong> ${PCD.fmtMoney(cps)}</span>
-              </div>
-            </div>
-          </div>
-          <div class="kcard-grid">
-            <div>
-              <div class="kcard-ings-label">${t('recipe_ingredients')}</div>
-              <div class="kcard-ings">${ingsHtml}</div>
-            </div>
-            <div>
-              <div class="kcard-method-label">${t('kcard_method')}</div>
-              <div class="kcard-method">${PCD.escapeHtml(r.steps || '')}</div>
-            </div>
-          </div>
-          <div class="kcard-footer">
-            <span>${card.prepBy ? t('kcard_prep_by') + ': ' + PCD.escapeHtml(card.prepBy) : ''}</span>
-            <span>${PCD.fmtDate(new Date())}</span>
-          </div>
-        </div>
-      </div>
-    `;
-
-    const printBtn = PCD.el('button', { class: 'btn btn-primary' });
-    printBtn.innerHTML = PCD.icon('print',16) + ' <span>' + t('print') + '</span>';
-    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('close') });
-    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
-    footer.appendChild(closeBtn);
-    footer.appendChild(printBtn);
-
-    const m = PCD.modal.open({
-      title: t('preview') + ' · ' + r.name,
-      body: body, footer: footer, size: 'xl', closable: true
-    });
-    closeBtn.addEventListener('click', function () { m.close(); });
-    printBtn.addEventListener('click', function () { const wrap = body.querySelector('.print-wrap'); if (wrap) PCD.print(wrap.innerHTML); else window.print(); });
+    PCD.print(html, 'Kitchen Cards — ' + recipes.length + ' recipes');
   }
 
   PCD.tools = PCD.tools || {};
-  PCD.tools.kitchenCards = { render: render, openEditor: openEditor, openPrintView: openPrintView };
+  PCD.tools.kitchenCards = { render: render };
 })();
