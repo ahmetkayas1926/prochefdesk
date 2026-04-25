@@ -96,5 +96,4 @@
 /* ---------- AVOID WIDE TABLES ON MOBILE ---------- */
 .table-responsive {
   overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
 }

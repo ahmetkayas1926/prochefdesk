@@ -102,12 +102,20 @@
         // Force reflow then add .open class to trigger transition
         root.offsetHeight;
         stack.push(modal);
-        // Lock scroll on html while any modal is open
-        document.documentElement.style.overflow = 'hidden';
+        // Lock scroll — preserve position so we don't jump to top
+        if (stack.length === 1) {
+          const scrollY = window.scrollY || window.pageYOffset || 0;
+          document.body.dataset.scrollLock = String(scrollY);
+          document.body.style.position = 'fixed';
+          document.body.style.top = '-' + scrollY + 'px';
+          document.body.style.left = '0';
+          document.body.style.right = '0';
+          document.body.style.width = '100%';
+        }
         requestAnimationFrame(function () { root.classList.add('open'); });
         modal._isOpen = true;
 
-        // Focus first input if any
+        // Focus first input if any (desktop only — mobile keyboard pop-up is annoying)
         setTimeout(function () {
           const inp = panel.querySelector('input:not([type=hidden]), textarea, select, button');
           if (inp && PCD.isTouch && !PCD.isTouch()) inp.focus();
@@ -117,24 +125,26 @@
       close: function () {
         if (!modal._isOpen) return;
         modal._isOpen = false;
-        // Immediately disable pointer events so the closing modal doesn't
-        // swallow clicks during the 250ms transition. This fixes the
-        // "need 3 clicks to close" bug on fast clicks.
         root.style.pointerEvents = 'none';
         root.classList.remove('open');
-        // Remove from stack
         const idx = stack.indexOf(modal);
         if (idx >= 0) stack.splice(idx, 1);
-        // Unlock scroll if no modals left
+        // Unlock scroll if no modals left — restore scroll position
         if (stack.length === 0) {
-          document.documentElement.style.overflow = '';
+          const scrollY = parseInt(document.body.dataset.scrollLock || '0', 10);
+          document.body.style.position = '';
+          document.body.style.top = '';
+          document.body.style.left = '';
+          document.body.style.right = '';
+          document.body.style.width = '';
+          delete document.body.dataset.scrollLock;
+          if (scrollY > 0) window.scrollTo(0, scrollY);
         }
-        // Fire onClose SYNCHRONOUSLY so callers' resolve() runs immediately
+        // Fire onClose SYNCHRONOUSLY
         if (typeof modal._onClose === 'function') {
           try { modal._onClose(); } catch (e) { PCD.error && PCD.error(e); }
           modal._onClose = null;
         }
-        // Remove from DOM after transition finishes
         setTimeout(function () {
           if (root.parentNode) root.parentNode.removeChild(root);
         }, 250);

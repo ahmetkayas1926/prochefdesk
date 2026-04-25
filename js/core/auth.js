@@ -24,20 +24,33 @@
           }
         } else if (event === 'SIGNED_OUT') {
           auth._clearUser();
+        } else if (event === 'USER_UPDATED') {
+          if (session && session.user) auth._setUser(session.user);
         }
       });
 
-      // Check existing session
+      // Check existing session — graceful failure if iOS has evicted it
       return supabase.auth.getSession().then(function (res) {
         if (res.data && res.data.session && res.data.session.user) {
           auth._setUser(res.data.session.user);
-          // Pull cloud data
-          return PCD.cloud.pull().then(function () {
+          // Pull cloud data — silent failure if network issue
+          return PCD.cloud.pull().catch(function (e) {
+            PCD.warn('Cloud pull failed (will retry on next sync):', e && e.message);
+          }).then(function () {
             return PCD.cloud.fetchPlan();
           }).then(function (plan) {
             PCD.store.set('plan', plan);
+          }).catch(function (e) {
+            PCD.warn('Plan fetch failed:', e && e.message);
           });
+        } else if (res.error) {
+          // "Invalid Refresh Token" or network error on iOS — treat as logged out
+          PCD.warn('Session check error (treating as logged out):', res.error.message);
+          auth._clearUser();
         }
+      }).catch(function (e) {
+        // Supabase unreachable — app should still work offline
+        PCD.warn('Auth init failed (offline?):', e && e.message);
       });
     },
 

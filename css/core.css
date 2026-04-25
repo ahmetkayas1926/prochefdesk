@@ -100,11 +100,13 @@
 
 /* ---------- RESET ---------- */
 *, *::before, *::after { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; min-height: 100%; }
+html, body { margin: 0; padding: 0; }
 html {
   -webkit-text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent;
-  /* CRITICAL: prevent browser swipe-back gesture interfering with app nav */
+  /* Prevent double-tap zoom and pinch-zoom. Scroll is still allowed. */
+  touch-action: manipulation;
+  /* Prevent browser swipe-back gesture horizontally */
   overscroll-behavior-x: contain;
 }
 body {
@@ -115,9 +117,11 @@ body {
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overscroll-behavior-y: contain;
-  /* prevent pull-to-refresh hijacking and edge swipe nav */
   overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  touch-action: manipulation;
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 img, svg { display: block; max-width: 100%; }
 button {
@@ -186,10 +190,9 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ---------- APP LAYOUT ---------- */
+/* Block layout — page flows naturally, body scrolls. No grid trap. */
 .app {
-  display: grid;
-  grid-template-rows: auto auto auto;
-  /* No min-height — let content define height. Body scrolls naturally. */
+  display: block;
 }
 
 /* ---------- TOPBAR ---------- */
@@ -239,13 +242,8 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 
 /* ---------- MAIN / VIEW ---------- */
 .main {
-  min-height: 0;
-  /* Let the page itself scroll naturally — don't trap scroll inside .main.
-     This fixes mouse wheel scroll on desktop and 1-finger scroll on mobile. */
-  overflow-x: hidden;
-  /* when bottom nav is visible (mobile), leave space */
+  /* Natural block flow. Body scrolls, not main. */
   padding-bottom: calc(var(--bottomnav-h) + var(--sa-b));
-  overscroll-behavior-y: contain;
 }
 .view {
   max-width: var(--content-max);

@@ -365,6 +365,40 @@
     setTimeout(updateOfflineStatus, 1000);
   }
 
+  // ============ FORCE DISABLE ZOOM (iOS Safari ignores user-scalable=no) ============
+  // Pinch-zoom: prevent any 2+ finger touches
+  document.addEventListener('touchstart', function (e) {
+    if (e.touches && e.touches.length > 1) {
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  document.addEventListener('touchmove', function (e) {
+    if (e.touches && e.touches.length > 1) {
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  // iOS Safari gesture events (pinch) — block explicitly
+  document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+  document.addEventListener('gesturechange', function (e) { e.preventDefault(); });
+  document.addEventListener('gestureend', function (e) { e.preventDefault(); });
+
+  // Double-tap zoom: block the second tap if within 300ms
+  let _lastTouchEnd = 0;
+  document.addEventListener('touchend', function (e) {
+    const now = Date.now();
+    if (now - _lastTouchEnd <= 300) {
+      e.preventDefault();
+    }
+    _lastTouchEnd = now;
+  }, { passive: false });
+
+  // Prevent wheel+ctrl zoom on desktop
+  document.addEventListener('wheel', function (e) {
+    if (e.ctrlKey) e.preventDefault();
+  }, { passive: false });
+
   // ============ KEYBOARD SHORTCUTS (desktop) ============
   document.addEventListener('keydown', function (e) {
     // Ignore if typing in input/textarea/select (except for Esc which always works)
@@ -418,6 +452,46 @@
       if (search) { e.preventDefault(); search.focus(); }
       return;
     }
+  });
+
+  // ============ REQUEST PERSISTENT STORAGE ============
+  // Prevents iOS 7-day storage eviction + browsers clearing data under pressure
+  // when the user relies on the app's local state as primary data.
+  (function () {
+    if (navigator.storage && navigator.storage.persist) {
+      navigator.storage.persisted().then(function (isPersisted) {
+        if (!isPersisted) {
+          navigator.storage.persist().then(function (granted) {
+            PCD.log && PCD.log('[Storage] persistent:', granted);
+          });
+        }
+      }).catch(function () {});
+    }
+  })();
+
+  // ============ GLOBAL ERROR HANDLER ============
+  // Catches uncaught exceptions so a single broken tool doesn't crash the whole app.
+  // Shows a discreet toast instead of silent failure.
+  let _errorCount = 0;
+  let _lastErrorAt = 0;
+  window.addEventListener('error', function (e) {
+    const now = Date.now();
+    if (now - _lastErrorAt < 1000) {
+      _errorCount++;
+      if (_errorCount > 10) return; // rate-limit — prevent error loops
+    } else {
+      _errorCount = 0;
+    }
+    _lastErrorAt = now;
+    PCD.error && PCD.error('[Global]', e.message || e.error, e.filename, e.lineno);
+    if (PCD.toast) {
+      PCD.toast.error('Something went wrong. Try again or refresh.', 3000);
+    }
+  });
+
+  window.addEventListener('unhandledrejection', function (e) {
+    PCD.error && PCD.error('[Promise]', e.reason);
+    // Silent for promise rejections — most are network related and already handled
   });
 
   // Boot on DOMContentLoaded

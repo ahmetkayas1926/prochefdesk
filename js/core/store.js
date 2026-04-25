@@ -111,13 +111,39 @@
 
   // ---------- PERSIST (debounced) ----------
   const persist = PCD.debounce(function () {
+    let serialized;
     try {
-      localStorage.setItem(LS_KEY_STATE, JSON.stringify(state));
+      serialized = JSON.stringify(state);
+    } catch (e) {
+      PCD.err('Failed to serialize state:', e);
+      return;
+    }
+    try {
+      localStorage.setItem(LS_KEY_STATE, serialized);
     } catch (e) {
       PCD.err('Failed to persist state:', e);
-      // storage full? try again after clearing meta
-      if (e && e.name === 'QuotaExceededError') {
-        PCD.toast && PCD.toast.error('Storage quota exceeded');
+      if (e && (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014)) {
+        // Storage full — attempt graceful recovery by pruning old price history
+        const stateCopy = PCD.clone(state);
+        if (stateCopy.ingredients) {
+          Object.keys(stateCopy.ingredients).forEach(function (k) {
+            const ing = stateCopy.ingredients[k];
+            if (ing.priceHistory && ing.priceHistory.length > 5) {
+              ing.priceHistory = ing.priceHistory.slice(-5);
+            }
+          });
+        }
+        // Trim waste log, cost history to last 500 entries
+        if (stateCopy.waste && stateCopy.waste.length > 500) stateCopy.waste = stateCopy.waste.slice(-500);
+        if (stateCopy.costHistory && stateCopy.costHistory.length > 500) stateCopy.costHistory = stateCopy.costHistory.slice(-500);
+        if (stateCopy.checklistSessions && stateCopy.checklistSessions.length > 100) stateCopy.checklistSessions = stateCopy.checklistSessions.slice(-100);
+        try {
+          localStorage.setItem(LS_KEY_STATE, JSON.stringify(stateCopy));
+          state = stateCopy;
+          PCD.toast && PCD.toast.warning('Storage almost full — old history trimmed');
+        } catch (e2) {
+          PCD.toast && PCD.toast.error('Storage full. Please export backup and reset.');
+        }
       }
     }
     // tell cloud module to sync

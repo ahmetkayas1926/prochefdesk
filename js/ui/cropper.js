@@ -299,7 +299,7 @@
           offCtx.rotate(rot * Math.PI / 180);
           offCtx.drawImage(state.img || imgEl, -nw / 2, -nh / 2, nw, nh);
 
-          const maxOutW = 1200;
+          const maxOutW = 900;
           const outW = Math.min(maxOutW, Math.round(cw));
           const outH = Math.round(outW * (ch / cw));
           canvas.width = outW;
