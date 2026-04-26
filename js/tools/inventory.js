@@ -38,6 +38,41 @@
     PCD.store.set('pendingStockCount', all);
   }
 
+  // Workspace-scoped inventory read/write
+  function readInventory() {
+    const wsId = PCD.store.getActiveWorkspaceId();
+    const all = PCD.store._read('inventory') || {};
+    // Detect legacy flat shape (values are inventory rows with stock/parLevel)
+    const keys = Object.keys(all);
+    if (keys.length > 0) {
+      const sample = all[keys[0]];
+      if (sample && (sample.stock !== undefined || sample.parLevel !== undefined)) {
+        return all; // legacy flat
+      }
+    }
+    return all[wsId] || {};
+  }
+  function writeInventory(invMap) {
+    const wsId = PCD.store.getActiveWorkspaceId();
+    const root = PCD.store._read('inventory') || {};
+    // Detect legacy flat
+    const keys = Object.keys(root);
+    let next;
+    if (keys.length > 0) {
+      const sample = root[keys[0]];
+      if (sample && (sample.stock !== undefined || sample.parLevel !== undefined)) {
+        // Legacy → migrate now
+        next = { [wsId]: invMap };
+      } else {
+        next = Object.assign({}, root);
+        next[wsId] = invMap;
+      }
+    } else {
+      next = { [wsId]: invMap };
+    }
+    PCD.store.set('inventory', next);
+  }
+
   function computeStatus(invRow) {
     if (!invRow || invRow.parLevel == null) return 'untracked';
     const stock = Number(invRow.stock) || 0;
@@ -73,7 +108,7 @@
   function render(view) {
     const t = PCD.i18n.t;
     const ings = PCD.store.listIngredients();
-    const invAll = PCD.store._read('inventory') || {};
+    const invAll = readInventory();
     const pending = getPendingForCurrentWs();
     let filter = 'all';
 
@@ -382,7 +417,7 @@
     const title = options.title || 'Bulk Stock Count';
     const ings = PCD.store.listIngredients();
     if (ings.length === 0) { PCD.toast.info('No ingredients to count'); return; }
-    const invAll = PCD.store._read('inventory') || {};
+    const invAll = readInventory();
     const draft = {};
     ings.forEach(function (i) {
       if (options.blankStart) {
@@ -556,7 +591,7 @@
   }
 
   function applyCountsToInventory(countedValues) {
-    const cur = PCD.store._read('inventory') || {};
+    const cur = readInventory();
     const next = Object.assign({}, cur);
     const now = new Date().toISOString();
     Object.keys(countedValues).forEach(function (iid) {
@@ -566,12 +601,12 @@
       row.lastCountedAt = now;
       next[iid] = row;
     });
-    PCD.store.set('inventory', next);
+    writeInventory(next);
   }
 
   function promptGenerateOrdersAfterCount() {
     const ings = PCD.store.listIngredients();
-    const invAll = PCD.store._read('inventory') || {};
+    const invAll = readInventory();
     // Count how many items are below par (tracked only)
     let belowCount = 0;
     ings.forEach(function (i) {
@@ -596,7 +631,7 @@
   // ============ AUTO-GENERATE PURCHASE ORDER ============
   function openGenerateOrder() {
     const ings = PCD.store.listIngredients();
-    const invAll = PCD.store._read('inventory') || {};
+    const invAll = readInventory();
     // Collect all items below par
     const below = [];
     ings.forEach(function (i) {
@@ -779,7 +814,7 @@
     const t = PCD.i18n.t;
     const ing = PCD.store.getIngredient(ingId);
     if (!ing) { PCD.toast.error('Ingredient not found'); return; }
-    const invAll = PCD.store._read('inventory') || {};
+    const invAll = readInventory();
     const row = invAll[ingId] ? PCD.clone(invAll[ingId]) : { stock: null, parLevel: null, minLevel: null, lastCountedAt: null, lastOrderedAt: null };
     const status = computeStatus(row);
 
@@ -846,10 +881,10 @@
     PCD.$('#markOrdered', body).addEventListener('click', function () {
       row.lastOrderedAt = new Date().toISOString();
       // Save immediately
-      const allCurrent = PCD.store._read('inventory') || {};
+      const allCurrent = readInventory();
       const next = Object.assign({}, allCurrent);
       next[ingId] = Object.assign({}, row);
-      PCD.store.set('inventory', next);
+      writeInventory(next);
       PCD.toast.success(t('inv_mark_ordered') + ' ✓');
       this.innerHTML = '✓ ' + t('inv_mark_ordered');
       this.disabled = true;
@@ -877,10 +912,10 @@
       row.minLevel = min === '' ? null : parseFloat(min);
       if (row.stock !== oldStock) row.lastCountedAt = new Date().toISOString();
 
-      const allCurrent = PCD.store._read('inventory') || {};
+      const allCurrent = readInventory();
       const next = Object.assign({}, allCurrent);
       next[ingId] = row;
-      PCD.store.set('inventory', next);
+      writeInventory(next);
       PCD.toast.success(t('saved'));
       m.close();
       setTimeout(function () {

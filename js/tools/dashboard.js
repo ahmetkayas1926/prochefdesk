@@ -115,11 +115,18 @@
     const nextEvent = upcomingEvents[0] || null;
 
     // 3) Active checklists (in progress)
-    const sessions = PCD.store._read('checklistSessions') || [];
+    const allSessions = PCD.store._read('checklistSessions') || {};
+    const wsId = PCD.store.getActiveWorkspaceId();
+    const sessions = Array.isArray(allSessions) ? allSessions : (allSessions[wsId] || []);
     const activeSessions = sessions.filter(function (s) { return !s.completedAt; });
 
     // 4) Low stock count + critical items
-    const invAll = PCD.store._read('inventory') || {};
+    const allInv = PCD.store._read('inventory') || {};
+    const invWsId = PCD.store.getActiveWorkspaceId();
+    const invAllKeys = Object.keys(allInv);
+    const invSample = invAllKeys.length > 0 ? allInv[invAllKeys[0]] : null;
+    const isLegacyInv = invSample && (invSample.stock !== undefined || invSample.parLevel !== undefined);
+    const invAll = isLegacyInv ? allInv : (allInv[invWsId] || {});
     let lowStockItems = [];
     if (PCD.tools && PCD.tools.inventory && PCD.tools.inventory.computeStatus) {
       ings.forEach(function (i) {
@@ -133,7 +140,9 @@
     const criticalStock = lowStockItems.filter(function (x) { return x.status === 'critical' || x.status === 'out'; });
 
     // 5) Today's waste cost
-    const waste = PCD.store._read('waste') || [];
+    const allWaste = PCD.store._read('waste') || {};
+    const wasteWsId = PCD.store.getActiveWorkspaceId();
+    const waste = Array.isArray(allWaste) ? allWaste : (allWaste[wasteWsId] || []);
     const todayIso = new Date().toISOString().slice(0, 10);
     const todayWaste = waste.filter(function (w) { return (w.at || '').slice(0, 10) === todayIso; });
     const todayWasteCost = todayWaste.reduce(function (sum, w) { return sum + (w.cost || 0); }, 0);

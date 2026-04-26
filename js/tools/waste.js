@@ -12,6 +12,21 @@
   'use strict';
   const PCD = window.PCD;
 
+  // Workspace-scoped waste storage
+  function readWaste() {
+    const wsId = PCD.store.getActiveWorkspaceId();
+    const all = PCD.store._read('waste') || {};
+    if (Array.isArray(all)) return all; // legacy
+    return all[wsId] || [];
+  }
+  function writeWaste(arr) {
+    const wsId = PCD.store.getActiveWorkspaceId();
+    const root = PCD.store._read('waste') || {};
+    let next = Array.isArray(root) ? {} : Object.assign({}, root);
+    next[wsId] = arr;
+    PCD.store.set('waste', next);
+  }
+
   const REASONS = ['spoilage', 'overcooked', 'dropped', 'wrong_order', 'trim', 'expired', 'other'];
 
   function calcEntryCost(entry, ingredient) {
@@ -28,7 +43,7 @@
 
   function render(view) {
     const t = PCD.i18n.t;
-    const entries = (PCD.store._read('waste') || []).slice();
+    const entries = readWaste().slice();
     const ingMap = {};
     PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
 
@@ -217,7 +232,7 @@
 
   function openEditor(wid) {
     const t = PCD.i18n.t;
-    const entries = (PCD.store._read('waste') || []).slice();
+    const entries = readWaste().slice();
     const existing = wid ? entries.find(function (e) { return e.id === wid; }) : null;
     const data = existing ? PCD.clone(existing) : {
       ingredientId: null, amount: null, unit: null, reason: 'spoilage', notes: '', at: new Date().toISOString()
@@ -348,8 +363,8 @@
         title: t('confirm_delete'), text: t('confirm_delete_desc'), okText: t('delete')
       }).then(function (ok) {
         if (!ok) return;
-        const cur = (PCD.store._read('waste') || []).filter(function (e) { return e.id !== existing.id; });
-        PCD.store.set('waste', cur);
+        const cur = readWaste().filter(function (e) { return e.id !== existing.id; });
+        writeWaste(cur);
         PCD.toast.success(t('item_deleted'));
         m.close();
         setTimeout(function () {
@@ -365,14 +380,14 @@
       data.cost = calcEntryCost(data, ing);
       if (!existing) data.id = PCD.uid('w');
       else data.id = existing.id;
-      const cur = PCD.store._read('waste') || [];
+      const cur = readWaste();
       let next;
       if (existing) {
         next = cur.map(function (e) { return e.id === existing.id ? data : e; });
       } else {
         next = cur.concat([data]);
       }
-      PCD.store.set('waste', next);
+      writeWaste(next);
       PCD.toast.success(t('waste_logged'));
       m.close();
       setTimeout(function () {

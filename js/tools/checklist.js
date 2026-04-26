@@ -35,6 +35,23 @@
   'use strict';
   const PCD = window.PCD;
 
+  // Workspace-scoped session storage: state.checklistSessions = { wsId: [sessions] }
+  function readSessions() {
+    const wsId = PCD.store.getActiveWorkspaceId();
+    const all = PCD.store._read('checklistSessions') || {};
+    // Backward-compat: if it was a flat array (old data), treat as no-ws
+    if (Array.isArray(all)) return all;
+    return all[wsId] || [];
+  }
+  function writeSessions(arr) {
+    const wsId = PCD.store.getActiveWorkspaceId();
+    const root = PCD.store._read('checklistSessions') || {};
+    // If legacy array, migrate it under current ws
+    let next = Array.isArray(root) ? {} : Object.assign({}, root);
+    next[wsId] = arr;
+    PCD.store.set('checklistSessions', next);
+  }
+
   // Categories + priorities (carry over from v1.5)
   const CATS = [
     { id: 'prep',     labelKey: 'chk_categories_prep',     color: '#f59e0b' },
@@ -316,7 +333,7 @@
   }
 
   function listActiveSessions() {
-    const all = PCD.store._read('checklistSessions') || [];
+    const all = readSessions();
     return all.filter(function (s) { return !s.completedAt; }).slice().sort(function (a, b) {
       return (b.startedAt || '').localeCompare(a.startedAt || '');
     });
@@ -563,23 +580,23 @@
         };
       }),
     };
-    const all = PCD.store._read('checklistSessions') || [];
+    const all = readSessions();
     all.push(session);
-    PCD.store.set('checklistSessions', all);
+    writeSessions(all);
     openSession(session.id);
   }
 
   function getSession(sid) {
-    const all = PCD.store._read('checklistSessions') || [];
+    const all = readSessions();
     return all.find(function (s) { return s.id === sid; });
   }
 
   function updateSession(sid, mutator) {
-    const all = PCD.store._read('checklistSessions') || [];
+    const all = readSessions();
     const idx = all.findIndex(function (s) { return s.id === sid; });
     if (idx < 0) return;
     mutator(all[idx]);
-    PCD.store.set('checklistSessions', all);
+    writeSessions(all);
   }
 
   // Compute "done" flag based on item type
