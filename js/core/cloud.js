@@ -89,8 +89,14 @@
         plan: state.plan,
         prefs: state.prefs,
         onboarding: state.onboarding,
-        recipes: state.recipes,
+        // Workspaces (v2.2)
+        workspaces: state.workspaces,
+        activeWorkspaceId: state.activeWorkspaceId,
+        // Library (shared)
         ingredients: state.ingredients,
+        costHistory: state.costHistory,
+        // Workspace-bound (now namespaced by wsId inside)
+        recipes: state.recipes,
         menus: state.menus,
         events: state.events,
         suppliers: state.suppliers,
@@ -100,8 +106,8 @@
         checklistSessions: state.checklistSessions,
         canvases: state.canvases,
         shoppingLists: state.shoppingLists,
-        costHistory: state.costHistory,
         pendingStockCount: state.pendingStockCount,
+        salesLog: state.salesLog,
       };
 
       supabase.from('user_data').upsert({

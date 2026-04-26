@@ -319,6 +319,7 @@
       'file-text': '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke-linecap="round" stroke-linejoin="round"/><polyline points="14 2 14 8 20 8" stroke-linecap="round" stroke-linejoin="round"/><line x1="16" y1="13" x2="8" y2="13" stroke-linecap="round"/><line x1="16" y1="17" x2="8" y2="17" stroke-linecap="round"/><line x1="10" y1="9" x2="8" y2="9" stroke-linecap="round"/>',
       refresh: '<polyline points="23 4 23 10 17 10" stroke-linecap="round" stroke-linejoin="round"/><polyline points="1 20 1 14 7 14" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" stroke-linecap="round" stroke-linejoin="round"/>',
       'chef-hat': '<path d="M6 13.87A4 4 0 017.41 6a5.11 5.11 0 011.05-1.54 5 5 0 017.08 0A5.11 5.11 0 0116.59 6 4 4 0 0118 13.87V21H6z" stroke-linecap="round" stroke-linejoin="round"/><line x1="6" y1="17" x2="18" y2="17" stroke-linecap="round"/>',
+      archive: '<rect x="2" y="4" width="20" height="5" rx="1" stroke-linejoin="round"/><path d="M4 9v10a2 2 0 002 2h12a2 2 0 002-2V9M10 13h4" stroke-linecap="round" stroke-linejoin="round"/>',
       thermometer: '<path d="M14 14.76V3.5a2.5 2.5 0 00-5 0v11.26a4 4 0 105 0z" stroke-linecap="round" stroke-linejoin="round"/>',
       snowflake: '<line x1="2" y1="12" x2="22" y2="12" stroke-linecap="round"/><line x1="12" y1="2" x2="12" y2="22" stroke-linecap="round"/><path d="M20 16l-4-4 4-4M4 8l4 4-4 4M16 4l-4 4-4-4M8 20l4-4 4 4" stroke-linecap="round" stroke-linejoin="round"/>',
     };
@@ -504,6 +505,68 @@
       clearTimeout(pressTimer);
       pressTimer = null;
       pressedEl = null;
+    });
+  };
+
+  // ============ COPY-TO-WORKSPACE HELPER ============
+  // Pickable picker: choose target workspace (from active list excluding current),
+  // then store.copyToWorkspace clones the item under target ws.
+  // table: 'recipes' | 'menus' | 'events' | 'suppliers' etc.
+  PCD.openCopyToWorkspace = function (table, itemId, itemName) {
+    const fromWsId = PCD.store.getActiveWorkspaceId();
+    const all = PCD.store.listWorkspaces(false);
+    const targets = all.filter(function (w) { return w.id !== fromWsId; });
+
+    if (targets.length === 0) {
+      PCD.modal.confirm({
+        title: 'No other workspaces',
+        text: 'You only have one active workspace. Create another from the workspace switcher first, then come back to copy.',
+        okText: 'OK', cancelText: null,
+      });
+      return;
+    }
+
+    const colorHex = function (cid) {
+      const map = {green:'#16a34a',blue:'#2563eb',purple:'#9333ea',pink:'#db2777',orange:'#ea580c',amber:'#d97706',teal:'#0d9488',slate:'#475569'};
+      return map[cid] || map.green;
+    };
+
+    const body = PCD.el('div');
+    let html = '<div class="text-muted text-sm mb-3">Copy <strong>' + PCD.escapeHtml(itemName || 'this item') + '</strong> to another workspace. The original stays untouched. The copy can be edited independently in the target.</div>';
+    html += '<div class="flex flex-col gap-2">';
+    targets.forEach(function (w) {
+      html += '<button data-target="' + w.id + '" class="card card-hover" style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--border);cursor:pointer;text-align:start;">' +
+        '<div style="width:36px;height:36px;border-radius:8px;background:' + colorHex(w.color) + ';color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + PCD.icon(w.icon || 'chef-hat', 18) + '</div>' +
+        '<div style="flex:1;min-width:0;">' +
+          '<div style="font-weight:700;font-size:14px;">' + PCD.escapeHtml(w.name) + '</div>' +
+          '<div class="text-muted" style="font-size:12px;">' +
+            (w.concept ? PCD.escapeHtml(w.concept) : '') +
+            (w.role ? (w.concept ? ' · ' : '') + PCD.escapeHtml(w.role) : '') +
+          '</div>' +
+        '</div>' +
+        '<div style="color:var(--text-3);">' + PCD.icon('chevronRight', 18) + '</div>' +
+      '</button>';
+    });
+    html += '</div>';
+    body.innerHTML = html;
+
+    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: 'Cancel', style: { width: '100%' } });
+    const footer = PCD.el('div', { style: { width: '100%' } });
+    footer.appendChild(cancelBtn);
+
+    const m = PCD.modal.open({ title: 'Copy to workspace', body: body, footer: footer, size: 'sm', closable: true });
+    cancelBtn.addEventListener('click', function () { m.close(); });
+
+    PCD.on(body, 'click', '[data-target]', function () {
+      const targetWsId = this.getAttribute('data-target');
+      const copy = PCD.store.copyToWorkspace(table, itemId, fromWsId, targetWsId);
+      const targetWs = PCD.store.getWorkspace(targetWsId);
+      if (copy && targetWs) {
+        PCD.toast.success('Copied to "' + targetWs.name + '"');
+      } else {
+        PCD.toast.error('Copy failed');
+      }
+      m.close();
     });
   };
 

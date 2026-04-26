@@ -88,6 +88,7 @@
                 <div class="field-hint">Will be visible on your public profile when community sharing launches.</div>
               </div>
               <button class="btn btn-primary btn-sm" id="saveChefProfileBtn" style="margin-top:6px;">${PCD.icon('check', 14)} Save profile</button>
+              <button class="btn btn-outline btn-sm" id="previewChefProfileBtn" style="margin-top:6px;margin-inline-start:6px;">${PCD.icon('user', 14)} <span>Preview public profile</span></button>
             </div>
           </div>
         </div>
@@ -272,6 +273,18 @@
       PCD.store.set('user', u);
       PCD.toast.success('Profile saved');
     });
+    const previewChefBtn = PCD.$('#previewChefProfileBtn', view);
+    if (previewChefBtn) previewChefBtn.addEventListener('click', function () {
+      // Save first to capture latest values
+      const u = PCD.store.get('user') || {};
+      u.name = (PCD.$('#chefName', view).value || '').trim();
+      u.role = PCD.$('#chefRole', view).value;
+      u.country = (PCD.$('#chefCountry', view).value || '').trim();
+      u.workplace = (PCD.$('#chefWorkplace', view).value || '').trim();
+      u.bio = (PCD.$('#chefBio', view).value || '').trim();
+      PCD.store.set('user', u);
+      openPublicProfilePreview(u);
+    });
 
     const syncBtn = PCD.$('#syncNowBtn', view);
     if (syncBtn) syncBtn.addEventListener('click', function () {
@@ -401,6 +414,77 @@
         setTimeout(function () { window.location.reload(); }, 500);
       });
     });
+  }
+
+  // ============ PUBLIC PROFILE PREVIEW ============
+  // Shows what other chefs will see when community sharing launches.
+  function openPublicProfilePreview(user) {
+    const recipes = PCD.store.listRecipes();
+    const workspaces = (PCD.store.listWorkspaces && PCD.store.listWorkspaces(true)) || [];
+    const initials = (user.name || user.email || '?').split(' ').map(function (s) { return s[0]; }).slice(0, 2).join('').toUpperCase();
+
+    // Public stats
+    const totalRecipes = recipes.length;
+    let totalAcrossWs = 0;
+    if (workspaces.length > 0) {
+      // count recipes across all workspaces
+      const allR = PCD.store.get('recipes') || {};
+      Object.keys(allR).forEach(function (wsId) {
+        totalAcrossWs += Object.keys(allR[wsId] || {}).length;
+      });
+    } else {
+      totalAcrossWs = totalRecipes;
+    }
+
+    const body = PCD.el('div');
+    const conceptList = workspaces.filter(function (w) { return !w.archived; }).map(function (w) {
+      return '<span style="display:inline-block;padding:4px 10px;background:var(--brand-50);color:var(--brand-700);border-radius:999px;font-size:12px;font-weight:600;margin:2px;">' +
+        PCD.escapeHtml(w.name) + (w.concept ? ' · ' + PCD.escapeHtml(w.concept) : '') +
+      '</span>';
+    }).join('');
+
+    body.innerHTML =
+      '<div style="background:linear-gradient(135deg,var(--brand-600),var(--brand-700));color:#fff;border-radius:12px;padding:32px 20px;text-align:center;margin-bottom:16px;">' +
+        '<div style="width:88px;height:88px;border-radius:50%;background:rgba(255,255,255,0.2);display:inline-flex;align-items:center;justify-content:center;font-size:32px;font-weight:800;margin-bottom:12px;">' +
+          (user.avatar ? '<img src="' + PCD.escapeHtml(user.avatar) + '" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">' : initials) +
+        '</div>' +
+        '<h1 style="margin:0;font-size:22px;font-weight:800;letter-spacing:-0.01em;">' + PCD.escapeHtml(user.name || 'Unnamed Chef') + '</h1>' +
+        (user.role ? '<div style="font-size:13px;opacity:0.9;margin-top:4px;font-weight:500;">' + PCD.escapeHtml(user.role) + '</div>' : '') +
+        ((user.workplace || user.country) ? '<div style="font-size:12px;opacity:0.8;margin-top:8px;">' +
+          (user.workplace ? PCD.escapeHtml(user.workplace) : '') +
+          (user.workplace && user.country ? ' · ' : '') +
+          (user.country ? PCD.escapeHtml(user.country) : '') +
+        '</div>' : '') +
+      '</div>' +
+
+      (user.bio ? '<div class="card mb-3" style="padding:16px;">' +
+        '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">About</div>' +
+        '<div style="font-size:14px;line-height:1.6;color:var(--text);">' + PCD.escapeHtml(user.bio) + '</div>' +
+      '</div>' : '') +
+
+      '<div class="card mb-3" style="padding:16px;">' +
+        '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Career stats</div>' +
+        '<div style="display:flex;gap:24px;flex-wrap:wrap;">' +
+          '<div><div class="text-muted text-sm">Recipes</div><div style="font-weight:800;font-size:24px;color:var(--brand-700);">' + totalAcrossWs + '</div></div>' +
+          '<div><div class="text-muted text-sm">Workspaces</div><div style="font-weight:800;font-size:24px;color:var(--brand-700);">' + workspaces.filter(function (w) { return !w.archived; }).length + '</div></div>' +
+        '</div>' +
+      '</div>' +
+
+      (conceptList ? '<div class="card mb-3" style="padding:16px;">' +
+        '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Concepts &amp; Career</div>' +
+        '<div>' + conceptList + '</div>' +
+      '</div>' : '') +
+
+      '<div style="background:var(--surface-2);padding:14px;border-radius:8px;text-align:center;font-size:13px;color:var(--text-3);">' +
+        PCD.icon('users', 16) + ' Community sharing launches in v3.x — your profile, recipe shares, and chef-to-chef ratings will live here.' +
+      '</div>';
+
+    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: 'Close', style: { width: '100%' } });
+    const footer = PCD.el('div', { style: { width: '100%' } });
+    footer.appendChild(closeBtn);
+
+    const m = PCD.modal.open({ title: 'Public profile preview', body: body, footer: footer, size: 'md', closable: true });
+    closeBtn.addEventListener('click', function () { m.close(); });
   }
 
   PCD.tools = PCD.tools || {};

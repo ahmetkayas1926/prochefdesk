@@ -54,6 +54,9 @@
       PCD.router.register('suppliers', PCD.tools.suppliers.render);
       PCD.router.register('events', PCD.tools.events.render);
       PCD.router.register('checklist', PCD.tools.checklist.render);
+      // Analytics
+      PCD.router.register('sales', PCD.tools.sales.render);
+      PCD.router.register('variance', PCD.tools.varianceTool.render);
 
       // 7) Start router + render initial view
       PCD.router.start();
@@ -131,6 +134,12 @@
 
     // Language toggle -> picker
     PCD.$('#btnLang').addEventListener('click', openLanguagePicker);
+
+    // Workspace switcher
+    PCD.$('#wsSwitcher').addEventListener('click', openWorkspaceSwitcher);
+    refreshWorkspaceLabel();
+    PCD.store.on('activeWorkspaceId', refreshWorkspaceLabel);
+    PCD.store.on('workspaces', refreshWorkspaceLabel);
 
     // User button
     PCD.$('#btnUser').addEventListener('click', function () {
@@ -212,6 +221,10 @@
       { title: 'Catering', items: [
         { key: 'events',  icon: 'calendar', route: 'events' },
       ]},
+      { title: 'Analytics', items: [
+        { key: 'sales',    icon: 'activity', route: 'sales' },
+        { key: 'variance', icon: 'percent', route: 'variance' },
+      ]},
       { title: null, items: [
         { key: 'account', icon: 'user', route: 'account' },
       ]},
@@ -259,6 +272,267 @@
     badge.textContent = t(plan + '_plan');
     const upgrade = PCD.$('#btnUpgrade');
     if (upgrade) upgrade.style.display = plan === 'free' ? '' : 'none';
+  }
+
+  // ============ WORKSPACE SWITCHER ============
+  const WS_COLORS = [
+    { id: 'green',  hex: '#16a34a' },
+    { id: 'blue',   hex: '#2563eb' },
+    { id: 'purple', hex: '#9333ea' },
+    { id: 'pink',   hex: '#db2777' },
+    { id: 'orange', hex: '#ea580c' },
+    { id: 'amber',  hex: '#d97706' },
+    { id: 'teal',   hex: '#0d9488' },
+    { id: 'slate',  hex: '#475569' },
+  ];
+  function wsColorHex(colorId) {
+    const c = WS_COLORS.find(function (x) { return x.id === colorId; });
+    return c ? c.hex : WS_COLORS[0].hex;
+  }
+
+  function refreshWorkspaceLabel() {
+    const ws = PCD.store.getActiveWorkspace();
+    if (!ws) return;
+    const nameEl = document.getElementById('wsName');
+    const dotEl = document.getElementById('wsDot');
+    if (nameEl) nameEl.textContent = ws.name || 'My Kitchen';
+    if (dotEl) dotEl.style.background = wsColorHex(ws.color);
+  }
+
+  function openWorkspaceSwitcher() {
+    const t = PCD.i18n.t;
+    const all = PCD.store.listWorkspaces(true);
+    const active = all.filter(function (w) { return !w.archived; });
+    const archived = all.filter(function (w) { return w.archived; });
+    const activeId = PCD.store.getActiveWorkspaceId();
+
+    const body = PCD.el('div');
+    let html = '<div style="margin-bottom:10px;">' +
+      '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Active workspaces</div>';
+    active.forEach(function (w) {
+      const stats = workspaceStats(w.id);
+      const isActive = w.id === activeId;
+      html += '<button data-pickws="' + w.id + '" class="ws-row' + (isActive ? ' active' : '') + '" style="display:flex;align-items:center;gap:12px;width:100%;padding:12px;border:1.5px solid ' + (isActive ? 'var(--brand-600)' : 'var(--border)') + ';border-radius:var(--r-md);background:' + (isActive ? 'var(--brand-50)' : 'var(--surface)') + ';margin-bottom:6px;cursor:pointer;text-align:start;">' +
+        '<div style="width:36px;height:36px;border-radius:8px;background:' + wsColorHex(w.color) + ';color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + PCD.icon(w.icon || 'chef-hat', 18) + '</div>' +
+        '<div style="flex:1;min-width:0;">' +
+          '<div style="font-weight:700;font-size:14px;">' + PCD.escapeHtml(w.name) + (isActive ? ' <span style="font-size:10px;color:var(--brand-700);font-weight:700;letter-spacing:0.04em;">· ACTIVE</span>' : '') + '</div>' +
+          '<div class="text-muted" style="font-size:12px;">' +
+            (w.concept ? PCD.escapeHtml(w.concept) + ' · ' : '') +
+            stats.recipes + ' recipes · ' + stats.menus + ' menus' +
+          '</div>' +
+        '</div>' +
+        '<button class="icon-btn" data-edit-ws="' + w.id + '" title="Edit workspace" onclick="event.stopPropagation()" style="flex-shrink:0;">' + PCD.icon('edit', 16) + '</button>' +
+      '</button>';
+    });
+    html += '</div>';
+
+    if (archived.length > 0) {
+      html += '<div style="margin-top:14px;">' +
+        '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Archived</div>';
+      archived.forEach(function (w) {
+        html += '<button data-pickws="' + w.id + '" class="ws-row" style="display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);margin-bottom:6px;cursor:pointer;opacity:0.6;text-align:start;">' +
+          '<div style="width:32px;height:32px;border-radius:8px;background:var(--text-3);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + PCD.icon('archive', 16) + '</div>' +
+          '<div style="flex:1;min-width:0;">' +
+            '<div style="font-weight:600;font-size:13px;">' + PCD.escapeHtml(w.name) + '</div>' +
+            '<div class="text-muted" style="font-size:11px;">Archived' + (w.concept ? ' · ' + PCD.escapeHtml(w.concept) : '') + '</div>' +
+          '</div>' +
+        '</button>';
+      });
+      html += '</div>';
+    }
+
+    html += '<button class="btn btn-outline" id="newWsBtn" style="width:100%;margin-top:12px;">' + PCD.icon('plus', 16) + ' <span>New workspace</span></button>';
+
+    body.innerHTML = html;
+
+    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: 'Close', style: { width: '100%' } });
+    const footer = PCD.el('div', { style: { width: '100%' } });
+    footer.appendChild(closeBtn);
+
+    const m = PCD.modal.open({ title: 'Workspaces', body: body, footer: footer, size: 'sm', closable: true });
+    closeBtn.addEventListener('click', function () { m.close(); });
+
+    PCD.on(body, 'click', '[data-pickws]', function (e) {
+      if (e.target.closest('[data-edit-ws]')) return;
+      const wsId = this.getAttribute('data-pickws');
+      if (wsId === activeId) { m.close(); return; }
+      const ws = PCD.store.getWorkspace(wsId);
+      if (ws && ws.archived) {
+        // Unarchive on switch
+        PCD.modal.confirm({
+          title: 'Reactivate workspace?',
+          text: '"' + ws.name + '" is archived. Reactivate and switch to it?',
+          okText: 'Reactivate'
+        }).then(function (ok) {
+          if (!ok) return;
+          PCD.store.archiveWorkspace(wsId, false);
+          PCD.store.setActiveWorkspaceId(wsId);
+          PCD.toast.success('Switched to ' + ws.name);
+          m.close();
+          setTimeout(function () { window.location.reload(); }, 400);
+        });
+        return;
+      }
+      PCD.store.setActiveWorkspaceId(wsId);
+      PCD.toast.success('Switched to ' + (ws ? ws.name : 'workspace'));
+      m.close();
+      // Reload to refresh all views with new workspace data
+      setTimeout(function () { window.location.reload(); }, 300);
+    });
+
+    PCD.on(body, 'click', '[data-edit-ws]', function (e) {
+      e.stopPropagation();
+      m.close();
+      setTimeout(function () { openWorkspaceEditor(this.getAttribute('data-edit-ws')); }.bind(this), 200);
+    });
+
+    PCD.$('#newWsBtn', body).addEventListener('click', function () {
+      m.close();
+      setTimeout(function () { openWorkspaceEditor(); }, 200);
+    });
+  }
+
+  function workspaceStats(wsId) {
+    const r = (PCD.store.get('recipes') || {})[wsId];
+    const m = (PCD.store.get('menus') || {})[wsId];
+    return {
+      recipes: r ? Object.keys(r).length : 0,
+      menus: m ? Object.keys(m).length : 0,
+    };
+  }
+
+  function openWorkspaceEditor(wsId) {
+    const t = PCD.i18n.t;
+    const existing = wsId ? PCD.store.getWorkspace(wsId) : null;
+    const data = existing ? Object.assign({}, existing) : {
+      name: '',
+      concept: '',
+      role: '',
+      city: '',
+      periodStart: null,
+      periodEnd: null,
+      color: 'green',
+      icon: 'chef-hat',
+      archived: false,
+    };
+
+    const body = PCD.el('div');
+    function buildBody() {
+      body.innerHTML =
+        '<div class="field"><label class="field-label">Workspace name *</label>' +
+        '<input type="text" class="input" id="wsNameInp" value="' + PCD.escapeHtml(data.name || '') + '" placeholder="e.g. La Bella, Crown Banquet, Le Bistro"></div>' +
+
+        '<div class="field-row">' +
+          '<div class="field"><label class="field-label">Concept</label>' +
+            '<input type="text" class="input" id="wsConcept" value="' + PCD.escapeHtml(data.concept || '') + '" placeholder="e.g. Italian a la carte, Banquet, French bistro"></div>' +
+          '<div class="field"><label class="field-label">Your role</label>' +
+            '<input type="text" class="input" id="wsRole" value="' + PCD.escapeHtml(data.role || '') + '" placeholder="e.g. Sous Chef, Head Chef"></div>' +
+        '</div>' +
+
+        '<div class="field-row">' +
+          '<div class="field"><label class="field-label">City / location</label>' +
+            '<input type="text" class="input" id="wsCity" value="' + PCD.escapeHtml(data.city || '') + '" placeholder="e.g. Perth, AU"></div>' +
+          '<div class="field"><label class="field-label">Period</label>' +
+            '<div style="display:flex;gap:6px;">' +
+              '<input type="month" class="input" id="wsStart" value="' + PCD.escapeHtml((data.periodStart || '').slice(0, 7)) + '" style="flex:1;">' +
+              '<input type="month" class="input" id="wsEnd" value="' + PCD.escapeHtml((data.periodEnd || '').slice(0, 7)) + '" placeholder="ongoing" style="flex:1;">' +
+            '</div>' +
+            '<div class="field-hint">Leave end blank if you\'re still there</div>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="field"><label class="field-label">Color</label>' +
+          '<div style="display:flex;gap:8px;flex-wrap:wrap;" id="wsColors">' +
+            WS_COLORS.map(function (c) {
+              const isSel = data.color === c.id;
+              return '<button type="button" data-color="' + c.id + '" style="width:36px;height:36px;border-radius:8px;background:' + c.hex + ';border:3px solid ' + (isSel ? '#fff' : c.hex) + ';outline:' + (isSel ? '2px solid ' + c.hex : 'none') + ';cursor:pointer;"></button>';
+            }).join('') +
+          '</div>' +
+        '</div>';
+
+      PCD.on(body, 'click', '[data-color]', function () {
+        data.color = this.getAttribute('data-color');
+        buildBody();
+      });
+    }
+    buildBody();
+
+    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') });
+    const saveBtn = PCD.el('button', { class: 'btn btn-primary', text: t('save'), style: { flex: '1' } });
+    let archiveBtn = null, deleteBtn = null;
+    if (existing) {
+      archiveBtn = PCD.el('button', { class: 'btn btn-outline' });
+      archiveBtn.innerHTML = PCD.icon('archive', 14) + ' <span>' + (existing.archived ? 'Unarchive' : 'Archive') + '</span>';
+      // Only allow delete if there's another workspace
+      const others = PCD.store.listWorkspaces(true).filter(function (w) { return w.id !== existing.id; });
+      if (others.length > 0) {
+        deleteBtn = PCD.el('button', { class: 'btn btn-ghost', text: 'Delete', style: { color: 'var(--danger)' } });
+      }
+    }
+    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
+    if (deleteBtn) footer.appendChild(deleteBtn);
+    if (archiveBtn) footer.appendChild(archiveBtn);
+    footer.appendChild(cancelBtn);
+    footer.appendChild(saveBtn);
+
+    const m = PCD.modal.open({
+      title: existing ? 'Edit workspace' : 'New workspace',
+      body: body, footer: footer, size: 'md', closable: true
+    });
+
+    cancelBtn.addEventListener('click', function () { m.close(); });
+    if (archiveBtn) archiveBtn.addEventListener('click', function () {
+      const willArchive = !existing.archived;
+      PCD.modal.confirm({
+        title: willArchive ? 'Archive workspace?' : 'Reactivate workspace?',
+        text: willArchive
+          ? '"' + existing.name + '" will be hidden but data is preserved. You can reactivate any time.'
+          : '"' + existing.name + '" will appear in the active list again.',
+        okText: willArchive ? 'Archive' : 'Reactivate'
+      }).then(function (ok) {
+        if (!ok) return;
+        PCD.store.archiveWorkspace(existing.id, willArchive);
+        PCD.toast.success(willArchive ? 'Workspace archived' : 'Workspace reactivated');
+        m.close();
+        setTimeout(function () { window.location.reload(); }, 400);
+      });
+    });
+    if (deleteBtn) deleteBtn.addEventListener('click', function () {
+      PCD.modal.confirm({
+        icon: '🗑', iconKind: 'danger', danger: true,
+        title: 'Delete "' + existing.name + '"?',
+        text: 'All recipes, menus, events and other data in this workspace will be permanently deleted. Ingredients library will remain. This cannot be undone.',
+        okText: 'Delete forever'
+      }).then(function (ok) {
+        if (!ok) return;
+        PCD.store.deleteWorkspace(existing.id);
+        PCD.toast.success('Workspace deleted');
+        m.close();
+        setTimeout(function () { window.location.reload(); }, 400);
+      });
+    });
+    saveBtn.addEventListener('click', function () {
+      data.name = (PCD.$('#wsNameInp', body).value || '').trim();
+      if (!data.name) { PCD.toast.error('Name required'); return; }
+      data.concept = (PCD.$('#wsConcept', body).value || '').trim();
+      data.role = (PCD.$('#wsRole', body).value || '').trim();
+      data.city = (PCD.$('#wsCity', body).value || '').trim();
+      const startVal = PCD.$('#wsStart', body).value;
+      const endVal = PCD.$('#wsEnd', body).value;
+      data.periodStart = startVal ? startVal + '-01' : null;
+      data.periodEnd = endVal ? endVal + '-01' : null;
+      if (existing) data.id = existing.id;
+      const isNew = !existing;
+      const saved = PCD.store.upsertWorkspace(data);
+      // For brand new workspace, switch to it
+      if (isNew) PCD.store.setActiveWorkspaceId(saved.id);
+      PCD.toast.success(t('saved'));
+      m.close();
+      setTimeout(function () {
+        if (isNew) window.location.reload();
+        else refreshWorkspaceLabel();
+      }, 300);
+    });
   }
 
   function openLanguagePicker() {

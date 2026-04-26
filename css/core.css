@@ -210,8 +210,41 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
   display: flex; align-items: center; gap: 10px;
   font-weight: 700; letter-spacing: -0.01em;
   cursor: pointer;
-  flex: 1; min-width: 0;
+  min-width: 0;
 }
+
+/* Workspace switcher (between brand and actions) */
+.ws-switcher {
+  display: flex; align-items: center; gap: 8px;
+  margin-inline-start: 12px;
+  padding: 6px 10px 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  cursor: pointer;
+  font-size: 13px; font-weight: 600;
+  color: var(--text);
+  transition: all .15s ease;
+  flex: 1;
+  min-width: 0;
+  max-width: 280px;
+}
+.ws-switcher:hover { border-color: var(--brand-300); background: var(--brand-50); }
+.ws-switcher .ws-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--brand-600);
+  flex-shrink: 0;
+}
+.ws-switcher .ws-name {
+  flex: 1; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  text-align: start;
+}
+@media (max-width: 600px) {
+  .ws-switcher { padding: 5px 8px; font-size: 12px; max-width: 160px; margin-inline-start: 8px; }
+  .ws-switcher .ws-dot { width: 8px; height: 8px; }
+}
+
 .brand-mark {
   width: 30px; height: 30px;
   display: inline-flex; align-items: center; justify-content: center;
@@ -221,6 +254,9 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
   flex-shrink: 0;
 }
 .brand-name { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 600px) {
+  .brand-name { display: none; }
+}
 .topbar-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
 
 .icon-btn { width: 40px; height: 40px;

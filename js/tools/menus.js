@@ -66,6 +66,7 @@
               <span>${PCD.fmtRelTime(m.updatedAt)}</span>
             </div>
           </div>
+          <button class="icon-btn" data-copy-mid="${m.id}" data-name="${PCD.escapeHtml(m.name || 'menu')}" title="Copy to workspace">${PCD.icon('truck', 18)}</button>
           <button class="icon-btn" data-edit-mid="${m.id}" title="Edit menu">${PCD.icon('edit', 18)}</button>
         `;
         cont.appendChild(row);
@@ -76,12 +77,18 @@
     PCD.$('#newMenuBtn', view).addEventListener('click', function () { openEditor(); });
     PCD.on(listEl, 'click', '[data-mid]', function (e) {
       // If user clicked the inline edit/delete icon let those handlers fire
-      if (e.target.closest('[data-edit-mid]') || e.target.closest('[data-del-mid]')) return;
+      if (e.target.closest('[data-edit-mid]') || e.target.closest('[data-del-mid]') || e.target.closest('[data-copy-mid]')) return;
       openPrintView(this.getAttribute('data-mid'));
     });
     PCD.on(listEl, 'click', '[data-edit-mid]', function (e) {
       e.stopPropagation();
       openEditor(this.getAttribute('data-edit-mid'));
+    });
+    PCD.on(listEl, 'click', '[data-copy-mid]', function (e) {
+      e.stopPropagation();
+      const mid = this.getAttribute('data-copy-mid');
+      const name = this.getAttribute('data-name');
+      PCD.openCopyToWorkspace('menus', mid, name);
     });
   }
 

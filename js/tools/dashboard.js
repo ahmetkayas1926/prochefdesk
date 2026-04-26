@@ -7,13 +7,51 @@
   'use strict';
   const PCD = window.PCD;
 
-  function computeFoodCost(recipe, ingMap) {
+  // Compute total food cost of a recipe.
+  // Supports SUB-RECIPES: an ingredient line can be a recipe reference
+  // ({ recipeId, amount, unit }) instead of an ingredient ({ ingredientId, ... }).
+  // Sub-recipe cost is calculated recursively and scaled to the amount used.
+  // Cycle-protected via a visited set passed down through recursion.
+  function computeFoodCost(recipe, ingMap, recipeMap, _visited) {
     if (!recipe || !recipe.ingredients) return 0;
+    // If recipeMap not provided, auto-build (works for sub-recipes from current workspace)
+    if (!recipeMap) recipeMap = buildRecipeMap();
+    _visited = _visited || {};
+    if (recipe.id) {
+      if (_visited[recipe.id]) return 0; // cycle — bail out
+      _visited[recipe.id] = true;
+    }
+
     let total = 0;
     recipe.ingredients.forEach(function (ri) {
+      const amt = Number(ri.amount) || 0;
+      if (amt <= 0) return;
+
+      // SUB-RECIPE LINE
+      if (ri.recipeId) {
+        if (!recipeMap) return;
+        const sub = recipeMap[ri.recipeId];
+        if (!sub) return;
+        // Cost of full sub-recipe
+        const subTotalCost = computeFoodCost(sub, ingMap, recipeMap, Object.assign({}, _visited));
+        const subYield = sub.yieldAmount || sub.servings || 1;
+        const subUnit = sub.yieldUnit || 'portion';
+        // Scale: how much of the sub-recipe are we using?
+        let scale = amt / (subYield || 1);
+        if (ri.unit && subUnit && ri.unit !== subUnit) {
+          // Best-effort unit conversion
+          try {
+            const conv = PCD.convertUnit(amt, ri.unit, subUnit);
+            scale = conv / (subYield || 1);
+          } catch (e) {}
+        }
+        total += subTotalCost * scale;
+        return;
+      }
+
+      // INGREDIENT LINE (legacy)
       const ing = ingMap[ri.ingredientId];
       if (!ing) return;
-      const amt = Number(ri.amount) || 0;
       let price = Number(ing.pricePerUnit) || 0;
       // Apply yield% if defined (e.g. chicken bone-in 70% → true cost = price / 0.7)
       const yld = Number(ing.yieldPercent);
@@ -33,8 +71,16 @@
     return total;
   }
 
+  // Helper for callers that don't have recipeMap
+  function buildRecipeMap() {
+    const map = {};
+    PCD.store.listRecipes().forEach(function (r) { map[r.id] = r; });
+    return map;
+  }
+
   PCD.recipes = PCD.recipes || {};
   PCD.recipes.computeFoodCost = computeFoodCost;
+  PCD.recipes.buildRecipeMap = buildRecipeMap;
 
   // ============ TODAY-FOCUSED DASHBOARD ============
   function render(view) {
@@ -236,7 +282,10 @@
       '</style>' +
 
       '<h1 class="dash-greet">' + headline + '</h1>' +
-      '<div class="dash-date">' + todayStr + '</div>' +
+      '<div class="dash-date">' + todayStr + (function () {
+        const ws = PCD.store.getActiveWorkspace();
+        return ws ? ' · <strong style="color:var(--brand-700);">' + PCD.escapeHtml(ws.name) + '</strong>' + (ws.role ? ' (' + PCD.escapeHtml(ws.role) + ')' : '') : '';
+      })() + '</div>' +
 
       // Action cards (today's focus)
       (cards.length > 0

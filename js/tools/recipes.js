@@ -20,7 +20,7 @@
   }
 
   function computeCost(recipe) {
-    return PCD.recipes.computeFoodCost(recipe, currentIngMap());
+    return PCD.recipes.computeFoodCost(recipe, currentIngMap(), PCD.recipes.buildRecipeMap());
   }
 
   // ============ LIST VIEW ============
@@ -85,11 +85,16 @@
         });
       }
       if (visible.length === 0 && !filter) {
+        const ws = PCD.store.getActiveWorkspace();
+        const wsLabel = ws ? PCD.escapeHtml(ws.name) : '';
         listEl.innerHTML = `
           <div class="empty">
             <div class="empty-icon">📖</div>
             <div class="empty-title">${t('no_recipes_yet')}</div>
-            <div class="empty-desc">${t('no_recipes_yet_desc')}</div>
+            <div class="empty-desc">
+              ${t('no_recipes_yet_desc')}
+              ${wsLabel ? '<div style="margin-top:8px;font-size:13px;">In workspace <strong>' + wsLabel + '</strong></div>' : ''}
+            </div>
             <div class="empty-action"><button class="btn btn-primary" id="emptyNewBtn">+ ${t('new_recipe')}</button></div>
           </div>
         `;
@@ -238,6 +243,9 @@
             renderList(view);
             setTimeout(function () { openEditor(saved.id); }, 200);
           }},
+          { icon: 'truck', label: 'Copy to workspace...', onClick: function () {
+            PCD.openCopyToWorkspace('recipes', rid, r.name);
+          }},
           { icon: 'share', label: PCD.i18n.t('act_share'), onClick: function () { openPreview(rid); } },
           { icon: 'grid', label: PCD.i18n.t('act_show_qr'), onClick: function () {
             const ingMap = currentIngMap();
@@ -277,7 +285,7 @@
     const r = PCD.store.getRecipe(rid);
     if (!r) { PCD.toast.error('Recipe not found'); return; }
     const ingMap = currentIngMap();
-    const cost = PCD.recipes.computeFoodCost(r, ingMap);
+    const cost = PCD.recipes.computeFoodCost(r, ingMap, PCD.recipes.buildRecipeMap());
     const costPerServing = r.servings ? cost / r.servings : cost;
     const pct = (r.salePrice && cost > 0 && r.servings) ? (costPerServing / r.salePrice) * 100 : null;
 
@@ -532,6 +540,81 @@
     });
   }
 
+  // Versions panel — shows all snapshots of a recipe, lets user view/restore/delete each.
+  function openVersionsPanel(recipeId, onAfterRestore) {
+    const r = PCD.store.getRecipe(recipeId);
+    if (!r) return;
+    const versions = (r.versions || []).slice().reverse(); // newest first
+
+    const body = PCD.el('div');
+    function renderBody() {
+      const cur = PCD.store.getRecipe(recipeId);
+      const v = (cur.versions || []).slice().reverse();
+      let html = '<div class="text-muted text-sm mb-3">Each save captures the previous state. Restore to roll back, or delete old snapshots.</div>';
+      if (v.length === 0) {
+        html += '<div class="empty"><div class="empty-icon" style="color:var(--brand-600);">' + PCD.icon('clock', 40) + '</div>' +
+          '<div class="empty-title">No previous versions yet</div>' +
+          '<div class="empty-desc">Versions are auto-captured when you save changes to ingredients, steps, or servings. The current state is always live.</div></div>';
+      } else {
+        html += '<div class="flex flex-col gap-2">';
+        v.forEach(function (ver) {
+          const ingCount = (ver.snapshot.ingredients || []).length;
+          html += '<div class="card" style="padding:12px;display:flex;align-items:center;gap:12px;">' +
+            '<div style="width:32px;height:32px;border-radius:8px;background:var(--brand-50);color:var(--brand-700);display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + PCD.icon('clock', 16) + '</div>' +
+            '<div style="flex:1;min-width:0;">' +
+              '<div style="font-weight:600;font-size:14px;">' + PCD.escapeHtml(ver.label || 'Version') + '</div>' +
+              '<div class="text-muted" style="font-size:12px;">' + PCD.fmtRelTime(ver.snapshotAt) + ' · ' + ingCount + ' ingredients · ' + (ver.snapshot.servings || 1) + ' servings</div>' +
+            '</div>' +
+            '<button class="btn btn-outline btn-sm" data-restore="' + ver.snapshotId + '">Restore</button>' +
+            '<button class="icon-btn" data-delv="' + ver.snapshotId + '" title="Delete">' + PCD.icon('trash', 16) + '</button>' +
+          '</div>';
+        });
+        html += '</div>';
+      }
+      body.innerHTML = html;
+    }
+    renderBody();
+
+    PCD.on(body, 'click', '[data-restore]', function () {
+      const sid = this.getAttribute('data-restore');
+      PCD.modal.confirm({
+        icon: '↩', iconKind: 'info',
+        title: 'Restore this version?',
+        text: 'Current state will be auto-saved as a new version first, so you can undo. Continue?',
+        okText: 'Restore'
+      }).then(function (ok) {
+        if (!ok) return;
+        const success = PCD.store.restoreRecipeVersion(recipeId, sid);
+        if (success) {
+          PCD.toast.success('Recipe restored — current state saved as new version');
+          if (typeof onAfterRestore === 'function') onAfterRestore();
+        } else {
+          PCD.toast.error('Restore failed');
+        }
+      });
+    });
+    PCD.on(body, 'click', '[data-delv]', function () {
+      const sid = this.getAttribute('data-delv');
+      PCD.modal.confirm({
+        icon: '🗑', iconKind: 'danger', danger: true,
+        title: 'Delete this version?',
+        text: 'This snapshot will be permanently removed. Cannot be undone.',
+        okText: 'Delete'
+      }).then(function (ok) {
+        if (!ok) return;
+        PCD.store.deleteRecipeVersion(recipeId, sid);
+        PCD.toast.success('Version deleted');
+        renderBody();
+      });
+    });
+
+    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: 'Close', style: { width: '100%' } });
+    const footer = PCD.el('div', { style: { width: '100%' } });
+    footer.appendChild(closeBtn);
+    const m = PCD.modal.open({ title: 'Versions · ' + r.name, body: body, footer: footer, size: 'md', closable: true });
+    closeBtn.addEventListener('click', function () { m.close(); });
+  }
+
   function openEditor(rid) {
     const t = PCD.i18n.t;
     const existing = rid ? PCD.store.getRecipe(rid) : null;
@@ -562,7 +645,7 @@
 
     function renderEditor() {
       const ingMap = currentIngMap();
-      const cost = PCD.recipes.computeFoodCost(data, ingMap);
+      const cost = PCD.recipes.computeFoodCost(data, ingMap, PCD.recipes.buildRecipeMap());
       const costPerServing = data.servings ? cost / data.servings : cost;
       const pct = (data.salePrice && cost > 0 && data.servings) ? (costPerServing / data.salePrice) * 100 : null;
 
@@ -607,6 +690,20 @@
           <div class="field">
             <label class="field-label">${t('recipe_cook_time')}</label>
             <input type="number" class="input" id="recipeCook" value="${data.cookTime || ''}" min="0">
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label class="field-label">Yield amount (for use as sub-recipe)</label>
+            <input type="number" class="input" id="recipeYieldAmount" value="${data.yieldAmount || ''}" step="0.01" min="0" placeholder="e.g. 800">
+            <div class="field-hint">How much this recipe produces. Leave blank if same as servings.</div>
+          </div>
+          <div class="field">
+            <label class="field-label">Yield unit</label>
+            <select class="select" id="recipeYieldUnit">
+              ${['portion','g','kg','ml','l','batch','tray','pcs'].map(function (u) { return '<option value="' + u + '"' + ((data.yieldUnit || 'portion') === u ? ' selected' : '') + '>' + u + '</option>'; }).join('')}
+            </select>
           </div>
         </div>
 
@@ -712,6 +809,7 @@
 
     function renderIngList() {
       const ingMap = currentIngMap();
+      const recipeMap = PCD.recipes.buildRecipeMap();
       const ingListEl = PCD.$('#ingList', body);
       if (!ingListEl) return;
       PCD.clear(ingListEl);
@@ -721,25 +819,56 @@
         return;
       }
       data.ingredients.forEach(function (ri, idx) {
-        const ing = ingMap[ri.ingredientId];
-        const row = PCD.el('div', { class: 'list-item', style: { minHeight: 'auto', padding: '10px' } });
-        const name = ing ? ing.name : '(removed ingredient)';
-        const lineCost = ing ? (function () {
-          const amt = Number(ri.amount) || 0;
-          let price = Number(ing.pricePerUnit) || 0;
-          if (ri.unit && ing.unit && ri.unit !== ing.unit) {
-            try { return PCD.convertUnit(amt, ri.unit, ing.unit) * price; } catch(e) {}
-          }
-          return amt * price;
-        })() : 0;
+        const isSubRecipe = !!ri.recipeId;
+        let name, lineCost, defaultUnit;
 
+        if (isSubRecipe) {
+          // SUB-RECIPE LINE
+          const sub = recipeMap[ri.recipeId];
+          name = sub ? sub.name : '(removed sub-recipe)';
+          const subYield = sub ? (sub.yieldAmount || sub.servings || 1) : 1;
+          defaultUnit = sub ? (sub.yieldUnit || 'portion') : 'portion';
+          if (sub) {
+            const subTotalCost = PCD.recipes.computeFoodCost(sub, ingMap, recipeMap);
+            const amt = Number(ri.amount) || 0;
+            let scale = amt / (subYield || 1);
+            if (ri.unit && defaultUnit && ri.unit !== defaultUnit) {
+              try { scale = PCD.convertUnit(amt, ri.unit, defaultUnit) / (subYield || 1); }
+              catch (e) {}
+            }
+            lineCost = subTotalCost * scale;
+          } else {
+            lineCost = 0;
+          }
+        } else {
+          // INGREDIENT LINE
+          const ing = ingMap[ri.ingredientId];
+          name = ing ? ing.name : '(removed ingredient)';
+          defaultUnit = ing && ing.unit;
+          lineCost = ing ? (function () {
+            const amt = Number(ri.amount) || 0;
+            let price = Number(ing.pricePerUnit) || 0;
+            const yld = Number(ing.yieldPercent);
+            if (yld && yld > 0 && yld < 100) price = price / (yld / 100);
+            if (ri.unit && ing.unit && ri.unit !== ing.unit) {
+              try { return PCD.convertUnit(amt, ri.unit, ing.unit) * price; } catch(e) {}
+            }
+            return amt * price;
+          })() : 0;
+        }
+
+        const row = PCD.el('div', { class: 'list-item', style: { minHeight: 'auto', padding: '10px' } });
+        const subBadge = isSubRecipe ? '<span style="display:inline-block;background:var(--brand-50);color:var(--brand-700);font-size:9px;font-weight:700;padding:2px 6px;border-radius:999px;letter-spacing:0.06em;text-transform:uppercase;margin-inline-start:6px;">SUB</span>' : '';
+        const unitOptions = isSubRecipe
+          ? ['portion','g','kg','ml','l','batch','tray','pcs']
+          : ['g','kg','ml','l','tsp','tbsp','cup','oz','lb','pcs','unit'];
         row.innerHTML = `
           <div class="list-item-body">
-            <div class="list-item-title">${PCD.escapeHtml(name)}</div>
+            <div class="list-item-title">${PCD.escapeHtml(name)}${subBadge}</div>
             <div class="list-item-meta">
               <input type="number" class="input" data-amount data-idx="${idx}" value="${ri.amount || 0}" step="0.01" min="0" style="width:90px;padding:6px 8px;min-height:32px;font-size:14px;">
               <select class="select" data-unit data-idx="${idx}" style="width:auto;padding:6px 8px;min-height:32px;font-size:14px;padding-right:28px;">
-                ${['g','kg','ml','l','tsp','tbsp','cup','oz','lb','pcs','unit'].map(function (u) { return '<option value="' + u + '"' + ((ri.unit || (ing && ing.unit)) === u ? ' selected' : '') + '>' + u + '</option>'; }).join('')}
+                ${unitOptions.map(function (u) { return '<option value="' + u + '"' + ((ri.unit || defaultUnit) === u ? ' selected' : '') + '>' + u + '</option>'; }).join('')}
               </select>
               <span class="text-muted">·</span>
               <span style="font-weight:600;">${PCD.fmtMoney(lineCost)}</span>
@@ -889,44 +1018,80 @@
           const q = (query || '').toLowerCase().trim();
           if (!q) { qDD.style.display = 'none'; qDD.innerHTML = ''; return; }
           const allIngs = PCD.store.listIngredients();
-          const alreadyInRecipe = new Set((data.ingredients || []).map(function (ri) { return ri.ingredientId; }));
+          const alreadyInRecipe = new Set((data.ingredients || []).map(function (ri) { return ri.ingredientId || ri.recipeId; }));
           const matches = allIngs.filter(function (i) {
             return (i.name || '').toLowerCase().indexOf(q) >= 0 && !alreadyInRecipe.has(i.id);
-          }).slice(0, 8);
+          }).slice(0, 6);
 
-          // If no existing ingredient matches, offer "create new"
-          const createOption = { id: '__new__', name: 'Create new: "' + query.trim() + '"', isCreate: true };
+          // Sub-recipe matches — exclude self + already-added + cycles
+          const allRecipes = PCD.store.listRecipes();
+          const recipeMatches = allRecipes.filter(function (r) {
+            if (data.id && r.id === data.id) return false; // can't include self
+            if (alreadyInRecipe.has(r.id)) return false;
+            return (r.name || '').toLowerCase().indexOf(q) >= 0;
+          }).slice(0, 6);
 
           let html = '';
-          matches.forEach(function (i) {
-            html += '<div data-pick="' + i.id + '" style="padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
-              '<div style="flex:1;min-width:0;"><div style="font-weight:600;">' + PCD.escapeHtml(i.name) + '</div>' +
-              '<div class="text-muted" style="font-size:11px;">' + PCD.fmtMoney(i.pricePerUnit || 0) + '/' + (i.unit || '') + '</div></div>' +
-              '</div>';
-          });
-          // Always show "create new" at the bottom if query has content
-          html += '<div data-pick="__new__" data-name="' + PCD.escapeHtml(query.trim()) + '" style="padding:10px 12px;cursor:pointer;background:var(--brand-50);color:var(--brand-700);font-weight:600;font-size:13px;">' +
-            PCD.icon('plus', 14) + ' Create "' + PCD.escapeHtml(query.trim()) + '"</div>';
+          if (matches.length > 0) {
+            html += '<div style="padding:6px 12px;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;background:var(--surface-2);">Ingredients</div>';
+            matches.forEach(function (i) {
+              html += '<div data-pick-ing="' + i.id + '" style="padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
+                '<div style="flex:1;min-width:0;"><div style="font-weight:600;">' + PCD.escapeHtml(i.name) + '</div>' +
+                '<div class="text-muted" style="font-size:11px;">' + PCD.fmtMoney(i.pricePerUnit || 0) + '/' + (i.unit || '') + '</div></div>' +
+                '</div>';
+            });
+          }
+          if (recipeMatches.length > 0) {
+            html += '<div style="padding:6px 12px;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;background:var(--surface-2);">Sub-recipes</div>';
+            recipeMatches.forEach(function (r) {
+              html += '<div data-pick-recipe="' + r.id + '" style="padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
+                '<div style="flex:1;min-width:0;"><div style="font-weight:600;">' + PCD.escapeHtml(r.name) +
+                ' <span style="font-size:9px;background:var(--brand-100);color:var(--brand-700);padding:2px 6px;border-radius:999px;letter-spacing:0.06em;text-transform:uppercase;font-weight:700;margin-inline-start:4px;">SUB</span></div>' +
+                '<div class="text-muted" style="font-size:11px;">' + (r.servings || 1) + ' ' + (r.yieldUnit || 'portions') + '</div></div>' +
+                '</div>';
+            });
+          }
+          // Always show "create new" at the bottom
+          html += '<div data-pick-ing="__new__" data-name="' + PCD.escapeHtml(query.trim()) + '" style="padding:10px 12px;cursor:pointer;background:var(--brand-50);color:var(--brand-700);font-weight:600;font-size:13px;">' +
+            PCD.icon('plus', 14) + ' Create new ingredient "' + PCD.escapeHtml(query.trim()) + '"</div>';
           qDD.innerHTML = html;
           qDD.style.display = 'block';
         }
 
         qInput.addEventListener('input', function () { renderDD(this.value); });
         qInput.addEventListener('focus', function () { if (this.value) renderDD(this.value); });
-        // close on outside click
         document.addEventListener('click', function (e) {
           if (!e.target.closest || (!e.target.closest('#quickIngInput') && !e.target.closest('#quickIngDD'))) {
             if (qDD) qDD.style.display = 'none';
           }
         });
 
-        PCD.on(qDD, 'click', '[data-pick]', function () {
-          const id = this.getAttribute('data-pick');
+        // Pick a sub-recipe
+        PCD.on(qDD, 'click', '[data-pick-recipe]', function () {
+          const rid = this.getAttribute('data-pick-recipe');
+          const sub = PCD.store.getRecipe(rid);
+          if (!sub) return;
+          const defaultUnit = sub.yieldUnit || 'portion';
+          const defaultAmt = 1;
+          data.ingredients = (data.ingredients || []).concat([{
+            recipeId: rid, amount: defaultAmt, unit: defaultUnit
+          }]);
+          qInput.value = '';
+          qDD.style.display = 'none';
+          renderEditor();
+          setTimeout(function () {
+            const fresh = PCD.$('#quickIngInput', body);
+            if (fresh) fresh.focus();
+          }, 50);
+        });
+
+        // Pick an ingredient
+        PCD.on(qDD, 'click', '[data-pick-ing]', function () {
+          const id = this.getAttribute('data-pick-ing');
           if (id === '__new__') {
             const newName = this.getAttribute('data-name') || qInput.value.trim();
             if (!newName) return;
             qDD.style.display = 'none';
-            // Open mini-dialog to capture unit + price BEFORE saving
             promptNewIngredientDetails(newName, function (saved, qty, qtyUnit) {
               data.ingredients = (data.ingredients || []).concat([{
                 ingredientId: saved.id, amount: qty || 100, unit: qtyUnit || saved.unit
@@ -957,7 +1122,7 @@
         qInput.addEventListener('keydown', function (e) {
           if (e.key === 'Enter') {
             e.preventDefault();
-            const first = qDD.querySelector('[data-pick]');
+            const first = qDD.querySelector('[data-pick-ing], [data-pick-recipe]');
             if (first) first.click();
           } else if (e.key === 'Escape') {
             qDD.style.display = 'none';
@@ -970,8 +1135,15 @@
 
     const saveBtn = PCD.el('button', { class: 'btn btn-primary', text: t('save_recipe'), style: { flex: '1' } });
     const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') });
-    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
+    let versionsBtn = null;
+    if (existing) {
+      versionsBtn = PCD.el('button', { class: 'btn btn-outline', title: 'Versions' });
+      const vCount = (existing.versions || []).length;
+      versionsBtn.innerHTML = PCD.icon('clock', 16) + ' <span>Versions' + (vCount > 0 ? ' (' + vCount + ')' : '') + '</span>';
+    }
+    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
     footer.appendChild(cancelBtn);
+    if (versionsBtn) footer.appendChild(versionsBtn);
     footer.appendChild(saveBtn);
 
     const m = PCD.modal.open({
@@ -983,6 +1155,13 @@
     });
 
     cancelBtn.addEventListener('click', function () { m.close(); });
+    if (versionsBtn) versionsBtn.addEventListener('click', function () {
+      openVersionsPanel(existing.id, function () {
+        // After restore, reload editor
+        m.close();
+        setTimeout(function () { openEditor(existing.id); }, 200);
+      });
+    });
     saveBtn.addEventListener('click', function () {
       // Collect latest values from form
       data.name = PCD.$('#recipeName', body).value.trim();
@@ -990,6 +1169,10 @@
       data.servings = parseInt(PCD.$('#recipeServings', body).value, 10) || 1;
       data.prepTime = parseInt(PCD.$('#recipePrep', body).value, 10) || null;
       data.cookTime = parseInt(PCD.$('#recipeCook', body).value, 10) || null;
+      const yldAmtInp = PCD.$('#recipeYieldAmount', body);
+      const yldUnitInp = PCD.$('#recipeYieldUnit', body);
+      data.yieldAmount = (yldAmtInp && yldAmtInp.value) ? parseFloat(yldAmtInp.value) : null;
+      data.yieldUnit = (yldUnitInp && yldUnitInp.value) ? yldUnitInp.value : 'portion';
       data.salePrice = parseFloat(PCD.$('#recipeSalePrice', body).value) || null;
       data.steps = PCD.$('#recipeSteps', body).value;
       data.plating = PCD.$('#recipePlating', body).value;
@@ -999,7 +1182,18 @@
         return;
       }
 
-      if (existing) data.id = existing.id;
+      if (existing) {
+        data.id = existing.id;
+        // Auto-snapshot if content meaningfully changed (ingredients or steps).
+        // Saves the OLD state into versions before applying the new save.
+        const ingChanged = JSON.stringify(existing.ingredients || []) !== JSON.stringify(data.ingredients || []);
+        const stepsChanged = (existing.steps || '') !== (data.steps || '');
+        const servingsChanged = (existing.servings || 0) !== (data.servings || 0);
+        if (ingChanged || stepsChanged || servingsChanged) {
+          // snapshot the OLD recipe state (before save)
+          PCD.store.snapshotRecipeVersion(existing.id, 'Auto · ' + new Date().toLocaleDateString());
+        }
+      }
       const saved = PCD.store.upsertRecipe(data);
       PCD.toast.success(t('recipe_saved'));
       m.close();

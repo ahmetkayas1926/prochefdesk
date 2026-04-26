@@ -24,6 +24,20 @@
   'use strict';
   const PCD = window.PCD;
 
+  // Pending stock count is now per-workspace
+  function getPendingForCurrentWs() {
+    const all = PCD.store.get('pendingStockCount') || {};
+    const wsId = PCD.store.getActiveWorkspaceId();
+    return all[wsId] || null;
+  }
+  function setPendingForCurrentWs(val) {
+    const all = Object.assign({}, PCD.store.get('pendingStockCount') || {});
+    const wsId = PCD.store.getActiveWorkspaceId();
+    if (val == null) delete all[wsId];
+    else all[wsId] = val;
+    PCD.store.set('pendingStockCount', all);
+  }
+
   function computeStatus(invRow) {
     if (!invRow || invRow.parLevel == null) return 'untracked';
     const stock = Number(invRow.stock) || 0;
@@ -60,7 +74,7 @@
     const t = PCD.i18n.t;
     const ings = PCD.store.listIngredients();
     const invAll = PCD.store._read('inventory') || {};
-    const pending = PCD.store.get('pendingStockCount');
+    const pending = getPendingForCurrentWs();
     let filter = 'all';
 
     // Aggregate stats
@@ -232,7 +246,7 @@
 
     const approveBtn = PCD.$('#approvePendingBtn', view);
     if (approveBtn) approveBtn.addEventListener('click', function () {
-      const p = PCD.store.get('pendingStockCount');
+      const p = getPendingForCurrentWs();
       if (!p) return;
       PCD.modal.confirm({
         icon: '✓', iconKind: 'success',
@@ -242,7 +256,7 @@
       }).then(function (ok) {
         if (!ok) return;
         applyCountsToInventory(p.counts);
-        PCD.store.set('pendingStockCount', null);
+        setPendingForCurrentWs(null);
         PCD.toast.success('Count approved');
         render(view);
         setTimeout(function () { promptGenerateOrdersAfterCount(); }, 400);
@@ -260,7 +274,7 @@
 
   // Review pending count — head chef can see values, edit individual items, or approve/reject
   function openReviewPending() {
-    const p = PCD.store.get('pendingStockCount');
+    const p = getPendingForCurrentWs();
     if (!p) return;
     const ings = PCD.store.listIngredients();
     const ingMap = {}; ings.forEach(function (i) { ingMap[i.id] = i; });
@@ -340,7 +354,7 @@
         okText: 'Reject'
       }).then(function (ok) {
         if (!ok) return;
-        PCD.store.set('pendingStockCount', null);
+        setPendingForCurrentWs(null);
         PCD.toast.info('Count rejected');
         m.close();
         setTimeout(function () {
@@ -351,7 +365,7 @@
     });
     approveBtn.addEventListener('click', function () {
       applyCountsToInventory(edited);
-      PCD.store.set('pendingStockCount', null);
+      setPendingForCurrentWs(null);
       PCD.toast.success('Count approved · ' + Object.keys(edited).length + ' items updated');
       m.close();
       setTimeout(function () {
@@ -515,7 +529,7 @@
           counts: countedValues,
           status: 'pending',
         };
-        PCD.store.set('pendingStockCount', pending);
+        setPendingForCurrentWs(pending);
         PCD.toast.success('Count saved — awaiting approval by head chef');
         m.close();
         setTimeout(function () {
@@ -531,7 +545,7 @@
       PCD.toast.success(n + ' stock level' + (n === 1 ? '' : 's') + ' updated');
       m.close();
       // Clear pending if we just approved
-      if (options.isApproving) PCD.store.set('pendingStockCount', null);
+      if (options.isApproving) setPendingForCurrentWs(null);
       setTimeout(function () {
         const v = PCD.$('#view');
         if (PCD.router.currentView() === 'inventory') render(v);

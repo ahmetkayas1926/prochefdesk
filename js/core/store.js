@@ -32,28 +32,113 @@
       demoSeeded: false,       // whether we've seeded the 3 demo recipes
     },
 
-    // data tables (each keyed by id)
-    recipes: {},       // { id: { id, name, category, photo, servings, ingredients:[{ingredientId,amount,unit}], steps, ... } }
-    ingredients: {},   // { id: { id, name, unit, pricePerUnit, supplier, category, priceHistory:[] } }
+    // ---------- WORKSPACES (v2.2) ----------
+    // Each workspace = a chef's job/concept (e.g. "La Bella · Italian a la carte · 2024-2025")
+    // Holds its own recipes/menus/events/suppliers/inventory/waste/checklists/shoppingLists.
+    // Ingredients library is shared across workspaces (an ingredient is an ingredient).
+    workspaces: {},            // { wsId: { id, name, concept, role, city, periodStart, periodEnd, archived, color, icon, createdAt } }
+    activeWorkspaceId: null,   // current workspace; null on first run -> auto-created
+
+    // ---------- LIBRARY (workspace-agnostic) ----------
+    ingredients: {},   // { id: { id, name, unit, pricePerUnit, supplier, category, priceHistory:[], yieldPercent } }
+    costHistory: [],   // global price change log
+
+    // ---------- WORKSPACE-BOUND ----------
+    // Each table now has shape: { wsId: { id: {...}, ... } }
+    recipes: {},
     menus: {},
     events: {},
     suppliers: {},
-    inventory: {},     // { ingredientId: { stock, parLevel, lastOrderDate } }
-    waste: [],         // array of waste entries
+    inventory: {},     // { wsId: { ingredientId: { stock, parLevel, lastOrderDate } } }
+    waste: {},         // { wsId: [...] }
     checklistTemplates: {},
-    checklistSessions: [],
+    checklistSessions: {}, // { wsId: [...] }
     canvases: {},      // kitchen cards
-    shoppingLists: {}, // phase 2 shopping lists
-    team: [],
-    costHistory: [],   // price change log
-    pendingStockCount: null, // { countedAt, countedBy, counts: {iid:num}, status } - awaits approval
+    shoppingLists: {},
+    pendingStockCount: {}, // { wsId: {...} | null }
+    salesLog: {},          // { wsId: [{date, recipeId, qty, ...}] } — for variance tracking
 
     // sync meta (not the data itself)
     _meta: {
       lastSyncAt: null,
       pendingChanges: 0,
+      schemaVersion: 2,        // bumped to 2 with workspace migration
     },
   };
+
+  // ---------- WORKSPACE HELPERS ----------
+  function currentWsId() {
+    ensureActiveWorkspace();
+    return state.activeWorkspaceId;
+  }
+
+  // Make sure there's at least one workspace and an active one selected.
+  // Also: if data is in legacy (top-level) format, migrate it into a default workspace.
+  function ensureActiveWorkspace() {
+    // If schema is already v2 with workspaces, just verify active id
+    if (state.workspaces && Object.keys(state.workspaces).length > 0) {
+      if (!state.activeWorkspaceId || !state.workspaces[state.activeWorkspaceId]) {
+        const first = Object.values(state.workspaces).filter(function (w) { return !w.archived; })[0]
+                   || Object.values(state.workspaces)[0];
+        state.activeWorkspaceId = first ? first.id : null;
+      }
+      return;
+    }
+    // Bootstrap: create default workspace
+    const defaultWs = {
+      id: PCD.uid('ws'),
+      name: 'My Kitchen',
+      concept: '',
+      role: '',
+      city: '',
+      periodStart: null,
+      periodEnd: null,
+      archived: false,
+      color: 'green',
+      icon: 'chef-hat',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    state.workspaces = { [defaultWs.id]: defaultWs };
+    state.activeWorkspaceId = defaultWs.id;
+
+    // Legacy migration — if any of the workspace-bound tables hold flat data
+    // (i.e. ids at top level, not nested by wsId), move it under the new ws
+    const wsBoundTables = ['recipes','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','salesLog'];
+    wsBoundTables.forEach(function (tbl) {
+      const t = state[tbl];
+      if (!t) return;
+      // Heuristic: legacy shape has values that look like records (have id/name/etc)
+      // OR is an array (waste was an array).
+      if (Array.isArray(t)) {
+        state[tbl] = { [defaultWs.id]: t.slice() };
+        return;
+      }
+      const keys = Object.keys(t);
+      if (keys.length === 0) {
+        state[tbl] = {};
+        return;
+      }
+      // If first value is itself an object containing 'id' or 'name' field → legacy flat
+      const sample = t[keys[0]];
+      const looksLikeRecord = sample && typeof sample === 'object' && (sample.id || sample.name || sample.text);
+      const looksLikeWsScoped = sample && typeof sample === 'object' && !sample.id && !sample.name; // already wsId -> {recordId: rec}
+      if (looksLikeRecord && !looksLikeWsScoped) {
+        state[tbl] = { [defaultWs.id]: t };
+      }
+    });
+
+    // pendingStockCount was a single object — move into workspace map
+    if (state.pendingStockCount && typeof state.pendingStockCount === 'object' && !Array.isArray(state.pendingStockCount)) {
+      const psc = state.pendingStockCount;
+      // If has 'counts' key it's a single-record (legacy)
+      if (psc.counts || psc.countedBy || psc.status) {
+        state.pendingStockCount = { [defaultWs.id]: psc };
+      } else if (Object.keys(psc).length === 0) {
+        state.pendingStockCount = {};
+      }
+    }
+  }
 
   // ---------- EVENT EMITTER ----------
   const listeners = {};
@@ -207,44 +292,225 @@
     },
 
     // ---- Recipe helpers ----
+    // ============ WORKSPACES API ============
+    // Returns the active workspace id; if none, lazily creates a default one
+    // and migrates legacy top-level data into it (one-time migration on load).
+    getActiveWorkspaceId: function () {
+      ensureActiveWorkspace();
+      return state.activeWorkspaceId;
+    },
+    getActiveWorkspace: function () {
+      ensureActiveWorkspace();
+      return PCD.clone(state.workspaces[state.activeWorkspaceId]) || null;
+    },
+    setActiveWorkspaceId: function (wsId) {
+      if (!state.workspaces[wsId]) return false;
+      state.activeWorkspaceId = wsId;
+      emit('activeWorkspaceId', wsId, null);
+      persist();
+      return true;
+    },
+    listWorkspaces: function (includeArchived) {
+      ensureActiveWorkspace();
+      const list = Object.values(PCD.clone(state.workspaces));
+      return includeArchived ? list : list.filter(function (w) { return !w.archived; });
+    },
+    getWorkspace: function (wsId) {
+      return PCD.clone(state.workspaces[wsId]) || null;
+    },
+    upsertWorkspace: function (ws) {
+      if (!ws.id) ws.id = PCD.uid('ws');
+      const now = new Date().toISOString();
+      ws.updatedAt = now;
+      if (!ws.createdAt) ws.createdAt = now;
+      const next = Object.assign({}, state.workspaces);
+      next[ws.id] = ws;
+      state.workspaces = next;
+      emit('workspaces', next, null);
+      persist();
+      return ws;
+    },
+    archiveWorkspace: function (wsId, archived) {
+      const w = state.workspaces[wsId];
+      if (!w) return false;
+      const next = Object.assign({}, state.workspaces);
+      next[wsId] = Object.assign({}, w, { archived: !!archived, updatedAt: new Date().toISOString() });
+      state.workspaces = next;
+      // If we just archived the active one, switch to another
+      if (archived && state.activeWorkspaceId === wsId) {
+        const alive = Object.values(state.workspaces).filter(function (x) { return !x.archived && x.id !== wsId; });
+        state.activeWorkspaceId = alive[0] ? alive[0].id : null;
+        ensureActiveWorkspace();
+      }
+      emit('workspaces', next, null);
+      persist();
+      return true;
+    },
+    deleteWorkspace: function (wsId) {
+      if (!state.workspaces[wsId]) return false;
+      // Refuse if it's the only one
+      const remaining = Object.keys(state.workspaces).filter(function (id) { return id !== wsId; });
+      if (remaining.length === 0) return false;
+      const next = Object.assign({}, state.workspaces);
+      delete next[wsId];
+      state.workspaces = next;
+      // Wipe workspace-bound data
+      ['recipes','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','pendingStockCount','salesLog'].forEach(function (tbl) {
+        if (state[tbl] && state[tbl][wsId] !== undefined) {
+          const t = Object.assign({}, state[tbl]);
+          delete t[wsId];
+          state[tbl] = t;
+        }
+      });
+      if (state.activeWorkspaceId === wsId) {
+        state.activeWorkspaceId = remaining[0];
+      }
+      emit('workspaces', next, null);
+      persist();
+      return true;
+    },
+
+    // Copy a single recipe / menu / etc from one workspace into another
+    copyToWorkspace: function (table, itemId, fromWsId, toWsId) {
+      if (!state[table] || !state[table][fromWsId]) return null;
+      const orig = state[table][fromWsId][itemId];
+      if (!orig) return null;
+      const copy = PCD.clone(orig);
+      copy.id = PCD.uid(table.slice(0, 1));
+      copy.createdAt = new Date().toISOString();
+      copy.updatedAt = copy.createdAt;
+      // tag with origin
+      copy._copiedFrom = { wsId: fromWsId, originalId: itemId };
+      const next = Object.assign({}, state[table]);
+      next[toWsId] = Object.assign({}, next[toWsId] || {});
+      next[toWsId][copy.id] = copy;
+      state[table] = next;
+      emit(table, next, null);
+      persist();
+      return copy;
+    },
+
+    // ---- Recipe (workspace-scoped) ----
     upsertRecipe: function (recipe) {
+      const wsId = currentWsId();
       if (!recipe.id) recipe.id = PCD.uid('r');
       const now = new Date().toISOString();
       recipe.updatedAt = now;
       if (!recipe.createdAt) recipe.createdAt = now;
       const recipes = Object.assign({}, state.recipes);
-      recipes[recipe.id] = recipe;
+      recipes[wsId] = Object.assign({}, recipes[wsId] || {});
+      recipes[wsId][recipe.id] = recipe;
       state.recipes = recipes;
-      emit('recipes', recipes, null);
+      emit('recipes', recipes[wsId], null);
       emit('recipes.' + recipe.id, recipe, null);
       persist();
       return recipe;
     },
     deleteRecipe: function (id) {
-      if (!state.recipes[id]) return false;
+      const wsId = currentWsId();
+      if (!state.recipes[wsId] || !state.recipes[wsId][id]) return false;
       const recipes = Object.assign({}, state.recipes);
-      delete recipes[id];
+      recipes[wsId] = Object.assign({}, recipes[wsId]);
+      delete recipes[wsId][id];
       state.recipes = recipes;
-      emit('recipes', recipes, null);
+      emit('recipes', recipes[wsId], null);
       persist();
       return true;
     },
     deleteRecipes: function (ids) {
-      if (!ids || !ids.length) return 0;
+      const wsId = currentWsId();
+      if (!ids || !ids.length || !state.recipes[wsId]) return 0;
       const recipes = Object.assign({}, state.recipes);
+      recipes[wsId] = Object.assign({}, recipes[wsId]);
       let n = 0;
       ids.forEach(function (id) {
-        if (recipes[id]) { delete recipes[id]; n++; }
+        if (recipes[wsId][id]) { delete recipes[wsId][id]; n++; }
       });
       state.recipes = recipes;
-      emit('recipes', recipes, null);
+      emit('recipes', recipes[wsId], null);
       persist();
       return n;
     },
-    getRecipe: function (id) { return PCD.clone(state.recipes[id]); },
-    listRecipes: function () { return Object.values(PCD.clone(state.recipes)); },
+    getRecipe: function (id) {
+      const wsId = currentWsId();
+      return state.recipes[wsId] ? PCD.clone(state.recipes[wsId][id]) : null;
+    },
+    listRecipes: function () {
+      const wsId = currentWsId();
+      return state.recipes[wsId] ? Object.values(PCD.clone(state.recipes[wsId])) : [];
+    },
 
-    // ---- Ingredient helpers ----
+    // Snapshot current recipe state into versions[] before user makes changes.
+    // versionLabel is optional ("Before salt change", "v2.1 - Mar 15", etc).
+    snapshotRecipeVersion: function (recipeId, label) {
+      const wsId = currentWsId();
+      if (!state.recipes[wsId] || !state.recipes[wsId][recipeId]) return null;
+      const recipes = Object.assign({}, state.recipes);
+      recipes[wsId] = Object.assign({}, recipes[wsId]);
+      const cur = PCD.clone(recipes[wsId][recipeId]);
+      const versions = cur.versions || [];
+      // Don't store versions inside versions
+      const snapshot = PCD.clone(cur);
+      delete snapshot.versions;
+      delete snapshot.id; // version snapshot has no id of its own
+      const versionEntry = {
+        snapshotId: PCD.uid('rv'),
+        label: label || ('v' + (versions.length + 1)),
+        snapshotAt: new Date().toISOString(),
+        snapshot: snapshot,
+      };
+      versions.push(versionEntry);
+      cur.versions = versions;
+      cur.updatedAt = new Date().toISOString();
+      recipes[wsId][recipeId] = cur;
+      state.recipes = recipes;
+      emit('recipes', recipes[wsId], null);
+      persist();
+      return versionEntry;
+    },
+    // Restore an old snapshot — current state is auto-snapshotted first
+    // so the restoration is reversible.
+    restoreRecipeVersion: function (recipeId, snapshotId) {
+      const wsId = currentWsId();
+      if (!state.recipes[wsId] || !state.recipes[wsId][recipeId]) return false;
+      const cur = PCD.clone(state.recipes[wsId][recipeId]);
+      const versions = cur.versions || [];
+      const versionEntry = versions.find(function (v) { return v.snapshotId === snapshotId; });
+      if (!versionEntry) return false;
+      // Auto-snapshot current state with label "Before restore"
+      this.snapshotRecipeVersion(recipeId, 'Before restore to ' + (versionEntry.label || 'older version'));
+      // Refresh
+      const recipes = Object.assign({}, state.recipes);
+      recipes[wsId] = Object.assign({}, recipes[wsId]);
+      const fresh = PCD.clone(recipes[wsId][recipeId]);
+      // Apply snapshot fields onto current
+      Object.keys(versionEntry.snapshot).forEach(function (k) {
+        if (k === 'createdAt' || k === 'id') return; // preserve identity
+        fresh[k] = PCD.clone(versionEntry.snapshot[k]);
+      });
+      fresh.updatedAt = new Date().toISOString();
+      recipes[wsId][recipeId] = fresh;
+      state.recipes = recipes;
+      emit('recipes', recipes[wsId], null);
+      persist();
+      return true;
+    },
+    deleteRecipeVersion: function (recipeId, snapshotId) {
+      const wsId = currentWsId();
+      if (!state.recipes[wsId] || !state.recipes[wsId][recipeId]) return false;
+      const recipes = Object.assign({}, state.recipes);
+      recipes[wsId] = Object.assign({}, recipes[wsId]);
+      const cur = PCD.clone(recipes[wsId][recipeId]);
+      cur.versions = (cur.versions || []).filter(function (v) { return v.snapshotId !== snapshotId; });
+      cur.updatedAt = new Date().toISOString();
+      recipes[wsId][recipeId] = cur;
+      state.recipes = recipes;
+      emit('recipes', recipes[wsId], null);
+      persist();
+      return true;
+    },
+
+    // ---- Ingredient helpers (LIBRARY — shared across workspaces) ----
     upsertIngredient: function (ing) {
       if (!ing.id) ing.id = PCD.uid('i');
       const now = new Date().toISOString();
@@ -284,34 +550,43 @@
     getIngredient: function (id) { return PCD.clone(state.ingredients[id]); },
     listIngredients: function () { return Object.values(PCD.clone(state.ingredients)); },
 
-    // ---- Generic table helpers (phase 2+): menus, canvases, shoppingLists ----
+    // ---- Generic table helpers (workspace-scoped: menus/events/suppliers/canvases/shoppingLists/etc) ----
     upsertInTable: function (table, item, idPrefix) {
+      const wsId = currentWsId();
       if (!state[table] || typeof state[table] !== 'object') state[table] = {};
+      if (!state[table][wsId]) state[table][wsId] = {};
       if (!item.id) item.id = PCD.uid(idPrefix || table.slice(0, 1));
       const now = new Date().toISOString();
       item.updatedAt = now;
       if (!item.createdAt) item.createdAt = now;
-      const next = Object.assign({}, state[table]);
-      next[item.id] = item;
-      state[table] = next;
-      emit(table, next, null);
+      const root = Object.assign({}, state[table]);
+      root[wsId] = Object.assign({}, root[wsId] || {});
+      root[wsId][item.id] = item;
+      state[table] = root;
+      emit(table, root[wsId], null);
       persist();
       return item;
     },
     deleteFromTable: function (table, id) {
-      if (!state[table] || !state[table][id]) return false;
-      const next = Object.assign({}, state[table]);
-      delete next[id];
-      state[table] = next;
-      emit(table, next, null);
+      const wsId = currentWsId();
+      if (!state[table] || !state[table][wsId] || !state[table][wsId][id]) return false;
+      const root = Object.assign({}, state[table]);
+      root[wsId] = Object.assign({}, root[wsId]);
+      delete root[wsId][id];
+      state[table] = root;
+      emit(table, root[wsId], null);
       persist();
       return true;
     },
     getFromTable: function (table, id) {
-      return state[table] ? PCD.clone(state[table][id]) : null;
+      const wsId = currentWsId();
+      if (!state[table] || !state[table][wsId]) return null;
+      return PCD.clone(state[table][wsId][id]);
     },
     listTable: function (table) {
-      return state[table] ? Object.values(PCD.clone(state[table])) : [];
+      const wsId = currentWsId();
+      if (!state[table] || !state[table][wsId]) return [];
+      return Object.values(PCD.clone(state[table][wsId]));
     },
 
     // ---- Pub/sub ----
