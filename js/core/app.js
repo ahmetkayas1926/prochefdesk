@@ -54,9 +54,6 @@
       PCD.router.register('suppliers', PCD.tools.suppliers.render);
       PCD.router.register('events', PCD.tools.events.render);
       PCD.router.register('checklist', PCD.tools.checklist.render);
-      // Analytics
-      PCD.router.register('sales', PCD.tools.sales.render);
-      PCD.router.register('variance', PCD.tools.varianceTool.render);
 
       // 7) Start router + render initial view
       PCD.router.start();
@@ -220,10 +217,6 @@
       ]},
       { title: 'Catering', items: [
         { key: 'events',  icon: 'calendar', route: 'events' },
-      ]},
-      { title: 'Analytics', items: [
-        { key: 'sales',    icon: 'activity', route: 'sales' },
-        { key: 'variance', icon: 'percent', route: 'variance' },
       ]},
       { title: null, items: [
         { key: 'account', icon: 'user', route: 'account' },

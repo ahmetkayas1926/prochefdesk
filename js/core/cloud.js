@@ -107,7 +107,6 @@
         canvases: state.canvases,
         shoppingLists: state.shoppingLists,
         pendingStockCount: state.pendingStockCount,
-        salesLog: state.salesLog,
       };
 
       supabase.from('user_data').upsert({

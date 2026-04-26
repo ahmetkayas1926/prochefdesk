@@ -56,7 +56,6 @@
     canvases: {},      // kitchen cards
     shoppingLists: {},
     pendingStockCount: {}, // { wsId: {...} | null }
-    salesLog: {},          // { wsId: [{date, recipeId, qty, ...}] } — for variance tracking
 
     // sync meta (not the data itself)
     _meta: {
@@ -104,7 +103,7 @@
 
     // Legacy migration — if any of the workspace-bound tables hold flat data
     // (i.e. ids at top level, not nested by wsId), move it under the new ws
-    const wsBoundTables = ['recipes','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','salesLog'];
+    const wsBoundTables = ['recipes','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists'];
     wsBoundTables.forEach(function (tbl) {
       const t = state[tbl];
       if (!t) return;
@@ -355,7 +354,7 @@
       delete next[wsId];
       state.workspaces = next;
       // Wipe workspace-bound data
-      ['recipes','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','pendingStockCount','salesLog'].forEach(function (tbl) {
+      ['recipes','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','pendingStockCount'].forEach(function (tbl) {
         if (state[tbl] && state[tbl][wsId] !== undefined) {
           const t = Object.assign({}, state[tbl]);
           delete t[wsId];
@@ -438,76 +437,6 @@
     listRecipes: function () {
       const wsId = currentWsId();
       return state.recipes[wsId] ? Object.values(PCD.clone(state.recipes[wsId])) : [];
-    },
-
-    // Snapshot current recipe state into versions[] before user makes changes.
-    // versionLabel is optional ("Before salt change", "v2.1 - Mar 15", etc).
-    snapshotRecipeVersion: function (recipeId, label) {
-      const wsId = currentWsId();
-      if (!state.recipes[wsId] || !state.recipes[wsId][recipeId]) return null;
-      const recipes = Object.assign({}, state.recipes);
-      recipes[wsId] = Object.assign({}, recipes[wsId]);
-      const cur = PCD.clone(recipes[wsId][recipeId]);
-      const versions = cur.versions || [];
-      // Don't store versions inside versions
-      const snapshot = PCD.clone(cur);
-      delete snapshot.versions;
-      delete snapshot.id; // version snapshot has no id of its own
-      const versionEntry = {
-        snapshotId: PCD.uid('rv'),
-        label: label || ('v' + (versions.length + 1)),
-        snapshotAt: new Date().toISOString(),
-        snapshot: snapshot,
-      };
-      versions.push(versionEntry);
-      cur.versions = versions;
-      cur.updatedAt = new Date().toISOString();
-      recipes[wsId][recipeId] = cur;
-      state.recipes = recipes;
-      emit('recipes', recipes[wsId], null);
-      persist();
-      return versionEntry;
-    },
-    // Restore an old snapshot — current state is auto-snapshotted first
-    // so the restoration is reversible.
-    restoreRecipeVersion: function (recipeId, snapshotId) {
-      const wsId = currentWsId();
-      if (!state.recipes[wsId] || !state.recipes[wsId][recipeId]) return false;
-      const cur = PCD.clone(state.recipes[wsId][recipeId]);
-      const versions = cur.versions || [];
-      const versionEntry = versions.find(function (v) { return v.snapshotId === snapshotId; });
-      if (!versionEntry) return false;
-      // Auto-snapshot current state with label "Before restore"
-      this.snapshotRecipeVersion(recipeId, 'Before restore to ' + (versionEntry.label || 'older version'));
-      // Refresh
-      const recipes = Object.assign({}, state.recipes);
-      recipes[wsId] = Object.assign({}, recipes[wsId]);
-      const fresh = PCD.clone(recipes[wsId][recipeId]);
-      // Apply snapshot fields onto current
-      Object.keys(versionEntry.snapshot).forEach(function (k) {
-        if (k === 'createdAt' || k === 'id') return; // preserve identity
-        fresh[k] = PCD.clone(versionEntry.snapshot[k]);
-      });
-      fresh.updatedAt = new Date().toISOString();
-      recipes[wsId][recipeId] = fresh;
-      state.recipes = recipes;
-      emit('recipes', recipes[wsId], null);
-      persist();
-      return true;
-    },
-    deleteRecipeVersion: function (recipeId, snapshotId) {
-      const wsId = currentWsId();
-      if (!state.recipes[wsId] || !state.recipes[wsId][recipeId]) return false;
-      const recipes = Object.assign({}, state.recipes);
-      recipes[wsId] = Object.assign({}, recipes[wsId]);
-      const cur = PCD.clone(recipes[wsId][recipeId]);
-      cur.versions = (cur.versions || []).filter(function (v) { return v.snapshotId !== snapshotId; });
-      cur.updatedAt = new Date().toISOString();
-      recipes[wsId][recipeId] = cur;
-      state.recipes = recipes;
-      emit('recipes', recipes[wsId], null);
-      persist();
-      return true;
     },
 
     // ---- Ingredient helpers (LIBRARY — shared across workspaces) ----

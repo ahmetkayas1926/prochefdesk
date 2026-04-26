@@ -584,7 +584,7 @@
         okText: 'Restore'
       }).then(function (ok) {
         if (!ok) return;
-        const success = PCD.store.restoreRecipeVersion(recipeId, sid);
+        const success = PCD.store.restoreRecipeVersion ? PCD.store.restoreRecipeVersion(recipeId, sid) : false;
         if (success) {
           PCD.toast.success('Recipe restored — current state saved as new version');
           if (typeof onAfterRestore === 'function') onAfterRestore();
@@ -602,7 +602,7 @@
         okText: 'Delete'
       }).then(function (ok) {
         if (!ok) return;
-        PCD.store.deleteRecipeVersion(recipeId, sid);
+        if (PCD.store.deleteRecipeVersion) PCD.store.deleteRecipeVersion(recipeId, sid);
         PCD.toast.success('Version deleted');
         renderBody();
       });
@@ -1136,7 +1136,7 @@
     const saveBtn = PCD.el('button', { class: 'btn btn-primary', text: t('save_recipe'), style: { flex: '1' } });
     const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') });
     let versionsBtn = null;
-    if (existing) {
+    if (existing && PCD.store.snapshotRecipeVersion) {
       versionsBtn = PCD.el('button', { class: 'btn btn-outline', title: 'Versions' });
       const vCount = (existing.versions || []).length;
       versionsBtn.innerHTML = PCD.icon('clock', 16) + ' <span>Versions' + (vCount > 0 ? ' (' + vCount + ')' : '') + '</span>';
@@ -1191,7 +1191,9 @@
         const servingsChanged = (existing.servings || 0) !== (data.servings || 0);
         if (ingChanged || stepsChanged || servingsChanged) {
           // snapshot the OLD recipe state (before save)
-          PCD.store.snapshotRecipeVersion(existing.id, 'Auto · ' + new Date().toLocaleDateString());
+          if (PCD.store.snapshotRecipeVersion) {
+            PCD.store.snapshotRecipeVersion(existing.id, 'Auto · ' + new Date().toLocaleDateString());
+          }
         }
       }
       const saved = PCD.store.upsertRecipe(data);

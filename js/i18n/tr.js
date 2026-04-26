@@ -7,8 +7,6 @@ window.PCD.i18n.register('tr', {
   nav_recipes: 'Tarifler',
   nav_ingredients: 'Kiler',
   nav_account: 'Hesap',
-  nav_sales: 'Satış Kaydı',
-  nav_variance: 'Sapma',
   nav_tools: 'Araçlar',
   nav_dashboard: 'Panel',
   nav_menus: 'Menüler',

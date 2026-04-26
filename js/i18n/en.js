@@ -9,8 +9,6 @@ window.PCD.i18n.register('en', {
   nav_recipes: 'Recipes',
   nav_ingredients: 'Pantry',
   nav_account: 'Me',
-  nav_sales: 'Sales Log',
-  nav_variance: 'Variance',
   nav_tools: 'Tools',
   nav_dashboard: 'Dashboard',
   nav_menus: 'Menus',
