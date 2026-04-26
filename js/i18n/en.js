@@ -309,7 +309,7 @@ window.PCD.i18n.register('en', {
   err_network: 'Network error. Try again.',
 
   // Account
-  account_title: 'Account',
+  account_title: 'Profile & Settings',
   your_profile: 'Your profile',
   preferences: 'Preferences',
   currency: 'Currency',

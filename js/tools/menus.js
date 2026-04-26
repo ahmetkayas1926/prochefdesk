@@ -66,6 +66,7 @@
               <span>${PCD.fmtRelTime(m.updatedAt)}</span>
             </div>
           </div>
+          <button class="icon-btn" data-edit-mid="${m.id}" title="Edit menu">${PCD.icon('edit', 18)}</button>
         `;
         cont.appendChild(row);
       });
@@ -73,8 +74,14 @@
     }
 
     PCD.$('#newMenuBtn', view).addEventListener('click', function () { openEditor(); });
-    PCD.on(listEl, 'click', '[data-mid]', function () {
-      openEditor(this.getAttribute('data-mid'));
+    PCD.on(listEl, 'click', '[data-mid]', function (e) {
+      // If user clicked the inline edit/delete icon let those handlers fire
+      if (e.target.closest('[data-edit-mid]') || e.target.closest('[data-del-mid]')) return;
+      openPrintView(this.getAttribute('data-mid'));
+    });
+    PCD.on(listEl, 'click', '[data-edit-mid]', function (e) {
+      e.stopPropagation();
+      openEditor(this.getAttribute('data-edit-mid'));
     });
   }
 
@@ -485,20 +492,45 @@
       sectionsBody += '</div></div>';
     });
 
-    // Inline-styled HTML works in both modal preview AND print window
-    const styledHtml =
+    // Print options — saved on menu so they persist
+    const printOpts = {
+      density: menu.printDensity || 'comfortable', // tight | comfortable | spacious
+      titleSize: menu.printTitleSize || 44,
+      itemSize: menu.printItemSize || 18,
+      sectionSize: menu.printSectionSize || 22,
+      pagePadding: menu.printPagePadding || 48, // px
+      itemGap: menu.printItemGap || 16,
+    };
+
+    function applyDensity(d) {
+      if (d === 'tight') {
+        printOpts.titleSize = 36; printOpts.itemSize = 16; printOpts.sectionSize = 18;
+        printOpts.pagePadding = 32; printOpts.itemGap = 10;
+      } else if (d === 'spacious') {
+        printOpts.titleSize = 52; printOpts.itemSize = 20; printOpts.sectionSize = 26;
+        printOpts.pagePadding = 64; printOpts.itemGap = 22;
+      } else {
+        printOpts.titleSize = 44; printOpts.itemSize = 18; printOpts.sectionSize = 22;
+        printOpts.pagePadding = 48; printOpts.itemGap = 16;
+      }
+      printOpts.density = d;
+    }
+
+    function buildStyledHtml() {
+      const O = printOpts;
+      return (
       '<style>' +
         '@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap");' +
         '.m-page {' +
           'background: #fff; color: #1a1a1a;' +
-          'max-width: 580px; margin: 0 auto; padding: 48px 56px;' +
+          'max-width: 580px; margin: 0 auto; padding: ' + O.pagePadding + 'px ' + (O.pagePadding + 8) + 'px;' +
           'font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;' +
           'font-weight: 300;' +
         '}' +
-        '.m-header { text-align: center; margin-bottom: 36px; padding-bottom: 0; }' +
+        '.m-header { text-align: center; margin-bottom: ' + Math.round(O.pagePadding * 0.75) + 'px; padding-bottom: 0; }' +
         '.m-title {' +
           'font-family: "Cormorant Garamond", Georgia, serif;' +
-          'font-size: 44px; font-weight: 500;' +
+          'font-size: ' + O.titleSize + 'px; font-weight: 500;' +
           'letter-spacing: 0.02em;' +
           'margin: 0 0 8px; color: #111;' +
           'line-height: 1.1;' +
@@ -514,15 +546,15 @@
           'background: #c5a572;' +
           'margin: 18px auto 0;' +
         '}' +
-        '.m-section { margin: 30px 0 24px; break-inside: avoid; page-break-inside: avoid; }' +
+        '.m-section { margin: ' + Math.round(O.itemGap * 1.8) + 'px 0 ' + Math.round(O.itemGap * 1.4) + 'px; break-inside: avoid; page-break-inside: avoid; }' +
         '.m-section-title {' +
           'font-family: "Cormorant Garamond", Georgia, serif;' +
-          'font-size: 22px; font-weight: 500;' +
+          'font-size: ' + O.sectionSize + 'px; font-weight: 500;' +
           'letter-spacing: 0.18em;' +
           'text-transform: uppercase;' +
           'text-align: center;' +
           'color: #111;' +
-          'margin: 0 0 22px;' +
+          'margin: 0 0 ' + Math.round(O.itemGap * 1.3) + 'px;' +
           'position: relative;' +
         '}' +
         '.m-section-title::before,' +
@@ -534,14 +566,12 @@
           'vertical-align: middle;' +
           'margin: 0 16px;' +
         '}' +
-        '.m-items { display: flex; flex-direction: column; gap: 16px; }' +
+        '.m-items { display: flex; flex-direction: column; gap: ' + O.itemGap + 'px; }' +
         '.m-item { break-inside: avoid; page-break-inside: avoid; }' +
-        '.m-item-row {' +
-          'display: flex; align-items: baseline; gap: 0;' +
-        '}' +
+        '.m-item-row { display: flex; align-items: baseline; gap: 0; }' +
         '.m-item-name {' +
           'font-family: "Cormorant Garamond", Georgia, serif;' +
-          'font-size: 18px; font-weight: 600;' +
+          'font-size: ' + O.itemSize + 'px; font-weight: 600;' +
           'color: #111;' +
           'letter-spacing: 0.02em;' +
           'flex-shrink: 0;' +
@@ -562,13 +592,13 @@
         '}' +
         '.m-item-price {' +
           'font-family: "Cormorant Garamond", Georgia, serif;' +
-          'font-size: 18px; font-weight: 600;' +
+          'font-size: ' + O.itemSize + 'px; font-weight: 600;' +
           'color: #c5a572;' +
           'flex-shrink: 0;' +
           'white-space: nowrap;' +
         '}' +
         '.m-item-desc {' +
-          'font-size: 12px; color: #666;' +
+          'font-size: ' + Math.max(11, O.itemSize - 6) + 'px; color: #666;' +
           'font-style: italic;' +
           'margin-top: 4px;' +
           'line-height: 1.5;' +
@@ -587,7 +617,7 @@
         '}' +
         '@media print {' +
           '@page { size: A4; margin: 0; }' +
-          '.m-page { padding: 18mm 22mm; max-width: 100%; }' +
+          '.m-page { padding: ' + (O.pagePadding * 0.4) + 'px ' + (O.pagePadding * 0.45) + 'px; max-width: 100%; }' +
         '}' +
       '</style>' +
       '<div class="m-page">' +
@@ -598,10 +628,46 @@
         '</div>' +
         sectionsBody +
         (menu.footer ? '<div class="m-footer">' + PCD.escapeHtml(menu.footer) + '</div>' : '') +
-      '</div>';
+      '</div>'
+      );
+    }
 
     const body = PCD.el('div');
-    body.innerHTML = styledHtml;
+
+    function refreshPreview() {
+      body.innerHTML =
+        '<div style="margin-bottom:14px;padding:12px 14px;background:var(--surface-2);border-radius:var(--r-md);">' +
+          '<div style="font-weight:700;font-size:13px;color:var(--text-2);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.04em;">Page density</div>' +
+          '<div class="flex gap-2" style="flex-wrap:wrap;">' +
+            '<button class="btn btn-secondary btn-sm" data-dens="tight" ' + (printOpts.density === 'tight' ? 'style="background:var(--brand-600);color:#fff;border-color:var(--brand-600);"' : '') + '>Tight</button>' +
+            '<button class="btn btn-secondary btn-sm" data-dens="comfortable" ' + (printOpts.density === 'comfortable' ? 'style="background:var(--brand-600);color:#fff;border-color:var(--brand-600);"' : '') + '>Comfortable</button>' +
+            '<button class="btn btn-secondary btn-sm" data-dens="spacious" ' + (printOpts.density === 'spacious' ? 'style="background:var(--brand-600);color:#fff;border-color:var(--brand-600);"' : '') + '>Spacious</button>' +
+            '<div style="flex:1;"></div>' +
+            '<span class="text-muted text-sm" style="font-size:11px;align-self:center;">' +
+              'Title ' + printOpts.titleSize + 'px · Item ' + printOpts.itemSize + 'px · Padding ' + printOpts.pagePadding + 'px' +
+            '</span>' +
+          '</div>' +
+        '</div>' +
+        buildStyledHtml();
+
+      PCD.on(body, 'click', '[data-dens]', function () {
+        applyDensity(this.getAttribute('data-dens'));
+        // persist
+        const m = PCD.store.getFromTable('menus', mid);
+        if (m) {
+          m.printDensity = printOpts.density;
+          m.printTitleSize = printOpts.titleSize;
+          m.printItemSize = printOpts.itemSize;
+          m.printSectionSize = printOpts.sectionSize;
+          m.printPagePadding = printOpts.pagePadding;
+          m.printItemGap = printOpts.itemGap;
+          PCD.store.upsertInTable('menus', m, 'm');
+        }
+        refreshPreview();
+      });
+    }
+
+    refreshPreview();
 
     const printBtn = PCD.el('button', { class: 'btn btn-primary' });
     printBtn.innerHTML = PCD.icon('print',16) + ' <span>' + t('print') + '</span>';
@@ -620,8 +686,8 @@
 
     closeBtn.addEventListener('click', function () { m.close(); });
     printBtn.addEventListener('click', function () {
-      // Pass full styled HTML — works in popup window because CSS is inline
-      PCD.print(styledHtml, menu.name || 'Menu');
+      // Pass freshly built HTML so it picks current density
+      PCD.print(buildStyledHtml(), menu.name || 'Menu');
     });
     qrBtn.addEventListener('click', function () {
       // Build plain-text menu for QR payload (text mode - works with any scanner)

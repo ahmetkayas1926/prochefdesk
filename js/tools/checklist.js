@@ -265,6 +265,7 @@
             <div style="font-weight:700;font-size:15px;">${PCD.escapeHtml(tpl.name)}${typeBadges}</div>
             <div class="text-muted text-sm">${(tpl.items || []).length} items</div>
           </div>
+          <button class="icon-btn" data-edit-tid="${tpl.id}" title="Edit template">${PCD.icon('edit', 18)}</button>
           <button class="btn btn-primary btn-sm" data-startrun="${tpl.id}" onclick="event.stopPropagation();">${t('checklist_start') || 'Start'}</button>
         </div>
       `;
@@ -274,7 +275,12 @@
     PCD.$('#newTplBtn', view).addEventListener('click', function () { openTemplateEditor(); });
     PCD.on(view, 'click', '[data-tid]', function (e) {
       if (e.target.closest('[data-startrun]')) return;
-      openTemplateEditor(this.getAttribute('data-tid'));
+      if (e.target.closest('[data-edit-tid]')) return;
+      openTemplatePreview(this.getAttribute('data-tid'));
+    });
+    PCD.on(view, 'click', '[data-edit-tid]', function (e) {
+      e.stopPropagation();
+      openTemplateEditor(this.getAttribute('data-edit-tid'));
     });
     PCD.on(view, 'click', '[data-startrun]', function (e) {
       e.stopPropagation();
@@ -313,6 +319,217 @@
     const all = PCD.store._read('checklistSessions') || [];
     return all.filter(function (s) { return !s.completedAt; }).slice().sort(function (a, b) {
       return (b.startedAt || '').localeCompare(a.startedAt || '');
+    });
+  }
+
+  // ============ TEMPLATE PREVIEW ============
+  // Click on a template → preview (not editor). Buttons: Start / Print / Edit / Share / Duplicate.
+  function openTemplatePreview(tid) {
+    const t = PCD.i18n.t;
+    const tpl = PCD.store.getFromTable('checklistTemplates', tid);
+    if (!tpl) return;
+
+    const items = tpl.items || [];
+
+    // Group items by category for preview
+    const groups = {};
+    items.forEach(function (it) {
+      const c = CATS.find(function (x) { return x.id === it.cat; }) || CATS[0];
+      const key = c.id;
+      if (!groups[key]) groups[key] = { cat: c, items: [] };
+      groups[key].items.push(it);
+    });
+
+    let groupedHtml = '';
+    Object.keys(groups).forEach(function (k) {
+      const g = groups[k];
+      groupedHtml += '<div style="margin-bottom:18px;">';
+      groupedHtml += '<div style="font-size:11px;font-weight:700;color:' + g.cat.color + ';text-transform:uppercase;letter-spacing:0.06em;padding:4px 0;border-bottom:1.5px solid ' + g.cat.color + '33;margin-bottom:8px;">' + catLabel(g.cat) + ' · ' + g.items.length + ' items</div>';
+      g.items.forEach(function (it, idx) {
+        const prio = PRIOS.find(function (p) { return p.id === it.prio; });
+        const prioDot = prio ? '<span style="width:7px;height:7px;border-radius:50%;background:' + prio.color + ';flex-shrink:0;display:inline-block;"></span>' : '';
+        let typeBadge = '';
+        if (it.type === 'temperature') typeBadge = '<span style="font-size:10px;padding:1px 6px;border-radius:999px;background:#dbeafe;color:#1e40af;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;">TEMP ' + (it.min !== undefined ? it.min : '?') + '–' + (it.max !== undefined ? it.max : '?') + (it.unit || '') + '</span>';
+        else if (it.type === 'numeric') typeBadge = '<span style="font-size:10px;padding:1px 6px;border-radius:999px;background:#fef3c7;color:#92400e;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;">NUMBER ' + (it.unit || '') + '</span>';
+        else if (it.type === 'pass-fail') typeBadge = '<span style="font-size:10px;padding:1px 6px;border-radius:999px;background:#dcfce7;color:#166534;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;">PASS/FAIL</span>';
+        else if (it.type === 'text') typeBadge = '<span style="font-size:10px;padding:1px 6px;border-radius:999px;background:#f1f5f9;color:#475569;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;">TEXT</span>';
+        groupedHtml += '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;margin-bottom:4px;background:var(--surface);">' +
+          '<div style="width:18px;height:18px;border:2px solid var(--border-strong);border-radius:3px;flex-shrink:0;"></div>' +
+          prioDot +
+          '<div style="flex:1;min-width:0;font-size:14px;font-weight:500;">' + PCD.escapeHtml(it.text || '') + '</div>' +
+          typeBadge +
+        '</div>';
+      });
+      groupedHtml += '</div>';
+    });
+
+    const body = PCD.el('div');
+    body.innerHTML =
+      '<div style="margin-bottom:16px;padding:14px 16px;background:linear-gradient(135deg,var(--brand-50),var(--surface));border-radius:var(--r-md);">' +
+        '<div style="font-size:11px;font-weight:700;color:var(--brand-700);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">Template preview</div>' +
+        '<div style="font-weight:800;font-size:20px;letter-spacing:-0.01em;">' + PCD.escapeHtml(tpl.name) + '</div>' +
+        '<div class="text-muted text-sm mt-1">' + items.length + ' items across ' + Object.keys(groups).length + ' categor' + (Object.keys(groups).length === 1 ? 'y' : 'ies') + '</div>' +
+      '</div>' +
+      groupedHtml;
+
+    const startBtn = PCD.el('button', { class: 'btn btn-primary', style: { flex: '1' } });
+    startBtn.innerHTML = PCD.icon('clock', 16) + ' <span>Start session</span>';
+    const editBtn = PCD.el('button', { class: 'btn btn-outline', title: 'Edit template' });
+    editBtn.innerHTML = PCD.icon('edit', 16);
+    const dupBtn = PCD.el('button', { class: 'btn btn-outline', title: 'Duplicate' });
+    dupBtn.innerHTML = PCD.icon('copy', 16);
+    const printBtn = PCD.el('button', { class: 'btn btn-outline', title: 'Print blank checklist' });
+    printBtn.innerHTML = PCD.icon('print', 16);
+    const shareBtn = PCD.el('button', { class: 'btn btn-outline', title: 'Share' });
+    shareBtn.innerHTML = PCD.icon('share', 16);
+    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('close') });
+    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
+    footer.appendChild(closeBtn);
+    footer.appendChild(printBtn);
+    footer.appendChild(shareBtn);
+    footer.appendChild(dupBtn);
+    footer.appendChild(editBtn);
+    footer.appendChild(startBtn);
+
+    const m = PCD.modal.open({ title: tpl.name, body: body, footer: footer, size: 'md', closable: true });
+
+    closeBtn.addEventListener('click', function () { m.close(); });
+    startBtn.addEventListener('click', function () {
+      m.close();
+      setTimeout(function () { startSession(tid); }, 200);
+    });
+    editBtn.addEventListener('click', function () {
+      m.close();
+      setTimeout(function () { openTemplateEditor(tid); }, 200);
+    });
+    dupBtn.addEventListener('click', function () {
+      const copy = PCD.clone(tpl);
+      delete copy.id; delete copy.createdAt; delete copy.updatedAt;
+      copy.name = copy.name + ' (Copy)';
+      copy.isDefault = false;
+      copy.items = (copy.items || []).map(function (it) { return Object.assign({}, it, { id: PCD.uid('it') }); });
+      const saved = PCD.store.upsertInTable('checklistTemplates', copy, 'tpl');
+      PCD.toast.success('Template duplicated');
+      m.close();
+      setTimeout(function () {
+        const v = PCD.$('#view');
+        if (PCD.router.currentView() === 'checklist') render(v);
+        setTimeout(function () { openTemplateEditor(saved.id); }, 200);
+      }, 150);
+    });
+    printBtn.addEventListener('click', function () {
+      printBlankTemplate(tpl);
+    });
+    shareBtn.addEventListener('click', function () {
+      shareBlankTemplate(tpl);
+    });
+  }
+
+  function printBlankTemplate(tpl) {
+    const items = tpl.items || [];
+    let rowsHtml = '';
+    items.forEach(function (it, idx) {
+      const cat = CATS.find(function (c) { return c.id === it.cat; });
+      const type = it.type || 'task';
+
+      let valueCol;
+      if (type === 'task') valueCol = '<span style="display:inline-block;width:18px;height:18px;border:2px solid #999;border-radius:3px;"></span>';
+      else if (type === 'temperature' || type === 'numeric') valueCol = '<span style="display:inline-block;border-bottom:1px solid #999;min-width:80px;height:18px;"></span> ' + (it.unit || '') +
+        ((it.min !== undefined || it.max !== undefined) ? '<div style="font-size:8pt;color:#999;margin-top:2px;">Target ' + (it.min !== undefined ? it.min : '?') + '–' + (it.max !== undefined ? it.max : '?') + '</div>' : '');
+      else if (type === 'pass-fail') valueCol = '<span style="font-size:9pt;">PASS &nbsp;<span style="display:inline-block;width:14px;height:14px;border:1.5px solid #999;border-radius:3px;vertical-align:middle;"></span> &nbsp;FAIL &nbsp;<span style="display:inline-block;width:14px;height:14px;border:1.5px solid #999;border-radius:3px;vertical-align:middle;"></span> &nbsp;N/A &nbsp;<span style="display:inline-block;width:14px;height:14px;border:1.5px solid #999;border-radius:3px;vertical-align:middle;"></span></span>';
+      else valueCol = '<span style="display:inline-block;border-bottom:1px solid #999;min-width:200px;height:18px;"></span>';
+
+      rowsHtml +=
+        '<tr>' +
+          '<td style="padding:10px 8px;border-bottom:1px solid #e5e5e5;width:30px;font-weight:700;color:#999;font-size:9pt;">' + (idx + 1) + '</td>' +
+          '<td style="padding:10px 8px;border-bottom:1px solid #e5e5e5;">' +
+            '<div style="font-weight:600;font-size:11pt;">' + PCD.escapeHtml(it.text) + '</div>' +
+            (cat ? '<div style="font-size:8pt;color:' + cat.color + ';font-weight:700;text-transform:uppercase;letter-spacing:0.04em;margin-top:2px;">' + catLabel(cat) + '</div>' : '') +
+          '</td>' +
+          '<td style="padding:10px 8px;border-bottom:1px solid #e5e5e5;text-align:center;width:200px;">' + valueCol + '</td>' +
+          '<td style="padding:10px 8px;border-bottom:1px solid #e5e5e5;width:80px;font-size:9pt;color:#999;text-align:center;">__:__</td>' +
+        '</tr>';
+    });
+
+    const html =
+      '<style>' +
+        '@page { size: A4; margin: 15mm; }' +
+        'body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; color: #1a1a1a; }' +
+        '.h-row { border-bottom: 3px solid #16a34a; padding-bottom: 10px; margin-bottom: 16px; }' +
+        '.h-row h1 { margin: 0; font-size: 22pt; color: #16a34a; }' +
+        '.h-meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 12px 0 18px; padding: 12px; background: #f8f8f8; border-radius: 6px; }' +
+        '.h-meta-item .lbl { color: #888; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; font-size: 8pt; }' +
+        '.h-meta-item .val { font-size: 11pt; font-weight: 600; }' +
+        'table { width: 100%; border-collapse: collapse; font-size: 10pt; }' +
+        'thead th { background: #f1f1f1; padding: 8px; text-align: left; font-size: 9pt; text-transform: uppercase; letter-spacing: 0.04em; color: #555; }' +
+        '.h-signoff { margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; font-size: 10pt; }' +
+        '.h-signoff .sig-line { border-bottom: 1px solid #888; padding-bottom: 30px; margin-bottom: 4px; }' +
+        '.h-signoff .sig-label { font-size: 8pt; color: #888; text-transform: uppercase; letter-spacing: 0.04em; }' +
+      '</style>' +
+      '<div class="h-row">' +
+        '<h1>' + PCD.escapeHtml(tpl.name) + '</h1>' +
+        '<div style="color:#666;font-size:11pt;margin-top:4px;">Blank checklist · ' + items.length + ' items</div>' +
+      '</div>' +
+      '<div class="h-meta">' +
+        '<div class="h-meta-item"><div class="lbl">Date</div><div class="val">__/__/____</div></div>' +
+        '<div class="h-meta-item"><div class="lbl">Shift / Time</div><div class="val">______</div></div>' +
+        '<div class="h-meta-item"><div class="lbl">Performed by</div><div class="val">______</div></div>' +
+      '</div>' +
+      '<table>' +
+        '<thead><tr><th style="width:30px;">#</th><th>Item</th><th style="text-align:center;width:200px;">Result / Value</th><th style="width:80px;text-align:center;">Time</th></tr></thead>' +
+        '<tbody>' + rowsHtml + '</tbody>' +
+      '</table>' +
+      '<div class="h-signoff">' +
+        '<div><div class="sig-line">&nbsp;</div><div class="sig-label">Performed by</div></div>' +
+        '<div><div class="sig-line">&nbsp;</div><div class="sig-label">Verified by (signature & date)</div></div>' +
+      '</div>';
+
+    PCD.print(html, tpl.name + ' — blank');
+  }
+
+  function shareBlankTemplate(tpl) {
+    const items = tpl.items || [];
+    const lines = [tpl.name + ' — checklist template', items.length + ' items', ''];
+    items.forEach(function (it) {
+      const cat = CATS.find(function (c) { return c.id === it.cat; });
+      const catTag = cat ? '[' + catLabel(cat).toUpperCase() + '] ' : '';
+      let typeTag = '';
+      if (it.type === 'temperature') typeTag = ' (temp ' + (it.min !== undefined ? it.min : '?') + '–' + (it.max !== undefined ? it.max : '?') + (it.unit || '') + ')';
+      else if (it.type === 'numeric') typeTag = ' (' + (it.unit || 'value') + ')';
+      else if (it.type === 'pass-fail') typeTag = ' (pass/fail)';
+      else if (it.type === 'text') typeTag = ' (text)';
+      lines.push('☐ ' + catTag + it.text + typeTag);
+    });
+    const text = lines.join('\n');
+
+    const body = PCD.el('div');
+    body.innerHTML =
+      '<div class="field"><label class="field-label">Message</label>' +
+      '<textarea class="textarea" id="tplShareText" rows="12" style="font-family:var(--font-mono);font-size:13px;">' + PCD.escapeHtml(text) + '</textarea></div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-top:14px;">' +
+        '<button class="btn btn-outline" id="tplShWa" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;">' +
+          '<div style="color:#25D366;">' + PCD.icon('message-circle', 24) + '</div><div style="font-weight:600;font-size:12px;">WhatsApp</div></button>' +
+        '<button class="btn btn-outline" id="tplShEmail" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;">' +
+          '<div style="color:#EA4335;">' + PCD.icon('mail', 24) + '</div><div style="font-weight:600;font-size:12px;">Email</div></button>' +
+        '<button class="btn btn-outline" id="tplShCopy" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;">' +
+          '<div style="color:var(--brand-600);">' + PCD.icon('copy', 24) + '</div><div style="font-weight:600;font-size:12px;">Copy</div></button>' +
+        '<button class="btn btn-outline" id="tplShMore" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;">' +
+          '<div style="color:var(--text-2);">' + PCD.icon('share', 24) + '</div><div style="font-weight:600;font-size:12px;">More...</div></button>' +
+      '</div>';
+
+    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: 'Close' });
+    const footer = PCD.el('div', { style: { display: 'flex', width: '100%' } });
+    footer.appendChild(closeBtn);
+    const m = PCD.modal.open({ title: 'Share template', body: body, footer: footer, size: 'md', closable: true });
+
+    function getText() { return PCD.$('#tplShareText', body).value; }
+    closeBtn.addEventListener('click', function () { m.close(); });
+    PCD.$('#tplShWa', body).addEventListener('click', function () { window.open('https://wa.me/?text=' + encodeURIComponent(getText()), '_blank'); m.close(); });
+    PCD.$('#tplShEmail', body).addEventListener('click', function () { window.location.href = 'mailto:?subject=' + encodeURIComponent(tpl.name) + '&body=' + encodeURIComponent(getText()); m.close(); });
+    PCD.$('#tplShCopy', body).addEventListener('click', function () { if (navigator.clipboard) navigator.clipboard.writeText(getText()).then(function () { PCD.toast.success('Copied'); m.close(); }); });
+    PCD.$('#tplShMore', body).addEventListener('click', function () {
+      if (navigator.share) navigator.share({ title: tpl.name, text: getText() }).then(function () { m.close(); }).catch(function () {});
+      else if (navigator.clipboard) navigator.clipboard.writeText(getText()).then(function () { PCD.toast.success('Copied'); m.close(); });
     });
   }
 

@@ -52,6 +52,47 @@
         </div>
       </div>
 
+      ${user ? `
+        <!-- CHEF PROFILE -->
+        <div class="section mb-3">
+          <div class="section-title" style="font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">Chef profile</div>
+          <div class="card">
+            <div class="card-body" style="padding:14px;">
+              <div class="text-muted text-sm mb-3">Personalize your workspace. This information will appear on printed recipes, menus, and event sheets — and on your public profile when sharing recipes with the chef community.</div>
+              <div class="field">
+                <label class="field-label">Full name</label>
+                <input type="text" class="input" id="chefName" value="${PCD.escapeHtml(user.name || '')}" placeholder="e.g. Ahmet Kayas">
+              </div>
+              <div class="field-row">
+                <div class="field">
+                  <label class="field-label">Title / role</label>
+                  <select class="select" id="chefRole">
+                    <option value="">— select —</option>
+                    ${['Head Chef','Executive Chef','Sous Chef','Chef de Cuisine','Chef de Partie','Pastry Chef','Private Chef','Catering Chef','Culinary Student','Kitchen Owner','Other'].map(function(r){
+                      return '<option value="'+r+'"'+((user.role===r)?' selected':'')+'>'+r+'</option>';
+                    }).join('')}
+                  </select>
+                </div>
+                <div class="field">
+                  <label class="field-label">Country</label>
+                  <input type="text" class="input" id="chefCountry" value="${PCD.escapeHtml(user.country || '')}" placeholder="e.g. Australia">
+                </div>
+              </div>
+              <div class="field">
+                <label class="field-label">Workplace (restaurant / hotel / private)</label>
+                <input type="text" class="input" id="chefWorkplace" value="${PCD.escapeHtml(user.workplace || '')}" placeholder="e.g. Crown Towers, Perth">
+              </div>
+              <div class="field">
+                <label class="field-label">Bio</label>
+                <textarea class="textarea" id="chefBio" rows="3" placeholder="A short professional bio — your style, training, signature dishes...">${PCD.escapeHtml(user.bio || '')}</textarea>
+                <div class="field-hint">Will be visible on your public profile when community sharing launches.</div>
+              </div>
+              <button class="btn btn-primary btn-sm" id="saveChefProfileBtn" style="margin-top:6px;">${PCD.icon('check', 14)} Save profile</button>
+            </div>
+          </div>
+        </div>
+      ` : ''}
+
       <!-- PREFERENCES -->
       <div class="section">
         <div class="section-title" style="font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">${t('preferences')}</div>
@@ -218,6 +259,18 @@
     if (approvalInp) approvalInp.addEventListener('change', function () {
       PCD.store.set('prefs.requireCountApproval', this.checked);
       PCD.toast.success(this.checked ? 'Approval enabled' : 'Approval disabled');
+    });
+
+    const saveChefBtn = PCD.$('#saveChefProfileBtn', view);
+    if (saveChefBtn) saveChefBtn.addEventListener('click', function () {
+      const u = PCD.store.get('user') || {};
+      u.name = (PCD.$('#chefName', view).value || '').trim();
+      u.role = PCD.$('#chefRole', view).value;
+      u.country = (PCD.$('#chefCountry', view).value || '').trim();
+      u.workplace = (PCD.$('#chefWorkplace', view).value || '').trim();
+      u.bio = (PCD.$('#chefBio', view).value || '').trim();
+      PCD.store.set('user', u);
+      PCD.toast.success('Profile saved');
     });
 
     const syncBtn = PCD.$('#syncNowBtn', view);

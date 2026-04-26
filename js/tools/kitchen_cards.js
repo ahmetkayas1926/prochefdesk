@@ -52,58 +52,91 @@
 
     function renderBody() {
       bodyEl.innerHTML = `
-        <div class="card mb-3" style="padding:14px;">
-          <div style="font-weight:700;margin-bottom:12px;">Sheet options</div>
+        <div style="display:grid;grid-template-columns:minmax(280px,1fr) minmax(280px,1.2fr);gap:14px;align-items:start;" class="kc-layout">
+          <div>
+            <div class="card mb-3" style="padding:14px;">
+              <div style="font-weight:700;margin-bottom:12px;">Sheet options</div>
 
-          <div class="grid mb-3" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
-            <div>
-              <div class="text-muted text-sm mb-1">Orientation</div>
-              <div class="flex gap-1">
-                <button class="btn btn-secondary btn-sm ${orientation==='landscape'?'active':''}" data-orient="landscape" style="flex:1;">Landscape</button>
-                <button class="btn btn-secondary btn-sm ${orientation==='portrait'?'active':''}" data-orient="portrait" style="flex:1;">Portrait</button>
+              <div class="mb-3">
+                <div class="text-muted text-sm mb-1">Orientation</div>
+                <div class="flex gap-1">
+                  <button class="btn btn-secondary btn-sm ${orientation==='landscape'?'active':''}" data-orient="landscape" style="flex:1;">${PCD.icon('grid',14)} <span>Landscape</span></button>
+                  <button class="btn btn-secondary btn-sm ${orientation==='portrait'?'active':''}" data-orient="portrait" style="flex:1;">${PCD.icon('file-text',14)} <span>Portrait</span></button>
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <div class="text-muted text-sm mb-1">Columns</div>
+                <div class="flex gap-1">
+                  <button class="btn btn-secondary btn-sm ${columns===2?'active':''}" data-cols="2" style="flex:1;">2</button>
+                  <button class="btn btn-secondary btn-sm ${columns===3?'active':''}" data-cols="3" style="flex:1;">3</button>
+                  <button class="btn btn-secondary btn-sm ${columns===4?'active':''}" data-cols="4" style="flex:1;">4</button>
+                  <button class="btn btn-secondary btn-sm ${columns===5?'active':''}" data-cols="5" style="flex:1;">5</button>
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <div class="text-muted text-sm mb-1">Font size</div>
+                <div class="flex gap-1">
+                  <button class="btn btn-secondary btn-sm ${fontSize==='small'?'active':''}" data-fs="small" style="flex:1;">Small</button>
+                  <button class="btn btn-secondary btn-sm ${fontSize==='medium'?'active':''}" data-fs="medium" style="flex:1;">Medium</button>
+                  <button class="btn btn-secondary btn-sm ${fontSize==='large'?'active':''}" data-fs="large" style="flex:1;">Large</button>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-3 mb-3" style="flex-wrap:wrap;">
+                <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
+                  <input type="checkbox" id="showMethod" ${showMethod ? 'checked' : ''} style="accent-color:var(--brand-600);">
+                  <span>Include method</span>
+                </label>
+                <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
+                  <input type="checkbox" id="showAmounts" ${showAmounts ? 'checked' : ''} style="accent-color:var(--brand-600);">
+                  <span>Show amounts</span>
+                </label>
+              </div>
+
+              <div class="flex items-center gap-2" style="flex-wrap:wrap;">
+                <button class="btn btn-outline btn-sm" id="selectAllBtn">Select all</button>
+                <button class="btn btn-outline btn-sm" id="selectNoneBtn">Select none</button>
+                <span class="text-muted text-sm" id="selCount" style="margin-inline-start:auto;">${selected.size} / ${recipes.length}</span>
               </div>
             </div>
-            <div>
-              <div class="text-muted text-sm mb-1">Columns</div>
-              <div class="flex gap-1">
-                <button class="btn btn-secondary btn-sm ${columns===2?'active':''}" data-cols="2" style="flex:1;">2</button>
-                <button class="btn btn-secondary btn-sm ${columns===3?'active':''}" data-cols="3" style="flex:1;">3</button>
-                <button class="btn btn-secondary btn-sm ${columns===4?'active':''}" data-cols="4" style="flex:1;">4</button>
-                <button class="btn btn-secondary btn-sm ${columns===5?'active':''}" data-cols="5" style="flex:1;">5</button>
-              </div>
+
+            <div class="card" style="padding:6px 0;max-height:340px;overflow-y:auto;">
+              <div id="recipeList"></div>
             </div>
-            <div>
-              <div class="text-muted text-sm mb-1">Font size</div>
-              <div class="flex gap-1">
-                <button class="btn btn-secondary btn-sm ${fontSize==='small'?'active':''}" data-fs="small" style="flex:1;">S</button>
-                <button class="btn btn-secondary btn-sm ${fontSize==='medium'?'active':''}" data-fs="medium" style="flex:1;">M</button>
-                <button class="btn btn-secondary btn-sm ${fontSize==='large'?'active':''}" data-fs="large" style="flex:1;">L</button>
-              </div>
-            </div>
+
+            <button class="btn btn-primary mt-3" id="printSheetBtn" style="width:100%;" ${selected.size === 0 ? 'disabled' : ''}>
+              ${PCD.icon('print', 16)} <span>Print sheet · ${selected.size} recipes</span>
+            </button>
           </div>
 
-          <div class="flex items-center gap-3 mb-3" style="flex-wrap:wrap;">
-            <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
-              <input type="checkbox" id="showMethod" ${showMethod ? 'checked' : ''} style="accent-color:var(--brand-600);">
-              <span>Include method</span>
-            </label>
-            <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
-              <input type="checkbox" id="showAmounts" ${showAmounts ? 'checked' : ''} style="accent-color:var(--brand-600);">
-              <span>Show amounts</span>
-            </label>
-          </div>
-
-          <div class="flex items-center gap-2" style="flex-wrap:wrap;">
-            <button class="btn btn-outline btn-sm" id="selectAllBtn">Select all</button>
-            <button class="btn btn-outline btn-sm" id="selectNoneBtn">Select none</button>
-            <span class="text-muted text-sm" id="selCount" style="margin-inline-start:auto;">${selected.size} of ${recipes.length} selected</span>
-            <button class="btn btn-primary" id="printSheetBtn" ${selected.size === 0 ? 'disabled' : ''}>${PCD.icon('print', 14)} <span>Print sheet</span></button>
+          <div>
+            <div class="card" style="padding:8px;background:var(--surface-2);position:sticky;top:80px;">
+              <div class="flex items-center justify-between mb-2" style="padding:0 6px;">
+                <div style="font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-3);">Live preview</div>
+                <div class="text-muted" style="font-size:11px;">A4 · ${orientation} · ${columns} cols</div>
+              </div>
+              <div id="kcPreview" style="background:#fff;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,0.08);overflow:hidden;${orientation === 'landscape' ? 'aspect-ratio:1.414/1;' : 'aspect-ratio:1/1.414;'}"></div>
+            </div>
           </div>
         </div>
 
-        <div class="card" style="padding:6px 0;">
-          <div id="recipeList"></div>
-        </div>
+        <style>
+          @media (max-width: 900px) {
+            .kc-layout { grid-template-columns: 1fr !important; }
+          }
+          .kc-preview-frame {
+            transform-origin: top left;
+            width: 100%;
+            height: 100%;
+            position: relative;
+          }
+          .kc-preview-frame .kc-sheet {
+            padding: 12px 14px;
+            box-sizing: border-box;
+          }
+        </style>
       `;
 
       const listEl = PCD.$('#recipeList', bodyEl);
@@ -143,8 +176,8 @@
         fontSize = this.getAttribute('data-fs');
         renderBody();
       });
-      PCD.$('#showMethod', bodyEl).addEventListener('change', function () { showMethod = this.checked; });
-      PCD.$('#showAmounts', bodyEl).addEventListener('change', function () { showAmounts = this.checked; });
+      PCD.$('#showMethod', bodyEl).addEventListener('change', function () { showMethod = this.checked; updatePreview(); });
+      PCD.$('#showAmounts', bodyEl).addEventListener('change', function () { showAmounts = this.checked; updatePreview(); });
       PCD.$('#selectAllBtn', bodyEl).addEventListener('click', function () {
         recipes.forEach(function (r) { selected.add(r.id); });
         renderBody();
@@ -157,11 +190,16 @@
         const rid = this.getAttribute('data-rid');
         if (this.checked) selected.add(rid); else selected.delete(rid);
         const printBtn = PCD.$('#printSheetBtn', bodyEl);
-        if (printBtn) printBtn.disabled = selected.size === 0;
+        if (printBtn) {
+          printBtn.disabled = selected.size === 0;
+          const span = printBtn.querySelector('span');
+          if (span) span.textContent = 'Print sheet · ' + selected.size + ' recipes';
+        }
         const row = this.closest('label');
         if (row) row.style.background = this.checked ? 'var(--brand-50)' : 'var(--surface)';
         const countEl = PCD.$('#selCount', bodyEl);
-        if (countEl) countEl.textContent = selected.size + ' of ' + recipes.length + ' selected';
+        if (countEl) countEl.textContent = selected.size + ' / ' + recipes.length;
+        updatePreview();
       });
       PCD.$('#printSheetBtn', bodyEl).addEventListener('click', function () {
         if (selected.size === 0) return;
@@ -173,6 +211,34 @@
           fontSize: fontSize,
         });
       });
+
+      // Live preview
+      updatePreview();
+    }
+
+    function updatePreview() {
+      const previewEl = PCD.$('#kcPreview', bodyEl);
+      if (!previewEl) return;
+      const selectedRecipes = recipes.filter(function (r) { return selected.has(r.id); });
+      if (selectedRecipes.length === 0) {
+        previewEl.innerHTML =
+          '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-3);text-align:center;padding:30px;">' +
+            '<div>' +
+              '<div style="font-size:32px;margin-bottom:8px;color:var(--brand-600);">' + PCD.icon('id-card', 32) + '</div>' +
+              '<div style="font-weight:600;font-size:14px;margin-bottom:4px;">Select recipes to preview</div>' +
+              '<div style="font-size:12px;">Tick the recipes you want on the sheet to see how they\'ll print.</div>' +
+            '</div>' +
+          '</div>';
+        return;
+      }
+      const html = buildSheetHtml(selectedRecipes, {
+        columns: columns,
+        orientation: orientation,
+        showMethod: showMethod,
+        showAmounts: showAmounts,
+        fontSize: fontSize,
+      });
+      previewEl.innerHTML = '<div class="kc-preview-frame">' + html + '</div>';
     }
 
     renderBody();
@@ -208,7 +274,7 @@
     return text.split(/\n+/).map(function (s) { return s.trim(); }).filter(Boolean);
   }
 
-  function printSheet(recipes, opts) {
+  function buildSheetHtml(recipes, opts) {
     const ingMap = {};
     PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
 
@@ -221,7 +287,6 @@
 
     let blocksHtml = '';
     recipes.forEach(function (r) {
-      // Ingredients as 2-col table
       let ingsHtml = '';
       (r.ingredients || []).forEach(function (ri) {
         const ing = ingMap[ri.ingredientId];
@@ -234,7 +299,6 @@
           '</tr>';
       });
 
-      // Method as numbered steps
       let methodHtml = '';
       if (opts.showMethod) {
         const steps = splitMethod(r.steps);
@@ -257,7 +321,7 @@
         '</div>';
     });
 
-    const html =
+    return (
       '<style>' +
         '@page { size: A4 ' + opts.orientation + '; margin: 6mm; }' +
         'body {' +
@@ -355,8 +419,12 @@
           '<div class="meta">' + recipes.length + ' recipes · ' + new Date().toLocaleDateString() + '</div>' +
         '</div>' +
         blocksHtml +
-      '</div>';
+      '</div>'
+    );
+  }
 
+  function printSheet(recipes, opts) {
+    const html = buildSheetHtml(recipes, opts);
     PCD.print(html, 'Kitchen Cards — ' + recipes.length + ' recipes');
   }
 

@@ -104,10 +104,12 @@
               unit: ri.unit || ing.unit,
               totalAmount: 0,
               totalCost: 0,
+              perRecipe: [],
             };
           }
           const amt = (ri.amount || 0) * factor;
           consolidated[key].totalAmount += amt;
+          consolidated[key].perRecipe.push({ recipeName: r.name, amount: amt, unit: ri.unit || ing.unit });
           // cost calculation
           let cost = amt * (ing.pricePerUnit || 0);
           if (ri.unit && ing.unit && ri.unit !== ing.unit) {
@@ -140,6 +142,7 @@
               <div class="btn-group">
                 <button class="btn${data.groupBy === 'category' ? ' active' : ''}" data-group="category">${t('shop_by_category')}</button>
                 <button class="btn${data.groupBy === 'supplier' ? ' active' : ''}" data-group="supplier">${t('shop_by_supplier')}</button>
+                <button class="btn${data.groupBy === 'recipe' ? ' active' : ''}" data-group="recipe">By recipe</button>
               </div>
             </div>
             <div class="stat mb-3" style="background:var(--brand-50);border-color:var(--brand-300);padding:12px;">
@@ -188,16 +191,34 @@
       if (consolEl) {
         const groupBy = data.groupBy || 'category';
         const groups = {};
-        Object.values(consolidated).forEach(function (c) {
-          let key;
-          if (groupBy === 'supplier') {
-            key = c.ingredient.supplier || '(no supplier)';
-          } else {
-            key = t(c.ingredient.category || 'cat_other');
-          }
-          if (!groups[key]) groups[key] = [];
-          groups[key].push(c);
-        });
+
+        if (groupBy === 'recipe') {
+          // Group by recipe — each ingredient appears under each recipe that uses it
+          Object.values(consolidated).forEach(function (c) {
+            (c.perRecipe || []).forEach(function (pr) {
+              const key = pr.recipeName;
+              if (!groups[key]) groups[key] = [];
+              groups[key].push({
+                ingredient: c.ingredient,
+                unit: pr.unit,
+                totalAmount: pr.amount,
+                totalCost: c.totalCost * (pr.amount / c.totalAmount), // proportional
+              });
+            });
+          });
+        } else {
+          Object.values(consolidated).forEach(function (c) {
+            let key;
+            if (groupBy === 'supplier') {
+              key = c.ingredient.supplier || '(no supplier)';
+            } else {
+              key = t(c.ingredient.category || 'cat_other');
+            }
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(c);
+          });
+        }
+
         Object.keys(groups).sort().forEach(function (g) {
           const section = PCD.el('div', { style: { marginBottom: '14px' } });
           section.appendChild(PCD.el('div', {

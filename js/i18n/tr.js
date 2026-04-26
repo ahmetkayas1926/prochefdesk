@@ -292,7 +292,7 @@ window.PCD.i18n.register('tr', {
   err_generic: 'Bir şeyler ters gitti',
   err_network: 'Ağ hatası. Tekrar dene.',
 
-  account_title: 'Hesap',
+  account_title: 'Profil ve Ayarlar',
   your_profile: 'Profilin',
   preferences: 'Tercihler',
   currency: 'Para birimi',

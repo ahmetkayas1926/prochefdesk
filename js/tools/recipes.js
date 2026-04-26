@@ -470,6 +470,68 @@
   }
 
   // ============ EDITOR ============
+  // Prompt user for details of a brand-new ingredient created inline.
+  // Captures unit + price/unit + amount-used-in-this-recipe.
+  // On save: creates Ingredient in library, then calls onDone(savedIng, qty, qtyUnit).
+  function promptNewIngredientDetails(name, onDone) {
+    const UNITS = ['g', 'kg', 'ml', 'l', 'tbsp', 'tsp', 'cup', 'oz', 'lb', 'pcs', 'bunch'];
+    const draft = { name: name, unit: 'g', pricePerUnit: 0, category: 'cat_other' };
+    const recipeQty = { amount: 100, unit: 'g' };
+    const body = PCD.el('div');
+    body.innerHTML =
+      '<div class="text-muted text-sm mb-3">This ingredient is not in your library yet. Quickly fill its purchase price so cost auto-calculates and it gets added to Ingredients.</div>' +
+      '<div class="field"><label class="field-label">Name</label>' +
+      '<input type="text" class="input" id="niName" value="' + PCD.escapeHtml(name) + '"></div>' +
+      '<div class="field-row">' +
+        '<div class="field"><label class="field-label">Purchase unit</label>' +
+        '<select class="select" id="niBuyUnit">' +
+          UNITS.map(function (u) { return '<option value="' + u + '"' + (u === 'kg' ? ' selected' : '') + '>' + u + '</option>'; }).join('') +
+        '</select></div>' +
+        '<div class="field"><label class="field-label">Price / unit</label>' +
+          '<div class="input-group">' +
+          '<span class="input-group-addon">' + (PCD.fmtCurrencySymbol ? PCD.fmtCurrencySymbol() : '$') + '</span>' +
+          '<input type="number" class="input" id="niPrice" placeholder="0.00" step="0.01" min="0">' +
+          '</div>' +
+          '<div class="field-hint">e.g. you buy chicken at $8 / kg → enter 8</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="field" style="border-top:1px solid var(--border);padding-top:12px;margin-top:8px;">' +
+        '<label class="field-label">In this recipe</label>' +
+        '<div class="field-row">' +
+          '<div class="field"><div class="input-group">' +
+            '<input type="number" class="input" id="niQty" value="100" step="0.1" min="0">' +
+          '</div></div>' +
+          '<div class="field">' +
+            '<select class="select" id="niQtyUnit">' +
+              UNITS.map(function (u) { return '<option value="' + u + '"' + (u === 'g' ? ' selected' : '') + '>' + u + '</option>'; }).join('') +
+            '</select>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+
+    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: 'Cancel' });
+    const saveBtn = PCD.el('button', { class: 'btn btn-primary', text: 'Save & Add', style: { flex: '1' } });
+    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
+    footer.appendChild(cancelBtn);
+    footer.appendChild(saveBtn);
+
+    const m = PCD.modal.open({ title: 'New ingredient', body: body, footer: footer, size: 'sm', closable: true });
+    setTimeout(function () { const inp = PCD.$('#niPrice', body); if (inp) inp.focus(); }, 100);
+
+    cancelBtn.addEventListener('click', function () { m.close(); });
+    saveBtn.addEventListener('click', function () {
+      draft.name = (PCD.$('#niName', body).value || '').trim();
+      if (!draft.name) { PCD.toast.error('Name required'); return; }
+      draft.unit = PCD.$('#niBuyUnit', body).value || 'g';
+      draft.pricePerUnit = parseFloat(PCD.$('#niPrice', body).value) || 0;
+      const qty = parseFloat(PCD.$('#niQty', body).value) || 100;
+      const qtyUnit = PCD.$('#niQtyUnit', body).value || draft.unit;
+      const saved = PCD.store.upsertIngredient(draft);
+      m.close();
+      setTimeout(function () { onDone(saved, qty, qtyUnit); }, 200);
+    });
+  }
+
   function openEditor(rid) {
     const t = PCD.i18n.t;
     const existing = rid ? PCD.store.getRecipe(rid) : null;
@@ -863,17 +925,25 @@
           if (id === '__new__') {
             const newName = this.getAttribute('data-name') || qInput.value.trim();
             if (!newName) return;
-            // Create new ingredient with default unit + pricePerUnit=0
-            const newIng = PCD.store.upsertIngredient({
-              name: newName, unit: 'g', pricePerUnit: 0, category: 'cat_other'
+            qDD.style.display = 'none';
+            // Open mini-dialog to capture unit + price BEFORE saving
+            promptNewIngredientDetails(newName, function (saved, qty, qtyUnit) {
+              data.ingredients = (data.ingredients || []).concat([{
+                ingredientId: saved.id, amount: qty || 100, unit: qtyUnit || saved.unit
+              }]);
+              PCD.toast.success('Added "' + newName + '" — synced to Ingredients library');
+              qInput.value = '';
+              renderEditor();
+              setTimeout(function () {
+                const fresh = PCD.$('#quickIngInput', body);
+                if (fresh) fresh.focus();
+              }, 50);
             });
-            data.ingredients = (data.ingredients || []).concat([{ ingredientId: newIng.id, amount: 100, unit: newIng.unit }]);
-            PCD.toast.success('Added "' + newName + '" — set its price in Ingredients');
-          } else {
-            const ing = PCD.store.getIngredient(id);
-            if (!ing) return;
-            data.ingredients = (data.ingredients || []).concat([{ ingredientId: id, amount: 100, unit: ing.unit || 'g' }]);
+            return;
           }
+          const ing = PCD.store.getIngredient(id);
+          if (!ing) return;
+          data.ingredients = (data.ingredients || []).concat([{ ingredientId: id, amount: 100, unit: ing.unit || 'g' }]);
           qInput.value = '';
           qDD.style.display = 'none';
           renderEditor();
