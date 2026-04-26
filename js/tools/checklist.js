@@ -282,25 +282,30 @@
             <div style="font-weight:700;font-size:15px;">${PCD.escapeHtml(tpl.name)}${typeBadges}</div>
             <div class="text-muted text-sm">${(tpl.items || []).length} items</div>
           </div>
-          <button class="icon-btn" data-edit-tid="${tpl.id}" title="Edit template">${PCD.icon('edit', 18)}</button>
-          <button class="btn btn-primary btn-sm" data-startrun="${tpl.id}" onclick="event.stopPropagation();">${t('checklist_start') || 'Start'}</button>
+          <button type="button" class="icon-btn" data-edit-tid="${tpl.id}" title="Edit template">${PCD.icon('edit', 18)}</button>
+          <button type="button" class="btn btn-primary btn-sm" data-startrun="${tpl.id}">${t('checklist_start') || 'Start'}</button>
         </div>
       `;
       tplEl.appendChild(row);
     });
 
     PCD.$('#newTplBtn', view).addEventListener('click', function () { openTemplateEditor(); });
+    // Click on the card body (not on inner buttons) → preview
     PCD.on(view, 'click', '[data-tid]', function (e) {
       if (e.target.closest('[data-startrun]')) return;
       if (e.target.closest('[data-edit-tid]')) return;
       openTemplatePreview(this.getAttribute('data-tid'));
     });
+    // Edit button: stopPropagation in handler (not inline)
     PCD.on(view, 'click', '[data-edit-tid]', function (e) {
       e.stopPropagation();
+      e.preventDefault();
       openTemplateEditor(this.getAttribute('data-edit-tid'));
     });
+    // Start button: stopPropagation in handler (not inline)
     PCD.on(view, 'click', '[data-startrun]', function (e) {
       e.stopPropagation();
+      e.preventDefault();
       const tid = this.getAttribute('data-startrun');
       startSession(tid);
     });
@@ -521,23 +526,34 @@
 
     const body = PCD.el('div');
     body.innerHTML =
-      '<div class="field"><label class="field-label">Message</label>' +
-      '<textarea class="textarea" id="tplShareText" rows="12" style="font-family:var(--font-mono);font-size:13px;">' + PCD.escapeHtml(text) + '</textarea></div>' +
-      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-top:14px;">' +
-        '<button class="btn btn-outline" id="tplShWa" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;">' +
-          '<div style="color:#25D366;">' + PCD.icon('message-circle', 24) + '</div><div style="font-weight:600;font-size:12px;">WhatsApp</div></button>' +
-        '<button class="btn btn-outline" id="tplShEmail" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;">' +
-          '<div style="color:#EA4335;">' + PCD.icon('mail', 24) + '</div><div style="font-weight:600;font-size:12px;">Email</div></button>' +
-        '<button class="btn btn-outline" id="tplShCopy" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;">' +
-          '<div style="color:var(--brand-600);">' + PCD.icon('copy', 24) + '</div><div style="font-weight:600;font-size:12px;">Copy</div></button>' +
-        '<button class="btn btn-outline" id="tplShMore" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;">' +
-          '<div style="color:var(--text-2);">' + PCD.icon('share', 24) + '</div><div style="font-weight:600;font-size:12px;">More...</div></button>' +
+      '<div style="padding:14px;background:var(--brand-50);border-radius:var(--r-md);margin-bottom:14px;">' +
+        '<div style="font-weight:700;color:var(--brand-700);margin-bottom:6px;">📄 Recommended: PDF</div>' +
+        '<div class="text-muted text-sm" style="margin-bottom:10px;">Print as a fillable PDF form, then share the file via WhatsApp / Email / Drive from your device.</div>' +
+        '<button class="btn btn-primary" id="tplShPdf" style="width:100%;">' + PCD.icon('print', 16) + ' <span>Save as PDF</span></button>' +
+      '</div>' +
+      '<div style="font-weight:600;font-size:12px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Or share as plain text</div>' +
+      '<div class="field"><label class="field-label">Message preview</label>' +
+      '<textarea class="textarea" id="tplShareText" rows="8" style="font-family:var(--font-mono);font-size:13px;">' + PCD.escapeHtml(text) + '</textarea></div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-top:10px;">' +
+        '<button class="btn btn-outline btn-sm" id="tplShWa" style="flex-direction:column;height:auto;padding:10px 4px;gap:4px;">' +
+          '<div style="color:#25D366;">' + PCD.icon('message-circle', 18) + '</div><div style="font-weight:600;font-size:11px;">WhatsApp</div></button>' +
+        '<button class="btn btn-outline btn-sm" id="tplShEmail" style="flex-direction:column;height:auto;padding:10px 4px;gap:4px;">' +
+          '<div style="color:#EA4335;">' + PCD.icon('mail', 18) + '</div><div style="font-weight:600;font-size:11px;">Email</div></button>' +
+        '<button class="btn btn-outline btn-sm" id="tplShCopy" style="flex-direction:column;height:auto;padding:10px 4px;gap:4px;">' +
+          '<div style="color:var(--brand-600);">' + PCD.icon('copy', 18) + '</div><div style="font-weight:600;font-size:11px;">Copy</div></button>' +
+        '<button class="btn btn-outline btn-sm" id="tplShMore" style="flex-direction:column;height:auto;padding:10px 4px;gap:4px;">' +
+          '<div style="color:var(--text-2);">' + PCD.icon('share', 18) + '</div><div style="font-weight:600;font-size:11px;">More...</div></button>' +
       '</div>';
 
     const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: 'Close' });
     const footer = PCD.el('div', { style: { display: 'flex', width: '100%' } });
     footer.appendChild(closeBtn);
     const m = PCD.modal.open({ title: 'Share template', body: body, footer: footer, size: 'md', closable: true });
+
+    PCD.$('#tplShPdf', body).addEventListener('click', function () {
+      m.close();
+      setTimeout(function () { printBlankTemplate(tpl); }, 250);
+    });
 
     function getText() { return PCD.$('#tplShareText', body).value; }
     closeBtn.addEventListener('click', function () { m.close(); });
@@ -1043,21 +1059,28 @@
     const text = buildShareText(s, tpl);
     const body = PCD.el('div');
     body.innerHTML =
-      '<div class="field"><label class="field-label">Message</label>' +
-      '<textarea class="textarea" id="shareText" rows="10" style="font-family:var(--font-mono);font-size:13px;">' + PCD.escapeHtml(text) + '</textarea></div>' +
-      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-top:12px;">' +
-        '<button class="btn btn-outline" id="shWa" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;">' +
-          '<div style="color:#25D366;">' + PCD.icon('message-circle', 24) + '</div>' +
-          '<div style="font-weight:600;font-size:12px;">WhatsApp</div></button>' +
-        '<button class="btn btn-outline" id="shEmail" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;">' +
-          '<div style="color:#EA4335;">' + PCD.icon('mail', 24) + '</div>' +
-          '<div style="font-weight:600;font-size:12px;">Email</div></button>' +
-        '<button class="btn btn-outline" id="shCopy" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;">' +
-          '<div style="color:var(--brand-600);">' + PCD.icon('copy', 24) + '</div>' +
-          '<div style="font-weight:600;font-size:12px;">Copy</div></button>' +
-        '<button class="btn btn-outline" id="shMore" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;">' +
-          '<div style="color:var(--text-2);">' + PCD.icon('share', 24) + '</div>' +
-          '<div style="font-weight:600;font-size:12px;">More...</div></button>' +
+      '<div style="padding:14px;background:var(--brand-50);border-radius:var(--r-md);margin-bottom:14px;">' +
+        '<div style="font-weight:700;color:var(--brand-700);margin-bottom:6px;">📄 Recommended: PDF</div>' +
+        '<div class="text-muted text-sm" style="margin-bottom:10px;">Checklists are audit documents. Download as PDF for proper records, then share the file via WhatsApp / Email / Drive from your device.</div>' +
+        '<button class="btn btn-primary" id="shPdf" style="width:100%;">' + PCD.icon('print', 16) + ' <span>Save as PDF</span></button>' +
+      '</div>' +
+
+      '<div style="font-weight:600;font-size:12px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Or share as plain text</div>' +
+      '<div class="field"><label class="field-label">Message preview (editable)</label>' +
+      '<textarea class="textarea" id="shareText" rows="6" style="font-family:var(--font-mono);font-size:13px;">' + PCD.escapeHtml(text) + '</textarea></div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-top:10px;">' +
+        '<button class="btn btn-outline btn-sm" id="shWa" style="flex-direction:column;height:auto;padding:10px 4px;gap:4px;">' +
+          '<div style="color:#25D366;">' + PCD.icon('message-circle', 18) + '</div>' +
+          '<div style="font-weight:600;font-size:11px;">WhatsApp</div></button>' +
+        '<button class="btn btn-outline btn-sm" id="shEmail" style="flex-direction:column;height:auto;padding:10px 4px;gap:4px;">' +
+          '<div style="color:#EA4335;">' + PCD.icon('mail', 18) + '</div>' +
+          '<div style="font-weight:600;font-size:11px;">Email</div></button>' +
+        '<button class="btn btn-outline btn-sm" id="shCopy" style="flex-direction:column;height:auto;padding:10px 4px;gap:4px;">' +
+          '<div style="color:var(--brand-600);">' + PCD.icon('copy', 18) + '</div>' +
+          '<div style="font-weight:600;font-size:11px;">Copy</div></button>' +
+        '<button class="btn btn-outline btn-sm" id="shMore" style="flex-direction:column;height:auto;padding:10px 4px;gap:4px;">' +
+          '<div style="color:var(--text-2);">' + PCD.icon('share', 18) + '</div>' +
+          '<div style="font-weight:600;font-size:11px;">More...</div></button>' +
       '</div>';
 
     const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: 'Close' });
@@ -1065,6 +1088,11 @@
     footer.appendChild(closeBtn);
 
     const m = PCD.modal.open({ title: 'Share · ' + title, body: body, footer: footer, size: 'md', closable: true });
+
+    PCD.$('#shPdf', body).addEventListener('click', function () {
+      m.close();
+      setTimeout(function () { printChecklistSession(s, tpl); }, 250);
+    });
 
     function getText() { return PCD.$('#shareText', body).value; }
     closeBtn.addEventListener('click', function () { m.close(); });

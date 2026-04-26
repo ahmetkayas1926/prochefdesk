@@ -474,16 +474,16 @@
 
     buildBody();
 
-    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') });
-    const saveBtn = PCD.el('button', { class: 'btn btn-primary', text: t('save'), style: { flex: '1' } });
+    const cancelBtn = PCD.el('button', { type: 'button', class: 'btn btn-secondary', text: t('cancel') });
+    const saveBtn = PCD.el('button', { type: 'button', class: 'btn btn-primary', text: t('save'), style: { flex: '1' } });
     let archiveBtn = null, deleteBtn = null;
     if (existing) {
-      archiveBtn = PCD.el('button', { class: 'btn btn-outline' });
+      archiveBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline' });
       archiveBtn.innerHTML = PCD.icon('archive', 14) + ' <span>' + (existing.archived ? 'Unarchive' : 'Archive') + '</span>';
       // Only allow delete if there's another workspace
       const others = PCD.store.listWorkspaces(true).filter(function (w) { return w.id !== existing.id; });
       if (others.length > 0) {
-        deleteBtn = PCD.el('button', { class: 'btn btn-ghost', text: 'Delete', style: { color: 'var(--danger)' } });
+        deleteBtn = PCD.el('button', { type: 'button', class: 'btn btn-ghost', text: 'Delete', style: { color: 'var(--danger)' } });
       }
     }
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
@@ -529,36 +529,69 @@
       });
     });
     saveBtn.addEventListener('click', function () {
-      // Read fresh values from DOM as safety net (in case input listeners didn't fire)
-      const nameInp = PCD.$('#wsNameInp', body);
-      const conceptInp = PCD.$('#wsConcept', body);
-      const roleInp = PCD.$('#wsRole', body);
-      const cityInp = PCD.$('#wsCity', body);
-      const startInp = PCD.$('#wsStart', body);
-      const endInp = PCD.$('#wsEnd', body);
-      if (nameInp) data.name = (nameInp.value || '').trim();
-      if (conceptInp) data.concept = (conceptInp.value || '').trim();
-      if (roleInp) data.role = (roleInp.value || '').trim();
-      if (cityInp) data.city = (cityInp.value || '').trim();
-      if (startInp) data.periodStart = startInp.value ? startInp.value + '-01' : null;
-      if (endInp) data.periodEnd = endInp.value ? endInp.value + '-01' : null;
+      try {
+        // Read fresh values from DOM as safety net
+        const nameInp = PCD.$('#wsNameInp', body);
+        const conceptInp = PCD.$('#wsConcept', body);
+        const roleInp = PCD.$('#wsRole', body);
+        const cityInp = PCD.$('#wsCity', body);
+        const startInp = PCD.$('#wsStart', body);
+        const endInp = PCD.$('#wsEnd', body);
+        if (nameInp) data.name = (nameInp.value || '').trim();
+        if (conceptInp) data.concept = (conceptInp.value || '').trim();
+        if (roleInp) data.role = (roleInp.value || '').trim();
+        if (cityInp) data.city = (cityInp.value || '').trim();
+        if (startInp) data.periodStart = startInp.value ? startInp.value + '-01' : null;
+        if (endInp) data.periodEnd = endInp.value ? endInp.value + '-01' : null;
 
-      if (!data.name) { PCD.toast.error('Name required'); return; }
-      if (existing) data.id = existing.id;
-      const isNew = !existing;
-      const saved = PCD.store.upsertWorkspace(data);
-      if (!saved || !saved.id) {
-        PCD.toast.error('Save failed');
-        return;
+        console.log('[Workspace Save] data:', JSON.parse(JSON.stringify(data)));
+
+        if (!data.name) {
+          PCD.toast.error('Name required');
+          return;
+        }
+        if (existing) data.id = existing.id;
+        const isNew = !existing;
+
+        const saved = PCD.store.upsertWorkspace(data);
+        console.log('[Workspace Save] saved:', saved && saved.id, 'isNew:', isNew);
+
+        if (!saved || !saved.id) {
+          PCD.toast.error('Save failed — workspace not created');
+          return;
+        }
+        // For brand new workspace, switch to it
+        if (isNew) {
+          PCD.store.setActiveWorkspaceId(saved.id);
+        }
+        // Try toast (if it fails, we still continue)
+        try { PCD.toast.success('Saved'); } catch (toastErr) { console.warn('[Workspace Save] toast failed:', toastErr); }
+        // Try close modal
+        try { m.close(); } catch (closeErr) { console.warn('[Workspace Save] modal close failed:', closeErr); }
+        // Reload after short delay
+        setTimeout(function () {
+          if (isNew) {
+            window.location.reload();
+          } else {
+            try { refreshWorkspaceLabel(); } catch (e) {}
+          }
+        }, 250);
+      } catch (err) {
+        console.error('[Workspace Save] FATAL:', err);
+        // Last resort: even on fatal error, try direct save
+        try {
+          const fallback = PCD.store.upsertWorkspace(data);
+          if (fallback && fallback.id) {
+            if (!existing) PCD.store.setActiveWorkspaceId(fallback.id);
+            alert('Workspace saved (with errors). Page will reload.');
+            window.location.reload();
+          } else {
+            alert('Save failed. Error: ' + (err.message || err));
+          }
+        } catch (e2) {
+          alert('Save failed completely. Error: ' + (err.message || err));
+        }
       }
-      // For brand new workspace, switch to it
-      if (isNew) PCD.store.setActiveWorkspaceId(saved.id);
-      PCD.toast.success(t('saved') || 'Saved');
-      m.close();
-      setTimeout(function () {
-        if (isNew) window.location.reload();
-        else refreshWorkspaceLabel();
-      }, 300);
     });
   }
 

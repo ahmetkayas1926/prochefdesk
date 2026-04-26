@@ -577,7 +577,7 @@
       // Apply directly (no approval or currently approving)
       applyCountsToInventory(countedValues);
       const n = Object.keys(countedValues).length;
-      PCD.toast.success(n + ' stock level' + (n === 1 ? '' : 's') + ' updated');
+      PCD.toast.success('✓ Stock count saved · ' + n + ' item' + (n === 1 ? '' : 's') + ' updated', 4000);
       m.close();
       // Clear pending if we just approved
       if (options.isApproving) setPendingForCurrentWs(null);
@@ -607,19 +607,18 @@
   function promptGenerateOrdersAfterCount() {
     const ings = PCD.store.listIngredients();
     const invAll = readInventory();
-    // Count how many items are below par (tracked only)
+    // Count tracked items needing reorder (out / critical / low)
     let belowCount = 0;
     ings.forEach(function (i) {
       const row = invAll[i.id];
       if (!row || row.parLevel == null) return;
-      const stock = Number(row.stock) || 0;
-      const par = Number(row.parLevel) || 0;
-      if (stock < par) belowCount++;
+      const status = computeStatus(row);
+      if (status === 'out' || status === 'critical' || status === 'low') belowCount++;
     });
     if (belowCount === 0) return;
     PCD.modal.confirm({
       icon: '📦', iconKind: 'info',
-      title: belowCount + ' item' + (belowCount === 1 ? '' : 's') + ' below par',
+      title: belowCount + ' item' + (belowCount === 1 ? '' : 's') + ' need ordering',
       text: 'Want to generate purchase orders for the low-stock items now?',
       okText: 'Generate Orders',
       cancelText: 'Later'
@@ -632,19 +631,25 @@
   function openGenerateOrder() {
     const ings = PCD.store.listIngredients();
     const invAll = readInventory();
-    // Collect all items below par
+    // Collect all items that need ordering: status critical, low, or out
     const below = [];
     ings.forEach(function (i) {
       const row = invAll[i.id];
       if (!row || row.parLevel == null) return;
       const stock = Number(row.stock) || 0;
       const par = Number(row.parLevel) || 0;
-      if (stock < par) {
+      const min = Number(row.minLevel) || 0;
+      const status = computeStatus(row);
+      // Order if: out, critical, or low
+      if (status === 'out' || status === 'critical' || status === 'low') {
+        // Need = enough to bring back up to par level
+        const need = Math.max(0, par - stock);
         below.push({
           ing: i,
           stock: stock,
           par: par,
-          need: Math.max(0, par - stock),
+          need: need || par,  // if par > stock then top up; if min > par (weird), at least order par amount
+          status: status,
           supplier: i.supplier || '(no supplier)',
         });
       }

@@ -126,14 +126,19 @@
           @media (max-width: 900px) {
             .kc-layout { grid-template-columns: 1fr !important; }
           }
+          /* Preview wrapper: real A4 size scaled down so layout is identical to print */
           .kc-preview-frame {
             transform-origin: top left;
-            width: 100%;
-            height: 100%;
+            position: absolute;
+            top: 0; left: 0;
+            background: #fff;
+          }
+          .kc-preview-outer {
             position: relative;
+            overflow: hidden;
+            background: #fff;
           }
           .kc-preview-frame .kc-sheet {
-            padding: 12px 14px;
             box-sizing: border-box;
           }
         </style>
@@ -238,10 +243,44 @@
         showAmounts: showAmounts,
         fontSize: fontSize,
       });
-      previewEl.innerHTML = '<div class="kc-preview-frame">' + html + '</div>';
+
+      // Real A4 dimensions in mm (with 8mm margin from @page rule, but we render full page)
+      const A4_W = orientation === 'landscape' ? 297 : 210;
+      const A4_H = orientation === 'landscape' ? 210 : 297;
+      // mm → px at 96 DPI: 1mm ≈ 3.7795px
+      const MM_TO_PX = 3.7795;
+      const pageW = A4_W * MM_TO_PX;
+      const pageH = A4_H * MM_TO_PX;
+
+      // Build preview with the full-size rendered sheet inside a scaled wrapper
+      previewEl.classList.add('kc-preview-outer');
+      previewEl.style.width = '100%';
+      previewEl.style.aspectRatio = (A4_W / A4_H).toFixed(4);
+      previewEl.innerHTML =
+        '<div class="kc-preview-frame" style="width:' + pageW + 'px;height:' + pageH + 'px;padding:8mm;box-sizing:border-box;">' + html + '</div>';
+
+      // After mount, compute scale to fit
+      requestAnimationFrame(function () {
+        const containerW = previewEl.clientWidth;
+        if (!containerW) return;
+        const scale = containerW / pageW;
+        const frame = previewEl.querySelector('.kc-preview-frame');
+        if (frame) {
+          frame.style.transform = 'scale(' + scale + ')';
+        }
+      });
     }
 
     renderBody();
+
+    // Re-fit preview on window resize
+    let resizeTimer;
+    const onResize = function () {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(function () { updatePreview(); }, 150);
+    };
+    window.addEventListener('resize', onResize);
+    // Cleanup if view is replaced (best-effort — view element gone = listener orphaned but harmless)
   }
 
   // Format ingredient amount nicely
@@ -278,10 +317,11 @@
     const ingMap = {};
     PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
 
+    // Compact, balanced typography — proportional sizing
     const fontSizes = {
-      small: { name: 9, ing: 7.5, method: 7 },
-      medium: { name: 10.5, ing: 8.5, method: 8 },
-      large: { name: 12, ing: 10, method: 9.5 },
+      small:  { name: 8.5,  ing: 7,   method: 6.5, sub: 7   },
+      medium: { name: 10,   ing: 8,   method: 7.5, sub: 8   },
+      large:  { name: 11.5, ing: 9.5, method: 9,   sub: 9.5 },
     };
     const fs = fontSizes[opts.fontSize] || fontSizes.medium;
 
@@ -293,124 +333,151 @@
         const name = ing ? ing.name : '?';
         const amt = opts.showAmounts ? formatAmount(ri.amount, ri.unit) : '';
         ingsHtml +=
-          '<tr>' +
-            '<td class="kc-ing-name">' + PCD.escapeHtml(name) + '</td>' +
-            (opts.showAmounts ? '<td class="kc-ing-amt">' + PCD.escapeHtml(amt) + '</td>' : '') +
-          '</tr>';
+          '<div class="kc-ing">' +
+            '<span class="kc-ing-name">' + PCD.escapeHtml(name) + '</span>' +
+            (opts.showAmounts ? '<span class="kc-ing-leader"></span><span class="kc-ing-amt">' + PCD.escapeHtml(amt) + '</span>' : '') +
+          '</div>';
       });
 
       let methodHtml = '';
       if (opts.showMethod) {
         const steps = splitMethod(r.steps);
         if (steps.length > 0) {
-          methodHtml = '<ol class="kc-method">';
-          steps.forEach(function (s) {
-            methodHtml += '<li>' + PCD.escapeHtml(s) + '</li>';
-          });
-          methodHtml += '</ol>';
+          // Inline numbered method (saves vertical space)
+          methodHtml = '<div class="kc-method">' +
+            steps.map(function (s, i) {
+              return '<span class="kc-step"><b>' + (i + 1) + '.</b> ' + PCD.escapeHtml(s) + '</span>';
+            }).join(' ') +
+          '</div>';
         }
       }
 
       blocksHtml +=
         '<div class="kc-block">' +
           '<div class="kc-name">' + PCD.escapeHtml(r.name || '') +
-            (r.servings ? ' <span class="kc-srv">' + r.servings + 'p</span>' : '') +
+            (r.servings ? '<span class="kc-srv"> · ' + r.servings + 'p</span>' : '') +
           '</div>' +
-          (ingsHtml ? '<table class="kc-ings">' + ingsHtml + '</table>' : '') +
+          (ingsHtml ? '<div class="kc-ings">' + ingsHtml + '</div>' : '') +
           methodHtml +
         '</div>';
     });
 
     return (
       '<style>' +
-        '@page { size: A4 ' + opts.orientation + '; margin: 6mm; }' +
-        'body {' +
-          'margin: 0; padding: 0;' +
-          'font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;' +
-          'color: #1a1a1a; background: #fff;' +
-        '}' +
+        '@page { size: A4 ' + opts.orientation + '; margin: 8mm; }' +
+        'body { margin: 0; padding: 0; font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif; color: #1a1a1a; background: #fff; }' +
+
+        // Sheet uses CSS Grid for clean equal columns (no column-count quirks)
         '.kc-sheet {' +
-          'column-count: ' + opts.columns + ';' +
-          'column-gap: 6mm;' +
-          'column-rule: 1px solid #d4d4d4;' +
+          'display: grid;' +
+          'grid-template-columns: repeat(' + opts.columns + ', minmax(0, 1fr));' +
+          'gap: 4mm;' +
+          'align-content: start;' +
         '}' +
+
         '.kc-header {' +
-          'column-span: all;' +
-          'margin-bottom: 6px;' +
-          'padding-bottom: 4px;' +
+          'grid-column: 1 / -1;' +
+          'display: flex; justify-content: space-between; align-items: baseline;' +
           'border-bottom: 2px solid #16a34a;' +
-          'display: flex;' +
-          'justify-content: space-between;' +
-          'align-items: baseline;' +
+          'padding-bottom: 4px;' +
+          'margin-bottom: 4px;' +
         '}' +
         '.kc-header h1 {' +
           'margin: 0;' +
-          'font-size: 13pt;' +
-          'font-weight: 700;' +
+          'font-size: 12pt; font-weight: 700;' +
           'color: #16a34a;' +
           'letter-spacing: -0.01em;' +
         '}' +
-        '.kc-header .meta {' +
-          'font-size: 8pt;' +
-          'color: #666;' +
-        '}' +
+        '.kc-header .meta { font-size: 8pt; color: #666; }' +
+
+        // Each recipe is a framed card
         '.kc-block {' +
           'break-inside: avoid;' +
           'page-break-inside: avoid;' +
-          'margin-bottom: 8px;' +
-          'padding: 4px 6px 6px;' +
-          'border-bottom: 1px solid #e5e5e5;' +
+          'border: 1.5px solid #16a34a;' +
+          'border-radius: 4px;' +
+          'padding: 6px 8px 8px;' +
+          'background: #fff;' +
+          'min-width: 0;' +  // critical: lets grid items shrink properly
         '}' +
+
+        // Recipe title — bold, prominent, but proportional
         '.kc-name {' +
           'font-size: ' + fs.name + 'pt;' +
           'font-weight: 800;' +
-          'color: #16a34a;' +
+          'color: #fff;' +
+          'background: #16a34a;' +
+          'padding: 4px 8px;' +
+          'margin: -6px -8px 6px;' +
+          'border-radius: 2px 2px 0 0;' +
           'letter-spacing: 0.02em;' +
           'text-transform: uppercase;' +
-          'margin-bottom: 4px;' +
-          'border-bottom: 1px solid #16a34a;' +
-          'padding-bottom: 2px;' +
+          'line-height: 1.15;' +
+          'word-break: break-word;' +
+          'overflow-wrap: break-word;' +
+          'hyphens: auto;' +
         '}' +
         '.kc-srv {' +
-          'font-size: 0.8em;' +
+          'font-size: 0.85em;' +
           'font-weight: 500;' +
-          'color: #666;' +
-          'margin-inline-start: 4px;' +
+          'opacity: 0.9;' +
           'text-transform: none;' +
           'letter-spacing: 0;' +
         '}' +
+
+        // Ingredients — tight rows with dotted leaders, no wrapping kink
         '.kc-ings {' +
-          'width: 100%;' +
-          'border-collapse: collapse;' +
+          'display: flex; flex-direction: column; gap: 1px;' +
           'font-size: ' + fs.ing + 'pt;' +
-          'line-height: 1.35;' +
+          'line-height: 1.3;' +
           'margin-bottom: 4px;' +
         '}' +
+        '.kc-ing {' +
+          'display: flex; align-items: baseline;' +
+          'gap: 0;' +
+          'min-width: 0;' +
+        '}' +
         '.kc-ing-name {' +
-          'padding: 1px 0;' +
+          'flex: 0 1 auto;' +
+          'min-width: 0;' +
+          'word-break: break-word;' +
+          'overflow-wrap: break-word;' +
+          'hyphens: auto;' +
           'color: #2a2a2a;' +
-          'vertical-align: top;' +
+        '}' +
+        '.kc-ing-leader {' +
+          'flex: 1 1 auto;' +
+          'min-width: 6px;' +
+          'border-bottom: 1px dotted #ccc;' +
+          'margin: 0 4px 3px;' +
+          'align-self: end;' +
         '}' +
         '.kc-ing-amt {' +
-          'padding: 1px 0 1px 6px;' +
-          'text-align: end;' +
+          'flex: 0 0 auto;' +
           'font-weight: 700;' +
           'color: #16a34a;' +
           'white-space: nowrap;' +
-          'vertical-align: top;' +
-          'width: 1%;' +
+          'font-variant-numeric: tabular-nums;' +
         '}' +
+
+        // Method — inline paragraph, very compact
         '.kc-method {' +
-          'list-style-position: outside;' +
-          'padding-inline-start: 14px;' +
-          'margin: 4px 0 0;' +
+          'border-top: 1px dashed #ccc;' +
+          'padding-top: 4px;' +
+          'margin-top: 4px;' +
           'font-size: ' + fs.method + 'pt;' +
           'line-height: 1.4;' +
           'color: #444;' +
         '}' +
-        '.kc-method li {' +
-          'margin-bottom: 2px;' +
-          'padding-inline-start: 2px;' +
+        '.kc-step b {' +
+          'color: #16a34a;' +
+          'font-weight: 800;' +
+          'margin-inline-end: 2px;' +
+        '}' +
+
+        // Print: solid colors must render
+        '@media print {' +
+          '* { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }' +
         '}' +
       '</style>' +
       '<div class="kc-sheet">' +

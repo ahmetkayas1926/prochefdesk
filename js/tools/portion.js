@@ -117,7 +117,8 @@
       }
     }
 
-    function refreshResult() {
+    function buildResult() {
+      // Builds the full result DOM ONCE. Subsequent value changes use updateResult().
       const resultEl = PCD.$('#pcResult', view);
       if (selected.size === 0) {
         resultEl.innerHTML = '';
@@ -126,57 +127,53 @@
 
       const ingMap = {};
       PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
-
       const selectedRecipes = recipes.filter(function (r) { return selected.has(r.id); });
-      let totalCost = 0;
-      let blocksHtml = '';
 
+      let blocksHtml = '';
       selectedRecipes.forEach(function (r) {
-        const targetPortions = portionsPerRecipe[r.id] || guestCount;
+        const targetPortions = portionsPerRecipe[r.id] != null ? portionsPerRecipe[r.id] : guestCount;
         const baseServings = r.servings || 1;
         const factor = targetPortions / baseServings;
-        const baseCost = PCD.recipes.computeFoodCost(r, ingMap);
-        const scaledCost = baseCost * factor;
-        totalCost += scaledCost;
 
         let ingsHtml = '';
-        (r.ingredients || []).forEach(function (ri) {
+        (r.ingredients || []).forEach(function (ri, idx) {
           const ing = ingMap[ri.ingredientId];
           const name = ing ? ing.name : '?';
-          const scaledAmt = (Number(ri.amount) || 0) * factor;
+          const baseAmt = Number(ri.amount) || 0;
+          const scaledAmt = baseAmt * factor;
           ingsHtml +=
             '<tr>' +
               '<td style="padding:6px 10px;border-bottom:1px solid var(--border);">' + PCD.escapeHtml(name) + '</td>' +
-              '<td style="padding:6px 10px;border-bottom:1px solid var(--border);text-align:end;font-weight:700;font-family:var(--font-mono);color:var(--brand-700);white-space:nowrap;">' + PCD.fmtNumber(scaledAmt) + ' ' + PCD.escapeHtml(ri.unit || '') + '</td>' +
+              '<td style="padding:6px 10px;border-bottom:1px solid var(--border);text-align:end;font-weight:700;font-family:var(--font-mono);color:var(--brand-700);white-space:nowrap;" data-amt-cell="' + r.id + ':' + idx + '" data-base-amt="' + baseAmt + '" data-unit="' + PCD.escapeHtml(ri.unit || '') + '">' +
+                PCD.fmtNumber(scaledAmt) + ' ' + PCD.escapeHtml(ri.unit || '') +
+              '</td>' +
             '</tr>';
         });
 
         blocksHtml +=
-          '<div class="card mb-3" style="padding:14px;">' +
+          '<div class="card mb-3" data-recipe-block="' + r.id + '" style="padding:14px;">' +
             '<div class="flex items-center justify-between mb-2" style="flex-wrap:wrap;gap:8px;">' +
               '<div style="font-weight:700;font-size:16px;">' + PCD.escapeHtml(r.name) + '</div>' +
               '<div class="flex items-center gap-2">' +
                 '<input type="number" class="input" data-rscale="' + r.id + '" value="' + targetPortions + '" min="1" step="1" style="width:80px;text-align:center;font-weight:700;">' +
                 '<span class="text-muted text-sm">portions</span>' +
                 '<span class="text-muted text-sm">·</span>' +
-                '<span style="font-weight:700;color:var(--brand-700);">' + PCD.fmtMoney(scaledCost) + '</span>' +
+                '<span style="font-weight:700;color:var(--brand-700);" data-recipe-cost="' + r.id + '">$0</span>' +
               '</div>' +
             '</div>' +
-            '<div class="text-muted text-sm mb-2">' + factor.toFixed(2) + '× from base ' + baseServings + ' servings</div>' +
+            '<div class="text-muted text-sm mb-2" data-recipe-factor="' + r.id + '">' + factor.toFixed(2) + '× from base ' + baseServings + ' servings</div>' +
             '<table style="width:100%;border-collapse:collapse;font-size:14px;">' + ingsHtml + '</table>' +
           '</div>';
       });
-
-      const totalPortions = selectedRecipes.reduce(function (s, r) { return s + (portionsPerRecipe[r.id] || guestCount); }, 0);
 
       resultEl.innerHTML =
         '<div class="card mb-3" style="padding:16px;background:linear-gradient(135deg,var(--brand-50),var(--surface));">' +
           '<div style="font-weight:800;font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">Step 3 — Scaled recipes</div>' +
           '<div class="flex items-center" style="gap:18px;flex-wrap:wrap;">' +
-            '<div><div class="text-muted text-sm">Recipes</div><div style="font-weight:700;font-size:20px;">' + selectedRecipes.length + '</div></div>' +
-            '<div><div class="text-muted text-sm">Total portions</div><div style="font-weight:700;font-size:20px;">' + totalPortions + '</div></div>' +
-            '<div><div class="text-muted text-sm">Total food cost</div><div style="font-weight:700;font-size:20px;color:var(--brand-700);">' + PCD.fmtMoney(totalCost) + '</div></div>' +
-            '<div><div class="text-muted text-sm">Cost / guest</div><div style="font-weight:700;font-size:20px;">' + PCD.fmtMoney(guestCount > 0 ? totalCost / guestCount : 0) + '</div></div>' +
+            '<div><div class="text-muted text-sm">Recipes</div><div style="font-weight:700;font-size:20px;" data-stat-recipes>' + selectedRecipes.length + '</div></div>' +
+            '<div><div class="text-muted text-sm">Total portions</div><div style="font-weight:700;font-size:20px;" data-stat-total-portions>0</div></div>' +
+            '<div><div class="text-muted text-sm">Total food cost</div><div style="font-weight:700;font-size:20px;color:var(--brand-700);" data-stat-total-cost>$0</div></div>' +
+            '<div><div class="text-muted text-sm">Cost / guest</div><div style="font-weight:700;font-size:20px;" data-stat-cost-per-guest>$0</div></div>' +
           '</div>' +
           '<div class="flex gap-2 mt-3" style="flex-wrap:wrap;">' +
             '<button class="btn btn-primary" id="pcShop">' + PCD.icon('shopping-cart', 16) + ' <span>Send to Shopping List</span></button>' +
@@ -186,16 +183,17 @@
         '</div>' +
         blocksHtml;
 
-      // Wire per-recipe scale inputs
+      // Wire per-recipe scale inputs - DEBOUNCED so user can type multi-digit
       PCD.on(resultEl, 'input', '[data-rscale]', function () {
         const rid = this.getAttribute('data-rscale');
-        const val = parseInt(this.value, 10);
-        if (val > 0) {
-          portionsPerRecipe[rid] = val;
-          // Don't full re-render to keep focus
-          // Just update the cost line for this recipe
-          refreshResult();
-        }
+        const raw = this.value;
+        // Allow empty while typing (user is in the middle of typing)
+        if (raw === '' || raw === null) return;
+        const val = parseInt(raw, 10);
+        if (isNaN(val) || val < 1) return;
+        portionsPerRecipe[rid] = val;
+        // Surgical update — DO NOT rebuild DOM, do not steal focus
+        updateResult();
       });
 
       PCD.$('#pcShop', resultEl).addEventListener('click', function () {
@@ -207,35 +205,138 @@
       PCD.$('#pcShare', resultEl).addEventListener('click', function () {
         shareScaled(selectedRecipes, guestCount, portionsPerRecipe, ingMap);
       });
+
+      // Initial value computation
+      updateResult();
+    }
+
+    function updateResult() {
+      // Updates the values WITHOUT rebuilding DOM (so input focus is preserved)
+      const resultEl = PCD.$('#pcResult', view);
+      if (!resultEl || selected.size === 0) return;
+
+      const ingMap = {};
+      PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
+      const selectedRecipes = recipes.filter(function (r) { return selected.has(r.id); });
+
+      let totalCost = 0;
+      let totalPortions = 0;
+
+      selectedRecipes.forEach(function (r) {
+        const targetPortions = portionsPerRecipe[r.id] != null ? portionsPerRecipe[r.id] : guestCount;
+        totalPortions += targetPortions;
+        const baseServings = r.servings || 1;
+        const factor = targetPortions / baseServings;
+        const baseCost = PCD.recipes.computeFoodCost(r, ingMap);
+        const scaledCost = baseCost * factor;
+        totalCost += scaledCost;
+
+        // Update recipe-level cost
+        const costEl = resultEl.querySelector('[data-recipe-cost="' + r.id + '"]');
+        if (costEl) costEl.textContent = PCD.fmtMoney(scaledCost);
+        const factorEl = resultEl.querySelector('[data-recipe-factor="' + r.id + '"]');
+        if (factorEl) factorEl.textContent = factor.toFixed(2) + '× from base ' + baseServings + ' servings';
+
+        // Update each ingredient amount cell
+        (r.ingredients || []).forEach(function (ri, idx) {
+          const cell = resultEl.querySelector('[data-amt-cell="' + r.id + ':' + idx + '"]');
+          if (!cell) return;
+          const baseAmt = Number(cell.getAttribute('data-base-amt')) || 0;
+          const unit = cell.getAttribute('data-unit') || '';
+          const scaledAmt = baseAmt * factor;
+          cell.textContent = PCD.fmtNumber(scaledAmt) + (unit ? ' ' + unit : '');
+        });
+      });
+
+      // Update top stats
+      const statRecipes = resultEl.querySelector('[data-stat-recipes]');
+      if (statRecipes) statRecipes.textContent = selectedRecipes.length;
+      const statTotalPortions = resultEl.querySelector('[data-stat-total-portions]');
+      if (statTotalPortions) statTotalPortions.textContent = totalPortions;
+      const statTotalCost = resultEl.querySelector('[data-stat-total-cost]');
+      if (statTotalCost) statTotalCost.textContent = PCD.fmtMoney(totalCost);
+      const statCpg = resultEl.querySelector('[data-stat-cost-per-guest]');
+      if (statCpg) statCpg.textContent = PCD.fmtMoney(guestCount > 0 ? totalCost / guestCount : 0);
+    }
+
+    // Public refresh: rebuilds full DOM (used when selection changes)
+    function refreshResult() {
+      buildResult();
     }
 
     // Wire root events
     PCD.$('#pcGuests', view).addEventListener('input', function () {
-      const v = parseInt(this.value, 10);
-      if (v > 0) {
-        guestCount = v;
-        // Update default portions for already-selected recipes if user hasn't manually overridden
-        // (we keep portionsPerRecipe as override)
-        refreshResult();
+      const raw = this.value;
+      if (raw === '' || raw === null) return;
+      const v = parseInt(raw, 10);
+      if (isNaN(v) || v < 1) return;
+      const oldGuest = guestCount;
+      guestCount = v;
+      // For recipes the user hasn't manually overridden, keep them in sync with guestCount
+      // (override = portionsPerRecipe[rid] was previously equal to old guestCount)
+      Object.keys(portionsPerRecipe).forEach(function (rid) {
+        if (portionsPerRecipe[rid] === oldGuest) {
+          portionsPerRecipe[rid] = guestCount;
+          // Update the input field too
+          const inp = view.querySelector('[data-rscale="' + rid + '"]');
+          if (inp && document.activeElement !== inp) inp.value = guestCount;
+        }
+      });
+      // Surgical update — preserves focus
+      updateResult();
+      // Also update inputs for recipes never touched (use default = guestCount)
+      const resultEl = PCD.$('#pcResult', view);
+      if (resultEl) {
+        resultEl.querySelectorAll('[data-rscale]').forEach(function (inp) {
+          const rid = inp.getAttribute('data-rscale');
+          if (portionsPerRecipe[rid] == null && document.activeElement !== inp) {
+            inp.value = guestCount;
+          }
+        });
       }
     });
     PCD.on(view, 'click', '[data-quick]', function () {
+      const oldGuest = guestCount;
       guestCount = parseInt(this.getAttribute('data-quick'), 10);
       PCD.$('#pcGuests', view).value = guestCount;
-      refreshResult();
+      // Sync overrides + inputs
+      Object.keys(portionsPerRecipe).forEach(function (rid) {
+        if (portionsPerRecipe[rid] === oldGuest) portionsPerRecipe[rid] = guestCount;
+      });
+      const resultEl = PCD.$('#pcResult', view);
+      if (resultEl) {
+        resultEl.querySelectorAll('[data-rscale]').forEach(function (inp) {
+          const rid = inp.getAttribute('data-rscale');
+          const target = portionsPerRecipe[rid] != null ? portionsPerRecipe[rid] : guestCount;
+          inp.value = target;
+        });
+      }
+      updateResult();
     });
     searchInp.addEventListener('input', paintRecipeList);
     PCD.$('#pcAll', view).addEventListener('click', function () {
-      recipes.forEach(function (r) { selected.add(r.id); });
+      recipes.forEach(function (r) {
+        selected.add(r.id);
+        if (portionsPerRecipe[r.id] == null) portionsPerRecipe[r.id] = guestCount;
+      });
       paintRecipeList(); updateSelStat(); refreshResult();
     });
     PCD.$('#pcNone', view).addEventListener('click', function () {
       selected.clear();
+      // Also clear overrides so old data doesn't leak
+      Object.keys(portionsPerRecipe).forEach(function (k) { delete portionsPerRecipe[k]; });
       paintRecipeList(); updateSelStat(); refreshResult();
     });
     PCD.on(recipeListEl, 'change', 'input[data-rid]', function () {
       const rid = this.getAttribute('data-rid');
-      if (this.checked) selected.add(rid); else selected.delete(rid);
+      if (this.checked) {
+        selected.add(rid);
+        // Initialize override to current guestCount so it stays in sync
+        if (portionsPerRecipe[rid] == null) portionsPerRecipe[rid] = guestCount;
+      } else {
+        selected.delete(rid);
+        delete portionsPerRecipe[rid];
+      }
       const row = this.closest('label');
       if (row) row.style.background = this.checked ? 'var(--brand-50)' : 'var(--surface)';
       updateSelStat();
@@ -268,54 +369,24 @@
     okBtn.addEventListener('click', function () {
       const name = (PCD.$('#slName', body).value || '').trim() || defaultName;
 
-      // Aggregate ingredients across recipes
-      // items: array of { ingredientId, name, unit, totalAmount, perRecipe: [{recipeName, amount, unit}], category }
-      const agg = {};
-      recipes.forEach(function (r) {
-        const target = portionsMap[r.id] || guestCount;
-        const factor = target / (r.servings || 1);
-        (r.ingredients || []).forEach(function (ri) {
-          const ing = ingMap[ri.ingredientId];
-          if (!ing) return;
-          const key = ri.ingredientId + '__' + (ri.unit || ing.unit);
-          if (!agg[key]) {
-            agg[key] = {
-              ingredientId: ri.ingredientId,
-              name: ing.name,
-              unit: ri.unit || ing.unit || '',
-              category: ing.category || 'cat_other',
-              totalAmount: 0,
-              perRecipe: [],
-            };
-          }
-          const scaled = (Number(ri.amount) || 0) * factor;
-          agg[key].totalAmount += scaled;
-          agg[key].perRecipe.push({ recipeName: r.name, amount: scaled, unit: ri.unit || ing.unit || '' });
-        });
-      });
-
-      const items = Object.values(agg).map(function (a) {
+      // Shopping list editor consolidates ingredients itself from recipes + portions.
+      // Send recipes with their target portion count.
+      const itemsForShopping = recipes.map(function (r) {
         return {
-          id: PCD.uid('sli'),
-          ingredientId: a.ingredientId,
-          name: a.name,
-          unit: a.unit,
-          amount: Number(a.totalAmount.toFixed(3)),
-          category: a.category,
-          perRecipe: a.perRecipe,
-          checked: false,
+          recipeId: r.id,
+          portions: portionsMap[r.id] != null ? portionsMap[r.id] : guestCount
         };
       });
 
       const list = {
         name: name,
-        sourceRecipes: recipes.map(function (r) { return { id: r.id, name: r.name, portions: portionsMap[r.id] || guestCount }; }),
+        items: itemsForShopping,
         guestCount: guestCount,
-        items: items,
+        groupBy: 'category',
         createdAt: new Date().toISOString(),
       };
       const saved = PCD.store.upsertInTable('shoppingLists', list, 'sl');
-      PCD.toast.success('Shopping list created · ' + items.length + ' items');
+      PCD.toast.success('Shopping list created · ' + recipes.length + ' recipes');
       m.close();
       // Navigate to shopping list view if available
       setTimeout(function () {

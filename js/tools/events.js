@@ -178,8 +178,9 @@
             <input type="number" class="input" id="ePrice" value="${data.pricePerHead || ''}" step="0.01" min="0">
           </div>
           <div class="field">
-            <label class="field-label">${t('event_budget')}</label>
-            <input type="number" class="input" id="eBudget" value="${data.budget || ''}" step="0.01" min="0">
+            <label class="field-label">Customer budget</label>
+            <input type="number" class="input" id="eBudget" value="${data.budget || ''}" step="0.01" min="0" placeholder="What the customer pays">
+            <div class="field-hint">Total amount the customer agreed to pay</div>
           </div>
         </div>
 
@@ -189,6 +190,19 @@
               <div class="stat-label">${t('event_total_cost')}</div>
               <div style="font-size:18px;font-weight:800;">${PCD.fmtMoney(stats.totalCost)}</div>
             </div>
+            ${data.budget > 0 ? (function () {
+              const remaining = (data.budget || 0) - stats.totalCost;
+              const usedPct = data.budget > 0 ? (stats.totalCost / data.budget) * 100 : 0;
+              const color = usedPct > 90 ? 'var(--danger)' : usedPct > 70 ? '#d97706' : 'var(--success)';
+              return '<div style="text-align:end;">' +
+                '<div class="stat-label">Customer budget</div>' +
+                '<div style="font-size:18px;font-weight:800;">' + PCD.fmtMoney(data.budget) + '</div>' +
+              '</div>' +
+              '<div style="text-align:end;">' +
+                '<div class="stat-label">Profit vs budget</div>' +
+                '<div style="font-size:18px;font-weight:800;color:' + color + ';">' + PCD.fmtMoney(remaining) + ' (' + (100 - usedPct).toFixed(0) + '%)</div>' +
+              '</div>';
+            })() : ''}
             ${stats.totalRevenue > 0 ? '<div style="text-align:end;"><div class="stat-label">' + t('event_total_revenue') + '</div><div style="font-size:18px;font-weight:800;">' + PCD.fmtMoney(stats.totalRevenue) + '</div></div>' : ''}
             ${stats.profit !== null ? '<div style="text-align:end;"><div class="stat-label">' + t('event_profit') + '</div><div style="font-size:18px;font-weight:800;color:' + (stats.profit >= 0 ? 'var(--success)' : 'var(--danger)') + ';">' + PCD.fmtMoney(stats.profit) + (stats.margin !== null ? ' (' + PCD.fmtPercent(stats.margin, 0) + ')' : '') + '</div></div>' : ''}
           </div>
@@ -262,7 +276,10 @@
         data.pricePerHead = parseFloat(this.value) || null;
         render();
       }, 400));
-      PCD.$('#eBudget', body).addEventListener('input', function () { data.budget = parseFloat(this.value) || null; });
+      PCD.$('#eBudget', body).addEventListener('input', PCD.debounce(function () {
+        data.budget = parseFloat(this.value) || null;
+        render();
+      }, 400));
       PCD.$('#eStatus', body).addEventListener('change', function () { data.status = this.value; });
       PCD.$('#eNotes', body).addEventListener('input', function () { data.notes = this.value; });
 
@@ -486,6 +503,7 @@
       : '') +
       '<div class="ev-summary">' +
         '<div class="ev-summary-row"><span>Total food cost</span><span>' + PCD.fmtMoney(stats.totalCost) + '</span></div>' +
+        (event.budget > 0 ? '<div class="ev-summary-row"><span>Customer budget</span><span>' + PCD.fmtMoney(event.budget) + '</span></div>' : '') +
         (stats.totalRevenue > 0 ? '<div class="ev-summary-row"><span>Total revenue</span><span>' + PCD.fmtMoney(stats.totalRevenue) + '</span></div>' : '') +
         (stats.profit !== null ? '<div class="ev-summary-row total"><span>Profit' + (stats.margin !== null ? ' (' + PCD.fmtPercent(stats.margin, 0) + ')' : '') + '</span><span>' + PCD.fmtMoney(stats.profit) + '</span></div>' : '') +
       '</div>' +
