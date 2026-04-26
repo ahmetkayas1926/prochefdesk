@@ -235,8 +235,16 @@
         // If icon is short name (no emoji chars), render as SVG via PCD.icon
         const isIconName = typeof it.icon === 'string' && /^[a-z\-]+$/.test(it.icon);
         const iconHtml = isIconName ? PCD.icon(it.icon, 18) : it.icon;
+        // Resolve label with fallback chain: t_X_title → X_title → nav_X → key as-is
+        let label = t('t_' + it.key + '_title');
+        if (label === 't_' + it.key + '_title') label = t(it.key + '_title');
+        if (label === it.key + '_title') label = t('nav_' + it.key);
+        if (label === 'nav_' + it.key) {
+          // Last resort: capitalize the key
+          label = it.key.charAt(0).toUpperCase() + it.key.slice(1).replace(/_/g, ' ');
+        }
         b.innerHTML = '<span class="sidenav-item-icon">' + iconHtml + '</span>' +
-                      '<span>' + t('t_' + it.key + '_title') + '</span>';
+                      '<span>' + PCD.escapeHtml(label) + '</span>';
         container.appendChild(b);
       });
     });
@@ -305,7 +313,7 @@
     active.forEach(function (w) {
       const stats = workspaceStats(w.id);
       const isActive = w.id === activeId;
-      html += '<button data-pickws="' + w.id + '" class="ws-row' + (isActive ? ' active' : '') + '" style="display:flex;align-items:center;gap:12px;width:100%;padding:12px;border:1.5px solid ' + (isActive ? 'var(--brand-600)' : 'var(--border)') + ';border-radius:var(--r-md);background:' + (isActive ? 'var(--brand-50)' : 'var(--surface)') + ';margin-bottom:6px;cursor:pointer;text-align:start;">' +
+      html += '<div data-pickws="' + w.id + '" role="button" tabindex="0" class="ws-row' + (isActive ? ' active' : '') + '" style="display:flex;align-items:center;gap:12px;width:100%;padding:12px;border:1.5px solid ' + (isActive ? 'var(--brand-600)' : 'var(--border)') + ';border-radius:var(--r-md);background:' + (isActive ? 'var(--brand-50)' : 'var(--surface)') + ';margin-bottom:6px;cursor:pointer;text-align:start;box-sizing:border-box;">' +
         '<div style="width:36px;height:36px;border-radius:8px;background:' + wsColorHex(w.color) + ';color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + PCD.icon(w.icon || 'chef-hat', 18) + '</div>' +
         '<div style="flex:1;min-width:0;">' +
           '<div style="font-weight:700;font-size:14px;">' + PCD.escapeHtml(w.name) + (isActive ? ' <span style="font-size:10px;color:var(--brand-700);font-weight:700;letter-spacing:0.04em;">· ACTIVE</span>' : '') + '</div>' +
@@ -314,8 +322,8 @@
             stats.recipes + ' recipes · ' + stats.menus + ' menus' +
           '</div>' +
         '</div>' +
-        '<button class="icon-btn" data-edit-ws="' + w.id + '" title="Edit workspace" onclick="event.stopPropagation()" style="flex-shrink:0;">' + PCD.icon('edit', 16) + '</button>' +
-      '</button>';
+        '<button type="button" class="icon-btn" data-edit-ws="' + w.id + '" title="Edit workspace" style="flex-shrink:0;">' + PCD.icon('edit', 16) + '</button>' +
+      '</div>';
     });
     html += '</div>';
 
@@ -323,13 +331,13 @@
       html += '<div style="margin-top:14px;">' +
         '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Archived</div>';
       archived.forEach(function (w) {
-        html += '<button data-pickws="' + w.id + '" class="ws-row" style="display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);margin-bottom:6px;cursor:pointer;opacity:0.6;text-align:start;">' +
+        html += '<div data-pickws="' + w.id + '" role="button" tabindex="0" class="ws-row" style="display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);margin-bottom:6px;cursor:pointer;opacity:0.6;text-align:start;box-sizing:border-box;">' +
           '<div style="width:32px;height:32px;border-radius:8px;background:var(--text-3);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + PCD.icon('archive', 16) + '</div>' +
           '<div style="flex:1;min-width:0;">' +
             '<div style="font-weight:600;font-size:13px;">' + PCD.escapeHtml(w.name) + '</div>' +
             '<div class="text-muted" style="font-size:11px;">Archived' + (w.concept ? ' · ' + PCD.escapeHtml(w.concept) : '') + '</div>' +
           '</div>' +
-        '</button>';
+        '</div>';
       });
       html += '</div>';
     }
@@ -375,8 +383,9 @@
 
     PCD.on(body, 'click', '[data-edit-ws]', function (e) {
       e.stopPropagation();
+      const wsId = this.getAttribute('data-edit-ws');
       m.close();
-      setTimeout(function () { openWorkspaceEditor(this.getAttribute('data-edit-ws')); }.bind(this), 200);
+      setTimeout(function () { openWorkspaceEditor(wsId); }, 200);
     });
 
     PCD.$('#newWsBtn', body).addEventListener('click', function () {
@@ -435,19 +444,34 @@
         '</div>' +
 
         '<div class="field"><label class="field-label">Color</label>' +
-          '<div style="display:flex;gap:8px;flex-wrap:wrap;" id="wsColors">' +
-            WS_COLORS.map(function (c) {
-              const isSel = data.color === c.id;
-              return '<button type="button" data-color="' + c.id + '" style="width:36px;height:36px;border-radius:8px;background:' + c.hex + ';border:3px solid ' + (isSel ? '#fff' : c.hex) + ';outline:' + (isSel ? '2px solid ' + c.hex : 'none') + ';cursor:pointer;"></button>';
-            }).join('') +
-          '</div>' +
+          '<div style="display:flex;gap:8px;flex-wrap:wrap;" id="wsColors"></div>' +
         '</div>';
+      paintColors();
 
-      PCD.on(body, 'click', '[data-color]', function () {
-        data.color = this.getAttribute('data-color');
-        buildBody();
-      });
+      // Live sync to data on each keystroke (so color clicks don't lose user's text)
+      PCD.on(body, 'input', '#wsNameInp', function () { data.name = this.value; });
+      PCD.on(body, 'input', '#wsConcept', function () { data.concept = this.value; });
+      PCD.on(body, 'input', '#wsRole', function () { data.role = this.value; });
+      PCD.on(body, 'input', '#wsCity', function () { data.city = this.value; });
+      PCD.on(body, 'input', '#wsStart', function () { data.periodStart = this.value ? this.value + '-01' : null; });
+      PCD.on(body, 'input', '#wsEnd', function () { data.periodEnd = this.value ? this.value + '-01' : null; });
     }
+
+    function paintColors() {
+      const wrap = PCD.$('#wsColors', body);
+      if (!wrap) return;
+      wrap.innerHTML = WS_COLORS.map(function (c) {
+        const isSel = data.color === c.id;
+        return '<button type="button" data-color="' + c.id + '" style="width:36px;height:36px;border-radius:8px;background:' + c.hex + ';border:3px solid ' + (isSel ? '#fff' : c.hex) + ';outline:' + (isSel ? '2px solid ' + c.hex : 'none') + ';cursor:pointer;"></button>';
+      }).join('');
+    }
+
+    // Color click: only repaint colors, preserve all input values
+    PCD.on(body, 'click', '[data-color]', function () {
+      data.color = this.getAttribute('data-color');
+      paintColors();
+    });
+
     buildBody();
 
     const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') });
@@ -505,21 +529,31 @@
       });
     });
     saveBtn.addEventListener('click', function () {
-      data.name = (PCD.$('#wsNameInp', body).value || '').trim();
+      // Read fresh values from DOM as safety net (in case input listeners didn't fire)
+      const nameInp = PCD.$('#wsNameInp', body);
+      const conceptInp = PCD.$('#wsConcept', body);
+      const roleInp = PCD.$('#wsRole', body);
+      const cityInp = PCD.$('#wsCity', body);
+      const startInp = PCD.$('#wsStart', body);
+      const endInp = PCD.$('#wsEnd', body);
+      if (nameInp) data.name = (nameInp.value || '').trim();
+      if (conceptInp) data.concept = (conceptInp.value || '').trim();
+      if (roleInp) data.role = (roleInp.value || '').trim();
+      if (cityInp) data.city = (cityInp.value || '').trim();
+      if (startInp) data.periodStart = startInp.value ? startInp.value + '-01' : null;
+      if (endInp) data.periodEnd = endInp.value ? endInp.value + '-01' : null;
+
       if (!data.name) { PCD.toast.error('Name required'); return; }
-      data.concept = (PCD.$('#wsConcept', body).value || '').trim();
-      data.role = (PCD.$('#wsRole', body).value || '').trim();
-      data.city = (PCD.$('#wsCity', body).value || '').trim();
-      const startVal = PCD.$('#wsStart', body).value;
-      const endVal = PCD.$('#wsEnd', body).value;
-      data.periodStart = startVal ? startVal + '-01' : null;
-      data.periodEnd = endVal ? endVal + '-01' : null;
       if (existing) data.id = existing.id;
       const isNew = !existing;
       const saved = PCD.store.upsertWorkspace(data);
+      if (!saved || !saved.id) {
+        PCD.toast.error('Save failed');
+        return;
+      }
       // For brand new workspace, switch to it
       if (isNew) PCD.store.setActiveWorkspaceId(saved.id);
-      PCD.toast.success(t('saved'));
+      PCD.toast.success(t('saved') || 'Saved');
       m.close();
       setTimeout(function () {
         if (isNew) window.location.reload();
@@ -543,11 +577,14 @@
     }).then(function (sel) {
       if (!sel || !sel.length) return;
       PCD.i18n.setLocale(sel[0]);
-      // Re-render current view
+      // Re-render current view to apply new translations
       const view = PCD.$('#view');
-      const cur = PCD.router.currentView();
-      if (cur && PCD.tools[cur]) PCD.tools[cur].render(view);
+      const cur = PCD.router.currentView() || 'dashboard';
+      if (view && PCD.tools[cur] && typeof PCD.tools[cur].render === 'function') {
+        try { PCD.tools[cur].render(view); } catch (e) { PCD.error && PCD.error(e); }
+      }
       populateSidenav();
+      refreshWorkspaceLabel();
     });
   }
 

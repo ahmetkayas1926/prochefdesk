@@ -306,6 +306,8 @@
       if (!state.workspaces[wsId]) return false;
       state.activeWorkspaceId = wsId;
       emit('activeWorkspaceId', wsId, null);
+      // Immediate localStorage write (bypass debounce) so a reload right after won't lose this
+      try { localStorage.setItem(LS_KEY_STATE, JSON.stringify(state)); } catch (e) {}
       persist();
       return true;
     },
@@ -326,6 +328,7 @@
       next[ws.id] = ws;
       state.workspaces = next;
       emit('workspaces', next, null);
+      try { localStorage.setItem(LS_KEY_STATE, JSON.stringify(state)); } catch (e) {}
       persist();
       return ws;
     },
@@ -342,6 +345,7 @@
         ensureActiveWorkspace();
       }
       emit('workspaces', next, null);
+      try { localStorage.setItem(LS_KEY_STATE, JSON.stringify(state)); } catch (e) {}
       persist();
       return true;
     },
@@ -365,6 +369,7 @@
         state.activeWorkspaceId = remaining[0];
       }
       emit('workspaces', next, null);
+      try { localStorage.setItem(LS_KEY_STATE, JSON.stringify(state)); } catch (e) {}
       persist();
       return true;
     },

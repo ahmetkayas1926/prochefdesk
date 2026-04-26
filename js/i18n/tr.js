@@ -204,6 +204,8 @@ window.PCD.i18n.register('tr', {
   t_suppliers_desc: 'Satıcı yönetimi',
   t_checklists_title: 'Vardiya Listeleri',
   t_checklists_desc: 'Açılış, kapanış, temizlik',
+  t_checklist_title: 'Kontrol Listeleri',
+  t_account_title: 'Profil ve Ayarlar',
   t_nutrition_title: 'Besin Değerleri',
   t_nutrition_desc: 'Makrolar ve alerjenler',
   t_menu_engineering_title: 'Menü Matrisi',

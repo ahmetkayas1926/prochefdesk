@@ -93,7 +93,7 @@
 
     // Greeting with time-of-day awareness
     const hour = new Date().getHours();
-    const greet = hour < 12 ? 'Good morning' : (hour < 18 ? 'Good afternoon' : 'Good evening');
+    const greet = hour < 12 ? t('dash_good_morning') : (hour < 18 ? t('dash_good_afternoon') : t('dash_good_evening'));
     const firstName = (user && user.name) ? user.name.split(' ')[0] : '';
     const headline = greet + (firstName ? ', ' + PCD.escapeHtml(firstName) : '');
     const todayStr = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
@@ -165,10 +165,10 @@
           '<div class="dash-card priority-warn" data-action="view-inventory" style="cursor:pointer;">' +
             '<div class="dash-card-icon" style="background:#fef3c7;color:#92400e;">' + PCD.icon('clock', 22) + '</div>' +
             '<div class="dash-card-body">' +
-              '<div class="dash-card-title">Stock count awaits approval</div>' +
-              '<div class="dash-card-desc">By ' + PCD.escapeHtml(pending.countedBy) + ' · ' + PCD.fmtRelTime(pending.countedAt) + ' · ' + Object.keys(pending.counts || {}).length + ' items</div>' +
+              '<div class="dash-card-title">' + t('dash_pending_count') + '</div>' +
+              '<div class="dash-card-desc">' + t('dash_pending_count_desc', { name: PCD.escapeHtml(pending.countedBy), time: PCD.fmtRelTime(pending.countedAt), n: Object.keys(pending.counts || {}).length }) + '</div>' +
             '</div>' +
-            '<div class="dash-card-cta">Review →</div>' +
+            '<div class="dash-card-cta">' + t('dash_review_cta') + '</div>' +
           '</div>'
       });
     }
@@ -177,7 +177,9 @@
     if (nextEvent) {
       const evDate = new Date(nextEvent.date);
       const isToday = nextEvent.date === todayIso;
-      const dayLabel = isToday ? 'Today' : (nextEvent.date === new Date(today.getTime() + 86400000).toISOString().slice(0, 10) ? 'Tomorrow' : evDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }));
+      const dayLabel = isToday ? t('dash_today') : (nextEvent.date === new Date(today.getTime() + 86400000).toISOString().slice(0, 10) ? t('dash_tomorrow') : evDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }));
+      const guestStr = nextEvent.guestCount ? t('dash_guests_suffix', { n: nextEvent.guestCount }) : '';
+      const venueStr = nextEvent.venue ? t('dash_venue_suffix', { venue: PCD.escapeHtml(nextEvent.venue) }) : '';
       cards.push({
         priority: isToday ? 1 : 3,
         html:
@@ -185,9 +187,9 @@
             '<div class="dash-card-icon" style="background:var(--brand-50);color:var(--brand-700);">' + PCD.icon('calendar', 22) + '</div>' +
             '<div class="dash-card-body">' +
               '<div class="dash-card-title">' + PCD.escapeHtml(nextEvent.name) + '</div>' +
-              '<div class="dash-card-desc">' + dayLabel + (nextEvent.guestCount ? ' · ' + nextEvent.guestCount + ' guests' : '') + (nextEvent.venue ? ' · ' + PCD.escapeHtml(nextEvent.venue) : '') + '</div>' +
+              '<div class="dash-card-desc">' + dayLabel + guestStr + venueStr + '</div>' +
             '</div>' +
-            '<div class="dash-card-cta">Open →</div>' +
+            '<div class="dash-card-cta">' + t('dash_open_cta') + '</div>' +
           '</div>'
       });
     }
@@ -204,10 +206,10 @@
           '<div class="dash-card" data-action="view-checklist" style="cursor:pointer;">' +
             '<div class="dash-card-icon" style="background:#dbeafe;color:#1e40af;">' + PCD.icon('check-square', 22) + '</div>' +
             '<div class="dash-card-body">' +
-              '<div class="dash-card-title">' + activeSessions.length + ' checklist' + (activeSessions.length === 1 ? '' : 's') + ' in progress</div>' +
-              '<div class="dash-card-desc">' + PCD.escapeHtml(s.templateName || 'Session') + ' · ' + done + '/' + total + ' (' + pct + '%)</div>' +
+              '<div class="dash-card-title">' + t('dash_active_checklists', { n: activeSessions.length, s: activeSessions.length === 1 ? '' : 's' }) + '</div>' +
+              '<div class="dash-card-desc">' + t('dash_session_progress', { name: PCD.escapeHtml(s.templateName || 'Session'), done: done, total: total, pct: pct }) + '</div>' +
             '</div>' +
-            '<div class="dash-card-cta">Continue →</div>' +
+            '<div class="dash-card-cta">' + t('dash_continue_cta') + '</div>' +
           '</div>'
       });
     }
@@ -215,17 +217,17 @@
     // CARD: Critical stock
     if (criticalStock.length > 0) {
       const sample = criticalStock.slice(0, 3).map(function (x) { return x.ing.name; }).join(', ');
-      const more = criticalStock.length > 3 ? ' +' + (criticalStock.length - 3) + ' more' : '';
+      const more = criticalStock.length > 3 ? ' +' + (criticalStock.length - 3) : '';
       cards.push({
         priority: 1,
         html:
           '<div class="dash-card priority-warn" data-action="view-inventory" style="cursor:pointer;">' +
             '<div class="dash-card-icon" style="background:#fee2e2;color:#991b1b;">' + PCD.icon('alert-triangle', 22) + '</div>' +
             '<div class="dash-card-body">' +
-              '<div class="dash-card-title">' + criticalStock.length + ' item' + (criticalStock.length === 1 ? '' : 's') + ' need ordering now</div>' +
+              '<div class="dash-card-title">' + t('dash_critical_stock', { n: criticalStock.length, s: criticalStock.length === 1 ? '' : 's' }) + '</div>' +
               '<div class="dash-card-desc">' + PCD.escapeHtml(sample) + more + '</div>' +
             '</div>' +
-            '<div class="dash-card-cta">Order →</div>' +
+            '<div class="dash-card-cta">' + t('dash_order_cta') + '</div>' +
           '</div>'
       });
     } else if (lowStockItems.length > 0) {
@@ -235,10 +237,10 @@
           '<div class="dash-card" data-action="view-inventory" style="cursor:pointer;">' +
             '<div class="dash-card-icon" style="background:#fef3c7;color:#92400e;">' + PCD.icon('package', 22) + '</div>' +
             '<div class="dash-card-body">' +
-              '<div class="dash-card-title">' + lowStockItems.length + ' item' + (lowStockItems.length === 1 ? '' : 's') + ' running low</div>' +
-              '<div class="dash-card-desc">Below par level — plan to reorder soon</div>' +
+              '<div class="dash-card-title">' + t('dash_low_stock', { n: lowStockItems.length, s: lowStockItems.length === 1 ? '' : 's' }) + '</div>' +
+              '<div class="dash-card-desc">' + t('dash_low_stock_desc') + '</div>' +
             '</div>' +
-            '<div class="dash-card-cta">Review →</div>' +
+            '<div class="dash-card-cta">' + t('dash_review_cta') + '</div>' +
           '</div>'
       });
     }
@@ -251,10 +253,10 @@
           '<div class="dash-card" data-action="view-waste" style="cursor:pointer;">' +
             '<div class="dash-card-icon" style="background:#fee2e2;color:#991b1b;">' + PCD.icon('recycle', 22) + '</div>' +
             '<div class="dash-card-body">' +
-              '<div class="dash-card-title">Today\'s waste: ' + PCD.fmtMoney(todayWasteCost) + '</div>' +
-              '<div class="dash-card-desc">' + todayWaste.length + ' entr' + (todayWaste.length === 1 ? 'y' : 'ies') + ' logged today</div>' +
+              '<div class="dash-card-title">' + t('dash_today_waste', { amount: PCD.fmtMoney(todayWasteCost) }) + '</div>' +
+              '<div class="dash-card-desc">' + t('dash_today_waste_desc', { n: todayWaste.length, y: todayWaste.length === 1 ? 'y' : 'ies' }) + '</div>' +
             '</div>' +
-            '<div class="dash-card-cta">Log →</div>' +
+            '<div class="dash-card-cta">' + t('dash_log_waste') + ' →</div>' +
           '</div>'
       });
     }
@@ -300,25 +302,25 @@
       (cards.length > 0
         ? '<div>' + cards.map(function (c) { return c.html; }).join('') + '</div>'
         : '<div class="dash-empty">' +
-            '<div class="dash-empty-title">All clear today ✓</div>' +
-            '<div>Nothing pressing — start cooking or planning ahead</div>' +
+            '<div class="dash-empty-title">' + t('dash_all_clear') + '</div>' +
+            '<div>' + t('dash_nothing_pressing') + '</div>' +
           '</div>'
       ) +
 
       // Quick actions
       '<div class="dash-quick">' +
-        '<button data-action="new-recipe"><span class="icn">' + PCD.icon('book-open', 20) + '</span><span class="lbl">New recipe</span></button>' +
-        '<button data-action="new-event"><span class="icn">' + PCD.icon('calendar', 20) + '</span><span class="lbl">New event</span></button>' +
-        '<button data-action="log-waste"><span class="icn">' + PCD.icon('recycle', 20) + '</span><span class="lbl">Log waste</span></button>' +
-        '<button data-action="start-checklist"><span class="icn">' + PCD.icon('check-square', 20) + '</span><span class="lbl">Start checklist</span></button>' +
-        '<button data-action="count-stock"><span class="icn">' + PCD.icon('package', 20) + '</span><span class="lbl">Count stock</span></button>' +
+        '<button data-action="new-recipe"><span class="icn">' + PCD.icon('book-open', 20) + '</span><span class="lbl">' + t('dash_new_recipe') + '</span></button>' +
+        '<button data-action="new-event"><span class="icn">' + PCD.icon('calendar', 20) + '</span><span class="lbl">' + t('dash_new_event') + '</span></button>' +
+        '<button data-action="log-waste"><span class="icn">' + PCD.icon('recycle', 20) + '</span><span class="lbl">' + t('dash_log_waste') + '</span></button>' +
+        '<button data-action="start-checklist"><span class="icn">' + PCD.icon('check-square', 20) + '</span><span class="lbl">' + t('dash_start_checklist') + '</span></button>' +
+        '<button data-action="count-stock"><span class="icn">' + PCD.icon('package', 20) + '</span><span class="lbl">' + t('dash_count_stock') + '</span></button>' +
       '</div>' +
 
       // Library stats (small footer)
       '<div class="dash-stats">' +
-        '<div class="dash-stat"><div class="dash-stat-num">' + stats.recipes + '</div><div class="dash-stat-lbl">Recipes</div></div>' +
-        '<div class="dash-stat"><div class="dash-stat-num">' + stats.ingredients + '</div><div class="dash-stat-lbl">Ingredients</div></div>' +
-        '<div class="dash-stat"><div class="dash-stat-num">' + stats.menus + '</div><div class="dash-stat-lbl">Menus</div></div>' +
+        '<div class="dash-stat"><div class="dash-stat-num">' + stats.recipes + '</div><div class="dash-stat-lbl">' + t('dash_recipes_label') + '</div></div>' +
+        '<div class="dash-stat"><div class="dash-stat-num">' + stats.ingredients + '</div><div class="dash-stat-lbl">' + t('dash_ingredients_label') + '</div></div>' +
+        '<div class="dash-stat"><div class="dash-stat-num">' + stats.menus + '</div><div class="dash-stat-lbl">' + t('dash_menus_label') + '</div></div>' +
       '</div>';
 
     // Wire actions

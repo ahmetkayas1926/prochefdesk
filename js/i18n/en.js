@@ -214,6 +214,8 @@ window.PCD.i18n.register('en', {
   t_suppliers_desc: 'Vendor management',
   t_checklists_title: 'Shift Checklists',
   t_checklists_desc: 'Opening, closing, cleaning',
+  t_checklist_title: 'Checklists',
+  t_account_title: 'Profile & Settings',
   t_nutrition_title: 'Nutrition',
   t_nutrition_desc: 'Macros & allergen info',
   t_menu_engineering_title: 'Menu Matrix',

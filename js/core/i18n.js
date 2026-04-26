@@ -30,6 +30,14 @@
       i18n.currentDir = dir;
       i18n.applyAll();
       if (PCD.store) PCD.store.set('prefs.locale', locale);
+      // Auto re-render current view so all string update immediately
+      if (PCD.router && PCD.tools) {
+        const cur = PCD.router.currentView() || 'dashboard';
+        const view = document.getElementById('view');
+        if (view && PCD.tools[cur] && typeof PCD.tools[cur].render === 'function') {
+          try { PCD.tools[cur].render(view); } catch (e) { /* ignore */ }
+        }
+      }
       PCD.log('Locale set to', locale);
       return true;
     },
