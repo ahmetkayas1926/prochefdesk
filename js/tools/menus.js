@@ -440,8 +440,13 @@
       m.close();
       setTimeout(function () {
         const v = PCD.$('#view');
-        if (PCD.router.currentView() === 'menus') render(v);
-      }, 250);
+        // Always re-render the list view if we're on (or coming back to) the menus page.
+        // If currentView() is empty (router transition), check the route key directly.
+        const cur = (PCD.router && PCD.router.currentView && PCD.router.currentView()) || '';
+        if (cur === 'menus' || (location.hash && location.hash.indexOf('menus') >= 0) || !cur) {
+          if (v) render(v);
+        }
+      }, 200);
     });
   }
 

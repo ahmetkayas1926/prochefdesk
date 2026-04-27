@@ -387,19 +387,47 @@
         if (!ing) return;
         const key = ri.ingredientId + '|' + (ri.unit || ing.unit);
         if (!consolidated[key]) {
-          consolidated[key] = { ingredient: ing, unit: ri.unit || ing.unit, totalAmount: 0 };
+          consolidated[key] = {
+            ingredient: ing,
+            unit: ri.unit || ing.unit,
+            totalAmount: 0,
+            perRecipe: [],
+          };
         }
-        consolidated[key].totalAmount += (ri.amount || 0) * factor;
+        const scaled = (ri.amount || 0) * factor;
+        consolidated[key].totalAmount += scaled;
+        consolidated[key].perRecipe.push({
+          recipeName: r.name,
+          recipeId: r.id,
+          amount: scaled,
+          unit: ri.unit || ing.unit,
+        });
       });
     });
 
     const groupBy = list.groupBy || 'category';
     const groups = {};
-    Object.values(consolidated).forEach(function (c) {
-      const key = (groupBy === 'supplier') ? (c.ingredient.supplier || '(no supplier)') : t(c.ingredient.category || 'cat_other');
-      if (!groups[key]) groups[key] = [];
-      groups[key].push(c);
-    });
+
+    if (groupBy === 'recipe') {
+      // Group by source recipe — each ingredient appears under each recipe that uses it
+      Object.values(consolidated).forEach(function (c) {
+        (c.perRecipe || []).forEach(function (pr) {
+          const key = pr.recipeName;
+          if (!groups[key]) groups[key] = [];
+          groups[key].push({
+            ingredient: c.ingredient,
+            unit: pr.unit,
+            totalAmount: pr.amount,
+          });
+        });
+      });
+    } else {
+      Object.values(consolidated).forEach(function (c) {
+        const key = (groupBy === 'supplier') ? (c.ingredient.supplier || '(no supplier)') : t(c.ingredient.category || 'cat_other');
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(c);
+      });
+    }
 
     let groupsHtml = '';
     Object.keys(groups).sort().forEach(function (g) {
@@ -408,7 +436,7 @@
         groupsHtml += '<div class="shop-row">' +
           '<div class="shop-cb"></div>' +
           '<div class="shop-name">' + PCD.escapeHtml(c.ingredient.name) +
-            (c.ingredient.supplier && groupBy !== 'supplier' ? ' <span class="shop-note">· ' + PCD.escapeHtml(c.ingredient.supplier) + '</span>' : '') +
+            (c.ingredient.supplier && groupBy !== 'supplier' && groupBy !== 'recipe' ? ' <span class="shop-note">· ' + PCD.escapeHtml(c.ingredient.supplier) + '</span>' : '') +
           '</div>' +
           '<div class="shop-amt">' + PCD.fmtNumber(c.totalAmount) + ' ' + c.unit + '</div>' +
         '</div>';

@@ -122,6 +122,7 @@
           <div class="page-subtitle">${t('inventory_subtitle')}</div>
         </div>
         <div class="page-header-actions">
+          <button class="btn btn-outline btn-sm" id="historyHeaderBtn" title="View past stock counts">${PCD.icon('clock',14)} History</button>
           <button class="btn btn-outline btn-sm" id="bulkCountBtn">${PCD.icon('list',14)} Count Stock</button>
           <button class="btn btn-outline btn-sm" id="genOrderBtn">${PCD.icon('send',14)} Generate Order</button>
         </div>
@@ -233,30 +234,61 @@
         return (a.ing.name || '').localeCompare(b.ing.name || '');
       });
 
-      const cont = PCD.el('div', { class: 'flex flex-col gap-2' });
+      // Group by category — same as Bulk Count for consistency
+      const byCat = {};
       filtered.forEach(function (x) {
-        const row = PCD.el('div', { class: 'list-item', 'data-iid': x.ing.id });
-        const color = statusColor(x.status);
-        const stockText = x.row && x.row.stock != null
-          ? PCD.fmtNumber(x.row.stock) + ' ' + x.ing.unit
-          : '—';
-        const parText = x.row && x.row.parLevel != null
-          ? PCD.fmtNumber(x.row.parLevel) + ' ' + x.ing.unit
-          : '—';
-        row.innerHTML = `
-          <div class="list-item-thumb" style="background:${color};color:white;font-weight:700;">${statusLabel(x.status).charAt(0)}</div>
-          <div class="list-item-body">
-            <div class="list-item-title">${PCD.escapeHtml(x.ing.name)}</div>
-            <div class="list-item-meta">
-              <span><strong>${stockText}</strong> / ${parText}</span>
-              ${x.row && x.row.lastOrderedAt ? '<span>·</span><span>' + t('inv_last_ordered') + ': ' + PCD.fmtRelTime(x.row.lastOrderedAt) + '</span>' : ''}
+        const cat = x.ing.category || 'cat_other';
+        if (!byCat[cat]) byCat[cat] = [];
+        byCat[cat].push(x);
+      });
+
+      const cont = PCD.el('div');
+      Object.keys(byCat).sort().forEach(function (cat) {
+        const items = byCat[cat];
+        // Category counter — how many need attention?
+        const needAttention = items.filter(function (x) {
+          return x.status === 'out' || x.status === 'critical' || x.status === 'low';
+        }).length;
+
+        const sec = PCD.el('div', { style: { marginBottom: '14px' } });
+        sec.innerHTML =
+          '<div style="display:flex;align-items:baseline;justify-content:space-between;margin:8px 0 6px;padding:4px 2px;border-bottom:1px solid var(--border);">' +
+            '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;">' +
+              PCD.escapeHtml(t(cat) || cat) + ' (' + items.length + ')' +
+            '</div>' +
+            (needAttention > 0
+              ? '<div style="font-size:11px;font-weight:700;color:var(--danger);">' + needAttention + ' need order</div>'
+              : '<div style="font-size:11px;color:var(--success);">all ok</div>'
+            ) +
+          '</div>';
+
+        const list = PCD.el('div', { class: 'flex flex-col gap-2' });
+        items.forEach(function (x) {
+          const row = PCD.el('div', { class: 'list-item', 'data-iid': x.ing.id });
+          const color = statusColor(x.status);
+          const stockText = x.row && x.row.stock != null
+            ? PCD.fmtNumber(x.row.stock) + ' ' + x.ing.unit
+            : '—';
+          const parText = x.row && x.row.parLevel != null
+            ? PCD.fmtNumber(x.row.parLevel) + ' ' + x.ing.unit
+            : '—';
+          row.innerHTML = `
+            <div class="list-item-thumb" style="background:${color};color:white;font-weight:700;">${statusLabel(x.status).charAt(0)}</div>
+            <div class="list-item-body">
+              <div class="list-item-title">${PCD.escapeHtml(x.ing.name)}</div>
+              <div class="list-item-meta">
+                <span><strong>${stockText}</strong> / ${parText}</span>
+                ${x.row && x.row.lastOrderedAt ? '<span>·</span><span>' + t('inv_last_ordered') + ': ' + PCD.fmtRelTime(x.row.lastOrderedAt) + '</span>' : ''}
+              </div>
             </div>
-          </div>
-          <div style="flex-shrink:0;">
-            <span class="chip" style="background:${color}20;color:${color};font-weight:700;">${statusLabel(x.status)}</span>
-          </div>
-        `;
-        cont.appendChild(row);
+            <div style="flex-shrink:0;">
+              <span class="chip" style="background:${color}20;color:${color};font-weight:700;">${statusLabel(x.status)}</span>
+            </div>
+          `;
+          list.appendChild(row);
+        });
+        sec.appendChild(list);
+        cont.appendChild(sec);
       });
       listEl.appendChild(cont);
     }
@@ -278,6 +310,9 @@
 
     const bulkBtn = PCD.$('#bulkCountBtn', view);
     if (bulkBtn) bulkBtn.addEventListener('click', function () { openBulkCount(); });
+
+    const histHeaderBtn = PCD.$('#historyHeaderBtn', view);
+    if (histHeaderBtn) histHeaderBtn.addEventListener('click', function () { openStockCountHistory(); });
 
     const approveBtn = PCD.$('#approvePendingBtn', view);
     if (approveBtn) approveBtn.addEventListener('click', function () {
@@ -411,6 +446,173 @@
     });
   }
 
+  // ============ STOCK COUNT HISTORY ============
+  // Shows all past bulk counts with date, who counted, and the values.
+  function openStockCountHistory() {
+    const t = PCD.i18n.t;
+    const all = (PCD.store.listTable('stockCountHistory') || []).slice();
+    all.sort(function (a, b) { return (b.countedAt || '').localeCompare(a.countedAt || ''); });
+
+    const body = PCD.el('div');
+
+    function paintList() {
+      const list = (PCD.store.listTable('stockCountHistory') || []).slice();
+      list.sort(function (a, b) { return (b.countedAt || '').localeCompare(a.countedAt || ''); });
+      if (list.length === 0) {
+        body.innerHTML =
+          '<div class="empty" style="padding:30px 16px;">' +
+            '<div class="empty-icon" style="color:var(--brand-600);">' + PCD.icon('clock', 40) + '</div>' +
+            '<div class="empty-title">No stock counts yet</div>' +
+            '<div class="empty-desc">Each "Save All Counts" creates a dated snapshot. Open it later to see what was on hand on any given day.</div>' +
+          '</div>';
+        return;
+      }
+
+      let html = '<div class="text-muted text-sm mb-2">Most recent first. Each entry is a snapshot of stock at that moment.</div>';
+      list.forEach(function (snap) {
+        const date = new Date(snap.countedAt);
+        const dateStr = date.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+        const timeStr = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+        html += '<div class="card mb-2" data-snap="' + snap.id + '" style="padding:12px;cursor:pointer;">' +
+          '<div style="display:flex;align-items:center;gap:10px;">' +
+            '<div style="width:36px;height:36px;border-radius:6px;background:var(--brand-50);color:var(--brand-700);display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + PCD.icon('clock', 18) + '</div>' +
+            '<div style="flex:1;min-width:0;">' +
+              '<div style="font-weight:700;font-size:14px;">' + dateStr + ' · ' + timeStr + '</div>' +
+              '<div class="text-muted" style="font-size:12px;">' +
+                snap.itemCount + ' items counted' +
+                (snap.countedBy ? ' · by ' + PCD.escapeHtml(snap.countedBy) : '') +
+              '</div>' +
+            '</div>' +
+            '<button type="button" class="icon-btn" data-del-snap="' + snap.id + '" title="Delete snapshot">' + PCD.icon('trash', 16) + '</button>' +
+          '</div>' +
+        '</div>';
+      });
+      body.innerHTML = html;
+    }
+    paintList();
+
+    const closeBtn = PCD.el('button', { type: 'button', class: 'btn btn-secondary', text: t('close') || 'Close', style: { width: '100%' } });
+    const footer = PCD.el('div', { style: { width: '100%' } });
+    footer.appendChild(closeBtn);
+    const m = PCD.modal.open({ title: 'Stock count history', body: body, footer: footer, size: 'md', closable: true });
+    closeBtn.addEventListener('click', function () { m.close(); });
+
+    PCD.on(body, 'click', '[data-snap]', function (e) {
+      if (e.target.closest('[data-del-snap]')) return;
+      const id = this.getAttribute('data-snap');
+      const snap = PCD.store.getFromTable('stockCountHistory', id);
+      if (!snap) return;
+      m.close();
+      setTimeout(function () { openSnapshotDetail(snap); }, 200);
+    });
+    PCD.on(body, 'click', '[data-del-snap]', function (e) {
+      e.stopPropagation();
+      const id = this.getAttribute('data-del-snap');
+      PCD.modal.confirm({
+        icon: '🗑', iconKind: 'danger', danger: true,
+        title: 'Delete this count?',
+        text: 'This snapshot will be permanently removed from history. Inventory levels stay as they are.',
+        okText: 'Delete'
+      }).then(function (ok) {
+        if (!ok) return;
+        PCD.store.deleteFromTable('stockCountHistory', id);
+        PCD.toast.success('Snapshot deleted');
+        paintList();
+      });
+    });
+  }
+
+  function openSnapshotDetail(snap) {
+    const t = PCD.i18n.t;
+    const date = new Date(snap.countedAt);
+    const dateStr = date.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const timeStr = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+
+    // Group by category
+    const byCat = {};
+    Object.keys(snap.counts || {}).forEach(function (iid) {
+      const c = snap.counts[iid];
+      const cat = c.category || 'cat_other';
+      if (!byCat[cat]) byCat[cat] = [];
+      byCat[cat].push(c);
+    });
+
+    let html = '<div class="text-muted mb-3">' + dateStr + ' · ' + timeStr +
+      (snap.countedBy ? ' · by ' + PCD.escapeHtml(snap.countedBy) : '') +
+      ' · ' + snap.itemCount + ' items</div>';
+
+    Object.keys(byCat).sort().forEach(function (cat) {
+      html += '<div style="margin-bottom:14px;">' +
+        '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">' +
+          PCD.escapeHtml(PCD.i18n.t(cat) || cat) + ' (' + byCat[cat].length + ')</div>';
+      byCat[cat].forEach(function (c) {
+        html += '<div style="display:flex;justify-content:space-between;padding:6px 10px;border:1px solid var(--border);border-radius:6px;margin-bottom:3px;">' +
+          '<span style="font-weight:500;">' + PCD.escapeHtml(c.name) + '</span>' +
+          '<span style="font-weight:700;font-family:var(--font-mono);color:var(--brand-700);">' + PCD.fmtNumber(c.amount) + ' ' + PCD.escapeHtml(c.unit || '') + '</span>' +
+        '</div>';
+      });
+      html += '</div>';
+    });
+
+    const body = PCD.el('div');
+    body.innerHTML = html;
+
+    const closeBtn = PCD.el('button', { type: 'button', class: 'btn btn-secondary', text: 'Close' });
+    const printBtn = PCD.el('button', { type: 'button', class: 'btn btn-primary', style: { flex: '1' } });
+    printBtn.innerHTML = PCD.icon('print', 14) + ' <span>Print</span>';
+    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
+    footer.appendChild(closeBtn);
+    footer.appendChild(printBtn);
+
+    const m = PCD.modal.open({
+      title: 'Count snapshot · ' + dateStr,
+      body: body, footer: footer, size: 'md', closable: true
+    });
+    closeBtn.addEventListener('click', function () { m.close(); });
+    printBtn.addEventListener('click', function () { printSnapshot(snap); });
+  }
+
+  function printSnapshot(snap) {
+    const date = new Date(snap.countedAt);
+    const dateStr = date.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const timeStr = date.toLocaleTimeString();
+
+    const byCat = {};
+    Object.keys(snap.counts || {}).forEach(function (iid) {
+      const c = snap.counts[iid];
+      const cat = c.category || 'cat_other';
+      if (!byCat[cat]) byCat[cat] = [];
+      byCat[cat].push(c);
+    });
+
+    let body = '';
+    Object.keys(byCat).sort().forEach(function (cat) {
+      body += '<h2>' + PCD.escapeHtml(PCD.i18n.t(cat) || cat) + '</h2><table>';
+      byCat[cat].forEach(function (c) {
+        body += '<tr><td>' + PCD.escapeHtml(c.name) + '</td><td style="text-align:right;font-weight:700;">' + PCD.fmtNumber(c.amount) + ' ' + PCD.escapeHtml(c.unit || '') + '</td></tr>';
+      });
+      body += '</table>';
+    });
+
+    const html =
+      '<style>' +
+        '@page { size: A4; margin: 15mm; }' +
+        'body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; color: #1a1a1a; }' +
+        'h1 { font-size: 22pt; margin: 0; color: #16a34a; border-bottom: 3px solid #16a34a; padding-bottom: 8px; }' +
+        'h2 { font-size: 11pt; color: #16a34a; text-transform: uppercase; letter-spacing: 0.04em; margin: 20px 0 6px; }' +
+        'table { width: 100%; border-collapse: collapse; font-size: 10pt; }' +
+        'td { padding: 4px 8px; border-bottom: 1px solid #eee; }' +
+        '.meta { color: #666; font-size: 11pt; margin: 4px 0 14px; }' +
+      '</style>' +
+      '<h1>Stock Count</h1>' +
+      '<div class="meta">' + dateStr + ' · ' + timeStr +
+        (snap.countedBy ? ' · by ' + PCD.escapeHtml(snap.countedBy) : '') +
+        ' · ' + snap.itemCount + ' items</div>' +
+      body;
+
+    PCD.print(html, 'Stock Count ' + date.toISOString().slice(0, 10));
+  }
+
   function openBulkCount(options) {
     options = options || {};
     const mode = options.mode || 'single';
@@ -445,10 +647,14 @@
     function renderBody() {
       const done = countCompleted();
       let html = '<div class="mb-3" style="padding:12px;background:var(--brand-50);border-radius:var(--r-md);position:sticky;top:0;z-index:3;">' +
-        '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">' +
           '<div><div style="font-weight:700;">Count Stock</div>' +
           '<div class="text-muted text-sm" id="countProgress">' + done + ' / ' + ings.length + ' counted</div></div>' +
-          '<input type="search" id="countSearch" placeholder="Filter..." style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--r-sm);font-size:13px;width:140px;">' +
+          '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">' +
+            '<input type="search" id="countSearch" placeholder="Filter..." style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--r-sm);font-size:13px;width:140px;">' +
+            '<button type="button" class="btn btn-outline btn-sm" id="clearAllBtn" title="Clear all values">' + PCD.icon('x', 14) + ' <span>Clear</span></button>' +
+            '<button type="button" class="btn btn-outline btn-sm" id="historyBtn" title="View past counts">' + PCD.icon('clock', 14) + ' <span>History</span></button>' +
+          '</div>' +
         '</div></div>';
 
       const cats = Object.keys(byCat).sort();
@@ -459,8 +665,15 @@
         byCat[c].forEach(function (i) {
           const val = draft[i.id] || '';
           const filled = val !== '';
+          const row = invAll[i.id];
+          const lastSeen = (row && row.lastCountedAt)
+            ? '<div class="text-muted" style="font-size:10px;line-height:1;">last: ' + PCD.fmtRelTime(row.lastCountedAt) + '</div>'
+            : '';
           html += '<div class="count-row" data-iid="' + i.id + '" data-name="' + PCD.escapeHtml((i.name || '').toLowerCase()) + '" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:4px;background:' + (filled ? 'var(--brand-50)' : 'var(--surface)') + ';">' +
-            '<div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:' + (filled ? '600' : '500') + ';">' + PCD.escapeHtml(i.name) + '</div>' +
+            '<div style="flex:1;min-width:0;">' +
+              '<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:' + (filled ? '600' : '500') + ';">' + PCD.escapeHtml(i.name) + '</div>' +
+              lastSeen +
+            '</div>' +
             '<input type="number" class="input count-input" data-iid="' + i.id + '" value="' + PCD.escapeHtml(val) + '" step="0.01" min="0" placeholder="—" style="width:90px;text-align:center;font-weight:700;font-family:var(--font-mono);padding:6px 8px;min-height:36px;">' +
             '<span class="text-muted" style="font-size:12px;width:36px;flex-shrink:0;">' + (i.unit || '') + '</span>' +
           '</div>';
@@ -484,6 +697,25 @@
           });
         });
       }
+
+      // Clear all values in the bulk count modal
+      const clearBtn = PCD.$('#clearAllBtn', body);
+      if (clearBtn) clearBtn.addEventListener('click', function () {
+        PCD.modal.confirm({
+          title: 'Clear all counts?',
+          text: 'This will empty all the count inputs above. Saved inventory levels are NOT affected — only the current form.',
+          okText: 'Clear all', cancelText: 'Cancel'
+        }).then(function (ok) {
+          if (!ok) return;
+          ings.forEach(function (i) { draft[i.id] = ''; });
+          renderBody();
+          PCD.toast.success('All counts cleared');
+        });
+      });
+
+      // Open count history
+      const histBtn = PCD.$('#historyBtn', body);
+      if (histBtn) histBtn.addEventListener('click', function () { openStockCountHistory(); });
 
       // Update progress on input change
       PCD.on(body, 'input', '.count-input', function () {
@@ -590,18 +822,46 @@
     });
   }
 
-  function applyCountsToInventory(countedValues) {
+  function applyCountsToInventory(countedValues, options) {
+    options = options || {};
     const cur = readInventory();
     const next = Object.assign({}, cur);
     const now = new Date().toISOString();
+    const snapshot = {
+      countedAt: now,
+      countedBy: (PCD.store.get('user') && PCD.store.get('user').name) || 'You',
+      counts: {},  // ingredientId → { amount, unit, name }
+      itemCount: 0,
+    };
+
+    const ingMap = {};
+    PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
+
     Object.keys(countedValues).forEach(function (iid) {
       const num = countedValues[iid];
+      if (num == null || num === '' || isNaN(Number(num))) return;
       const row = next[iid] || { stock: null, parLevel: null, minLevel: null };
-      row.stock = num;
+      row.stock = Number(num);
       row.lastCountedAt = now;
       next[iid] = row;
+      // Snapshot record
+      const ing = ingMap[iid];
+      snapshot.counts[iid] = {
+        amount: Number(num),
+        unit: ing ? ing.unit : '',
+        name: ing ? ing.name : '?',
+        category: ing ? ing.category : 'cat_other',
+      };
+      snapshot.itemCount++;
     });
     writeInventory(next);
+
+    // Save snapshot to history (workspace-scoped)
+    if (snapshot.itemCount > 0 && !options.skipHistory) {
+      try {
+        PCD.store.upsertInTable('stockCountHistory', snapshot, 'sch');
+      } catch (e) { /* table may not exist yet — silently */ }
+    }
   }
 
   function promptGenerateOrdersAfterCount() {

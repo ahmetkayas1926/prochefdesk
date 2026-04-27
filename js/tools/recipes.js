@@ -50,13 +50,14 @@
       </div>
 
       <div id="bulkBar" class="card" style="display:none;padding:10px 12px;margin-bottom:12px;background:var(--brand-50);border-color:var(--brand-300);position:sticky;top:0;z-index:5;">
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between" style="flex-wrap:wrap;gap:8px;">
           <div class="flex items-center gap-3">
             <label class="checkbox" style="min-height:auto;"><input type="checkbox" id="selAll"><span class="text-sm font-semibold"><span id="selCount">0</span> ${t('selected')}</span></label>
           </div>
-          <div class="flex gap-2">
-            <button class="btn btn-danger btn-sm" id="bulkDelete">${PCD.icon('trash',14)} ${t('delete')}</button>
-            <button class="btn btn-ghost btn-sm" id="exitSelect">${t('cancel')}</button>
+          <div class="flex gap-2" style="flex-wrap:wrap;">
+            <button type="button" class="btn btn-primary btn-sm" id="bulkCostReport">${PCD.icon('activity',14)} <span>Cost Report</span></button>
+            <button type="button" class="btn btn-danger btn-sm" id="bulkDelete">${PCD.icon('trash',14)} ${t('delete')}</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="exitSelect">${t('cancel')}</button>
           </div>
         </div>
       </div>
@@ -205,6 +206,13 @@
         render(view);
       });
     });
+    PCD.$('#bulkCostReport', view).addEventListener('click', function () {
+      if (selectedIds.size === 0) {
+        PCD.toast.info('Select at least one recipe');
+        return;
+      }
+      openCostReport(Array.from(selectedIds));
+    });
 
     PCD.$('#recipeSearch', view).addEventListener('input', PCD.debounce(function (e) {
       filter = e.target.value;
@@ -280,6 +288,447 @@
   }
 
   // ============ PREVIEW ============
+  // ============ COST REPORT ============
+  // Multi-recipe cost report. Shows detailed breakdown, lets user override
+  // sale price live, exports to PDF or Excel.
+  function openCostReport(recipeIds) {
+    const t = PCD.i18n.t;
+    const TARGET_FOOD_COST_PCT = 30;  // industry standard
+    const ingMap = currentIngMap();
+
+    // Collect recipes + working prices (user-editable copy)
+    const items = [];
+    recipeIds.forEach(function (rid) {
+      const r = PCD.store.getRecipe(rid);
+      if (!r) return;
+      const totalCost = PCD.recipes.computeFoodCost(r, ingMap, PCD.recipes.buildRecipeMap());
+      const servings = r.servings || 1;
+      const costPerServing = totalCost / servings;
+      const currentPrice = r.salePrice != null ? Number(r.salePrice) : null;
+      const suggestedPrice = costPerServing > 0 ? (costPerServing / (TARGET_FOOD_COST_PCT / 100)) : 0;
+      items.push({
+        recipe: r,
+        totalCost: totalCost,
+        servings: servings,
+        costPerServing: costPerServing,
+        currentPrice: currentPrice,
+        suggestedPrice: suggestedPrice,
+        // User-editable working price for live testing
+        testPrice: currentPrice != null ? currentPrice : suggestedPrice,
+      });
+    });
+
+    if (items.length === 0) {
+      PCD.toast.error('No recipes to report');
+      return;
+    }
+
+    const body = PCD.el('div');
+    function paint() {
+      let summaryTotalCost = 0;
+      let summaryTotalRevenue = 0;
+      let html = '<div class="text-muted text-sm mb-3">' +
+        items.length + ' recipe' + (items.length === 1 ? '' : 's') +
+        ' · Target food cost: <strong>' + TARGET_FOOD_COST_PCT + '%</strong>' +
+        ' · Tip: edit "Test price" to see live food cost % updates.' +
+      '</div>';
+
+      items.forEach(function (it, idx) {
+        const r = it.recipe;
+        summaryTotalCost += it.totalCost;
+        summaryTotalRevenue += (it.testPrice || 0) * it.servings;
+        const fcPct = (it.testPrice && it.testPrice > 0) ? (it.costPerServing / it.testPrice) * 100 : 0;
+        const status = fcPct === 0 ? 'gray' : fcPct < 25 ? 'green' : fcPct < 35 ? 'amber' : 'red';
+        const statusColor = status === 'green' ? 'var(--success)' : status === 'amber' ? '#d97706' : status === 'red' ? 'var(--danger)' : 'var(--text-3)';
+
+        // Ingredient table
+        let ingRowsHtml = '';
+        (r.ingredients || []).forEach(function (ri) {
+          const ing = ingMap[ri.ingredientId];
+          if (!ing) return;
+          const unitPrice = Number(ing.pricePerUnit) || 0;
+          const amt = Number(ri.amount) || 0;
+          let lineCost = amt * unitPrice;
+          if (ri.unit && ing.unit && ri.unit !== ing.unit) {
+            try { lineCost = PCD.convertUnit(amt, ri.unit, ing.unit) * unitPrice; } catch (e) {}
+          }
+          ingRowsHtml +=
+            '<tr>' +
+              '<td style="padding:4px 8px;border-bottom:1px solid var(--border);">' + PCD.escapeHtml(ing.name) + '</td>' +
+              '<td style="padding:4px 8px;border-bottom:1px solid var(--border);text-align:end;font-family:var(--font-mono);font-size:12px;color:var(--text-3);">' + PCD.fmtMoney(unitPrice) + '/' + PCD.escapeHtml(ing.unit) + '</td>' +
+              '<td style="padding:4px 8px;border-bottom:1px solid var(--border);text-align:end;font-family:var(--font-mono);font-size:13px;">' + PCD.fmtNumber(amt) + ' ' + PCD.escapeHtml(ri.unit || ing.unit) + '</td>' +
+              '<td style="padding:4px 8px;border-bottom:1px solid var(--border);text-align:end;font-family:var(--font-mono);font-weight:700;color:var(--brand-700);">' + PCD.fmtMoney(lineCost) + '</td>' +
+            '</tr>';
+        });
+
+        html +=
+          '<div class="card mb-3" data-idx="' + idx + '" style="padding:14px;">' +
+            '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px;">' +
+              '<div>' +
+                '<div style="font-weight:800;font-size:16px;">' + PCD.escapeHtml(r.name) + '</div>' +
+                '<div class="text-muted" style="font-size:12px;">' + (r.category || 'recipe') + ' · ' + it.servings + ' servings</div>' +
+              '</div>' +
+              '<div style="text-align:end;">' +
+                '<div class="text-muted" style="font-size:11px;text-transform:uppercase;letter-spacing:0.04em;font-weight:700;">Food cost %</div>' +
+                '<div style="font-size:22px;font-weight:800;color:' + statusColor + ';">' + fcPct.toFixed(1) + '%</div>' +
+              '</div>' +
+            '</div>' +
+
+            // Ingredient breakdown
+            '<div style="overflow-x:auto;margin-bottom:10px;">' +
+              '<table style="width:100%;border-collapse:collapse;font-size:13px;">' +
+                '<thead><tr>' +
+                  '<th style="text-align:start;padding:6px 8px;border-bottom:2px solid var(--border);font-size:10px;color:var(--text-3);font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Ingredient</th>' +
+                  '<th style="text-align:end;padding:6px 8px;border-bottom:2px solid var(--border);font-size:10px;color:var(--text-3);font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Unit price</th>' +
+                  '<th style="text-align:end;padding:6px 8px;border-bottom:2px solid var(--border);font-size:10px;color:var(--text-3);font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Qty</th>' +
+                  '<th style="text-align:end;padding:6px 8px;border-bottom:2px solid var(--border);font-size:10px;color:var(--text-3);font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Cost</th>' +
+                '</tr></thead><tbody>' + ingRowsHtml +
+                '<tr><td colspan="3" style="padding:6px 8px;border-top:2px solid var(--border);font-weight:700;text-align:end;">Total food cost</td>' +
+                '<td style="padding:6px 8px;border-top:2px solid var(--border);text-align:end;font-weight:800;color:var(--brand-700);font-family:var(--font-mono);">' + PCD.fmtMoney(it.totalCost) + '</td></tr>' +
+                '<tr><td colspan="3" style="padding:4px 8px;text-align:end;color:var(--text-3);font-size:12px;">Cost per serving</td>' +
+                '<td style="padding:4px 8px;text-align:end;font-weight:700;font-family:var(--font-mono);">' + PCD.fmtMoney(it.costPerServing) + '</td></tr>' +
+                '</tbody>' +
+              '</table>' +
+            '</div>' +
+
+            // Pricing area — current + test (live)
+            '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;padding:10px;background:var(--surface-2);border-radius:var(--r-md);">' +
+              '<div>' +
+                '<div class="text-muted" style="font-size:10px;text-transform:uppercase;letter-spacing:0.04em;font-weight:700;">Current price</div>' +
+                '<div style="font-weight:700;font-size:15px;">' + (it.currentPrice != null ? PCD.fmtMoney(it.currentPrice) : '<span style="color:var(--text-3);">—</span>') + '</div>' +
+              '</div>' +
+              '<div>' +
+                '<div class="text-muted" style="font-size:10px;text-transform:uppercase;letter-spacing:0.04em;font-weight:700;">Suggested @ ' + TARGET_FOOD_COST_PCT + '%</div>' +
+                '<div style="font-weight:700;font-size:15px;color:var(--brand-700);">' + PCD.fmtMoney(it.suggestedPrice) + '</div>' +
+              '</div>' +
+              '<div>' +
+                '<div class="text-muted" style="font-size:10px;text-transform:uppercase;letter-spacing:0.04em;font-weight:700;">Test price (live)</div>' +
+                '<input type="number" data-test-price="' + idx + '" value="' + (it.testPrice || 0).toFixed(2) + '" step="0.01" min="0" style="width:100%;padding:4px 8px;border:1.5px solid var(--brand-300);border-radius:6px;font-weight:700;font-size:15px;font-family:var(--font-mono);">' +
+              '</div>' +
+              '<div>' +
+                '<div class="text-muted" style="font-size:10px;text-transform:uppercase;letter-spacing:0.04em;font-weight:700;">Margin / serving</div>' +
+                '<div style="font-weight:700;font-size:15px;color:' + statusColor + ';">' + PCD.fmtMoney(Math.max(0, (it.testPrice || 0) - it.costPerServing)) + '</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>';
+      });
+
+      // Summary
+      const summaryFcPct = summaryTotalRevenue > 0 ? (summaryTotalCost / summaryTotalRevenue) * 100 : 0;
+      html +=
+        '<div class="card" style="padding:14px;background:linear-gradient(135deg,var(--brand-50),var(--surface));">' +
+          '<div style="font-weight:800;font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">Summary across ' + items.length + ' recipes</div>' +
+          '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;">' +
+            '<div><div class="text-muted text-sm">Total food cost</div><div style="font-weight:800;font-size:18px;">' + PCD.fmtMoney(summaryTotalCost) + '</div></div>' +
+            '<div><div class="text-muted text-sm">Total revenue (test prices)</div><div style="font-weight:800;font-size:18px;">' + PCD.fmtMoney(summaryTotalRevenue) + '</div></div>' +
+            '<div><div class="text-muted text-sm">Average food cost %</div><div style="font-weight:800;font-size:18px;color:' + (summaryFcPct < 30 ? 'var(--success)' : summaryFcPct < 40 ? '#d97706' : 'var(--danger)') + ';">' + summaryFcPct.toFixed(1) + '%</div></div>' +
+            '<div><div class="text-muted text-sm">Total profit</div><div style="font-weight:800;font-size:18px;color:var(--success);">' + PCD.fmtMoney(Math.max(0, summaryTotalRevenue - summaryTotalCost)) + '</div></div>' +
+          '</div>' +
+        '</div>';
+
+      body.innerHTML = html;
+
+      // Wire test-price inputs (live update)
+      PCD.on(body, 'input', '[data-test-price]', PCD.debounce(function () {
+        const idx = parseInt(this.getAttribute('data-test-price'), 10);
+        const val = parseFloat(this.value);
+        if (!isNaN(val) && val >= 0 && items[idx]) {
+          items[idx].testPrice = val;
+          paint();
+        }
+      }, 200));
+    }
+    paint();
+
+    const closeBtn = PCD.el('button', { type: 'button', class: 'btn btn-secondary', text: 'Close' });
+    const pdfBtn = PCD.el('button', { type: 'button', class: 'btn btn-primary' });
+    pdfBtn.innerHTML = PCD.icon('print', 16) + ' <span>PDF</span>';
+    const xlsxBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline' });
+    xlsxBtn.innerHTML = PCD.icon('book-open', 16) + ' <span>Excel</span>';
+
+    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
+    footer.appendChild(closeBtn);
+    footer.appendChild(xlsxBtn);
+    footer.appendChild(pdfBtn);
+
+    const m = PCD.modal.open({
+      title: 'Cost Report' + (items.length > 1 ? ' · ' + items.length + ' recipes' : ''),
+      body: body, footer: footer, size: 'lg', closable: true
+    });
+    closeBtn.addEventListener('click', function () { m.close(); });
+    pdfBtn.addEventListener('click', function () { exportCostReportPDF(items, TARGET_FOOD_COST_PCT); });
+    xlsxBtn.addEventListener('click', function () { exportCostReportXLSX(items, TARGET_FOOD_COST_PCT); });
+  }
+
+  // PDF: minimal, professional, image-free
+  function exportCostReportPDF(items, targetPct) {
+    const ingMap = currentIngMap();
+    const dateStr = new Date().toLocaleDateString();
+    const ws = PCD.store.getActiveWorkspace ? PCD.store.getActiveWorkspace() : null;
+    const wsName = ws ? ws.name : '';
+
+    let summaryTotalCost = 0, summaryTotalRevenue = 0;
+    let recipesHtml = '';
+
+    items.forEach(function (it) {
+      const r = it.recipe;
+      summaryTotalCost += it.totalCost;
+      summaryTotalRevenue += (it.testPrice || 0) * it.servings;
+      const fcPct = (it.testPrice && it.testPrice > 0) ? (it.costPerServing / it.testPrice) * 100 : 0;
+
+      let ingRows = '';
+      (r.ingredients || []).forEach(function (ri) {
+        const ing = ingMap[ri.ingredientId];
+        if (!ing) return;
+        const unitPrice = Number(ing.pricePerUnit) || 0;
+        const amt = Number(ri.amount) || 0;
+        let lineCost = amt * unitPrice;
+        if (ri.unit && ing.unit && ri.unit !== ing.unit) {
+          try { lineCost = PCD.convertUnit(amt, ri.unit, ing.unit) * unitPrice; } catch (e) {}
+        }
+        ingRows +=
+          '<tr>' +
+            '<td>' + PCD.escapeHtml(ing.name) + '</td>' +
+            '<td class="num">' + PCD.fmtMoney(unitPrice) + '/' + PCD.escapeHtml(ing.unit) + '</td>' +
+            '<td class="num">' + PCD.fmtNumber(amt) + ' ' + PCD.escapeHtml(ri.unit || ing.unit) + '</td>' +
+            '<td class="num bold">' + PCD.fmtMoney(lineCost) + '</td>' +
+          '</tr>';
+      });
+
+      recipesHtml +=
+        '<section class="recipe">' +
+          '<div class="recipe-header">' +
+            '<div>' +
+              '<h2>' + PCD.escapeHtml(r.name) + '</h2>' +
+              '<div class="meta">' + (r.category || 'recipe') + ' · ' + it.servings + ' servings</div>' +
+            '</div>' +
+            '<div class="fc-badge">FC <b>' + fcPct.toFixed(1) + '%</b></div>' +
+          '</div>' +
+
+          '<table class="ing-table">' +
+            '<thead><tr>' +
+              '<th>Ingredient</th><th>Unit price</th><th>Qty</th><th>Cost</th>' +
+            '</tr></thead>' +
+            '<tbody>' + ingRows + '</tbody>' +
+            '<tfoot>' +
+              '<tr><td colspan="3" class="num">Total food cost</td><td class="num bold">' + PCD.fmtMoney(it.totalCost) + '</td></tr>' +
+              '<tr><td colspan="3" class="num minor">Cost per serving</td><td class="num">' + PCD.fmtMoney(it.costPerServing) + '</td></tr>' +
+            '</tfoot>' +
+          '</table>' +
+
+          '<div class="pricing">' +
+            '<div><div class="lbl">Current price</div><div class="val">' + (it.currentPrice != null ? PCD.fmtMoney(it.currentPrice) : '—') + '</div></div>' +
+            '<div><div class="lbl">Suggested @ ' + targetPct + '%</div><div class="val brand">' + PCD.fmtMoney(it.suggestedPrice) + '</div></div>' +
+            '<div><div class="lbl">Test price</div><div class="val">' + PCD.fmtMoney(it.testPrice || 0) + '</div></div>' +
+            '<div><div class="lbl">Margin / serving</div><div class="val">' + PCD.fmtMoney(Math.max(0, (it.testPrice || 0) - it.costPerServing)) + '</div></div>' +
+          '</div>' +
+        '</section>';
+    });
+
+    const summaryFcPct = summaryTotalRevenue > 0 ? (summaryTotalCost / summaryTotalRevenue) * 100 : 0;
+
+    const html =
+      '<style>' +
+        '@page { size: A4; margin: 14mm; }' +
+        'body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; color: #1a1a1a; }' +
+        '.report-header { border-bottom: 3px solid #16a34a; padding-bottom: 10px; margin-bottom: 18px; display:flex; justify-content:space-between; align-items:flex-end; }' +
+        '.report-header h1 { font-size: 22pt; color: #16a34a; margin: 0; }' +
+        '.report-header .sub { color: #666; font-size: 10pt; margin-top: 4px; }' +
+        '.report-header .meta { color: #888; font-size: 9pt; text-align: end; }' +
+        '.recipe { margin-bottom: 22px; padding-bottom: 14px; break-inside: avoid; page-break-inside: avoid; }' +
+        '.recipe + .recipe { border-top: 1px solid #e5e5e5; padding-top: 14px; }' +
+        '.recipe-header { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom: 8px; }' +
+        '.recipe-header h2 { font-size: 14pt; margin: 0; color: #111; }' +
+        '.recipe-header .meta { font-size: 9pt; color: #888; text-transform: capitalize; }' +
+        '.fc-badge { font-size: 10pt; color: #16a34a; padding: 4px 10px; border: 1.5px solid #16a34a; border-radius: 999px; }' +
+        '.fc-badge b { font-size: 11pt; }' +
+        '.ing-table { width:100%; border-collapse: collapse; font-size: 9.5pt; margin-bottom: 10px; }' +
+        '.ing-table th { background: #f8f8f8; text-align: start; padding: 6px 8px; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.04em; color: #666; border-bottom: 1.5px solid #ddd; }' +
+        '.ing-table th.num, .ing-table td.num { text-align: end; }' +
+        '.ing-table td { padding: 4px 8px; border-bottom: 1px solid #f0f0f0; }' +
+        '.ing-table tfoot td { border-bottom: 0; padding-top: 6px; }' +
+        '.ing-table tfoot tr:first-child td { border-top: 2px solid #16a34a; padding-top: 8px; }' +
+        '.ing-table .bold { font-weight: 700; color: #16a34a; }' +
+        '.ing-table .minor { color: #888; font-size: 9pt; }' +
+        '.pricing { display:grid; grid-template-columns: repeat(4, 1fr); gap: 12px; padding: 10px 14px; background: #f8f8f8; border-radius: 6px; }' +
+        '.pricing .lbl { font-size: 8pt; color: #888; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; }' +
+        '.pricing .val { font-size: 12pt; font-weight: 700; }' +
+        '.pricing .brand { color: #16a34a; }' +
+        '.summary { margin-top: 20px; padding: 14px; background: #f0fdf4; border: 1.5px solid #16a34a; border-radius: 8px; }' +
+        '.summary h3 { font-size: 11pt; color: #16a34a; margin: 0 0 10px; text-transform: uppercase; letter-spacing: 0.04em; }' +
+        '.summary-grid { display:grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }' +
+      '</style>' +
+      '<div class="report-header">' +
+        '<div>' +
+          '<h1>Cost Report</h1>' +
+          '<div class="sub">' + items.length + ' recipe' + (items.length === 1 ? '' : 's') + ' · Target food cost ' + targetPct + '%</div>' +
+        '</div>' +
+        '<div class="meta">' + dateStr + (wsName ? ' · ' + PCD.escapeHtml(wsName) : '') + '</div>' +
+      '</div>' +
+      recipesHtml +
+      (items.length > 1 ?
+      '<div class="summary">' +
+        '<h3>Summary</h3>' +
+        '<div class="summary-grid">' +
+          '<div class="pricing"><div><div class="lbl">Total food cost</div><div class="val">' + PCD.fmtMoney(summaryTotalCost) + '</div></div></div>' +
+          '<div class="pricing"><div><div class="lbl">Total revenue</div><div class="val">' + PCD.fmtMoney(summaryTotalRevenue) + '</div></div></div>' +
+          '<div class="pricing"><div><div class="lbl">Avg food cost %</div><div class="val brand">' + summaryFcPct.toFixed(1) + '%</div></div></div>' +
+          '<div class="pricing"><div><div class="lbl">Total profit</div><div class="val">' + PCD.fmtMoney(Math.max(0, summaryTotalRevenue - summaryTotalCost)) + '</div></div></div>' +
+        '</div>' +
+      '</div>' : '');
+
+    PCD.print(html, 'Cost Report ' + new Date().toISOString().slice(0, 10));
+  }
+
+  // Excel: 1 sheet per recipe + Summary sheet, formulas live
+  function exportCostReportXLSX(items, targetPct) {
+    if (!window.XLSX) {
+      PCD.toast.error('Excel library not loaded — try refreshing the page');
+      return;
+    }
+    const ingMap = currentIngMap();
+    const wb = XLSX.utils.book_new();
+
+    // Summary sheet (built first, will be moved to position 0 at end)
+    const summaryRows = [
+      ['Cost Report'],
+      ['Generated', new Date().toLocaleString()],
+      ['Target food cost %', targetPct],
+      [],
+      ['Recipe', 'Servings', 'Total food cost', 'Cost per serving', 'Suggested price (per serving)', 'Test price (per serving)', 'Food cost % (test)', 'Profit per serving'],
+    ];
+
+    items.forEach(function (it, idx) {
+      const r = it.recipe;
+      const sheetName = (r.name || ('Recipe' + (idx + 1))).slice(0, 28).replace(/[\\\/\?\*\[\]:]/g, '_');
+
+      const rows = [];
+      // Title block
+      rows.push([r.name]);
+      rows.push([(r.category || 'recipe') + ' · ' + it.servings + ' servings']);
+      rows.push([]);
+      // Header
+      rows.push(['Ingredient', 'Unit price', 'Unit', 'Qty', 'Qty unit', 'Line cost']);
+
+      const startIngRow = rows.length + 1;  // 1-indexed in Excel
+      let lastIngRow = startIngRow - 1;
+
+      (r.ingredients || []).forEach(function (ri) {
+        const ing = ingMap[ri.ingredientId];
+        if (!ing) return;
+        const rowIdx = rows.length + 1;
+        // Use formula for line cost: Unit price * Qty (assumes unit match — we put a value for unit conv if needed)
+        let qtyForFormula = Number(ri.amount) || 0;
+        if (ri.unit && ing.unit && ri.unit !== ing.unit) {
+          try { qtyForFormula = PCD.convertUnit(qtyForFormula, ri.unit, ing.unit); } catch (e) {}
+        }
+        rows.push([
+          ing.name,
+          Number(ing.pricePerUnit) || 0,
+          ing.unit || '',
+          qtyForFormula,
+          ing.unit || '',
+          { f: 'B' + rowIdx + '*D' + rowIdx, t: 'n', z: '"$"#,##0.00' }
+        ]);
+        lastIngRow = rowIdx;
+      });
+
+      rows.push([]);
+      // Totals
+      const totalRow = rows.length + 1;
+      rows.push([
+        'Total food cost', '', '', '', '',
+        { f: 'SUM(F' + startIngRow + ':F' + lastIngRow + ')', t: 'n', z: '"$"#,##0.00' }
+      ]);
+      const servingsRow = rows.length + 1;
+      rows.push(['Servings', '', '', '', '', it.servings]);
+      const cpsRow = rows.length + 1;
+      rows.push([
+        'Cost per serving', '', '', '', '',
+        { f: 'F' + totalRow + '/F' + servingsRow, t: 'n', z: '"$"#,##0.00' }
+      ]);
+      rows.push([]);
+      rows.push(['PRICING (edit Test price below to see live impact)']);
+      const targetRow = rows.length + 1;
+      rows.push(['Target food cost %', '', '', '', '', targetPct / 100]);
+      const suggRow = rows.length + 1;
+      rows.push([
+        'Suggested price (per serving)', '', '', '', '',
+        { f: 'F' + cpsRow + '/F' + targetRow, t: 'n', z: '"$"#,##0.00' }
+      ]);
+      const testRow = rows.length + 1;
+      rows.push(['Test price (per serving) — EDIT ME', '', '', '', '', it.testPrice || it.suggestedPrice || 0]);
+      const fcPctRow = rows.length + 1;
+      rows.push([
+        'Food cost % at test price', '', '', '', '',
+        { f: 'IF(F' + testRow + '>0, F' + cpsRow + '/F' + testRow + ', 0)', t: 'n', z: '0.00%' }
+      ]);
+      const marginRow = rows.length + 1;
+      rows.push([
+        'Margin per serving', '', '', '', '',
+        { f: 'F' + testRow + '-F' + cpsRow, t: 'n', z: '"$"#,##0.00' }
+      ]);
+      rows.push([
+        'Total revenue at test price', '', '', '', '',
+        { f: 'F' + testRow + '*F' + servingsRow, t: 'n', z: '"$"#,##0.00' }
+      ]);
+      rows.push([
+        'Total profit', '', '', '', '',
+        { f: 'F' + testRow + '*F' + servingsRow + '-F' + totalRow, t: 'n', z: '"$"#,##0.00' }
+      ]);
+
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      // Column widths
+      ws['!cols'] = [
+        { wch: 38 }, { wch: 14 }, { wch: 8 }, { wch: 10 }, { wch: 8 }, { wch: 14 },
+      ];
+      // Bold the title
+      try {
+        if (ws['A1']) ws['A1'].s = { font: { bold: true, sz: 14 } };
+      } catch (e) {}
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+
+      // Add to summary
+      summaryRows.push([
+        r.name,
+        it.servings,
+        it.totalCost,
+        it.costPerServing,
+        it.suggestedPrice,
+        it.testPrice || 0,
+        (it.testPrice && it.testPrice > 0) ? (it.costPerServing / it.testPrice) : 0,
+        Math.max(0, (it.testPrice || 0) - it.costPerServing)
+      ]);
+    });
+
+    // Insert summary sheet at position 0
+    const summaryWs = XLSX.utils.aoa_to_sheet(summaryRows);
+    summaryWs['!cols'] = [
+      { wch: 30 }, { wch: 10 }, { wch: 16 }, { wch: 16 }, { wch: 22 }, { wch: 20 }, { wch: 18 }, { wch: 18 }
+    ];
+    // Number formatting on currency columns
+    for (let r = 5; r < summaryRows.length; r++) {
+      ['C', 'D', 'E', 'F', 'H'].forEach(function (col) {
+        const cell = summaryWs[col + (r + 1)];
+        if (cell) cell.z = '"$"#,##0.00';
+      });
+      const pctCell = summaryWs['G' + (r + 1)];
+      if (pctCell) pctCell.z = '0.00%';
+    }
+    XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
+    // Move Summary to first position
+    const sheetNames = wb.SheetNames;
+    const summaryIdx = sheetNames.indexOf('Summary');
+    if (summaryIdx > 0) {
+      sheetNames.splice(summaryIdx, 1);
+      sheetNames.unshift('Summary');
+    }
+
+    const filename = 'cost-report-' + new Date().toISOString().slice(0, 10) + '.xlsx';
+    XLSX.writeFile(wb, filename);
+    PCD.toast.success('Excel downloaded · open and edit Test price cells');
+  }
+
   function openPreview(rid) {
     const t = PCD.i18n.t;
     const r = PCD.store.getRecipe(rid);
@@ -329,19 +778,26 @@
     `;
 
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
-    const editBtn = PCD.el('button', { class: 'btn btn-primary', text: t('edit'), style: { flex: '1', minWidth: '100px' } });
-    const duplicateBtn = PCD.el('button', { class: 'btn btn-outline', title: 'Duplicate' });
+    const editBtn = PCD.el('button', { type: 'button', class: 'btn btn-primary', text: t('edit'), style: { flex: '1', minWidth: '100px' } });
+    const duplicateBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: 'Duplicate' });
     duplicateBtn.innerHTML = PCD.icon('copy', 16);
-    const shareBtn = PCD.el('button', { class: 'btn btn-outline', title: 'Share' });
+    const costReportBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: 'Cost Report' });
+    costReportBtn.innerHTML = PCD.icon('activity', 16) + ' <span>Cost Report</span>';
+    const shareBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: 'Share' });
     shareBtn.innerHTML = PCD.icon('share', 16);
-    const deleteBtn = PCD.el('button', { class: 'btn btn-outline', title: t('delete'), style: { color: 'var(--danger)' } });
+    const deleteBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: t('delete'), style: { color: 'var(--danger)' } });
     deleteBtn.innerHTML = PCD.icon('trash', 16);
     footer.appendChild(deleteBtn);
     footer.appendChild(shareBtn);
     footer.appendChild(duplicateBtn);
+    footer.appendChild(costReportBtn);
     footer.appendChild(editBtn);
 
     const m = PCD.modal.open({ title: r.name, body: body, footer: footer, size: 'md', closable: true });
+
+    costReportBtn.addEventListener('click', function () {
+      openCostReport([rid]);
+    });
 
     editBtn.addEventListener('click', function () {
       m.close();
