@@ -685,10 +685,13 @@
     printBtn.innerHTML = PCD.icon('print',16) + ' <span>' + t('print') + '</span>';
     const qrBtn = PCD.el('button', { class: 'btn btn-outline' });
     qrBtn.innerHTML = PCD.icon('grid',16) + ' <span>QR</span>';
+    const shareLinkBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: 'Public share link' });
+    shareLinkBtn.innerHTML = PCD.icon('share',16) + ' <span>Share link</span>';
     const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('close') });
-    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
+    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
     footer.appendChild(closeBtn);
     footer.appendChild(qrBtn);
+    footer.appendChild(shareLinkBtn);
     footer.appendChild(printBtn);
 
     const m = PCD.modal.open({
@@ -698,8 +701,50 @@
 
     closeBtn.addEventListener('click', function () { m.close(); });
     printBtn.addEventListener('click', function () {
-      // Pass freshly built HTML so it picks current density
       PCD.print(buildStyledHtml(), menu.name || 'Menu');
+    });
+    shareLinkBtn.addEventListener('click', function () {
+      const user = PCD.store.get('user');
+      if (!user || !user.id) {
+        PCD.toast.error('Sign in to create public links');
+        return;
+      }
+      if (!PCD.share || !PCD.share.createOrGetShareUrl) {
+        PCD.toast.error('Share unavailable');
+        return;
+      }
+      shareLinkBtn.disabled = true;
+      shareLinkBtn.innerHTML = '<span class="spinner"></span>';
+      PCD.share.createOrGetShareUrl('menu', mid).then(function (url) {
+        shareLinkBtn.disabled = false;
+        shareLinkBtn.innerHTML = PCD.icon('share',16) + ' <span>Share link</span>';
+        // Show modal with the link
+        const linkBody = PCD.el('div');
+        linkBody.innerHTML =
+          '<div class="text-muted text-sm mb-2">Bu menüyü herkese açık olarak paylaşmak için aşağıdaki linki kopyala:</div>' +
+          '<input type="text" id="menuShareLink" value="' + PCD.escapeHtml(url) + '" readonly style="width:100%;padding:10px;border:1.5px solid var(--brand-600);border-radius:6px;font-family:var(--font-mono);font-size:13px;background:#fff;margin-bottom:10px;">' +
+          '<div class="flex gap-2">' +
+            '<button type="button" class="btn btn-primary" id="copyMenuLink" style="flex:1;">' + PCD.icon('copy',16) + ' <span>Copy link</span></button>' +
+            '<button type="button" class="btn btn-outline" id="waMenuLink" style="flex:1;">' + PCD.icon('message-circle',16) + ' <span>WhatsApp</span></button>' +
+          '</div>';
+        const lc = PCD.el('button', { class: 'btn btn-secondary', text: 'Close', style: { width: '100%' } });
+        const lf = PCD.el('div', { style: { width: '100%' } });
+        lf.appendChild(lc);
+        const lm = PCD.modal.open({ title: '🔗 Share link', body: linkBody, footer: lf, size: 'sm', closable: true });
+        lc.addEventListener('click', function () { lm.close(); });
+        // Auto-select
+        setTimeout(function () { const inp = PCD.$('#menuShareLink', linkBody); if (inp) { inp.focus(); inp.select(); } }, 100);
+        PCD.$('#copyMenuLink', linkBody).addEventListener('click', function () {
+          if (navigator.clipboard) navigator.clipboard.writeText(url).then(function () { PCD.toast.success('✓ Link copied'); });
+        });
+        PCD.$('#waMenuLink', linkBody).addEventListener('click', function () {
+          window.open('https://wa.me/?text=' + encodeURIComponent(url), '_blank');
+        });
+      }).catch(function (e) {
+        shareLinkBtn.disabled = false;
+        shareLinkBtn.innerHTML = PCD.icon('share',16) + ' <span>Share link</span>';
+        PCD.toast.error('Share failed: ' + (e.message || e));
+      });
     });
     qrBtn.addEventListener('click', function () {
       // Build plain-text menu for QR payload (text mode - works with any scanner)

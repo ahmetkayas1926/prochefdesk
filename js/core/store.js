@@ -421,7 +421,8 @@
       if (!state.recipes[wsId] || !state.recipes[wsId][id]) return false;
       const recipes = Object.assign({}, state.recipes);
       recipes[wsId] = Object.assign({}, recipes[wsId]);
-      delete recipes[wsId][id];
+      // Soft delete: set _deletedAt instead of removing
+      recipes[wsId][id] = Object.assign({}, recipes[wsId][id], { _deletedAt: new Date().toISOString() });
       state.recipes = recipes;
       emit('recipes', recipes[wsId], null);
       persist();
@@ -432,9 +433,13 @@
       if (!ids || !ids.length || !state.recipes[wsId]) return 0;
       const recipes = Object.assign({}, state.recipes);
       recipes[wsId] = Object.assign({}, recipes[wsId]);
+      const now = new Date().toISOString();
       let n = 0;
       ids.forEach(function (id) {
-        if (recipes[wsId][id]) { delete recipes[wsId][id]; n++; }
+        if (recipes[wsId][id] && !recipes[wsId][id]._deletedAt) {
+          recipes[wsId][id] = Object.assign({}, recipes[wsId][id], { _deletedAt: now });
+          n++;
+        }
       });
       state.recipes = recipes;
       emit('recipes', recipes[wsId], null);
@@ -443,11 +448,14 @@
     },
     getRecipe: function (id) {
       const wsId = currentWsId();
-      return state.recipes[wsId] ? PCD.clone(state.recipes[wsId][id]) : null;
+      const r = state.recipes[wsId] ? state.recipes[wsId][id] : null;
+      if (!r || r._deletedAt) return null;
+      return PCD.clone(r);
     },
     listRecipes: function () {
       const wsId = currentWsId();
-      return state.recipes[wsId] ? Object.values(PCD.clone(state.recipes[wsId])) : [];
+      if (!state.recipes[wsId]) return [];
+      return Object.values(PCD.clone(state.recipes[wsId])).filter(function (r) { return !r._deletedAt; });
     },
 
     // ---- Ingredient helpers (LIBRARY — shared across workspaces) ----
@@ -471,7 +479,7 @@
     deleteIngredient: function (id) {
       if (!state.ingredients[id]) return false;
       const ingredients = Object.assign({}, state.ingredients);
-      delete ingredients[id];
+      ingredients[id] = Object.assign({}, ingredients[id], { _deletedAt: new Date().toISOString() });
       state.ingredients = ingredients;
       emit('ingredients', ingredients, null);
       persist();
@@ -480,15 +488,27 @@
     deleteIngredients: function (ids) {
       if (!ids || !ids.length) return 0;
       const ings = Object.assign({}, state.ingredients);
+      const now = new Date().toISOString();
       let n = 0;
-      ids.forEach(function (id) { if (ings[id]) { delete ings[id]; n++; } });
+      ids.forEach(function (id) {
+        if (ings[id] && !ings[id]._deletedAt) {
+          ings[id] = Object.assign({}, ings[id], { _deletedAt: now });
+          n++;
+        }
+      });
       state.ingredients = ings;
       emit('ingredients', ings, null);
       persist();
       return n;
     },
-    getIngredient: function (id) { return PCD.clone(state.ingredients[id]); },
-    listIngredients: function () { return Object.values(PCD.clone(state.ingredients)); },
+    getIngredient: function (id) {
+      const i = state.ingredients[id];
+      if (!i || i._deletedAt) return null;
+      return PCD.clone(i);
+    },
+    listIngredients: function () {
+      return Object.values(PCD.clone(state.ingredients)).filter(function (i) { return !i._deletedAt; });
+    },
 
     // ---- Generic table helpers (workspace-scoped: menus/events/suppliers/canvases/shoppingLists/etc) ----
     upsertInTable: function (table, item, idPrefix) {
@@ -512,7 +532,8 @@
       if (!state[table] || !state[table][wsId] || !state[table][wsId][id]) return false;
       const root = Object.assign({}, state[table]);
       root[wsId] = Object.assign({}, root[wsId]);
-      delete root[wsId][id];
+      // Soft delete
+      root[wsId][id] = Object.assign({}, root[wsId][id], { _deletedAt: new Date().toISOString() });
       state[table] = root;
       emit(table, root[wsId], null);
       persist();
@@ -521,12 +542,151 @@
     getFromTable: function (table, id) {
       const wsId = currentWsId();
       if (!state[table] || !state[table][wsId]) return null;
-      return PCD.clone(state[table][wsId][id]);
+      const item = state[table][wsId][id];
+      if (!item || item._deletedAt) return null;
+      return PCD.clone(item);
     },
     listTable: function (table) {
       const wsId = currentWsId();
       if (!state[table] || !state[table][wsId]) return [];
-      return Object.values(PCD.clone(state[table][wsId]));
+      return Object.values(PCD.clone(state[table][wsId])).filter(function (it) { return !it._deletedAt; });
+    },
+
+    // ============ TRASH API ============
+    // List all soft-deleted items across tables.
+    // Returns: [{ table, id, item, label, deletedAt }]
+    listTrash: function () {
+      const wsId = currentWsId();
+      const out = [];
+      // Recipes
+      const recipes = state.recipes[wsId] || {};
+      Object.values(recipes).forEach(function (r) {
+        if (r._deletedAt) out.push({ table: 'recipes', id: r.id, item: r, label: r.name || 'Recipe', deletedAt: r._deletedAt });
+      });
+      // Ingredients (shared)
+      Object.values(state.ingredients || {}).forEach(function (i) {
+        if (i._deletedAt) out.push({ table: 'ingredients', id: i.id, item: i, label: i.name || 'Ingredient', deletedAt: i._deletedAt });
+      });
+      // Generic ws-bound tables
+      ['menus','events','suppliers','canvases','shoppingLists','checklistTemplates'].forEach(function (table) {
+        const data = (state[table] && state[table][wsId]) || {};
+        Object.values(data).forEach(function (it) {
+          if (it._deletedAt) out.push({ table: table, id: it.id, item: it, label: it.name || it.title || 'Item', deletedAt: it._deletedAt });
+        });
+      });
+      return out.sort(function (a, b) { return (b.deletedAt || '').localeCompare(a.deletedAt || ''); });
+    },
+
+    restoreFromTrash: function (table, id) {
+      const wsId = currentWsId();
+      if (table === 'recipes') {
+        if (!state.recipes[wsId] || !state.recipes[wsId][id]) return false;
+        const recipes = Object.assign({}, state.recipes);
+        recipes[wsId] = Object.assign({}, recipes[wsId]);
+        const r = Object.assign({}, recipes[wsId][id]);
+        delete r._deletedAt;
+        recipes[wsId][id] = r;
+        state.recipes = recipes;
+        emit('recipes', recipes[wsId], null);
+        persist();
+        return true;
+      }
+      if (table === 'ingredients') {
+        if (!state.ingredients[id]) return false;
+        const ings = Object.assign({}, state.ingredients);
+        const i = Object.assign({}, ings[id]);
+        delete i._deletedAt;
+        ings[id] = i;
+        state.ingredients = ings;
+        emit('ingredients', ings, null);
+        persist();
+        return true;
+      }
+      if (state[table] && state[table][wsId] && state[table][wsId][id]) {
+        const root = Object.assign({}, state[table]);
+        root[wsId] = Object.assign({}, root[wsId]);
+        const it = Object.assign({}, root[wsId][id]);
+        delete it._deletedAt;
+        root[wsId][id] = it;
+        state[table] = root;
+        emit(table, root[wsId], null);
+        persist();
+        return true;
+      }
+      return false;
+    },
+
+    purgeFromTrash: function (table, id) {
+      const wsId = currentWsId();
+      if (table === 'recipes') {
+        if (!state.recipes[wsId] || !state.recipes[wsId][id]) return false;
+        const recipes = Object.assign({}, state.recipes);
+        recipes[wsId] = Object.assign({}, recipes[wsId]);
+        delete recipes[wsId][id];
+        state.recipes = recipes;
+        emit('recipes', recipes[wsId], null);
+        persist();
+        return true;
+      }
+      if (table === 'ingredients') {
+        if (!state.ingredients[id]) return false;
+        const ings = Object.assign({}, state.ingredients);
+        delete ings[id];
+        state.ingredients = ings;
+        emit('ingredients', ings, null);
+        persist();
+        return true;
+      }
+      if (state[table] && state[table][wsId] && state[table][wsId][id]) {
+        const root = Object.assign({}, state[table]);
+        root[wsId] = Object.assign({}, root[wsId]);
+        delete root[wsId][id];
+        state[table] = root;
+        emit(table, root[wsId], null);
+        persist();
+        return true;
+      }
+      return false;
+    },
+
+    // Auto-purge items soft-deleted more than `daysOld` days ago.
+    autoPurgeOldTrash: function (daysOld) {
+      daysOld = daysOld || 30;
+      const cutoff = Date.now() - daysOld * 86400000;
+      let purged = 0;
+      const wsId = currentWsId();
+      const tables = ['recipes','menus','events','suppliers','canvases','shoppingLists','checklistTemplates'];
+      tables.forEach(function (table) {
+        const data = (state[table] && state[table][wsId]) || {};
+        const next = Object.assign({}, data);
+        let changed = false;
+        Object.keys(next).forEach(function (id) {
+          const it = next[id];
+          if (it._deletedAt && new Date(it._deletedAt).getTime() < cutoff) {
+            delete next[id];
+            changed = true;
+            purged++;
+          }
+        });
+        if (changed) {
+          const root = Object.assign({}, state[table]);
+          root[wsId] = next;
+          state[table] = root;
+        }
+      });
+      // Ingredients (shared, no wsId scope)
+      const ings = Object.assign({}, state.ingredients);
+      let ingsChanged = false;
+      Object.keys(ings).forEach(function (id) {
+        if (ings[id]._deletedAt && new Date(ings[id]._deletedAt).getTime() < cutoff) {
+          delete ings[id];
+          ingsChanged = true;
+          purged++;
+        }
+      });
+      if (ingsChanged) state.ingredients = ings;
+      if (purged > 0) persist();
+      return purged;
     },
 
     // ---- Pub/sub ----

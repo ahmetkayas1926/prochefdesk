@@ -42,6 +42,7 @@
           { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } }
         );
         cloud.supabase = supabase;
+        window._supabaseClient = supabase;  // expose for share.js
         cloud.ready = true;
         PCD.log('Supabase ready.');
 

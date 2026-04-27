@@ -218,8 +218,8 @@
           body.appendChild(PCD.el('p', { style: { fontSize: '14px', color: 'var(--text-3)', lineHeight: '1.5', margin: '0 auto', maxWidth: '320px' }, text: opts.text }));
         }
 
-        const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: opts.cancelText || t('cancel') });
-        const okBtn = PCD.el('button', { class: 'btn ' + (opts.danger ? 'btn-danger' : 'btn-primary'), text: opts.okText || t('confirm') });
+        const cancelBtn = PCD.el('button', { type: 'button', class: 'btn btn-secondary', text: opts.cancelText || t('cancel') });
+        const okBtn = PCD.el('button', { type: 'button', class: 'btn ' + (opts.danger ? 'btn-danger' : 'btn-primary'), text: opts.okText || t('confirm') });
         const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
         cancelBtn.style.flex = '1';
         okBtn.style.flex = '1';

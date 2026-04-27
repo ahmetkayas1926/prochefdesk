@@ -163,17 +163,24 @@
                 <button class="btn btn-outline btn-sm" id="syncNowBtn">${t('sync_now')}</button>
               </div>
             ` : ''}
+            <button class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;border-bottom:1px solid var(--border);" id="trashBtn">
+              <div>
+                <div style="font-weight:600;">🗑 Çöp kutusu / Trash</div>
+                <div class="text-muted text-sm" id="trashCount">Silinen öğeleri 30 gün boyunca geri yükleyebilirsin</div>
+              </div>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
             <button class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;border-bottom:1px solid var(--border);" id="exportDataBtn">
               <div>
-                <div style="font-weight:600;">${t('export_data')}</div>
-                <div class="text-muted text-sm">Full JSON backup</div>
+                <div style="font-weight:600;">📥 Yedek indir / Download backup</div>
+                <div class="text-muted text-sm">Tüm verilerinin tek dosyada yedeği — Google Drive veya e-postaya kaydet</div>
               </div>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
             <button class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;border-bottom:1px solid var(--border);" id="importDataBtn">
               <div>
-                <div style="font-weight:600;">Import Backup</div>
-                <div class="text-muted text-sm">Restore from JSON</div>
+                <div style="font-weight:600;">📤 Yedekten geri yükle / Restore backup</div>
+                <div class="text-muted text-sm">Daha önce indirdiğin yedek dosyasını yükle</div>
               </div>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
@@ -205,6 +212,43 @@
               </div>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- HELP & ABOUT -->
+      <div class="section">
+        <div class="section-title" style="font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">Yardım · Help</div>
+        <div class="card">
+          <div class="card-body" style="padding:0;">
+            <button class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;border-bottom:1px solid var(--border);" id="aboutBtn">
+              <div>
+                <div style="font-weight:600;">ℹ️ Hakkında · About</div>
+                <div class="text-muted text-sm">Bu uygulama nedir, kim için, nasıl çalışır</div>
+              </div>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;border-bottom:1px solid var(--border);" id="faqBtn">
+              <div>
+                <div style="font-weight:600;">❓ Sık Sorulan Sorular · FAQ</div>
+                <div class="text-muted text-sm">Verilerim güvende mi? Ücretsiz mi? Offline çalışır mı?</div>
+              </div>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;border-bottom:1px solid var(--border);" id="restartTourBtn">
+              <div>
+                <div style="font-weight:600;">🎓 Tanıtım turunu yeniden başlat</div>
+                <div class="text-muted text-sm">İlk açılış mesajını tekrar göster</div>
+              </div>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <a href="mailto:hello@prochefdesk.com?subject=ProChefDesk Feedback" class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;text-decoration:none;color:inherit;">
+              <div>
+                <div style="font-weight:600;">✉️ Geri bildirim gönder · Send feedback</div>
+                <div class="text-muted text-sm">Bug, öneri, soru — bize yaz</div>
+              </div>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
           </div>
         </div>
       </div>
@@ -306,9 +350,25 @@
         version: window.PCD_CONFIG.APP_VERSION,
         data: state
       };
-      PCD.download(JSON.stringify(payload, null, 2), 'prochefdesk-backup-' + new Date().toISOString().slice(0, 10) + '.json', 'application/json');
-      PCD.toast.success('Exported');
+      PCD.download(JSON.stringify(payload, null, 2), 'prochefdesk-yedek-' + new Date().toISOString().slice(0, 10) + '.json', 'application/json');
+      PCD.toast.success('✓ Yedek indirildi · Backup downloaded');
     });
+
+    // Trash button
+    const trashBtn = PCD.$('#trashBtn', view);
+    if (trashBtn) {
+      // Update count
+      const trashItems = PCD.store.listTrash ? PCD.store.listTrash() : [];
+      const countEl = PCD.$('#trashCount', view);
+      if (countEl) {
+        if (trashItems.length === 0) {
+          countEl.textContent = 'Çöp kutusu boş · Trash is empty';
+        } else {
+          countEl.textContent = trashItems.length + ' öğe · 30 gün sonra otomatik silinir';
+        }
+      }
+      trashBtn.addEventListener('click', function () { openTrashModal(); });
+    }
 
     const importBtn = PCD.$('#importDataBtn', view);
     if (importBtn) importBtn.addEventListener('click', function () {
@@ -414,6 +474,97 @@
         setTimeout(function () { window.location.reload(); }, 500);
       });
     });
+
+    // Help & About
+    const aboutBtn = PCD.$('#aboutBtn', view);
+    if (aboutBtn) aboutBtn.addEventListener('click', openAboutModal);
+    const faqBtn = PCD.$('#faqBtn', view);
+    if (faqBtn) faqBtn.addEventListener('click', openFaqModal);
+    const restartTourBtn = PCD.$('#restartTourBtn', view);
+    if (restartTourBtn) restartTourBtn.addEventListener('click', function () {
+      if (PCD.tutorial && PCD.tutorial.startMainTour) {
+        PCD.tutorial.startMainTour();
+      } else {
+        PCD.toast.info('Tour unavailable');
+      }
+    });
+  }
+
+  function openAboutModal() {
+    const body = PCD.el('div');
+    body.innerHTML =
+      '<div style="text-align:center;padding:14px;background:linear-gradient(135deg,var(--brand-50),var(--surface));border-radius:12px;margin-bottom:16px;">' +
+        '<div style="font-size:32px;font-weight:800;color:var(--brand-700);">ProChefDesk</div>' +
+        '<div class="text-muted text-sm">Profesyonel şefler için dijital mutfak · Digital kitchen for working chefs</div>' +
+        '<div class="text-muted" style="font-size:11px;margin-top:8px;">Sürüm · Version ' + PCD_CONFIG.APP_VERSION + '</div>' +
+      '</div>' +
+      '<div style="line-height:1.7;font-size:14px;">' +
+        '<p><strong>Bu uygulama nedir?</strong><br>' +
+        'Restoran, otel ve catering şefleri için tam dijital mutfak yönetim aracı. Tarif maliyetlendirmeden menü tasarımına, stoktan etkinlik planlamaya kadar her ihtiyacı karşılar.</p>' +
+        '<p><strong>Kim için?</strong><br>' +
+        '• Restoran ve otel şefleri<br>' +
+        '• Banket ve catering işletmeleri<br>' +
+        '• Mutfak öğrencileri ve yeni şefler<br>' +
+        '• Tarif arşivi tutmak isteyen herkes</p>' +
+        '<p><strong>Nasıl çalışır?</strong><br>' +
+        'Workspace mantığıyla her iş yerin (örn. La Bella, Le Bistro) ayrı çalışma alanı olur. İçerikler karışmaz. Cloud sync ile her cihazdan erişebilirsin. Offline da çalışır.</p>' +
+      '</div>';
+
+    const closeBtn = PCD.el('button', { type: 'button', class: 'btn btn-secondary', text: 'Kapat / Close', style: { width: '100%' } });
+    const footer = PCD.el('div', { style: { width: '100%' } });
+    footer.appendChild(closeBtn);
+    const m = PCD.modal.open({ title: 'Hakkında · About', body: body, footer: footer, size: 'md', closable: true });
+    closeBtn.addEventListener('click', function () { m.close(); });
+  }
+
+  function openFaqModal() {
+    const faqs = [
+      {
+        q: 'Verilerim güvende mi?',
+        a: 'Tüm verilerin önce cihazında (localStorage) saklanır, sonra giriş yaptıysan Supabase\'e şifreli olarak senkronize edilir. Şifreni biz göremeyiz. İstediğin zaman "Yedek indir" ile tüm verini bilgisayarına alabilirsin.'
+      },
+      {
+        q: 'Ücretsiz mi?',
+        a: 'Şu an evet, beta sürümde. Tüm özellikler açık, sınırsız kullanım. İleride premium özellikler eklenebilir ama temel işlevler her zaman ücretsiz kalacak.'
+      },
+      {
+        q: 'Offline çalışır mı?',
+        a: 'Evet. İlk açılıştan sonra internet olmadan da çalışır. Tarayıcıda "Add to Home Screen" yaparsan native uygulama gibi açılır. İnternet gelince cloud\'a otomatik senkron olur.'
+      },
+      {
+        q: 'Sildiğim bir şeyi geri alabilir miyim?',
+        a: 'Evet. Sildiğin her şey 30 gün boyunca Çöp Kutusu\'nda kalır (Hesap → Çöp Kutusu). Tek tıkla geri yükleyebilirsin. 30 gün sonra kalıcı silinir.'
+      },
+      {
+        q: 'Verilerimi yedeklemek istiyorum',
+        a: 'Hesap → "Yedek indir" tıkla. Tüm verilerin tek dosya olarak iner (.json formatında). Bu dosyayı Google Drive, e-posta veya USB\'ye kaydet. İstediğin zaman "Yedekten geri yükle" ile aynı dosyayı geri yükleyebilirsin.'
+      },
+      {
+        q: 'App Store / Google Play\'de var mı?',
+        a: 'Hayır, web tabanlı. Ama telefonun tarayıcısında "Add to Home Screen" / "Ana ekrana ekle" yaparsan ikonu çıkar, uygulama gibi açılır.'
+      },
+      {
+        q: 'Şifremi unuttum',
+        a: 'Giriş ekranında "Forgot password" tıkla → e-postana sıfırlama linki gelir. Hesabını tamamen kaybedersen ve yedek dosyan da yoksa veriler maalesef geri gelmez. Bu yüzden ara sıra "Yedek indir" yapmanı öneririz.'
+      },
+      {
+        q: 'Sorun yaşıyorum / öneri var',
+        a: 'hello@prochefdesk.com adresine e-posta atabilirsin. Her geri bildirim önemli — uygulamayı şefin gerçek ihtiyacına göre şekillendiriyoruz.'
+      },
+    ];
+    const body = PCD.el('div');
+    body.innerHTML = faqs.map(function (f) {
+      return '<div style="border:1px solid var(--border);border-radius:8px;margin-bottom:8px;padding:12px;">' +
+        '<div style="font-weight:700;color:var(--brand-700);margin-bottom:6px;">' + PCD.escapeHtml(f.q) + '</div>' +
+        '<div class="text-muted" style="font-size:13px;line-height:1.6;">' + PCD.escapeHtml(f.a) + '</div>' +
+      '</div>';
+    }).join('');
+
+    const closeBtn = PCD.el('button', { type: 'button', class: 'btn btn-secondary', text: 'Kapat / Close', style: { width: '100%' } });
+    const footer = PCD.el('div', { style: { width: '100%' } });
+    footer.appendChild(closeBtn);
+    const m = PCD.modal.open({ title: 'Sık Sorulan Sorular · FAQ', body: body, footer: footer, size: 'md', closable: true });
+    closeBtn.addEventListener('click', function () { m.close(); });
   }
 
   // ============ PUBLIC PROFILE PREVIEW ============
@@ -484,6 +635,103 @@
     footer.appendChild(closeBtn);
 
     const m = PCD.modal.open({ title: 'Public profile preview', body: body, footer: footer, size: 'md', closable: true });
+    closeBtn.addEventListener('click', function () { m.close(); });
+  }
+
+  // ============ TRASH MODAL ============
+  function openTrashModal() {
+    const body = PCD.el('div');
+
+    function paint() {
+      const items = PCD.store.listTrash ? PCD.store.listTrash() : [];
+      if (items.length === 0) {
+        body.innerHTML =
+          '<div class="empty" style="padding:30px 16px;">' +
+            '<div class="empty-icon" style="color:var(--brand-600);">' + PCD.icon('trash', 40) + '</div>' +
+            '<div class="empty-title">Çöp kutusu boş</div>' +
+            '<div class="empty-desc">Sildiğin öğeler buraya düşer ve 30 gün boyunca geri yüklenebilir. 30 günden sonra kalıcı olarak silinir.</div>' +
+          '</div>';
+        return;
+      }
+
+      // Group by table
+      const labels = {
+        recipes: { name: 'Tarifler · Recipes', icon: 'book-open' },
+        ingredients: { name: 'Malzemeler · Ingredients', icon: 'carrot' },
+        menus: { name: 'Menüler · Menus', icon: 'menu' },
+        events: { name: 'Etkinlikler · Events', icon: 'calendar' },
+        suppliers: { name: 'Tedarikçiler · Suppliers', icon: 'truck' },
+        canvases: { name: 'Kanvaslar · Canvases', icon: 'id-card' },
+        shoppingLists: { name: 'Alışveriş · Shopping', icon: 'shopping-cart' },
+        checklistTemplates: { name: 'Kontrol Listeleri · Checklists', icon: 'check-square' },
+      };
+
+      const grouped = {};
+      items.forEach(function (it) {
+        if (!grouped[it.table]) grouped[it.table] = [];
+        grouped[it.table].push(it);
+      });
+
+      let html = '<div class="text-muted text-sm mb-3" style="padding:10px 12px;background:var(--surface-2);border-radius:6px;">' +
+        items.length + ' öğe çöp kutusunda · 30 günden eski öğeler otomatik silinir' +
+      '</div>';
+
+      Object.keys(grouped).forEach(function (table) {
+        const lbl = labels[table] || { name: table, icon: 'trash' };
+        html += '<div style="margin-bottom:14px;">' +
+          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">' +
+            '<span style="color:var(--brand-700);">' + PCD.icon(lbl.icon, 14) + '</span>' +
+            '<span style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;">' + lbl.name + ' (' + grouped[table].length + ')</span>' +
+          '</div>';
+        grouped[table].forEach(function (it) {
+          const ageDays = Math.floor((Date.now() - new Date(it.deletedAt).getTime()) / 86400000);
+          const daysLeft = 30 - ageDays;
+          html += '<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--border);border-radius:6px;margin-bottom:4px;">' +
+            '<div style="flex:1;min-width:0;">' +
+              '<div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + PCD.escapeHtml(it.label) + '</div>' +
+              '<div class="text-muted" style="font-size:11px;">Silindi: ' + PCD.fmtRelTime(it.deletedAt) + ' · ' + Math.max(0, daysLeft) + ' gün kaldı</div>' +
+            '</div>' +
+            '<button type="button" class="btn btn-outline btn-sm" data-restore="' + it.table + '|' + it.id + '" title="Geri yükle">↶</button>' +
+            '<button type="button" class="icon-btn" data-purge="' + it.table + '|' + it.id + '" title="Kalıcı sil" style="color:var(--danger);">' + PCD.icon('trash', 14) + '</button>' +
+          '</div>';
+        });
+        html += '</div>';
+      });
+
+      body.innerHTML = html;
+    }
+    paint();
+
+    PCD.on(body, 'click', '[data-restore]', function () {
+      const parts = this.getAttribute('data-restore').split('|');
+      if (PCD.store.restoreFromTrash(parts[0], parts[1])) {
+        PCD.toast.success('Geri yüklendi · Restored');
+        paint();
+      } else {
+        PCD.toast.error('Restore failed');
+      }
+    });
+    PCD.on(body, 'click', '[data-purge]', function () {
+      const parts = this.getAttribute('data-purge').split('|');
+      PCD.modal.confirm({
+        icon: '🗑', iconKind: 'danger', danger: true,
+        title: 'Kalıcı olarak sil?',
+        text: 'Bu öğe kalıcı olarak silinecek ve geri yüklenemeyecek.',
+        okText: 'Kalıcı sil',
+        cancelText: 'İptal'
+      }).then(function (ok) {
+        if (!ok) return;
+        if (PCD.store.purgeFromTrash(parts[0], parts[1])) {
+          PCD.toast.success('Kalıcı olarak silindi');
+          paint();
+        }
+      });
+    });
+
+    const closeBtn = PCD.el('button', { type: 'button', class: 'btn btn-secondary', text: 'Kapat / Close', style: { width: '100%' } });
+    const footer = PCD.el('div', { style: { width: '100%' } });
+    footer.appendChild(closeBtn);
+    const m = PCD.modal.open({ title: '🗑 Çöp Kutusu · Trash', body: body, footer: footer, size: 'md', closable: true });
     closeBtn.addEventListener('click', function () { m.close(); });
   }
 

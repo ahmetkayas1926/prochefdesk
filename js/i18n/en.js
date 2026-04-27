@@ -253,13 +253,13 @@ window.PCD.i18n.register('en', {
 
   // Tutorials
   tour_welcome_title: 'Welcome to ProChefDesk 👋',
-  tour_welcome_text: 'The fastest way to cost recipes, plan menus, and run your kitchen. Let\'s take a quick 30-second tour.',
-  tour_nav_title: 'Your toolkit',
-  tour_nav_text: 'Tap the + button at the bottom to see all tools. Everything is one tap away.',
-  tour_recipes_title: 'Recipes, costed instantly',
-  tour_recipes_text: 'Every ingredient you add is priced automatically. See your food cost % in real time.',
-  tour_demo_title: 'Try it now',
-  tour_demo_text: 'We\'ve added 3 popular recipes so you can see how every tool works. Delete them whenever you like.',
+  tour_welcome_text: 'A complete digital kitchen — recipes with live costing, menus, events, inventory, checklists, and more. Built for working chefs.',
+  tour_nav_title: 'Everything is connected',
+  tour_nav_text: 'Sidebar (≡ icon) opens all tools. Update an ingredient price → all recipes update. Add a recipe → use it in menus, events, kitchen cards.',
+  tour_recipes_title: 'Already filled with sample data',
+  tour_recipes_text: 'We\'ve loaded 3 recipes, 30+ ingredients, a sample menu, an upcoming event, suppliers, and inventory. Click around — everything works.',
+  tour_demo_title: 'Make it yours',
+  tour_demo_text: 'Edit, copy, or delete sample data anytime. When you\'re ready, create your own workspace. Need to start fresh? Account → Reset demo data.',
   tour_finish: 'Got it, let\'s cook',
 
   // Tool-specific first-use tips

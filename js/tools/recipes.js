@@ -1114,8 +1114,18 @@
   function openRecipeShareSheet(opts) {
     const body = PCD.el('div');
     body.innerHTML =
+      '<div style="padding:14px;background:linear-gradient(135deg,var(--brand-50),var(--surface));border:1px solid var(--brand-300);border-radius:8px;margin-bottom:14px;">' +
+        '<div style="font-weight:700;color:var(--brand-700);margin-bottom:4px;">🔗 Public link · Herkese açık link</div>' +
+        '<div class="text-muted text-sm" style="margin-bottom:10px;">Login olmadan da bu tarifi görebilen kalıcı bir link. WhatsApp, Instagram, e-posta, neye yapıştırırsan oraya yapışır.</div>' +
+        '<button type="button" class="btn btn-primary btn-sm" id="rShPublicLink" style="width:100%;">' +
+          PCD.icon('share', 14) + ' <span>Generate share link</span>' +
+        '</button>' +
+        '<input type="text" id="rShLinkOutput" readonly style="display:none;width:100%;margin-top:8px;padding:8px;border:1.5px solid var(--brand-600);border-radius:6px;font-family:var(--font-mono);font-size:12px;background:#fff;">' +
+      '</div>' +
+
+      '<div style="font-weight:600;font-size:12px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Or share as text</div>' +
       '<div class="field"><label class="field-label">Message</label>' +
-      '<textarea class="textarea" id="rShareText" rows="10" style="font-family:var(--font-mono);font-size:13px;">' + PCD.escapeHtml(opts.text) + '</textarea></div>' +
+      '<textarea class="textarea" id="rShareText" rows="8" style="font-family:var(--font-mono);font-size:13px;">' + PCD.escapeHtml(opts.text) + '</textarea></div>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-top:12px">' +
         '<button class="btn btn-outline" id="rShWa" style="flex-direction:column;height:auto;padding:12px 4px;gap:4px">' +
           '<div style="color:#25D366">' + PCD.icon('message-circle', 22) + '</div>' +
@@ -1138,6 +1148,54 @@
 
     function getText() { return PCD.$('#rShareText', body).value; }
     closeBtn.addEventListener('click', function () { m.close(); });
+
+    // Public share link
+    const linkBtn = PCD.$('#rShPublicLink', body);
+    const linkOut = PCD.$('#rShLinkOutput', body);
+    linkBtn.addEventListener('click', function () {
+      const user = PCD.store.get('user');
+      if (!user || !user.id) {
+        PCD.toast.error('Sign in to create public links');
+        return;
+      }
+      if (!PCD.share || !PCD.share.createOrGetShareUrl) {
+        PCD.toast.error('Share unavailable');
+        return;
+      }
+      linkBtn.disabled = true;
+      linkBtn.innerHTML = '<span class="spinner"></span> Generating...';
+      PCD.share.createOrGetShareUrl('recipe', opts.recipe.id).then(function (url) {
+        linkOut.value = url;
+        linkOut.style.display = 'block';
+        linkBtn.innerHTML = PCD.icon('copy', 14) + ' <span>Copy link</span>';
+        linkBtn.disabled = false;
+        // First click: select all in input. Second click: copy.
+        linkOut.focus();
+        linkOut.select();
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(url).then(function () {
+            PCD.toast.success('✓ Link copied · ' + url.length + ' chars');
+          });
+        }
+        // Subsequent clicks just copy
+        linkBtn.onclick = function () {
+          if (navigator.clipboard) {
+            navigator.clipboard.writeText(url).then(function () {
+              PCD.toast.success('Copied');
+            });
+          } else {
+            linkOut.select();
+            document.execCommand('copy');
+            PCD.toast.success('Copied');
+          }
+        };
+      }).catch(function (e) {
+        PCD.toast.error('Share failed: ' + (e.message || e));
+        linkBtn.disabled = false;
+        linkBtn.innerHTML = PCD.icon('share', 14) + ' <span>Generate share link</span>';
+      });
+    });
+
     PCD.$('#rShWa', body).addEventListener('click', function () {
       window.open('https://wa.me/?text=' + encodeURIComponent(getText()), '_blank');
       m.close();

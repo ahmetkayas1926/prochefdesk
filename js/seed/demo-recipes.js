@@ -187,8 +187,129 @@
     PCD.store.upsertRecipe(tikka);
     PCD.store.upsertRecipe(burger);
 
+    // Re-fetch with their assigned ids
+    const all = PCD.store.listRecipes();
+    const carbonaraR = all.find(function (r) { return r.name === 'Spaghetti alla Carbonara'; });
+    const tikkaR = all.find(function (r) { return r.name === 'Chicken Tikka Masala'; });
+    const burgerR = all.find(function (r) { return r.name === 'Classic Cheeseburger'; });
+
+    // === DEMO MENU ===
+    if (carbonaraR && tikkaR && burgerR) {
+      PCD.store.upsertInTable('menus', {
+        name: 'Lunch Menu',
+        subtitle: 'Sample · Customize me',
+        sections: [
+          { id: PCD.uid('sec'), title: 'Mains', items: [
+            { id: PCD.uid('mi'), recipeId: tikkaR.id, price: 18 },
+            { id: PCD.uid('mi'), recipeId: carbonaraR.id, price: 16 },
+            { id: PCD.uid('mi'), recipeId: burgerR.id, price: 14 },
+          ]},
+        ],
+        printDensity: 'comfortable',
+        _demo: true,
+      }, 'm');
+    }
+
+    // === DEMO SUPPLIERS ===
+    const supplierData = [
+      { name: 'Fresh Farm Co.', category: 'cat_produce', phone: '+1 555 0101', email: 'orders@freshfarm.example', products: [
+        { name: 'Tomato', unit: 'kg' },
+        { name: 'Onion', unit: 'kg' },
+        { name: 'Garlic', unit: 'kg' },
+      ]},
+      { name: 'Premium Meats', category: 'cat_meat', phone: '+1 555 0202', email: 'orders@premiummeats.example', products: [
+        { name: 'Beef mince (80/20)', unit: 'kg' },
+        { name: 'Chicken thigh boneless', unit: 'kg' },
+        { name: 'Pancetta', unit: 'kg' },
+      ]},
+      { name: 'Dairy Direct', category: 'cat_dairy', phone: '+1 555 0303', email: 'orders@dairydirect.example', products: [
+        { name: 'Heavy cream', unit: 'L' },
+        { name: 'Plain yogurt', unit: 'kg' },
+        { name: 'Pecorino Romano', unit: 'kg' },
+        { name: 'Parmigiano Reggiano', unit: 'kg' },
+      ]},
+      { name: 'Bakery Wholesale', category: 'cat_baking', phone: '+1 555 0404', email: 'orders@bakery.example', products: [
+        { name: 'Burger buns brioche', unit: 'pcs' },
+      ]},
+      { name: 'Spice Importers', category: 'cat_spices', phone: '+1 555 0505', email: 'orders@spices.example', products: [
+        { name: 'Garam masala', unit: 'kg' },
+        { name: 'Ground cumin', unit: 'kg' },
+        { name: 'Paprika (smoked)', unit: 'kg' },
+      ]},
+    ];
+    supplierData.forEach(function (s) {
+      PCD.store.upsertInTable('suppliers', Object.assign({ _demo: true }, s), 's');
+    });
+
+    // === DEMO INVENTORY ===
+    // Set par + min levels and current stock for some ingredients (mostly OK, one critical)
+    const wsId = PCD.store.getActiveWorkspaceId();
+    const inv = PCD.store.get('inventory') || {};
+    inv[wsId] = inv[wsId] || {};
+    const invMap = {
+      'Spaghetti pasta':        { stock: 8000,  parLevel: 5000, minLevel: 2000 },  // OK
+      'Heavy cream':            { stock: 1500,  parLevel: 2000, minLevel: 500 },   // LOW
+      'Plain yogurt':           { stock: 200,   parLevel: 1000, minLevel: 500 },   // CRITICAL
+      'Burger buns brioche':    { stock: 12,    parLevel: 24,   minLevel: 6 },     // LOW
+      'Pancetta':               { stock: 800,   parLevel: 1000, minLevel: 200 },   // OK
+      'Pecorino Romano':        { stock: 1500,  parLevel: 2000, minLevel: 500 },   // OK
+      'Eggs (large)':           { stock: 60,    parLevel: 30,   minLevel: 10 },    // OK
+      'Tomato puree':           { stock: 2000,  parLevel: 1000, minLevel: 300 },   // OK
+    };
+    Object.keys(invMap).forEach(function (name) {
+      const ing = upserted[name];
+      if (!ing) return;
+      const cfg = invMap[name];
+      inv[wsId][ing.id] = {
+        stock: cfg.stock,
+        parLevel: cfg.parLevel,
+        minLevel: cfg.minLevel,
+        lastCountedAt: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+      };
+    });
+    PCD.store.set('inventory', inv);
+
+    // === DEMO EVENT (next Saturday) ===
+    if (carbonaraR && tikkaR) {
+      const now = new Date();
+      const daysUntilSat = (6 - now.getDay() + 7) % 7 || 7;
+      const eventDate = new Date(now.getTime() + daysUntilSat * 86400000);
+      const dateStr = eventDate.toISOString().slice(0, 10);
+      PCD.store.upsertInTable('events', {
+        name: 'Wedding Reception',
+        date: dateStr,
+        time: '18:30',
+        guestCount: 60,
+        venue: 'Garden Terrace',
+        pricePerHead: 65,
+        budget: 4500,
+        status: 'confirmed',
+        notes: 'Sample event · Customize or delete',
+        recipes: [
+          { recipeId: carbonaraR.id, portionsPerGuest: 1 },
+          { recipeId: tikkaR.id, portionsPerGuest: 1 },
+        ],
+        _demo: true,
+      }, 'e');
+    }
+
+    // === DEMO KITCHEN CARDS CANVAS ===
+    if (carbonaraR && tikkaR && burgerR) {
+      PCD.store.upsertInTable('canvases', {
+        name: 'Daily Kitchen Reference',
+        columns: 3, orientation: 'landscape', fontSize: 'medium',
+        showMethod: true, showAmounts: true,
+        layout: [
+          { recipeId: tikkaR.id, span: 1 },
+          { recipeId: carbonaraR.id, span: 1 },
+          { recipeId: burgerR.id, span: 1 },
+        ],
+        _demo: true,
+      }, 'cvs');
+    }
+
     PCD.store.update('onboarding', { demoSeeded: true });
-    PCD.log('Demo recipes seeded.');
+    PCD.log('Demo data seeded.');
   }
 
   function removeDemo() {
@@ -196,6 +317,13 @@
     const recs = PCD.store.listRecipes().filter(function (r) { return r._demo; }).map(function (r) { return r.id; });
     PCD.store.deleteRecipes(recs);
     PCD.store.deleteIngredients(ings);
+    // Remove demo entries from generic tables
+    ['menus','events','suppliers','canvases','shoppingLists'].forEach(function (table) {
+      const items = PCD.store.listTable(table) || [];
+      items.forEach(function (it) {
+        if (it._demo) PCD.store.deleteFromTable(table, it.id);
+      });
+    });
     PCD.store.update('onboarding', { demoSeeded: false });
   }
 

@@ -287,7 +287,8 @@
         '.dash-quick button .icn { color: var(--brand-600); }' +
         '.dash-quick button .lbl { font-weight: 600; font-size: 14px; color: var(--text); }' +
         '.dash-stats { display: flex; gap: 14px; margin-top: 24px; padding: 14px 16px; background: var(--surface-2); border-radius: var(--r-md); flex-wrap: wrap; }' +
-        '.dash-stat { display: flex; flex-direction: column; gap: 2px; }' +
+        '.dash-stat { display: flex; flex-direction: column; gap: 2px; padding: 6px 12px; border-radius: 8px; cursor: pointer; transition: all .15s ease; border: 1.5px solid transparent; }' +
+        '.dash-stat:hover { background: var(--surface); border-color: var(--brand-300); transform: translateY(-1px); }' +
         '.dash-stat-num { font-size: 18px; font-weight: 700; color: var(--text); }' +
         '.dash-stat-lbl { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em; }' +
       '</style>' +
@@ -310,17 +311,17 @@
       // Quick actions
       '<div class="dash-quick">' +
         '<button data-action="new-recipe"><span class="icn">' + PCD.icon('book-open', 20) + '</span><span class="lbl">' + t('dash_new_recipe') + '</span></button>' +
-        '<button data-action="new-event"><span class="icn">' + PCD.icon('calendar', 20) + '</span><span class="lbl">' + t('dash_new_event') + '</span></button>' +
-        '<button data-action="log-waste"><span class="icn">' + PCD.icon('recycle', 20) + '</span><span class="lbl">' + t('dash_log_waste') + '</span></button>' +
+        '<button data-action="open-menus"><span class="icn">' + PCD.icon('menu', 20) + '</span><span class="lbl">' + (t('t_menus_title') || 'Menu Builder') + '</span></button>' +
         '<button data-action="start-checklist"><span class="icn">' + PCD.icon('check-square', 20) + '</span><span class="lbl">' + t('dash_start_checklist') + '</span></button>' +
-        '<button data-action="count-stock"><span class="icn">' + PCD.icon('package', 20) + '</span><span class="lbl">' + t('dash_count_stock') + '</span></button>' +
+        '<button data-action="new-event"><span class="icn">' + PCD.icon('calendar', 20) + '</span><span class="lbl">' + t('dash_new_event') + '</span></button>' +
+        '<button data-action="kitchen-cards"><span class="icn">' + PCD.icon('id-card', 20) + '</span><span class="lbl">' + (t('t_kitchen_cards_title') || 'Kitchen Cards') + '</span></button>' +
       '</div>' +
 
       // Library stats (small footer)
       '<div class="dash-stats">' +
-        '<div class="dash-stat"><div class="dash-stat-num">' + stats.recipes + '</div><div class="dash-stat-lbl">' + t('dash_recipes_label') + '</div></div>' +
-        '<div class="dash-stat"><div class="dash-stat-num">' + stats.ingredients + '</div><div class="dash-stat-lbl">' + t('dash_ingredients_label') + '</div></div>' +
-        '<div class="dash-stat"><div class="dash-stat-num">' + stats.menus + '</div><div class="dash-stat-lbl">' + t('dash_menus_label') + '</div></div>' +
+        '<div class="dash-stat" data-action="open-recipes" role="button" tabindex="0" title="Recipes"><div class="dash-stat-num">' + stats.recipes + '</div><div class="dash-stat-lbl">' + t('dash_recipes_label') + '</div></div>' +
+        '<div class="dash-stat" data-action="open-ingredients" role="button" tabindex="0" title="Ingredients"><div class="dash-stat-num">' + stats.ingredients + '</div><div class="dash-stat-lbl">' + t('dash_ingredients_label') + '</div></div>' +
+        '<div class="dash-stat" data-action="open-menus-stat" role="button" tabindex="0" title="Menus"><div class="dash-stat-num">' + stats.menus + '</div><div class="dash-stat-lbl">' + t('dash_menus_label') + '</div></div>' +
       '</div>';
 
     // Wire actions
@@ -331,14 +332,14 @@
       PCD.router.go('events');
       setTimeout(function () { if (PCD.tools.events && PCD.tools.events.openEditor) PCD.tools.events.openEditor(); }, 200);
     });
-    PCD.on(view, 'click', '[data-action="log-waste"]', function () {
-      PCD.router.go('waste');
+    PCD.on(view, 'click', '[data-action="open-menus"]', function () {
+      PCD.router.go('menus');
     });
     PCD.on(view, 'click', '[data-action="start-checklist"]', function () {
       PCD.router.go('checklist');
     });
-    PCD.on(view, 'click', '[data-action="count-stock"]', function () {
-      PCD.router.go('inventory');
+    PCD.on(view, 'click', '[data-action="kitchen-cards"]', function () {
+      PCD.router.go('kitchen_cards');
     });
     PCD.on(view, 'click', '[data-action="view-inventory"]', function () {
       PCD.router.go('inventory');
@@ -355,6 +356,16 @@
     });
     PCD.on(view, 'click', '[data-action="view-waste"]', function () {
       PCD.router.go('waste');
+    });
+    // Clickable stat tiles (Recipes / Ingredients / Menus counts)
+    PCD.on(view, 'click', '[data-action="open-recipes"]', function () {
+      PCD.router.go('recipes');
+    });
+    PCD.on(view, 'click', '[data-action="open-ingredients"]', function () {
+      PCD.router.go('ingredients');
+    });
+    PCD.on(view, 'click', '[data-action="open-menus-stat"]', function () {
+      PCD.router.go('menus');
     });
   }
 

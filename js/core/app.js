@@ -10,8 +10,19 @@
     const PCD = window.PCD;
     const t = PCD.i18n.t;
 
+    // 0) Init cloud first (so share.js can use supabase client)
+    PCD.cloud.init();
+
+    // 0.5) Check for ?share= URL — if present, render share page and skip normal app
+    if (PCD.share && PCD.share.initShareCheck && PCD.share.initShareCheck()) {
+      // Share page shown; do NOT continue normal boot
+      return;
+    }
+
     // 1) Load persisted state
     PCD.store.init();
+    // Auto-purge trash older than 30 days
+    try { PCD.store.autoPurgeOldTrash && PCD.store.autoPurgeOldTrash(30); } catch (e) {}
 
     // 2) Apply saved theme BEFORE showing UI
     const savedTheme = PCD.store.get('prefs.theme') || 'light';
@@ -25,9 +36,6 @@
       savedLocale = supported ? browser : 'en';
     }
     PCD.i18n.setLocale(savedLocale);
-
-    // 4) Init cloud (no-op if not configured)
-    PCD.cloud.init();
 
     // 5) Init auth (may check session and hydrate user)
     PCD.auth.init().then(function () {
