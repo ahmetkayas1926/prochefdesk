@@ -129,7 +129,7 @@
           (filled > 0 ? ' · <span style="color:var(--brand-700);font-weight:700;">' + filled + ' to order</span>' : '') +
         '</div>' +
       '</div>' +
-      '<button class="icon-btn" data-edit-sup="' + s.id + '" title="Edit" style="flex-shrink:0;">' + PCD.icon('edit', 18) + '</button>' +
+      '<button class="icon-btn" data-edit-sup="' + s.id + '" title="' + PCD.escapeHtml(t('btn_edit_action')) + '" style="flex-shrink:0;">' + PCD.icon('edit', 18) + '</button>' +
       (products.length > 0 ? '<button class="btn btn-primary btn-sm" data-send-sup="' + s.id + '" style="flex-shrink:0;">' + PCD.icon('send', 14) + ' Send' + (filled > 0 ? ' (' + filled + ')' : '') + '</button>' : '');
     card.appendChild(header);
 
@@ -161,7 +161,7 @@
       const noProducts = PCD.el('div', {
         class: 'text-muted text-sm',
         style: { padding: '8px 0', fontSize: '13px', fontStyle: 'italic' },
-        text: 'No products yet — tap edit to add the items you buy from this supplier.'
+        text: t('supplier_no_products')
       });
       card.appendChild(noProducts);
     }
@@ -206,7 +206,7 @@
       return v && parseFloat(v) > 0;
     });
     if (filled.length === 0) {
-      PCD.toast.warning('Enter quantities for at least one product first');
+      PCD.toast.warning(t('enter_quantities_first'));
       return;
     }
     // Pick delivery date first, then build message + open share sheet
@@ -264,7 +264,7 @@
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
     footer.appendChild(cancelBtn);
     footer.appendChild(nextBtn);
-    const m = PCD.modal.open({ title: 'Send order to ' + supplier.name, body: body, footer: footer, size: 'sm', closable: true });
+    const m = PCD.modal.open({ title: t('send_order_to_name', { name: supplier.name }), body: body, footer: footer, size: 'sm', closable: true });
     cancelBtn.addEventListener('click', function () { m.close(); });
     nextBtn.addEventListener('click', function () {
       const notes = (PCD.$('#dlvNotes', body).value || '').trim();
@@ -338,7 +338,7 @@
     const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: 'Close' });
     const footer = PCD.el('div', { style: { display: 'flex', width: '100%' } });
     footer.appendChild(cancelBtn);
-    const m = PCD.modal.open({ title: 'Send to ' + supplier.name, body: body, footer: footer, size: 'md', closable: true });
+    const m = PCD.modal.open({ title: t('send_to_name', { name: supplier.name }), body: body, footer: footer, size: 'md', closable: true });
 
     function getMsg() { return PCD.$('#shareMsg', body).value; }
     cancelBtn.addEventListener('click', function () { m.close(); });
@@ -373,7 +373,7 @@
       // Use Web Share API if available (system share sheet)
       if (navigator.share) {
         navigator.share({
-          title: 'Order for ' + supplier.name,
+          title: t('order_for_name', { name: supplier.name }),
           text: txt
         }).then(function () {
           onSentSuccess(supplier);
@@ -383,7 +383,7 @@
         });
       } else if (navigator.clipboard) {
         navigator.clipboard.writeText(txt).then(function () {
-          PCD.toast.success('Copied to clipboard — paste it anywhere');
+          PCD.toast.success(t('copied_to_clipboard'));
         });
       }
     });
@@ -392,7 +392,7 @@
   function onSentSuccess(supplier) {
     // Clear quantities for this supplier — they were sent
     delete draftQty[supplier.id];
-    PCD.toast.success('Order sent to ' + supplier.name);
+    PCD.toast.success(t('order_sent_to', { name: supplier.name }));
     // Re-render so the badge clears
     setTimeout(function () {
       const v = PCD.$('#view');
@@ -431,7 +431,7 @@
           </div>
           <div class="field">
             <label class="field-label">WhatsApp</label>
-            <input type="tel" class="input" id="sWa" value="${PCD.escapeHtml(data.whatsapp || '')}" placeholder="Leave empty to use phone">
+            <input type="tel" class="input" id="sWa" value="${PCD.escapeHtml(data.whatsapp || '')}" placeholder="' + PCD.escapeHtml(t('placeholder_leave_empty_phone')) + '">
           </div>
         </div>
         <div class="field">
@@ -440,7 +440,7 @@
         </div>
         <div class="field">
           <label class="field-label">Notes</label>
-          <textarea class="textarea" id="sNotes" rows="2" placeholder="Delivery days, min order, etc.">${PCD.escapeHtml(data.notes || '')}</textarea>
+          <textarea class="textarea" id="sNotes" rows="2" placeholder="' + PCD.escapeHtml(t('placeholder_delivery_days')) + '">${PCD.escapeHtml(data.notes || '')}</textarea>
         </div>
 
         <div class="section-title mt-4 mb-2" style="font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;">Products (${data.products.length})</div>
@@ -453,7 +453,7 @@
       data.products.forEach(function (p, idx) {
         const row = PCD.el('div', { style: { display: 'flex', gap: '6px', alignItems: 'center' } });
         row.innerHTML = `
-          <input type="text" class="input" data-pname="${idx}" value="${PCD.escapeHtml(p.name || '')}" placeholder="Product name" style="flex:1;">
+          <input type="text" class="input" data-pname="${idx}" value="${PCD.escapeHtml(p.name || '')}" placeholder="' + PCD.escapeHtml(t('placeholder_product_name')) + '" style="flex:1;">
           <select class="select" data-punit="${idx}" style="width:75px;">
             ${UNITS.map(function (u) { return '<option value="' + u + '"' + (p.unit === u ? ' selected' : '') + '>' + u + '</option>'; }).join('')}
           </select>
@@ -527,7 +527,7 @@
     saveBtn.addEventListener('click', function () {
       // Read fresh from DOM (safety net)
       data.name = (PCD.$('#sName', body).value || '').trim();
-      if (!data.name) { PCD.toast.error('Name required'); return; }
+      if (!data.name) { PCD.toast.error(t('toast_name_required')); return; }
       data.category = PCD.$('#sCat', body).value;
       data.phone = (PCD.$('#sPhone', body).value || '').trim();
       data.whatsapp = (PCD.$('#sWa', body).value || '').trim();

@@ -28,7 +28,7 @@
       <div class="page-header">
         <div class="page-header-text">
           <div class="page-title">${t('t_kitchen_cards_title') || 'Kitchen Cards'}</div>
-          <div class="page-subtitle">Print compact A4 reference sheets — laminate, hang in the kitchen</div>
+          <div class="page-subtitle">${t('kitchen_cards_subtitle')}</div>
         </div>
       </div>
       <div id="kcBody"></div>
@@ -87,9 +87,9 @@
           <div>
             <div class="card mb-3" style="padding:14px;">
               <div class="flex items-center justify-between mb-2" style="gap:6px;flex-wrap:wrap;">
-                <input type="text" class="input" id="canvasName" value="${PCD.escapeHtml(canvasName)}" placeholder="Canvas name" style="flex:1;min-width:120px;font-weight:700;">
-                <button type="button" class="btn btn-outline btn-sm" id="newCanvasBtn" title="Start a new canvas">${PCD.icon('plus', 14)}</button>
-                ${allCanvases.length > 0 ? '<button type="button" class="btn btn-outline btn-sm" id="loadCanvasBtn" title="Load saved canvas">' + PCD.icon('book-open', 14) + ' <span>' + allCanvases.length + '</span></button>' : ''}
+                <input type="text" class="input" id="canvasName" value="${PCD.escapeHtml(canvasName)}" placeholder="' + PCD.escapeHtml(t('placeholder_canvas_name')) + '" style="flex:1;min-width:120px;font-weight:700;">
+                <button type="button" class="btn btn-outline btn-sm" id="newCanvasBtn" title="' + PCD.escapeHtml(t('tooltip_new_canvas')) + '">${PCD.icon('plus', 14)}</button>
+                ${allCanvases.length > 0 ? '<button type="button" class="btn btn-outline btn-sm" id="loadCanvasBtn" title="' + PCD.escapeHtml(t('tooltip_load_canvas')) + '">' + PCD.icon('book-open', 14) + ' <span>' + allCanvases.length + '</span></button>' : ''}
               </div>
 
               <div class="mb-2">
@@ -255,9 +255,9 @@
         const saved = PCD.store.upsertInTable('canvases', payload, 'cvs');
         if (saved && saved.id) {
           canvasId = saved.id;
-          PCD.toast.success('Canvas "' + finalName + '" saved');
+          PCD.toast.success(t('canvas_saved', { name: finalName }));
         } else {
-          PCD.toast.error('Save failed');
+          PCD.toast.error(t('toast_save_failed'));
         }
       });
 
@@ -269,7 +269,7 @@
         showMethod = true; showAmounts = true;
         layout = recipes.map(function (r) { return { recipeId: r.id, span: 1 }; });
         renderBody();
-        PCD.toast.info('New canvas — name it and customize');
+        PCD.toast.info(t('new_canvas_message'));
       });
 
       // Load canvas
@@ -513,13 +513,13 @@
       }
 
       const interactiveExtras = opts.interactive
-        ? '<button type="button" class="remove-btn" title="Remove from canvas">×</button>' +
-          '<div class="kc-resize-handle" title="Drag to resize"></div>'
+        ? '<button type="button" class="remove-btn" title="' + PCD.escapeHtml(t('tooltip_remove_from_canvas')) + '">×</button>' +
+          '<div class="kc-resize-handle" title="' + PCD.escapeHtml(t('tooltip_drag_to_resize')) + '"></div>'
         : '';
 
       blocksHtml +=
         '<div class="kc-block" data-rid="' + r.id + '" style="grid-column: span ' + span + ';">' +
-          '<div class="kc-name kc-block-header" title="Drag to reorder">' + PCD.escapeHtml(r.name || '') +
+          '<div class="kc-name kc-block-header" title="' + PCD.escapeHtml(t('tooltip_drag_to_reorder')) + '">' + PCD.escapeHtml(r.name || '') +
             (r.servings ? '<span class="kc-srv"> · ' + r.servings + 'p</span>' : '') +
           '</div>' +
           (ingsHtml ? '<div class="kc-ings">' + ingsHtml + '</div>' : '') +
@@ -702,7 +702,7 @@
                 (c.orientation || 'landscape') + ' · ' + PCD.fmtRelTime(c.updatedAt) +
               '</div>' +
             '</div>' +
-            '<button type="button" class="icon-btn" data-del-cvs="' + c.id + '" title="Delete">' + PCD.icon('trash', 16) + '</button>' +
+            '<button type="button" class="icon-btn" data-del-cvs="' + c.id + '" title="' + PCD.escapeHtml(t('btn_delete_action')) + '">' + PCD.icon('trash', 16) + '</button>' +
           '</div>';
         }).join('') +
       '</div>';
@@ -712,7 +712,7 @@
     const closeBtn = PCD.el('button', { type: 'button', class: 'btn btn-secondary', text: 'Close', style: { width: '100%' } });
     const footer = PCD.el('div', { style: { width: '100%' } });
     footer.appendChild(closeBtn);
-    const m = PCD.modal.open({ title: 'Saved canvases', body: body, footer: footer, size: 'sm', closable: true });
+    const m = PCD.modal.open({ title: t('modal_saved_canvases'), body: body, footer: footer, size: 'sm', closable: true });
     closeBtn.addEventListener('click', function () { m.close(); });
 
     PCD.on(body, 'click', '[data-cvs]', function (e) {
@@ -729,13 +729,13 @@
       const cvs = PCD.store.getFromTable('canvases', id);
       PCD.modal.confirm({
         icon: '🗑', iconKind: 'danger', danger: true,
-        title: 'Delete canvas?',
+        title: t('confirm_delete_canvas'),
         text: '"' + (cvs && cvs.name ? cvs.name : 'Canvas') + '" will be permanently removed.',
         okText: 'Delete'
       }).then(function (ok) {
         if (!ok) return;
         PCD.store.deleteFromTable('canvases', id);
-        PCD.toast.success('Canvas deleted');
+        PCD.toast.success(t('toast_canvas_deleted'));
         paintList();
       });
     });

@@ -21,7 +21,7 @@
       <div class="page-header">
         <div class="page-header-text">
           <div class="page-title">${t('shopping_title')}</div>
-          <div class="page-subtitle">${lists.length} ${lists.length === 1 ? 'list' : 'lists'}</div>
+          <div class="page-subtitle">${lists.length} ${lists.length === 1 ? t('list_singular') : t('list_plural')}</div>
         </div>
         <div class="page-header-actions">
           <button class="btn btn-primary" id="newShopBtn">+ ${t('new_shop')}</button>

@@ -45,7 +45,7 @@
       <div class="page-header">
         <div class="page-header-text">
           <div class="page-title">${t('portion_title') || 'Portion Calculator'}</div>
-          <div class="page-subtitle">Scale one or more recipes for an event</div>
+          <div class="page-subtitle">${t('portion_subtitle')}</div>
         </div>
       </div>
 
@@ -70,7 +70,7 @@
             <button class="btn btn-ghost btn-sm" id="pcNone">Clear</button>
           </div>
         </div>
-        <input type="search" class="input mb-2" id="pcSearch" placeholder="Search recipes...">
+        <input type="search" class="input mb-2" id="pcSearch" placeholder="' + PCD.escapeHtml(t('placeholder_search_recipes')) + '">
         <div id="pcRecipeList" style="max-height:280px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r-sm);"></div>
         <div class="text-muted text-sm mt-2" id="pcSelStat">No recipes selected</div>
       </div>
@@ -363,7 +363,7 @@
     footer.appendChild(cancelBtn);
     footer.appendChild(okBtn);
 
-    const m = PCD.modal.open({ title: 'New shopping list', body: body, footer: footer, size: 'sm', closable: true });
+    const m = PCD.modal.open({ title: t('modal_new_shopping_list'), body: body, footer: footer, size: 'sm', closable: true });
 
     cancelBtn.addEventListener('click', function () { m.close(); });
     okBtn.addEventListener('click', function () {
@@ -386,7 +386,7 @@
         createdAt: new Date().toISOString(),
       };
       const saved = PCD.store.upsertInTable('shoppingLists', list, 'sl');
-      PCD.toast.success('Shopping list created · ' + recipes.length + ' recipes');
+      PCD.toast.success(t('shopping_list_created', { n: recipes.length }));
       m.close();
       // Navigate to shopping list view if available
       setTimeout(function () {
@@ -507,7 +507,7 @@
     const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: 'Close' });
     const footer = PCD.el('div', { style: { display: 'flex', width: '100%' } });
     footer.appendChild(closeBtn);
-    const m = PCD.modal.open({ title: 'Share scaled recipes', body: body, footer: footer, size: 'md', closable: true });
+    const m = PCD.modal.open({ title: t('modal_share_scaled_recipes'), body: body, footer: footer, size: 'md', closable: true });
 
     function getText() { return PCD.$('#shText', body).value; }
     closeBtn.addEventListener('click', function () { m.close(); });
@@ -519,13 +519,13 @@
       m.close();
     });
     PCD.$('#shCopy', body).addEventListener('click', function () {
-      if (navigator.clipboard) navigator.clipboard.writeText(getText()).then(function () { PCD.toast.success('Copied'); m.close(); });
+      if (navigator.clipboard) navigator.clipboard.writeText(getText()).then(function () { PCD.toast.success(t('toast_copied')); m.close(); });
     });
     PCD.$('#shMore', body).addEventListener('click', function () {
       if (navigator.share) {
-        navigator.share({ title: 'Scaled recipes', text: getText() }).then(function () { m.close(); }).catch(function () {});
+        navigator.share({ title: t('modal_scaled_recipes'), text: getText() }).then(function () { m.close(); }).catch(function () {});
       } else if (navigator.clipboard) {
-        navigator.clipboard.writeText(getText()).then(function () { PCD.toast.success('Copied'); m.close(); });
+        navigator.clipboard.writeText(getText()).then(function () { PCD.toast.success(t('toast_copied')); m.close(); });
       }
     });
   }

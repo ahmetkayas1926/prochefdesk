@@ -179,7 +179,7 @@
           </div>
           <div class="field">
             <label class="field-label">Customer budget</label>
-            <input type="number" class="input" id="eBudget" value="${data.budget || ''}" step="0.01" min="0" placeholder="What the customer pays">
+            <input type="number" class="input" id="eBudget" value="${data.budget || ''}" step="0.01" min="0" placeholder="' + PCD.escapeHtml(t('placeholder_customer_pays')) + '">
             <div class="field-hint">Total amount the customer agreed to pay</div>
           </div>
         </div>
@@ -318,7 +318,7 @@
 
       PCD.$('#genShop', body).addEventListener('click', function () {
         if (!data.guestCount || !data.menu || data.menu.length === 0) {
-          PCD.toast.warning('Set guest count and add recipes first');
+          PCD.toast.warning(t('toast_set_guest_first'));
           return;
         }
         // Build shopping list items from menu (convert per-guest to total portions)
@@ -347,9 +347,9 @@
     if (existing) deleteBtn = PCD.el('button', { class: 'btn btn-ghost', text: t('delete'), style: { color: 'var(--danger)' } });
     let printBtn = null, shareBtn = null;
     if (existing) {
-      printBtn = PCD.el('button', { class: 'btn btn-outline', title: 'Print / PDF' });
+      printBtn = PCD.el('button', { class: 'btn btn-outline', title: t('modal_print_pdf') });
       printBtn.innerHTML = PCD.icon('print', 16);
-      shareBtn = PCD.el('button', { class: 'btn btn-outline', title: 'Share' });
+      shareBtn = PCD.el('button', { class: 'btn btn-outline', title: t('modal_share') });
       shareBtn.innerHTML = PCD.icon('share', 16);
     }
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
@@ -538,7 +538,7 @@
     const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: 'Close' });
     const footer = PCD.el('div', { style: { display: 'flex', width: '100%' } });
     footer.appendChild(closeBtn);
-    const m = PCD.modal.open({ title: 'Share · ' + (event.name || 'Event'), body: body, footer: footer, size: 'md', closable: true });
+    const m = PCD.modal.open({ title: t('share_event_with_name', { name: (event.name || 'Event') }), body: body, footer: footer, size: 'md', closable: true });
     function getMsg() { return PCD.$('#evShareText', body).value; }
     closeBtn.addEventListener('click', function () { m.close(); });
     PCD.$('#evShWa', body).addEventListener('click', function () {
@@ -551,7 +551,7 @@
     });
     PCD.$('#evShCopy', body).addEventListener('click', function () {
       if (navigator.clipboard) {
-        navigator.clipboard.writeText(getMsg()).then(function () { PCD.toast.success('Copied'); m.close(); });
+        navigator.clipboard.writeText(getMsg()).then(function () { PCD.toast.success(t('toast_copied')); m.close(); });
       }
     });
     PCD.$('#evShMore', body).addEventListener('click', function () {
@@ -559,7 +559,7 @@
         navigator.share({ title: event.name || 'Event', text: getMsg() }).then(function () { m.close(); }).catch(function () {});
       } else {
         if (navigator.clipboard) {
-          navigator.clipboard.writeText(getMsg()).then(function () { PCD.toast.success('Copied'); m.close(); });
+          navigator.clipboard.writeText(getMsg()).then(function () { PCD.toast.success(t('toast_copied')); m.close(); });
         }
       }
     });

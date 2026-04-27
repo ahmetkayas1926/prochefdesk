@@ -173,8 +173,8 @@
         PCD.on(m.el, 'click', '#authSubmit', function () {
           const email = (emailEl.value || '').trim();
           const pw = passEl.value;
-          if (!PCD.isEmail(email)) { PCD.toast.error('Invalid email'); return; }
-          if (!pw || pw.length < 6) { PCD.toast.error('Password too short'); return; }
+          if (!PCD.isEmail(email)) { PCD.toast.error(PCD.i18n.t('invalid_email')); return; }
+          if (!pw || pw.length < 6) { PCD.toast.error(PCD.i18n.t('password_too_short')); return; }
           if (!PCD.cloud.ready) {
             PCD.toast.warning(t('auth_backend_not_configured'));
             return;

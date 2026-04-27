@@ -226,9 +226,9 @@
         try {
           localStorage.setItem(LS_KEY_STATE, JSON.stringify(stateCopy));
           state = stateCopy;
-          PCD.toast && PCD.toast.warning('Storage almost full — old history trimmed');
+          PCD.toast && PCD.toast.warning(PCD.i18n ? PCD.i18n.t('storage_almost_full') : 'Storage almost full');
         } catch (e2) {
-          PCD.toast && PCD.toast.error('Storage full. Please export backup and reset.');
+          PCD.toast && PCD.toast.error(PCD.i18n ? PCD.i18n.t('storage_full') : 'Storage full');
         }
       }
     }

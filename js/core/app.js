@@ -171,7 +171,7 @@
     // Upgrade button
     const upgradeBtn = PCD.$('#btnUpgrade');
     if (upgradeBtn) upgradeBtn.addEventListener('click', function () {
-      PCD.toast.info('Coming soon 🚀');
+      PCD.toast.info(PCD.i18n.t('coming_soon'));
     });
 
     // Bottom nav
@@ -207,23 +207,23 @@
       { title: null, items: [
         { key: 'dashboard', icon: 'home', route: 'dashboard' },
       ]},
-      { title: 'Library', items: [
+      { title: t('nav_section_library') || 'Library', items: [
         { key: 'recipes',     icon: 'book-open', route: 'recipes' },
         { key: 'ingredients', icon: 'carrot', route: 'ingredients' },
         { key: 'menus',       icon: 'menu', route: 'menus' },
       ]},
-      { title: 'Kitchen', items: [
+      { title: t('nav_section_kitchen') || 'Kitchen', items: [
         { key: 'kitchen_cards', icon: 'id-card', route: 'kitchen_cards' },
         { key: 'portion',       icon: 'scale', route: 'portion' },
         { key: 'checklist',     icon: 'check-square', route: 'checklist' },
         { key: 'waste',         icon: 'recycle', route: 'waste' },
       ]},
-      { title: 'Sourcing', items: [
+      { title: t('nav_section_sourcing') || 'Sourcing', items: [
         { key: 'inventory', icon: 'package', route: 'inventory' },
         { key: 'suppliers', icon: 'truck', route: 'suppliers' },
         { key: 'shopping',  icon: 'shopping-cart', route: 'shopping' },
       ]},
-      { title: 'Catering', items: [
+      { title: t('nav_section_catering') || 'Catering', items: [
         { key: 'events',  icon: 'calendar', route: 'events' },
       ]},
       { title: null, items: [
@@ -330,7 +330,7 @@
             stats.recipes + ' recipes · ' + stats.menus + ' menus' +
           '</div>' +
         '</div>' +
-        '<button type="button" class="icon-btn" data-edit-ws="' + w.id + '" title="Edit workspace" style="flex-shrink:0;">' + PCD.icon('edit', 16) + '</button>' +
+        '<button type="button" class="icon-btn" data-edit-ws="' + w.id + '" title="' + PCD.escapeHtml(t('btn_edit_workspace')) + '" style="flex-shrink:0;">' + PCD.icon('edit', 16) + '</button>' +
       '</div>';
     });
     html += '</div>';
@@ -358,7 +358,7 @@
     const footer = PCD.el('div', { style: { width: '100%' } });
     footer.appendChild(closeBtn);
 
-    const m = PCD.modal.open({ title: 'Workspaces', body: body, footer: footer, size: 'sm', closable: true });
+    const m = PCD.modal.open({ title: t('modal_workspaces'), body: body, footer: footer, size: 'sm', closable: true });
     closeBtn.addEventListener('click', function () { m.close(); });
 
     PCD.on(body, 'click', '[data-pickws]', function (e) {
@@ -369,21 +369,21 @@
       if (ws && ws.archived) {
         // Unarchive on switch
         PCD.modal.confirm({
-          title: 'Reactivate workspace?',
+          title: t('confirm_reactivate_workspace'),
           text: '"' + ws.name + '" is archived. Reactivate and switch to it?',
           okText: 'Reactivate'
         }).then(function (ok) {
           if (!ok) return;
           PCD.store.archiveWorkspace(wsId, false);
           PCD.store.setActiveWorkspaceId(wsId);
-          PCD.toast.success('Switched to ' + ws.name);
+          PCD.toast.success(PCD.i18n.t('switched_to_workspace', { name: ws.name }));
           m.close();
           setTimeout(function () { window.location.reload(); }, 400);
         });
         return;
       }
       PCD.store.setActiveWorkspaceId(wsId);
-      PCD.toast.success('Switched to ' + (ws ? ws.name : 'workspace'));
+      PCD.toast.success(PCD.i18n.t('switched_to_workspace', { name: (ws ? ws.name : '') }));
       m.close();
       // Reload to refresh all views with new workspace data
       setTimeout(function () { window.location.reload(); }, 300);
@@ -546,7 +546,7 @@
 
       PCD.modal.confirm({
         icon: '⚠️', iconKind: 'danger', danger: true,
-        title: 'Delete workspace "' + existing.name + '"?',
+        title: PCD.i18n.t('confirm_delete_workspace_title', { name: existing.name }),
         text: dataSummary +
           '. Ingredients library is shared and will not be touched. ' +
           'This action CANNOT BE UNDONE.',
@@ -556,10 +556,10 @@
         if (!ok) return;
         const success = PCD.store.deleteWorkspace(wsId);
         if (!success) {
-          PCD.toast.error('Cannot delete — at least one workspace must remain');
+          PCD.toast.error(PCD.i18n.t('cannot_delete_last_workspace'));
           return;
         }
-        try { PCD.toast.success('Workspace deleted'); } catch (e) {}
+        try { PCD.toast.success(PCD.i18n.t('workspace_deleted')); } catch (e) {}
         try { m.close(); } catch (e) {}
 
         // Push deletion to cloud BEFORE reload (otherwise reload pulls stale state with the ws back)
@@ -594,7 +594,7 @@
       console.log('[Workspace Save] click fired, data:', JSON.parse(JSON.stringify(data)));
 
       if (!data.name) {
-        try { PCD.toast.error('Name required'); } catch (e) { alert('Name required'); }
+        try { PCD.toast.error(t('toast_name_required')); } catch (e) { alert('Name required'); }
         return;
       }
 
@@ -624,7 +624,7 @@
       }
 
       // STEP 4 — UI cleanup (best effort, but reload will fix anything)
-      try { PCD.toast.success('Workspace saved'); } catch (e) {}
+      try { PCD.toast.success(PCD.i18n.t('workspace_saved')); } catch (e) {}
       try { m.close(); } catch (e) {}
 
       // STEP 5 — Push to cloud BEFORE reload (so reload doesn't pull stale state)
@@ -865,7 +865,7 @@
     _lastErrorAt = now;
     PCD.error && PCD.error('[Global]', e.message || e.error, e.filename, e.lineno);
     if (PCD.toast) {
-      PCD.toast.error('Something went wrong. Try again or refresh.', 3000);
+      PCD.toast.error(PCD.i18n.t('generic_error'), 3000);
     }
   });
 

@@ -282,7 +282,7 @@
             <div style="font-weight:700;font-size:15px;">${PCD.escapeHtml(tpl.name)}${typeBadges}</div>
             <div class="text-muted text-sm">${(tpl.items || []).length} items</div>
           </div>
-          <button type="button" class="icon-btn" data-edit-tid="${tpl.id}" title="Edit template">${PCD.icon('edit', 18)}</button>
+          <button type="button" class="icon-btn" data-edit-tid="${tpl.id}" title="${PCD.escapeHtml(t('btn_edit_template'))}">${PCD.icon('edit', 18)}</button>
           <button type="button" class="btn btn-primary btn-sm" data-startrun="${tpl.id}">${t('checklist_start') || 'Start'}</button>
         </div>
       `;
@@ -396,13 +396,13 @@
 
     const startBtn = PCD.el('button', { class: 'btn btn-primary', style: { flex: '1' } });
     startBtn.innerHTML = PCD.icon('clock', 16) + ' <span>Start session</span>';
-    const editBtn = PCD.el('button', { class: 'btn btn-outline', title: 'Edit template' });
+    const editBtn = PCD.el('button', { class: 'btn btn-outline', title: t('btn_edit_template') });
     editBtn.innerHTML = PCD.icon('edit', 16);
-    const dupBtn = PCD.el('button', { class: 'btn btn-outline', title: 'Duplicate' });
+    const dupBtn = PCD.el('button', { class: 'btn btn-outline', title: t('btn_duplicate') });
     dupBtn.innerHTML = PCD.icon('copy', 16);
-    const printBtn = PCD.el('button', { class: 'btn btn-outline', title: 'Print blank checklist' });
+    const printBtn = PCD.el('button', { class: 'btn btn-outline', title: t('btn_print_blank_checklist') });
     printBtn.innerHTML = PCD.icon('print', 16);
-    const shareBtn = PCD.el('button', { class: 'btn btn-outline', title: 'Share' });
+    const shareBtn = PCD.el('button', { class: 'btn btn-outline', title: t('modal_share') });
     shareBtn.innerHTML = PCD.icon('share', 16);
     const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('close') });
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
@@ -431,7 +431,7 @@
       copy.isDefault = false;
       copy.items = (copy.items || []).map(function (it) { return Object.assign({}, it, { id: PCD.uid('it') }); });
       const saved = PCD.store.upsertInTable('checklistTemplates', copy, 'tpl');
-      PCD.toast.success('Template duplicated');
+      PCD.toast.success(t('template_duplicated'));
       m.close();
       setTimeout(function () {
         const v = PCD.$('#view');
@@ -548,7 +548,7 @@
     const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: 'Close' });
     const footer = PCD.el('div', { style: { display: 'flex', width: '100%' } });
     footer.appendChild(closeBtn);
-    const m = PCD.modal.open({ title: 'Share template', body: body, footer: footer, size: 'md', closable: true });
+    const m = PCD.modal.open({ title: t('share_template'), body: body, footer: footer, size: 'md', closable: true });
 
     PCD.$('#tplShPdf', body).addEventListener('click', function () {
       m.close();
@@ -559,10 +559,10 @@
     closeBtn.addEventListener('click', function () { m.close(); });
     PCD.$('#tplShWa', body).addEventListener('click', function () { window.open('https://wa.me/?text=' + encodeURIComponent(getText()), '_blank'); m.close(); });
     PCD.$('#tplShEmail', body).addEventListener('click', function () { window.location.href = 'mailto:?subject=' + encodeURIComponent(tpl.name) + '&body=' + encodeURIComponent(getText()); m.close(); });
-    PCD.$('#tplShCopy', body).addEventListener('click', function () { if (navigator.clipboard) navigator.clipboard.writeText(getText()).then(function () { PCD.toast.success('Copied'); m.close(); }); });
+    PCD.$('#tplShCopy', body).addEventListener('click', function () { if (navigator.clipboard) navigator.clipboard.writeText(getText()).then(function () { PCD.toast.success(t('toast_copied')); m.close(); }); });
     PCD.$('#tplShMore', body).addEventListener('click', function () {
       if (navigator.share) navigator.share({ title: tpl.name, text: getText() }).then(function () { m.close(); }).catch(function () {});
-      else if (navigator.clipboard) navigator.clipboard.writeText(getText()).then(function () { PCD.toast.success('Copied'); m.close(); });
+      else if (navigator.clipboard) navigator.clipboard.writeText(getText()).then(function () { PCD.toast.success(t('toast_copied')); m.close(); });
     });
   }
 
@@ -728,7 +728,7 @@
           : '';
         inputHtml =
           '<div style="display:flex;gap:8px;align-items:center;">' +
-            '<input type="number" class="input" data-numinput="' + idx + '" value="' + (it.value !== null && it.value !== undefined ? it.value : '') + '" step="0.1" placeholder="Enter value" style="flex:1;font-weight:600;font-family:var(--font-mono);' + (outOfRange ? 'border-color:var(--danger);color:var(--danger);' : '') + '">' +
+            '<input type="number" class="input" data-numinput="' + idx + '" value="' + (it.value !== null && it.value !== undefined ? it.value : '') + '" step="0.1" placeholder="' + PCD.escapeHtml(t('placeholder_enter_value')) + '" style="flex:1;font-weight:600;font-family:var(--font-mono);' + (outOfRange ? 'border-color:var(--danger);color:var(--danger);' : '') + '">' +
             (it.unit ? '<span style="font-weight:600;color:var(--text-2);min-width:40px;">' + PCD.escapeHtml(it.unit) + '</span>' : '') +
           '</div>' +
           (rangeStr ? '<div class="text-muted text-sm mt-1" style="font-size:11px;">' + rangeStr + (outOfRange ? ' · <strong style="color:var(--danger);">OUT OF RANGE</strong>' : '') + '</div>' : '');
@@ -743,7 +743,7 @@
         wrap.innerHTML = headerHtml + inputHtml;
       } else if (type === 'text') {
         inputHtml =
-          '<input type="text" class="input" data-textinput="' + idx + '" value="' + PCD.escapeHtml(it.value || '') + '" placeholder="Enter text">';
+          '<input type="text" class="input" data-textinput="' + idx + '" value="' + PCD.escapeHtml(it.value || '') + '" placeholder="' + PCD.escapeHtml(t('placeholder_enter_text')) + '">';
         wrap.innerHTML = headerHtml + inputHtml;
       }
 
@@ -761,7 +761,7 @@
           (hasComment ? '✏️ Comment' : '+ Add comment') +
         '</button>' +
         '<div data-cmwrap="' + idx + '" style="display:' + (hasComment ? 'block' : 'none') + ';margin-top:4px;">' +
-          '<input type="text" class="input" data-cminput="' + idx + '" value="' + PCD.escapeHtml(it.comment || '') + '" placeholder="Notes for this item..." style="font-size:13px;padding:6px 10px;min-height:32px;">' +
+          '<input type="text" class="input" data-cminput="' + idx + '" value="' + PCD.escapeHtml(it.comment || '') + '" placeholder="' + PCD.escapeHtml(t('placeholder_item_notes')) + '" style="font-size:13px;padding:6px 10px;min-height:32px;">' +
         '</div>';
       wrap.appendChild(commentRow);
 
@@ -873,9 +873,9 @@
     renderBody();
 
     const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('close') });
-    const printBtn = PCD.el('button', { class: 'btn btn-outline', title: 'Print / PDF' });
+    const printBtn = PCD.el('button', { class: 'btn btn-outline', title: t('modal_print_pdf') });
     printBtn.innerHTML = PCD.icon('print', 16);
-    const shareBtn = PCD.el('button', { class: 'btn btn-outline', title: 'Share' });
+    const shareBtn = PCD.el('button', { class: 'btn btn-outline', title: t('modal_share') });
     shareBtn.innerHTML = PCD.icon('share', 16);
     const completeBtn = PCD.el('button', { class: 'btn btn-primary', text: t('checklist_complete') || 'Complete', style: { flex: '1' } });
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
@@ -906,8 +906,8 @@
       const incomplete = total - s.items.filter(isItemComplete).length;
       if (incomplete > 0) {
         PCD.modal.confirm({
-          title: 'Complete with ' + incomplete + ' unfinished?',
-          text: 'Mark session as completed anyway?',
+          title: t('complete_with_unfinished', { n: incomplete }),
+          text: t('confirm_complete_anyway'),
           okText: 'Complete',
         }).then(function (ok) {
           if (!ok) return;
@@ -922,7 +922,7 @@
           s.completedAt = new Date().toISOString();
           s.completedBy = user.name || user.email || '';
         });
-        PCD.toast.success('Checklist completed');
+        PCD.toast.success(t('toast_checklist_completed'));
         m.close();
         setTimeout(function () {
           const v = PCD.$('#view');
@@ -1087,7 +1087,7 @@
     const footer = PCD.el('div', { style: { display: 'flex', width: '100%' } });
     footer.appendChild(closeBtn);
 
-    const m = PCD.modal.open({ title: 'Share · ' + title, body: body, footer: footer, size: 'md', closable: true });
+    const m = PCD.modal.open({ title: t('share_with_name', { name: title }), body: body, footer: footer, size: 'md', closable: true });
 
     PCD.$('#shPdf', body).addEventListener('click', function () {
       m.close();
@@ -1107,7 +1107,7 @@
     PCD.$('#shCopy', body).addEventListener('click', function () {
       if (navigator.clipboard) {
         navigator.clipboard.writeText(getText()).then(function () {
-          PCD.toast.success('Copied');
+          PCD.toast.success(t('toast_copied'));
           m.close();
         });
       }
@@ -1117,7 +1117,7 @@
         navigator.share({ title: title, text: getText() }).then(function () { m.close(); }).catch(function () {});
       } else {
         if (navigator.clipboard) {
-          navigator.clipboard.writeText(getText()).then(function () { PCD.toast.success('Copied'); m.close(); });
+          navigator.clipboard.writeText(getText()).then(function () { PCD.toast.success(t('toast_copied')); m.close(); });
         }
       }
     });
@@ -1157,7 +1157,7 @@
         row.innerHTML = `
           <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
             <div style="color:var(--text-3);font-size:12px;width:24px;text-align:right;font-weight:700;">${idx + 1}.</div>
-            <input type="text" class="input" data-itemtext="${idx}" value="${PCD.escapeHtml(it.text || '')}" placeholder="Item description" style="flex:1;font-weight:500;">
+            <input type="text" class="input" data-itemtext="${idx}" value="${PCD.escapeHtml(it.text || '')}" placeholder="' + PCD.escapeHtml(t('placeholder_item_description')) + '" style="flex:1;font-weight:500;">
             <button class="icon-btn" data-itemdel="${idx}">${PCD.icon('x',16)}</button>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
@@ -1173,8 +1173,8 @@
           </div>
           ${(type === 'temperature' || type === 'numeric') ? `
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:6px;">
-              <input type="number" class="input" data-itemmin="${idx}" value="${it.min !== undefined ? it.min : ''}" step="0.1" placeholder="Min" style="font-size:12px;">
-              <input type="number" class="input" data-itemmax="${idx}" value="${it.max !== undefined ? it.max : ''}" step="0.1" placeholder="Max" style="font-size:12px;">
+              <input type="number" class="input" data-itemmin="${idx}" value="${it.min !== undefined ? it.min : ''}" step="0.1" placeholder="${PCD.escapeHtml(t('placeholder_min'))}" style="font-size:12px;">
+              <input type="number" class="input" data-itemmax="${idx}" value="${it.max !== undefined ? it.max : ''}" step="0.1" placeholder="${PCD.escapeHtml(t('placeholder_max'))}" style="font-size:12px;">
               <input type="text" class="input" data-itemunit="${idx}" value="${PCD.escapeHtml(it.unit || '')}" placeholder="${type === 'temperature' ? '°C' : 'unit'}" style="font-size:12px;">
             </div>
           ` : ''}
@@ -1278,9 +1278,9 @@
       });
 
       data.name = (data.name || '').trim();
-      if (!data.name) { PCD.toast.error('Name required'); return; }
+      if (!data.name) { PCD.toast.error(t('toast_name_required')); return; }
       data.items = data.items.filter(function (it) { return it.text && it.text.trim(); });
-      if (data.items.length === 0) { PCD.toast.error('Add at least one item'); return; }
+      if (data.items.length === 0) { PCD.toast.error(t('toast_add_at_least_one_item')); return; }
       if (existing) data.id = existing.id;
       PCD.store.upsertInTable('checklistTemplates', data, 'tpl');
       PCD.toast.success(t('saved'));
