@@ -122,7 +122,7 @@
           <div class="page-subtitle">${t('inventory_subtitle')}</div>
         </div>
         <div class="page-header-actions">
-          <button class="btn btn-outline btn-sm" id="historyHeaderBtn" title="' + PCD.escapeHtml(t('btn_view_past_stock_counts')) + '">${PCD.icon('clock',14)} History</button>
+          <button class="btn btn-outline btn-sm" id="historyHeaderBtn" title="${PCD.escapeHtml(t('btn_view_past_stock_counts'))}">${PCD.icon('clock',14)} History</button>
           <button class="btn btn-outline btn-sm" id="bulkCountBtn">${PCD.icon('list',14)} Count Stock</button>
           <button class="btn btn-outline btn-sm" id="genOrderBtn">${PCD.icon('send',14)} Generate Order</button>
         </div>
@@ -146,9 +146,9 @@
 
       <div id="invStats" class="grid mb-3" style="grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));"></div>
       <div class="flex gap-2 mb-3" style="overflow-x:auto;scrollbar-width:none;">
-        <button class="btn btn-secondary btn-sm active" data-filter="all">${t('inv_filter_all')}</button>
+        <button class="btn btn-secondary btn-sm active" data-filter="all">' + t('inv_filter_all') + '</button>
         <button class="btn btn-secondary btn-sm" data-filter="low">${t('inv_filter_low')}</button>
-        <button class="btn btn-secondary btn-sm" data-filter="ok">${t('inv_filter_ok')}</button>
+        <button class="btn btn-secondary btn-sm" data-filter="ok">' + t('inv_filter_ok') + '</button>
       </div>
       <div id="invList"></div>
     `;
@@ -176,7 +176,7 @@
       const s = computeStats();
       statsEl.innerHTML = `
         <div class="stat">
-          <div class="stat-label">${t('inv_status_ok')}</div>
+          <div class="stat-label">' + t('inv_status_ok') + '</div>
           <div class="stat-value" style="color:var(--success);">${s.ok}</div>
         </div>
         <div class="stat">
@@ -184,7 +184,7 @@
           <div class="stat-value" style="color:var(--warning);">${s.low}</div>
         </div>
         <div class="stat">
-          <div class="stat-label">${t('inv_status_critical')}</div>
+          <div class="stat-label">' + t('inv_status_critical') + '</div>
           <div class="stat-value" style="color:var(--danger);">${s.crit}</div>
         </div>
         <div class="stat">
@@ -200,9 +200,9 @@
         listEl.innerHTML = `
           <div class="empty">
             <div class="empty-icon">📦</div>
-            <div class="empty-title">${t('no_ingredients_yet')}</div>
+            <div class="empty-title">' + t('no_ingredients_yet') + '</div>
             <div class="empty-desc">${t('no_ingredients_yet_desc')}</div>
-            <div class="empty-action"><button class="btn btn-primary" id="goIng">${t('new_ingredient')}</button></div>
+            <div class="empty-action"><button class="btn btn-primary" id="goIng">' + t('new_ingredient') + '</button></div>
           </div>
         `;
         PCD.$('#goIng', listEl).addEventListener('click', function () { PCD.router.go('ingredients'); });
@@ -278,7 +278,7 @@
               <div class="list-item-title">${PCD.escapeHtml(x.ing.name)}</div>
               <div class="list-item-meta">
                 <span><strong>${stockText}</strong> / ${parText}</span>
-                ${x.row && x.row.lastOrderedAt ? '<span>·</span><span>' + t('inv_last_ordered') + ': ' + PCD.fmtRelTime(x.row.lastOrderedAt) + '</span>' : ''}
+                ${x.row && x.row.lastOrderedAt ? '<span>·</span><span>' + PCD.escapeHtml(t('inv_last_ordered')) + ': ' + PCD.fmtRelTime(x.row.lastOrderedAt) + '</span>' : ''}
               </div>
             </div>
             <div style="flex-shrink:0;">
@@ -1097,15 +1097,15 @@
 
       <div class="field-row">
         <div class="field">
-          <label class="field-label">${t('inv_current_stock')}</label>
+          <label class="field-label">' + t('inv_current_stock') + '</label>
           <div class="input-group">
             <input type="number" class="input" id="invStock" value="${row.stock != null ? row.stock : ''}" step="0.01" min="0" placeholder="0">
             <span class="input-group-addon">${ing.unit}</span>
           </div>
-          ${row.lastCountedAt ? '<div class="field-hint">' + t('inv_last_counted') + ': ' + PCD.fmtRelTime(row.lastCountedAt) + '</div>' : ''}
+          ${row.lastCountedAt ? '<div class="field-hint">' + PCD.escapeHtml(t('inv_last_counted')) + ': ' + PCD.fmtRelTime(row.lastCountedAt) + '</div>' : ''}
         </div>
         <div class="field">
-          <label class="field-label">${t('inv_stock_value')}</label>
+          <label class="field-label">' + t('inv_stock_value') + '</label>
           <div class="input" style="background:var(--surface-2);display:flex;align-items:center;" id="invValue">—</div>
         </div>
       </div>
@@ -1120,7 +1120,7 @@
           <div class="field-hint">Target stock level</div>
         </div>
         <div class="field">
-          <label class="field-label">${t('inv_min_level')}</label>
+          <label class="field-label">' + t('inv_min_level') + '</label>
           <div class="input-group">
             <input type="number" class="input" id="invMin" value="${row.minLevel != null ? row.minLevel : ''}" step="0.01" min="0" placeholder="0">
             <span class="input-group-addon">${ing.unit}</span>
@@ -1132,7 +1132,7 @@
       <div class="flex gap-2 mt-3">
         <button class="btn btn-outline btn-block" id="markOrdered">${t('inv_mark_ordered')}</button>
       </div>
-      ${row.lastOrderedAt ? '<div class="text-muted text-sm mt-2">' + t('inv_last_ordered') + ': ' + PCD.fmtRelTime(row.lastOrderedAt) + '</div>' : ''}
+      ${row.lastOrderedAt ? '<div class="text-muted text-sm mt-2">' + PCD.escapeHtml(t('inv_last_ordered')) + ': ' + PCD.fmtRelTime(row.lastOrderedAt) + '</div>' : ''}
     `;
 
     function updateValue() {

@@ -55,7 +55,7 @@
             <label class="checkbox" style="min-height:auto;"><input type="checkbox" id="selAll"><span class="text-sm font-semibold"><span id="selCount">0</span> ${t('selected')}</span></label>
           </div>
           <div class="flex gap-2" style="flex-wrap:wrap;">
-            <button type="button" class="btn btn-primary btn-sm" id="bulkCostReport">${PCD.icon('activity',14)} <span>' + PCD.escapeHtml(t('modal_cost_report')) + '</span></button>
+            <button type="button" class="btn btn-primary btn-sm" id="bulkCostReport">${PCD.icon('activity',14)} <span>${PCD.escapeHtml(t('modal_cost_report'))}</span></button>
             <button type="button" class="btn btn-danger btn-sm" id="bulkDelete">${PCD.icon('trash',14)} ${t('delete')}</button>
             <button type="button" class="btn btn-ghost btn-sm" id="exitSelect">${t('cancel')}</button>
           </div>
@@ -998,8 +998,8 @@
       <div class="grid grid-2 mb-3" style="gap:8px;">
         <div class="stat" style="padding:10px;"><div class="stat-label">${t('food_cost')}</div><div class="stat-value" style="font-size:18px;">${PCD.fmtMoney(cost)}</div></div>
         <div class="stat" style="padding:10px;"><div class="stat-label">${t('cost_per_serving')}</div><div class="stat-value" style="font-size:18px;">${PCD.fmtMoney(costPerServing)}</div></div>
-        ${r.salePrice ? '<div class="stat" style="padding:10px;"><div class="stat-label">' + t('recipe_sale_price') + '</div><div class="stat-value" style="font-size:18px;">' + PCD.fmtMoney(r.salePrice) + '</div></div>' : ''}
-        ${pct !== null ? '<div class="stat" style="padding:10px;"><div class="stat-label">' + t('food_cost_percent') + '</div><div class="stat-value" style="font-size:18px;color:' + (pct <= 35 ? 'var(--success)' : (pct <= 45 ? 'var(--warning)' : 'var(--danger)')) + ';">' + PCD.fmtPercent(pct, 1) + '</div></div>' : ''}
+        ${r.salePrice ? '<div class="stat" style="padding:10px;"><div class="stat-label">' + PCD.escapeHtml(t('recipe_sale_price')) + '</div><div class="stat-value" style="font-size:18px;">' + PCD.fmtMoney(r.salePrice) + '</div></div>' : ''}
+        ${pct !== null ? '<div class="stat" style="padding:10px;"><div class="stat-label">' + PCD.escapeHtml(t('food_cost_percent')) + '</div><div class="stat-value" style="font-size:18px;color:' + (pct <= 35 ? 'var(--success)' : (pct <= 45 ? 'var(--warning)' : 'var(--danger)')) + ';">' + PCD.fmtPercent(pct, 1) + '</div></div>' : ''}
       </div>
 
       <div class="section-title mt-3 mb-2">${t('recipe_ingredients')}</div>
@@ -1066,23 +1066,28 @@
     });
 
     shareBtn.addEventListener('click', function () {
-      const ingMap = {};
-      PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
-      const lines = [r.name, ''];
-      lines.push(t('recipe_servings') + ': ' + (r.servings || 1));
-      if (r.salePrice) lines.push(t('sale_price') + ': ' + PCD.fmtMoney(r.salePrice));
-      lines.push('');
-      lines.push(t('recipe_ingredients') + ':');
-      (r.ingredients || []).forEach(function (ri) {
-        const ing = ingMap[ri.ingredientId];
-        lines.push('• ' + (ing ? ing.name : '(removed)') + ' — ' + PCD.fmtNumber(ri.amount) + ' ' + (ri.unit || ''));
-      });
-      if (r.steps) {
+      try {
+        const ingMap = {};
+        PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
+        const lines = [r.name, ''];
+        lines.push(t('recipe_servings') + ': ' + (r.servings || 1));
+        if (r.salePrice) lines.push(t('sale_price') + ': ' + PCD.fmtMoney(r.salePrice));
         lines.push('');
-        lines.push('Method:');
-        lines.push(r.steps);
+        lines.push(t('recipe_ingredients') + ':');
+        (r.ingredients || []).forEach(function (ri) {
+          const ing = ingMap[ri.ingredientId];
+          lines.push('• ' + (ing ? ing.name : '(removed)') + ' — ' + PCD.fmtNumber(ri.amount) + ' ' + (ri.unit || ''));
+        });
+        if (r.steps) {
+          lines.push('');
+          lines.push('Method:');
+          lines.push(r.steps);
+        }
+        openRecipeShareSheet({ title: r.name, text: lines.join('\n'), recipe: r, ingMap: ingMap });
+      } catch (err) {
+        console.error('[Share] Open share sheet failed:', err);
+        PCD.toast.error('Share failed: ' + (err.message || 'unknown error'));
       }
-      openRecipeShareSheet({ title: r.name, text: lines.join('\n'), recipe: r, ingMap: ingMap });
     });
 
     deleteBtn.addEventListener('click', function () {
@@ -1141,7 +1146,7 @@
           '<div style="font-weight:600;font-size:12px">Copy</div></button>' +
       '</div>';
 
-    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('btn_close') });
+    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('btn_close_action') });
     const footer = PCD.el('div', { style: { display: 'flex', width: '100%' } });
     footer.appendChild(closeBtn);
     const m = PCD.modal.open({ title: t('share_with_name', { name: opts.title }), body: body, footer: footer, size: 'md', closable: true });
@@ -1409,7 +1414,7 @@
         <div class="field">
           <label class="field-label">${t('recipe_photo')}</label>
           <div id="photoZone" style="position:relative;width:100%;height:180px;border-radius:var(--r-lg);background:${data.photo ? 'url(' + data.photo + ') center/cover' : 'var(--surface-2)'};display:flex;align-items:center;justify-content:center;cursor:pointer;border:2px dashed ${data.photo ? 'transparent' : 'var(--border-strong)'};overflow:hidden;">
-            ${!data.photo ? '<div class="text-center text-muted"><div style="font-size:32px;margin-bottom:4px;">📷</div><div class="text-sm">' + t('recipe_photo_hint') + '</div></div>' : ''}
+            ${!data.photo ? '<div class="text-center text-muted"><div style="font-size:32px;margin-bottom:4px;">📷</div><div class="text-sm">' + PCD.escapeHtml(t('recipe_photo_hint')) + '</div></div>' : ''}
             ${data.photo ? '<button type="button" id="removePhoto" class="icon-btn" style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.6);color:white;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/></svg></button>' : ''}
           </div>
           <div class="flex gap-2 mt-2" id="photoActions" style="display:${data.photo ? 'none' : 'flex'};">
@@ -1471,7 +1476,7 @@
 
           <!-- Quick-add autocomplete -->
           <div style="position:relative;margin-bottom:10px;">
-            <input type="text" class="input" id="quickIngInput" placeholder="' + PCD.escapeHtml(t('recipe_quick_add_placeholder')) + '" autocomplete="off" style="padding-inline-start:36px;">
+            <input type="text" class="input" id="quickIngInput" placeholder="${PCD.escapeHtml(t('recipe_quick_add_placeholder'))}" autocomplete="off" style="padding-inline-start:36px;">
             <div style="position:absolute;inset-inline-start:10px;top:50%;transform:translateY(-50%);color:var(--text-3);pointer-events:none;">${PCD.icon('search', 16)}</div>
             <div id="quickIngDD" style="display:none;position:absolute;top:100%;inset-inline-start:0;inset-inline-end:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);box-shadow:var(--shadow-lg);max-height:240px;overflow-y:auto;z-index:5;margin-top:4px;"></div>
           </div>

@@ -1157,7 +1157,7 @@
         row.innerHTML = `
           <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
             <div style="color:var(--text-3);font-size:12px;width:24px;text-align:right;font-weight:700;">${idx + 1}.</div>
-            <input type="text" class="input" data-itemtext="${idx}" value="${PCD.escapeHtml(it.text || '')}" placeholder="' + PCD.escapeHtml(t('placeholder_item_description')) + '" style="flex:1;font-weight:500;">
+            <input type="text" class="input" data-itemtext="${idx}" value="${PCD.escapeHtml(it.text || '')}" placeholder="${PCD.escapeHtml(t('placeholder_item_description'))}" style="flex:1;font-weight:500;">
             <button class="icon-btn" data-itemdel="${idx}">${PCD.icon('x',16)}</button>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">

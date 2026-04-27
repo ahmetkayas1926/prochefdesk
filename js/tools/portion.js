@@ -70,7 +70,7 @@
             <button class="btn btn-ghost btn-sm" id="pcNone">Clear</button>
           </div>
         </div>
-        <input type="search" class="input mb-2" id="pcSearch" placeholder="' + PCD.escapeHtml(t('placeholder_search_recipes')) + '">
+        <input type="search" class="input mb-2" id="pcSearch" placeholder="${PCD.escapeHtml(t('placeholder_search_recipes'))}">
         <div id="pcRecipeList" style="max-height:280px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r-sm);"></div>
         <div class="text-muted text-sm mt-2" id="pcSelStat">No recipes selected</div>
       </div>

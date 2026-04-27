@@ -66,8 +66,8 @@
               <span>${PCD.fmtRelTime(m.updatedAt)}</span>
             </div>
           </div>
-          <button class="icon-btn" data-copy-mid="${m.id}" data-name="${PCD.escapeHtml(m.name || 'menu')}" title="${PCD.escapeHtml(t('btn_copy_to_workspace'))}">${PCD.icon('truck', 18)}</button>
-          <button class="icon-btn" data-edit-mid="${m.id}" title="' + PCD.escapeHtml(t('btn_edit_menu_title')) + '">${PCD.icon('edit', 18)}</button>
+          <button class="icon-btn" data-copy-mid="${m.id}" data-name="${PCD.escapeHtml(m.name || 'menu')}" title="' + PCD.escapeHtml(t('btn_copy_to_workspace')) + '">${PCD.icon('truck', 18)}</button>
+          <button class="icon-btn" data-edit-mid="${m.id}" title="${PCD.escapeHtml(t('btn_edit_menu_title'))}">${PCD.icon('edit', 18)}</button>
         `;
         cont.appendChild(row);
       });
@@ -156,7 +156,7 @@
               <div class="stat-label">${t('menu_total_revenue')}</div>
               <div style="font-size:20px;font-weight:800;">${PCD.fmtMoney(stats.totalRevenue)}</div>
             </div>
-            ${stats.avgMargin !== null ? '<div style="text-align:right;"><div class="stat-label">' + t('menu_avg_margin') + '</div><div style="font-size:20px;font-weight:800;color:' + (stats.avgMargin >= 65 ? 'var(--success)' : (stats.avgMargin >= 55 ? 'var(--warning)' : 'var(--danger)')) + ';">' + PCD.fmtPercent(stats.avgMargin, 0) + '</div></div>' : ''}
+            ${stats.avgMargin !== null ? '<div style="text-align:right;"><div class="stat-label">' + PCD.escapeHtml(t('menu_avg_margin')) + '</div><div style="font-size:20px;font-weight:800;color:' + (stats.avgMargin >= 65 ? 'var(--success)' : (stats.avgMargin >= 55 ? 'var(--warning)' : 'var(--danger)')) + ';">' + PCD.fmtPercent(stats.avgMargin, 0) + '</div></div>' : ''}
           </div>
         </div>
 
@@ -179,7 +179,7 @@
         </div>
         <div class="checkbox">
           <input type="checkbox" id="menuHideAllergens" ${data.hideAllergens ? 'checked' : ''}>
-          <span>' + PCD.escapeHtml(t('menu_hide_allergens')) + '</span>
+          <span>${PCD.escapeHtml(t('menu_hide_allergens'))}</span>
         </div>
       `;
 
