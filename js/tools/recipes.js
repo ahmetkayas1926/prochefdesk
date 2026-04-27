@@ -131,6 +131,20 @@
         row.appendChild(thumb);
         row.appendChild(body);
 
+        // Copy-to-workspace icon button (only when not in select mode)
+        if (!selectMode) {
+          const copyBtn = PCD.el('button', {
+            type: 'button',
+            class: 'icon-btn',
+            'data-copy-rid': r.id,
+            'data-name': r.name,
+            title: 'Copy to workspace',
+            style: { flexShrink: '0' }
+          });
+          copyBtn.innerHTML = PCD.icon('truck', 18);
+          row.appendChild(copyBtn);
+        }
+
         // Select checkbox when in select mode
         if (selectMode) {
           const cb = PCD.el('input', { type: 'checkbox', class: 'select-cb' });
@@ -222,8 +236,9 @@
 
     // Tap row → preview (NOT edit) — fix from v43
     PCD.on(listEl, 'click', '[data-rid]', function (e) {
-      // ignore if clicked on checkbox
+      // ignore if clicked on checkbox or copy button
       if (e.target.closest('.select-cb')) return;
+      if (e.target.closest('[data-copy-rid]')) return;
       if (selectMode) {
         const cb = this.querySelector('.select-cb');
         if (cb) { cb.checked = !cb.checked; cb.dispatchEvent(new Event('change')); }
@@ -231,6 +246,14 @@
       }
       const rid = this.getAttribute('data-rid');
       openPreview(rid);
+    });
+
+    // Copy-to-workspace icon
+    PCD.on(listEl, 'click', '[data-copy-rid]', function (e) {
+      e.stopPropagation();
+      const rid = this.getAttribute('data-copy-rid');
+      const name = this.getAttribute('data-name');
+      if (PCD.openCopyToWorkspace) PCD.openCopyToWorkspace('recipes', rid, name);
     });
 
     // Long-press / right-click for quick actions (mobile + desktop)
@@ -705,10 +728,17 @@
 
     // Helper to set a cell value+style
     function setCell(ws, addr, value, style, formula) {
-      const cell = { v: value };
-      if (formula) { cell.f = formula; cell.t = 'n'; }
-      else if (typeof value === 'number') cell.t = 'n';
-      else if (typeof value === 'string') cell.t = 's';
+      const cell = {};
+      if (formula) {
+        // Both formula AND cached value — Excel shows the value, recalculates on edit
+        cell.f = formula;
+        cell.v = value;
+        cell.t = 'n';
+      } else {
+        cell.v = value;
+        if (typeof value === 'number') cell.t = 'n';
+        else if (typeof value === 'string') cell.t = 's';
+      }
       if (style) cell.s = style;
       ws[addr] = cell;
     }
@@ -792,13 +822,15 @@
         if (ri.unit && ing.unit && ri.unit !== ing.unit) {
           try { qtyForFormula = PCD.convertUnit(qtyForFormula, ri.unit, ing.unit); } catch (e) {}
         }
+        const unitPrice = Number(ing.pricePerUnit) || 0;
+        const lineCost = unitPrice * qtyForFormula;  // cached value
         const isAlt = ingIdx % 2 === 1;
         setCell(ws, 'A' + row, ing.name, isAlt ? cellAltStyle : cellStyle);
-        setCell(ws, 'B' + row, Number(ing.pricePerUnit) || 0, isAlt ? cellNumAltStyle : cellNumStyle);
+        setCell(ws, 'B' + row, unitPrice, isAlt ? cellNumAltStyle : cellNumStyle);
         setCell(ws, 'C' + row, ing.unit || '', isAlt ? cellAltStyle : cellStyle);
         setCell(ws, 'D' + row, qtyForFormula, isAlt ? cellQtyAltStyle : cellQtyStyle);
         setCell(ws, 'E' + row, ing.unit || '', isAlt ? cellAltStyle : cellStyle);
-        setCell(ws, 'F' + row, 0, isAlt ? cellNumAltStyle : cellNumStyle, 'B' + row + '*D' + row);
+        setCell(ws, 'F' + row, lineCost, isAlt ? cellNumAltStyle : cellNumStyle, 'B' + row + '*D' + row);
         lastIngRow = row;
         row++;
       });
@@ -812,7 +844,7 @@
       setCell(ws, 'C' + row, '', totalLabelStyle);
       setCell(ws, 'D' + row, '', totalLabelStyle);
       setCell(ws, 'E' + row, 'TOTAL FOOD COST', totalLabelStyle);
-      setCell(ws, 'F' + row, 0, totalRowStyle, 'SUM(F' + startIngRow + ':F' + lastIngRow + ')');
+      setCell(ws, 'F' + row, it.totalCost, totalRowStyle, 'SUM(F' + startIngRow + ':F' + lastIngRow + ')');
       row++;
 
       const servingsRow = row;
@@ -830,7 +862,7 @@
       setCell(ws, 'C' + row, '', cellStyle);
       setCell(ws, 'D' + row, '', cellStyle);
       setCell(ws, 'E' + row, 'Cost per serving', pricingLabelStyle);
-      setCell(ws, 'F' + row, 0, pricingValStyle, 'F' + totalRow + '/F' + servingsRow);
+      setCell(ws, 'F' + row, it.costPerServing, pricingValStyle, 'F' + totalRow + '/F' + servingsRow);
       row++;
 
       row++;  // blank
@@ -854,52 +886,57 @@
       setCell(ws, 'C' + row, '', cellStyle);
       setCell(ws, 'D' + row, '', cellStyle);
       setCell(ws, 'E' + row, 'Suggested price (per serving)', pricingLabelStyle);
-      setCell(ws, 'F' + row, 0, pricingValStyle, 'F' + cpsRow + '/F' + targetRow);
+      setCell(ws, 'F' + row, it.suggestedPrice, pricingValStyle, 'F' + cpsRow + '/F' + targetRow);
       row++;
 
+      const testPriceVal = it.testPrice || it.suggestedPrice || 0;
       const testRow = row;
       setCell(ws, 'A' + row, '', editableLabelStyle);
       setCell(ws, 'B' + row, '', editableLabelStyle);
       setCell(ws, 'C' + row, '', editableLabelStyle);
       setCell(ws, 'D' + row, '', editableLabelStyle);
       setCell(ws, 'E' + row, '✏ TEST PRICE — EDIT ME', editableLabelStyle);
-      setCell(ws, 'F' + row, it.testPrice || it.suggestedPrice || 0, editableStyle);
+      setCell(ws, 'F' + row, testPriceVal, editableStyle);
       row++;
 
       const fcPctRow = row;
+      const fcPctVal = testPriceVal > 0 ? it.costPerServing / testPriceVal : 0;
       setCell(ws, 'A' + row, '', cellStyle);
       setCell(ws, 'B' + row, '', cellStyle);
       setCell(ws, 'C' + row, '', cellStyle);
       setCell(ws, 'D' + row, '', cellStyle);
       setCell(ws, 'E' + row, 'Food cost % at test price', pricingLabelStyle);
-      setCell(ws, 'F' + row, 0, pctStyle, 'IF(F' + testRow + '>0, F' + cpsRow + '/F' + testRow + ', 0)');
+      setCell(ws, 'F' + row, fcPctVal, pctStyle, 'IF(F' + testRow + '>0, F' + cpsRow + '/F' + testRow + ', 0)');
       row++;
 
       const marginRow = row;
+      const marginVal = testPriceVal - it.costPerServing;
       setCell(ws, 'A' + row, '', cellStyle);
       setCell(ws, 'B' + row, '', cellStyle);
       setCell(ws, 'C' + row, '', cellStyle);
       setCell(ws, 'D' + row, '', cellStyle);
       setCell(ws, 'E' + row, 'Margin per serving', pricingLabelStyle);
-      setCell(ws, 'F' + row, 0, pricingValStyle, 'F' + testRow + '-F' + cpsRow);
+      setCell(ws, 'F' + row, marginVal, pricingValStyle, 'F' + testRow + '-F' + cpsRow);
       row++;
 
       const revRow = row;
+      const revVal = testPriceVal * it.servings;
       setCell(ws, 'A' + row, '', cellStyle);
       setCell(ws, 'B' + row, '', cellStyle);
       setCell(ws, 'C' + row, '', cellStyle);
       setCell(ws, 'D' + row, '', cellStyle);
       setCell(ws, 'E' + row, 'Total revenue', pricingLabelStyle);
-      setCell(ws, 'F' + row, 0, pricingValStyle, 'F' + testRow + '*F' + servingsRow);
+      setCell(ws, 'F' + row, revVal, pricingValStyle, 'F' + testRow + '*F' + servingsRow);
       row++;
 
       const profitRow = row;
+      const profitVal = revVal - it.totalCost;
       setCell(ws, 'A' + row, '', totalLabelStyle);
       setCell(ws, 'B' + row, '', totalLabelStyle);
       setCell(ws, 'C' + row, '', totalLabelStyle);
       setCell(ws, 'D' + row, '', totalLabelStyle);
       setCell(ws, 'E' + row, 'TOTAL PROFIT', totalLabelStyle);
-      setCell(ws, 'F' + row, 0, totalRowStyle, 'F' + testRow + '*F' + servingsRow + '-F' + totalRow);
+      setCell(ws, 'F' + row, profitVal, totalRowStyle, 'F' + testRow + '*F' + servingsRow + '-F' + totalRow);
       row++;
 
       // Column widths
@@ -918,6 +955,11 @@
     });
 
     const filename = 'cost-report-' + new Date().toISOString().slice(0, 10) + '.xlsx';
+    // Force Excel to recalculate all formulas when the file is opened.
+    // Without this, cached zero values stay and editing test price doesn't update %.
+    if (!wb.Workbook) wb.Workbook = {};
+    if (!wb.Workbook.CalcPr) wb.Workbook.CalcPr = {};
+    wb.Workbook.CalcPr.fullCalcOnLoad = true;
     XLSX.writeFile(wb, filename);
     PCD.toast.success('Excel downloaded · open and edit yellow Test price cells');
   }
@@ -974,6 +1016,8 @@
     const editBtn = PCD.el('button', { type: 'button', class: 'btn btn-primary', text: t('edit'), style: { flex: '1', minWidth: '100px' } });
     const duplicateBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: 'Duplicate' });
     duplicateBtn.innerHTML = PCD.icon('copy', 16);
+    const copyToWsBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: 'Copy to workspace' });
+    copyToWsBtn.innerHTML = PCD.icon('truck', 16);
     const costReportBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: 'Cost Report' });
     costReportBtn.innerHTML = PCD.icon('activity', 16) + ' <span>Cost Report</span>';
     const shareBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: 'Share' });
@@ -983,10 +1027,15 @@
     footer.appendChild(deleteBtn);
     footer.appendChild(shareBtn);
     footer.appendChild(duplicateBtn);
+    footer.appendChild(copyToWsBtn);
     footer.appendChild(costReportBtn);
     footer.appendChild(editBtn);
 
     const m = PCD.modal.open({ title: r.name, body: body, footer: footer, size: 'md', closable: true });
+
+    copyToWsBtn.addEventListener('click', function () {
+      if (PCD.openCopyToWorkspace) PCD.openCopyToWorkspace('recipes', rid, r.name);
+    });
 
     costReportBtn.addEventListener('click', function () {
       openCostReport([rid]);
