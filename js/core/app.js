@@ -515,17 +515,52 @@
       });
     });
     if (deleteBtn) deleteBtn.addEventListener('click', function () {
+      // Build counts of data that will be wiped, so user sees consequences
+      const wsId = existing.id;
+      const recipesInWs = (PCD.store.get('recipes') || {})[wsId] || {};
+      const menusInWs = (PCD.store.get('menus') || {})[wsId] || {};
+      const eventsInWs = (PCD.store.get('events') || {})[wsId] || {};
+      const suppliersInWs = (PCD.store.get('suppliers') || {})[wsId] || {};
+      const counts = {
+        recipes: Object.keys(recipesInWs).length,
+        menus: Object.keys(menusInWs).length,
+        events: Object.keys(eventsInWs).length,
+        suppliers: Object.keys(suppliersInWs).length,
+      };
+      const dataLines = [];
+      if (counts.recipes) dataLines.push(counts.recipes + ' recipe' + (counts.recipes === 1 ? '' : 's'));
+      if (counts.menus) dataLines.push(counts.menus + ' menu' + (counts.menus === 1 ? '' : 's'));
+      if (counts.events) dataLines.push(counts.events + ' event' + (counts.events === 1 ? '' : 's'));
+      if (counts.suppliers) dataLines.push(counts.suppliers + ' supplier' + (counts.suppliers === 1 ? '' : 's'));
+      const dataSummary = dataLines.length > 0
+        ? dataLines.join(' · ') + ' will be permanently deleted'
+        : 'This workspace is empty — safe to delete';
+
       PCD.modal.confirm({
-        icon: '🗑', iconKind: 'danger', danger: true,
-        title: 'Delete "' + existing.name + '"?',
-        text: 'All recipes, menus, events and other data in this workspace will be permanently deleted. Ingredients library will remain. This cannot be undone.',
-        okText: 'Delete forever'
+        icon: '⚠️', iconKind: 'danger', danger: true,
+        title: 'Delete workspace "' + existing.name + '"?',
+        text: dataSummary +
+          '. Ingredients library is shared and will not be touched. ' +
+          'This action CANNOT BE UNDONE.',
+        okText: 'Yes, delete "' + existing.name + '" forever',
+        cancelText: 'Cancel'
       }).then(function (ok) {
         if (!ok) return;
-        PCD.store.deleteWorkspace(existing.id);
-        PCD.toast.success('Workspace deleted');
-        m.close();
-        setTimeout(function () { window.location.reload(); }, 400);
+        const success = PCD.store.deleteWorkspace(wsId);
+        if (!success) {
+          PCD.toast.error('Cannot delete — at least one workspace must remain');
+          return;
+        }
+        try { PCD.toast.success('Workspace deleted'); } catch (e) {}
+        try { m.close(); } catch (e) {}
+
+        // Push deletion to cloud BEFORE reload (otherwise reload pulls stale state with the ws back)
+        const doReload = function () { window.location.reload(); };
+        if (PCD.cloud && typeof PCD.cloud.pushNow === 'function') {
+          PCD.cloud.pushNow().then(function () { setTimeout(doReload, 100); });
+        } else {
+          setTimeout(doReload, 250);
+        }
       });
     });
     saveBtn.addEventListener('click', function (clickEvent) {

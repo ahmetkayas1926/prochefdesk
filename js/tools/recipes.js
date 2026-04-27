@@ -580,7 +580,7 @@
     PCD.print(html, 'Cost Report ' + new Date().toISOString().slice(0, 10));
   }
 
-  // Excel: 1 sheet per recipe + Summary sheet, formulas live
+  // Excel: 1 sheet per recipe + Summary sheet, with full professional styling
   function exportCostReportXLSX(items, targetPct) {
     if (!window.XLSX) {
       PCD.toast.error('Excel library not loaded — try refreshing the page');
@@ -589,144 +589,337 @@
     const ingMap = currentIngMap();
     const wb = XLSX.utils.book_new();
 
-    // Summary sheet (built first, will be moved to position 0 at end)
-    const summaryRows = [
-      ['Cost Report'],
-      ['Generated', new Date().toLocaleString()],
-      ['Target food cost %', targetPct],
-      [],
-      ['Recipe', 'Servings', 'Total food cost', 'Cost per serving', 'Suggested price (per serving)', 'Test price (per serving)', 'Food cost % (test)', 'Profit per serving'],
-    ];
+    // ============ STYLE PRESETS ============
+    const BRAND = '16A34A';        // green
+    const BRAND_LIGHT = 'F0FDF4';  // very light green
+    const HEADER_BG = '16A34A';
+    const ROW_ALT = 'FAFAFA';
+    const TEST_BG = 'FEF3C7';      // amber/yellow for editable test price
+    const BORDER_COLOR = 'D4D4D4';
 
+    const thinBorder = {
+      top: { style: 'thin', color: { rgb: BORDER_COLOR } },
+      bottom: { style: 'thin', color: { rgb: BORDER_COLOR } },
+      left: { style: 'thin', color: { rgb: BORDER_COLOR } },
+      right: { style: 'thin', color: { rgb: BORDER_COLOR } },
+    };
+    const thickBorder = {
+      top: { style: 'medium', color: { rgb: BRAND } },
+      bottom: { style: 'medium', color: { rgb: BRAND } },
+      left: { style: 'medium', color: { rgb: BRAND } },
+      right: { style: 'medium', color: { rgb: BRAND } },
+    };
+
+    const titleStyle = {
+      font: { name: 'Calibri', sz: 18, bold: true, color: { rgb: BRAND } },
+      alignment: { vertical: 'center', horizontal: 'left' },
+    };
+    const subtitleStyle = {
+      font: { name: 'Calibri', sz: 10, color: { rgb: '666666' } },
+      alignment: { vertical: 'center' },
+    };
+    const sectionHeaderStyle = {
+      font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: BRAND } },
+      alignment: { vertical: 'center' },
+      border: { bottom: { style: 'medium', color: { rgb: BRAND } } },
+    };
+    const tableHeaderStyle = {
+      font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: 'FFFFFF' } },
+      fill: { fgColor: { rgb: HEADER_BG } },
+      alignment: { vertical: 'center', horizontal: 'left' },
+      border: thinBorder,
+    };
+    const tableHeaderRightStyle = Object.assign({}, tableHeaderStyle, {
+      alignment: { vertical: 'center', horizontal: 'right' },
+    });
+    const cellStyle = {
+      font: { name: 'Calibri', sz: 10 },
+      alignment: { vertical: 'center', horizontal: 'left' },
+      border: thinBorder,
+    };
+    const cellNumStyle = {
+      font: { name: 'Calibri', sz: 10 },
+      alignment: { vertical: 'center', horizontal: 'right' },
+      border: thinBorder,
+      numFmt: '"$"#,##0.00',
+    };
+    const cellQtyStyle = {
+      font: { name: 'Calibri', sz: 10 },
+      alignment: { vertical: 'center', horizontal: 'right' },
+      border: thinBorder,
+      numFmt: '#,##0.##',
+    };
+    const cellNumAltStyle = Object.assign({}, cellNumStyle, {
+      fill: { fgColor: { rgb: ROW_ALT } },
+    });
+    const cellAltStyle = Object.assign({}, cellStyle, {
+      fill: { fgColor: { rgb: ROW_ALT } },
+    });
+    const cellQtyAltStyle = Object.assign({}, cellQtyStyle, {
+      fill: { fgColor: { rgb: ROW_ALT } },
+    });
+    const totalRowStyle = {
+      font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: BRAND } },
+      fill: { fgColor: { rgb: BRAND_LIGHT } },
+      alignment: { vertical: 'center', horizontal: 'right' },
+      border: { top: { style: 'medium', color: { rgb: BRAND } }, bottom: thinBorder.bottom, left: thinBorder.left, right: thinBorder.right },
+      numFmt: '"$"#,##0.00',
+    };
+    const totalLabelStyle = {
+      font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: BRAND } },
+      fill: { fgColor: { rgb: BRAND_LIGHT } },
+      alignment: { vertical: 'center', horizontal: 'right' },
+      border: { top: { style: 'medium', color: { rgb: BRAND } }, bottom: thinBorder.bottom, left: thinBorder.left, right: thinBorder.right },
+    };
+    const pricingLabelStyle = {
+      font: { name: 'Calibri', sz: 10, bold: true },
+      alignment: { vertical: 'center', horizontal: 'left' },
+      border: thinBorder,
+      fill: { fgColor: { rgb: ROW_ALT } },
+    };
+    const pricingValStyle = {
+      font: { name: 'Calibri', sz: 11, bold: true },
+      alignment: { vertical: 'center', horizontal: 'right' },
+      border: thinBorder,
+      numFmt: '"$"#,##0.00',
+    };
+    const editableStyle = {
+      font: { name: 'Calibri', sz: 12, bold: true, color: { rgb: '92400E' } },
+      fill: { fgColor: { rgb: TEST_BG } },
+      alignment: { vertical: 'center', horizontal: 'right' },
+      border: thickBorder,
+      numFmt: '"$"#,##0.00',
+    };
+    const editableLabelStyle = {
+      font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: '92400E' } },
+      fill: { fgColor: { rgb: TEST_BG } },
+      alignment: { vertical: 'center', horizontal: 'left' },
+      border: thickBorder,
+    };
+    const pctStyle = {
+      font: { name: 'Calibri', sz: 11, bold: true },
+      alignment: { vertical: 'center', horizontal: 'right' },
+      border: thinBorder,
+      numFmt: '0.00%',
+    };
+
+    // Helper to set a cell value+style
+    function setCell(ws, addr, value, style, formula) {
+      const cell = { v: value };
+      if (formula) { cell.f = formula; cell.t = 'n'; }
+      else if (typeof value === 'number') cell.t = 'n';
+      else if (typeof value === 'string') cell.t = 's';
+      if (style) cell.s = style;
+      ws[addr] = cell;
+    }
+
+    // ============ SUMMARY SHEET ============
+    const summaryWs = {};
+    const summaryRange = { s: { c: 0, r: 0 }, e: { c: 7, r: 0 } };
+    setCell(summaryWs, 'A1', 'COST REPORT', titleStyle);
+    setCell(summaryWs, 'A2', 'Generated: ' + new Date().toLocaleString(), subtitleStyle);
+    setCell(summaryWs, 'A3', 'Target food cost: ' + targetPct + '%', subtitleStyle);
+    // Row 5: header
+    const sumHeaders = ['Recipe', 'Servings', 'Total food cost', 'Cost per serving', 'Suggested price', 'Test price', 'Food cost %', 'Profit / serving'];
+    sumHeaders.forEach(function (h, i) {
+      const col = String.fromCharCode(65 + i);
+      setCell(summaryWs, col + '5', h, i === 0 ? tableHeaderStyle : tableHeaderRightStyle);
+    });
+    // Data rows from row 6
+    let sumRow = 6;
+    items.forEach(function (it, idx) {
+      const r = it.recipe;
+      const fcPct = (it.testPrice && it.testPrice > 0) ? (it.costPerServing / it.testPrice) : 0;
+      const profit = Math.max(0, (it.testPrice || 0) - it.costPerServing);
+      const isAlt = idx % 2 === 1;
+      setCell(summaryWs, 'A' + sumRow, r.name, isAlt ? cellAltStyle : cellStyle);
+      setCell(summaryWs, 'B' + sumRow, it.servings, isAlt ? cellQtyAltStyle : cellQtyStyle);
+      setCell(summaryWs, 'C' + sumRow, it.totalCost, isAlt ? cellNumAltStyle : cellNumStyle);
+      setCell(summaryWs, 'D' + sumRow, it.costPerServing, isAlt ? cellNumAltStyle : cellNumStyle);
+      setCell(summaryWs, 'E' + sumRow, it.suggestedPrice, isAlt ? cellNumAltStyle : cellNumStyle);
+      setCell(summaryWs, 'F' + sumRow, it.testPrice || 0, isAlt ? cellNumAltStyle : cellNumStyle);
+      setCell(summaryWs, 'G' + sumRow, fcPct, isAlt ? Object.assign({}, pctStyle, { fill: { fgColor: { rgb: ROW_ALT } } }) : pctStyle);
+      setCell(summaryWs, 'H' + sumRow, profit, isAlt ? cellNumAltStyle : cellNumStyle);
+      sumRow++;
+    });
+
+    // Column widths and merge for title
+    summaryWs['!cols'] = [
+      { wch: 30 }, { wch: 10 }, { wch: 16 }, { wch: 16 }, { wch: 18 }, { wch: 16 }, { wch: 14 }, { wch: 16 }
+    ];
+    summaryWs['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 7 } }];
+    summaryWs['!rows'] = [{ hpt: 28 }];  // taller title row
+    summaryWs['!ref'] = 'A1:H' + (sumRow - 1);
+    summaryWs['!freeze'] = { xSplit: 0, ySplit: 5 };
+
+    XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
+
+    // ============ ONE SHEET PER RECIPE ============
     items.forEach(function (it, idx) {
       const r = it.recipe;
       const sheetName = (r.name || ('Recipe' + (idx + 1))).slice(0, 28).replace(/[\\\/\?\*\[\]:]/g, '_');
+      const ws = {};
+      let row = 1;
 
-      const rows = [];
-      // Title block
-      rows.push([r.name]);
-      rows.push([(r.category || 'recipe') + ' · ' + it.servings + ' servings']);
-      rows.push([]);
-      // Header
-      rows.push(['Ingredient', 'Unit price', 'Unit', 'Qty', 'Qty unit', 'Line cost']);
+      // Title
+      setCell(ws, 'A' + row, r.name, titleStyle);
+      row++;
+      setCell(ws, 'A' + row, (r.category || 'recipe') + ' · ' + it.servings + ' servings', subtitleStyle);
+      row++;
+      row++;  // blank
 
-      const startIngRow = rows.length + 1;  // 1-indexed in Excel
-      let lastIngRow = startIngRow - 1;
+      // Section: Ingredients
+      setCell(ws, 'A' + row, 'INGREDIENT BREAKDOWN', sectionHeaderStyle);
+      row++;
 
-      (r.ingredients || []).forEach(function (ri) {
+      // Header row
+      const headerRow = row;
+      setCell(ws, 'A' + row, 'Ingredient', tableHeaderStyle);
+      setCell(ws, 'B' + row, 'Unit price', tableHeaderRightStyle);
+      setCell(ws, 'C' + row, 'Unit', tableHeaderStyle);
+      setCell(ws, 'D' + row, 'Qty', tableHeaderRightStyle);
+      setCell(ws, 'E' + row, 'Qty unit', tableHeaderStyle);
+      setCell(ws, 'F' + row, 'Line cost', tableHeaderRightStyle);
+      row++;
+
+      const startIngRow = row;
+      let lastIngRow = row - 1;
+
+      (r.ingredients || []).forEach(function (ri, ingIdx) {
         const ing = ingMap[ri.ingredientId];
         if (!ing) return;
-        const rowIdx = rows.length + 1;
-        // Use formula for line cost: Unit price * Qty (assumes unit match — we put a value for unit conv if needed)
         let qtyForFormula = Number(ri.amount) || 0;
         if (ri.unit && ing.unit && ri.unit !== ing.unit) {
           try { qtyForFormula = PCD.convertUnit(qtyForFormula, ri.unit, ing.unit); } catch (e) {}
         }
-        rows.push([
-          ing.name,
-          Number(ing.pricePerUnit) || 0,
-          ing.unit || '',
-          qtyForFormula,
-          ing.unit || '',
-          { f: 'B' + rowIdx + '*D' + rowIdx, t: 'n', z: '"$"#,##0.00' }
-        ]);
-        lastIngRow = rowIdx;
+        const isAlt = ingIdx % 2 === 1;
+        setCell(ws, 'A' + row, ing.name, isAlt ? cellAltStyle : cellStyle);
+        setCell(ws, 'B' + row, Number(ing.pricePerUnit) || 0, isAlt ? cellNumAltStyle : cellNumStyle);
+        setCell(ws, 'C' + row, ing.unit || '', isAlt ? cellAltStyle : cellStyle);
+        setCell(ws, 'D' + row, qtyForFormula, isAlt ? cellQtyAltStyle : cellQtyStyle);
+        setCell(ws, 'E' + row, ing.unit || '', isAlt ? cellAltStyle : cellStyle);
+        setCell(ws, 'F' + row, 0, isAlt ? cellNumAltStyle : cellNumStyle, 'B' + row + '*D' + row);
+        lastIngRow = row;
+        row++;
       });
 
-      rows.push([]);
-      // Totals
-      const totalRow = rows.length + 1;
-      rows.push([
-        'Total food cost', '', '', '', '',
-        { f: 'SUM(F' + startIngRow + ':F' + lastIngRow + ')', t: 'n', z: '"$"#,##0.00' }
-      ]);
-      const servingsRow = rows.length + 1;
-      rows.push(['Servings', '', '', '', '', it.servings]);
-      const cpsRow = rows.length + 1;
-      rows.push([
-        'Cost per serving', '', '', '', '',
-        { f: 'F' + totalRow + '/F' + servingsRow, t: 'n', z: '"$"#,##0.00' }
-      ]);
-      rows.push([]);
-      rows.push(['PRICING (edit Test price below to see live impact)']);
-      const targetRow = rows.length + 1;
-      rows.push(['Target food cost %', '', '', '', '', targetPct / 100]);
-      const suggRow = rows.length + 1;
-      rows.push([
-        'Suggested price (per serving)', '', '', '', '',
-        { f: 'F' + cpsRow + '/F' + targetRow, t: 'n', z: '"$"#,##0.00' }
-      ]);
-      const testRow = rows.length + 1;
-      rows.push(['Test price (per serving) — EDIT ME', '', '', '', '', it.testPrice || it.suggestedPrice || 0]);
-      const fcPctRow = rows.length + 1;
-      rows.push([
-        'Food cost % at test price', '', '', '', '',
-        { f: 'IF(F' + testRow + '>0, F' + cpsRow + '/F' + testRow + ', 0)', t: 'n', z: '0.00%' }
-      ]);
-      const marginRow = rows.length + 1;
-      rows.push([
-        'Margin per serving', '', '', '', '',
-        { f: 'F' + testRow + '-F' + cpsRow, t: 'n', z: '"$"#,##0.00' }
-      ]);
-      rows.push([
-        'Total revenue at test price', '', '', '', '',
-        { f: 'F' + testRow + '*F' + servingsRow, t: 'n', z: '"$"#,##0.00' }
-      ]);
-      rows.push([
-        'Total profit', '', '', '', '',
-        { f: 'F' + testRow + '*F' + servingsRow + '-F' + totalRow, t: 'n', z: '"$"#,##0.00' }
-      ]);
+      row++;  // blank
 
-      const ws = XLSX.utils.aoa_to_sheet(rows);
+      // Totals
+      const totalRow = row;
+      setCell(ws, 'A' + row, '', totalLabelStyle);
+      setCell(ws, 'B' + row, '', totalLabelStyle);
+      setCell(ws, 'C' + row, '', totalLabelStyle);
+      setCell(ws, 'D' + row, '', totalLabelStyle);
+      setCell(ws, 'E' + row, 'TOTAL FOOD COST', totalLabelStyle);
+      setCell(ws, 'F' + row, 0, totalRowStyle, 'SUM(F' + startIngRow + ':F' + lastIngRow + ')');
+      row++;
+
+      const servingsRow = row;
+      setCell(ws, 'A' + row, '', cellStyle);
+      setCell(ws, 'B' + row, '', cellStyle);
+      setCell(ws, 'C' + row, '', cellStyle);
+      setCell(ws, 'D' + row, '', cellStyle);
+      setCell(ws, 'E' + row, 'Servings', pricingLabelStyle);
+      setCell(ws, 'F' + row, it.servings, Object.assign({}, pricingValStyle, { numFmt: '0' }));
+      row++;
+
+      const cpsRow = row;
+      setCell(ws, 'A' + row, '', cellStyle);
+      setCell(ws, 'B' + row, '', cellStyle);
+      setCell(ws, 'C' + row, '', cellStyle);
+      setCell(ws, 'D' + row, '', cellStyle);
+      setCell(ws, 'E' + row, 'Cost per serving', pricingLabelStyle);
+      setCell(ws, 'F' + row, 0, pricingValStyle, 'F' + totalRow + '/F' + servingsRow);
+      row++;
+
+      row++;  // blank
+
+      // Pricing section
+      setCell(ws, 'A' + row, 'PRICING — edit Test price below to see live impact', sectionHeaderStyle);
+      row++;
+
+      const targetRow = row;
+      setCell(ws, 'A' + row, '', cellStyle);
+      setCell(ws, 'B' + row, '', cellStyle);
+      setCell(ws, 'C' + row, '', cellStyle);
+      setCell(ws, 'D' + row, '', cellStyle);
+      setCell(ws, 'E' + row, 'Target food cost %', pricingLabelStyle);
+      setCell(ws, 'F' + row, targetPct / 100, Object.assign({}, pricingValStyle, { numFmt: '0%' }));
+      row++;
+
+      const suggRow = row;
+      setCell(ws, 'A' + row, '', cellStyle);
+      setCell(ws, 'B' + row, '', cellStyle);
+      setCell(ws, 'C' + row, '', cellStyle);
+      setCell(ws, 'D' + row, '', cellStyle);
+      setCell(ws, 'E' + row, 'Suggested price (per serving)', pricingLabelStyle);
+      setCell(ws, 'F' + row, 0, pricingValStyle, 'F' + cpsRow + '/F' + targetRow);
+      row++;
+
+      const testRow = row;
+      setCell(ws, 'A' + row, '', editableLabelStyle);
+      setCell(ws, 'B' + row, '', editableLabelStyle);
+      setCell(ws, 'C' + row, '', editableLabelStyle);
+      setCell(ws, 'D' + row, '', editableLabelStyle);
+      setCell(ws, 'E' + row, '✏ TEST PRICE — EDIT ME', editableLabelStyle);
+      setCell(ws, 'F' + row, it.testPrice || it.suggestedPrice || 0, editableStyle);
+      row++;
+
+      const fcPctRow = row;
+      setCell(ws, 'A' + row, '', cellStyle);
+      setCell(ws, 'B' + row, '', cellStyle);
+      setCell(ws, 'C' + row, '', cellStyle);
+      setCell(ws, 'D' + row, '', cellStyle);
+      setCell(ws, 'E' + row, 'Food cost % at test price', pricingLabelStyle);
+      setCell(ws, 'F' + row, 0, pctStyle, 'IF(F' + testRow + '>0, F' + cpsRow + '/F' + testRow + ', 0)');
+      row++;
+
+      const marginRow = row;
+      setCell(ws, 'A' + row, '', cellStyle);
+      setCell(ws, 'B' + row, '', cellStyle);
+      setCell(ws, 'C' + row, '', cellStyle);
+      setCell(ws, 'D' + row, '', cellStyle);
+      setCell(ws, 'E' + row, 'Margin per serving', pricingLabelStyle);
+      setCell(ws, 'F' + row, 0, pricingValStyle, 'F' + testRow + '-F' + cpsRow);
+      row++;
+
+      const revRow = row;
+      setCell(ws, 'A' + row, '', cellStyle);
+      setCell(ws, 'B' + row, '', cellStyle);
+      setCell(ws, 'C' + row, '', cellStyle);
+      setCell(ws, 'D' + row, '', cellStyle);
+      setCell(ws, 'E' + row, 'Total revenue', pricingLabelStyle);
+      setCell(ws, 'F' + row, 0, pricingValStyle, 'F' + testRow + '*F' + servingsRow);
+      row++;
+
+      const profitRow = row;
+      setCell(ws, 'A' + row, '', totalLabelStyle);
+      setCell(ws, 'B' + row, '', totalLabelStyle);
+      setCell(ws, 'C' + row, '', totalLabelStyle);
+      setCell(ws, 'D' + row, '', totalLabelStyle);
+      setCell(ws, 'E' + row, 'TOTAL PROFIT', totalLabelStyle);
+      setCell(ws, 'F' + row, 0, totalRowStyle, 'F' + testRow + '*F' + servingsRow + '-F' + totalRow);
+      row++;
+
       // Column widths
       ws['!cols'] = [
-        { wch: 38 }, { wch: 14 }, { wch: 8 }, { wch: 10 }, { wch: 8 }, { wch: 14 },
+        { wch: 32 }, { wch: 14 }, { wch: 8 }, { wch: 12 }, { wch: 8 }, { wch: 16 },
       ];
-      // Bold the title
-      try {
-        if (ws['A1']) ws['A1'].s = { font: { bold: true, sz: 14 } };
-      } catch (e) {}
+      ws['!ref'] = 'A1:F' + (row - 1);
+      // Merge title
+      ws['!merges'] = [
+        { s: { r: 0, c: 0 }, e: { r: 0, c: 5 } },  // title
+        { s: { r: 1, c: 0 }, e: { r: 1, c: 5 } },  // subtitle
+      ];
+      ws['!rows'] = [{ hpt: 28 }];  // taller title
+
       XLSX.utils.book_append_sheet(wb, ws, sheetName);
-
-      // Add to summary
-      summaryRows.push([
-        r.name,
-        it.servings,
-        it.totalCost,
-        it.costPerServing,
-        it.suggestedPrice,
-        it.testPrice || 0,
-        (it.testPrice && it.testPrice > 0) ? (it.costPerServing / it.testPrice) : 0,
-        Math.max(0, (it.testPrice || 0) - it.costPerServing)
-      ]);
     });
-
-    // Insert summary sheet at position 0
-    const summaryWs = XLSX.utils.aoa_to_sheet(summaryRows);
-    summaryWs['!cols'] = [
-      { wch: 30 }, { wch: 10 }, { wch: 16 }, { wch: 16 }, { wch: 22 }, { wch: 20 }, { wch: 18 }, { wch: 18 }
-    ];
-    // Number formatting on currency columns
-    for (let r = 5; r < summaryRows.length; r++) {
-      ['C', 'D', 'E', 'F', 'H'].forEach(function (col) {
-        const cell = summaryWs[col + (r + 1)];
-        if (cell) cell.z = '"$"#,##0.00';
-      });
-      const pctCell = summaryWs['G' + (r + 1)];
-      if (pctCell) pctCell.z = '0.00%';
-    }
-    XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
-    // Move Summary to first position
-    const sheetNames = wb.SheetNames;
-    const summaryIdx = sheetNames.indexOf('Summary');
-    if (summaryIdx > 0) {
-      sheetNames.splice(summaryIdx, 1);
-      sheetNames.unshift('Summary');
-    }
 
     const filename = 'cost-report-' + new Date().toISOString().slice(0, 10) + '.xlsx';
     XLSX.writeFile(wb, filename);
-    PCD.toast.success('Excel downloaded · open and edit Test price cells');
+    PCD.toast.success('Excel downloaded · open and edit yellow Test price cells');
   }
 
   function openPreview(rid) {

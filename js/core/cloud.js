@@ -106,6 +106,7 @@
           shoppingLists: state.shoppingLists,
           pendingStockCount: state.pendingStockCount,
           stockCountHistory: state.stockCountHistory,
+          _deletedWorkspaces: state._deletedWorkspaces,
         };
 
         supabase.from('user_data').upsert({
@@ -160,6 +161,7 @@
         shoppingLists: state.shoppingLists,
         pendingStockCount: state.pendingStockCount,
         stockCountHistory: state.stockCountHistory,
+          _deletedWorkspaces: state._deletedWorkspaces,
       };
 
       supabase.from('user_data').upsert({
@@ -198,34 +200,64 @@
               const remote = res.data.value;
               const current = PCD.store.get();
 
+              // Tombstones — workspaces deleted locally that should NOT be resurrected from cloud
+              const tombstones = current._deletedWorkspaces || {};
+
               // Special handling for workspaces: union by id (don't drop local-only ws)
-              // This prevents data loss when cloud is stale (e.g. just-created ws not synced yet)
-              const mergedWorkspaces = Object.assign({}, remote.workspaces || {}, current.workspaces || {});
-              // For each local-only ws, keep local version. For overlapping, prefer remote (cloud is source of truth for synced data)
-              if (current.workspaces) {
-                Object.keys(current.workspaces).forEach(function (wsId) {
-                  if (!remote.workspaces || !remote.workspaces[wsId]) {
-                    // Local-only — keep it
-                    mergedWorkspaces[wsId] = current.workspaces[wsId];
-                  } else {
-                    // Both have it — newer updatedAt wins
-                    const localUpd = current.workspaces[wsId].updatedAt || '';
-                    const remoteUpd = remote.workspaces[wsId].updatedAt || '';
-                    mergedWorkspaces[wsId] = (localUpd > remoteUpd) ? current.workspaces[wsId] : remote.workspaces[wsId];
-                  }
-                });
-              }
+              // BUT respect tombstones: deleted ws stays deleted even if cloud still has it
+              const mergedWorkspaces = {};
+              const allIds = new Set();
+              if (remote.workspaces) Object.keys(remote.workspaces).forEach(function (id) { allIds.add(id); });
+              if (current.workspaces) Object.keys(current.workspaces).forEach(function (id) { allIds.add(id); });
+
+              allIds.forEach(function (wsId) {
+                // Skip if this ws was deleted locally (tombstoned)
+                if (tombstones[wsId]) return;
+
+                const localWs = current.workspaces && current.workspaces[wsId];
+                const remoteWs = remote.workspaces && remote.workspaces[wsId];
+                if (localWs && remoteWs) {
+                  // Both have it — newer updatedAt wins
+                  const localUpd = localWs.updatedAt || '';
+                  const remoteUpd = remoteWs.updatedAt || '';
+                  mergedWorkspaces[wsId] = (localUpd > remoteUpd) ? localWs : remoteWs;
+                } else if (localWs) {
+                  mergedWorkspaces[wsId] = localWs;
+                } else if (remoteWs) {
+                  mergedWorkspaces[wsId] = remoteWs;
+                }
+              });
+
+              // Merge tombstones too (union)
+              const mergedTombstones = Object.assign({}, remote._deletedWorkspaces || {}, current._deletedWorkspaces || {});
 
               // Merge strategy: cloud data overwrites recipe/ingredient/etc. but keep user/_meta/workspaces local-aware
               const merged = Object.assign({}, current, remote, {
                 workspaces: mergedWorkspaces,
+                _deletedWorkspaces: mergedTombstones,
                 // Keep activeWorkspaceId from local if it points to a workspace we have
                 activeWorkspaceId: (current.activeWorkspaceId && mergedWorkspaces[current.activeWorkspaceId])
                   ? current.activeWorkspaceId
-                  : (remote.activeWorkspaceId || current.activeWorkspaceId),
+                  : ((remote.activeWorkspaceId && mergedWorkspaces[remote.activeWorkspaceId])
+                      ? remote.activeWorkspaceId
+                      : (Object.keys(mergedWorkspaces)[0] || null)),
                 user: current.user,
                 _meta: Object.assign({}, current._meta, { lastSyncAt: res.data.updated_at })
               });
+
+              // Also clean up workspace-bound tables for tombstoned workspaces
+              ['recipes','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','pendingStockCount','stockCountHistory'].forEach(function (tbl) {
+                if (merged[tbl]) {
+                  Object.keys(tombstones).forEach(function (deadWsId) {
+                    if (merged[tbl][deadWsId]) {
+                      const t = Object.assign({}, merged[tbl]);
+                      delete t[deadWsId];
+                      merged[tbl] = t;
+                    }
+                  });
+                }
+              });
+
               PCD.store.replaceAll(merged);
               resolve(merged);
             } else {

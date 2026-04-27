@@ -38,6 +38,7 @@
     // Ingredients library is shared across workspaces (an ingredient is an ingredient).
     workspaces: {},            // { wsId: { id, name, concept, role, city, periodStart, periodEnd, archived, color, icon, createdAt } }
     activeWorkspaceId: null,   // current workspace; null on first run -> auto-created
+    _deletedWorkspaces: {},    // tombstones — { wsId: deletedAt } so cloud merge won't resurrect deleted ws
 
     // ---------- LIBRARY (workspace-agnostic) ----------
     ingredients: {},   // { id: { id, name, unit, pricePerUnit, supplier, category, priceHistory:[], yieldPercent } }
@@ -369,6 +370,10 @@
       if (state.activeWorkspaceId === wsId) {
         state.activeWorkspaceId = remaining[0];
       }
+      // Mark as deleted in tombstones so cloud merge won't resurrect
+      if (!state._deletedWorkspaces) state._deletedWorkspaces = {};
+      state._deletedWorkspaces = Object.assign({}, state._deletedWorkspaces);
+      state._deletedWorkspaces[wsId] = new Date().toISOString();
       emit('workspaces', next, null);
       try { localStorage.setItem(LS_KEY_STATE, JSON.stringify(state)); } catch (e) {}
       persist();
