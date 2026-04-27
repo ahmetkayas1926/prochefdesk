@@ -584,15 +584,23 @@
       try { PCD.toast.success('Workspace saved'); } catch (e) {}
       try { m.close(); } catch (e) {}
 
-      // STEP 5 — Reload (always for new workspace, label refresh otherwise)
-      console.log('[Workspace Save] success, reloading in 250ms');
-      setTimeout(function () {
+      // STEP 5 — Push to cloud BEFORE reload (so reload doesn't pull stale state)
+      console.log('[Workspace Save] success, pushing to cloud before reload');
+      const doReload = function () {
         if (isNew) {
           window.location.reload();
         } else {
           try { refreshWorkspaceLabel(); } catch (e) {}
         }
-      }, 250);
+      };
+      if (PCD.cloud && typeof PCD.cloud.pushNow === 'function') {
+        PCD.cloud.pushNow().then(function () {
+          setTimeout(doReload, 100);
+        });
+      } else {
+        // No cloud → just reload after short delay
+        setTimeout(doReload, 250);
+      }
     });
   }
 

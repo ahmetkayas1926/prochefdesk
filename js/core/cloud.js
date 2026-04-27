@@ -76,6 +76,58 @@
       cloud._doSync();
     },
 
+    // Force-push current state to cloud, return promise that resolves when done.
+    // Use this before reload() to guarantee cloud has latest data.
+    pushNow: function () {
+      return new Promise(function (resolve) {
+        if (!cloud.ready) return resolve(false);
+        const user = PCD.store.get('user');
+        if (!user || !user.id) return resolve(false);
+        if (!navigator.onLine) return resolve(false);
+
+        const state = PCD.store.get();
+        const payload = {
+          plan: state.plan,
+          prefs: state.prefs,
+          onboarding: state.onboarding,
+          workspaces: state.workspaces,
+          activeWorkspaceId: state.activeWorkspaceId,
+          ingredients: state.ingredients,
+          costHistory: state.costHistory,
+          recipes: state.recipes,
+          menus: state.menus,
+          events: state.events,
+          suppliers: state.suppliers,
+          inventory: state.inventory,
+          waste: state.waste,
+          checklistTemplates: state.checklistTemplates,
+          checklistSessions: state.checklistSessions,
+          canvases: state.canvases,
+          shoppingLists: state.shoppingLists,
+          pendingStockCount: state.pendingStockCount,
+          stockCountHistory: state.stockCountHistory,
+        };
+
+        supabase.from('user_data').upsert({
+          user_id: user.id,
+          key: 'state',
+          value: payload,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id,key' }).then(function (res) {
+          if (res.error) {
+            PCD.err('pushNow error', res.error);
+            resolve(false);
+          } else {
+            PCD.log('pushNow OK');
+            resolve(true);
+          }
+        }).catch(function (e) {
+          PCD.err('pushNow exception', e);
+          resolve(false);
+        });
+      });
+    },
+
     _doSync: function () {
       if (!cloud.ready) return;
       const user = PCD.store.get('user');
@@ -143,11 +195,34 @@
             if (res.error) { PCD.err('pull error', res.error); return reject(res.error); }
             if (res.data && res.data.value) {
               PCD.log('pulled state from cloud');
-              // merge cloud data into local. Cloud wins for base tables.
               const remote = res.data.value;
               const current = PCD.store.get();
-              // Merge strategy: cloud data overwrites recipe/ingredient/etc. but keep user/_meta local
+
+              // Special handling for workspaces: union by id (don't drop local-only ws)
+              // This prevents data loss when cloud is stale (e.g. just-created ws not synced yet)
+              const mergedWorkspaces = Object.assign({}, remote.workspaces || {}, current.workspaces || {});
+              // For each local-only ws, keep local version. For overlapping, prefer remote (cloud is source of truth for synced data)
+              if (current.workspaces) {
+                Object.keys(current.workspaces).forEach(function (wsId) {
+                  if (!remote.workspaces || !remote.workspaces[wsId]) {
+                    // Local-only — keep it
+                    mergedWorkspaces[wsId] = current.workspaces[wsId];
+                  } else {
+                    // Both have it — newer updatedAt wins
+                    const localUpd = current.workspaces[wsId].updatedAt || '';
+                    const remoteUpd = remote.workspaces[wsId].updatedAt || '';
+                    mergedWorkspaces[wsId] = (localUpd > remoteUpd) ? current.workspaces[wsId] : remote.workspaces[wsId];
+                  }
+                });
+              }
+
+              // Merge strategy: cloud data overwrites recipe/ingredient/etc. but keep user/_meta/workspaces local-aware
               const merged = Object.assign({}, current, remote, {
+                workspaces: mergedWorkspaces,
+                // Keep activeWorkspaceId from local if it points to a workspace we have
+                activeWorkspaceId: (current.activeWorkspaceId && mergedWorkspaces[current.activeWorkspaceId])
+                  ? current.activeWorkspaceId
+                  : (remote.activeWorkspaceId || current.activeWorkspaceId),
                 user: current.user,
                 _meta: Object.assign({}, current._meta, { lastSyncAt: res.data.updated_at })
               });
