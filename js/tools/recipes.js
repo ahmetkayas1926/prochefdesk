@@ -55,7 +55,7 @@
             <label class="checkbox" style="min-height:auto;"><input type="checkbox" id="selAll"><span class="text-sm font-semibold"><span id="selCount">0</span> ${t('selected')}</span></label>
           </div>
           <div class="flex gap-2" style="flex-wrap:wrap;">
-            <button type="button" class="btn btn-primary btn-sm" id="bulkCostReport">${PCD.icon('activity',14)} <span>' + PCD.escapeHtml(t('modal_cost_report')) + '</span></button>
+            <button type="button" class="btn btn-primary btn-sm" id="bulkCostReport">${PCD.icon('activity',14)} <span>Cost Report</span></button>
             <button type="button" class="btn btn-danger btn-sm" id="bulkDelete">${PCD.icon('trash',14)} ${t('delete')}</button>
             <button type="button" class="btn btn-ghost btn-sm" id="exitSelect">${t('cancel')}</button>
           </div>
@@ -138,7 +138,7 @@
             class: 'icon-btn',
             'data-copy-rid': r.id,
             'data-name': r.name,
-            title: t('btn_copy_to_workspace'),
+            title: 'Copy to workspace',
             style: { flexShrink: '0' }
           });
           copyBtn.innerHTML = PCD.icon('truck', 18);
@@ -222,7 +222,7 @@
     });
     PCD.$('#bulkCostReport', view).addEventListener('click', function () {
       if (selectedIds.size === 0) {
-        PCD.toast.info(t('toast_select_one_recipe'));
+        PCD.toast.info('Select at least one recipe');
         return;
       }
       openCostReport(Array.from(selectedIds));
@@ -270,7 +270,7 @@
             delete copy.id; delete copy.createdAt; delete copy.updatedAt;
             copy.name = copy.name + ' (Copy)';
             const saved = PCD.store.upsertRecipe(copy);
-            PCD.toast.success(t('toast_duplicated'));
+            PCD.toast.success('Duplicated');
             renderList(view);
             setTimeout(function () { openEditor(saved.id); }, 200);
           }},
@@ -289,16 +289,16 @@
               lines.push('• ' + (ing ? ing.name : '(removed)') + ' — ' + PCD.fmtNumber(ri.amount) + ' ' + (ri.unit || ''));
             });
             if (r.steps) { lines.push(''); lines.push('Method:'); lines.push(r.steps); }
-            PCD.qr.show({ title: r.name, subtitle: t('modal_recipe_qr'), text: lines.join('\n') });
+            PCD.qr.show({ title: r.name, subtitle: 'Recipe QR', text: lines.join('\n') });
           }},
           { icon: 'trash', label: PCD.i18n.t('act_delete'), danger: true, onClick: function () {
             const backup = PCD.clone(r);
             PCD.store.deleteRecipe(rid);
             renderList(view);
-            PCD.toast.success(t('toast_deleted'), 5000, {
-              action: { label: t('btn_undo'), onClick: function () {
+            PCD.toast.success('Deleted', 5000, {
+              action: { label: 'UNDO', onClick: function () {
                 PCD.store.upsertRecipe(backup);
-                PCD.toast.success(t('toast_restored'));
+                PCD.toast.success('Restored');
                 renderList(view);
               }}
             });
@@ -342,7 +342,7 @@
     });
 
     if (items.length === 0) {
-      PCD.toast.error(t('toast_no_recipes_to_report'));
+      PCD.toast.error('No recipes to report');
       return;
     }
 
@@ -463,11 +463,11 @@
     }
     paint();
 
-    const closeBtn = PCD.el('button', { type: 'button', class: 'btn btn-secondary', text: t('btn_close_action') });
+    const closeBtn = PCD.el('button', { type: 'button', class: 'btn btn-secondary', text: 'Close' });
     const pdfBtn = PCD.el('button', { type: 'button', class: 'btn btn-primary' });
     pdfBtn.innerHTML = PCD.icon('print', 16) + ' <span>PDF</span>';
     const xlsxBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline' });
-    xlsxBtn.innerHTML = PCD.icon('book-open', 16) + ' <span>' + PCD.escapeHtml(t('label_excel')) + '</span>';
+    xlsxBtn.innerHTML = PCD.icon('book-open', 16) + ' <span>Excel</span>';
 
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
     footer.appendChild(closeBtn);
@@ -475,7 +475,7 @@
     footer.appendChild(pdfBtn);
 
     const m = PCD.modal.open({
-      title: t('modal_cost_report') + (items.length > 1 ? ' · ' + items.length + ' recipes' : ''),
+      title: 'Cost Report' + (items.length > 1 ? ' · ' + items.length + ' recipes' : ''),
       body: body, footer: footer, size: 'lg', closable: true
     });
     closeBtn.addEventListener('click', function () { m.close(); });
@@ -606,7 +606,7 @@
   // Excel: 1 sheet per recipe + Summary sheet, with full professional styling
   function exportCostReportXLSX(items, targetPct) {
     if (!window.XLSX) {
-      PCD.toast.error(t('excel_library_not_loaded'));
+      PCD.toast.error('Excel library not loaded — try refreshing the page');
       return;
     }
     const ingMap = currentIngMap();
@@ -961,13 +961,13 @@
     if (!wb.Workbook.CalcPr) wb.Workbook.CalcPr = {};
     wb.Workbook.CalcPr.fullCalcOnLoad = true;
     XLSX.writeFile(wb, filename);
-    PCD.toast.success(t('excel_downloaded'));
+    PCD.toast.success('Excel downloaded · open and edit yellow Test price cells');
   }
 
   function openPreview(rid) {
     const t = PCD.i18n.t;
     const r = PCD.store.getRecipe(rid);
-    if (!r) { PCD.toast.error(t('toast_recipe_not_found')); return; }
+    if (!r) { PCD.toast.error('Recipe not found'); return; }
     const ingMap = currentIngMap();
     const cost = PCD.recipes.computeFoodCost(r, ingMap, PCD.recipes.buildRecipeMap());
     const costPerServing = r.servings ? cost / r.servings : cost;
@@ -1014,13 +1014,13 @@
 
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
     const editBtn = PCD.el('button', { type: 'button', class: 'btn btn-primary', text: t('edit'), style: { flex: '1', minWidth: '100px' } });
-    const duplicateBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: t('btn_duplicate') });
+    const duplicateBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: 'Duplicate' });
     duplicateBtn.innerHTML = PCD.icon('copy', 16);
-    const copyToWsBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: t('btn_copy_to_workspace') });
+    const copyToWsBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: 'Copy to workspace' });
     copyToWsBtn.innerHTML = PCD.icon('truck', 16);
-    const costReportBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: t('modal_cost_report') });
-    costReportBtn.innerHTML = PCD.icon('activity', 16) + ' <span>' + PCD.escapeHtml(t('modal_cost_report')) + '</span>';
-    const shareBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: t('modal_share') });
+    const costReportBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: 'Cost Report' });
+    costReportBtn.innerHTML = PCD.icon('activity', 16) + ' <span>Cost Report</span>';
+    const shareBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: 'Share' });
     shareBtn.innerHTML = PCD.icon('share', 16);
     const deleteBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: t('delete'), style: { color: 'var(--danger)' } });
     deleteBtn.innerHTML = PCD.icon('trash', 16);
@@ -1055,7 +1055,7 @@
       delete copy.updatedAt;
       copy.name = copy.name + ' (Copy)';
       const saved = PCD.store.upsertRecipe(copy);
-      PCD.toast.success(t('toast_recipe_duplicated'));
+      PCD.toast.success('Recipe duplicated');
       m.close();
       setTimeout(function () {
         const view = PCD.$('#view');
@@ -1097,10 +1097,10 @@
       else if (PCD.router.currentView() === 'dashboard') PCD.tools.dashboard.render(view);
       PCD.toast.success(t('item_deleted'), 5000, {
         action: {
-          label: t('btn_undo'),
+          label: 'UNDO',
           onClick: function () {
             PCD.store.upsertRecipe(backup);
-            PCD.toast.success(t('toast_restored'));
+            PCD.toast.success('Restored');
             const v = PCD.$('#view');
             if (PCD.router.currentView() === 'recipes') renderList(v);
             else if (PCD.router.currentView() === 'dashboard') PCD.tools.dashboard.render(v);
@@ -1118,7 +1118,7 @@
         '<div style="font-weight:700;color:var(--brand-700);margin-bottom:4px;">🔗 Public link · Herkese açık link</div>' +
         '<div class="text-muted text-sm" style="margin-bottom:10px;">Login olmadan da bu tarifi görebilen kalıcı bir link. WhatsApp, Instagram, e-posta, neye yapıştırırsan oraya yapışır.</div>' +
         '<button type="button" class="btn btn-primary btn-sm" id="rShPublicLink" style="width:100%;">' +
-          PCD.icon('share', 14) + ' <span>' + PCD.escapeHtml(t('btn_generate_share_link')) + '</span>' +
+          PCD.icon('share', 14) + ' <span>Generate share link</span>' +
         '</button>' +
         '<input type="text" id="rShLinkOutput" readonly style="display:none;width:100%;margin-top:8px;padding:8px;border:1.5px solid var(--brand-600);border-radius:6px;font-family:var(--font-mono);font-size:12px;background:#fff;">' +
       '</div>' +
@@ -1144,7 +1144,7 @@
     const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('btn_close') });
     const footer = PCD.el('div', { style: { display: 'flex', width: '100%' } });
     footer.appendChild(closeBtn);
-    const m = PCD.modal.open({ title: t('share_with_name', { name: opts.title }), body: body, footer: footer, size: 'md', closable: true });
+    const m = PCD.modal.open({ title: 'Share · ' + opts.title, body: body, footer: footer, size: 'md', closable: true });
 
     function getText() { return PCD.$('#rShareText', body).value; }
     closeBtn.addEventListener('click', function () { m.close(); });
@@ -1155,11 +1155,11 @@
     linkBtn.addEventListener('click', function () {
       const user = PCD.store.get('user');
       if (!user || !user.id) {
-        PCD.toast.error(t('toast_signin_for_public'));
+        PCD.toast.error('Sign in to create public links');
         return;
       }
       if (!PCD.share || !PCD.share.createOrGetShareUrl) {
-        PCD.toast.error(t('toast_share_unavailable'));
+        PCD.toast.error('Share unavailable');
         return;
       }
       linkBtn.disabled = true;
@@ -1167,7 +1167,7 @@
       PCD.share.createOrGetShareUrl('recipe', opts.recipe.id).then(function (url) {
         linkOut.value = url;
         linkOut.style.display = 'block';
-        linkBtn.innerHTML = PCD.icon('copy', 14) + ' <span>' + PCD.escapeHtml(t('btn_copy_link')) + '</span>';
+        linkBtn.innerHTML = PCD.icon('copy', 14) + ' <span>Copy link</span>';
         linkBtn.disabled = false;
         // First click: select all in input. Second click: copy.
         linkOut.focus();
@@ -1181,18 +1181,18 @@
         linkBtn.onclick = function () {
           if (navigator.clipboard) {
             navigator.clipboard.writeText(url).then(function () {
-              PCD.toast.success(t('toast_copied'));
+              PCD.toast.success('Copied');
             });
           } else {
             linkOut.select();
             document.execCommand('copy');
-            PCD.toast.success(t('toast_copied'));
+            PCD.toast.success('Copied');
           }
         };
       }).catch(function (e) {
-        PCD.toast.error(t('share_failed', { err: (e.message || e) }));
+        PCD.toast.error('Share failed: ' + (e.message || e));
         linkBtn.disabled = false;
-        linkBtn.innerHTML = PCD.icon('share', 14) + ' <span>' + PCD.escapeHtml(t('btn_generate_share_link')) + '</span>';
+        linkBtn.innerHTML = PCD.icon('share', 14) + ' <span>Generate share link</span>';
       });
     });
 
@@ -1226,7 +1226,7 @@
     PCD.$('#rShCopy', body).addEventListener('click', function () {
       if (navigator.clipboard) {
         navigator.clipboard.writeText(getText()).then(function () {
-          PCD.toast.success(t('toast_copied'));
+          PCD.toast.success('Copied');
           m.close();
         });
       }
@@ -1273,19 +1273,19 @@
         '</div>' +
       '</div>';
 
-    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('btn_cancel_action') });
-    const saveBtn = PCD.el('button', { class: 'btn btn-primary', text: t('btn_save_and_add'), style: { flex: '1' } });
+    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: 'Cancel' });
+    const saveBtn = PCD.el('button', { class: 'btn btn-primary', text: 'Save & Add', style: { flex: '1' } });
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
     footer.appendChild(cancelBtn);
     footer.appendChild(saveBtn);
 
-    const m = PCD.modal.open({ title: t('modal_new_ingredient'), body: body, footer: footer, size: 'sm', closable: true });
+    const m = PCD.modal.open({ title: 'New ingredient', body: body, footer: footer, size: 'sm', closable: true });
     setTimeout(function () { const inp = PCD.$('#niPrice', body); if (inp) inp.focus(); }, 100);
 
     cancelBtn.addEventListener('click', function () { m.close(); });
     saveBtn.addEventListener('click', function () {
       draft.name = (PCD.$('#niName', body).value || '').trim();
-      if (!draft.name) { PCD.toast.error(t('toast_name_required')); return; }
+      if (!draft.name) { PCD.toast.error('Name required'); return; }
       draft.unit = PCD.$('#niBuyUnit', body).value || 'g';
       draft.pricePerUnit = parseFloat(PCD.$('#niPrice', body).value) || 0;
       const qty = parseFloat(PCD.$('#niQty', body).value) || 100;
@@ -1322,7 +1322,7 @@
               '<div class="text-muted" style="font-size:12px;">' + PCD.fmtRelTime(ver.snapshotAt) + ' · ' + ingCount + ' ingredients · ' + (ver.snapshot.servings || 1) + ' servings</div>' +
             '</div>' +
             '<button class="btn btn-outline btn-sm" data-restore="' + ver.snapshotId + '">Restore</button>' +
-            '<button class="icon-btn" data-delv="' + ver.snapshotId + '" title="' + PCD.escapeHtml(t('btn_delete_action')) + '">' + PCD.icon('trash', 16) + '</button>' +
+            '<button class="icon-btn" data-delv="' + ver.snapshotId + '" title="Delete">' + PCD.icon('trash', 16) + '</button>' +
           '</div>';
         });
         html += '</div>';
@@ -1335,17 +1335,17 @@
       const sid = this.getAttribute('data-restore');
       PCD.modal.confirm({
         icon: '↩', iconKind: 'info',
-        title: t('confirm_restore_version'),
-        text: t('confirm_restore_version_text'),
-        okText: t('btn_restore')
+        title: 'Restore this version?',
+        text: 'Current state will be auto-saved as a new version first, so you can undo. Continue?',
+        okText: 'Restore'
       }).then(function (ok) {
         if (!ok) return;
         const success = PCD.store.restoreRecipeVersion ? PCD.store.restoreRecipeVersion(recipeId, sid) : false;
         if (success) {
-          PCD.toast.success(t('recipe_restored_as_version'));
+          PCD.toast.success('Recipe restored — current state saved as new version');
           if (typeof onAfterRestore === 'function') onAfterRestore();
         } else {
-          PCD.toast.error(t('toast_restore_failed'));
+          PCD.toast.error('Restore failed');
         }
       });
     });
@@ -1353,21 +1353,21 @@
       const sid = this.getAttribute('data-delv');
       PCD.modal.confirm({
         icon: '🗑', iconKind: 'danger', danger: true,
-        title: t('confirm_delete_version'),
-        text: t('confirm_delete_snapshot_text'),
-        okText: t('btn_delete_action')
+        title: 'Delete this version?',
+        text: 'This snapshot will be permanently removed. Cannot be undone.',
+        okText: 'Delete'
       }).then(function (ok) {
         if (!ok) return;
         if (PCD.store.deleteRecipeVersion) PCD.store.deleteRecipeVersion(recipeId, sid);
-        PCD.toast.success(t('version_deleted'));
+        PCD.toast.success('Version deleted');
         renderBody();
       });
     });
 
-    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('btn_close_action'), style: { width: '100%' } });
+    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: 'Close', style: { width: '100%' } });
     const footer = PCD.el('div', { style: { width: '100%' } });
     footer.appendChild(closeBtn);
-    const m = PCD.modal.open({ title: t('versions_with_name', { name: r.name }), body: body, footer: footer, size: 'md', closable: true });
+    const m = PCD.modal.open({ title: 'Versions · ' + r.name, body: body, footer: footer, size: 'md', closable: true });
     closeBtn.addEventListener('click', function () { m.close(); });
   }
 
@@ -1382,7 +1382,7 @@
       if (plan === 'free' && count >= window.PCD_CONFIG.FREE_RECIPE_LIMIT) {
         PCD.modal.alert({
           icon: '⭐', iconKind: 'warning',
-          title: t('modal_upgrade_needed'),
+          title: 'Upgrade needed',
           text: t('recipe_limit_reached').replace('{n}', window.PCD_CONFIG.FREE_RECIPE_LIMIT),
           okText: t('upgrade_to_pro')
         });
@@ -1471,7 +1471,7 @@
 
           <!-- Quick-add autocomplete -->
           <div style="position:relative;margin-bottom:10px;">
-            <input type="text" class="input" id="quickIngInput" placeholder="' + PCD.escapeHtml(t('recipe_quick_add_placeholder')) + '" autocomplete="off" style="padding-inline-start:36px;">
+            <input type="text" class="input" id="quickIngInput" placeholder="Quick add — type ingredient name..." autocomplete="off" style="padding-inline-start:36px;">
             <div style="position:absolute;inset-inline-start:10px;top:50%;transform:translateY(-50%);color:var(--text-3);pointer-events:none;">${PCD.icon('search', 16)}</div>
             <div id="quickIngDD" style="display:none;position:absolute;top:100%;inset-inline-start:0;inset-inline-end:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);box-shadow:var(--shadow-lg);max-height:240px;overflow-y:auto;z-index:5;margin-top:4px;"></div>
           </div>
@@ -1852,7 +1852,7 @@
               data.ingredients = (data.ingredients || []).concat([{
                 ingredientId: saved.id, amount: qty || 100, unit: qtyUnit || saved.unit
               }]);
-              PCD.toast.success(t('ingredient_added_synced', { name: newName }));
+              PCD.toast.success('Added "' + newName + '" — synced to Ingredients library');
               qInput.value = '';
               renderEditor();
               setTimeout(function () {
@@ -1893,7 +1893,7 @@
     const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') });
     let versionsBtn = null;
     if (existing && PCD.store.snapshotRecipeVersion) {
-      versionsBtn = PCD.el('button', { class: 'btn btn-outline', title: t('modal_versions') });
+      versionsBtn = PCD.el('button', { class: 'btn btn-outline', title: 'Versions' });
       const vCount = (existing.versions || []).length;
       versionsBtn.innerHTML = PCD.icon('clock', 16) + ' <span>Versions' + (vCount > 0 ? ' (' + vCount + ')' : '') + '</span>';
     }

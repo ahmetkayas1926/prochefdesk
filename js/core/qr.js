@@ -88,7 +88,7 @@
     copyBtn.addEventListener('click', function () {
       if (navigator.clipboard) {
         navigator.clipboard.writeText(text).then(function () {
-          PCD.toast.success(PCD.i18n.t('link_copied'));
+          PCD.toast.success('Link copied');
         });
       }
     });

@@ -84,7 +84,7 @@
               </div>
               <div class="field">
                 <label class="field-label">Bio</label>
-                <textarea class="textarea" id="chefBio" rows="3" placeholder="${PCD.escapeHtml(t('placeholder_chef_bio'))}">${PCD.escapeHtml(user.bio || '')}</textarea>
+                <textarea class="textarea" id="chefBio" rows="3" placeholder="A short professional bio — your style, training, signature dishes...">${PCD.escapeHtml(user.bio || '')}</textarea>
                 <div class="field-hint">Will be visible on your public profile when community sharing launches.</div>
               </div>
               <button class="btn btn-primary btn-sm" id="saveChefProfileBtn" style="margin-top:6px;">${PCD.icon('check', 14)} Save profile</button>
@@ -194,6 +194,13 @@
               </div>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
+            <button class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;color:var(--danger);" id="clearAllBtn">
+              <div>
+                <div style="font-weight:600;">${t('clear_all_data')}</div>
+                <div style="color:var(--text-3);font-size:13px;">Irreversible</div>
+              </div>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
           </div>
         </div>
       </div>
@@ -224,13 +231,6 @@
               </div>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
-            <button type="button" class="tappable" id="reportIssueBtn" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;color:inherit;cursor:pointer;border-bottom:1px solid var(--border);">
-              <div>
-                <div style="font-weight:600;">🐛 ${t('report_issue_title')}</div>
-                <div class="text-muted text-sm">${t('report_issue_subtitle')}</div>
-              </div>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
             <a href="mailto:hello@prochefdesk.com?subject=ProChefDesk Feedback" class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;text-decoration:none;color:inherit;">
               <div>
                 <div style="font-weight:600;">✉️ ${t('feedback_title')}</div>
@@ -239,15 +239,6 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </a>
           </div>
-        </div>
-      </div>
-
-      <!-- LEGAL LINKS -->
-      <div class="section">
-        <div class="text-center" style="padding:8px 0 0;">
-          <a href="/privacy.html" target="_blank" rel="noopener" style="color:var(--text-3);font-size:13px;text-decoration:none;margin:0 10px;">${t('legal_privacy')}</a>
-          <span style="color:var(--text-3);">·</span>
-          <a href="/terms.html" target="_blank" rel="noopener" style="color:var(--text-3);font-size:13px;text-decoration:none;margin:0 10px;">${t('legal_terms')}</a>
         </div>
       </div>
 
@@ -267,7 +258,7 @@
     if (signOutBtn) signOutBtn.addEventListener('click', function () {
       PCD.modal.confirm({
         icon: '👋', iconKind: 'info',
-        title: t('sign_out'), text: t('confirm_sign_out_title'),
+        title: t('sign_out'), text: 'Sign out?',
         okText: t('sign_out')
       }).then(function (ok) {
         if (!ok) return;
@@ -308,7 +299,7 @@
       u.workplace = (PCD.$('#chefWorkplace', view).value || '').trim();
       u.bio = (PCD.$('#chefBio', view).value || '').trim();
       PCD.store.set('user', u);
-      PCD.toast.success(t('toast_profile_saved'));
+      PCD.toast.success('Profile saved');
     });
     const previewChefBtn = PCD.$('#previewChefProfileBtn', view);
     if (previewChefBtn) previewChefBtn.addEventListener('click', function () {
@@ -379,20 +370,20 @@
             const data = parsed.data || parsed;
             PCD.modal.confirm({
               icon: '⚠️', iconKind: 'warning', danger: true,
-              title: t('confirm_import_replace_title'),
-              text: t('confirm_restore_text'),
-              okText: t('confirm_replace_everything')
+              title: 'Import will REPLACE all current data',
+              text: 'This cannot be undone. Your current recipes, ingredients, menus, etc. will be replaced with the backup contents. Continue?',
+              okText: 'Replace everything'
             }).then(function (ok) {
               if (!ok) return;
               // Merge restore — replace top-level keys
               Object.keys(data).forEach(function (k) {
                 if (k !== '_meta') PCD.store.set(k, data[k]);
               });
-              PCD.toast.success(t('backup_restored_reloading'));
+              PCD.toast.success('Backup restored — reloading...');
               setTimeout(function () { window.location.reload(); }, 800);
             });
           } catch (err) {
-            PCD.toast.error(t('invalid_backup_file', { err: err.message }));
+            PCD.toast.error('Invalid backup file: ' + err.message);
           }
         };
         reader.readAsText(f);
@@ -403,7 +394,7 @@
     const expRec = PCD.$('#exportRecipesBtn', view);
     if (expRec) expRec.addEventListener('click', function () {
       const recipes = PCD.store.listRecipes();
-      if (!recipes.length) { PCD.toast.info(t('toast_no_recipes_to_export')); return; }
+      if (!recipes.length) { PCD.toast.info('No recipes to export'); return; }
       const ingMap = {};
       PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
       const rows = [['Name', 'Category', 'Servings', 'Food Cost', 'Cost/Serving', 'Sale Price', 'Food Cost %', 'Prep Time', 'Cook Time', 'Ingredients']];
@@ -419,20 +410,20 @@
       });
       const csv = rows.map(function (r) { return r.map(function (c) { return '"' + String(c == null ? '' : c).replace(/"/g, '""') + '"'; }).join(','); }).join('\n');
       PCD.download(csv, 'recipes-' + new Date().toISOString().slice(0, 10) + '.csv', 'text/csv');
-      PCD.toast.success(t('recipes_exported', { n: recipes.length }));
+      PCD.toast.success('Recipes exported (' + recipes.length + ')');
     });
 
     const expIng = PCD.$('#exportIngredientsBtn', view);
     if (expIng) expIng.addEventListener('click', function () {
       const ings = PCD.store.listIngredients();
-      if (!ings.length) { PCD.toast.info(t('toast_no_ingredients_to_export')); return; }
+      if (!ings.length) { PCD.toast.info('No ingredients to export'); return; }
       const rows = [['Name', 'Price', 'Unit', 'Category', 'Supplier']];
       ings.forEach(function (i) {
         rows.push([i.name, i.pricePerUnit || 0, i.unit || '', i.category || '', i.supplier || '']);
       });
       const csv = rows.map(function (r) { return r.map(function (c) { return '"' + String(c == null ? '' : c).replace(/"/g, '""') + '"'; }).join(','); }).join('\n');
       PCD.download(csv, 'ingredients-' + new Date().toISOString().slice(0, 10) + '.csv', 'text/csv');
-      PCD.toast.success(t('ingredients_exported', { n: ings.length }));
+      PCD.toast.success('Ingredients exported (' + ings.length + ')');
     });
 
     PCD.$('#demoToggleBtn', view).addEventListener('click', function () {
@@ -454,6 +445,30 @@
       }
     });
 
+    PCD.$('#clearAllBtn', view).addEventListener('click', function () {
+      PCD.modal.confirm({
+        icon: '⚠️', iconKind: 'danger', danger: true,
+        title: t('clear_all_title'),
+        text: t('clear_all_text'),
+        okText: t('clear_all_btn'),
+        cancelText: t('cancel')
+      }).then(function (ok) {
+        if (!ok) return;
+
+        PCD.store.reset();
+
+        const doReload = function () {
+          PCD.toast.success('✓ ' + t('clear_all_done'));
+          setTimeout(function () { window.location.reload(); }, 500);
+        };
+        if (PCD.cloud && typeof PCD.cloud.pushNow === 'function') {
+          PCD.cloud.pushNow().then(doReload).catch(doReload);
+        } else {
+          doReload();
+        }
+      });
+    });
+
     // Help & About
     const aboutBtn = PCD.$('#aboutBtn', view);
     if (aboutBtn) aboutBtn.addEventListener('click', openAboutModal);
@@ -464,72 +479,8 @@
       if (PCD.tutorial && PCD.tutorial.startMainTour) {
         PCD.tutorial.startMainTour();
       } else {
-        PCD.toast.info(t('toast_tour_unavailable'));
+        PCD.toast.info('Tour unavailable');
       }
-    });
-    const reportIssueBtn = PCD.$('#reportIssueBtn', view);
-    if (reportIssueBtn) reportIssueBtn.addEventListener('click', openReportIssueModal);
-  }
-
-  // ============ REPORT ISSUE MODAL ============
-  function openReportIssueModal() {
-    const t = PCD.i18n.t;
-    const body = PCD.el('div');
-    body.innerHTML =
-      '<div class="text-muted text-sm mb-3">' + PCD.escapeHtml(t('report_issue_intro')) + '</div>' +
-      '<div class="field mb-3">' +
-        '<label class="field-label">' + PCD.escapeHtml(t('report_issue_subject_label')) + '</label>' +
-        '<input type="text" class="input" id="reportSubject" placeholder="' + PCD.escapeHtml(t('report_issue_subject_placeholder')) + '" maxlength="120">' +
-      '</div>' +
-      '<div class="field mb-3">' +
-        '<label class="field-label">' + PCD.escapeHtml(t('report_issue_description_label')) + '</label>' +
-        '<textarea class="textarea" id="reportDescription" rows="6" placeholder="' + PCD.escapeHtml(t('report_issue_description_placeholder')) + '" maxlength="2000"></textarea>' +
-      '</div>' +
-      '<div class="text-muted" style="font-size:11px;line-height:1.5;padding:10px 12px;background:var(--surface-2);border-radius:6px;">' +
-        '<strong>' + PCD.escapeHtml(t('report_issue_auto_info_title')) + ':</strong> ' +
-        PCD.escapeHtml(t('report_issue_auto_info')) +
-      '</div>';
-
-    const cancelBtn = PCD.el('button', { type: 'button', class: 'btn btn-secondary', text: t('btn_cancel_action') });
-    const sendBtn = PCD.el('button', { type: 'button', class: 'btn btn-primary' });
-    sendBtn.innerHTML = PCD.icon('mail', 14) + ' <span>' + PCD.escapeHtml(t('report_issue_send_btn')) + '</span>';
-
-    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
-    cancelBtn.style.flex = '1';
-    sendBtn.style.flex = '2';
-    footer.appendChild(cancelBtn);
-    footer.appendChild(sendBtn);
-
-    const m = PCD.modal.open({
-      title: '🐛 ' + t('report_issue_title'),
-      body: body, footer: footer, size: 'md', closable: true
-    });
-    cancelBtn.addEventListener('click', function () { m.close(); });
-    sendBtn.addEventListener('click', function () {
-      const subj = (PCD.$('#reportSubject', body).value || '').trim();
-      const desc = (PCD.$('#reportDescription', body).value || '').trim();
-      if (!subj) { PCD.toast.error(t('toast_name_required')); return; }
-      if (!desc) { PCD.toast.error(t('report_issue_description_required')); return; }
-
-      // Auto-collect technical info
-      const user = PCD.store.get('user') || {};
-      const techInfo =
-        '\n\n---\n' +
-        'Technical info (auto-included):\n' +
-        '• Version: ' + (PCD_CONFIG.APP_VERSION || 'unknown') + '\n' +
-        '• Browser: ' + navigator.userAgent + '\n' +
-        '• Page: ' + (location.hash || location.pathname || '/') + '\n' +
-        '• Locale: ' + (PCD.i18n.currentLocale || 'unknown') + '\n' +
-        '• User: ' + (user.email || 'not signed in') + '\n' +
-        '• Time: ' + new Date().toISOString();
-
-      const mailtoUrl = 'mailto:hello@prochefdesk.com' +
-        '?subject=' + encodeURIComponent('[ProChefDesk Issue] ' + subj) +
-        '&body=' + encodeURIComponent(desc + techInfo);
-
-      window.location.href = mailtoUrl;
-      m.close();
-      PCD.toast.success(t('report_issue_sent'));
     });
   }
 
@@ -655,7 +606,7 @@
     const footer = PCD.el('div', { style: { width: '100%' } });
     footer.appendChild(closeBtn);
 
-    const m = PCD.modal.open({ title: t('modal_public_profile_preview'), body: body, footer: footer, size: 'md', closable: true });
+    const m = PCD.modal.open({ title: 'Public profile preview', body: body, footer: footer, size: 'md', closable: true });
     closeBtn.addEventListener('click', function () { m.close(); });
   }
 
@@ -713,8 +664,8 @@
               '<div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + PCD.escapeHtml(it.label) + '</div>' +
               '<div class="text-muted" style="font-size:11px;">' + PCD.fmtRelTime(it.deletedAt) + ' · ' + t('trash_days_left').replace('{n}', Math.max(0, daysLeft)) + '</div>' +
             '</div>' +
-            '<button type="button" class="btn btn-outline btn-sm" data-restore="' + it.table + '|' + it.id + '" title="' + PCD.escapeHtml(t('btn_restore_action')) + '">↶</button>' +
-            '<button type="button" class="icon-btn" data-purge="' + it.table + '|' + it.id + '" title="' + PCD.escapeHtml(t('btn_delete_forever')) + '" style="color:var(--danger);">' + PCD.icon('trash', 14) + '</button>' +
+            '<button type="button" class="btn btn-outline btn-sm" data-restore="' + it.table + '|' + it.id + '" title="Restore">↶</button>' +
+            '<button type="button" class="icon-btn" data-purge="' + it.table + '|' + it.id + '" title="Delete forever" style="color:var(--danger);">' + PCD.icon('trash', 14) + '</button>' +
           '</div>';
         });
         html += '</div>';
@@ -730,7 +681,7 @@
         PCD.toast.success('✓ ' + t('trash_restored'));
         paint();
       } else {
-        PCD.toast.error(t('toast_restore_failed'));
+        PCD.toast.error('Restore failed');
       }
     });
     PCD.on(body, 'click', '[data-purge]', function () {

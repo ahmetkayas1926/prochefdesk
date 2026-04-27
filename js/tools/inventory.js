@@ -122,7 +122,7 @@
           <div class="page-subtitle">${t('inventory_subtitle')}</div>
         </div>
         <div class="page-header-actions">
-          <button class="btn btn-outline btn-sm" id="historyHeaderBtn" title="' + PCD.escapeHtml(t('btn_view_past_stock_counts')) + '">${PCD.icon('clock',14)} History</button>
+          <button class="btn btn-outline btn-sm" id="historyHeaderBtn" title="View past stock counts">${PCD.icon('clock',14)} History</button>
           <button class="btn btn-outline btn-sm" id="bulkCountBtn">${PCD.icon('list',14)} Count Stock</button>
           <button class="btn btn-outline btn-sm" id="genOrderBtn">${PCD.icon('send',14)} Generate Order</button>
         </div>
@@ -320,14 +320,14 @@
       if (!p) return;
       PCD.modal.confirm({
         icon: '✓', iconKind: 'success',
-        title: t('confirm_approve_count'),
+        title: 'Approve stock count?',
         text: Object.keys(p.counts || {}).length + ' items counted by ' + p.countedBy + '. Stock levels will be updated.',
-        okText: t('btn_approve')
+        okText: 'Approve'
       }).then(function (ok) {
         if (!ok) return;
         applyCountsToInventory(p.counts);
         setPendingForCurrentWs(null);
-        PCD.toast.success(t('toast_count_approved'));
+        PCD.toast.success('Count approved');
         render(view);
         setTimeout(function () { promptGenerateOrdersAfterCount(); }, 400);
       });
@@ -402,7 +402,7 @@
     renderBody();
 
     const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('cancel') });
-    const rejectBtn = PCD.el('button', { class: 'btn btn-outline', text: t('btn_reject'), style: { color: 'var(--danger)' } });
+    const rejectBtn = PCD.el('button', { class: 'btn btn-outline', text: 'Reject', style: { color: 'var(--danger)' } });
     const approveBtn = PCD.el('button', { class: 'btn btn-primary', style: { flex: '1' } });
     approveBtn.innerHTML = PCD.icon('check', 16) + ' <span>Approve count</span>';
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
@@ -411,7 +411,7 @@
     footer.appendChild(approveBtn);
 
     const m = PCD.modal.open({
-      title: t('modal_review_stock_count'),
+      title: 'Review Stock Count',
       body: body, footer: footer, size: 'lg', closable: true
     });
 
@@ -419,13 +419,13 @@
     rejectBtn.addEventListener('click', function () {
       PCD.modal.confirm({
         icon: '⚠', iconKind: 'danger', danger: true,
-        title: t('confirm_reject_count'),
-        text: t('confirm_reject_count_text'),
-        okText: t('btn_reject')
+        title: 'Reject this count?',
+        text: 'The count will be discarded. Sous chef will need to count again.',
+        okText: 'Reject'
       }).then(function (ok) {
         if (!ok) return;
         setPendingForCurrentWs(null);
-        PCD.toast.info(t('toast_count_rejected'));
+        PCD.toast.info('Count rejected');
         m.close();
         setTimeout(function () {
           const v = PCD.$('#view');
@@ -436,7 +436,7 @@
     approveBtn.addEventListener('click', function () {
       applyCountsToInventory(edited);
       setPendingForCurrentWs(null);
-      PCD.toast.success(t('count_approved_items', { n: Object.keys(edited).length }));
+      PCD.toast.success('Count approved · ' + Object.keys(edited).length + ' items updated');
       m.close();
       setTimeout(function () {
         const v = PCD.$('#view');
@@ -483,7 +483,7 @@
                 (snap.countedBy ? ' · by ' + PCD.escapeHtml(snap.countedBy) : '') +
               '</div>' +
             '</div>' +
-            '<button type="button" class="icon-btn" data-del-snap="' + snap.id + '" title="' + PCD.escapeHtml(t('btn_delete_snapshot')) + '">' + PCD.icon('trash', 16) + '</button>' +
+            '<button type="button" class="icon-btn" data-del-snap="' + snap.id + '" title="Delete snapshot">' + PCD.icon('trash', 16) + '</button>' +
           '</div>' +
         '</div>';
       });
@@ -494,7 +494,7 @@
     const closeBtn = PCD.el('button', { type: 'button', class: 'btn btn-secondary', text: t('close') || 'Close', style: { width: '100%' } });
     const footer = PCD.el('div', { style: { width: '100%' } });
     footer.appendChild(closeBtn);
-    const m = PCD.modal.open({ title: t('modal_stock_count_history'), body: body, footer: footer, size: 'md', closable: true });
+    const m = PCD.modal.open({ title: 'Stock count history', body: body, footer: footer, size: 'md', closable: true });
     closeBtn.addEventListener('click', function () { m.close(); });
 
     PCD.on(body, 'click', '[data-snap]', function (e) {
@@ -510,13 +510,13 @@
       const id = this.getAttribute('data-del-snap');
       PCD.modal.confirm({
         icon: '🗑', iconKind: 'danger', danger: true,
-        title: t('confirm_delete_count'),
-        text: t('confirm_delete_snapshot_history_text'),
+        title: 'Delete this count?',
+        text: 'This snapshot will be permanently removed from history. Inventory levels stay as they are.',
         okText: 'Delete'
       }).then(function (ok) {
         if (!ok) return;
         PCD.store.deleteFromTable('stockCountHistory', id);
-        PCD.toast.success(t('toast_snapshot_deleted'));
+        PCD.toast.success('Snapshot deleted');
         paintList();
       });
     });
@@ -565,7 +565,7 @@
     footer.appendChild(printBtn);
 
     const m = PCD.modal.open({
-      title: t('count_snapshot_with_date', { date: dateStr }),
+      title: 'Count snapshot · ' + dateStr,
       body: body, footer: footer, size: 'md', closable: true
     });
     closeBtn.addEventListener('click', function () { m.close(); });
@@ -618,7 +618,7 @@
     const mode = options.mode || 'single';
     const title = options.title || 'Bulk Stock Count';
     const ings = PCD.store.listIngredients();
-    if (ings.length === 0) { PCD.toast.info(t('toast_no_ingredients_to_count')); return; }
+    if (ings.length === 0) { PCD.toast.info('No ingredients to count'); return; }
     const invAll = readInventory();
     const draft = {};
     ings.forEach(function (i) {
@@ -651,9 +651,9 @@
           '<div><div style="font-weight:700;">Count Stock</div>' +
           '<div class="text-muted text-sm" id="countProgress">' + done + ' / ' + ings.length + ' counted</div></div>' +
           '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">' +
-            '<input type="search" id="countSearch" placeholder="' + PCD.escapeHtml(t('placeholder_filter')) + '" style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--r-sm);font-size:13px;width:140px;">' +
-            '<button type="button" class="btn btn-outline btn-sm" id="clearAllBtn" title="' + PCD.escapeHtml(t('btn_clear_all_values')) + '">' + PCD.icon('x', 14) + ' <span>Clear</span></button>' +
-            '<button type="button" class="btn btn-outline btn-sm" id="historyBtn" title="' + PCD.escapeHtml(t('btn_view_past_counts')) + '">' + PCD.icon('clock', 14) + ' <span>History</span></button>' +
+            '<input type="search" id="countSearch" placeholder="Filter..." style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--r-sm);font-size:13px;width:140px;">' +
+            '<button type="button" class="btn btn-outline btn-sm" id="clearAllBtn" title="Clear all values">' + PCD.icon('x', 14) + ' <span>Clear</span></button>' +
+            '<button type="button" class="btn btn-outline btn-sm" id="historyBtn" title="View past counts">' + PCD.icon('clock', 14) + ' <span>History</span></button>' +
           '</div>' +
         '</div></div>';
 
@@ -702,14 +702,14 @@
       const clearBtn = PCD.$('#clearAllBtn', body);
       if (clearBtn) clearBtn.addEventListener('click', function () {
         PCD.modal.confirm({
-          title: t('confirm_clear_counts'),
-          text: t('confirm_clear_counts_text'),
+          title: 'Clear all counts?',
+          text: 'This will empty all the count inputs above. Saved inventory levels are NOT affected — only the current form.',
           okText: 'Clear all', cancelText: 'Cancel'
         }).then(function (ok) {
           if (!ok) return;
           ings.forEach(function (i) { draft[i.id] = ''; });
           renderBody();
-          PCD.toast.success(t('toast_all_counts_cleared'));
+          PCD.toast.success('All counts cleared');
         });
       });
 
@@ -784,7 +784,7 @@
       });
 
       if (Object.keys(countedValues).length === 0) {
-        PCD.toast.warning(t('toast_no_counts_entered'));
+        PCD.toast.warning('No counts entered');
         return;
       }
 
@@ -797,7 +797,7 @@
           status: 'pending',
         };
         setPendingForCurrentWs(pending);
-        PCD.toast.success(t('count_saved_awaiting'));
+        PCD.toast.success('Count saved — awaiting approval by head chef');
         m.close();
         setTimeout(function () {
           const v = PCD.$('#view');
@@ -879,7 +879,7 @@
     PCD.modal.confirm({
       icon: '📦', iconKind: 'info',
       title: belowCount + ' item' + (belowCount === 1 ? '' : 's') + ' need ordering',
-      text: t('confirm_generate_orders_text'),
+      text: 'Want to generate purchase orders for the low-stock items now?',
       okText: 'Generate Orders',
       cancelText: 'Later'
     }).then(function (ok) {
@@ -916,7 +916,7 @@
     });
 
     if (below.length === 0) {
-      PCD.toast.info(t('all_tracked_at_par'));
+      PCD.toast.info('All tracked items are at or above par level ✓');
       return;
     }
 
@@ -964,7 +964,7 @@
     footer.appendChild(shareBtn);
 
     const m = PCD.modal.open({
-      title: t('modal_purchase_order'), body: body, footer: footer, size: 'md', closable: true
+      title: 'Purchase Order', body: body, footer: footer, size: 'md', closable: true
     });
 
     function collectSelected() {
@@ -1007,7 +1007,7 @@
     printBtn.addEventListener('click', function () {
       const d = collectSelected();
       const supKeys = Object.keys(d.selectedBySupplier);
-      if (supKeys.length === 0) { PCD.toast.warning(t('toast_no_items_selected')); return; }
+      if (supKeys.length === 0) { PCD.toast.warning('No items selected'); return; }
       let html = '<div style="max-width:680px;margin:0 auto">';
       html += '<h1>Purchase Order</h1>';
       html += '<div style="color:#666;font-size:12px;margin-bottom:16px;">' + d.date + (d.userName ? ' · ' + PCD.escapeHtml(d.userName) : '') + '</div>';
@@ -1025,7 +1025,7 @@
 
     shareBtn.addEventListener('click', function () {
       const msg = buildMessage();
-      if (!msg) { PCD.toast.warning(t('toast_no_items_selected')); return; }
+      if (!msg) { PCD.toast.warning('No items selected'); return; }
       // Open a simple share sheet: WA/SMS/Email/Copy
       const shareBody = PCD.el('div');
       shareBody.innerHTML =
@@ -1048,7 +1048,7 @@
       const closeShBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('btn_close') });
       const shFooter = PCD.el('div', { style: { display: 'flex', width: '100%' } });
       shFooter.appendChild(closeShBtn);
-      const sm = PCD.modal.open({ title: t('modal_share_purchase_order'), body: shareBody, footer: shFooter, size: 'md', closable: true });
+      const sm = PCD.modal.open({ title: 'Share Purchase Order', body: shareBody, footer: shFooter, size: 'md', closable: true });
       function getMsg() { return PCD.$('#poMsg', shareBody).value; }
       closeShBtn.addEventListener('click', function () { sm.close(); });
       PCD.$('#poWa', shareBody).addEventListener('click', function () {
@@ -1066,7 +1066,7 @@
       PCD.$('#poCopy', shareBody).addEventListener('click', function () {
         if (navigator.clipboard) {
           navigator.clipboard.writeText(getMsg()).then(function () {
-            PCD.toast.success(t('toast_copied'));
+            PCD.toast.success('Copied');
             sm.close();
           });
         }
@@ -1078,7 +1078,7 @@
   function openEditor(ingId) {
     const t = PCD.i18n.t;
     const ing = PCD.store.getIngredient(ingId);
-    if (!ing) { PCD.toast.error(t('toast_ingredient_not_found')); return; }
+    if (!ing) { PCD.toast.error('Ingredient not found'); return; }
     const invAll = readInventory();
     const row = invAll[ingId] ? PCD.clone(invAll[ingId]) : { stock: null, parLevel: null, minLevel: null, lastCountedAt: null, lastOrderedAt: null };
     const status = computeStatus(row);

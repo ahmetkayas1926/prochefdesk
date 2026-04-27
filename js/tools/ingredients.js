@@ -27,7 +27,7 @@
       <div class="page-header">
         <div class="page-header-text">
           <div class="page-title">${t('ingredients_title')}</div>
-          <div class="page-subtitle">${ings.length} ${ings.length === 1 ? t('item_singular') : t('item_plural')}</div>
+          <div class="page-subtitle">${ings.length} items</div>
         </div>
         <div class="page-header-actions">
           ${ings.length > 0 ? `<button class="btn btn-outline btn-sm" id="toggleSelIng">${PCD.icon('check-square',14)} ${t('select_mode')}</button>` : ''}
@@ -115,7 +115,7 @@
             const prev = Number(last.price) || 0;
             if (prev && cur && prev !== cur) {
               const up = cur > prev;
-              trendHtml = '<span data-hist="' + i.id + '" style="color:' + (up ? 'var(--danger)' : 'var(--success)') + ';font-weight:700;cursor:pointer;font-size:11px;" title="' + PCD.escapeHtml(t('ingredient_price_history')) + '">' +
+              trendHtml = '<span data-hist="' + i.id + '" style="color:' + (up ? 'var(--danger)' : 'var(--success)') + ';font-weight:700;cursor:pointer;font-size:11px;" title="Price history">' +
                 (up ? '▲' : '▼') + ' ' + Math.abs(((cur-prev)/prev)*100).toFixed(0) + '%</span>';
             }
           }
@@ -470,7 +470,7 @@ Pasta,0.003,g,cat_dry_goods,</code></pre>
         // Parse XLSX — use SheetJS if available, else inform user
         loadSheetJS(function (err, XLSX) {
           if (err) {
-            PCD.toast.error(t('excel_parser_failed'));
+            PCD.toast.error('Excel parser failed to load. Try CSV export instead.');
             return;
           }
           const reader = new FileReader();
@@ -483,7 +483,7 @@ Pasta,0.003,g,cat_dry_goods,</code></pre>
               PCD.$('#importText', body).value = csv;
               previewParse(csv);
             } catch (err) {
-              PCD.toast.error(t('could_not_parse_excel', { err: err.message }));
+              PCD.toast.error('Could not parse Excel file: ' + err.message);
             }
           };
           reader.readAsArrayBuffer(f);
@@ -535,7 +535,7 @@ Pasta,0.003,g,cat_dry_goods,</code></pre>
 
     cancelBtn.addEventListener('click', function () { m.close(); });
     importGoBtn.addEventListener('click', function () {
-      if (!parsed || !parsed.length) { PCD.toast.error(t('toast_nothing_to_import')); return; }
+      if (!parsed || !parsed.length) { PCD.toast.error('Nothing to import'); return; }
       let added = 0, updated = 0;
       const existing = {};
       PCD.store.listIngredients().forEach(function (i) { existing[i.name.toLowerCase()] = i; });
@@ -561,7 +561,7 @@ Pasta,0.003,g,cat_dry_goods,</code></pre>
           added++;
         }
       });
-      PCD.toast.success(t('imported_summary', { added: added, updated: updated }));
+      PCD.toast.success('Imported: ' + added + ' new, ' + updated + ' updated');
       m.close();
       setTimeout(function () {
         const v = PCD.$('#view');

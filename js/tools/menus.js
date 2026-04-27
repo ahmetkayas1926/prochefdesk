@@ -28,7 +28,7 @@
       <div class="page-header">
         <div class="page-header-text">
           <div class="page-title">${t('menus_title')}</div>
-          <div class="page-subtitle">${menus.length} ${menus.length === 1 ? t('menu_singular') : t('menu_plural')}</div>
+          <div class="page-subtitle">${menus.length} ${menus.length === 1 ? 'menu' : 'menus'}</div>
         </div>
         <div class="page-header-actions">
           <button class="btn btn-primary" id="newMenuBtn">+ ${t('new_menu')}</button>
@@ -66,8 +66,8 @@
               <span>${PCD.fmtRelTime(m.updatedAt)}</span>
             </div>
           </div>
-          <button class="icon-btn" data-copy-mid="${m.id}" data-name="${PCD.escapeHtml(m.name || 'menu')}" title="${PCD.escapeHtml(t('btn_copy_to_workspace'))}">${PCD.icon('truck', 18)}</button>
-          <button class="icon-btn" data-edit-mid="${m.id}" title="' + PCD.escapeHtml(t('btn_edit_menu_title')) + '">${PCD.icon('edit', 18)}</button>
+          <button class="icon-btn" data-copy-mid="${m.id}" data-name="${PCD.escapeHtml(m.name || 'menu')}" title="Copy to workspace">${PCD.icon('truck', 18)}</button>
+          <button class="icon-btn" data-edit-mid="${m.id}" title="Edit menu">${PCD.icon('edit', 18)}</button>
         `;
         cont.appendChild(row);
       });
@@ -179,7 +179,7 @@
         </div>
         <div class="checkbox">
           <input type="checkbox" id="menuHideAllergens" ${data.hideAllergens ? 'checked' : ''}>
-          <span>' + PCD.escapeHtml(t('menu_hide_allergens')) + '</span>
+          <span>Hide allergen icons</span>
         </div>
       `;
 
@@ -192,10 +192,10 @@
         const isLast = sIdx === totalSections - 1;
         secEl.innerHTML = `
           <div class="flex items-center gap-2 mb-2">
-            <button class="icon-btn" data-secup="${sIdx}" ${isFirst ? 'disabled style="opacity:0.3;"' : 'title="' + PCD.escapeHtml(t('btn_move_section_up')) + '"'}>
+            <button class="icon-btn" data-secup="${sIdx}" ${isFirst ? 'disabled style="opacity:0.3;"' : 'title="Move section up"'}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M18 15l-6-6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
-            <button class="icon-btn" data-secdown="${sIdx}" ${isLast ? 'disabled style="opacity:0.3;"' : 'title="' + PCD.escapeHtml(t('btn_move_section_down')) + '"'}>
+            <button class="icon-btn" data-secdown="${sIdx}" ${isLast ? 'disabled style="opacity:0.3;"' : 'title="Move section down"'}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
             <input type="text" class="input" data-secname value="${PCD.escapeHtml(sec.name || '')}" placeholder="${PCD.i18n.t('menu_section_name')}" style="flex:1;font-weight:600;">
@@ -482,7 +482,7 @@
           const tags = PCD.allergensDB.recipeAllergens(r, ingMap);
           if (tags && tags.length > 0) {
             const allList = PCD.allergensDB.list || [];
-            allergenIcons = ' <span class="m-allerg" title="' + PCD.escapeHtml(t('allergens_label', { list: tags.join(', ') })) + '">' +
+            allergenIcons = ' <span class="m-allerg" title="Allergens: ' + tags.join(', ') + '">' +
               tags.slice(0, 6).map(function (key) {
                 const a = allList.find(function (x) { return x.key === key; });
                 return a ? a.icon : '';
@@ -685,8 +685,8 @@
     printBtn.innerHTML = PCD.icon('print',16) + ' <span>' + t('print') + '</span>';
     const qrBtn = PCD.el('button', { class: 'btn btn-outline' });
     qrBtn.innerHTML = PCD.icon('grid',16) + ' <span>QR</span>';
-    const shareLinkBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: t('modal_public_share_link') });
-    shareLinkBtn.innerHTML = PCD.icon('share',16) + ' <span>' + PCD.escapeHtml(t('btn_share_link')) + '</span>';
+    const shareLinkBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: 'Public share link' });
+    shareLinkBtn.innerHTML = PCD.icon('share',16) + ' <span>Share link</span>';
     const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('close') });
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
     footer.appendChild(closeBtn);
@@ -706,28 +706,28 @@
     shareLinkBtn.addEventListener('click', function () {
       const user = PCD.store.get('user');
       if (!user || !user.id) {
-        PCD.toast.error(t('toast_signin_for_public'));
+        PCD.toast.error('Sign in to create public links');
         return;
       }
       if (!PCD.share || !PCD.share.createOrGetShareUrl) {
-        PCD.toast.error(t('toast_share_unavailable'));
+        PCD.toast.error('Share unavailable');
         return;
       }
       shareLinkBtn.disabled = true;
       shareLinkBtn.innerHTML = '<span class="spinner"></span>';
       PCD.share.createOrGetShareUrl('menu', mid).then(function (url) {
         shareLinkBtn.disabled = false;
-        shareLinkBtn.innerHTML = PCD.icon('share',16) + ' <span>' + PCD.escapeHtml(t('btn_share_link')) + '</span>';
+        shareLinkBtn.innerHTML = PCD.icon('share',16) + ' <span>Share link</span>';
         // Show modal with the link
         const linkBody = PCD.el('div');
         linkBody.innerHTML =
           '<div class="text-muted text-sm mb-2">Bu menüyü herkese açık olarak paylaşmak için aşağıdaki linki kopyala:</div>' +
           '<input type="text" id="menuShareLink" value="' + PCD.escapeHtml(url) + '" readonly style="width:100%;padding:10px;border:1.5px solid var(--brand-600);border-radius:6px;font-family:var(--font-mono);font-size:13px;background:#fff;margin-bottom:10px;">' +
           '<div class="flex gap-2">' +
-            '<button type="button" class="btn btn-primary" id="copyMenuLink" style="flex:1;">' + PCD.icon('copy',16) + ' <span>' + PCD.escapeHtml(t('btn_copy_link')) + '</span></button>' +
-            '<button type="button" class="btn btn-outline" id="waMenuLink" style="flex:1;">' + PCD.icon('message-circle',16) + ' <span>' + PCD.escapeHtml(t('label_whatsapp')) + '</span></button>' +
+            '<button type="button" class="btn btn-primary" id="copyMenuLink" style="flex:1;">' + PCD.icon('copy',16) + ' <span>Copy link</span></button>' +
+            '<button type="button" class="btn btn-outline" id="waMenuLink" style="flex:1;">' + PCD.icon('message-circle',16) + ' <span>WhatsApp</span></button>' +
           '</div>';
-        const lc = PCD.el('button', { class: 'btn btn-secondary', text: t('btn_close_action'), style: { width: '100%' } });
+        const lc = PCD.el('button', { class: 'btn btn-secondary', text: 'Close', style: { width: '100%' } });
         const lf = PCD.el('div', { style: { width: '100%' } });
         lf.appendChild(lc);
         const lm = PCD.modal.open({ title: '🔗 Share link', body: linkBody, footer: lf, size: 'sm', closable: true });
@@ -742,8 +742,8 @@
         });
       }).catch(function (e) {
         shareLinkBtn.disabled = false;
-        shareLinkBtn.innerHTML = PCD.icon('share',16) + ' <span>' + PCD.escapeHtml(t('btn_share_link')) + '</span>';
-        PCD.toast.error(t('share_failed', { err: (e.message || e) }));
+        shareLinkBtn.innerHTML = PCD.icon('share',16) + ' <span>Share link</span>';
+        PCD.toast.error('Share failed: ' + (e.message || e));
       });
     });
     qrBtn.addEventListener('click', function () {
@@ -766,7 +766,7 @@
       });
       PCD.qr.show({
         title: menu.name || 'Menu',
-        subtitle: t('modal_scan_to_view'),
+        subtitle: 'Scan to view',
         text: lines.join('\n')
       });
     });

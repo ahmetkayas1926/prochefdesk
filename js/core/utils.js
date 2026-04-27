@@ -519,7 +519,7 @@
 
     if (targets.length === 0) {
       PCD.modal.confirm({
-        title: PCD.i18n.t('no_other_workspaces') || 'No other workspaces',
+        title: 'No other workspaces',
         text: 'You only have one active workspace. Create another from the workspace switcher first, then come back to copy.',
         okText: 'OK', cancelText: null,
       });
@@ -554,7 +554,7 @@
     const footer = PCD.el('div', { style: { width: '100%' } });
     footer.appendChild(cancelBtn);
 
-    const m = PCD.modal.open({ title: PCD.i18n.t('btn_copy_to_workspace'), body: body, footer: footer, size: 'sm', closable: true });
+    const m = PCD.modal.open({ title: 'Copy to workspace', body: body, footer: footer, size: 'sm', closable: true });
     cancelBtn.addEventListener('click', function () { m.close(); });
 
     PCD.on(body, 'click', '[data-target]', function () {
@@ -562,9 +562,9 @@
       const copy = PCD.store.copyToWorkspace(table, itemId, fromWsId, targetWsId);
       const targetWs = PCD.store.getWorkspace(targetWsId);
       if (copy && targetWs) {
-        PCD.toast.success(PCD.i18n.t('copied_to_workspace', { name: targetWs.name }));
+        PCD.toast.success('Copied to "' + targetWs.name + '"');
       } else {
-        PCD.toast.error(PCD.i18n.t('copy_failed'));
+        PCD.toast.error('Copy failed');
       }
       m.close();
     });
