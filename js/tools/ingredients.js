@@ -30,7 +30,7 @@
           <div class="page-subtitle">${ings.length} ${ings.length === 1 ? t('item_singular') : t('item_plural')}</div>
         </div>
         <div class="page-header-actions">
-          ${ings.length > 0 ? `<button class="btn btn-outline btn-sm" id="toggleSelIng">${PCD.icon('check-square',14)} ' + t('select_mode') + '</button>` : ''}
+          ${ings.length > 0 ? `<button class="btn btn-outline btn-sm" id="toggleSelIng">${PCD.icon('check-square',14)} ${t('select_mode')}</button>` : ''}
           <button class="btn btn-outline btn-sm" id="importBtn" title="${t('ingredients_import_title') || 'Bulk import'}">${PCD.icon('upload',14)} ${t('ingredients_import') || 'Import'}</button>
           <button class="btn btn-primary" id="newIngBtn">${PCD.icon('plus',14)} ${t('new_ingredient')}</button>
         </div>

@@ -87,8 +87,8 @@
           <div>
             <div class="card mb-3" style="padding:14px;">
               <div class="flex items-center justify-between mb-2" style="gap:6px;flex-wrap:wrap;">
-                <input type="text" class="input" id="canvasName" value="${PCD.escapeHtml(canvasName)}" placeholder="${PCD.escapeHtml(t('placeholder_canvas_name'))}" style="flex:1;min-width:120px;font-weight:700;">
-                <button type="button" class="btn btn-outline btn-sm" id="newCanvasBtn" title="${PCD.escapeHtml(t('tooltip_new_canvas'))}">${PCD.icon('plus', 14)}</button>
+                <input type="text" class="input" id="canvasName" value="${PCD.escapeHtml(canvasName)}" placeholder="' + PCD.escapeHtml(t('placeholder_canvas_name')) + '" style="flex:1;min-width:120px;font-weight:700;">
+                <button type="button" class="btn btn-outline btn-sm" id="newCanvasBtn" title="' + PCD.escapeHtml(t('tooltip_new_canvas')) + '">${PCD.icon('plus', 14)}</button>
                 ${allCanvases.length > 0 ? '<button type="button" class="btn btn-outline btn-sm" id="loadCanvasBtn" title="' + PCD.escapeHtml(t('tooltip_load_canvas')) + '">' + PCD.icon('book-open', 14) + ' <span>' + allCanvases.length + '</span></button>' : ''}
               </div>
 

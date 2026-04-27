@@ -431,7 +431,7 @@
           </div>
           <div class="field">
             <label class="field-label">WhatsApp</label>
-            <input type="tel" class="input" id="sWa" value="${PCD.escapeHtml(data.whatsapp || '')}" placeholder="${PCD.escapeHtml(t('placeholder_leave_empty_phone'))}">
+            <input type="tel" class="input" id="sWa" value="${PCD.escapeHtml(data.whatsapp || '')}" placeholder="' + PCD.escapeHtml(t('placeholder_leave_empty_phone')) + '">
           </div>
         </div>
         <div class="field">
@@ -440,7 +440,7 @@
         </div>
         <div class="field">
           <label class="field-label">Notes</label>
-          <textarea class="textarea" id="sNotes" rows="2" placeholder="${PCD.escapeHtml(t('placeholder_delivery_days'))}">${PCD.escapeHtml(data.notes || '')}</textarea>
+          <textarea class="textarea" id="sNotes" rows="2" placeholder="' + PCD.escapeHtml(t('placeholder_delivery_days')) + '">${PCD.escapeHtml(data.notes || '')}</textarea>
         </div>
 
         <div class="section-title mt-4 mb-2" style="font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;">Products (${data.products.length})</div>
@@ -453,7 +453,7 @@
       data.products.forEach(function (p, idx) {
         const row = PCD.el('div', { style: { display: 'flex', gap: '6px', alignItems: 'center' } });
         row.innerHTML = `
-          <input type="text" class="input" data-pname="${idx}" value="${PCD.escapeHtml(p.name || '')}" placeholder="${PCD.escapeHtml(t('placeholder_product_name'))}" style="flex:1;">
+          <input type="text" class="input" data-pname="${idx}" value="${PCD.escapeHtml(p.name || '')}" placeholder="' + PCD.escapeHtml(t('placeholder_product_name')) + '" style="flex:1;">
           <select class="select" data-punit="${idx}" style="width:75px;">
             ${UNITS.map(function (u) { return '<option value="' + u + '"' + (p.unit === u ? ' selected' : '') + '>' + u + '</option>'; }).join('')}
           </select>

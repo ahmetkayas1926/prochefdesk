@@ -88,8 +88,8 @@
           </div>
           <div class="flex gap-2" style="flex-wrap:wrap;">
             <span class="chip">${t('event_total_cost')}: <strong>${PCD.fmtMoney(stats.totalCost)}</strong></span>
-            ${stats.totalRevenue > 0 ? '<span class="chip chip-brand">' + PCD.escapeHtml(t('event_total_revenue')) + ': <strong>' + PCD.fmtMoney(stats.totalRevenue) + '</strong></span>' : ''}
-            ${stats.profit !== null ? '<span class="chip chip-' + (stats.profit >= 0 ? 'success' : 'danger') + '">' + PCD.escapeHtml(t('event_profit')) + ': <strong>' + PCD.fmtMoney(stats.profit) + '</strong></span>' : ''}
+            ${stats.totalRevenue > 0 ? '<span class="chip chip-brand">' + t('event_total_revenue') + ': <strong>' + PCD.fmtMoney(stats.totalRevenue) + '</strong></span>' : ''}
+            ${stats.profit !== null ? '<span class="chip chip-' + (stats.profit >= 0 ? 'success' : 'danger') + '">' + t('event_profit') + ': <strong>' + PCD.fmtMoney(stats.profit) + '</strong></span>' : ''}
           </div>
         `;
         cont.appendChild(row);
@@ -179,7 +179,7 @@
           </div>
           <div class="field">
             <label class="field-label">Customer budget</label>
-            <input type="number" class="input" id="eBudget" value="${data.budget || ''}" step="0.01" min="0" placeholder="${PCD.escapeHtml(t('placeholder_customer_pays'))}">
+            <input type="number" class="input" id="eBudget" value="${data.budget || ''}" step="0.01" min="0" placeholder="' + PCD.escapeHtml(t('placeholder_customer_pays')) + '">
             <div class="field-hint">Total amount the customer agreed to pay</div>
           </div>
         </div>
@@ -203,8 +203,8 @@
                 '<div style="font-size:18px;font-weight:800;color:' + color + ';">' + PCD.fmtMoney(remaining) + ' (' + (100 - usedPct).toFixed(0) + '%)</div>' +
               '</div>';
             })() : ''}
-            ${stats.totalRevenue > 0 ? '<div style="text-align:end;"><div class="stat-label">' + PCD.escapeHtml(t('event_total_revenue')) + '</div><div style="font-size:18px;font-weight:800;">' + PCD.fmtMoney(stats.totalRevenue) + '</div></div>' : ''}
-            ${stats.profit !== null ? '<div style="text-align:end;"><div class="stat-label">' + PCD.escapeHtml(t('event_profit')) + '</div><div style="font-size:18px;font-weight:800;color:' + (stats.profit >= 0 ? 'var(--success)' : 'var(--danger)') + ';">' + PCD.fmtMoney(stats.profit) + (stats.margin !== null ? ' (' + PCD.fmtPercent(stats.margin, 0) + ')' : '') + '</div></div>' : ''}
+            ${stats.totalRevenue > 0 ? '<div style="text-align:end;"><div class="stat-label">' + t('event_total_revenue') + '</div><div style="font-size:18px;font-weight:800;">' + PCD.fmtMoney(stats.totalRevenue) + '</div></div>' : ''}
+            ${stats.profit !== null ? '<div style="text-align:end;"><div class="stat-label">' + t('event_profit') + '</div><div style="font-size:18px;font-weight:800;color:' + (stats.profit >= 0 ? 'var(--success)' : 'var(--danger)') + ';">' + PCD.fmtMoney(stats.profit) + (stats.margin !== null ? ' (' + PCD.fmtPercent(stats.margin, 0) + ')' : '') + '</div></div>' : ''}
           </div>
         </div>
 

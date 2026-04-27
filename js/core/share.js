@@ -106,7 +106,6 @@
       if (!payload) return reject(new Error('Item not found'));
 
       const shareId = genShareId();
-      console.log('[Share] Creating share:', shareId, 'for', kind, id);
       supabase.from('public_shares').insert({
         id: shareId,
         kind: kind,
@@ -115,17 +114,12 @@
         created_at: new Date().toISOString(),
       }).then(function (res) {
         if (res.error) {
-          console.error('[Share] insert error:', res.error);
           PCD.err('share insert error', res.error);
-          return reject(new Error(res.error.message || 'Insert failed'));
+          return reject(res.error);
         }
-        console.log('[Share] Created OK:', shareId);
         const url = location.origin + location.pathname + '?share=' + shareId;
         resolve(url);
-      }).catch(function (err) {
-        console.error('[Share] insert catch:', err);
-        reject(err);
-      });
+      }).catch(reject);
     });
   }
 
@@ -133,27 +127,13 @@
   function fetchShare(shareId) {
     return new Promise(function (resolve, reject) {
       const supabase = window._supabaseClient;
-      if (!supabase) {
-        console.error('[Share] Supabase client missing');
-        return reject(new Error('Supabase client missing'));
-      }
-      console.log('[Share] Fetching share:', shareId);
+      if (!supabase) return reject(new Error('Supabase client missing'));
       supabase.from('public_shares').select('*').eq('id', shareId).maybeSingle()
         .then(function (res) {
-          if (res.error) {
-            console.error('[Share] fetch error:', res.error);
-            return reject(new Error(res.error.message || 'Database error'));
-          }
-          if (!res.data) {
-            console.warn('[Share] No record found for id:', shareId);
-            return reject(new Error('Share link not found or expired'));
-          }
-          console.log('[Share] Fetched OK');
+          if (res.error) return reject(res.error);
+          if (!res.data) return reject(new Error('Share not found'));
           resolve(res.data);
-        }).catch(function (err) {
-          console.error('[Share] catch:', err);
-          reject(err);
-        });
+        }).catch(reject);
     });
   }
 
@@ -269,21 +249,11 @@
     const shareId = params.get('share');
     if (!shareId) return false;
 
-    // Hide splash screen (since normal boot flow won't run)
-    function hideSplash() {
-      const splash = document.getElementById('splash');
-      if (splash) {
-        splash.classList.add('hide');
-        setTimeout(function () { splash.style.display = 'none'; }, 340);
-      }
-    }
-
     const appEl = document.getElementById('app');
     if (appEl) {
       appEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif;color:#666;">Loading shared content...</div>';
       appEl.classList.remove('hidden');
     }
-    hideSplash();
 
     // Need cloud for fetchShare. cloud.init runs on PCD bootstrap; wait briefly.
     function tryFetch(retries) {
@@ -291,12 +261,8 @@
         if (retries > 0) return setTimeout(function () { tryFetch(retries - 1); }, 200);
         return showError('Cloud not available');
       }
-      fetchShare(shareId).then(function (share) {
-        renderSharePage(share);
-        hideSplash();
-      }).catch(function (e) {
+      fetchShare(shareId).then(renderSharePage).catch(function (e) {
         showError(e.message || 'Share not found');
-        hideSplash();
       });
     }
     function showError(msg) {

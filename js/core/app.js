@@ -10,9 +10,6 @@
     const PCD = window.PCD;
     const t = PCD.i18n.t;
 
-    // Log version for debugging cache issues
-    console.log('%c ProChefDesk v' + (window.PCD_CONFIG && PCD_CONFIG.APP_VERSION) + ' ', 'background:#16a34a;color:#fff;font-weight:bold;padding:4px 10px;border-radius:4px;');
-
     // 0) Init cloud first (so share.js can use supabase client)
     PCD.cloud.init();
 

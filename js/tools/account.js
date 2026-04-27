@@ -96,7 +96,7 @@
 
       <!-- PREFERENCES -->
       <div class="section">
-        <div class="section-title" style="font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">' + t('preferences') + '</div>
+        <div class="section-title" style="font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">${t('preferences')}</div>
         <div class="card">
           <div class="card-body" style="padding:0;">
             <!-- Currency -->
@@ -110,17 +110,17 @@
             </div>
             <!-- Language -->
             <div class="flex items-center justify-between" style="padding:14px 16px;border-bottom:1px solid var(--border);">
-              <div style="flex:1;"><div style="font-weight:600;">' + t('language') + '</div></div>
+              <div style="flex:1;"><div style="font-weight:600;">${t('language')}</div></div>
               <select class="select" id="prefLocale" style="width:auto;min-height:36px;padding:6px 28px 6px 12px;">
                 ${(window.PCD_CONFIG.LOCALES || []).map(function (l) { return '<option value="' + l.code + '"' + (loc === l.code ? ' selected' : '') + '>' + l.name + '</option>'; }).join('')}
               </select>
             </div>
             <!-- Theme -->
             <div class="flex items-center justify-between" style="padding:14px 16px;border-bottom:1px solid var(--border);">
-              <div style="flex:1;"><div style="font-weight:600;">' + t('theme') + '</div></div>
+              <div style="flex:1;"><div style="font-weight:600;">${t('theme')}</div></div>
               <div class="btn-group">
-                <button class="btn${theme === 'light' ? ' active' : ''}" data-theme="light">☀️ ' + t('theme_light') + '</button>
-                <button class="btn${theme === 'dark' ? ' active' : ''}" data-theme="dark">🌙 ' + t('theme_dark') + '</button>
+                <button class="btn${theme === 'light' ? ' active' : ''}" data-theme="light">☀️ ${t('theme_light')}</button>
+                <button class="btn${theme === 'dark' ? ' active' : ''}" data-theme="dark">🌙 ${t('theme_dark')}</button>
               </div>
             </div>
             <!-- Haptic -->
@@ -140,7 +140,7 @@
 
       <!-- DATA & SYNC -->
       <div class="section">
-        <div class="section-title" style="font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">' + t('data_and_sync') + '</div>
+        <div class="section-title" style="font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">${t('data_and_sync')}</div>
         <div class="card">
           <div class="card-body" style="padding:0;">
             ${user && PCD.cloud.ready ? `
@@ -154,21 +154,21 @@
             ` : ''}
             <button class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;border-bottom:1px solid var(--border);" id="trashBtn">
               <div>
-                <div style="font-weight:600;">🗑 ' + t('trash_title') + '</div>
+                <div style="font-weight:600;">🗑 ${t('trash_title')}</div>
                 <div class="text-muted text-sm" id="trashCount">${t('trash_subtitle')}</div>
               </div>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
             <button class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;border-bottom:1px solid var(--border);" id="exportDataBtn">
               <div>
-                <div style="font-weight:600;">📥 ' + t('backup_download') + '</div>
+                <div style="font-weight:600;">📥 ${t('backup_download')}</div>
                 <div class="text-muted text-sm">${t('backup_download_desc')}</div>
               </div>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
             <button class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;border-bottom:1px solid var(--border);" id="importDataBtn">
               <div>
-                <div style="font-weight:600;">📤 ' + t('backup_restore') + '</div>
+                <div style="font-weight:600;">📤 ${t('backup_restore')}</div>
                 <div class="text-muted text-sm">${t('backup_restore_desc')}</div>
               </div>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -200,41 +200,41 @@
 
       <!-- HELP & ABOUT -->
       <div class="section">
-        <div class="section-title" style="font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">' + t('help_section_title') + '</div>
+        <div class="section-title" style="font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">${t('help_section_title')}</div>
         <div class="card">
           <div class="card-body" style="padding:0;">
             <button class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;border-bottom:1px solid var(--border);" id="aboutBtn">
               <div>
                 <div style="font-weight:600;">ℹ️ ${t('about_title')}</div>
-                <div class="text-muted text-sm">' + t('about_subtitle') + '</div>
+                <div class="text-muted text-sm">${t('about_subtitle')}</div>
               </div>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
             <button class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;border-bottom:1px solid var(--border);" id="faqBtn">
               <div>
                 <div style="font-weight:600;">❓ ${t('faq_title')}</div>
-                <div class="text-muted text-sm">' + t('faq_subtitle') + '</div>
+                <div class="text-muted text-sm">${t('faq_subtitle')}</div>
               </div>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
             <button class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;border-bottom:1px solid var(--border);" id="restartTourBtn">
               <div>
                 <div style="font-weight:600;">🎓 ${t('restart_tour_title')}</div>
-                <div class="text-muted text-sm">' + t('restart_tour_subtitle') + '</div>
+                <div class="text-muted text-sm">${t('restart_tour_subtitle')}</div>
               </div>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
             <button type="button" class="tappable" id="reportIssueBtn" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;color:inherit;cursor:pointer;border-bottom:1px solid var(--border);">
               <div>
                 <div style="font-weight:600;">🐛 ${t('report_issue_title')}</div>
-                <div class="text-muted text-sm">' + t('report_issue_subtitle') + '</div>
+                <div class="text-muted text-sm">${t('report_issue_subtitle')}</div>
               </div>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
             <a href="mailto:hello@prochefdesk.com?subject=ProChefDesk Feedback" class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;text-decoration:none;color:inherit;">
               <div>
                 <div style="font-weight:600;">✉️ ${t('feedback_title')}</div>
-                <div class="text-muted text-sm">' + t('feedback_subtitle') + '</div>
+                <div class="text-muted text-sm">${t('feedback_subtitle')}</div>
               </div>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </a>
@@ -247,14 +247,14 @@
         <div class="text-center" style="padding:8px 0 0;">
           <a href="/privacy.html" target="_blank" rel="noopener" style="color:var(--text-3);font-size:13px;text-decoration:none;margin:0 10px;">${t('legal_privacy')}</a>
           <span style="color:var(--text-3);">·</span>
-          <a href="/terms.html" target="_blank" rel="noopener" style="color:var(--text-3);font-size:13px;text-decoration:none;margin:0 10px;">' + t('legal_terms') + '</a>
+          <a href="/terms.html" target="_blank" rel="noopener" style="color:var(--text-3);font-size:13px;text-decoration:none;margin:0 10px;">${t('legal_terms')}</a>
         </div>
       </div>
 
       <!-- ABOUT -->
       <div class="section">
         <div class="text-center text-muted text-sm" style="padding:16px 0;">
-          <div><strong>${t('app_name')}</strong> · ' + t('app_tagline') + '</div>
+          <div><strong>${t('app_name')}</strong> · ${t('app_tagline')}</div>
           <div class="mt-1">${t('version')} ${PCD_CONFIG.APP_VERSION}</div>
         </div>
       </div>
@@ -486,7 +486,9 @@
         '<textarea class="textarea" id="reportDescription" rows="6" placeholder="' + PCD.escapeHtml(t('report_issue_description_placeholder')) + '" maxlength="2000"></textarea>' +
       '</div>' +
       '<div class="text-muted" style="font-size:11px;line-height:1.5;padding:10px 12px;background:var(--surface-2);border-radius:6px;">' +
-        '<strong>' + PCD.escapeHtml(t('report_issue_auto_info_title')) + ':</strong> ' + PCD.escapeHtml(t('report_issue_auto_info')) + '</div>';
+        '<strong>' + PCD.escapeHtml(t('report_issue_auto_info_title')) + ':</strong> ' +
+        PCD.escapeHtml(t('report_issue_auto_info')) +
+      '</div>';
 
     const cancelBtn = PCD.el('button', { type: 'button', class: 'btn btn-secondary', text: t('btn_cancel_action') });
     const sendBtn = PCD.el('button', { type: 'button', class: 'btn btn-primary' });
@@ -541,13 +543,15 @@
         '<div class="text-muted" style="font-size:11px;margin-top:8px;">v' + PCD_CONFIG.APP_VERSION + '</div>' +
       '</div>' +
       '<div style="line-height:1.7;font-size:14px;">' +
-        '<p><strong>' + PCD.escapeHtml(t('about_q1')) + '</strong><br>' + PCD.escapeHtml(t('about_a1')) + '</p>' +
+        '<p><strong>' + PCD.escapeHtml(t('about_q1')) + '</strong><br>' +
+        PCD.escapeHtml(t('about_a1')) + '</p>' +
         '<p><strong>' + PCD.escapeHtml(t('about_q2')) + '</strong><br>' +
         '• ' + PCD.escapeHtml(t('about_a2_l1')) + '<br>' +
         '• ' + PCD.escapeHtml(t('about_a2_l2')) + '<br>' +
         '• ' + PCD.escapeHtml(t('about_a2_l3')) + '<br>' +
         '• ' + PCD.escapeHtml(t('about_a2_l4')) + '</p>' +
-        '<p><strong>' + PCD.escapeHtml(t('about_q3')) + '</strong><br>' + PCD.escapeHtml(t('about_a3')) + '</p>' +
+        '<p><strong>' + PCD.escapeHtml(t('about_q3')) + '</strong><br>' +
+        PCD.escapeHtml(t('about_a3')) + '</p>' +
       '</div>';
 
     const closeBtn = PCD.el('button', { type: 'button', class: 'btn btn-secondary', text: t('close'), style: { width: '100%' } });
