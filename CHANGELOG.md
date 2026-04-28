@@ -1,3 +1,60 @@
+# v2.5.11 — Sorun bildir formu artık direkt gönderim
+
+## Talep
+
+Mevcut "Sorun bildir" akışı `mailto:` linki ile kullanıcının kendi e-posta uygulamasını açıyordu. Kullanıcı kendi adından otomatik debug bilgisi içeren tuhaf bir mail göndermek istemiyordu — formdan vazgeçiyordu.
+
+## Çözüm
+
+Web3Forms üzerinden direkt sunucuya POST. Kullanıcı sadece "Bildiriniz alındı, teşekkürler" görür. Form submission'ı `hello@prochefdesk.com` adresine düşer.
+
+**Form artık 4 alan içeriyor (hepsi zorunlu):**
+- Ad (signed-in user'dan otomatik dolduruluyor)
+- E-posta (signed-in user'dan otomatik dolduruluyor)
+- Konu
+- Açıklama
+
+Otomatik debug bloğu (app version, browser, OS, dil, tema, ekran boyutu, timestamp, URL, user ID) maile ekleniyor — eskisi gibi.
+
+**Hata yönetimi:** Network hatasında veya Web3Forms cevabı başarısızsa kullanıcıya "Gönderilemedi, internet bağlantınızı kontrol edin" toast'ı, buton yeniden aktif olur.
+
+## Kod değişiklikleri
+
+- `js/tools/account.js` — `openReportIssueModal` baştan yazıldı:
+  - `mailto:` link kaldırıldı
+  - `fetch('https://api.web3forms.com/submit', POST, JSON)` eklendi
+  - Web3Forms access key (`f5039b66-...`) sabit
+  - Email format validation eklendi
+  - Honeypot field (`botcheck`) spam koruması için
+  - Loading state (spinner + "Gönderiliyor…")
+- `js/i18n/*` (6 dilde):
+  - 6 yeni key: `report_issue_name_label`, `report_issue_name_placeholder`, `report_issue_email_label`, `report_issue_email_invalid`, `report_issue_sending`, `report_issue_sent`, `report_issue_send_failed`
+  - Mevcut key'ler güncellendi: `report_issue_intro`, `report_issue_send`, `report_issue_validation`
+  - Eski `report_issue_opened` korundu (kullanılmıyor ama referansı kırmamak için)
+
+## Web3Forms hakkında
+
+- Free tier: 250 mail/ay (senin kullanımın için fazlasıyla yeterli)
+- Submission'lar Web3Forms dashboard'unda da görünür
+- Access key public key, kod içinde olması güvenlik sorunu değil
+- Spam protection built-in
+
+## Migration gerekli mi
+
+Hayır. Tamamen client-side değişiklik.
+
+## Test
+
+1. Account → Help → Sorun bildir
+2. Form 4 alanlı görünmeli, ad ve email pre-filled (signed-in ise)
+3. Tüm alanları doldur → "Bildirimi gönder"
+4. Buton spinner gösterir → kapanır → "Bildiriniz alındı" toast
+5. `hello@prochefdesk.com` mail kutusunu kontrol et → mesaj gelmeli
+6. Boş alan bırakırsan → validation toast
+7. Geçersiz email girersen → "Geçerli bir e-posta girin" toast
+
+---
+
 # v2.5.10 — Mobil + butonu çalıştırma + alt panel düzenleme
 
 ## Talep

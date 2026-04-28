@@ -589,11 +589,32 @@
     closeBtn.addEventListener('click', function () { m.close(); });
   }
 
+  // Public Web3Forms key — submissions land in hello@prochefdesk.com.
+  // Safe to ship in client code (this is a public access key, not a secret).
+  const WEB3FORMS_KEY = 'f5039b66-3003-485b-9b72-5fdd9c9abaa1';
+
   function openReportIssueModal() {
     const t = PCD.i18n.t;
+
+    // Pre-fill name and email from the signed-in user when available so
+    // the chef doesn't have to type it again.
+    const user = (PCD.store && PCD.store.get('user')) || {};
+    const prefName = PCD.escapeHtml(user.name || '');
+    const prefEmail = PCD.escapeHtml(user.email || '');
+
     const body = PCD.el('div');
     body.innerHTML =
       '<div class="text-muted text-sm" style="margin-bottom:14px;line-height:1.5;">' + PCD.escapeHtml(t('report_issue_intro')) + '</div>' +
+      '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">' +
+        '<div style="flex:1;min-width:160px;">' +
+          '<label for="reportName" style="display:block;font-weight:600;font-size:13px;margin-bottom:4px;">' + PCD.escapeHtml(t('report_issue_name_label')) + '</label>' +
+          '<input id="reportName" type="text" maxlength="80" value="' + prefName + '" placeholder="' + PCD.escapeHtml(t('report_issue_name_placeholder')) + '" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-1);font-size:14px;box-sizing:border-box;">' +
+        '</div>' +
+        '<div style="flex:1;min-width:160px;">' +
+          '<label for="reportEmail" style="display:block;font-weight:600;font-size:13px;margin-bottom:4px;">' + PCD.escapeHtml(t('report_issue_email_label')) + '</label>' +
+          '<input id="reportEmail" type="email" maxlength="120" value="' + prefEmail + '" placeholder="hello@example.com" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-1);font-size:14px;box-sizing:border-box;">' +
+        '</div>' +
+      '</div>' +
       '<div style="margin-bottom:12px;">' +
         '<label for="reportSubject" style="display:block;font-weight:600;font-size:13px;margin-bottom:4px;">' + PCD.escapeHtml(t('report_issue_subject_label')) + '</label>' +
         '<input id="reportSubject" type="text" maxlength="120" placeholder="' + PCD.escapeHtml(t('report_issue_subject_placeholder')) + '" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-1);font-size:14px;box-sizing:border-box;">' +
@@ -613,16 +634,26 @@
     const m = PCD.modal.open({ title: '🐛 ' + t('report_issue_title'), body: body, footer: footer, size: 'md', closable: true });
     cancelBtn.addEventListener('click', function () { m.close(); });
     sendBtn.addEventListener('click', function () {
+      const nameEl = body.querySelector('#reportName');
+      const emailEl = body.querySelector('#reportEmail');
       const subjectEl = body.querySelector('#reportSubject');
       const descEl = body.querySelector('#reportDesc');
+      const reporterName = (nameEl && nameEl.value || '').trim();
+      const reporterEmail = (emailEl && emailEl.value || '').trim();
       const subject = (subjectEl && subjectEl.value || '').trim();
       const desc = (descEl && descEl.value || '').trim();
-      if (!subject || !desc) {
+
+      if (!reporterName || !reporterEmail || !subject || !desc) {
         PCD.toast.error(t('report_issue_validation'));
         return;
       }
+      // Light email shape check (server validates too).
+      if (reporterEmail.indexOf('@') < 1 || reporterEmail.indexOf('.') < 0) {
+        PCD.toast.error(t('report_issue_email_invalid'));
+        return;
+      }
 
-      // Detect browser & OS from userAgent
+      // Build debug block — same data the old mailto version sent.
       const ua = navigator.userAgent || '';
       let browser = 'Unknown';
       if (/Edg\//.test(ua)) browser = 'Edge';
@@ -651,15 +682,47 @@
         'Theme: ' + theme + '\n' +
         'Screen: ' + screenSize + '\n' +
         'Timestamp: ' + ts + '\n' +
-        'URL: ' + (window.location && window.location.href || '');
+        'URL: ' + (window.location && window.location.href || '') + '\n' +
+        'User ID: ' + (user.id || 'anonymous');
 
-      const mailto = 'mailto:hello@prochefdesk.com' +
-        '?subject=' + encodeURIComponent('[ProChefDesk] ' + subject) +
-        '&body=' + encodeURIComponent(desc + debugBlock);
+      // Disable button while sending; restore on error.
+      sendBtn.disabled = true;
+      const origLabel = sendBtn.textContent;
+      sendBtn.innerHTML = '<span class="spinner"></span> ' + t('report_issue_sending');
 
-      window.location.href = mailto;
-      m.close();
-      PCD.toast.success(t('report_issue_opened'));
+      const payload = {
+        access_key: WEB3FORMS_KEY,
+        subject: '[ProChefDesk] ' + subject,
+        from_name: 'ProChefDesk Issue Reporter',
+        name: reporterName,
+        email: reporterEmail,
+        message: desc + debugBlock,
+        // Honeypot (Web3Forms ignores submissions where botcheck != "")
+        botcheck: '',
+      };
+
+      fetch('https://api.web3forms.com/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(payload),
+      }).then(function (res) {
+        return res.json().then(function (data) { return { ok: res.ok, data: data }; });
+      }).then(function (result) {
+        if (result.ok && result.data && result.data.success) {
+          m.close();
+          PCD.toast.success(t('report_issue_sent'));
+        } else {
+          sendBtn.disabled = false;
+          sendBtn.textContent = origLabel;
+          PCD.toast.error(t('report_issue_send_failed'));
+          PCD.err && PCD.err('web3forms response', result);
+        }
+      }).catch(function (err) {
+        sendBtn.disabled = false;
+        sendBtn.textContent = origLabel;
+        PCD.toast.error(t('report_issue_send_failed'));
+        PCD.err && PCD.err('web3forms error', err);
+      });
     });
   }
 
