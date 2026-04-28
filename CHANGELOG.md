@@ -1,3 +1,39 @@
+# v2.6.9 — Ghost workspace bug — gerçek çözüm
+
+## Sorun (v2.6.8'de tam çözülmemişti)
+
+v2.6.8'deki filtre yetersizdi:
+1. SIGNED_IN event'inde **cloud pull yapmıyordu** — bu yüzden ghost workspace push ile remote'a yazılıyordu
+2. Filtre sadece "local-only ve son 5 dakika" çalışıyordu — remote'a yazılmış eski ghost'ları yakalamıyordu
+
+## Çözüm
+
+**1. SIGNED_IN'de pull tetikle** (auth.js):
+- Login event'i geldiğinde otomatik `PCD.cloud.pull()` çağrısı eklendi
+- Bu sayede ghost workspace cloud merge filtresinden geçirilebiliyor, push edilmeden temizleniyor
+
+**2. Genişletilmiş ghost filtresi** (cloud.js):
+- Eski filtre: sadece "local-only + son 5 dakika"
+- Yeni filtre: **lokal veya remote** olsun, içinde hiç içerik yoksa + adı "My Kitchen" + concept/role/city boş + archived değilse → ghost olarak kabul edilir
+- Mevcut workspace listesi içinde **en az bir non-ghost varsa** ghost'lar silinir
+- Eğer hiç non-ghost yoksa (yeni hesap durumu) en yeni ghost korunur — kullanıcı asla workspace'siz kalmaz
+
+Bu ikinci filtre, **v2.6.8'den önceki login'lerde remote'a sızmış eski ghost'ları da otomatik temizler**. Yani şu an 3 tane fazla "My Kitchen" varsa, bu paket deploy olduğunda bir sonraki login'de otomatik silinecekler (sadece gerçek workspace'in kalır).
+
+## Risk değerlendirmesi
+
+- Ghost detection sadece "My Kitchen" + tüm field'lar boş + tüm tablolar boş kombinasyonunu yakalıyor. Kullanıcının gerçekten boş yarattığı bir workspace bile concept/role girilirse veya yeniden adlandırılırsa korunur
+- "Son non-ghost yoksa korumayı bırakma" güvencesi — kullanıcı her zaman en az 1 workspace ile kalır
+- Tombstone sistemi mevcut — bilinçli silinen workspace'ler diriltilmez
+
+## Test
+
+1. Mevcut 3 ghost workspace var → push v2.6.9 → login → cloud sync sonrası ghost'lar otomatik temizlenmeli, sadece gerçek workspace (içinde 7 recipe + 1 menu olan) kalmalı
+2. Logout → Login → workspace sayısı **artmamalı**
+3. "+ Yeni çalışma alanı" → "Test" yaz, kaydet → bu boş ama gerçek bir workspace, silinmemeli (çünkü kullanıcı isim koydu)
+
+---
+
 # v2.6.8 — Login ghost workspace bug fix + workspace editor TR
 
 ## Talep + Bug

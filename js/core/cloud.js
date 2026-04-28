@@ -204,33 +204,31 @@
               // Tombstones — workspaces deleted locally that should NOT be resurrected from cloud
               const tombstones = current._deletedWorkspaces || {};
 
-              // Special handling for workspaces: union by id (don't drop local-only ws)
-              // BUT respect tombstones: deleted ws stays deleted even if cloud still has it
+              // BUG FIX (v2.6.8 / hardened in v2.6.9): On every login the
+              // bootstrap code creates an empty "My Kitchen" workspace
+              // BEFORE cloud pull. Without filtering, that ghost workspace
+              // accumulates one duplicate per login.
               //
-              // BUG FIX (v2.6.8): On every login the bootstrap code creates an
-              // empty "My Kitchen" workspace BEFORE cloud pull. Without this
-              // filter, that ghost workspace would be kept (local-only) and
-              // accumulate one duplicate per login.
-              // Drop a local-only workspace if ALL of these are true:
-              //   - it's not in the remote
-              //   - it still has the default name "My Kitchen"
+              // Drop a workspace (whether local-only OR already synced to
+              // remote) if ALL of these are true:
+              //   - it's named "My Kitchen" (default — chef hasn't renamed)
+              //   - it has no concept/role/city
+              //   - it's not archived
               //   - it has no content in any workspace-bound table
-              //   - it was created very recently (last 5 minutes)
-              // This catches the bootstrap-created ghost without affecting
-              // genuine empty workspaces the user just created intentionally
-              // (those will be uploaded on next push, then survive future pulls).
-              function isGhostBootstrapWs(ws) {
+              //   - it's NOT the only remaining workspace (we never delete
+              //     the user's last workspace this way)
+              //   - at least one OTHER non-ghost workspace exists
+              //
+              // This catches both freshly-bootstrapped ghosts and historical
+              // ones that already got synced to remote.
+              function isEmptyGhostWs(ws, sourceState) {
                 if (!ws) return false;
                 if (ws.name !== 'My Kitchen') return false;
                 if (ws.concept || ws.role || ws.city) return false;
                 if (ws.archived) return false;
-                const createdMs = ws.createdAt ? new Date(ws.createdAt).getTime() : 0;
-                if (!createdMs) return false;
-                if (Date.now() - createdMs > 5 * 60 * 1000) return false;
-                // Any content in any workspace-bound table → not a ghost.
                 const wsTables = ['recipes','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','stockCountHistory','haccpLogs','haccpUnits','haccpReadings'];
                 for (let i = 0; i < wsTables.length; i++) {
-                  const t = current[wsTables[i]];
+                  const t = sourceState && sourceState[wsTables[i]];
                   if (t && t[ws.id] && Object.keys(t[ws.id]).length > 0) return false;
                 }
                 return true;
@@ -243,29 +241,57 @@
               if (remote.workspaces) Object.keys(remote.workspaces).forEach(function (id) { allIds.add(id); });
               if (current.workspaces) Object.keys(current.workspaces).forEach(function (id) { allIds.add(id); });
 
+              // First pass: build merge result the normal way.
               allIds.forEach(function (wsId) {
-                // Skip if this ws was deleted locally (tombstoned)
                 if (tombstones[wsId]) return;
-
                 const localWs = current.workspaces && current.workspaces[wsId];
                 const remoteWs = remote.workspaces && remote.workspaces[wsId];
                 if (localWs && remoteWs) {
-                  // Both have it — newer updatedAt wins
                   const localUpd = localWs.updatedAt || '';
                   const remoteUpd = remoteWs.updatedAt || '';
                   mergedWorkspaces[wsId] = (localUpd > remoteUpd) ? localWs : remoteWs;
                 } else if (localWs) {
-                  // Local-only: drop it if it looks like a ghost bootstrap workspace,
-                  // otherwise keep (the user genuinely created it).
-                  if (!isGhostBootstrapWs(localWs)) {
-                    mergedWorkspaces[wsId] = localWs;
-                  } else {
-                    PCD.log('cloud merge: dropping ghost bootstrap workspace', wsId);
-                  }
+                  mergedWorkspaces[wsId] = localWs;
                 } else if (remoteWs) {
                   mergedWorkspaces[wsId] = remoteWs;
                 }
               });
+
+              // Second pass: identify ghost workspaces.
+              // A ghost is detected against whichever side has its content
+              // (local for local-only, remote for remote-only, or either for both).
+              const allWsIds = Object.keys(mergedWorkspaces);
+              const ghostIds = [];
+              allWsIds.forEach(function (wsId) {
+                const ws = mergedWorkspaces[wsId];
+                const isLocal = current.workspaces && current.workspaces[wsId];
+                const isRemote = remote.workspaces && remote.workspaces[wsId];
+                const localGhost = isLocal && isEmptyGhostWs(ws, current);
+                const remoteGhost = isRemote && isEmptyGhostWs(ws, remote);
+                // Only flag as ghost if it has no content in EITHER side.
+                if ((isLocal && !localGhost) || (isRemote && !remoteGhost)) return;
+                if (isLocal || isRemote) ghostIds.push(wsId);
+              });
+
+              // Never delete ALL workspaces — keep at least one alive.
+              // If after filtering nothing would be left, keep the most recent ghost.
+              const nonGhostCount = allWsIds.length - ghostIds.length;
+              if (nonGhostCount === 0 && ghostIds.length > 0) {
+                // Pick newest ghost to keep.
+                let keepId = ghostIds[0];
+                let keepTs = '';
+                ghostIds.forEach(function (id) {
+                  const ts = (mergedWorkspaces[id].createdAt || '');
+                  if (ts > keepTs) { keepTs = ts; keepId = id; }
+                });
+                ghostIds.splice(ghostIds.indexOf(keepId), 1);
+              }
+
+              // Remove the ghosts.
+              if (ghostIds.length > 0) {
+                PCD.log('cloud merge: dropping ' + ghostIds.length + ' ghost workspace(s)', ghostIds);
+                ghostIds.forEach(function (id) { delete mergedWorkspaces[id]; });
+              }
 
               // Merge tombstones too (union)
               const mergedTombstones = Object.assign({}, remote._deletedWorkspaces || {}, current._deletedWorkspaces || {});

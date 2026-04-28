@@ -22,6 +22,17 @@
           if (session && session.user) {
             auth._setUser(session.user);
           }
+          // BUG FIX (v2.6.9): On a fresh sign-in (history was cleared, etc.)
+          // the local store has just bootstrapped a ghost "My Kitchen"
+          // workspace. Pull from cloud right after the auth event so the
+          // merge filter can drop the ghost — BEFORE any push uploads it.
+          if (event === 'SIGNED_IN' && session && session.user) {
+            if (PCD.cloud && PCD.cloud.pull) {
+              PCD.cloud.pull().catch(function (e) {
+                PCD.warn('Cloud pull on sign-in failed:', e && e.message);
+              });
+            }
+          }
         } else if (event === 'SIGNED_OUT') {
           auth._clearUser();
         } else if (event === 'USER_UPDATED') {
