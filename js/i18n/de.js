@@ -163,4 +163,13 @@ window.PCD.i18n.register('de', {
 
   // Foto-Upload — hinzugefügt v2.5.9
   photo_uploading: 'Foto wird hochgeladen…',
+
+  // Checklisten sortieren + Workspace-Kopie — hinzugefügt v2.5.12
+  move_up: 'Nach oben',
+  move_down: 'Nach unten',
+  more_actions: 'Weitere Aktionen',
+  act_copy_workspace: 'In Workspace kopieren…',
+  checklist_delete_confirm_title: 'Diese Vorlage löschen?',
+  checklist_delete_confirm_msg: 'Die Vorlage wird dauerhaft entfernt. Laufende Sitzungen funktionieren weiter.',
+  checklist_deleted: 'Vorlage gelöscht',
 });

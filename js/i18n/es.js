@@ -162,4 +162,13 @@ window.PCD.i18n.register('es', {
 
   // Subida de foto — añadido v2.5.9
   photo_uploading: 'Subiendo foto…',
+
+  // Reordenar checklists + copia a workspace — añadido v2.5.12
+  move_up: 'Subir',
+  move_down: 'Bajar',
+  more_actions: 'Más acciones',
+  act_copy_workspace: 'Copiar a workspace…',
+  checklist_delete_confirm_title: '¿Eliminar esta plantilla?',
+  checklist_delete_confirm_msg: 'La plantilla se eliminará permanentemente. Las sesiones en curso seguirán funcionando.',
+  checklist_deleted: 'Plantilla eliminada',
 });

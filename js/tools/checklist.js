@@ -267,7 +267,9 @@
 
     // Templates
     const tplEl = PCD.$('#templatesList', view);
-    templates.forEach(function (tpl) {
+    templates.forEach(function (tpl, idx) {
+      const isFirst = idx === 0;
+      const isLast = idx === templates.length - 1;
       const row = PCD.el('div', { class: 'card card-hover', 'data-tid': tpl.id, style: { padding: '12px' } });
       const itemTypes = [...new Set((tpl.items || []).map(function (i) { return i.type || 'task'; }))];
       const typeBadges = itemTypes.length > 1 || (itemTypes[0] && itemTypes[0] !== 'task')
@@ -275,6 +277,8 @@
             return '<span style="font-size:9px;padding:2px 6px;border-radius:999px;background:var(--brand-50);color:var(--brand-700);font-weight:700;letter-spacing:0.04em;text-transform:uppercase;margin-inline-start:4px;">' + t + '</span>';
           }).join('')
         : '';
+      // v2.5.12: up/down arrows for chef-controlled ordering, 3-dot menu
+      // for edit / copy-to-workspace / delete (replaces the inline edit btn).
       row.innerHTML = `
         <div class="flex items-center gap-3">
           <div class="list-item-thumb" style="background:var(--brand-50);color:var(--brand-700);">${PCD.icon(tpl.icon || 'check-square',20)}</div>
@@ -282,11 +286,70 @@
             <div style="font-weight:700;font-size:15px;">${PCD.escapeHtml(tpl.name)}${typeBadges}</div>
             <div class="text-muted text-sm">${(tpl.items || []).length} items</div>
           </div>
-          <button type="button" class="icon-btn" data-edit-tid="${tpl.id}" title="Edit template">${PCD.icon('edit', 18)}</button>
+          <div class="flex flex-col" style="gap:2px;">
+            <button type="button" class="icon-btn" data-move-up="${tpl.id}" ${isFirst ? 'disabled' : ''} title="${t('move_up') || 'Move up'}" style="padding:4px;height:24px;width:28px;${isFirst ? 'opacity:0.3;cursor:not-allowed;' : ''}">${PCD.icon('chevron-up', 14)}</button>
+            <button type="button" class="icon-btn" data-move-down="${tpl.id}" ${isLast ? 'disabled' : ''} title="${t('move_down') || 'Move down'}" style="padding:4px;height:24px;width:28px;${isLast ? 'opacity:0.3;cursor:not-allowed;' : ''}">${PCD.icon('chevron-down', 14)}</button>
+          </div>
+          <button type="button" class="icon-btn" data-tpl-menu="${tpl.id}" title="${t('more_actions') || 'More actions'}">${PCD.icon('more-vertical', 18)}</button>
           <button type="button" class="btn btn-primary btn-sm" data-startrun="${tpl.id}">${t('checklist_start') || 'Start'}</button>
         </div>
       `;
       tplEl.appendChild(row);
+    });
+
+    // Up/down — reorder by swapping sortIndex.
+    PCD.on(view, 'click', '[data-move-up]', function (e) {
+      e.stopPropagation();
+      const tid = this.getAttribute('data-move-up');
+      moveTemplate(tid, -1);
+      render(view);
+    });
+    PCD.on(view, 'click', '[data-move-down]', function (e) {
+      e.stopPropagation();
+      const tid = this.getAttribute('data-move-down');
+      moveTemplate(tid, +1);
+      render(view);
+    });
+
+    // 3-dot menu — Edit / Copy to workspace / Delete.
+    PCD.on(view, 'click', '[data-tpl-menu]', function (e) {
+      e.stopPropagation();
+      const tid = this.getAttribute('data-tpl-menu');
+      const tpl = PCD.store.getFromTable('checklistTemplates', tid);
+      if (!tpl) return;
+      PCD.actionSheet({
+        title: tpl.name,
+        actions: [
+          { icon: 'edit', label: t('act_edit') || 'Edit', onClick: function () { openTemplateEditor(tid); } },
+          { icon: 'copy', label: t('act_duplicate') || 'Duplicate', onClick: function () {
+            const copy = PCD.clone(tpl);
+            delete copy.id; delete copy.createdAt; delete copy.updatedAt;
+            copy.name = copy.name + ' (Copy)';
+            copy.isDefault = false;
+            // New copies go to the end of the list.
+            copy.sortIndex = templates.length;
+            PCD.store.upsertInTable('checklistTemplates', copy, 'tpl');
+            PCD.toast.success(t('act_duplicate') + ' ✓');
+            render(view);
+          }},
+          { icon: 'truck', label: t('act_copy_workspace') || 'Copy to workspace...', onClick: function () {
+            PCD.openCopyToWorkspace('checklistTemplates', tid, tpl.name);
+          }},
+          { icon: 'trash', label: t('act_delete') || 'Delete', danger: true, onClick: function () {
+            PCD.modal.confirm({
+              icon: '🗑', iconKind: 'danger', danger: true,
+              title: t('checklist_delete_confirm_title') || 'Delete this template?',
+              text: t('checklist_delete_confirm_msg') || 'This will permanently remove the template. Any in-progress sessions will keep working.',
+              okText: t('act_delete') || 'Delete',
+            }).then(function (ok) {
+              if (!ok) return;
+              PCD.store.deleteFromTable('checklistTemplates', tid);
+              PCD.toast.success(t('checklist_deleted') || 'Template deleted');
+              render(view);
+            });
+          }},
+        ]
+      });
     });
 
     PCD.$('#newTplBtn', view).addEventListener('click', function () { openTemplateEditor(); });
@@ -294,6 +357,9 @@
     PCD.on(view, 'click', '[data-tid]', function (e) {
       if (e.target.closest('[data-startrun]')) return;
       if (e.target.closest('[data-edit-tid]')) return;
+      if (e.target.closest('[data-move-up]')) return;
+      if (e.target.closest('[data-move-down]')) return;
+      if (e.target.closest('[data-tpl-menu]')) return;
       openTemplatePreview(this.getAttribute('data-tid'));
     });
     // Edit button: stopPropagation in handler (not inline)
@@ -318,10 +384,11 @@
   function listTemplates() {
     let tpls = PCD.store.listTable('checklistTemplates');
     if (tpls.length === 0) {
-      DEFAULT_TEMPLATES.forEach(function (def) {
+      DEFAULT_TEMPLATES.forEach(function (def, idx) {
         PCD.store.upsertInTable('checklistTemplates', {
           name: def.name,
           icon: def.icon,
+          sortIndex: idx,
           items: def.items.map(function (it) {
             const item = { id: PCD.uid('it'), text: it.text, cat: it.cat || 'prep', prio: it.prio || 'med', type: it.type || 'task' };
             if (it.min !== undefined) item.min = it.min;
@@ -334,7 +401,40 @@
       });
       tpls = PCD.store.listTable('checklistTemplates');
     }
-    return tpls;
+    // Sort by sortIndex (chef-controlled order). Templates without
+    // a sortIndex go to the end, in createdAt order. This handles
+    // existing data from before v2.5.12 gracefully.
+    return tpls.slice().sort(function (a, b) {
+      const ai = (typeof a.sortIndex === 'number') ? a.sortIndex : 999999;
+      const bi = (typeof b.sortIndex === 'number') ? b.sortIndex : 999999;
+      if (ai !== bi) return ai - bi;
+      return (a.createdAt || '').localeCompare(b.createdAt || '');
+    });
+  }
+
+  // Move a template up or down in the user's preferred order.
+  // direction: -1 (up) or +1 (down). No-op at the boundaries.
+  function moveTemplate(tid, direction) {
+    const ordered = listTemplates();
+    const i = ordered.findIndex(function (t) { return t.id === tid; });
+    if (i < 0) return;
+    const j = i + direction;
+    if (j < 0 || j >= ordered.length) return;
+    // Swap sortIndex values, but normalise the whole list first so
+    // every template has a stable integer index. This is cheap and
+    // makes future moves simple.
+    ordered.forEach(function (t, idx) { t.sortIndex = idx; });
+    const tmp = ordered[i].sortIndex;
+    ordered[i].sortIndex = ordered[j].sortIndex;
+    ordered[j].sortIndex = tmp;
+    // Persist both rows.
+    PCD.store.upsertInTable('checklistTemplates', ordered[i], 'tpl');
+    PCD.store.upsertInTable('checklistTemplates', ordered[j], 'tpl');
+    // Also persist any other rows whose sortIndex we just normalised
+    // for the first time.
+    ordered.forEach(function (t, idx) {
+      if (idx !== i && idx !== j) PCD.store.upsertInTable('checklistTemplates', t, 'tpl');
+    });
   }
 
   function listActiveSessions() {

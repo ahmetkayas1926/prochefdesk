@@ -456,4 +456,13 @@ window.PCD.i18n.register('tr', {
 
   // Fotoğraf yükleme — eklendi v2.5.9
   photo_uploading: 'Fotoğraf yükleniyor…',
+
+  // Kontrol listesi sıralama + workspace kopyalama — eklendi v2.5.12
+  move_up: 'Yukarı taşı',
+  move_down: 'Aşağı taşı',
+  more_actions: 'Daha fazla işlem',
+  act_copy_workspace: 'Çalışma alanına kopyala…',
+  checklist_delete_confirm_title: 'Bu şablon silinsin mi?',
+  checklist_delete_confirm_msg: 'Şablon kalıcı olarak silinecek. Devam eden oturumlar çalışmaya devam eder.',
+  checklist_deleted: 'Şablon silindi',
 });

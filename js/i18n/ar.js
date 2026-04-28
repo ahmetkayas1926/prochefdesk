@@ -165,4 +165,13 @@ window.PCD.i18n.register('ar', {
 
   // تحميل الصورة — أُضيف v2.5.9
   photo_uploading: 'جارٍ تحميل الصورة…',
+
+  // إعادة ترتيب القوائم + نسخ إلى مساحة عمل — أُضيف v2.5.12
+  move_up: 'تحريك لأعلى',
+  move_down: 'تحريك لأسفل',
+  more_actions: 'إجراءات إضافية',
+  act_copy_workspace: 'نسخ إلى مساحة عمل…',
+  checklist_delete_confirm_title: 'حذف هذا القالب؟',
+  checklist_delete_confirm_msg: 'سيتم حذف القالب نهائيًا. الجلسات الجارية ستستمر في العمل.',
+  checklist_deleted: 'تم حذف القالب',
 });

@@ -1,3 +1,51 @@
+# v2.5.12 — Checklist sıralama + workspace kopyalama
+
+## Talep
+
+1. Yeni eklenen checklist en alta gidiyordu — şefin favori checklist'leri üstte olmalı, sıra değiştirilebilir olmalı
+2. Recipe ve menülerde olan "kamyon ikonu" (workspace kopyalama) checklist'lerde de olmalı — şef yeni işletmede aynı checklist'i kullanmak istiyor
+
+## Çözüm
+
+**1. Sıralama:**
+- Her checklist template'e `sortIndex` field eklendi
+- Card'a yukarı/aşağı ok butonları eklendi
+- Tıklayınca komşu template ile sortIndex swap olur
+- Mevcut template'ler ilk reorder'da otomatik normalize edilir (geriye uyumlu)
+
+**2. Workspace kopyalama:**
+- Card'daki eski "Edit" butonu yerine 3-nokta menü (⋮)
+- 3-nokta menüde: Edit · Duplicate · Copy to workspace · Delete
+- Mevcut `PCD.openCopyToWorkspace()` helper'ı kullanılıyor (recipes/menus'taki aynı modal)
+- `checklistTemplates` zaten store'da workspace-bound table olarak tanımlıydı, ekstra altyapı gerekmedi
+
+## Kod değişiklikleri
+
+- `js/tools/checklist.js`:
+  - `listTemplates` artık `sortIndex` ile sıralıyor (createdAt fallback)
+  - Yeni `moveTemplate(tid, direction)` helper
+  - Card layout'u: up/down ok butonları + 3-nokta menü + Start
+  - `actionSheet` ile 3-nokta menü (Edit / Duplicate / Copy to workspace / Delete)
+  - Click bubble guard'ları yeni butonlar için güncellendi
+- `js/core/utils.js`: `chevronUp`, `chevron-up`, `chevron-down`, `more-vertical`, `moreVertical` icon'ları eklendi
+- `js/i18n/*` (6 dilde 7 yeni key): `move_up`, `move_down`, `more_actions`, `act_copy_workspace`, `checklist_delete_confirm_title`, `checklist_delete_confirm_msg`, `checklist_deleted`
+
+## Migration gerekli mi
+
+Hayır. `sortIndex` yoksa default 999999 kabul edilir, ilk reorder'da otomatik normalize.
+
+## Test
+
+1. Checklist sayfasında her template'in yanında ↑ ↓ butonları görünmeli
+2. ↑ ↓ tıklayarak sırayı değiştir → sayfayı yenile → sıra korunmalı
+3. ⋮ butonu → action sheet açılmalı: Edit · Duplicate · Copy to workspace · Delete
+4. "Copy to workspace" → diğer workspace'leri listeleyen modal → seç → "Kopyalandı" toast
+5. Diğer workspace'e geç → kopyalanmış template orada görünmeli
+6. Edit/Duplicate/Delete davranışları aynı olmalı
+7. En üstteki template'in ↑ butonu disabled, en alttakinin ↓ butonu disabled
+
+---
+
 # v2.5.11 — Sorun bildir formu artık direkt gönderim
 
 ## Talep

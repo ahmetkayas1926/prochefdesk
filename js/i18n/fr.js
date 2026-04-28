@@ -163,4 +163,13 @@ window.PCD.i18n.register('fr', {
 
   // Téléversement de photo — ajouté v2.5.9
   photo_uploading: 'Téléversement de la photo…',
+
+  // Réordonner checklists + copier vers workspace — ajouté v2.5.12
+  move_up: 'Monter',
+  move_down: 'Descendre',
+  more_actions: 'Plus d\'actions',
+  act_copy_workspace: 'Copier vers workspace…',
+  checklist_delete_confirm_title: 'Supprimer ce modèle ?',
+  checklist_delete_confirm_msg: 'Le modèle sera définitivement supprimé. Les sessions en cours continueront de fonctionner.',
+  checklist_deleted: 'Modèle supprimé',
 });

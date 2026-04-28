@@ -473,4 +473,13 @@ window.PCD.i18n.register('en', {
 
   // Photo upload — added v2.5.9
   photo_uploading: 'Uploading photo…',
+
+  // Checklist reorder + workspace copy — added v2.5.12
+  move_up: 'Move up',
+  move_down: 'Move down',
+  more_actions: 'More actions',
+  act_copy_workspace: 'Copy to workspace…',
+  checklist_delete_confirm_title: 'Delete this template?',
+  checklist_delete_confirm_msg: 'This will permanently remove the template. Any in-progress sessions will keep working.',
+  checklist_deleted: 'Template deleted',
 });
