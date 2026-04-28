@@ -551,5 +551,12 @@ window.PCD.i18n.register('en', {
   haccp_log_name_placeholder: 'e.g. Banquet Kitchen',
   haccp_log_name_required: 'Log name is required',
   haccp_log_created: 'Log created',
+
+  // Sidenav section titles — added v2.6.6
+  section_library: 'Library',
+  section_kitchen: 'Kitchen',
+  section_sourcing: 'Sourcing',
+  section_catering: 'Catering',
+  section_haccp_forms: 'HACCP Forms',
   optional: 'optional',
 });

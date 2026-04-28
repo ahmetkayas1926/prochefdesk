@@ -202,5 +202,10 @@ window.PCD.i18n.register('ar', {
   haccp_shift_morning: 'الصباح (الافتتاح)',
   haccp_shift_evening: 'المساء (الإغلاق)',
   haccp_corrective_action: 'إجراء تصحيحي / ملاحظة',
+  section_library: 'المكتبة',
+  section_kitchen: 'المطبخ',
+  section_sourcing: 'التوريد',
+  section_catering: 'التموين',
+  section_haccp_forms: 'نماذج HACCP',
   optional: 'اختياري',
 });

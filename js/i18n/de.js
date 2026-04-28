@@ -200,5 +200,10 @@ window.PCD.i18n.register('de', {
   haccp_shift_morning: 'Morgens (Öffnung)',
   haccp_shift_evening: 'Abends (Schluss)',
   haccp_corrective_action: 'Korrekturmaßnahme / Notiz',
+  section_library: 'Bibliothek',
+  section_kitchen: 'Küche',
+  section_sourcing: 'Beschaffung',
+  section_catering: 'Catering',
+  section_haccp_forms: 'HACCP-Formulare',
   optional: 'optional',
 });

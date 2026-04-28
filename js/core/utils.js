@@ -341,11 +341,19 @@
     // Footer injected into every printable. Subtle, single-line, only
     // visible on the printed page — never obtrusive on screen.
     // English-only by design (acts as a soft credit/attribution line).
-    // print-color-adjust:exact forces the green brand colour to render even
-    // when the user has Chrome's "Background graphics" option disabled.
-    const FOOTER_HTML =
-      '<div class="pcd-print-footer" style="margin-top:24px;padding-top:8px;border-top:1px solid #e5e5e5;text-align:center;font-size:9px;color:#999;font-family:-apple-system,Segoe UI,Roboto,sans-serif;letter-spacing:0.02em;-webkit-print-color-adjust:exact;print-color-adjust:exact;">' +
-        'Made with <strong style="color:#16a34a;font-weight:700;-webkit-print-color-adjust:exact;print-color-adjust:exact;">ProChefDesk</strong> · prochefdesk.com' +
+    // We inject a dedicated <style> block (rather than inline styles on the
+    // <strong>) because some browsers strip inline child colours during
+    // print rendering, leaving the brand name in the parent grey colour.
+    // !important ensures these rules win regardless of caller styles.
+    const FOOTER_STYLE =
+      '<style>' +
+        '.pcd-print-footer{margin-top:24px;padding-top:8px;border-top:1px solid #e5e5e5;text-align:center;font-size:9px;color:#999;font-family:-apple-system,Segoe UI,Roboto,sans-serif;letter-spacing:0.02em;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}' +
+        '.pcd-print-footer .pcd-brand{color:#16a34a !important;font-weight:700 !important;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}' +
+        '@media print{.pcd-print-footer .pcd-brand{color:#16a34a !important;}}' +
+      '</style>';
+    const FOOTER_HTML = FOOTER_STYLE +
+      '<div class="pcd-print-footer">' +
+        'Made with <span class="pcd-brand">ProChefDesk</span> · prochefdesk.com' +
       '</div>';
 
     // If input looks like partial content (no <!DOCTYPE>), wrap it

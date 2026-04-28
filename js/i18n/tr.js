@@ -534,5 +534,12 @@ window.PCD.i18n.register('tr', {
   haccp_log_name_placeholder: 'örn. Banket Mutfağı',
   haccp_log_name_required: 'Form adı gerekli',
   haccp_log_created: 'Form oluşturuldu',
+
+  // Yan menü başlıkları — eklendi v2.6.6
+  section_library: 'Kütüphane',
+  section_kitchen: 'Mutfak',
+  section_sourcing: 'Tedarik',
+  section_catering: 'Catering',
+  section_haccp_forms: 'HACCP Formları',
   optional: 'isteğe bağlı',
 });

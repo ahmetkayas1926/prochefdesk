@@ -258,26 +258,26 @@
       { title: null, items: [
         { key: 'dashboard', icon: 'home', route: 'dashboard' },
       ]},
-      { title: 'Library', items: [
+      { title: t('section_library'), items: [
         { key: 'recipes',     icon: 'book-open', route: 'recipes' },
         { key: 'ingredients', icon: 'carrot', route: 'ingredients' },
         { key: 'menus',       icon: 'menu', route: 'menus' },
       ]},
-      { title: 'Kitchen', items: [
+      { title: t('section_kitchen'), items: [
         { key: 'kitchen_cards', icon: 'id-card', route: 'kitchen_cards' },
         { key: 'portion',       icon: 'scale', route: 'portion' },
         { key: 'checklist',     icon: 'check-square', route: 'checklist' },
         { key: 'waste',         icon: 'recycle', route: 'waste' },
       ]},
-      { title: 'Sourcing', items: [
+      { title: t('section_sourcing'), items: [
         { key: 'inventory', icon: 'package', route: 'inventory' },
         { key: 'suppliers', icon: 'truck', route: 'suppliers' },
         { key: 'shopping',  icon: 'shopping-cart', route: 'shopping' },
       ]},
-      { title: 'Catering', items: [
+      { title: t('section_catering'), items: [
         { key: 'events',  icon: 'calendar', route: 'events' },
       ]},
-      { title: 'HACCP Forms', items: [
+      { title: t('section_haccp_forms'), items: [
         { key: 'haccp_logs', icon: 'thermometer', route: 'haccp_logs' },
       ]},
       { title: null, items: [

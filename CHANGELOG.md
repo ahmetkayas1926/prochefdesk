@@ -1,3 +1,48 @@
+# v2.6.6 — Sidenav başlıkları çevrildi
+
+## Talep
+
+Yan menüde 5 başlık hardcoded İngilizce'ydi: Library, Kitchen, Sourcing, Catering, HACCP Forms. Türkçe seçilse bile İngilizce kalıyordu.
+
+## Çözüm
+
+5 yeni i18n key (`section_library`, `section_kitchen`, `section_sourcing`, `section_catering`, `section_haccp_forms`) — 6 dilde tam çevirili. `app.js`'de hardcoded title yerine `t('section_*')` çağrısı.
+
+Mevcut hiçbir key'le çakışmadı, sadece 5 yeni satır 6 dilde, sonra app.js'de 5 string değişikliği. Risk minimum.
+
+## Test
+
+1. Dil = TR → Sidenav: Kütüphane / Mutfak / Tedarik / Catering / HACCP Formları
+2. Dil = EN → Library / Kitchen / Sourcing / Catering / HACCP Forms
+3. Dil = DE → Bibliothek / Küche / Beschaffung / Catering / HACCP-Formulare
+
+---
+
+# v2.6.5 — Print footer "ProChefDesk" yeşil bold render fix
+
+## Talep
+
+v2.6.4'te `print-color-adjust:exact` eklenmişti ama Chrome print preview hâlâ "ProChefDesk"i gri olarak render ediyordu, yeşil bold değil.
+
+## Sebep
+
+Inline `style="color:#16a34a"` parent footer'ın `color:#999`'una karşı yetersiz kalıyordu. Bazı browserlar print render aşamasında inline child color'ı parent'a düşürüyor.
+
+## Çözüm
+
+Inline yerine **dedicated `<style>` block + `!important` + class-based**:
+- `<strong>` yerine `<span class="pcd-brand">` 
+- `.pcd-brand { color:#16a34a !important; font-weight:700 !important }` 
+- `@media print` içinde de aynı kural — print path'inde garantili
+- `print-color-adjust:exact !important` her iki seviyede
+
+## Test
+
+- Recipes/menüler/checklists print → footer'da "ProChefDesk" yeşil ve kalın görünmeli
+- Background graphics seçeneğinden bağımsız çalışmalı
+
+---
+
 # v2.6.4 — HACCP çoklu form desteği + print footer rengi
 
 ## Talep
