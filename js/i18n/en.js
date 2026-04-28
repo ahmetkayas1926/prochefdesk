@@ -402,4 +402,11 @@ window.PCD.i18n.register('en', {
   clear_all_data: 'Clear all data',
   about: 'About',
   version: 'Version',
+
+  // Legal (privacy / terms) — added v2.5.4
+  legal_section_title: 'Legal',
+  legal_privacy: 'Privacy Policy',
+  legal_privacy_subtitle: 'How we handle your data',
+  legal_terms: 'Terms of Service',
+  legal_terms_subtitle: 'Rules for using ProChefDesk',
 });

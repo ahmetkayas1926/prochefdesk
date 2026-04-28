@@ -242,6 +242,29 @@
         </div>
       </div>
 
+      <!-- LEGAL -->
+      <div class="section">
+        <div class="section-title" style="font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">${t('legal_section_title')}</div>
+        <div class="card">
+          <div class="card-body" style="padding:0;">
+            <a href="privacy.html" target="_blank" rel="noopener" class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;text-decoration:none;color:inherit;border-bottom:1px solid var(--border);">
+              <div>
+                <div style="font-weight:600;">🔒 ${t('legal_privacy')}</div>
+                <div class="text-muted text-sm">${t('legal_privacy_subtitle')}</div>
+              </div>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
+            <a href="terms.html" target="_blank" rel="noopener" class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;text-decoration:none;color:inherit;">
+              <div>
+                <div style="font-weight:600;">📄 ${t('legal_terms')}</div>
+                <div class="text-muted text-sm">${t('legal_terms_subtitle')}</div>
+              </div>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
+          </div>
+        </div>
+      </div>
+
       <!-- ABOUT -->
       <div class="section">
         <div class="text-center text-muted text-sm" style="padding:16px 0;">

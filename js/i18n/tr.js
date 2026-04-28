@@ -385,4 +385,11 @@ window.PCD.i18n.register('tr', {
   clear_all_data: 'Tüm verileri sil',
   about: 'Hakkında',
   version: 'Sürüm',
+
+  // Legal (gizlilik / şartlar) — eklendi v2.5.4
+  legal_section_title: 'Yasal',
+  legal_privacy: 'Gizlilik Politikası',
+  legal_privacy_subtitle: 'Verilerinizi nasıl ele alıyoruz',
+  legal_terms: 'Kullanım Şartları',
+  legal_terms_subtitle: 'ProChefDesk kullanım kuralları',
 });

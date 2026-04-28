@@ -95,4 +95,10 @@ window.PCD.i18n.register('ar', {
   last_synced: 'آخر مزامنة', sync_now: 'مزامنة الآن', export_data: 'تصدير البيانات',
   reset_demo: 'إضافة التجريبية', clear_demo: 'إزالة التجريبية',
   clear_all_data: 'مسح كل البيانات', about: 'حول', version: 'الإصدار',
+  // Legal — v2.5.4
+  legal_section_title: 'قانوني',
+  legal_privacy: 'سياسة الخصوصية',
+  legal_privacy_subtitle: 'كيف نتعامل مع بياناتك',
+  legal_terms: 'شروط الخدمة',
+  legal_terms_subtitle: 'قواعد استخدام ProChefDesk',
 });
