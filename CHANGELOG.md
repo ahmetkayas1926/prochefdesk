@@ -1,3 +1,27 @@
+# v2.6.3 — HACCP print tek sayfa fix
+
+## Talep
+
+Print preview ikinci sayfaya taşıyordu. "Made with ProChefDesk" footer'ı ikinci sayfada görünüyordu.
+
+## Çözüm
+
+- Page margin: 8mm → 5mm (sayfa kullanımı +%30)
+- Body padding: 10px → 0 (margin zaten boşluk veriyor)
+- Header h1: 16px → 14px, sub: 10px → 9px
+- Notes/sign font: 9-10px → 8-9px, padding'ler kompakt
+- Cell padding: 2-3px → 1-3px
+- "Made with ProChefDesk" global footer'ı bu print için gizlendi (`.pcd-print-footer { display:none }`); yerine inline kompakt footer (`.h-foot`) eklendi — A4 alanını boşa harcamadan tek satır
+
+Sonuç: Form artık tek A4 yatay sayfada sığar.
+
+## Test
+
+- Print preview → 1 page görünmeli
+- "Made with ProChefDesk" tablonun hemen altında kompakt görünmeli, kesinlikle 2. sayfaya geçmemeli
+
+---
+
 # v2.6.2 — HACCP grid optimizasyonu (tek sayfa fit)
 
 ## Talep

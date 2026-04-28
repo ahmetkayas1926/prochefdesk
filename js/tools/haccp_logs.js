@@ -512,30 +512,35 @@
 
     let html =
       '<style>' +
-        'body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#000;margin:0;padding:10px;}' +
-        '.h-head{margin-bottom:10px;border-bottom:2px solid #16a34a;padding-bottom:5px;}' +
-        '.h-head h1{margin:0;font-size:16px;}' +
-        '.h-head .sub{font-size:10px;color:#555;margin-top:2px;}' +
+        'body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#000;margin:0;padding:0;}' +
+        '.h-head{margin-bottom:6px;border-bottom:2px solid #16a34a;padding-bottom:4px;}' +
+        '.h-head h1{margin:0;font-size:14px;}' +
+        '.h-head .sub{font-size:9px;color:#555;margin-top:1px;}' +
         'table.h-grid{width:100%;border-collapse:collapse;font-size:9px;table-layout:fixed;}' +
-        'table.h-grid th, table.h-grid td{border:1px solid #999;padding:2px 3px;text-align:center;}' +
+        'table.h-grid th, table.h-grid td{border:1px solid #999;padding:1px 3px;text-align:center;}' +
         'table.h-grid th{background:#f3f4f6;font-weight:700;font-size:8px;}' +
         'table.h-grid td.day{text-align:left;font-weight:600;background:#fafafa;font-size:9px;}' +
         'table.h-grid td.oor{background:#fee2e2;color:#991b1b;font-weight:700;}' +
         'table.h-grid td.has-note::after{content:" *";color:#16a34a;}' +
-        '.h-notes{margin-top:8px;font-size:9px;}' +
-        '.h-notes .nh{font-weight:700;margin-bottom:4px;font-size:10px;}' +
-        '.h-notes .ni{padding:2px 0;border-bottom:1px solid #eee;}' +
-        '.h-sign{margin-top:10px;padding-top:6px;border-top:1px solid #ccc;font-size:10px;display:flex;justify-content:space-between;}' +
-        '@page{size:A4 landscape;margin:8mm;}' +
-        (units.length > 6 ? '.h-warn{padding:4px 8px;background:#fef3c7;color:#92400e;font-size:9px;border-radius:3px;margin-bottom:6px;}' : '') +
+        '.h-notes{margin-top:6px;font-size:8px;}' +
+        '.h-notes .nh{font-weight:700;margin-bottom:3px;font-size:9px;}' +
+        '.h-notes .ni{padding:1px 0;border-bottom:1px solid #eee;}' +
+        '.h-sign{margin-top:6px;padding-top:4px;border-top:1px solid #ccc;font-size:9px;display:flex;justify-content:space-between;}' +
+        // The global PCD.print() footer ("Made with ProChefDesk") would be
+        // injected below the table and push everything to page 2 on a
+        // tight landscape A4. Hide it; we render our own compact footer.
+        '.pcd-print-footer{display:none !important;}' +
+        '.h-foot{margin-top:4px;text-align:center;font-size:7px;color:#999;}' +
+        '@page{size:A4 landscape;margin:5mm;}' +
+        (units.length > 6 ? '.h-warn{padding:3px 6px;background:#fef3c7;color:#92400e;font-size:8px;border-radius:3px;margin-bottom:4px;}' : '') +
       '</style>' +
       '<div class="h-head">' +
         '<h1>HACCP · Fridge & Freezer Temperature Log</h1>' +
-        '<div class="sub">' + PCD.escapeHtml(wsName) + ' · ' + PCD.escapeHtml(monthLabel(year, monthIdx0)) + ' · Temperatures in °' + tempUnit + '</div>' +
+        '<div class="sub">' + PCD.escapeHtml(wsName) + ' · ' + PCD.escapeHtml(monthLabel(year, monthIdx0)) + ' · °' + tempUnit + '</div>' +
       '</div>' +
-      (units.length > 6 ? '<div class="h-warn">⚠ ' + units.length + ' units printed on one page — text may be tight. Consider splitting your log into two groups for better readability.</div>' : '') +
+      (units.length > 6 ? '<div class="h-warn">⚠ ' + units.length + ' units on one page — text is tight. Consider splitting into two groups.</div>' : '') +
       '<table class="h-grid"><thead>' +
-        '<tr><th rowspan="2" style="width:8%;">Day</th>';
+        '<tr><th rowspan="2" style="width:7%;">Day</th>';
     units.forEach(function (u) {
       const range = (u.min !== undefined && u.max !== undefined) ? '(' + u.min + '–' + u.max + ')' : '';
       html += '<th colspan="2">' + PCD.escapeHtml(u.name) + '<br><span style="font-weight:400;color:#666;font-size:7px;">' + range + '</span></th>';
@@ -584,6 +589,7 @@
 
     const user = PCD.store.get('user') || {};
     html += '<div class="h-sign"><div>Reviewed by: ____________________________</div><div>Date: ' + new Date().toLocaleDateString() + '</div></div>';
+    html += '<div class="h-foot">Made with ProChefDesk · prochefdesk.com</div>';
 
     PCD.print(html, 'HACCP Fridge Log — ' + monthLabel(year, monthIdx0));
   }
