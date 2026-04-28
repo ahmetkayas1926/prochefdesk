@@ -1687,10 +1687,17 @@
         const reader = new FileReader();
         reader.onload = function () {
           PCD.cropper.open(reader.result).then(function (cropped) {
-            if (cropped) {
-              data.photo = cropped;
+            if (!cropped) return;
+            // v2.5.9: Upload the cropped photo to Supabase Storage so we
+            // store a small URL instead of a multi-MB base64 string in
+            // the recipe row. If upload fails (offline, no auth, etc.)
+            // the helper falls back to the dataURL — same as before.
+            const t = PCD.i18n.t;
+            PCD.toast.info(t('photo_uploading'));
+            PCD.photoStorage.upload(cropped).then(function (urlOrDataUrl) {
+              data.photo = urlOrDataUrl;
               renderEditor();
-            }
+            });
           });
         };
         reader.readAsDataURL(f);

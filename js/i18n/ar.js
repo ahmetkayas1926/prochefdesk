@@ -155,4 +155,7 @@ window.PCD.i18n.register('ar', {
   canvas_share_save_pdf: 'حفظ كـ PDF',
   canvas_share_pdf_tip: 'انقر على "حفظ كـ PDF" أو استخدم قائمة الطباعة في متصفحك لحفظ هذه البطاقة على هاتفك.',
   canvas_share_save_failed: 'تعذّر حفظ البطاقة',
+
+  // تحميل الصورة — أُضيف v2.5.9
+  photo_uploading: 'جارٍ تحميل الصورة…',
 });

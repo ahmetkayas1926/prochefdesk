@@ -463,4 +463,7 @@ window.PCD.i18n.register('en', {
   canvas_share_save_pdf: 'Save as PDF',
   canvas_share_pdf_tip: 'Tap "Save as PDF" or use your browser\'s print menu to save this canvas to your phone.',
   canvas_share_save_failed: 'Could not save canvas',
+
+  // Photo upload — added v2.5.9
+  photo_uploading: 'Uploading photo…',
 });

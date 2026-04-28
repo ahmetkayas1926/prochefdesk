@@ -1,3 +1,49 @@
+# v2.5.9 — Recipe foto sıkıştırma + Storage'a taşıma
+
+## Talep
+
+Recipe fotoğrafları database'e base64 olarak gömülüyor. 4-5 MB foto → ~6-7 MB DB satırı. Bu Supabase free tier'ın 500 MB DB limitini hızla doldurur ve uygulamayı yavaşlatır. Uzun vade ölçeklenebilir değil.
+
+## Çözüm
+
+1. **WebP sıkıştırma** — Cropper artık WebP @ 0.82 quality çıkışı veriyor. JPEG'den ~%30 daha küçük, gözle aynı kalite.
+2. **Supabase Storage** — Fotolar `recipe-photos` bucket'ına yükleniyor, recipe'de sadece public URL string'i saklanıyor.
+3. **Geriye uyumlu** — Eski recipe'lerdeki base64 fotolar bozulmadan çalışmaya devam eder. Bir foto düzenlenirse yeni sistem kullanılır.
+4. **Graceful fallback** — Offline veya cloud yoksa eski davranış (base64) korunur, kullanıcı kaybetmez.
+
+## Kod değişiklikleri
+
+- `js/core/photo-storage.js` (yeni) — dataURL → WebP → Storage upload helper
+- `js/ui/cropper.js` — JPEG 0.85 yerine WebP 0.82 (JPEG fallback'li)
+- `js/tools/recipes.js` — cropper sonrası `PCD.photoStorage.upload()` çağrısı, kullanıcıya "Yükleniyor…" toast
+- `index.html` — yeni script tag (cloud.js'den sonra)
+- `js/i18n/*` — `photo_uploading` key (6 dilde)
+- `migrations/v2.5.9-recipe-photos-rls.sql` — Storage RLS policies
+
+## Migration gerekli
+
+Bu paketi deploy etmeden önce:
+
+1. Supabase Dashboard → Storage → `recipe-photos` bucket olduğunu doğrula (zaten oluşturuldu, public)
+2. SQL Editor → `migrations/v2.5.9-recipe-photos-rls.sql` dosyasını çalıştır → "Success. No rows returned"
+3. Sonra paketi push et
+
+## Test
+
+1. Yeni recipe oluştur, 4-5 MB foto yükle
+2. "Fotoğraf yükleniyor…" toast'ını gör
+3. Recipe kaydet, listede fotoğrafı gör (URL'den yüklenir)
+4. Network tab'inde upload boyutuna bak — 100-200 KB civarı olmalı
+5. Eski recipe'lerin foto'larının hala görüntülendiğini doğrula
+
+## Beklenen kazanım
+
+- Database boyutu yeni fotolar için **%99 küçülür**
+- Yeni recipe yükleme hızı **3-5x artar** (DB satırı küçük)
+- Storage maliyeti minimal (1 GB free tier'da binlerce foto sığar)
+
+---
+
 # v2.5.8 — Kitchen Cards Share + QR
 
 ## Yeni özellik

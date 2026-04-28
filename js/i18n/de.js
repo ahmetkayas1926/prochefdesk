@@ -153,4 +153,7 @@ window.PCD.i18n.register('de', {
   canvas_share_save_pdf: 'Als PDF speichern',
   canvas_share_pdf_tip: 'Tippen Sie auf "Als PDF speichern" oder verwenden Sie das Druckmenü Ihres Browsers, um diese Karte auf Ihrem Telefon zu speichern.',
   canvas_share_save_failed: 'Karte konnte nicht gespeichert werden',
+
+  // Foto-Upload — hinzugefügt v2.5.9
+  photo_uploading: 'Foto wird hochgeladen…',
 });

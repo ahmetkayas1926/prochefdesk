@@ -152,4 +152,7 @@ window.PCD.i18n.register('es', {
   canvas_share_save_pdf: 'Guardar como PDF',
   canvas_share_pdf_tip: 'Toca "Guardar como PDF" o usa el menú de impresión del navegador para guardar esta ficha en tu teléfono.',
   canvas_share_save_failed: 'No se pudo guardar la ficha',
+
+  // Subida de foto — añadido v2.5.9
+  photo_uploading: 'Subiendo foto…',
 });

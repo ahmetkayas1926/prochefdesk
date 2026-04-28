@@ -308,7 +308,13 @@
           ctx.imageSmoothingQuality = 'high';
           ctx.drawImage(off, cx, cy, cw, ch, 0, 0, outW, outH);
 
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          // v2.5.9: WebP is ~30% smaller than JPEG at the same visual
+          // quality. Falls back to JPEG if the browser refuses WebP
+          // (very rare — Safari iOS 14+ supports it).
+          let dataUrl = canvas.toDataURL('image/webp', 0.82);
+          if (!dataUrl || dataUrl.indexOf('data:image/webp') !== 0) {
+            dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          }
           // Detach onClose so closing doesn't trigger resolve(null)
           modal._onClose = null;
           window.removeEventListener('resize', resize);

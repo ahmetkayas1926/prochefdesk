@@ -446,4 +446,7 @@ window.PCD.i18n.register('tr', {
   canvas_share_save_pdf: 'PDF olarak kaydet',
   canvas_share_pdf_tip: 'Bu kartı telefonuna kaydetmek için "PDF olarak kaydet" düğmesine bas veya tarayıcının yazdırma menüsünü kullan.',
   canvas_share_save_failed: 'Kart kaydedilemedi',
+
+  // Fotoğraf yükleme — eklendi v2.5.9
+  photo_uploading: 'Fotoğraf yükleniyor…',
 });

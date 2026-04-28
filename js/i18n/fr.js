@@ -153,4 +153,7 @@ window.PCD.i18n.register('fr', {
   canvas_share_save_pdf: 'Enregistrer en PDF',
   canvas_share_pdf_tip: 'Touchez « Enregistrer en PDF » ou utilisez le menu d\'impression de votre navigateur pour enregistrer cette fiche sur votre téléphone.',
   canvas_share_save_failed: 'Impossible d\'enregistrer la fiche',
+
+  // Téléversement de photo — ajouté v2.5.9
+  photo_uploading: 'Téléversement de la photo…',
 });
