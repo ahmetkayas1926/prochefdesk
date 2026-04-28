@@ -92,11 +92,12 @@
     };
   }
 
-  // Stub for kitchen card snapshot. Real implementation lands in v2.5.8.
-  // Returning null here causes createOrGetShareUrl to reject with
-  // 'Item not found', which is the desired behaviour until v2.5.8 wires
-  // up the kitchen-cards UI.
-  function snapshotKitchenCard(/* canvasId */) {
+  // Forwards to kitchen_cards.js's snapshot function. The tools module
+  // owns the canvas data shape, so it owns the snapshot logic too.
+  function snapshotKitchenCard(canvasId) {
+    if (PCD.tools && PCD.tools.kitchenCards && PCD.tools.kitchenCards.snapshot) {
+      return PCD.tools.kitchenCards.snapshot(canvasId);
+    }
     return null;
   }
 
@@ -256,6 +257,18 @@
     const appEl = document.getElementById('app');
     if (!appEl) return;
     const p = share.payload || {};
+
+    // Kitchen cards have their own A4 sheet renderer that lives in
+    // kitchen_cards.js (so the layout & CSS stay in sync with the live
+    // editor's print output). Delegate and return early.
+    if (p.kind === 'kitchencard') {
+      if (PCD.tools && PCD.tools.kitchenCards && PCD.tools.kitchenCards.renderFromSnapshot) {
+        appEl.innerHTML = PCD.tools.kitchenCards.renderFromSnapshot(p);
+      } else {
+        appEl.innerHTML = '<div style="padding:40px;text-align:center;color:#666;">Kitchen card renderer unavailable</div>';
+      }
+      return;
+    }
 
     let html = '<style>' +
       '.share-page { max-width: 800px; margin: 0 auto; padding: 24px; font-family: -apple-system, "Segoe UI", Roboto, sans-serif; }' +

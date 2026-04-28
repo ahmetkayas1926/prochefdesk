@@ -146,4 +146,11 @@ window.PCD.i18n.register('de', {
   share_paused_page_title: 'Diese Freigabe ist pausiert',
   share_paused_page_msg: 'Der Eigentümer hat diese Freigabe vorübergehend deaktiviert. Sie kann später wieder verfügbar sein.',
   share_back_to_app: 'ProChefDesk öffnen →',
+
+  // Küchenkarte teilen (v2.5.8)
+  canvas_share_btn: 'QR teilen',
+  canvas_share_qr_subtitle: 'Scannen, um die Karte zu sehen',
+  canvas_share_save_pdf: 'Als PDF speichern',
+  canvas_share_pdf_tip: 'Tippen Sie auf "Als PDF speichern" oder verwenden Sie das Druckmenü Ihres Browsers, um diese Karte auf Ihrem Telefon zu speichern.',
+  canvas_share_save_failed: 'Karte konnte nicht gespeichert werden',
 });

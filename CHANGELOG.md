@@ -1,3 +1,117 @@
+# v2.5.8 — Kitchen Cards Share + QR
+
+## Yeni özellik
+
+### Kitchen Cards canvas paylaşımı
+
+Head chef bir mutfak kartını canvas'a yerleştirip kaydettikten sonra QR kodu üretip mutfak duvarına asabilir. Junior cook telefondan tarar → A4 layout'unu görür → "Save as PDF" ile kendi telefonuna kaydedebilir.
+
+**Senaryo:**
+1. Head chef Kitchen Cards'a girer, "Breakfast Prep" canvas'ını oluşturur, recipes ekler
+2. **🔗 Share QR** butonuna basar (Save Canvas + Print yanına eklendi)
+3. Eğer canvas kaydedilmemişse: otomatik kaydedilir (auto-save+share akışı, tek tık)
+4. QR modal açılır → Print → A4 kağıda QR + canvas adı
+5. Mutfak duvarına asılır
+6. Junior cook telefon kamerasıyla QR'ı tarar
+7. Tarayıcı açılır → ProChefDesk toolbar'lı canvas A4 layout görüntülenir
+8. **📄 Save as PDF** butonuna basar (veya Chrome menüsünden Print)
+9. PDF telefona kaydolur, offline da bakabilir
+
+**Auto-refresh avantajı (v2.5.7'den miras):** Head chef bir tarifi düzenlerse, sonraki "Share QR" çağrısında snapshot otomatik güncellenir. Mutfak duvarındaki QR aynı kalır ama herkes güncel tarifi görür.
+
+## Kod değişiklikleri
+
+### `js/tools/kitchen_cards.js`
+
+**`buildSheetHtml(opts)` refactored:**
+- Hem owner formu (`{ingredientId, amount, unit}` → ingredient lookup) hem public formu (`{name, amount, unit}` → resolved name) destekler
+- `PCD.store.listIngredients()` çağrısı try-catch ile sarıldı, public viewer'da store boş olsa bile crash etmez
+- Mevcut owner-side davranışı değişmedi — sadece additional bir code path eklendi
+
+**Yeni `snapshot(canvasId)` fonksiyonu:**
+- Canvas'ı PCD.store'dan okur
+- Layout'taki her recipe için ingredient'ları **resolve** eder (ID → name + amount + unit inline)
+- Eksik tarifler filtrelenir (silinmiş recipe'ler snapshot'a girmez)
+- Hiç recipe kalmazsa null döner
+- Public viewer'ın orijinal `recipes`/`ingredients` tablolarına erişmesine gerek kalmaz — her şey payload'da
+
+**Yeni `renderFromSnapshot(payload)` fonksiyonu:**
+- Snapshot'tan tam HTML üretir (toolbar + sheet)
+- `buildSheetHtml`'i public formuyla çağırır
+- Sticky toolbar: ProChefDesk branding + canvas adı + "📄 Save as PDF" butonu
+- Toolbar `@media print` ile gizlenir → PDF'te görünmez, sadece canvas çıkar
+- "📄 Save as PDF" butonu `window.print()` çağırır → Chrome native dialog
+- Mobile responsive: küçük ipucu metni de gösterir ("tarayıcı yazdırma menüsünü kullan")
+
+**UI'ya yeni "🔗 Share QR" butonu:**
+- Save Canvas + Print butonlarının arasına eklendi (3 buton: Save / Share / Print)
+- Tıklanınca:
+  - Auth check → user yoksa "Sign in required" toast
+  - PCD.share check → cloud yoksa "Could not create QR" toast
+  - **Auto-save:** canvas kaydedilmemişse `persistCanvas()` helper'ı çalıştırır, ID üretir
+  - `createOrGetShareUrl('kitchencard', canvasId)` → URL alır
+  - QR modal açar (mevcut `PCD.qr.show()` kullanılır)
+- Loading state: spinner + "QR oluşturuluyor…" buton içinde
+
+**`persistCanvas()` helper:**
+- Save button ve Share button'un dublike kayıt mantığını ortak fonksiyona aldı
+- Mevcut Save davranışı aynı, sadece yeniden kullanıldı
+
+**Module API expose:**
+- `PCD.tools.kitchenCards = { render, snapshot, renderFromSnapshot }`
+
+### `js/core/share.js`
+
+**`snapshotKitchenCard(canvasId)`:**
+- v2.5.7'deki `null` stub kaldırıldı
+- Şimdi `PCD.tools.kitchenCards.snapshot(canvasId)`'a forward ediyor
+- Tools modülü mevcut değilse null döner (defensive)
+
+**`renderSharePage(share)`:**
+- `kind === 'kitchencard'` durumu için early-return path eklendi
+- Recipe/menu wrapper kullanmadan direkt `PCD.tools.kitchenCards.renderFromSnapshot(p)` çağrılır
+- Recipe ve menu rendering'i hiç değişmedi
+
+### `js/i18n/*` (6 dilde 5 yeni key)
+
+`canvas_share_btn`, `canvas_share_qr_subtitle`, `canvas_share_save_pdf`, `canvas_share_pdf_tip`, `canvas_share_save_failed` — EN/TR/ES/FR/DE/AR.
+
+## Veritabanı değişikliği
+
+**Yok.** v2.5.7'de `kind` enum'a `'kitchencard'` zaten dahildi (text kolonu, herhangi bir değer kabul eder). Bu paket tamamen client-side.
+
+## Cache-busting
+
+- `index.html` — 48 yer `?v=2.5.7` → `?v=2.5.8` + sidenav `v2.5.8`
+- `privacy.html`, `terms.html` — sadece CSS cache-bust
+- `js/core/config.js` — APP_VERSION 2.5.8
+
+## Bilinen sınırlamalar
+
+- Public share sayfasında dil İngilizce'de sabittir. Junior cook telefon dilinde Türkçe görse bile share sayfasında "Save as PDF" yazar. Bu kasıtlı: share path normal app boot'unu atladığı için locale prefs'i okumuyor. Sonradan navigator.language tabanlı bir light auto-detect ekleyebiliriz.
+- Canvas çok karmaşıksa (örn. 20+ tarif × uzun method'lar) snapshot payload büyür. Pratik testlerde 10-15 tarif = ~30-50 KB civarı, Supabase jsonb 1 GB limit'i ile mukayese edildiğinde sorun yok.
+- Auto-refresh sayesinde tarif değiştirme yansır, ama **canvas layout'u** değiştirilmedi (tarifler aynı). Eğer canvas'tan tarif çıkarırsan ve aynı share URL'sini açarsan eski snapshot görünür → tekrar QR'a bas, snapshot tazelenir.
+
+## Doğrulama
+
+- 42 JS dosyası `node --check` ✓
+- `buildSheetHtml` defensive PCD.store guard'ı var, public viewer'da crash etmez ✓
+- `PCD.tools.kitchenCards` API'si runtime'da mevcut (script load order tutarlı) ✓
+- Recipe/menu share rendering'i aynı, regression yok ✓
+
+## Test senaryoları
+
+1. **Auto save+share** — Yeni canvas oluştur, tarif ekle, kaydetmeden direkt 🔗 Share QR'a bas → otomatik kaydedilir → QR modal açılır ✓
+2. **Var olan canvas paylaşımı** — Kaydedilmiş canvas yükle → Share QR → mevcut share URL'si döner (idempotent) ✓
+3. **Public render** — QR'ı telefondan tara → A4 layout açılır, ProChefDesk toolbar'ı + Save as PDF butonu görünür ✓
+4. **Save as PDF** — Public sayfada "Save as PDF" → Chrome print dialog → PDF kaydet → toolbar gizli, sadece canvas A4'te ✓
+5. **Auto-refresh** — Tarif düzenle → tekrar Share QR → aynı URL ama yeni snapshot ✓
+6. **Pause** (v2.5.7'den) — My Shares → kitchen card share'i pause et → QR yine çalışır ama "⏸ This share is paused" sayfası ✓
+7. **Delete** (v2.5.7'den) → Sil → URL 404 ✓
+8. **Empty canvas** — Tarif olmayan boş canvas'ta Share butonu disabled (zaten Save de disabled) ✓
+
+---
+
 # v2.5.7 — Share lifecycle (list / pause / delete) + create-or-get fix
 
 ⚠️ **Bu sürüm Supabase'de bir migration gerektiriyor.** Paketin içindeki `migrations/v2.5.7-share-lifecycle.sql` dosyasını Supabase Dashboard → SQL Editor'da bir kere çalıştır. Çalıştırmazsan paylaşım/QR butonları "Could not create share" hatası verir.

@@ -456,4 +456,11 @@ window.PCD.i18n.register('en', {
   share_paused_page_title: 'This share is paused',
   share_paused_page_msg: 'The owner has temporarily disabled this share. It may become available again later.',
   share_back_to_app: 'Open ProChefDesk →',
+
+  // Kitchen card share (v2.5.8)
+  canvas_share_btn: 'Share QR',
+  canvas_share_qr_subtitle: 'Scan to view canvas',
+  canvas_share_save_pdf: 'Save as PDF',
+  canvas_share_pdf_tip: 'Tap "Save as PDF" or use your browser\'s print menu to save this canvas to your phone.',
+  canvas_share_save_failed: 'Could not save canvas',
 });

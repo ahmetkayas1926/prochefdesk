@@ -138,6 +138,9 @@
               <button type="button" class="btn btn-outline" id="saveCanvasBtn" style="flex:1;" ${layout.length === 0 ? 'disabled' : ''}>
                 ${PCD.icon('check', 16)} <span>Save canvas</span>
               </button>
+              <button type="button" class="btn btn-outline" id="shareCanvasBtn" style="flex:1;" ${layout.length === 0 ? 'disabled' : ''} title="${PCD.escapeHtml((PCD.i18n && PCD.i18n.t) ? PCD.i18n.t('canvas_share_btn') : 'Share QR')}">
+                ${PCD.icon('share', 16)} <span>${(PCD.i18n && PCD.i18n.t) ? PCD.i18n.t('canvas_share_btn') : 'Share QR'}</span>
+              </button>
               <button type="button" class="btn btn-primary" id="printSheetBtn" style="flex:2;" ${layout.length === 0 ? 'disabled' : ''}>
                 ${PCD.icon('print', 16)} <span>Print · ${layout.length} recipes</span>
               </button>
@@ -241,9 +244,9 @@
         renderBody();
       });
 
-      // Save canvas
-      PCD.$('#saveCanvasBtn', bodyEl).addEventListener('click', function () {
-        if (layout.length === 0) return;
+      // Helper: persist current canvas state. Used by both Save and Share buttons.
+      // Returns the canvas ID (newly created or existing).
+      function persistCanvas() {
         const finalName = (canvasName || '').trim() || 'Untitled canvas';
         const payload = {
           name: finalName,
@@ -255,10 +258,62 @@
         const saved = PCD.store.upsertInTable('canvases', payload, 'cvs');
         if (saved && saved.id) {
           canvasId = saved.id;
-          PCD.toast.success('Canvas "' + finalName + '" saved');
+          return saved.id;
+        }
+        return null;
+      }
+
+      // Save canvas
+      PCD.$('#saveCanvasBtn', bodyEl).addEventListener('click', function () {
+        if (layout.length === 0) return;
+        const id = persistCanvas();
+        if (id) {
+          PCD.toast.success('Canvas "' + ((canvasName || '').trim() || 'Untitled canvas') + '" saved');
         } else {
           PCD.toast.error('Save failed');
         }
+      });
+
+      // Share canvas as QR (v2.5.8) — auto-saves the canvas first if it has no ID yet.
+      PCD.$('#shareCanvasBtn', bodyEl).addEventListener('click', function () {
+        const t = PCD.i18n.t;
+        if (layout.length === 0) return;
+
+        const user = PCD.store.get('user');
+        if (!user || !user.id) {
+          PCD.toast.error(t('qr_signin_required'));
+          return;
+        }
+        if (!PCD.share || !PCD.share.createOrGetShareUrl) {
+          PCD.toast.error(t('qr_share_error'));
+          return;
+        }
+
+        // Auto-save if needed so we always have a canvas ID to share.
+        const id = persistCanvas();
+        if (!id) {
+          PCD.toast.error(t('canvas_share_save_failed'));
+          return;
+        }
+
+        const shareBtn = PCD.$('#shareCanvasBtn', bodyEl);
+        const origHTML = shareBtn.innerHTML;
+        shareBtn.disabled = true;
+        shareBtn.innerHTML = '<span class="spinner"></span> ' + t('qr_generating');
+
+        PCD.share.createOrGetShareUrl('kitchencard', id).then(function (url) {
+          shareBtn.disabled = false;
+          shareBtn.innerHTML = origHTML;
+          PCD.qr.show({
+            title: (canvasName || '').trim() || 'Kitchen Reference',
+            subtitle: t('canvas_share_qr_subtitle'),
+            text: url
+          });
+        }).catch(function (e) {
+          shareBtn.disabled = false;
+          shareBtn.innerHTML = origHTML;
+          PCD.toast.error(t('qr_share_error') + ': ' + (e.message || e));
+        });
       });
 
       // New canvas
@@ -464,9 +519,18 @@
   }
 
   // ============ SHEET HTML BUILDER ============
+  // Accepts both data shapes:
+  //   - Owner form (live editor): r.ingredients = [{ ingredientId, amount, unit }]
+  //     -> looks up name from PCD.store.listIngredients()
+  //   - Public form (share snapshot): r.ingredients = [{ name, amount, unit }]
+  //     -> uses ri.name directly, never touches PCD.store
   function buildSheetHtml(opts) {
-    const ingMap = {};
-    PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
+    let ingMap = {};
+    if (PCD.store && PCD.store.listIngredients) {
+      try {
+        PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
+      } catch (e) { /* public viewer — store not initialised */ }
+    }
 
     const fontSizes = {
       xs:     { name: 7,    ing: 5.5, method: 5.5 },
@@ -490,8 +554,10 @@
 
       let ingsHtml = '';
       (r.ingredients || []).forEach(function (ri) {
-        const ing = ingMap[ri.ingredientId];
-        const name = ing ? ing.name : '?';
+        // Public-form (snapshot): ri.name is set directly.
+        // Owner-form (live editor): ri.ingredientId resolves via ingMap.
+        const ing = ri.ingredientId ? ingMap[ri.ingredientId] : null;
+        const name = ri.name || (ing ? ing.name : '?');
         const amt = opts.showAmounts ? formatAmount(ri.amount, ri.unit) : '';
         ingsHtml +=
           '<div class="kc-ing">' +
@@ -741,6 +807,114 @@
     });
   }
 
+  // ============ SHARE SNAPSHOT (v2.5.8) ============
+  // Build a self-contained snapshot of a saved canvas.
+  // - Resolves every recipe inline (name, ingredients with names+amounts+units, steps).
+  // - Public viewer never touches PCD.store — everything they need is in the payload.
+  // Returns null if canvas is missing or has no usable recipes.
+  function snapshotCanvas(canvasId) {
+    const cvs = PCD.store.getFromTable('canvases', canvasId);
+    if (!cvs) return null;
+
+    // Resolve each recipe in the layout, embedding ingredient details inline.
+    const ingMap = {};
+    PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
+
+    const layoutResolved = (cvs.layout || []).map(function (item) {
+      const r = item.recipeId ? PCD.store.getRecipe(item.recipeId) : null;
+      if (!r) return null;
+      const ingredients = (r.ingredients || []).map(function (ri) {
+        const ing = ingMap[ri.ingredientId];
+        return {
+          name: ing ? ing.name : '?',
+          amount: ri.amount,
+          unit: ri.unit || (ing && ing.unit) || '',
+        };
+      });
+      return {
+        recipeId: r.id,
+        span: Math.max(1, item.span || 1),
+        recipe: {
+          id: r.id,
+          name: r.name,
+          servings: r.servings,
+          ingredients: ingredients,
+          steps: r.steps,
+        },
+      };
+    }).filter(function (x) { return x !== null; });
+
+    if (layoutResolved.length === 0) return null;
+
+    return {
+      kind: 'kitchencard',
+      name: cvs.name || 'Kitchen Reference',
+      columns: cvs.columns,
+      orientation: cvs.orientation,
+      fontSize: cvs.fontSize,
+      showMethod: cvs.showMethod,
+      showAmounts: cvs.showAmounts,
+      layoutResolved: layoutResolved,
+      sharedAt: new Date().toISOString(),
+    };
+  }
+
+  // Render a snapshot for the public share viewer.
+  // Returns a complete HTML string (sheet + fit-to-screen wrapper +
+  // a "Save as PDF" button that triggers the browser's print dialog).
+  // Does NOT depend on PCD.store — works on any device, even in incognito.
+  function renderFromSnapshot(payload) {
+    if (!payload || !payload.layoutResolved) {
+      return '<div style="padding:40px;text-align:center;color:#666;">Canvas data missing</div>';
+    }
+
+    // Adapt snapshot's layoutResolved into the shape buildSheetHtml expects.
+    const layoutRecipes = payload.layoutResolved.map(function (item) {
+      return { recipe: item.recipe, span: item.span };
+    });
+
+    const sheetHtml = buildSheetHtml({
+      layoutRecipes: layoutRecipes,
+      columns: payload.columns,
+      orientation: payload.orientation,
+      fontSize: payload.fontSize,
+      showMethod: payload.showMethod,
+      showAmounts: payload.showAmounts,
+      title: payload.name,
+      interactive: false,
+    });
+
+    // Wrap with a small toolbar so mobile users can trigger Save-as-PDF.
+    // Localised label falls back to English if i18n isn't loaded yet.
+    const t = (PCD.i18n && PCD.i18n.t) ? PCD.i18n.t : function (k, fb) { return fb; };
+    const saveLabel = t('canvas_share_save_pdf', 'Save as PDF');
+    const tip = t('canvas_share_pdf_tip', 'Tap "Save as PDF" or use your browser\'s print menu.');
+
+    return (
+      '<style>' +
+        '.kc-share-toolbar { position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 14px; background: #ffffff; border-bottom: 1px solid #e5e7eb; flex-wrap: wrap; }' +
+        '.kc-share-toolbar .left { font-size: 13px; color: #666; }' +
+        '.kc-share-toolbar .left strong { color: #16a34a; }' +
+        '.kc-share-toolbar button { background: #16a34a; color: #fff; border: 0; padding: 8px 16px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; }' +
+        '.kc-share-toolbar button:hover { background: #15803d; }' +
+        '.kc-share-tip { font-size: 11px; color: #999; padding: 8px 14px 0; text-align: center; }' +
+        '@media print { .kc-share-toolbar, .kc-share-tip { display: none !important; } }' +
+        '.kc-share-wrap { padding: 14px; max-width: 100%; overflow-x: auto; background: #f8fafc; }' +
+        '@media print { .kc-share-wrap { padding: 0; background: #fff; } }' +
+      '</style>' +
+      '<div class="kc-share-toolbar">' +
+        '<div class="left"><strong>ProChefDesk</strong> · ' + PCD.escapeHtml(payload.name || '') + '</div>' +
+        '<button type="button" onclick="window.print()">📄 ' + PCD.escapeHtml(saveLabel) + '</button>' +
+      '</div>' +
+      '<div class="kc-share-tip">' + PCD.escapeHtml(tip) + '</div>' +
+      '<div class="kc-share-wrap">' + sheetHtml + '</div>'
+    );
+  }
+
   PCD.tools = PCD.tools || {};
-  PCD.tools.kitchenCards = { render: render };
+  PCD.tools.kitchenCards = {
+    render: render,
+    snapshot: snapshotCanvas,
+    renderFromSnapshot: renderFromSnapshot,
+  };
 })();

@@ -146,4 +146,11 @@ window.PCD.i18n.register('fr', {
   share_paused_page_title: 'Ce partage est en pause',
   share_paused_page_msg: 'Le propriétaire a temporairement désactivé ce partage. Il pourra redevenir disponible ultérieurement.',
   share_back_to_app: 'Ouvrir ProChefDesk →',
+
+  // Partage de fiche de cuisine (v2.5.8)
+  canvas_share_btn: 'Partager QR',
+  canvas_share_qr_subtitle: 'Scannez pour voir la fiche',
+  canvas_share_save_pdf: 'Enregistrer en PDF',
+  canvas_share_pdf_tip: 'Touchez « Enregistrer en PDF » ou utilisez le menu d\'impression de votre navigateur pour enregistrer cette fiche sur votre téléphone.',
+  canvas_share_save_failed: 'Impossible d\'enregistrer la fiche',
 });

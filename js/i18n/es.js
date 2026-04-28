@@ -145,4 +145,11 @@ window.PCD.i18n.register('es', {
   share_paused_page_title: 'Este compartido está pausado',
   share_paused_page_msg: 'El propietario ha desactivado temporalmente este compartido. Es posible que vuelva a estar disponible más tarde.',
   share_back_to_app: 'Abrir ProChefDesk →',
+
+  // Compartir ficha de cocina (v2.5.8)
+  canvas_share_btn: 'Compartir QR',
+  canvas_share_qr_subtitle: 'Escanea para ver la ficha',
+  canvas_share_save_pdf: 'Guardar como PDF',
+  canvas_share_pdf_tip: 'Toca "Guardar como PDF" o usa el menú de impresión del navegador para guardar esta ficha en tu teléfono.',
+  canvas_share_save_failed: 'No se pudo guardar la ficha',
 });

@@ -439,4 +439,11 @@ window.PCD.i18n.register('tr', {
   share_paused_page_title: 'Bu paylaşım duraklatılmış',
   share_paused_page_msg: 'Sahibi bu paylaşımı geçici olarak devre dışı bıraktı. İleride tekrar erişilebilir olabilir.',
   share_back_to_app: 'ProChefDesk\'i Aç →',
+
+  // Mutfak kartı paylaşımı (v2.5.8)
+  canvas_share_btn: 'QR Paylaş',
+  canvas_share_qr_subtitle: 'Kartı görmek için tara',
+  canvas_share_save_pdf: 'PDF olarak kaydet',
+  canvas_share_pdf_tip: 'Bu kartı telefonuna kaydetmek için "PDF olarak kaydet" düğmesine bas veya tarayıcının yazdırma menüsünü kullan.',
+  canvas_share_save_failed: 'Kart kaydedilemedi',
 });

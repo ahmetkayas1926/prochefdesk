@@ -148,4 +148,11 @@ window.PCD.i18n.register('ar', {
   share_paused_page_title: 'هذه المشاركة متوقّفة مؤقتًا',
   share_paused_page_msg: 'قام المالك بتعطيل هذه المشاركة مؤقتًا. قد تصبح متاحة مرة أخرى لاحقًا.',
   share_back_to_app: 'فتح ProChefDesk ←',
+
+  // مشاركة بطاقة المطبخ (v2.5.8)
+  canvas_share_btn: 'مشاركة QR',
+  canvas_share_qr_subtitle: 'امسح لعرض البطاقة',
+  canvas_share_save_pdf: 'حفظ كـ PDF',
+  canvas_share_pdf_tip: 'انقر على "حفظ كـ PDF" أو استخدم قائمة الطباعة في متصفحك لحفظ هذه البطاقة على هاتفك.',
+  canvas_share_save_failed: 'تعذّر حفظ البطاقة',
 });
