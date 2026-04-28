@@ -1,3 +1,69 @@
+# v2.6.0 — Checklist session history
+
+## Talep
+
+Şu ana kadar Start session → tikle tikle → Complete edince veriler **kayboluyor görünüyordu**. Aslında store'da kayıtlıydı ama UI'da gösterilmiyordu. HACCP compliance için geçmişin tamamı erişilebilir olmalı.
+
+## Çözüm
+
+**Veri zaten kaydediliyordu** — `completedAt` alanı set edilip session "active" listesinden çıkıyordu, ama silinmiyordu. Eksik olan tek şey **history UI**.
+
+### Eklenen özellikler
+
+- Template preview modal'ında yeni **"📜 History" butonu** (yanında badge ile tamamlanmış oturum sayısı)
+- History modal: tamamlanmış oturumlar listesi, en yeni üstte
+- Default **son 90 günü** göster, "Daha eski X oturumu göster" butonu
+- Her satırda: tarih · saat · şefin adı · X/Y tamamlanma · sorun varsa kırmızı uyarı
+- Bir satıra tıklayınca **session detayı** açılır
+- Detay görünümünde: başlangıç/bitiş saati, süre, şef, tüm item sonuçları (PASS/FAIL/değer/sıcaklık)
+- Her geçmiş kayıt için **"Print / PDF"** butonu (mevcut `printChecklistSession` kullanıyor)
+- Her geçmiş kayıt için **"Sil"** butonu (HACCP uyarısı ile)
+
+### Geçmiş tutma stratejisi
+
+- **Sınırsız tut** — kayıtlar otomatik silinmez (HACCP genelde 2 yıl ister, ama yer kaplamaz)
+- UI default 90 gün gösterir, "older" butonu ile genişler
+- Kullanıcı manuel silebilir (uyarı ile)
+
+### Şef imza
+
+- Otomatik: signed-in kullanıcının adı + tarih/saat
+- Mevcut `s.completedBy` field'ı zaten dolduruluyordu
+
+## Kod değişiklikleri
+
+`js/tools/checklist.js`:
+- Yeni `listCompletedSessions(templateId?)` helper
+- Yeni `deleteSessionById(sid)` helper
+- Yeni `openSessionHistory(templateId)` modal
+- Yeni `openHistoryDetail(session, tpl)` modal
+- Template preview modal'ına History butonu (badge ile)
+
+`js/i18n/*` (6 dilde 18 yeni key): `checklist_history*` ailesi
+
+## Migration gerekli mi
+
+Hayır. Veriler zaten store'da, sadece UI eksikti.
+
+## Bilinen sınırlama
+
+- Cross-template history view yok (örn. "tüm şablonlar arası son 30 gün") — ileride eklenebilir
+- Tarih aralığı filtresi yok (sadece "son 90 gün" / "tümü") — basit tutuldu
+- Bulk PDF export yok ("son 3 ay walk-in cooler check'lerinin tamamı tek PDF") — ileride eklenebilir
+
+## Test
+
+1. Bir template seç → preview aç → "📜 History" butonu görünmeli (henüz kayıt yoksa badge yok)
+2. Start session → birkaç item tikle → Complete
+3. Aynı template → preview → History butonunda **1** badge'i
+4. History'e tıkla → kayıt görünmeli (tarih/saat/şef adı/X/Y)
+5. Satıra tıkla → detay açılsın → tüm item sonuçları görünmeli
+6. Print → PDF üretilsin (alt köşede "Made with ProChefDesk")
+7. Birkaç kez tekrar et → çoklu kayıt listede sıralı görünsün
+8. 90 gün öncesi sahte data yoksa "Show older" butonu çıkmaz (mevcut data 90 gün içinde)
+
+---
+
 # v2.5.13 — Print/PDF çıktılarına "Made with prochefdesk.com" footer
 
 ## Talep

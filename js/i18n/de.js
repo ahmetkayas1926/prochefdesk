@@ -172,4 +172,23 @@ window.PCD.i18n.register('de', {
   checklist_delete_confirm_title: 'Diese Vorlage löschen?',
   checklist_delete_confirm_msg: 'Die Vorlage wird dauerhaft entfernt. Laufende Sitzungen funktionieren weiter.',
   checklist_deleted: 'Vorlage gelöscht',
+
+  // Sitzungsverlauf — hinzugefügt v2.6.0
+  checklist_history: 'Verlauf',
+  checklist_history_intro: 'Vergangene abgeschlossene Sitzungen. Auf eine Zeile tippen für Details oder als PDF speichern.',
+  checklist_history_empty_title: 'Noch keine abgeschlossenen Sitzungen',
+  checklist_history_empty_msg: 'Sobald Sie eine Sitzung abschließen, erscheint sie hier für Ihre Aufzeichnungen.',
+  checklist_history_show_older: '{n} ältere Sitzungen anzeigen',
+  checklist_history_total: 'Zeige alle {n} Sitzungen',
+  checklist_history_unknown_chef: 'Unbekannt',
+  checklist_history_issues: 'Probleme',
+  checklist_history_completed_at: 'Abgeschlossen',
+  checklist_history_started_at: 'Begonnen',
+  checklist_history_by: 'Von',
+  checklist_history_result: 'Ergebnis',
+  checklist_history_minutes: 'Min',
+  checklist_history_all_pass: 'alles bestanden',
+  checklist_history_delete_title: 'Diesen Eintrag löschen?',
+  checklist_history_delete_msg: 'Entfernt die Sitzung dauerhaft aus dem Verlauf. HACCP-Aufzeichnungen können nicht wiederhergestellt werden.',
+  checklist_history_deleted: 'Eintrag gelöscht',
 });

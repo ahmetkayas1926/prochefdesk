@@ -174,4 +174,23 @@ window.PCD.i18n.register('ar', {
   checklist_delete_confirm_title: 'حذف هذا القالب؟',
   checklist_delete_confirm_msg: 'سيتم حذف القالب نهائيًا. الجلسات الجارية ستستمر في العمل.',
   checklist_deleted: 'تم حذف القالب',
+
+  // سجل الجلسات — أُضيف v2.6.0
+  checklist_history: 'السجل',
+  checklist_history_intro: 'الجلسات المكتملة السابقة. اضغط على أي صف لعرض التفاصيل أو الحفظ كـ PDF.',
+  checklist_history_empty_title: 'لا توجد جلسات مكتملة بعد',
+  checklist_history_empty_msg: 'عند إكمال جلسة، ستظهر هنا في سجلاتك.',
+  checklist_history_show_older: 'عرض {n} جلسات أقدم',
+  checklist_history_total: 'عرض جميع الجلسات الـ {n}',
+  checklist_history_unknown_chef: 'غير معروف',
+  checklist_history_issues: 'مشاكل',
+  checklist_history_completed_at: 'اكتملت',
+  checklist_history_started_at: 'بدأت',
+  checklist_history_by: 'بواسطة',
+  checklist_history_result: 'النتيجة',
+  checklist_history_minutes: 'دقيقة',
+  checklist_history_all_pass: 'الكل ناجح',
+  checklist_history_delete_title: 'حذف هذا السجل؟',
+  checklist_history_delete_msg: 'يحذف الجلسة من السجل بشكل دائم. لا يمكن استرداد سجلات HACCP.',
+  checklist_history_deleted: 'تم حذف السجل',
 });

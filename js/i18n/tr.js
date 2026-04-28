@@ -465,4 +465,23 @@ window.PCD.i18n.register('tr', {
   checklist_delete_confirm_title: 'Bu şablon silinsin mi?',
   checklist_delete_confirm_msg: 'Şablon kalıcı olarak silinecek. Devam eden oturumlar çalışmaya devam eder.',
   checklist_deleted: 'Şablon silindi',
+
+  // Oturum geçmişi — eklendi v2.6.0
+  checklist_history: 'Geçmiş',
+  checklist_history_intro: 'Geçmiş tamamlanmış oturumlar. Detayı görmek veya PDF olarak kaydetmek için bir satıra dokun.',
+  checklist_history_empty_title: 'Henüz tamamlanmış oturum yok',
+  checklist_history_empty_msg: 'Bir oturumu tamamladığında, kayıtların için burada görünecek.',
+  checklist_history_show_older: '{n} daha eski oturumu göster',
+  checklist_history_total: 'Toplam {n} oturum gösteriliyor',
+  checklist_history_unknown_chef: 'Bilinmiyor',
+  checklist_history_issues: 'sorun',
+  checklist_history_completed_at: 'Tamamlandı',
+  checklist_history_started_at: 'Başlangıç',
+  checklist_history_by: 'Yapan',
+  checklist_history_result: 'Sonuç',
+  checklist_history_minutes: 'dk',
+  checklist_history_all_pass: 'tümü başarılı',
+  checklist_history_delete_title: 'Bu kayıt silinsin mi?',
+  checklist_history_delete_msg: 'Oturum geçmişten kalıcı olarak silinir. HACCP kayıtları geri alınamaz.',
+  checklist_history_deleted: 'Kayıt silindi',
 });

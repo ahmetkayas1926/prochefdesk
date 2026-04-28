@@ -482,4 +482,23 @@ window.PCD.i18n.register('en', {
   checklist_delete_confirm_title: 'Delete this template?',
   checklist_delete_confirm_msg: 'This will permanently remove the template. Any in-progress sessions will keep working.',
   checklist_deleted: 'Template deleted',
+
+  // Session history — added v2.6.0
+  checklist_history: 'History',
+  checklist_history_intro: 'Past completed sessions. Tap any row to view details or save as PDF.',
+  checklist_history_empty_title: 'No completed sessions yet',
+  checklist_history_empty_msg: 'Once you complete a session, it will appear here for your records.',
+  checklist_history_show_older: 'Show {n} older sessions',
+  checklist_history_total: 'Showing all {n} sessions',
+  checklist_history_unknown_chef: 'Unknown',
+  checklist_history_issues: 'issues',
+  checklist_history_completed_at: 'Completed',
+  checklist_history_started_at: 'Started',
+  checklist_history_by: 'By',
+  checklist_history_result: 'Result',
+  checklist_history_minutes: 'min',
+  checklist_history_all_pass: 'all pass',
+  checklist_history_delete_title: 'Delete this record?',
+  checklist_history_delete_msg: 'This permanently removes the session from history. HACCP records cannot be recovered.',
+  checklist_history_deleted: 'Record deleted',
 });

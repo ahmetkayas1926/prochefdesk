@@ -444,6 +444,25 @@
     });
   }
 
+  // List completed sessions for a given template, newest first.
+  // If templateId is omitted, returns ALL completed sessions in the workspace.
+  function listCompletedSessions(templateId) {
+    const all = readSessions();
+    return all.filter(function (s) {
+      if (!s.completedAt) return false;
+      if (templateId && s.templateId !== templateId) return false;
+      return true;
+    }).slice().sort(function (a, b) {
+      return (b.completedAt || '').localeCompare(a.completedAt || '');
+    });
+  }
+
+  function deleteSessionById(sid) {
+    const all = readSessions();
+    const next = all.filter(function (s) { return s.id !== sid; });
+    writeSessions(next);
+  }
+
   // ============ TEMPLATE PREVIEW ============
   // Click on a template → preview (not editor). Buttons: Start / Print / Edit / Share / Duplicate.
   function openTemplatePreview(tid) {
@@ -504,9 +523,20 @@
     printBtn.innerHTML = PCD.icon('print', 16);
     const shareBtn = PCD.el('button', { class: 'btn btn-outline', title: 'Share' });
     shareBtn.innerHTML = PCD.icon('share', 16);
+    // History button — shows past completed sessions for this template.
+    const completedCount = listCompletedSessions(tid).length;
+    const historyBtn = PCD.el('button', {
+      class: 'btn btn-outline',
+      title: t('checklist_history') || 'History',
+    });
+    historyBtn.innerHTML = PCD.icon('clock', 16) +
+      (completedCount > 0
+        ? ' <span style="font-weight:700;font-size:11px;background:var(--brand-600);color:#fff;padding:1px 6px;border-radius:999px;margin-inline-start:4px;">' + completedCount + '</span>'
+        : '');
     const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('close') });
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
     footer.appendChild(closeBtn);
+    footer.appendChild(historyBtn);
     footer.appendChild(printBtn);
     footer.appendChild(shareBtn);
     footer.appendChild(dupBtn);
@@ -523,6 +553,10 @@
     editBtn.addEventListener('click', function () {
       m.close();
       setTimeout(function () { openTemplateEditor(tid); }, 200);
+    });
+    historyBtn.addEventListener('click', function () {
+      m.close();
+      setTimeout(function () { openSessionHistory(tid); }, 200);
     });
     dupBtn.addEventListener('click', function () {
       const copy = PCD.clone(tpl);
@@ -1029,6 +1063,198 @@
           if (PCD.router.currentView() === 'checklist') render(v);
         }, 150);
       }
+    });
+  }
+
+  // ============ SESSION HISTORY (v2.6.0) ============
+  // Show past completed sessions for a template. By default shows last
+  // 90 days; user can expand to "all" with one tap. HACCP requires up
+  // to 2 years of records — we never auto-delete, just paginate the UI.
+  function openSessionHistory(templateId) {
+    const t = PCD.i18n.t;
+    const tpl = PCD.store.getFromTable('checklistTemplates', templateId);
+    if (!tpl) {
+      PCD.toast.error('Template not found');
+      return;
+    }
+
+    let showAll = false;
+    const body = PCD.el('div');
+
+    function paint() {
+      const all = listCompletedSessions(templateId);
+      const cutoff = Date.now() - (90 * 24 * 60 * 60 * 1000);
+      const visible = showAll ? all : all.filter(function (s) {
+        return new Date(s.completedAt).getTime() >= cutoff;
+      });
+      const hiddenCount = all.length - visible.length;
+
+      if (all.length === 0) {
+        body.innerHTML =
+          '<div class="text-muted" style="padding:48px 20px;text-align:center;line-height:1.6;">' +
+            '<div style="font-size:40px;margin-bottom:10px;">📜</div>' +
+            '<div style="font-weight:600;color:var(--text-1);margin-bottom:6px;">' + PCD.escapeHtml(t('checklist_history_empty_title') || 'No completed sessions yet') + '</div>' +
+            '<div style="font-size:13px;">' + PCD.escapeHtml(t('checklist_history_empty_msg') || 'Once you complete a session, it will appear here for your records.') + '</div>' +
+          '</div>';
+        return;
+      }
+
+      let html = '<div class="text-muted text-sm" style="margin-bottom:12px;">' +
+        PCD.escapeHtml(t('checklist_history_intro') || 'Past completed sessions. Tap any row to view details or save as PDF.') +
+      '</div>';
+
+      visible.forEach(function (s) {
+        const total = (s.items || []).length;
+        const done = (s.items || []).filter(isItemComplete).length;
+        const failed = (s.items || []).filter(function (i) { return i.result === 'fail'; }).length;
+        const oor = (s.items || []).filter(isValueOutOfRange).length;
+        const pct = total ? Math.round((done / total) * 100) : 0;
+        const issues = failed + oor;
+        const statusColor = issues > 0 ? '#dc2626' : '#16a34a';
+        const statusIcon = issues > 0 ? '⚠' : '✓';
+        const completedDate = new Date(s.completedAt);
+        const dateStr = completedDate.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+        const timeStr = completedDate.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+
+        html += '<div class="card card-hover" data-history-sid="' + s.id + '" style="padding:12px 14px;margin-bottom:8px;cursor:pointer;">' +
+          '<div style="display:flex;align-items:center;gap:10px;">' +
+            '<div style="width:36px;height:36px;border-radius:8px;background:' + statusColor + '15;color:' + statusColor + ';display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;flex-shrink:0;">' + statusIcon + '</div>' +
+            '<div style="flex:1;min-width:0;">' +
+              '<div style="font-weight:600;font-size:14px;">' + PCD.escapeHtml(dateStr) + ' · ' + PCD.escapeHtml(timeStr) + '</div>' +
+              '<div class="text-muted" style="font-size:12px;margin-top:2px;">' +
+                PCD.escapeHtml(s.completedBy || t('checklist_history_unknown_chef') || 'Unknown') +
+                ' · ' + done + '/' + total + ' (' + pct + '%)' +
+                (issues > 0 ? ' · <span style="color:' + statusColor + ';font-weight:600;">' + issues + ' ' + (t('checklist_history_issues') || 'issues') + '</span>' : '') +
+              '</div>' +
+            '</div>' +
+            '<div style="color:var(--text-3);">›</div>' +
+          '</div>' +
+        '</div>';
+      });
+
+      if (!showAll && hiddenCount > 0) {
+        html += '<button id="historyShowAllBtn" class="btn btn-secondary" style="width:100%;margin-top:8px;">' +
+          PCD.escapeHtml((t('checklist_history_show_older') || 'Show {n} older sessions').replace('{n}', hiddenCount)) +
+        '</button>';
+      } else if (showAll && all.length > 0) {
+        html += '<div class="text-muted" style="text-align:center;font-size:11px;margin-top:10px;">' +
+          PCD.escapeHtml((t('checklist_history_total') || 'Showing all {n} sessions').replace('{n}', all.length)) +
+        '</div>';
+      }
+
+      body.innerHTML = html;
+
+      // Wire up clicks
+      body.querySelectorAll('[data-history-sid]').forEach(function (el) {
+        el.addEventListener('click', function () {
+          const sid = this.getAttribute('data-history-sid');
+          const session = getSession(sid);
+          if (session) openHistoryDetail(session, tpl);
+        });
+      });
+      const showAllBtn = body.querySelector('#historyShowAllBtn');
+      if (showAllBtn) {
+        showAllBtn.addEventListener('click', function () {
+          showAll = true;
+          paint();
+        });
+      }
+    }
+    paint();
+
+    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('close'), style: { width: '100%' } });
+    const footer = PCD.el('div', { style: { width: '100%' } });
+    footer.appendChild(closeBtn);
+
+    const m = PCD.modal.open({
+      title: '📜 ' + (t('checklist_history') || 'History') + ' · ' + tpl.name,
+      body: body,
+      footer: footer,
+      size: 'md',
+      closable: true,
+    });
+    closeBtn.addEventListener('click', function () { m.close(); });
+  }
+
+  // Show a single past session — read-only view + Print/Delete actions.
+  function openHistoryDetail(session, tpl) {
+    const t = PCD.i18n.t;
+    const total = (session.items || []).length;
+    const done = (session.items || []).filter(isItemComplete).length;
+    const failed = (session.items || []).filter(function (i) { return i.result === 'fail'; }).length;
+    const oor = (session.items || []).filter(isValueOutOfRange).length;
+    const issues = failed + oor;
+    const completedDate = new Date(session.completedAt);
+    const startedDate = new Date(session.startedAt);
+    const durationMin = Math.max(1, Math.round((completedDate - startedDate) / 60000));
+
+    const body = PCD.el('div');
+    let itemsHtml = '';
+    (session.items || []).forEach(function (it) {
+      const cat = CATS.find(function (c) { return c.id === it.cat; });
+      const tplItem = (tpl.items || []).find(function (x) { return x.id === it.id; }) || {};
+      const text = tplItem.text || '(item)';
+      const oorThis = isValueOutOfRange(it);
+      let valueStr = '';
+      if (it.result === 'pass') valueStr = '<span style="color:#16a34a;font-weight:700;">✓ PASS</span>';
+      else if (it.result === 'fail') valueStr = '<span style="color:#dc2626;font-weight:700;">✗ FAIL</span>';
+      else if (it.value !== undefined && it.value !== null && it.value !== '') {
+        valueStr = '<span style="' + (oorThis ? 'color:#dc2626;font-weight:700;' : 'color:var(--text-1);') + '">' + PCD.escapeHtml(String(it.value)) + (tplItem.unit ? ' ' + tplItem.unit : '') + '</span>';
+      } else if (isItemComplete(it)) {
+        valueStr = '<span style="color:#16a34a;">✓</span>';
+      } else {
+        valueStr = '<span style="color:var(--text-3);">—</span>';
+      }
+      itemsHtml += '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid var(--border);">' +
+        '<div style="flex:1;min-width:0;font-size:13px;">' + PCD.escapeHtml(text) + '</div>' +
+        '<div style="font-size:13px;flex-shrink:0;">' + valueStr + '</div>' +
+      '</div>';
+    });
+
+    body.innerHTML =
+      '<div style="background:var(--surface-2);padding:12px 14px;border-radius:8px;margin-bottom:14px;font-size:13px;line-height:1.7;">' +
+        '<div><strong>' + (t('checklist_history_completed_at') || 'Completed') + ':</strong> ' + completedDate.toLocaleString() + '</div>' +
+        '<div><strong>' + (t('checklist_history_started_at') || 'Started') + ':</strong> ' + startedDate.toLocaleString() + ' (' + durationMin + ' ' + (t('checklist_history_minutes') || 'min') + ')</div>' +
+        '<div><strong>' + (t('checklist_history_by') || 'By') + ':</strong> ' + PCD.escapeHtml(session.completedBy || (t('checklist_history_unknown_chef') || 'Unknown')) + '</div>' +
+        '<div><strong>' + (t('checklist_history_result') || 'Result') + ':</strong> ' + done + '/' + total +
+          (issues > 0 ? ' · <span style="color:#dc2626;font-weight:700;">' + issues + ' ' + (t('checklist_history_issues') || 'issues') + '</span>' : ' · <span style="color:#16a34a;font-weight:700;">' + (t('checklist_history_all_pass') || 'all pass') + '</span>') +
+        '</div>' +
+      '</div>' +
+      '<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;">' + itemsHtml + '</div>';
+
+    const printBtn = PCD.el('button', { class: 'btn btn-primary', style: { flex: '1' } });
+    printBtn.innerHTML = PCD.icon('print', 16) + ' <span>' + (t('print') || 'Print / PDF') + '</span>';
+    const deleteBtn = PCD.el('button', { class: 'btn btn-outline', title: t('act_delete') || 'Delete' });
+    deleteBtn.innerHTML = PCD.icon('trash', 16);
+    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('close') });
+    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
+    footer.appendChild(closeBtn);
+    footer.appendChild(deleteBtn);
+    footer.appendChild(printBtn);
+
+    const m = PCD.modal.open({
+      title: tpl.name + ' — ' + completedDate.toLocaleDateString(),
+      body: body,
+      footer: footer,
+      size: 'md',
+      closable: true,
+    });
+    closeBtn.addEventListener('click', function () { m.close(); });
+    printBtn.addEventListener('click', function () { printChecklistSession(session, tpl); });
+    deleteBtn.addEventListener('click', function () {
+      PCD.modal.confirm({
+        icon: '🗑', iconKind: 'danger', danger: true,
+        title: t('checklist_history_delete_title') || 'Delete this record?',
+        text: t('checklist_history_delete_msg') || 'This permanently removes the session from history. HACCP records cannot be recovered.',
+        okText: t('act_delete') || 'Delete',
+      }).then(function (ok) {
+        if (!ok) return;
+        deleteSessionById(session.id);
+        PCD.toast.success(t('checklist_history_deleted') || 'Record deleted');
+        m.close();
+        // Reopen history list to refresh count
+        setTimeout(function () { openSessionHistory(tpl.id); }, 200);
+      });
     });
   }
 

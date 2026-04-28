@@ -171,4 +171,23 @@ window.PCD.i18n.register('es', {
   checklist_delete_confirm_title: '¿Eliminar esta plantilla?',
   checklist_delete_confirm_msg: 'La plantilla se eliminará permanentemente. Las sesiones en curso seguirán funcionando.',
   checklist_deleted: 'Plantilla eliminada',
+
+  // Historial de sesiones — añadido v2.6.0
+  checklist_history: 'Historial',
+  checklist_history_intro: 'Sesiones completadas anteriormente. Toca una fila para ver detalles o guardar como PDF.',
+  checklist_history_empty_title: 'Aún no hay sesiones completadas',
+  checklist_history_empty_msg: 'Cuando completes una sesión, aparecerá aquí para tus registros.',
+  checklist_history_show_older: 'Mostrar {n} sesiones anteriores',
+  checklist_history_total: 'Mostrando las {n} sesiones',
+  checklist_history_unknown_chef: 'Desconocido',
+  checklist_history_issues: 'incidencias',
+  checklist_history_completed_at: 'Completada',
+  checklist_history_started_at: 'Iniciada',
+  checklist_history_by: 'Por',
+  checklist_history_result: 'Resultado',
+  checklist_history_minutes: 'min',
+  checklist_history_all_pass: 'todo correcto',
+  checklist_history_delete_title: '¿Eliminar este registro?',
+  checklist_history_delete_msg: 'Elimina la sesión del historial de forma permanente. Los registros HACCP no se pueden recuperar.',
+  checklist_history_deleted: 'Registro eliminado',
 });

@@ -172,4 +172,23 @@ window.PCD.i18n.register('fr', {
   checklist_delete_confirm_title: 'Supprimer ce modèle ?',
   checklist_delete_confirm_msg: 'Le modèle sera définitivement supprimé. Les sessions en cours continueront de fonctionner.',
   checklist_deleted: 'Modèle supprimé',
+
+  // Historique des sessions — ajouté v2.6.0
+  checklist_history: 'Historique',
+  checklist_history_intro: 'Sessions terminées précédemment. Touchez une ligne pour voir les détails ou enregistrer en PDF.',
+  checklist_history_empty_title: 'Aucune session terminée pour le moment',
+  checklist_history_empty_msg: 'Une fois une session terminée, elle apparaîtra ici pour vos registres.',
+  checklist_history_show_older: 'Afficher {n} sessions plus anciennes',
+  checklist_history_total: 'Affichage de toutes les {n} sessions',
+  checklist_history_unknown_chef: 'Inconnu',
+  checklist_history_issues: 'problèmes',
+  checklist_history_completed_at: 'Terminée',
+  checklist_history_started_at: 'Commencée',
+  checklist_history_by: 'Par',
+  checklist_history_result: 'Résultat',
+  checklist_history_minutes: 'min',
+  checklist_history_all_pass: 'tout réussi',
+  checklist_history_delete_title: 'Supprimer cet enregistrement ?',
+  checklist_history_delete_msg: 'La session sera supprimée définitivement de l\'historique. Les registres HACCP ne peuvent pas être récupérés.',
+  checklist_history_deleted: 'Enregistrement supprimé',
 });
