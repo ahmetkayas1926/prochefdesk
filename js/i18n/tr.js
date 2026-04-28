@@ -553,18 +553,5 @@ window.PCD.i18n.register('tr', {
   ws_edit_tooltip: 'Çalışma alanını düzenle',
   ws_new_workspace: 'Yeni çalışma alanı',
   ws_edit_title: 'Çalışma alanını düzenle',
-
-  // Çalışma alanı editör alanları (v2.6.8)
-  ws_field_name: 'Çalışma alanı adı',
-  ws_field_name_placeholder: 'örn. La Bella, Crown Banquet, Le Bistro',
-  ws_field_concept: 'Konsept',
-  ws_field_concept_placeholder: 'örn. İtalyan alakart, Banket, Fransız bistrosu',
-  ws_field_role: 'Göreviniz',
-  ws_field_role_placeholder: 'örn. Sous Chef, Head Chef',
-  ws_field_city: 'Şehir / konum',
-  ws_field_city_placeholder: 'örn. Perth, AU',
-  ws_field_period: 'Dönem',
-  ws_field_period_hint: 'Hâlâ buradaysanız bitiş tarihini boş bırakın',
-  ws_field_color: 'Renk',
   optional: 'isteğe bağlı',
 });

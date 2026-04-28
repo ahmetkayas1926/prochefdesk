@@ -483,29 +483,29 @@
     const body = PCD.el('div');
     function buildBody() {
       body.innerHTML =
-        '<div class="field"><label class="field-label">' + t('ws_field_name') + ' *</label>' +
-        '<input type="text" class="input" id="wsNameInp" value="' + PCD.escapeHtml(data.name || '') + '" placeholder="' + PCD.escapeHtml(t('ws_field_name_placeholder')) + '"></div>' +
+        '<div class="field"><label class="field-label">Workspace name *</label>' +
+        '<input type="text" class="input" id="wsNameInp" value="' + PCD.escapeHtml(data.name || '') + '" placeholder="e.g. La Bella, Crown Banquet, Le Bistro"></div>' +
 
         '<div class="field-row">' +
-          '<div class="field"><label class="field-label">' + t('ws_field_concept') + '</label>' +
-            '<input type="text" class="input" id="wsConcept" value="' + PCD.escapeHtml(data.concept || '') + '" placeholder="' + PCD.escapeHtml(t('ws_field_concept_placeholder')) + '"></div>' +
-          '<div class="field"><label class="field-label">' + t('ws_field_role') + '</label>' +
-            '<input type="text" class="input" id="wsRole" value="' + PCD.escapeHtml(data.role || '') + '" placeholder="' + PCD.escapeHtml(t('ws_field_role_placeholder')) + '"></div>' +
+          '<div class="field"><label class="field-label">Concept</label>' +
+            '<input type="text" class="input" id="wsConcept" value="' + PCD.escapeHtml(data.concept || '') + '" placeholder="e.g. Italian a la carte, Banquet, French bistro"></div>' +
+          '<div class="field"><label class="field-label">Your role</label>' +
+            '<input type="text" class="input" id="wsRole" value="' + PCD.escapeHtml(data.role || '') + '" placeholder="e.g. Sous Chef, Head Chef"></div>' +
         '</div>' +
 
         '<div class="field-row">' +
-          '<div class="field"><label class="field-label">' + t('ws_field_city') + '</label>' +
-            '<input type="text" class="input" id="wsCity" value="' + PCD.escapeHtml(data.city || '') + '" placeholder="' + PCD.escapeHtml(t('ws_field_city_placeholder')) + '"></div>' +
-          '<div class="field"><label class="field-label">' + t('ws_field_period') + '</label>' +
+          '<div class="field"><label class="field-label">City / location</label>' +
+            '<input type="text" class="input" id="wsCity" value="' + PCD.escapeHtml(data.city || '') + '" placeholder="e.g. Perth, AU"></div>' +
+          '<div class="field"><label class="field-label">Period</label>' +
             '<div style="display:flex;gap:6px;">' +
               '<input type="month" class="input" id="wsStart" value="' + PCD.escapeHtml((data.periodStart || '').slice(0, 7)) + '" style="flex:1;">' +
               '<input type="month" class="input" id="wsEnd" value="' + PCD.escapeHtml((data.periodEnd || '').slice(0, 7)) + '" placeholder="ongoing" style="flex:1;">' +
             '</div>' +
-            '<div class="field-hint">' + t('ws_field_period_hint') + '</div>' +
+            '<div class="field-hint">Leave end blank if you\'re still there</div>' +
           '</div>' +
         '</div>' +
 
-        '<div class="field"><label class="field-label">' + t('ws_field_color') + '</label>' +
+        '<div class="field"><label class="field-label">Color</label>' +
           '<div style="display:flex;gap:8px;flex-wrap:wrap;" id="wsColors"></div>' +
         '</div>';
       paintColors();

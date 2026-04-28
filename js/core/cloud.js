@@ -206,38 +206,6 @@
 
               // Special handling for workspaces: union by id (don't drop local-only ws)
               // BUT respect tombstones: deleted ws stays deleted even if cloud still has it
-              //
-              // BUG FIX (v2.6.8): On every login the bootstrap code creates an
-              // empty "My Kitchen" workspace BEFORE cloud pull. Without this
-              // filter, that ghost workspace would be kept (local-only) and
-              // accumulate one duplicate per login.
-              // Drop a local-only workspace if ALL of these are true:
-              //   - it's not in the remote
-              //   - it still has the default name "My Kitchen"
-              //   - it has no content in any workspace-bound table
-              //   - it was created very recently (last 5 minutes)
-              // This catches the bootstrap-created ghost without affecting
-              // genuine empty workspaces the user just created intentionally
-              // (those will be uploaded on next push, then survive future pulls).
-              function isGhostBootstrapWs(ws) {
-                if (!ws) return false;
-                if (ws.name !== 'My Kitchen') return false;
-                if (ws.concept || ws.role || ws.city) return false;
-                if (ws.archived) return false;
-                const createdMs = ws.createdAt ? new Date(ws.createdAt).getTime() : 0;
-                if (!createdMs) return false;
-                if (Date.now() - createdMs > 5 * 60 * 1000) return false;
-                // Any content in any workspace-bound table → not a ghost.
-                const wsTables = ['recipes','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','stockCountHistory','haccpLogs','haccpUnits','haccpReadings'];
-                for (let i = 0; i < wsTables.length; i++) {
-                  const t = current[wsTables[i]];
-                  if (t && t[ws.id] && Object.keys(t[ws.id]).length > 0) return false;
-                }
-                return true;
-              }
-
-              // Special handling for workspaces: union by id (don't drop local-only ws)
-              // BUT respect tombstones: deleted ws stays deleted even if cloud still has it
               const mergedWorkspaces = {};
               const allIds = new Set();
               if (remote.workspaces) Object.keys(remote.workspaces).forEach(function (id) { allIds.add(id); });
@@ -255,13 +223,7 @@
                   const remoteUpd = remoteWs.updatedAt || '';
                   mergedWorkspaces[wsId] = (localUpd > remoteUpd) ? localWs : remoteWs;
                 } else if (localWs) {
-                  // Local-only: drop it if it looks like a ghost bootstrap workspace,
-                  // otherwise keep (the user genuinely created it).
-                  if (!isGhostBootstrapWs(localWs)) {
-                    mergedWorkspaces[wsId] = localWs;
-                  } else {
-                    PCD.log('cloud merge: dropping ghost bootstrap workspace', wsId);
-                  }
+                  mergedWorkspaces[wsId] = localWs;
                 } else if (remoteWs) {
                   mergedWorkspaces[wsId] = remoteWs;
                 }

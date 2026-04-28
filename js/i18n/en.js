@@ -570,18 +570,5 @@ window.PCD.i18n.register('en', {
   ws_edit_tooltip: 'Edit workspace',
   ws_new_workspace: 'New workspace',
   ws_edit_title: 'Edit workspace',
-
-  // Workspace editor fields (v2.6.8)
-  ws_field_name: 'Workspace name',
-  ws_field_name_placeholder: 'e.g. La Bella, Crown Banquet, Le Bistro',
-  ws_field_concept: 'Concept',
-  ws_field_concept_placeholder: 'e.g. Italian a la carte, Banquet, French bistro',
-  ws_field_role: 'Your role',
-  ws_field_role_placeholder: 'e.g. Sous Chef, Head Chef',
-  ws_field_city: 'City / location',
-  ws_field_city_placeholder: 'e.g. Perth, AU',
-  ws_field_period: 'Period',
-  ws_field_period_hint: 'Leave end blank if you\'re still there',
-  ws_field_color: 'Color',
   optional: 'optional',
 });
