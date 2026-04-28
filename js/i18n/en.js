@@ -409,4 +409,23 @@ window.PCD.i18n.register('en', {
   legal_privacy_subtitle: 'How we handle your data',
   legal_terms: 'Terms of Service',
   legal_terms_subtitle: 'Rules for using ProChefDesk',
+
+  // Report an issue — added v2.5.5
+  report_issue_card_title: 'Report an issue',
+  report_issue_card_subtitle: 'Found a bug? Let us know',
+  report_issue_title: 'Report an issue',
+  report_issue_intro: 'Tell us what went wrong. Your message will open in your email app.',
+  report_issue_subject_label: 'Subject',
+  report_issue_subject_placeholder: 'Briefly, what happened?',
+  report_issue_desc_label: 'Description',
+  report_issue_desc_placeholder: 'Steps to reproduce, what you expected, what you saw…',
+  report_issue_debug_note: 'App version, browser, and OS will be added automatically to help us debug.',
+  report_issue_send: 'Send via email',
+  report_issue_validation: 'Please fill in both subject and description.',
+  report_issue_opened: 'Email app opened',
+
+  // QR — added v2.5.6
+  qr_generating: 'Generating QR…',
+  qr_share_error: 'Could not create QR',
+  qr_signin_required: 'Sign in to create a shareable QR',
 });

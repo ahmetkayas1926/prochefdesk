@@ -101,4 +101,23 @@ window.PCD.i18n.register('ar', {
   legal_privacy_subtitle: 'كيف نتعامل مع بياناتك',
   legal_terms: 'شروط الخدمة',
   legal_terms_subtitle: 'قواعد استخدام ProChefDesk',
+
+  // الإبلاغ عن مشكلة — أُضيف v2.5.5
+  report_issue_card_title: 'الإبلاغ عن مشكلة',
+  report_issue_card_subtitle: 'وجدت خطأ؟ أعلِمنا',
+  report_issue_title: 'الإبلاغ عن مشكلة',
+  report_issue_intro: 'أخبرنا بما حدث. ستُفتح رسالتك في تطبيق البريد الإلكتروني لديك.',
+  report_issue_subject_label: 'الموضوع',
+  report_issue_subject_placeholder: 'ما الذي حدث باختصار؟',
+  report_issue_desc_label: 'الوصف',
+  report_issue_desc_placeholder: 'خطوات إعادة الإنتاج، ما توقعت، ما رأيت…',
+  report_issue_debug_note: 'سيتم إضافة إصدار التطبيق والمتصفح ونظام التشغيل تلقائيًا للمساعدة في تصحيح الخطأ.',
+  report_issue_send: 'إرسال عبر البريد الإلكتروني',
+  report_issue_validation: 'يرجى ملء الموضوع والوصف.',
+  report_issue_opened: 'تم فتح تطبيق البريد الإلكتروني',
+
+  // QR — أُضيف v2.5.6
+  qr_generating: 'جارٍ إنشاء رمز QR…',
+  qr_share_error: 'تعذّر إنشاء رمز QR',
+  qr_signin_required: 'سجّل الدخول لإنشاء رمز QR قابل للمشاركة',
 });

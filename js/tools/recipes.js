@@ -279,17 +279,28 @@
           }},
           { icon: 'share', label: PCD.i18n.t('act_share'), onClick: function () { openPreview(rid); } },
           { icon: 'grid', label: PCD.i18n.t('act_show_qr'), onClick: function () {
-            const ingMap = currentIngMap();
-            const lines = [r.name, ''];
-            lines.push((r.servings || 1) + ' servings');
-            lines.push('');
-            lines.push('Ingredients:');
-            (r.ingredients || []).forEach(function (ri) {
-              const ing = ingMap[ri.ingredientId];
-              lines.push('• ' + (ing ? ing.name : '(removed)') + ' — ' + PCD.fmtNumber(ri.amount) + ' ' + (ri.unit || ''));
+            // Generate a share URL and put THAT in the QR — so scanning opens
+            // the recipe in a browser, not just a wall of text.
+            const t = PCD.i18n.t;
+            const user = PCD.store.get('user');
+            if (!user || !user.id) {
+              PCD.toast.error(t('qr_signin_required'));
+              return;
+            }
+            if (!PCD.share || !PCD.share.createOrGetShareUrl) {
+              PCD.toast.error(t('qr_share_error'));
+              return;
+            }
+            PCD.toast.info(t('qr_generating'));
+            PCD.share.createOrGetShareUrl('recipe', rid).then(function (url) {
+              PCD.qr.show({
+                title: r.name,
+                subtitle: t('act_show_qr'),
+                text: url
+              });
+            }).catch(function (e) {
+              PCD.toast.error(t('qr_share_error') + ': ' + (e.message || e));
             });
-            if (r.steps) { lines.push(''); lines.push('Method:'); lines.push(r.steps); }
-            PCD.qr.show({ title: r.name, subtitle: 'Recipe QR', text: lines.join('\n') });
           }},
           { icon: 'trash', label: PCD.i18n.t('act_delete'), danger: true, onClick: function () {
             const backup = PCD.clone(r);

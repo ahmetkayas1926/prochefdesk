@@ -249,6 +249,15 @@
     const shareId = params.get('share');
     if (!shareId) return false;
 
+    // Hide splash immediately — share path bypasses normal app boot,
+    // which is what normally hides the splash. Without this, user sees
+    // an indefinite spinner on the "Kitchen OS" splash screen.
+    const splash = document.getElementById('splash');
+    if (splash) {
+      splash.classList.add('fade-out');
+      setTimeout(function () { splash.style.display = 'none'; }, 340);
+    }
+
     const appEl = document.getElementById('app');
     if (appEl) {
       appEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif;color:#666;">Loading shared content...</div>';

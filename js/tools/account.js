@@ -231,6 +231,13 @@
               </div>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
+            <button class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;border-bottom:1px solid var(--border);" id="reportIssueBtn">
+              <div>
+                <div style="font-weight:600;">🐛 ${t('report_issue_card_title')}</div>
+                <div class="text-muted text-sm">${t('report_issue_card_subtitle')}</div>
+              </div>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
             <a href="mailto:hello@prochefdesk.com?subject=ProChefDesk Feedback" class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;text-decoration:none;color:inherit;">
               <div>
                 <div style="font-weight:600;">✉️ ${t('feedback_title')}</div>
@@ -505,6 +512,8 @@
         PCD.toast.info('Tour unavailable');
       }
     });
+    const reportIssueBtn = PCD.$('#reportIssueBtn', view);
+    if (reportIssueBtn) reportIssueBtn.addEventListener('click', openReportIssueModal);
   }
 
   function openAboutModal() {
@@ -560,6 +569,80 @@
     footer.appendChild(closeBtn);
     const m = PCD.modal.open({ title: t('faq_title'), body: body, footer: footer, size: 'md', closable: true });
     closeBtn.addEventListener('click', function () { m.close(); });
+  }
+
+  function openReportIssueModal() {
+    const t = PCD.i18n.t;
+    const body = PCD.el('div');
+    body.innerHTML =
+      '<div class="text-muted text-sm" style="margin-bottom:14px;line-height:1.5;">' + PCD.escapeHtml(t('report_issue_intro')) + '</div>' +
+      '<div style="margin-bottom:12px;">' +
+        '<label for="reportSubject" style="display:block;font-weight:600;font-size:13px;margin-bottom:4px;">' + PCD.escapeHtml(t('report_issue_subject_label')) + '</label>' +
+        '<input id="reportSubject" type="text" maxlength="120" placeholder="' + PCD.escapeHtml(t('report_issue_subject_placeholder')) + '" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-1);font-size:14px;box-sizing:border-box;">' +
+      '</div>' +
+      '<div style="margin-bottom:12px;">' +
+        '<label for="reportDesc" style="display:block;font-weight:600;font-size:13px;margin-bottom:4px;">' + PCD.escapeHtml(t('report_issue_desc_label')) + '</label>' +
+        '<textarea id="reportDesc" rows="6" maxlength="2000" placeholder="' + PCD.escapeHtml(t('report_issue_desc_placeholder')) + '" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-1);font-size:14px;font-family:inherit;resize:vertical;box-sizing:border-box;"></textarea>' +
+      '</div>' +
+      '<div class="text-muted" style="font-size:11px;line-height:1.5;padding:8px 10px;background:var(--surface-2);border-radius:6px;">ℹ️ ' + PCD.escapeHtml(t('report_issue_debug_note')) + '</div>';
+
+    const cancelBtn = PCD.el('button', { type: 'button', class: 'btn btn-secondary', text: t('close'), style: { flex: '1' } });
+    const sendBtn = PCD.el('button', { type: 'button', class: 'btn btn-primary', text: t('report_issue_send'), style: { flex: '1' } });
+    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
+    footer.appendChild(cancelBtn);
+    footer.appendChild(sendBtn);
+
+    const m = PCD.modal.open({ title: '🐛 ' + t('report_issue_title'), body: body, footer: footer, size: 'md', closable: true });
+    cancelBtn.addEventListener('click', function () { m.close(); });
+    sendBtn.addEventListener('click', function () {
+      const subjectEl = body.querySelector('#reportSubject');
+      const descEl = body.querySelector('#reportDesc');
+      const subject = (subjectEl && subjectEl.value || '').trim();
+      const desc = (descEl && descEl.value || '').trim();
+      if (!subject || !desc) {
+        PCD.toast.error(t('report_issue_validation'));
+        return;
+      }
+
+      // Detect browser & OS from userAgent
+      const ua = navigator.userAgent || '';
+      let browser = 'Unknown';
+      if (/Edg\//.test(ua)) browser = 'Edge';
+      else if (/OPR\/|Opera/.test(ua)) browser = 'Opera';
+      else if (/Chrome\//.test(ua)) browser = 'Chrome';
+      else if (/Firefox\//.test(ua)) browser = 'Firefox';
+      else if (/Safari\//.test(ua)) browser = 'Safari';
+      let os = 'Unknown';
+      if (/Windows/.test(ua)) os = 'Windows';
+      else if (/Android/.test(ua)) os = 'Android';
+      else if (/iPhone|iPad|iPod/.test(ua)) os = 'iOS';
+      else if (/Mac OS X|Macintosh/.test(ua)) os = 'macOS';
+      else if (/Linux/.test(ua)) os = 'Linux';
+
+      const locale = (PCD.i18n && PCD.i18n.currentLocale) || 'en';
+      const theme = (document.documentElement.getAttribute('data-theme')) || 'light';
+      const screenSize = (window.innerWidth || 0) + 'x' + (window.innerHeight || 0);
+      const ts = new Date().toISOString();
+
+      const debugBlock =
+        '\n\n---\n' +
+        'App version: ' + (window.PCD_CONFIG && PCD_CONFIG.APP_VERSION) + '\n' +
+        'Browser: ' + browser + '\n' +
+        'OS: ' + os + '\n' +
+        'Language: ' + locale + '\n' +
+        'Theme: ' + theme + '\n' +
+        'Screen: ' + screenSize + '\n' +
+        'Timestamp: ' + ts + '\n' +
+        'URL: ' + (window.location && window.location.href || '');
+
+      const mailto = 'mailto:hello@prochefdesk.com' +
+        '?subject=' + encodeURIComponent('[ProChefDesk] ' + subject) +
+        '&body=' + encodeURIComponent(desc + debugBlock);
+
+      window.location.href = mailto;
+      m.close();
+      PCD.toast.success(t('report_issue_opened'));
+    });
   }
 
   // ============ PUBLIC PROFILE PREVIEW ============

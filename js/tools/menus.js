@@ -747,27 +747,33 @@
       });
     });
     qrBtn.addEventListener('click', function () {
-      // Build plain-text menu for QR payload (text mode - works with any scanner)
-      const lines = [menu.name || 'Menu'];
-      if (menu.subtitle) lines.push(menu.subtitle);
-      lines.push('');
-      (menu.sections || []).forEach(function (sec) {
-        if (!sec.items || sec.items.length === 0) return;
-        lines.push('— ' + sec.name + ' —');
-        sec.items.forEach(function (it) {
-          const r = it.recipeId ? PCD.store.getRecipe(it.recipeId) : null;
-          const name = it.customName || (r ? r.name : '(removed)');
-          const price = (it.price !== undefined && it.price !== null && it.price !== '') ? Number(it.price) : (r && r.salePrice ? r.salePrice : null);
-          let line = '• ' + name;
-          if (!menu.hidePrices && price) line += ' — ' + PCD.fmtMoney(price);
-          lines.push(line);
+      // Generate a share URL and put THAT in the QR — so scanning opens
+      // the menu in a browser, not just a wall of text.
+      const t = PCD.i18n.t;
+      const user = PCD.store.get('user');
+      if (!user || !user.id) {
+        PCD.toast.error(t('qr_signin_required'));
+        return;
+      }
+      if (!PCD.share || !PCD.share.createOrGetShareUrl) {
+        PCD.toast.error(t('qr_share_error'));
+        return;
+      }
+      qrBtn.disabled = true;
+      const origHTML = qrBtn.innerHTML;
+      qrBtn.innerHTML = '<span class="spinner"></span> ' + t('qr_generating');
+      PCD.share.createOrGetShareUrl('menu', menu.id).then(function (url) {
+        qrBtn.disabled = false;
+        qrBtn.innerHTML = origHTML;
+        PCD.qr.show({
+          title: menu.name || 'Menu',
+          subtitle: 'Scan to view',
+          text: url
         });
-        lines.push('');
-      });
-      PCD.qr.show({
-        title: menu.name || 'Menu',
-        subtitle: 'Scan to view',
-        text: lines.join('\n')
+      }).catch(function (e) {
+        qrBtn.disabled = false;
+        qrBtn.innerHTML = origHTML;
+        PCD.toast.error(t('qr_share_error') + ': ' + (e.message || e));
       });
     });
   }

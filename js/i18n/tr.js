@@ -392,4 +392,23 @@ window.PCD.i18n.register('tr', {
   legal_privacy_subtitle: 'Verilerinizi nasıl ele alıyoruz',
   legal_terms: 'Kullanım Şartları',
   legal_terms_subtitle: 'ProChefDesk kullanım kuralları',
+
+  // Sorun bildir — eklendi v2.5.5
+  report_issue_card_title: 'Sorun bildir',
+  report_issue_card_subtitle: 'Bir hata mı var? Bize iletin',
+  report_issue_title: 'Sorun bildir',
+  report_issue_intro: 'Ne oldu, anlatın. Mesajınız e-posta uygulamanızda açılacak.',
+  report_issue_subject_label: 'Konu',
+  report_issue_subject_placeholder: 'Kısaca ne oldu?',
+  report_issue_desc_label: 'Açıklama',
+  report_issue_desc_placeholder: 'Adımlar, beklediğiniz, gördüğünüz…',
+  report_issue_debug_note: 'Sürüm, tarayıcı ve işletim sistemi bilgileri hata ayıklaması için otomatik eklenecek.',
+  report_issue_send: 'E-posta ile gönder',
+  report_issue_validation: 'Lütfen konu ve açıklamayı doldurun.',
+  report_issue_opened: 'E-posta uygulaması açıldı',
+
+  // QR — eklendi v2.5.6
+  qr_generating: 'QR oluşturuluyor…',
+  qr_share_error: 'QR oluşturulamadı',
+  qr_signin_required: 'Paylaşılabilir QR için giriş yapın',
 });
