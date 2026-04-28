@@ -371,48 +371,48 @@
 
     const body = PCD.el('div');
     let html = '<div style="margin-bottom:10px;">' +
-      '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Active workspaces</div>';
+      '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">' + t('ws_active_section') + '</div>';
     active.forEach(function (w) {
       const stats = workspaceStats(w.id);
       const isActive = w.id === activeId;
       html += '<div data-pickws="' + w.id + '" role="button" tabindex="0" class="ws-row' + (isActive ? ' active' : '') + '" style="display:flex;align-items:center;gap:12px;width:100%;padding:12px;border:1.5px solid ' + (isActive ? 'var(--brand-600)' : 'var(--border)') + ';border-radius:var(--r-md);background:' + (isActive ? 'var(--brand-50)' : 'var(--surface)') + ';margin-bottom:6px;cursor:pointer;text-align:start;box-sizing:border-box;">' +
         '<div style="width:36px;height:36px;border-radius:8px;background:' + wsColorHex(w.color) + ';color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + PCD.icon(w.icon || 'chef-hat', 18) + '</div>' +
         '<div style="flex:1;min-width:0;">' +
-          '<div style="font-weight:700;font-size:14px;">' + PCD.escapeHtml(w.name) + (isActive ? ' <span style="font-size:10px;color:var(--brand-700);font-weight:700;letter-spacing:0.04em;">· ACTIVE</span>' : '') + '</div>' +
+          '<div style="font-weight:700;font-size:14px;">' + PCD.escapeHtml(w.name) + (isActive ? ' <span style="font-size:10px;color:var(--brand-700);font-weight:700;letter-spacing:0.04em;">· ' + t('ws_active_badge') + '</span>' : '') + '</div>' +
           '<div class="text-muted" style="font-size:12px;">' +
             (w.concept ? PCD.escapeHtml(w.concept) + ' · ' : '') +
-            stats.recipes + ' recipes · ' + stats.menus + ' menus' +
+            stats.recipes + ' ' + t('ws_recipes_count') + ' · ' + stats.menus + ' ' + t('ws_menus_count') +
           '</div>' +
         '</div>' +
-        '<button type="button" class="icon-btn" data-edit-ws="' + w.id + '" title="Edit workspace" style="flex-shrink:0;">' + PCD.icon('edit', 16) + '</button>' +
+        '<button type="button" class="icon-btn" data-edit-ws="' + w.id + '" title="' + PCD.escapeHtml(t('ws_edit_tooltip')) + '" style="flex-shrink:0;">' + PCD.icon('edit', 16) + '</button>' +
       '</div>';
     });
     html += '</div>';
 
     if (archived.length > 0) {
       html += '<div style="margin-top:14px;">' +
-        '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Archived</div>';
+        '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">' + t('ws_archived_section') + '</div>';
       archived.forEach(function (w) {
         html += '<div data-pickws="' + w.id + '" role="button" tabindex="0" class="ws-row" style="display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);margin-bottom:6px;cursor:pointer;opacity:0.6;text-align:start;box-sizing:border-box;">' +
           '<div style="width:32px;height:32px;border-radius:8px;background:var(--text-3);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + PCD.icon('archive', 16) + '</div>' +
           '<div style="flex:1;min-width:0;">' +
             '<div style="font-weight:600;font-size:13px;">' + PCD.escapeHtml(w.name) + '</div>' +
-            '<div class="text-muted" style="font-size:11px;">Archived' + (w.concept ? ' · ' + PCD.escapeHtml(w.concept) : '') + '</div>' +
+            '<div class="text-muted" style="font-size:11px;">' + t('ws_archived_label') + (w.concept ? ' · ' + PCD.escapeHtml(w.concept) : '') + '</div>' +
           '</div>' +
         '</div>';
       });
       html += '</div>';
     }
 
-    html += '<button class="btn btn-outline" id="newWsBtn" style="width:100%;margin-top:12px;">' + PCD.icon('plus', 16) + ' <span>New workspace</span></button>';
+    html += '<button class="btn btn-outline" id="newWsBtn" style="width:100%;margin-top:12px;">' + PCD.icon('plus', 16) + ' <span>' + t('ws_new_workspace') + '</span></button>';
 
     body.innerHTML = html;
 
-    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: 'Close', style: { width: '100%' } });
+    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('close'), style: { width: '100%' } });
     const footer = PCD.el('div', { style: { width: '100%' } });
     footer.appendChild(closeBtn);
 
-    const m = PCD.modal.open({ title: 'Workspaces', body: body, footer: footer, size: 'sm', closable: true });
+    const m = PCD.modal.open({ title: t('ws_switcher_title'), body: body, footer: footer, size: 'sm', closable: true });
     closeBtn.addEventListener('click', function () { m.close(); });
 
     PCD.on(body, 'click', '[data-pickws]', function (e) {
@@ -555,7 +555,7 @@
     footer.appendChild(saveBtn);
 
     const m = PCD.modal.open({
-      title: existing ? 'Edit workspace' : 'New workspace',
+      title: existing ? t('ws_edit_title') : t('ws_new_workspace'),
       body: body, footer: footer, size: 'md', closable: true
     });
 

@@ -1,3 +1,26 @@
+# v2.6.7 — Workspace switcher modal Türkçe çevirisi
+
+## Talep
+
+Çalışma alanları modal'ında bazı kısımlar İngilizce kalıyordu: "Workspaces", "Active workspaces", "recipes · menus", "ACTIVE", "Edit workspace", "Archived", "New workspace", "Close", "Edit workspace / New workspace" başlıkları.
+
+## Çözüm
+
+10 yeni i18n key (`ws_*`) — sadece EN ve TR. `app.js`'de hardcoded metinler `t('ws_*')` çağrılarına dönüştürüldü.
+
+Mevcut `close` keyi var — yeniden kullanıldı, duplicate yok.
+
+## Test
+
+1. Dil = TR → workspace dropdown aç
+2. "Çalışma Alanları" başlığı, "Aktif çalışma alanları" alt başlık
+3. Workspace satırlarında "X tarif · Y menü"
+4. Aktif olanın yanında "AKTİF" rozet
+5. "Yeni çalışma alanı" butonu, "Kapat" butonu
+6. Bir workspace'i düzenle → modal başlığı "Çalışma alanını düzenle"
+
+---
+
 # v2.6.6 — Sidenav başlıkları çevrildi
 
 ## Talep

@@ -541,5 +541,17 @@ window.PCD.i18n.register('tr', {
   section_sourcing: 'Tedarik',
   section_catering: 'Catering',
   section_haccp_forms: 'HACCP Formları',
+
+  // Çalışma alanı seçici modal — eklendi v2.6.7
+  ws_switcher_title: 'Çalışma Alanları',
+  ws_active_section: 'Aktif çalışma alanları',
+  ws_archived_section: 'Arşivlenmiş',
+  ws_archived_label: 'Arşivlenmiş',
+  ws_active_badge: 'AKTİF',
+  ws_recipes_count: 'tarif',
+  ws_menus_count: 'menü',
+  ws_edit_tooltip: 'Çalışma alanını düzenle',
+  ws_new_workspace: 'Yeni çalışma alanı',
+  ws_edit_title: 'Çalışma alanını düzenle',
   optional: 'isteğe bağlı',
 });

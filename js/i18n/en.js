@@ -558,5 +558,17 @@ window.PCD.i18n.register('en', {
   section_sourcing: 'Sourcing',
   section_catering: 'Catering',
   section_haccp_forms: 'HACCP Forms',
+
+  // Workspace switcher modal — added v2.6.7
+  ws_switcher_title: 'Workspaces',
+  ws_active_section: 'Active workspaces',
+  ws_archived_section: 'Archived',
+  ws_archived_label: 'Archived',
+  ws_active_badge: 'ACTIVE',
+  ws_recipes_count: 'recipes',
+  ws_menus_count: 'menus',
+  ws_edit_tooltip: 'Edit workspace',
+  ws_new_workspace: 'New workspace',
+  ws_edit_title: 'Edit workspace',
   optional: 'optional',
 });
