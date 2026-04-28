@@ -1,3 +1,48 @@
+# v2.5.13 — Print/PDF çıktılarına "Made with prochefdesk.com" footer
+
+## Talep
+
+Tüm print/PDF çıktılarının altına nazik bir reklam: "Made with ProChefDesk · prochefdesk.com". Recipe print, menü print, canvas print, checklist print, cost report, purchase order, shopping list, event print, portion calculator print — hepsine.
+
+## Çözüm
+
+Tüm print akışları `PCD.print()` helper'ından geçtiği için footer'ı **tek noktaya** ekledim. Recipe / menü / canvas / checklist / inventory / events / portion / shopping — hepsi otomatik kazanır.
+
+**Footer:**
+- Tek satır, ortalanmış, çok küçük (9px)
+- Üstte ince ayraç çizgi, sayfa içeriği ile karışmaz
+- "Made with **ProChefDesk** · prochefdesk.com" — "ProChefDesk" yeşil
+- Sadece print/PDF çıktısının altında görünür, ekran modal'ında zaten kullanıcı görmez (sayfa sonunda)
+- İngilizce — uluslararası tutarlılık
+
+## Kod değişiklikleri
+
+`js/core/utils.js`:
+- `PCD.print()` içinde `FOOTER_HTML` sabiti tanımlandı
+- Partial içerik wrap edilirken `</body>` öncesine footer enjekte edilir
+- Tam HTML (DOCTYPE'lı) verilirse `</body>` regex'i ile yine enjekte edilir (mevcut tüm caller'lar partial gönderiyor, ama gelecekte tam HTML gönderene de çalışsın)
+
+## Migration gerekli mi
+
+Hayır.
+
+## Bilinen sınırlama
+
+Public share sayfasındaki Kitchen Card "Save as PDF" butonu `PCD.print()` kullanmıyor (iframe içinden direkt `window.print()`). Footer oraya eklenmedi. Eğer istenirse ayrı pakette public share renderer'ına da eklenebilir.
+
+## Test
+
+1. Bir recipe'de Print → çıktının en altında "Made with ProChefDesk · prochefdesk.com" görünmeli
+2. Bir menüde Print → aynı
+3. Kitchen Card Print → aynı
+4. Checklist (blank veya completed session) Print → aynı
+5. Cost Report PDF → aynı
+6. Inventory stock count / purchase order → aynı
+7. Shopping list → aynı
+8. Event print → aynı
+
+---
+
 # v2.5.12 — Checklist sıralama + workspace kopyalama
 
 ## Talep
