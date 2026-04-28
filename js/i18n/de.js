@@ -191,4 +191,14 @@ window.PCD.i18n.register('de', {
   checklist_history_delete_title: 'Diesen Eintrag löschen?',
   checklist_history_delete_msg: 'Entfernt die Sitzung dauerhaft aus dem Verlauf. HACCP-Aufzeichnungen können nicht wiederhergestellt werden.',
   checklist_history_deleted: 'Eintrag gelöscht',
+
+  // HACCP — hinzugefügt v2.6.1
+  nav_haccp_logs: 'Kühl & Gefrier',
+  haccp_logs_title: 'Kühl- & Gefrierprotokoll',
+  haccp_logs_subtitle: 'Tägliche Überwachung · HACCP-konform',
+  haccp_add_unit: 'Einheit hinzufügen',
+  haccp_shift_morning: 'Morgens (Öffnung)',
+  haccp_shift_evening: 'Abends (Schluss)',
+  haccp_corrective_action: 'Korrekturmaßnahme / Notiz',
+  optional: 'optional',
 });

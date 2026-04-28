@@ -190,4 +190,14 @@ window.PCD.i18n.register('es', {
   checklist_history_delete_title: '¿Eliminar este registro?',
   checklist_history_delete_msg: 'Elimina la sesión del historial de forma permanente. Los registros HACCP no se pueden recuperar.',
   checklist_history_deleted: 'Registro eliminado',
+
+  // HACCP — añadido v2.6.1
+  nav_haccp_logs: 'Registro Frigorífico',
+  haccp_logs_title: 'Registro de Frigoríficos y Congeladores',
+  haccp_logs_subtitle: 'Monitoreo diario · Registros conformes con HACCP',
+  haccp_add_unit: 'Añadir unidad',
+  haccp_shift_morning: 'Mañana (apertura)',
+  haccp_shift_evening: 'Tarde (cierre)',
+  haccp_corrective_action: 'Acción correctiva / nota',
+  optional: 'opcional',
 });

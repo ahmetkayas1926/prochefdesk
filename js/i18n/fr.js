@@ -191,4 +191,14 @@ window.PCD.i18n.register('fr', {
   checklist_history_delete_title: 'Supprimer cet enregistrement ?',
   checklist_history_delete_msg: 'La session sera supprimée définitivement de l\'historique. Les registres HACCP ne peuvent pas être récupérés.',
   checklist_history_deleted: 'Enregistrement supprimé',
+
+  // HACCP — ajouté v2.6.1
+  nav_haccp_logs: 'Journal Frigo',
+  haccp_logs_title: 'Journal Frigo & Congélateur',
+  haccp_logs_subtitle: 'Suivi quotidien · Conforme HACCP',
+  haccp_add_unit: 'Ajouter unité',
+  haccp_shift_morning: 'Matin (ouverture)',
+  haccp_shift_evening: 'Soir (fermeture)',
+  haccp_corrective_action: 'Action corrective / note',
+  optional: 'facultatif',
 });

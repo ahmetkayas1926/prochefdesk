@@ -193,4 +193,14 @@ window.PCD.i18n.register('ar', {
   checklist_history_delete_title: 'حذف هذا السجل؟',
   checklist_history_delete_msg: 'يحذف الجلسة من السجل بشكل دائم. لا يمكن استرداد سجلات HACCP.',
   checklist_history_deleted: 'تم حذف السجل',
+
+  // HACCP — أُضيف v2.6.1
+  nav_haccp_logs: 'سجل التبريد',
+  haccp_logs_title: 'سجل الثلاجات والمجمدات',
+  haccp_logs_subtitle: 'مراقبة يومية · متوافق مع HACCP',
+  haccp_add_unit: 'إضافة وحدة',
+  haccp_shift_morning: 'الصباح (الافتتاح)',
+  haccp_shift_evening: 'المساء (الإغلاق)',
+  haccp_corrective_action: 'إجراء تصحيحي / ملاحظة',
+  optional: 'اختياري',
 });

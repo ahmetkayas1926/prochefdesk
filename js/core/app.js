@@ -62,6 +62,8 @@
       PCD.router.register('suppliers', PCD.tools.suppliers.render);
       PCD.router.register('events', PCD.tools.events.render);
       PCD.router.register('checklist', PCD.tools.checklist.render);
+      // HACCP Forms (v2.6.1+) — fridge/freezer log first; cooling/cleaning later
+      PCD.router.register('haccp_logs', PCD.tools.haccpLogs.render);
 
       // 7) Start router + render initial view
       PCD.router.start();
@@ -202,6 +204,7 @@
           suppliers:   function () { PCD.tools.suppliers && PCD.tools.suppliers.openEditor && PCD.tools.suppliers.openEditor(); },
           checklist:   function () { PCD.tools.checklist && PCD.tools.checklist.openEditor && PCD.tools.checklist.openEditor(); },
           inventory:   function () { PCD.tools.inventory && PCD.tools.inventory.openEditor && PCD.tools.inventory.openEditor(); },
+          haccp_logs:  function () { PCD.tools.haccpLogs && PCD.tools.haccpLogs.openEditor && PCD.tools.haccpLogs.openEditor(); },
         };
         if (directCreators[cur]) {
           directCreators[cur]();
@@ -273,6 +276,9 @@
       ]},
       { title: 'Catering', items: [
         { key: 'events',  icon: 'calendar', route: 'events' },
+      ]},
+      { title: 'HACCP Forms', items: [
+        { key: 'haccp_logs', icon: 'thermometer', route: 'haccp_logs' },
       ]},
       { title: null, items: [
         { key: 'account', icon: 'user', route: 'account' },

@@ -1,3 +1,61 @@
+# v2.6.1 — HACCP Forms · Fridge & Freezer Log
+
+## Talep
+
+HACCP standartlarına uygun fridge/freezer derece takip formu. Şef cihazları sayısı/isimleriyle özelleştirir, günde 2 vardiya (sabah açılış + akşam kapanış) derece girer, out-of-range değerler için corrective action notu ekleyebilir, aylık tablo PDF olarak basılır.
+
+## Çözüm
+
+Yeni "HACCP Forms" başlığı altında ilk araç: **Fridge & Freezer Log**. Side menüden erişilir.
+
+### Özellikler
+
+- **Cihaz yönetimi:** Şef her birim için isim + min/max sıcaklık aralığı tanımlar. Hazır şablonlar: Fridge (0–4°C), Walk-in Cooler (0–4°C), Freezer (–25 to –18°C), Bar Fridge, Display Cooler, Hot Holding (63–90°C).
+- **Aylık grid:** Satırlar = ayın günleri (1-31), sütunlar = cihaz × vardiya (AM/PM). Tek bakışta tüm ay görünür.
+- **Bugün vurgusu:** Bugünün satırı yeşil arka planla işaretlenir.
+- **Hücre tıklayınca:** Sıcaklık girme modal'ı açılır. Auto-focus, klavye sayısal.
+- **Out-of-range uyarı:** Limit dışı değer girildiğinde anında kırmızı uyarı + corrective action önerisi (zorunlu değil, isteğe bağlı). Şef gerçek değeri (8°C gibi) yazıp, ne yaptığını not olarak ekler.
+- **Future-proof:** Gelecek tarihlere giriş engellenir.
+- **PDF export:** Tüm ay tek A4 yatay PDF — sıcaklık tablosu + corrective action notları altta + reviewed by alanı + footer "Made with ProChefDesk".
+- **Sıcaklık birimi:** °C / °F seçilebilir (workspace başına `prefs.haccpTempUnit`).
+
+### Kullanıcı akışı
+
+1. Side menü → HACCP Forms → Fridge & Freezer Log
+2. İlk açılışta empty state → "Add first unit"
+3. "Walk-in Cooler 1" ekle, preset "Walk-in Cooler" seç → 0–4°C otomatik
+4. Ana grid açılır → bugünün AM hücresine tıkla → 3.5°C gir → kaydet
+5. Akşam kapanışta PM hücresine tıkla → 4.1°C gir
+6. Eğer 8°C girersen → kırmızı uyarı → "Door left open after delivery" yaz → kaydet
+7. Ay sonu → "Print/PDF" → A4 yatay PDF → sağlık denetimi için klasöre
+
+## Kod değişiklikleri
+
+- `js/tools/haccp_logs.js` (YENİ) — tüm HACCP log mantığı tek modülde
+- `js/core/store.js` — `wsBoundTables` listesine `haccpUnits` + `haccpReadings` eklendi (legacy migration + workspace deletion cleanup için)
+- `js/core/cloud.js` — tombstone cleanup listesine eklendi
+- `js/core/app.js` — router register + sidenav (HACCP Forms section) + context-aware "+" button
+- `js/core/utils.js` — `thermometer` icon eklendi
+- `index.html` — script tag eklendi
+- `js/i18n/*` — EN/TR tam, ES/FR/DE/AR minimal (kalanlar EN fallback)
+
+## Migration gerekli mi
+
+Hayır. Yeni state tabloları otomatik oluşturulur, mevcut user_data Supabase tablosu zaten her şeyi tutuyor. Cloud sync otomatik çalışır.
+
+## Test
+
+1. Side menü → HACCP Forms → Fridge & Freezer Log
+2. "Add first unit" → preset seç → cihaz ekle
+3. Bugünün AM hücresine tıkla → derece gir → kaydet → grid'de görünmeli
+4. Hatalı bir değer (örn. 8°C, limit 4°C) gir → kırmızı uyarı görünmeli + ⚠ ikonu hücrede
+5. Note ekle → 📝 ikonu hücrede görünmeli
+6. Ay değiştir → ← → butonları ile geçmiş aylara bak
+7. "Print/PDF" → A4 yatay PDF aç → tablo + notlar + footer
+8. Mobile + butonu → HACCP Logs'tayken yeni cihaz oluşturma modalı açmalı
+
+---
+
 # v2.6.0 — Checklist session history
 
 ## Talep
