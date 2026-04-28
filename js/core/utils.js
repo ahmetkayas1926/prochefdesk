@@ -341,9 +341,11 @@
     // Footer injected into every printable. Subtle, single-line, only
     // visible on the printed page — never obtrusive on screen.
     // English-only by design (acts as a soft credit/attribution line).
+    // print-color-adjust:exact forces the green brand colour to render even
+    // when the user has Chrome's "Background graphics" option disabled.
     const FOOTER_HTML =
-      '<div class="pcd-print-footer" style="margin-top:24px;padding-top:8px;border-top:1px solid #e5e5e5;text-align:center;font-size:9px;color:#999;font-family:-apple-system,Segoe UI,Roboto,sans-serif;letter-spacing:0.02em;">' +
-        'Made with <strong style="color:#16a34a;">ProChefDesk</strong> · prochefdesk.com' +
+      '<div class="pcd-print-footer" style="margin-top:24px;padding-top:8px;border-top:1px solid #e5e5e5;text-align:center;font-size:9px;color:#999;font-family:-apple-system,Segoe UI,Roboto,sans-serif;letter-spacing:0.02em;-webkit-print-color-adjust:exact;print-color-adjust:exact;">' +
+        'Made with <strong style="color:#16a34a;font-weight:700;-webkit-print-color-adjust:exact;print-color-adjust:exact;">ProChefDesk</strong> · prochefdesk.com' +
       '</div>';
 
     // If input looks like partial content (no <!DOCTYPE>), wrap it

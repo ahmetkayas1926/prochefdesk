@@ -247,7 +247,7 @@
               });
 
               // Also clean up workspace-bound tables for tombstoned workspaces
-              ['recipes','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','pendingStockCount','stockCountHistory','haccpUnits','haccpReadings'].forEach(function (tbl) {
+              ['recipes','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','pendingStockCount','stockCountHistory','haccpLogs','haccpUnits','haccpReadings'].forEach(function (tbl) {
                 if (merged[tbl]) {
                   Object.keys(tombstones).forEach(function (deadWsId) {
                     if (merged[tbl][deadWsId]) {

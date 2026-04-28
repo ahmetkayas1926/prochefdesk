@@ -105,7 +105,7 @@
 
     // Legacy migration — if any of the workspace-bound tables hold flat data
     // (i.e. ids at top level, not nested by wsId), move it under the new ws
-    const wsBoundTables = ['recipes','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','stockCountHistory','haccpUnits','haccpReadings'];
+    const wsBoundTables = ['recipes','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','stockCountHistory','haccpLogs','haccpUnits','haccpReadings'];
     wsBoundTables.forEach(function (tbl) {
       const t = state[tbl];
       if (!t) return;
@@ -360,7 +360,7 @@
       delete next[wsId];
       state.workspaces = next;
       // Wipe workspace-bound data
-      ['recipes','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','pendingStockCount','stockCountHistory','haccpUnits','haccpReadings'].forEach(function (tbl) {
+      ['recipes','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','pendingStockCount','stockCountHistory','haccpLogs','haccpUnits','haccpReadings'].forEach(function (tbl) {
         if (state[tbl] && state[tbl][wsId] !== undefined) {
           const t = Object.assign({}, state[tbl]);
           delete t[wsId];

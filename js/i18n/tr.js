@@ -520,5 +520,19 @@ window.PCD.i18n.register('tr', {
   haccp_value_required: 'Sıcaklık değeri gir',
   haccp_reading_deleted: 'Okuma silindi',
   haccp_too_many_units: 'Çok fazla cihaz var. Tablo ekranda ve baskıda sıkışık görünebilir. İleride çok sayfalı düzen eklenecek.',
+
+  // HACCP çoklu log desteği — eklendi v2.6.4
+  haccp_log: 'Form',
+  haccp_new_log: 'Yeni form',
+  haccp_rename_log: 'Formu yeniden adlandır',
+  haccp_delete_log: 'Formu sil',
+  haccp_delete_log_title: 'Bu form silinsin mi?',
+  haccp_delete_log_msg: '"{name}" formu, {count} cihazı ve tüm sıcaklık kayıtlarıyla birlikte kalıcı olarak silinecek. Bu işlem geri alınamaz.',
+  haccp_log_deleted: 'Form silindi',
+  haccp_log_intro: 'Her mutfak alanı için ayrı bir form oluştur. Birden fazla mutfak yönettiğinde (örn. banket, alakart, bar) ve farklı soğutucular olduğunda kullanışlıdır.',
+  haccp_log_name: 'Form adı',
+  haccp_log_name_placeholder: 'örn. Banket Mutfağı',
+  haccp_log_name_required: 'Form adı gerekli',
+  haccp_log_created: 'Form oluşturuldu',
   optional: 'isteğe bağlı',
 });

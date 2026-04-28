@@ -537,5 +537,19 @@ window.PCD.i18n.register('en', {
   haccp_value_required: 'Enter a temperature value',
   haccp_reading_deleted: 'Reading removed',
   haccp_too_many_units: 'You have many units. The grid may feel tight on screen and on print. Multi-page layout is coming in a future update.',
+
+  // HACCP multi-log support — added v2.6.4
+  haccp_log: 'Log',
+  haccp_new_log: 'New log',
+  haccp_rename_log: 'Rename log',
+  haccp_delete_log: 'Delete log',
+  haccp_delete_log_title: 'Delete this log?',
+  haccp_delete_log_msg: 'This permanently deletes "{name}" along with its {count} unit(s) and all temperature readings. This cannot be undone.',
+  haccp_log_deleted: 'Log deleted',
+  haccp_log_intro: 'Create a separate log for each kitchen area. Useful when you manage multiple kitchens (e.g. banquet, à la carte, bar) with different refrigeration units.',
+  haccp_log_name: 'Log name',
+  haccp_log_name_placeholder: 'e.g. Banquet Kitchen',
+  haccp_log_name_required: 'Log name is required',
+  haccp_log_created: 'Log created',
   optional: 'optional',
 });

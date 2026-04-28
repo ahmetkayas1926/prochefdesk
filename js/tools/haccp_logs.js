@@ -1,28 +1,31 @@
 /* ================================================================
    ProChefDesk — haccp_logs.js
-   HACCP Forms · Fridge & Freezer Temperature Log (v2.6.1)
+   HACCP Forms · Fridge & Freezer Temperature Log
 
-   Two storage tables:
-   - haccpUnits     — list of refrigeration units (workspace-bound)
-                      shape: { id, name, type, min, max, unit, sortIndex }
-   - haccpReadings  — daily readings for each unit (workspace-bound)
+   Storage tables (workspace-bound):
+   - haccpLogs      — separate logs per kitchen area
+                      shape: { id, name, sortIndex }
+   - haccpUnits     — refrigeration units, scoped to a log
+                      shape: { id, logId, name, min, max, unit, sortIndex }
+   - haccpReadings  — daily readings, scoped to a unit
                       shape: { id, unitId, date (YYYY-MM-DD),
                                morning: { value, time, chef, note } | null,
                                evening: { value, time, chef, note } | null }
 
-   View structure:
-   1. Header: month picker + unit count
-   2. Grid: rows = days of the month, columns = unit × shift (AM/PM)
-            Out-of-range cells highlighted red, click to edit
-   3. Toolbar: + Add unit, Print/PDF, settings
-   4. Detail modal: enter value, optional note ("corrective action")
+   Multi-log support added in v2.6.4:
+   - Workspace contains many logs ("Banquet Kitchen", "Italian Restaurant")
+   - Each log has its own units and readings
+   - Header has a log selector dropdown + log management menu
+   - Existing data is migrated to a "Default" log on first run
    ================================================================ */
 
 (function () {
   'use strict';
   const PCD = window.PCD;
+  const TABLE_LOGS = 'haccpLogs';
   const TABLE_UNITS = 'haccpUnits';
   const TABLE_READINGS = 'haccpReadings';
+  const PREF_CURRENT_LOG = 'prefs.haccpCurrentLogId';
 
   // ============ DEFAULT UNIT TEMPLATES ============
   // Used as suggestions when chef adds a new unit.
@@ -44,9 +47,88 @@
     PCD.store.set('prefs.haccpTempUnit', u === 'F' ? 'F' : 'C');
   }
 
+  // ============ LOG HELPERS (v2.6.4) ============
+  function listLogs() {
+    return (PCD.store.listTable(TABLE_LOGS) || []).slice().sort(function (a, b) {
+      const ai = (typeof a.sortIndex === 'number') ? a.sortIndex : 999999;
+      const bi = (typeof b.sortIndex === 'number') ? b.sortIndex : 999999;
+      if (ai !== bi) return ai - bi;
+      return (a.createdAt || '').localeCompare(b.createdAt || '');
+    });
+  }
+
+  // Migration + default-log bootstrap.
+  // - If no logs exist, create a "Default" log.
+  // - Any units without a logId get attached to the default log.
+  // Runs every render — cheap, idempotent.
+  function ensureDefaultLog() {
+    let logs = listLogs();
+    let defaultLog = null;
+
+    if (logs.length === 0) {
+      defaultLog = PCD.store.upsertInTable(TABLE_LOGS, {
+        name: 'Default',
+        sortIndex: 0,
+      }, 'log');
+      logs = [defaultLog];
+    } else {
+      defaultLog = logs[0];
+    }
+
+    // Backfill any orphan units (created before v2.6.4).
+    const orphanUnits = (PCD.store.listTable(TABLE_UNITS) || []).filter(function (u) { return !u.logId; });
+    if (orphanUnits.length > 0) {
+      orphanUnits.forEach(function (u) {
+        u.logId = defaultLog.id;
+        PCD.store.upsertInTable(TABLE_UNITS, u, 'unit');
+      });
+    }
+
+    return logs;
+  }
+
+  function getCurrentLogId() {
+    const logs = listLogs();
+    if (logs.length === 0) return null;
+    const stored = PCD.store.get(PREF_CURRENT_LOG);
+    if (stored && logs.some(function (l) { return l.id === stored; })) return stored;
+    return logs[0].id;
+  }
+  function setCurrentLogId(logId) {
+    PCD.store.set(PREF_CURRENT_LOG, logId);
+  }
+
+  function getCurrentLog() {
+    const id = getCurrentLogId();
+    if (!id) return null;
+    return PCD.store.getFromTable(TABLE_LOGS, id);
+  }
+
+  // Cascade-delete a log: removes all units in the log, all readings for
+  // those units, then the log itself.
+  function deleteLogCascade(logId) {
+    const allUnits = PCD.store.listTable(TABLE_UNITS) || [];
+    const unitsToDelete = allUnits.filter(function (u) { return u.logId === logId; });
+    const unitIds = unitsToDelete.map(function (u) { return u.id; });
+
+    const allReadings = PCD.store.listTable(TABLE_READINGS) || [];
+    allReadings.forEach(function (r) {
+      if (unitIds.indexOf(r.unitId) >= 0) {
+        PCD.store.deleteFromTable(TABLE_READINGS, r.id);
+      }
+    });
+    unitsToDelete.forEach(function (u) {
+      PCD.store.deleteFromTable(TABLE_UNITS, u.id);
+    });
+    PCD.store.deleteFromTable(TABLE_LOGS, logId);
+  }
+
   // ============ DATA HELPERS ============
   function listUnits() {
-    return (PCD.store.listTable(TABLE_UNITS) || []).slice().sort(function (a, b) {
+    const logId = getCurrentLogId();
+    return (PCD.store.listTable(TABLE_UNITS) || []).filter(function (u) {
+      return u.logId === logId;
+    }).slice().sort(function (a, b) {
       const ai = (typeof a.sortIndex === 'number') ? a.sortIndex : 999999;
       const bi = (typeof b.sortIndex === 'number') ? b.sortIndex : 999999;
       if (ai !== bi) return ai - bi;
@@ -104,6 +186,10 @@
 
   function render(view) {
     const t = PCD.i18n.t;
+    // Bootstrap default log + migrate any orphan units. Cheap, idempotent.
+    ensureDefaultLog();
+    const logs = listLogs();
+    const currentLog = getCurrentLog();
     const units = listUnits();
     const tempUnit = getDefaultTempUnit();
     const days = daysInMonth(_viewYear, _viewMonth);
@@ -119,6 +205,74 @@
           (units.length > 0 ? '<button class="btn btn-outline btn-sm" id="haccpPrintBtn">' + PCD.icon('print', 16) + ' <span>' + (t('print') || 'Print/PDF') + '</span></button>' : '') +
         '</div>' +
       '</div>';
+
+    // ===== Log selector (v2.6.4) =====
+    // Always rendered. Lets the chef switch between separate logs
+    // (e.g. "Banquet Kitchen" vs "Italian Restaurant") and manage them.
+    const logSelector = PCD.el('div', { class: 'card', style: { padding: '10px 14px', marginTop: '12px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' } });
+    let logOptionsHtml = '';
+    logs.forEach(function (l) {
+      const sel = l.id === (currentLog && currentLog.id) ? ' selected' : '';
+      logOptionsHtml += '<option value="' + l.id + '"' + sel + '>' + PCD.escapeHtml(l.name) + '</option>';
+    });
+    logSelector.innerHTML =
+      '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.05em;flex-shrink:0;">' +
+        PCD.escapeHtml(t('haccp_log') || 'Log') +
+      '</div>' +
+      '<select id="haccpLogSelect" style="flex:1;min-width:160px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--surface-1);color:var(--text-1);font-size:14px;font-weight:600;">' +
+        logOptionsHtml +
+      '</select>' +
+      '<button class="btn btn-outline btn-sm" id="haccpNewLogBtn" title="' + PCD.escapeHtml(t('haccp_new_log') || 'New log') + '">' + PCD.icon('plus', 16) + ' <span>' + PCD.escapeHtml(t('haccp_new_log') || 'New log') + '</span></button>' +
+      (currentLog ? '<button class="btn btn-outline btn-sm" id="haccpLogMenuBtn" title="' + PCD.escapeHtml(t('more_actions') || 'More actions') + '">' + PCD.icon('more-vertical', 16) + '</button>' : '');
+    view.appendChild(logSelector);
+
+    // Wire up log selector
+    PCD.$('#haccpLogSelect', view).addEventListener('change', function () {
+      setCurrentLogId(this.value);
+      render(view);
+    });
+    PCD.$('#haccpNewLogBtn', view).addEventListener('click', function () {
+      openLogEditor(null, function (newLog) {
+        if (newLog && newLog.id) setCurrentLogId(newLog.id);
+        render(view);
+      });
+    });
+    const logMenuBtn = PCD.$('#haccpLogMenuBtn', view);
+    if (logMenuBtn) {
+      logMenuBtn.addEventListener('click', function () {
+        PCD.actionSheet({
+          title: currentLog.name,
+          actions: [
+            { icon: 'edit', label: t('haccp_rename_log') || 'Rename log', onClick: function () {
+              openLogEditor(currentLog.id, function () { render(view); });
+            }},
+            { icon: 'trash', label: t('haccp_delete_log') || 'Delete log', danger: true, onClick: function () {
+              const otherLogs = logs.filter(function (l) { return l.id !== currentLog.id; });
+              const unitCount = (PCD.store.listTable(TABLE_UNITS) || []).filter(function (u) { return u.logId === currentLog.id; }).length;
+              PCD.modal.confirm({
+                icon: '🗑', iconKind: 'danger', danger: true,
+                title: t('haccp_delete_log_title') || 'Delete this log?',
+                text: ((t('haccp_delete_log_msg') || 'This permanently deletes "{name}" along with its {count} unit(s) and all temperature readings. This cannot be undone.')
+                  .replace('{name}', currentLog.name)
+                  .replace('{count}', unitCount)),
+                okText: t('act_delete') || 'Delete',
+              }).then(function (ok) {
+                if (!ok) return;
+                deleteLogCascade(currentLog.id);
+                // Switch to another log, or create a fresh default if none left.
+                if (otherLogs.length > 0) {
+                  setCurrentLogId(otherLogs[0].id);
+                } else {
+                  PCD.store.set(PREF_CURRENT_LOG, null);
+                }
+                PCD.toast.success(t('haccp_log_deleted') || 'Log deleted');
+                render(view);
+              });
+            }},
+          ],
+        });
+      });
+    }
 
     if (units.length === 0) {
       const empty = PCD.el('div', { class: 'card', style: { padding: '48px 24px', textAlign: 'center', marginTop: '20px' } });
@@ -285,6 +439,60 @@
     });
   }
 
+  // ============ LOG EDITOR (v2.6.4) ============
+  // Create or rename a log. Delete is handled separately via confirm modal
+  // because it requires cascade-delete warnings.
+  function openLogEditor(logId, onClose) {
+    const t = PCD.i18n.t;
+    const existing = logId ? PCD.store.getFromTable(TABLE_LOGS, logId) : null;
+
+    const body = PCD.el('div');
+    body.innerHTML =
+      (existing ? '' :
+        '<div class="text-muted text-sm" style="margin-bottom:14px;line-height:1.5;">' +
+          PCD.escapeHtml(t('haccp_log_intro') || 'Create a separate log for each kitchen area. Useful when you manage multiple kitchens (e.g. banquet, à la carte, bar) with different refrigeration units.') +
+        '</div>'
+      ) +
+      '<div style="margin-bottom:6px;">' +
+        '<label style="display:block;font-weight:600;font-size:13px;margin-bottom:4px;">' + PCD.escapeHtml(t('haccp_log_name') || 'Log name') + '</label>' +
+        '<input id="hlName" type="text" maxlength="80" placeholder="' + PCD.escapeHtml(t('haccp_log_name_placeholder') || 'e.g. Banquet Kitchen') + '" value="' + PCD.escapeHtml(existing && existing.name || '') + '" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-1);font-size:14px;box-sizing:border-box;">' +
+      '</div>';
+
+    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') || 'Cancel', style: { flex: '1' } });
+    const saveBtn = PCD.el('button', {
+      class: 'btn btn-primary',
+      text: existing ? (t('save') || 'Save') : (t('haccp_new_log') || 'Create log'),
+      style: { flex: '2' },
+    });
+    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
+    footer.appendChild(cancelBtn);
+    footer.appendChild(saveBtn);
+
+    const m = PCD.modal.open({
+      title: existing ? (t('haccp_rename_log') || 'Rename log') : (t('haccp_new_log') || 'New log'),
+      body: body, footer: footer, size: 'sm', closable: true,
+    });
+    cancelBtn.addEventListener('click', function () { m.close(); });
+    setTimeout(function () {
+      const inp = body.querySelector('#hlName');
+      if (inp) inp.focus();
+    }, 60);
+    saveBtn.addEventListener('click', function () {
+      const name = body.querySelector('#hlName').value.trim();
+      if (!name) {
+        PCD.toast.error(t('haccp_log_name_required') || 'Log name is required');
+        return;
+      }
+      const payload = existing
+        ? Object.assign({}, existing, { name: name })
+        : { name: name, sortIndex: listLogs().length };
+      const saved = PCD.store.upsertInTable(TABLE_LOGS, payload, 'log');
+      PCD.toast.success(existing ? (t('saved') || 'Saved') : (t('haccp_log_created') || 'Log created'));
+      m.close();
+      if (onClose) onClose(saved);
+    });
+  }
+
   // ============ UNIT EDITOR ============
   function openUnitEditor(unitId, onClose) {
     const t = PCD.i18n.t;
@@ -387,7 +595,7 @@
         PCD.toast.error(t('haccp_unit_range_invalid') || 'Min must be less than max'); return;
       }
       const payload = existing ? Object.assign({}, existing, { name: name, min: min, max: max })
-                               : { name: name, min: min, max: max, unit: tempUnit, sortIndex: listUnits().length };
+                               : { name: name, min: min, max: max, unit: tempUnit, sortIndex: listUnits().length, logId: getCurrentLogId() };
       PCD.store.upsertInTable(TABLE_UNITS, payload, 'unit');
       PCD.toast.success(existing ? (t('saved') || 'Saved') : (t('haccp_unit_added') || 'Unit added'));
       m.close();
@@ -509,6 +717,8 @@
     const tempUnit = getDefaultTempUnit();
     const ws = PCD.store.getActiveWorkspace ? PCD.store.getActiveWorkspace() : null;
     const wsName = (ws && ws.name) || 'Kitchen';
+    const currentLog = getCurrentLog();
+    const logName = (currentLog && currentLog.name) || '';
 
     let html =
       '<style>' +
@@ -536,7 +746,7 @@
       '</style>' +
       '<div class="h-head">' +
         '<h1>HACCP · Fridge & Freezer Temperature Log</h1>' +
-        '<div class="sub">' + PCD.escapeHtml(wsName) + ' · ' + PCD.escapeHtml(monthLabel(year, monthIdx0)) + ' · °' + tempUnit + '</div>' +
+        '<div class="sub">' + PCD.escapeHtml(wsName) + (logName ? ' · ' + PCD.escapeHtml(logName) : '') + ' · ' + PCD.escapeHtml(monthLabel(year, monthIdx0)) + ' · °' + tempUnit + '</div>' +
       '</div>' +
       (units.length > 6 ? '<div class="h-warn">⚠ ' + units.length + ' units on one page — text is tight. Consider splitting into two groups.</div>' : '') +
       '<table class="h-grid"><thead>' +

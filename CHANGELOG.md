@@ -1,3 +1,61 @@
+# v2.6.4 — HACCP çoklu form desteği + print footer rengi
+
+## Talep
+
+Senaryo: Executive chef bir otelde banket mutfak için bir form, italyan restoran için ayrı bir form ister. Her mutfakta farklı sayıda soğutucular var. Tek bir grid yetersiz.
+
+## Çözüm
+
+**Çoklu log (form) desteği:**
+- Sayfa başında log selector dropdown: "Banquet Kitchen ▼"
+- Yanında "+ New log" butonu — sınırsız log oluşturulabilir
+- "⋮" menüde Rename · Delete log
+- Her log'un kendi üniteleri ve okumaları var, tamamen izole
+- Aktif log seçimi `prefs.haccpCurrentLogId`'de saklanır
+- Default log: ilk açılışta otomatik bir "Default" log oluşturulur — mevcut data buna migrate edilir
+- Print PDF başlığında log adı görünür: "Workspace · Banquet Kitchen · April 2026"
+
+**Cascade-delete:** Bir log silinince → içindeki tüm üniteler + tüm sıcaklık okumaları kalıcı olarak silinir. Confirm modal: "X log'u, Y cihaz ve tüm okumalar silinecek".
+
+**Migration:** v2.6.1-2.6.3'ten gelen mevcut üniteler (logId yok) ilk açılışta otomatik default log'a aktarılır. Render'da idempotent.
+
+**Bonus — Print footer rengi düzeltildi:** `print-color-adjust:exact` eklendi → Chrome "Background graphics" kapalı olsa bile "ProChefDesk" yeşil/bold render edilir.
+
+## Kod
+
+`js/tools/haccp_logs.js`:
+- Yeni TABLE_LOGS sabiti ve PREF_CURRENT_LOG anahtarı
+- Log helpers: `listLogs`, `ensureDefaultLog`, `getCurrentLogId`, `setCurrentLogId`, `getCurrentLog`, `deleteLogCascade`
+- `listUnits` artık sadece **aktif log'un** ünitelerini döndürür
+- Yeni `openLogEditor(logId, onClose)` — create/rename
+- Render'da log selector card eklendi: dropdown + New log + "⋮" menü
+- Yeni unit'lere otomatik `logId` atanır
+- Print başlığında log adı
+
+`js/core/store.js`, `js/core/cloud.js`: `haccpLogs` workspace-bound tablo listesine eklendi
+`js/core/utils.js`: print footer'a `print-color-adjust:exact` eklendi (yeşil ProChefDesk her zaman görünür)
+`js/i18n/en.js`, `js/i18n/tr.js`: 12 yeni log key
+
+## Migration gerekli mi
+
+Hayır. Tamamen client-side. İlk render'da:
+1. `haccpLogs` tablosu boşsa "Default" log otomatik oluşturulur
+2. Mevcut tüm orphan üniteler default log'a backfill edilir
+3. Cloud sync bu işi otomatik handle eder
+
+## Test
+
+1. HACCP Logs aç → "Default" log seçili olmalı, mevcut tüm cihazların görünmeli
+2. "+ New log" → "Italian Kitchen" yaz → oluştur → o log seçili, üniteler boş
+3. + Add unit → 3 fridge ekle (sadece bu log'a ait)
+4. Dropdown'dan "Default"'a geç → eski cihazlar tekrar görünmeli, Italian üniteler görünmemeli
+5. Italian'a geri dön → "⋮" → "Rename" → "Italian Kitchen — Banquet Mode" yap
+6. "⋮" → "Delete log" → confirm modal "Italian Kitchen — Banquet Mode (3 units)" yazsın → onayla → log silinir, otomatik Default'a geçer
+7. Print → başlıkta "Workspace · Default · April 2026" görünmeli
+8. Recipes/menus print → "Made with **ProChefDesk** · prochefdesk.com" yeşil bold görünmeli (background graphics kapalı olsa bile)
+
+---
+
 # v2.6.3 — HACCP print tek sayfa fix
 
 ## Talep
