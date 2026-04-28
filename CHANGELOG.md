@@ -1,3 +1,47 @@
+# v2.5.10 — Mobil + butonu çalıştırma + alt panel düzenleme
+
+## Talep
+
+1. Mobilde alt paneldeki + (artı) butonu hiçbir şey yapmıyordu
+2. Alt panel: Pantry yerine Kitchen Cards olsun → Home · Recipes · + · Cards · Me
+3. Pantry side menüde kalmaya devam etsin
+
+## Çözüm
+
+**+ butonu artık context-aware.** Bulunduğun sayfaya göre yeni öğe oluşturma editörünü açıyor:
+- Recipes'taysan → Yeni Recipe
+- Menus'tasan → Yeni Menu
+- Ingredients'taysan → Yeni Ingredient
+- Events / Suppliers / Checklist / Inventory aynı şekilde
+- Kitchen Cards'taysan → Yeni canvas başlatma butonunu otomatik tıklıyor
+- Home / Account / Shopping gibi context dışı sayfalardaysan → Recipes'a gidip yeni recipe editörü açıyor (en olası "create" niyeti)
+
+**Alt panel güncellendi:** Pantry butonu çıkarıldı, yerine Kitchen Cards kondu. Pantry side menüde (☰) zaten var, oradan erişilebilir.
+
+## Kod değişiklikleri
+
+- `index.html` — bottom nav: Pantry → Kitchen Cards, + butonu ID'lendi (`bnCreateBtn`)
+- `js/core/app.js` — + butonu için context-aware handler (her tool'un `openEditor` API'sini kullanıyor)
+- `js/tools/checklist.js` — `PCD.tools.checklist` API'sine `openEditor` eklendi (mevcut `openTemplateEditor` fonksiyonuna alias)
+- 6 dilde `nav_kitchen_cards` key'i zaten mevcuttu, yeni i18n key gerekmedi
+
+## Test
+
+1. Mobilde Recipes sayfasında + butonuna bas → "New Recipe" modal açılmalı
+2. Menus sayfasında + → "New Menu" modal
+3. Ingredients sayfasında + → "New Ingredient" modal
+4. Checklist sayfasında + → "New Template" modal
+5. Kitchen Cards sayfasında + → canvas reset oluyor, "New canvas" toast
+6. Home sayfasında + → Recipes'a yönlendiriyor + "New Recipe" modal açıyor
+7. Alt panel sırası: Home · Recipes · + · Cards · Me
+8. Pantry'ye side menüden (☰) erişilebiliyor
+
+## Migration gerekli mi
+
+Hayır. Tamamen client-side değişiklik.
+
+---
+
 # v2.5.9 — Recipe foto sıkıştırma + Storage'a taşıma
 
 ## Talep

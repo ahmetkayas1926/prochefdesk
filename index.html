@@ -21,12 +21,12 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-<!-- Stylesheets: cache-bust with ?v=2.5.9 on deploy -->
-<link rel="stylesheet" href="css/core.css?v=2.5.9">
-<link rel="stylesheet" href="css/components.css?v=2.5.9">
-<link rel="stylesheet" href="css/mobile.css?v=2.5.9">
-<link rel="stylesheet" href="css/themes.css?v=2.5.9">
-<link rel="stylesheet" href="css/print.css?v=2.5.9">
+<!-- Stylesheets: cache-bust with ?v=2.5.10 on deploy -->
+<link rel="stylesheet" href="css/core.css?v=2.5.10">
+<link rel="stylesheet" href="css/components.css?v=2.5.10">
+<link rel="stylesheet" href="css/mobile.css?v=2.5.10">
+<link rel="stylesheet" href="css/themes.css?v=2.5.10">
+<link rel="stylesheet" href="css/print.css?v=2.5.10">
 </head>
 <body>
 
@@ -95,7 +95,7 @@
           <a href="privacy.html" target="_blank" rel="noopener" data-i18n="legal_privacy" style="color:var(--text-3);text-decoration:none;">Privacy</a>
           <span style="margin:0 4px;">·</span>
           <a href="terms.html" target="_blank" rel="noopener" data-i18n="legal_terms" style="color:var(--text-3);text-decoration:none;">Terms</a>
-          <div style="margin-top:2px;opacity:0.7;">v2.5.9</div>
+          <div style="margin-top:2px;opacity:0.7;">v2.5.10</div>
         </div>
       </div>
     </div>
@@ -116,12 +116,12 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20" stroke-linecap="round"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <span data-i18n="nav_recipes">Recipes</span>
     </button>
-    <button class="bn-item bn-center" data-nav="tools">
+    <button class="bn-item bn-center" id="bnCreateBtn" type="button" aria-label="Create new">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>
     </button>
-    <button class="bn-item" data-nav="ingredients">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2l3 6 6-6 3 6-3 14H9L6 8l-3-6z" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span data-i18n="nav_ingredients">Pantry</span>
+    <button class="bn-item" data-nav="kitchen_cards">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 9h18M8 14h2M8 17h6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span data-i18n="nav_kitchen_cards">Cards</span>
     </button>
     <button class="bn-item" data-nav="account">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="7" r="4"/></svg>
@@ -149,59 +149,59 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 
 <!-- ===== Core modules (order matters) ===== -->
-<script src="js/core/config.js?v=2.5.9"></script>
-<script src="js/core/utils.js?v=2.5.9"></script>
-<script src="js/core/store.js?v=2.5.9"></script>
-<script src="js/core/i18n.js?v=2.5.9"></script>
-<script src="js/i18n/en.js?v=2.5.9"></script>
-<script src="js/i18n/tr.js?v=2.5.9"></script>
-<script src="js/i18n/es.js?v=2.5.9"></script>
-<script src="js/i18n/fr.js?v=2.5.9"></script>
-<script src="js/i18n/de.js?v=2.5.9"></script>
-<script src="js/i18n/ar.js?v=2.5.9"></script>
-<script src="js/i18n/phase2.js?v=2.5.9"></script>
-<script src="js/i18n/phase3.js?v=2.5.9"></script>
-<script src="js/i18n/phase4.js?v=2.5.9"></script>
-<script src="js/i18n/phase4-1.js?v=2.5.9"></script>
-<script src="js/i18n/v17.js?v=2.5.9"></script>
-<script src="js/core/allergens-db.js?v=2.5.9"></script>
-<script src="js/core/qr.js?v=2.5.9"></script>
-<script src="js/core/cloud.js?v=2.5.9"></script>
-<script src="js/core/photo-storage.js?v=2.5.9"></script>
-<script src="js/core/share.js?v=2.5.9"></script>
-<script src="js/core/auth.js?v=2.5.9"></script>
-<script src="js/core/router.js?v=2.5.9"></script>
+<script src="js/core/config.js?v=2.5.10"></script>
+<script src="js/core/utils.js?v=2.5.10"></script>
+<script src="js/core/store.js?v=2.5.10"></script>
+<script src="js/core/i18n.js?v=2.5.10"></script>
+<script src="js/i18n/en.js?v=2.5.10"></script>
+<script src="js/i18n/tr.js?v=2.5.10"></script>
+<script src="js/i18n/es.js?v=2.5.10"></script>
+<script src="js/i18n/fr.js?v=2.5.10"></script>
+<script src="js/i18n/de.js?v=2.5.10"></script>
+<script src="js/i18n/ar.js?v=2.5.10"></script>
+<script src="js/i18n/phase2.js?v=2.5.10"></script>
+<script src="js/i18n/phase3.js?v=2.5.10"></script>
+<script src="js/i18n/phase4.js?v=2.5.10"></script>
+<script src="js/i18n/phase4-1.js?v=2.5.10"></script>
+<script src="js/i18n/v17.js?v=2.5.10"></script>
+<script src="js/core/allergens-db.js?v=2.5.10"></script>
+<script src="js/core/qr.js?v=2.5.10"></script>
+<script src="js/core/cloud.js?v=2.5.10"></script>
+<script src="js/core/photo-storage.js?v=2.5.10"></script>
+<script src="js/core/share.js?v=2.5.10"></script>
+<script src="js/core/auth.js?v=2.5.10"></script>
+<script src="js/core/router.js?v=2.5.10"></script>
 
 <!-- UI primitives -->
-<script src="js/ui/modal.js?v=2.5.9"></script>
-<script src="js/ui/toast.js?v=2.5.9"></script>
-<script src="js/ui/tutorial.js?v=2.5.9"></script>
-<script src="js/ui/cropper.js?v=2.5.9"></script>
-<script src="js/ui/picker.js?v=2.5.9"></script>
-<script src="js/ui/dragdrop.js?v=2.5.9"></script>
+<script src="js/ui/modal.js?v=2.5.10"></script>
+<script src="js/ui/toast.js?v=2.5.10"></script>
+<script src="js/ui/tutorial.js?v=2.5.10"></script>
+<script src="js/ui/cropper.js?v=2.5.10"></script>
+<script src="js/ui/picker.js?v=2.5.10"></script>
+<script src="js/ui/dragdrop.js?v=2.5.10"></script>
 
 <!-- Seed data -->
-<script src="js/seed/demo-recipes.js?v=2.5.9"></script>
+<script src="js/seed/demo-recipes.js?v=2.5.10"></script>
 
 <!-- Tools -->
-<script src="js/tools/dashboard.js?v=2.5.9"></script>
-<script src="js/tools/recipes.js?v=2.5.9"></script>
-<script src="js/tools/ingredients.js?v=2.5.9"></script>
-<script src="js/tools/account.js?v=2.5.9"></script>
+<script src="js/tools/dashboard.js?v=2.5.10"></script>
+<script src="js/tools/recipes.js?v=2.5.10"></script>
+<script src="js/tools/ingredients.js?v=2.5.10"></script>
+<script src="js/tools/account.js?v=2.5.10"></script>
 <!-- Phase 2 tools -->
-<script src="js/tools/menus.js?v=2.5.9"></script>
-<script src="js/tools/kitchen_cards.js?v=2.5.9"></script>
-<script src="js/tools/shopping.js?v=2.5.9"></script>
-<script src="js/tools/portion.js?v=2.5.9"></script>
+<script src="js/tools/menus.js?v=2.5.10"></script>
+<script src="js/tools/kitchen_cards.js?v=2.5.10"></script>
+<script src="js/tools/shopping.js?v=2.5.10"></script>
+<script src="js/tools/portion.js?v=2.5.10"></script>
 <!-- Phase 3 tools -->
-<script src="js/tools/inventory.js?v=2.5.9"></script>
-<script src="js/tools/waste.js?v=2.5.9"></script>
-<script src="js/tools/suppliers.js?v=2.5.9"></script>
-<script src="js/tools/events.js?v=2.5.9"></script>
-<script src="js/tools/checklist.js?v=2.5.9"></script>
+<script src="js/tools/inventory.js?v=2.5.10"></script>
+<script src="js/tools/waste.js?v=2.5.10"></script>
+<script src="js/tools/suppliers.js?v=2.5.10"></script>
+<script src="js/tools/events.js?v=2.5.10"></script>
+<script src="js/tools/checklist.js?v=2.5.10"></script>
 
 <!-- Bootstrap -->
-<script src="js/core/app.js?v=2.5.9"></script>
+<script src="js/core/app.js?v=2.5.10"></script>
 
 </body>
 </html>

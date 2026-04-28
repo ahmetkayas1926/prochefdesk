@@ -1293,5 +1293,5 @@
   }
 
   PCD.tools = PCD.tools || {};
-  PCD.tools.checklist = { render: render };
+  PCD.tools.checklist = { render: render, openEditor: openTemplateEditor };
 })();

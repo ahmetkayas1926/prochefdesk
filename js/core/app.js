@@ -182,6 +182,54 @@
       });
     });
 
+    // Bottom nav center "+" button — context-aware "new item" creator.
+    // Mirrors what each tool's own "+ New ..." button does. If the current
+    // view doesn't expose openEditor (e.g. kitchen_cards), fall back to
+    // routing to recipes and creating a recipe — the most common case.
+    const bnCreateBtn = document.getElementById('bnCreateBtn');
+    if (bnCreateBtn) {
+      bnCreateBtn.addEventListener('click', function () {
+        PCD.haptic('light');
+        const cur = (PCD.router && PCD.router.currentView && PCD.router.currentView()) || 'dashboard';
+
+        // Tools that expose openEditor — call directly to launch the
+        // "new <thing>" editor without leaving the current view.
+        const directCreators = {
+          recipes:     function () { PCD.tools.recipes && PCD.tools.recipes.openEditor(); },
+          ingredients: function () { PCD.tools.ingredients && PCD.tools.ingredients.openEditor(); },
+          menus:       function () { PCD.tools.menus && PCD.tools.menus.openEditor(); },
+          events:      function () { PCD.tools.events && PCD.tools.events.openEditor(); },
+          suppliers:   function () { PCD.tools.suppliers && PCD.tools.suppliers.openEditor && PCD.tools.suppliers.openEditor(); },
+          checklist:   function () { PCD.tools.checklist && PCD.tools.checklist.openEditor && PCD.tools.checklist.openEditor(); },
+          inventory:   function () { PCD.tools.inventory && PCD.tools.inventory.openEditor && PCD.tools.inventory.openEditor(); },
+        };
+        if (directCreators[cur]) {
+          directCreators[cur]();
+          return;
+        }
+
+        // Kitchen cards: the "new canvas" reset lives behind an
+        // in-page button. Navigate to the view, then click that button
+        // once the view has rendered.
+        if (cur === 'kitchen_cards') {
+          PCD.router.go('kitchen_cards');
+          setTimeout(function () {
+            const newBtn = document.getElementById('newCanvasBtn');
+            if (newBtn) newBtn.click();
+          }, 150);
+          return;
+        }
+
+        // Default for dashboard / account / shopping / unknown views:
+        // jump to recipes and open the new-recipe editor — the most
+        // common "create" intent.
+        PCD.router.go('recipes');
+        setTimeout(function () {
+          if (PCD.tools.recipes && PCD.tools.recipes.openEditor) PCD.tools.recipes.openEditor();
+        }, 150);
+      });
+    }
+
     // Sidenav items (delegated — populated later)
     PCD.on(PCD.$('#sidenav'), 'click', '[data-nav]', function () {
       const name = this.getAttribute('data-nav');
