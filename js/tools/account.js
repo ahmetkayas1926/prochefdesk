@@ -272,6 +272,22 @@
         </div>
       </div>
 
+      <!-- SHARED ITEMS -->
+      <div class="section">
+        <div class="section-title" style="font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">${t('shared_items_section_title')}</div>
+        <div class="card">
+          <div class="card-body" style="padding:0;">
+            <button class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;" id="sharedItemsBtn">
+              <div>
+                <div style="font-weight:600;">🔗 ${t('shared_items_card_title')}</div>
+                <div class="text-muted text-sm">${t('shared_items_card_subtitle')}</div>
+              </div>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- ABOUT -->
       <div class="section">
         <div class="text-center text-muted text-sm" style="padding:16px 0;">
@@ -514,6 +530,8 @@
     });
     const reportIssueBtn = PCD.$('#reportIssueBtn', view);
     if (reportIssueBtn) reportIssueBtn.addEventListener('click', openReportIssueModal);
+    const sharedItemsBtn = PCD.$('#sharedItemsBtn', view);
+    if (sharedItemsBtn) sharedItemsBtn.addEventListener('click', openSharedItemsModal);
   }
 
   function openAboutModal() {
@@ -643,6 +661,143 @@
       m.close();
       PCD.toast.success(t('report_issue_opened'));
     });
+  }
+
+  // ============ MY SHARES (v2.5.7) ============
+  // Lists every public_share owned by the current user so they can
+  // pause, resume, copy URL or delete it. Refreshed each time the
+  // modal is opened (no local cache).
+
+  function openSharedItemsModal() {
+    const t = PCD.i18n.t;
+
+    if (!PCD.share || !PCD.share.listMyShares) {
+      PCD.toast.error(t('share_unavailable'));
+      return;
+    }
+    const user = PCD.store.get('user');
+    if (!user || !user.id) {
+      PCD.toast.error(t('share_signin_required'));
+      return;
+    }
+
+    const body = PCD.el('div');
+    body.innerHTML = '<div class="text-muted" style="padding:40px 20px;text-align:center;"><div class="spinner" style="margin:0 auto 12px;"></div>' + PCD.escapeHtml(t('share_loading')) + '</div>';
+
+    const closeBtn = PCD.el('button', { type: 'button', class: 'btn btn-secondary', text: t('close'), style: { width: '100%' } });
+    const footer = PCD.el('div', { style: { width: '100%' } });
+    footer.appendChild(closeBtn);
+
+    const m = PCD.modal.open({
+      title: '🔗 ' + t('shared_items_section_title'),
+      body: body,
+      footer: footer,
+      size: 'md',
+      closable: true
+    });
+    closeBtn.addEventListener('click', function () { m.close(); });
+
+    function reload() {
+      PCD.share.listMyShares().then(function (shares) {
+        renderSharesList(body, shares, reload);
+      }).catch(function (e) {
+        body.innerHTML = '<div class="text-muted" style="padding:30px;text-align:center;">' + PCD.escapeHtml(e.message || 'Error') + '</div>';
+      });
+    }
+    reload();
+  }
+
+  function renderSharesList(body, shares, reload) {
+    const t = PCD.i18n.t;
+
+    if (!shares || shares.length === 0) {
+      body.innerHTML =
+        '<div class="text-muted" style="padding:48px 20px;text-align:center;line-height:1.6;">' +
+          '<div style="font-size:40px;margin-bottom:10px;">🔗</div>' +
+          '<div>' + PCD.escapeHtml(t('share_no_shares_yet')) + '</div>' +
+        '</div>';
+      return;
+    }
+
+    body.innerHTML = '';
+    shares.forEach(function (share) {
+      const card = buildShareCard(share, reload);
+      body.appendChild(card);
+    });
+  }
+
+  function buildShareCard(share, reload) {
+    const t = PCD.i18n.t;
+    const name = (share.payload && share.payload.name) || '(unnamed)';
+    const kindIcon =
+      share.kind === 'recipe'      ? '📖' :
+      share.kind === 'menu'        ? '🍽' :
+      share.kind === 'kitchencard' ? '🗂' : '🔗';
+    const kindLabel = t('share_kind_' + share.kind) || share.kind;
+    const url = location.origin + location.pathname + '?share=' + share.id;
+
+    const statusColor = share.paused ? 'var(--text-3)' : 'var(--brand-600)';
+    const statusText  = share.paused ? '⏸ ' + t('share_paused') : '● ' + t('share_active');
+
+    const card = PCD.el('div', {
+      class: 'card',
+      style: { padding: '12px 14px', marginBottom: '10px' }
+    });
+
+    card.innerHTML =
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px;">' +
+        '<div style="min-width:0;flex:1;">' +
+          '<div style="font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + kindIcon + ' ' + PCD.escapeHtml(name) + '</div>' +
+          '<div class="text-muted text-sm" style="margin-top:2px;">' + PCD.escapeHtml(kindLabel) + ' · 👁 ' + share.view_count + ' ' + PCD.escapeHtml(t('share_views')) + '</div>' +
+        '</div>' +
+        '<div style="font-size:11px;font-weight:700;color:' + statusColor + ';white-space:nowrap;">' + statusText + '</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
+        '<button class="btn btn-secondary btn-sm" data-act="copy" style="flex:1;min-width:90px;">📋 ' + PCD.escapeHtml(t('share_copy_url')) + '</button>' +
+        '<button class="btn btn-secondary btn-sm" data-act="toggle" style="flex:1;min-width:90px;">' +
+          (share.paused ? '▶ ' + PCD.escapeHtml(t('share_unpause_btn')) : '⏸ ' + PCD.escapeHtml(t('share_pause_btn'))) +
+        '</button>' +
+        '<button class="btn btn-secondary btn-sm" data-act="delete" style="flex:0 0 auto;color:#dc2626;">🗑</button>' +
+      '</div>';
+
+    card.querySelector('[data-act="copy"]').addEventListener('click', function () {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(function () {
+          PCD.toast.success(t('share_url_copied'));
+        });
+      }
+    });
+
+    card.querySelector('[data-act="toggle"]').addEventListener('click', function () {
+      const shouldPause = !share.paused;
+      PCD.share.setSharePaused(share.id, shouldPause).then(function () {
+        PCD.toast.success(shouldPause ? t('share_paused_msg') : t('share_unpaused_msg'));
+        reload();
+      }).catch(function (e) {
+        PCD.toast.error(e.message || 'Error');
+      });
+    });
+
+    card.querySelector('[data-act="delete"]').addEventListener('click', function () {
+      PCD.modal.confirm({
+        icon: '🗑', iconKind: 'danger',
+        title: t('share_delete_confirm_title'),
+        text: t('share_delete_confirm_msg'),
+        okText: t('share_delete_btn'),
+        cancelText: t('cancel'),
+        danger: true,
+      }).then(function (ok) {
+        if (!ok) return;
+        PCD.share.deleteShare(share.id).then(function () {
+          PCD.toast.success(t('share_deleted_msg'));
+          reload();
+        }).catch(function (e) {
+          PCD.toast.error(e.message || 'Error');
+        });
+      });
+    });
+
+    return card;
   }
 
   // ============ PUBLIC PROFILE PREVIEW ============

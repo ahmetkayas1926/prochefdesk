@@ -1,21 +1,22 @@
 /* ================================================================
    ProChefDesk — share.js
-   Public share URLs for recipes & menus.
+   Public share URLs for recipes, menus & kitchen cards.
 
-   Architecture:
-   - Each share gets a random 8-char ID (e.g. ?share=abc12345)
-   - Share record stored in Supabase 'public_shares' table:
-       { id, kind, payload, owner_id, created_at }
-   - 'public_shares' table needs RLS policy:
-       SELECT — anyone (anon role)
-       INSERT — authenticated only
-       UPDATE/DELETE — owner only
-   - URL format: prochefdesk.com/?share=abc12345
-   - On boot, app.js checks for ?share param and routes to public view
-
-   The share payload is a SNAPSHOT (frozen copy) — if owner edits the
-   recipe later, public link still shows the original. This is desired
-   behavior (predictable, cacheable, no privacy leak).
+   Architecture (v2.5.7):
+   - Each share gets a random ID (e.g. ?share=abc12345xyz1)
+   - Stored in Supabase 'public_shares' with full lifecycle support:
+       { id, kind, source_id, payload, owner_id, paused, view_count,
+         created_at, updated_at }
+   - One share per (owner, kind, source_id) — UNIQUE constraint.
+     Same recipe/menu/canvas always returns the same URL.
+   - createOrGetShareUrl auto-refreshes the snapshot every call,
+     so the share always reflects the current state of the source item.
+   - Owners can pause (temporarily disable) or delete shares from
+     Account → My shares.
+   - View count incremented atomically via RPC on each public view.
+   - Paused shares show a "this share is paused" page instead of content.
+   - URL format: prochefdesk.com/?share=abc12345xyz1
+   - On boot, app.js checks for ?share param and routes to public view.
    ================================================================ */
 
 (function () {
@@ -23,8 +24,9 @@
   const PCD = window.PCD;
 
   function genShareId() {
-    // 8-char base36 random ID
-    return Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6);
+    // 12-char base36 random ID — collision risk negligible
+    return Math.random().toString(36).slice(2, 10) +
+           Math.random().toString(36).slice(2, 6);
   }
 
   // Build a self-contained snapshot of a recipe with embedded ingredient details
@@ -90,11 +92,21 @@
     };
   }
 
-  // Get or create a share for a recipe/menu. Returns Promise resolving to URL.
-  function createOrGetShareUrl(kind, id) {
+  // Stub for kitchen card snapshot. Real implementation lands in v2.5.8.
+  // Returning null here causes createOrGetShareUrl to reject with
+  // 'Item not found', which is the desired behaviour until v2.5.8 wires
+  // up the kitchen-cards UI.
+  function snapshotKitchenCard(/* canvasId */) {
+    return null;
+  }
+
+  // Get or create a share for a recipe/menu/kitchencard.
+  // Returns Promise resolving to URL.
+  // Idempotent: same (owner, kind, sourceId) -> same share ID/URL.
+  // Snapshot is refreshed on every call so the public view stays current.
+  function createOrGetShareUrl(kind, sourceId) {
     return new Promise(function (resolve, reject) {
       if (!PCD.cloud || !PCD.cloud.ready) {
-        // No cloud → can't share. Fallback: nothing.
         return reject(new Error('Cloud not configured'));
       }
       const supabase = window._supabaseClient;
@@ -102,28 +114,69 @@
       const user = PCD.store.get('user');
       if (!user || !user.id) return reject(new Error('Sign in to share'));
 
-      const payload = (kind === 'recipe') ? snapshotRecipe(id) : snapshotMenu(id);
+      const payload =
+        (kind === 'recipe')      ? snapshotRecipe(sourceId) :
+        (kind === 'menu')        ? snapshotMenu(sourceId) :
+        (kind === 'kitchencard') ? snapshotKitchenCard(sourceId) :
+        null;
       if (!payload) return reject(new Error('Item not found'));
 
-      const shareId = genShareId();
-      supabase.from('public_shares').insert({
-        id: shareId,
-        kind: kind,
-        payload: payload,
-        owner_id: user.id,
-        created_at: new Date().toISOString(),
-      }).then(function (res) {
-        if (res.error) {
-          PCD.err('share insert error', res.error);
-          return reject(res.error);
-        }
-        const url = location.origin + location.pathname + '?share=' + shareId;
-        resolve(url);
-      }).catch(reject);
+      // 1) Check if a share already exists for this (owner, kind, source)
+      supabase.from('public_shares')
+        .select('id, paused')
+        .eq('owner_id', user.id)
+        .eq('kind', kind)
+        .eq('source_id', sourceId)
+        .maybeSingle()
+        .then(function (sel) {
+          if (sel.error) {
+            PCD.err('share lookup error', sel.error);
+            return reject(sel.error);
+          }
+
+          if (sel.data) {
+            // Existing share → refresh snapshot, keep the URL stable
+            const shareId = sel.data.id;
+            supabase.from('public_shares')
+              .update({ payload: payload })
+              .eq('id', shareId)
+              .then(function (upd) {
+                if (upd.error) {
+                  PCD.err('share update error', upd.error);
+                  return reject(upd.error);
+                }
+                const url = location.origin + location.pathname + '?share=' + shareId;
+                resolve(url);
+              }).catch(reject);
+            return;
+          }
+
+          // 2) No existing share → create a new one
+          const shareId = genShareId();
+          supabase.from('public_shares')
+            .insert({
+              id: shareId,
+              kind: kind,
+              source_id: sourceId,
+              payload: payload,
+              owner_id: user.id,
+              paused: false,
+            })
+            .then(function (ins) {
+              if (ins.error) {
+                PCD.err('share insert error', ins.error);
+                return reject(ins.error);
+              }
+              const url = location.origin + location.pathname + '?share=' + shareId;
+              resolve(url);
+            }).catch(reject);
+        }).catch(reject);
     });
   }
 
   // Fetch a public share by ID — used when ?share= is in URL
+  // Rejects with special 'paused' error if share exists but is paused,
+  // so initShareCheck can render a friendly "this share is paused" page.
   function fetchShare(shareId) {
     return new Promise(function (resolve, reject) {
       const supabase = window._supabaseClient;
@@ -132,7 +185,67 @@
         .then(function (res) {
           if (res.error) return reject(res.error);
           if (!res.data) return reject(new Error('Share not found'));
+          if (res.data.paused) {
+            const e = new Error('paused');
+            e.code = 'paused';
+            return reject(e);
+          }
+          // Fire-and-forget view counter; never block render.
+          try {
+            supabase.rpc('increment_share_view', { share_id: shareId })
+              .then(function () {}).catch(function () {});
+          } catch (e) { /* ignore */ }
           resolve(res.data);
+        }).catch(reject);
+    });
+  }
+
+  // ============ LIFECYCLE: list / pause / unpause / delete ============
+
+  // List all shares owned by current user.
+  // Returns Promise<Array<{id,kind,source_id,payload,paused,view_count,created_at,updated_at}>>
+  function listMyShares() {
+    return new Promise(function (resolve, reject) {
+      const supabase = window._supabaseClient;
+      if (!supabase) return reject(new Error('Cloud not available'));
+      const user = PCD.store.get('user');
+      if (!user || !user.id) return reject(new Error('Sign in required'));
+
+      supabase.from('public_shares')
+        .select('id, kind, source_id, payload, paused, view_count, created_at, updated_at')
+        .eq('owner_id', user.id)
+        .order('updated_at', { ascending: false })
+        .then(function (res) {
+          if (res.error) return reject(res.error);
+          resolve(res.data || []);
+        }).catch(reject);
+    });
+  }
+
+  // Pause or unpause a share.
+  function setSharePaused(shareId, paused) {
+    return new Promise(function (resolve, reject) {
+      const supabase = window._supabaseClient;
+      if (!supabase) return reject(new Error('Cloud not available'));
+      supabase.from('public_shares')
+        .update({ paused: !!paused })
+        .eq('id', shareId)
+        .then(function (res) {
+          if (res.error) return reject(res.error);
+          resolve();
+        }).catch(reject);
+    });
+  }
+
+  // Permanently delete a share. The URL stops working.
+  function deleteShare(shareId) {
+    return new Promise(function (resolve, reject) {
+      const supabase = window._supabaseClient;
+      if (!supabase) return reject(new Error('Cloud not available'));
+      supabase.from('public_shares').delete().eq('id', shareId)
+        .then(function (res) {
+          if (res.error) return reject(res.error);
+          resolve();
         }).catch(reject);
     });
   }
@@ -271,6 +384,7 @@
         return showError('Cloud not available');
       }
       fetchShare(shareId).then(renderSharePage).catch(function (e) {
+        if (e && e.code === 'paused') return showPaused();
         showError(e.message || 'Share not found');
       });
     }
@@ -280,6 +394,21 @@
           '<h1 style="font-size:24px;color:#dc2626;">Share not found</h1>' +
           '<p>' + escapeHtml(msg) + '</p>' +
           '<a href="' + location.origin + location.pathname + '" style="color:#16a34a;font-weight:700;text-decoration:none;margin-top:14px;">Open ProChefDesk →</a>' +
+          '</div>';
+      }
+    }
+    function showPaused() {
+      // Try to localise; fall back to English if i18n isn't ready.
+      const t = (PCD.i18n && PCD.i18n.t) ? PCD.i18n.t : function (k, fb) { return fb; };
+      const title = t('share_paused_page_title', 'This share is paused');
+      const body = t('share_paused_page_msg', 'The owner has temporarily disabled this share. It may become available again later.');
+      const back = t('share_back_to_app', 'Open ProChefDesk →');
+      if (appEl) {
+        appEl.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#666;text-align:center;padding:24px;">' +
+          '<div style="font-size:56px;margin-bottom:18px;">⏸</div>' +
+          '<h1 style="font-size:22px;color:#444;margin:0;font-weight:700;">' + escapeHtml(title) + '</h1>' +
+          '<p style="margin:14px 0 0;max-width:420px;line-height:1.6;">' + escapeHtml(body) + '</p>' +
+          '<a href="' + location.origin + location.pathname + '" style="color:#16a34a;font-weight:700;text-decoration:none;margin-top:24px;">' + escapeHtml(back) + '</a>' +
           '</div>';
       }
     }
@@ -293,6 +422,10 @@
     renderSharePage: renderSharePage,
     snapshotRecipe: snapshotRecipe,
     snapshotMenu: snapshotMenu,
+    snapshotKitchenCard: snapshotKitchenCard,
     initShareCheck: initShareCheck,
+    listMyShares: listMyShares,
+    setSharePaused: setSharePaused,
+    deleteShare: deleteShare,
   };
 })();
