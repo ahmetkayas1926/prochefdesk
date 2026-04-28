@@ -536,5 +536,6 @@ window.PCD.i18n.register('en', {
   haccp_note_placeholder: 'e.g. Door left open after delivery, closed at 14:30. Re-check at 15:00 = 4°C.',
   haccp_value_required: 'Enter a temperature value',
   haccp_reading_deleted: 'Reading removed',
+  haccp_too_many_units: 'You have many units. The grid may feel tight on screen and on print. Multi-page layout is coming in a future update.',
   optional: 'optional',
 });

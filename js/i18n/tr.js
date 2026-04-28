@@ -519,5 +519,6 @@ window.PCD.i18n.register('tr', {
   haccp_note_placeholder: 'örn. Teslimat sonrası kapı açık unutulmuş, 14:30\'da kapatıldı. 15:00 tekrar kontrol = 4°C.',
   haccp_value_required: 'Sıcaklık değeri gir',
   haccp_reading_deleted: 'Okuma silindi',
+  haccp_too_many_units: 'Çok fazla cihaz var. Tablo ekranda ve baskıda sıkışık görünebilir. İleride çok sayfalı düzen eklenecek.',
   optional: 'isteğe bağlı',
 });

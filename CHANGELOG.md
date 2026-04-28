@@ -1,3 +1,37 @@
+# v2.6.2 — HACCP grid optimizasyonu (tek sayfa fit)
+
+## Talep
+
+1. Day kolonu çok geniş, gereksiz boşluk var
+2. Ekranda ve print'te tüm grid tek sayfaya sığmıyordu
+3. Çok cihaz eklenirse uyarı gerekli
+
+## Çözüm
+
+**Ekran:** Day kolonu 70px sabit, hücreler 50px, font 12px (önceden 13px). Toplam grid genişliği `70 + units × 100`. 6 ünite tek sayfada rahat sığar, üzerinde scroll devreye girer.
+
+**Print:** A4 yatay, table-layout fixed, font 9px, kompakt padding. 6 üniteye kadar tek sayfa, 7+ ise üst tarafta uyarı.
+
+**Uyarı:** 6'dan fazla ünite varsa hem ekranda hem print'te sarı banner: "Çok fazla cihaz, sıkışık görünebilir, ileride çok sayfalı düzen gelecek."
+
+## Kod
+
+`js/tools/haccp_logs.js`:
+- Grid: padding'ler küçüldü, font 12px, day kolonu 70px sabit, AM/PM hücreleri 50px sabit
+- Print: tüm font/padding boyutları küçüldü, `table-layout:fixed`, A4 margin 8mm
+- 6+ ünite için ekran + print uyarısı
+
+`js/i18n/en.js`, `tr.js`: `haccp_too_many_units` key
+
+## Test
+
+1. 1-3 ünite ile grid → tek bakışta ay tamamı sığsın, day kolonu kompakt
+2. Print → tek A4 yatay sayfada tüm ay
+3. 7+ ünite ekle → sarı uyarı bandı
+4. Print → uyarı + tablo (sıkışık ama yine de tek sayfa)
+
+---
+
 # v2.6.1 — HACCP Forms · Fridge & Freezer Log
 
 ## Talep

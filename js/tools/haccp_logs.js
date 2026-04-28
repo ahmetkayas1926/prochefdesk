@@ -145,14 +145,39 @@
     view.appendChild(monthNav);
 
     // Build the grid table.
-    // Sticky-header table; rows = days, columns = unit×shift.
+    // Tight layout — fit as many units as possible on one page.
+    // Day column: ~70px, each unit×shift cell: ~50px each (so 100px per unit).
+    // ~6 units fit comfortably on a 1200px desktop / 8 fits on 1440px.
     // For mobile we wrap in a scroll container.
+    const FIT_LIMIT = 6; // beyond this, the grid gets too tight on a single page
+    const showFitWarning = units.length > FIT_LIMIT;
+    if (showFitWarning) {
+      const banner = PCD.el('div', {
+        class: 'card',
+        style: {
+          padding: '10px 14px',
+          marginTop: '10px',
+          marginBottom: '12px',
+          background: '#fef3c7',
+          border: '1px solid #fbbf24',
+          color: '#92400e',
+          fontSize: '12px',
+          lineHeight: '1.5',
+        }
+      });
+      banner.innerHTML = '⚠ ' + PCD.escapeHtml(t('haccp_too_many_units') ||
+        'You have ' + units.length + ' units. The grid may feel tight on screen and on print. Multi-page layout is coming in a future update.');
+      view.appendChild(banner);
+    }
+
     const wrap = PCD.el('div', { class: 'card', style: { padding: '0', overflowX: 'auto' } });
+    // Per-unit width: 100px (50 AM + 50 PM). Day column: 70px.
+    const minW = 70 + units.length * 100;
     let table =
-      '<table style="width:100%;min-width:' + (220 + units.length * 200) + 'px;border-collapse:collapse;font-size:13px;">' +
+      '<table style="width:100%;min-width:' + minW + 'px;border-collapse:collapse;font-size:12px;">' +
         '<thead style="position:sticky;top:0;z-index:2;background:var(--surface-2);">' +
           '<tr>' +
-            '<th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-3);border-bottom:1px solid var(--border);position:sticky;left:0;background:var(--surface-2);z-index:3;min-width:120px;">' +
+            '<th style="padding:8px 8px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-3);border-bottom:1px solid var(--border);position:sticky;left:0;background:var(--surface-2);z-index:3;width:70px;min-width:70px;">' +
               PCD.escapeHtml(t('haccp_col_day') || 'Day') +
             '</th>';
     units.forEach(function (u) {
@@ -160,18 +185,18 @@
         ? u.min + '–' + u.max + '°' + tempUnit
         : '—';
       table +=
-        '<th colspan="2" style="padding:10px 8px;text-align:center;font-size:11px;font-weight:700;border-bottom:1px solid var(--border);border-left:1px solid var(--border);">' +
-          '<div style="font-size:13px;font-weight:700;text-transform:none;letter-spacing:0;color:var(--text-1);">' + PCD.escapeHtml(u.name) + '</div>' +
-          '<div style="font-size:10px;font-weight:400;color:var(--text-3);text-transform:none;letter-spacing:0;margin-top:2px;">' + range + '</div>' +
+        '<th colspan="2" style="padding:8px 4px;text-align:center;font-size:11px;font-weight:700;border-bottom:1px solid var(--border);border-left:1px solid var(--border);">' +
+          '<div style="font-size:12px;font-weight:700;text-transform:none;letter-spacing:0;color:var(--text-1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + PCD.escapeHtml(u.name) + '</div>' +
+          '<div style="font-size:9px;font-weight:400;color:var(--text-3);text-transform:none;letter-spacing:0;margin-top:1px;">' + range + '</div>' +
         '</th>';
     });
     table += '</tr>' +
           '<tr style="background:var(--surface);">' +
-            '<th style="padding:6px 12px;text-align:left;font-size:10px;font-weight:600;color:var(--text-3);border-bottom:1px solid var(--border);position:sticky;left:0;background:var(--surface);z-index:3;"></th>';
+            '<th style="padding:4px 8px;text-align:left;font-size:9px;font-weight:600;color:var(--text-3);border-bottom:1px solid var(--border);position:sticky;left:0;background:var(--surface);z-index:3;width:70px;min-width:70px;"></th>';
     units.forEach(function () {
       table +=
-        '<th style="padding:6px 4px;text-align:center;font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);border-left:1px solid var(--border);">AM</th>' +
-        '<th style="padding:6px 4px;text-align:center;font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);">PM</th>';
+        '<th style="padding:4px 2px;text-align:center;font-size:9px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);border-left:1px solid var(--border);width:50px;">AM</th>' +
+        '<th style="padding:4px 2px;text-align:center;font-size:9px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);width:50px;">PM</th>';
     });
     table += '</tr></thead><tbody>';
 
@@ -187,28 +212,28 @@
       const dow = date.toLocaleDateString(undefined, { weekday: 'short' });
       const rowBg = isToday ? 'var(--brand-50)' : 'transparent';
       table += '<tr style="background:' + rowBg + ';">' +
-        '<td style="padding:8px 12px;border-bottom:1px solid var(--border);font-weight:' + (isToday ? '700' : '500') + ';position:sticky;left:0;background:' + (isToday ? 'var(--brand-50)' : 'var(--surface)') + ';z-index:1;min-width:120px;">' +
-          '<div>' + d + ' <span style="color:var(--text-3);font-weight:400;font-size:11px;">' + dow + '</span></div>' +
+        '<td style="padding:5px 8px;border-bottom:1px solid var(--border);font-weight:' + (isToday ? '700' : '500') + ';position:sticky;left:0;background:' + (isToday ? 'var(--brand-50)' : 'var(--surface)') + ';z-index:1;width:70px;min-width:70px;font-size:11px;">' +
+          '<div>' + d + ' <span style="color:var(--text-3);font-weight:400;font-size:10px;">' + dow + '</span></div>' +
         '</td>';
 
       units.forEach(function (u) {
         const reading = readingsByKey[u.id + '|' + dateStr];
         ['morning', 'evening'].forEach(function (shift) {
           const r = reading && reading[shift];
-          const cellStyle = 'padding:6px 4px;border-bottom:1px solid var(--border);text-align:center;cursor:' + (isFuture ? 'not-allowed' : 'pointer') + ';' +
+          const cellStyle = 'padding:4px 2px;border-bottom:1px solid var(--border);text-align:center;cursor:' + (isFuture ? 'not-allowed' : 'pointer') + ';width:50px;' +
             (shift === 'morning' ? 'border-left:1px solid var(--border);' : '');
           let cellContent = '';
           if (r && r.value !== undefined && r.value !== null && r.value !== '') {
             const oor = isOutOfRange(u, r.value);
             const hasNote = !!r.note;
             cellContent =
-              '<div style="display:inline-flex;align-items:center;gap:3px;font-weight:600;color:' + (oor ? '#dc2626' : 'var(--text-1)') + ';font-size:13px;">' +
+              '<div style="display:inline-flex;align-items:center;gap:2px;font-weight:600;color:' + (oor ? '#dc2626' : 'var(--text-1)') + ';font-size:12px;">' +
                 (oor ? '⚠' : '') +
                 PCD.escapeHtml(String(r.value)) + '°' +
-                (hasNote ? '<span title="Has note" style="color:var(--brand-600);font-size:10px;">📝</span>' : '') +
+                (hasNote ? '<span title="Has note" style="color:var(--brand-600);font-size:9px;">📝</span>' : '') +
               '</div>';
           } else if (!isFuture) {
-            cellContent = '<span style="color:var(--text-3);font-size:18px;font-weight:300;">+</span>';
+            cellContent = '<span style="color:var(--text-3);font-size:16px;font-weight:300;">+</span>';
           } else {
             cellContent = '<span style="color:var(--text-3);">·</span>';
           }
@@ -487,31 +512,33 @@
 
     let html =
       '<style>' +
-        'body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#000;margin:0;padding:16px;}' +
-        '.h-head{margin-bottom:16px;border-bottom:2px solid #16a34a;padding-bottom:8px;}' +
-        '.h-head h1{margin:0;font-size:20px;}' +
-        '.h-head .sub{font-size:12px;color:#555;margin-top:2px;}' +
-        'table.h-grid{width:100%;border-collapse:collapse;font-size:10px;}' +
-        'table.h-grid th, table.h-grid td{border:1px solid #999;padding:3px 4px;text-align:center;}' +
-        'table.h-grid th{background:#f3f4f6;font-weight:700;font-size:9px;}' +
-        'table.h-grid td.day{text-align:left;font-weight:600;background:#fafafa;}' +
+        'body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#000;margin:0;padding:10px;}' +
+        '.h-head{margin-bottom:10px;border-bottom:2px solid #16a34a;padding-bottom:5px;}' +
+        '.h-head h1{margin:0;font-size:16px;}' +
+        '.h-head .sub{font-size:10px;color:#555;margin-top:2px;}' +
+        'table.h-grid{width:100%;border-collapse:collapse;font-size:9px;table-layout:fixed;}' +
+        'table.h-grid th, table.h-grid td{border:1px solid #999;padding:2px 3px;text-align:center;}' +
+        'table.h-grid th{background:#f3f4f6;font-weight:700;font-size:8px;}' +
+        'table.h-grid td.day{text-align:left;font-weight:600;background:#fafafa;font-size:9px;}' +
         'table.h-grid td.oor{background:#fee2e2;color:#991b1b;font-weight:700;}' +
         'table.h-grid td.has-note::after{content:" *";color:#16a34a;}' +
-        '.h-notes{margin-top:14px;font-size:10px;}' +
-        '.h-notes .nh{font-weight:700;margin-bottom:6px;font-size:11px;}' +
-        '.h-notes .ni{padding:4px 0;border-bottom:1px solid #eee;}' +
-        '.h-sign{margin-top:18px;padding-top:10px;border-top:1px solid #ccc;font-size:11px;display:flex;justify-content:space-between;}' +
-        '@page{size:A4 landscape;margin:12mm;}' +
+        '.h-notes{margin-top:8px;font-size:9px;}' +
+        '.h-notes .nh{font-weight:700;margin-bottom:4px;font-size:10px;}' +
+        '.h-notes .ni{padding:2px 0;border-bottom:1px solid #eee;}' +
+        '.h-sign{margin-top:10px;padding-top:6px;border-top:1px solid #ccc;font-size:10px;display:flex;justify-content:space-between;}' +
+        '@page{size:A4 landscape;margin:8mm;}' +
+        (units.length > 6 ? '.h-warn{padding:4px 8px;background:#fef3c7;color:#92400e;font-size:9px;border-radius:3px;margin-bottom:6px;}' : '') +
       '</style>' +
       '<div class="h-head">' +
         '<h1>HACCP · Fridge & Freezer Temperature Log</h1>' +
         '<div class="sub">' + PCD.escapeHtml(wsName) + ' · ' + PCD.escapeHtml(monthLabel(year, monthIdx0)) + ' · Temperatures in °' + tempUnit + '</div>' +
       '</div>' +
+      (units.length > 6 ? '<div class="h-warn">⚠ ' + units.length + ' units printed on one page — text may be tight. Consider splitting your log into two groups for better readability.</div>' : '') +
       '<table class="h-grid"><thead>' +
-        '<tr><th rowspan="2">Day</th>';
+        '<tr><th rowspan="2" style="width:8%;">Day</th>';
     units.forEach(function (u) {
       const range = (u.min !== undefined && u.max !== undefined) ? '(' + u.min + '–' + u.max + ')' : '';
-      html += '<th colspan="2">' + PCD.escapeHtml(u.name) + '<br><span style="font-weight:400;color:#666;">' + range + '</span></th>';
+      html += '<th colspan="2">' + PCD.escapeHtml(u.name) + '<br><span style="font-weight:400;color:#666;font-size:7px;">' + range + '</span></th>';
     });
     html += '</tr><tr>';
     units.forEach(function () { html += '<th>AM</th><th>PM</th>'; });
