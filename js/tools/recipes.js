@@ -1309,6 +1309,7 @@
 
   // Versions panel — shows all snapshots of a recipe, lets user view/restore/delete each.
   function openVersionsPanel(recipeId, onAfterRestore) {
+    const t = PCD.i18n.t;
     const r = PCD.store.getRecipe(recipeId);
     if (!r) return;
     const versions = (r.versions || []).slice().reverse(); // newest first
@@ -1346,17 +1347,17 @@
       const sid = this.getAttribute('data-restore');
       PCD.modal.confirm({
         icon: '↩', iconKind: 'info',
-        title: 'Restore this version?',
-        text: 'Current state will be auto-saved as a new version first, so you can undo. Continue?',
-        okText: 'Restore'
+        title: t('recipe_restore_title'),
+        text: t('recipe_revert_msg'),
+        okText: t('recipe_restore_ok')
       }).then(function (ok) {
         if (!ok) return;
         const success = PCD.store.restoreRecipeVersion ? PCD.store.restoreRecipeVersion(recipeId, sid) : false;
         if (success) {
-          PCD.toast.success('Recipe restored — current state saved as new version');
+          PCD.toast.success(t('recipe_restored_msg'));
           if (typeof onAfterRestore === 'function') onAfterRestore();
         } else {
-          PCD.toast.error('Restore failed');
+          PCD.toast.error(t('recipe_restore_failed'));
         }
       });
     });
@@ -1364,13 +1365,13 @@
       const sid = this.getAttribute('data-delv');
       PCD.modal.confirm({
         icon: '🗑', iconKind: 'danger', danger: true,
-        title: 'Delete this version?',
-        text: 'This snapshot will be permanently removed. Cannot be undone.',
-        okText: 'Delete'
+        title: t('recipe_delete_version_title'),
+        text: t('recipe_delete_version_msg'),
+        okText: t('act_delete') || 'Delete'
       }).then(function (ok) {
         if (!ok) return;
         if (PCD.store.deleteRecipeVersion) PCD.store.deleteRecipeVersion(recipeId, sid);
-        PCD.toast.success('Version deleted');
+        PCD.toast.success(t('recipe_version_deleted'));
         renderBody();
       });
     });
@@ -1462,12 +1463,12 @@
 
         <div class="field-row">
           <div class="field">
-            <label class="field-label">Yield amount (for use as sub-recipe)</label>
+            <label class="field-label">${t('recipe_yield_amount_label')}</label>
             <input type="number" class="input" id="recipeYieldAmount" value="${data.yieldAmount || ''}" step="0.01" min="0" placeholder="e.g. 800">
-            <div class="field-hint">How much this recipe produces. Leave blank if same as servings.</div>
+            <div class="field-hint">${t('recipe_yield_amount_hint')}</div>
           </div>
           <div class="field">
-            <label class="field-label">Yield unit</label>
+            <label class="field-label">${t('recipe_yield_unit_label')}</label>
             <select class="select" id="recipeYieldUnit">
               ${['portion','g','kg','ml','l','batch','tray','pcs'].map(function (u) { return '<option value="' + u + '"' + ((data.yieldUnit || 'portion') === u ? ' selected' : '') + '>' + u + '</option>'; }).join('')}
             </select>
@@ -1482,7 +1483,7 @@
 
           <!-- Quick-add autocomplete -->
           <div style="position:relative;margin-bottom:10px;">
-            <input type="text" class="input" id="quickIngInput" placeholder="Quick add — type ingredient name..." autocomplete="off" style="padding-inline-start:36px;">
+            <input type="text" class="input" id="quickIngInput" placeholder="${PCD.escapeHtml(t('recipe_quick_add_placeholder'))}" autocomplete="off" style="padding-inline-start:36px;">
             <div style="position:absolute;inset-inline-start:10px;top:50%;transform:translateY(-50%);color:var(--text-3);pointer-events:none;">${PCD.icon('search', 16)}</div>
             <div id="quickIngDD" style="display:none;position:absolute;top:100%;inset-inline-start:0;inset-inline-end:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);box-shadow:var(--shadow-lg);max-height:240px;overflow-y:auto;z-index:5;margin-top:4px;"></div>
           </div>
@@ -1507,8 +1508,8 @@
         </div>
 
         <div class="field">
-          <label class="field-label">Allergens</label>
-          <div class="text-muted text-sm mb-2" style="font-size:12px;">Auto-detected from ingredients. Click to override.</div>
+          <label class="field-label">${t('recipe_allergens_label')}</label>
+          <div class="text-muted text-sm mb-2" style="font-size:12px;">${t('recipe_allergens_hint')}</div>
           <div id="allergenChips" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
         </div>
 

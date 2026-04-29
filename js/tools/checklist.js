@@ -66,11 +66,11 @@
     { id: 'low',  labelKey: 'chk_prio_low',  color: '#94a3b8' },
   ];
   const ITEM_TYPES = [
-    { id: 'task',        label: 'Task',        desc: 'Simple checkbox' },
-    { id: 'temperature', label: 'Temperature', desc: '°C input + range' },
-    { id: 'numeric',     label: 'Numeric',     desc: 'Number input' },
-    { id: 'pass-fail',   label: 'Pass/Fail',   desc: 'Inspection result' },
-    { id: 'text',        label: 'Text',        desc: 'Free-text input' },
+    { id: 'task',        labelKey: 'chk_item_type_task',        desc: 'Simple checkbox' },
+    { id: 'temperature', labelKey: 'chk_item_type_temperature', desc: '°C input + range' },
+    { id: 'numeric',     labelKey: 'chk_item_type_numeric',     desc: 'Number input' },
+    { id: 'pass-fail',   labelKey: 'chk_item_type_passfail',    desc: 'Inspection result' },
+    { id: 'text',        labelKey: 'chk_item_type_text',        desc: 'Free-text input' },
   ];
   function catLabel(c) { return c ? PCD.i18n.t(c.labelKey) : ''; }
   function prioLabel(p) { return p ? PCD.i18n.t(p.labelKey) : ''; }
@@ -790,7 +790,7 @@
       body.innerHTML =
         '<div class="mb-3" style="padding:12px;background:var(--brand-50);border-radius:var(--r-md);">' +
           '<div class="flex items-center justify-between mb-2">' +
-            '<div style="font-weight:700;">' + done + '/' + total + ' complete</div>' +
+            '<div style="font-weight:700;">' + PCD.i18n.t('chk_complete_count', { done: done, total: total }) + '</div>' +
             '<div style="font-weight:700;color:var(--brand-700);font-size:18px;">' + pct + '%</div>' +
           '</div>' +
           '<div class="progress" style="height:6px;">' +
@@ -996,7 +996,7 @@
       const head = body.querySelector('.mb-3');
       if (head) {
         const dEl = head.querySelector('[style*="font-weight:700"]:first-child');
-        if (dEl) dEl.textContent = done + '/' + total + ' complete';
+        if (dEl) dEl.textContent = PCD.i18n.t('chk_complete_count', { done: done, total: total });
         const pEl = head.querySelector('[style*="font-size:18px"]');
         if (pEl) pEl.textContent = pct + '%';
         const bar = head.querySelector('.progress-bar');
@@ -1463,14 +1463,14 @@
     function renderEditor() {
       body.innerHTML = `
         <div class="field">
-          <label class="field-label">Template name *</label>
-          <input type="text" class="input" id="tplName" value="${PCD.escapeHtml(data.name || '')}" placeholder="e.g. Monday Opening Inspection">
+          <label class="field-label">${PCD.i18n.t('chk_tpl_name')} *</label>
+          <input type="text" class="input" id="tplName" value="${PCD.escapeHtml(data.name || '')}" placeholder="${PCD.escapeHtml(PCD.i18n.t('chk_tpl_name_placeholder'))}">
         </div>
 
         <div class="field">
-          <label class="field-label">Items</label>
+          <label class="field-label">${PCD.i18n.t('chk_items_label')}</label>
           <div id="itemsList" class="flex flex-col gap-2"></div>
-          <button class="btn btn-ghost btn-sm mt-2" id="addItemBtn">${PCD.icon('plus',14)} Add item</button>
+          <button class="btn btn-ghost btn-sm mt-2" id="addItemBtn">${PCD.icon('plus',14)} ${PCD.i18n.t('chk_add_item')}</button>
         </div>
       `;
 
@@ -1483,12 +1483,12 @@
         row.innerHTML = `
           <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
             <div style="color:var(--text-3);font-size:12px;width:24px;text-align:right;font-weight:700;">${idx + 1}.</div>
-            <input type="text" class="input" data-itemtext="${idx}" value="${PCD.escapeHtml(it.text || '')}" placeholder="Item description" style="flex:1;font-weight:500;">
+            <input type="text" class="input" data-itemtext="${idx}" value="${PCD.escapeHtml(it.text || '')}" placeholder="${PCD.escapeHtml(PCD.i18n.t('chk_item_description'))}" style="flex:1;font-weight:500;">
             <button class="icon-btn" data-itemdel="${idx}">${PCD.icon('x',16)}</button>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
             <select class="select" data-itemtype="${idx}" style="font-size:12px;">
-              ${ITEM_TYPES.map(function (t) { return '<option value="' + t.id + '"' + (type === t.id ? ' selected' : '') + '>' + t.label + '</option>'; }).join('')}
+              ${ITEM_TYPES.map(function (it) { return '<option value="' + it.id + '"' + (type === it.id ? ' selected' : '') + '>' + PCD.i18n.t(it.labelKey) + '</option>'; }).join('')}
             </select>
             <select class="select" data-itemcat="${idx}" style="font-size:12px;">
               ${CATS.map(function (c) { return '<option value="' + c.id + '"' + ((it.cat || 'prep') === c.id ? ' selected' : '') + '>' + catLabel(c) + '</option>'; }).join('')}
@@ -1499,9 +1499,9 @@
           </div>
           ${(type === 'temperature' || type === 'numeric') ? `
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:6px;">
-              <input type="number" class="input" data-itemmin="${idx}" value="${it.min !== undefined ? it.min : ''}" step="0.1" placeholder="Min" style="font-size:12px;">
-              <input type="number" class="input" data-itemmax="${idx}" value="${it.max !== undefined ? it.max : ''}" step="0.1" placeholder="Max" style="font-size:12px;">
-              <input type="text" class="input" data-itemunit="${idx}" value="${PCD.escapeHtml(it.unit || '')}" placeholder="${type === 'temperature' ? '°C' : 'unit'}" style="font-size:12px;">
+              <input type="number" class="input" data-itemmin="${idx}" value="${it.min !== undefined ? it.min : ''}" step="0.1" placeholder="${PCD.escapeHtml(PCD.i18n.t('chk_min'))}" style="font-size:12px;">
+              <input type="number" class="input" data-itemmax="${idx}" value="${it.max !== undefined ? it.max : ''}" step="0.1" placeholder="${PCD.escapeHtml(PCD.i18n.t('chk_max'))}" style="font-size:12px;">
+              <input type="text" class="input" data-itemunit="${idx}" value="${PCD.escapeHtml(it.unit || '')}" placeholder="${type === 'temperature' ? '°C' : PCD.escapeHtml(PCD.i18n.t('chk_unit_placeholder'))}" style="font-size:12px;">
             </div>
           ` : ''}
         `;

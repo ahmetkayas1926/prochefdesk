@@ -122,9 +122,9 @@
           <div class="page-subtitle">${t('inventory_subtitle')}</div>
         </div>
         <div class="page-header-actions">
-          <button class="btn btn-outline btn-sm" id="historyHeaderBtn" title="View past stock counts">${PCD.icon('clock',14)} History</button>
-          <button class="btn btn-outline btn-sm" id="bulkCountBtn">${PCD.icon('list',14)} Count Stock</button>
-          <button class="btn btn-outline btn-sm" id="genOrderBtn">${PCD.icon('send',14)} Generate Order</button>
+          <button class="btn btn-outline btn-sm" id="historyHeaderBtn" title="${PCD.escapeHtml(t('inv_view_past_counts_tooltip'))}">${PCD.icon('clock',14)} ${t('inv_history')}</button>
+          <button class="btn btn-outline btn-sm" id="bulkCountBtn">${PCD.icon('list',14)} ${t('inv_count_stock')}</button>
+          <button class="btn btn-outline btn-sm" id="genOrderBtn">${PCD.icon('send',14)} ${t('inv_generate_order')}</button>
         </div>
       </div>
 
@@ -257,8 +257,8 @@
               PCD.escapeHtml(t(cat) || cat) + ' (' + items.length + ')' +
             '</div>' +
             (needAttention > 0
-              ? '<div style="font-size:11px;font-weight:700;color:var(--danger);">' + needAttention + ' need order</div>'
-              : '<div style="font-size:11px;color:var(--success);">all ok</div>'
+              ? '<div style="font-size:11px;font-weight:700;color:var(--danger);">' + t('inv_need_order', { n: needAttention }) + '</div>'
+              : '<div style="font-size:11px;color:var(--success);">' + t('inv_all_ok') + '</div>'
             ) +
           '</div>';
 
@@ -419,13 +419,13 @@
     rejectBtn.addEventListener('click', function () {
       PCD.modal.confirm({
         icon: '⚠', iconKind: 'danger', danger: true,
-        title: 'Reject this count?',
-        text: 'The count will be discarded. Sous chef will need to count again.',
-        okText: 'Reject'
+        title: t('inv_reject_count_title'),
+        text: t('inv_discard_count_msg'),
+        okText: t('inv_reject')
       }).then(function (ok) {
         if (!ok) return;
         setPendingForCurrentWs(null);
-        PCD.toast.info('Count rejected');
+        PCD.toast.info(t('inv_count_rejected'));
         m.close();
         setTimeout(function () {
           const v = PCD.$('#view');
@@ -479,8 +479,8 @@
             '<div style="flex:1;min-width:0;">' +
               '<div style="font-weight:700;font-size:14px;">' + dateStr + ' · ' + timeStr + '</div>' +
               '<div class="text-muted" style="font-size:12px;">' +
-                snap.itemCount + ' items counted' +
-                (snap.countedBy ? ' · by ' + PCD.escapeHtml(snap.countedBy) : '') +
+                t('inv_x_items_counted', { n: snap.itemCount }) +
+                (snap.countedBy ? ' · ' + PCD.escapeHtml(snap.countedBy) : '') +
               '</div>' +
             '</div>' +
             '<button type="button" class="icon-btn" data-del-snap="' + snap.id + '" title="Delete snapshot">' + PCD.icon('trash', 16) + '</button>' +
@@ -510,13 +510,13 @@
       const id = this.getAttribute('data-del-snap');
       PCD.modal.confirm({
         icon: '🗑', iconKind: 'danger', danger: true,
-        title: 'Delete this count?',
-        text: 'This snapshot will be permanently removed from history. Inventory levels stay as they are.',
-        okText: 'Delete'
+        title: t('inv_delete_snapshot_title'),
+        text: t('inv_delete_snapshot_msg'),
+        okText: t('act_delete') || 'Delete'
       }).then(function (ok) {
         if (!ok) return;
         PCD.store.deleteFromTable('stockCountHistory', id);
-        PCD.toast.success('Snapshot deleted');
+        PCD.toast.success(t('inv_snapshot_deleted'));
         paintList();
       });
     });
@@ -615,10 +615,11 @@
 
   function openBulkCount(options) {
     options = options || {};
+    const t = PCD.i18n.t;
     const mode = options.mode || 'single';
-    const title = options.title || 'Bulk Stock Count';
+    const title = options.title || t('inv_bulk_stock_count');
     const ings = PCD.store.listIngredients();
-    if (ings.length === 0) { PCD.toast.info('No ingredients to count'); return; }
+    if (ings.length === 0) { PCD.toast.info(t('inv_no_ingredients_to_count')); return; }
     const invAll = readInventory();
     const draft = {};
     ings.forEach(function (i) {
@@ -648,12 +649,12 @@
       const done = countCompleted();
       let html = '<div class="mb-3" style="padding:12px;background:var(--brand-50);border-radius:var(--r-md);position:sticky;top:0;z-index:3;">' +
         '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">' +
-          '<div><div style="font-weight:700;">Count Stock</div>' +
-          '<div class="text-muted text-sm" id="countProgress">' + done + ' / ' + ings.length + ' counted</div></div>' +
+          '<div><div style="font-weight:700;">' + t('inv_count_stock') + '</div>' +
+          '<div class="text-muted text-sm" id="countProgress">' + t('inv_progress_counted', { done: done, total: ings.length }) + '</div></div>' +
           '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">' +
-            '<input type="search" id="countSearch" placeholder="Filter..." style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--r-sm);font-size:13px;width:140px;">' +
-            '<button type="button" class="btn btn-outline btn-sm" id="clearAllBtn" title="Clear all values">' + PCD.icon('x', 14) + ' <span>Clear</span></button>' +
-            '<button type="button" class="btn btn-outline btn-sm" id="historyBtn" title="View past counts">' + PCD.icon('clock', 14) + ' <span>History</span></button>' +
+            '<input type="search" id="countSearch" placeholder="' + PCD.escapeHtml(t('inv_filter_placeholder')) + '" style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--r-sm);font-size:13px;width:140px;">' +
+            '<button type="button" class="btn btn-outline btn-sm" id="clearAllBtn" title="' + PCD.escapeHtml(t('inv_clear_all_tooltip')) + '">' + PCD.icon('x', 14) + ' <span>' + t('inv_clear') + '</span></button>' +
+            '<button type="button" class="btn btn-outline btn-sm" id="historyBtn" title="' + PCD.escapeHtml(t('inv_view_past_counts_tooltip_short')) + '">' + PCD.icon('clock', 14) + ' <span>' + t('inv_history') + '</span></button>' +
           '</div>' +
         '</div></div>';
 
@@ -702,14 +703,14 @@
       const clearBtn = PCD.$('#clearAllBtn', body);
       if (clearBtn) clearBtn.addEventListener('click', function () {
         PCD.modal.confirm({
-          title: 'Clear all counts?',
-          text: 'This will empty all the count inputs above. Saved inventory levels are NOT affected — only the current form.',
-          okText: 'Clear all', cancelText: 'Cancel'
+          title: t('inv_clear_count_form_title'),
+          text: t('inv_clear_count_form_msg'),
+          okText: t('inv_clear'), cancelText: t('cancel') || 'Cancel'
         }).then(function (ok) {
           if (!ok) return;
           ings.forEach(function (i) { draft[i.id] = ''; });
           renderBody();
-          PCD.toast.success('All counts cleared');
+          PCD.toast.success(t('inv_clear'));
         });
       });
 
@@ -726,7 +727,7 @@
         if (row) row.style.background = (this.value !== '') ? 'var(--brand-50)' : 'var(--surface)';
         // Update progress
         const prog = PCD.$('#countProgress', body);
-        if (prog) prog.textContent = countCompleted() + ' / ' + ings.length + ' counted';
+        if (prog) prog.textContent = t('inv_progress_counted', { done: countCompleted(), total: ings.length });
       });
       // Tab / Enter advance to next input
       PCD.on(body, 'keydown', '.count-input', function (e) {
@@ -865,6 +866,7 @@
   }
 
   function promptGenerateOrdersAfterCount() {
+    const t = PCD.i18n.t;
     const ings = PCD.store.listIngredients();
     const invAll = readInventory();
     // Count tracked items needing reorder (out / critical / low)
@@ -876,12 +878,13 @@
       if (status === 'out' || status === 'critical' || status === 'low') belowCount++;
     });
     if (belowCount === 0) return;
+    const titleKey = belowCount === 1 ? 'inv_x_items_need_ordering_singular' : 'inv_x_items_need_ordering_plural';
     PCD.modal.confirm({
       icon: '📦', iconKind: 'info',
-      title: belowCount + ' item' + (belowCount === 1 ? '' : 's') + ' need ordering',
-      text: 'Want to generate purchase orders for the low-stock items now?',
-      okText: 'Generate Orders',
-      cancelText: 'Later'
+      title: t(titleKey, { n: belowCount }),
+      text: t('inv_generate_orders_msg'),
+      okText: t('inv_generate_orders'),
+      cancelText: t('inv_later')
     }).then(function (ok) {
       if (ok) openGenerateOrder();
     });

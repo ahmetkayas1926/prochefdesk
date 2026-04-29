@@ -547,9 +547,10 @@
     const targets = all.filter(function (w) { return w.id !== fromWsId; });
 
     if (targets.length === 0) {
+      const tt = PCD.i18n && PCD.i18n.t ? PCD.i18n.t : function (k, fb) { return fb; };
       PCD.modal.confirm({
-        title: 'No other workspaces',
-        text: 'You only have one active workspace. Create another from the workspace switcher first, then come back to copy.',
+        title: tt('ws_only_one_title') || 'No other workspaces',
+        text: tt('ws_only_one_msg') || 'You only have one active workspace. Create another from the workspace switcher first, then come back to copy.',
         okText: 'OK', cancelText: null,
       });
       return;

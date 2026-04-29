@@ -178,9 +178,9 @@
             <input type="number" class="input" id="ePrice" value="${data.pricePerHead || ''}" step="0.01" min="0">
           </div>
           <div class="field">
-            <label class="field-label">Customer budget</label>
-            <input type="number" class="input" id="eBudget" value="${data.budget || ''}" step="0.01" min="0" placeholder="What the customer pays">
-            <div class="field-hint">Total amount the customer agreed to pay</div>
+            <label class="field-label">${t('event_customer_budget')}</label>
+            <input type="number" class="input" id="eBudget" value="${data.budget || ''}" step="0.01" min="0" placeholder="${PCD.escapeHtml(t('event_customer_budget_placeholder'))}">
+            <div class="field-hint">${t('event_customer_budget_hint')}</div>
           </div>
         </div>
 
@@ -195,11 +195,11 @@
               const usedPct = data.budget > 0 ? (stats.totalCost / data.budget) * 100 : 0;
               const color = usedPct > 90 ? 'var(--danger)' : usedPct > 70 ? '#d97706' : 'var(--success)';
               return '<div style="text-align:end;">' +
-                '<div class="stat-label">Customer budget</div>' +
+                '<div class="stat-label">' + t('event_customer_budget') + '</div>' +
                 '<div style="font-size:18px;font-weight:800;">' + PCD.fmtMoney(data.budget) + '</div>' +
               '</div>' +
               '<div style="text-align:end;">' +
-                '<div class="stat-label">Profit vs budget</div>' +
+                '<div class="stat-label">' + t('event_profit_vs_budget') + '</div>' +
                 '<div style="font-size:18px;font-weight:800;color:' + color + ';">' + PCD.fmtMoney(remaining) + ' (' + (100 - usedPct).toFixed(0) + '%)</div>' +
               '</div>';
             })() : ''}

@@ -1,3 +1,299 @@
+# v2.6.20 — Son tarama: kalan eksiklerin Türkçeleştirilmesi
+
+## Talep
+
+Çeviri serisinin son paketi. Kalan dağınık hardcoded metinleri tara ve düzelt.
+
+## Çözüm
+
+23 yeni i18n key — sadece EN ve TR. Hedeflenen yerler:
+
+**Confirm dialog'lar:**
+- `account.js`: Sign out? + Backup restore (title/text/okText)
+- `inventory.js`: Reject count + Delete snapshot + Clear count form (title/text/okText/toast'lar)
+- `recipes.js`: Restore version + Delete version (title/text/okText/toast'lar)
+- `utils.js`: "No other workspaces" (workspace copy modal'ı)
+
+**Tooltip ve aria etiketleri:**
+- `haccp_logs.js`: Previous/Next month aria-label
+- `menus.js`: Edit menu tooltip
+- `ingredients.js`: Price history tooltip
+
+**suppliers.js:**
+- "No products yet — tap edit..." metni
+- "Product name" placeholder
+- `buildSupplierCard` fonksiyonuna `t` scope eklendi
+
+**Bug fix:** `recipes.js` `openVersionsPanel` fonksiyonunda `t` tanımlı değildi, eklendi.
+
+## Kapsam dışı (kasıtlı)
+
+- `DEFAULT_TEMPLATES` İngilizce içerikleri (sadece yeni hesaplarda görünür, ayrı paket)
+- Print HTML içerikleri (etkinlik, recipe vb. baskı çıktıları — ayrı paket)
+- Router fallback error mesajı (nadir görülür)
+- Bazı ihtimal düşük tooltip'ler (Delete forever, Delete snapshot icon-btn) — sadece hover'da görünür, screen reader'lar zaten var
+- Aria-label'lar (Dismiss vb.) — sadece erişilebilirlik
+
+## Test
+
+1. Dil = TR → bu yerlerin hepsi TR olmalı:
+   - Hesap → Çıkış yap → "Çıkış yapılsın mı?" diyalogu
+   - Hesap → Yedekten geri yükle → "İçe aktarma TÜM mevcut veriyi DEĞİŞTİRİR" diyalogu
+   - Stok sayım reddetme → "Bu sayım reddedilsin mi?"
+   - Stok geçmiş kayıt sil → "Bu kayıt silinsin mi?"
+   - Toplu sayım modal'ında "Temizle" → "Tüm sayım değerleri temizlensin mi?"
+   - Tarif düzenle → versiyonlar → Geri yükle → "Bu sürüme geri dönülsün mü?"
+   - Tarif düzenle → versiyon sil → "Bu sürüm silinsin mi?"
+   - Tek workspace varken kopyala dene → "Başka çalışma alanı yok"
+   - HACCP grid ay oklarına hover → tooltip TR
+   - Menüler listesinde edit ikonuna hover → "Menüyü düzenle"
+   - Malzemelerde fiyat değişim ▲▼ ikonuna hover → "Fiyat geçmişi"
+   - Tedarikçi kartında ürün yokken "Henüz ürün yok..."
+   - Tedarikçi düzenle → ürün adı placeholder "Ürün adı"
+
+---
+
+# v2.6.19 — HACCP cihaz hazır şablon isimleri Türkçe
+
+## Talep
+
+HACCP empty state, log selector, tüm modal'lar zaten i18n çevrili (TR'de tam). Tek eksik: cihaz ekleme modal'ında "Preset" butonları — "Fridge / Walk-in Cooler / Freezer / Bar Fridge / Display Cooler / Hot Holding". Şef bir preset'e bastığında isim alanı bu metinle dolar — Türkçe seçilmişse bile İngilizce isim yazılır.
+
+## Çözüm
+
+6 yeni i18n key (`haccp_preset_*`) — sadece EN ve TR. `UNIT_PRESETS` array'inin sabit `name` field'ı `nameKey` ile değiştirildi. Preset butonu render'da ve preset tıklandığında `t(p.nameKey)` ile çevrili isim kullanılır.
+
+Walk-in Cooler TR'de de "Walk-in Cooler" olarak kaldı — sektörde Türkiye'de de İngilizce orijinal terim kullanılıyor.
+
+## Test
+
+1. Dil = TR
+2. HACCP Forms → Cihaz ekle modal aç
+3. Preset butonları: "Buzdolabı / Walk-in Cooler / Dondurucu / Bar Buzdolabı / Vitrin Soğutucu / Sıcak Tutma"
+4. Bir preset'e tıkla → isim alanı TR isim ile dolar
+
+---
+
+# v2.6.18 — Etkinlik editörü Türkçe (müşteri bütçesi)
+
+## Talep
+
+Yeni Etkinlik modal'ında "Customer budget" label, "What the customer pays" placeholder, "Total amount the customer agreed to pay" hint, "Profit vs budget" stat-label hardcoded İngilizce kalıyordu.
+
+## Çözüm
+
+4 yeni i18n key (`event_customer_budget*`, `event_profit_vs_budget`) — sadece EN ve TR. `events.js`'de editor field bloğu ve stat-label blokları t() çağrılarına dönüştürüldü.
+
+## Bilinen kapsam dışı
+
+Etkinlik **print HTML**'i (yazdırma çıktısı, ~line 480-512) hâlâ İngilizce metinler içeriyor: "Date / Guests / Venue / Price/person / Menu / Recipe / Per guest / Total portions / Cost / Total food cost / Customer budget / Total revenue / Profit / Notes". Bu print template'leri ayrı bir pakette ele alınabilir; print-HTML'de yapılan değişiklikler test/iterasyon açısından farklıdır (preview popup'a bakma, font değişikliği etkileri gibi).
+
+## Test
+
+1. Dil = TR
+2. Yeni Etkinlik aç
+3. "Müşteri bütçesi" label + "Müşterinin ödediği tutar" placeholder + "Müşterinin ödemeyi kabul ettiği toplam tutar" hint
+4. Bütçe gir → stat alanlarında "Müşteri bütçesi" + "Bütçeye göre kâr" görünmeli
+
+---
+
+# v2.6.17 — Stok / Inventory Türkçe
+
+## Talep
+
+Stok sayfasında bir sürü hardcoded metin: "History / Count Stock / Generate Order" üst butonlar, "all ok / X need order" stat etiketleri, "Bulk Stock Count / Filter... / Clear / X / Y counted" bulk count modal'ı, "View past stock counts" tooltip'leri, "X items counted" history listesi, "Generate Orders / Later / X items need ordering / Want to generate purchase orders..." onay diyalogu.
+
+## Çözüm
+
+15 yeni i18n key (`inv_*`) — sadece EN ve TR. Mevcut `inv_count_stock` ve `inv_generate_order` keyleri zaten v17.js'de tanımlıydı ama kullanılmıyordu — artık kullanılıyor.
+
+`promptGenerateOrdersAfterCount()` fonksiyonunda `t` scope eksikti, eklendi. `openBulkCount()` fonksiyonuna da `t` eklendi.
+
+Interpolation kullanan keyler:
+- `inv_need_order: '{n} tanesi siparişlik'`
+- `inv_progress_counted: '{done} / {total} sayıldı'`
+- `inv_x_items_counted: '{n} öğe sayıldı'`
+- Tekil/çoğul ayrı keyler: `inv_x_items_need_ordering_singular / _plural`
+
+## Test
+
+1. Dil = TR
+2. Stok sayfası → üst sağ butonlar: "Geçmiş / Stok Say / Sipariş Oluştur"
+3. Kategori başlıklarında: "tümü iyi" yeşil veya "X tanesi siparişlik" kırmızı
+4. "Stok Say" → modal açılsın → "Stok Say" başlık + "X / Y sayıldı" progress
+5. Filter input: "Filtrele..." placeholder
+6. "Temizle" / "Geçmiş" butonları
+7. Sayım kaydet → "Düşük stoklu öğeler için sipariş oluşturmak ister misin?" diyalog → "Sipariş Oluştur / Sonra"
+8. Geçmiş listesinde: "X öğe sayıldı"
+
+---
+
+# v2.6.16 — Kontrol Listesi editörü Türkçe
+
+## Talep
+
+Yeni Şablon modal'ında bazı yerler İngilizce kalıyordu: "Template name" + placeholder, "Items", "Add item", "Item description", item tipi dropdown'ı (Task / Temperature / Numeric / Pass/Fail / Text), Min/Max/unit placeholders, oturum ekranındaki "X/Y complete" progress text'i.
+
+## Çözüm
+
+15 yeni i18n key (`chk_*`) — sadece EN ve TR. `checklist.js`'de:
+- `ITEM_TYPES` array'inin sabit `label` field'ı `labelKey` field'ı ile değiştirildi (`CATS` ve `PRIOS` zaten labelKey kullanıyordu, tutarlı pattern)
+- Editor labels + placeholders + dropdown options + progress text — hepsi `t()` çağrılarına dönüştürüldü
+- Progress için interpolation: `t('chk_complete_count', { done, total })` → "3/8 tamamlandı"
+
+`DEFAULT_TEMPLATES` İngilizce metinleri — bu paketin scope'u dışı bırakıldı. Bunlar sadece **ilk açılışta hiç template yokken** seed olarak kayıt ediliyor. Mevcut hesabında zaten kendi şablonların var, default'ları görmüyorsun. Yeni hesaplar TR ile başlatıldığında ileride bir pakette bunları çevirebiliriz.
+
+## Test
+
+1. Dil = TR
+2. Kontrol Listesi → "+ Şablon" → modal açılsın
+3. "Şablon adı" label + "örn. Pazartesi Açılış Kontrolü" placeholder
+4. "Öğeler" başlık + "Öğe ekle" buton
+5. Öğe satırlarında: "Öğe açıklaması" placeholder
+6. Tip dropdown'ı: Görev / Sıcaklık / Sayısal / Geçti-Kaldı / Metin
+7. Sıcaklık veya Sayısal seçilirse: Min / Maks / birim placeholders TR
+8. Bir checklist başlat (Start) → progress: "0/8 tamamlandı", item tikleyince "1/8 tamamlandı"
+
+---
+
+# v2.6.15 — Porsiyon Hesaplayıcı Türkçe
+
+## Talep
+
+Porsiyon Hesaplayıcı sayfasında bir çok hardcoded metin: "Scale one or more recipes for an event", "Step 1 — Guest count / Step 2 — Choose recipes / Step 3 — Scaled recipes", "guests / Select all / Clear / Search recipes...", "X servings · Y ingredients", "No recipes selected / X recipes selected", "X× from base Y servings", "portions", "Recipes / Total portions / Total food cost / Cost / guest" stat'ları, "Send to Shopping List / Print / Share" butonları.
+
+## Çözüm
+
+22 yeni i18n key (`pc_*`) — sadece EN ve TR. `portion.js`'deki tüm hardcoded metinler t() çağrılarına dönüştürüldü.
+
+`pc_recipes_selected` ve `pc_recipes_selected_plural` ayrı keyler — TR'de tekil/çoğul aynı ("tarif"), EN'de farklı ("recipe / recipes"). Interpolation kullanıldı: `t('pc_servings_ingredients', { s: 4, i: 15 })`.
+
+## Test
+
+1. Dil = TR → Porsiyon Hesaplayıcı aç
+2. Alt başlık: "Bir veya daha fazla tarifi etkinlik için ölçeklendir"
+3. "Adım 1 — Misafir sayısı" + "misafir" suffix
+4. "Adım 2 — Tarif seç" + "Tümünü seç / Temizle" + "Tarif ara..." placeholder
+5. "Tarif seçilmedi" → tarif seç → "X tarif seçildi"
+6. Tarif satırlarında: "X porsiyon · Y malzeme"
+7. Adım 3'te: "Tarif / Toplam porsiyon / Toplam yemek maliyeti / Kişi başı maliyet"
+8. Recipe block: "Temel X porsiyondan Y× / porsiyon"
+9. Butonlar: "Alışveriş Listesine Gönder / Yazdır / Paylaş"
+
+---
+
+# v2.6.14 — Mutfak Kartları Türkçe
+
+## Talep
+
+Mutfak Kartları sayfasında bir çok hardcoded İngilizce metin vardı: alt başlık, "Canvas name", "Start a new canvas / Load saved canvas" tooltip'ler, "Orientation / Landscape / Portrait", "Columns (1–9)", "Font size", "Method / Amounts" checkbox'lar, "Tips:" + 3 ipucu, "Recipes on canvas", "Save canvas", "Print · X recipes", "Live preview · drag & resize", "A4 · landscape · 4 cols", "No recipes on canvas / Tick recipes from the left panel..."
+
+## Çözüm
+
+22 yeni i18n key (`kc_*`) — sadece EN ve TR. `kitchen_cards.js`'deki tüm hardcoded label'lar t() çağrılarına dönüştürüldü.
+
+`kc_print_x_recipes` interpolation kullanıyor: `Yazdır · {n} tarif`. Aktif dilde "tarif/recipes" çoğul/tekil otomatik yerleşir.
+
+`kc_a4_summary` interpolation kullanıyor: yön (landscape/portrait → yatay/dikey) ve sütun sayısını dile göre yerleştirir.
+
+## Test
+
+1. Dil = TR
+2. Mutfak Kartları aç
+3. Tüm sol panel TR: Yön (Yatay/Dikey), Sütun (1–9), Yazı boyutu, Yapılışı/Miktarlar checkbox, İpuçları + 3 ipucu, Karttaki tarifler, Kartı kaydet, Yazdır · X tarif
+4. Sağ panel: "Canlı önizleme · sürükle & boyutlandır", "A4 · yatay · 4 sütun"
+5. Boş canvas → "Kartta tarif yok / Eklemek için sol paneldeki tarifleri işaretle."
+6. "Yeni kart başlat" + "Kaydedilmiş kartı yükle" tooltip'ler
+
+---
+
+# v2.6.13 — Menü varsayılan bölüm isimleri Türkçe
+
+## Talep
+
+Yeni menü oluştururken otomatik 3 bölüm geliyordu: "Appetizers", "Mains", "Desserts" — Türkçe seçilmiş olsa bile İngilizce.
+
+## Çözüm
+
+3 yeni i18n key (`menu_default_appetizers`, `menu_default_mains`, `menu_default_desserts`) — sadece EN ve TR. `menus.js`'deki sabit `DEFAULT_SECTIONS` array'i `getDefaultSections()` fonksiyonu ile değiştirildi — her yeni menü için aktif dile göre çevrili default isimler döner.
+
+Bu sadece **yeni menüleri** etkiler. Mevcut menülerdeki bölüm isimleri kullanıcı tarafından girilmiş olduğundan dokunulmaz (başka türlü olamazdı zaten).
+
+## Test
+
+1. Dil = TR
+2. Yeni menü oluştur
+3. Default 3 bölüm: "Başlangıçlar", "Ana Yemekler", "Tatlılar"
+4. Dil = EN, yeni menü oluştur → "Appetizers", "Mains", "Desserts"
+
+---
+
+# v2.6.12 — Malzeme editörü Türkçe
+
+## Talep
+
+Yeni Malzeme modal'ında "Yield % (optional)", "After trim/peel/clean. e.g. Chicken thigh boneless = 75%, Salmon fillet = 88%. Leaves blank = no trim loss." ve hesaplanan "True cost (EP)" etiketi İngilizce kalıyordu.
+
+## Çözüm
+
+3 yeni i18n key (`ing_yield_label`, `ing_yield_hint`, `ing_true_cost`) — sadece EN ve TR. `ingredients.js`'deki tek blok t() çağrılarına dönüştürüldü.
+
+## Test
+
+1. Dil = TR
+2. Yeni Malzeme modal aç
+3. "Verim % (opsiyonel)" label
+4. Altında: "Temizleme/soyma/ayıklama sonrası. Örn. Kemiksiz tavuk but = %75, Somon fileto = %88. Boş bırak = fire yok."
+5. Yield % girip fiyat varsa "Gerçek maliyet (EP)" yazısı
+
+---
+
+# v2.6.11 — Tarif editörü Türkçe
+
+## Talep
+
+Yeni Tarif modal'ında bazı alanlar İngilizce kalıyordu: "Yield amount (for use as sub-recipe)", "How much this recipe produces. Leave blank if same as servings.", "Yield unit", "Quick add — type ingredient name...", "Allergens", "Auto-detected from ingredients. Click to override."
+
+## Çözüm
+
+6 yeni i18n key (`recipe_yield_*`, `recipe_quick_add_placeholder`, `recipe_allergens_*`) — sadece EN ve TR. `recipes.js`'deki ilgili 3 blok t() çağrılarına dönüştürüldü.
+
+Birim değerleri (g, kg, ml, l, portion, batch, tray, pcs) — ortak, dokunulmadı; standart kısaltmalar TR'de de aynı kullanılıyor.
+
+## Test
+
+1. Dil = TR
+2. Yeni Tarif → modal açılsın
+3. "Verim miktarı (alt-tarif olarak kullanım için)" + ipucu altta TR
+4. "Verim birimi" label TR
+5. Malzemeler bölümünde: "Hızlı ekle — malzeme adı yaz..." placeholder
+6. Allerjen bölümü: "Alerjenler" başlığı + "Malzemelerden otomatik tespit edildi. Değiştirmek için tıkla."
+
+---
+
+# v2.6.10 — Account / Şef profili Türkçe
+
+## Talep
+
+Hesap sayfasında bazı alanlar İngilizce kalıyordu: "Chef profile" başlığı, profil formundaki tüm label'lar (Full name, Title/role, Country, Workplace, Bio), placeholder'lar, "Save profile / Preview public profile" butonları, "Export Recipes (CSV) / For spreadsheet / accounting", "Export Ingredients (CSV) / Price list / inventory", "3 sample recipes", "Irreversible".
+
+## Çözüm
+
+21 yeni i18n key (`chef_*`, `export_*`, `demo_3_recipes`, `irreversible`) — sadece EN ve TR. `account.js`'deki ilgili 5 blok t() çağrılarına dönüştürüldü.
+
+## Test
+
+1. Dil = TR
+2. Hesap → Şef profili: "Şef profili" başlığı, tüm label'lar TR ("Ad soyad", "Unvan / görev", "Ülke", "İş yeri", "Biyografi", "— seçin —")
+3. Placeholder'lar TR ("örn. Ahmet Kayas", "örn. Avustralya", "örn. Crown Towers, Perth", "Kısa profesyonel bir biyografi…")
+4. "Profili kaydet" / "Halka açık profili önizle" butonları TR
+5. Veri ve Senkron: "Tarifleri Dışa Aktar (CSV) / Excel / muhasebe için"
+6. "Malzemeleri Dışa Aktar (CSV) / Fiyat listesi / stok"
+7. "3 örnek tarif"
+8. "Tüm verileri sil / Geri alınamaz"
+
+---
+
 # v2.6.9 — Ghost workspace bug — gerçek çözüm
 
 ## Sorun (v2.6.8'de tam çözülmemişti)

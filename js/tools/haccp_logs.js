@@ -29,13 +29,15 @@
 
   // ============ DEFAULT UNIT TEMPLATES ============
   // Used as suggestions when chef adds a new unit.
+  // nameKey is resolved via i18n at render time so the chef sees the
+  // preset name in their current language.
   const UNIT_PRESETS = [
-    { type: 'fridge',      name: 'Fridge',           min: 0,    max: 4 },
-    { type: 'cooler',      name: 'Walk-in Cooler',   min: 0,    max: 4 },
-    { type: 'freezer',     name: 'Freezer',          min: -25,  max: -18 },
-    { type: 'bar_fridge',  name: 'Bar Fridge',       min: 0,    max: 4 },
-    { type: 'display',     name: 'Display Cooler',   min: 0,    max: 4 },
-    { type: 'hot_holding', name: 'Hot Holding',      min: 63,   max: 90 },
+    { type: 'fridge',      nameKey: 'haccp_preset_fridge',       min: 0,    max: 4 },
+    { type: 'cooler',      nameKey: 'haccp_preset_cooler',       min: 0,    max: 4 },
+    { type: 'freezer',     nameKey: 'haccp_preset_freezer',      min: -25,  max: -18 },
+    { type: 'bar_fridge',  nameKey: 'haccp_preset_bar_fridge',   min: 0,    max: 4 },
+    { type: 'display',     nameKey: 'haccp_preset_display',      min: 0,    max: 4 },
+    { type: 'hot_holding', nameKey: 'haccp_preset_hot_holding',  min: 63,   max: 90 },
   ];
 
   // Default temperature unit per workspace ('C' or 'F').
@@ -293,9 +295,9 @@
     // Month navigator
     const monthNav = PCD.el('div', { class: 'card', style: { padding: '12px 16px', marginTop: '16px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '12px' } });
     monthNav.innerHTML =
-      '<button class="btn btn-outline btn-sm" id="haccpPrevMonth" aria-label="Previous month">' + PCD.icon('chevronLeft', 16) + '</button>' +
+      '<button class="btn btn-outline btn-sm" id="haccpPrevMonth" aria-label="' + PCD.escapeHtml(t('prev_month_aria')) + '">' + PCD.icon('chevronLeft', 16) + '</button>' +
       '<div style="flex:1;text-align:center;font-weight:700;font-size:16px;">' + PCD.escapeHtml(monthLabel(_viewYear, _viewMonth)) + '</div>' +
-      '<button class="btn btn-outline btn-sm" id="haccpNextMonth" aria-label="Next month">' + PCD.icon('chevronRight', 16) + '</button>';
+      '<button class="btn btn-outline btn-sm" id="haccpNextMonth" aria-label="' + PCD.escapeHtml(t('next_month_aria')) + '">' + PCD.icon('chevronRight', 16) + '</button>';
     view.appendChild(monthNav);
 
     // Build the grid table.
@@ -515,7 +517,7 @@
           '<label style="display:block;font-weight:600;font-size:13px;margin-bottom:6px;">' + PCD.escapeHtml(t('haccp_unit_preset') || 'Preset (optional)') + '</label>' +
           '<div id="huPresets" style="display:flex;gap:6px;flex-wrap:wrap;">' +
             UNIT_PRESETS.map(function (p) {
-              return '<button type="button" class="btn btn-outline btn-sm" data-preset="' + p.type + '" style="font-size:12px;">' + PCD.escapeHtml(p.name) + ' (' + p.min + '–' + p.max + '°' + tempUnit + ')</button>';
+              return '<button type="button" class="btn btn-outline btn-sm" data-preset="' + p.type + '" style="font-size:12px;">' + PCD.escapeHtml(t(p.nameKey)) + ' (' + p.min + '–' + p.max + '°' + tempUnit + ')</button>';
             }).join('') +
           '</div>' +
         '</div>'
@@ -542,7 +544,7 @@
             const type = this.getAttribute('data-preset');
             const p = UNIT_PRESETS.find(function (x) { return x.type === type; });
             if (!p) return;
-            body.querySelector('#huName').value = p.name;
+            body.querySelector('#huName').value = t(p.nameKey);
             body.querySelector('#huMin').value = p.min;
             body.querySelector('#huMax').value = p.max;
           });

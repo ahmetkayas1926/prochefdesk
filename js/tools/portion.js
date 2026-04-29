@@ -45,15 +45,15 @@
       <div class="page-header">
         <div class="page-header-text">
           <div class="page-title">${t('portion_title') || 'Portion Calculator'}</div>
-          <div class="page-subtitle">Scale one or more recipes for an event</div>
+          <div class="page-subtitle">${t('pc_subtitle')}</div>
         </div>
       </div>
 
       <div class="card mb-3" style="padding:14px;">
-        <div style="font-weight:700;font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:10px;">Step 1 — Guest count</div>
+        <div style="font-weight:700;font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:10px;">${t('pc_step1')}</div>
         <div class="flex items-center gap-3" style="flex-wrap:wrap;">
           <input type="number" class="input" id="pcGuests" value="${guestCount}" min="1" step="1" style="width:120px;font-weight:700;font-size:18px;text-align:center;">
-          <span style="color:var(--text-3);">guests</span>
+          <span style="color:var(--text-3);">${t('pc_guests')}</span>
           <div style="flex:1;"></div>
           <button class="btn btn-secondary btn-sm" data-quick="20">20</button>
           <button class="btn btn-secondary btn-sm" data-quick="50">50</button>
@@ -64,15 +64,15 @@
 
       <div class="card mb-3" style="padding:14px;">
         <div class="flex items-center justify-between mb-2">
-          <div style="font-weight:700;font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;">Step 2 — Choose recipes</div>
+          <div style="font-weight:700;font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;">${t('pc_step2')}</div>
           <div class="flex gap-2">
-            <button class="btn btn-ghost btn-sm" id="pcAll">Select all</button>
-            <button class="btn btn-ghost btn-sm" id="pcNone">Clear</button>
+            <button class="btn btn-ghost btn-sm" id="pcAll">${t('pc_select_all')}</button>
+            <button class="btn btn-ghost btn-sm" id="pcNone">${t('pc_clear')}</button>
           </div>
         </div>
-        <input type="search" class="input mb-2" id="pcSearch" placeholder="Search recipes...">
+        <input type="search" class="input mb-2" id="pcSearch" placeholder="${PCD.escapeHtml(t('pc_search_placeholder'))}">
         <div id="pcRecipeList" style="max-height:280px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r-sm);"></div>
-        <div class="text-muted text-sm mt-2" id="pcSelStat">No recipes selected</div>
+        <div class="text-muted text-sm mt-2" id="pcSelStat">${t('pc_no_recipes_selected')}</div>
       </div>
 
       <div id="pcResult"></div>
@@ -100,7 +100,7 @@
           '<input type="checkbox" data-rid="' + r.id + '"' + (isSel ? ' checked' : '') + ' style="width:18px;height:18px;accent-color:var(--brand-600);flex-shrink:0;">' +
           '<div style="flex:1;min-width:0;">' +
             '<div style="font-weight:600;font-size:14px;">' + PCD.escapeHtml(r.name) + '</div>' +
-            '<div class="text-muted" style="font-size:12px;">' + (r.servings || 1) + ' servings · ' + ((r.ingredients || []).length) + ' ingredients</div>' +
+            '<div class="text-muted" style="font-size:12px;">' + t('pc_servings_ingredients', { s: r.servings || 1, i: (r.ingredients || []).length }) + '</div>' +
           '</div>';
         recipeListEl.appendChild(row);
       });
@@ -108,10 +108,11 @@
 
     function updateSelStat() {
       if (selected.size === 0) {
-        selStatEl.textContent = 'No recipes selected';
+        selStatEl.textContent = t('pc_no_recipes_selected');
         selStatEl.style.color = 'var(--text-3)';
       } else {
-        selStatEl.textContent = selected.size + ' recipe' + (selected.size === 1 ? '' : 's') + ' selected';
+        const k = selected.size === 1 ? 'pc_recipes_selected' : 'pc_recipes_selected_plural';
+        selStatEl.textContent = t(k, { n: selected.size });
         selStatEl.style.color = 'var(--brand-700)';
         selStatEl.style.fontWeight = '600';
       }
@@ -156,29 +157,29 @@
               '<div style="font-weight:700;font-size:16px;">' + PCD.escapeHtml(r.name) + '</div>' +
               '<div class="flex items-center gap-2">' +
                 '<input type="number" class="input" data-rscale="' + r.id + '" value="' + targetPortions + '" min="1" step="1" style="width:80px;text-align:center;font-weight:700;">' +
-                '<span class="text-muted text-sm">portions</span>' +
+                '<span class="text-muted text-sm">' + t('pc_portions') + '</span>' +
                 '<span class="text-muted text-sm">·</span>' +
                 '<span style="font-weight:700;color:var(--brand-700);" data-recipe-cost="' + r.id + '">$0</span>' +
               '</div>' +
             '</div>' +
-            '<div class="text-muted text-sm mb-2" data-recipe-factor="' + r.id + '">' + factor.toFixed(2) + '× from base ' + baseServings + ' servings</div>' +
+            '<div class="text-muted text-sm mb-2" data-recipe-factor="' + r.id + '">' + t('pc_factor_from_base', { factor: factor.toFixed(2), n: baseServings }) + '</div>' +
             '<table style="width:100%;border-collapse:collapse;font-size:14px;">' + ingsHtml + '</table>' +
           '</div>';
       });
 
       resultEl.innerHTML =
         '<div class="card mb-3" style="padding:16px;background:linear-gradient(135deg,var(--brand-50),var(--surface));">' +
-          '<div style="font-weight:800;font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">Step 3 — Scaled recipes</div>' +
+          '<div style="font-weight:800;font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">' + t('pc_step3') + '</div>' +
           '<div class="flex items-center" style="gap:18px;flex-wrap:wrap;">' +
-            '<div><div class="text-muted text-sm">Recipes</div><div style="font-weight:700;font-size:20px;" data-stat-recipes>' + selectedRecipes.length + '</div></div>' +
-            '<div><div class="text-muted text-sm">Total portions</div><div style="font-weight:700;font-size:20px;" data-stat-total-portions>0</div></div>' +
-            '<div><div class="text-muted text-sm">Total food cost</div><div style="font-weight:700;font-size:20px;color:var(--brand-700);" data-stat-total-cost>$0</div></div>' +
-            '<div><div class="text-muted text-sm">Cost / guest</div><div style="font-weight:700;font-size:20px;" data-stat-cost-per-guest>$0</div></div>' +
+            '<div><div class="text-muted text-sm">' + t('pc_stat_recipes') + '</div><div style="font-weight:700;font-size:20px;" data-stat-recipes>' + selectedRecipes.length + '</div></div>' +
+            '<div><div class="text-muted text-sm">' + t('pc_stat_total_portions') + '</div><div style="font-weight:700;font-size:20px;" data-stat-total-portions>0</div></div>' +
+            '<div><div class="text-muted text-sm">' + t('pc_stat_total_cost') + '</div><div style="font-weight:700;font-size:20px;color:var(--brand-700);" data-stat-total-cost>$0</div></div>' +
+            '<div><div class="text-muted text-sm">' + t('pc_stat_cost_per_guest') + '</div><div style="font-weight:700;font-size:20px;" data-stat-cost-per-guest>$0</div></div>' +
           '</div>' +
           '<div class="flex gap-2 mt-3" style="flex-wrap:wrap;">' +
-            '<button class="btn btn-primary" id="pcShop">' + PCD.icon('shopping-cart', 16) + ' <span>Send to Shopping List</span></button>' +
-            '<button class="btn btn-outline" id="pcPrint">' + PCD.icon('print', 16) + ' <span>Print</span></button>' +
-            '<button class="btn btn-outline" id="pcShare">' + PCD.icon('share', 16) + ' <span>Share</span></button>' +
+            '<button class="btn btn-primary" id="pcShop">' + PCD.icon('shopping-cart', 16) + ' <span>' + t('pc_send_to_shopping') + '</span></button>' +
+            '<button class="btn btn-outline" id="pcPrint">' + PCD.icon('print', 16) + ' <span>' + t('pc_print') + '</span></button>' +
+            '<button class="btn btn-outline" id="pcShare">' + PCD.icon('share', 16) + ' <span>' + t('pc_share') + '</span></button>' +
           '</div>' +
         '</div>' +
         blocksHtml;
@@ -235,7 +236,7 @@
         const costEl = resultEl.querySelector('[data-recipe-cost="' + r.id + '"]');
         if (costEl) costEl.textContent = PCD.fmtMoney(scaledCost);
         const factorEl = resultEl.querySelector('[data-recipe-factor="' + r.id + '"]');
-        if (factorEl) factorEl.textContent = factor.toFixed(2) + '× from base ' + baseServings + ' servings';
+        if (factorEl) factorEl.textContent = t('pc_factor_from_base', { factor: factor.toFixed(2), n: baseServings });
 
         // Update each ingredient amount cell
         (r.ingredients || []).forEach(function (ri, idx) {

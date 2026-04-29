@@ -28,7 +28,7 @@
       <div class="page-header">
         <div class="page-header-text">
           <div class="page-title">${t('t_kitchen_cards_title') || 'Kitchen Cards'}</div>
-          <div class="page-subtitle">Print compact A4 reference sheets — laminate, hang in the kitchen</div>
+          <div class="page-subtitle">${t('kc_subtitle')}</div>
         </div>
       </div>
       <div id="kcBody"></div>
@@ -87,62 +87,62 @@
           <div>
             <div class="card mb-3" style="padding:14px;">
               <div class="flex items-center justify-between mb-2" style="gap:6px;flex-wrap:wrap;">
-                <input type="text" class="input" id="canvasName" value="${PCD.escapeHtml(canvasName)}" placeholder="Canvas name" style="flex:1;min-width:120px;font-weight:700;">
-                <button type="button" class="btn btn-outline btn-sm" id="newCanvasBtn" title="Start a new canvas">${PCD.icon('plus', 14)}</button>
-                ${allCanvases.length > 0 ? '<button type="button" class="btn btn-outline btn-sm" id="loadCanvasBtn" title="Load saved canvas">' + PCD.icon('book-open', 14) + ' <span>' + allCanvases.length + '</span></button>' : ''}
+                <input type="text" class="input" id="canvasName" value="${PCD.escapeHtml(canvasName)}" placeholder="${PCD.escapeHtml(t('kc_canvas_name_placeholder'))}" style="flex:1;min-width:120px;font-weight:700;">
+                <button type="button" class="btn btn-outline btn-sm" id="newCanvasBtn" title="${PCD.escapeHtml(t('kc_new_canvas_tooltip'))}">${PCD.icon('plus', 14)}</button>
+                ${allCanvases.length > 0 ? '<button type="button" class="btn btn-outline btn-sm" id="loadCanvasBtn" title="' + PCD.escapeHtml(t('kc_load_canvas_tooltip')) + '">' + PCD.icon('book-open', 14) + ' <span>' + allCanvases.length + '</span></button>' : ''}
               </div>
 
               <div class="mb-2">
-                <div class="text-muted text-sm mb-1">Orientation</div>
+                <div class="text-muted text-sm mb-1">${t('kc_orientation')}</div>
                 <div class="flex gap-1">
-                  <button type="button" class="btn btn-secondary btn-sm ${orientation==='landscape'?'active':''}" data-orient="landscape" style="flex:1;">${PCD.icon('grid',14)} <span>Landscape</span></button>
-                  <button type="button" class="btn btn-secondary btn-sm ${orientation==='portrait'?'active':''}" data-orient="portrait" style="flex:1;">${PCD.icon('file-text',14)} <span>Portrait</span></button>
+                  <button type="button" class="btn btn-secondary btn-sm ${orientation==='landscape'?'active':''}" data-orient="landscape" style="flex:1;">${PCD.icon('grid',14)} <span>${t('kc_landscape')}</span></button>
+                  <button type="button" class="btn btn-secondary btn-sm ${orientation==='portrait'?'active':''}" data-orient="portrait" style="flex:1;">${PCD.icon('file-text',14)} <span>${t('kc_portrait')}</span></button>
                 </div>
               </div>
 
               <div class="mb-2">
-                <div class="text-muted text-sm mb-1">Columns (1–9)</div>
+                <div class="text-muted text-sm mb-1">${t('kc_columns')}</div>
                 <div class="flex gap-1" style="flex-wrap:wrap;">${colsButtons}</div>
               </div>
 
               <div class="mb-2">
-                <div class="text-muted text-sm mb-1">Font size</div>
+                <div class="text-muted text-sm mb-1">${t('kc_font_size')}</div>
                 <div class="flex gap-1">${fontButtons}</div>
               </div>
 
               <div class="flex items-center gap-3 mb-2" style="flex-wrap:wrap;">
                 <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
                   <input type="checkbox" id="showMethod" ${showMethod ? 'checked' : ''} style="accent-color:var(--brand-600);">
-                  <span>Method</span>
+                  <span>${t('kc_method')}</span>
                 </label>
                 <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
                   <input type="checkbox" id="showAmounts" ${showAmounts ? 'checked' : ''} style="accent-color:var(--brand-600);">
-                  <span>Amounts</span>
+                  <span>${t('kc_amounts')}</span>
                 </label>
               </div>
 
               <div style="font-size:11px;color:var(--text-3);padding:8px;background:var(--surface-2);border-radius:6px;line-height:1.4;">
-                <strong>Tips:</strong><br>
-                • Drag a card from its header to reorder<br>
-                • Resize a card by dragging its right edge<br>
-                • Add/remove recipes below
+                <strong>${t('kc_tips_title')}</strong><br>
+                • ${t('kc_tip_1')}<br>
+                • ${t('kc_tip_2')}<br>
+                • ${t('kc_tip_3')}
               </div>
             </div>
 
             <div class="card" style="padding:8px 0;max-height:320px;overflow-y:auto;">
-              <div style="padding:6px 12px;font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;">Recipes on canvas</div>
+              <div style="padding:6px 12px;font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;">${t('kc_recipes_on_canvas')}</div>
               <div id="recipeList"></div>
             </div>
 
             <div class="flex gap-2 mt-3">
               <button type="button" class="btn btn-outline" id="saveCanvasBtn" style="flex:1;" ${layout.length === 0 ? 'disabled' : ''}>
-                ${PCD.icon('check', 16)} <span>Save canvas</span>
+                ${PCD.icon('check', 16)} <span>${t('kc_save_canvas')}</span>
               </button>
               <button type="button" class="btn btn-outline" id="shareCanvasBtn" style="flex:1;" ${layout.length === 0 ? 'disabled' : ''} title="${PCD.escapeHtml((PCD.i18n && PCD.i18n.t) ? PCD.i18n.t('canvas_share_btn') : 'Share QR')}">
                 ${PCD.icon('share', 16)} <span>${(PCD.i18n && PCD.i18n.t) ? PCD.i18n.t('canvas_share_btn') : 'Share QR'}</span>
               </button>
               <button type="button" class="btn btn-primary" id="printSheetBtn" style="flex:2;" ${layout.length === 0 ? 'disabled' : ''}>
-                ${PCD.icon('print', 16)} <span>Print · ${layout.length} recipes</span>
+                ${PCD.icon('print', 16)} <span>${t('kc_print_x_recipes', { n: layout.length })}</span>
               </button>
             </div>
           </div>
@@ -150,8 +150,8 @@
           <div>
             <div class="card" style="padding:8px;background:var(--surface-2);position:sticky;top:80px;">
               <div class="flex items-center justify-between mb-2" style="padding:0 6px;">
-                <div style="font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-3);">Live preview · drag &amp; resize</div>
-                <div class="text-muted" style="font-size:11px;">A4 · ${orientation} · ${columns} cols</div>
+                <div style="font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-3);">${t('kc_live_preview')}</div>
+                <div class="text-muted" style="font-size:11px;">${t('kc_a4_summary', { orient: orientation === 'landscape' ? t('kc_landscape').toLowerCase() : t('kc_portrait').toLowerCase(), cols: columns })}</div>
               </div>
               <div id="kcPreview" style="background:#fff;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,0.08);overflow:hidden;${orientation === 'landscape' ? 'aspect-ratio:1.414/1;' : 'aspect-ratio:1/1.414;'}position:relative;"></div>
             </div>
@@ -372,8 +372,8 @@
           '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-3);text-align:center;padding:30px;">' +
             '<div>' +
               '<div style="font-size:32px;margin-bottom:8px;color:var(--brand-600);">' + PCD.icon('id-card', 32) + '</div>' +
-              '<div style="font-weight:600;font-size:14px;margin-bottom:4px;">No recipes on canvas</div>' +
-              '<div style="font-size:12px;">Tick recipes from the left panel to add them.</div>' +
+              '<div style="font-weight:600;font-size:14px;margin-bottom:4px;">' + t('kc_no_recipes_title') + '</div>' +
+              '<div style="font-size:12px;">' + t('kc_no_recipes_msg') + '</div>' +
             '</div>' +
           '</div>';
         return;

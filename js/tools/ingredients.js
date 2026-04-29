@@ -115,7 +115,7 @@
             const prev = Number(last.price) || 0;
             if (prev && cur && prev !== cur) {
               const up = cur > prev;
-              trendHtml = '<span data-hist="' + i.id + '" style="color:' + (up ? 'var(--danger)' : 'var(--success)') + ';font-weight:700;cursor:pointer;font-size:11px;" title="Price history">' +
+              trendHtml = '<span data-hist="' + i.id + '" style="color:' + (up ? 'var(--danger)' : 'var(--success)') + ';font-weight:700;cursor:pointer;font-size:11px;" title="' + PCD.escapeHtml(t('price_history_tooltip')) + '">' +
                 (up ? '▲' : '▼') + ' ' + Math.abs(((cur-prev)/prev)*100).toFixed(0) + '%</span>';
             }
           }
@@ -316,15 +316,15 @@
         <input type="text" class="input" id="ingSupplier" value="${PCD.escapeHtml(data.supplier || '')}">
       </div>
       <div class="field">
-        <label class="field-label">Yield % (optional)</label>
+        <label class="field-label">${t('ing_yield_label')}</label>
         <div class="input-group">
           <input type="number" class="input" id="ingYield" value="${data.yieldPercent || ''}" step="1" min="1" max="100" placeholder="100">
           <span class="input-group-addon">%</span>
         </div>
-        <div class="field-hint">After trim/peel/clean. e.g. Chicken thigh boneless = 75%, Salmon fillet = 88%. Leaves blank = no trim loss.</div>
+        <div class="field-hint">${t('ing_yield_hint')}</div>
         ${data.pricePerUnit && data.yieldPercent && data.yieldPercent < 100 ? `
           <div class="text-sm mt-2" style="padding:8px 10px;background:var(--brand-50);border-radius:var(--r-sm);color:var(--brand-700);font-weight:600;">
-            True cost (EP): ${PCD.fmtMoney((data.pricePerUnit / (data.yieldPercent / 100)))} / ${data.unit}
+            ${t('ing_true_cost')}: ${PCD.fmtMoney((data.pricePerUnit / (data.yieldPercent / 100)))} / ${data.unit}
           </div>
         ` : ''}
       </div>

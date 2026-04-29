@@ -12,11 +12,16 @@
   'use strict';
   const PCD = window.PCD;
 
-  const DEFAULT_SECTIONS = [
-    { id: null, name: 'Appetizers', items: [] },
-    { id: null, name: 'Mains',      items: [] },
-    { id: null, name: 'Desserts',   items: [] },
-  ];
+  // Localized default section names — built at call time so the chef's
+  // current language is used when creating a new menu.
+  function getDefaultSections() {
+    const t = PCD.i18n.t;
+    return [
+      { id: null, name: t('menu_default_appetizers'), items: [] },
+      { id: null, name: t('menu_default_mains'),      items: [] },
+      { id: null, name: t('menu_default_desserts'),   items: [] },
+    ];
+  }
 
   function render(view) {
     const t = PCD.i18n.t;
@@ -67,7 +72,7 @@
             </div>
           </div>
           <button class="icon-btn" data-copy-mid="${m.id}" data-name="${PCD.escapeHtml(m.name || 'menu')}" title="Copy to workspace">${PCD.icon('truck', 18)}</button>
-          <button class="icon-btn" data-edit-mid="${m.id}" title="Edit menu">${PCD.icon('edit', 18)}</button>
+          <button class="icon-btn" data-edit-mid="${m.id}" title="${PCD.escapeHtml(t('edit_menu_tooltip'))}">${PCD.icon('edit', 18)}</button>
         `;
         cont.appendChild(row);
       });
@@ -101,7 +106,7 @@
       subtitle: '',
       footer: '',
       hidePrices: false,
-      sections: DEFAULT_SECTIONS.map(function (s) {
+      sections: getDefaultSections().map(function (s) {
         return { id: PCD.uid('sec'), name: s.name, items: [] };
       }),
     };

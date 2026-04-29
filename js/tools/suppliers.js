@@ -110,6 +110,7 @@
   }
 
   function buildSupplierCard(s) {
+    const t = PCD.i18n.t;
     const card = PCD.el('div', {
       class: 'card',
       'data-sid-card': s.id,
@@ -161,7 +162,7 @@
       const noProducts = PCD.el('div', {
         class: 'text-muted text-sm',
         style: { padding: '8px 0', fontSize: '13px', fontStyle: 'italic' },
-        text: 'No products yet — tap edit to add the items you buy from this supplier.'
+        text: t('suppliers_no_products')
       });
       card.appendChild(noProducts);
     }
@@ -453,7 +454,7 @@
       data.products.forEach(function (p, idx) {
         const row = PCD.el('div', { style: { display: 'flex', gap: '6px', alignItems: 'center' } });
         row.innerHTML = `
-          <input type="text" class="input" data-pname="${idx}" value="${PCD.escapeHtml(p.name || '')}" placeholder="Product name" style="flex:1;">
+          <input type="text" class="input" data-pname="${idx}" value="${PCD.escapeHtml(p.name || '')}" placeholder="${PCD.escapeHtml(t('suppliers_product_name_placeholder'))}" style="flex:1;">
           <select class="select" data-punit="${idx}" style="width:75px;">
             ${UNITS.map(function (u) { return '<option value="' + u + '"' + (p.unit === u ? ' selected' : '') + '>' + u + '</option>'; }).join('')}
           </select>

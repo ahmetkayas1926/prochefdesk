@@ -55,40 +55,40 @@
       ${user ? `
         <!-- CHEF PROFILE -->
         <div class="section mb-3">
-          <div class="section-title" style="font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">Chef profile</div>
+          <div class="section-title" style="font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">${t('chef_profile_title')}</div>
           <div class="card">
             <div class="card-body" style="padding:14px;">
-              <div class="text-muted text-sm mb-3">Personalize your workspace. This information will appear on printed recipes, menus, and event sheets — and on your public profile when sharing recipes with the chef community.</div>
+              <div class="text-muted text-sm mb-3">${t('chef_profile_intro')}</div>
               <div class="field">
-                <label class="field-label">Full name</label>
-                <input type="text" class="input" id="chefName" value="${PCD.escapeHtml(user.name || '')}" placeholder="e.g. Ahmet Kayas">
+                <label class="field-label">${t('chef_full_name')}</label>
+                <input type="text" class="input" id="chefName" value="${PCD.escapeHtml(user.name || '')}" placeholder="${PCD.escapeHtml(t('chef_full_name_placeholder'))}">
               </div>
               <div class="field-row">
                 <div class="field">
-                  <label class="field-label">Title / role</label>
+                  <label class="field-label">${t('chef_title_role')}</label>
                   <select class="select" id="chefRole">
-                    <option value="">— select —</option>
+                    <option value="">${t('chef_select')}</option>
                     ${['Head Chef','Executive Chef','Sous Chef','Chef de Cuisine','Chef de Partie','Pastry Chef','Private Chef','Catering Chef','Culinary Student','Kitchen Owner','Other'].map(function(r){
                       return '<option value="'+r+'"'+((user.role===r)?' selected':'')+'>'+r+'</option>';
                     }).join('')}
                   </select>
                 </div>
                 <div class="field">
-                  <label class="field-label">Country</label>
-                  <input type="text" class="input" id="chefCountry" value="${PCD.escapeHtml(user.country || '')}" placeholder="e.g. Australia">
+                  <label class="field-label">${t('chef_country')}</label>
+                  <input type="text" class="input" id="chefCountry" value="${PCD.escapeHtml(user.country || '')}" placeholder="${PCD.escapeHtml(t('chef_country_placeholder'))}">
                 </div>
               </div>
               <div class="field">
-                <label class="field-label">Workplace (restaurant / hotel / private)</label>
-                <input type="text" class="input" id="chefWorkplace" value="${PCD.escapeHtml(user.workplace || '')}" placeholder="e.g. Crown Towers, Perth">
+                <label class="field-label">${t('chef_workplace')}</label>
+                <input type="text" class="input" id="chefWorkplace" value="${PCD.escapeHtml(user.workplace || '')}" placeholder="${PCD.escapeHtml(t('chef_workplace_placeholder'))}">
               </div>
               <div class="field">
-                <label class="field-label">Bio</label>
-                <textarea class="textarea" id="chefBio" rows="3" placeholder="A short professional bio — your style, training, signature dishes...">${PCD.escapeHtml(user.bio || '')}</textarea>
-                <div class="field-hint">Will be visible on your public profile when community sharing launches.</div>
+                <label class="field-label">${t('chef_bio')}</label>
+                <textarea class="textarea" id="chefBio" rows="3" placeholder="${PCD.escapeHtml(t('chef_bio_placeholder'))}">${PCD.escapeHtml(user.bio || '')}</textarea>
+                <div class="field-hint">${t('chef_bio_hint')}</div>
               </div>
-              <button class="btn btn-primary btn-sm" id="saveChefProfileBtn" style="margin-top:6px;">${PCD.icon('check', 14)} Save profile</button>
-              <button class="btn btn-outline btn-sm" id="previewChefProfileBtn" style="margin-top:6px;margin-inline-start:6px;">${PCD.icon('user', 14)} <span>Preview public profile</span></button>
+              <button class="btn btn-primary btn-sm" id="saveChefProfileBtn" style="margin-top:6px;">${PCD.icon('check', 14)} ${t('chef_save_profile')}</button>
+              <button class="btn btn-outline btn-sm" id="previewChefProfileBtn" style="margin-top:6px;margin-inline-start:6px;">${PCD.icon('user', 14)} <span>${t('chef_preview_public')}</span></button>
             </div>
           </div>
         </div>
@@ -175,29 +175,29 @@
             </button>
             <button class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;border-bottom:1px solid var(--border);" id="exportRecipesBtn">
               <div>
-                <div style="font-weight:600;">Export Recipes (CSV)</div>
-                <div class="text-muted text-sm">For spreadsheet / accounting</div>
+                <div style="font-weight:600;">${t('export_recipes')}</div>
+                <div class="text-muted text-sm">${t('export_recipes_desc')}</div>
               </div>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
             <button class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;border-bottom:1px solid var(--border);" id="exportIngredientsBtn">
               <div>
-                <div style="font-weight:600;">Export Ingredients (CSV)</div>
-                <div class="text-muted text-sm">Price list / inventory</div>
+                <div style="font-weight:600;">${t('export_ingredients')}</div>
+                <div class="text-muted text-sm">${t('export_ingredients_desc')}</div>
               </div>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
             <button class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;border-bottom:1px solid var(--border);" id="demoToggleBtn">
               <div>
                 <div style="font-weight:600;">${PCD.store.get('onboarding.demoSeeded') ? t('clear_demo') : t('reset_demo')}</div>
-                <div class="text-muted text-sm">3 sample recipes</div>
+                <div class="text-muted text-sm">${t('demo_3_recipes')}</div>
               </div>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
             <button class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;color:var(--danger);" id="clearAllBtn">
               <div>
                 <div style="font-weight:600;">${t('clear_all_data')}</div>
-                <div style="color:var(--text-3);font-size:13px;">Irreversible</div>
+                <div style="color:var(--text-3);font-size:13px;">${t('irreversible')}</div>
               </div>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
@@ -304,7 +304,7 @@
     if (signOutBtn) signOutBtn.addEventListener('click', function () {
       PCD.modal.confirm({
         icon: '👋', iconKind: 'info',
-        title: t('sign_out'), text: 'Sign out?',
+        title: t('sign_out'), text: t('sign_out_confirm'),
         okText: t('sign_out')
       }).then(function (ok) {
         if (!ok) return;
@@ -416,9 +416,9 @@
             const data = parsed.data || parsed;
             PCD.modal.confirm({
               icon: '⚠️', iconKind: 'warning', danger: true,
-              title: 'Import will REPLACE all current data',
-              text: 'This cannot be undone. Your current recipes, ingredients, menus, etc. will be replaced with the backup contents. Continue?',
-              okText: 'Replace everything'
+              title: t('backup_restore_title'),
+              text: t('backup_restore_confirm'),
+              okText: t('backup_restore_ok')
             }).then(function (ok) {
               if (!ok) return;
               // Merge restore — replace top-level keys
