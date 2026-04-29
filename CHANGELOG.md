@@ -1,3 +1,54 @@
+# v2.6.30 — Ingredients workspace-bound + demo cleanup tamamlandı
+
+## Sorun 1: Yeni workspace temiz başlamıyordu
+
+Senaryo: Şef Avustralya'da kendi mutfağı için ingredients listesi yarattı (yerel fiyatlarla). Sonra Florida'da ikinci bir restoran için yeni workspace açtı. Beklenti: temiz başlangıç. Gerçek: Avustralya fiyatlarıyla aynı malzeme listesi yeni workspace'te de görünüyordu.
+
+### Sebep
+
+`state.ingredients` workspace-bound DEĞİLdi — global, paylaşılmış bir master list olarak tutuluyordu. Bilinçli bir tasarım kararıydı ("LIBRARY — shared across workspaces" yorumu vardı), ama gerçek dünyada çalışmıyor. Farklı şehir/ülke = farklı ürünler, farklı fiyatlar.
+
+### Çözüm
+
+`store.js`'de ingredients tamamen workspace-scoped'a dönüştürüldü:
+- `state.ingredients = { wsId: { ingId: {...} } }` (önceden flat: `{ ingId: {...} }`)
+- `upsertIngredient`, `deleteIngredient`, `deleteIngredients`, `getIngredient`, `listIngredients` — hepsi `currentWsId()`'ı kullanıyor
+- Trash list / restore / purge fonksiyonları da workspace-scoped'a uyumlu
+- `wsBoundTables` migration listesine `ingredients` eklendi → mevcut flat data otomatik aktif workspace altına taşınır
+- Workspace silme cleanup'u + cloud sync ws-tablo listesi de güncellendi
+
+**Migration güvenliği:** Mevcut tek-workspace kullanıcılar için bir şey değişmez — flat ingredients otomatik aktif ws altına taşınır. Sonraki yeni workspace ise boş başlar.
+
+## Sorun 2: Demo cleanup eksik
+
+"Remove demo recipes" sadece recipes ve ingredients'ı siliyordu. Inventory'deki demo entries (par level, stok) orphan kalıyordu — silinen ingredient'a referans veren ölü kayıtlar. Ayrıca demo bir menu yoktu (canvas + event vardı ama menu eksikti).
+
+### Çözüm
+
+`js/seed/demo-recipes.js`:
+- **Demo menu seed eklendi**: "Lunch Menu" — 3 demo recipe ile (Spaghetti, Tikka, Cheeseburger), `_demo: true` flag ile
+- **Inventory entries `_demo` flag aldı** — demo ingredient'ların stok kayıtları artık işaretli
+- **`removeDemo` güncellendi** — workspace'in inventory tablosundaki `_demo: true` entries de temizleniyor
+
+Sonuç: "Remove demo recipes" → recipes + ingredients + menu + canvas + event + inventory entries hepsi birlikte gider. "Re-add demo recipes" → hepsi geri gelir, tutarlı bir bütün.
+
+## Test
+
+**Bug 1 testi:**
+1. Mevcut workspace'te ingredients olmasına dikkat
+2. Çalışma alanları → "+ Yeni çalışma alanı" → "Florida" oluştur
+3. Florida workspace'ine geç → Ingredients sayfası aç → **boş olmalı**
+4. Inventory sayfası → boş olmalı
+5. Ana workspace'e geri dön → eski ingredients hâlâ duruyor olmalı
+
+**Bug 2 testi:**
+1. Hesap → "Remove demo recipes" → onayla
+2. Recipes, Ingredients (eğer hep _demo idiyse), Inventory, Menu Builder, Kitchen Cards, Event Planner — hepsinden demo veriler temizlenmeli
+3. "Re-add demo recipes" tıkla
+4. Hepsi geri gelmeli (3 recipe, ~30 ingredient, 8 inventory entry, 1 menu, 1 canvas, 1 event)
+
+---
+
 # v2.6.29 — Cost Report büyük revizyon: Türkçe, formüller, hyperlink, footer
 
 ## Talep

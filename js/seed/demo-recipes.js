@@ -265,9 +265,31 @@
         parLevel: cfg.parLevel,
         minLevel: cfg.minLevel,
         lastCountedAt: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+        _demo: true, // (v2.6.30) flag so removeDemo can clean these up
       };
     });
     PCD.store.set('inventory', inv);
+
+    // === DEMO MENU (added v2.6.30) ===
+    if (carbonaraR && tikkaR && burgerR) {
+      PCD.store.upsertInTable('menus', {
+        name: 'Lunch Menu',
+        subtitle: 'Sample · customize me',
+        sections: [
+          {
+            id: PCD.uid('sec'),
+            name: 'Mains',
+            items: [
+              { id: PCD.uid('mi'), recipeId: carbonaraR.id },
+              { id: PCD.uid('mi'), recipeId: tikkaR.id },
+              { id: PCD.uid('mi'), recipeId: burgerR.id },
+            ],
+          },
+        ],
+        hidePrices: false,
+        _demo: true,
+      }, 'm');
+    }
 
     // === DEMO EVENT (next Saturday) ===
     if (carbonaraR && tikkaR) {
@@ -317,13 +339,27 @@
     const recs = PCD.store.listRecipes().filter(function (r) { return r._demo; }).map(function (r) { return r.id; });
     PCD.store.deleteRecipes(recs);
     PCD.store.deleteIngredients(ings);
-    // Remove demo entries from generic tables
+    // Remove demo entries from generic tables (menus, events, suppliers, canvases, shoppingLists)
     ['menus','events','suppliers','canvases','shoppingLists'].forEach(function (table) {
       const items = PCD.store.listTable(table) || [];
       items.forEach(function (it) {
         if (it._demo) PCD.store.deleteFromTable(table, it.id);
       });
     });
+    // Remove demo inventory entries (v2.6.30)
+    // Inventory is keyed by ingredientId, not a generic table — clean
+    // up entries marked with _demo flag in the active workspace.
+    const wsId = PCD.store.getActiveWorkspaceId();
+    const inv = PCD.store.get('inventory') || {};
+    if (inv[wsId]) {
+      const wsInv = Object.assign({}, inv[wsId]);
+      Object.keys(wsInv).forEach(function (ingId) {
+        if (wsInv[ingId] && wsInv[ingId]._demo) delete wsInv[ingId];
+      });
+      const newInv = Object.assign({}, inv);
+      newInv[wsId] = wsInv;
+      PCD.store.set('inventory', newInv);
+    }
     PCD.store.update('onboarding', { demoSeeded: false });
   }
 

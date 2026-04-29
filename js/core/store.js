@@ -104,8 +104,9 @@
     state.activeWorkspaceId = defaultWs.id;
 
     // Legacy migration — if any of the workspace-bound tables hold flat data
-    // (i.e. ids at top level, not nested by wsId), move it under the new ws
-    const wsBoundTables = ['recipes','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','stockCountHistory','haccpLogs','haccpUnits','haccpReadings','haccpCookCool'];
+    // (i.e. ids at top level, not nested by wsId), move it under the new ws.
+    // 'ingredients' was added to this list in v2.6.30 (per-workspace pricing).
+    const wsBoundTables = ['recipes','ingredients','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','stockCountHistory','haccpLogs','haccpUnits','haccpReadings','haccpCookCool'];
     wsBoundTables.forEach(function (tbl) {
       const t = state[tbl];
       if (!t) return;
@@ -360,7 +361,7 @@
       delete next[wsId];
       state.workspaces = next;
       // Wipe workspace-bound data
-      ['recipes','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','pendingStockCount','stockCountHistory','haccpLogs','haccpUnits','haccpReadings','haccpCookCool'].forEach(function (tbl) {
+      ['recipes','ingredients','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','pendingStockCount','stockCountHistory','haccpLogs','haccpUnits','haccpReadings','haccpCookCool'].forEach(function (tbl) {
         if (state[tbl] && state[tbl][wsId] !== undefined) {
           const t = Object.assign({}, state[tbl]);
           delete t[wsId];
@@ -458,56 +459,80 @@
       return Object.values(PCD.clone(state.recipes[wsId])).filter(function (r) { return !r._deletedAt; });
     },
 
-    // ---- Ingredient helpers (LIBRARY — shared across workspaces) ----
+    // ---- Ingredient helpers (workspace-scoped from v2.6.30) ----
+    // Previously ingredients were shared across all workspaces (one master
+    // list). Real-world chefs run kitchens in different countries with
+    // different prices and even different products available — so each
+    // workspace now keeps its own ingredient list.
+    //
+    // Migration: legacy flat ingredients (state.ingredients = { id: {...} })
+    // get moved into the active workspace on first load (handled in the
+    // wsBoundTables migration block above).
     upsertIngredient: function (ing) {
+      const wsId = currentWsId();
       if (!ing.id) ing.id = PCD.uid('i');
       const now = new Date().toISOString();
       ing.updatedAt = now;
       if (!ing.createdAt) ing.createdAt = now;
+      if (!state.ingredients) state.ingredients = {};
+      if (!state.ingredients[wsId]) state.ingredients[wsId] = {};
       const ingredients = Object.assign({}, state.ingredients);
-      // track price change
-      const existing = ingredients[ing.id];
+      const wsIngs = Object.assign({}, ingredients[wsId] || {});
+      const existing = wsIngs[ing.id];
       if (existing && existing.pricePerUnit !== ing.pricePerUnit) {
         ing.priceHistory = (existing.priceHistory || []).concat({ at: now, price: ing.pricePerUnit });
       }
-      ingredients[ing.id] = ing;
+      wsIngs[ing.id] = ing;
+      ingredients[wsId] = wsIngs;
       state.ingredients = ingredients;
-      emit('ingredients', ingredients, null);
+      emit('ingredients', wsIngs, null);
       persist();
       return ing;
     },
     deleteIngredient: function (id) {
-      if (!state.ingredients[id]) return false;
+      const wsId = currentWsId();
+      const wsIngs = (state.ingredients && state.ingredients[wsId]) || {};
+      if (!wsIngs[id]) return false;
       const ingredients = Object.assign({}, state.ingredients);
-      ingredients[id] = Object.assign({}, ingredients[id], { _deletedAt: new Date().toISOString() });
+      const newWsIngs = Object.assign({}, wsIngs);
+      newWsIngs[id] = Object.assign({}, newWsIngs[id], { _deletedAt: new Date().toISOString() });
+      ingredients[wsId] = newWsIngs;
       state.ingredients = ingredients;
-      emit('ingredients', ingredients, null);
+      emit('ingredients', newWsIngs, null);
       persist();
       return true;
     },
     deleteIngredients: function (ids) {
       if (!ids || !ids.length) return 0;
-      const ings = Object.assign({}, state.ingredients);
+      const wsId = currentWsId();
+      const wsIngs = (state.ingredients && state.ingredients[wsId]) || {};
+      const ingredients = Object.assign({}, state.ingredients);
+      const newWsIngs = Object.assign({}, wsIngs);
       const now = new Date().toISOString();
       let n = 0;
       ids.forEach(function (id) {
-        if (ings[id] && !ings[id]._deletedAt) {
-          ings[id] = Object.assign({}, ings[id], { _deletedAt: now });
+        if (newWsIngs[id] && !newWsIngs[id]._deletedAt) {
+          newWsIngs[id] = Object.assign({}, newWsIngs[id], { _deletedAt: now });
           n++;
         }
       });
-      state.ingredients = ings;
-      emit('ingredients', ings, null);
+      ingredients[wsId] = newWsIngs;
+      state.ingredients = ingredients;
+      emit('ingredients', newWsIngs, null);
       persist();
       return n;
     },
     getIngredient: function (id) {
-      const i = state.ingredients[id];
+      const wsId = currentWsId();
+      const wsIngs = (state.ingredients && state.ingredients[wsId]) || {};
+      const i = wsIngs[id];
       if (!i || i._deletedAt) return null;
       return PCD.clone(i);
     },
     listIngredients: function () {
-      return Object.values(PCD.clone(state.ingredients)).filter(function (i) { return !i._deletedAt; });
+      const wsId = currentWsId();
+      const wsIngs = (state.ingredients && state.ingredients[wsId]) || {};
+      return Object.values(PCD.clone(wsIngs)).filter(function (i) { return !i._deletedAt; });
     },
 
     // ---- Generic table helpers (workspace-scoped: menus/events/suppliers/canvases/shoppingLists/etc) ----
@@ -563,8 +588,9 @@
       Object.values(recipes).forEach(function (r) {
         if (r._deletedAt) out.push({ table: 'recipes', id: r.id, item: r, label: r.name || 'Recipe', deletedAt: r._deletedAt });
       });
-      // Ingredients (shared)
-      Object.values(state.ingredients || {}).forEach(function (i) {
+      // Ingredients (workspace-scoped from v2.6.30)
+      const wsIngs = (state.ingredients && state.ingredients[wsId]) || {};
+      Object.values(wsIngs).forEach(function (i) {
         if (i._deletedAt) out.push({ table: 'ingredients', id: i.id, item: i, label: i.name || 'Ingredient', deletedAt: i._deletedAt });
       });
       // Generic ws-bound tables
@@ -592,13 +618,16 @@
         return true;
       }
       if (table === 'ingredients') {
-        if (!state.ingredients[id]) return false;
+        const wsIngs = (state.ingredients && state.ingredients[wsId]) || {};
+        if (!wsIngs[id]) return false;
         const ings = Object.assign({}, state.ingredients);
-        const i = Object.assign({}, ings[id]);
+        const newWsIngs = Object.assign({}, wsIngs);
+        const i = Object.assign({}, newWsIngs[id]);
         delete i._deletedAt;
-        ings[id] = i;
+        newWsIngs[id] = i;
+        ings[wsId] = newWsIngs;
         state.ingredients = ings;
-        emit('ingredients', ings, null);
+        emit('ingredients', newWsIngs, null);
         persist();
         return true;
       }
@@ -629,11 +658,14 @@
         return true;
       }
       if (table === 'ingredients') {
-        if (!state.ingredients[id]) return false;
+        const wsIngs = (state.ingredients && state.ingredients[wsId]) || {};
+        if (!wsIngs[id]) return false;
         const ings = Object.assign({}, state.ingredients);
-        delete ings[id];
+        const newWsIngs = Object.assign({}, wsIngs);
+        delete newWsIngs[id];
+        ings[wsId] = newWsIngs;
         state.ingredients = ings;
-        emit('ingredients', ings, null);
+        emit('ingredients', newWsIngs, null);
         persist();
         return true;
       }
