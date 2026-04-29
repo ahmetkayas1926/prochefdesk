@@ -424,7 +424,7 @@
         PCD.toast.success(t('item_deleted'));
         m.close();
         const v = PCD.$('#view');
-        if (PCD.router.currentView() === 'menus') render(v);
+        if (PCD.router.currentView() === 'menus' && v && PCD.tools.menus && PCD.tools.menus.render) PCD.tools.menus.render(v);
       });
     });
     previewBtn.addEventListener('click', function () {
@@ -446,10 +446,11 @@
       setTimeout(function () {
         const v = PCD.$('#view');
         // Always re-render the list view if we're on (or coming back to) the menus page.
-        // If currentView() is empty (router transition), check the route key directly.
+        // BUG FIX (v2.6.34): inner render() shadows outer page-level render().
+        // Use the public tool API which is unambiguous.
         const cur = (PCD.router && PCD.router.currentView && PCD.router.currentView()) || '';
         if (cur === 'menus' || (location.hash && location.hash.indexOf('menus') >= 0) || !cur) {
-          if (v) render(v);
+          if (v && PCD.tools.menus && PCD.tools.menus.render) PCD.tools.menus.render(v);
         }
       }, 200);
     });

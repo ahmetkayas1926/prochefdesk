@@ -1,3 +1,118 @@
+# v2.6.34 — KRİTİK: liste sayfaları save/delete sonrası yenilenmiyordu
+
+## Bug
+
+Senaryoları:
+1. Ingredients sayfasında "Select all → Delete" → toast "X öğe silindi" çıkıyor ama liste güncellenmiyor. Sayfa yenileyince doğru görünüyor.
+2. Recipes sayfasında bulk delete → aynı problem.
+3. Yeni Menü oluştur → kaydet → toast "Menü kaydedildi" ama menüler listesi güncellenmiyor.
+4. Menü sil → aynı problem.
+
+Tüm durumlarda kullanıcı "sayfayı yenilemek" zorunda kalıyordu.
+
+## Üç ayrı sebep
+
+### 1. Yanlış function adı (`render` yerine `renderList`)
+
+**ingredients.js (line 186)** ve **recipes.js (line 220)**:
+```js
+// Module exports `renderList` but code called `render`:
+PCD.tools.X = { render: renderList };  // dış API doğru
+// fakat içeride...
+render(view);  // ❌ render diye fonksiyon YOK → sessiz hata
+```
+
+JavaScript'te `render` undefined → hata → liste güncellenmedi. Bu sessiz bir hataydı (fırlatılan hata yutuldu çünkü click handler içinde).
+
+**Düzeltme:** `render(view)` → `renderList(view)`.
+
+### 2. Function shadowing (menus.js)
+
+menus.js'de **iki tane** `render` fonksiyonu var:
+- Outer (line 26): `function render(view)` — sayfa-seviyesi liste
+- Inner (line 146): `function render()` — modal'ın iç render'ı (modal açıkken kullanılır)
+
+Save handler içinden `render(v)` çağrıldığında JavaScript closure scope'u önce **inner** `render`'ı buluyor → `view` parametresi yok → modal kapatılmış olduğu için body referansı geçersiz → hata → liste güncellenmiyor.
+
+**Düzeltme:** Public API üzerinden çağır:
+```js
+PCD.tools.menus.render(v)  // ambiguous değil, dış scope'a gider
+```
+
+İki yer düzeltildi (save + delete).
+
+### 3. (Yan kontrol) Diğer dosyalar zaten temiz
+
+- **events.js, shopping.js, waste.js**: `render_list / renderListView` adında wrapper fonksiyon kullanmışlar — bu shadowing'den kaçınıyor, çalışıyor.
+- **inventory.js**: tek render fonksiyonu, scope problemi yok.
+- **kitchen_cards.js, suppliers.js, account.js, checklist.js, dashboard.js, haccp_*, portion.js**: tek render, sorun yok.
+
+## Etkilenen kullanıcı senaryoları
+
+✓ Bulk delete ingredients (Ingredients → Select → Delete)
+✓ Bulk delete recipes (Recipes → Select → Delete)
+✓ Yeni menü oluştur ve kaydet
+✓ Menü sil
+✓ Menü düzenle ve kaydet (zaten setTimeout ile re-render çağrısı vardı, şimdi düzgün API ile)
+
+## Test
+
+1. Ingredients → "Seç" → Tümünü işaretle → Sil → Onayla → liste **anlık** boşalmalı
+2. Recipes → aynı senaryo
+3. Yeni Menü → "TEST" yaz → Kaydet → menüler listesi **anlık** "TEST"i göstermeli
+4. TEST'i aç → Sil → menüler listesi **anlık** güncellenmeli, TEST görünmemeli
+
+---
+
+# v2.6.33 — KRİTİK BUG: tarif editöründe yazılanlar siliniyor
+
+## Bug
+
+Yeni Tarif modal'ında ad yaz, sonra "Sale price" gibi formül-bağlı bir alana değer gir → **tarif adı kayboluyor**. Aynısı kategori, hazırlık, pişirme, yield amount/unit, adımlar, plating, notlar, mutfak (cuisine) için de geçerli.
+
+## Sebep
+
+`renderEditor()` `body.innerHTML` ile **tüm modal HTML'ini yeniden oluşturuyor**. İçerideki bazı alanlar (servings, sale price, ingredient amount) için `input` event handler'ları var → değerler `data` objesine senkron yazılıyor → re-render'dan sonra korunuyor. Ama **diğer alanların handler'ları yok** (name, prep, cook, yield, category, steps, plating, notes, cuisine) → re-render bu inputları sıfırdan yaratıyor, kullanıcının yazdığı kayboluyor.
+
+## Çözüm
+
+`renderEditor()` fonksiyonunun **en başına snapshot kodu** eklendi: re-render'dan ÖNCE her input'un mevcut DOM değerini `data` objesine yazıyor. Böylece HTML yeniden oluşturulduğunda inputlara doğru `value` atanıyor.
+
+Etkilenen alanlar:
+- `#recipeName` → `data.name`
+- `#recipeCategory` → `data.category`
+- `#recipePrep` → `data.prepTime`
+- `#recipeCook` → `data.cookTime`
+- `#recipeYieldAmount` → `data.yieldAmount`
+- `#recipeYieldUnit` → `data.yieldUnit`
+- `#recipeSteps` → `data.steps`
+- `#recipePlating` → `data.plating`
+- `#recipeNotes` → `data.notes`
+- `#recipeCuisine` → `data.cuisine`
+
+## Diğer modal'lar kontrol edildi
+
+- **Menus**: name, subtitle, section name → handler'ları var, güvende
+- **Events**: tüm alanların handler'ları var, güvende
+- **Checklist**: tplName handler'ı var, güvende
+- **Suppliers**: tüm alanların handler'ları var, güvende
+- **Ingredients editor**: re-render yok, tek seferde set, güvende
+- **Workspace editor**: re-render yok, güvende
+- **HACCP editor'lar**: tek seferde set, güvende
+
+Yani bug sadece recipe editor'unda vardı.
+
+## Test
+
+1. Yeni Tarif aç
+2. Tarif adı yaz: "Mantı"
+3. Hazırlık (dk): 30 yaz
+4. **Sale price kutusunu doldur**: 18
+5. Tarif adı hâlâ "Mantı" olmalı (önceden boşalıyordu)
+6. Aşağıdaki tüm alanlar girilen değerleri korumalı
+
+---
+
 # v2.6.32 — Modal'larda klavye akışı (Enter = ileri, Ctrl+Enter = kaydet)
 
 ## Talep

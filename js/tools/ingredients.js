@@ -183,7 +183,7 @@
         const n = PCD.store.deleteIngredients(Array.from(selectedIds));
         PCD.toast.success(PCD.i18n.t('items_deleted').replace('{n}', n));
         selectedIds = new Set(); selectMode = false;
-        render(view);
+        renderList(view);
       });
     });
 
