@@ -1,3 +1,54 @@
+# v2.6.23 — KRİTİK BUG FIX: logout veri sızıntısı
+
+## Talep / Bug
+
+Logout yaptıktan sonra workspace switcher'ı açtığında oluşturduğun "NAZZAR" workspace'i hâlâ görünüyordu. Çıkış yapsa bile localStorage'daki tüm kullanıcı verisi (workspaces, recipes, menus, ingredients, vb.) duruyordu.
+
+**Güvenlik açısı:** Aynı tarayıcıyı kullanan başka bir kişi (ya da seninle ortak bilgisayar kullanan biri) önceki kullanıcının verilerini görür ve değiştirebilirdi.
+
+## Sebep
+
+`auth.js`'de `_clearUser` fonksiyonu sadece `user` objesini siliyordu:
+```js
+PCD.store.set('user', null);
+```
+
+`workspaces`, `recipes`, `menus`, `ingredients`, `inventory`, `events`, `suppliers`, `checklistTemplates`, `canvases`, `haccpUnits`, `haccpReadings`, `haccpCookCool` tablolarına dokunulmuyordu.
+
+## Çözüm
+
+**1. `store.js` — yeni `clearUserData()` fonksiyonu:**
+- Tüm kullanıcı-spesifik veriyi silen ama UI tercihlerini (theme, locale, currency, haccpTempUnit) koruyan selektif silme
+- Mevcut `reset()` fonksiyonu her şeyi siliyordu (tercih dahil) — kullanmıyoruz
+- localStorage'a hemen yazılır (flush), event'ler emit edilir
+
+**2. `auth.js` — `_clearUser(wipeData)` parametre kabul ediyor:**
+- `wipeData=true` (gerçek logout): tüm veri silinir + sayfa otomatik reload edilir (UI temiz state'e döner)
+- `wipeData=false` (geçici session error, offline, token süresi dolmuş): sadece user objesi silinir, **veri korunur** — kullanıcı tekrar bağlanınca senkronize devam eder
+
+**3. Çağrı noktaları güncellendi:**
+- `SIGNED_OUT` event → `_clearUser(true)` (gerçek logout)
+- Manuel `signOut()` çağrısı → `_clearUser(true)`
+- Session error fallback → `_clearUser()` (parametre yok, false → veriyi koru)
+
+**4. Korunan ayarlar (logout sonrası):**
+- `prefs.theme` (light/dark)
+- `prefs.locale` (TR/EN/...)
+- `prefs.currency`
+- `prefs.haccpTempUnit` (°C/°F)
+- `prefs.haccpCurrentLogId` (yeni hesapta hızlı kullanım için)
+
+## Test
+
+1. Login ol → "TEST" workspace oluştur
+2. Logout
+3. Sayfa otomatik reload olmalı, login ekranı görünmeli
+4. Workspace switcher'ı açmaya çalış (giriş yapmadan) → "TEST" görünmemeli
+5. Tekrar login → cloud'dan veriler otomatik gelmeli (TEST orada)
+6. Dil ve tema tercihi (light/dark) korunmuş olmalı
+
+---
+
 # v2.6.22 — HACCP gün isimleri ve AM/PM Türkçe
 
 ## Talep

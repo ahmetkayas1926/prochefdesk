@@ -713,6 +713,38 @@
       });
     },
 
+    // Wipe all user-specific data on logout, but keep UI preferences
+    // (theme, locale, etc.) so the next user / next session starts fresh
+    // but in the chef's chosen language and theme.
+    //
+    // BUG FIX (v2.6.23): Without this, logging out left workspaces,
+    // recipes, menus, etc. in localStorage. Anyone using the same
+    // browser would see the previous user's data.
+    clearUserData: function () {
+      // Save the prefs we want to keep
+      const savedPrefs = {};
+      const prefKeys = ['prefs.theme', 'prefs.locale', 'prefs.currency', 'prefs.haccpTempUnit', 'prefs.haccpCurrentLogId'];
+      prefKeys.forEach(function (k) {
+        const v = state.prefs && state.prefs[k.replace('prefs.', '')];
+        if (v !== undefined) savedPrefs[k] = v;
+      });
+      // Reset everything
+      state = PCD.clone(defaultState);
+      // Restore prefs
+      Object.keys(savedPrefs).forEach(function (k) {
+        const subKey = k.replace('prefs.', '');
+        state.prefs = state.prefs || {};
+        state.prefs[subKey] = savedPrefs[k];
+      });
+      // Persist immediately
+      try { localStorage.setItem(LS_KEY_STATE, JSON.stringify(state)); }
+      catch (e) { PCD.err('clearUserData persist fail', e); }
+      emit('*:reset', state);
+      ['recipes','ingredients','menus','events','suppliers','inventory','waste','onboarding','user','plan','workspaces','activeWorkspaceId'].forEach(function (k) {
+        emit(k, state[k]);
+      });
+    },
+
     // Force save immediately (e.g. before navigation)
     flush: function () {
       try { localStorage.setItem(LS_KEY_STATE, JSON.stringify(state)); }

@@ -34,7 +34,9 @@
             }
           }
         } else if (event === 'SIGNED_OUT') {
-          auth._clearUser();
+          // Explicit logout — wipe all user-specific data so the next
+          // browser user can't see workspaces, recipes etc.
+          auth._clearUser(true);
         } else if (event === 'USER_UPDATED') {
           if (session && session.user) auth._setUser(session.user);
         }
@@ -75,8 +77,25 @@
       PCD.store.set('user', user);
     },
 
-    _clearUser: function () {
-      PCD.store.set('user', null);
+    _clearUser: function (wipeData) {
+      // BUG FIX (v2.6.23): On explicit logout, clear all user-specific
+      // data (workspaces, recipes, menus, etc.) — not just the user
+      // object. Otherwise the next person to use the browser sees the
+      // previous user's data.
+      //
+      // wipeData=false is used for transient session errors (token
+      // expiry, offline, etc.) where we just want to mark the user as
+      // logged out but keep their local data so they can sync again
+      // when the network returns.
+      if (wipeData && PCD.store && PCD.store.clearUserData) {
+        PCD.store.clearUserData();
+        // Force a reload so the UI returns cleanly to the logged-out state.
+        setTimeout(function () {
+          try { location.reload(); } catch (e) { /* ignore */ }
+        }, 150);
+      } else {
+        PCD.store.set('user', null);
+      }
     },
 
     signUp: function (email, password) {
@@ -104,10 +123,10 @@
       const supabase = PCD.cloud && PCD.cloud.getClient();
       if (supabase) {
         return supabase.auth.signOut().then(function () {
-          auth._clearUser();
+          auth._clearUser(true);
         });
       }
-      auth._clearUser();
+      auth._clearUser(true);
       return Promise.resolve();
     },
 
