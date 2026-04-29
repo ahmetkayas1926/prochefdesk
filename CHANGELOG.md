@@ -1,3 +1,88 @@
+# v2.6.27 — Tarif önizleme: QR butonu eklendi
+
+## Talep
+
+Menülerde tarif paylaşırken QR kodu var (modal'da QR butonu), ama tarif önizlemesinde yok. Aynı özellik tarifte de olmalı.
+
+## Çözüm
+
+Tarif preview modal'ının footer'ına yeni QR butonu eklendi (share butonunun yanında, yeşil grid ikonuyla).
+
+**Akış:**
+1. Tarife tıkla → preview modal aç
+2. Footer butonları: 🗑 · ↗ Share · ⊞ **QR (yeni)** · ⎘ Duplicate · 🚚 · 📊 Cost · ✏️ Edit
+3. QR'a bas → otomatik public share link oluşur → QR popup'ı açılır
+4. Şef telefonuna QR'ı tarayabilir, herkese link aynı
+
+Menülerdeki QR akışıyla **birebir aynı** (aynı `PCD.share.createOrGetShareUrl` + `PCD.qr.show` kullanılıyor). Mevcut paylaşım altyapısı tekrar kullanıldı, yeni kod yazılmadı — sadece tarif modal'ına buton bağlandı.
+
+## Test
+
+1. Bir tarife tıkla → önizleme açılsın
+2. Footer'da QR butonu (grid ikonu) görünmeli
+3. QR'a bas → spinner → QR popup'ı açılır → URL içerir
+4. URL'yi başka tarayıcıda aç → tarif görünmeli
+5. Login değilken QR'a bas → "Sign in to create QR codes" hatası
+
+---
+
+# v2.6.26 — Cook & Cool Log redesign: tarih bazlı tablo formu
+
+## Talep
+
+Mevcut event-based liste yapısı yerine **A4 yatay sayfaya sığan, akıllı tablo formu** istendi:
+- 15 satırlı sabit tablo (tek bir günü tamamen kapsar)
+- Boş satıra tıkla → popup → doldur
+- "Boş yazdır" — şef kağıda elle doldurmak isterse
+- "Bu günü yazdır" — mevcut kayıtlarla birlikte yazdır
+- Gün gün gezinti (← bugün →)
+
+## Çözüm
+
+`haccp_cooling.js` baştan yazıldı. Eski event-based liste mantığı atıldı.
+
+**Yeni veri modeli:** Her kayıt artık bir `date` (YYYY-MM-DD) ve `rowIndex` (0–14) değerine sahip. Aynı gün için 15 satıra kadar kayıt tutulur. Eski kayıtlar (event-based, date alanı olmayan) görünmez ama silinmez — eğer kalmışsa sessizce arka planda durur.
+
+**UI:**
+- Üstte tarih navigatörü: ← [Tam tarih · Bugün] [Bugün butonu] →
+- Altında "Son kayıtlı günler" (son 5 gün hızlı geçiş)
+- 15 satırlı tablo, alternating row bg
+- Sütunlar: # · Yemek · Miktar · Pişirme sonu (°/saat) · +2h (°/saat) · Son (°/saat) · Düzeltici eylem · Şef
+- Out-of-range hücreler kırmızı (⚠ + kırmızı arka plan)
+- Boş satırlar: "+ Doldurmak için tıkla"
+
+**Popup editor:**
+- Yemek adı + Miktar/Birim
+- 3 büyük checkpoint kartı: Pişirme sonu / +2h / Son. Her biri sıcaklık + saat alanı.
+- Düzeltici eylem notu (opsiyonel) + Şef adı
+- Sil butonu (mevcut kayıt için)
+- En az **yemek adı veya bir sıcaklık** zorunlu (kısmi kayıt destekli)
+
+**Print:**
+- A4 yatay, 6mm margin (verimli alan kullanımı)
+- 11 sütunlu tablo, 15 satır
+- Üst başlık: "HACCP · Cook & Cool Log · [workspace] · [tarih] · °C"
+- Sağ üstte target değerleri (2h hedef, 6h hedef)
+- Alt: HACCP gereksinim özeti + "Kontrol eden: ___"
+- "Made with ProChefDesk" footer
+- **Boş yazdır:** Tüm hücreler boş, tarih satırı çizgi
+- **Bu günü yazdır:** Mevcut kayıtlar baked in
+
+**Storage:** Aynı `haccpCookCool` tablosu, alanlar farklı yapıda (`date`, `rowIndex`, `cookEndTemp`, `cookEndAt`, `cp2hTemp`, `cp2hAt`, `endedTemp`, `endedAt`, `note`, `chef`).
+
+## Test
+
+1. HACCP Forms → Pişirme & Soğutma → bugünün boş tablosu
+2. 1. satıra tıkla → "Domates Çorbası", 5 L, pişirme 65°C / 14:00 → kaydet
+3. Tabloda satır dolu görünür
+4. 2. satıra tıkla → daha eksik bilgi gir (sadece yemek adı) → kaydet
+5. Tarih oklarıyla dünkü güne git → boş tablo
+6. "Boş yazdır" → A4 yatay, 15 satırlı boş form
+7. "Bu günü yazdır" → mevcut 2 kaydın olduğu sayfa
+8. Out-of-range değer test: cook end 25°C → +2h 30°C → tabloda kırmızı uyarı
+
+---
+
 # v2.6.25 — Free tier limitleri kaldırıldı (şimdilik sınırsız)
 
 ## Talep

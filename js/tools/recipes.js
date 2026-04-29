@@ -1033,10 +1033,13 @@
     costReportBtn.innerHTML = PCD.icon('activity', 16) + ' <span>Cost Report</span>';
     const shareBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: 'Share' });
     shareBtn.innerHTML = PCD.icon('share', 16);
+    const qrBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: 'QR' });
+    qrBtn.innerHTML = PCD.icon('grid', 16);
     const deleteBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: t('delete'), style: { color: 'var(--danger)' } });
     deleteBtn.innerHTML = PCD.icon('trash', 16);
     footer.appendChild(deleteBtn);
     footer.appendChild(shareBtn);
+    footer.appendChild(qrBtn);
     footer.appendChild(duplicateBtn);
     footer.appendChild(copyToWsBtn);
     footer.appendChild(costReportBtn);
@@ -1094,6 +1097,36 @@
         lines.push(r.steps);
       }
       openRecipeShareSheet({ title: r.name, text: lines.join('\n'), recipe: r, ingMap: ingMap });
+    });
+
+    qrBtn.addEventListener('click', function () {
+      // Generate a share URL and put THAT in the QR — so scanning opens
+      // the recipe in a browser, not just a wall of text.
+      const user = PCD.store.get('user');
+      if (!user || !user.id) {
+        PCD.toast.error(t('qr_signin_required') || 'Sign in to create QR codes');
+        return;
+      }
+      if (!PCD.share || !PCD.share.createOrGetShareUrl) {
+        PCD.toast.error(t('qr_share_error') || 'QR generation failed');
+        return;
+      }
+      qrBtn.disabled = true;
+      const orig = qrBtn.innerHTML;
+      qrBtn.innerHTML = '<span class="spinner"></span>';
+      PCD.share.createOrGetShareUrl('recipe', rid).then(function (url) {
+        qrBtn.disabled = false;
+        qrBtn.innerHTML = orig;
+        PCD.qr.show({
+          title: r.name,
+          subtitle: t('act_show_qr') || 'Scan to view',
+          text: url
+        });
+      }).catch(function (e) {
+        qrBtn.disabled = false;
+        qrBtn.innerHTML = orig;
+        PCD.toast.error((t('qr_share_error') || 'QR error') + ': ' + (e.message || e));
+      });
     });
 
     deleteBtn.addEventListener('click', function () {

@@ -1,41 +1,31 @@
 /* ================================================================
-   ProChefDesk — haccp_cooling.js
-   HACCP Forms · Cook & Cool Log (v2.6.21)
+   ProChefDesk — haccp_cooling.js (v2.6.26 redesign)
+   HACCP Forms · Cook & Cool Log
 
-   Event-based log: each food item that gets cooked then cooled is
-   one record. Tracks the cooking endpoint temp and 4 cooling
-   checkpoints over the FDA 6-hour cooling window:
-     - End of cooking (target ≥60°C / 135°F)
-     - 2 hours later (must be ≤21°C / 70°F — KEY HACCP GATE)
-     - 4 hours later
-     - 6 hours later (must be ≤5°C / 41°F — DONE)
+   Date-based form: each day = one A4 landscape page with 15 rows.
+   Rows can be filled directly via tap (popup), printed blank for
+   manual writing, or printed with current data baked in.
 
-   Screen: list view, newest first. Active events float to the top
-   with a "what's the next checkpoint?" hint.
-   Print: filtered date range, multi-page A4 landscape, each event
-   = 1 row.
+   HACCP gates (FDA Food Code 2017):
+     - Cook end ≥ 60°C / 135°F
+     - 2h checkpoint ≤ 21°C / 70°F
+     - 6h end ≤ 5°C / 41°F
 
-   Storage tables (workspace-bound):
-   - haccpCookCool — { id, foodName, quantity, quantityUnit,
-                       cookEndAt, cookEndTemp,
-                       checkpoints: [{at, temp}],
-                       endedAt, endedTemp,
-                       correctiveAction, chef, status }
+   Storage: workspace-bound table 'haccpCookCool'.
+   Each record has a `date` (YYYY-MM-DD) so we can group by day.
    ================================================================ */
 
 (function () {
   'use strict';
   const PCD = window.PCD;
   const TABLE = 'haccpCookCool';
+  const ROWS_PER_PAGE = 15;
 
-  // HACCP cooling targets (FDA Food Code 2017)
-  const TARGET_2H_C = 21;   // 70°F
-  const TARGET_6H_C = 5;    // 41°F
-  const TOTAL_WINDOW_MS = 6 * 60 * 60 * 1000;
-  const STAGE_2H_MS    = 2 * 60 * 60 * 1000;
+  // HACCP cooling targets
+  const TARGET_2H_C = 21;
+  const TARGET_6H_C = 5;
 
-  function locale() { return (PCD.i18n && PCD.i18n.currentLocale) || "en"; }
-
+  function locale() { return (PCD.i18n && PCD.i18n.currentLocale) || 'en'; }
   function getTempUnit() {
     const pref = PCD.store && PCD.store.get && PCD.store.get('prefs.haccpTempUnit');
     return pref === 'F' ? 'F' : 'C';
@@ -44,59 +34,53 @@
   function fmtTemp(c) {
     if (c === null || c === undefined || c === '') return '—';
     const u = getTempUnit();
-    if (u === 'F') return ctoF(c) + '°F';
-    return c + '°C';
+    const v = u === 'F' ? ctoF(c) : c;
+    return v + '°';
   }
   function targetForUI(c) {
     return getTempUnit() === 'F' ? ctoF(c) + '°F' : c + '°C';
   }
 
-  // ============ DATA ============
-  function listAll() {
-    return (PCD.store.listTable(TABLE) || []).slice().sort(function (a, b) {
-      return (b.cookEndAt || '').localeCompare(a.cookEndAt || '');
-    });
+  function ymd(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return y + '-' + m + '-' + d;
   }
-  function listActive() {
-    return listAll().filter(function (r) { return !r.endedAt; });
+  function todayYmd() { return ymd(new Date()); }
+  function shiftDate(yymmdd, days) {
+    const d = new Date(yymmdd + 'T00:00:00');
+    d.setDate(d.getDate() + days);
+    return ymd(d);
   }
-  function listCompleted() {
-    return listAll().filter(function (r) { return !!r.endedAt; });
+  function dateLabel(yymmdd) {
+    const d = new Date(yymmdd + 'T00:00:00');
+    return d.toLocaleDateString(locale(), { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   }
 
-  // Event status: 'on-track', 'warning' (close to limit), 'failed', 'done'
-  function statusFor(r) {
-    if (r.endedAt) {
-      // Final check: did it reach 5°C within 6 hours?
-      const totalMs = new Date(r.endedAt) - new Date(r.cookEndAt);
-      if (r.endedTemp > TARGET_6H_C) return 'failed';
-      if (totalMs > TOTAL_WINDOW_MS) return 'failed';
-      // Also check 2h gate via checkpoints
-      const cp2h = (r.checkpoints || []).find(function (c) {
-        return new Date(c.at) - new Date(r.cookEndAt) >= STAGE_2H_MS - 60000 // ±1 min tolerance
-            && new Date(c.at) - new Date(r.cookEndAt) <= STAGE_2H_MS + 30 * 60000; // 2h..2.5h window
-      });
-      if (cp2h && cp2h.temp > TARGET_2H_C) return 'failed';
-      return 'done';
-    }
-    // Active
-    const elapsed = Date.now() - new Date(r.cookEndAt);
-    if (elapsed > TOTAL_WINDOW_MS) return 'failed';
-    // Check latest checkpoint
-    const latest = (r.checkpoints || [])[((r.checkpoints || []).length - 1)];
-    if (latest) {
-      const sinceCook = new Date(latest.at) - new Date(r.cookEndAt);
-      if (sinceCook >= STAGE_2H_MS && latest.temp > TARGET_2H_C) return 'warning';
-    }
-    return 'on-track';
+  function listForDate(dateStr) {
+    return (PCD.store.listTable(TABLE) || []).filter(function (r) {
+      return r.date === dateStr;
+    }).slice().sort(function (a, b) {
+      return (a.rowIndex || 0) - (b.rowIndex || 0);
+    });
   }
+  function listDatesWithRecords() {
+    const dates = {};
+    (PCD.store.listTable(TABLE) || []).forEach(function (r) {
+      if (r.date) dates[r.date] = true;
+    });
+    return Object.keys(dates).sort().reverse();
+  }
+
+  let _viewDate = todayYmd();
 
   // ============ MAIN VIEW ============
   function render(view) {
     const t = PCD.i18n.t;
-    const active = listActive();
-    const completed = listCompleted().slice(0, 90); // last 90 days roughly
     const u = getTempUnit();
+    const records = listForDate(_viewDate);
+    const dates = listDatesWithRecords();
 
     view.innerHTML =
       '<div class="page-header">' +
@@ -105,523 +89,388 @@
           '<div class="page-subtitle">' + (t('hcc_subtitle') || 'HACCP cooling: 60°C → 21°C in 2h → 5°C in 6h total') + '</div>' +
         '</div>' +
         '<div class="page-header-actions">' +
-          '<button class="btn btn-primary btn-sm" id="hccNewEventBtn">' + PCD.icon('plus', 16) + ' <span>' + (t('hcc_new_event') || 'New cook') + '</span></button>' +
-          (completed.length > 0 ? '<button class="btn btn-outline btn-sm" id="hccPrintBtn">' + PCD.icon('print', 16) + ' <span>' + (t('print') || 'Print/PDF') + '</span></button>' : '') +
+          '<button class="btn btn-outline btn-sm" id="hccPrintBlankBtn" title="' + PCD.escapeHtml(t('hcc_print_blank_tip') || 'Boş formu yazdır, elle doldur') + '">' + PCD.icon('print', 14) + ' <span>' + PCD.escapeHtml(t('hcc_print_blank') || 'Boş yazdır') + '</span></button>' +
+          '<button class="btn btn-primary btn-sm" id="hccPrintDayBtn">' + PCD.icon('print', 14) + ' <span>' + PCD.escapeHtml(t('hcc_print_day') || 'Bu günü yazdır') + '</span></button>' +
         '</div>' +
       '</div>';
 
-    // === Active events (sticky at top) ===
-    if (active.length > 0) {
-      const activeWrap = PCD.el('div', { class: 'card', style: { padding: '10px 14px', marginTop: '12px', background: 'var(--brand-50)', border: '1px solid var(--brand-300)' } });
-      activeWrap.innerHTML =
-        '<div style="font-size:11px;font-weight:700;color:var(--brand-700);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">' +
-          (t('hcc_active') || 'Active cooling') + ' (' + active.length + ')' +
-        '</div>';
-      active.forEach(function (r) {
-        const card = buildEventCard(r, t, true);
-        activeWrap.appendChild(card);
+    const isToday = _viewDate === todayYmd();
+    const dateNav = PCD.el('div', { class: 'card', style: { padding: '10px 14px', marginTop: '12px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '12px' } });
+    dateNav.innerHTML =
+      '<button class="btn btn-outline btn-sm" id="hccPrevDay" aria-label="' + PCD.escapeHtml(t('prev_day') || 'Önceki gün') + '">' + PCD.icon('chevronLeft', 16) + '</button>' +
+      '<div style="flex:1;text-align:center;">' +
+        '<div style="font-weight:700;font-size:15px;">' + PCD.escapeHtml(dateLabel(_viewDate)) + (isToday ? ' · <span style="color:var(--brand-700);font-size:11px;">' + PCD.escapeHtml(t('today') || 'Bugün') + '</span>' : '') + '</div>' +
+        '<div class="text-muted" style="font-size:11px;">' + records.length + ' / ' + ROWS_PER_PAGE + ' ' + PCD.escapeHtml(t('hcc_filled') || 'dolu') + '</div>' +
+      '</div>' +
+      '<button class="btn btn-outline btn-sm" id="hccTodayBtn" ' + (isToday ? 'disabled' : '') + '>' + PCD.escapeHtml(t('today') || 'Bugün') + '</button>' +
+      '<button class="btn btn-outline btn-sm" id="hccNextDay" aria-label="' + PCD.escapeHtml(t('next_day') || 'Sonraki gün') + '">' + PCD.icon('chevronRight', 16) + '</button>';
+    view.appendChild(dateNav);
+
+    if (dates.length > 0) {
+      const quickJump = PCD.el('div', { style: { display: 'flex', gap: '6px', marginBottom: '10px', flexWrap: 'wrap', alignItems: 'center' } });
+      const label = PCD.el('span', { style: { fontSize: '11px', color: 'var(--text-3)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }, text: (t('hcc_recent_days') || 'Son kayıtlı günler') + ':' });
+      quickJump.appendChild(label);
+      dates.slice(0, 5).forEach(function (d) {
+        const isActive = d === _viewDate;
+        const btn = PCD.el('button', {
+          class: 'btn btn-' + (isActive ? 'primary' : 'outline') + ' btn-sm',
+          style: { fontSize: '12px', padding: '4px 10px' },
+          'data-jump': d,
+        });
+        const dDate = new Date(d + 'T00:00:00');
+        btn.textContent = dDate.toLocaleDateString(locale(), { month: 'short', day: 'numeric' });
+        quickJump.appendChild(btn);
       });
-      view.appendChild(activeWrap);
+      view.appendChild(quickJump);
     }
 
-    // === Completed events list ===
-    if (completed.length === 0 && active.length === 0) {
-      const empty = PCD.el('div', { class: 'card', style: { padding: '48px 24px', textAlign: 'center', marginTop: '20px' } });
-      empty.innerHTML =
-        '<div style="font-size:48px;margin-bottom:12px;">🌡</div>' +
-        '<div style="font-weight:700;font-size:18px;margin-bottom:6px;">' + PCD.escapeHtml(t('hcc_empty_title') || 'No cook & cool records yet') + '</div>' +
-        '<div class="text-muted" style="font-size:14px;line-height:1.6;max-width:480px;margin:0 auto 18px;">' + PCD.escapeHtml(t('hcc_empty_msg') || 'Track every batch you cook and cool — soup, stock, chicken, rice. HACCP requires recording the temperature drop within 6 hours.') + '</div>' +
-        '<button class="btn btn-primary" id="hccEmptyAddBtn">' + PCD.icon('plus', 16) + ' <span>' + PCD.escapeHtml(t('hcc_first_event') || 'Start first event') + '</span></button>';
-      view.appendChild(empty);
-      const handler = function () { openEventEditor(null, function () { render(view); }); };
-      PCD.$('#hccNewEventBtn', view).addEventListener('click', handler);
-      const emptyAdd = PCD.$('#hccEmptyAddBtn', view);
-      if (emptyAdd) emptyAdd.addEventListener('click', handler);
-      return;
-    }
+    // Build the table
+    const wrap = PCD.el('div', { class: 'card', style: { padding: '0', overflowX: 'auto' } });
+    const target2h = targetForUI(TARGET_2H_C);
+    const target6h = targetForUI(TARGET_6H_C);
 
-    if (completed.length > 0) {
-      const histTitle = PCD.el('div', { style: { padding: '12px 4px 6px', fontSize: '11px', fontWeight: '700', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' } });
-      histTitle.textContent = (t('hcc_history') || 'History') + ' · ' + completed.length;
-      view.appendChild(histTitle);
-      const histWrap = PCD.el('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px' } });
-      completed.forEach(function (r) {
-        const card = buildEventCard(r, t, false);
-        histWrap.appendChild(card);
-      });
-      view.appendChild(histWrap);
-    }
+    let table =
+      '<table style="width:100%;min-width:1100px;border-collapse:collapse;font-size:12px;table-layout:fixed;">' +
+        '<thead style="background:var(--surface-2);">' +
+          '<tr>' +
+            '<th style="width:32px;padding:8px 4px;text-align:center;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);">#</th>' +
+            '<th style="padding:8px 8px;text-align:start;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);border-left:1px solid var(--border);width:22%;">' + PCD.escapeHtml(t('hcc_col_food') || 'Yemek / Parti') + '</th>' +
+            '<th style="padding:8px 6px;text-align:center;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);border-left:1px solid var(--border);width:9%;">' + PCD.escapeHtml(t('hcc_col_qty') || 'Miktar') + '</th>' +
+            '<th colspan="2" style="padding:8px 6px;text-align:center;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);border-left:1px solid var(--border);">' + PCD.escapeHtml(t('hcc_col_cook_end') || 'Pişirme sonu') + '</th>' +
+            '<th colspan="2" style="padding:8px 6px;text-align:center;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);border-left:1px solid var(--border);">+2h <span style="font-weight:400;color:var(--text-3);">≤' + target2h + '</span></th>' +
+            '<th colspan="2" style="padding:8px 6px;text-align:center;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);border-left:1px solid var(--border);">' + PCD.escapeHtml(t('hcc_col_final') || 'Son') + ' <span style="font-weight:400;color:var(--text-3);">≤' + target6h + '</span></th>' +
+            '<th style="padding:8px 6px;text-align:start;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);border-left:1px solid var(--border);width:14%;">' + PCD.escapeHtml(t('hcc_col_note') || 'Düzeltici eylem') + '</th>' +
+            '<th style="padding:8px 6px;text-align:center;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);border-left:1px solid var(--border);width:9%;">' + PCD.escapeHtml(t('hcc_col_chef') || 'Şef') + '</th>' +
+          '</tr>' +
+          '<tr>' +
+            '<th style="padding:4px;border-bottom:1px solid var(--border);"></th>' +
+            '<th style="padding:4px;border-bottom:1px solid var(--border);border-left:1px solid var(--border);"></th>' +
+            '<th style="padding:4px;border-bottom:1px solid var(--border);border-left:1px solid var(--border);"></th>' +
+            '<th style="padding:4px;text-align:center;font-size:9px;color:var(--text-3);border-bottom:1px solid var(--border);border-left:1px solid var(--border);width:7%;">°' + u + '</th>' +
+            '<th style="padding:4px;text-align:center;font-size:9px;color:var(--text-3);border-bottom:1px solid var(--border);width:7%;">' + PCD.escapeHtml(t('hcc_col_time') || 'Saat') + '</th>' +
+            '<th style="padding:4px;text-align:center;font-size:9px;color:var(--text-3);border-bottom:1px solid var(--border);border-left:1px solid var(--border);width:7%;">°' + u + '</th>' +
+            '<th style="padding:4px;text-align:center;font-size:9px;color:var(--text-3);border-bottom:1px solid var(--border);width:7%;">' + PCD.escapeHtml(t('hcc_col_time') || 'Saat') + '</th>' +
+            '<th style="padding:4px;text-align:center;font-size:9px;color:var(--text-3);border-bottom:1px solid var(--border);border-left:1px solid var(--border);width:7%;">°' + u + '</th>' +
+            '<th style="padding:4px;text-align:center;font-size:9px;color:var(--text-3);border-bottom:1px solid var(--border);width:7%;">' + PCD.escapeHtml(t('hcc_col_time') || 'Saat') + '</th>' +
+            '<th style="padding:4px;border-bottom:1px solid var(--border);border-left:1px solid var(--border);"></th>' +
+            '<th style="padding:4px;border-bottom:1px solid var(--border);border-left:1px solid var(--border);"></th>' +
+          '</tr>' +
+        '</thead><tbody>';
 
-    // Wire up
-    PCD.$('#hccNewEventBtn', view).addEventListener('click', function () {
-      openEventEditor(null, function () { render(view); });
-    });
-    const printBtn = PCD.$('#hccPrintBtn', view);
-    if (printBtn) printBtn.addEventListener('click', function () { openPrintDateRange(); });
+    const byRow = {};
+    records.forEach(function (r) { if (typeof r.rowIndex === 'number') byRow[r.rowIndex] = r; });
 
-    // Click on any event card → open editor
-    PCD.on(view, 'click', '[data-hcc-id]', function () {
-      const id = this.getAttribute('data-hcc-id');
-      openEventEditor(id, function () { render(view); });
-    });
-  }
+    for (let i = 0; i < ROWS_PER_PAGE; i++) {
+      const r = byRow[i];
+      const filled = !!r;
+      const rowBg = i % 2 === 0 ? 'var(--surface)' : 'var(--surface-1)';
+      table += '<tr data-row="' + i + '" style="background:' + rowBg + ';cursor:pointer;height:32px;" class="hcc-row">';
+      table += '<td style="padding:4px;text-align:center;font-size:11px;color:var(--text-3);border-bottom:1px solid var(--border);font-weight:600;">' + (i + 1) + '</td>';
+      if (filled) {
+        const cookTime = r.cookEndAt ? new Date(r.cookEndAt).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' }) : '';
+        const cp2hTime = r.cp2hAt ? new Date(r.cp2hAt).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' }) : '';
+        const finalTime = r.endedAt ? new Date(r.endedAt).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' }) : '';
+        const cp2hFail = r.cp2hTemp != null && r.cp2hTemp > TARGET_2H_C;
+        const endFail = r.endedTemp != null && r.endedTemp > TARGET_6H_C;
 
-  function buildEventCard(r, t, isActive) {
-    const status = statusFor(r);
-    const colors = {
-      'on-track': { bg: '#fff', icon: '⏱', color: 'var(--brand-700)' },
-      'warning':  { bg: '#fef3c7', icon: '⚠',  color: '#92400e' },
-      'failed':   { bg: '#fef2f2', icon: '✗',  color: '#991b1b' },
-      'done':     { bg: '#fff',    icon: '✓',  color: 'var(--success, #16a34a)' },
-    };
-    const c = colors[status] || colors['on-track'];
-
-    const card = PCD.el('div', {
-      class: 'card card-hover',
-      'data-hcc-id': r.id,
-      style: { padding: '12px 14px', cursor: 'pointer', background: c.bg, marginBottom: '6px' }
-    });
-
-    // Build progress / status line
-    let progressStr = '';
-    if (r.endedAt) {
-      const totalMs = new Date(r.endedAt) - new Date(r.cookEndAt);
-      const totalH = (totalMs / (60 * 60 * 1000)).toFixed(1);
-      progressStr = (t('hcc_completed_in') || 'Completed in') + ' ' + totalH + 'h · ' + fmtTemp(r.endedTemp);
-    } else {
-      const elapsed = Date.now() - new Date(r.cookEndAt);
-      const elapsedH = (elapsed / (60 * 60 * 1000)).toFixed(1);
-      const remaining = (TOTAL_WINDOW_MS - elapsed) / (60 * 60 * 1000);
-      const cps = (r.checkpoints || []).length;
-      if (remaining > 0) {
-        progressStr = (t('hcc_in_progress') || 'In progress') + ' · ' +
-          elapsedH + 'h · ' + cps + ' ' + (t('hcc_checkpoints') || 'checkpoints');
+        table +=
+          '<td style="padding:4px 8px;font-size:12px;font-weight:600;border-bottom:1px solid var(--border);border-left:1px solid var(--border);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + PCD.escapeHtml(r.foodName || '') + '</td>' +
+          '<td style="padding:4px 6px;text-align:center;font-size:11px;border-bottom:1px solid var(--border);border-left:1px solid var(--border);">' + (r.quantity ? PCD.escapeHtml(r.quantity) + (r.quantityUnit ? ' ' + PCD.escapeHtml(r.quantityUnit) : '') : '—') + '</td>' +
+          '<td style="padding:4px;text-align:center;font-size:12px;font-weight:600;border-bottom:1px solid var(--border);border-left:1px solid var(--border);">' + fmtTemp(r.cookEndTemp) + '</td>' +
+          '<td style="padding:4px;text-align:center;font-size:11px;color:var(--text-2);border-bottom:1px solid var(--border);">' + (cookTime || '—') + '</td>' +
+          '<td style="padding:4px;text-align:center;font-size:12px;font-weight:600;border-bottom:1px solid var(--border);border-left:1px solid var(--border);' + (cp2hFail ? 'background:#fee2e2;color:#991b1b;' : '') + '">' + (r.cp2hTemp != null ? (cp2hFail ? '⚠ ' : '') + fmtTemp(r.cp2hTemp) : '—') + '</td>' +
+          '<td style="padding:4px;text-align:center;font-size:11px;color:var(--text-2);border-bottom:1px solid var(--border);' + (cp2hFail ? 'background:#fee2e2;' : '') + '">' + (cp2hTime || '—') + '</td>' +
+          '<td style="padding:4px;text-align:center;font-size:12px;font-weight:600;border-bottom:1px solid var(--border);border-left:1px solid var(--border);' + (endFail ? 'background:#fee2e2;color:#991b1b;' : '') + '">' + (r.endedTemp != null ? (endFail ? '⚠ ' : '') + fmtTemp(r.endedTemp) : '—') + '</td>' +
+          '<td style="padding:4px;text-align:center;font-size:11px;color:var(--text-2);border-bottom:1px solid var(--border);' + (endFail ? 'background:#fee2e2;' : '') + '">' + (finalTime || '—') + '</td>' +
+          '<td style="padding:4px 6px;font-size:11px;color:var(--text-2);border-bottom:1px solid var(--border);border-left:1px solid var(--border);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + PCD.escapeHtml(r.note || '') + '">' + PCD.escapeHtml(r.note || '—') + '</td>' +
+          '<td style="padding:4px 6px;text-align:center;font-size:11px;color:var(--text-2);border-bottom:1px solid var(--border);border-left:1px solid var(--border);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + PCD.escapeHtml(r.chef || '—') + '</td>';
       } else {
-        progressStr = (t('hcc_overdue') || 'Overdue') + ' · ' + elapsedH + 'h';
+        table +=
+          '<td colspan="10" style="padding:4px 12px;font-size:13px;color:var(--text-3);border-bottom:1px solid var(--border);border-left:1px solid var(--border);">' +
+            '<span style="display:inline-flex;align-items:center;gap:6px;"><span style="color:var(--text-3);font-weight:300;font-size:16px;">+</span> <span style="font-style:italic;font-size:11px;">' + PCD.escapeHtml(t('hcc_click_to_fill') || 'Doldurmak için tıkla') + '</span></span>' +
+          '</td>';
       }
+      table += '</tr>';
     }
+    table += '</tbody></table>';
+    wrap.innerHTML = table;
+    view.appendChild(wrap);
 
-    const startDate = new Date(r.cookEndAt);
-    const dateStr = startDate.toLocaleDateString(locale(), { month: 'short', day: 'numeric' }) +
-                    ' · ' + startDate.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' });
+    PCD.$('#hccPrevDay', view).addEventListener('click', function () {
+      _viewDate = shiftDate(_viewDate, -1);
+      render(view);
+    });
+    PCD.$('#hccNextDay', view).addEventListener('click', function () {
+      _viewDate = shiftDate(_viewDate, 1);
+      render(view);
+    });
+    const todayBtn = PCD.$('#hccTodayBtn', view);
+    if (todayBtn) todayBtn.addEventListener('click', function () {
+      _viewDate = todayYmd();
+      render(view);
+    });
+    PCD.$('#hccPrintBlankBtn', view).addEventListener('click', function () { printDay(_viewDate, true); });
+    PCD.$('#hccPrintDayBtn', view).addEventListener('click', function () { printDay(_viewDate, false); });
 
-    card.innerHTML =
-      '<div style="display:flex;align-items:center;gap:10px;">' +
-        '<div style="width:36px;height:36px;border-radius:8px;background:' + c.color + '22;color:' + c.color + ';display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;flex-shrink:0;">' + c.icon + '</div>' +
-        '<div style="flex:1;min-width:0;">' +
-          '<div style="font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + PCD.escapeHtml(r.foodName || '?') + '</div>' +
-          '<div class="text-muted" style="font-size:12px;margin-top:2px;">' +
-            (r.quantity ? PCD.escapeHtml(r.quantity) + (r.quantityUnit ? ' ' + PCD.escapeHtml(r.quantityUnit) : '') + ' · ' : '') +
-            PCD.escapeHtml(dateStr) + ' · <span style="color:' + c.color + ';font-weight:600;">' + PCD.escapeHtml(progressStr) + '</span>' +
-          '</div>' +
-        '</div>' +
-        '<div style="color:var(--text-3);">›</div>' +
-      '</div>';
-
-    return card;
+    PCD.on(view, 'click', '[data-jump]', function () {
+      _viewDate = this.getAttribute('data-jump');
+      render(view);
+    });
+    PCD.on(view, 'click', '[data-row]', function () {
+      const idx = parseInt(this.getAttribute('data-row'), 10);
+      const existing = byRow[idx];
+      openRowEditor(idx, existing, function () { render(view); });
+    });
   }
 
-  // ============ EVENT EDITOR ============
-  // Single modal that handles: create new, view existing, add checkpoint, complete.
-  function openEventEditor(id, onClose) {
+  // ============ ROW EDITOR ============
+  function openRowEditor(rowIndex, existing, onClose) {
     const t = PCD.i18n.t;
-    let event = id ? PCD.store.getFromTable(TABLE, id) : null;
-    const isNew = !event;
-    if (isNew) {
-      event = {
-        foodName: '',
-        quantity: '',
-        quantityUnit: '',
-        cookEndAt: null,
-        cookEndTemp: null,
-        checkpoints: [],
-        endedAt: null,
-        endedTemp: null,
-        correctiveAction: '',
-        chef: '',
-      };
+    const u = getTempUnit();
+    const target2h = targetForUI(TARGET_2H_C);
+    const target6h = targetForUI(TARGET_6H_C);
+
+    const data = existing ? Object.assign({}, existing) : {
+      date: _viewDate, rowIndex: rowIndex,
+      foodName: '', quantity: '', quantityUnit: '',
+      cookEndTemp: null, cookEndAt: null,
+      cp2hTemp: null, cp2hAt: null,
+      endedTemp: null, endedAt: null,
+      note: '', chef: '',
+    };
+
+    function hhmmFromIso(iso) {
+      if (!iso) return '';
+      try { return new Date(iso).toTimeString().slice(0, 5); } catch (e) { return ''; }
+    }
+    function isoFromHhmm(hhmm, dateStr) {
+      if (!hhmm) return null;
+      const d = new Date(dateStr + 'T' + hhmm + ':00');
+      return isNaN(d.getTime()) ? null : d.toISOString();
     }
 
     const body = PCD.el('div');
-
-    function paint() {
-      const u = getTempUnit();
-      const target2h = targetForUI(TARGET_2H_C);
-      const target6h = targetForUI(TARGET_6H_C);
-
-      if (!event.cookEndAt) {
-        // === STEP 1: Cooking just finished — record start ===
-        body.innerHTML =
-          '<div style="background:var(--surface-2);padding:10px 12px;border-radius:8px;margin-bottom:14px;font-size:12px;line-height:1.5;color:var(--text-2);">' +
-            '🔥 ' + PCD.escapeHtml(t('hcc_step1_intro') || 'Step 1: Record what you just finished cooking. Cooling will start now.') +
+    body.innerHTML =
+      '<div style="background:var(--surface-2);padding:8px 12px;border-radius:8px;margin-bottom:14px;font-size:12px;color:var(--text-2);">' +
+        '🌡 ' + PCD.escapeHtml(t('hcc_row_intro') || 'Bu satırı doldur. Boş bıraktığın alanlar tabloda — olarak görünür.') +
+      '</div>' +
+      '<div style="margin-bottom:10px;">' +
+        '<label style="display:block;font-weight:600;font-size:13px;margin-bottom:4px;">' + PCD.escapeHtml(t('hcc_food_name') || 'Yemek / Parti adı') + '</label>' +
+        '<input id="rfFood" type="text" maxlength="60" value="' + PCD.escapeHtml(data.foodName || '') + '" placeholder="' + PCD.escapeHtml(t('hcc_food_placeholder') || 'örn. Domates çorbası, tavuk göğsü') + '" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-1);font-size:14px;box-sizing:border-box;">' +
+      '</div>' +
+      '<div style="display:flex;gap:8px;margin-bottom:14px;">' +
+        '<div style="flex:1.4;">' +
+          '<label style="display:block;font-weight:600;font-size:12px;margin-bottom:4px;">' + PCD.escapeHtml(t('hcc_quantity') || 'Miktar') + '</label>' +
+          '<input id="rfQty" type="text" maxlength="15" value="' + PCD.escapeHtml(data.quantity || '') + '" placeholder="örn. 5" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-1);font-size:13px;box-sizing:border-box;">' +
+        '</div>' +
+        '<div style="flex:1;">' +
+          '<label style="display:block;font-weight:600;font-size:12px;margin-bottom:4px;">' + PCD.escapeHtml(t('hcc_unit') || 'Birim') + '</label>' +
+          '<input id="rfQtyU" type="text" maxlength="8" value="' + PCD.escapeHtml(data.quantityUnit || '') + '" placeholder="L / kg / adet" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-1);font-size:13px;box-sizing:border-box;">' +
+        '</div>' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">' +
+        '<div style="border:1px solid var(--border);border-radius:8px;padding:10px;">' +
+          '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">🔥 ' + PCD.escapeHtml(t('hcc_col_cook_end') || 'Pişirme sonu') + '</div>' +
+          '<div style="display:flex;gap:4px;">' +
+            '<input id="rfCookT" type="number" step="0.1" placeholder="60" value="' + (data.cookEndTemp != null ? data.cookEndTemp : '') + '" style="flex:1;padding:8px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface-1);color:var(--text-1);font-size:14px;font-weight:600;text-align:center;box-sizing:border-box;width:0;min-width:0;">' +
+            '<span style="display:flex;align-items:center;color:var(--text-3);font-size:13px;">°' + u + '</span>' +
           '</div>' +
-          '<div style="margin-bottom:12px;">' +
-            '<label style="display:block;font-weight:600;font-size:13px;margin-bottom:4px;">' + PCD.escapeHtml(t('hcc_food_name') || 'Food / batch name') + '</label>' +
-            '<input id="hccFood" type="text" maxlength="80" placeholder="' + PCD.escapeHtml(t('hcc_food_placeholder') || 'e.g. Tomato soup, chicken thighs, rice') + '" value="' + PCD.escapeHtml(event.foodName || '') + '" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-1);font-size:14px;box-sizing:border-box;">' +
+          '<input id="rfCookH" type="time" value="' + hhmmFromIso(data.cookEndAt) + '" style="width:100%;padding:6px 8px;margin-top:4px;border:1px solid var(--border);border-radius:6px;background:var(--surface-1);color:var(--text-1);font-size:12px;box-sizing:border-box;">' +
+        '</div>' +
+        '<div style="border:1px solid var(--border);border-radius:8px;padding:10px;">' +
+          '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">🌡 +2h <span style="font-weight:400;">≤' + target2h + '</span></div>' +
+          '<div style="display:flex;gap:4px;">' +
+            '<input id="rfCp2hT" type="number" step="0.1" placeholder="' + (u === 'F' ? '70' : '21') + '" value="' + (data.cp2hTemp != null ? data.cp2hTemp : '') + '" style="flex:1;padding:8px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface-1);color:var(--text-1);font-size:14px;font-weight:600;text-align:center;box-sizing:border-box;width:0;min-width:0;">' +
+            '<span style="display:flex;align-items:center;color:var(--text-3);font-size:13px;">°' + u + '</span>' +
           '</div>' +
-          '<div style="display:flex;gap:8px;margin-bottom:12px;">' +
-            '<div style="flex:1.2;">' +
-              '<label style="display:block;font-weight:600;font-size:13px;margin-bottom:4px;">' + PCD.escapeHtml(t('hcc_quantity') || 'Quantity') + '</label>' +
-              '<input id="hccQty" type="text" maxlength="20" placeholder="' + PCD.escapeHtml(t('hcc_quantity_placeholder') || 'e.g. 5') + '" value="' + PCD.escapeHtml(event.quantity || '') + '" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-1);font-size:14px;box-sizing:border-box;">' +
-            '</div>' +
-            '<div style="flex:1;">' +
-              '<label style="display:block;font-weight:600;font-size:13px;margin-bottom:4px;">' + PCD.escapeHtml(t('hcc_unit') || 'Unit') + '</label>' +
-              '<input id="hccQtyU" type="text" maxlength="10" placeholder="' + PCD.escapeHtml(t('hcc_unit_placeholder') || 'L / kg / pcs') + '" value="' + PCD.escapeHtml(event.quantityUnit || '') + '" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-1);font-size:14px;box-sizing:border-box;">' +
-            '</div>' +
+          '<input id="rfCp2hH" type="time" value="' + hhmmFromIso(data.cp2hAt) + '" style="width:100%;padding:6px 8px;margin-top:4px;border:1px solid var(--border);border-radius:6px;background:var(--surface-1);color:var(--text-1);font-size:12px;box-sizing:border-box;">' +
+        '</div>' +
+        '<div style="border:1px solid var(--border);border-radius:8px;padding:10px;">' +
+          '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">✓ ' + PCD.escapeHtml(t('hcc_col_final') || 'Son') + ' <span style="font-weight:400;">≤' + target6h + '</span></div>' +
+          '<div style="display:flex;gap:4px;">' +
+            '<input id="rfEndT" type="number" step="0.1" placeholder="' + (u === 'F' ? '41' : '5') + '" value="' + (data.endedTemp != null ? data.endedTemp : '') + '" style="flex:1;padding:8px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface-1);color:var(--text-1);font-size:14px;font-weight:600;text-align:center;box-sizing:border-box;width:0;min-width:0;">' +
+            '<span style="display:flex;align-items:center;color:var(--text-3);font-size:13px;">°' + u + '</span>' +
           '</div>' +
-          '<div style="margin-bottom:8px;">' +
-            '<label style="display:block;font-weight:600;font-size:13px;margin-bottom:4px;">' + PCD.escapeHtml(t('hcc_cook_end_temp') || 'Temperature now') + ' (°' + u + ')</label>' +
-            '<input id="hccTemp" type="number" step="0.1" placeholder="60" style="width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-1);font-size:18px;font-weight:600;box-sizing:border-box;text-align:center;">' +
-          '</div>' +
-          '<div class="text-muted" style="font-size:11px;line-height:1.5;padding:8px 10px;background:var(--surface-2);border-radius:6px;">ℹ️ ' +
-            PCD.escapeHtml(t('hcc_cook_end_tip') || 'HACCP: cooking should end at 60°C+ (135°F+). Record it as you start cooling.') +
-          '</div>';
-      } else {
-        // === STEP 2+: Active or completed event ===
-        const startDate = new Date(event.cookEndAt);
-        const elapsedMs = Date.now() - startDate;
-        const elapsedH = elapsedMs / (60 * 60 * 1000);
-        const remainingH = Math.max(0, (TOTAL_WINDOW_MS - elapsedMs) / (60 * 60 * 1000));
+          '<input id="rfEndH" type="time" value="' + hhmmFromIso(data.endedAt) + '" style="width:100%;padding:6px 8px;margin-top:4px;border:1px solid var(--border);border-radius:6px;background:var(--surface-1);color:var(--text-1);font-size:12px;box-sizing:border-box;">' +
+        '</div>' +
+      '</div>' +
+      '<div style="margin-bottom:8px;">' +
+        '<label style="display:flex;align-items:center;justify-content:space-between;font-weight:600;font-size:12px;margin-bottom:4px;">' +
+          '<span>' + PCD.escapeHtml(t('hcc_corrective_action') || 'Düzeltici eylem / not') + '</span>' +
+          '<span style="font-weight:400;font-size:11px;color:var(--text-3);">' + PCD.escapeHtml(t('optional') || 'opsiyonel') + '</span>' +
+        '</label>' +
+        '<textarea id="rfNote" rows="2" maxlength="200" placeholder="' + PCD.escapeHtml(t('hcc_note_placeholder') || 'örn. Buz banyosu kullanıldı, sığ tepsilere alındı') + '" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-1);font-size:13px;font-family:inherit;resize:vertical;box-sizing:border-box;">' + PCD.escapeHtml(data.note || '') + '</textarea>' +
+      '</div>' +
+      '<div>' +
+        '<label style="display:block;font-weight:600;font-size:12px;margin-bottom:4px;">' + PCD.escapeHtml(t('hcc_col_chef') || 'Şef') + '</label>' +
+        '<input id="rfChef" type="text" maxlength="40" value="' + PCD.escapeHtml(data.chef || '') + '" placeholder="' + PCD.escapeHtml(t('hcc_chef_placeholder') || 'Adın / inisiyallerin') + '" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-1);font-size:13px;box-sizing:border-box;">' +
+      '</div>';
 
-        let summaryHtml =
-          '<div style="background:var(--surface-2);padding:10px 12px;border-radius:8px;margin-bottom:12px;font-size:13px;line-height:1.5;">' +
-            '<div style="font-weight:700;margin-bottom:2px;">' + PCD.escapeHtml(event.foodName || '?') +
-              (event.quantity ? ' · ' + PCD.escapeHtml(event.quantity) + (event.quantityUnit ? ' ' + PCD.escapeHtml(event.quantityUnit) : '') : '') +
-            '</div>' +
-            '<div class="text-muted" style="font-size:11px;">' +
-              PCD.escapeHtml(t('hcc_cooking_done_at') || 'Cooking ended') + ': ' + startDate.toLocaleString(locale()) + ' · ' + fmtTemp(event.cookEndTemp) +
-            '</div>' +
-          '</div>';
+    setTimeout(function () { body.querySelector('#rfFood').focus(); }, 80);
 
-        // Status indicator
-        const status = statusFor(event);
-        if (!event.endedAt) {
-          const stColors = { 'on-track': '#16a34a', 'warning': '#f59e0b', 'failed': '#dc2626' };
-          const stLabels = {
-            'on-track': t('hcc_st_ontrack') || 'On track',
-            'warning':  t('hcc_st_warning') || 'Behind target',
-            'failed':   t('hcc_st_failed')  || 'Out of safe window',
-          };
-          summaryHtml +=
-            '<div style="padding:10px 12px;border-radius:8px;background:' + stColors[status] + '15;color:' + stColors[status] + ';font-size:13px;font-weight:600;margin-bottom:12px;">' +
-              stLabels[status] + ' · ' + elapsedH.toFixed(1) + 'h ' + (t('hcc_elapsed') || 'elapsed') + ' · ' +
-              (remainingH > 0 ? remainingH.toFixed(1) + 'h ' + (t('hcc_left') || 'left') : (t('hcc_window_closed') || 'window closed')) +
-            '</div>';
-        } else {
-          summaryHtml +=
-            '<div style="padding:10px 12px;border-radius:8px;background:' + (status === 'done' ? '#16a34a15' : '#dc262615') + ';color:' + (status === 'done' ? '#16a34a' : '#dc2626') + ';font-size:13px;font-weight:600;margin-bottom:12px;">' +
-              (status === 'done' ? '✓ ' + (t('hcc_passed') || 'Passed') : '✗ ' + (t('hcc_failed_label') || 'Failed')) +
-            '</div>';
-        }
-
-        // Checkpoints list
-        let cpHtml = '<div style="margin-bottom:12px;">' +
-          '<div style="font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-3);margin-bottom:6px;">' +
-            (t('hcc_checkpoints') || 'Checkpoints') +
-          '</div>';
-
-        // Show cook end as first row
-        cpHtml += buildCheckpointRow(t('hcc_cook_end') || 'Cook end', startDate, event.cookEndTemp, '🔥', null);
-
-        // Then user checkpoints
-        (event.checkpoints || []).forEach(function (cp, idx) {
-          const cpDate = new Date(cp.at);
-          const sinceCookH = (cpDate - startDate) / (60 * 60 * 1000);
-          let target = null;
-          if (sinceCookH >= 1.5 && sinceCookH <= 2.5) target = TARGET_2H_C;
-          cpHtml += buildCheckpointRow('+' + sinceCookH.toFixed(1) + 'h', cpDate, cp.temp, '🌡', target);
-        });
-
-        // End point if completed
-        if (event.endedAt) {
-          const endDate = new Date(event.endedAt);
-          const sinceCookH = (endDate - startDate) / (60 * 60 * 1000);
-          cpHtml += buildCheckpointRow((t('hcc_final') || 'Final') + ' (+' + sinceCookH.toFixed(1) + 'h)', endDate, event.endedTemp, '✓', TARGET_6H_C);
-        }
-
-        cpHtml += '</div>';
-        summaryHtml += cpHtml;
-
-        // If active, show "add checkpoint" inputs
-        if (!event.endedAt) {
-          summaryHtml +=
-            '<div style="border:2px dashed var(--brand-300);padding:12px;border-radius:8px;margin-bottom:12px;background:var(--brand-50);">' +
-              '<div style="font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--brand-700);margin-bottom:8px;">' +
-                (t('hcc_add_checkpoint') || 'Add checkpoint') +
-              '</div>' +
-              '<div style="margin-bottom:8px;">' +
-                '<label style="display:block;font-size:11px;color:var(--text-3);margin-bottom:3px;">' + PCD.escapeHtml(t('hcc_temp_now') || 'Current temperature') + ' (°' + u + ')</label>' +
-                '<input id="hccCpTemp" type="number" step="0.1" placeholder="' + target2h + '" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-1);font-size:16px;font-weight:600;box-sizing:border-box;text-align:center;">' +
-              '</div>' +
-              '<div style="display:flex;gap:6px;">' +
-                '<button id="hccAddCpBtn" class="btn btn-outline btn-sm" style="flex:1;">' + (t('hcc_save_checkpoint') || 'Save checkpoint') + '</button>' +
-                '<button id="hccCompleteBtn" class="btn btn-primary btn-sm" style="flex:1;">' + (t('hcc_complete') || 'Complete (final)') + '</button>' +
-              '</div>' +
-              '<div class="text-muted" style="font-size:11px;line-height:1.5;margin-top:8px;">' +
-                '🎯 ' + PCD.escapeHtml(t('hcc_target_2h') || '2h target') + ': ' + target2h + ' · ' +
-                '🎯 ' + PCD.escapeHtml(t('hcc_target_6h') || '6h target') + ': ' + target6h +
-              '</div>' +
-            '</div>';
-        }
-
-        // Corrective action / note (always editable)
-        summaryHtml +=
-          '<div style="margin-bottom:8px;">' +
-            '<label style="display:flex;align-items:center;justify-content:space-between;font-weight:600;font-size:13px;margin-bottom:4px;">' +
-              '<span>' + PCD.escapeHtml(t('hcc_corrective_action') || 'Corrective action / note') + '</span>' +
-              '<span style="font-weight:400;font-size:11px;color:var(--text-3);">' + PCD.escapeHtml(t('optional') || 'optional') + '</span>' +
-            '</label>' +
-            '<textarea id="hccNote" rows="2" maxlength="400" placeholder="' + PCD.escapeHtml(t('hcc_note_placeholder') || 'e.g. Used ice bath, switched to shallow trays at 14:30') + '" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-1);font-size:13px;font-family:inherit;resize:vertical;box-sizing:border-box;">' + PCD.escapeHtml(event.correctiveAction || '') + '</textarea>' +
-          '</div>';
-
-        body.innerHTML = summaryHtml;
-
-        // Wire up active inputs
-        if (!event.endedAt) {
-          setTimeout(function () {
-            const addBtn = body.querySelector('#hccAddCpBtn');
-            const compBtn = body.querySelector('#hccCompleteBtn');
-            if (addBtn) addBtn.addEventListener('click', function () {
-              const temp = parseFloat(body.querySelector('#hccCpTemp').value);
-              if (isNaN(temp)) { PCD.toast.error(t('haccp_value_required') || 'Enter a temperature value'); return; }
-              event.checkpoints = (event.checkpoints || []).concat([{ at: new Date().toISOString(), temp: temp }]);
-              event.correctiveAction = body.querySelector('#hccNote').value.trim();
-              persist();
-              paint();
-            });
-            if (compBtn) compBtn.addEventListener('click', function () {
-              const temp = parseFloat(body.querySelector('#hccCpTemp').value);
-              if (isNaN(temp)) { PCD.toast.error(t('haccp_value_required') || 'Enter a temperature value'); return; }
-              event.endedAt = new Date().toISOString();
-              event.endedTemp = temp;
-              event.correctiveAction = body.querySelector('#hccNote').value.trim();
-              persist();
-              paint();
-            });
-          }, 50);
-        }
-      }
-    }
-
-    function persist() {
-      const user = PCD.store.get('user') || {};
-      if (!event.chef) event.chef = user.name || user.email || '';
-      const saved = PCD.store.upsertInTable(TABLE, event, 'cce');
-      if (saved && saved.id) event.id = saved.id;
-    }
-
-    paint();
-
-    // Footer buttons
-    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('close'), style: { flex: '1' } });
-    const startBtn = PCD.el('button', { class: 'btn btn-primary', text: t('hcc_start') || 'Start cooling', style: { flex: '2' } });
-    const deleteBtn = !isNew ? PCD.el('button', { class: 'btn btn-outline', title: t('act_delete') || 'Delete', style: { flexShrink: 0 } }) : null;
+    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') || 'İptal', style: { flex: '1' } });
+    const saveBtn = PCD.el('button', { class: 'btn btn-primary', text: t('save') || 'Kaydet', style: { flex: '2' } });
+    const deleteBtn = existing ? PCD.el('button', { class: 'btn btn-outline', title: t('act_delete') || 'Sil', style: { flexShrink: 0 } }) : null;
     if (deleteBtn) deleteBtn.innerHTML = PCD.icon('trash', 16);
 
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
-    footer.appendChild(closeBtn);
+    footer.appendChild(cancelBtn);
     if (deleteBtn) footer.appendChild(deleteBtn);
-    if (!event.cookEndAt) footer.appendChild(startBtn);
+    footer.appendChild(saveBtn);
 
     const m = PCD.modal.open({
-      title: '🌡 ' + (isNew ? (t('hcc_new_event') || 'New cook') : PCD.escapeHtml(event.foodName || (t('hcc_event') || 'Event'))),
+      title: '🌡 ' + (existing ? (t('hcc_edit_row') || 'Satırı düzenle') : (t('hcc_new_row') || 'Yeni satır')) + ' #' + (rowIndex + 1),
       body: body, footer: footer, size: 'md', closable: true,
     });
-    closeBtn.addEventListener('click', function () { m.close(); if (onClose) onClose(); });
-    startBtn.addEventListener('click', function () {
-      const food = body.querySelector('#hccFood').value.trim();
-      const qty = body.querySelector('#hccQty').value.trim();
-      const qtyU = body.querySelector('#hccQtyU').value.trim();
-      const temp = parseFloat(body.querySelector('#hccTemp').value);
-      if (!food) { PCD.toast.error(t('hcc_food_required') || 'Food name required'); return; }
-      if (isNaN(temp)) { PCD.toast.error(t('haccp_value_required') || 'Enter a temperature value'); return; }
-      event.foodName = food;
-      event.quantity = qty;
-      event.quantityUnit = qtyU;
-      event.cookEndAt = new Date().toISOString();
-      event.cookEndTemp = temp;
-      persist();
-      paint();
-    });
+    cancelBtn.addEventListener('click', function () { m.close(); });
     if (deleteBtn) deleteBtn.addEventListener('click', function () {
       PCD.modal.confirm({
         icon: '🗑', iconKind: 'danger', danger: true,
-        title: t('hcc_delete_title') || 'Delete this record?',
-        text: t('hcc_delete_msg') || 'This permanently removes the cook & cool record.',
-        okText: t('act_delete') || 'Delete',
+        title: t('hcc_delete_title') || 'Bu satır silinsin mi?',
+        text: t('hcc_delete_msg') || 'Pişirme & soğutma kaydı kalıcı olarak silinir.',
+        okText: t('act_delete') || 'Sil',
       }).then(function (ok) {
         if (!ok) return;
-        if (event.id) PCD.store.deleteFromTable(TABLE, event.id);
-        PCD.toast.success(t('hcc_deleted') || 'Record deleted');
+        if (data.id) PCD.store.deleteFromTable(TABLE, data.id);
+        PCD.toast.success(t('hcc_deleted') || 'Kayıt silindi');
         m.close();
         if (onClose) onClose();
       });
     });
-  }
+    saveBtn.addEventListener('click', function () {
+      const food = body.querySelector('#rfFood').value.trim();
+      data.foodName = food;
+      data.quantity = body.querySelector('#rfQty').value.trim();
+      data.quantityUnit = body.querySelector('#rfQtyU').value.trim();
 
-  function buildCheckpointRow(label, date, temp, icon, targetC) {
-    const time = date.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' });
-    let badge = '';
-    if (targetC !== null && temp !== null && temp !== undefined) {
-      const meets = temp <= targetC;
-      const color = meets ? '#16a34a' : '#dc2626';
-      const sym = meets ? '✓' : '✗';
-      badge = '<span style="margin-inline-start:6px;font-size:11px;font-weight:700;color:' + color + ';">' + sym + ' ' + (t_('hcc_target') || 'target') + ' ' + targetForUI(targetC) + '</span>';
-    }
-    return '<div style="display:flex;align-items:center;gap:10px;padding:6px 8px;border-bottom:1px solid var(--border);font-size:13px;">' +
-      '<div style="width:24px;text-align:center;">' + icon + '</div>' +
-      '<div style="flex:1;color:var(--text-3);font-size:11px;">' + PCD.escapeHtml(label) + ' · ' + time + '</div>' +
-      '<div style="font-weight:700;">' + fmtTemp(temp) + badge + '</div>' +
-    '</div>';
+      const num = function (v) { const n = parseFloat(v); return isNaN(n) ? null : n; };
+      data.cookEndTemp = num(body.querySelector('#rfCookT').value);
+      data.cookEndAt = isoFromHhmm(body.querySelector('#rfCookH').value, _viewDate);
+      data.cp2hTemp = num(body.querySelector('#rfCp2hT').value);
+      data.cp2hAt = isoFromHhmm(body.querySelector('#rfCp2hH').value, _viewDate);
+      data.endedTemp = num(body.querySelector('#rfEndT').value);
+      data.endedAt = isoFromHhmm(body.querySelector('#rfEndH').value, _viewDate);
+      data.note = body.querySelector('#rfNote').value.trim();
+      data.chef = body.querySelector('#rfChef').value.trim();
+
+      if (!food && data.cookEndTemp == null && data.cp2hTemp == null && data.endedTemp == null) {
+        PCD.toast.error(t('hcc_at_least_one') || 'En az yemek adı veya bir sıcaklık girin');
+        return;
+      }
+
+      PCD.store.upsertInTable(TABLE, data, 'cce');
+      PCD.toast.success(t('saved') || 'Kaydedildi');
+      m.close();
+      if (onClose) onClose();
+    });
   }
-  // Tiny t() shim used inside buildCheckpointRow (which doesn't have closure t)
-  function t_(k) { return PCD.i18n && PCD.i18n.t ? PCD.i18n.t(k) : k; }
 
   // ============ PRINT ============
-  function openPrintDateRange() {
+  function printDay(dateStr, blank) {
     const t = PCD.i18n.t;
-    const completed = listCompleted();
-    if (completed.length === 0) { PCD.toast.info(t('hcc_no_records_to_print') || 'No completed records to print'); return; }
-
-    const today = new Date();
-    const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
-    const fmt = function (d) {
-      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-    };
-
-    const body = PCD.el('div');
-    body.innerHTML =
-      '<div class="text-muted text-sm" style="margin-bottom:14px;">' +
-        PCD.escapeHtml(t('hcc_print_intro') || 'Choose a date range. The PDF will list one row per cook & cool event.') +
-      '</div>' +
-      '<div style="display:flex;gap:8px;margin-bottom:8px;">' +
-        '<div style="flex:1;">' +
-          '<label style="display:block;font-size:11px;color:var(--text-3);margin-bottom:3px;">' + PCD.escapeHtml(t('from') || 'From') + '</label>' +
-          '<input id="hccFrom" type="date" value="' + fmt(monthAgo) + '" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-1);font-size:14px;box-sizing:border-box;">' +
-        '</div>' +
-        '<div style="flex:1;">' +
-          '<label style="display:block;font-size:11px;color:var(--text-3);margin-bottom:3px;">' + PCD.escapeHtml(t('to') || 'To') + '</label>' +
-          '<input id="hccTo" type="date" value="' + fmt(today) + '" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-1);font-size:14px;box-sizing:border-box;">' +
-        '</div>' +
-      '</div>';
-
-    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') || 'Cancel', style: { flex: '1' } });
-    const printBtn = PCD.el('button', { class: 'btn btn-primary', text: t('print') || 'Print/PDF', style: { flex: '2' } });
-    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
-    footer.appendChild(cancelBtn);
-    footer.appendChild(printBtn);
-
-    const m = PCD.modal.open({
-      title: '🖨 ' + (t('hcc_print_title') || 'Print Cook & Cool Log'),
-      body: body, footer: footer, size: 'sm', closable: true,
-    });
-    cancelBtn.addEventListener('click', function () { m.close(); });
-    printBtn.addEventListener('click', function () {
-      const from = body.querySelector('#hccFrom').value;
-      const to = body.querySelector('#hccTo').value;
-      m.close();
-      printRange(from, to);
-    });
-  }
-
-  function printRange(fromYmd, toYmd) {
-    const completed = listCompleted();
-    const fromMs = new Date(fromYmd + 'T00:00:00').getTime();
-    const toMs = new Date(toYmd + 'T23:59:59').getTime();
-    const filtered = completed.filter(function (r) {
-      const t = new Date(r.cookEndAt).getTime();
-      return t >= fromMs && t <= toMs;
-    }).sort(function (a, b) {
-      return (a.cookEndAt || '').localeCompare(b.cookEndAt || '');
-    });
-
+    const u = getTempUnit();
+    const target2h = targetForUI(TARGET_2H_C);
+    const target6h = targetForUI(TARGET_6H_C);
     const ws = PCD.store.getActiveWorkspace ? PCD.store.getActiveWorkspace() : null;
     const wsName = (ws && ws.name) || 'Kitchen';
-    const u = getTempUnit();
+
+    const records = (blank || !dateStr) ? [] : listForDate(dateStr);
+    const byRow = {};
+    records.forEach(function (r) { if (typeof r.rowIndex === 'number') byRow[r.rowIndex] = r; });
+
+    const headerDate = dateStr && !blank ? new Date(dateStr + 'T00:00:00').toLocaleDateString(locale(), { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '________________________';
 
     let html =
       '<style>' +
         'body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#000;margin:0;padding:0;}' +
-        '.h-head{margin-bottom:6px;border-bottom:2px solid #16a34a;padding-bottom:4px;}' +
+        '.h-head{margin-bottom:6px;border-bottom:2px solid #16a34a;padding-bottom:4px;display:flex;justify-content:space-between;align-items:flex-end;}' +
         '.h-head h1{margin:0;font-size:14px;}' +
-        '.h-head .sub{font-size:9px;color:#555;margin-top:1px;}' +
-        'table.h-grid{width:100%;border-collapse:collapse;font-size:9px;}' +
-        'table.h-grid th, table.h-grid td{border:1px solid #999;padding:3px 4px;text-align:center;vertical-align:middle;}' +
-        'table.h-grid th{background:#f3f4f6;font-weight:700;font-size:8px;}' +
-        'table.h-grid td.food{text-align:left;font-weight:600;}' +
+        '.h-head .sub{font-size:10px;color:#555;margin-top:1px;}' +
+        '.h-head .right{font-size:10px;color:#555;text-align:end;}' +
+        'table.h-grid{width:100%;border-collapse:collapse;font-size:9px;table-layout:fixed;}' +
+        'table.h-grid th, table.h-grid td{border:1px solid #999;padding:3px 4px;vertical-align:middle;}' +
+        'table.h-grid th{background:#f3f4f6;font-weight:700;font-size:8px;text-align:center;text-transform:uppercase;letter-spacing:0.04em;}' +
+        'table.h-grid td.idx{text-align:center;width:3%;font-weight:700;color:#666;}' +
+        'table.h-grid td.food{width:22%;font-weight:600;}' +
+        'table.h-grid td.qty{width:9%;text-align:center;}' +
+        'table.h-grid td.t{width:7%;text-align:center;font-weight:600;}' +
+        'table.h-grid td.h{width:7%;text-align:center;color:#666;font-size:8px;}' +
+        'table.h-grid td.note{width:14%;font-size:8px;}' +
+        'table.h-grid td.chef{width:9%;text-align:center;}' +
         'table.h-grid td.fail{background:#fee2e2;color:#991b1b;font-weight:700;}' +
-        'table.h-grid td.note{text-align:left;font-size:8px;}' +
-        '.h-foot{margin-top:6px;text-align:center;font-size:7px;color:#999;}' +
+        '.h-foot{margin-top:6px;display:flex;justify-content:space-between;font-size:9px;}' +
+        '.h-foot .legend{color:#666;}' +
+        '.h-brand{margin-top:4px;text-align:center;font-size:7px;color:#999;}' +
         '.pcd-print-footer{display:none !important;}' +
-        '@page{size:A4 landscape;margin:7mm;}' +
+        '@page{size:A4 landscape;margin:6mm;}' +
       '</style>' +
       '<div class="h-head">' +
-        '<h1>HACCP · Cook & Cool Log</h1>' +
-        '<div class="sub">' + PCD.escapeHtml(wsName) + ' · ' + PCD.escapeHtml(fromYmd) + ' – ' + PCD.escapeHtml(toYmd) + ' · ' + filtered.length + ' records · °' + u + '</div>' +
+        '<div>' +
+          '<h1>HACCP · ' + PCD.escapeHtml(t('hcc_title') || 'Cook & Cool Log') + '</h1>' +
+          '<div class="sub">' + PCD.escapeHtml(wsName) + ' · ' + PCD.escapeHtml(headerDate) + ' · °' + u + '</div>' +
+        '</div>' +
+        '<div class="right">' +
+          '<div><strong>' + PCD.escapeHtml(t('hcc_target_2h') || '2h hedef') + ':</strong> ≤' + target2h + '</div>' +
+          '<div><strong>' + PCD.escapeHtml(t('hcc_target_6h') || '6h hedef') + ':</strong> ≤' + target6h + '</div>' +
+        '</div>' +
       '</div>' +
-      '<table class="h-grid"><thead><tr>' +
-        '<th>Date</th>' +
-        '<th>Food / Batch</th>' +
-        '<th>Qty</th>' +
-        '<th>Cook end</th>' +
-        '<th>+1h</th>' +
-        '<th>+2h<br>(≤' + targetForUI(TARGET_2H_C) + ')</th>' +
-        '<th>+3h</th>' +
-        '<th>+4h</th>' +
-        '<th>End<br>(≤' + targetForUI(TARGET_6H_C) + ')</th>' +
-        '<th>Total<br>(h)</th>' +
-        '<th>Corrective action</th>' +
-        '<th>Chef</th>' +
-      '</tr></thead><tbody>';
+      '<table class="h-grid"><thead>' +
+        '<tr>' +
+          '<th rowspan="2">#</th>' +
+          '<th rowspan="2">' + PCD.escapeHtml(t('hcc_col_food') || 'Yemek / Parti') + '</th>' +
+          '<th rowspan="2">' + PCD.escapeHtml(t('hcc_col_qty') || 'Miktar') + '</th>' +
+          '<th colspan="2">' + PCD.escapeHtml(t('hcc_col_cook_end') || 'Pişirme sonu') + '</th>' +
+          '<th colspan="2">+2h <span style="font-weight:400;">≤' + target2h + '</span></th>' +
+          '<th colspan="2">' + PCD.escapeHtml(t('hcc_col_final') || 'Son') + ' <span style="font-weight:400;">≤' + target6h + '</span></th>' +
+          '<th rowspan="2">' + PCD.escapeHtml(t('hcc_col_note') || 'Düzeltici eylem') + '</th>' +
+          '<th rowspan="2">' + PCD.escapeHtml(t('hcc_col_chef') || 'Şef') + '</th>' +
+        '</tr>' +
+        '<tr>' +
+          '<th>°' + u + '</th><th>' + PCD.escapeHtml(t('hcc_col_time') || 'Saat') + '</th>' +
+          '<th>°' + u + '</th><th>' + PCD.escapeHtml(t('hcc_col_time') || 'Saat') + '</th>' +
+          '<th>°' + u + '</th><th>' + PCD.escapeHtml(t('hcc_col_time') || 'Saat') + '</th>' +
+        '</tr>' +
+      '</thead><tbody>';
 
-    function findCpAtHour(r, hour, tolerance) {
-      tolerance = tolerance || 0.6; // half-hour either side
-      const targetMs = new Date(r.cookEndAt).getTime() + hour * 60 * 60 * 1000;
-      let best = null;
-      let bestDelta = Infinity;
-      (r.checkpoints || []).forEach(function (cp) {
-        const d = Math.abs(new Date(cp.at).getTime() - targetMs);
-        if (d < bestDelta && d <= tolerance * 60 * 60 * 1000) {
-          best = cp; bestDelta = d;
-        }
-      });
-      return best;
+    for (let i = 0; i < ROWS_PER_PAGE; i++) {
+      const r = byRow[i];
+      const cookT = r && r.cookEndTemp != null ? (u === 'F' ? ctoF(r.cookEndTemp) : r.cookEndTemp) + '°' : '';
+      const cookH = r && r.cookEndAt ? new Date(r.cookEndAt).toTimeString().slice(0, 5) : '';
+      const cp2hT = r && r.cp2hTemp != null ? (u === 'F' ? ctoF(r.cp2hTemp) : r.cp2hTemp) + '°' : '';
+      const cp2hH = r && r.cp2hAt ? new Date(r.cp2hAt).toTimeString().slice(0, 5) : '';
+      const endT = r && r.endedTemp != null ? (u === 'F' ? ctoF(r.endedTemp) : r.endedTemp) + '°' : '';
+      const endH = r && r.endedAt ? new Date(r.endedAt).toTimeString().slice(0, 5) : '';
+      const cp2hFail = r && r.cp2hTemp != null && r.cp2hTemp > TARGET_2H_C;
+      const endFail = r && r.endedTemp != null && r.endedTemp > TARGET_6H_C;
+
+      html += '<tr style="height:22px;">' +
+        '<td class="idx">' + (i + 1) + '</td>' +
+        '<td class="food">' + (r ? PCD.escapeHtml(r.foodName || '') : '') + '</td>' +
+        '<td class="qty">' + (r && r.quantity ? PCD.escapeHtml(r.quantity) + (r.quantityUnit ? ' ' + PCD.escapeHtml(r.quantityUnit) : '') : '') + '</td>' +
+        '<td class="t">' + cookT + '</td>' +
+        '<td class="h">' + cookH + '</td>' +
+        '<td class="t' + (cp2hFail ? ' fail' : '') + '">' + cp2hT + '</td>' +
+        '<td class="h' + (cp2hFail ? ' fail' : '') + '">' + cp2hH + '</td>' +
+        '<td class="t' + (endFail ? ' fail' : '') + '">' + endT + '</td>' +
+        '<td class="h' + (endFail ? ' fail' : '') + '">' + endH + '</td>' +
+        '<td class="note">' + (r ? PCD.escapeHtml(r.note || '') : '') + '</td>' +
+        '<td class="chef">' + (r ? PCD.escapeHtml(r.chef || '') : '') + '</td>' +
+      '</tr>';
     }
 
-    filtered.forEach(function (r) {
-      const startDate = new Date(r.cookEndAt);
-      const endDate = new Date(r.endedAt);
-      const totalH = ((endDate - startDate) / (60 * 60 * 1000)).toFixed(1);
-      const cp1 = findCpAtHour(r, 1);
-      const cp2 = findCpAtHour(r, 2);
-      const cp3 = findCpAtHour(r, 3);
-      const cp4 = findCpAtHour(r, 4);
-      const cell = function (cp, target) {
-        if (!cp) return '<td>—</td>';
-        const fail = (target !== undefined && cp.temp > target);
-        return '<td class="' + (fail ? 'fail' : '') + '">' + (u === 'F' ? ctoF(cp.temp) : cp.temp) + '°</td>';
-      };
-      const endFail = r.endedTemp > TARGET_6H_C || (totalH * 1 > 6);
-      html += '<tr>' +
-        '<td>' + startDate.toLocaleDateString(locale(), { month: 'short', day: 'numeric' }) + '</td>' +
-        '<td class="food">' + PCD.escapeHtml(r.foodName || '?') + '</td>' +
-        '<td>' + (r.quantity ? PCD.escapeHtml(r.quantity) + (r.quantityUnit ? ' ' + PCD.escapeHtml(r.quantityUnit) : '') : '—') + '</td>' +
-        '<td>' + (u === 'F' ? ctoF(r.cookEndTemp) : r.cookEndTemp) + '° / ' + startDate.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' }) + '</td>' +
-        cell(cp1) +
-        cell(cp2, TARGET_2H_C) +
-        cell(cp3) +
-        cell(cp4) +
-        '<td class="' + (endFail ? 'fail' : '') + '">' + (u === 'F' ? ctoF(r.endedTemp) : r.endedTemp) + '° / ' + endDate.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' }) + '</td>' +
-        '<td class="' + (totalH * 1 > 6 ? 'fail' : '') + '">' + totalH + '</td>' +
-        '<td class="note">' + (r.correctiveAction ? PCD.escapeHtml(r.correctiveAction) : '—') + '</td>' +
-        '<td>' + PCD.escapeHtml(r.chef || '') + '</td>' +
-      '</tr>';
-    });
+    html += '</tbody></table>' +
+      '<div class="h-foot">' +
+        '<div class="legend">' +
+          '<strong>' + PCD.escapeHtml(t('hcc_legend') || 'HACCP gates') + ':</strong> ' +
+          PCD.escapeHtml(t('hcc_col_cook_end') || 'Pişirme sonu') + ' ≥' + targetForUI(60) + ' · ' +
+          '+2h ≤' + target2h + ' · ' +
+          PCD.escapeHtml(t('hcc_col_final') || 'Son') + ' ≤' + target6h +
+        '</div>' +
+        '<div><strong>' + PCD.escapeHtml(t('reviewed_by') || 'Kontrol eden') + ':</strong> ____________________</div>' +
+      '</div>' +
+      '<div class="h-brand">Made with ProChefDesk · prochefdesk.com</div>';
 
-    html += '</tbody></table>';
-    html += '<div class="h-foot">Made with ProChefDesk · prochefdesk.com</div>';
-
-    PCD.print(html, 'HACCP Cook & Cool Log');
+    PCD.print(html, 'HACCP Cook & Cool · ' + (dateStr || 'Blank'));
   }
 
   // ============ EXPORT ============
@@ -629,9 +478,18 @@
   PCD.tools.haccpCooling = {
     render: render,
     openEditor: function () {
-      openEventEditor(null, function () {
-        const v = PCD.$('#view');
-        if (PCD.router.currentView() === 'haccp_cooling') render(v);
+      const records = listForDate(_viewDate);
+      const used = {};
+      records.forEach(function (r) { if (typeof r.rowIndex === 'number') used[r.rowIndex] = true; });
+      let firstEmpty = 0;
+      while (used[firstEmpty] && firstEmpty < ROWS_PER_PAGE) firstEmpty++;
+      if (firstEmpty >= ROWS_PER_PAGE) {
+        PCD.toast.info((PCD.i18n.t && PCD.i18n.t('hcc_day_full')) || 'Bu gün dolu, sonraki güne geç');
+        return;
+      }
+      openRowEditor(firstEmpty, null, function () {
+        const v = document.getElementById('view');
+        if (v && PCD.router.currentView() === 'haccp_cooling') render(v);
       });
     },
   };
