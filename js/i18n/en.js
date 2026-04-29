@@ -537,6 +537,8 @@ window.PCD.i18n.register('en', {
   haccp_value_required: 'Enter a temperature value',
   haccp_reading_deleted: 'Reading removed',
   haccp_too_many_units: 'You have many units. The grid may feel tight on screen and on print. Multi-page layout is coming in a future update.',
+  haccp_am: 'Morning',
+  haccp_pm: 'Evening',
 
   // HACCP multi-log support — added v2.6.4
   haccp_log: 'Log',

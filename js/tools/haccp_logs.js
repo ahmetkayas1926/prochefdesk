@@ -158,6 +158,9 @@
   }
 
   // ============ DATE HELPERS ============
+  // Localised date formatting helper — uses the chef's active language.
+  function locale() { return (PCD.i18n && PCD.i18n.currentLocale) || "en"; }
+
   function ymd(date) {
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -168,7 +171,7 @@
     return new Date(year, monthIdx0 + 1, 0).getDate();
   }
   function monthLabel(year, monthIdx0) {
-    return new Date(year, monthIdx0, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+    return new Date(year, monthIdx0, 1).toLocaleDateString(locale(), { month: 'long', year: 'numeric' });
   }
 
   // ============ VALIDATION ============
@@ -351,8 +354,8 @@
             '<th style="padding:4px 8px;text-align:left;font-size:9px;font-weight:600;color:var(--text-3);border-bottom:1px solid var(--border);position:sticky;left:0;background:var(--surface);z-index:3;width:70px;min-width:70px;"></th>';
     units.forEach(function () {
       table +=
-        '<th style="padding:4px 2px;text-align:center;font-size:9px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);border-left:1px solid var(--border);width:50px;">AM</th>' +
-        '<th style="padding:4px 2px;text-align:center;font-size:9px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);width:50px;">PM</th>';
+        '<th style="padding:4px 2px;text-align:center;font-size:9px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);border-left:1px solid var(--border);width:50px;">' + PCD.escapeHtml(t('haccp_am')) + '</th>' +
+        '<th style="padding:4px 2px;text-align:center;font-size:9px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);width:50px;">' + PCD.escapeHtml(t('haccp_pm')) + '</th>';
     });
     table += '</tr></thead><tbody>';
 
@@ -365,7 +368,7 @@
       const dateStr = ymd(date);
       const isToday = dateStr === todayStr;
       const isFuture = dateStr > todayStr;
-      const dow = date.toLocaleDateString(undefined, { weekday: 'short' });
+      const dow = date.toLocaleDateString(locale(), { weekday: 'short' });
       const rowBg = isToday ? 'var(--brand-50)' : 'transparent';
       table += '<tr style="background:' + rowBg + ';">' +
         '<td style="padding:5px 8px;border-bottom:1px solid var(--border);font-weight:' + (isToday ? '700' : '500') + ';position:sticky;left:0;background:' + (isToday ? 'var(--brand-50)' : 'var(--surface)') + ';z-index:1;width:70px;min-width:70px;font-size:11px;">' +
@@ -615,7 +618,7 @@
     const r = (existing && existing[shift]) || null;
 
     const shiftLabel = shift === 'morning' ? (t('haccp_shift_morning') || 'Morning (opening)') : (t('haccp_shift_evening') || 'Evening (closing)');
-    const dateLabel = new Date(dateStr).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const dateLabel = new Date(dateStr).toLocaleDateString(locale(), { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
     const body = PCD.el('div');
     body.innerHTML =
@@ -758,7 +761,7 @@
       html += '<th colspan="2">' + PCD.escapeHtml(u.name) + '<br><span style="font-weight:400;color:#666;font-size:7px;">' + range + '</span></th>';
     });
     html += '</tr><tr>';
-    units.forEach(function () { html += '<th>AM</th><th>PM</th>'; });
+    units.forEach(function () { html += '<th>' + PCD.escapeHtml(t('haccp_am')) + '</th><th>' + PCD.escapeHtml(t('haccp_pm')) + '</th>'; });
     html += '</tr></thead><tbody>';
 
     const readingsByKey = {};
@@ -768,7 +771,7 @@
     for (let d = 1; d <= days; d++) {
       const date = new Date(year, monthIdx0, d);
       const dateStr = ymd(date);
-      const dow = date.toLocaleDateString(undefined, { weekday: 'short' });
+      const dow = date.toLocaleDateString(locale(), { weekday: 'short' });
       html += '<tr><td class="day">' + d + ' ' + dow + '</td>';
       units.forEach(function (u) {
         ['morning', 'evening'].forEach(function (shift) {
@@ -794,7 +797,7 @@
     if (notesAccum.length > 0) {
       html += '<div class="h-notes"><div class="nh">Corrective Actions / Notes (* in grid)</div>';
       notesAccum.forEach(function (n) {
-        html += '<div class="ni"><strong>' + PCD.escapeHtml(n.dateStr) + ' · ' + PCD.escapeHtml(n.unit) + ' (' + (n.shift === 'morning' ? 'AM' : 'PM') + ') · ' + PCD.escapeHtml(String(n.value)) + '°' + tempUnit + '</strong> — ' + PCD.escapeHtml(n.note) + (n.chef ? ' <span style="color:#666;">(' + PCD.escapeHtml(n.chef) + ')</span>' : '') + '</div>';
+        html += '<div class="ni"><strong>' + PCD.escapeHtml(n.dateStr) + ' · ' + PCD.escapeHtml(n.unit) + ' (' + PCD.escapeHtml(n.shift === 'morning' ? t('haccp_am') : t('haccp_pm')) + ') · ' + PCD.escapeHtml(String(n.value)) + '°' + tempUnit + '</strong> — ' + PCD.escapeHtml(n.note) + (n.chef ? ' <span style="color:#666;">(' + PCD.escapeHtml(n.chef) + ')</span>' : '') + '</div>';
       });
       html += '</div>';
     }

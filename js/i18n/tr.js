@@ -520,6 +520,8 @@ window.PCD.i18n.register('tr', {
   haccp_value_required: 'Sıcaklık değeri gir',
   haccp_reading_deleted: 'Okuma silindi',
   haccp_too_many_units: 'Çok fazla cihaz var. Tablo ekranda ve baskıda sıkışık görünebilir. İleride çok sayfalı düzen eklenecek.',
+  haccp_am: 'Sabah',
+  haccp_pm: 'Akşam',
 
   // HACCP çoklu log desteği — eklendi v2.6.4
   haccp_log: 'Form',

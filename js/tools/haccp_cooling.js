@@ -34,6 +34,8 @@
   const TOTAL_WINDOW_MS = 6 * 60 * 60 * 1000;
   const STAGE_2H_MS    = 2 * 60 * 60 * 1000;
 
+  function locale() { return (PCD.i18n && PCD.i18n.currentLocale) || "en"; }
+
   function getTempUnit() {
     const pref = PCD.store && PCD.store.get && PCD.store.get('prefs.haccpTempUnit');
     return pref === 'F' ? 'F' : 'C';
@@ -200,8 +202,8 @@
     }
 
     const startDate = new Date(r.cookEndAt);
-    const dateStr = startDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) +
-                    ' · ' + startDate.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    const dateStr = startDate.toLocaleDateString(locale(), { month: 'short', day: 'numeric' }) +
+                    ' · ' + startDate.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' });
 
     card.innerHTML =
       '<div style="display:flex;align-items:center;gap:10px;">' +
@@ -287,7 +289,7 @@
               (event.quantity ? ' · ' + PCD.escapeHtml(event.quantity) + (event.quantityUnit ? ' ' + PCD.escapeHtml(event.quantityUnit) : '') : '') +
             '</div>' +
             '<div class="text-muted" style="font-size:11px;">' +
-              PCD.escapeHtml(t('hcc_cooking_done_at') || 'Cooking ended') + ': ' + startDate.toLocaleString() + ' · ' + fmtTemp(event.cookEndTemp) +
+              PCD.escapeHtml(t('hcc_cooking_done_at') || 'Cooking ended') + ': ' + startDate.toLocaleString(locale()) + ' · ' + fmtTemp(event.cookEndTemp) +
             '</div>' +
           '</div>';
 
@@ -458,7 +460,7 @@
   }
 
   function buildCheckpointRow(label, date, temp, icon, targetC) {
-    const time = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    const time = date.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' });
     let badge = '';
     if (targetC !== null && temp !== null && temp !== undefined) {
       const meets = temp <= targetC;
@@ -601,15 +603,15 @@
       };
       const endFail = r.endedTemp > TARGET_6H_C || (totalH * 1 > 6);
       html += '<tr>' +
-        '<td>' + startDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + '</td>' +
+        '<td>' + startDate.toLocaleDateString(locale(), { month: 'short', day: 'numeric' }) + '</td>' +
         '<td class="food">' + PCD.escapeHtml(r.foodName || '?') + '</td>' +
         '<td>' + (r.quantity ? PCD.escapeHtml(r.quantity) + (r.quantityUnit ? ' ' + PCD.escapeHtml(r.quantityUnit) : '') : '—') + '</td>' +
-        '<td>' + (u === 'F' ? ctoF(r.cookEndTemp) : r.cookEndTemp) + '° / ' + startDate.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) + '</td>' +
+        '<td>' + (u === 'F' ? ctoF(r.cookEndTemp) : r.cookEndTemp) + '° / ' + startDate.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' }) + '</td>' +
         cell(cp1) +
         cell(cp2, TARGET_2H_C) +
         cell(cp3) +
         cell(cp4) +
-        '<td class="' + (endFail ? 'fail' : '') + '">' + (u === 'F' ? ctoF(r.endedTemp) : r.endedTemp) + '° / ' + endDate.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) + '</td>' +
+        '<td class="' + (endFail ? 'fail' : '') + '">' + (u === 'F' ? ctoF(r.endedTemp) : r.endedTemp) + '° / ' + endDate.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' }) + '</td>' +
         '<td class="' + (totalH * 1 > 6 ? 'fail' : '') + '">' + totalH + '</td>' +
         '<td class="note">' + (r.correctiveAction ? PCD.escapeHtml(r.correctiveAction) : '—') + '</td>' +
         '<td>' + PCD.escapeHtml(r.chef || '') + '</td>' +

@@ -1,3 +1,33 @@
+# v2.6.22 — HACCP gün isimleri ve AM/PM Türkçe
+
+## Talep
+
+1. Soğutucu & Dondurucu sayfasında AM / PM kolon başlıkları → "Sabah" / "Akşam"
+2. Gün isimleri (Wed/Thu/Fri) bilgisayarın işletim sistemi diline göre geliyordu — uygulama dilini ezmeli
+
+## Çözüm
+
+**1. AM/PM:**
+- 2 yeni i18n key: `haccp_am`, `haccp_pm` (EN: Morning/Evening, TR: Sabah/Akşam)
+- Ekrandaki grid başlıkları, print başlıkları ve corrective action notları t() çağrılarına dönüştürüldü
+
+**2. Gün isimleri:**
+- `haccp_logs.js` ve `haccp_cooling.js` dosyalarında tüm `toLocaleDateString(undefined, ...)` çağrıları `toLocaleDateString(locale(), ...)` ile değiştirildi
+- `locale()` helper fonksiyonu PCD.i18n.currentLocale'i kullanıyor
+- Aynı değişiklik `toLocaleTimeString` ve `toLocaleString` çağrılarına da uygulandı
+
+Sonuç: TR seçilirse Çar/Per/Cum, EN seçilirse Wed/Thu/Fri görünür. Browser/OS dilinden bağımsız.
+
+## Test
+
+1. Dil = TR → HACCP Soğutucu sayfası
+2. Kolon başlıkları: "Sabah" / "Akşam" 
+3. Sol günler: Çar / Per / Cum / Cmt / Paz / Pzt / Sal
+4. HACCP Pişirme & Soğutma sayfası → tarih/saat formatları da TR
+5. Print PDF → grid başlıklarında ve notlarında TR
+
+---
+
 # v2.6.21 — HACCP Cook & Cool Log + Türkçe default checklist'ler
 
 ## Talep
