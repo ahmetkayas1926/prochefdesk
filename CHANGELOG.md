@@ -1,3 +1,103 @@
+# v2.6.29 — Cost Report büyük revizyon: Türkçe, formüller, hyperlink, footer
+
+## Talep
+
+1. Cost Report modal, PDF, Excel — TR seçili iken her şey İngilizce kalıyordu
+2. Excel **Summary** sekmesinde rakamlar statik: Test price değiştirilince hiçbir şey güncellenmiyordu, ayrıca toplam satırı yoktu
+3. Sütun genişlikleri sığmıyordu (manuel genişletme gerekiyordu)
+4. Detail ↔ Summary arası tıklanabilir bağlantı yoktu
+5. Excel'de "Made with ProChefDesk" footer eksikti
+
+## Çözüm
+
+### TR/EN i18n
+55 yeni anahtar (`cr_*`). Cost Report modal, PDF print HTML, Excel başlıkları/etiketleri tamamen i18n'e bağlandı. EN/TR tam, diğer 4 dil EN fallback.
+
+### Excel Summary sekmesi: yaşayan rapor
+- **Cross-sheet formüller**: Summary'deki her satır, ilgili Detail sekmesindeki hücrelere bağlı (`='Spaghetti'!F21` gibi). Test price'ı **istediğin sekmede** düzenle, diğer sekme otomatik senkron olur.
+- **Food cost %** = Cost per serving ÷ Test price (formül, anlık güncellenir)
+- **Profit / serving** = Test price − Cost per serving (formül, anlık güncellenir)
+- **TOPLAM satırı** (per-serving / set-menu mantığı):
+  - Cost per serving SUM
+  - Suggested price SUM
+  - Test price SUM (set fiyatı)
+  - Food cost % = D toplam ÷ F toplam (set-menu yüzdesi)
+  - Profit / serving SUM
+  - Servings ve Total food cost sütunları boş (per-serving odaklı)
+
+### Auto-fit sütun genişlikleri
+Yeni `autoFit()` helper fonksiyonu. Tüm satırların string-coerced uzunluklarına bakıp her sütun için optimal genişlik hesaplar (min 8, max 40 karakter, +2 padding). Hem Summary hem her Detail sekmesi için ayrı hesap.
+
+### Hyperlinkler
+- **Summary → Detail**: I sütununda her yemek satırının yanında "Detay →" linki, ilgili Detail sekmesinin A1'ine atlar
+- **Detail → Summary**: Her Detail sekmesinin F1 hücresinde "← Özete Dön" linki, Summary!A1'e atlar
+
+### Footer
+Hem Summary hem her Detail sekmesinin altında "ProChefDesk ile yapıldı · prochefdesk.com" satırı (italic, gri, 8pt).
+
+### PDF print
+Footer eklendi: "ProChefDesk ile yapıldı · prochefdesk.com". Print modülünün varsayılan footer'ı `display:none` ile gizlendi (çift footer önlemek için).
+
+## Test
+
+1. Dil = TR
+2. Recipes → bir tarif seç → Cost Report bas → modal TR olmalı
+3. PDF → preview TR olmalı, alt köşede "ProChefDesk ile yapıldı"
+4. Excel → indir
+   - Summary sekmesi açıl → tüm başlıklar TR, "TOPLAM" satırı en altta
+   - F sütununda Test price hücresini düzenle → G (food cost %) ve H (profit) anlık güncellenir
+   - I sütununda "Detay →" linkine tıkla → ilgili Detail sekmesine atla
+   - Detail sekmesinin sağ üst F1'inde "← Özete Dön" linki → Summary'e geri dön
+5. Sütun genişliklerine manuel ayar gerekmemeli
+6. Çoklu seçim (3+ recipe) ile Cost Report → Summary'de TOPLAM satırı doğru hesaplamalı, set-menu fiyatlama mantığı
+
+---
+
+# v2.6.28 — Anlık dil değişimi + HACCP print Türkçe
+
+## Sorun 1: Anlık dil değişimi çalışmıyordu
+
+HACCP sayfaları (Soğutucu Log, Pişirme & Soğutma) ve Mutfak Kartları üzerindeyken üst panelden TR/EN değiştirince, sayfa **yenilenene kadar** eski dilde kalıyordu.
+
+### Sebep
+
+`setLocale` fonksiyonu, dil değiştiğinde mevcut sayfayı yeniden render ediyor. Ama route ismi snake_case (`haccp_logs`, `haccp_cooling`, `kitchen_cards`) tool ismi ise camelCase (`PCD.tools.haccpLogs`, `PCD.tools.haccpCooling`, `PCD.tools.kitchenCards`). `PCD.tools[cur]` lookup'ı snake_case ile başarısız oluyordu, fallback yok, render çağrılmadı.
+
+### Çözüm
+
+`js/core/i18n.js` `setLocale` fonksiyonunda snake_case → camelCase dönüştürme eklendi. Önce snake_case ismiyle deneniyor (eski tool isimleri için), bulamazsa camelCase ile deneniyor.
+
+```js
+const camel = cur.replace(/_([a-z])/g, function (_, c) { return c.toUpperCase(); });
+const tool = PCD.tools[cur] || PCD.tools[camel];
+```
+
+Sonuç: HACCP sayfasındayken TR/EN değiştir → anında yeniden render edilir, dil hemen değişir. Aynı düzeltme Mutfak Kartları ve Pişirme & Soğutma içinde de geçerli (aynı snake/camel pattern).
+
+## Sorun 2: Print preview'da bazı kısımlar İngilizce kalıyordu
+
+Soğutucu Log "Yazdır" butonuna basınca açılan preview'da:
+- Üst başlık "HACCP · Fridge & Freezer Temperature Log"
+- "Day" sütunu
+- "Corrective Actions / Notes (* in grid)"
+- "Reviewed by:" + "Date:"
+
+hardcoded İngilizce kalıyordu.
+
+### Çözüm
+
+3 yeni i18n key eklendi: `haccp_print_title`, `haccp_print_notes`, `haccp_print_date`. `reviewed_by` zaten vardı. Print HTML t() çağrılarına dönüştürüldü. Tarih biçimi de `locale()` parametresi alarak yerelleştirildi.
+
+## Test
+
+1. Dashboard → dil EN → tarif/menü/HACCP sayfalarına gez
+2. HACCP Soğutucu sayfasındayken üst panelden dili TR yap → **anında** Türkçe olmalı, sayfa yenilenmemeli
+3. Aynısı Pişirme & Soğutma için
+4. Aynısı Mutfak Kartları için
+5. Soğutucu Log → Yazdır → preview'da "HACCP · Soğutucu & Dondurucu Sıcaklık Takibi", "Gün" sütunu, "Düzeltici eylemler / Notlar", "Kontrol eden: ___" + "Tarih: 29/04/2026"
+
+---
+
 # v2.6.27 — Tarif önizleme: QR butonu eklendi
 
 ## Talep

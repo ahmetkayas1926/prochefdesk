@@ -750,12 +750,12 @@
         (units.length > 6 ? '.h-warn{padding:3px 6px;background:#fef3c7;color:#92400e;font-size:8px;border-radius:3px;margin-bottom:4px;}' : '') +
       '</style>' +
       '<div class="h-head">' +
-        '<h1>HACCP · Fridge & Freezer Temperature Log</h1>' +
+        '<h1>' + PCD.escapeHtml(t('haccp_print_title') || 'HACCP · Fridge & Freezer Temperature Log') + '</h1>' +
         '<div class="sub">' + PCD.escapeHtml(wsName) + (logName ? ' · ' + PCD.escapeHtml(logName) : '') + ' · ' + PCD.escapeHtml(monthLabel(year, monthIdx0)) + ' · °' + tempUnit + '</div>' +
       '</div>' +
       (units.length > 6 ? '<div class="h-warn">⚠ ' + units.length + ' units on one page — text is tight. Consider splitting into two groups.</div>' : '') +
       '<table class="h-grid"><thead>' +
-        '<tr><th rowspan="2" style="width:7%;">Day</th>';
+        '<tr><th rowspan="2" style="width:7%;">' + PCD.escapeHtml(t('haccp_col_day') || 'Day') + '</th>';
     units.forEach(function (u) {
       const range = (u.min !== undefined && u.max !== undefined) ? '(' + u.min + '–' + u.max + ')' : '';
       html += '<th colspan="2">' + PCD.escapeHtml(u.name) + '<br><span style="font-weight:400;color:#666;font-size:7px;">' + range + '</span></th>';
@@ -795,7 +795,7 @@
     html += '</tbody></table>';
 
     if (notesAccum.length > 0) {
-      html += '<div class="h-notes"><div class="nh">Corrective Actions / Notes (* in grid)</div>';
+      html += '<div class="h-notes"><div class="nh">' + PCD.escapeHtml(t('haccp_print_notes') || 'Corrective Actions / Notes (* in grid)') + '</div>';
       notesAccum.forEach(function (n) {
         html += '<div class="ni"><strong>' + PCD.escapeHtml(n.dateStr) + ' · ' + PCD.escapeHtml(n.unit) + ' (' + PCD.escapeHtml(n.shift === 'morning' ? t('haccp_am') : t('haccp_pm')) + ') · ' + PCD.escapeHtml(String(n.value)) + '°' + tempUnit + '</strong> — ' + PCD.escapeHtml(n.note) + (n.chef ? ' <span style="color:#666;">(' + PCD.escapeHtml(n.chef) + ')</span>' : '') + '</div>';
       });
@@ -803,7 +803,7 @@
     }
 
     const user = PCD.store.get('user') || {};
-    html += '<div class="h-sign"><div>Reviewed by: ____________________________</div><div>Date: ' + new Date().toLocaleDateString() + '</div></div>';
+    html += '<div class="h-sign"><div>' + PCD.escapeHtml(t('reviewed_by') || 'Reviewed by') + ': ____________________________</div><div>' + PCD.escapeHtml(t('haccp_print_date') || 'Date') + ': ' + new Date().toLocaleDateString(locale()) + '</div></div>';
     html += '<div class="h-foot">Made with ProChefDesk · prochefdesk.com</div>';
 
     PCD.print(html, 'HACCP Fridge Log — ' + monthLabel(year, monthIdx0));

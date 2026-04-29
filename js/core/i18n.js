@@ -30,12 +30,16 @@
       i18n.currentDir = dir;
       i18n.applyAll();
       if (PCD.store) PCD.store.set('prefs.locale', locale);
-      // Auto re-render current view so all string update immediately
+      // Auto re-render current view so all strings update immediately.
+      // BUG FIX (v2.6.28): Route names are snake_case (e.g. haccp_logs) but
+      // tool names are camelCase (PCD.tools.haccpLogs). Convert before lookup.
       if (PCD.router && PCD.tools) {
         const cur = PCD.router.currentView() || 'dashboard';
+        const camel = cur.replace(/_([a-z])/g, function (_, c) { return c.toUpperCase(); });
         const view = document.getElementById('view');
-        if (view && PCD.tools[cur] && typeof PCD.tools[cur].render === 'function') {
-          try { PCD.tools[cur].render(view); } catch (e) { /* ignore */ }
+        const tool = PCD.tools[cur] || PCD.tools[camel];
+        if (view && tool && typeof tool.render === 'function') {
+          try { tool.render(view); } catch (e) { /* ignore */ }
         }
       }
       PCD.log('Locale set to', locale);
