@@ -71,6 +71,68 @@
 
     root.appendChild(panel);
 
+    // Keyboard form flow (v2.6.32) — applies to ALL modals:
+    // - Enter on input/select → move focus to next focusable form element
+    //   (mimics Tab). Lets users fill out forms with Enter only.
+    // - Enter inside textarea → newline (browser default, untouched).
+    // - Ctrl+Enter / Cmd+Enter anywhere → click the primary submit button
+    //   in the footer (the .btn-primary, or the last button if none has
+    //   that class).
+    // - Inputs marked data-skip-enter="true" keep their original Enter
+    //   behavior (used by autocompletes like the recipe quick-add).
+    panel.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter') return;
+      const target = e.target;
+      if (!target) return;
+
+      // Ctrl+Enter / Cmd+Enter → primary save anywhere
+      if (e.ctrlKey || e.metaKey) {
+        const submitBtn = (footerEl && (footerEl.querySelector('.btn-primary:not([disabled])') || (function () {
+          const all = footerEl.querySelectorAll('button:not([disabled])');
+          return all.length ? all[all.length - 1] : null;
+        })())) || null;
+        if (submitBtn) {
+          e.preventDefault();
+          submitBtn.click();
+        }
+        return;
+      }
+
+      const tag = (target.tagName || '').toLowerCase();
+      // Textarea: leave Enter alone (newline)
+      if (tag === 'textarea') return;
+      // Buttons: leave Enter alone (browser triggers click)
+      if (tag === 'button') return;
+      // Anything explicitly opted out (autocompletes etc.)
+      if (target.getAttribute && target.getAttribute('data-skip-enter') === 'true') return;
+      // Only handle inputs and selects from here
+      if (tag !== 'input' && tag !== 'select') return;
+
+      // Move focus to next focusable form element inside the panel.
+      // If we're already at the last one, click the primary button.
+      const focusables = Array.prototype.slice.call(
+        panel.querySelectorAll('input:not([type=hidden]):not([disabled]), select:not([disabled]), textarea:not([disabled])')
+      ).filter(function (el) { return el.offsetParent !== null; });
+
+      const idx = focusables.indexOf(target);
+      e.preventDefault();
+      if (idx >= 0 && idx < focusables.length - 1) {
+        focusables[idx + 1].focus();
+        const next = focusables[idx + 1];
+        // Select text in number/text inputs so the user can immediately overwrite
+        if (next.tagName === 'INPUT' && (next.type === 'number' || next.type === 'text' || next.type === 'search' || next.type === 'email')) {
+          try { next.select(); } catch (ex) { /* ignore */ }
+        }
+      } else {
+        // Last field — submit form via primary button
+        const submitBtn = (footerEl && (footerEl.querySelector('.btn-primary:not([disabled])') || (function () {
+          const all = footerEl.querySelectorAll('button:not([disabled])');
+          return all.length ? all[all.length - 1] : null;
+        })())) || null;
+        if (submitBtn) submitBtn.click();
+      }
+    });
+
     // Click on backdrop closes — use mousedown+mouseup pair to avoid
     // accidental close when text selection ends outside the panel.
     let backdropDown = false;
@@ -128,7 +190,13 @@
         // Focus first input if any (desktop only — mobile keyboard pop-up is annoying)
         setTimeout(function () {
           const inp = panel.querySelector('input:not([type=hidden]), textarea, select, button');
-          if (inp && PCD.isTouch && !PCD.isTouch()) inp.focus();
+          if (inp && PCD.isTouch && !PCD.isTouch()) {
+            inp.focus();
+            // Select text in editable inputs so users can overwrite immediately
+            if (inp.tagName === 'INPUT' && (inp.type === 'number' || inp.type === 'text' || inp.type === 'search' || inp.type === 'email')) {
+              try { inp.select(); } catch (ex) { /* ignore */ }
+            }
+          }
         }, 250);
       },
 

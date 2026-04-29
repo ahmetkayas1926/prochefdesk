@@ -1731,7 +1731,7 @@
 
           <!-- Quick-add autocomplete -->
           <div style="position:relative;margin-bottom:10px;">
-            <input type="text" class="input" id="quickIngInput" placeholder="${PCD.escapeHtml(t('recipe_quick_add_placeholder'))}" autocomplete="off" style="padding-inline-start:36px;">
+            <input type="text" class="input" id="quickIngInput" placeholder="${PCD.escapeHtml(t('recipe_quick_add_placeholder'))}" autocomplete="off" data-skip-enter="true" style="padding-inline-start:36px;">
             <div style="position:absolute;inset-inline-start:10px;top:50%;transform:translateY(-50%);color:var(--text-3);pointer-events:none;">${PCD.icon('search', 16)}</div>
             <div id="quickIngDD" style="display:none;position:absolute;top:100%;inset-inline-start:0;inset-inline-end:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);box-shadow:var(--shadow-lg);max-height:240px;overflow-y:auto;z-index:5;margin-top:4px;"></div>
           </div>
@@ -1956,6 +1956,17 @@
       if (photoCamera) photoCamera.addEventListener('change', handlePhotoFile);
       if (photoGallery) photoGallery.addEventListener('change', handlePhotoFile);
 
+      // Helper: pick the recipe-line unit when adding an ingredient.
+      // Most kitchen recipes use grams or millilitres at the dish level;
+      // ingredients bought by kg or L would otherwise default to "100 kg"
+      // which is a 1000x cost-calculation mistake.
+      function defaultRecipeUnit(ing) {
+        let u = (ing && ing.unit) || 'g';
+        if (u === 'kg') return 'g';
+        if (u === 'l' || u === 'L') return 'ml';
+        return u;
+      }
+
       PCD.$('#addIngBtn', body).addEventListener('click', function () {
         const items = PCD.store.listIngredients().map(function (i) {
           return { id: i.id, name: i.name, meta: t(i.category || 'cat_other') + ' · ' + PCD.fmtMoney(i.pricePerUnit) + '/' + i.unit };
@@ -1968,7 +1979,7 @@
           }).then(function (ok) {
             if (ok) PCD.tools.ingredients.openEditor(null, function (newIng) {
               if (newIng) {
-                data.ingredients = data.ingredients.concat([{ ingredientId: newIng.id, amount: 100, unit: newIng.unit }]);
+                data.ingredients = data.ingredients.concat([{ ingredientId: newIng.id, amount: 100, unit: defaultRecipeUnit(newIng) }]);
                 renderEditor();
               }
             });
@@ -1991,7 +2002,7 @@
             if (existingMap[id]) next.push(existingMap[id]);
             else {
               const i = ingMap2[id];
-              next.push({ ingredientId: id, amount: 100, unit: i ? i.unit : 'g' });
+              next.push({ ingredientId: id, amount: 100, unit: defaultRecipeUnit(i) });
             }
           });
           data.ingredients = next;
@@ -2117,7 +2128,7 @@
             qDD.style.display = 'none';
             promptNewIngredientDetails(newName, function (saved, qty, qtyUnit) {
               data.ingredients = (data.ingredients || []).concat([{
-                ingredientId: saved.id, amount: qty || 100, unit: qtyUnit || saved.unit
+                ingredientId: saved.id, amount: qty || 100, unit: qtyUnit || defaultRecipeUnit(saved)
               }]);
               PCD.toast.success('Added "' + newName + '" — synced to Ingredients library');
               qInput.value = '';
@@ -2131,7 +2142,10 @@
           }
           const ing = PCD.store.getIngredient(id);
           if (!ing) return;
-          data.ingredients = (data.ingredients || []).concat([{ ingredientId: id, amount: 100, unit: ing.unit || 'g' }]);
+          // Bug fix (v2.6.31): use cooking-scale unit (g/ml) when the
+          // ingredient is bought in bulk units (kg/L), so a chef typing
+          // "100" doesn't end up with 100 KG of garlic.
+          data.ingredients = (data.ingredients || []).concat([{ ingredientId: id, amount: 100, unit: defaultRecipeUnit(ing) }]);
           qInput.value = '';
           qDD.style.display = 'none';
           renderEditor();

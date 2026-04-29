@@ -1,3 +1,84 @@
+# v2.6.32 — Modal'larda klavye akışı (Enter = ileri, Ctrl+Enter = kaydet)
+
+## Talep
+
+Modal'larda form doldururken her seferinde fareyle bir sonraki alana tıklamak. Klavyeden Enter ile ilerlenebilmeli, en sonunda kaydedebilmeli.
+
+## Çözüm
+
+`js/ui/modal.js`'de **tüm modal'lar için** central klavye akışı eklendi:
+
+**Davranış:**
+1. **Modal açılınca** → ilk input otomatik odaklanır (desktop) + içeriği seçili gelir (kullanıcı hemen üzerine yazabilir)
+2. **Enter (input/select)** → bir sonraki form alanına atlar (Tab gibi). Yeni alanın içeriği de otomatik seçili gelir
+3. **Enter (textarea)** → newline (varsayılan davranış korunur)
+4. **Enter (button)** → varsayılan tıklama (browser native)
+5. **Ctrl+Enter / Cmd+Enter** (her yerden) → footer'daki primary button'a tıklar (genelde "Kaydet")
+6. **Son alandayken Enter** → otomatik primary button'a tıklar (Kaydet)
+
+**`data-skip-enter="true"` opt-out:** Autocomplete'leri olan inputlar (örn. tarif quick add) bu özelliği atlar — Enter zaten ilk eşleşmeyi seçer, davranış değişmesin. Bu pattern başka inputlara da kolayca eklenebilir.
+
+**Etki:** Tüm modal'lar otomatik kazandı — Tarif, Malzeme, Menü, Etkinlik, HACCP, Kontrol Listesi, Çalışma Alanı, Cost Report, Sorun Bildir vb. Hiç ayrı kod gerekmedi çünkü merkezi `modal.open` infra'sına eklendi.
+
+## Test
+
+1. **Yeni Tarif** modal aç → tarif adı kutusu otomatik odaklı, içerik seçili
+2. "Mantı" yaz → Enter → Kategori dropdown
+3. Enter → Porsiyon (önceki değer seçili)
+4. Enter → Hazırlık (dk)
+5. Enter → ... son alana kadar
+6. Son alanda Enter veya Ctrl+Enter → Kaydet
+7. Adımlar textarea'da Enter normal newline yapmalı
+8. Quick add malzeme kutusunda Enter ilk eşleşmeyi seçmeye devam etmeli (autocomplete bozulmamalı)
+
+---
+
+# v2.6.31 — KRİTİK BUG: tarif eklerken kg/L birim varsayılanı
+
+## Bug
+
+Tarife ingredient eklediğinde sistem otomatik olarak ingredient'ın **base unit**'ini kullanıyordu. Sorun:
+- Sarımsak (Garlic Peeled) **kg** cinsinden alınır ($7.95/kg)
+- Tarif satırına "100" yazınca → **100 kg** sarımsak → **$795** maliyet
+- Halbuki kullanıcı 100 **gram** demek istiyordu → $0.795 olması gerekti
+
+Aynı sorun L cinsinden alınan ürünlerde de var (zeytinyağı vb.).
+
+**Hatanın boyutu:** 1000x maliyet hesaplama hatası. Catastrophic — tarif maliyeti tamamen yanlış çıkar.
+
+## Sebep
+
+`recipes.js`'in 4 farklı yerinde tarif satırı eklerken `unit` alanı doğrudan `ing.unit` (base unit) olarak set ediliyordu. Restoran mutfağında ingredient'lar **toptan birimde** alınır (kg, L) ama **mutfak ölçeğinde** kullanılır (g, ml).
+
+## Çözüm
+
+Yeni helper fonksiyon `defaultRecipeUnit(ing)`:
+```js
+if (base unit === 'kg') → 'g'
+if (base unit === 'l' || 'L') → 'ml'
+else → unchanged (g, ml, pcs)
+```
+
+4 ekleme noktası bu helper'ı kullanacak:
+1. Quick-add (autocomplete'ten ingredient seç)
+2. "+ Add" butonu picker (multi-select)
+3. Boş ingredient state'inden yeni ingredient yarat
+4. Quick-add'tan inline yeni ingredient yarat (`__new__`)
+
+## Test
+
+1. CSV import et (kg/L birimleriyle)
+2. Yeni tarif → sarımsağı seç → otomatik **100 g** olmalı, kg değil
+3. Doğru maliyet: 0.1 × $7.95 = **$0.795** (1000x değil)
+4. Pcs cinsinden ürünler (yumurta, ekmek): aynı kalır (pcs)
+5. Mevcut yanlış girilmiş satırları **elle düzelt** — dropdown'dan kg → g
+
+## Mevcut tariflerde
+
+Senin "Kibbeh" tarifindeki Garlic Peeled satırı zaten 100 kg olarak kayıtlı. Recipe edit'te **dropdown'dan g'a çevir**, $0.795 olur. Bu paket sonraki eklemeler için.
+
+---
+
 # v2.6.30 — Ingredients workspace-bound + demo cleanup tamamlandı
 
 ## Sorun 1: Yeni workspace temiz başlamıyordu
