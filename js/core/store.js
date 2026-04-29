@@ -179,6 +179,26 @@
       PCD.warn('Failed to load state:', e);
       state = PCD.clone(defaultState);
     }
+    // Normalize ingredient unit case (v2.6.35). Some CSV imports stored
+    // 'L', 'KG', 'ML' in uppercase. The convertUnit utility is now
+    // case-insensitive (also v2.6.35) but to keep the edit-modal dropdown
+    // showing the right unit and to make data consistent, lowercase them.
+    if (state.ingredients && typeof state.ingredients === 'object') {
+      Object.keys(state.ingredients).forEach(function (wsId) {
+        const wsIngs = state.ingredients[wsId];
+        if (!wsIngs || typeof wsIngs !== 'object') return;
+        Object.keys(wsIngs).forEach(function (ingId) {
+          const ing = wsIngs[ingId];
+          if (ing && typeof ing.unit === 'string') {
+            const lc = ing.unit.toLowerCase();
+            // Only normalize if it maps to a known canonical unit
+            if (lc !== ing.unit && (lc === 'l' || lc === 'kg' || lc === 'ml' || lc === 'g' || lc === 'pcs')) {
+              ing.unit = lc;
+            }
+          }
+        });
+      });
+    }
   }
 
   function deepMerge(target, source) {
@@ -457,6 +477,25 @@
       const wsId = currentWsId();
       if (!state.recipes[wsId]) return [];
       return Object.values(PCD.clone(state.recipes[wsId])).filter(function (r) { return !r._deletedAt; });
+    },
+
+    // Returns array of recipe names that reference the given ingredient ID.
+    // Used by ingredients.js before deletion (v2.6.36): if an ingredient
+    // is used in any recipe, deletion is blocked to prevent broken
+    // "(removed)" lines and silent data corruption.
+    findRecipesUsingIngredient: function (ingId) {
+      const wsId = currentWsId();
+      if (!state.recipes[wsId]) return [];
+      const recipes = state.recipes[wsId];
+      const out = [];
+      Object.keys(recipes).forEach(function (rid) {
+        const r = recipes[rid];
+        if (!r || r._deletedAt) return;
+        if (!r.ingredients || !r.ingredients.length) return;
+        const used = r.ingredients.some(function (ri) { return ri.ingredientId === ingId; });
+        if (used) out.push(r.name || '(untitled)');
+      });
+      return out;
     },
 
     // ---- Ingredient helpers (workspace-scoped from v2.6.30) ----

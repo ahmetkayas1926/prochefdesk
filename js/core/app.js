@@ -67,14 +67,17 @@
       PCD.router.register('haccp_cooling', PCD.tools.haccpCooling.render);
 
       // 7) Start router + render initial view
+      // BUG FIX (v2.6.36): Read the route from the URL hash so F5 keeps
+      // the user on the same page instead of bouncing back to dashboard.
       PCD.router.start();
-      PCD.router.go('dashboard', null, { skipHistory: true });
+      const initial = (PCD.router.initialRoute && PCD.router.initialRoute()) || 'dashboard';
+      PCD.router.go(initial, null, { skipHistory: true });
 
       // 8) Seed demos if first run
       if (!PCD.store.get('onboarding.demoSeeded')) {
         PCD.demo.seed();
-        // Re-render dashboard now that we have data
-        PCD.router.go('dashboard', null, { skipHistory: true });
+        // Re-render whichever view is current now that we have data
+        PCD.router.go(initial, null, { skipHistory: true });
       }
 
       // 9) Wire chrome (topbar, sidenav, bottom nav)

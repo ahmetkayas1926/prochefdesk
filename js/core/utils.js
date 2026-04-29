@@ -188,18 +188,25 @@
 
   PCD.convertUnit = function (value, fromUnit, toUnit) {
     if (fromUnit === toUnit) return value;
+    // Normalize case — invoices and CSV imports commonly use 'L'/'KG'/'ML'.
+    // Without this, conversion silently fails and prices are wrong by
+    // factors of 1000 (e.g. $/L treated as $/ml).
+    const fromU = (fromUnit || '').toLowerCase();
+    const toU = (toUnit || '').toLowerCase();
+    if (fromU === toU) return value;
     const groups = PCD.UNITS;
     for (const g in groups) {
       const table = groups[g];
-      if (fromUnit in table && toUnit in table) {
-        return value * table[fromUnit] / table[toUnit];
+      if (fromU in table && toU in table) {
+        return value * table[fromU] / table[toU];
       }
     }
     return value; // same group not found
   };
 
   PCD.unitGroup = function (u) {
-    for (const g in PCD.UNITS) if (u in PCD.UNITS[g]) return g;
+    const lc = (u || '').toLowerCase();
+    for (const g in PCD.UNITS) if (lc in PCD.UNITS[g]) return g;
     return null;
   };
 

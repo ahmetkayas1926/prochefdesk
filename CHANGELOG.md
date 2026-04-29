@@ -1,3 +1,100 @@
+# v2.6.37 — F5 yenileme bugu (URL hash routing)
+
+## Bug
+
+Herhangi bir sayfada (Vardiya, Profil, HACCP, Tarifler vs.) F5 ile yenile → her seferinde **dashboard'a** atıyordu. Kullanıcı bulunduğu yerde kalmıyordu.
+
+## Sebep
+
+Router URL'de hangi sayfada olunduğunu **kaydetmiyordu**. `pushState` çağrıları hep `pathname` (yani `/`) kullanıyordu, hash veya başka identifier yoktu. F5 yapınca:
+1. Sayfa yeniden yüklenir
+2. `app.js` boot olur
+3. `router.go('dashboard')` zorlanır
+4. → her zaman dashboard
+
+## Çözüm
+
+`js/core/router.js` URL hash desteği aldı:
+- `router.go('recipes')` → URL artık `prochefdesk.com/#recipes`
+- `router.initialRoute()` helper → boot sırasında URL hash'i okur, geçerli route varsa ona git
+- Browser back button da hash ile çalışır
+- Public share linkleri (`?share=ID`) etkilenmez (query string, hash değil)
+
+`js/core/app.js` boot sırasında artık `initialRoute()` kullanıyor:
+```js
+const initial = PCD.router.initialRoute() || 'dashboard';
+PCD.router.go(initial, null, { skipHistory: true });
+```
+
+## Test
+
+1. Tariflere git → URL `#recipes` görünmeli
+2. F5 → tariflerde kalmalı
+3. Vardiya kontrol listelerine git → F5 → kalmalı
+4. Profil ayarlarına git → F5 → kalmalı
+5. Browser back/forward butonları çalışmalı
+6. Direkt URL `prochefdesk.com/#inventory` aç → inventory açılmalı
+
+---
+
+# v2.6.36 — Malzeme silme güvenliği
+
+## Yeni davranış
+
+Bir malzeme bir tariften kullanıldığı sürece silinemez. Recipe'lerin "(removed)" satırlarla bozulmasını önler.
+
+**Bireysel silme**: Edit modal'dan sil → ingredient kullanılıyorsa uyarı modal'ı: "Bu malzeme X tarifte kullanılıyor: Kibbeh, Mantı..." → "Tamam". Sil butonu pasifleşmez ama sil olmaz.
+
+**Toplu silme**: 100 seçtin, 10 tanesi kullanımda. Sonuç:
+- 90 silinir
+- Modal: "✓ 90 malzeme silindi · ⚠ 10 malzeme kullanımda olduğu için silinmedi: Sarımsak (3 tarif: Kibbeh, Mantı, Pilav), Yumurta (5 tarif: ...) ..."
+
+## Test
+
+1. Olive Oil'i kullanan bir tarif yap (örn. Pizza)
+2. Ingredients → Olive Oil'i tek tek silmeye dene → "Bu malzeme 1 tarifte kullanılıyor: Pizza" uyarısı, silinmez
+3. Bulk delete: 5 malzeme seç (3'ü tarif kullanımda) → 2 silinir, 3'ü için uyarı modal'ı
+
+---
+
+# v2.6.35 — KRİTİK: birim büyük/küçük harf duyarlılığı (1000x maliyet hatası)
+
+## Bug
+
+Olive Oil ingredient'ı edit modal'ında "Temel birim: g" gözüküyor ama altında "L başına fiyat" yazıyor — iç tutarsızlık. Tarif satırına 1000 ml zeytinyağı eklenince maliyet **$15,690** çıkıyor (gerçek: $15.69).
+
+## Üç ayrı sebep, hepsi aynı sorundan
+
+### 1. CSV import birim büyük/küçük harfi normalize etmiyordu
+
+CSV'de `unit=L` (büyük harf) yazılırsa, sistem onu **olduğu gibi** kaydediyordu. Ancak edit modal dropdown'ı sadece küçük harf birimleri (`l`, `kg`, `ml`, `g`) içeriyor → büyük `L` dropdown'da bulunmadı → varsayılan olarak `g` görünüyor (görsel hata).
+
+**Düzeltme:** `parseCSV` artık birim alanını otomatik küçültür (`L → l`, `KG → kg`, `ML → ml`).
+
+### 2. `convertUnit` case-sensitive idi
+
+Tarif satırı `1000 ml`, ingredient base unit `L` (büyük). `convertUnit('ml', 'L', ...)` → tablolar küçük harf bekliyor → eşleşme yok → dönüştürmeden geri dönüyor → fiyat hesabı 1000x bozuk.
+
+**Düzeltme:** `convertUnit` ve `unitGroup` artık case-insensitive — input'u içeride lowercase yapıp lookup ediyor.
+
+### 3. Mevcut bozuk veri (one-time migration)
+
+Senin Olive Oil ingredient'ında `unit='L'` zaten kayıtlı. Yeni import normalize ediyor ama eski kayıtlar bozuk kalır. `load()` fonksiyonuna **otomatik migration** eklendi: her startup'ta tüm ingredients'taki büyük harf birimleri lowercase'e çevirir.
+
+Etki: Bu paketi yükledikten sonra sayfa açılır → mevcut Olive Oil'in unit'i `L → l` olur → cloud'a sync edilir → edit modal artık tutarlı görünür.
+
+## Test
+
+1. Olive Oil'in **edit** modal'ını aç → "Temel birim: l" görünmeli (g değil)
+2. Yeni bir test tarifi yarat → 1000 ml zeytinyağı ekle → maliyet **$15.69** olmalı (15690 değil)
+3. Yeni CSV import et büyük harfli birimlerle (`Test Item, 10, L`) → ingredient'a `l` kaydedilmeli, dropdown doğru görünmeli
+
+## Bilinen kapsamı dışı
+
+Senin mevcut **Kibbeh recipe'i hâlâ "(removed)"** gösteriyor çünkü o satırların ingredient ID referansları, sen sildiğinde kaybolmuştu. Bu paket bunu düzeltmez — Kibbeh'i silmen ve yeniden yapman gerekir. Bu paket, gelecekteki recipe'lerin doğru hesaplanmasını sağlar.
+
+---
+
 # v2.6.34 — KRİTİK: liste sayfaları save/delete sonrası yenilenmiyordu
 
 ## Bug

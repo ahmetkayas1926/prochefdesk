@@ -283,7 +283,7 @@
           body.appendChild(PCD.el('h3', { style: { fontSize: '18px', fontWeight: '700', margin: '0 0 6px', letterSpacing: '-0.01em' }, text: opts.title }));
         }
         if (opts.text) {
-          body.appendChild(PCD.el('p', { style: { fontSize: '14px', color: 'var(--text-3)', lineHeight: '1.5', margin: '0 auto', maxWidth: '320px' }, text: opts.text }));
+          body.appendChild(PCD.el('p', { style: { fontSize: '14px', color: 'var(--text-3)', lineHeight: '1.5', margin: '0 auto', maxWidth: '320px', whiteSpace: 'pre-line' }, text: opts.text }));
         }
 
         const cancelBtn = PCD.el('button', { type: 'button', class: 'btn btn-secondary', text: opts.cancelText || t('cancel') });

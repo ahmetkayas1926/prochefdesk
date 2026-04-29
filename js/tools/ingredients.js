@@ -180,8 +180,36 @@
         okText: PCD.i18n.t('delete')
       }).then(function (ok) {
         if (!ok) return;
-        const n = PCD.store.deleteIngredients(Array.from(selectedIds));
-        PCD.toast.success(PCD.i18n.t('items_deleted').replace('{n}', n));
+        // v2.6.36: split selection into "safe to delete" vs "in use".
+        // Ingredients that are referenced by any recipe stay alive so
+        // recipes don't end up with broken "(removed)" lines.
+        const ingMap = currentIngMap();
+        const safeIds = [];
+        const blocked = []; // { name, recipes: [...] }
+        Array.from(selectedIds).forEach(function (id) {
+          const usedIn = (PCD.store.findRecipesUsingIngredient && PCD.store.findRecipesUsingIngredient(id)) || [];
+          if (usedIn.length === 0) {
+            safeIds.push(id);
+          } else {
+            const ing = ingMap[id];
+            blocked.push({ name: (ing && ing.name) || '?', recipes: usedIn });
+          }
+        });
+
+        let deletedCount = 0;
+        if (safeIds.length > 0) {
+          deletedCount = PCD.store.deleteIngredients(safeIds);
+        }
+
+        // Result feedback
+        if (blocked.length === 0) {
+          // Pure success
+          PCD.toast.success(PCD.i18n.t('items_deleted').replace('{n}', deletedCount));
+        } else {
+          // Mixed or all-blocked — show explanatory modal
+          showBulkDeleteResult(deletedCount, blocked);
+        }
+
         selectedIds = new Set(); selectMode = false;
         renderList(view);
       });
@@ -371,6 +399,26 @@
 
     cancelBtn.addEventListener('click', function () { m.close(); if (callback) callback(null); });
     if (deleteBtn) deleteBtn.addEventListener('click', function () {
+      // v2.6.36: block deletion if ingredient is used in any recipe.
+      // Prevents recipes from showing "(removed)" lines and silent
+      // cost-calculation breakage.
+      const usedIn = (PCD.store.findRecipesUsingIngredient && PCD.store.findRecipesUsingIngredient(existing.id)) || [];
+      if (usedIn.length > 0) {
+        const previewList = usedIn.slice(0, 5);
+        const more = usedIn.length - previewList.length;
+        let listText = '• ' + previewList.join('\n• ');
+        if (more > 0) listText += '\n• … +' + more;
+        PCD.modal.confirm({
+          icon: '⚠', iconKind: 'warning',
+          title: t('ing_cannot_delete') || 'Silinemez',
+          text: (t('ing_used_in_n') || 'Bu malzeme {n} tarifte kullanılıyor:').replace('{n}', usedIn.length) + '\n\n' +
+                listText + '\n\n' +
+                (t('ing_remove_first') || 'Önce bu tariflerden çıkar, sonra tekrar dene.'),
+          okText: t('ok') || 'Tamam',
+          cancelText: null,
+        });
+        return;
+      }
       PCD.modal.confirm({
         icon: '🗑', iconKind: 'danger', danger: true,
         title: t('confirm_delete'), text: t('confirm_delete_desc'),
@@ -570,6 +618,49 @@ Pasta,0.003,g,cat_dry_goods,</code></pre>
     });
   }
 
+  // ============ BULK DELETE RESULT MODAL (v2.6.36) ============
+  // Shown after a bulk delete when at least one ingredient was kept
+  // because it's used in recipes. Tells the chef exactly what happened.
+  function showBulkDeleteResult(deletedCount, blocked) {
+    const t = PCD.i18n.t;
+    const body = PCD.el('div');
+    let html = '';
+    if (deletedCount > 0) {
+      html += '<div style="padding:10px 12px;background:#f0fdf4;border:1px solid #16a34a;border-radius:8px;margin-bottom:12px;font-weight:600;color:#15803d;">' +
+        '✓ ' + (t('ing_bulk_deleted') || '{n} malzeme silindi').replace('{n}', deletedCount) +
+      '</div>';
+    }
+    html += '<div style="padding:10px 12px;background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;font-size:13px;line-height:1.5;color:#92400e;">' +
+      '<div style="font-weight:700;margin-bottom:6px;">⚠ ' +
+        (t('ing_bulk_blocked') || '{n} malzeme kullanımda olduğu için silinmedi:').replace('{n}', blocked.length) +
+      '</div>' +
+      '<ul style="margin:6px 0 0;padding-inline-start:20px;max-height:240px;overflow-y:auto;">';
+    blocked.forEach(function (b) {
+      const recipesPreview = b.recipes.slice(0, 3);
+      const more = b.recipes.length - recipesPreview.length;
+      let recipesStr = recipesPreview.map(PCD.escapeHtml).join(', ');
+      if (more > 0) recipesStr += ' +' + more;
+      const recipesLabel = b.recipes.length === 1
+        ? '1 ' + (t('cr_recipe') || 'tarif').toLowerCase()
+        : b.recipes.length + ' ' + (t('cr_recipe') || 'tarif').toLowerCase();
+      html += '<li style="margin-bottom:4px;"><strong>' + PCD.escapeHtml(b.name) + '</strong> <span style="color:#78350f;">(' + recipesLabel + ': ' + recipesStr + ')</span></li>';
+    });
+    html += '</ul></div>';
+    body.innerHTML = html;
+
+    const okBtn = PCD.el('button', { class: 'btn btn-primary', text: t('close') || 'Kapat', style: { width: '100%' } });
+    const footer = PCD.el('div', { style: { width: '100%' } });
+    footer.appendChild(okBtn);
+
+    const m = PCD.modal.open({
+      title: deletedCount > 0
+        ? (t('ing_bulk_partial_title') || 'Silme tamamlandı (kısmen)')
+        : (t('ing_bulk_blocked_title') || 'Hiçbir malzeme silinmedi'),
+      body: body, footer: footer, size: 'sm', closable: true,
+    });
+    okBtn.addEventListener('click', function () { m.close(); });
+  }
+
   // CSV/TSV parser
   function parseCSV(text) {
     const lines = text.split(/\r?\n/).map(function (l) { return l.trim(); }).filter(function (l) { return l; });
@@ -586,10 +677,17 @@ Pasta,0.003,g,cat_dry_goods,</code></pre>
       const name = (cells[0] || '').trim();
       const price = parseFloat((cells[1] || '').replace(/[^0-9.\-]/g, ''));
       if (!name || isNaN(price)) return;
+      // Normalize unit case so 'L'/'KG'/'ML' (common in invoices) match
+      // the lowercase canonical units (l, kg, ml). Without this the unit
+      // would be saved as 'L', not appear in the dropdown, and break
+      // unit conversion in recipe lines.
+      let rawUnit = (cells[2] || '').trim() || 'g';
+      const lcUnit = rawUnit.toLowerCase();
+      if (UNITS.indexOf(lcUnit) >= 0) rawUnit = lcUnit;
       rows.push({
         name: name,
         pricePerUnit: price,
-        unit: (cells[2] || '').trim() || 'g',
+        unit: rawUnit,
         category: (cells[3] || '').trim() || 'cat_other',
         supplier: (cells[4] || '').trim() || '',
       });

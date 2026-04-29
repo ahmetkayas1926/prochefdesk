@@ -872,5 +872,15 @@ window.PCD.i18n.register('tr', {
   cr_go_to_detail: 'Detay →',
   cr_go_to_summary: '← Özete Dön',
   cr_made_with: 'ProChefDesk ile yapıldı · prochefdesk.com',
+
+  // Malzeme silme güvenliği (v2.6.36)
+  ing_cannot_delete: 'Silinemez',
+  ing_used_in_n: 'Bu malzeme {n} tarifte kullanılıyor:',
+  ing_remove_first: 'Önce bu tariflerden çıkar, sonra tekrar dene.',
+  ing_bulk_deleted: '{n} malzeme silindi.',
+  ing_bulk_blocked: '{n} malzeme kullanımda olduğu için silinmedi:',
+  ing_bulk_partial_title: 'Silme tamamlandı (kısmen)',
+  ing_bulk_blocked_title: 'Hiçbir malzeme silinmedi',
+  ok: 'Tamam',
   optional: 'isteğe bağlı',
 });

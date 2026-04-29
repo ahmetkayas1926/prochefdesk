@@ -889,5 +889,15 @@ window.PCD.i18n.register('en', {
   cr_go_to_detail: 'Detail →',
   cr_go_to_summary: '← Back to Summary',
   cr_made_with: 'Made with ProChefDesk · prochefdesk.com',
+
+  // Ingredient deletion safety (v2.6.36)
+  ing_cannot_delete: 'Cannot delete',
+  ing_used_in_n: 'This ingredient is used in {n} recipe(s):',
+  ing_remove_first: 'Remove it from those recipes first, then try again.',
+  ing_bulk_deleted: '{n} ingredient(s) deleted.',
+  ing_bulk_blocked: '{n} ingredient(s) were not deleted because they are in use:',
+  ing_bulk_partial_title: 'Delete completed (partial)',
+  ing_bulk_blocked_title: 'No ingredients were deleted',
+  ok: 'OK',
   optional: 'optional',
 });
