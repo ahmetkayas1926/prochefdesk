@@ -1,3 +1,73 @@
+# v2.6.25 — Free tier limitleri kaldırıldı (şimdilik sınırsız)
+
+## Talep
+
+Senaryo: Yeni recipe oluştururken "Upgrade needed — Ücretsiz limit: 5 tarif" diyalogu çıkıyordu. Şu an her şey ücretsiz olmalı, premium tier ileride gelecek.
+
+## Çözüm
+
+**1. Config limitleri yükseltildi:**
+- `FREE_RECIPE_LIMIT: 5 → 999999`
+- `FREE_INGREDIENT_LIMIT: 50 → 999999`
+
+Sınır kontrolü kodu mevcut yapısıyla duruyor — premium tier eklendiğinde tek bir config dosyasından açılır.
+
+**2. Sidenav'daki "Free Plan" badge ve "Upgrade to Pro" butonu gizlendi:**
+- Şu an her şey ücretsiz olduğundan kullanıcıya "Pro'ya yükselt" demek kafa karıştırıcı
+- `updatePlanBadge()` fonksiyonunda her ikisi de `display: none` yapıldı
+- Premium tier eklendiğinde tek satır değişikliğiyle tekrar açılır
+
+## Test
+
+1. Login ol
+2. 6+ recipe oluşturmaya çalış — "Upgrade needed" diyalogu **çıkmamalı**, yeni recipe oluşmalı
+3. Sidenav'a bak (☰) → en altta "Plan Gratuit / Pro'ya Yükselt" görünmemeli
+4. Workspace switcher modal açıldığında her şey normal
+
+## Not (ileri için)
+
+Premium tier eklemek istediğinde değişecek 3 yer:
+1. `config.js` → limit değerlerini 5/50'ye geri al
+2. `app.js` → `updatePlanBadge` içindeki `display: none` satırlarını kaldır
+3. Stripe entegrasyonu için ayrı bir paket
+
+---
+
+# v2.6.24 — Public share sayfası kibar başlık + footer
+
+## Talep
+
+URL paylaşımı yapıldığında açılan sayfada büyük yeşil banner ve "Try ProChefDesk free →" CTA'sı agresif görünüyordu. Daha nazik bir başlık + alt footer olsun.
+
+## Çözüm
+
+**Üst banner çıkarıldı.** Yerine ortalanmış, küçük (13px), gri tonlu, nazik bir başlık çizgisi:
+
+```
+                  ProChefDesk
+─────────────────────────────────
+```
+
+Sadece "ProChefDesk" linki — alt çizgi ile içerikten ayrılır. Üst tarafta agresif CTA yok.
+
+**Alt footer sadeleştirildi:**
+Önceki karışık iki dilli "Bu tarif ProChefDesk ile paylaşıldı · Shared with ProChefDesk · Try it free" yerine:
+
+```
+Made with ProChefDesk · prochefdesk.com
+```
+
+Tek satır, gri, link yeşil. Print/PDF footer'larıyla **tutarlı** (v2.5.13'te eklediğimiz "Made with" footer ile aynı stil).
+
+## Test
+
+1. Bir tarif veya menü için Share Link → URL'yi başka tarayıcıda aç
+2. Üstte küçük "ProChefDesk" yazısı, altında alt çizgi
+3. İçerik: tarif/menü
+4. Alt footer: "Made with ProChefDesk · prochefdesk.com" tek satır, sade
+
+---
+
 # v2.6.23 — KRİTİK BUG FIX: logout veri sızıntısı
 
 ## Talep / Bug

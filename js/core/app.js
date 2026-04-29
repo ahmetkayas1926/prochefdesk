@@ -337,7 +337,10 @@
     badge.className = 'plan-badge plan-' + plan;
     badge.textContent = t(plan + '_plan');
     const upgrade = PCD.$('#btnUpgrade');
-    if (upgrade) upgrade.style.display = plan === 'free' ? '' : 'none';
+    // v2.6.25: Şu an her şey ücretsiz, "Pro'ya Yükselt" butonu kullanıcıyı
+    // kafa karıştırıyor. Premium tier eklendiğinde bu blok geri açılacak.
+    if (upgrade) upgrade.style.display = 'none';
+    if (badge) badge.style.display = 'none';
   }
 
   // ============ WORKSPACE SWITCHER ============

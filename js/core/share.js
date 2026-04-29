@@ -272,10 +272,9 @@
 
     let html = '<style>' +
       '.share-page { max-width: 800px; margin: 0 auto; padding: 24px; font-family: -apple-system, "Segoe UI", Roboto, sans-serif; }' +
-      '.share-banner { display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border-radius:12px;margin-bottom:24px;flex-wrap:wrap;gap:10px; }' +
-      '.share-banner .brand { font-weight:800;font-size:18px;letter-spacing:-0.01em; }' +
-      '.share-banner .tagline { font-size:12px;opacity:0.9;margin-top:2px; }' +
-      '.share-banner .cta { background:#fff;color:#16a34a;padding:8px 16px;border-radius:8px;font-weight:700;font-size:13px;text-decoration:none;border:0;cursor:pointer; }' +
+      '.share-topbrand { text-align:center;padding:14px 16px 18px;font-size:13px;color:#888;border-bottom:1px solid #eee;margin-bottom:24px; }' +
+      '.share-topbrand a { color:#16a34a;font-weight:700;text-decoration:none; }' +
+      '.share-topbrand a:hover { text-decoration:underline; }' +
       '.share-content h1 { font-size:28px;margin:0 0 8px; }' +
       '.share-meta { color:#666;font-size:14px;margin-bottom:18px; }' +
       '.share-photo { width:100%;max-height:400px;object-fit:cover;border-radius:12px;margin-bottom:18px; }' +
@@ -290,12 +289,16 @@
       '.menu-item-name { font-weight:600;font-size:16px;display:flex;justify-content:space-between; }' +
       '.menu-item-desc { color:#666;font-size:13px;font-style:italic;margin-top:4px; }' +
       '.share-footer { text-align:center;padding:24px;color:#999;font-size:12px;border-top:1px solid #eee;margin-top:32px; }' +
+      '.share-footer a { color:#16a34a;text-decoration:none; }' +
+      '.share-footer a:hover { text-decoration:underline; }' +
     '</style>';
 
     html += '<div class="share-page">';
-    html += '<div class="share-banner">' +
-      '<div><div class="brand">ProChefDesk</div><div class="tagline">Made by chefs, for chefs</div></div>' +
-      '<button class="cta" onclick="window.location.href=window.location.origin+window.location.pathname">Try ProChefDesk free →</button>' +
+    // Subtle top brand line — kibar, üst tarafta küçük bir tanıtım çizgisi.
+    // Eski büyük yeşil banner ve "Try free" CTA'sı çıkartıldı; alttaki footer
+    // zaten "Made with ProChefDesk" yazıyor.
+    html += '<div class="share-topbrand">' +
+      '<a href="' + location.origin + location.pathname + '" target="_blank" rel="noopener">ProChefDesk</a>' +
     '</div>';
 
     html += '<div class="share-content">';
@@ -346,9 +349,7 @@
 
     html += '</div>';
     html += '<div class="share-footer">' +
-      'Bu ' + (p.kind === 'recipe' ? 'tarif' : 'menü') + ' ProChefDesk ile paylaşıldı · ' +
-      'Shared with ProChefDesk · ' +
-      '<a href="' + location.origin + location.pathname + '" style="color:#16a34a;">Try it free</a>' +
+      'Made with <a href="' + location.origin + location.pathname + '" target="_blank" rel="noopener"><strong>ProChefDesk</strong></a> · prochefdesk.com' +
     '</div>';
     html += '</div>';
 

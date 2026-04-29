@@ -27,13 +27,16 @@ window.PCD_CONFIG = {
   // 3. APP DEFAULTS
   // ==============================================================
   APP_NAME: 'ProChefDesk',
-  APP_VERSION: '2.6.23',
+  APP_VERSION: '2.6.25',
   DEFAULT_CURRENCY: 'USD',
   DEFAULT_LOCALE: 'en',
 
   // Free tier limits
-  FREE_RECIPE_LIMIT: 5,
-  FREE_INGREDIENT_LIMIT: 50,
+  // v2.6.25: Şu an her şey ücretsiz. Premium ileride gelirse bu sayılar
+  // düşürülecek. 999999 = pratik olarak sınırsız, ama limit kontrol kodu
+  // mevcut yapısıyla duruyor (gelecekte tek noktadan açılır).
+  FREE_RECIPE_LIMIT: 999999,
+  FREE_INGREDIENT_LIMIT: 999999,
 
   // Supported currencies
   CURRENCIES: [
