@@ -226,7 +226,7 @@
                 if (ws.name !== 'My Kitchen') return false;
                 if (ws.concept || ws.role || ws.city) return false;
                 if (ws.archived) return false;
-                const wsTables = ['recipes','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','stockCountHistory','haccpLogs','haccpUnits','haccpReadings'];
+                const wsTables = ['recipes','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','stockCountHistory','haccpLogs','haccpUnits','haccpReadings','haccpCookCool'];
                 for (let i = 0; i < wsTables.length; i++) {
                   const t = sourceState && sourceState[wsTables[i]];
                   if (t && t[ws.id] && Object.keys(t[ws.id]).length > 0) return false;
@@ -311,7 +311,7 @@
               });
 
               // Also clean up workspace-bound tables for tombstoned workspaces
-              ['recipes','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','pendingStockCount','stockCountHistory','haccpLogs','haccpUnits','haccpReadings'].forEach(function (tbl) {
+              ['recipes','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','pendingStockCount','stockCountHistory','haccpLogs','haccpUnits','haccpReadings','haccpCookCool'].forEach(function (tbl) {
                 if (merged[tbl]) {
                   Object.keys(tombstones).forEach(function (deadWsId) {
                     if (merged[tbl][deadWsId]) {

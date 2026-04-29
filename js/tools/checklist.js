@@ -75,7 +75,152 @@
   function catLabel(c) { return c ? PCD.i18n.t(c.labelKey) : ''; }
   function prioLabel(p) { return p ? PCD.i18n.t(p.labelKey) : ''; }
 
-  const DEFAULT_TEMPLATES = [
+  // Default templates seeded for new accounts.
+  // Built at call time so the chef's current language is used.
+  // Mevcut hesaplarda zaten template'ler kayıtlı; bu yalnızca tablo boşken,
+  // hiç template oluşmamış yeni kullanıcılar için seed olarak çalışır.
+  function getDefaultTemplates() {
+    const lang = (PCD.i18n && PCD.i18n.currentLocale) || 'en';
+    if (lang === 'tr') {
+      return [
+        {
+          name: 'Açılış Hazırlığı',
+          icon: 'clock',
+          items: [
+            { text: 'Buzdolabı ve dondurucu sıcaklıklarını kontrol et (2–4°C / -18°C)', cat: 'admin', prio: 'high', type: 'task' },
+            { text: 'Sabah teslimatlarını al ve kontrol et — ağırlık ve tarihleri doğrula', cat: 'admin', prio: 'high', type: 'task' },
+            { text: 'Bugünkü rezervasyonları ve covers sayısını gözden geçir', cat: 'admin', prio: 'high', type: 'task' },
+            { text: 'Mutfak ekibini brifle — özel menü, biten ürünler, alerjen uyarıları', cat: 'admin', prio: 'high', type: 'task' },
+            { text: 'Tüm istasyonları kur — mise en place kontrolü', cat: 'prep', prio: 'high', type: 'task' },
+            { text: 'Stok, sos ve baz hazırlıklarını yap', cat: 'cooking', prio: 'med', type: 'task' },
+            { text: 'Servisi için protein porsiyonla', cat: 'prep', prio: 'high', type: 'task' },
+            { text: 'Sebze garnitür ve yan ürünlerini hazırla', cat: 'prep', prio: 'med', type: 'task' },
+            { text: 'Tüm hazırlık kaplarını etiketle ve tarih at', cat: 'prep', prio: 'med', type: 'task' },
+            { text: 'Önceki vardiyadan kalan temizlik programlarını kontrol et', cat: 'cleaning', prio: 'med', type: 'task' },
+            { text: 'Tüm çorba, sos ve özel yemeklerin tat kontrolünü yap', cat: 'cooking', prio: 'high', type: 'task' },
+            { text: 'Sanitizer kovalarını doldur (200ppm)', cat: 'cleaning', prio: 'high', type: 'task' },
+          ]
+        },
+        {
+          name: 'Kapanış ve Servis Sonu',
+          icon: 'check-square',
+          items: [
+            { text: 'Tüm sıcak yemekleri 90 dk içinde 8°C altına soğut', cat: 'cooking', prio: 'high', type: 'task' },
+            { text: 'Tüm soğukta saklanacak artıkları etiketle, sar ve tarih at', cat: 'prep', prio: 'high', type: 'task' },
+            { text: 'Son kullanma tarihi geçen her şeyi at', cat: 'admin', prio: 'high', type: 'task' },
+            { text: 'Tüm pişirme yüzeylerini ve ekipmanı derin temizle', cat: 'cleaning', prio: 'high', type: 'task' },
+            { text: 'Tüm hazırlık tahtalarını ve bıçakları temizle ve sanitize et', cat: 'cleaning', prio: 'high', type: 'task' },
+            { text: 'Fritözleri ve ızgaraları yağdan arındır ve temizle', cat: 'cleaning', prio: 'high', type: 'task' },
+            { text: 'Mutfak zeminini paspasla', cat: 'cleaning', prio: 'med', type: 'task' },
+            { text: 'Çöp kovalarını boşalt ve poşetleri değiştir', cat: 'cleaning', prio: 'med', type: 'task' },
+            { text: 'Sabah servisi için buzdolaplarını kontrol et ve doldur', cat: 'prep', prio: 'med', type: 'task' },
+            { text: 'Günlük atık kaydını güncelle', cat: 'admin', prio: 'med', type: 'task' },
+            { text: 'Sonraki vardiya için notlar yaz — eksiklikler, sorunlar', cat: 'admin', prio: 'med', type: 'task' },
+            { text: 'Kapıyı kilitle ve alarmları kur', cat: 'admin', prio: 'high', type: 'task' },
+          ]
+        },
+        {
+          name: 'Günlük Sıcaklık Kaydı',
+          icon: 'thermometer',
+          items: [
+            { text: 'Walk-in cooler', cat: 'admin', prio: 'high', type: 'temperature', min: 1, max: 4, unit: '°C' },
+            { text: 'Walk-in dondurucu', cat: 'admin', prio: 'high', type: 'temperature', min: -22, max: -18, unit: '°C' },
+            { text: 'Reach-in soğutucu 1', cat: 'admin', prio: 'high', type: 'temperature', min: 1, max: 4, unit: '°C' },
+            { text: 'Reach-in soğutucu 2', cat: 'admin', prio: 'high', type: 'temperature', min: 1, max: 4, unit: '°C' },
+            { text: 'Vitrin buzdolabı', cat: 'admin', prio: 'high', type: 'temperature', min: 1, max: 4, unit: '°C' },
+            { text: 'Sıcak tutma (bain-marie)', cat: 'cooking', prio: 'high', type: 'temperature', min: 63, max: 90, unit: '°C' },
+            { text: 'Bulaşık makinesi durulama', cat: 'cleaning', prio: 'med', type: 'temperature', min: 82, max: 95, unit: '°C' },
+            { text: 'Denetçi imzası', cat: 'admin', prio: 'high', type: 'text' },
+          ]
+        },
+        {
+          name: 'Mal Kabul Kontrolü',
+          icon: 'truck',
+          items: [
+            { text: 'Tedarikçi adı', cat: 'admin', prio: 'high', type: 'text' },
+            { text: 'Fatura / irsaliye numarası', cat: 'admin', prio: 'high', type: 'text' },
+            { text: 'Araç temiz ve iyi durumda', cat: 'admin', prio: 'high', type: 'pass-fail' },
+            { text: 'Şoför temiz üniformada', cat: 'admin', prio: 'low', type: 'pass-fail' },
+            { text: 'Soğuk ürünler sıcaklığı (≤5°C)', cat: 'admin', prio: 'high', type: 'temperature', min: 0, max: 5, unit: '°C' },
+            { text: 'Donmuş ürünler sıcaklığı (≤-15°C)', cat: 'admin', prio: 'high', type: 'temperature', min: -25, max: -15, unit: '°C' },
+            { text: 'Ambalaj sağlam (hasarsız, sızıntısız)', cat: 'admin', prio: 'high', type: 'pass-fail' },
+            { text: 'Son kullanma / tavsiye edilen tüketim tarihleri uygun', cat: 'admin', prio: 'high', type: 'pass-fail' },
+            { text: 'Miktarlar fatura ile eşleşiyor', cat: 'admin', prio: 'high', type: 'pass-fail' },
+            { text: 'Kalite / görünüm uygun', cat: 'admin', prio: 'high', type: 'pass-fail' },
+            { text: 'Mallar 30 dk içinde depolandı', cat: 'admin', prio: 'high', type: 'task' },
+          ]
+        },
+        {
+          name: 'Walk-in Cooler Günlük Kontrol',
+          icon: 'snowflake',
+          items: [
+            { text: 'Hava sıcaklığı (hedef ≤4°C)', cat: 'admin', prio: 'high', type: 'temperature', min: 0, max: 4, unit: '°C' },
+            { text: 'Kapı contaları sağlam (boşluk yok)', cat: 'admin', prio: 'high', type: 'pass-fail' },
+            { text: 'Zemin temiz ve kuru', cat: 'cleaning', prio: 'high', type: 'pass-fail' },
+            { text: 'Raflar düzenli (çiğ altta, RTE üstte)', cat: 'admin', prio: 'high', type: 'pass-fail' },
+            { text: 'Tüm yiyecekler tarih etiketli', cat: 'admin', prio: 'high', type: 'pass-fail' },
+            { text: 'FIFO rotasyonu uygulandı', cat: 'admin', prio: 'high', type: 'pass-fail' },
+            { text: 'Süresi geçmiş ürün yok', cat: 'admin', prio: 'high', type: 'pass-fail' },
+            { text: 'Aydınlatma çalışıyor', cat: 'admin', prio: 'low', type: 'pass-fail' },
+            { text: 'Birikmiş su / sızıntı yok', cat: 'admin', prio: 'high', type: 'pass-fail' },
+            { text: 'Haşere izi (görülmedi)', cat: 'admin', prio: 'high', type: 'pass-fail' },
+          ]
+        },
+        {
+          name: 'HACCP Günlük Denetim',
+          icon: 'check-square',
+          items: [
+            { text: 'Tüm personel temiz üniforma / önlük giyiyor', cat: 'admin', prio: 'high', type: 'pass-fail' },
+            { text: 'El yıkama istasyonları dolu (sabun, havlu, su)', cat: 'admin', prio: 'high', type: 'pass-fail' },
+            { text: 'Renk kodlu kesme tahtaları doğru kullanılıyor', cat: 'prep', prio: 'high', type: 'pass-fail' },
+            { text: 'Çiğ ve hazır yenebilir ürünler ayrılmış', cat: 'prep', prio: 'high', type: 'pass-fail' },
+            { text: 'Pişirme sıcaklıkları doğrulandı (prob ile)', cat: 'cooking', prio: 'high', type: 'pass-fail' },
+            { text: 'Sıcak yemek 63°C üzerinde tutuluyor', cat: 'cooking', prio: 'high', type: 'pass-fail' },
+            { text: 'Soğuk yemek 5°C altında tutuluyor', cat: 'admin', prio: 'high', type: 'pass-fail' },
+            { text: 'Sanitizer konsantrasyonu ≥200ppm', cat: 'cleaning', prio: 'high', type: 'numeric', min: 200, max: 400, unit: 'ppm' },
+            { text: 'Alerjen prosedürlerine uyuldu (çapraz bulaşma yok)', cat: 'admin', prio: 'high', type: 'pass-fail' },
+            { text: 'Personel hastalığı bildirilmedi', cat: 'admin', prio: 'high', type: 'pass-fail' },
+          ]
+        },
+        {
+          name: 'Haftalık Derin Temizlik',
+          icon: 'recycle',
+          items: [
+            { text: 'Davlumbaz filtrelerini yağdan arındır — sıcak su solüsyonunda beklet', cat: 'cleaning', prio: 'high', type: 'task' },
+            { text: 'Fırın içlerini temizle — rafları çıkart, yağı al', cat: 'cleaning', prio: 'high', type: 'task' },
+            { text: 'Buharlı pişiriciler ve combi fırınlardan kireç temizle', cat: 'cleaning', prio: 'high', type: 'task' },
+            { text: 'Walk-in soğutucuyu temizle — raflar, duvarlar, kapı contaları', cat: 'cleaning', prio: 'high', type: 'task' },
+            { text: 'Sandık dondurucuların buzunu çöz ve temizle', cat: 'cleaning', prio: 'med', type: 'task' },
+            { text: 'Tüm ekipmanın arkasını ve altını temizle', cat: 'cleaning', prio: 'med', type: 'task' },
+            { text: 'Tüm saklama kapları ve kapakları sanitize et', cat: 'cleaning', prio: 'med', type: 'task' },
+            { text: 'Zemin tahliyelerini kontrol et ve temizle', cat: 'cleaning', prio: 'med', type: 'task' },
+            { text: 'İlk yardım kitini kontrol et ve doldur', cat: 'admin', prio: 'high', type: 'task' },
+            { text: 'Yangın söndürme sistemini test et', cat: 'admin', prio: 'high', type: 'task' },
+          ]
+        },
+        {
+          name: 'Banket / Etkinlik Hazırlığı',
+          icon: 'calendar',
+          items: [
+            { text: 'F&B müdürü ile son misafir sayısını teyit et', cat: 'admin', prio: 'high', type: 'numeric', unit: 'misafir' },
+            { text: 'Tüm misafirler için alerjen listesini doğrula — mutfağa ilet', cat: 'admin', prio: 'high', type: 'task' },
+            { text: 'Tüm tarifleri etkinlik sayısına ölçeklendir ve yazdır', cat: 'prep', prio: 'high', type: 'task' },
+            { text: 'Servis başlamadan 2 saat önce mise en place tamamla', cat: 'prep', prio: 'high', type: 'task' },
+            { text: 'Mezeleri ve soğuk başlangıçları önceden porsiyonla', cat: 'prep', prio: 'high', type: 'task' },
+            { text: 'Servis istasyonlarını kur — tabaklar, garnitürler, sos şişeleri', cat: 'service', prio: 'high', type: 'task' },
+            { text: 'Tüm mutfak ekibini sıralama ve zamanlama hakkında brifle', cat: 'admin', prio: 'high', type: 'task' },
+            { text: 'Sıcak tutma sıcaklıklarını teyit et', cat: 'cooking', prio: 'high', type: 'temperature', min: 63, max: 90, unit: '°C' },
+            { text: 'Pass alanını kur — sıcak lambalar, expo istasyonu', cat: 'service', prio: 'med', type: 'task' },
+            { text: 'Alerjen tabaklarını ayır — ayrı garnitür alanı', cat: 'service', prio: 'high', type: 'task' },
+          ]
+        },
+      ];
+    }
+    // Default: English (also fallback for ES/FR/DE/AR)
+    return DEFAULT_TEMPLATES_EN;
+  }
+
+  const DEFAULT_TEMPLATES_EN = [
     {
       name: 'Opening Prep',
       icon: 'clock',
@@ -384,7 +529,7 @@
   function listTemplates() {
     let tpls = PCD.store.listTable('checklistTemplates');
     if (tpls.length === 0) {
-      DEFAULT_TEMPLATES.forEach(function (def, idx) {
+      getDefaultTemplates().forEach(function (def, idx) {
         PCD.store.upsertInTable('checklistTemplates', {
           name: def.name,
           icon: def.icon,

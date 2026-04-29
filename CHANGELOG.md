@@ -1,3 +1,69 @@
+# v2.6.21 — HACCP Cook & Cool Log + Türkçe default checklist'ler
+
+## Talep
+
+1. **HACCP Cook & Cool Log** — pişirme bitiş + soğutma süreci takibi (FDA Food Code 2017 standartlarına göre: 60°C → 21°C 2 saat → 5°C 6 saat).
+2. **Default checklist'ler Türkçe versiyonu** — yeni Türk kullanıcıların ilk açılışta İngilizce template görmesini önlemek.
+3. **Demo recipe fotoları kontrol** — büyük dosya tüketmiyor mu?
+
+## 1) HACCP Cook & Cool Log (yeni araç)
+
+Yeni HACCP Forms aracı, `js/tools/haccp_cooling.js`. Mevcut Fridge & Freezer Log ile aynı mantık ama farklı veri yapısı: **event-based** (her parti = 1 kayıt), takvim ızgarası yok.
+
+**Kullanıcı akışı:**
+1. Şef yemek pişirmeyi bitirir → "Yeni pişirme" → yemek adı + miktar + bitiş sıcaklığı gir → soğutma başlar
+2. Sayfanın üstünde "Aktif soğutma" widget'ı: o anda devam eden tüm event'ler
+3. Şef ara kontrolde sıcaklık girer ("+1h, +2h..."), 2 saatte 21°C altına düşmediyse uyarı
+4. 6 saat içinde "Tamamla (son)" → final sıcaklık + status (Geçti / Başarısız)
+5. Geçmiş kayıtlar listede, en yeni üstte
+6. Print: tarih aralığı seç → çok sayfalı A4 yatay PDF (her kayıt = 1 satır)
+
+**HACCP gates (FDA Food Code 2017):**
+- Cook end ≥ 60°C (135°F) — dokümante edilir
+- 2 saat içinde ≤ 21°C (70°F) — kritik geçit
+- 6 saat içinde ≤ 5°C (41°F) — son hedef
+
+Out-of-range değerler kırmızı, corrective action note alanı isteğe bağlı.
+
+**Veri tablosu:** `haccpCookCool` (workspace-bound). Store + cloud sync listelerine eklendi.
+
+**Print formatı:** A4 yatay, font 9px, table-layout. Sütunlar: Tarih · Yemek · Miktar · Pişirme bitiş · +1h · +2h · +3h · +4h · Son · Toplam saat · Düzeltici eylem · Şef. 25-30 kayıt/sayfa sığar.
+
+## 2) Default checklist'ler Türkçe
+
+`DEFAULT_TEMPLATES` sabit array'i `getDefaultTemplates()` fonksiyonu ile değiştirildi. Aktif dile göre Türkçe veya İngilizce varsayılan template seti döner.
+
+8 template tamamen Türkçe çevirildi:
+- Açılış Hazırlığı (12 öğe)
+- Kapanış ve Servis Sonu (12 öğe)
+- Günlük Sıcaklık Kaydı (8 öğe)
+- Mal Kabul Kontrolü (11 öğe)
+- Walk-in Cooler Günlük Kontrol (10 öğe)
+- HACCP Günlük Denetim (10 öğe)
+- Haftalık Derin Temizlik (10 öğe)
+- Banket / Etkinlik Hazırlığı (10 öğe)
+
+Sadece **yeni hesaplara** etki eder (mevcut hesaplarda zaten template'ler kayıtlı).
+
+## 3) Demo recipe fotoları
+
+**Sorun yok.** Demo fotolar Unsplash CDN'den geliyor (`https://images.unsplash.com/...?w=1200&q=80`). Senin Supabase Storage'ında veya database'de saklanmıyor → maliyet sıfır, alan kaplamıyor.
+
+Kullanıcı demo recipe'i edit'leyip kendi fotosunu yüklerse o foto v2.5.9 değişikliği sayesinde sıkıştırılarak Storage'a gider (~150 KB).
+
+## Test
+
+**Cook & Cool Log:**
+1. HACCP Forms → "Pişirme & Soğutma" yeni aracı (TR'de)
+2. "Yeni pişirme" → "Tavuk göğsü" + "3" + "kg" + "65" → "Soğutmayı başlat"
+3. Geri dön → üstte aktif soğutma kartı görünmeli
+4. Karta tıkla → sıcaklık gir (örn. 22°C) → "Kontrol noktasını kaydet"
+5. Birkaç checkpoint ekle → son "Tamamla (son)" → status: Geçti veya Başarısız
+6. Listeden başka bir kayıt → tarih aralığı seç → Print → A4 yatay PDF
+7. Senin mevcut hesabında zaten checklist'lerin var, varsayılan Türkçe template seed test edilemiyor (yeni hesap gerekli)
+
+---
+
 # v2.6.20 — Son tarama: kalan eksiklerin Türkçeleştirilmesi
 
 ## Talep
