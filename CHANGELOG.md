@@ -1,4 +1,199 @@
-# v2.6.63 — Error monitoring (production hata izleme)
+# v2.6.64 — i18n eksikleri + Storage temizlik aracı + Account deletion düzeltmesi (KAPSAMLI)
+
+Bu paket kullanıcının fark ettiği 7 farklı sorunu kapsıyor.
+
+## 1. Free Plan chip artık gizli
+
+Account sayfasında her zaman "Free Plan" chip'i görünüyordu. Sidenav'da v2.6.43'te gizlenmişti ama account başlık kartında atlanmıştı. Artık sadece `plan === 'pro'` veya `'team'` ise görünür (premium gelene kadar tüm kullanıcılarda gizli).
+
+## 2. Tarih/saat artık locale-aware
+
+Dashboard "Sat 2 May" gibi İngilizce tarih gösteriyordu çünkü `toLocaleDateString(undefined, ...)` browser default'unu kullanıyordu, PCD locale'ini değil.
+
+15 yer düzeltildi (`inventory.js`, `checklist.js`, `suppliers.js`, `events.js`, `dashboard.js`):
+
+```js
+// Önce
+date.toLocaleDateString(undefined, { weekday: 'long', ... })
+
+// Sonra
+date.toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || 'en', { weekday: 'long', ... })
+```
+
+Türkçe seçili olunca artık "Cumartesi 2 Mayıs" gibi yazıyor.
+
+## 3. Inventory hardcoded English (3 string)
+
+- "Save All Counts" butonu → `t('inv_save_all_counts')` ("Tüm Sayımları Kaydet")
+- "Save Chef A count" / "Save Chef B count" → çift sayım modu için
+- "No stock counts yet" boş durum başlığı → çevrildi
+- 'Each "Save All Counts" creates a dated snapshot...' açıklama → çevrildi
+- "Most recent first. Each entry is a snapshot..." stok geçmişi intro → çevrildi
+
+## 4. Workspace silme modal'ı tamamen Türkçeleşti
+
+Önce:
+> "6 recipes · 2 menus · 1 event · 5 suppliers will be permanently deleted. Ingredients library is shared and will not be touched. This action CANNOT BE UNDONE."
+> [Cancel]
+
+Sonra:
+> "6 tarif · 2 menü · 1 etkinlik · 5 tedarikçi kalıcı olarak silinecek. Malzeme kütüphanesi paylaşımlıdır ve etkilenmez. Bu işlem GERİ ALINAMAZ."
+> [İptal]
+
+Pluralization (recipe/recipes) kaldırıldı — Türkçe tek formla çalışıyor (`tarif` hem tekil hem çoğul).
+
+## 5. YENİ: Storage Tools paneli (Account → Depolama Araçları)
+
+Foto silme bug'larını **kullanıcı self-service çözebilsin** diye yeni bir araç:
+
+**Açılışta:**
+- Supabase Storage'daki `recipe-photos/{userId}/` klasörünü tarar
+- State'teki tüm tarif foto URL'lerini (aktif + soft-deleted) toplar
+- **Orphan'ları** (Storage'da var ama hiçbir tarif kullanmıyor) tespit eder
+
+**Gösterir:**
+```
+┌─────────────────┬─────────────────┐
+│ Toplam dosya: 24│ Yetimler: 11    │
+│ 2.3 MB          │ 1.1 MB          │
+└─────────────────┴─────────────────┘
+
+Bu dosyalar hiçbir tarif tarafından kullanılmıyor:
+• 1777558798738-jpe1by.webp     47.6 KB
+• 1777559047652-e9tlf2.webp     78.5 KB
+...
+
+[İptal]  [🗑️ 11 yetimi sil]
+```
+
+**Silme sonrası:**
+- Başarılı/başarısız sayımı gösterir
+- **Hatalar tek tek listelenir** (debug için kritik) — örn. "RLS policy violation", "file not found", vs.
+- Başarısız olanlar için neden Supabase Storage RLS'inde sorun olduğu net görünür
+
+Bu araç hem **temizlik aracı**, hem **debug aracı**. Kullanıcının bildirdiği "foto silinmiyor" sorununu bu pencereyle kendisi görüp temizleyebilir.
+
+## 6. `deletePhotoByUrl` artık detaylı hata döndürüyor
+
+Önce `Promise<boolean>` (true/false) dönüyordu — neden başarısız olduğu sessizce kayboluyordu.
+
+Şimdi `Promise<{ ok, key, reason }>` dönüyor:
+
+```js
+{ ok: false, reason: 'foreign-key', key: 'xyz/abc.webp' }
+{ ok: false, reason: 'rls-or-network: new row violates row-level security policy', key: '...' }
+{ ok: false, reason: 'file-not-found', key: '...' }
+{ ok: false, reason: 'no-supabase-client', key: null }
+```
+
+Storage Audit modal'ı bu reason'ları kullanıcıya gösteriyor.
+
+## 7. Account deletion — Edge Function ile auth.users silme (BÜYÜK FİX)
+
+### Sorun
+
+v2.6.60'ta hesap silme akışı vardı ama:
+- `auth.users` row'u silinemiyordu (anon key yetkisi yok)
+- Foto temizliği bazen başarısız oluyordu (sessiz fail)
+- Kullanıcı "hesap silindi" toast'u görüp Supabase Dashboard'a bakınca hala duruyordu
+
+### Çözüm
+
+#### Yeni: Supabase Edge Function
+
+Repo'ya eklendi: `supabase-functions/delete-account/index.ts`
+
+Bu serverless fonksiyon `service_role` key ile şunları yapar (anon ile imkansız):
+1. `recipe-photos/{userId}/` altındaki TÜM dosyaları siler
+2. `public_shares` row'larını siler (owner_id = userId)
+3. `user_data` row'larını siler
+4. **`auth.users` row'unu siler** (asıl kritik adım)
+
+JWT doğrulamasıyla güvenli — kullanıcı sadece kendi hesabını silebilir.
+
+#### Deploy adımları
+
+Edge Function'ı deploy etmek için (CLI ile):
+```bash
+brew install supabase/tap/supabase
+cd /your/project
+supabase login
+supabase link --project-ref <project-ref>
+mkdir -p supabase/functions/delete-account
+cp /path/to/v2.6.64/supabase-functions/delete-account/index.ts supabase/functions/delete-account/
+supabase functions deploy delete-account
+```
+
+#### Fallback davranışı
+
+Edge Function deploy edilmemişse veya çağrı fail olursa **fallback path** çalışır:
+- Foto/share/user_data **anon ile** silmeye çalışır
+- `auth.users` row'u kalır
+- Kullanıcıya **net mesaj** gösterilir:
+  > "Yerel veriler silindi ancak hesap girişiniz kaldırılamadı (Edge Function yayında değil). Tam silme için destek ile iletişime geçin."
+
+Önce kullanıcı "hesap silindi" yanıltıcı mesajı alıyordu — şimdi durumu net biliyor.
+
+#### Yeni i18n key
+
+`delete_account_auth_remains` — fallback durumunda gösterilen mesaj.
+
+## Kullanıcı için deploy adımları (sırayla)
+
+⚠️ **Bu paket için gereken Supabase işlemleri:**
+
+1. **Edge Function deploy** (opsiyonel, ama hesap silme tam çalışsın için ZORUNLU):
+   - Supabase CLI kur (`brew install supabase/tap/supabase`)
+   - `supabase login`
+   - `supabase link --project-ref <senin-project-ref>`
+   - `supabase/functions/delete-account/` klasörü oluştur, ZIP'teki `supabase-functions/delete-account/index.ts` dosyasını içine kopyala
+   - `supabase functions deploy delete-account`
+
+   Bunu yapmazsan: hesap silme yine çalışır ama auth.users row'u kalır (kullanıcı net mesaj alır).
+
+2. **Kod push**: GitHub Desktop ile v2.6.64 push.
+
+## Test (push sonrası)
+
+### Free Plan chip
+- Account sayfasını aç → kullanıcı bilgilerinin altında "Free Plan" chip'i **görünmemeli**
+
+### Tarih/saat lokali
+- Dilini TR yap → Dashboard'da event olduğunda "Cmt 2 May" gibi Türkçe gösterim
+- EN'e geri al → "Sat 2 May"
+
+### Inventory
+- TR'de Inventory → bir item için par/min set et → Bulk Count → "Tüm Sayımları Kaydet" butonu (önce "Save All Counts")
+- Sayım kaydet → Stok geçmişi → "En yenisi üstte..." Türkçe (önce "Most recent first")
+
+### Workspace silme
+- TR'de bir workspace'i sil → modal Türkçe (önce "will be permanently deleted")
+
+### Storage Tools (YENİ)
+- Account → Depolama Araçları → Fotoğraf deposu temizliği
+- Modal açılır, taramayı bekle
+- Eğer orphan'ların varsa (zaten birikmiş olmalı): liste gösterir
+- "X yetimi sil" → onay → silme
+- Sonuç: "Temizleme tamamlandı: 11 silindi, 0 başarısız"
+- Eğer hata olursa: hangi RLS politikası vs. sebep gösterir → buradan asıl bug'ı bulabiliriz
+
+### Account deletion
+- Test hesabı oluştur (gerçek hesabı KULLANMA!)
+- Account → Tehlikeli Bölge → Hesabı sil
+- Edge Function deploy edildiyse: tam silme
+- Edge Function deploy edilmediyse: yerel veri silinir, kullanıcıya net mesaj
+
+## Risk
+
+Orta. Çok dosya değişti (account.js, app.js, dashboard.js, inventory.js, checklist.js, suppliers.js, events.js, photo-storage.js, en.js, tr.js).
+
+- i18n değişiklikleri: sıfır risk
+- Photo storage Promise signature değişti (boolean → object) — caller'lar (store.js) `.ok` field'ını kullanmıyor, sadece "deleted" log'u yazıyor → backward compatible
+- Edge Function: yeni ekleme, mevcut akışı bozmuyor; deploy edilmezse fallback eski davranışa döner
+
+---
+
+
 
 ## Sorun
 

@@ -96,7 +96,10 @@
     const greet = hour < 12 ? t('dash_good_morning') : (hour < 18 ? t('dash_good_afternoon') : t('dash_good_evening'));
     const firstName = (user && user.name) ? user.name.split(' ')[0] : '';
     const headline = greet + (firstName ? ', ' + PCD.escapeHtml(firstName) : '');
-    const todayStr = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+    // v2.6.64 — Use PCD locale instead of undefined (which uses browser default)
+    // so date strings respect the user's selected language.
+    const _locale = (PCD.i18n && PCD.i18n.currentLocale) || 'en';
+    const todayStr = new Date().toLocaleDateString(_locale, { weekday: 'long', month: 'long', day: 'numeric' });
 
     // === Cards data ===
     // 1) Pending stock count approval
@@ -182,7 +185,7 @@
     if (nextEvent) {
       const evDate = new Date(nextEvent.date);
       const isToday = nextEvent.date === todayIso;
-      const dayLabel = isToday ? t('dash_today') : (nextEvent.date === new Date(today.getTime() + 86400000).toISOString().slice(0, 10) ? t('dash_tomorrow') : evDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }));
+      const dayLabel = isToday ? t('dash_today') : (nextEvent.date === new Date(today.getTime() + 86400000).toISOString().slice(0, 10) ? t('dash_tomorrow') : evDate.toLocaleDateString(_locale, { weekday: 'short', month: 'short', day: 'numeric' }));
       const guestStr = nextEvent.guestCount ? t('dash_guests_suffix', { n: nextEvent.guestCount }) : '';
       const venueStr = nextEvent.venue ? t('dash_venue_suffix', { venue: PCD.escapeHtml(nextEvent.venue) }) : '';
       cards.push({

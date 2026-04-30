@@ -146,32 +146,40 @@
   // or URLs that no longer exist all resolve to false silently. RLS will
   // reject deletions for files outside the caller's user folder, which
   // is the intended behaviour (defence in depth).
-  // Returns Promise<boolean>: true if the blob was successfully removed.
+  // v2.6.64 — Returns Promise<{ ok, key, reason }> instead of boolean,
+  // so callers can surface a useful debug message when deletion fails.
   function deletePhotoByUrl(url) {
     return new Promise(function (resolve) {
       const key = urlToStorageKey(url);
-      if (!key) return resolve(false);
+      if (!key) return resolve({ ok: false, reason: 'not-a-storage-url', key: null });
       const supabase = window._supabaseClient;
-      if (!supabase) return resolve(false);
+      if (!supabase) return resolve({ ok: false, reason: 'no-supabase-client', key: key });
       const user = PCD.store && PCD.store.get('user');
-      if (!user || !user.id) return resolve(false);
+      if (!user || !user.id) return resolve({ ok: false, reason: 'not-signed-in', key: key });
       // Defence in depth: only attempt deletion if the key starts with
       // this user's ID. RLS policy enforces this server-side, but we
       // skip the round-trip when we already know it would fail.
       if (key.indexOf(user.id + '/') !== 0) {
         PCD.log && PCD.log('photo-storage: skip foreign key', key);
-        return resolve(false);
+        return resolve({ ok: false, reason: 'foreign-key', key: key });
       }
       supabase.storage.from(BUCKET).remove([key]).then(function (res) {
         if (res.error) {
           PCD.warn && PCD.warn('photo-storage: delete failed', res.error.message || res.error);
-          return resolve(false);
+          return resolve({ ok: false, reason: 'rls-or-network: ' + (res.error.message || 'unknown'), key: key });
+        }
+        // v2.6.64 — Supabase storage.remove() can return data: [] (empty
+        // array) when the file path doesn't match. Treat that as failure
+        // so we can surface "file not found in bucket" diagnostics.
+        if (Array.isArray(res.data) && res.data.length === 0) {
+          PCD.warn && PCD.warn('photo-storage: file not found in bucket', key);
+          return resolve({ ok: false, reason: 'file-not-found', key: key });
         }
         PCD.log && PCD.log('photo-storage: deleted', key);
-        resolve(true);
+        resolve({ ok: true, reason: 'deleted', key: key });
       }).catch(function (e) {
         PCD.warn && PCD.warn('photo-storage: delete exception', e);
-        resolve(false);
+        resolve({ ok: false, reason: 'exception: ' + (e.message || e), key: key });
       });
     });
   }

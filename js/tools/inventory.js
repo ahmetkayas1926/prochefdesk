@@ -462,17 +462,17 @@
         body.innerHTML =
           '<div class="empty" style="padding:30px 16px;">' +
             '<div class="empty-icon" style="color:var(--brand-600);">' + PCD.icon('clock', 40) + '</div>' +
-            '<div class="empty-title">No stock counts yet</div>' +
-            '<div class="empty-desc">Each "Save All Counts" creates a dated snapshot. Open it later to see what was on hand on any given day.</div>' +
+            '<div class="empty-title">' + PCD.i18n.t('inv_count_history_empty_title') + '</div>' +
+            '<div class="empty-desc">' + PCD.i18n.t('inv_count_history_empty_desc') + '</div>' +
           '</div>';
         return;
       }
 
-      let html = '<div class="text-muted text-sm mb-2">Most recent first. Each entry is a snapshot of stock at that moment.</div>';
+      let html = '<div class="text-muted text-sm mb-2">' + PCD.i18n.t('inv_count_history_intro') + '</div>';
       list.forEach(function (snap) {
         const date = new Date(snap.countedAt);
-        const dateStr = date.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
-        const timeStr = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+        const dateStr = date.toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || "en", { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+        const timeStr = date.toLocaleTimeString((PCD.i18n && PCD.i18n.currentLocale) || "en", { hour: '2-digit', minute: '2-digit' });
         html += '<div class="card mb-2" data-snap="' + snap.id + '" style="padding:12px;cursor:pointer;">' +
           '<div style="display:flex;align-items:center;gap:10px;">' +
             '<div style="width:36px;height:36px;border-radius:6px;background:var(--brand-50);color:var(--brand-700);display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + PCD.icon('clock', 18) + '</div>' +
@@ -525,8 +525,8 @@
   function openSnapshotDetail(snap) {
     const t = PCD.i18n.t;
     const date = new Date(snap.countedAt);
-    const dateStr = date.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-    const timeStr = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    const dateStr = date.toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || "en", { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const timeStr = date.toLocaleTimeString((PCD.i18n && PCD.i18n.currentLocale) || "en", { hour: '2-digit', minute: '2-digit' });
 
     // Group by category
     const byCat = {};
@@ -574,7 +574,7 @@
 
   function printSnapshot(snap) {
     const date = new Date(snap.countedAt);
-    const dateStr = date.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const dateStr = date.toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || "en", { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     const timeStr = date.toLocaleTimeString();
 
     const byCat = {};
@@ -749,7 +749,7 @@
 
     const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('cancel') });
     const saveBtn = PCD.el('button', { class: 'btn btn-primary', style: { flex: '1' } });
-    const saveLabel = (mode === 'doubleA') ? 'Save Chef A count' : (mode === 'doubleB' ? 'Save Chef B count' : 'Save All Counts');
+    const saveLabel = (mode === 'doubleA') ? PCD.i18n.t('inv_save_chef_a') : (mode === 'doubleB' ? PCD.i18n.t('inv_save_chef_b') : PCD.i18n.t('inv_save_all_counts'));
     saveBtn.innerHTML = PCD.icon('check', 16) + ' <span>' + saveLabel + '</span>';
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
     footer.appendChild(cancelBtn);

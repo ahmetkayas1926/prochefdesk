@@ -642,23 +642,22 @@
         events: Object.keys(eventsInWs).length,
         suppliers: Object.keys(suppliersInWs).length,
       };
+      const T = PCD.i18n.t;
       const dataLines = [];
-      if (counts.recipes) dataLines.push(counts.recipes + ' recipe' + (counts.recipes === 1 ? '' : 's'));
-      if (counts.menus) dataLines.push(counts.menus + ' menu' + (counts.menus === 1 ? '' : 's'));
-      if (counts.events) dataLines.push(counts.events + ' event' + (counts.events === 1 ? '' : 's'));
-      if (counts.suppliers) dataLines.push(counts.suppliers + ' supplier' + (counts.suppliers === 1 ? '' : 's'));
+      if (counts.recipes) dataLines.push(counts.recipes + ' ' + T('ws_delete_summary_recipes'));
+      if (counts.menus) dataLines.push(counts.menus + ' ' + T('ws_delete_summary_menus'));
+      if (counts.events) dataLines.push(counts.events + ' ' + T('ws_delete_summary_events'));
+      if (counts.suppliers) dataLines.push(counts.suppliers + ' ' + T('ws_delete_summary_suppliers'));
       const dataSummary = dataLines.length > 0
-        ? dataLines.join(' · ') + ' will be permanently deleted'
-        : 'This workspace is empty — safe to delete';
+        ? T('ws_delete_summary_will_delete', { items: dataLines.join(' · ') })
+        : T('ws_delete_summary_empty');
 
       PCD.modal.confirm({
         icon: '⚠️', iconKind: 'danger', danger: true,
-        title: PCD.i18n.t('modal_delete_workspace_named', { name: existing.name }),
-        text: dataSummary +
-          '. Ingredients library is shared and will not be touched. ' +
-          'This action CANNOT BE UNDONE.',
-        okText: PCD.i18n.t('modal_yes_delete_named', { name: existing.name }),
-        cancelText: 'Cancel'
+        title: T('modal_delete_workspace_named', { name: existing.name }),
+        text: dataSummary + ' ' + T('ws_delete_summary_tail'),
+        okText: T('modal_yes_delete_named', { name: existing.name }),
+        cancelText: T('cancel')
       }).then(function (ok) {
         if (!ok) return;
         const success = PCD.store.deleteWorkspace(wsId);

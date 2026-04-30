@@ -413,7 +413,7 @@
     PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
     PCD.store.listRecipes().forEach(function (r) { recipeMap[r.id] = r; });
     const stats = computeStats(event, ingMap, recipeMap);
-    const dateStr = event.date ? new Date(event.date).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : '';
+    const dateStr = event.date ? new Date(event.date).toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || "en", { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : '';
 
     const lines = [];
     lines.push(event.name || 'Event');
@@ -452,7 +452,7 @@
     PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
     PCD.store.listRecipes().forEach(function (r) { recipeMap[r.id] = r; });
     const stats = computeStats(event, ingMap, recipeMap);
-    const dateStr = event.date ? new Date(event.date).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : '';
+    const dateStr = event.date ? new Date(event.date).toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || "en", { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : '';
 
     let menuRows = '';
     (event.menu || []).forEach(function (item) {

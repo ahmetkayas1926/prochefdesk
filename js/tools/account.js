@@ -37,7 +37,7 @@
               <div style="flex:1;min-width:0;">
                 <div style="font-weight:700;font-size:16px;">${PCD.escapeHtml(user.name || user.email)}</div>
                 <div class="text-muted text-sm" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${PCD.escapeHtml(user.email)}</div>
-                <div class="chip chip-${plan === 'pro' ? 'brand' : (plan === 'team' ? 'brand' : '')} mt-1">${t(plan + '_plan')}</div>
+                ${plan === 'pro' || plan === 'team' ? `<div class="chip chip-brand mt-1">${t(plan + '_plan')}</div>` : ''}
               </div>
               <button class="btn btn-outline btn-sm" id="signOutBtn">${t('sign_out')}</button>
             </div>
@@ -289,6 +289,22 @@
       </div>
 
       ${user ? `
+        <!-- STORAGE TOOLS (v2.6.64) — orphan photo audit + cleanup -->
+        <div class="section">
+          <div class="section-title" style="font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">${t('storage_tools_section_title')}</div>
+          <div class="card">
+            <div class="card-body" style="padding:0;">
+              <button class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;" id="storageAuditBtn">
+                <div>
+                  <div style="font-weight:600;">🧹 ${t('storage_audit_title')}</div>
+                  <div class="text-muted text-sm">${t('storage_audit_subtitle')}</div>
+                </div>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
         <!-- DANGER ZONE (v2.6.60) — Account deletion / GDPR -->
         <div class="section">
           <div class="section-title" style="font-size:13px;color:var(--danger);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">${t('danger_zone_title')}</div>
@@ -314,6 +330,10 @@
         </div>
       </div>
     `;
+
+    // v2.6.64 — Storage audit + manual orphan cleanup
+    const storageAuditBtn = PCD.$('#storageAuditBtn', view);
+    if (storageAuditBtn) storageAuditBtn.addEventListener('click', openStorageAuditModal);
 
     // v2.6.60 — Account deletion flow (GDPR-compliant)
     const deleteAccountBtn = PCD.$('#deleteAccountBtn', view);
@@ -721,6 +741,195 @@
   // Then signs out. The auth.users row itself stays (Supabase requires
   // admin SDK for that — we email the user how to delete the auth row,
   // or it's delete-on-cascade if the project is configured that way).
+  // v2.6.64 — Storage audit & cleanup. Lists actual files in the user's
+  // recipe-photos folder, compares against URLs referenced in current
+  // state (across ALL workspaces, including soft-deleted), and offers
+  // a one-click cleanup of orphans. Also surfaces deletion errors so
+  // the user can debug RLS / permission issues.
+  function openStorageAuditModal() {
+    const t = PCD.i18n.t;
+    const user = PCD.store.get('user') || {};
+    if (!user.id) {
+      PCD.toast.error(t('delete_account_signin_required'));
+      return;
+    }
+    const supabase = PCD.cloud && PCD.cloud.getClient && PCD.cloud.getClient();
+    if (!supabase) {
+      PCD.toast.error(t('storage_audit_no_cloud') || 'Cloud unavailable. Sign in or check connection.');
+      return;
+    }
+
+    const body = PCD.el('div');
+    body.innerHTML = '<div class="text-center" style="padding:40px;color:var(--text-3);">' +
+      '<div style="font-size:32px;margin-bottom:8px;">⏳</div>' +
+      '<div>' + PCD.escapeHtml(t('storage_audit_scanning')) + '</div>' +
+    '</div>';
+
+    const m = PCD.modal.open({
+      title: '🧹 ' + t('storage_audit_title'),
+      body: body,
+      size: 'md',
+      closable: true,
+    });
+
+    // Step 1: list all files in the user's folder
+    supabase.storage.from('recipe-photos')
+      .list(user.id + '/', { limit: 1000, sortBy: { column: 'created_at', order: 'desc' } })
+      .then(function (res) {
+        if (res.error) {
+          body.innerHTML =
+            '<div style="background:#fee2e2;color:#991b1b;padding:14px;border-radius:8px;font-size:13px;line-height:1.6;">' +
+              '⚠️ <strong>' + PCD.escapeHtml(t('storage_audit_list_failed')) + '</strong><br>' +
+              PCD.escapeHtml(res.error.message || String(res.error)) +
+            '</div>';
+          return;
+        }
+        const files = res.data || [];
+        renderAuditResult(files);
+      })
+      .catch(function (e) {
+        body.innerHTML =
+          '<div style="background:#fee2e2;color:#991b1b;padding:14px;border-radius:8px;">' +
+            '⚠️ ' + PCD.escapeHtml(t('storage_audit_list_failed')) + ': ' +
+            PCD.escapeHtml((e && e.message) || String(e)) +
+          '</div>';
+      });
+
+    function renderAuditResult(files) {
+      // Build set of URLs/keys referenced in current state (ALL workspaces, including soft-deleted)
+      const referencedKeys = new Set();
+      const allRecipes = PCD.store.get('recipes') || {};
+      Object.keys(allRecipes).forEach(function (wsId) {
+        const ws = allRecipes[wsId] || {};
+        Object.keys(ws).forEach(function (rid) {
+          const r = ws[rid];
+          if (r && r.photo && PCD.photoStorage && PCD.photoStorage.urlToStorageKey) {
+            const k = PCD.photoStorage.urlToStorageKey(r.photo);
+            if (k) referencedKeys.add(k);
+          }
+        });
+      });
+
+      // Identify orphans
+      const orphans = [];
+      const totalBytes = files.reduce(function (sum, f) { return sum + (f.metadata && f.metadata.size || 0); }, 0);
+      let orphanBytes = 0;
+      files.forEach(function (f) {
+        const fullKey = user.id + '/' + f.name;
+        if (!referencedKeys.has(fullKey)) {
+          orphans.push({ key: fullKey, name: f.name, size: f.metadata && f.metadata.size || 0 });
+          orphanBytes += (f.metadata && f.metadata.size) || 0;
+        }
+      });
+
+      function fmtBytes(n) {
+        if (n < 1024) return n + ' B';
+        if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+        return (n / (1024 * 1024)).toFixed(2) + ' MB';
+      }
+
+      // Build summary
+      let html =
+        '<div style="background:var(--surface-2);border-radius:8px;padding:14px;margin-bottom:14px;">' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">' +
+            '<div>' +
+              '<div class="text-muted text-sm">' + PCD.escapeHtml(t('storage_audit_total_files')) + '</div>' +
+              '<div style="font-size:22px;font-weight:700;">' + files.length + '</div>' +
+              '<div class="text-muted text-sm">' + fmtBytes(totalBytes) + '</div>' +
+            '</div>' +
+            '<div>' +
+              '<div class="text-muted text-sm">' + PCD.escapeHtml(t('storage_audit_orphans')) + '</div>' +
+              '<div style="font-size:22px;font-weight:700;color:' + (orphans.length > 0 ? 'var(--warning)' : 'var(--success)') + ';">' + orphans.length + '</div>' +
+              '<div class="text-muted text-sm">' + fmtBytes(orphanBytes) + '</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+
+      if (orphans.length === 0) {
+        html += '<div style="text-align:center;padding:20px;color:var(--success);">✓ ' +
+          PCD.escapeHtml(t('storage_audit_all_clean')) + '</div>';
+        body.innerHTML = html;
+        return;
+      }
+
+      // Show orphan list (max 50 to keep modal sane)
+      html += '<div class="text-muted text-sm mb-2">' + PCD.escapeHtml(t('storage_audit_orphan_intro')) + '</div>';
+      html += '<div style="max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px;font-family:monospace;font-size:11px;">';
+      const shownOrphans = orphans.slice(0, 50);
+      shownOrphans.forEach(function (o) {
+        html += '<div style="padding:4px 8px;border-bottom:1px solid var(--border-subtle);display:flex;justify-content:space-between;gap:8px;">' +
+          '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + PCD.escapeHtml(o.name) + '</span>' +
+          '<span class="text-muted" style="flex-shrink:0;">' + fmtBytes(o.size) + '</span>' +
+        '</div>';
+      });
+      if (orphans.length > 50) {
+        html += '<div class="text-muted" style="padding:8px;text-align:center;">+' + (orphans.length - 50) + ' more</div>';
+      }
+      html += '</div>';
+
+      html += '<div style="margin-top:14px;display:flex;gap:8px;">' +
+        '<button id="auditCancelBtn" class="btn btn-secondary" style="flex:1;">' + PCD.escapeHtml(t('cancel')) + '</button>' +
+        '<button id="auditCleanBtn" class="btn btn-danger" style="flex:1;">🗑️ ' + PCD.escapeHtml(t('storage_audit_clean_btn', { n: orphans.length })) + '</button>' +
+      '</div>';
+
+      body.innerHTML = html;
+
+      body.querySelector('#auditCancelBtn').addEventListener('click', function () { m.close(); });
+      body.querySelector('#auditCleanBtn').addEventListener('click', function () {
+        const cleanBtn = body.querySelector('#auditCleanBtn');
+        cleanBtn.disabled = true;
+        cleanBtn.innerHTML = '⏳ ' + PCD.escapeHtml(t('storage_audit_cleaning'));
+        runOrphanCleanup(orphans).then(function (result) {
+          // Show result with errors if any
+          let resultHtml =
+            '<div style="background:' + (result.failed === 0 ? '#dcfce7;color:#166534' : '#fee2e2;color:#991b1b') + ';padding:14px;border-radius:8px;margin-bottom:14px;font-size:13px;line-height:1.6;">' +
+              '<strong>' + (result.failed === 0 ? '✓ ' : '⚠️ ') +
+              PCD.escapeHtml(t('storage_audit_cleanup_result', { ok: result.deleted, fail: result.failed })) +
+              '</strong>' +
+            '</div>';
+          if (result.errors.length > 0) {
+            resultHtml += '<div class="text-sm" style="margin-bottom:8px;font-weight:600;">' +
+              PCD.escapeHtml(t('storage_audit_errors_label')) + '</div>' +
+              '<div style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px;font-family:monospace;font-size:11px;">';
+            result.errors.slice(0, 20).forEach(function (e) {
+              resultHtml += '<div style="padding:4px 0;border-bottom:1px solid var(--border-subtle);">' +
+                '<div>' + PCD.escapeHtml(e.key) + '</div>' +
+                '<div class="text-muted">' + PCD.escapeHtml(e.reason) + '</div>' +
+              '</div>';
+            });
+            resultHtml += '</div>';
+          }
+          resultHtml += '<button id="auditCloseBtn" class="btn btn-primary" style="width:100%;margin-top:14px;">' + PCD.escapeHtml(t('btn_close')) + '</button>';
+          body.innerHTML = resultHtml;
+          body.querySelector('#auditCloseBtn').addEventListener('click', function () { m.close(); });
+        });
+      });
+    }
+
+    function runOrphanCleanup(orphans) {
+      const results = { deleted: 0, failed: 0, errors: [] };
+      const promises = orphans.map(function (o) {
+        // Reconstruct a public URL so deleteByUrl can parse it
+        const pub = supabase.storage.from('recipe-photos').getPublicUrl(o.key);
+        const url = pub && pub.data && pub.data.publicUrl;
+        if (!url) {
+          results.failed++;
+          results.errors.push({ key: o.key, reason: 'cannot construct URL' });
+          return Promise.resolve();
+        }
+        return PCD.photoStorage.deleteByUrl(url).then(function (res) {
+          if (res && res.ok) {
+            results.deleted++;
+          } else {
+            results.failed++;
+            results.errors.push({ key: o.key, reason: (res && res.reason) || 'unknown' });
+          }
+        });
+      });
+      return Promise.all(promises).then(function () { return results; });
+    }
+  }
+
   function openDeleteAccountModal() {
     const t = PCD.i18n.t;
     const user = PCD.store.get('user') || {};
@@ -794,16 +1003,20 @@
         deleteBtn.innerHTML = '<span class="spinner"></span> ' + t('delete_account_in_progress');
         runAccountDeletion(user).then(function (result) {
           m.close();
-          if (result.allOk) {
+          if (result.allOk && result.authUserDeleted) {
             PCD.toast.success(t('delete_account_success'));
-          } else {
+          } else if (result.authUserDeleted) {
             PCD.toast.warning(t('delete_account_partial_success', { details: result.errors.join(', ') }));
+          } else {
+            // Auth user NOT deleted — most common when Edge Function not deployed.
+            // Tell the user clearly so they don't think it's done.
+            PCD.toast.warning(t('delete_account_auth_remains', { details: result.errors.join(', ') }));
           }
           // Sign out + reload (auth.signOut already calls clearUserData)
           setTimeout(function () {
             if (PCD.auth && PCD.auth.signOut) PCD.auth.signOut();
             else location.reload();
-          }, 1200);
+          }, 2500);
         }).catch(function (err) {
           deleteBtn.disabled = false;
           deleteBtn.innerHTML = t('delete_account_confirm_btn');
@@ -813,23 +1026,61 @@
     });
   }
 
-  // v2.6.60 — Run the actual deletion sequence. Best-effort:
-  // each step's failure is logged but doesn't block the next step.
-  // Returns Promise<{ allOk: boolean, errors: string[] }>.
+  // v2.6.60 (rewritten v2.6.64) — Run the actual deletion sequence.
+  // PRIMARY PATH: invoke the `delete-account` Edge Function which uses
+  // service_role to also delete the auth.users row (impossible from
+  // anon/authenticated client). This is the only path that delivers full
+  // GDPR right-to-erasure.
+  // FALLBACK PATH: if the Edge Function is unavailable (not deployed
+  // yet, or network issue), fall back to client-side cleanup of what
+  // anon CAN delete (photos, shares, user_data). The auth.users row
+  // stays, but at least the user's content is gone.
+  // Returns Promise<{ allOk, errors, authUserDeleted }>.
   function runAccountDeletion(user) {
-    return new Promise(function (resolve) {
-      const errors = [];
-      const supabase = PCD.cloud && PCD.cloud.getClient && PCD.cloud.getClient();
-      if (!supabase) {
-        // No cloud — just clear local state
-        if (PCD.store && PCD.store.clearUserData) PCD.store.clearUserData();
-        resolve({ allOk: true, errors: [] });
-        return;
+    const supabase = PCD.cloud && PCD.cloud.getClient && PCD.cloud.getClient();
+    if (!supabase) {
+      // No cloud — just clear local state
+      if (PCD.store && PCD.store.clearUserData) PCD.store.clearUserData();
+      return Promise.resolve({ allOk: true, errors: [], authUserDeleted: false });
+    }
+
+    return supabase.auth.getSession().then(function (sess) {
+      const token = sess && sess.data && sess.data.session && sess.data.session.access_token;
+      if (!token) {
+        // No JWT — fall back to client-only cleanup
+        return runFallbackDeletion(user, supabase, ['no JWT — auth user not deleted']);
       }
+      // Try Edge Function first
+      return supabase.functions.invoke('delete-account', {})
+        .then(function (res) {
+          if (res.error) {
+            // Edge Function not deployed or errored — fallback
+            return runFallbackDeletion(user, supabase, ['edge function failed: ' + (res.error.message || res.error) + ' — auth user not deleted, please contact support']);
+          }
+          const data = res.data || {};
+          // Edge function did the work — just clear local state
+          try { if (PCD.store && PCD.store.clearUserData) PCD.store.clearUserData(); } catch (e) {}
+          return {
+            allOk: !!data.authUserDeleted && (!data.errors || data.errors.length === 0),
+            errors: data.errors || [],
+            authUserDeleted: !!data.authUserDeleted,
+          };
+        })
+        .catch(function (e) {
+          return runFallbackDeletion(user, supabase, ['edge function exception: ' + (e && e.message || e)]);
+        });
+    });
+  }
+
+  // v2.6.64 — Client-side cleanup fallback used when the Edge Function
+  // is unavailable. Cannot delete auth.users row.
+  function runFallbackDeletion(user, supabase, prefaceErrors) {
+    return new Promise(function (resolve) {
+      const errors = (prefaceErrors || []).slice();
 
       // 1) Delete all recipe photos in user's storage folder
       const deletePhotos = supabase.storage.from('recipe-photos')
-        .list(user.id + '/', { limit: 1000 })
+        .list(user.id + '/', { limit: 10000 })
         .then(function (res) {
           if (res.error) { errors.push('photo list: ' + res.error.message); return; }
           if (!res.data || !res.data.length) return;
@@ -839,22 +1090,21 @@
           });
         }).catch(function (e) { errors.push('photo step: ' + (e.message || e)); });
 
-      // 2) Delete all public share rows owned by this user
+      // 2) Delete public_shares
       const deleteShares = supabase.from('public_shares').delete().eq('owner_id', user.id)
         .then(function (res) { if (res.error) errors.push('shares: ' + res.error.message); })
         .catch(function (e) { errors.push('shares step: ' + (e.message || e)); });
 
-      // 3) Delete user_data row(s)
+      // 3) Delete user_data
       const deleteUserData = supabase.from('user_data').delete().eq('user_id', user.id)
         .then(function (res) { if (res.error) errors.push('user_data: ' + res.error.message); })
         .catch(function (e) { errors.push('user_data step: ' + (e.message || e)); });
 
-      // 4) Wipe local storage
       Promise.all([deletePhotos, deleteShares, deleteUserData]).then(function () {
         try {
           if (PCD.store && PCD.store.clearUserData) PCD.store.clearUserData();
         } catch (e) { errors.push('local: ' + (e.message || e)); }
-        resolve({ allOk: errors.length === 0, errors: errors });
+        resolve({ allOk: false, errors: errors, authUserDeleted: false });
       });
     });
   }

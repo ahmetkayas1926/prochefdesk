@@ -219,7 +219,7 @@
     const dayAfter = new Date(); dayAfter.setDate(dayAfter.getDate() + 2);
     function iso(d) { return d.toISOString().slice(0, 10); }
     function dayName(d) {
-      return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+      return d.toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || "en", { weekday: 'short', month: 'short', day: 'numeric' });
     }
     let selected = iso(tomorrow);
 
@@ -276,7 +276,7 @@
 
   function buildMessage(supplier, items, deliveryDate, notes) {
     const dq = draftQty[supplier.id] || {};
-    const dateStr = new Date(deliveryDate).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+    const dateStr = new Date(deliveryDate).toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || "en", { weekday: 'long', month: 'long', day: 'numeric' });
     const user = PCD.store.get('user') || {};
     const userName = user.name || user.email || '';
 
@@ -361,7 +361,7 @@
       m.close();
     });
     PCD.$('#shEmail', body).addEventListener('click', function () {
-      const subject = 'Order request — delivery ' + new Date(deliveryDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      const subject = 'Order request — delivery ' + new Date(deliveryDate).toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || "en", { month: 'short', day: 'numeric' });
       const url = email
         ? 'mailto:' + email + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(getMsg())
         : 'mailto:?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(getMsg());

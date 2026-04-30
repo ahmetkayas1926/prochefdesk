@@ -1258,8 +1258,8 @@
         const statusColor = issues > 0 ? '#dc2626' : '#16a34a';
         const statusIcon = issues > 0 ? '⚠' : '✓';
         const completedDate = new Date(s.completedAt);
-        const dateStr = completedDate.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-        const timeStr = completedDate.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+        const dateStr = completedDate.toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || "en", { year: 'numeric', month: 'short', day: 'numeric' });
+        const timeStr = completedDate.toLocaleTimeString((PCD.i18n && PCD.i18n.currentLocale) || "en", { hour: '2-digit', minute: '2-digit' });
 
         html += '<div class="card card-hover" data-history-sid="' + s.id + '" style="padding:12px 14px;margin-bottom:8px;cursor:pointer;">' +
           '<div style="display:flex;align-items:center;gap:10px;">' +
@@ -1439,7 +1439,7 @@
         valueCell = it.value ? PCD.escapeHtml(it.value) : '<span style="color:#999;">—</span>';
       }
 
-      const time = it.doneAt ? new Date(it.doneAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : '';
+      const time = it.doneAt ? new Date(it.doneAt).toLocaleTimeString((PCD.i18n && PCD.i18n.currentLocale) || "en", { hour: '2-digit', minute: '2-digit' }) : '';
       const comment = it.comment ? '<div style="font-size:9pt;color:#666;font-style:italic;margin-top:3px;">📝 ' + PCD.escapeHtml(it.comment) + '</div>' : '';
 
       rowsHtml +=
@@ -1476,8 +1476,8 @@
       '<div class="h-row">' +
         '<h1>' + PCD.escapeHtml((tpl && tpl.name) || s.templateName || 'Checklist') + '</h1>' +
         '<div style="color:#666;font-size:11pt;margin-top:4px;">' +
-          new Date(s.startedAt).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) +
-          (s.completedAt ? ' · Completed ' + new Date(s.completedAt).toLocaleTimeString(undefined, {hour:'2-digit', minute:'2-digit'}) : '') +
+          new Date(s.startedAt).toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || "en", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) +
+          (s.completedAt ? ' · Completed ' + new Date(s.completedAt).toLocaleTimeString((PCD.i18n && PCD.i18n.currentLocale) || "en", {hour:'2-digit', minute:'2-digit'}) : '') +
         '</div>' +
       '</div>' +
       '<div class="h-meta">' +
