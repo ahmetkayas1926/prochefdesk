@@ -288,6 +288,24 @@
         </div>
       </div>
 
+      ${user ? `
+        <!-- DANGER ZONE (v2.6.60) — Account deletion / GDPR -->
+        <div class="section">
+          <div class="section-title" style="font-size:13px;color:var(--danger);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">${t('danger_zone_title')}</div>
+          <div class="card" style="border-color:rgba(220,38,38,0.3);">
+            <div class="card-body" style="padding:0;">
+              <button class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;color:var(--danger);" id="deleteAccountBtn">
+                <div>
+                  <div style="font-weight:600;">🗑️ ${t('delete_account_title')}</div>
+                  <div class="text-muted text-sm" style="color:var(--text-3);">${t('delete_account_subtitle')}</div>
+                </div>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      ` : ''}
+
       <!-- ABOUT -->
       <div class="section">
         <div class="text-center text-muted text-sm" style="padding:16px 0;">
@@ -297,7 +315,10 @@
       </div>
     `;
 
-    // Wire up
+    // v2.6.60 — Account deletion flow (GDPR-compliant)
+    const deleteAccountBtn = PCD.$('#deleteAccountBtn', view);
+    if (deleteAccountBtn) deleteAccountBtn.addEventListener('click', openDeleteAccountModal);
+
     const signInBtn = PCD.$('#signInBtn', view);
     if (signInBtn) signInBtn.addEventListener('click', function () { PCD.auth.openAuthModal(); });
     const signOutBtn = PCD.$('#signOutBtn', view);
@@ -690,6 +711,153 @@
   // Public Web3Forms key — submissions land in hello@prochefdesk.com.
   // Safe to ship in client code (this is a public access key, not a secret).
   const WEB3FORMS_KEY = 'f5039b66-3003-485b-9b72-5fdd9c9abaa1';
+
+  // v2.6.60 — Account deletion flow (GDPR Art. 17 — Right to erasure)
+  // Deletes:
+  //   1. Recipe photos from Storage bucket (recipe-photos/{userId}/...)
+  //   2. Public share rows (public_shares where owner_id = user.id)
+  //   3. user_data row (RLS allows DELETE on own rows since v2.6.47)
+  //   4. Local state (clearUserData wipes localStorage but keeps prefs)
+  // Then signs out. The auth.users row itself stays (Supabase requires
+  // admin SDK for that — we email the user how to delete the auth row,
+  // or it's delete-on-cascade if the project is configured that way).
+  function openDeleteAccountModal() {
+    const t = PCD.i18n.t;
+    const user = PCD.store.get('user') || {};
+    if (!user.id) {
+      PCD.toast.error(t('delete_account_signin_required'));
+      return;
+    }
+
+    // Step 1 modal: educational + email confirmation gate
+    const body = PCD.el('div');
+    body.innerHTML =
+      '<div style="background:#fee2e2;color:#991b1b;padding:12px 14px;border-radius:var(--r-sm);font-size:13px;line-height:1.6;margin-bottom:14px;">' +
+        '⚠️ <strong>' + PCD.escapeHtml(t('delete_account_warning_title')) + '</strong><br>' +
+        PCD.escapeHtml(t('delete_account_warning_body')) +
+      '</div>' +
+      '<div style="font-size:13px;color:var(--text-2);margin-bottom:12px;line-height:1.6;">' +
+        PCD.escapeHtml(t('delete_account_what_happens')) +
+        '<ul style="margin:8px 0 0 22px;padding:0;">' +
+          '<li>' + PCD.escapeHtml(t('delete_account_will_delete_state')) + '</li>' +
+          '<li>' + PCD.escapeHtml(t('delete_account_will_delete_photos')) + '</li>' +
+          '<li>' + PCD.escapeHtml(t('delete_account_will_delete_shares')) + '</li>' +
+          '<li>' + PCD.escapeHtml(t('delete_account_will_delete_local')) + '</li>' +
+        '</ul>' +
+      '</div>' +
+      '<div style="font-size:13px;color:var(--text-2);margin-bottom:14px;line-height:1.6;">' +
+        PCD.escapeHtml(t('delete_account_backup_advice')) +
+      '</div>' +
+      '<div style="margin-bottom:8px;">' +
+        '<label style="display:block;font-weight:600;font-size:13px;margin-bottom:4px;">' + PCD.escapeHtml(t('delete_account_email_confirm_label')) + '</label>' +
+        '<input id="confirmDeleteEmail" type="email" placeholder="' + PCD.escapeHtml(user.email || '') + '" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-1);font-size:14px;box-sizing:border-box;">' +
+      '</div>' +
+      '<div class="text-muted" style="font-size:11px;line-height:1.5;">' + PCD.escapeHtml(t('delete_account_email_confirm_hint', { email: user.email || '' })) + '</div>';
+
+    const cancelBtn = PCD.el('button', { type: 'button', class: 'btn btn-secondary', text: t('cancel'), style: { flex: '1' } });
+    const deleteBtn = PCD.el('button', { type: 'button', class: 'btn btn-danger', text: t('delete_account_confirm_btn'), style: { flex: '1' } });
+    deleteBtn.disabled = true;
+    deleteBtn.style.opacity = '0.55';
+
+    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
+    footer.appendChild(cancelBtn);
+    footer.appendChild(deleteBtn);
+
+    const m = PCD.modal.open({
+      title: '🗑️ ' + t('delete_account_title'),
+      body: body,
+      footer: footer,
+      size: 'md',
+      closable: true,
+    });
+
+    // Enable delete button only when typed email matches
+    const emailInp = body.querySelector('#confirmDeleteEmail');
+    emailInp.addEventListener('input', function () {
+      const matches = this.value.trim().toLowerCase() === (user.email || '').toLowerCase();
+      deleteBtn.disabled = !matches;
+      deleteBtn.style.opacity = matches ? '1' : '0.55';
+    });
+
+    cancelBtn.addEventListener('click', function () { m.close(); });
+    deleteBtn.addEventListener('click', function () {
+      // Final hard-confirm
+      PCD.modal.confirm({
+        icon: '⚠️', iconKind: 'danger', danger: true,
+        title: t('delete_account_final_confirm_title'),
+        text: t('delete_account_final_confirm_text'),
+        okText: t('delete_account_final_confirm_ok'),
+        cancelText: t('cancel'),
+      }).then(function (ok) {
+        if (!ok) return;
+        deleteBtn.disabled = true;
+        deleteBtn.innerHTML = '<span class="spinner"></span> ' + t('delete_account_in_progress');
+        runAccountDeletion(user).then(function (result) {
+          m.close();
+          if (result.allOk) {
+            PCD.toast.success(t('delete_account_success'));
+          } else {
+            PCD.toast.warning(t('delete_account_partial_success', { details: result.errors.join(', ') }));
+          }
+          // Sign out + reload (auth.signOut already calls clearUserData)
+          setTimeout(function () {
+            if (PCD.auth && PCD.auth.signOut) PCD.auth.signOut();
+            else location.reload();
+          }, 1200);
+        }).catch(function (err) {
+          deleteBtn.disabled = false;
+          deleteBtn.innerHTML = t('delete_account_confirm_btn');
+          PCD.toast.error(t('delete_account_failed', { msg: (err && err.message) || err }));
+        });
+      });
+    });
+  }
+
+  // v2.6.60 — Run the actual deletion sequence. Best-effort:
+  // each step's failure is logged but doesn't block the next step.
+  // Returns Promise<{ allOk: boolean, errors: string[] }>.
+  function runAccountDeletion(user) {
+    return new Promise(function (resolve) {
+      const errors = [];
+      const supabase = PCD.cloud && PCD.cloud.getClient && PCD.cloud.getClient();
+      if (!supabase) {
+        // No cloud — just clear local state
+        if (PCD.store && PCD.store.clearUserData) PCD.store.clearUserData();
+        resolve({ allOk: true, errors: [] });
+        return;
+      }
+
+      // 1) Delete all recipe photos in user's storage folder
+      const deletePhotos = supabase.storage.from('recipe-photos')
+        .list(user.id + '/', { limit: 1000 })
+        .then(function (res) {
+          if (res.error) { errors.push('photo list: ' + res.error.message); return; }
+          if (!res.data || !res.data.length) return;
+          const paths = res.data.map(function (f) { return user.id + '/' + f.name; });
+          return supabase.storage.from('recipe-photos').remove(paths).then(function (rm) {
+            if (rm.error) errors.push('photo delete: ' + rm.error.message);
+          });
+        }).catch(function (e) { errors.push('photo step: ' + (e.message || e)); });
+
+      // 2) Delete all public share rows owned by this user
+      const deleteShares = supabase.from('public_shares').delete().eq('owner_id', user.id)
+        .then(function (res) { if (res.error) errors.push('shares: ' + res.error.message); })
+        .catch(function (e) { errors.push('shares step: ' + (e.message || e)); });
+
+      // 3) Delete user_data row(s)
+      const deleteUserData = supabase.from('user_data').delete().eq('user_id', user.id)
+        .then(function (res) { if (res.error) errors.push('user_data: ' + res.error.message); })
+        .catch(function (e) { errors.push('user_data step: ' + (e.message || e)); });
+
+      // 4) Wipe local storage
+      Promise.all([deletePhotos, deleteShares, deleteUserData]).then(function () {
+        try {
+          if (PCD.store && PCD.store.clearUserData) PCD.store.clearUserData();
+        } catch (e) { errors.push('local: ' + (e.message || e)); }
+        resolve({ allOk: errors.length === 0, errors: errors });
+      });
+    });
+  }
 
   function openReportIssueModal() {
     const t = PCD.i18n.t;

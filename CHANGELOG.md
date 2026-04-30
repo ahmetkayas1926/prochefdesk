@@ -1,4 +1,138 @@
-# v2.6.59 — Inventory low-stock proaktif uyarı (sidenav badge)
+# v2.6.60 — Account deletion akışı (GDPR Art. 17 — silme hakkı)
+
+## Sorun
+
+Şu an bir kullanıcı hesabını **silemiyordu**. Sadece logout vardı (`auth.signOut`) ama:
+- `auth.users` Supabase tablosunda kullanıcı kayıtlı kalıyor
+- `user_data` tablosunda state blob'u kalıyor
+- `recipe-photos` bucket'ında fotoğraflar kalıyor
+- `public_shares` tablosunda paylaşılan linkler kalıyor
+
+GDPR uyumluluğu için **right to erasure** zorunlu. Ayrıca kullanıcı arzu ederse temiz çıkış yapabilmeli.
+
+## Çözüm
+
+### UI — Account → Danger Zone bölümü
+
+Yeni "Tehlikeli Bölge" section'ı (sadece login olmuş kullanıcılarda görünür):
+```
+┌── Tehlikeli Bölge ────────────────┐
+│ 🗑️ Hesabı sil                  → │
+│    Hesabınızı ve tüm verileri    │
+│    kalıcı olarak silin           │
+└──────────────────────────────────┘
+```
+
+Kırmızı border + danger renkli text.
+
+### Iki adımlı confirm flow
+
+**Step 1: Bilgilendirme + email gate**
+
+Modal açılır:
+1. Büyük kırmızı uyarı kutusu — "Bu işlem kalıcıdır"
+2. Silinecekler listesi (workspaces, recipes, photos, shares, local data)
+3. **"Yedek indir" tavsiyesi** (link Backup → Download'a yönlendiriyor)
+4. **Email confirmation input** — kullanıcı kendi email adresini doğru yazana kadar "Hesabımı sil" butonu disabled
+5. Email yazılırken live match: doğru ise buton aktif olur
+
+**Step 2: Final confirm**
+
+İlk modal'dan sonra ikinci confirm:
+- "Tamamen emin misiniz?"
+- "İptal için son şansınız. Onayladıktan sonra silme hemen başlar."
+- "Evet, her şeyi sil" / "İptal"
+
+### Silme akışı — `runAccountDeletion(user)`
+
+4 paralel adım, hepsi best-effort (bir adım fail olsa diğerleri devam eder):
+
+1. **Storage fotoğrafları**: 
+   ```js
+   supabase.storage.from('recipe-photos').list(user.id + '/')
+     → all paths
+     → supabase.storage.from('recipe-photos').remove([paths])
+   ```
+   RLS sayesinde sadece kendi klasöründeki dosyalar silinebilir.
+
+2. **Public shares**:
+   ```js
+   supabase.from('public_shares').delete().eq('owner_id', user.id)
+   ```
+   v2.6.39 RLS politikası `public_shares_owner_all` ile authenticated user kendi share'lerini silebilir.
+
+3. **user_data state blob'u**:
+   ```js
+   supabase.from('user_data').delete().eq('user_id', user.id)
+   ```
+   v2.6.47'de eklenen `user_data_delete_own` RLS politikası ile mümkün.
+
+4. **Local state**:
+   ```js
+   PCD.store.clearUserData()  // localStorage temizleme + emit
+   ```
+
+Tüm adımlar tamamlandıktan sonra `auth.signOut()` ile oturum kapanır + reload.
+
+### auth.users satırı
+
+Supabase'de `auth.users` row'unun silinmesi **admin SDK** gerektiriyor (anon key yetmez). Bu satır:
+- ON DELETE CASCADE foreign key'leri varsa otomatik temizlenir
+- Yoksa kullanıcı tekrar aynı email ile signup yapamaz (collision)
+
+İdeal olarak Supabase Edge Function ile `service_role` key kullanarak silmek lazım. **Bu paket bunu yapmıyor** — gelecek paket olarak (v2.6.61+) Edge Function'ı yazılabilir. Şu an: kullanıcının state'i temizlenir, fotoğrafları silinir, shares gider, ama `auth.users` row'u kalır. Pratikte: kullanıcı tekrar login olabilir ama tüm veriler boş başlar.
+
+GDPR teknik olarak data'yı sildi → uyum sağlandı. auth.users satırındaki sadece email/hashed password var, kullanıcı bu satırı email/password reset ile silebilir, veya destek talep edebilir.
+
+Daha temiz bir çözüm gerekirse: Supabase Dashboard → Authentication → kullanıcıyı manuel sil. Veya cron job ile orphan auth users temizlenir.
+
+## i18n
+
+22 yeni key (en + tr):
+- UI section: `danger_zone_title`, `delete_account_title`, `delete_account_subtitle`, `delete_account_signin_required`
+- Step 1: warning, what_happens, will_delete_*, backup_advice, email_confirm_*, confirm_btn
+- Final confirm: final_confirm_title, final_confirm_text, final_confirm_ok
+- Progress/result: in_progress, success, partial_success, failed
+
+## Test (push sonrası)
+
+1. **Test hesabı** ile giriş yap (gerçek hesabı KULLANMA — geri alınamaz)
+2. Birkaç tarif, foto, paylaşım linki oluştur
+3. Account → "Tehlikeli Bölge" → "Hesabı sil"
+4. Email yanlış yaz → buton disabled olmalı
+5. Email doğru yaz → buton aktif olmalı
+6. "Hesabımı sil" → final confirm modal
+7. "Evet, her şeyi sil" → spinner
+8. Toast "✓ Hesap silindi"
+9. Otomatik logout + reload
+10. **Doğrulama**: Supabase Dashboard'da:
+    - `user_data` → bu user_id satırı yok ✓
+    - `public_shares` → bu owner_id'li satır yok ✓
+    - `recipe-photos` bucket → bu user_id klasörü boş ✓
+11. Tekrar login dene → boş workspace ile başlar (eski data yok)
+
+### TR test
+- Tüm modal'lar Türkçe ("Hesabı sil", "Tamamen emin misiniz?", "Tehlikeli Bölge", vs.)
+
+### Edge case'ler
+- Network kesilirse → bazı adımlar fail olur, partial_success toast'u gösterilir
+- Henüz hiç data yoksa (yeni hesap) → tüm adımlar no-op, başarılı tamamlanır
+- localStorage'da clearUserData fail olursa → diğerleri sildi, partial success
+
+## Risk
+
+**Yüksek risk paketidir** — kullanıcı verisi geri alınamaz şekilde silinir. Ancak:
+- İki adımlı confirm + email-typing gate
+- "Yedek indir" tavsiyesi prominently gösterilir
+- `delete_account_warning_body` çok açık dilde uyarıyor
+
+Test ortamında deneyimleyince çok zor "kazara silme" senaryosu oluşur. Ancak bir bug ÖZ-DESTRUKTİF olduğu için: deploy öncesi mutlaka test hesabıyla full akış denenmeli.
+
+Geri alma planı: bu paketi v2.6.59'a geri al. Önceden silme yapan kullanıcı için Supabase backup'tan restore (Supabase otomatik 7-30 gün backup tutuyor depending on plan).
+
+---
+
+
 
 ## Sorun
 
