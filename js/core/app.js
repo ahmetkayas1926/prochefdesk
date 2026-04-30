@@ -654,10 +654,8 @@
       if (startInp) data.periodStart = startInp.value ? startInp.value + '-01' : null;
       if (endInp) data.periodEnd = endInp.value ? endInp.value + '-01' : null;
 
-      console.log('[Workspace Save] click fired, data:', JSON.parse(JSON.stringify(data)));
-
       if (!data.name) {
-        try { PCD.toast.error('Name required'); } catch (e) { alert('Name required'); }
+        PCD.toast && PCD.toast.error('Name required');
         return;
       }
 
@@ -666,14 +664,13 @@
       try {
         if (existing) data.id = existing.id;
         saved = PCD.store.upsertWorkspace(data);
-        console.log('[Workspace Save] upsert returned:', saved && saved.id);
       } catch (saveErr) {
-        console.error('[Workspace Save] upsert ERROR:', saveErr);
-        alert('Save failed: ' + (saveErr.message || saveErr));
+        PCD.err && PCD.err('[Workspace Save] upsert error', saveErr);
+        PCD.toast && PCD.toast.error('Save failed: ' + (saveErr && saveErr.message || saveErr));
         return;
       }
       if (!saved || !saved.id) {
-        alert('Save failed — workspace was not created.');
+        PCD.toast && PCD.toast.error('Save failed — workspace was not created.');
         return;
       }
 
@@ -683,7 +680,7 @@
       try {
         if (isNew) PCD.store.setActiveWorkspaceId(saved.id);
       } catch (e) {
-        console.warn('[Workspace Save] setActive failed (non-fatal):', e);
+        PCD.warn && PCD.warn('[Workspace Save] setActive failed (non-fatal):', e);
       }
 
       // STEP 4 — UI cleanup (best effort, but reload will fix anything)
@@ -691,7 +688,6 @@
       try { m.close(); } catch (e) {}
 
       // STEP 5 — Push to cloud BEFORE reload (so reload doesn't pull stale state)
-      console.log('[Workspace Save] success, pushing to cloud before reload');
       const doReload = function () {
         if (isNew) {
           window.location.reload();

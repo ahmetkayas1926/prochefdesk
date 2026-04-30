@@ -1,4 +1,52 @@
-# v2.6.37 — F5 yenileme bugu (URL hash routing)
+# v2.6.38 — Workspace save'inde debug kalıntıları temizliği
+
+## Sorun
+
+`js/core/app.js` workspace save handler'ında 7 adet debug kalıntısı vardı:
+- 3 adet `console.log('[Workspace Save] ...')` — DevTools açık olmasa bile prod console'da gözüküyordu
+- 3 adet `alert(...)` — modal/toast yerine native browser alert; UI bloke ediyor, kullanıcıyı paniğe sokar
+- 1 adet `console.error(...)`
+
+Hata ayıklama oturumundan kalmış, prod'a geçmiş. Toast pattern her yerde mevcut, native `alert()` kullanılması gereksiz.
+
+## Çözüm
+
+Hepsi `PCD.toast` ve `PCD.err` (debug-flag'li wrapper) ile değiştirildi:
+
+```js
+// Önce
+console.log('[Workspace Save] click fired, data:', ...);
+try { PCD.toast.error('Name required'); } catch (e) { alert('Name required'); }
+
+// Sonra
+PCD.toast && PCD.toast.error('Name required');
+```
+
+`PCD.err` tanımı (utils.js): sadece `PCD_CONFIG.DEBUG=true` iken çıktı verir, prod'da sessizdir.
+
+## Etki
+
+- UI artık `alert()` ile bloke olmuyor
+- Console temiz (yeni kullanıcı F12 açınca debug log görmeyecek)
+- Davranış birebir aynı (toast'lar zaten her yerde aynı pattern'i izliyor)
+
+## Test
+
+1. Workspace switcher → "Yeni workspace" → ad alanını boş bırak → Save
+   - Beklenen: toast "Name required", `alert()` popup yok
+2. Workspace switcher → "Yeni workspace" → ad ver → Save
+   - Beklenen: "Workspace saved" toast, sayfa reload
+3. Mevcut workspace → düzenle → Save (mevcut workspace üzerine)
+   - Beklenen: "Workspace saved" toast, reload yok, label güncellenir
+4. Console (F12): `[Workspace Save] ...` log mesajları artık YOK
+
+## Risk
+
+Sıfır. Aynı dosyada (`app.js`), tek bir handler'da, sadece debug kalıntıları kaldırıldı. İş mantığı değişmedi.
+
+---
+
+
 
 ## Bug
 
