@@ -599,9 +599,9 @@
       const copy = PCD.store.copyToWorkspace(table, itemId, fromWsId, targetWsId);
       const targetWs = PCD.store.getWorkspace(targetWsId);
       if (copy && targetWs) {
-        PCD.toast.success('Copied to "' + targetWs.name + '"');
+        PCD.toast.success(PCD.i18n.t('toast_copied_to_workspace', { name: targetWs.name }));
       } else {
-        PCD.toast.error('Copy failed');
+        PCD.toast.error(PCD.i18n.t('toast_copy_failed'));
       }
       m.close();
     });

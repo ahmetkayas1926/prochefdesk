@@ -222,7 +222,7 @@
     });
     PCD.$('#bulkCostReport', view).addEventListener('click', function () {
       if (selectedIds.size === 0) {
-        PCD.toast.info('Select at least one recipe');
+        PCD.toast.info(PCD.i18n.t('toast_select_at_least_one_recipe'));
         return;
       }
       openCostReport(Array.from(selectedIds));
@@ -270,7 +270,7 @@
             delete copy.id; delete copy.createdAt; delete copy.updatedAt;
             copy.name = copy.name + ' (Copy)';
             const saved = PCD.store.upsertRecipe(copy);
-            PCD.toast.success('Duplicated');
+            PCD.toast.success(PCD.i18n.t('toast_duplicated'));
             renderList(view);
             setTimeout(function () { openEditor(saved.id); }, 200);
           }},
@@ -306,10 +306,10 @@
             const backup = PCD.clone(r);
             PCD.store.deleteRecipe(rid);
             renderList(view);
-            PCD.toast.success('Deleted', 5000, {
+            PCD.toast.success(PCD.i18n.t('toast_deleted'), 5000, {
               action: { label: 'UNDO', onClick: function () {
                 PCD.store.upsertRecipe(backup);
-                PCD.toast.success('Restored');
+                PCD.toast.success(PCD.i18n.t('toast_restored'));
                 renderList(view);
               }}
             });
@@ -1193,7 +1193,7 @@
   function openPreview(rid) {
     const t = PCD.i18n.t;
     const r = PCD.store.getRecipe(rid);
-    if (!r) { PCD.toast.error('Recipe not found'); return; }
+    if (!r) { PCD.toast.error(PCD.i18n.t('toast_recipe_not_found')); return; }
     const ingMap = currentIngMap();
     const cost = PCD.recipes.computeFoodCost(r, ingMap, PCD.recipes.buildRecipeMap());
     const costPerServing = r.servings ? cost / r.servings : cost;
@@ -1284,7 +1284,7 @@
       delete copy.updatedAt;
       copy.name = copy.name + ' (Copy)';
       const saved = PCD.store.upsertRecipe(copy);
-      PCD.toast.success('Recipe duplicated');
+      PCD.toast.success(PCD.i18n.t('toast_recipe_duplicated'));
       m.close();
       setTimeout(function () {
         const view = PCD.$('#view');
@@ -1359,7 +1359,7 @@
           label: 'UNDO',
           onClick: function () {
             PCD.store.upsertRecipe(backup);
-            PCD.toast.success('Restored');
+            PCD.toast.success(PCD.i18n.t('toast_restored'));
             const v = PCD.$('#view');
             if (PCD.router.currentView() === 'recipes') renderList(v);
             else if (PCD.router.currentView() === 'dashboard') PCD.tools.dashboard.render(v);
@@ -1414,11 +1414,11 @@
     linkBtn.addEventListener('click', function () {
       const user = PCD.store.get('user');
       if (!user || !user.id) {
-        PCD.toast.error('Sign in to create public links');
+        PCD.toast.error(PCD.i18n.t('toast_sign_in_to_share'));
         return;
       }
       if (!PCD.share || !PCD.share.createOrGetShareUrl) {
-        PCD.toast.error('Share unavailable');
+        PCD.toast.error(PCD.i18n.t('toast_share_unavailable'));
         return;
       }
       linkBtn.disabled = true;
@@ -1440,16 +1440,16 @@
         linkBtn.onclick = function () {
           if (navigator.clipboard) {
             navigator.clipboard.writeText(url).then(function () {
-              PCD.toast.success('Copied');
+              PCD.toast.success(PCD.i18n.t('toast_copied'));
             });
           } else {
             linkOut.select();
             document.execCommand('copy');
-            PCD.toast.success('Copied');
+            PCD.toast.success(PCD.i18n.t('toast_copied'));
           }
         };
       }).catch(function (e) {
-        PCD.toast.error('Share failed: ' + (e.message || e));
+        PCD.toast.error(PCD.i18n.t('toast_share_failed', { msg: e.message || e }));
         linkBtn.disabled = false;
         linkBtn.innerHTML = PCD.icon('share', 14) + ' <span>Generate share link</span>';
       });
@@ -1485,7 +1485,7 @@
     PCD.$('#rShCopy', body).addEventListener('click', function () {
       if (navigator.clipboard) {
         navigator.clipboard.writeText(getText()).then(function () {
-          PCD.toast.success('Copied');
+          PCD.toast.success(PCD.i18n.t('toast_copied'));
           m.close();
         });
       }
@@ -1544,7 +1544,7 @@
     cancelBtn.addEventListener('click', function () { m.close(); });
     saveBtn.addEventListener('click', function () {
       draft.name = (PCD.$('#niName', body).value || '').trim();
-      if (!draft.name) { PCD.toast.error('Name required'); return; }
+      if (!draft.name) { PCD.toast.error(PCD.i18n.t('toast_name_required')); return; }
       draft.unit = PCD.$('#niBuyUnit', body).value || 'g';
       draft.pricePerUnit = parseFloat(PCD.$('#niPrice', body).value) || 0;
       const qty = parseFloat(PCD.$('#niQty', body).value) || 100;
@@ -2293,7 +2293,7 @@
               data.ingredients = (data.ingredients || []).concat([{
                 ingredientId: saved.id, amount: qty || 100, unit: qtyUnit || defaultRecipeUnit(saved)
               }]);
-              PCD.toast.success('Added "' + newName + '" — synced to Ingredients library');
+              PCD.toast.success(PCD.i18n.t('toast_quick_added_synced', { name: newName }));
               qInput.value = '';
               // v2.6.48 — targeted re-render
               renderIngList();

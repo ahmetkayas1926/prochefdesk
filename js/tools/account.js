@@ -345,7 +345,7 @@
       u.workplace = (PCD.$('#chefWorkplace', view).value || '').trim();
       u.bio = (PCD.$('#chefBio', view).value || '').trim();
       PCD.store.set('user', u);
-      PCD.toast.success('Profile saved');
+      PCD.toast.success(PCD.i18n.t('toast_profile_saved'));
     });
     const previewChefBtn = PCD.$('#previewChefProfileBtn', view);
     if (previewChefBtn) previewChefBtn.addEventListener('click', function () {
@@ -425,11 +425,11 @@
               Object.keys(data).forEach(function (k) {
                 if (k !== '_meta') PCD.store.set(k, data[k]);
               });
-              PCD.toast.success('Backup restored — reloading...');
+              PCD.toast.success(PCD.i18n.t('toast_backup_restored'));
               setTimeout(function () { window.location.reload(); }, 800);
             });
           } catch (err) {
-            PCD.toast.error('Invalid backup file: ' + err.message);
+            PCD.toast.error(PCD.i18n.t('toast_invalid_backup', { msg: err.message }));
           }
         };
         reader.readAsText(f);
@@ -440,7 +440,7 @@
     const expRec = PCD.$('#exportRecipesBtn', view);
     if (expRec) expRec.addEventListener('click', function () {
       const recipes = PCD.store.listRecipes();
-      if (!recipes.length) { PCD.toast.info('No recipes to export'); return; }
+      if (!recipes.length) { PCD.toast.info(PCD.i18n.t('toast_no_recipes_to_export')); return; }
       const ingMap = {};
       PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
       const rows = [['Name', 'Category', 'Servings', 'Food Cost', 'Cost/Serving', 'Sale Price', 'Food Cost %', 'Prep Time', 'Cook Time', 'Ingredients']];
@@ -456,20 +456,20 @@
       });
       const csv = rows.map(function (r) { return r.map(function (c) { return '"' + String(c == null ? '' : c).replace(/"/g, '""') + '"'; }).join(','); }).join('\n');
       PCD.download(csv, 'recipes-' + new Date().toISOString().slice(0, 10) + '.csv', 'text/csv');
-      PCD.toast.success('Recipes exported (' + recipes.length + ')');
+      PCD.toast.success(PCD.i18n.t('toast_recipes_exported_n', { n: recipes.length }));
     });
 
     const expIng = PCD.$('#exportIngredientsBtn', view);
     if (expIng) expIng.addEventListener('click', function () {
       const ings = PCD.store.listIngredients();
-      if (!ings.length) { PCD.toast.info('No ingredients to export'); return; }
+      if (!ings.length) { PCD.toast.info(PCD.i18n.t('toast_no_ingredients_to_export')); return; }
       const rows = [['Name', 'Price', 'Unit', 'Category', 'Supplier']];
       ings.forEach(function (i) {
         rows.push([i.name, i.pricePerUnit || 0, i.unit || '', i.category || '', i.supplier || '']);
       });
       const csv = rows.map(function (r) { return r.map(function (c) { return '"' + String(c == null ? '' : c).replace(/"/g, '""') + '"'; }).join(','); }).join('\n');
       PCD.download(csv, 'ingredients-' + new Date().toISOString().slice(0, 10) + '.csv', 'text/csv');
-      PCD.toast.success('Ingredients exported (' + ings.length + ')');
+      PCD.toast.success(PCD.i18n.t('toast_ingredients_exported_n', { n: ings.length }));
     });
 
     PCD.$('#demoToggleBtn', view).addEventListener('click', function () {
@@ -525,7 +525,7 @@
       if (PCD.tutorial && PCD.tutorial.startMainTour) {
         PCD.tutorial.startMainTour();
       } else {
-        PCD.toast.info('Tour unavailable');
+        PCD.toast.info(PCD.i18n.t('toast_tour_unavailable'));
       }
     });
     const reportIssueBtn = PCD.$('#reportIssueBtn', view);
@@ -1005,7 +1005,7 @@
         PCD.toast.success('✓ ' + t('trash_restored'));
         paint();
       } else {
-        PCD.toast.error('Restore failed');
+        PCD.toast.error(PCD.i18n.t('toast_restore_failed'));
       }
     });
     PCD.on(body, 'click', '[data-purge]', function () {

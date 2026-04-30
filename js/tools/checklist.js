@@ -710,7 +710,7 @@
       copy.isDefault = false;
       copy.items = (copy.items || []).map(function (it) { return Object.assign({}, it, { id: PCD.uid('it') }); });
       const saved = PCD.store.upsertInTable('checklistTemplates', copy, 'tpl');
-      PCD.toast.success('Template duplicated');
+      PCD.toast.success(PCD.i18n.t('toast_template_duplicated'));
       m.close();
       setTimeout(function () {
         const v = PCD.$('#view');
@@ -838,10 +838,10 @@
     closeBtn.addEventListener('click', function () { m.close(); });
     PCD.$('#tplShWa', body).addEventListener('click', function () { window.open('https://wa.me/?text=' + encodeURIComponent(getText()), '_blank'); m.close(); });
     PCD.$('#tplShEmail', body).addEventListener('click', function () { window.location.href = 'mailto:?subject=' + encodeURIComponent(tpl.name) + '&body=' + encodeURIComponent(getText()); m.close(); });
-    PCD.$('#tplShCopy', body).addEventListener('click', function () { if (navigator.clipboard) navigator.clipboard.writeText(getText()).then(function () { PCD.toast.success('Copied'); m.close(); }); });
+    PCD.$('#tplShCopy', body).addEventListener('click', function () { if (navigator.clipboard) navigator.clipboard.writeText(getText()).then(function () { PCD.toast.success(PCD.i18n.t('toast_copied')); m.close(); }); });
     PCD.$('#tplShMore', body).addEventListener('click', function () {
       if (navigator.share) navigator.share({ title: tpl.name, text: getText() }).then(function () { m.close(); }).catch(function () {});
-      else if (navigator.clipboard) navigator.clipboard.writeText(getText()).then(function () { PCD.toast.success('Copied'); m.close(); });
+      else if (navigator.clipboard) navigator.clipboard.writeText(getText()).then(function () { PCD.toast.success(PCD.i18n.t('toast_copied')); m.close(); });
     });
   }
 
@@ -1201,7 +1201,7 @@
           s.completedAt = new Date().toISOString();
           s.completedBy = user.name || user.email || '';
         });
-        PCD.toast.success('Checklist completed');
+        PCD.toast.success(PCD.i18n.t('toast_checklist_completed'));
         m.close();
         setTimeout(function () {
           const v = PCD.$('#view');
@@ -1219,7 +1219,7 @@
     const t = PCD.i18n.t;
     const tpl = PCD.store.getFromTable('checklistTemplates', templateId);
     if (!tpl) {
-      PCD.toast.error('Template not found');
+      PCD.toast.error(PCD.i18n.t('toast_template_not_found'));
       return;
     }
 
@@ -1578,7 +1578,7 @@
     PCD.$('#shCopy', body).addEventListener('click', function () {
       if (navigator.clipboard) {
         navigator.clipboard.writeText(getText()).then(function () {
-          PCD.toast.success('Copied');
+          PCD.toast.success(PCD.i18n.t('toast_copied'));
           m.close();
         });
       }
@@ -1588,7 +1588,7 @@
         navigator.share({ title: title, text: getText() }).then(function () { m.close(); }).catch(function () {});
       } else {
         if (navigator.clipboard) {
-          navigator.clipboard.writeText(getText()).then(function () { PCD.toast.success('Copied'); m.close(); });
+          navigator.clipboard.writeText(getText()).then(function () { PCD.toast.success(PCD.i18n.t('toast_copied')); m.close(); });
         }
       }
     });
@@ -1749,9 +1749,9 @@
       });
 
       data.name = (data.name || '').trim();
-      if (!data.name) { PCD.toast.error('Name required'); return; }
+      if (!data.name) { PCD.toast.error(PCD.i18n.t('toast_name_required')); return; }
       data.items = data.items.filter(function (it) { return it.text && it.text.trim(); });
-      if (data.items.length === 0) { PCD.toast.error('Add at least one item'); return; }
+      if (data.items.length === 0) { PCD.toast.error(PCD.i18n.t('toast_add_at_least_one_item')); return; }
       if (existing) data.id = existing.id;
       PCD.store.upsertInTable('checklistTemplates', data, 'tpl');
       PCD.toast.success(t('saved'));

@@ -523,7 +523,7 @@ Pasta,0.003,g,cat_dry_goods,</code></pre>
         // Removed for clarity. If for some reason XLSX is missing
         // (CDN blocked, etc.) we surface the same friendly error.
         if (!window.XLSX || !window.XLSX.read) {
-          PCD.toast.error('Excel parser not loaded. Try CSV export instead.');
+          PCD.toast.error(PCD.i18n.t('toast_excel_parser_unavailable'));
           return;
         }
         const reader = new FileReader();
@@ -536,7 +536,7 @@ Pasta,0.003,g,cat_dry_goods,</code></pre>
             PCD.$('#importText', body).value = csv;
             previewParse(csv);
           } catch (err) {
-            PCD.toast.error('Could not parse Excel file: ' + err.message);
+            PCD.toast.error(PCD.i18n.t('toast_excel_parse_failed', { msg: err.message }));
           }
         };
         reader.readAsArrayBuffer(f);
@@ -587,7 +587,7 @@ Pasta,0.003,g,cat_dry_goods,</code></pre>
 
     cancelBtn.addEventListener('click', function () { m.close(); });
     importGoBtn.addEventListener('click', function () {
-      if (!parsed || !parsed.length) { PCD.toast.error('Nothing to import'); return; }
+      if (!parsed || !parsed.length) { PCD.toast.error(PCD.i18n.t('toast_nothing_to_import')); return; }
       let added = 0, updated = 0;
       const existing = {};
       PCD.store.listIngredients().forEach(function (i) { existing[i.name.toLowerCase()] = i; });
@@ -613,7 +613,7 @@ Pasta,0.003,g,cat_dry_goods,</code></pre>
           added++;
         }
       });
-      PCD.toast.success('Imported: ' + added + ' new, ' + updated + ' updated');
+      PCD.toast.success(PCD.i18n.t('toast_imported_n_new_m_updated', { new: added, updated: updated }));
       m.close();
       setTimeout(function () {
         const v = PCD.$('#view');

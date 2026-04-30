@@ -327,7 +327,7 @@
         if (!ok) return;
         applyCountsToInventory(p.counts);
         setPendingForCurrentWs(null);
-        PCD.toast.success('Count approved');
+        PCD.toast.success(PCD.i18n.t('toast_count_approved'));
         render(view);
         setTimeout(function () { promptGenerateOrdersAfterCount(); }, 400);
       });
@@ -436,7 +436,7 @@
     approveBtn.addEventListener('click', function () {
       applyCountsToInventory(edited);
       setPendingForCurrentWs(null);
-      PCD.toast.success('Count approved · ' + Object.keys(edited).length + ' items updated');
+      PCD.toast.success(PCD.i18n.t('toast_count_approved_n_items', { n: Object.keys(edited).length }));
       m.close();
       setTimeout(function () {
         const v = PCD.$('#view');
@@ -785,7 +785,7 @@
       });
 
       if (Object.keys(countedValues).length === 0) {
-        PCD.toast.warning('No counts entered');
+        PCD.toast.warning(PCD.i18n.t('toast_no_counts_entered'));
         return;
       }
 
@@ -798,7 +798,7 @@
           status: 'pending',
         };
         setPendingForCurrentWs(pending);
-        PCD.toast.success('Count saved — awaiting approval by head chef');
+        PCD.toast.success(PCD.i18n.t('toast_count_saved_pending'));
         m.close();
         setTimeout(function () {
           const v = PCD.$('#view');
@@ -919,7 +919,7 @@
     });
 
     if (below.length === 0) {
-      PCD.toast.info('All tracked items are at or above par level ✓');
+      PCD.toast.info(PCD.i18n.t('toast_inventory_all_above_par'));
       return;
     }
 
@@ -1010,7 +1010,7 @@
     printBtn.addEventListener('click', function () {
       const d = collectSelected();
       const supKeys = Object.keys(d.selectedBySupplier);
-      if (supKeys.length === 0) { PCD.toast.warning('No items selected'); return; }
+      if (supKeys.length === 0) { PCD.toast.warning(PCD.i18n.t('toast_no_items_selected')); return; }
       let html = '<div style="max-width:680px;margin:0 auto">';
       html += '<h1>Purchase Order</h1>';
       html += '<div style="color:#666;font-size:12px;margin-bottom:16px;">' + d.date + (d.userName ? ' · ' + PCD.escapeHtml(d.userName) : '') + '</div>';
@@ -1028,7 +1028,7 @@
 
     shareBtn.addEventListener('click', function () {
       const msg = buildMessage();
-      if (!msg) { PCD.toast.warning('No items selected'); return; }
+      if (!msg) { PCD.toast.warning(PCD.i18n.t('toast_no_items_selected')); return; }
       // Open a simple share sheet: WA/SMS/Email/Copy
       const shareBody = PCD.el('div');
       shareBody.innerHTML =
@@ -1069,7 +1069,7 @@
       PCD.$('#poCopy', shareBody).addEventListener('click', function () {
         if (navigator.clipboard) {
           navigator.clipboard.writeText(getMsg()).then(function () {
-            PCD.toast.success('Copied');
+            PCD.toast.success(PCD.i18n.t('toast_copied'));
             sm.close();
           });
         }
@@ -1081,7 +1081,7 @@
   function openEditor(ingId) {
     const t = PCD.i18n.t;
     const ing = PCD.store.getIngredient(ingId);
-    if (!ing) { PCD.toast.error('Ingredient not found'); return; }
+    if (!ing) { PCD.toast.error(PCD.i18n.t('toast_ingredient_not_found')); return; }
     const invAll = readInventory();
     const row = invAll[ingId] ? PCD.clone(invAll[ingId]) : { stock: null, parLevel: null, minLevel: null, lastCountedAt: null, lastOrderedAt: null };
     const status = computeStatus(row);

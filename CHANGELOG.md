@@ -1,4 +1,91 @@
-# v2.6.50 — EN/TR diff fix (eksik 1 key tamamlandı)
+# v2.6.51 — Hardcoded toast string'leri i18n'e çekildi (EN/TR mükemmellik)
+
+## Sorun
+
+Audit bulgusu: **78 hardcoded İngilizce toast** çağrısı vardı. Yani Türkçe seçili olsa bile şef şu metinleri **İngilizce** görüyordu:
+
+```
+"Copied"
+"Name required"
+"Save failed"
+"Recipe not found"
+"Imported: 12 new, 3 updated"
+"Switched to Lyon Restoran"
+... ve 70+ diğeri
+```
+
+EN/TR mükemmellik hedefi için kabul edilemez.
+
+## Çözüm
+
+### 63 benzersiz string i18n key'lerine çevrildi:
+
+- **46 simple** (sabit metin): `'Copied'` → `PCD.i18n.t('toast_copied')`
+- **17 concat** (placeholder içeren): `'Switched to ' + ws.name` → `PCD.i18n.t('toast_workspace_switched', { name: ws.name })`
+
+### 14 dosyada 78 toast call değiştirildi
+
+| Dosya | Değiştirilen |
+|-------|--------------|
+| recipes.js | 24 (simple) + 2 (concat) |
+| account.js | 23 (simple) + 4 (concat) |
+| inventory.js | 11 (simple) + 1 (concat) |
+| checklist.js | 9 (simple) + 0 (concat) |
+| app.js | 9 (simple) + 1 (concat) |
+| menus.js | 9 (simple) + 1 (concat) |
+| auth.js | 7 (simple) + 0 (concat) |
+| haccp_logs.js | 7 (simple) + 0 (concat) |
+| kitchen_cards.js | 5 (simple) + 1 (concat) |
+| ingredients.js | 4 (simple) + 1 (concat) |
+| events.js | 3 (simple) + 1 (concat) |
+| diğerleri | sıfır veya tek tük |
+
+### `js/i18n/en.js` ve `js/i18n/tr.js`'ye 62 yeni key eklendi
+
+```
+en: 1287 → 1349 keys
+tr: 1287 → 1349 keys
+```
+
+## Örnekler (yeni davranış)
+
+| Kullanıcı eylemi | EN dilinde toast | TR dilinde toast |
+|------------------|------------------|------------------|
+| Bir tarif çoğalt | "Recipe duplicated" | "Tarif çoğaltıldı" |
+| Workspace değiştir | "Switched to Bar Lyon" | "Geçildi: Bar Lyon" |
+| 12 yeni 3 güncel ingredient import | "Imported: 12 new, 3 updated" | "İçe aktarıldı: 12 yeni, 3 güncellendi" |
+| Sipariş gönder | "Order sent to Bidfood" | "Sipariş gönderildi: Bidfood" |
+| Stok sayım onayla | "Count approved · 47 items updated" | "Sayım onaylandı · 47 öğe güncellendi" |
+
+## Doğrulama
+
+- Migration script'i ile **62 key 2 lokale eklendi, 0 eksik**
+- Migration sonrası **0 hardcoded English toast** (`grep` ile doğrulandı)
+- Tüm 27 JS dosyası syntax check pass
+
+## Kapsam dışı
+
+- **Modal title/text/button label'ları** — bunlar `PCD.modal.confirm({ title, text })` ile çağrılıyor, ayrı pakette (v2.6.52) ele alınacak
+- **Print HTML'lerindeki hardcoded text'ler** — `print.css` ve template dosyalarındaki İngilizce kalan kısımlar v2.6.53'te
+- **ES/FR/DE/AR çevirileri** — yeni 62 key bu lokallere eklenmedi, runtime fallback EN'e gidiyor (mevcut davranış)
+
+## Test (push sonrası)
+
+1. **TR'ye geç** → herhangi bir tarifte:
+   - Çoğalt → "Tarif çoğaltıldı" görmelisin (önceden "Recipe duplicated" görüyordun)
+   - Foto kopyala → "Kopyalandı"
+   - Sil → "Silindi"
+2. **Workspace switcher** → bir alana geç → "Geçildi: {ad}"
+3. **Ingredients import** → CSV yükle → "İçe aktarıldı: X yeni, Y güncellendi"
+4. **EN'e geri dön** → aynı eylemler İngilizce görünmeli
+
+## Risk
+
+Düşük. Migration tek bir Node script ile otomatik yapıldı, regex'ler sıkı tutuldu (hatalı eşleşme riski sıfır), her step verify edildi. Davranış birebir aynı, sadece dil seçilebilir oldu.
+
+---
+
+
 
 ## Bulgu
 

@@ -293,7 +293,7 @@
   function showQuotaModal() {
     if (!PCD.modal || !PCD.modal.open) {
       // No modal subsystem yet (very early boot) — fall back to toast.
-      PCD.toast && PCD.toast.error('Storage full. Open Account → Backup to download your data.');
+      PCD.toast && PCD.toast.error(PCD.i18n.t('toast_storage_full_minimal'));
       return;
     }
     _quotaModalOpen = true;

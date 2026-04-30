@@ -207,7 +207,7 @@
       return v && parseFloat(v) > 0;
     });
     if (filled.length === 0) {
-      PCD.toast.warning('Enter quantities for at least one product first');
+      PCD.toast.warning(PCD.i18n.t('toast_enter_quantities_first'));
       return;
     }
     // Pick delivery date first, then build message + open share sheet
@@ -384,7 +384,7 @@
         });
       } else if (navigator.clipboard) {
         navigator.clipboard.writeText(txt).then(function () {
-          PCD.toast.success('Copied to clipboard — paste it anywhere');
+          PCD.toast.success(PCD.i18n.t('toast_copied_to_clipboard'));
         });
       }
     });
@@ -393,7 +393,7 @@
   function onSentSuccess(supplier) {
     // Clear quantities for this supplier — they were sent
     delete draftQty[supplier.id];
-    PCD.toast.success('Order sent to ' + supplier.name);
+    PCD.toast.success(PCD.i18n.t('toast_order_sent_to', { name: supplier.name }));
     // Re-render so the badge clears
     setTimeout(function () {
       const v = PCD.$('#view');
@@ -528,7 +528,7 @@
     saveBtn.addEventListener('click', function () {
       // Read fresh from DOM (safety net)
       data.name = (PCD.$('#sName', body).value || '').trim();
-      if (!data.name) { PCD.toast.error('Name required'); return; }
+      if (!data.name) { PCD.toast.error(PCD.i18n.t('toast_name_required')); return; }
       data.category = PCD.$('#sCat', body).value;
       data.phone = (PCD.$('#sPhone', body).value || '').trim();
       data.whatsapp = (PCD.$('#sWa', body).value || '').trim();

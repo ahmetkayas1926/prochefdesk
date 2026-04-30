@@ -177,7 +177,7 @@
     // Upgrade button
     const upgradeBtn = PCD.$('#btnUpgrade');
     if (upgradeBtn) upgradeBtn.addEventListener('click', function () {
-      PCD.toast.info('Coming soon 🚀');
+      PCD.toast.info(PCD.i18n.t('toast_coming_soon'));
     });
 
     // Bottom nav
@@ -439,14 +439,14 @@
           if (!ok) return;
           PCD.store.archiveWorkspace(wsId, false);
           PCD.store.setActiveWorkspaceId(wsId);
-          PCD.toast.success('Switched to ' + ws.name);
+          PCD.toast.success(PCD.i18n.t('toast_workspace_switched', { name: ws.name }));
           m.close();
           setTimeout(function () { window.location.reload(); }, 400);
         });
         return;
       }
       PCD.store.setActiveWorkspaceId(wsId);
-      PCD.toast.success('Switched to ' + (ws ? ws.name : 'workspace'));
+      PCD.toast.success(PCD.i18n.t('toast_workspace_switched', { name: (ws ? ws.name : 'workspace') }));
       m.close();
       // Reload to refresh all views with new workspace data
       setTimeout(function () { window.location.reload(); }, 300);
@@ -619,10 +619,10 @@
         if (!ok) return;
         const success = PCD.store.deleteWorkspace(wsId);
         if (!success) {
-          PCD.toast.error('Cannot delete — at least one workspace must remain');
+          PCD.toast.error(PCD.i18n.t('toast_workspace_min_one'));
           return;
         }
-        try { PCD.toast.success('Workspace deleted'); } catch (e) {}
+        try { PCD.toast.success(PCD.i18n.t('toast_workspace_deleted')); } catch (e) {}
         try { m.close(); } catch (e) {}
 
         // Push deletion to cloud BEFORE reload (otherwise reload pulls stale state with the ws back)
@@ -655,7 +655,7 @@
       if (endInp) data.periodEnd = endInp.value ? endInp.value + '-01' : null;
 
       if (!data.name) {
-        PCD.toast && PCD.toast.error('Name required');
+        PCD.toast && PCD.toast.error(PCD.i18n.t('toast_name_required'));
         return;
       }
 
@@ -666,11 +666,11 @@
         saved = PCD.store.upsertWorkspace(data);
       } catch (saveErr) {
         PCD.err && PCD.err('[Workspace Save] upsert error', saveErr);
-        PCD.toast && PCD.toast.error('Save failed: ' + (saveErr && saveErr.message || saveErr));
+        PCD.toast && PCD.toast.error(PCD.i18n.t('toast_save_failed_with_error', { msg: (saveErr && saveErr.message || saveErr) }));
         return;
       }
       if (!saved || !saved.id) {
-        PCD.toast && PCD.toast.error('Save failed — workspace was not created.');
+        PCD.toast && PCD.toast.error(PCD.i18n.t('toast_workspace_create_failed'));
         return;
       }
 
@@ -684,7 +684,7 @@
       }
 
       // STEP 4 — UI cleanup (best effort, but reload will fix anything)
-      try { PCD.toast.success('Workspace saved'); } catch (e) {}
+      try { PCD.toast.success(PCD.i18n.t('toast_workspace_saved')); } catch (e) {}
       try { m.close(); } catch (e) {}
 
       // STEP 5 — Push to cloud BEFORE reload (so reload doesn't pull stale state)
@@ -924,7 +924,7 @@
     _lastErrorAt = now;
     PCD.error && PCD.error('[Global]', e.message || e.error, e.filename, e.lineno);
     if (PCD.toast) {
-      PCD.toast.error('Something went wrong. Try again or refresh.', 3000);
+      PCD.toast.error(PCD.i18n.t('toast_generic_error'), 3000);
     }
   });
 

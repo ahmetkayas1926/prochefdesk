@@ -712,11 +712,11 @@
     shareLinkBtn.addEventListener('click', function () {
       const user = PCD.store.get('user');
       if (!user || !user.id) {
-        PCD.toast.error('Sign in to create public links');
+        PCD.toast.error(PCD.i18n.t('toast_sign_in_to_share'));
         return;
       }
       if (!PCD.share || !PCD.share.createOrGetShareUrl) {
-        PCD.toast.error('Share unavailable');
+        PCD.toast.error(PCD.i18n.t('toast_share_unavailable'));
         return;
       }
       shareLinkBtn.disabled = true;
@@ -741,7 +741,7 @@
         // Auto-select
         setTimeout(function () { const inp = PCD.$('#menuShareLink', linkBody); if (inp) { inp.focus(); inp.select(); } }, 100);
         PCD.$('#copyMenuLink', linkBody).addEventListener('click', function () {
-          if (navigator.clipboard) navigator.clipboard.writeText(url).then(function () { PCD.toast.success('✓ Link copied'); });
+          if (navigator.clipboard) navigator.clipboard.writeText(url).then(function () { PCD.toast.success(PCD.i18n.t('toast_link_copied_ok')); });
         });
         PCD.$('#waMenuLink', linkBody).addEventListener('click', function () {
           window.open('https://wa.me/?text=' + encodeURIComponent(url), '_blank');
@@ -749,7 +749,7 @@
       }).catch(function (e) {
         shareLinkBtn.disabled = false;
         shareLinkBtn.innerHTML = PCD.icon('share',16) + ' <span>Share link</span>';
-        PCD.toast.error('Share failed: ' + (e.message || e));
+        PCD.toast.error(PCD.i18n.t('toast_share_failed', { msg: e.message || e }));
       });
     });
     qrBtn.addEventListener('click', function () {

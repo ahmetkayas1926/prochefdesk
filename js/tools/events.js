@@ -318,7 +318,7 @@
 
       PCD.$('#genShop', body).addEventListener('click', function () {
         if (!data.guestCount || !data.menu || data.menu.length === 0) {
-          PCD.toast.warning('Set guest count and add recipes first');
+          PCD.toast.warning(PCD.i18n.t('toast_set_guest_count_first'));
           return;
         }
         // Build shopping list items from menu (convert per-guest to total portions)
@@ -551,7 +551,7 @@
     });
     PCD.$('#evShCopy', body).addEventListener('click', function () {
       if (navigator.clipboard) {
-        navigator.clipboard.writeText(getMsg()).then(function () { PCD.toast.success('Copied'); m.close(); });
+        navigator.clipboard.writeText(getMsg()).then(function () { PCD.toast.success(PCD.i18n.t('toast_copied')); m.close(); });
       }
     });
     PCD.$('#evShMore', body).addEventListener('click', function () {
@@ -559,7 +559,7 @@
         navigator.share({ title: event.name || 'Event', text: getMsg() }).then(function () { m.close(); }).catch(function () {});
       } else {
         if (navigator.clipboard) {
-          navigator.clipboard.writeText(getMsg()).then(function () { PCD.toast.success('Copied'); m.close(); });
+          navigator.clipboard.writeText(getMsg()).then(function () { PCD.toast.success(PCD.i18n.t('toast_copied')); m.close(); });
         }
       }
     });

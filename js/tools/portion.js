@@ -387,7 +387,7 @@
         createdAt: new Date().toISOString(),
       };
       const saved = PCD.store.upsertInTable('shoppingLists', list, 'sl');
-      PCD.toast.success('Shopping list created · ' + recipes.length + ' recipes');
+      PCD.toast.success(PCD.i18n.t('toast_shopping_created_n', { n: recipes.length }));
       m.close();
       // Navigate to shopping list view if available
       setTimeout(function () {
@@ -520,13 +520,13 @@
       m.close();
     });
     PCD.$('#shCopy', body).addEventListener('click', function () {
-      if (navigator.clipboard) navigator.clipboard.writeText(getText()).then(function () { PCD.toast.success('Copied'); m.close(); });
+      if (navigator.clipboard) navigator.clipboard.writeText(getText()).then(function () { PCD.toast.success(PCD.i18n.t('toast_copied')); m.close(); });
     });
     PCD.$('#shMore', body).addEventListener('click', function () {
       if (navigator.share) {
         navigator.share({ title: 'Scaled recipes', text: getText() }).then(function () { m.close(); }).catch(function () {});
       } else if (navigator.clipboard) {
-        navigator.clipboard.writeText(getText()).then(function () { PCD.toast.success('Copied'); m.close(); });
+        navigator.clipboard.writeText(getText()).then(function () { PCD.toast.success(PCD.i18n.t('toast_copied')); m.close(); });
       }
     });
   }

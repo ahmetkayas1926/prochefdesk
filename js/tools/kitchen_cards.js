@@ -268,9 +268,9 @@
         if (layout.length === 0) return;
         const id = persistCanvas();
         if (id) {
-          PCD.toast.success('Canvas "' + ((canvasName || '').trim() || 'Untitled canvas') + '" saved');
+          PCD.toast.success(PCD.i18n.t('toast_canvas_saved', { name: ((canvasName || '').trim() || 'Untitled canvas') }));
         } else {
-          PCD.toast.error('Save failed');
+          PCD.toast.error(PCD.i18n.t('toast_save_failed'));
         }
       });
 
@@ -324,7 +324,7 @@
         showMethod = true; showAmounts = true;
         layout = recipes.map(function (r) { return { recipeId: r.id, span: 1 }; });
         renderBody();
-        PCD.toast.info('New canvas — name it and customize');
+        PCD.toast.info(PCD.i18n.t('toast_new_canvas'));
       });
 
       // Load canvas
@@ -801,7 +801,7 @@
       }).then(function (ok) {
         if (!ok) return;
         PCD.store.deleteFromTable('canvases', id);
-        PCD.toast.success('Canvas deleted');
+        PCD.toast.success(PCD.i18n.t('toast_canvas_deleted'));
         paintList();
       });
     });
