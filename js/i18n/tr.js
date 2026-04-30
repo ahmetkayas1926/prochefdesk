@@ -1260,6 +1260,7 @@ window.PCD.i18n.register('tr', {
   dash_low_stock_desc: "Hedef seviyenin altında — yakında sipariş ver",
   dash_today_waste: "Bugünün fire: {amount}",
   dash_today_waste_desc: "Bugün {n} kayıt girildi",
+  dash_event_meta: "{day}{guests}{venue}",
   dash_guests_suffix: " · {n} misafir",
   dash_venue_suffix: " · {venue}",
   dash_session_progress: "{name} · {done}/{total} (%{pct})",

@@ -1,4 +1,45 @@
-# v2.6.49 — Cleanup: ölü kod silme + function shadowing audit
+# v2.6.50 — EN/TR diff fix (eksik 1 key tamamlandı)
+
+## Bulgu
+
+EN ve TR çevirilerinin tamlık seviyesi audit edildi:
+
+```
+EN: 1287 key
+TR: 1286 key  ← 1 eksik
+```
+
+Eksik key: `dash_event_meta = "{day}{guests}{venue}"` — pure template, hiç düz metin yok. Saf placeholder concat. Çevirisi gerekmiyor ama tutarlılık için TR'ye eklendi.
+
+## Değişiklik
+
+`js/i18n/tr.js`'ye tek satır eklendi:
+```js
+dash_event_meta: "{day}{guests}{venue}",
+```
+
+EN ile birebir aynı (zaten metin yok).
+
+## Doğrulama
+
+```
+en 1287 keys
+tr 1287 keys  ✓
+es 676 keys
+fr 676 keys
+de 676 keys
+ar 676 keys
+```
+
+EN ve TR artık **tam** parite. ES/FR/DE/AR ~53% — bunlar başka pakette.
+
+## Risk
+
+Sıfır. Tek satır data ekleme.
+
+---
+
+
 
 ## A) ingredients.js — `loadSheetJS` lazy loader silindi (#13)
 
