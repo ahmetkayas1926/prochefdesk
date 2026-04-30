@@ -1,4 +1,77 @@
-# v2.6.46 — i18n birleştirme: 11 dosya → 6 dosya
+# v2.6.47 — user_data RLS migration (defensive + repo'ya eklendi)
+
+## Sorun
+
+`user_data` tablosu cloud sync'in ana taşıyıcısı (cloud.js):
+- Her kullanıcının TÜM state'i (recipes, ingredients, menus, workspaces, inventory, suppliers, events, vs.) tek bir jsonb blob olarak burada
+- Şema: `user_data (user_id uuid, key text, value jsonb, updated_at)`
+- Kullanılan tek key: `'state'`
+
+Bu tablo Supabase Dashboard üzerinden **ELLE** oluşturulmuştu. RLS politikaları da dashboard'dan elle kuruldu, repo'da SQL **yoktu**. İki risk vardı:
+
+1. Yeni Supabase ortamına deploy edilirse RLS yapılandırması atlanabilir → tüm kullanıcı verisi anon SELECT'e açılır (v2.6.39'daki public_shares açığının daha kötüsü, çünkü TÜM state burada)
+
+2. Mevcut ortamda bir migration yanlışlıkla RLS'i kapatabilir, kimse fark etmez
+
+## Çözüm
+
+`migrations/v2.6.47-user-data-rls.sql` — **defansif ve idempotent** migration:
+
+- `CREATE TABLE IF NOT EXISTS user_data ...` — mevcut tabloyu değiştirmez, yoksa oluşturur
+- `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` — zaten açıksa no-op
+- 4 politika `DROP IF EXISTS` + `CREATE` ile **standardize** edilir:
+  - `user_data_select_own` (SELECT, authenticated, `auth.uid() = user_id`)
+  - `user_data_insert_own` (INSERT)
+  - `user_data_update_own` (UPDATE)
+  - `user_data_delete_own` (DELETE)
+- Eski/farklı isimlendirilmiş politikalar (Dashboard default'ları dahil) drop edilir
+- `updated_at` otomatik güncelleme trigger'ı eklenir (defansif — cloud.js zaten elle gönderiyor)
+
+**Anon role için HİÇBİR erişim yok** — SELECT/INSERT/UPDATE/DELETE hepsi blokludur.
+
+## Davranış değişikliği
+
+Üretim ortamında RLS doğru kuruluysa (büyük olasılıkla öyle): **no-op**. Eğer eksik veya yanlışsa: düzeltir.
+
+## Kod ayağı
+
+`js/core/cloud.js` değişiklik **gerektirmiyor**. Mevcut çağrılar:
+```js
+supabase.from('user_data').upsert({ user_id: user.id, key: 'state', value: payload })
+```
+yeni RLS ile uyumlu (`user_id` user.id'ye eşit, `auth.uid() = user_id` check'i geçer).
+
+## Deploy adımı
+
+Sadece SQL — kod tarafında değişiklik yok (sürüm bump versiyon footer için):
+
+1. Supabase Dashboard → SQL Editor → `migrations/v2.6.47-user-data-rls.sql` içeriğini yapıştır → Run
+2. Doğrulama (migration sonu yorumlarında detay):
+   ```sql
+   SELECT polname, polcmd FROM pg_policy WHERE polrelid = 'user_data'::regclass;
+   ```
+   4 satır dönmeli: select_own, insert_own, update_own, delete_own
+3. Anon test: Supabase Dashboard → Table Editor → user_data → "View as: anon" → 0 rows
+4. Production'da kod deploy etmeden önce 1 kullanıcı login → veri sync sorunsuz mu kontrol et
+
+## Geri alma planı
+
+Bir şey ters giderse (RLS politikası mevcut user'ları kilitler), Supabase SQL Editor'de:
+
+```sql
+-- Geçici olarak RLS'i devre dışı bırak (acil durum, tüm authenticated rolleri açar)
+ALTER TABLE user_data DISABLE ROW LEVEL SECURITY;
+```
+
+Sorun çözüldükten sonra `ENABLE` ile tekrar aç + politikaları yeniden kur.
+
+## Risk
+
+Düşük (eğer üretimde RLS zaten kurulduysa). Orta (eğer farklı politika isimlendirmesi varsa ve drop sonrası bir miyamlanma sorunu çıkarsa). Tüm değişiklikler tek bir transaction içinde — başarısızlıkta rollback otomatik.
+
+---
+
+
 
 ## Sorun
 
