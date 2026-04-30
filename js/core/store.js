@@ -719,6 +719,107 @@
       return out;
     },
 
+    // v2.6.55 — Detect recipes with "(removed ingredient)" or
+    // "(removed sub-recipe)" lines. These are leftover from the pre-v2.6.36
+    // era when ingredient deletion silently broke recipes. Returns:
+    //   [{ recipe, brokenLines: [{ idx, kind: 'ingredient'|'subrecipe', refId }] }]
+    // Used by dashboard self-healing card and the cleanup modal.
+    findBrokenRecipes: function () {
+      const wsId = currentWsId();
+      if (!state.recipes[wsId]) return [];
+      const recipes = state.recipes[wsId];
+      // Build maps of valid (non-deleted) ingredients and recipes for quick lookup
+      const wsIngs = (state.ingredients && state.ingredients[wsId]) || {};
+      const validIngIds = new Set();
+      Object.keys(wsIngs).forEach(function (id) {
+        const ing = wsIngs[id];
+        if (ing && !ing._deletedAt) validIngIds.add(id);
+      });
+      const validRecipeIds = new Set();
+      Object.keys(recipes).forEach(function (id) {
+        const r = recipes[id];
+        if (r && !r._deletedAt) validRecipeIds.add(id);
+      });
+      const out = [];
+      Object.keys(recipes).forEach(function (rid) {
+        const r = recipes[rid];
+        if (!r || r._deletedAt) return;
+        if (!r.ingredients || !r.ingredients.length) return;
+        const brokenLines = [];
+        r.ingredients.forEach(function (ri, idx) {
+          if (ri.recipeId) {
+            // Sub-recipe reference — broken if target recipe is missing/deleted
+            // Or if it points to itself (cycle)
+            if (!validRecipeIds.has(ri.recipeId) || ri.recipeId === r.id) {
+              brokenLines.push({ idx: idx, kind: 'subrecipe', refId: ri.recipeId });
+            }
+          } else if (ri.ingredientId) {
+            // Ingredient reference — broken if target ingredient is missing/deleted
+            if (!validIngIds.has(ri.ingredientId)) {
+              brokenLines.push({ idx: idx, kind: 'ingredient', refId: ri.ingredientId });
+            }
+          }
+          // else: malformed line (no id at all) — also broken
+          else {
+            brokenLines.push({ idx: idx, kind: 'malformed', refId: null });
+          }
+        });
+        if (brokenLines.length > 0) {
+          out.push({ recipe: PCD.clone(r), brokenLines: brokenLines });
+        }
+      });
+      return out;
+    },
+
+    // v2.6.55 — Remove all broken ingredient/sub-recipe lines from the
+    // given recipe. Returns the count of removed lines, or 0 if recipe
+    // not found / no broken lines. Triggers normal upsert flow so cloud
+    // sync + persist behave normally.
+    cleanRecipeBrokenLines: function (recipeId) {
+      const wsId = currentWsId();
+      if (!state.recipes[wsId] || !state.recipes[wsId][recipeId]) return 0;
+      const r = state.recipes[wsId][recipeId];
+      if (r._deletedAt || !r.ingredients || !r.ingredients.length) return 0;
+      const wsIngs = (state.ingredients && state.ingredients[wsId]) || {};
+      const validIngIds = new Set();
+      Object.keys(wsIngs).forEach(function (id) {
+        if (wsIngs[id] && !wsIngs[id]._deletedAt) validIngIds.add(id);
+      });
+      const validRecipeIds = new Set();
+      Object.keys(state.recipes[wsId]).forEach(function (id) {
+        const rr = state.recipes[wsId][id];
+        if (rr && !rr._deletedAt) validRecipeIds.add(id);
+      });
+      const before = r.ingredients.length;
+      const cleaned = r.ingredients.filter(function (ri) {
+        if (ri.recipeId) {
+          return validRecipeIds.has(ri.recipeId) && ri.recipeId !== r.id;
+        } else if (ri.ingredientId) {
+          return validIngIds.has(ri.ingredientId);
+        } else {
+          return false; // malformed line, drop
+        }
+      });
+      const removed = before - cleaned.length;
+      if (removed === 0) return 0;
+      // Use upsertRecipe to trigger normal save flow (versioning, cloud sync, etc.)
+      const updated = Object.assign({}, PCD.clone(r), { ingredients: cleaned });
+      this.upsertRecipe(updated);
+      return removed;
+    },
+
+    // v2.6.55 — Bulk version: clean all broken recipes in one go.
+    // Returns total lines removed across all recipes.
+    cleanAllBrokenRecipes: function () {
+      const broken = this.findBrokenRecipes();
+      let totalRemoved = 0;
+      const self = this;
+      broken.forEach(function (b) {
+        totalRemoved += self.cleanRecipeBrokenLines(b.recipe.id);
+      });
+      return { recipes: broken.length, lines: totalRemoved };
+    },
+
     // ---- Ingredient helpers (workspace-scoped from v2.6.30) ----
     // Previously ingredients were shared across all workspaces (one master
     // list). Real-world chefs run kitchens in different countries with

@@ -1,4 +1,100 @@
-# v2.6.54 — Workspace silinince orphan foto temizliği
+# v2.6.55 — Recipe self-healing (bozuk referans temizliği)
+
+## Sorun
+
+v2.6.36 öncesinde malzeme silme akışı **sessizdi** — bir malzeme silindiğinde, o malzemeyi kullanan tüm tariflerde "(removed ingredient)" satırı bırakıyordu. Sub-recipe için de aynı: silinen alt-tarif "(removed sub-recipe)" satırına dönüşüyordu.
+
+v2.6.36'dan beri silme bu durumu engelliyor (kullanılan malzeme silinemez), ama **eski bozuk tarifler hâlâ kullanıcının verisinde**. Şefler bu tariflerin neden hesaplamasının bozuk olduğunu fark etmiyor — cost hesabı yanlış, recipe editor'de kafa karıştırıcı satırlar var.
+
+## Çözüm
+
+### 1. Tespit (`store.js`)
+
+Yeni `findBrokenRecipes()` helper'ı:
+- Aktif workspace'teki tüm aktif (silinmemiş) tarifleri tarar
+- Her tarifin ingredient satırlarını kontrol eder:
+  - `ri.ingredientId` set ama ingredient silindi/yok → broken
+  - `ri.recipeId` set ama sub-recipe silindi/yok → broken
+  - Hem `ri.ingredientId` hem `ri.recipeId` boş → malformed
+  - Cycle: `ri.recipeId === r.id` → broken (self-reference)
+- Sonuç: `[{ recipe, brokenLines: [{ idx, kind, refId }] }]`
+
+### 2. Temizleme (`store.js`)
+
+Yeni `cleanRecipeBrokenLines(recipeId)`:
+- Sadece geçerli ingredient/sub-recipe referanslı satırları korur
+- Diğerlerini filtreler
+- Normal `upsertRecipe()` flow'undan geçer (versioning, cloud sync dahil)
+
+Yeni `cleanAllBrokenRecipes()`:
+- `findBrokenRecipes()` ile listele → hepsini sırayla `cleanRecipeBrokenLines` ile temizle
+- Sonuç: `{ recipes: N, lines: M }` istatistik
+
+### 3. Dashboard kartı (`dashboard.js`)
+
+Bozuk tarif varsa dashboard'da sarı uyarı kartı:
+- Title: "**N tarif düzeltme bekliyor**"
+- Description: ilk 3 tarifin adı (+N more)
+- CTA: "Düzelt"
+- Click → self-heal modal açılır
+
+### 4. Self-heal modal (`dashboard.js`)
+
+- Tüm bozuk tarifleri liste halinde gösterir
+- Her satır: tarif adı + kaç satır eksik (X eksik malzeme · Y eksik alt-tarif · Z bozuk)
+- "Hepsini düzelt" butonu → confirm modal → temizleme
+
+### 5. Otomatik versiyon snapshot
+
+**ÖNEMLİ veri bütünlüğü garantisi:** Temizleme öncesi her tarif için `snapshotRecipeVersion('Before self-heal · {tarih}')` çağrılır. Kullanıcı bir şeyden memnun değilse Recipe → Versions'dan geri alabilir.
+
+### 6. i18n
+
+13 yeni key eklendi (en + tr). Modal Türkçe açıklamalı, "Bu tariflerde silinmiş malzeme veya alt-tarife referans veren satırlar var..." gibi.
+
+## Test (push sonrası)
+
+### Bozuk tarif simülasyonu
+1. Bir test tarifine 3 malzeme ekle (örn. Tuz, Karabiber, Sarımsak)
+2. Kayıt et
+3. **(v2.6.36 koruması var, yani aktif kullanılan malzeme silinemez. Ama eski bozuk tarifler için:)** Browser console'dan:
+```js
+// Bir tarifin ingredients'inden birinin ingredientId'sini geçersiz bir ID ile değiştir
+const r = PCD.store.listRecipes()[0];
+r.ingredients[0].ingredientId = 'fake_invalid_id';
+PCD.store.upsertRecipe(r);
+location.reload();
+```
+4. Dashboard'a git → sarı kart "1 tarif düzeltme bekliyor" görmelisin
+5. Karta tıkla → modal açılır, "1 missing ingredient(s)" yazısı
+6. "Fix all" tıkla → confirm → onayla
+7. Toast: "✓ 1 tarif düzeltildi — 1 bozuk satır kaldırıldı"
+8. Dashboard reload, sarı kart kayboldu
+9. Recipe → Versions: "Before self-heal · {tarih}" snapshot'ı görmelisin
+
+### TR test
+1. Dilini TR'ye çevir
+2. Aynı senaryo → tüm metinler Türkçe görünmeli ("düzeltme bekliyor", "Hepsini düzelt", "bozuk satır kaldırıldı", vs.)
+
+### Temiz veri testi
+1. Hiç bozuk tarif yokken dashboard'a git → sarı kart **görünmemeli**
+2. Eğer manuel olarak `data-action="fix-broken-recipes"` tetiklersen → "✓ Tüm tarifler temiz görünüyor" toast'u
+
+### Edge case'ler
+- ✅ Self-reference cycle (recipe kendine referans veriyor) → broken sayılır, temizlenir
+- ✅ Hem ingredientId hem recipeId boş satırlar → malformed olarak temizlenir
+- ✅ Soft-delete'li ingredient'a referans → broken sayılır (silinmiş kabul edilir)
+- ✅ Aktif workspace dışındaki bozuk tarifler etkilenmez (workspace izolasyonu korunur)
+
+## Risk
+
+Düşük. Otomatik versiyon snapshot ile geri alınabilir. Confirm modal var. Sadece ORPHAN satırlar silinir, sağlam satırlar korunur.
+
+Geri alma planı: bir tarif yanlışlıkla temizlendi → Recipe modal → Versions → "Before self-heal" snapshot'ını restore et.
+
+---
+
+
 
 ## Sorun
 

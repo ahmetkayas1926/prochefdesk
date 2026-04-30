@@ -1410,4 +1410,19 @@ window.PCD.i18n.register('tr', {
   label_total_revenue: "Toplam ciro",
   label_hide_allergen_icons: "Alerjen ikonlarını gizle",
   print_tip_save_as_pdf: "İpucu: yazdırma ekranında \"PDF olarak Kaydet\" seçin",
+
+  // v2.6.55 — Self-heal (broken recipe references)
+  dash_broken_recipes_title: "{n} tarif düzeltme bekliyor",
+  dash_fix_cta: "Düzelt",
+  selfheal_modal_title: "Bozuk referanslı tarifler",
+  selfheal_intro: "Bu tariflerde silinmiş malzeme veya alt-tarife referans veren satırlar var. Editörde \"(kaldırıldı)\" olarak görünüyor ve maliyet hesaplamasını bozuyor. Temizleme bu satırları kaldırır, tarif kalır.",
+  selfheal_safety_note: "✓ Temizleme öncesi otomatik sürüm anlık görüntüsü alınır, gerekirse Tarif → Sürümler'den geri alabilirsiniz.",
+  selfheal_label_missing_ing: "eksik malzeme",
+  selfheal_label_missing_sub: "eksik alt-tarif",
+  selfheal_label_malformed: "bozuk satır",
+  selfheal_fix_all: "Hepsini düzelt",
+  selfheal_confirm_title: "Bozuk satırlar temizlensin mi?",
+  selfheal_confirm_text: "{n} tariften bozuk satırlar kaldırılacak. Her tarife önce otomatik sürüm anlık görüntüsü alınır, geri alabilirsiniz.",
+  selfheal_done: "✓ {recipes} tarif düzeltildi — {lines} bozuk satır kaldırıldı",
+  selfheal_already_clean: "✓ Tüm tarifler temiz görünüyor",
 });

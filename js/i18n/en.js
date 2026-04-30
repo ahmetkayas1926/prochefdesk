@@ -1410,4 +1410,19 @@ window.PCD.i18n.register('en', {
   label_total_revenue: "Total revenue",
   label_hide_allergen_icons: "Hide allergen icons",
   print_tip_save_as_pdf: "Tip: pick \"Save as PDF\" in the print dialog",
+
+  // v2.6.55 — Self-heal (broken recipe references)
+  dash_broken_recipes_title: "{n} recipe{s_lines_n} need fixing",
+  dash_fix_cta: "Fix",
+  selfheal_modal_title: "Recipes with broken references",
+  selfheal_intro: "These recipes have lines that reference deleted ingredients or sub-recipes. They show as \"(removed)\" in the editor and break cost calculations. Cleaning removes the orphan lines but keeps the recipe.",
+  selfheal_safety_note: "✓ A version snapshot is taken automatically before cleaning, so you can revert via Recipe → Versions if needed.",
+  selfheal_label_missing_ing: "missing ingredient(s)",
+  selfheal_label_missing_sub: "missing sub-recipe(s)",
+  selfheal_label_malformed: "malformed line(s)",
+  selfheal_fix_all: "Fix all",
+  selfheal_confirm_title: "Clean broken lines?",
+  selfheal_confirm_text: "Orphan lines will be removed from {n} recipe(s). Each recipe gets an automatic version snapshot first so you can revert.",
+  selfheal_done: "✓ Fixed {recipes} recipe(s) — {lines} orphan line(s) removed",
+  selfheal_already_clean: "✓ All recipes look clean",
 });

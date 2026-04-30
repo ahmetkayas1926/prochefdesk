@@ -154,6 +154,11 @@
       menus: PCD.store.listTable ? PCD.store.listTable('menus').length : 0,
     };
 
+    // 7) Broken recipes (v2.6.55) — recipes with "(removed ingredient)" or
+    // "(removed sub-recipe)" lines. Leftovers from pre-v2.6.36 era when
+    // ingredient deletion silently broke recipes.
+    const brokenRecipes = (PCD.store.findBrokenRecipes && PCD.store.findBrokenRecipes()) || [];
+
     // === Build cards HTML ===
     const cards = [];
 
@@ -210,6 +215,26 @@
               '<div class="dash-card-desc">' + t('dash_session_progress', { name: PCD.escapeHtml(s.templateName || 'Session'), done: done, total: total, pct: pct }) + '</div>' +
             '</div>' +
             '<div class="dash-card-cta">' + t('dash_continue_cta') + '</div>' +
+          '</div>'
+      });
+    }
+
+    // CARD: Broken recipes (v2.6.55) — show when there are recipes with
+    // orphan ingredient/sub-recipe references. Click → open self-heal modal.
+    if (brokenRecipes.length > 0) {
+      const sample = brokenRecipes.slice(0, 3).map(function (b) { return b.recipe.name || '(untitled)'; }).join(', ');
+      const more = brokenRecipes.length > 3 ? ' +' + (brokenRecipes.length - 3) : '';
+      const totalLines = brokenRecipes.reduce(function (sum, b) { return sum + b.brokenLines.length; }, 0);
+      cards.push({
+        priority: 2,
+        html:
+          '<div class="dash-card priority-warn" data-action="fix-broken-recipes" style="cursor:pointer;">' +
+            '<div class="dash-card-icon" style="background:#fef3c7;color:#92400e;">' + PCD.icon('alert-triangle', 22) + '</div>' +
+            '<div class="dash-card-body">' +
+              '<div class="dash-card-title">' + t('dash_broken_recipes_title', { n: brokenRecipes.length, lines: totalLines }) + '</div>' +
+              '<div class="dash-card-desc">' + PCD.escapeHtml(sample) + more + '</div>' +
+            '</div>' +
+            '<div class="dash-card-cta">' + t('dash_fix_cta') + '</div>' +
           '</div>'
       });
     }
@@ -357,6 +382,10 @@
     PCD.on(view, 'click', '[data-action="view-waste"]', function () {
       PCD.router.go('waste');
     });
+    // v2.6.55 — Self-heal: show broken recipes modal with "Fix all" action
+    PCD.on(view, 'click', '[data-action="fix-broken-recipes"]', function () {
+      openBrokenRecipesModal(view);
+    });
     // Clickable stat tiles (Recipes / Ingredients / Menus counts)
     PCD.on(view, 'click', '[data-action="open-recipes"]', function () {
       PCD.router.go('recipes');
@@ -366,6 +395,91 @@
     });
     PCD.on(view, 'click', '[data-action="open-menus-stat"]', function () {
       PCD.router.go('menus');
+    });
+  }
+
+  // v2.6.55 — Self-healing modal: lists recipes with broken
+  // ingredient/sub-recipe references and offers a "Fix all" action that
+  // strips the orphan lines from each recipe.
+  function openBrokenRecipesModal(view) {
+    const t = PCD.i18n.t;
+    const broken = (PCD.store.findBrokenRecipes && PCD.store.findBrokenRecipes()) || [];
+    if (broken.length === 0) {
+      PCD.toast.success(t('selfheal_already_clean', '✓ All recipes look clean'));
+      return;
+    }
+
+    const body = PCD.el('div');
+    let html =
+      '<div style="font-size:13px;color:var(--text-2);margin-bottom:14px;line-height:1.6;">' +
+        t('selfheal_intro', 'These recipes have lines that reference deleted ingredients or sub-recipes. They show as "(removed)" in the editor and break cost calculations. Cleaning removes the orphan lines but keeps the recipe.') +
+      '</div>' +
+      '<div style="background:var(--surface-2);border-radius:var(--r-sm);padding:8px 12px;margin-bottom:12px;font-size:12px;color:var(--text-3);">' +
+        t('selfheal_safety_note', '✓ A version snapshot is taken automatically before cleaning, so you can revert via Recipe → Versions if needed.') +
+      '</div>' +
+      '<div style="max-height:340px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r-sm);">';
+
+    broken.forEach(function (b, i) {
+      const r = b.recipe;
+      const lines = b.brokenLines.length;
+      const ingMissing = b.brokenLines.filter(function (l) { return l.kind === 'ingredient'; }).length;
+      const subMissing = b.brokenLines.filter(function (l) { return l.kind === 'subrecipe'; }).length;
+      const malformed = b.brokenLines.filter(function (l) { return l.kind === 'malformed'; }).length;
+      const desc = [];
+      if (ingMissing) desc.push(ingMissing + ' ' + t('selfheal_label_missing_ing', 'missing ingredient(s)'));
+      if (subMissing) desc.push(subMissing + ' ' + t('selfheal_label_missing_sub', 'missing sub-recipe(s)'));
+      if (malformed) desc.push(malformed + ' ' + t('selfheal_label_malformed', 'malformed line(s)'));
+      html +=
+        '<div style="padding:10px 12px;' + (i < broken.length - 1 ? 'border-bottom:1px solid var(--border);' : '') + 'display:flex;justify-content:space-between;align-items:center;gap:10px;">' +
+          '<div style="flex:1;min-width:0;">' +
+            '<div style="font-weight:600;font-size:14px;">' + PCD.escapeHtml(r.name || '(untitled)') + '</div>' +
+            '<div class="text-muted" style="font-size:12px;">' + PCD.escapeHtml(desc.join(' · ')) + '</div>' +
+          '</div>' +
+          '<span style="font-weight:700;color:var(--warning);font-size:12px;background:var(--surface-2);padding:4px 8px;border-radius:999px;">' + lines + '</span>' +
+        '</div>';
+    });
+    html += '</div>';
+    body.innerHTML = html;
+
+    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') });
+    const fixBtn = PCD.el('button', { class: 'btn btn-primary', style: { flex: '1' } });
+    fixBtn.innerHTML = PCD.icon('check', 16) + ' <span>' + t('selfheal_fix_all', 'Fix all') + ' (' + broken.length + ')</span>';
+    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
+    footer.appendChild(cancelBtn);
+    footer.appendChild(fixBtn);
+
+    const m = PCD.modal.open({
+      title: t('selfheal_modal_title', 'Recipes with broken references'),
+      body: body,
+      footer: footer,
+      size: 'md',
+      closable: true,
+    });
+
+    cancelBtn.addEventListener('click', function () { m.close(); });
+    fixBtn.addEventListener('click', function () {
+      // Confirm before destructive action
+      PCD.modal.confirm({
+        icon: '🧹', iconKind: 'info',
+        title: t('selfheal_confirm_title', 'Clean broken lines?'),
+        text: t('selfheal_confirm_text', 'Orphan lines will be removed from {n} recipe(s). Each recipe gets an automatic version snapshot first so you can revert.', { n: broken.length }),
+        okText: t('selfheal_fix_all', 'Fix all'),
+        cancelText: t('cancel'),
+      }).then(function (ok) {
+        if (!ok) return;
+        // Snapshot each broken recipe before cleaning
+        broken.forEach(function (b) {
+          if (PCD.store.snapshotRecipeVersion) {
+            try { PCD.store.snapshotRecipeVersion(b.recipe.id, 'Before self-heal · ' + new Date().toLocaleDateString()); }
+            catch (e) { /* ignore — best effort */ }
+          }
+        });
+        const result = PCD.store.cleanAllBrokenRecipes();
+        m.close();
+        PCD.toast.success(t('selfheal_done', '✓ Fixed {recipes} recipe(s) — {lines} orphan line(s) removed', result));
+        // Re-render dashboard so the card disappears
+        setTimeout(function () { render(view); }, 300);
+      });
     });
   }
 
