@@ -374,6 +374,20 @@
     laterBtn.addEventListener('click', function () { m.close(); });
   }
 
+  // v2.6.43 — Helper: synchronous write of current state to localStorage,
+  // bypassing the debounce. Used in workspace mutations and clearUserData
+  // where we need the change persisted before a navigation/reload happens.
+  // Centralizes 6 copy-pasted try/catch blocks across the file.
+  function flushSync() {
+    try {
+      localStorage.setItem(LS_KEY_STATE, JSON.stringify(state));
+      return true;
+    } catch (e) {
+      PCD.err && PCD.err('flushSync fail', e);
+      return false;
+    }
+  }
+
   // ---------- PERSIST (debounced) ----------
   const persist = PCD.debounce(function () {
     let serialized;
@@ -474,7 +488,7 @@
       state.activeWorkspaceId = wsId;
       emit('activeWorkspaceId', wsId, null);
       // Immediate localStorage write (bypass debounce) so a reload right after won't lose this
-      try { localStorage.setItem(LS_KEY_STATE, JSON.stringify(state)); } catch (e) {}
+      flushSync();
       persist();
       return true;
     },
@@ -495,7 +509,7 @@
       next[ws.id] = ws;
       state.workspaces = next;
       emit('workspaces', next, null);
-      try { localStorage.setItem(LS_KEY_STATE, JSON.stringify(state)); } catch (e) {}
+      flushSync();
       persist();
       return ws;
     },
@@ -512,7 +526,7 @@
         ensureActiveWorkspace();
       }
       emit('workspaces', next, null);
-      try { localStorage.setItem(LS_KEY_STATE, JSON.stringify(state)); } catch (e) {}
+      flushSync();
       persist();
       return true;
     },
@@ -540,7 +554,7 @@
       state._deletedWorkspaces = Object.assign({}, state._deletedWorkspaces);
       state._deletedWorkspaces[wsId] = new Date().toISOString();
       emit('workspaces', next, null);
-      try { localStorage.setItem(LS_KEY_STATE, JSON.stringify(state)); } catch (e) {}
+      flushSync();
       persist();
       return true;
     },
@@ -952,8 +966,7 @@
         state.prefs[subKey] = savedPrefs[k];
       });
       // Persist immediately
-      try { localStorage.setItem(LS_KEY_STATE, JSON.stringify(state)); }
-      catch (e) { PCD.err('clearUserData persist fail', e); }
+      flushSync();
       emit('*:reset', state);
       ['recipes','ingredients','menus','events','suppliers','inventory','waste','onboarding','user','plan','workspaces','activeWorkspaceId'].forEach(function (k) {
         emit(k, state[k]);
@@ -962,8 +975,7 @@
 
     // Force save immediately (e.g. before navigation)
     flush: function () {
-      try { localStorage.setItem(LS_KEY_STATE, JSON.stringify(state)); }
-      catch (e) { PCD.err('flush fail', e); }
+      flushSync();
     },
 
     // Mark tool as "seen" for tutorials

@@ -1,4 +1,68 @@
-# v2.6.42 — localStorage doluyken sessiz veri silme yerine kullanıcıya soruluyor
+# v2.6.43 — Küçük temizlikler: flushSync helper + premium UI FOUC fix
+
+## Değişiklikler
+
+### 1. `js/core/store.js`: 6 yerdeki `localStorage.setItem` tekrarı tek helper'da birleşti
+
+Önceden modülün 6 farklı yerinde kopyala-yapıştır kod vardı:
+
+```js
+try { localStorage.setItem(LS_KEY_STATE, JSON.stringify(state)); } catch (e) {}
+```
+
+Yeni `flushSync()` helper:
+
+```js
+function flushSync() {
+  try {
+    localStorage.setItem(LS_KEY_STATE, JSON.stringify(state));
+    return true;
+  } catch (e) {
+    PCD.err && PCD.err('flushSync fail', e);
+    return false;
+  }
+}
+```
+
+Kullanılan yerler:
+- `setActiveWorkspaceId`
+- `upsertWorkspace`
+- `archiveWorkspace`
+- `deleteWorkspace`
+- `clearUserData`
+- public `flush` API
+
+Geriye kalan 3 `localStorage.setItem` çağrısı bilerek bırakıldı (her birinin spesifik error handling akışı var: trim path, flushSync'in kendisi, debounced persist).
+
+### 2. `index.html`: Gizli premium UI'a inline `display:none` (FOUC fix)
+
+`#planBadge` ve `#btnUpgrade` HTML'de duruyor (premium ileride aktifleşince kullanılacak), JS tarafında `display:none` yapılıyordu. Aralarda kısacık görünüp kayboluyordu (flash of unstyled content).
+
+Artık inline style ile sayfa ilk paint'te gizli — JS kontrolü hâlâ çalışıyor (defensive, dual gate). Premium aktif olunca her iki yerde de bu `display:none`'lar kaldırılacak. HTML yorumunda not ekledim:
+
+```html
+<!-- Premium UI is hidden until Stripe tier launches. -->
+```
+
+## Etki
+
+- store.js: 4 satır kısaldı, single-source-of-truth ile bakım kolaylaştı
+- index.html: ilk render'da plan badge flash etmiyor, daha temiz görünüm
+- Davranış değişikliği yok
+
+## Test
+
+1. Sidenav'ı aç → "Free Plan" badge görünmemeli (hiç görünmemeli, kısa flash bile)
+2. Workspace switcher → yeni workspace oluştur → reload → workspace kaybolmamalı (flushSync hâlâ çalışmalı)
+3. Logout → reload → veri temizlenmiş olmalı (clearUserData → flushSync)
+
+## Risk
+
+Sıfır. Sadece kod organizasyonu + CSS inline. Davranış birebir aynı.
+
+---
+
+
 
 ## Sorun
 
