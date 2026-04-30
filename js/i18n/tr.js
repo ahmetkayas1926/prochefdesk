@@ -1505,4 +1505,13 @@ window.PCD.i18n.register('tr', {
   storage_audit_cleanup_result: "Temizleme tamamlandı: {ok} silindi, {fail} başarısız",
   storage_audit_errors_label: "Hatalar:",
   delete_account_auth_remains: "Yerel veriler silindi ancak hesap girişiniz kaldırılamadı (Edge Function yayında değil). Tam silme için destek ile iletişime geçin. Ayrıntı: {details}",
+
+  // v2.6.65 — Offline dataURL photo migration
+  storage_audit_dataurl_title: "{n} fotoğraf çevrimdışı kaydedildi (hala verinizde)",
+  storage_audit_dataurl_desc: "Bu fotoğraflar çevrimdışıyken oluşturulduğu için bulut depolamaya yüklenemedi. Tariflerinizin içinde base64 veri olarak duruyorlar ve veri boyutunuzu büyütüyorlar. Yer açmak için taşıyın.",
+  storage_audit_dataurl_migrate: "{n} fotoğrafı buluta taşı",
+  storage_audit_dataurl_migrating: "Taşınıyor...",
+  storage_audit_dataurl_done: "✓ {n} fotoğraf bulut depolamaya taşındı",
+  storage_audit_dataurl_failed: "{n} fotoğraf için taşıma başarısız. Bağlantınızı kontrol edip tekrar deneyin.",
+  storage_audit_dataurl_nothing: "Taşınacak bir şey yok.",
 });

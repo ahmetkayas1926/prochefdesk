@@ -1,4 +1,104 @@
-# v2.6.64 — i18n eksikleri + Storage temizlik aracı + Account deletion düzeltmesi (KAPSAMLI)
+# v2.6.65 — Offline foto migration: dataURL'leri Storage'a taşı
+
+## Sorun
+
+Telefonda offline iken bir tarife foto eklediğinde:
+- Internet yok → Supabase Storage'a yüklenemez
+- Foto **base64 dataURL** olarak `recipe.photo` field'ına kaydedilir
+- Online olduğunda recipe sync olur ama foto **dataURL halinde kalır** — Storage'a hiç yüklenmiyor
+
+Sonuç:
+- State blob'u büyür (50KB foto = ~70KB base64)
+- localStorage 5MB limit'e daha hızlı çarpıyor
+- Multi-device'ta her cihaz aynı dataURL'i alıyor (zaten state'in bir parçası), tekrar tekrar
+- Storage Tools'ta foto sayısı yanlış görünüyor (Storage'da yok)
+
+## Çözüm
+
+`photo-storage.js`'e yeni helper:
+
+```js
+PCD.photoStorage.migrateDataUrlPhotos()
+```
+
+Çalışma şekli:
+1. Tüm workspaces'teki tüm recipe'leri tarar (silinmiş dahil)
+2. `photo` field'ı `data:` ile başlayan recipe'leri toplar
+3. Her birini sırayla `uploadPhotoFromDataUrl` ile Storage'a yükler
+4. Başarılı yüklemelerde `recipe.photo` URL ile değiştirilir
+5. Başarısız olursa dataURL aynen kalır (sonraki çağrıda tekrar denenir)
+
+Sonuç: `{ checked, migrated, failed, errors }`.
+
+### Otomatik tetikleme
+
+`auth.js`'de iki yerde:
+- **SIGNED_IN** event sonrası cloud pull bittiğinde
+- **Existing session** boot'ta cloud pull bittiğinde
+
+İdempotent — dataURL yoksa hiçbir şey yapmaz, anlık sonuç döner.
+
+Migration başarılıysa `cloud.queueSync()` tetiklenir → temizlenmiş state cloud'a push'lanır.
+
+### Manuel tetikleme
+
+Account → Photo storage cleanup modal'ında:
+- Eğer dataURL'li recipe varsa, sarı uyarı kutusu çıkar:
+  > "📷 N fotoğraf çevrimdışı kaydedildi (hala verinizde)"
+  > "Bu fotoğraflar çevrimdışıyken oluşturulduğu için bulut depolamaya yüklenemedi..."
+  > **[⬆️ N fotoğrafı buluta taşı]**
+
+Kullanıcı bu butona tıklayarak migration'ı manuel tetikleyebilir.
+
+### Yeni store API: `upsertRecipeRaw(wsId, recipe)`
+
+Migration sırasında recipe.photo'yu URL ile değiştirirken `upsertRecipe`'i kullanmamak gerekiyor çünkü:
+- v2.6.44'te eklenen photo cleanup, "yeni photo eski photo'yu eziyor" diye yorumlar
+- Yeni URL'i Storage'dan SİLMEYE çalışır → upload ettiğimiz blob silinir!
+
+`upsertRecipeRaw` bu cleanup'ı bypass eder:
+- updatedAt bumpetmez
+- Photo cleanup tetiklemez
+- Versiyon snapshot almaz
+- Sadece `state.recipes[wsId][recipe.id] = recipe` ve `persist()`
+
+Bu sadece housekeeping migration'ları için kullanılmalı, normal save akışında değil.
+
+## i18n
+
+7 yeni key (en + tr): `storage_audit_dataurl_title`, `desc`, `migrate`, `migrating`, `done`, `failed`, `nothing`.
+
+## Test (push sonrası)
+
+### Otomatik (sayfa yenilendikten sonra)
+1. Sayfayı tam yenile (Ctrl+Shift+R)
+2. Login session'ın varsa: boot sonrası migration otomatik çalışır
+3. Account → Photo storage cleanup → açıldığında "syc offline test" recipe'sinin fotosu artık `Total files`'a dahil olmalı
+4. Sarı uyarı kutusu (dataURL'li recipe sayısı) **görünmemeli** (zaten taşındı)
+
+### Manuel
+Eğer otomatik tetiklenmemişse veya yeni bir offline foto eklersen:
+1. Account → Photo storage cleanup
+2. Sarı uyarı kutusunu gör (dataURL count)
+3. "N fotoğrafı buluta taşı" butonuna bas
+4. Toast: "✓ N fotoğraf bulut depolamaya taşındı"
+5. Modal kapanır
+6. Tekrar aç → sarı kutu gitti, Total files arttı
+
+### Doğrulama
+1. Supabase Dashboard → Storage → recipe-photos → klasörünü aç
+2. "syc offline test" recipe'sinin yeni .webp dosyası burada olmalı
+3. Recipe modalını aç → foto görünür halde olmalı (URL artık Storage'da)
+
+## Risk
+
+Düşük. Best-effort, exception swallow'lu. dataURL upload'ı başarısız olursa eski davranış aynen korunur (dataURL kalır). Idempotent — birden fazla kez çağırmak zarar vermez.
+
+Tek hassas nokta: `upsertRecipeRaw` kullanılıyor — bu özellikle photo cleanup'ı tetiklememesi için. Eğer yanlışlıkla `upsertRecipe` (normal API) kullansaydık, upload ettiğimiz yeni URL'in dataURL'i "eski" sanılıp Storage'dan silinmesine çalışılırdı. Şu an sıfır risk.
+
+---
+
+
 
 Bu paket kullanıcının fark ettiği 7 farklı sorunu kapsıyor.
 

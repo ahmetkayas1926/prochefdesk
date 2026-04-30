@@ -727,6 +727,24 @@
       }
       return recipe;
     },
+    // v2.6.65 — Low-level recipe upsert that BYPASSES photo cleanup,
+    // version snapshots, and updatedAt bumps. Used by housekeeping
+    // migrations (dataURL → Storage URL) where we don't want a state
+    // change notification storm and don't want the photo cleanup logic
+    // to misinterpret the URL change as a "photo replaced" event.
+    //
+    // Caller passes (wsId, recipe). The recipe must already have an id.
+    upsertRecipeRaw: function (wsId, recipe) {
+      if (!wsId || !recipe || !recipe.id) return null;
+      const recipes = Object.assign({}, state.recipes);
+      recipes[wsId] = Object.assign({}, recipes[wsId] || {});
+      recipes[wsId][recipe.id] = recipe;
+      state.recipes = recipes;
+      // Persist without emitting recipes event — we don't want the live
+      // recipe list to flicker and re-render N times during migration.
+      persist();
+      return recipe;
+    },
     deleteRecipe: function (id) {
       const wsId = currentWsId();
       if (!state.recipes[wsId] || !state.recipes[wsId][id]) return false;

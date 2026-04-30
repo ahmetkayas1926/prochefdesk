@@ -184,9 +184,87 @@
     });
   }
 
+  // v2.6.65 — Walk all recipes (across all workspaces, including soft-
+  // deleted) and find any recipe whose `photo` field starts with `data:`.
+  // Such photos were saved while offline (no cloud), as base64 strings
+  // bloating the state blob. Upload each one to Storage and replace the
+  // recipe's photo field with the public URL.
+  //
+  // Returns Promise<{ checked, migrated, failed, errors }>.
+  // Best-effort: never throws. Skips silently if user is anonymous or
+  // photoStorage isn't ready. Designed to be idempotent — running it
+  // twice does nothing on the second pass (no more dataURLs to find).
+  //
+  // Triggered: on app boot AFTER cloud pull (or after sign-in), and
+  // optionally on demand from a settings button.
+  function migrateDataUrlPhotos() {
+    return new Promise(function (resolve) {
+      const result = { checked: 0, migrated: 0, failed: 0, errors: [] };
+      const supabase = window._supabaseClient;
+      const user = PCD.store && PCD.store.get('user');
+      if (!supabase || !user || !user.id || !PCD.store || !PCD.store.upsertRecipeRaw) {
+        return resolve(result);
+      }
+
+      // Snapshot all recipes (across all workspaces) that have a dataURL photo.
+      const allRecipes = PCD.store.get('recipes') || {};
+      const candidates = [];
+      Object.keys(allRecipes).forEach(function (wsId) {
+        const ws = allRecipes[wsId] || {};
+        Object.keys(ws).forEach(function (rid) {
+          const r = ws[rid];
+          if (r && typeof r.photo === 'string' && r.photo.indexOf('data:') === 0) {
+            candidates.push({ wsId: wsId, rid: rid, recipe: r });
+          }
+        });
+      });
+      result.checked = candidates.length;
+      if (candidates.length === 0) {
+        return resolve(result);
+      }
+      PCD.log && PCD.log('photo-migration: found', candidates.length, 'dataURL recipes');
+
+      // Process serially to avoid hammering Storage with parallel uploads.
+      // Most users will have 0-3 dataURL photos; serial is fine.
+      let i = 0;
+      function next() {
+        if (i >= candidates.length) {
+          return resolve(result);
+        }
+        const c = candidates[i++];
+        uploadPhotoFromDataUrl(c.recipe.photo).then(function (urlOrDataUrl) {
+          // If upload succeeded, urlOrDataUrl is the new public URL.
+          // If upload failed (offline/RLS/etc.), it's the original dataURL.
+          if (typeof urlOrDataUrl === 'string' && urlOrDataUrl.indexOf('data:') !== 0) {
+            // Successful upload — patch the recipe in place using a special
+            // store API that doesn't trigger version snapshots or cloud
+            // sync emissions for this housekeeping update.
+            try {
+              PCD.store.upsertRecipeRaw(c.wsId, Object.assign({}, c.recipe, { photo: urlOrDataUrl }));
+              result.migrated++;
+            } catch (e) {
+              result.failed++;
+              result.errors.push({ rid: c.rid, reason: 'upsertRaw failed: ' + (e.message || e) });
+            }
+          } else {
+            result.failed++;
+            result.errors.push({ rid: c.rid, reason: 'upload returned dataURL (offline or upload failed)' });
+          }
+          next();
+        }).catch(function (e) {
+          result.failed++;
+          result.errors.push({ rid: c.rid, reason: 'exception: ' + (e.message || e) });
+          next();
+        });
+      }
+      next();
+    });
+  }
+
   PCD.photoStorage = {
     upload: uploadPhotoFromDataUrl,
     deleteByUrl: deletePhotoByUrl,
     urlToStorageKey: urlToStorageKey,
+    migrateDataUrlPhotos: migrateDataUrlPhotos,
   };
 })();

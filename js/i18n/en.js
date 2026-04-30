@@ -1505,4 +1505,13 @@ window.PCD.i18n.register('en', {
   storage_audit_cleanup_result: "Cleanup complete: {ok} deleted, {fail} failed",
   storage_audit_errors_label: "Errors:",
   delete_account_auth_remains: "Local data deleted, but your account login was not removed (Edge Function not deployed). Contact support to fully erase. Details: {details}",
+
+  // v2.6.65 — Offline dataURL photo migration
+  storage_audit_dataurl_title: "{n} photo(s) saved offline (still in your data)",
+  storage_audit_dataurl_desc: "These photos were created when you were offline, so they couldn't be uploaded to cloud storage. They live as base64 data inside your recipes, which makes your data heavier. Migrate them to free up space.",
+  storage_audit_dataurl_migrate: "Migrate {n} photo(s) to cloud",
+  storage_audit_dataurl_migrating: "Migrating...",
+  storage_audit_dataurl_done: "✓ {n} photo(s) migrated to cloud storage",
+  storage_audit_dataurl_failed: "Migration failed for {n} photo(s). Check your connection and try again.",
+  storage_audit_dataurl_nothing: "Nothing to migrate.",
 });

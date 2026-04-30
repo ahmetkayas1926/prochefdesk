@@ -28,7 +28,20 @@
           // merge filter can drop the ghost — BEFORE any push uploads it.
           if (event === 'SIGNED_IN' && session && session.user) {
             if (PCD.cloud && PCD.cloud.pull) {
-              PCD.cloud.pull().catch(function (e) {
+              PCD.cloud.pull().then(function () {
+                // v2.6.65 — After cloud pull, migrate any dataURL photos
+                // (created offline on this or another device) to Storage.
+                // Best-effort: errors logged but never thrown.
+                if (PCD.photoStorage && PCD.photoStorage.migrateDataUrlPhotos) {
+                  PCD.photoStorage.migrateDataUrlPhotos().then(function (r) {
+                    if (r.migrated > 0) {
+                      PCD.log && PCD.log('photo-migration: signed-in path migrated', r.migrated, 'recipes');
+                      // Trigger a sync push so the migrated state hits the cloud
+                      if (PCD.cloud && PCD.cloud.queueSync) PCD.cloud.queueSync();
+                    }
+                  });
+                }
+              }).catch(function (e) {
                 PCD.warn('Cloud pull on sign-in failed:', e && e.message);
               });
             }
@@ -49,6 +62,17 @@
           // Pull cloud data — silent failure if network issue
           return PCD.cloud.pull().catch(function (e) {
             PCD.warn('Cloud pull failed (will retry on next sync):', e && e.message);
+          }).then(function () {
+            // v2.6.65 — Migrate dataURL photos to Storage after pull.
+            // Runs once per session; idempotent if no dataURLs exist.
+            if (PCD.photoStorage && PCD.photoStorage.migrateDataUrlPhotos) {
+              return PCD.photoStorage.migrateDataUrlPhotos().then(function (r) {
+                if (r.migrated > 0) {
+                  PCD.log && PCD.log('photo-migration: existing-session path migrated', r.migrated, 'recipes');
+                  if (PCD.cloud && PCD.cloud.queueSync) PCD.cloud.queueSync();
+                }
+              });
+            }
           }).then(function () {
             return PCD.cloud.fetchPlan();
           }).then(function (plan) {

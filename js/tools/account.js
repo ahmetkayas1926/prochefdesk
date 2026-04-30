@@ -799,13 +799,22 @@
       // Build set of URLs/keys referenced in current state (ALL workspaces, including soft-deleted)
       const referencedKeys = new Set();
       const allRecipes = PCD.store.get('recipes') || {};
+      // v2.6.65 — Also count recipes whose photo is still a base64 dataURL.
+      // These were created offline (no Storage upload). Migration is offered
+      // separately so the user can fix them with one click.
+      let dataUrlRecipeCount = 0;
       Object.keys(allRecipes).forEach(function (wsId) {
         const ws = allRecipes[wsId] || {};
         Object.keys(ws).forEach(function (rid) {
           const r = ws[rid];
-          if (r && r.photo && PCD.photoStorage && PCD.photoStorage.urlToStorageKey) {
-            const k = PCD.photoStorage.urlToStorageKey(r.photo);
-            if (k) referencedKeys.add(k);
+          if (!r) return;
+          if (r.photo && typeof r.photo === 'string') {
+            if (r.photo.indexOf('data:') === 0) {
+              dataUrlRecipeCount++;
+            } else if (PCD.photoStorage && PCD.photoStorage.urlToStorageKey) {
+              const k = PCD.photoStorage.urlToStorageKey(r.photo);
+              if (k) referencedKeys.add(k);
+            }
           }
         });
       });
@@ -845,10 +854,25 @@
           '</div>' +
         '</div>';
 
+      // v2.6.65 — Surface offline-created dataURL photos with a migrate button
+      if (dataUrlRecipeCount > 0) {
+        html +=
+          '<div style="background:#fef3c7;color:#92400e;border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:13px;line-height:1.5;">' +
+            '<div style="font-weight:600;margin-bottom:6px;">📷 ' + PCD.escapeHtml(t('storage_audit_dataurl_title', { n: dataUrlRecipeCount })) + '</div>' +
+            '<div style="margin-bottom:10px;">' + PCD.escapeHtml(t('storage_audit_dataurl_desc')) + '</div>' +
+            '<button id="migrateDataUrlBtn" class="btn btn-primary btn-sm" style="background:#92400e;border-color:#92400e;">' +
+              '⬆️ ' + PCD.escapeHtml(t('storage_audit_dataurl_migrate', { n: dataUrlRecipeCount })) +
+            '</button>' +
+          '</div>';
+      }
+
       if (orphans.length === 0) {
         html += '<div style="text-align:center;padding:20px;color:var(--success);">✓ ' +
           PCD.escapeHtml(t('storage_audit_all_clean')) + '</div>';
         body.innerHTML = html;
+        // Wire the migrate button if shown
+        const migBtn = body.querySelector('#migrateDataUrlBtn');
+        if (migBtn) wireMigrateButton(migBtn);
         return;
       }
 
@@ -873,6 +897,10 @@
       '</div>';
 
       body.innerHTML = html;
+
+      // v2.6.65 — Wire dataURL migrate button if present
+      const migBtn0 = body.querySelector('#migrateDataUrlBtn');
+      if (migBtn0) wireMigrateButton(migBtn0);
 
       body.querySelector('#auditCancelBtn').addEventListener('click', function () { m.close(); });
       body.querySelector('#auditCleanBtn').addEventListener('click', function () {
@@ -902,6 +930,33 @@
           resultHtml += '<button id="auditCloseBtn" class="btn btn-primary" style="width:100%;margin-top:14px;">' + PCD.escapeHtml(t('btn_close')) + '</button>';
           body.innerHTML = resultHtml;
           body.querySelector('#auditCloseBtn').addEventListener('click', function () { m.close(); });
+        });
+      });
+    }
+
+    // v2.6.65 — Wire the "migrate offline dataURL photos to Storage" button.
+    // On click: disable, run migration, show result inline, then close
+    // modal so a re-open shows the updated counts.
+    function wireMigrateButton(btn) {
+      btn.addEventListener('click', function () {
+        if (!PCD.photoStorage || !PCD.photoStorage.migrateDataUrlPhotos) {
+          PCD.toast.error('Migration unavailable');
+          return;
+        }
+        btn.disabled = true;
+        btn.innerHTML = '⏳ ' + PCD.escapeHtml(t('storage_audit_dataurl_migrating'));
+        PCD.photoStorage.migrateDataUrlPhotos().then(function (r) {
+          if (r.migrated > 0) {
+            PCD.toast.success(t('storage_audit_dataurl_done', { n: r.migrated }));
+            // Trigger sync push so cloud gets the cleaned-up state
+            if (PCD.cloud && PCD.cloud.queueSync) PCD.cloud.queueSync();
+          } else if (r.failed > 0) {
+            PCD.toast.error(t('storage_audit_dataurl_failed', { n: r.failed }));
+          } else {
+            PCD.toast.info(t('storage_audit_dataurl_nothing'));
+          }
+          // Close modal — user can reopen to see new counts
+          m.close();
         });
       });
     }
