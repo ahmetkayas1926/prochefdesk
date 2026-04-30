@@ -86,6 +86,13 @@
       // 10) Populate sidenav items
       populateSidenav();
 
+      // v2.6.59 — Re-populate sidenav when inventory changes so the
+      // critical-count badge stays current without needing a reload.
+      try {
+        PCD.store.on('inventory', function () { try { populateSidenav(); } catch (e) {} });
+        PCD.store.on('ingredients', function () { try { populateSidenav(); } catch (e) {} });
+      } catch (e) { /* ignore — boot tolerance */ }
+
       // 11) Hide splash, show app
       setTimeout(function () {
         const splash = PCD.$('#splash');
@@ -311,11 +318,48 @@
           // Last resort: capitalize the key
           label = it.key.charAt(0).toUpperCase() + it.key.slice(1).replace(/_/g, ' ');
         }
+        // v2.6.59 — Sidenav badge for inventory: show critical count
+        // proactively so the chef sees urgent restocks even before
+        // opening the dashboard. Updated each time sidenav is repopulated.
+        let badgeHtml = '';
+        if (it.key === 'inventory') {
+          const criticalCount = countCriticalInventory();
+          if (criticalCount > 0) {
+            badgeHtml =
+              '<span class="sidenav-item-badge" style="display:inline-block;margin-inline-start:auto;background:var(--danger);color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:999px;min-width:18px;text-align:center;line-height:14px;">' +
+              criticalCount + '</span>';
+          }
+        }
         b.innerHTML = '<span class="sidenav-item-icon">' + iconHtml + '</span>' +
-                      '<span>' + PCD.escapeHtml(label) + '</span>';
+                      '<span style="flex:1;">' + PCD.escapeHtml(label) + '</span>' +
+                      badgeHtml;
         container.appendChild(b);
       });
     });
+  }
+
+  // v2.6.59 — Count inventory items with critical/out status. Used by
+  // the sidenav badge to flag urgent restocks proactively.
+  function countCriticalInventory() {
+    try {
+      if (!PCD.tools || !PCD.tools.inventory || !PCD.tools.inventory.computeStatus) return 0;
+      const wsId = PCD.store.getActiveWorkspaceId();
+      const allInv = PCD.store._read ? (PCD.store._read('inventory') || {}) : {};
+      const invKeys = Object.keys(allInv);
+      const sample = invKeys.length > 0 ? allInv[invKeys[0]] : null;
+      const isLegacy = sample && (sample.stock !== undefined || sample.parLevel !== undefined);
+      const invForWs = isLegacy ? allInv : (allInv[wsId] || {});
+      const ings = PCD.store.listIngredients ? PCD.store.listIngredients() : [];
+      let n = 0;
+      ings.forEach(function (i) {
+        const row = invForWs[i.id];
+        const s = PCD.tools.inventory.computeStatus(row);
+        if (s === 'critical' || s === 'out') n++;
+      });
+      return n;
+    } catch (e) {
+      return 0;
+    }
   }
 
   function updateUserAvatar() {

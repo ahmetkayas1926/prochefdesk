@@ -1,4 +1,75 @@
-# v2.6.58 — Cloud pull merge: per-record last-write-wins (KRİTİK veri kaybı önleme)
+# v2.6.59 — Inventory low-stock proaktif uyarı (sidenav badge)
+
+## Sorun
+
+Şu an stok kritik durumdaki malzemeler için tek görünür uyarı **dashboard kartı**. Şef başka bir tool'da çalışıyorsa (recipe yazıyor, menu hazırlıyor) kritik stok'u bilmiyor.
+
+Restoran operasyonunda servis başlamadan önce eksik malzeme **acil iş** — şef operasyonel araçlardan çıkmadan görmeli.
+
+## Çözüm
+
+`js/core/app.js` `populateSidenav()` fonksiyonuna kritik stok badge'i eklendi:
+
+```
+☰ Menu
+─────────
+🏠 Home
+📖 Recipes
+🥕 Ingredients
+📋 Menus
+─────────
+🍳 Kitchen Cards
+✓ Checklists
+♻ Waste
+
+📦 Inventory  [3]  ← kırmızı badge
+🚚 Suppliers
+🛒 Shopping
+─────────
+```
+
+Badge sadece `critical` veya `out` statüsündeki item'ları sayar (sadece `low` değil — `low` daha az aciliyetli, par level altına düşmüş ama kritik altına düşmemiş).
+
+`computeStatus` mantığı (mevcut, `inventory.js`):
+- `out`: stok ≤ 0
+- `critical`: stok < minLevel (kritik eşik tanımlanmışsa)
+- `low`: stok < parLevel (par altına düştü ama hala kritik üstü)
+- `ok`: stok ≥ parLevel
+
+Badge sadece `out` + `critical` toplamını gösterir.
+
+### Dinamik güncelleme
+
+Sidenav badge sadece boot'ta değil, inventory veya ingredients değişince **otomatik güncelleniyor**:
+
+```js
+PCD.store.on('inventory', () => populateSidenav());
+PCD.store.on('ingredients', () => populateSidenav());
+```
+
+Yani şef:
+- Bir tarif yazarken inventory'ye stok girse → sidenav otomatik güncellenir
+- Yeni ingredient eklerse → badge etkilenmez (par yoksa yine 0)
+- Stok sayım yapsa → badge anında güncellenir
+
+## Test (push sonrası)
+
+1. Inventory'e git → bir item için par 100, min 10 set et
+2. Stoğu 5 yap → status `critical` olur
+3. Hamburger menüyü aç → "Inventory [1]" kırmızı badge görmelisin
+4. Stoğu 50'ye çıkar → `low` olur, kritik değil → badge **gitmeli**
+5. Stoğu 200'e çıkar → `ok` → badge yok
+6. Stoğu 0 yap → `out` → badge [1]
+7. 5 ingredient'ı kritik yap → badge [5]
+8. Yeni workspace'e geç → badge yeni workspace'in inventory'sine göre güncellenir
+
+## Risk
+
+Sıfır. Sadece görsel ekleme, kor gücü yok. Hata durumunda count 0 dönülür (badge görünmez).
+
+---
+
+
 
 ## Sorun
 
