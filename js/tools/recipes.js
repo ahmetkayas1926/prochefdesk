@@ -1659,6 +1659,13 @@
 
     const body = PCD.el('div');
 
+    // v2.6.40 — Memory leak fix: outside-click handler for quick-add
+    // dropdown is attached ONCE per editor session (not on every
+    // renderEditor() call), and removed on modal close. Without this,
+    // every keystroke that triggered a re-render was adding a fresh
+    // document-level click listener that never got cleaned up.
+    let _qDDOutsideHandler = null;
+
     function renderEditor() {
       // BUG FIX (v2.6.33): Before re-rendering the modal HTML, snapshot
       // all form field values from the DOM into `data`. Otherwise editing
@@ -2120,11 +2127,22 @@
 
         qInput.addEventListener('input', function () { renderDD(this.value); });
         qInput.addEventListener('focus', function () { if (this.value) renderDD(this.value); });
-        document.addEventListener('click', function (e) {
-          if (!e.target.closest || (!e.target.closest('#quickIngInput') && !e.target.closest('#quickIngDD'))) {
-            if (qDD) qDD.style.display = 'none';
-          }
-        });
+        // Outside-click handler — attach ONCE per editor session.
+        // The listener uses getElementById to find the current qDD
+        // (which is recreated on every renderEditor) so a single
+        // listener works across all re-renders. Cleanup happens in the
+        // modal's onClose callback below. Without this guard, every
+        // renderEditor() call was leaking a fresh document listener.
+        if (!_qDDOutsideHandler) {
+          _qDDOutsideHandler = function (e) {
+            const dd = document.getElementById('quickIngDD');
+            if (!dd) return;
+            if (!e.target.closest || (!e.target.closest('#quickIngInput') && !e.target.closest('#quickIngDD'))) {
+              dd.style.display = 'none';
+            }
+          };
+          document.addEventListener('click', _qDDOutsideHandler);
+        }
 
         // Pick a sub-recipe
         PCD.on(qDD, 'click', '[data-pick-recipe]', function () {
@@ -2215,6 +2233,16 @@
       footer: footer,
       size: 'lg',
       closable: true,
+      onClose: function () {
+        // v2.6.40 — Remove the document-level outside-click listener
+        // we attached for the quick-add ingredient dropdown. Without
+        // this, every editor session leaked a global click listener
+        // that fired on EVERY click for the rest of the page lifetime.
+        if (_qDDOutsideHandler) {
+          document.removeEventListener('click', _qDDOutsideHandler);
+          _qDDOutsideHandler = null;
+        }
+      },
     });
 
     cancelBtn.addEventListener('click', function () { m.close(); });

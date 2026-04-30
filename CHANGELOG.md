@@ -1,4 +1,65 @@
-# v2.6.39 — public_shares RLS açığı düzeltmesi (GÜVENLİK)
+# v2.6.40 — Recipe editor memory leak (document-level click listener)
+
+## Sorun
+
+`js/tools/recipes.js` recipe editor'ünde quick-add ingredient autocomplete dropdown'ı için "dropdown dışına tıklayınca kapansın" davranışı `document.addEventListener('click', ...)` ile yapılmıştı.
+
+İki katmanlı bug:
+
+1. **Listener hiç kaldırılmıyordu.** Editor kapatılsa bile global click listener document'ta kalıyor, sayfa hayatı boyunca her tıklamada çalışıyordu.
+
+2. **Her renderEditor()'da yeni listener ekleniyordu.** Daha kötüsü: handler `wireEditor()` içindeydi, `wireEditor()` her `renderEditor()` çağrısında çalışır. `renderEditor()` ise:
+   - amount/unit/servings/salePrice değişiminde (300ms debounce ile)
+   - ingredient eklendiğinde
+   - ingredient çıkarıldığında
+   - foto değiştiğinde
+   - allergen toggle'da
+   - ...her seferinde
+
+Bir tarif düzenleme oturumunda 30-50 listener birikebiliyordu. Şef günde 20 tarif düzenlerse, 600-1000 leaked global listener. PWA olarak açık tutulan uzun oturumlarda performans hissedilir şekilde bozuluyordu.
+
+## Çözüm
+
+Üç değişiklik (hepsi `js/tools/recipes.js`):
+
+1. **`openEditor` scope'unda `_qDDOutsideHandler` referansı tutuluyor**
+2. **`wireEditor`'da listener `if (!_qDDOutsideHandler)` guard'ı ile bir kere kuruluyor** — sonraki re-render'lar atlıyor
+3. **Modal'ın `onClose` callback'inde `removeEventListener` çağrılıyor**
+
+Listener gövdesi `document.getElementById('quickIngDD')` ile dropdown'u dinamik buluyor, böylece body.innerHTML re-render'ları arasında tek listener tüm dropdown örnekleri için çalışıyor.
+
+## Etki
+
+- Editor açma/kapama çevrimi başına **net 0 listener** (önceden 30-50)
+- Uzun oturumlarda tıklamalar artık her seferinde N listener'ı tetiklemiyor
+- Memory grafiği sabit kalıyor
+
+## Test
+
+1. Recipe editor'i aç → bir ingredient ekle → modal'ı kapat → DevTools → Performance → Memory → snapshot
+2. Editor'i 10 kere aç-kapa → tekrar snapshot → büyüme yok / minimal olmalı
+3. Quick-add input'a tıkla → otomatik dropdown açılır → boş alana tıkla → kapanır (davranış aynı)
+4. Quick-add ile ingredient seç → dropdown kapanır → editor çalışmaya devam eder
+5. Editor'de amount alanını değiştir → debounce sonrası re-render → dropdown davranışı bozulmamış olmalı
+6. Modal'ı kapat → quick-add ile ilgili hiçbir click handler artık tetiklenmemeli (DevTools → Elements → Event Listeners → document'ta yeni click satırı yok)
+
+## Risk
+
+Düşük. Davranış aynı, sadece listener yönetimi düzeldi. `if` guard'ı yanlış çalışırsa worst case eski davranış (her render'da yeni listener) — yani regresyondan kötü olamaz.
+
+## Notlar (gelecek bakımı için)
+
+`js/core/utils.js` dosyasındaki `PCD.on(el, evt, sel, fn)` helper'ı delegated event'i element'e bağlar — modal kapatıldığında element DOM'dan çıkınca otomatik temizlenir. Yeni feature yazarken `document.addEventListener` yerine **bu helper'ı tercih et**, leak ihtimali sıfır olur.
+
+Diğer dosyalarda 289 `addEventListener` çağrısı var, sadece 3'ünde `removeEventListener` karşılığı var. Bu spesifik leak en kötüsüydü çünkü:
+- Document seviyesinde (kapsam çok geniş)
+- Render fonksiyonu içinde (tekrar tekrar eklenir)
+
+Diğer listener'lar element'e bağlı (modal kapanınca element'le birlikte gider), o yüzden onlar acil değil.
+
+---
+
+
 
 ## Açık (kritik)
 
