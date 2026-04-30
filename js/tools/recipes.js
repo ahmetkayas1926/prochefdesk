@@ -1773,7 +1773,7 @@
           <div class="text-sm text-muted mt-2" style="font-size:12px;">${t('recipe_ingredients_hint')}</div>
         </div>
 
-        <div class="stat mb-3" style="background:var(--brand-50);border-color:var(--brand-300);padding:12px;">
+        <div id="costStrip" class="stat mb-3" style="background:var(--brand-50);border-color:var(--brand-300);padding:12px;">
           <div class="flex items-center justify-between">
             <div>
               <div class="stat-label">${t('food_cost')}</div>
@@ -1920,7 +1920,7 @@
                 ${unitOptions.map(function (u) { return '<option value="' + u + '"' + ((ri.unit || defaultUnit) === u ? ' selected' : '') + '>' + u + '</option>'; }).join('')}
               </select>
               <span class="text-muted">·</span>
-              <span style="font-weight:600;">${PCD.fmtMoney(lineCost)}</span>
+              <span data-line-cost data-idx="${idx}" style="font-weight:600;">${PCD.fmtMoney(lineCost)}</span>
             </div>
           </div>
           <button type="button" class="icon-btn" data-remove="${idx}" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/></svg></button>
@@ -1929,9 +1929,119 @@
       });
     }
 
-    function updateCostStrip() {
-      // Only update the cost strip + individual ingredient line costs — lightweight
-      renderEditor();
+    // v2.6.48 — Partial-update helpers replace the old "rebuild the
+    // entire modal HTML on every keystroke" pattern. The full
+    // renderEditor() is now only called on (1) initial mount, (2) when
+    // ingredient list structure changes (add/remove), and (3) explicit
+    // version restore. Numeric edits (amount/unit/servings/salePrice)
+    // and photo changes use targeted DOM updates that keep focus,
+    // selection, scroll position, and dropdown state intact.
+
+    function _computeCostNumbers() {
+      const ingMap = currentIngMap();
+      const recipeMap = PCD.recipes.buildRecipeMap();
+      const cost = PCD.recipes.computeFoodCost(data, ingMap, recipeMap);
+      const costPerServing = data.servings ? cost / data.servings : cost;
+      const pct = (data.salePrice && cost > 0 && data.servings)
+        ? (costPerServing / data.salePrice) * 100
+        : null;
+      return { cost: cost, costPerServing: costPerServing, pct: pct, ingMap: ingMap, recipeMap: recipeMap };
+    }
+
+    function updateCostStripDOM() {
+      const strip = body.querySelector('#costStrip');
+      if (!strip) return;
+      const t = PCD.i18n.t;
+      const c = _computeCostNumbers();
+      const pctHtml = (c.pct !== null)
+        ? '<div style="text-align:right;"><div class="stat-label">' + t('food_cost_percent') +
+          '</div><div style="font-size:20px;font-weight:800;color:' +
+          (c.pct <= 35 ? 'var(--success)' : (c.pct <= 45 ? 'var(--warning)' : 'var(--danger)')) +
+          ';">' + PCD.fmtPercent(c.pct, 1) + '</div></div>'
+        : '';
+      strip.innerHTML =
+        '<div class="flex items-center justify-between">' +
+          '<div>' +
+            '<div class="stat-label">' + t('food_cost') + '</div>' +
+            '<div style="font-size:20px;font-weight:800;letter-spacing:-0.01em;">' + PCD.fmtMoney(c.cost) + '</div>' +
+          '</div>' +
+          pctHtml +
+        '</div>';
+    }
+
+    // Update each ingredient row's "line cost" span without touching
+    // the surrounding inputs, selects, or list structure. Called when
+    // amount or unit changes — preserves focus on the input being edited.
+    function updateLineCostsDOM() {
+      const c = _computeCostNumbers();
+      const ingMap = c.ingMap;
+      const recipeMap = c.recipeMap;
+      const spans = body.querySelectorAll('[data-line-cost]');
+      for (let i = 0; i < spans.length; i++) {
+        const span = spans[i];
+        const idx = parseInt(span.getAttribute('data-idx'), 10);
+        const ri = data.ingredients && data.ingredients[idx];
+        if (!ri) { span.textContent = ''; continue; }
+        let lineCost = 0;
+        if (ri.recipeId) {
+          const sub = recipeMap[ri.recipeId];
+          if (sub) {
+            const subYield = sub.yieldAmount || sub.servings || 1;
+            const defaultUnit = sub.yieldUnit || 'portion';
+            const subTotalCost = PCD.recipes.computeFoodCost(sub, ingMap, recipeMap);
+            const amt = Number(ri.amount) || 0;
+            let scale = amt / (subYield || 1);
+            if (ri.unit && defaultUnit && ri.unit !== defaultUnit) {
+              try { scale = PCD.convertUnit(amt, ri.unit, defaultUnit) / (subYield || 1); } catch (e) {}
+            }
+            lineCost = subTotalCost * scale;
+          }
+        } else {
+          const ing = ingMap[ri.ingredientId];
+          if (ing) {
+            const amt = Number(ri.amount) || 0;
+            let price = Number(ing.pricePerUnit) || 0;
+            const yld = Number(ing.yieldPercent);
+            if (yld && yld > 0 && yld < 100) price = price / (yld / 100);
+            if (ri.unit && ing.unit && ri.unit !== ing.unit) {
+              try { lineCost = PCD.convertUnit(amt, ri.unit, ing.unit) * price; } catch (e) { lineCost = amt * price; }
+            } else {
+              lineCost = amt * price;
+            }
+          }
+        }
+        span.textContent = PCD.fmtMoney(lineCost);
+      }
+    }
+
+    // Re-render only the photo zone (`#photoZone` + `#photoActions`).
+    // Used after photo upload / remove so the rest of the form (with
+    // its inputs and current focus) stays untouched.
+    function renderPhotoZoneDOM() {
+      const t = PCD.i18n.t;
+      const zone = body.querySelector('#photoZone');
+      const actions = body.querySelector('#photoActions');
+      if (!zone || !actions) return;
+      // Update background and dashed border
+      zone.style.background = data.photo ? 'url(' + data.photo + ') center/cover' : 'var(--surface-2)';
+      zone.style.border = '2px dashed ' + (data.photo ? 'transparent' : 'var(--border-strong)');
+      zone.innerHTML =
+        (!data.photo
+          ? '<div class="text-center text-muted"><div style="font-size:32px;margin-bottom:4px;">📷</div><div class="text-sm">' + t('recipe_photo_hint') + '</div></div>'
+          : '') +
+        (data.photo
+          ? '<button type="button" id="removePhoto" class="icon-btn" style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.6);color:white;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/></svg></button>'
+          : '');
+      actions.style.display = data.photo ? 'none' : 'flex';
+      // Re-bind the freshly-created remove button
+      const removeBtn = body.querySelector('#removePhoto');
+      if (removeBtn) {
+        removeBtn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          data.photo = null;
+          renderPhotoZoneDOM();
+        });
+      }
     }
 
     function wireEditor() {
@@ -1951,7 +2061,7 @@
       if (removeBtn) removeBtn.addEventListener('click', function (e) {
         e.stopPropagation();
         data.photo = null;
-        renderEditor();
+        renderPhotoZoneDOM();
       });
 
       if (cameraBtn) cameraBtn.addEventListener('click', function (e) {
@@ -1978,7 +2088,7 @@
             PCD.toast.info(t('photo_uploading'));
             PCD.photoStorage.upload(cropped).then(function (urlOrDataUrl) {
               data.photo = urlOrDataUrl;
-              renderEditor();
+              renderPhotoZoneDOM();
             });
           });
         };
@@ -2013,7 +2123,9 @@
             if (ok) PCD.tools.ingredients.openEditor(null, function (newIng) {
               if (newIng) {
                 data.ingredients = data.ingredients.concat([{ ingredientId: newIng.id, amount: 100, unit: defaultRecipeUnit(newIng) }]);
-                renderEditor();
+                // v2.6.48 — list structure changed (new row), targeted re-render
+                renderIngList();
+                updateCostStripDOM();
               }
             });
           });
@@ -2039,42 +2151,64 @@
             }
           });
           data.ingredients = next;
-          renderEditor();
+          // v2.6.48 — list structure changed, targeted re-render (not full)
+          renderIngList();
+          renderAllergenChips();  // auto-detected allergens may shift
+          updateCostStripDOM();
         });
       });
 
-      // Live updates on amount / unit / servings / salePrice
+      // v2.6.48 — Live updates on amount / unit / servings / salePrice.
+      // These handlers used to call renderEditor() (full modal rebuild),
+      // which broke focus, scroll position, and dropdown state on every
+      // keystroke. Now they use targeted DOM updates that touch only
+      // the cost numbers, leaving inputs and selects intact.
       PCD.on(body, 'input', '[data-amount]', function () {
         const idx = parseInt(this.getAttribute('data-idx'), 10);
+        if (!data.ingredients[idx]) return;
         data.ingredients[idx].amount = parseFloat(this.value) || 0;
-        // Instead of full re-render (which would break focus), just update cost strip + line cost:
-        const strip = body.querySelector('.stat');
-        // Light debounce
+        // Light debounce so big numbers typed quickly don't thrash
         clearTimeout(wireEditor._t);
-        wireEditor._t = setTimeout(renderEditor, 300);
+        wireEditor._t = setTimeout(function () {
+          updateLineCostsDOM();
+          updateCostStripDOM();
+        }, 150);
       });
       PCD.on(body, 'change', '[data-unit]', function () {
         const idx = parseInt(this.getAttribute('data-idx'), 10);
+        if (!data.ingredients[idx]) return;
         data.ingredients[idx].unit = this.value;
-        renderEditor();
+        updateLineCostsDOM();
+        updateCostStripDOM();
       });
       PCD.on(body, 'click', '[data-remove]', function () {
         const idx = parseInt(this.getAttribute('data-remove'), 10);
         data.ingredients.splice(idx, 1);
-        renderEditor();
+        // List structure changed, but inputs outside the list keep state
+        renderIngList();
+        renderAllergenChips();  // auto-detected allergens may shift
+        updateCostStripDOM();
       });
 
       const servingsEl = PCD.$('#recipeServings', body);
       servingsEl.addEventListener('input', function () {
         data.servings = parseInt(this.value, 10) || 1;
         clearTimeout(wireEditor._t2);
-        wireEditor._t2 = setTimeout(renderEditor, 300);
+        wireEditor._t2 = setTimeout(function () {
+          // Servings affects cost-per-serving and cost % — line costs
+          // are total amount × price (not per-serving), so they don't
+          // change. Update only the cost strip.
+          updateCostStripDOM();
+        }, 150);
       });
       const priceEl = PCD.$('#recipeSalePrice', body);
       priceEl.addEventListener('input', function () {
         data.salePrice = parseFloat(this.value) || null;
         clearTimeout(wireEditor._t3);
-        wireEditor._t3 = setTimeout(renderEditor, 300);
+        wireEditor._t3 = setTimeout(function () {
+          // Sale price only affects the % display in the strip
+          updateCostStripDOM();
+        }, 150);
       });
 
       // ===== QUICK-ADD AUTOCOMPLETE =====
@@ -2156,7 +2290,10 @@
           }]);
           qInput.value = '';
           qDD.style.display = 'none';
-          renderEditor();
+          // v2.6.48 — list grew, targeted re-render only
+          renderIngList();
+          renderAllergenChips();
+          updateCostStripDOM();
           setTimeout(function () {
             const fresh = PCD.$('#quickIngInput', body);
             if (fresh) fresh.focus();
@@ -2176,7 +2313,10 @@
               }]);
               PCD.toast.success('Added "' + newName + '" — synced to Ingredients library');
               qInput.value = '';
-              renderEditor();
+              // v2.6.48 — targeted re-render
+              renderIngList();
+              renderAllergenChips();
+              updateCostStripDOM();
               setTimeout(function () {
                 const fresh = PCD.$('#quickIngInput', body);
                 if (fresh) fresh.focus();
@@ -2192,7 +2332,10 @@
           data.ingredients = (data.ingredients || []).concat([{ ingredientId: id, amount: 100, unit: defaultRecipeUnit(ing) }]);
           qInput.value = '';
           qDD.style.display = 'none';
-          renderEditor();
+          // v2.6.48 — targeted re-render
+          renderIngList();
+          renderAllergenChips();
+          updateCostStripDOM();
           setTimeout(function () {
             const fresh = PCD.$('#quickIngInput', body);
             if (fresh) fresh.focus();
