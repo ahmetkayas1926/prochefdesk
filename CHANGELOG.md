@@ -1,4 +1,70 @@
-# v2.6.41 — CSV parser SheetJS'e geçirildi (chef invoice import güvenirliği)
+# v2.6.42 — localStorage doluyken sessiz veri silme yerine kullanıcıya soruluyor
+
+## Sorun
+
+`js/core/store.js` `persist()` fonksiyonu `localStorage.setItem` `QuotaExceededError` fırlattığında **sessizce** şu verileri kırpıyordu:
+
+- Her ingredient'in `priceHistory` listesi → son 5 fiyat değişikliği dışında kalanlar **silinir**
+- `waste` log → son 500 kayıt dışında kalanlar **silinir**
+- `costHistory` → son 500 kayıt dışında kalanlar **silinir**
+- `checklistSessions` → son 100 oturum dışında kalanlar **silinir**
+
+Sadece `PCD.toast.warning('Storage almost full — old history trimmed')` toast'u atılıyordu (3-4 sn'de kaybolur). Şef bunu görmezse veya görse bile ne silindiğini bilmezse, geçmiş fiyat trendleri ve atık geçmişi sessizce uçmuştu — restoran yönetiminde önemli kayıt.
+
+Daha kötüsü: **export edilmeden silindiği için geri dönüşü yok.**
+
+## Çözüm
+
+Üç ayrı UX adımına bölündü:
+
+1. **Storage dolu modal'ı** açılır — sessizce gitmez
+2. **3 buton:**
+   - 📥 **Yedek indir** — Tüm state'i `prochefdesk-backup-YYYY-MM-DD.json` olarak indirir (henüz hiçbir şey silinmez)
+   - 🗑 **Eskileri sil** — Confirm modal sonrası eski davranışı uygular (priceHistory→5, waste/cost→500, checklist→100)
+   - **Şimdi değil** — Modal kapanır, kullanıcı bilinçli karar verir
+
+3. Modal açıkken ardarda persist çağrıları olursa `_quotaModalOpen` flag'i ile spam engellenir
+
+`trimAndPersist()` ve `showQuotaModal()` ayrı fonksiyonlara çıkarıldı (test edilebilir, tek sorumluluk).
+
+## Davranış değişiklikleri
+
+| Senaryo | Önce | Şimdi |
+|---------|------|-------|
+| Storage dolu → setItem hata | Sessiz silme + toast | Modal açılır, kullanıcı seçer |
+| Kullanıcı modal'ı kapatır | — | Hiçbir şey silinmez. Sonraki persist'te modal yine gelir |
+| Kullanıcı yedek indirir | — | JSON download + state aynen kalır |
+| Kullanıcı "Eskileri sil" + confirm | — | Eski silme davranışı uygulanır |
+
+## Test
+
+1. **Manuel quota tetikleme** (DevTools console):
+   ```js
+   // Geçici olarak storage'ı doldur
+   localStorage.setItem('_test_fill', 'x'.repeat(4 * 1024 * 1024));
+   // Bir tarif değişikliği yap → modal açılmalı
+   ```
+   Sonra: `localStorage.removeItem('_test_fill')` ile temizle.
+
+2. Modal açıldığında:
+   - "Yedek indir" → JSON download başlamalı
+   - "Eskileri sil" → confirm modal → "Yes, trim" → toast "✓ Old history trimmed"
+   - "Şimdi değil" → modal kapanır
+   - Modal tekrar tetiklenirse spam olmamalı
+
+3. **Migration durumu**: Eski toast davranışına alışmış kullanıcılar artık modal görecek — bilinçlilik artıyor, bu istenen davranış.
+
+## i18n eksiği (kabul edilen kompromis)
+
+Modal metinleri yeni `quota_*` key'lerini içeriyor, ama ş u an EN/TR dosyalarında bu key'ler **yok** — `t(key, fallbackString)` overload'ı sayesinde fallback EN string render olur. Yeni key'ler i18n birleştirme paketinde (#12, sonradan) eklenecek. Şu an üretim kullanıcılarına EN modal görünür; aciliyet düşük çünkü modal nadir tetiklenir (ortalama localStorage kotası 5-10 MB, normal kullanımda 1-2 MB).
+
+## Risk
+
+Düşük. Tek dosya (`store.js`). Davranış sadece quota path'inde değişti, normal akış aynı. Trim mantığı korundu, sadece kullanıcı onayı arkasına alındı.
+
+---
+
+
 
 ## Sorun
 

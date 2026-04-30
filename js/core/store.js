@@ -216,6 +216,164 @@
     return out;
   }
 
+  // v2.6.42 — Quota-exceeded modal flag. Without this, every subsequent
+  // debounced persist() call after the first quota error would re-open
+  // the modal, spamming the user.
+  let _quotaModalOpen = false;
+
+  // Trim helper — keep separate from persist() so the user-facing modal
+  // can call it explicitly. Returns true if the trimmed state could be
+  // persisted, false if storage is still full afterwards.
+  function trimAndPersist() {
+    const stateCopy = PCD.clone(state);
+    if (stateCopy.ingredients) {
+      // Walk both legacy flat shape and workspace-scoped shape.
+      Object.keys(stateCopy.ingredients).forEach(function (k) {
+        const v = stateCopy.ingredients[k];
+        if (v && v.priceHistory && v.priceHistory.length > 5) {
+          v.priceHistory = v.priceHistory.slice(-5);
+        } else if (v && typeof v === 'object') {
+          Object.keys(v).forEach(function (id) {
+            const ing = v[id];
+            if (ing && ing.priceHistory && ing.priceHistory.length > 5) {
+              ing.priceHistory = ing.priceHistory.slice(-5);
+            }
+          });
+        }
+      });
+    }
+    if (Array.isArray(stateCopy.waste) && stateCopy.waste.length > 500) {
+      stateCopy.waste = stateCopy.waste.slice(-500);
+    }
+    if (Array.isArray(stateCopy.costHistory) && stateCopy.costHistory.length > 500) {
+      stateCopy.costHistory = stateCopy.costHistory.slice(-500);
+    }
+    if (Array.isArray(stateCopy.checklistSessions) && stateCopy.checklistSessions.length > 100) {
+      stateCopy.checklistSessions = stateCopy.checklistSessions.slice(-100);
+    }
+    try {
+      localStorage.setItem(LS_KEY_STATE, JSON.stringify(stateCopy));
+      state = stateCopy;
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Download a JSON backup of the entire current in-memory state. Used
+  // when storage is full so the user can rescue their data before any
+  // trimming happens.
+  function downloadBackup() {
+    try {
+      const payload = {
+        exportedAt: new Date().toISOString(),
+        version: (window.PCD_CONFIG && window.PCD_CONFIG.APP_VERSION) || '',
+        reason: 'storage-full',
+        data: state,
+      };
+      const json = JSON.stringify(payload, null, 2);
+      const filename = 'prochefdesk-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+      if (PCD.download) {
+        PCD.download(json, filename, 'application/json');
+      } else {
+        // Defensive fallback (PCD.download should exist; defined in utils.js)
+        const a = document.createElement('a');
+        a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(json);
+        a.download = filename;
+        a.click();
+      }
+      return true;
+    } catch (e) {
+      PCD.err && PCD.err('downloadBackup failed', e);
+      return false;
+    }
+  }
+
+  // Show the quota modal. Three explicit choices, no silent data loss.
+  function showQuotaModal() {
+    if (!PCD.modal || !PCD.modal.open) {
+      // No modal subsystem yet (very early boot) — fall back to toast.
+      PCD.toast && PCD.toast.error('Storage full. Open Account → Backup to download your data.');
+      return;
+    }
+    _quotaModalOpen = true;
+
+    const t = (PCD.i18n && PCD.i18n.t) ? PCD.i18n.t : function (k, fb) { return fb || k; };
+
+    const bodyHtml =
+      '<div style="font-size:14px;line-height:1.6;color:var(--text-2);">' +
+        '<p style="margin:0 0 12px;">' +
+          t('quota_full_msg',
+            'Your browser storage is full. The change you just made could not be saved to disk.') +
+        '</p>' +
+        '<p style="margin:0 0 12px;">' +
+          t('quota_full_advice',
+            'Download a backup first (recommended), then choose whether to free up space by trimming old history.') +
+        '</p>' +
+        '<div style="background:var(--surface-2);border-radius:var(--r-sm);padding:10px 12px;font-size:12px;color:var(--text-3);margin-top:14px;">' +
+          t('quota_full_what_trimmed',
+            'Trimming keeps the last 5 price changes per ingredient, last 500 waste/cost entries, and last 100 checklist sessions. Your recipes, menus, ingredients, and current data are NOT touched.') +
+        '</div>' +
+      '</div>';
+
+    const downloadBtn = PCD.el('button', { class: 'btn btn-primary' });
+    downloadBtn.innerHTML = '📥 ' + t('quota_btn_download', 'Download backup');
+
+    const trimBtn = PCD.el('button', { class: 'btn btn-outline' });
+    trimBtn.innerHTML = '🗑 ' + t('quota_btn_trim', 'Trim old history');
+
+    const laterBtn = PCD.el('button', { class: 'btn btn-ghost' });
+    laterBtn.textContent = t('quota_btn_later', 'Not now');
+
+    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
+    footer.appendChild(laterBtn);
+    footer.appendChild(trimBtn);
+    footer.appendChild(downloadBtn);
+
+    const m = PCD.modal.open({
+      title: '⚠️ ' + t('quota_full_title', 'Storage is full'),
+      body: bodyHtml,
+      footer: footer,
+      size: 'md',
+      closable: true,
+      onClose: function () { _quotaModalOpen = false; },
+    });
+
+    downloadBtn.addEventListener('click', function () {
+      const ok = downloadBackup();
+      if (ok) {
+        PCD.toast && PCD.toast.success(t('quota_downloaded', '✓ Backup downloaded'));
+      } else {
+        PCD.toast && PCD.toast.error(t('quota_download_failed', 'Backup download failed'));
+      }
+      // Don't auto-close — user might also want to trim now.
+    });
+
+    trimBtn.addEventListener('click', function () {
+      // Confirm before destructive trim.
+      PCD.modal.confirm({
+        icon: '🗑', iconKind: 'warning',
+        title: t('quota_trim_confirm_title', 'Trim old history?'),
+        text: t('quota_trim_confirm_text',
+          'Old price history, waste/cost log entries, and checklist sessions will be removed. This cannot be undone. Recipes and ingredients are not affected.'),
+        okText: t('quota_trim_confirm_ok', 'Yes, trim'),
+        cancelText: t('cancel', 'Cancel'),
+      }).then(function (ok) {
+        if (!ok) return;
+        const success = trimAndPersist();
+        if (success) {
+          PCD.toast && PCD.toast.success(t('quota_trimmed', '✓ Old history trimmed'));
+          m.close();
+        } else {
+          PCD.toast && PCD.toast.error(t('quota_still_full',
+            'Storage is still full after trimming. Please download backup and contact support.'));
+        }
+      });
+    });
+
+    laterBtn.addEventListener('click', function () { m.close(); });
+  }
+
   // ---------- PERSIST (debounced) ----------
   const persist = PCD.debounce(function () {
     let serialized;
@@ -230,26 +388,12 @@
     } catch (e) {
       PCD.err('Failed to persist state:', e);
       if (e && (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014)) {
-        // Storage full — attempt graceful recovery by pruning old price history
-        const stateCopy = PCD.clone(state);
-        if (stateCopy.ingredients) {
-          Object.keys(stateCopy.ingredients).forEach(function (k) {
-            const ing = stateCopy.ingredients[k];
-            if (ing.priceHistory && ing.priceHistory.length > 5) {
-              ing.priceHistory = ing.priceHistory.slice(-5);
-            }
-          });
-        }
-        // Trim waste log, cost history to last 500 entries
-        if (stateCopy.waste && stateCopy.waste.length > 500) stateCopy.waste = stateCopy.waste.slice(-500);
-        if (stateCopy.costHistory && stateCopy.costHistory.length > 500) stateCopy.costHistory = stateCopy.costHistory.slice(-500);
-        if (stateCopy.checklistSessions && stateCopy.checklistSessions.length > 100) stateCopy.checklistSessions = stateCopy.checklistSessions.slice(-100);
-        try {
-          localStorage.setItem(LS_KEY_STATE, JSON.stringify(stateCopy));
-          state = stateCopy;
-          PCD.toast && PCD.toast.warning('Storage almost full — old history trimmed');
-        } catch (e2) {
-          PCD.toast && PCD.toast.error('Storage full. Please export backup and reset.');
+        // v2.6.42 — Storage full. Show explicit modal to user instead of
+        // silently trimming priceHistory/waste/cost behind their back.
+        // The modal lets them download a backup first, then decide whether
+        // to trim. See trimAndPersist() and showQuotaModal() above.
+        if (!_quotaModalOpen) {
+          showQuotaModal();
         }
       }
     }
