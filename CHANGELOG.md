@@ -1,4 +1,77 @@
-# v2.6.45 — PWA manifest gerçek dosyaya çevrildi + iOS apple-touch-icon
+# v2.6.46 — i18n birleştirme: 11 dosya → 6 dosya
+
+## Sorun
+
+Translation system 11 dosyaya bölünmüştü:
+- `en.js`, `tr.js`, `es.js`, `fr.js`, `de.js`, `ar.js` — 6 base dosya
+- `phase2.js`, `phase3.js`, `phase4.js`, `phase4-1.js`, `v17.js` — 5 patch dosyası
+
+Her patch dosyası 6 dilde de key tanımlıyordu. Toplam 4564 satır, 5277 key. Yeni bir çevirici (sen veya freelance) "şu key nerede?" diye sorduğunda 11 dosyaya bakmak gerekiyordu. Hangi dosyada bir key'in tanımlı olduğu belirsizdi — son register kazanıyordu (Object.assign override semantics).
+
+## Çözüm
+
+Tüm patch dosyalarını base dosyalarla birleştirdim. **Davranış birebir aynı** — Node.js script ile:
+1. Eski yükleme sırasıyla 11 dosyayı eval ettim
+2. Her locale için final merged dictionary çıkardım
+3. Yeni 6 dosyaya yazdım (`window.PCD.i18n.register('xx', { ... })` formatında)
+4. Doğrulama: yeni 6 dosyayı tekrar yükle, eskisinin merged sonucuyla karşılaştır → **5277 key, 0 fark**
+
+`index.html`:
+```html
+<!-- ÖNCE: 11 script tag -->
+<script src="js/i18n/en.js"></script>
+... 5 base + 5 phase + 1 v17 ...
+
+<!-- SONRA: 6 script tag -->
+<script src="js/i18n/en.js"></script>
+<script src="js/i18n/tr.js"></script>
+<script src="js/i18n/es.js"></script>
+<script src="js/i18n/fr.js"></script>
+<script src="js/i18n/de.js"></script>
+<script src="js/i18n/ar.js"></script>
+```
+
+## Etki
+
+- **Bakım kolaylığı**: bir key arıyorsan tek dosyada bulursun
+- **Çevirici onboarding**: "EN'in tr karşılığı eksik" demek için artık 1 dosya farkı yeterli
+- **5 daha az HTTP request** ilk yüklemede (cache'lenir ama yine de)
+- **Dosya sayısı**: 11 → 6
+- **Toplam satır**: 4564 → 5355 (yeni dosyalarda her key kendi satırında, biraz daha okunabilir)
+
+## Key dağılımı
+
+| Locale | Key sayısı | Tamamlanma |
+|--------|-----------|------------|
+| en     | 1287      | 100% (source of truth) |
+| tr     | 1286      | 100% (Türk şef için) |
+| es     | 676       | ~53% — runtime fallback EN'e |
+| fr     | 676       | ~53% — runtime fallback EN'e |
+| de     | 676       | ~53% — runtime fallback EN'e |
+| ar     | 676       | ~53% — runtime fallback EN'e |
+
+ES/FR/DE/AR'da eksik key'ler runtime'da otomatik EN'e fallback yapıyor (i18n.t fonksiyonu). Tamamlanma scope dışı (uzun vadeli iş).
+
+## Test
+
+1. EN açık → tüm sayfalarda metinler doğru görünmeli (regresyon yok)
+2. TR'ye geç → tüm sayfalar Türkçe (regresyon yok)
+3. ES/FR/DE/AR → çevirisi olan key'ler dilinde, olmayan key'ler EN'e fallback
+4. DevTools Console: `Object.keys(window.PCD).length` ≥ 1287 (en bundle yüklü)
+5. `window.PCD.i18n.t('save')` → 'Save' (en) veya 'Kaydet' (tr) vs.
+6. Network tab: `/js/i18n/` altında 11 değil 6 istek
+
+## Risk
+
+Sıfır. Otomatik script ile birleştirildi, tekrar yükleyince **5277 key 0 fark** doğrulandı. Davranış byte-byte aynı.
+
+## Gelecek
+
+ES/FR/DE/AR tamamlanması ayrı paket olacak — chef community'den native speaker'lara çevirtilebilir, veya GPT/Claude ile bulk translate sonrası native review.
+
+---
+
+
 
 ## Sorun
 
