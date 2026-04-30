@@ -1,4 +1,67 @@
-# v2.6.53 — Print HTML çevirileri (recipe print, button label'ları, print toolbar)
+# v2.6.54 — Workspace silinince orphan foto temizliği
+
+## Sorun
+
+v2.6.44'te recipe foto upload/güncelleme/silme akışlarında orphan blob temizliği eklenmişti. Ama **workspace silme** bu kapsamda değildi (kasıtlı, scope dışı bırakılmıştı).
+
+Kullanıcı bir workspace'i silince:
+- ✅ recipe row'ları wipe edilir (state'ten silinir)
+- ✅ menus, events, vs. wipe edilir
+- ❌ **Foto dosyaları Supabase Storage'da kalır** — orphan birikme
+
+Bir şef "La Bella" workspace'ini bitirip silince, içindeki 50 tarifin fotoları (~5-10 MB) Storage'da kalıyordu. 100 şef × 2-3 workspace silimi = ~30 GB orphan veri.
+
+## Çözüm
+
+`store.js` `deleteWorkspace()` fonksiyonu güncellendi:
+
+1. **Wipe ÖNCESİ** workspace'in tüm recipe foto URL'lerini topla (`_photosToDelete` array)
+2. State'i mutate et (mevcut davranış)
+3. **Wipe SONRASI** her foto URL için:
+   - `isPhotoStillUsed(url, recipeId)` ile kontrol et — başka workspace'te aynı foto var mı?
+   - Yoksa `PCD.photoStorage.deleteByUrl(url)` ile sil
+
+`isPhotoStillUsed` (v2.6.44'te eklenmişti) artık **freshly mutated state**'i tarıyor — yani silinen workspace'in row'ları gitmiş, ama diğer workspace'lerin row'ları hala var. Eğer başka bir workspace'te aynı URL'i kullanan duplicate recipe varsa, foto silinmez. **Veri bütünlüğü garantili.**
+
+## Edge case'ler
+
+- ✅ **Duplicate recipe başka workspace'te**: silinmez
+- ✅ **dataURL fotolar (eski v2.5.8 öncesi)**: `urlToStorageKey` null döner, no-op
+- ✅ **Foreign URL (manuel paste)**: RLS reddeder
+- ✅ **Storage kotası dolu**: deleteByUrl sessiz fail, sıkıntı yok
+- ✅ **Çoklu cihaz**: cloud sync sonrası diğer cihazda da sync olur (bir sonraki pull)
+- ✅ **Tombstone**: workspace tombstone'a girer, cloud merge resurrect etmez
+
+## Etki
+
+- Workspace silme akışı artık **tam temizlik** yapıyor
+- Long-term Storage maliyeti düşer
+- Kullanıcı verisi etrafında "veriyi gerçekten siliyoruz" güvencesi (GDPR-friendly)
+
+## Test (push sonrası)
+
+1. Yeni bir test workspace oluştur ("Test Mutfağı")
+2. İçine 2-3 tarif ekle, her birine fotoğraf yükle
+3. Supabase Dashboard → Storage → `recipe-photos` bucket'ında kullanıcı klasörünün altına gir → 2-3 yeni dosya görmelisin
+4. Test workspace'ini sil (workspace switcher → düzenle → Sil)
+5. Storage bucket'ında o foto dosyaları **gitmiş olmalı**
+6. Aynı kullanıcı aktif workspace'inde bir tarife fotoğraf yüklediyse, onun fotosu kalmalı (etkilenmedi)
+
+### Duplicate testi
+1. Ana workspace'te bir tarife fotoğraf yükle
+2. O tarifi başka workspace'e kopyala (workspace switcher → kopyala)
+3. Ana workspace'i sil
+4. **Ana workspace silindi ama foto durmalı** çünkü kopya hala kullanıyor (isPhotoStillUsed = true)
+
+## Risk
+
+Düşük-orta. `isPhotoStillUsed` koruması ile yanlış silme ihtimali çok düşük. Ama silmenin geri dönüşü yok — eğer bug varsa fotoğraflar gider. Test senaryosu mutlaka çalıştırılmalı, özellikle duplicate testi.
+
+Geri alma planı: bu paketi v2.6.53'e geri al, ek silme işlemi devre dışı kalır (önceki davranış: orphan birikir).
+
+---
+
+
 
 ## Sorun
 

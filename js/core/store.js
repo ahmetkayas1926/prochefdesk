@@ -561,6 +561,16 @@
       // Refuse if it's the only one
       const remaining = Object.keys(state.workspaces).filter(function (id) { return id !== wsId; });
       if (remaining.length === 0) return false;
+      // v2.6.54 — Collect ALL photo URLs from this workspace's recipes
+      // BEFORE wiping the data. After the wipe completes, delete each
+      // orphaned blob from Storage (using isPhotoStillUsed to avoid
+      // deleting URLs shared with other workspaces' duplicates).
+      const _photosToDelete = [];
+      const wsRecipes = (state.recipes && state.recipes[wsId]) || {};
+      Object.keys(wsRecipes).forEach(function (rid) {
+        const r = wsRecipes[rid];
+        if (r && r.photo) _photosToDelete.push({ url: r.photo, recipeId: r.id });
+      });
       const next = Object.assign({}, state.workspaces);
       delete next[wsId];
       state.workspaces = next;
@@ -582,6 +592,17 @@
       emit('workspaces', next, null);
       flushSync();
       persist();
+      // v2.6.54 — After state is wiped, clean up orphaned photo blobs.
+      // isPhotoStillUsed walks the freshly-mutated state, so duplicated
+      // recipes in OTHER workspaces still using the same URL are protected.
+      // Best-effort, async, non-blocking — deletion failures are silent.
+      if (_photosToDelete.length && PCD.photoStorage && PCD.photoStorage.deleteByUrl) {
+        _photosToDelete.forEach(function (p) {
+          if (!isPhotoStillUsed(p.url, p.recipeId)) {
+            PCD.photoStorage.deleteByUrl(p.url);
+          }
+        });
+      }
       return true;
     },
 
