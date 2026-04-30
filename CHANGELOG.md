@@ -1,4 +1,134 @@
-# v2.6.56 — Public share sayfası dil otomatik algılama
+# v2.6.57 — Backup restore: schema validation + preview (veri güvenliği)
+
+## Sorun
+
+`Account → Backup → Restore` akışı naïve idi:
+
+```js
+// Eski davranış:
+const parsed = JSON.parse(file);
+const data = parsed.data || parsed;
+// Confirm modal (sadece text uyarı)
+Object.keys(data).forEach(k => PCD.store.set(k, data[k]));  // hepsini ezer
+```
+
+Riskler:
+1. **Yanlış format JSON yüklenirse** state baştan sona bozulur
+2. **Şifre dosyası, başka uygulamadan JSON, vs. yüklerse** state korumasız ezilir
+3. **Yedek içeriği önizlenemiyor** — kullanıcı "kazara restore'a tıkladım" deyip emin olamıyor
+4. **Schema versiyonu kontrol edilmiyor** — gelecekteki backup formatları kırılma yapabilir
+5. **Tehlikeli alanlar (`user`, `_meta`, `_deletedWorkspaces`)** restore edilebiliyor
+
+## Çözüm
+
+`account.js` `importDataBtn` handler'ı baştan yazıldı:
+
+### 1. Dosya boyutu kontrolü
+```js
+if (f.size > 50 * 1024 * 1024) {
+  PCD.toast.error(t('backup_restore_too_large'));
+  return;
+}
+```
+
+### 2. Schema validation — `validateBackup(data)`
+- Top-level **object** olmalı (array veya string değil)
+- Şu key'lerden **en az birisi** mevcut olmalı: `recipes, ingredients, menus, events, suppliers, inventory, waste, workspaces, prefs, canvases, shoppingLists, checklistTemplates, checklistSessions, stockCountHistory`
+- `recipes` alanı varsa **object** olmalı (array değil)
+- `workspaces` alanı varsa **object** olmalı
+
+Random JSON dosyaları (örn. başka site'den export, package.json, vs.) bu testi geçemez.
+
+### 3. Preview modal — `buildBackupSummary(data)`
+
+Restore confirm yerine içerik preview gösteren custom modal:
+
+```
+⚠️ Yedeği geri yükle
+─────────────────────────
+Yedek sürümü: 2.6.55 · Oluşturulma: 28.04.2026 14:32
+
+Bu yedek şunları içeriyor:
+┌─────────────────────────────────┐
+│ · 3 çalışma alanı               │
+│ · 47 tarif                      │
+│ · 89 malzeme                    │
+│ · 12 menü                       │
+│ · 4 etkinlik                    │
+│ · 8 kontrol listesi şablonu     │
+└─────────────────────────────────┘
+
+⚠️ Geri yükleme MEVCUT çalışma alanları, tarifler,
+malzemeler ve diğer verileri SİLİP üzerine yazacak.
+Mevcut durumu geri istemeniz ihtimaline karşı önce
+taze bir yedek alın.
+
+         [İptal] [Geri yükle]
+```
+
+Modal `PCD.modal.confirm` yerine custom `PCD.modal.open` ile yapıldı çünkü `confirm()` text alanını `textContent` ile render ediyor (HTML render etmiyor).
+
+### 4. Tehlikeli alanlar SKIP listesi
+
+```js
+const SKIP = ['_meta', 'user', '_deletedWorkspaces'];
+Object.keys(data).forEach(function (k) {
+  if (SKIP.indexOf(k) >= 0) return;
+  PCD.store.set(k, data[k]);
+});
+```
+
+- `user` — eski oturum bilgisi yeni oturumu bozmasın
+- `_meta` — sync timestamp'leri overlap etmesin
+- `_deletedWorkspaces` — tombstone'lar restore'da resurrect bug çıkarabilir
+
+## i18n
+
+14 yeni key (en + tr):
+- `backup_restore_too_large`
+- `backup_restore_invalid_schema` (concat: msg)
+- `backup_restore_meta` (version + date)
+- `backup_restore_preview_intro`
+- `backup_restore_warning`
+- `backup_summary_workspaces, recipes, ingredients, menus, events, suppliers, checklists, canvases, empty`
+
+## Test (push sonrası)
+
+### Geçerli yedek
+1. Account → 📥 Backup download → kaydet
+2. Account → 📤 Restore → o dosyayı yükle
+3. Preview modal: "47 tarif, 89 malzeme, ..." görmelisin
+4. "İptal" tıklarsan hiçbir şey değişmemeli
+5. "Geri yükle" → reload → veriler geri gelmeli (zaten oradaydı, idempotent)
+
+### Geçersiz yedek
+1. Notepad'da `{"foo": "bar"}` yaz, kaydet
+2. Restore → o dosyayı yükle
+3. Toast: "Geçersiz yedek: Missing all expected fields"
+4. State değişmemeli
+
+### Yanlış shape
+1. Notepad'da `{"recipes": "should be object"}` yaz
+2. Restore → toast: "Geçersiz yedek: recipes field has wrong shape"
+
+### Büyük dosya
+1. 60MB sahte JSON yükle → "Yedek dosyası çok büyük (>50MB)"
+
+### Bozuk JSON
+1. Yarım JSON `{recipes:` yükle → "Geçersiz yedek: Unexpected end of JSON input" (or similar)
+
+### TR çevirisi
+- Tüm modal Türkçe görünmeli (preview, uyarı, etiketler)
+
+## Risk
+
+Düşük-orta. Validation katmanı eklenirse meşru restore'lar bozulabilir mi? Test ettim — `data` veya `parsed` (her iki format) hala destekleniyor; validation sadece "en az 1 expected key var mı" kontrolü, yumuşak.
+
+Geri alma planı: bu paketi v2.6.56'ya geri al, naïve restore döner (ama kullanıcı kendi backup dosyalarını yine geri yükleyebilir).
+
+---
+
+
 
 ## Sorun
 

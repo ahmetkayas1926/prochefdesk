@@ -409,33 +409,131 @@
       inp.onchange = function (e) {
         const f = e.target.files && e.target.files[0];
         if (!f) return;
+        if (f.size > 50 * 1024 * 1024) {
+          PCD.toast.error(t('backup_restore_too_large') || 'Backup file too large (>50MB)');
+          return;
+        }
         const reader = new FileReader();
         reader.onload = function (evt) {
+          let parsed, data;
           try {
-            const parsed = JSON.parse(evt.target.result);
-            const data = parsed.data || parsed;
-            PCD.modal.confirm({
-              icon: '⚠️', iconKind: 'warning', danger: true,
-              title: t('backup_restore_title'),
-              text: t('backup_restore_confirm'),
-              okText: t('backup_restore_ok')
-            }).then(function (ok) {
-              if (!ok) return;
-              // Merge restore — replace top-level keys
-              Object.keys(data).forEach(function (k) {
-                if (k !== '_meta') PCD.store.set(k, data[k]);
-              });
-              PCD.toast.success(PCD.i18n.t('toast_backup_restored'));
-              setTimeout(function () { window.location.reload(); }, 800);
-            });
+            parsed = JSON.parse(evt.target.result);
+            data = parsed.data || parsed;
           } catch (err) {
             PCD.toast.error(PCD.i18n.t('toast_invalid_backup', { msg: err.message }));
+            return;
           }
+
+          // v2.6.57 — Validate schema before restoring
+          const validation = validateBackup(data, parsed);
+          if (!validation.valid) {
+            PCD.toast.error(t('backup_restore_invalid_schema', { msg: validation.error }) ||
+                            'Invalid backup: ' + validation.error);
+            return;
+          }
+
+          // Build a preview summary so the chef knows what's about to be restored
+          const summary = buildBackupSummary(data);
+          const versionInfo = parsed.version ? '<div class="text-muted" style="font-size:11px;margin-bottom:8px;">' +
+            t('backup_restore_meta', { version: PCD.escapeHtml(parsed.version), date: parsed.exportedAt ? new Date(parsed.exportedAt).toLocaleString() : '?' }) +
+            '</div>' : '';
+          const previewHtml = versionInfo +
+            '<div style="font-size:13px;color:var(--text-2);line-height:1.6;margin-bottom:12px;">' +
+              t('backup_restore_preview_intro', 'This backup contains:') +
+            '</div>' +
+            '<div style="background:var(--surface-2);border-radius:var(--r-sm);padding:10px 14px;margin-bottom:14px;font-size:13px;">' +
+              summary.lines.map(function (l) { return '<div>· ' + l + '</div>'; }).join('') +
+            '</div>' +
+            '<div style="background:#fef3c7;color:#92400e;padding:10px 14px;border-radius:var(--r-sm);font-size:12px;line-height:1.5;">' +
+              '⚠️ ' + t('backup_restore_warning', 'Restoring will OVERWRITE your current workspaces, recipes, ingredients and other data. Make a fresh backup of the current state first if you might want to come back.') +
+            '</div>';
+
+          // v2.6.57 — Custom modal (instead of confirm) so the HTML
+          // preview block renders properly. confirm() uses textContent
+          // for the message which would show raw HTML.
+          const previewBody = PCD.el('div');
+          previewBody.innerHTML = previewHtml;
+          const cancelBtn = PCD.el('button', { type: 'button', class: 'btn btn-secondary', text: t('cancel'), style: { flex: '1' } });
+          const restoreBtn = PCD.el('button', { type: 'button', class: 'btn btn-danger', text: t('backup_restore_ok'), style: { flex: '1' } });
+          const previewFooter = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
+          previewFooter.appendChild(cancelBtn);
+          previewFooter.appendChild(restoreBtn);
+          const previewModal = PCD.modal.open({
+            title: '⚠️ ' + t('backup_restore_title'),
+            body: previewBody,
+            footer: previewFooter,
+            size: 'md',
+            closable: true,
+          });
+          cancelBtn.addEventListener('click', function () { previewModal.close(); });
+          restoreBtn.addEventListener('click', function () {
+            // Replace top-level keys, but skip dangerous ones
+            const SKIP = ['_meta', 'user', '_deletedWorkspaces'];
+            Object.keys(data).forEach(function (k) {
+              if (SKIP.indexOf(k) >= 0) return;
+              PCD.store.set(k, data[k]);
+            });
+            previewModal.close();
+            PCD.toast.success(PCD.i18n.t('toast_backup_restored'));
+            setTimeout(function () { window.location.reload(); }, 800);
+          });
         };
         reader.readAsText(f);
       };
       inp.click();
     });
+
+    // v2.6.57 — Validate that the parsed JSON looks like a PCD backup.
+    // Checks for at least one expected top-level key + sane shapes.
+    function validateBackup(data, raw) {
+      if (!data || typeof data !== 'object' || Array.isArray(data)) {
+        return { valid: false, error: 'Top-level must be an object' };
+      }
+      // Required: at least ONE of the expected keys must be present
+      const EXPECTED = ['recipes','ingredients','menus','events','suppliers','inventory','waste','workspaces','prefs','canvases','shoppingLists','checklistTemplates','checklistSessions','stockCountHistory'];
+      const hasAny = EXPECTED.some(function (k) { return Object.prototype.hasOwnProperty.call(data, k); });
+      if (!hasAny) {
+        return { valid: false, error: 'Missing all expected fields (recipes, ingredients, ...)' };
+      }
+      // Recipes/menus/events should be objects (key-value), not arrays or strings
+      if (data.recipes !== undefined && (typeof data.recipes !== 'object' || Array.isArray(data.recipes))) {
+        return { valid: false, error: 'recipes field has wrong shape' };
+      }
+      if (data.workspaces !== undefined && (typeof data.workspaces !== 'object' || Array.isArray(data.workspaces))) {
+        return { valid: false, error: 'workspaces field has wrong shape' };
+      }
+      return { valid: true };
+    }
+
+    // v2.6.57 — Build a short human-readable preview of backup contents.
+    function buildBackupSummary(data) {
+      const lines = [];
+      function countDeep(obj) {
+        // For workspace-scoped data: { wsId: { id: {...} } } — count inner items across all wsIds
+        if (!obj || typeof obj !== 'object') return 0;
+        if (Array.isArray(obj)) return obj.length;
+        let total = 0;
+        Object.values(obj).forEach(function (v) {
+          if (v && typeof v === 'object' && !Array.isArray(v)) {
+            // Could be a record (has id) OR a wsId map of records
+            if (v.id) total += 1;
+            else total += Object.keys(v).length;
+          }
+        });
+        return total;
+      }
+      const T = PCD.i18n.t;
+      if (data.workspaces) lines.push(Object.keys(data.workspaces).length + ' ' + T('backup_summary_workspaces', 'workspace(s)'));
+      if (data.recipes) lines.push(countDeep(data.recipes) + ' ' + T('backup_summary_recipes', 'recipe(s)'));
+      if (data.ingredients) lines.push(countDeep(data.ingredients) + ' ' + T('backup_summary_ingredients', 'ingredient(s)'));
+      if (data.menus) lines.push(countDeep(data.menus) + ' ' + T('backup_summary_menus', 'menu(s)'));
+      if (data.events) lines.push(countDeep(data.events) + ' ' + T('backup_summary_events', 'event(s)'));
+      if (data.suppliers) lines.push(countDeep(data.suppliers) + ' ' + T('backup_summary_suppliers', 'supplier(s)'));
+      if (data.checklistTemplates) lines.push(countDeep(data.checklistTemplates) + ' ' + T('backup_summary_checklists', 'checklist template(s)'));
+      if (data.canvases) lines.push(countDeep(data.canvases) + ' ' + T('backup_summary_canvases', 'kitchen card(s)'));
+      if (lines.length === 0) lines.push(T('backup_summary_empty', '(metadata only — no recipes or workspaces)'));
+      return { lines: lines };
+    }
 
     const expRec = PCD.$('#exportRecipesBtn', view);
     if (expRec) expRec.addEventListener('click', function () {

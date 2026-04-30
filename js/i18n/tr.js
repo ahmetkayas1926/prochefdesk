@@ -1435,4 +1435,20 @@ window.PCD.i18n.register('tr', {
   share_ingredients: "Malzemeler",
   share_method: "Yöntem",
   share_plating: "Sunum",
+
+  // v2.6.57 — Backup restore validation + preview
+  backup_restore_too_large: "Yedek dosyası çok büyük (>50MB)",
+  backup_restore_invalid_schema: "Geçersiz yedek: {msg}",
+  backup_restore_meta: "Yedek sürümü: {version} · Oluşturulma: {date}",
+  backup_restore_preview_intro: "Bu yedek şunları içeriyor:",
+  backup_restore_warning: "Geri yükleme MEVCUT çalışma alanları, tarifler, malzemeler ve diğer verileri SİLİP üzerine yazacak. Mevcut durumu geri istemeniz ihtimaline karşı önce taze bir yedek alın.",
+  backup_summary_workspaces: "çalışma alanı",
+  backup_summary_recipes: "tarif",
+  backup_summary_ingredients: "malzeme",
+  backup_summary_menus: "menü",
+  backup_summary_events: "etkinlik",
+  backup_summary_suppliers: "tedarikçi",
+  backup_summary_checklists: "kontrol listesi şablonu",
+  backup_summary_canvases: "mutfak kartı",
+  backup_summary_empty: "(sadece meta veri — tarif veya çalışma alanı yok)",
 });

@@ -1435,4 +1435,20 @@ window.PCD.i18n.register('en', {
   share_ingredients: "Ingredients",
   share_method: "Method",
   share_plating: "Plating",
+
+  // v2.6.57 — Backup restore validation + preview
+  backup_restore_too_large: "Backup file too large (>50MB)",
+  backup_restore_invalid_schema: "Invalid backup: {msg}",
+  backup_restore_meta: "Backup version: {version} · Created: {date}",
+  backup_restore_preview_intro: "This backup contains:",
+  backup_restore_warning: "Restoring will OVERWRITE your current workspaces, recipes, ingredients and other data. Make a fresh backup of the current state first if you might want to come back.",
+  backup_summary_workspaces: "workspace(s)",
+  backup_summary_recipes: "recipe(s)",
+  backup_summary_ingredients: "ingredient(s)",
+  backup_summary_menus: "menu(s)",
+  backup_summary_events: "event(s)",
+  backup_summary_suppliers: "supplier(s)",
+  backup_summary_checklists: "checklist template(s)",
+  backup_summary_canvases: "kitchen card(s)",
+  backup_summary_empty: "(metadata only — no recipes or workspaces)",
 });
