@@ -1245,7 +1245,7 @@
     const copyToWsBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: PCD.i18n.t('modal_copy_to_workspace_title') });
     copyToWsBtn.innerHTML = PCD.icon('truck', 16);
     const costReportBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: 'Cost Report' });
-    costReportBtn.innerHTML = PCD.icon('activity', 16) + ' <span>Cost Report</span>';
+    costReportBtn.innerHTML = PCD.icon('activity', 16) + ' <span>' + PCD.i18n.t('btn_cost_report') + '</span>';
     const shareBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: 'Share' });
     shareBtn.innerHTML = PCD.icon('share', 16);
     const qrBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: 'QR' });
@@ -1377,7 +1377,7 @@
         '<div style="font-weight:700;color:var(--brand-700);margin-bottom:4px;">🔗 Public link · Herkese açık link</div>' +
         '<div class="text-muted text-sm" style="margin-bottom:10px;">Login olmadan da bu tarifi görebilen kalıcı bir link. WhatsApp, Instagram, e-posta, neye yapıştırırsan oraya yapışır.</div>' +
         '<button type="button" class="btn btn-primary btn-sm" id="rShPublicLink" style="width:100%;">' +
-          PCD.icon('share', 14) + ' <span>Generate share link</span>' +
+          PCD.icon('share', 14) + ' <span>' + PCD.i18n.t('btn_generate_share_link') + '</span>' +
         '</button>' +
         '<input type="text" id="rShLinkOutput" readonly style="display:none;width:100%;margin-top:8px;padding:8px;border:1.5px solid var(--brand-600);border-radius:6px;font-family:var(--font-mono);font-size:12px;background:#fff;">' +
       '</div>' +
@@ -1426,7 +1426,7 @@
       PCD.share.createOrGetShareUrl('recipe', opts.recipe.id).then(function (url) {
         linkOut.value = url;
         linkOut.style.display = 'block';
-        linkBtn.innerHTML = PCD.icon('copy', 14) + ' <span>Copy link</span>';
+        linkBtn.innerHTML = PCD.icon('copy', 14) + ' <span>' + PCD.i18n.t('btn_copy_link') + '</span>';
         linkBtn.disabled = false;
         // First click: select all in input. Second click: copy.
         linkOut.focus();
@@ -1451,7 +1451,7 @@
       }).catch(function (e) {
         PCD.toast.error(PCD.i18n.t('toast_share_failed', { msg: e.message || e }));
         linkBtn.disabled = false;
-        linkBtn.innerHTML = PCD.icon('share', 14) + ' <span>Generate share link</span>';
+        linkBtn.innerHTML = PCD.icon('share', 14) + ' <span>' + PCD.i18n.t('btn_generate_share_link') + '</span>';
       });
     });
 
@@ -1466,6 +1466,7 @@
     PCD.$('#rShPrint', body).addEventListener('click', function () {
       const r = opts.recipe;
       const ingMap = opts.ingMap;
+      const tt = PCD.i18n.t;
       const rows = (r.ingredients || []).map(function (ri) {
         const ing = ingMap[ri.ingredientId];
         return '<tr><td>' + PCD.escapeHtml(ing ? ing.name : '(removed)') + '</td><td style="text-align:right">' + PCD.fmtNumber(ri.amount) + ' ' + PCD.escapeHtml(ri.unit || '') + '</td></tr>';
@@ -1474,10 +1475,11 @@
         '<div style="max-width:680px;margin:0 auto">' +
         (r.photo ? '<img src="' + r.photo + '" style="width:100%;max-height:300px;object-fit:cover;border-radius:8px;margin-bottom:16px">' : '') +
         '<h1>' + PCD.escapeHtml(r.name) + '</h1>' +
-        '<div style="color:#666;font-size:12px;margin-bottom:16px">' + (r.servings || 1) + ' servings</div>' +
-        '<h3 style="margin-top:16px">Ingredients</h3>' +
+        '<div style="color:#666;font-size:12px;margin-bottom:16px">' + (r.servings || 1) + ' ' + tt('recipe_servings').toLowerCase() + '</div>' +
+        '<h3 style="margin-top:16px">' + tt('recipe_ingredients') + '</h3>' +
         '<table>' + rows + '</table>' +
-        (r.steps ? '<h3 style="margin-top:16px">Method</h3><pre>' + PCD.escapeHtml(r.steps) + '</pre>' : '') +
+        (r.steps ? '<h3 style="margin-top:16px">' + tt('recipe_steps') + '</h3><pre>' + PCD.escapeHtml(r.steps) + '</pre>' : '') +
+        (r.plating ? '<h3 style="margin-top:16px">' + tt('recipe_plating') + '</h3><pre>' + PCD.escapeHtml(r.plating) + '</pre>' : '') +
         '</div>';
       PCD.print(html, r.name);
       m.close();

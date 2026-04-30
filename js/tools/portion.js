@@ -359,7 +359,7 @@
 
     const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('cancel') });
     const okBtn = PCD.el('button', { class: 'btn btn-primary', style: { flex: '1' } });
-    okBtn.innerHTML = PCD.icon('check', 16) + ' <span>Create list</span>';
+    okBtn.innerHTML = PCD.icon('check', 16) + ' <span>' + PCD.i18n.t('btn_create_list') + '</span>';
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
     footer.appendChild(cancelBtn);
     footer.appendChild(okBtn);
@@ -462,7 +462,7 @@
       '</div>' +
       blocks +
       '<div style="margin-top:14px;padding:10px 14px;background:#f0fdf4;border-radius:8px;display:flex;justify-content:space-between;font-size:11pt;font-weight:700;">' +
-        '<span>Total food cost</span>' +
+        '<span>' + PCD.i18n.t('label_total_food_cost') + '</span>' +
         '<span style="color:#16a34a;">' + PCD.fmtMoney(totalCost) + ' (' + PCD.fmtMoney(guestCount > 0 ? totalCost / guestCount : 0) + ' / guest)</span>' +
       '</div>';
 

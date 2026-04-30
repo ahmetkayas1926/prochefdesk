@@ -659,7 +659,7 @@
       groupedHtml;
 
     const startBtn = PCD.el('button', { class: 'btn btn-primary', style: { flex: '1' } });
-    startBtn.innerHTML = PCD.icon('clock', 16) + ' <span>Start session</span>';
+    startBtn.innerHTML = PCD.icon('clock', 16) + ' <span>' + PCD.i18n.t('btn_start_session') + '</span>';
     const editBtn = PCD.el('button', { class: 'btn btn-outline', title: 'Edit template' });
     editBtn.innerHTML = PCD.icon('edit', 16);
     const dupBtn = PCD.el('button', { class: 'btn btn-outline', title: 'Duplicate' });

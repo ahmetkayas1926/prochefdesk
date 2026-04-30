@@ -53,11 +53,11 @@
 
     const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('btn_close') });
     const copyBtn = PCD.el('button', { class: 'btn btn-outline' });
-    copyBtn.innerHTML = PCD.icon('copy', 14) + ' <span>Copy link</span>';
+    copyBtn.innerHTML = PCD.icon('copy', 14) + ' <span>' + PCD.i18n.t('btn_copy_link') + '</span>';
     const downloadBtn = PCD.el('button', { class: 'btn btn-outline' });
     downloadBtn.innerHTML = PCD.icon('download', 14) + ' <span>PNG</span>';
     const printBtn = PCD.el('button', { class: 'btn btn-primary', style: { flex: '1' } });
-    printBtn.innerHTML = PCD.icon('print', 14) + ' <span>Print</span>';
+    printBtn.innerHTML = PCD.icon('print', 14) + ' <span>' + PCD.i18n.t('print') + '</span>';
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
     footer.appendChild(closeBtn);
     footer.appendChild(copyBtn);

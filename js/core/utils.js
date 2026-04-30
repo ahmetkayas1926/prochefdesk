@@ -388,10 +388,19 @@
       fullHtml = fullHtml.replace(/<\/body>/i, FOOTER_HTML + '</body>');
     }
 
+    // v2.6.53 — i18n the print toolbar at top of popup window. Strings
+    // are resolved BEFORE writing to the new window since the new window
+    // doesn't have access to PCD.i18n. Footer "Made with ProChefDesk"
+    // remains English-only by design (acts as soft attribution).
+    const tt = (PCD.i18n && PCD.i18n.t) ? PCD.i18n.t : function (k, fb) { return fb || k; };
+    const labelPrintSavePdf = tt('btn_print_save_pdf', 'Print / Save as PDF');
+    const labelClose = tt('btn_close', 'Close');
+    const labelTip = tt('print_tip_save_as_pdf', 'Tip: pick "Save as PDF" in the print dialog');
+
     // Inject print button at top (skipped when printing)
     const printableHtml = fullHtml.replace(
       /<body[^>]*>/,
-      '$&<div class="no-print"><button onclick="window.print()" style="padding:8px 18px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer">Print / Save as PDF</button><button onclick="window.close()" style="padding:8px 14px;background:#f0f0f0;color:#333;border:none;border-radius:6px;font-size:13px;cursor:pointer">Close</button><span style="font-size:11px;color:#888">Tip: pick "Save as PDF" in the print dialog</span></div>'
+      '$&<div class="no-print"><button onclick="window.print()" style="padding:8px 18px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer">' + labelPrintSavePdf + '</button><button onclick="window.close()" style="padding:8px 14px;background:#f0f0f0;color:#333;border:none;border-radius:6px;font-size:13px;cursor:pointer">' + labelClose + '</button><span style="font-size:11px;color:#888">' + labelTip + '</span></div>'
     );
 
     // Try popup (desktop / allowing browsers)

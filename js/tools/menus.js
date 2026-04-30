@@ -692,7 +692,7 @@
     const qrBtn = PCD.el('button', { class: 'btn btn-outline' });
     qrBtn.innerHTML = PCD.icon('grid',16) + ' <span>QR</span>';
     const shareLinkBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: 'Public share link' });
-    shareLinkBtn.innerHTML = PCD.icon('share',16) + ' <span>Share link</span>';
+    shareLinkBtn.innerHTML = PCD.icon('share',16) + ' <span>' + PCD.i18n.t('btn_share_link') + '</span>';
     const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('close') });
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
     footer.appendChild(closeBtn);
@@ -723,7 +723,7 @@
       shareLinkBtn.innerHTML = '<span class="spinner"></span>';
       PCD.share.createOrGetShareUrl('menu', mid).then(function (url) {
         shareLinkBtn.disabled = false;
-        shareLinkBtn.innerHTML = PCD.icon('share',16) + ' <span>Share link</span>';
+        shareLinkBtn.innerHTML = PCD.icon('share',16) + ' <span>' + PCD.i18n.t('btn_share_link') + '</span>';
         // Show modal with the link
         const linkBody = PCD.el('div');
         linkBody.innerHTML =
@@ -748,7 +748,7 @@
         });
       }).catch(function (e) {
         shareLinkBtn.disabled = false;
-        shareLinkBtn.innerHTML = PCD.icon('share',16) + ' <span>Share link</span>';
+        shareLinkBtn.innerHTML = PCD.icon('share',16) + ' <span>' + PCD.i18n.t('btn_share_link') + '</span>';
         PCD.toast.error(PCD.i18n.t('toast_share_failed', { msg: e.message || e }));
       });
     });

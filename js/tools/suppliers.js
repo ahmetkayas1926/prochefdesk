@@ -261,7 +261,7 @@
 
     const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('cancel') });
     const nextBtn = PCD.el('button', { class: 'btn btn-primary', style: { flex: '1' } });
-    nextBtn.innerHTML = PCD.icon('send', 14) + ' <span>Next</span>';
+    nextBtn.innerHTML = PCD.icon('send', 14) + ' <span>' + PCD.i18n.t('btn_next') + '</span>';
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
     footer.appendChild(cancelBtn);
     footer.appendChild(nextBtn);

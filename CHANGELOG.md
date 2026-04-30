@@ -1,4 +1,128 @@
-# v2.6.52 — Modal & button hardcoded string'leri i18n'e çekildi
+# v2.6.53 — Print HTML çevirileri (recipe print, button label'ları, print toolbar)
+
+## Sorun
+
+Print pop-up'ı ve tarif yazdırma çıktısında hâlâ İngilizce kalan kısımlar vardı:
+
+### Print toolbar (her print pop-up'ında üstte beliren)
+- "Print / Save as PDF" butonu
+- "Close" butonu
+- "Tip: pick 'Save as PDF' in the print dialog" hint
+
+### Recipe print HTML
+- "Ingredients" başlığı
+- "Method" başlığı
+- "servings" suffix
+- "Plating" eksikti (hiç gözükmüyordu)
+
+### Inline UI buton/label'lar (`<span>X</span>` formatında embed)
+- "Save as PDF" (3 yerde)
+- "Print" (3 yerde)
+- "Share link" (3 yerde)
+- "Generate share link" (2 yerde)
+- "Copy link" (2 yerde)
+- "Cost Report"
+- "Approve count"
+- "Share Order"
+- "Create list"
+- "Start session"
+- "Total food cost"
+- "Customer budget"
+- "Total revenue"
+- "Hide allergen icons"
+- ...ve diğerleri
+
+## Çözüm
+
+### 19 yeni key eklendi (en.js + tr.js)
+
+Buton key'leri:
+- `btn_save_as_pdf` "Save as PDF" / "PDF olarak Kaydet"
+- `btn_print_pdf` "Print / PDF" / "Yazdır / PDF"
+- `btn_print_save_pdf` "Print / Save as PDF" / "Yazdır / PDF olarak Kaydet"
+- `btn_share_link`, `btn_copy_link`, `btn_whatsapp`
+- `btn_cost_report` "Cost Report" / "Maliyet Raporu"
+- `btn_generate_share_link` "Generate share link" / "Paylaşım bağlantısı oluştur"
+- `btn_versions`, `btn_versions_n` (with placeholder)
+- `btn_approve_count`, `btn_share_order`, `btn_create_list`, `btn_start_session`
+
+Label key'leri:
+- `label_total_food_cost` "Total food cost" / "Toplam yiyecek maliyeti"
+- `label_customer_budget` "Customer budget" / "Müşteri bütçesi"
+- `label_total_revenue` "Total revenue" / "Toplam ciro"
+- `label_hide_allergen_icons` "Hide allergen icons" / "Alerjen ikonlarını gizle"
+
+Print toolbar key:
+- `print_tip_save_as_pdf` "Tip: pick \"Save as PDF\" in the print dialog" / "İpucu: yazdırma ekranında \"PDF olarak Kaydet\" seçin"
+
+### Replacement sayıları
+
+| Tip | Sayı |
+|-----|------|
+| `<span>X</span>` literal replacements (otomatik) | 17 |
+| Recipe print HTML labels (manuel) | 4 (Ingredients, Method, servings, Plating eklendi) |
+| `PCD.print` toolbar (utils.js) | 3 (button + button + tip) |
+| **Toplam** | **24** |
+
+### `PCD.print` toolbar i18n implementasyonu
+
+Tricky kısım: `PCD.print()` HTML'i yeni bir `window.open()` popup'ında render ediyor — yeni pencerenin `PCD.i18n` erişimi yok. Çözüm: HTML'i yazmadan ÖNCE ana pencerede `PCD.i18n.t()` çağrılarını resolve edip resolved string'leri embed et.
+
+`utils.js`'de:
+```js
+const tt = (PCD.i18n && PCD.i18n.t) ? PCD.i18n.t : function (k, fb) { return fb || k; };
+const labelPrintSavePdf = tt('btn_print_save_pdf', 'Print / Save as PDF');
+const labelClose = tt('btn_close', 'Close');
+const labelTip = tt('print_tip_save_as_pdf', 'Tip: ...');
+// ... HTML.replace(... + labelPrintSavePdf + ...)
+```
+
+## Doğrulama
+
+- en: 1374 → 1393 keys
+- tr: 1374 → 1393 keys
+- Parite: tam (0 eksik her iki yönde)
+- Tüm 27 JS dosyası syntax pass
+
+## Test (push sonrası)
+
+1. **TR'ye geç** → herhangi bir tarifi paylaş → Print → pop-up'ta üstte "Yazdır / PDF olarak Kaydet" + "Kapat" + "İpucu:..." görmelisin
+2. Yazdırılan tarif HTML'de:
+   - Başlık altında "{N} servis" (servings)
+   - "Malzemeler" başlığı (Ingredients yerine)
+   - "Yöntem" başlığı (Method yerine)
+   - Plating notları (varsa) "Sunum notları" başlığıyla
+3. Recipe modalında:
+   - "Maliyet Raporu" butonu (Cost Report)
+   - "Sürümler" butonu (Versions)
+   - "Paylaşım bağlantısı oluştur" (Generate share link)
+4. Inventory:
+   - "Sayımı onayla" butonu (Approve count)
+   - "Siparişi paylaş" (Share Order)
+5. Event detail:
+   - "Toplam yiyecek maliyeti" (Total food cost)
+   - "Müşteri bütçesi" (Customer budget)
+6. Menu builder:
+   - "Alerjen ikonlarını gizle" checkbox label
+
+## Hâlâ kapsam dışı
+
+- **HACCP form print HTML'leri** — bunların header/label'ları ayrı bir audit gerektiriyor (haccp_logs.js, haccp_cooling.js)
+- **Menu print template** — print HTML'inde "ALLERGENS:" gibi label'lar var mı kontrol edilmeli (genelde t() kullanılıyor ama edge case'ler olabilir)
+- **Kitchen card print template** — şablon büyük, ayrı paket
+- **Checklist print** — şablon büyük, ayrı paket
+- **Event print template** — orta büyüklükte, gözden geçirilmeli
+- **Shopping list print** — küçük, gözden geçirilmeli
+
+Bu kalanlar bir sonraki paket olarak (v2.6.54+) yapılabilir. Şu an en yüksek görünürlüklü olanlar (recipe print + universal print toolbar + büyük buton label'ları) tamamlandı.
+
+## Risk
+
+Düşük. Migration script'leri ile otomatik replacements + manuel düzeltmeler ile kontrollü. EN/TR parite garantili. Davranış aynı, sadece dil seçilebilir oldu.
+
+---
+
+
 
 ## Sorun
 

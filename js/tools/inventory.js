@@ -404,7 +404,7 @@
     const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('cancel') });
     const rejectBtn = PCD.el('button', { class: 'btn btn-outline', text: PCD.i18n.t('btn_reject'), style: { color: 'var(--danger)' } });
     const approveBtn = PCD.el('button', { class: 'btn btn-primary', style: { flex: '1' } });
-    approveBtn.innerHTML = PCD.icon('check', 16) + ' <span>Approve count</span>';
+    approveBtn.innerHTML = PCD.icon('check', 16) + ' <span>' + PCD.i18n.t('btn_approve_count') + '</span>';
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
     footer.appendChild(cancelBtn);
     footer.appendChild(rejectBtn);
@@ -559,7 +559,7 @@
 
     const closeBtn = PCD.el('button', { type: 'button', class: 'btn btn-secondary', text: PCD.i18n.t('btn_close') });
     const printBtn = PCD.el('button', { type: 'button', class: 'btn btn-primary', style: { flex: '1' } });
-    printBtn.innerHTML = PCD.icon('print', 14) + ' <span>Print</span>';
+    printBtn.innerHTML = PCD.icon('print', 14) + ' <span>' + PCD.i18n.t('print') + '</span>';
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
     footer.appendChild(closeBtn);
     footer.appendChild(printBtn);
@@ -958,9 +958,9 @@
 
     const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('cancel') });
     const printBtn = PCD.el('button', { class: 'btn btn-outline' });
-    printBtn.innerHTML = PCD.icon('print', 14) + ' <span>Print</span>';
+    printBtn.innerHTML = PCD.icon('print', 14) + ' <span>' + PCD.i18n.t('print') + '</span>';
     const shareBtn = PCD.el('button', { class: 'btn btn-primary', style: { flex: '1' } });
-    shareBtn.innerHTML = PCD.icon('send', 14) + ' <span>Share Order</span>';
+    shareBtn.innerHTML = PCD.icon('send', 14) + ' <span>' + PCD.i18n.t('btn_share_order') + '</span>';
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
     footer.appendChild(cancelBtn);
     footer.appendChild(printBtn);
