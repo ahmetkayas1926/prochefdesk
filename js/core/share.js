@@ -259,12 +259,62 @@
     });
   }
 
+  // v2.6.56 — Detect viewer's preferred locale for the share page.
+  // Order of preference:
+  //   1. ?lang=xx URL parameter (explicit override)
+  //   2. localStorage pcd_state prefs.locale (if viewer is also a PCD user)
+  //   3. navigator.language (browser default, e.g. "tr-TR" → "tr")
+  //   4. 'en' fallback
+  // Only switches if the bundle is loaded for that locale (otherwise falls
+  // back to en — i18n.t() already handles missing keys gracefully).
+  function autoDetectShareLocale() {
+    try {
+      const supported = ['en', 'tr', 'es', 'fr', 'de', 'ar'];
+      // 1) URL override
+      const params = new URLSearchParams(location.search);
+      const langParam = params.get('lang');
+      if (langParam && supported.indexOf(langParam) >= 0) return langParam;
+      // 2) Existing PCD user preference
+      try {
+        const raw = localStorage.getItem('pcd_state');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          const stored = parsed && parsed.prefs && parsed.prefs.locale;
+          if (stored && supported.indexOf(stored) >= 0) return stored;
+        }
+      } catch (e) { /* ignore */ }
+      // 3) Browser language (en-GB → en, tr-TR → tr, ar-SA → ar, etc.)
+      const navLang = (navigator.language || 'en').toLowerCase().split('-')[0];
+      if (supported.indexOf(navLang) >= 0) return navLang;
+    } catch (e) { /* ignore */ }
+    return 'en';
+  }
+
   // Render a share's payload as a self-contained read-only HTML page.
   // Replaces the entire #app content.
   function renderSharePage(share) {
     const appEl = document.getElementById('app');
     if (!appEl) return;
     const p = share.payload || {};
+
+    // v2.6.56 — Set i18n locale based on viewer's preference so labels
+    // ("Ingredients", "Method", "servings", etc.) render in their language.
+    // Recipe content (steps, plating) stays in the owner's original language
+    // — that's correct, we don't want to machine-translate user content.
+    const viewerLocale = autoDetectShareLocale();
+    if (PCD.i18n && PCD.i18n.setLocale) {
+      try { PCD.i18n.setLocale(viewerLocale); } catch (e) { /* ignore */ }
+    }
+    // Use t() with English fallback for safety
+    const t = (PCD.i18n && PCD.i18n.t) ? PCD.i18n.t : function (k, fb) { return fb || k; };
+
+    // Apply RTL direction for Arabic share pages
+    if (viewerLocale === 'ar') {
+      document.documentElement.setAttribute('dir', 'rtl');
+      document.documentElement.setAttribute('lang', 'ar');
+    } else {
+      document.documentElement.setAttribute('lang', viewerLocale);
+    }
 
     // Kitchen cards have their own A4 sheet renderer that lives in
     // kitchen_cards.js (so the layout & CSS stay in sync with the live
@@ -312,30 +362,30 @@
     html += '<div class="share-content">';
 
     if (p.kind === 'recipe') {
-      html += '<h1>' + escapeHtml(p.name || 'Recipe') + '</h1>';
+      html += '<h1>' + escapeHtml(p.name || t('share_default_recipe', 'Recipe')) + '</h1>';
       html += '<div class="share-meta">';
-      if (p.servings) html += p.servings + ' servings';
-      if (p.prepTime) html += ' · ' + p.prepTime + 'min prep';
-      if (p.cookTime) html += ' · ' + p.cookTime + 'min cook';
+      if (p.servings) html += p.servings + ' ' + t('share_servings_unit', 'servings');
+      if (p.prepTime) html += ' · ' + p.prepTime + ' ' + t('share_min_prep', 'min prep');
+      if (p.cookTime) html += ' · ' + p.cookTime + ' ' + t('share_min_cook', 'min cook');
       html += '</div>';
       if (p.photo) html += '<img class="share-photo" src="' + escapeHtml(p.photo) + '" alt="">';
 
       if (p.ingredients && p.ingredients.length > 0) {
-        html += '<div class="share-section"><h2>Ingredients</h2>';
+        html += '<div class="share-section"><h2>' + escapeHtml(t('share_ingredients', 'Ingredients')) + '</h2>';
         p.ingredients.forEach(function (ri) {
           html += '<div class="ing-row"><span>' + escapeHtml(ri.name) + '</span><strong>' + escapeHtml(formatAmt(ri.amount, ri.unit)) + '</strong></div>';
         });
         html += '</div>';
       }
       if (p.steps) {
-        html += '<div class="share-section"><h2>Method</h2><div class="steps">' + escapeHtml(p.steps) + '</div></div>';
+        html += '<div class="share-section"><h2>' + escapeHtml(t('share_method', 'Method')) + '</h2><div class="steps">' + escapeHtml(p.steps) + '</div></div>';
       }
       if (p.plating) {
-        html += '<div class="share-section"><h2>Plating</h2><div class="steps">' + escapeHtml(p.plating) + '</div></div>';
+        html += '<div class="share-section"><h2>' + escapeHtml(t('share_plating', 'Plating')) + '</h2><div class="steps">' + escapeHtml(p.plating) + '</div></div>';
       }
     } else if (p.kind === 'menu') {
       html += '<div style="text-align:center;margin-bottom:30px;">';
-      html += '<h1 style="font-size:36px;margin-bottom:8px;">' + escapeHtml(p.name || 'Menu') + '</h1>';
+      html += '<h1 style="font-size:36px;margin-bottom:8px;">' + escapeHtml(p.name || t('share_default_menu', 'Menu')) + '</h1>';
       if (p.subtitle) html += '<div style="font-size:12px;letter-spacing:0.24em;color:#888;text-transform:uppercase;">' + escapeHtml(p.subtitle) + '</div>';
       html += '</div>';
       (p.sections || []).forEach(function (sec) {

@@ -1425,4 +1425,14 @@ window.PCD.i18n.register('tr', {
   selfheal_confirm_text: "{n} tariften bozuk satırlar kaldırılacak. Her tarife önce otomatik sürüm anlık görüntüsü alınır, geri alabilirsiniz.",
   selfheal_done: "✓ {recipes} tarif düzeltildi — {lines} bozuk satır kaldırıldı",
   selfheal_already_clean: "✓ Tüm tarifler temiz görünüyor",
+
+  // v2.6.56 — Public share page labels (auto-localized for viewer)
+  share_default_recipe: "Tarif",
+  share_default_menu: "Menü",
+  share_servings_unit: "porsiyon",
+  share_min_prep: "dk hazırlık",
+  share_min_cook: "dk pişirme",
+  share_ingredients: "Malzemeler",
+  share_method: "Yöntem",
+  share_plating: "Sunum",
 });

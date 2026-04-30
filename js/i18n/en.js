@@ -1425,4 +1425,14 @@ window.PCD.i18n.register('en', {
   selfheal_confirm_text: "Orphan lines will be removed from {n} recipe(s). Each recipe gets an automatic version snapshot first so you can revert.",
   selfheal_done: "✓ Fixed {recipes} recipe(s) — {lines} orphan line(s) removed",
   selfheal_already_clean: "✓ All recipes look clean",
+
+  // v2.6.56 — Public share page labels (auto-localized for viewer)
+  share_default_recipe: "Recipe",
+  share_default_menu: "Menu",
+  share_servings_unit: "servings",
+  share_min_prep: "min prep",
+  share_min_cook: "min cook",
+  share_ingredients: "Ingredients",
+  share_method: "Method",
+  share_plating: "Plating",
 });

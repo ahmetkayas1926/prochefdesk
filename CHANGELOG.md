@@ -1,4 +1,73 @@
-# v2.6.55 — Recipe self-healing (bozuk referans temizliği)
+# v2.6.56 — Public share sayfası dil otomatik algılama
+
+## Sorun
+
+`prochefdesk.com/?share=xxx` ile açılan paylaşım sayfaları HER ZAMAN İngilizce render ediliyordu. Şef Türkçe'de tarif yazıyor, paylaşım linki gönderiyor; alıcının tarayıcısı Türkçe veya hatta yine PCD kullanıcısı bile olsa "Ingredients", "Method", "Plating" gibi etiketler İngilizce çıkıyordu.
+
+## Çözüm
+
+`js/core/share.js`'de yeni `autoDetectShareLocale()` helper'ı ile fallback zinciri:
+
+1. **`?lang=xx` URL parametresi** — explicit override (örn. `?share=xxx&lang=tr`)
+2. **localStorage'daki `pcd_state.prefs.locale`** — eğer alıcı da PCD kullanıcısıysa kendi tercih ettiği dil
+3. **`navigator.language`** — tarayıcının default dili (örn. "tr-TR" → "tr", "ar-SA" → "ar")
+4. **'en' fallback** — diğer her durum
+
+Desteklenen dilller: `en, tr, es, fr, de, ar` (PCD'nin desteklediklerinin tümü).
+
+`renderSharePage` fonksiyonu artık:
+- Boot'ta locale'i set eder (`PCD.i18n.setLocale(viewerLocale)`)
+- Arabic ise `<html dir="rtl">` set eder
+- HTML render'ında hardcoded English yerine `t('share_ingredients', 'Ingredients')` gibi çağrılar yapar
+
+## i18n key'leri
+
+8 yeni key eklendi (en + tr):
+
+| Key | EN | TR |
+|-----|----|----|
+| `share_default_recipe` | "Recipe" | "Tarif" |
+| `share_default_menu` | "Menu" | "Menü" |
+| `share_servings_unit` | "servings" | "porsiyon" |
+| `share_min_prep` | "min prep" | "dk hazırlık" |
+| `share_min_cook` | "min cook" | "dk pişirme" |
+| `share_ingredients` | "Ingredients" | "Malzemeler" |
+| `share_method` | "Method" | "Yöntem" |
+| `share_plating` | "Plating" | "Sunum" |
+
+## Davranış
+
+| Senaryo | Görünen UI dili |
+|---------|-----------------|
+| Şef TR'de tarif paylaştı, alıcı `?share=xxx` açtı, tarayıcı TR | Türkçe ✓ |
+| Şef TR'de tarif paylaştı, alıcı PCD kullanıcısı (TR seçili) | Türkçe ✓ |
+| Şef TR'de paylaştı, alıcı non-PCD, tarayıcı EN | İngilizce |
+| Şef TR'de paylaştı, alıcı `?share=xxx&lang=fr` açtı | Fransızca (fallback EN) |
+| Tüm tarayıcılar Arabic | RTL layout + AR ✓ |
+
+**Tarif İÇERİĞİ** (steps, plating, ingredient names) elbette şefin yazdığı dilde kalır — biz çeviri yapmıyoruz, sadece UI label'larını alıcının diline çeviriyoruz.
+
+## Test (push sonrası)
+
+1. **TR'ye geç** → bir tarif paylaş → "Bağlantıyı kopyala"
+2. **Gizli pencere aç**, tarayıcı dilini TR olarak ayarla (Settings → Languages)
+3. Linki yapıştır → sayfa açılır
+4. Görmen gereken:
+   - "Malzemeler" başlığı (önce: Ingredients)
+   - "Yöntem" başlığı (önce: Method)
+   - "Sunum" başlığı (önce: Plating)
+   - "X porsiyon" (önce: X servings)
+   - "Y dk hazırlık" (önce: Y min prep)
+5. **`?share=xxx&lang=fr` ekle** URL'in sonuna → Fransızca fallback (FR çevirisi yoksa EN'e fallback olur, ama FR seçilebiliyor)
+6. **Arabic test** → URL'e `?lang=ar` ekle → sağdan sola layout
+
+## Risk
+
+Düşük. Mevcut share linkleri etkilenmez — sadece UI label dili otomatik geliyor. Yanlış locale durumunda i18n.t() güzelce EN'e fallback yapıyor.
+
+---
+
+
 
 ## Sorun
 
