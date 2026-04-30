@@ -1,4 +1,72 @@
-# v2.6.38 — Workspace save'inde debug kalıntıları temizliği
+# v2.6.39 — public_shares RLS açığı düzeltmesi (GÜVENLİK)
+
+## Açık (kritik)
+
+`public_shares` tablosuna v2.5.7 migration'ı `USING (true)` olan bir public SELECT politikası eklemişti. Niyet: "share ID'leri rastgele 12 karakter token, ID'yi bilmek erişim demek". Postgres RLS böyle çalışmıyor.
+
+**Sonuç:** Herhangi bir anonim istemci (sadece anon key ile, hiç login olmadan) `SELECT * FROM public_shares` çekip:
+- Tüm kullanıcıların paylaştığı **bütün** payload'ları (tarif içerikleri, menüler, kitchen card'lar)
+- `owner_id` (her share'in sahibi)
+- `source_id` (iç tarif/menü ID'leri)
+- `view_count` (analitik)
+
+— hepsini **dökebiliyordu**. Yüzlerce şefi olan bir public sürüm için kritik privacy ihlali.
+
+## Çözüm
+
+`migrations/v2.6.39-share-rls-fix.sql` üç şey yapıyor:
+
+1. **Eski açık SELECT politikasını düşür** (`DROP POLICY public_shares_read_by_id`)
+2. **Owner-only SELECT ekle** — kullanıcı sadece kendi share'lerini görür. "My Shares", `createOrGetShareUrl` lookup, pause/delete bunun üzerinden çalışır.
+3. **`fetch_share_by_id(share_id)` SECURITY DEFINER RPC ekle** — anon kullanıcı sadece zaten ID'sini bildiği bir share'e ulaşabilir. Sadece `id, kind, payload, paused` döner. `owner_id` ve `view_count` artık anonim çağırana ASLA gitmez.
+
+`js/core/share.js` → `fetchShare()` artık `supabase.rpc('fetch_share_by_id', { share_id })` çağırıyor. Eski direct SELECT yolu artık çalışmaz (RLS bloklar) — bu doğru davranış.
+
+Diğer share.js fonksiyonları (createOrGetShareUrl, listMyShares, setSharePaused, deleteShare) zaten `owner_id = user.id` filter'ı ile çalışıyor — yeni `public_shares_owner_select` politikası ile korundular, kod değişikliği gerekmedi.
+
+## Deploy sırası ÖNEMLİ
+
+1. **Önce** Supabase Dashboard → SQL Editor'de `migrations/v2.6.39-share-rls-fix.sql` çalıştır
+2. **Sonra** prochefdesk.com'a v2.6.39 kodunu deploy et
+
+Ters yapılırsa: yeni kod RPC çağırıyor ama RPC daha yok → share linkleri kısa süre kırılır. Doğru sıra ile geçiş kullanıcılara tamamen şeffaf.
+
+**Geri alma planı:** Bir şey ters giderse (RPC hata verirse vs.), Supabase SQL Editor'de:
+```sql
+CREATE POLICY public_shares_read_by_id ON public_shares
+  FOR SELECT USING (true);
+```
+çalıştırınca eski davranışa döner; kod tarafında share.js'i v2.6.38'e geri alabilirsin (RPC olmasa da eski SELECT path'i o sürümde duruyor).
+
+## Test
+
+### Migration sonrası, kod deploy öncesi
+1. Supabase Dashboard → Table Editor → public_shares → "View as anon" → satır görünmemeli
+2. Mevcut share URL aç (eski cache'siz tarayıcı) → "Loading shared content..." sonrası "Share not found" — beklenen, kod henüz deploy edilmedi
+
+### Kod deploy sonrası
+3. Mevcut bir tarif share URL'i aç (anon olarak, gizli pencere) → tarif görünmeli ✓
+4. Mevcut bir menü share URL'i aç → menü görünmeli ✓
+5. Kitchen card share → kart görünmeli ✓
+6. Pause edilmiş bir share → "this share is paused" sayfası ✓
+7. Login ol → Account → My shares → kendi listene erişebilmelisin ✓
+8. Login ol → bir tarifi share et → URL alabilmelisin ✓
+9. View count: bir share'i 3 kere açtıktan sonra Account → My shares → view count 3 ✓
+
+### Saldırı testi (privacy doğrulaması)
+10. Browser console'da:
+```js
+window._supabaseClient.from('public_shares').select('*').then(console.log)
+```
+   → boş array dönmeli (önceden tüm tabloyu döküyordu)
+
+## Risk
+
+Düşük-orta. Migration tek transaction (BEGIN/COMMIT), idempotent (DROP IF EXISTS, CREATE OR REPLACE). Geri alma yolu var. Ana risk: deploy sırası ters olursa share linkleri 1-2 dakika kırılır.
+
+---
+
+
 
 ## Sorun
 

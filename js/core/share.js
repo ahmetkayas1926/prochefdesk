@@ -175,18 +175,26 @@
     });
   }
 
-  // Fetch a public share by ID — used when ?share= is in URL
+  // Fetch a public share by ID — used when ?share= is in URL.
+  // Calls the `fetch_share_by_id` SECURITY DEFINER RPC (v2.6.39): direct
+  // SELECT on public_shares is no longer permitted to anonymous users
+  // because USING (true) was leaking the entire shares table.
+  // The RPC returns only { id, kind, payload, paused } — owner_id and
+  // view_count are NEVER exposed to anonymous callers.
   // Rejects with special 'paused' error if share exists but is paused,
   // so initShareCheck can render a friendly "this share is paused" page.
   function fetchShare(shareId) {
     return new Promise(function (resolve, reject) {
       const supabase = window._supabaseClient;
       if (!supabase) return reject(new Error('Supabase client missing'));
-      supabase.from('public_shares').select('*').eq('id', shareId).maybeSingle()
+      supabase.rpc('fetch_share_by_id', { share_id: shareId })
         .then(function (res) {
           if (res.error) return reject(res.error);
-          if (!res.data) return reject(new Error('Share not found'));
-          if (res.data.paused) {
+          // RPC with TABLE return → res.data is an array (possibly empty)
+          const rows = res.data;
+          const row = Array.isArray(rows) ? rows[0] : rows;
+          if (!row) return reject(new Error('Share not found'));
+          if (row.paused) {
             const e = new Error('paused');
             e.code = 'paused';
             return reject(e);
@@ -196,7 +204,7 @@
             supabase.rpc('increment_share_view', { share_id: shareId })
               .then(function () {}).catch(function () {});
           } catch (e) { /* ignore */ }
-          resolve(res.data);
+          resolve(row);
         }).catch(reject);
     });
   }
