@@ -167,7 +167,14 @@
           if (!r) return;
           const row = PCD.el('div', { class: 'list-item', style: { minHeight: 'auto', padding: '10px' } });
           const thumb = PCD.el('div', { class: 'list-item-thumb', style: { width: '44px', height: '44px' } });
-          if (r.photo) thumb.style.backgroundImage = 'url(' + r.photo + ')';
+          // v2.6.61 — lazy thumbnail
+          if (r.photo) {
+            const img = PCD.el('img');
+            img.src = r.photo; img.loading = 'lazy'; img.alt = '';
+            img.style.width = '100%'; img.style.height = '100%';
+            img.style.objectFit = 'cover'; img.style.borderRadius = 'inherit'; img.style.display = 'block';
+            thumb.appendChild(img);
+          }
           else thumb.textContent = '🍽️';
           const bodyDiv = PCD.el('div', { class: 'list-item-body' });
           bodyDiv.innerHTML = `

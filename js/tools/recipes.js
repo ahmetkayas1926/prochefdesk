@@ -115,8 +115,23 @@
         const pct = (r.salePrice && cost > 0 && r.servings) ? (costPerServing / r.salePrice) * 100 : null;
         const row = PCD.el('div', { class: 'list-item', 'data-rid': r.id });
         const thumb = PCD.el('div', { class: 'list-item-thumb' });
-        if (r.photo) thumb.style.backgroundImage = 'url(' + r.photo + ')';
-        else thumb.textContent = '🍽️';
+        // v2.6.61 — Native lazy loading for thumbnails. Previously every
+        // recipe in the list would download its photo immediately, even
+        // for items below the fold. With 100+ recipes this added 5-10MB
+        // of unnecessary network on first paint. <img loading="lazy">
+        // defers download until the row is near the viewport.
+        if (r.photo) {
+          const img = PCD.el('img');
+          img.src = r.photo;
+          img.loading = 'lazy';
+          img.alt = '';
+          img.style.width = '100%';
+          img.style.height = '100%';
+          img.style.objectFit = 'cover';
+          img.style.borderRadius = 'inherit';
+          img.style.display = 'block';
+          thumb.appendChild(img);
+        } else thumb.textContent = '🍽️';
 
         const body = PCD.el('div', { class: 'list-item-body' });
         body.innerHTML = `
@@ -1211,7 +1226,7 @@
 
     const body = PCD.el('div');
     body.innerHTML = `
-      ${r.photo ? `<img src="${PCD.escapeHtml(r.photo)}" style="width:100%;height:220px;object-fit:cover;border-radius:var(--r-lg);margin-bottom:14px;">` : ''}
+      ${r.photo ? `<img src="${PCD.escapeHtml(r.photo)}" loading="lazy" alt="" style="width:100%;height:220px;object-fit:cover;border-radius:var(--r-lg);margin-bottom:14px;">` : ''}
       <div class="flex flex-col gap-2 mb-3">
         <div class="flex gap-2" style="flex-wrap:wrap;">
           <span class="chip chip-brand">${t(r.category || 'cat_main')}</span>

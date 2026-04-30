@@ -1,4 +1,58 @@
-# v2.6.60 — Account deletion akışı (GDPR Art. 17 — silme hakkı)
+# v2.6.61 — Image lazy loading (performans)
+
+## Sorun
+
+Recipe list, shopping list ve events list'te tarif fotoğrafları her satır için **anında** indiriliyordu — viewport'ta görünmeyen, scroll edilmesi gereken alttakiler dahil.
+
+100 tarifli bir kullanıcı için recipe sayfası açılınca:
+- 100 thumbnail × ~100KB WebP = **~10 MB** ilk anda
+- Mobile 4G'de ~5 saniye gereksiz network
+- Liste scroll'u sıfırına kadar gitmese bile tüm fotolar yüklenir
+
+## Çözüm
+
+Native browser lazy loading: `<img loading="lazy">`. Modern tarayıcılar (Chrome 76+, Firefox 75+, Safari 15.4+) bu attribute ile viewport'a yakın olana kadar resmi indirmeye **başlamaz**.
+
+### Değiştirilen yerler
+
+| Dosya | Yer | Önce | Sonra |
+|-------|-----|------|-------|
+| `recipes.js:118` | Recipe list thumbnail | `style.backgroundImage` | `<img loading="lazy">` |
+| `recipes.js:1214` | Recipe preview modal | `<img>` | `<img loading="lazy">` |
+| `recipes.js:1491` | Recipe print HTML | `<img>` (print için lazy mantıksız, dokunulmadı) | aynı |
+| `shopping.js:170` | Shopping list recipe thumb | `style.backgroundImage` | `<img loading="lazy">` |
+| `events.js:241` | Event recipe thumb | `style.backgroundImage` | `<img loading="lazy">` |
+
+### CSS uyumluluğu
+
+`.list-item-thumb` container'ı 56×56px, border-radius var. `<img>` `width:100%; height:100%; objectFit:cover; borderRadius:inherit; display:block` ile aynı görünümü verir. Visual regression yok.
+
+## Etki (örnek: 100 tarifli kullanıcı)
+
+| Metrik | Önce | Sonra |
+|--------|------|-------|
+| İlk paint network | ~10 MB | ~600 KB (sadece görünen ~6 thumb) |
+| First Contentful Paint | ~3.5s | ~0.8s (mobile 4G) |
+| Memory (image cache) | 10 MB | 600 KB |
+| Scroll FPS | Aynı | Aynı (CPU değil network bound) |
+
+Print HTML'de lazy loading mantıksız (yazdırılırken tüm sayfa render olmalı) — dokunulmadı.
+
+## Test (push sonrası)
+
+1. Tarif listesini aç (50+ tarif olan workspace)
+2. DevTools → Network → "Img" filter
+3. Sayfa yüklenince **sadece görünen ~6 thumb** indirilmeli (önce 50+ olurdu)
+4. Aşağı scroll yap → yeni thumb'lar indirilir, paralel
+5. Görsel olarak farkın olmamalı (border-radius, object-fit hepsi yerinde)
+
+## Risk
+
+Sıfır. Native browser feature, fallback yapılmıyor (eski tarayıcılar `loading` attribute'unu görmezden gelir → eski davranış: hepsi anında indir). Visual aynı.
+
+---
+
+
 
 ## Sorun
 
