@@ -357,14 +357,14 @@
       '<div class="field"><label class="field-label">Name this shopping list</label>' +
       '<input type="text" class="input" id="slName" value="' + PCD.escapeHtml(defaultName) + '" placeholder="e.g. Wedding · 23 May"></div>';
 
-    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: 'Cancel' });
+    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('cancel') });
     const okBtn = PCD.el('button', { class: 'btn btn-primary', style: { flex: '1' } });
     okBtn.innerHTML = PCD.icon('check', 16) + ' <span>Create list</span>';
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
     footer.appendChild(cancelBtn);
     footer.appendChild(okBtn);
 
-    const m = PCD.modal.open({ title: 'New shopping list', body: body, footer: footer, size: 'sm', closable: true });
+    const m = PCD.modal.open({ title: PCD.i18n.t('modal_new_shopping_list_title'), body: body, footer: footer, size: 'sm', closable: true });
 
     cancelBtn.addEventListener('click', function () { m.close(); });
     okBtn.addEventListener('click', function () {
@@ -505,10 +505,10 @@
           '<div style="color:var(--text-2);">' + PCD.icon('share', 24) + '</div><div style="font-weight:600;font-size:12px;">More...</div></button>' +
       '</div>';
 
-    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: 'Close' });
+    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('btn_close') });
     const footer = PCD.el('div', { style: { display: 'flex', width: '100%' } });
     footer.appendChild(closeBtn);
-    const m = PCD.modal.open({ title: 'Share scaled recipes', body: body, footer: footer, size: 'md', closable: true });
+    const m = PCD.modal.open({ title: PCD.i18n.t('modal_share_scaled_title'), body: body, footer: footer, size: 'md', closable: true });
 
     function getText() { return PCD.$('#shText', body).value; }
     closeBtn.addEventListener('click', function () { m.close(); });

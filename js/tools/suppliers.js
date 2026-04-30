@@ -259,13 +259,13 @@
       selected = this.value;
     });
 
-    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: 'Cancel' });
+    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('cancel') });
     const nextBtn = PCD.el('button', { class: 'btn btn-primary', style: { flex: '1' } });
     nextBtn.innerHTML = PCD.icon('send', 14) + ' <span>Next</span>';
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
     footer.appendChild(cancelBtn);
     footer.appendChild(nextBtn);
-    const m = PCD.modal.open({ title: 'Send order to ' + supplier.name, body: body, footer: footer, size: 'sm', closable: true });
+    const m = PCD.modal.open({ title: PCD.i18n.t('modal_send_order_to', { name: supplier.name }), body: body, footer: footer, size: 'sm', closable: true });
     cancelBtn.addEventListener('click', function () { m.close(); });
     nextBtn.addEventListener('click', function () {
       const notes = (PCD.$('#dlvNotes', body).value || '').trim();
@@ -336,10 +336,10 @@
       '</div>' +
       (!hasAnyContact ? '<div class="text-muted text-sm mt-3" style="text-align:center;font-size:12px;">No contact saved for this supplier — choose a channel above to send.</div>' : '');
 
-    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: 'Close' });
+    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('btn_close') });
     const footer = PCD.el('div', { style: { display: 'flex', width: '100%' } });
     footer.appendChild(cancelBtn);
-    const m = PCD.modal.open({ title: 'Send to ' + supplier.name, body: body, footer: footer, size: 'md', closable: true });
+    const m = PCD.modal.open({ title: PCD.i18n.t('modal_send_to', { name: supplier.name }), body: body, footer: footer, size: 'md', closable: true });
 
     function getMsg() { return PCD.$('#shareMsg', body).value; }
     cancelBtn.addEventListener('click', function () { m.close(); });

@@ -320,9 +320,9 @@
       if (!p) return;
       PCD.modal.confirm({
         icon: '✓', iconKind: 'success',
-        title: 'Approve stock count?',
+        title: PCD.i18n.t('modal_approve_count_title'),
         text: Object.keys(p.counts || {}).length + ' items counted by ' + p.countedBy + '. Stock levels will be updated.',
-        okText: 'Approve'
+        okText: PCD.i18n.t('btn_approve')
       }).then(function (ok) {
         if (!ok) return;
         applyCountsToInventory(p.counts);
@@ -402,7 +402,7 @@
     renderBody();
 
     const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('cancel') });
-    const rejectBtn = PCD.el('button', { class: 'btn btn-outline', text: 'Reject', style: { color: 'var(--danger)' } });
+    const rejectBtn = PCD.el('button', { class: 'btn btn-outline', text: PCD.i18n.t('btn_reject'), style: { color: 'var(--danger)' } });
     const approveBtn = PCD.el('button', { class: 'btn btn-primary', style: { flex: '1' } });
     approveBtn.innerHTML = PCD.icon('check', 16) + ' <span>Approve count</span>';
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
@@ -411,7 +411,7 @@
     footer.appendChild(approveBtn);
 
     const m = PCD.modal.open({
-      title: 'Review Stock Count',
+      title: PCD.i18n.t('modal_review_count_title'),
       body: body, footer: footer, size: 'lg', closable: true
     });
 
@@ -494,7 +494,7 @@
     const closeBtn = PCD.el('button', { type: 'button', class: 'btn btn-secondary', text: t('close') || 'Close', style: { width: '100%' } });
     const footer = PCD.el('div', { style: { width: '100%' } });
     footer.appendChild(closeBtn);
-    const m = PCD.modal.open({ title: 'Stock count history', body: body, footer: footer, size: 'md', closable: true });
+    const m = PCD.modal.open({ title: PCD.i18n.t('modal_count_history_title'), body: body, footer: footer, size: 'md', closable: true });
     closeBtn.addEventListener('click', function () { m.close(); });
 
     PCD.on(body, 'click', '[data-snap]', function (e) {
@@ -557,7 +557,7 @@
     const body = PCD.el('div');
     body.innerHTML = html;
 
-    const closeBtn = PCD.el('button', { type: 'button', class: 'btn btn-secondary', text: 'Close' });
+    const closeBtn = PCD.el('button', { type: 'button', class: 'btn btn-secondary', text: PCD.i18n.t('btn_close') });
     const printBtn = PCD.el('button', { type: 'button', class: 'btn btn-primary', style: { flex: '1' } });
     printBtn.innerHTML = PCD.icon('print', 14) + ' <span>Print</span>';
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
@@ -565,7 +565,7 @@
     footer.appendChild(printBtn);
 
     const m = PCD.modal.open({
-      title: 'Count snapshot · ' + dateStr,
+      title: PCD.i18n.t('modal_count_snapshot_date', { date: dateStr }),
       body: body, footer: footer, size: 'md', closable: true
     });
     closeBtn.addEventListener('click', function () { m.close(); });
@@ -967,7 +967,7 @@
     footer.appendChild(shareBtn);
 
     const m = PCD.modal.open({
-      title: 'Purchase Order', body: body, footer: footer, size: 'md', closable: true
+      title: PCD.i18n.t('modal_purchase_order_title'), body: body, footer: footer, size: 'md', closable: true
     });
 
     function collectSelected() {
@@ -1051,7 +1051,7 @@
       const closeShBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('btn_close') });
       const shFooter = PCD.el('div', { style: { display: 'flex', width: '100%' } });
       shFooter.appendChild(closeShBtn);
-      const sm = PCD.modal.open({ title: 'Share Purchase Order', body: shareBody, footer: shFooter, size: 'md', closable: true });
+      const sm = PCD.modal.open({ title: PCD.i18n.t('modal_share_po_title'), body: shareBody, footer: shFooter, size: 'md', closable: true });
       function getMsg() { return PCD.$('#poMsg', shareBody).value; }
       closeShBtn.addEventListener('click', function () { sm.close(); });
       PCD.$('#poWa', shareBody).addEventListener('click', function () {

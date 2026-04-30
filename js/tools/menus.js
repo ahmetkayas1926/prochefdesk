@@ -733,7 +733,7 @@
             '<button type="button" class="btn btn-primary" id="copyMenuLink" style="flex:1;">' + PCD.icon('copy',16) + ' <span>Copy link</span></button>' +
             '<button type="button" class="btn btn-outline" id="waMenuLink" style="flex:1;">' + PCD.icon('message-circle',16) + ' <span>WhatsApp</span></button>' +
           '</div>';
-        const lc = PCD.el('button', { class: 'btn btn-secondary', text: 'Close', style: { width: '100%' } });
+        const lc = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('btn_close'), style: { width: '100%' } });
         const lf = PCD.el('div', { style: { width: '100%' } });
         lf.appendChild(lc);
         const lm = PCD.modal.open({ title: '🔗 Share link', body: linkBody, footer: lf, size: 'sm', closable: true });

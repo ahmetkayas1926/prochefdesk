@@ -587,11 +587,11 @@
     html += '</div>';
     body.innerHTML = html;
 
-    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: 'Cancel', style: { width: '100%' } });
+    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('cancel'), style: { width: '100%' } });
     const footer = PCD.el('div', { style: { width: '100%' } });
     footer.appendChild(cancelBtn);
 
-    const m = PCD.modal.open({ title: 'Copy to workspace', body: body, footer: footer, size: 'sm', closable: true });
+    const m = PCD.modal.open({ title: PCD.i18n.t('modal_copy_to_workspace_title'), body: body, footer: footer, size: 'sm', closable: true });
     cancelBtn.addEventListener('click', function () { m.close(); });
 
     PCD.on(body, 'click', '[data-target]', function () {

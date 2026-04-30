@@ -1,4 +1,92 @@
-# v2.6.51 — Hardcoded toast string'leri i18n'e çekildi (EN/TR mükemmellik)
+# v2.6.52 — Modal & button hardcoded string'leri i18n'e çekildi
+
+## Sorun
+
+v2.6.51'de toast'lar i18n'e alındı. Ama hala TR seçilince İngilizce gösterilen yerler vardı:
+
+- **Modal başlıkları**: "Approve stock count?", "Delete canvas?", "Reactivate workspace?", "Purchase Order", "Stock count history", vs.
+- **Modal text body'leri**: "Mark session as completed anyway?"
+- **Modal button label'ları**: "Approve", "Reactivate", "Complete", "Yes, delete \"X\" forever"
+- **PCD.el button text'leri**: "Close" (10 yerde), "Cancel" (4 yerde), "Reject" (1 yerde)
+
+Toplam ~30 unique string × ~43 call site.
+
+## Çözüm
+
+### 26 yeni modal-spesifik key eklendi (en.js + tr.js)
+
+**Buton key'leri:**
+- `btn_approve`, `btn_complete`, `btn_reactivate`
+
+**Modal title key'leri** (15):
+- `modal_approve_count_title` "Approve stock count?" / "Stok sayımını onayla?"
+- `modal_review_count_title` "Review Stock Count" / "Stok Sayımını İncele"
+- `modal_count_history_title` "Stock count history" / "Stok sayım geçmişi"
+- `modal_purchase_order_title` "Purchase Order" / "Sipariş"
+- `modal_share_po_title` "Share Purchase Order" / "Siparişi Paylaş"
+- `modal_share_scaled_title` "Share scaled recipes" / "Ölçeklendirilmiş tarifleri paylaş"
+- `modal_share_template_title` "Share template" / "Şablonu paylaş"
+- `modal_new_shopping_list_title` "New shopping list" / "Yeni alışveriş listesi"
+- `modal_delete_canvas_title` "Delete canvas?" / "Kartı sil?"
+- `modal_saved_canvases_title` "Saved canvases" / "Kayıtlı kartlar"
+- `modal_reactivate_ws_title` "Reactivate workspace?" / "Çalışma alanını yeniden etkinleştir?"
+- `modal_copy_to_workspace_title` "Copy to workspace" / "Çalışma alanına kopyala"
+- `modal_public_profile_preview` "Public profile preview" / "Genel profil önizlemesi"
+- `modal_upgrade_needed_title` "Upgrade needed" / "Yükseltme gerekli"
+- `modal_complete_unfinished_text` "Mark session as completed anyway?" / "Oturumu yine de tamamlanmış olarak işaretle?"
+
+**Concat key'leri** (8 — placeholder içeren):
+- `modal_complete_with_n_unfinished` "Complete with {n} unfinished?" / "{n} bitmemiş ile tamamla?"
+- `modal_count_snapshot_date` "Count snapshot · {date}" / "Sayım anlık görüntüsü · {date}"
+- `modal_delete_workspace_named` "Delete workspace \"{name}\"?" / "\"{name}\" çalışma alanını sil?"
+- `modal_yes_delete_named` "Yes, delete \"{name}\" forever" / "Evet, \"{name}\" alanını kalıcı sil"
+- `modal_send_order_to` "Send order to {name}" / "Sipariş gönder: {name}"
+- `modal_send_to` "Send to {name}" / "Gönder: {name}"
+- `modal_share_named` "Share · {name}" / "Paylaş · {name}"
+- `modal_versions_named` "Versions · {name}" / "Sürümler · {name}"
+
+### Mevcut key'ler tekrar kullanıldı
+
+`Close` (10 yerde), `Cancel` (4 yerde), `Reject` (1 yerde) — `cancel`, `btn_close`, `btn_reject` zaten en/tr.js'de tanımlı, sadece source kodu i18n'e çekildi.
+
+### Replacement sayıları
+
+| Tip | Sayı |
+|-----|------|
+| Simple modal field | 20 |
+| Concat modal field | 8 |
+| PCD.el button text | 15 |
+| **Toplam** | **43** |
+
+## Doğrulama
+
+- EN: 1349 → 1374 keys
+- TR: 1349 → 1374 keys
+- Eksik key (her iki yönde): **0**
+- Tüm 27 JS dosyası syntax pass
+
+## Test (push sonrası)
+
+1. **TR'ye geç** → workspace switcher → bir alanı sil → modal başlığı "Bar Lyon" çalışma alanını sil?" olmalı (önce "Delete workspace \"Bar Lyon\"?")
+2. **Inventory** → "Approve stock count?" yerine "Stok sayımını onayla?"
+3. **Saved canvases** modal'ı → "Kayıtlı kartlar" başlığı
+4. **Herhangi bir modal'ın "Close" butonu** → "Kapat"
+5. **Cancel butonları** → "İptal"
+6. **EN'e geri dön** → her şey İngilizce
+
+## Kapsam dışı (ileride)
+
+- Checklist tool'unda **default template task metinleri** (~50 İngilizce string + ~50 Türkçe). Bunlar UI label değil, **seed content** — kullanıcı bunları silip kendi listesini yapabilir. Çevirisi seed dosyalarında yapılmalı, ayrı paket
+- Print HTML'leri (recipe print, menu print, vs.) — bu da kapsamlı bir paket olarak v2.6.53'te
+- innerHTML literal'lerinde hardcoded English (örn. dashboard widget label'ları) — yarı yarıya yapıldı, audit gerekli
+
+## Risk
+
+Düşük. Migration script'i ile otomatik, regex sıkı (false-positive yok), syntax pass. EN ve TR arasında parite garantili.
+
+---
+
+
 
 ## Sorun
 

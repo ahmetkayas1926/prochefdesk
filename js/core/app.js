@@ -432,9 +432,9 @@
       if (ws && ws.archived) {
         // Unarchive on switch
         PCD.modal.confirm({
-          title: 'Reactivate workspace?',
+          title: PCD.i18n.t('modal_reactivate_ws_title'),
           text: '"' + ws.name + '" is archived. Reactivate and switch to it?',
-          okText: 'Reactivate'
+          okText: PCD.i18n.t('btn_reactivate')
         }).then(function (ok) {
           if (!ok) return;
           PCD.store.archiveWorkspace(wsId, false);
@@ -609,11 +609,11 @@
 
       PCD.modal.confirm({
         icon: '⚠️', iconKind: 'danger', danger: true,
-        title: 'Delete workspace "' + existing.name + '"?',
+        title: PCD.i18n.t('modal_delete_workspace_named', { name: existing.name }),
         text: dataSummary +
           '. Ingredients library is shared and will not be touched. ' +
           'This action CANNOT BE UNDONE.',
-        okText: 'Yes, delete "' + existing.name + '" forever',
+        okText: PCD.i18n.t('modal_yes_delete_named', { name: existing.name }),
         cancelText: 'Cancel'
       }).then(function (ok) {
         if (!ok) return;

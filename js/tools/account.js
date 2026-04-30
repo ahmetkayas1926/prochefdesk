@@ -926,11 +926,11 @@
         PCD.icon('users', 16) + ' Community sharing launches in v3.x — your profile, recipe shares, and chef-to-chef ratings will live here.' +
       '</div>';
 
-    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: 'Close', style: { width: '100%' } });
+    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('btn_close'), style: { width: '100%' } });
     const footer = PCD.el('div', { style: { width: '100%' } });
     footer.appendChild(closeBtn);
 
-    const m = PCD.modal.open({ title: 'Public profile preview', body: body, footer: footer, size: 'md', closable: true });
+    const m = PCD.modal.open({ title: PCD.i18n.t('modal_public_profile_preview'), body: body, footer: footer, size: 'md', closable: true });
     closeBtn.addEventListener('click', function () { m.close(); });
   }
 

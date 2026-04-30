@@ -824,10 +824,10 @@
           '<div style="color:var(--text-2);">' + PCD.icon('share', 18) + '</div><div style="font-weight:600;font-size:11px;">More...</div></button>' +
       '</div>';
 
-    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: 'Close' });
+    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('btn_close') });
     const footer = PCD.el('div', { style: { display: 'flex', width: '100%' } });
     footer.appendChild(closeBtn);
-    const m = PCD.modal.open({ title: 'Share template', body: body, footer: footer, size: 'md', closable: true });
+    const m = PCD.modal.open({ title: PCD.i18n.t('modal_share_template_title'), body: body, footer: footer, size: 'md', closable: true });
 
     PCD.$('#tplShPdf', body).addEventListener('click', function () {
       m.close();
@@ -1185,9 +1185,9 @@
       const incomplete = total - s.items.filter(isItemComplete).length;
       if (incomplete > 0) {
         PCD.modal.confirm({
-          title: 'Complete with ' + incomplete + ' unfinished?',
-          text: 'Mark session as completed anyway?',
-          okText: 'Complete',
+          title: PCD.i18n.t('modal_complete_with_n_unfinished', { n: incomplete }),
+          text: PCD.i18n.t('modal_complete_unfinished_text'),
+          okText: PCD.i18n.t('btn_complete'),
         }).then(function (ok) {
           if (!ok) return;
           finalizeSession();
@@ -1554,7 +1554,7 @@
           '<div style="font-weight:600;font-size:11px;">More...</div></button>' +
       '</div>';
 
-    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: 'Close' });
+    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('btn_close') });
     const footer = PCD.el('div', { style: { display: 'flex', width: '100%' } });
     footer.appendChild(closeBtn);
 

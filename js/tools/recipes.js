@@ -138,7 +138,7 @@
             class: 'icon-btn',
             'data-copy-rid': r.id,
             'data-name': r.name,
-            title: 'Copy to workspace',
+            title: PCD.i18n.t('modal_copy_to_workspace_title'),
             style: { flexShrink: '0' }
           });
           copyBtn.innerHTML = PCD.icon('truck', 18);
@@ -1242,7 +1242,7 @@
     const editBtn = PCD.el('button', { type: 'button', class: 'btn btn-primary', text: t('edit'), style: { flex: '1', minWidth: '100px' } });
     const duplicateBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: 'Duplicate' });
     duplicateBtn.innerHTML = PCD.icon('copy', 16);
-    const copyToWsBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: 'Copy to workspace' });
+    const copyToWsBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: PCD.i18n.t('modal_copy_to_workspace_title') });
     copyToWsBtn.innerHTML = PCD.icon('truck', 16);
     const costReportBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: 'Cost Report' });
     costReportBtn.innerHTML = PCD.icon('activity', 16) + ' <span>Cost Report</span>';
@@ -1532,7 +1532,7 @@
         '</div>' +
       '</div>';
 
-    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: 'Cancel' });
+    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('cancel') });
     const saveBtn = PCD.el('button', { class: 'btn btn-primary', text: 'Save & Add', style: { flex: '1' } });
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
     footer.appendChild(cancelBtn);
@@ -1624,10 +1624,10 @@
       });
     });
 
-    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: 'Close', style: { width: '100%' } });
+    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('btn_close'), style: { width: '100%' } });
     const footer = PCD.el('div', { style: { width: '100%' } });
     footer.appendChild(closeBtn);
-    const m = PCD.modal.open({ title: 'Versions · ' + r.name, body: body, footer: footer, size: 'md', closable: true });
+    const m = PCD.modal.open({ title: PCD.i18n.t('modal_versions_named', { name: r.name }), body: body, footer: footer, size: 'md', closable: true });
     closeBtn.addEventListener('click', function () { m.close(); });
   }
 
@@ -1642,7 +1642,7 @@
       if (plan === 'free' && count >= window.PCD_CONFIG.FREE_RECIPE_LIMIT) {
         PCD.modal.alert({
           icon: '⭐', iconKind: 'warning',
-          title: 'Upgrade needed',
+          title: PCD.i18n.t('modal_upgrade_needed_title'),
           text: t('recipe_limit_reached').replace('{n}', window.PCD_CONFIG.FREE_RECIPE_LIMIT),
           okText: t('upgrade_to_pro')
         });

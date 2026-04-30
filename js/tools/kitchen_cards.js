@@ -775,10 +775,10 @@
     }
     paintList();
 
-    const closeBtn = PCD.el('button', { type: 'button', class: 'btn btn-secondary', text: 'Close', style: { width: '100%' } });
+    const closeBtn = PCD.el('button', { type: 'button', class: 'btn btn-secondary', text: PCD.i18n.t('btn_close'), style: { width: '100%' } });
     const footer = PCD.el('div', { style: { width: '100%' } });
     footer.appendChild(closeBtn);
-    const m = PCD.modal.open({ title: 'Saved canvases', body: body, footer: footer, size: 'sm', closable: true });
+    const m = PCD.modal.open({ title: PCD.i18n.t('modal_saved_canvases_title'), body: body, footer: footer, size: 'sm', closable: true });
     closeBtn.addEventListener('click', function () { m.close(); });
 
     PCD.on(body, 'click', '[data-cvs]', function (e) {
@@ -795,7 +795,7 @@
       const cvs = PCD.store.getFromTable('canvases', id);
       PCD.modal.confirm({
         icon: '🗑', iconKind: 'danger', danger: true,
-        title: 'Delete canvas?',
+        title: PCD.i18n.t('modal_delete_canvas_title'),
         text: '"' + (cvs && cvs.name ? cvs.name : 'Canvas') + '" will be permanently removed.',
         okText: 'Delete'
       }).then(function (ok) {

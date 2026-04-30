@@ -535,10 +535,10 @@
           '<div style="font-weight:600;font-size:12px;">More...</div></button>' +
       '</div>';
 
-    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: 'Close' });
+    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('btn_close') });
     const footer = PCD.el('div', { style: { display: 'flex', width: '100%' } });
     footer.appendChild(closeBtn);
-    const m = PCD.modal.open({ title: 'Share · ' + (event.name || 'Event'), body: body, footer: footer, size: 'md', closable: true });
+    const m = PCD.modal.open({ title: PCD.i18n.t('modal_share_named', { name: (event.name || 'Event') }), body: body, footer: footer, size: 'md', closable: true });
     function getMsg() { return PCD.$('#evShareText', body).value; }
     closeBtn.addEventListener('click', function () { m.close(); });
     PCD.$('#evShWa', body).addEventListener('click', function () {
