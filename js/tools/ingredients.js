@@ -662,41 +662,84 @@ Pasta,0.003,g,cat_dry_goods,</code></pre>
   }
 
   // CSV/TSV parser
+  // v2.6.41 — Backed by SheetJS (xlsx-js-style is loaded globally on every
+  // page from index.html). The previous home-grown parser had two known
+  // failure modes that broke chef invoice imports:
+  //   1. Escaped quotes ("" inside a quoted cell) were toggled as two
+  //      separate quotes, mangling product names like
+  //      Mozzarella "Buffalo" 250g
+  //   2. Multi-line quoted fields (rare but legal CSV) were split on
+  //      every newline, corrupting any row that crossed a line break.
+  // SheetJS handles both correctly, plus trims whitespace consistently.
+  // The old splitLine() function is kept as a defensive fallback in case
+  // window.XLSX hasn't loaded yet (slow network) — same behaviour as
+  // before for the common case.
   function parseCSV(text) {
-    const lines = text.split(/\r?\n/).map(function (l) { return l.trim(); }).filter(function (l) { return l; });
-    if (!lines.length) return [];
-    // Detect separator
-    const sep = lines[0].indexOf('\t') >= 0 ? '\t' : ',';
-    // Check if first line is header
-    const firstCells = splitLine(lines[0], sep);
-    const hasHeader = firstCells.length >= 2 && /name/i.test(firstCells[0]) && /price/i.test(firstCells[1] || '');
+    if (!text || !text.trim()) return [];
+
+    // Detect separator from first non-empty line
+    const firstLine = (text.split(/\r?\n/).find(function (l) { return l.trim(); }) || '');
+    const sep = firstLine.indexOf('\t') >= 0 ? '\t' : ',';
+
+    let aoa = null;
+    if (window.XLSX && window.XLSX.read && window.XLSX.utils) {
+      try {
+        const wb = window.XLSX.read(text, { type: 'string', FS: sep, raw: false });
+        const sheet = wb.Sheets[wb.SheetNames[0]];
+        if (sheet) {
+          aoa = window.XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', blankrows: false });
+        }
+      } catch (e) {
+        PCD.warn && PCD.warn('parseCSV: SheetJS parse failed, falling back', e);
+        aoa = null;
+      }
+    }
+
+    // Defensive fallback — only runs if SheetJS isn't ready (rare).
+    if (!aoa) {
+      const lines = text.split(/\r?\n/).map(function (l) { return l.trim(); }).filter(function (l) { return l; });
+      aoa = lines.map(function (line) { return splitLine(line, sep); });
+    }
+
+    if (!aoa.length) return [];
+
+    // Header detection (same heuristic as before)
+    const firstRow = aoa[0] || [];
+    const hasHeader = firstRow.length >= 2 &&
+      /name/i.test(String(firstRow[0] || '')) &&
+      /price/i.test(String(firstRow[1] || ''));
+    const dataRows = hasHeader ? aoa.slice(1) : aoa;
+
     const rows = [];
-    (hasHeader ? lines.slice(1) : lines).forEach(function (line) {
-      const cells = splitLine(line, sep);
-      if (cells.length < 2) return;
-      const name = (cells[0] || '').trim();
-      const price = parseFloat((cells[1] || '').replace(/[^0-9.\-]/g, ''));
+    dataRows.forEach(function (cells) {
+      if (!cells || cells.length < 2) return;
+      const name = String(cells[0] || '').trim();
+      const priceStr = String(cells[1] || '').replace(/[^0-9.\-]/g, '');
+      const price = parseFloat(priceStr);
       if (!name || isNaN(price)) return;
       // Normalize unit case so 'L'/'KG'/'ML' (common in invoices) match
       // the lowercase canonical units (l, kg, ml). Without this the unit
       // would be saved as 'L', not appear in the dropdown, and break
       // unit conversion in recipe lines.
-      let rawUnit = (cells[2] || '').trim() || 'g';
+      let rawUnit = String(cells[2] || '').trim() || 'g';
       const lcUnit = rawUnit.toLowerCase();
       if (UNITS.indexOf(lcUnit) >= 0) rawUnit = lcUnit;
       rows.push({
         name: name,
         pricePerUnit: price,
         unit: rawUnit,
-        category: (cells[3] || '').trim() || 'cat_other',
-        supplier: (cells[4] || '').trim() || '',
+        category: String(cells[3] || '').trim() || 'cat_other',
+        supplier: String(cells[4] || '').trim() || '',
       });
     });
     return rows;
   }
 
+  // Defensive fallback splitter — used only if SheetJS isn't available.
+  // Basic CSV split with simple quote handling. Kept around because the
+  // SheetJS bundle could fail to load on a flaky network and we still
+  // want imports to work for the common (no-quotes) case.
   function splitLine(line, sep) {
-    // Simple CSV split with basic quote handling
     const result = [];
     let cur = '';
     let inQuote = false;

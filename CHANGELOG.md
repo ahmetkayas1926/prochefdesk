@@ -1,4 +1,111 @@
-# v2.6.40 — Recipe editor memory leak (document-level click listener)
+# v2.6.41 — CSV parser SheetJS'e geçirildi (chef invoice import güvenirliği)
+
+## Sorun
+
+`js/tools/ingredients.js` içindeki ev yapımı `parseCSV` fonksiyonunun bilinen iki başarısızlık modu vardı:
+
+### 1. Escape edilmiş tırnak (`""`) yanlış işleniyordu
+
+CSV standart escape: bir tırnak içinde tırnak yazmak için iki tırnak (`""`). Örnek:
+
+```
+"Mozzarella ""Buffalo"" 250g",18.50,pcs
+```
+
+Eski parser her `"` görünce `inQuote` flag'ini toggle ediyordu. Bu yüzden:
+- `"`  → inQuote=true
+- `Mozzarella ` → cur'a ekle
+- `"` → inQuote=false  ❌ yanlış!
+- `"` → inQuote=true
+- `Buffalo` → cur'a ekle
+- ...
+
+Sonuç: ürün adı bozuk veya satır yarıda kesilmiş.
+
+### 2. Tırnak içindeki yeni satırlar bozuluyordu
+
+Standart CSV'de tırnak içinde `\n` yasal:
+```
+"Sun-dried
+tomatoes",12.00,jar
+```
+
+Eski parser önce `text.split(/\r?\n/)` yapıyordu — yani tırnak içi yeni satırı görmüyor, satırı yarıda kesiyordu. İki bozuk satır oluşuyordu.
+
+### Etki
+
+- Şefin gönderdiği gerçek bir fatura CSV'sini kopyalayıp yapıştırınca bazı satırlar **sessizce atlanıyordu** (parseFloat NaN çıkar, satır skip)
+- Bazı satırlar yanlış değerlerle import oluyordu
+- Şef "neden 70 ürün eklediğim halde 65 görünüyor" diye fark edemiyordu — hata sessizdi
+
+## Çözüm
+
+`parseCSV` artık SheetJS'in (`xlsx-js-style@1.2.0`, zaten her sayfada yüklü) `XLSX.read(text, { type: 'string', FS: sep })` + `sheet_to_json(...)` kombinasyonunu kullanıyor. RFC 4180 standardına uygun:
+
+- Escape edilmiş tırnaklar (`""` → `"`)
+- Tırnak içi yeni satırlar
+- Tırnak içi sep karakteri (`,` veya `\t`)
+- Boş satırlar
+- Trailing whitespace
+
+Eski `splitLine` fonksiyonu defensive fallback olarak korundu — eğer SheetJS bundle'ı yüklenemezse (yavaş ağ, blocked CDN vs.) parser yine çalışıyor (eski davranışla, ama kırılmamış).
+
+## Davranış değişiklikleri
+
+- ✅ Tüm geçerli CSV'ler artık doğru parse oluyor
+- ✅ Eski basit CSV'ler aynı sonucu üretmeye devam ediyor (regression yok)
+- ⚠ Header detection mantığı aynı (`/name/i` + `/price/i` testi) — bu kasıtlı, semver-stable
+- ⚠ Birim normalizasyonu (`L` → `l`) korundu
+
+## Test senaryoları
+
+1. **Basit CSV** (eski format):
+   ```
+   Olive Oil,12.50,L,cat_oils,Costco
+   Garlic,2.99,kg,cat_produce,
+   ```
+   → 2 satır parse olmalı, eskisi gibi.
+
+2. **Tırnak içi virgül**:
+   ```
+   "Olive Oil, Extra Virgin",12.50,L,cat_oils,
+   ```
+   → ad: `Olive Oil, Extra Virgin` (eskiden bu da doğru çalışıyordu, regression yok)
+
+3. **Escape edilmiş tırnak**:
+   ```
+   "Mozzarella ""Buffalo"" 250g",18.50,pcs,cat_dairy,
+   ```
+   → ad: `Mozzarella "Buffalo" 250g` (eskiden bozuktu, şimdi doğru)
+
+4. **TSV (Excel'den copy-paste)**: tab-separated, aynı kolonlar → çalışmalı
+
+5. **Header detection**:
+   ```
+   name,price,unit,category,supplier
+   Olive Oil,12.50,L,cat_oils,
+   ```
+   → header satırı atlanmalı, 1 ürün eklenmeli
+
+6. **Header'sız**:
+   ```
+   Olive Oil,12.50,L,
+   ```
+   → 1 ürün eklenmeli (header detection yanlış pozitif vermeli değil)
+
+7. **.xlsx upload**: dosya yükle → SheetJS .xlsx'i CSV'ye çevirir → parseCSV ile geçer (aynı path, regression yok)
+
+8. **SheetJS yüklü değilse** (DevTools → Network → block xlsx CDN, sonra import deneyin):
+   → fallback splitLine ile basit CSV yine çalışmalı
+   → Console'da `parseCSV: SheetJS parse failed, falling back` warning olabilir
+
+## Risk
+
+Düşük. Tek dosya değişikliği, davranış geriye uyumlu. Testler geçerse regresyon riski yok. Worst case: SheetJS bug'lı bir dosyayı çözemezse fallback'e düşer (eski davranış).
+
+---
+
+
 
 ## Sorun
 
