@@ -1,4 +1,117 @@
-# v2.6.61 — Image lazy loading (performans)
+# v2.6.62 — Schema versioning + migration runner
+
+## Sorun
+
+`_meta.schemaVersion: 2` field'ı vardı ama gerçek bir migration runner yoktu. Eski versiyon kullanıcı yeni kodu yükleyince schema upgrade path'i ad-hoc'tu (`ensureActiveWorkspace`'te legacy → workspace-scoped, `load()`'da unit case normalization).
+
+İki büyük sorun:
+1. **Yeni migration ekleme zorlaşıyor** — her seferinde load() veya ensureActiveWorkspace() içine inline kod yazmak gerekiyor
+2. **v2.6.58 sync mantığı `updatedAt`'a güveniyor** ama eski kayıtların hepsinde bu field olmayabilir → unfair last-write-wins (eski kayıt her zaman kaybediyor)
+
+## Çözüm
+
+### 1. Formal migration runner
+
+```js
+const CURRENT_SCHEMA_VERSION = 3;
+
+const migrations = {
+  3: function (state) {
+    // ensure all records have updatedAt
+    return state;
+  },
+  // 4: function (state) { ... }   ← gelecekte
+};
+
+function runMigrations(s) {
+  const fromV = s._meta.schemaVersion || 1;
+  if (fromV >= CURRENT_SCHEMA_VERSION) return s;
+  for (let v = fromV + 1; v <= CURRENT_SCHEMA_VERSION; v++) {
+    if (migrations[v]) s = migrations[v](s);
+  }
+  s._meta.schemaVersion = CURRENT_SCHEMA_VERSION;
+  return s;
+}
+```
+
+Çağrılan yerler:
+- `load()` — boot'ta localStorage'dan okurken
+- `replaceAll()` — cloud'tan pull olunca veya backup restore'dan
+
+### 2. v3 migration: ensure updatedAt
+
+v2.6.58'de eklenen last-write-wins merge mantığı `updatedAt` field'ına güveniyor. Bir record'da updatedAt yoksa string karşılaştırmasında `'' < anything` → eski record her zaman kaybeder.
+
+v3 migration tüm user-edited tablolarda her record için:
+```js
+if (!rec.updatedAt) rec.updatedAt = rec.createdAt || '1970-01-01T00:00:00.000Z';
+```
+
+Tablolar: `recipes, ingredients, menus, events, suppliers, canvases, shoppingLists, checklistTemplates, stockCountHistory`.
+
+**Idempotent**: ikinci çalıştırma fark etmez (zaten updatedAt var).
+
+**Konservatif**: createdAt yoksa epoch (1970) kullanıyor. Yeni cihazda updatedAt'lı (gerçek tarih) versiyon her zaman kazanır — eskinin "bilinmeyen tarih" olduğunu kabul ediyoruz, fail-safe.
+
+### 3. Hata durumu
+
+Migration fail olursa:
+```js
+catch (e) {
+  PCD.err('[migration] v' + v + ' failed', e);
+  return s;  // schemaVersion bump'lanmaz, sonraki açılışta tekrar denenir
+}
+```
+
+Schema version bump'lanmadığı için kullanıcı F5 yapınca migration tekrar denenir. Eğer devamlı fail oluyorsa kullanıcı eski şemada kalır ama veri kaybetmez.
+
+## Yeni migration nasıl eklenir
+
+1. `CURRENT_SCHEMA_VERSION` artır (örn. 3 → 4)
+2. `migrations[4] = function (state) { ... return state; }` ekle
+3. Migration **idempotent** olmalı (ikinci çalıştırma zarar vermesin)
+4. Sıfır çağrı limit yok — sayı yıllarda artar (örn. v50, v100)
+
+## Etki
+
+- Eski kullanıcı eski cihazını açınca → migration çalışır → tüm record'larda updatedAt belirir → cloud sync düzgün çalışır
+- Yeni kullanıcı → defaultState zaten v3 → migration no-op
+- Cloud'dan pull → eğer cloud blob v2 ise → pull sonrası migration koşar
+
+## Test (push sonrası)
+
+1. **Eski state simulasyonu**: DevTools console'da:
+```js
+const s = JSON.parse(localStorage.getItem('pcd_state'));
+s._meta.schemaVersion = 2;
+// Bir tarif'in updatedAt'ını sil
+const wsId = Object.keys(s.recipes)[0];
+const rid = Object.keys(s.recipes[wsId])[0];
+delete s.recipes[wsId][rid].updatedAt;
+localStorage.setItem('pcd_state', JSON.stringify(s));
+location.reload();
+```
+2. Reload sonrası DevTools console'da:
+```js
+const s = JSON.parse(localStorage.getItem('pcd_state'));
+console.log(s._meta.schemaVersion); // 3 olmalı
+console.log(s.recipes[wsId][rid].updatedAt); // dolu olmalı (createdAt veya 1970)
+```
+3. Yeni kullanıcı için → migration log'u console'da `[migration] applied schema v3` görünmeli (ilk açılışta)
+
+### Regression
+- Mevcut tüm akışlar çalışmalı (recipe save, sync, restore)
+- Migration çalıştırması yavaş olmamalı (100 tarif × 9 tablo × O(1) field check = milisaniyeler)
+
+## Risk
+
+Düşük. Tek bir field set işlemi, idempotent. Eğer migration logic'inde bir bug çıkarsa → record set edilmiyor, schemaVersion bump'lanmıyor → hata sessizce loglanıyor.
+
+Geri alma: bu paketi v2.6.61'e geri al → `runMigrations` çalışmaz → record'larda updatedAt yoksa olmamış olur. Ama sync mantığı eski olmadan da düzgün çalışır (v2.6.58 fallback'i: '' < anything, eski kayıt kaybeder).
+
+---
+
+
 
 ## Sorun
 

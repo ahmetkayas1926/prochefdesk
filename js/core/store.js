@@ -63,9 +63,75 @@
     _meta: {
       lastSyncAt: null,
       pendingChanges: 0,
-      schemaVersion: 2,        // bumped to 2 with workspace migration
+      schemaVersion: 3,        // v2.6.62: schema migration runner introduced (v3 ensures updatedAt on all records)
     },
   };
+
+  // ---------- SCHEMA MIGRATIONS (v2.6.62) ----------
+  // Runs once per schema-version-jump on load. Each migration takes the
+  // state object and returns the upgraded version. Migrations are
+  // applied in order: v(fromV+1), v(fromV+2), ... v(CURRENT_SCHEMA_VERSION).
+  // After all migrations run, _meta.schemaVersion is updated to current.
+  //
+  // To add a new migration:
+  //   1. Bump CURRENT_SCHEMA_VERSION below
+  //   2. Add a `migrations[N]` function that takes state and returns it
+  //   3. Migrations should be IDEMPOTENT (running twice is safe)
+  //   4. Don't break old data — migrations are one-way; downgrades aren't supported
+  const CURRENT_SCHEMA_VERSION = 3;
+
+  const migrations = {
+    // v2 → v3 (added in v2.6.62):
+    // Ensure every record in user-edited tables has an `updatedAt` field.
+    // Without this, the v2.6.58 last-write-wins sync logic can't compare
+    // timestamps and old records get overwritten unfairly. Idempotent —
+    // records that already have updatedAt are left alone.
+    3: function (state) {
+      const TABLES = ['recipes','ingredients','menus','events','suppliers',
+                      'canvases','shoppingLists','checklistTemplates','stockCountHistory'];
+      TABLES.forEach(function (tbl) {
+        const t = state[tbl];
+        if (!t || typeof t !== 'object') return;
+        Object.keys(t).forEach(function (wsId) {
+          const wsScope = t[wsId];
+          if (!wsScope || typeof wsScope !== 'object') return;
+          // Walk records inside the wsId scope
+          Object.keys(wsScope).forEach(function (recId) {
+            const rec = wsScope[recId];
+            if (!rec || typeof rec !== 'object') return;
+            if (!rec.updatedAt) {
+              // Use createdAt if available, else epoch (so it always loses to
+              // records that DO have a real updatedAt — safer than 'now')
+              rec.updatedAt = rec.createdAt || '1970-01-01T00:00:00.000Z';
+            }
+          });
+        });
+      });
+      return state;
+    },
+  };
+
+  function runMigrations(s) {
+    if (!s || typeof s !== 'object') return s;
+    const fromV = (s._meta && s._meta.schemaVersion) || 1;
+    if (fromV >= CURRENT_SCHEMA_VERSION) return s;
+    for (let v = fromV + 1; v <= CURRENT_SCHEMA_VERSION; v++) {
+      const fn = migrations[v];
+      if (fn) {
+        try {
+          s = fn(s) || s;
+          PCD.log && PCD.log('[migration] applied schema v' + v);
+        } catch (e) {
+          PCD.err && PCD.err('[migration] v' + v + ' failed', e);
+          // Stop on error — don't bump schemaVersion past failed migration
+          return s;
+        }
+      }
+    }
+    s._meta = s._meta || {};
+    s._meta.schemaVersion = CURRENT_SCHEMA_VERSION;
+    return s;
+  }
 
   // ---------- WORKSPACE HELPERS ----------
   function currentWsId() {
@@ -179,6 +245,9 @@
       PCD.warn('Failed to load state:', e);
       state = PCD.clone(defaultState);
     }
+    // v2.6.62 — Run schema migrations BEFORE other normalization so that
+    // any added migration logic (e.g. ensure updatedAt) sees data first.
+    state = runMigrations(state);
     // Normalize ingredient unit case (v2.6.35). Some CSV imports stored
     // 'L', 'KG', 'ML' in uppercase. The convertUnit utility is now
     // case-insensitive (also v2.6.35) but to keep the edit-modal dropdown
@@ -1113,6 +1182,10 @@
     // ---- Full state management ----
     replaceAll: function (newState) {
       state = deepMerge(PCD.clone(defaultState), newState);
+      // v2.6.62 — Apply migrations to data pulled from cloud or imported
+      // from backup. The cloud blob might still be at an older schema if
+      // another device wrote it before being upgraded.
+      state = runMigrations(state);
       emit('*:replaced', state);
       // Trigger a broad refresh
       ['recipes','ingredients','menus','events','suppliers','inventory','waste','prefs','onboarding','user','plan'].forEach(function (k) {
