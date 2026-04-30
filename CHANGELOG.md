@@ -1,4 +1,94 @@
-# v2.6.48 — Recipe editor partial-update refactor (focus & UX düzeltmesi)
+# v2.6.49 — Cleanup: ölü kod silme + function shadowing audit
+
+## A) ingredients.js — `loadSheetJS` lazy loader silindi (#13)
+
+`xlsx-js-style@1.2.0` `index.html`'de global olarak her sayfada yükleniyor (Excel export için). Bu yüzden `window.XLSX` her zaman tanımlı. Ama `ingredients.js` xlsx upload path'inde başka bir kütüphaneyi (`xlsx@0.18.5`) lazy-load eden 18 satır kod vardı:
+
+```js
+function loadSheetJS(cb) {
+  if (window.XLSX) return cb(null, window.XLSX);  // <-- her zaman bu satırda dönüyor
+  // ...network fetch + script inject — asla çalışmıyor...
+}
+```
+
+İlk guard her zaman fire ediyordu — geri kalan kod **asla** çalıştırılmıyordu. Net ölü kod.
+
+Çözüm: `loadSheetJS` çağrısını direkt `window.XLSX` kullanımıyla değiştirdim. Defensive guard ekledim:
+
+```js
+if (!window.XLSX || !window.XLSX.read) {
+  PCD.toast.error('Excel parser not loaded. Try CSV export instead.');
+  return;
+}
+```
+
+`loadSheetJS` fonksiyon tanımı silindi.
+
+**Net azalma:** -20 satır ölü kod.
+
+## B) recipes.js — Dead snapshot bloğu silindi (#4 follow-up)
+
+`renderEditor()` başında v2.6.33 fix'iyle eklenen "input snapshot" bloğu vardı (10 input field için DOM'dan değer okuyup `data`'ya yazıyordu). Bu, eski tasarımda renderEditor sürekli tekrar çalıştığı için typing sırasında değer kaybını önlüyordu.
+
+v2.6.48 partial-update refactor'undan sonra `renderEditor()` artık **sadece bir kere** çalışıyor (ilk mount). İlk çağrıda DOM henüz yok, snapshot her zaman no-op. Sonraki "rerender" yok.
+
+Snapshot bloğu **dead code**. Sildim, yorumda neden silindiğini belirttim.
+
+**Net azalma:** -19 satır.
+
+## C) Function shadowing audit (#16)
+
+v2.6.34'te `menus.js`'de inner `render()` fonksiyonunun outer `render()`'ı gizlediği bir bug bulunmuştu. Bu pattern'in başka tool'larda olup olmadığını araştırdım.
+
+### Audit yöntemi
+
+```bash
+grep -nE "^[[:space:]]*function [a-zA-Z_]+\(" js/tools/*.js | \
+  awk -F: '{print $2}' | sort | uniq -c | sort -rn | awk '$1 > 1'
+```
+
+### Sonuç: 2 candidate
+
+1. `inventory.js` — `function renderBody()` iki kez (satır 357 ve 648)
+2. `recipes.js` — `function paint()` iki kez (satır 72 ve 361)
+
+### Detay analiz
+
+**`inventory.js`:**
+- 357: `openReviewPending()` içinde
+- 648: `openBulkCount()` içinde
+- **FARKLI parent function scope'ları → shadowing yok** ✓
+
+**`recipes.js`:**
+- 72: `renderList()` içinde
+- 361: `openCostReport()` içinde
+- **FARKLI parent function scope'ları → shadowing yok** ✓
+
+### Sonuç
+
+v2.6.34 menus.js bug'ı izole bir vakaymış. Diğer 14 tool'da shadowing pattern'i yok. **Kod değişikliği yapılmadı.**
+
+Bu audit bulgusunun tekrar yapılmasına gerek yok — sadece yeni eklenen tool'larda dikkat edilmeli. Convention: **inner function isimleri parent function ile çakışmasın** (örn. `render` outer'da varsa inner'da `paint` veya `repaint` kullan).
+
+## Özet
+
+- ✅ -39 satır ölü kod
+- ✅ Audit tamamlandı, başka shadowing yok
+- ✅ Davranış değişikliği yok
+
+## Test
+
+1. Ingredients → Import → .xlsx dosyası yükle → preview gözükmeli
+2. Recipe editor aç → save et → kaydedilen veri doğru olmalı (snapshot silinmesi etkilemedi)
+3. Tüm dosyalarda syntax check pass
+
+## Risk
+
+Sıfır. Net ölü kod silme + audit. Davranış birebir aynı.
+
+---
+
+
 
 ## Sorun
 

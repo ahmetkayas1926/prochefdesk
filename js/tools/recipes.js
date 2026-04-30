@@ -1667,31 +1667,13 @@
     let _qDDOutsideHandler = null;
 
     function renderEditor() {
-      // BUG FIX (v2.6.33): Before re-rendering the modal HTML, snapshot
-      // all form field values from the DOM into `data`. Otherwise editing
-      // ANY field (servings, sale price, ingredient amount) triggers a
-      // re-render that wipes out whatever the user just typed in OTHER
-      // fields (name, prep, cook, yield, category, steps, notes...).
-      const _nameEl = body.querySelector('#recipeName');
-      if (_nameEl) data.name = _nameEl.value;
-      const _catEl = body.querySelector('#recipeCategory');
-      if (_catEl) data.category = _catEl.value;
-      const _prepEl = body.querySelector('#recipePrep');
-      if (_prepEl) data.prepTime = _prepEl.value === '' ? null : (parseInt(_prepEl.value, 10) || null);
-      const _cookEl = body.querySelector('#recipeCook');
-      if (_cookEl) data.cookTime = _cookEl.value === '' ? null : (parseInt(_cookEl.value, 10) || null);
-      const _yldAmtEl = body.querySelector('#recipeYieldAmount');
-      if (_yldAmtEl) data.yieldAmount = _yldAmtEl.value === '' ? null : (parseFloat(_yldAmtEl.value) || null);
-      const _yldUnitEl = body.querySelector('#recipeYieldUnit');
-      if (_yldUnitEl) data.yieldUnit = _yldUnitEl.value || 'portion';
-      const _stepsEl = body.querySelector('#recipeSteps');
-      if (_stepsEl) data.steps = _stepsEl.value;
-      const _platingEl = body.querySelector('#recipePlating');
-      if (_platingEl) data.plating = _platingEl.value;
-      const _notesEl = body.querySelector('#recipeNotes');
-      if (_notesEl) data.notes = _notesEl.value;
-      const _cuisineEl = body.querySelector('#recipeCuisine');
-      if (_cuisineEl) data.cuisine = _cuisineEl.value;
+      // v2.6.49 — The v2.6.33 input-snapshot block (which read DOM values
+      // back into `data` before rebuilding HTML) was removed here. With
+      // the v2.6.48 partial-update refactor renderEditor() runs only on
+      // initial mount, so there are no DOM values to snapshot — and on
+      // first call the inputs don't exist yet anyway. The save handler
+      // reads input values directly. Cancel discards them. Keystrokes
+      // update `data` live.
 
       const ingMap = currentIngMap();
       const cost = PCD.recipes.computeFoodCost(data, ingMap, PCD.recipes.buildRecipeMap());

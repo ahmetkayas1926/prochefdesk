@@ -515,27 +515,31 @@ Pasta,0.003,g,cat_dry_goods,</code></pre>
       if (!f) return;
       const name = f.name.toLowerCase();
       if (name.endsWith('.xlsx')) {
-        // Parse XLSX — use SheetJS if available, else inform user
-        loadSheetJS(function (err, XLSX) {
-          if (err) {
-            PCD.toast.error('Excel parser failed to load. Try CSV export instead.');
-            return;
+        // v2.6.49 — SheetJS (xlsx-js-style@1.2.0) is loaded globally on
+        // every page from index.html, so window.XLSX is always available
+        // here. The previous lazy-loader (loadSheetJS) tried to fetch
+        // xlsx@0.18.5 from the CDN but its first guard always fired:
+        //   if (window.XLSX) return cb(null, window.XLSX);
+        // Removed for clarity. If for some reason XLSX is missing
+        // (CDN blocked, etc.) we surface the same friendly error.
+        if (!window.XLSX || !window.XLSX.read) {
+          PCD.toast.error('Excel parser not loaded. Try CSV export instead.');
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = function (evt) {
+          try {
+            const data = new Uint8Array(evt.target.result);
+            const wb = window.XLSX.read(data, { type: 'array' });
+            const sheet = wb.Sheets[wb.SheetNames[0]];
+            const csv = window.XLSX.utils.sheet_to_csv(sheet);
+            PCD.$('#importText', body).value = csv;
+            previewParse(csv);
+          } catch (err) {
+            PCD.toast.error('Could not parse Excel file: ' + err.message);
           }
-          const reader = new FileReader();
-          reader.onload = function (evt) {
-            try {
-              const data = new Uint8Array(evt.target.result);
-              const wb = XLSX.read(data, { type: 'array' });
-              const sheet = wb.Sheets[wb.SheetNames[0]];
-              const csv = XLSX.utils.sheet_to_csv(sheet);
-              PCD.$('#importText', body).value = csv;
-              previewParse(csv);
-            } catch (err) {
-              PCD.toast.error('Could not parse Excel file: ' + err.message);
-            }
-          };
-          reader.readAsArrayBuffer(f);
-        });
+        };
+        reader.readAsArrayBuffer(f);
       } else {
         const reader = new FileReader();
         reader.onload = function (evt) {
@@ -751,25 +755,6 @@ Pasta,0.003,g,cat_dry_goods,</code></pre>
     }
     result.push(cur);
     return result;
-  }
-
-  // Load SheetJS from CDN on demand
-  let sheetJSLoading = null;
-  function loadSheetJS(cb) {
-    if (window.XLSX) return cb(null, window.XLSX);
-    if (sheetJSLoading) { sheetJSLoading.push(cb); return; }
-    sheetJSLoading = [cb];
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
-    script.onload = function () {
-      const q = sheetJSLoading; sheetJSLoading = null;
-      q.forEach(function (c) { c(null, window.XLSX); });
-    };
-    script.onerror = function () {
-      const q = sheetJSLoading; sheetJSLoading = null;
-      q.forEach(function (c) { c(new Error('load failed')); });
-    };
-    document.head.appendChild(script);
   }
 
   PCD.tools = PCD.tools || {};
