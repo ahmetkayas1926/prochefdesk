@@ -1,4 +1,82 @@
-# v2.6.44 — Photo storage orphan blob cleanup
+# v2.6.45 — PWA manifest gerçek dosyaya çevrildi + iOS apple-touch-icon
+
+## Sorun
+
+`index.html` PWA manifest'ini `data:application/json,...` URL olarak inline tutuyordu. Aynı şekilde icon, base64 SVG dataURL'di.
+
+İki problem:
+
+### 1. iOS Safari install reddi
+iOS Safari'nin bazı sürümleri (özellikle 14-15) `data:` URL manifest'leri reddediyor — "Add to Home Screen" sonrası ikon kayboluyor veya PWA başlamıyordu. Android'de sorun yoktu (Chrome dataURL manifest kabul ediyor).
+
+### 2. iOS apple-touch-icon yoktu
+iOS Safari home screen ikonu için manifest'i değil `<link rel="apple-touch-icon">` tag'ini okur. Bu tag yoktu — iOS rastgele bir screenshot kullanıyordu.
+
+### 3. SVG-only icon iOS'ta bulanık
+PNG fallback yoktu. iOS 16 öncesi SVG icon'ları doğru render etmiyor.
+
+## Çözüm
+
+### Dosyalar:
+- **`manifest.webmanifest`** — gerçek JSON manifest, kök dizinde
+- **`assets/icons/icon-192.png`** (3.8 KB) — Android home screen
+- **`assets/icons/icon-512.png`** (10.9 KB) — splash + manifest
+- **`assets/icons/apple-touch-icon-180.png`** (3.5 KB) — iOS home screen
+- **`assets/icons/icon-192-maskable.png`** (2.9 KB) — Android adaptive icon (safe zone)
+- **`assets/icons/icon-512-maskable.png`** (8.5 KB) — Android adaptive (büyük)
+
+İkonlar PIL ile programatik üretildi — yeşil (#16a34a) rounded square, beyaz "PC" yazısı. Maskable variant 80% safe zone padding ile, Android adaptive icon shape'lerinde kırpılmasın diye.
+
+### `index.html` değişiklikleri:
+```html
+<!-- Eski: dataURL inline manifest, sadece SVG icon -->
+
+<!-- Yeni: -->
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+```
+
+SVG favicon (`<link rel="icon" type="image/svg+xml">`) korundu — modern tarayıcılarda keskin, browser tab için optimal.
+
+### Manifest içeriği güncellendi:
+- `description` eklendi
+- `scope: "/"` eklendi (PWA scope açık)
+- `categories` eklendi (app store metadata)
+- `lang`, `dir` eklendi
+- Icons array'inde her boyut için ayrı entry, `purpose: "any"` ve `purpose: "maskable"` ayrımı
+
+## Test
+
+### Android (Chrome)
+1. Site aç → ⋮ → "Install app" — yeşil PC ikonu görünmeli
+2. Home screen'den aç → splash screen'de büyük PC ikonu (512px)
+3. App drawer'da yuvarlak/squircle/heart shape — adaptive icon olarak doğru görünmeli (maskable sayesinde)
+
+### iOS Safari (15+)
+1. Site aç → Share → "Add to Home Screen"
+2. Önerilen icon yeşil PC olmalı (apple-touch-icon-180.png)
+3. Home screen'de standalone PWA olarak açılmalı
+
+### Chrome DevTools doğrulama
+1. F12 → Application → Manifest
+2. Hata olmamalı
+3. Icons listesinde 5 entry görünmeli (192/512 any + 192/512 maskable + apple-touch-icon)
+4. "Manifest" altında "Identity" green check'leri olmalı
+5. Lighthouse → PWA audit → Installable: PASS
+
+## Cloudflare Pages dikkat
+
+`manifest.webmanifest` dosyası kök dizinde — Cloudflare Pages bunu otomatik serve eder. Eğer custom `_headers` veya `_redirects` varsa kontrol edilmeli; ama mevcut konfigürasyonda özel bir kural yok, default davranış doğru.
+
+Ek olarak Cloudflare otomatik content-type tahmin ediyor: `.webmanifest` → `application/manifest+json`. Doğru.
+
+## Risk
+
+Düşük. Eski PWA install'ları etkilenmez — yeni manifest farklı `start_url` veya `scope` kullanmıyor. Önceden install edilmiş PWA'lar kendi cache'lerinden ikon kullanmaya devam eder, yeni install'lar yeni ikonu alır. iOS'ta ilk kez doğru install deneyimi.
+
+---
+
+
 
 ## Sorun
 
