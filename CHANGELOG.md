@@ -1,4 +1,96 @@
-# v2.6.43 — Küçük temizlikler: flushSync helper + premium UI FOUC fix
+# v2.6.44 — Photo storage orphan blob cleanup
+
+## Sorun
+
+Tarif fotoğrafları Supabase Storage `recipe-photos` bucket'ında WebP olarak saklanıyor. Ancak iki yerde **orphan dosya birikmesi** vardı:
+
+### 1. Foto güncelleme
+Tarife yeni foto yükleyince:
+- Yeni dosya bucket'a upload edilir, URL recipe row'una yazılır
+- **Eski dosya bucket'ta kalır** — recipe row'undan referans yok, ama dosya orada
+- Bir tarif 6 ay içinde 5 kere foto güncellenirse → 4 ölü dosya
+
+### 2. Tarif silme (purge)
+Recipe trash'ten kalıcı silinirken:
+- Recipe row gider
+- **Foto dosyası bucket'ta kalır** — sahipsiz
+
+100 şef × ortalama 50 tarif × 3 foto güncellemesi = ~15.000 ölü dosya. WebP @ 100-150 KB = **2 GB+ ölü veri**. Supabase Free tier'da 1 GB Storage, yani fatura sürpriziyle bekleyen problem.
+
+## Çözüm
+
+Üç ayağı var:
+
+### 1. `js/core/photo-storage.js`: yeni iki fonksiyon
+
+- **`urlToStorageKey(url)`** — Public Storage URL'inden bucket key'ini çıkarır. dataURL veya foreign URL → null
+- **`deletePhotoByUrl(url)`** — Bucket key bulup `supabase.storage.from('recipe-photos').remove([key])` çağırır. Defence-in-depth: silme yalnızca user'ın kendi klasörü için denenir (RLS de zaten engelliyor)
+
+Hatalar sessizce loglanır — recipe save işlemini bloke etmez.
+
+### 2. `js/core/store.js`: `isPhotoStillUsed(url, excludeRecipeId)` helper
+
+Tüm workspace'lerdeki tüm recipe'leri (soft-deleted dahil) tarayıp aynı URL'i kullanan başka recipe var mı kontrol eder. **Bu kritik** — duplicate edilen tarifler aynı URL'i paylaşır, kontrolsüz silersek diğer kopyanın fotosu kırılır.
+
+### 3. Üç akışta cleanup tetiklenir
+
+| Akış | Davranış |
+|------|----------|
+| `upsertRecipe` (foto değişti) | Eski URL silinir (eğer başka recipe kullanmıyorsa) |
+| `purgeFromTrash` (recipe kalıcı sil) | Foto silinir (eğer başka recipe kullanmıyorsa) |
+| `autoPurgeOldTrash` (30 gün sonra otomatik) | Tüm purged recipe'lerin fotoları silinir (kontrol ile) |
+
+Soft-delete (sadece `_deletedAt` set) **fotoyu silmez** — kullanıcı geri restore edebilir.
+
+## Edge case'ler
+
+- ✅ **dataURL fotolar** (eski v2.5.8 öncesi): Storage'da değil, `urlToStorageKey` null döner, no-op
+- ✅ **Duplicate recipe**: aynı URL'i iki recipe paylaşıyorsa, `isPhotoStillUsed` true döner, silme atlanır
+- ✅ **Copy to workspace**: `_copiedFrom` ile yeni recipe oluşur, photo URL kopyalanır → aynı koruma
+- ✅ **Cloud pull (replaceAll)**: state komple replace olduğunda eski photo'lar referansını kaybeder, ama bu noktada cleanup yapılmıyor (scope dışı, ileride). Worst case: bir kerelik orphan birikme, autoPurgeOldTrash kısmen çözer
+- ✅ **Workspace silinince**: o workspace'deki tüm recipe'lerin fotoları orphan olur (mevcut davranış, scope dışı)
+- ✅ **Foreign URL** (manuel paste edilmiş): RLS reddeder + key user folder ile başlamıyorsa zaten denenmez
+- ✅ **Offline / signed-out**: deletePhotoByUrl sessizce false döner, hata yok
+
+## Test
+
+1. **Temel akış**:
+   - Bir tarife foto1 yükle → Storage'da gör (Supabase Dashboard → Storage)
+   - Aynı tarife foto2 yükle → kayıt sonrası Storage'da SADECE foto2 olmalı (foto1 silinmiş)
+
+2. **Duplicate korunması**:
+   - Tarif A'ya foto yükle
+   - Tarif A'yı duplicate → tarif B aynı URL'i paylaşır
+   - Tarif A'ya yeni foto yükle → eski URL silinmemeli (B hâlâ kullanıyor)
+   - Tarif B'ye yeni foto yükle → ŞİMDİ eski URL silinmeli (kullanan kalmadı)
+
+3. **Soft-delete'te koruma**:
+   - Tarife foto yükle
+   - Tarifi sil (trash'e) → Storage'da foto **durmalı**
+   - Trash'ten restore et → foto hâlâ çalışmalı
+   - Trash'ten kalıcı sil → şimdi foto silinmeli
+
+4. **30 gün otomatik purge**:
+   - Tarif sil + 30 gün bekle (veya `autoPurgeOldTrash(0)` console'dan çağır)
+   - Foto silinmeli
+
+5. **Eski dataURL fotolar (v2.5.8 öncesi)**:
+   - Eski recipe'lere dokunulmasın, regression olmamalı
+   - dataURL'li tarifin save'i hata fırlatmamalı
+
+## Risk
+
+**Orta**. Silmenin geri dönüşü yok. Ancak:
+- `isPhotoStillUsed` koruması ile yanlış silme ihtimali çok düşük
+- Hatalar sessizce loglanır, save akışını bloke etmez
+- RLS server-side ek koruma sağlar
+- Soft-delete sırasında foto KORUNUR — kullanıcı yanlışlıkla sildiyse 30 gün geri alabilir
+
+İlk 1 hafta production'da takip edilmeli — Supabase Dashboard → Storage'da bucket boyutu trendi düşmeli.
+
+---
+
+
 
 ## Değişiklikler
 

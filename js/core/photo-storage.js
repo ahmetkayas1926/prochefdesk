@@ -122,7 +122,63 @@
     });
   }
 
+  // v2.6.44 — Parse a public Storage URL back into the bucket key.
+  // Returns null for dataURLs (not stored), foreign URLs, or junk input.
+  // Bucket URL format:
+  //   https://<project>.supabase.co/storage/v1/object/public/recipe-photos/<userId>/<file>.webp
+  function urlToStorageKey(url) {
+    if (!url || typeof url !== 'string') return null;
+    if (url.indexOf('data:') === 0) return null; // dataURL, not in bucket
+    const marker = '/' + BUCKET + '/';
+    const idx = url.indexOf(marker);
+    if (idx < 0) return null;
+    let key = url.slice(idx + marker.length);
+    // Strip query string / hash if present
+    const qIdx = key.indexOf('?');
+    if (qIdx >= 0) key = key.slice(0, qIdx);
+    const hIdx = key.indexOf('#');
+    if (hIdx >= 0) key = key.slice(0, hIdx);
+    return key || null;
+  }
+
+  // v2.6.44 — Delete a photo blob from Storage by its public URL.
+  // Safe to call with anything: dataURLs, foreign URLs, null, undefined,
+  // or URLs that no longer exist all resolve to false silently. RLS will
+  // reject deletions for files outside the caller's user folder, which
+  // is the intended behaviour (defence in depth).
+  // Returns Promise<boolean>: true if the blob was successfully removed.
+  function deletePhotoByUrl(url) {
+    return new Promise(function (resolve) {
+      const key = urlToStorageKey(url);
+      if (!key) return resolve(false);
+      const supabase = window._supabaseClient;
+      if (!supabase) return resolve(false);
+      const user = PCD.store && PCD.store.get('user');
+      if (!user || !user.id) return resolve(false);
+      // Defence in depth: only attempt deletion if the key starts with
+      // this user's ID. RLS policy enforces this server-side, but we
+      // skip the round-trip when we already know it would fail.
+      if (key.indexOf(user.id + '/') !== 0) {
+        PCD.log && PCD.log('photo-storage: skip foreign key', key);
+        return resolve(false);
+      }
+      supabase.storage.from(BUCKET).remove([key]).then(function (res) {
+        if (res.error) {
+          PCD.warn && PCD.warn('photo-storage: delete failed', res.error.message || res.error);
+          return resolve(false);
+        }
+        PCD.log && PCD.log('photo-storage: deleted', key);
+        resolve(true);
+      }).catch(function (e) {
+        PCD.warn && PCD.warn('photo-storage: delete exception', e);
+        resolve(false);
+      });
+    });
+  }
+
   PCD.photoStorage = {
     upload: uploadPhotoFromDataUrl,
+    deleteByUrl: deletePhotoByUrl,
+    urlToStorageKey: urlToStorageKey,
   };
 })();

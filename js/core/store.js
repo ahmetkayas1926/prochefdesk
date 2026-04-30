@@ -388,6 +388,32 @@
     }
   }
 
+  // v2.6.44 — Photo orphan check: walks ALL recipes (across every
+  // workspace, including soft-deleted) and returns true if any recipe
+  // OTHER than the excluded one still references this photo URL.
+  // Used by upsertRecipe and purge paths to decide whether deleting
+  // the blob from Supabase Storage is safe. Without this check,
+  // duplicating a recipe (which copies the photo URL) would lead to
+  // accidentally deleting the photo of the still-existing copy.
+  function isPhotoStillUsed(photoUrl, excludeRecipeId) {
+    if (!photoUrl) return false;
+    // dataURL photos are never "in storage" so they have no shared blob
+    if (typeof photoUrl === 'string' && photoUrl.indexOf('data:') === 0) return false;
+    const all = state.recipes || {};
+    const wsIds = Object.keys(all);
+    for (let i = 0; i < wsIds.length; i++) {
+      const wsRecipes = all[wsIds[i]] || {};
+      const rids = Object.keys(wsRecipes);
+      for (let j = 0; j < rids.length; j++) {
+        const r = wsRecipes[rids[j]];
+        if (!r) continue;
+        if (excludeRecipeId && r.id === excludeRecipeId) continue;
+        if (r.photo === photoUrl) return true;
+      }
+    }
+    return false;
+  }
+
   // ---------- PERSIST (debounced) ----------
   const persist = PCD.debounce(function () {
     let serialized;
@@ -586,6 +612,12 @@
       const now = new Date().toISOString();
       recipe.updatedAt = now;
       if (!recipe.createdAt) recipe.createdAt = now;
+      // v2.6.44 — Capture the previous photo URL BEFORE mutation so we
+      // can clean up the old Storage blob if the user replaced the photo.
+      // The check below runs after the upsert so the new state is what
+      // isPhotoStillUsed sees.
+      const _prevRecipe = (state.recipes[wsId] && state.recipes[wsId][recipe.id]) || null;
+      const _prevPhoto = _prevRecipe && _prevRecipe.photo;
       const recipes = Object.assign({}, state.recipes);
       recipes[wsId] = Object.assign({}, recipes[wsId] || {});
       recipes[wsId][recipe.id] = recipe;
@@ -593,6 +625,16 @@
       emit('recipes', recipes[wsId], null);
       emit('recipes.' + recipe.id, recipe, null);
       persist();
+      // v2.6.44 — Orphan blob cleanup. Best-effort, non-blocking. Skipped
+      // when: (1) photo unchanged, (2) old photo is a dataURL or foreign
+      // URL, (3) another recipe still references the URL (e.g. copied
+      // recipe). Failures are silent to avoid blocking the save.
+      if (_prevPhoto && _prevPhoto !== recipe.photo &&
+          PCD.photoStorage && PCD.photoStorage.deleteByUrl) {
+        if (!isPhotoStillUsed(_prevPhoto, recipe.id)) {
+          PCD.photoStorage.deleteByUrl(_prevPhoto);
+        }
+      }
       return recipe;
     },
     deleteRecipe: function (id) {
@@ -846,12 +888,20 @@
       const wsId = currentWsId();
       if (table === 'recipes') {
         if (!state.recipes[wsId] || !state.recipes[wsId][id]) return false;
+        // v2.6.44 — Capture photo URL before deletion so we can clean up
+        // the orphaned Storage blob if no other recipe references it.
+        const _purgePhoto = state.recipes[wsId][id].photo;
         const recipes = Object.assign({}, state.recipes);
         recipes[wsId] = Object.assign({}, recipes[wsId]);
         delete recipes[wsId][id];
         state.recipes = recipes;
         emit('recipes', recipes[wsId], null);
         persist();
+        if (_purgePhoto && PCD.photoStorage && PCD.photoStorage.deleteByUrl) {
+          if (!isPhotoStillUsed(_purgePhoto, id)) {
+            PCD.photoStorage.deleteByUrl(_purgePhoto);
+          }
+        }
         return true;
       }
       if (table === 'ingredients') {
@@ -884,6 +934,9 @@
       const cutoff = Date.now() - daysOld * 86400000;
       let purged = 0;
       const wsId = currentWsId();
+      // v2.6.44 — Collect photo URLs from purged recipes for orphan
+      // blob cleanup after the state mutation completes.
+      const purgedRecipePhotos = [];
       const tables = ['recipes','menus','events','suppliers','canvases','shoppingLists','checklistTemplates'];
       tables.forEach(function (table) {
         const data = (state[table] && state[table][wsId]) || {};
@@ -892,6 +945,9 @@
         Object.keys(next).forEach(function (id) {
           const it = next[id];
           if (it._deletedAt && new Date(it._deletedAt).getTime() < cutoff) {
+            if (table === 'recipes' && it.photo) {
+              purgedRecipePhotos.push({ url: it.photo, recipeId: it.id });
+            }
             delete next[id];
             changed = true;
             purged++;
@@ -915,6 +971,17 @@
       });
       if (ingsChanged) state.ingredients = ings;
       if (purged > 0) persist();
+      // v2.6.44 — After state has been updated, attempt to clean up
+      // orphaned photo blobs. isPhotoStillUsed walks the freshly-mutated
+      // state, so if a duplicate recipe still references the URL we skip
+      // deletion. Best-effort, async, non-blocking.
+      if (purgedRecipePhotos.length && PCD.photoStorage && PCD.photoStorage.deleteByUrl) {
+        purgedRecipePhotos.forEach(function (p) {
+          if (!isPhotoStillUsed(p.url, p.recipeId)) {
+            PCD.photoStorage.deleteByUrl(p.url);
+          }
+        });
+      }
       return purged;
     },
 
