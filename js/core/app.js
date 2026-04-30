@@ -955,8 +955,56 @@
   // ============ GLOBAL ERROR HANDLER ============
   // Catches uncaught exceptions so a single broken tool doesn't crash the whole app.
   // Shows a discreet toast instead of silent failure.
+  // v2.6.63 — Also reports to Supabase `client_errors` table so the admin
+  // can monitor production issues. Rate-limited and PII-scrubbed.
   let _errorCount = 0;
   let _lastErrorAt = 0;
+  // v2.6.63 — Per-message dedupe: don't spam the same error
+  const _reportedMessages = {};
+  const REPORT_DEDUPE_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
+  // v2.6.63 — Hard cap per session to prevent runaway loops
+  let _sessionReportCount = 0;
+  const MAX_REPORTS_PER_SESSION = 30;
+
+  function reportErrorToCloud(payload) {
+    try {
+      if (_sessionReportCount >= MAX_REPORTS_PER_SESSION) return;
+      const dedupeKey = (payload.message || '') + '|' + (payload.filename || '') + ':' + (payload.line || 0);
+      const now = Date.now();
+      const lastReport = _reportedMessages[dedupeKey];
+      if (lastReport && now - lastReport < REPORT_DEDUPE_WINDOW_MS) return;
+      _reportedMessages[dedupeKey] = now;
+      _sessionReportCount++;
+      const supabase = (PCD.cloud && PCD.cloud.getClient && PCD.cloud.getClient()) || null;
+      if (!supabase) return;
+      const user = PCD.store.get('user');
+      // Build context (safe metadata only, NO recipe content / PII)
+      const context = {
+        view: (PCD.router && PCD.router.currentView && PCD.router.currentView()) || null,
+        ws_id: (PCD.store && PCD.store.getActiveWorkspaceId && PCD.store.getActiveWorkspaceId()) || null,
+        theme: document.documentElement.getAttribute('data-theme') || null,
+        screen: (window.innerWidth || 0) + 'x' + (window.innerHeight || 0),
+        online: navigator.onLine,
+      };
+      // Truncate stack to keep payload small (Supabase row size limit)
+      const stackTrunc = (payload.stack || '').slice(0, 4000);
+      // Fire-and-forget; don't await, don't block
+      supabase.from('client_errors').insert({
+        user_id: (user && user.id) || null,
+        app_version: (window.PCD_CONFIG && window.PCD_CONFIG.APP_VERSION) || null,
+        locale: (PCD.i18n && PCD.i18n.currentLocale) || null,
+        url: (window.location && window.location.href) || null,
+        user_agent: navigator.userAgent || null,
+        message: (payload.message || '').slice(0, 1000),
+        filename: (payload.filename || '').slice(0, 500),
+        line: payload.line || null,
+        col: payload.col || null,
+        stack: stackTrunc,
+        context: context,
+      }).then(function () { /* ok */ }).catch(function () { /* swallow */ });
+    } catch (e) { /* never let error reporter throw */ }
+  }
+
   window.addEventListener('error', function (e) {
     const now = Date.now();
     if (now - _lastErrorAt < 1000) {
@@ -970,11 +1018,33 @@
     if (PCD.toast) {
       PCD.toast.error(PCD.i18n.t('toast_generic_error'), 3000);
     }
+    // v2.6.63 — Report to cloud (best-effort, async)
+    reportErrorToCloud({
+      message: (e.message || (e.error && e.error.message) || 'unknown error'),
+      filename: e.filename,
+      line: e.lineno,
+      col: e.colno,
+      stack: (e.error && e.error.stack) || null,
+    });
   });
 
   window.addEventListener('unhandledrejection', function (e) {
     PCD.error && PCD.error('[Promise]', e.reason);
-    // Silent for promise rejections — most are network related and already handled
+    // v2.6.63 — Also report unhandled promise rejections (often network-related,
+    // but some are real bugs we want to know about).
+    const reason = e.reason;
+    let message = 'unhandledrejection';
+    let stack = null;
+    if (reason) {
+      if (typeof reason === 'string') message = reason;
+      else if (reason.message) {
+        message = reason.message;
+        stack = reason.stack || null;
+      } else {
+        try { message = JSON.stringify(reason).slice(0, 200); } catch (_) {}
+      }
+    }
+    reportErrorToCloud({ message: 'unhandledrejection: ' + message, stack: stack });
   });
 
   // Boot on DOMContentLoaded

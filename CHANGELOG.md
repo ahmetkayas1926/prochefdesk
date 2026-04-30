@@ -1,4 +1,146 @@
-# v2.6.62 — Schema versioning + migration runner
+# v2.6.63 — Error monitoring (production hata izleme)
+
+## Sorun
+
+Production'da bir kullanıcının tarayıcısında JS hatası çıktığında:
+- Sadece kendi DevTools console'unda görünüyordu
+- Şef "uygulama bozuldu" deyip Web3Forms ile rapor edebilirdi ama nadir
+- Sessizce kayboluyor → admin (sen) hangi tarif modal'ı patladığını, hangi cihazda, hangi sürümde **bilmiyordu**
+
+Restoran ortamında bu kabul edilemez — şef servis sırasında hata yaşıyorsa anında veri gerek.
+
+## Çözüm
+
+İki taraflı: **SQL migration + JS reporter**.
+
+### 1. `client_errors` tablosu
+
+Yeni Supabase tablosu (`migrations/v2.6.63-client-errors.sql`):
+
+```sql
+client_errors (
+  id          uuid PK,
+  user_id     uuid NULL,        -- anonim kullanıcılar da raporlayabilir
+  created_at  timestamptz,
+  app_version text,
+  locale      text,
+  url         text,
+  user_agent  text,
+  message     text NOT NULL,
+  filename    text,
+  line        int,
+  col         int,
+  stack       text,
+  context     jsonb              -- view, ws_id, theme, online, vs.
+)
+```
+
+#### RLS politikaları
+
+| Rol | INSERT | SELECT | UPDATE | DELETE |
+|-----|--------|--------|--------|--------|
+| anon | ✓ (user_id NULL olmalı) | — | — | — |
+| authenticated | ✓ (kendi user_id'si) | — | — | — |
+| service_role | (zaten her şey) | ✓ | ✓ | ✓ |
+
+**Önemli**: Hiçbir kullanıcı SELECT yapamaz — başkalarının stacktrace'lerini göremez (PII koruma). Sadece sen Supabase Dashboard'dan görürsün.
+
+### 2. JS reporter (`js/core/app.js`)
+
+Mevcut `window.addEventListener('error', ...)` + `unhandledrejection` handler'larına Supabase insert eklendi.
+
+**Güvenlik / gizlilik önlemleri:**
+- **PII LOGLANMIYOR**: tarif adı, ingredient adı, kullanıcı email'i gibi user content gönderilmiyor
+- **Sadece teknik bilgi**: message, stack, filename, line, version, locale, view, workspace ID, ekran boyutu
+- **Stack truncation**: 4000 char (Supabase row size limit'e dikkat)
+- **Message truncation**: 1000 char
+
+**Rate limiting:**
+- **Per-message dedupe**: aynı hata 5 dakika içinde 1 kere gönderilir (sonra tekrar)
+- **Session cap**: tarayıcı oturumu başına maksimum 30 hata gönderilir (loop koruması)
+- **Existing rate limit**: 1 saniyede 10'dan fazla hata varsa yenileri toast bile göstermiyordu (zaten vardı, korundu)
+
+**Fire-and-forget**: insert'i await etmiyoruz, hata olursa swallow. Bir şefin hatalı bir tıklaması diğer eylemleri bloke etmemeli.
+
+**Defensive**: tüm logic try-catch içinde — error reporter'ın kendisi error fırlatamaz (sonsuz döngü korunması).
+
+### Context içeriği
+
+```js
+context: {
+  view: 'recipes',           // hangi sayfada hata oluştu
+  ws_id: 'ws_abc123',        // hangi workspace
+  theme: 'dark',
+  screen: '1920x1080',
+  online: true
+}
+```
+
+## Deploy adımları (SQL migration GEREKLİ)
+
+⚠️ **Bu paket SQL migration gerektiriyor:**
+
+1. Supabase Dashboard → SQL Editor → `migrations/v2.6.63-client-errors.sql` içeriğini yapıştır → Run
+2. Tablo + politikalar oluşur (idempotent)
+3. v2.6.63 kodunu deploy et
+
+Sıra önemli: önce SQL, sonra kod. Aksi halde kod insert denerken tablo yok → error fail (zaten swallow'lanır, ama hata loglanmaz).
+
+## Test (push sonrası)
+
+### Manuel hata tetikleme
+1. DevTools console:
+```js
+throw new Error('Test error from manual trigger');
+```
+2. Toast görmelisin: "Bir hata oluştu..."
+3. Supabase Dashboard → Table Editor → `client_errors` → en üst satır:
+   - `message`: "Test error from manual trigger"
+   - `app_version`: "2.6.63"
+   - `user_id`: senin user_id (login ise) veya NULL
+   - `context.view`: bulunduğun sayfa
+
+### Promise rejection
+```js
+Promise.reject(new Error('Test promise rejection'));
+```
+→ Tablo'da `unhandledrejection: Test promise rejection` satırı
+
+### Dedupe testi
+1. Aynı hatayı 3 kere fırlat (5 dk içinde)
+2. Tabloda sadece 1 satır olmalı
+
+### Rate limit
+1. Console'dan loop ile 50 hata fırlat:
+```js
+for (let i = 0; i < 50; i++) throw new Error('spam ' + i);
+```
+2. Tabloda max 30 satır olmalı (session cap)
+
+### PII korunuyor mu?
+1. Bir tarif kayıt sırasında error fırlat
+2. `context` ve `message` alanlarında tarif adı, ingredient adı **olmamalı**
+
+## Anonim hata raporlama
+
+User logout olsa bile anonim hata raporlanır (`user_id: NULL`). Bu sayede share sayfasındaki hatalar da yakalanır. RLS bu durumu özel olarak izin veriyor (`anon_insert` policy).
+
+## Geri alma
+
+Bu paket geri alınmak istenirse:
+1. v2.6.62'ye git → JS error reporter çalışmaz
+2. Tablo Supabase'de kalır (boş kalır, zarar yok)
+3. İstersen: `DROP TABLE client_errors CASCADE;` ile temizle
+
+## Risk
+
+Düşük. Hata reporter PII içermiyor, defensive yazıldı (kendisi throw edemez), rate-limited. Eğer Supabase yavaşsa veya tablo yoksa: insert fail olur, swallow'lanır → kullanıcı için fark yok.
+
+Tek risk: yanlışlıkla PII loglanıyor mu? Migration ile manuel testle kontrol edilmeli (yukarıdaki "PII korunuyor mu?" testi).
+
+---
+
+
 
 ## Sorun
 
