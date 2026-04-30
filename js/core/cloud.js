@@ -23,6 +23,95 @@
   let pendingSync = false;
   let onlineListenerAdded = false;
 
+  // v2.6.58 — Per-record merge helpers. The previous pull() did a
+  // shallow Object.assign({}, current, remote) which meant remote's
+  // `recipes` blob entirely replaced current's `recipes` blob. If the
+  // user had unsynced local edits (made offline, or while sync was in
+  // flight), those edits were silently lost on the next pull.
+  //
+  // The fix: for each user-edited record, compare updatedAt timestamps
+  // between local and remote, keep whichever is newer. Soft-deletions
+  // (_deletedAt) are treated as a normal update — if local deletion is
+  // newer than remote update, the deletion wins.
+
+  function _recordTs(rec) {
+    if (!rec || typeof rec !== 'object') return '';
+    return rec._deletedAt || rec.updatedAt || rec.createdAt || '';
+  }
+
+  function mergeRecordsByUpdatedAt(local, remote) {
+    // Both inputs: { id: record }. Returns merged map.
+    local = local || {};
+    remote = remote || {};
+    const out = {};
+    const ids = new Set();
+    Object.keys(local).forEach(function (id) { ids.add(id); });
+    Object.keys(remote).forEach(function (id) { ids.add(id); });
+    ids.forEach(function (id) {
+      const l = local[id];
+      const r = remote[id];
+      if (!l) { out[id] = r; return; }
+      if (!r) { out[id] = l; return; }
+      // Both exist — keep newer
+      out[id] = (_recordTs(l) > _recordTs(r)) ? l : r;
+    });
+    return out;
+  }
+
+  function mergeWsScopedTable(local, remote) {
+    // Both inputs: { wsId: { id: record } }
+    local = local || {};
+    remote = remote || {};
+    const out = {};
+    const wsIds = new Set();
+    Object.keys(local).forEach(function (id) { wsIds.add(id); });
+    Object.keys(remote).forEach(function (id) { wsIds.add(id); });
+    wsIds.forEach(function (wsId) {
+      out[wsId] = mergeRecordsByUpdatedAt(local[wsId], remote[wsId]);
+    });
+    return out;
+  }
+
+  function mergeArrayByIdAndTs(local, remote) {
+    // Used for waste log, costHistory, checklistSessions arrays under wsId.
+    // If items have an `id` field, union by id with newest timestamp.
+    // Otherwise fall back to the longer array (assumes append-only).
+    local = local || [];
+    remote = remote || [];
+    if (!local.length) return remote.slice();
+    if (!remote.length) return local.slice();
+    const sample = local[0] || remote[0];
+    if (sample && sample.id) {
+      const map = {};
+      local.forEach(function (x) { if (x && x.id) map[x.id] = x; });
+      remote.forEach(function (x) {
+        if (!x || !x.id) return;
+        const existing = map[x.id];
+        if (!existing) { map[x.id] = x; return; }
+        const lt = _recordTs(existing) || existing.at || '';
+        const rt = _recordTs(x) || x.at || '';
+        if (rt > lt) map[x.id] = x;
+      });
+      return Object.values(map);
+    }
+    // No id field — pick longer (assumes append-only logs)
+    return local.length >= remote.length ? local.slice() : remote.slice();
+  }
+
+  function mergeWsScopedArrayTable(local, remote) {
+    // For tables with shape: { wsId: [...records...] }
+    local = local || {};
+    remote = remote || {};
+    const out = {};
+    const wsIds = new Set();
+    Object.keys(local).forEach(function (id) { wsIds.add(id); });
+    Object.keys(remote).forEach(function (id) { wsIds.add(id); });
+    wsIds.forEach(function (wsId) {
+      out[wsId] = mergeArrayByIdAndTs(local[wsId], remote[wsId]);
+    });
+    return out;
+  }
+
   const cloud = {
     ready: false,
 
@@ -296,8 +385,43 @@
               // Merge tombstones too (union)
               const mergedTombstones = Object.assign({}, remote._deletedWorkspaces || {}, current._deletedWorkspaces || {});
 
-              // Merge strategy: cloud data overwrites recipe/ingredient/etc. but keep user/_meta/workspaces local-aware
-              const merged = Object.assign({}, current, remote, {
+              // v2.6.58 — Per-record merge for user-edited tables.
+              // Previously remote ENTIRELY replaced local for these tables,
+              // losing any unsynced local edits. Now we merge by updatedAt
+              // per record, so newest write wins.
+              //
+              // Tables in this list have `updatedAt` on every record:
+              const HIGH_EDIT_WS_TABLES = [
+                'recipes', 'ingredients', 'menus', 'events', 'suppliers',
+                'canvases', 'shoppingLists', 'checklistTemplates',
+                'stockCountHistory'
+              ];
+              // Tables that are arrays under wsId (append-only logs):
+              const ARRAY_WS_TABLES = ['waste', 'checklistSessions'];
+              // Tables without per-record timestamps — keep remote-wins for
+              // these (existing behavior). Inventory levels change via
+              // counts not edits, so cloud is generally authoritative.
+              const REMOTE_WINS_TABLES = [
+                'inventory', 'pendingStockCount',
+                'haccpLogs', 'haccpUnits', 'haccpReadings', 'haccpCookCool'
+              ];
+
+              const mergedTables = {};
+              HIGH_EDIT_WS_TABLES.forEach(function (tbl) {
+                mergedTables[tbl] = mergeWsScopedTable(current[tbl], remote[tbl]);
+              });
+              ARRAY_WS_TABLES.forEach(function (tbl) {
+                mergedTables[tbl] = mergeWsScopedArrayTable(current[tbl], remote[tbl]);
+              });
+              REMOTE_WINS_TABLES.forEach(function (tbl) {
+                mergedTables[tbl] = (remote[tbl] !== undefined) ? remote[tbl] : current[tbl];
+              });
+              // Top-level cost history (not workspace-scoped)
+              mergedTables.costHistory = mergeArrayByIdAndTs(current.costHistory, remote.costHistory);
+
+              // Merge strategy: per-table merge for user data, then overlay
+              // workspace metadata, user, _meta, etc.
+              const merged = Object.assign({}, current, remote, mergedTables, {
                 workspaces: mergedWorkspaces,
                 _deletedWorkspaces: mergedTombstones,
                 // Keep activeWorkspaceId from local if it points to a workspace we have

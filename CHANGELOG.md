@@ -1,4 +1,155 @@
-# v2.6.57 — Backup restore: schema validation + preview (veri güvenliği)
+# v2.6.58 — Cloud pull merge: per-record last-write-wins (KRİTİK veri kaybı önleme)
+
+## Sorun
+
+`js/core/cloud.js` `pull()` fonksiyonu state merge'ini şöyle yapıyordu:
+
+```js
+const merged = Object.assign({}, current, remote, { ... });
+```
+
+`Object.assign` **shallow merge** — yani top-level her key için sağ operand sol'u TAMAMEN eziyor. Bu, `recipes` alanı için şu anlama geliyor:
+
+```
+current.recipes = {                  remote.recipes = {
+  'ws_1': {                            'ws_1': {
+    'r_old': { ... },                    'r_old': { ... }
+    'r_LOCAL_NEW': { ... }  ← ←        }
+  }                                  }
+}                                    
+Object.assign result: remote.recipes wins → r_LOCAL_NEW kaybolur ❌
+```
+
+### Veri kaybı senaryoları
+
+1. **Offline edit + senkronize öncesi pull**:
+   - Şef telefonu offline'da tarif yazar
+   - Online olduğunda bir sebeple pull tetiklenir (token refresh, SIGNED_IN event)
+   - Pull stale cloud state çeker, replace eder → yeni tarif gider
+2. **Hızlı sayfa yenileme**:
+   - Şef tarif kaydeder, debounced sync henüz upload etmemiş (400ms gecikme)
+   - Şef hızlıca F5 yapar
+   - Boot sırasında pull tetiklenir, eski cloud state ile state'i ezer → yeni tarif gider
+3. **Çoklu sekme**:
+   - İki sekme açık, biri yazar (queueSync), diğeri pull eder (auto event)
+   - İkinci sekmenin pull'u birinci sekmenin değişikliklerini ezer
+
+Tüm bunlar **sessiz veri kaybı** — kullanıcı fark etmez, recipe yokolur.
+
+## Çözüm
+
+Per-record merge:
+
+### 3 yeni helper (cloud.js):
+
+**`mergeRecordsByUpdatedAt(local, remote)`**
+- İki record map'i alır (`{ id: record }`)
+- Her id için: sadece bir tarafta varsa onu al, ikisinde de varsa **newer `updatedAt`** olanı tut
+- `_recordTs(rec)` helper: `_deletedAt > updatedAt > createdAt` öncelik sırası
+
+**`mergeWsScopedTable(local, remote)`**
+- Workspace-scoped tablolar için (`{ wsId: { id: record } }`)
+- Her wsId için yukarıdaki record merge'i çağırır
+
+**`mergeArrayByIdAndTs(local, remote)`**
+- Array tablolar için (waste log, costHistory, checklistSessions)
+- Item'ların `id` field'ı varsa: union by id + newest timestamp
+- Yoksa: longer wins (append-only varsayımı)
+
+**`mergeWsScopedArrayTable(local, remote)`**
+- `{ wsId: [...] }` tablolar için (waste, checklistSessions)
+
+### Tablo kategorileri
+
+```js
+HIGH_EDIT_WS_TABLES = [recipes, ingredients, menus, events, suppliers,
+                       canvases, shoppingLists, checklistTemplates,
+                       stockCountHistory];
+// Per-record updatedAt merge → SAFE FROM DATA LOSS
+
+ARRAY_WS_TABLES = [waste, checklistSessions];
+// Union by id with timestamp → SAFE
+
+REMOTE_WINS_TABLES = [inventory, pendingStockCount, haccpLogs/Units/Readings/CookCool];
+// Mevcut davranış korundu — bu tablolarda updatedAt yok, last-write-wins
+// per-record yapılamaz. Cloud genellikle authoritative (multi-user count'lar)
+
+costHistory  → mergeArrayByIdAndTs (top-level array)
+```
+
+### Pull akışı yeni hali
+
+```js
+const mergedTables = {};
+HIGH_EDIT_WS_TABLES.forEach(tbl => mergedTables[tbl] = mergeWsScopedTable(current[tbl], remote[tbl]));
+ARRAY_WS_TABLES.forEach(tbl => mergedTables[tbl] = mergeWsScopedArrayTable(current[tbl], remote[tbl]));
+REMOTE_WINS_TABLES.forEach(tbl => mergedTables[tbl] = remote[tbl] !== undefined ? remote[tbl] : current[tbl]);
+mergedTables.costHistory = mergeArrayByIdAndTs(current.costHistory, remote.costHistory);
+
+const merged = Object.assign({}, current, remote, mergedTables, { workspaces, _deletedWorkspaces, ... });
+```
+
+## Davranış
+
+| Senaryo | Önce | Sonra |
+|---------|------|-------|
+| Offline yazılan tarif, online'da pull | **Kaybolur** | Korunur |
+| Hızlı F5, sync gecikmiş | **Kaybolur** | Korunur |
+| Çoklu sekme çakışması | **Kaybolur** | Newest wins |
+| İki cihazdan aynı tarifi düzenleme | Last-pull wins | Newest updatedAt wins |
+| Cihaz A silmiş, cihaz B düzenlemiş | Last-pull wins | Newer timestamp wins |
+| Workspace silme tombstone'u | Korunur (zaten) | Korunur (aynı) |
+
+## Test (push sonrası — KRİTİK)
+
+### Senaryo 1: Offline → Pull
+1. Şu an oturum açıksan **çıkış yap → giriş yap** (pull tetiklensin)
+2. Veri yerinde mi? ✓
+3. **Network'ü offline'a al** (DevTools → Network → Offline)
+4. Bir tarif düzenle, kaydet
+5. Network'ü online'a al
+6. F5 yap
+7. Tarif düzenlemen orada **olmalı** (önce kaybolurdu)
+
+### Senaryo 2: Çakışma
+1. Tarayıcı A: bir tarifi `Mantı` → `Mantı v2` yap, kaydet
+2. **Anlık olarak** Tarayıcı B (gizli pencere, aynı hesap): aynı tarifi `Mantı v3` yap, kaydet
+3. İkisinde de F5 yap
+4. **Newer updatedAt kazanmalı** (B sonra kaydetti diyelim → tüm cihazlarda `Mantı v3`)
+
+### Senaryo 3: Soft delete vs edit
+1. Cihaz A: bir tarifi sil (trash'e)
+2. Cihaz B: aynı tarifi düzenle (sonra)
+3. Pull merge → B'nin düzenlemesi kazanmalı (newer updatedAt > A'nın _deletedAt)
+4. Tersi: B düzenler, A sonra siler → A'nın silmesi kazanmalı
+
+### Senaryo 4: Workspace tombstone
+1. Cihaz A: bir workspace sil (tombstone'a girer)
+2. Cihaz B (offline iken): aynı workspace'te tarif düzenle
+3. B online → pull → workspace tombstone'da olduğu için **wipe edilmeli** (tombstone wins, doğru davranış)
+
+### Senaryo 5: Tıkır tıkır mevcut akış
+1. Tek cihazda kullan, tarif ekle/düzenle/sil
+2. Hiçbir regression olmamalı (her tek-cihaz kullanım aynı)
+
+## Risk
+
+**Yüksek-orta risk paketidir** — sync mantığı altyapı. Eğer bug çıkarsa:
+- Veri kaybı (tersine!) — newer record yanlış kaybedilir
+- Veri çoklama — aynı record iki workspace'te kalır
+- Resurrection — silinmiş kayıtlar geri gelir
+
+Bu yüzden test senaryoları ZORUNLU. Production deploy öncesi test ortamında 5 senaryoyu da geçmesi gerekir.
+
+Geri alma planı: bu paketi v2.6.57'ye geri al, eski "remote wins" davranışı döner. Bu pakette eklenen 4 helper kullanılmıyor olur ama dosyada kalır (zarar yok).
+
+## Notlar
+
+Bu paket **multi-device sync mimarisinin (#8)** ön hazırlık adımıdır. Ana mimari değişiklik (per-table sync + Realtime channel) hala bekliyor — ama bu fix bile mevcut tek-blob mimarisinde **veri kaybı riskini büyük ölçüde azaltıyor**. Premium başlamadan önce ana mimari de yapılmalı, ama bu paket acil veri kaybını şu an çözüyor.
+
+---
+
+
 
 ## Sorun
 
