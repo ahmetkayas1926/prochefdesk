@@ -1,4 +1,78 @@
-# v2.6.65 — Offline foto migration: dataURL'leri Storage'a taşı
+# v2.6.66 — Multi-device sync Faz 1: Per-table SQL şema (additive)
+
+## Amaç
+
+Şu an tüm kullanıcı verisi `user_data.value` jsonb blob'unun içinde. Multi-device sync için bu yetersiz — her cihaz tüm blob'u indir-üzerine-yaz mantığında çalışıyor, çakışma + sessiz veri kaybı riski yüksek.
+
+Bu paket per-table sync mimarisinin **temelini atıyor**: her record (recipe, ingredient, menu, vs.) artık kendi satırında, kendi `updated_at`'ı ile cloud'da tutulacak.
+
+## Bu pakette ne var
+
+**Sadece SQL migration. Kod değişikliği yok.**
+
+11 yeni Supabase tablosu:
+- `workspaces` — top-level workspace metadata
+- `recipes`, `ingredients`, `menus`, `events`, `suppliers`, `canvases`, `shopping_lists`, `checklist_templates` — workspace-scoped
+- `inventory` — workspace + ingredient pair
+- `user_prefs` — top-level user preferences (locale, theme, vs.)
+
+Her tabloda:
+- `id` text PK (mevcut PCD ID formatı)
+- `user_id` uuid (RLS için)
+- `workspace_id` text (workspace-scoped tablolarda)
+- `data` jsonb (tüm record içeriği)
+- `created_at`, `updated_at`, `deleted_at` (soft-delete için)
+
+### RLS politikaları
+Her tablo için 4 politika: `select_own`, `insert_own`, `update_own`, `delete_own`. Hepsi `auth.uid() = user_id` check'i. Anon erişim sıfır.
+
+### updated_at trigger
+Her UPDATE'te otomatik bump (server-side, kod buna güvenebilir).
+
+### Realtime publication
+Faz 3'te kullanılacak. Tablolar `supabase_realtime` publication'ına eklendi.
+
+## Mevcut sistem etkilenmedi
+
+- **`user_data` tablosu dokunulmadı** — tek-blob sync hala çalışıyor
+- Mevcut kod (cloud.js) hala `user_data`'ya yazıyor
+- Kullanıcı hiçbir değişiklik hissetmiyor
+
+Yeni tablolar **boş**. Faz 4'te (migration script) mevcut blob veri buraya taşınacak.
+
+## Push öncesi yapılacak
+
+⚠️ **SQL gerekli:** Supabase Dashboard → SQL Editor → `migrations/v2.6.66-per-table-sync-schema.sql` içeriğini yapıştır → Run.
+
+Beklenen sonuç: "Success. No rows returned"
+
+## Test
+
+SQL Editor'da şu sorguyu çalıştır:
+
+```sql
+SELECT tablename FROM pg_tables WHERE schemaname = 'public'
+AND tablename IN ('workspaces','recipes','ingredients','menus','events',
+                  'suppliers','canvases','shopping_lists',
+                  'checklist_templates','inventory','user_prefs')
+ORDER BY tablename;
+```
+
+11 satır dönmeli (alfabetik sırada).
+
+## Risk
+
+Sıfır. Tamamen additive (mevcut tablolara dokunmuyor). Yeni tablolar boş. Eski sync akışı aynen çalışıyor.
+
+## Sonraki paketler
+
+- **Faz 2** (v2.6.67): `cloud.js` refactor — yeni tablolara per-table push/pull
+- **Faz 3** (v2.6.68): Supabase Realtime channel — diğer cihazdan değişiklikler anında gelsin
+- **Faz 4** (v2.6.69): Mevcut tek-blob veriyi yeni şemaya migrate et + eski sync'i devre dışı bırak
+
+---
+
+
 
 ## Sorun
 
