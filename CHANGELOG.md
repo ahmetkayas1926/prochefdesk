@@ -1,4 +1,47 @@
-# v2.6.71 — Multi-device sync Faz 4.1: Mevcut blob → per-table migration
+# v2.6.72 — Multi-device sync Faz 4.2: Per-table pull birincil
+
+## Amaç
+
+Pull akışında öncelik değişti: artık **yeni tablolar birincil veri kaynağı**, eski blob fallback.
+
+## Davranış
+
+`cloud.pull()` fonksiyonu çağrıldığında:
+
+1. **Önce** per-table'dan veri çekmeye çalışır (`PCD.cloudPerTable.pullAll()`)
+2. Eğer workspaces/recipes/ingredients'tan en az birinde veri varsa → **per-table state'i uygula, blob pull'u atla**
+3. Eğer per-table boşsa veya hata fırlatırsa → eski blob pull akışına devam (mevcut tüm logic, ghost workspace fix, last-write-wins merge, vs.)
+
+## Avantajları
+
+- **Sıfır risk**: per-table henüz boşsa eski sistem otomatik kullanılır
+- **Multi-device gerçek anlamda çalışır**: pull artık her cihazda farklı recordlardaki en yeni updatedAt'ı doğru alıyor
+- **Performans**: per-table pull paralel SELECT'lerle (11 tablo aynı anda) genellikle blob pull'dan hızlı
+
+## Backward compatibility
+
+- `cloud.pull()` aynı public API
+- `cloud.pullLegacyOnly()` ve `cloud.pullPerTableOnly()` debug için eklendi (kullanılmıyor)
+
+## Test (push sonrası)
+
+1. Hard refresh
+2. DevTools Console aç
+3. `cloud-pertable.js`'in pull başarılı olduğunu görmek için:
+   ```
+   PCD.cloud.pullPerTableOnly().then(s => console.log('per-table state:', s))
+   ```
+4. Recipe listesi normal şekilde dolu görünmeli (per-table'dan geliyor)
+
+## Risk
+
+Düşük-orta. Pull, sync'in en kritik akışı. Per-table boşsa fallback otomatik (kullanıcı veri kaybetmez). Per-table doluysa, multi-device case'leri için Faz 1-3'te test edildi.
+
+Geri alma: bu paketi v2.6.71'e geri al → eski blob pull tek başına çalışmaya devam.
+
+---
+
+
 
 ## Amaç
 
