@@ -281,42 +281,6 @@
         if (!cloud.ready) return resolve(null);
         const user = PCD.store.get('user');
         if (!user || !user.id) return resolve(null);
-
-        // v2.6.72 — Per-table is now primary. Try new tables first.
-        // If they have meaningful content, apply and skip the legacy blob.
-        // If empty (e.g. user not yet migrated), fall through to legacy.
-        const _perTableTry = (PCD.cloudPerTable && PCD.cloudPerTable.pullAll)
-          ? PCD.cloudPerTable.pullAll()
-          : Promise.resolve(null);
-
-        _perTableTry.then(function (perTableState) {
-          const hasData = perTableState && (
-            (perTableState.workspaces && Object.keys(perTableState.workspaces).length > 0) ||
-            (perTableState.recipes && Object.keys(perTableState.recipes).length > 0) ||
-            (perTableState.ingredients && Object.keys(perTableState.ingredients).length > 0)
-          );
-
-          if (hasData) {
-            PCD.log && PCD.log('pull: using per-table data (primary)');
-            const current = PCD.store.get();
-            const merged = Object.assign({}, current, perTableState, {
-              user: current.user,
-              _meta: Object.assign({}, current._meta, { lastSyncAt: new Date().toISOString() }),
-              _deletedWorkspaces: current._deletedWorkspaces || {},
-            });
-            PCD.store.replaceAll(merged);
-            return resolve(merged);
-          }
-
-          // Per-table empty → fall through to legacy blob pull below
-          PCD.log && PCD.log('pull: per-table empty, falling back to blob');
-          _runLegacyPull();
-        }).catch(function (e) {
-          PCD.warn && PCD.warn('per-table pull threw, falling back to blob', e);
-          _runLegacyPull();
-        });
-
-        function _runLegacyPull() {
         supabase.from('user_data').select('*')
           .eq('user_id', user.id).eq('key', 'state').maybeSingle()
           .then(function (res) {
@@ -492,7 +456,6 @@
             }
           })
           .catch(function (e) { PCD.err('pull exception', e); reject(e); });
-        }  // close _runLegacyPull
       });
     },
 
