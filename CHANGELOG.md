@@ -1,4 +1,88 @@
-# v2.6.66 — Multi-device sync Faz 1: Per-table SQL şema (additive)
+# v2.6.67 — Multi-device sync Faz 2: cloud.js per-table çift yazma
+
+## Amaç
+
+Faz 1'de oluşturulan 11 yeni tabloya (recipes, ingredients, vs.) **paralel olarak yazma** eklendi. Mevcut tek-blob sync (cloud.js) **aynen çalışmaya devam ediyor** — yeni sistem üstüne ekleniyor.
+
+## Strateji: Çift yazma fazı
+
+Şu an her store mutation'ı (recipe save, ingredient delete, vs.):
+1. localStorage'a yazılır (eskisi gibi)
+2. cloud.js debounce ile `user_data.value` blob'una push (eskisi gibi)
+3. **YENİ:** `cloud-pertable.js` debounce ile `recipes`, `ingredients`, vs. tablolarına push
+
+Avantaj: Bir bug çıkarsa eski blob fallback olarak çalışıyor. Faz 4'te eski sistem kapatılacak.
+
+## Yeni dosya: `js/core/cloud-pertable.js`
+
+- Mutate API: `queueUpsert(table, id, wsId, data)` ve `queueDelete(table, id, wsId)`
+- Dedupe queue + 600ms debounce + batch upsert
+- Online listener: queue tutuyor, internet gelince auto-flush
+- `pullAll()` — Faz 4'te kullanılacak
+
+## Store hook'ları
+
+5 mutation noktasında `cloudPerTable.queueUpsert` çağrısı eklendi:
+- `upsertRecipe`
+- `deleteRecipe` (soft-delete = upsert with `_deletedAt`)
+- `upsertIngredient`
+- `deleteIngredient`
+- `upsertWorkspace`
+- `archiveWorkspace`
+- `setActiveWorkspaceId` (user_prefs'e gider)
+
+Her mutation hem `user_data` blob'una hem yeni tabloya gidiyor. Eğer biri başarısız olursa diğeri yine de güncel.
+
+## Kapsam dışı (Faz 4'te yapılacak)
+
+Şu an HOOK eklenmemiş yerler — bunlar Faz 4'te toplu migration ile geçiş yaparken yapılacak:
+- `deleteRecipes` (bulk)
+- `purgeFromTrash` (kalıcı silme)
+- `autoPurgeOldTrash`
+- `upsertMenu`, `deleteMenu`
+- `upsertEvent`, `deleteEvent`
+- `upsertSupplier`, `deleteSupplier`
+- `upsertCanvas`, `deleteCanvas`
+- `upsertShoppingList`, `deleteShoppingList`
+- `upsertChecklistTemplate`, `deleteChecklistTemplate`
+- Inventory mutations
+- prefs/onboarding/plan/costHistory updates
+
+Bu paket ana akışları (recipe, ingredient, workspace) kapsıyor. Faz 4'te kalanlar otomatik migration ile kapsanacak.
+
+## Push öncesi yapılacak
+
+Yok. Sadece kod paketi. SQL değişikliği Faz 1'de yapılmıştı.
+
+## Test (push sonrası)
+
+1. Uygulamada bir tarif kaydet
+2. **30 saniye bekle** (debounce + flush)
+3. Supabase Dashboard → Table Editor → `recipes` tablosu
+4. Tarifin satır olarak görünmeli (id, user_id, workspace_id, data)
+5. Aynı tarifi düzenle, kaydet → Table Editor'da `updated_at` değişmeli
+6. Aynı tarifi sil → satır kalmalı ama `data._deletedAt` set olmalı (soft delete)
+
+Workspace test:
+1. Yeni workspace oluştur
+2. Table Editor → `workspaces` → yeni satır görünmeli
+
+Ingredient test:
+1. Yeni malzeme ekle
+2. Table Editor → `ingredients` → yeni satır
+
+## Risk
+
+Düşük. Mevcut sistem dokunulmadı. Yeni kod sessizce arka planda yazıyor — bir hata olursa toast değil sadece console.warn. Kullanıcı hiç fark etmiyor.
+
+## Sonraki
+
+- Faz 3 (v2.6.68): Realtime channel — diğer cihazdan değişiklikler anında gelir
+- Faz 4 (v2.6.69): Mevcut blob veriyi yeni şemaya migrate, eski sistemi devre dışı bırak
+
+---
+
+
 
 ## Amaç
 

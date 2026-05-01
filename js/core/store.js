@@ -585,6 +585,14 @@
       // Immediate localStorage write (bypass debounce) so a reload right after won't lose this
       flushSync();
       persist();
+      // v2.6.67 — Per-table sync (user_prefs holds activeWorkspaceId)
+      if (PCD.cloudPerTable) PCD.cloudPerTable.queueUpsert('user_prefs', null, null, {
+        activeWorkspaceId: wsId,
+        prefs: state.prefs,
+        plan: state.plan,
+        onboarding: state.onboarding,
+        costHistory: state.costHistory,
+      });
       return true;
     },
     listWorkspaces: function (includeArchived) {
@@ -606,6 +614,8 @@
       emit('workspaces', next, null);
       flushSync();
       persist();
+      // v2.6.67 — Per-table sync
+      if (PCD.cloudPerTable) PCD.cloudPerTable.queueUpsert('workspaces', ws.id, null, ws);
       return ws;
     },
     archiveWorkspace: function (wsId, archived) {
@@ -623,6 +633,8 @@
       emit('workspaces', next, null);
       flushSync();
       persist();
+      // v2.6.67 — Per-table sync
+      if (PCD.cloudPerTable) PCD.cloudPerTable.queueUpsert('workspaces', wsId, null, next[wsId]);
       return true;
     },
     deleteWorkspace: function (wsId) {
@@ -725,6 +737,8 @@
           PCD.photoStorage.deleteByUrl(_prevPhoto);
         }
       }
+      // v2.6.67 — Per-table sync (paralel olarak yeni tablolara yaz)
+      if (PCD.cloudPerTable) PCD.cloudPerTable.queueUpsert('recipes', recipe.id, wsId, recipe);
       return recipe;
     },
     // v2.6.65 — Low-level recipe upsert that BYPASSES photo cleanup,
@@ -755,6 +769,8 @@
       state.recipes = recipes;
       emit('recipes', recipes[wsId], null);
       persist();
+      // v2.6.67 — Per-table sync (soft delete = upsert with deleted_at)
+      if (PCD.cloudPerTable) PCD.cloudPerTable.queueUpsert('recipes', id, wsId, recipes[wsId][id]);
       return true;
     },
     deleteRecipes: function (ids) {
@@ -935,6 +951,8 @@
       state.ingredients = ingredients;
       emit('ingredients', wsIngs, null);
       persist();
+      // v2.6.67 — Per-table sync
+      if (PCD.cloudPerTable) PCD.cloudPerTable.queueUpsert('ingredients', ing.id, wsId, ing);
       return ing;
     },
     deleteIngredient: function (id) {
@@ -948,6 +966,8 @@
       state.ingredients = ingredients;
       emit('ingredients', newWsIngs, null);
       persist();
+      // v2.6.67 — Per-table sync
+      if (PCD.cloudPerTable) PCD.cloudPerTable.queueUpsert('ingredients', id, wsId, newWsIngs[id]);
       return true;
     },
     deleteIngredients: function (ids) {
