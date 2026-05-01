@@ -41,6 +41,9 @@
                     }
                   });
                 }
+                // v2.6.71 — One-time migration of existing blob data to per-table.
+                // Idempotent: subsequent runs are no-op (state.flag prevents re-trigger).
+                _migrateToPerTableOnce();
               }).catch(function (e) {
                 PCD.warn('Cloud pull on sign-in failed:', e && e.message);
               });
@@ -73,6 +76,9 @@
                 }
               });
             }
+          }).then(function () {
+            // v2.6.71 — One-time per-table migration after pull.
+            _migrateToPerTableOnce();
           }).then(function () {
             return PCD.cloud.fetchPlan();
           }).then(function (plan) {
@@ -271,4 +277,33 @@
   };
 
   PCD.auth = auth;
+
+  // v2.6.71 — One-time bulk migration: copy current blob state to new
+  // per-table tables. Idempotent guarded by _meta.migratedToPerTable
+  // flag in store. Best-effort — failures don't block the user.
+  function _migrateToPerTableOnce() {
+    try {
+      const meta = PCD.store.get('_meta') || {};
+      if (meta.migratedToPerTable) {
+        // Already done. Skip.
+        return;
+      }
+      if (!PCD.cloudPerTable || !PCD.cloudPerTable.migrateAllToPerTable) {
+        return;
+      }
+      PCD.log && PCD.log('per-table migration: starting');
+      PCD.cloudPerTable.migrateAllToPerTable().then(function (result) {
+        if (result.errors && result.errors.length > 0) {
+          PCD.warn && PCD.warn('per-table migration: errors', result.errors);
+        }
+        if (result.totalCount > 0 && (!result.errors || result.errors.length === 0)) {
+          // Mark as done — never run again on this device
+          PCD.store.update('_meta', { migratedToPerTable: true, migratedAt: new Date().toISOString() });
+          PCD.log && PCD.log('per-table migration: completed', result.totalCount, 'rows');
+        }
+      });
+    } catch (e) {
+      PCD.warn && PCD.warn('per-table migration exception', e);
+    }
+  }
 })();

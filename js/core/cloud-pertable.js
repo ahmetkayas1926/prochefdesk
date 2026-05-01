@@ -280,12 +280,166 @@
     });
   }
 
+  // v2.6.71 — Bulk migration: mevcut store state'inin tamamını yeni
+  // tablolara taşı. Idempotent: zaten taşınmış kayıtları skip etmiyor,
+  // upsert yapıyor (Supabase upsert dedupe). Tek seferde tüm veriyi
+  // gönderir, güvenli.
+  //
+  // Returns Promise<{ totalCount, errors }>
+  function migrateAllToPerTable() {
+    return new Promise(function (resolve) {
+      if (!isReady()) return resolve({ totalCount: 0, errors: ['not ready'] });
+      const supabase = PCD.cloud.getClient();
+      const user = PCD.store.get('user');
+      const result = { totalCount: 0, errors: [] };
+
+      // Build all rows from current state
+      const wsTablesMap = {
+        recipes: 'recipes',
+        ingredients: 'ingredients',
+        menus: 'menus',
+        events: 'events',
+        suppliers: 'suppliers',
+        canvases: 'canvases',
+        shoppingLists: 'shopping_lists',
+        checklistTemplates: 'checklist_templates',
+      };
+
+      const promises = [];
+
+      // 1) Workspaces
+      const workspaces = PCD.store.get('workspaces') || {};
+      const wsRows = Object.values(workspaces).map(function (w) {
+        return {
+          id: w.id,
+          user_id: user.id,
+          name: w.name || '',
+          concept: w.concept || null,
+          role: w.role || null,
+          city: w.city || null,
+          color: w.color || null,
+          period_start: w.periodStart || null,
+          period_end: w.periodEnd || null,
+          archived: !!w.archived,
+          is_active: false,
+          deleted_at: w._deletedAt || null,
+          data: w,
+        };
+      });
+      if (wsRows.length) {
+        promises.push(
+          supabase.from('workspaces').upsert(wsRows, { onConflict: 'id' })
+            .then(function (res) {
+              if (res.error) result.errors.push('workspaces: ' + res.error.message);
+              else result.totalCount += wsRows.length;
+            })
+            .catch(function (e) { result.errors.push('workspaces ex: ' + (e.message || e)); })
+        );
+      }
+
+      // 2) Workspace-scoped tables
+      Object.keys(wsTablesMap).forEach(function (stateKey) {
+        const sqlTable = wsTablesMap[stateKey];
+        const data = PCD.store.get(stateKey) || {};
+        const allRows = [];
+        Object.keys(data).forEach(function (wsId) {
+          const ws = data[wsId] || {};
+          Object.keys(ws).forEach(function (id) {
+            const item = ws[id];
+            if (!item || !id) return;
+            allRows.push({
+              id: id,
+              user_id: user.id,
+              workspace_id: wsId,
+              data: item,
+              deleted_at: item._deletedAt || null,
+            });
+          });
+        });
+        if (allRows.length) {
+          // Batch into chunks of 500 to avoid PostgREST payload limits
+          const CHUNK_SIZE = 500;
+          for (let i = 0; i < allRows.length; i += CHUNK_SIZE) {
+            const chunk = allRows.slice(i, i + CHUNK_SIZE);
+            promises.push(
+              supabase.from(sqlTable).upsert(chunk, { onConflict: 'id' })
+                .then(function (res) {
+                  if (res.error) result.errors.push(sqlTable + ': ' + res.error.message);
+                  else result.totalCount += chunk.length;
+                })
+                .catch(function (e) { result.errors.push(sqlTable + ' ex: ' + (e.message || e)); })
+            );
+          }
+        }
+      });
+
+      // 3) Inventory (workspace+ingredient pair)
+      const inventoryAll = PCD.store.get('inventory') || {};
+      const invRows = [];
+      Object.keys(inventoryAll).forEach(function (wsId) {
+        const ws = inventoryAll[wsId] || {};
+        // Detect legacy flat shape (no wsId namespace)
+        if (ws && (ws.stock !== undefined || ws.parLevel !== undefined)) return;
+        Object.keys(ws).forEach(function (ingId) {
+          const item = ws[ingId];
+          if (!item) return;
+          invRows.push({
+            id: 'inv_' + wsId + '_' + ingId,  // synthetic stable PK
+            user_id: user.id,
+            workspace_id: wsId,
+            ingredient_id: ingId,
+            data: item,
+          });
+        });
+      });
+      if (invRows.length) {
+        const CHUNK = 500;
+        for (let i = 0; i < invRows.length; i += CHUNK) {
+          const chunk = invRows.slice(i, i + CHUNK);
+          promises.push(
+            supabase.from('inventory').upsert(chunk, { onConflict: 'id' })
+              .then(function (res) {
+                if (res.error) result.errors.push('inventory: ' + res.error.message);
+                else result.totalCount += chunk.length;
+              })
+              .catch(function (e) { result.errors.push('inventory ex: ' + (e.message || e)); })
+          );
+        }
+      }
+
+      // 4) User prefs (single row)
+      const prefsRow = {
+        user_id: user.id,
+        data: {
+          prefs: PCD.store.get('prefs') || {},
+          plan: PCD.store.get('plan') || 'free',
+          onboarding: PCD.store.get('onboarding') || {},
+          costHistory: PCD.store.get('costHistory') || [],
+        },
+        active_workspace_id: PCD.store.get('activeWorkspaceId') || null,
+      };
+      promises.push(
+        supabase.from('user_prefs').upsert([prefsRow], { onConflict: 'user_id' })
+          .then(function (res) {
+            if (res.error) result.errors.push('user_prefs: ' + res.error.message);
+            else result.totalCount += 1;
+          })
+          .catch(function (e) { result.errors.push('user_prefs ex: ' + (e.message || e)); })
+      );
+
+      Promise.all(promises).then(function () {
+        resolve(result);
+      });
+    });
+  }
+
   // ============ PUBLIC API ============
   PCD.cloudPerTable = {
     queueUpsert: queueUpsert,
     queueDelete: queueDelete,
     flushNow: flushNow,
     pullAll: pullAll,
+    migrateAllToPerTable: migrateAllToPerTable,
     // Re-flush queued items when back online
     onOnline: function () {
       if (queue.length) scheduleFlush();

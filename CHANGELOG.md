@@ -1,4 +1,62 @@
-# v2.6.70 — Multi-device sync Faz 3 düzeltme: View auto-refresh
+# v2.6.71 — Multi-device sync Faz 4.1: Mevcut blob → per-table migration
+
+## Amaç
+
+Mevcut tüm kullanıcı verisi `user_data.value` jsonb blob'unun içinde. Faz 1-3'te yeni tabloları yarattık ama **eski veriler hala blob'da**. Bu paket onları bir kerelik yeni tablolara kopyalar.
+
+Bundan sonra:
+- Eski blob: aynen duruyor (silmiyoruz, fallback olarak kalır)
+- Yeni tablolar: dolu ve günceldir
+- Çift yazma: paralel devam eder (Faz 2'deki gibi)
+
+## Strateji: Idempotent + best-effort
+
+Login sonrası bir kerelik tetiklenir. Her kullanıcı için yalnızca ilk login'de çalışır:
+
+```
+state._meta.migratedToPerTable === true → skip
+```
+
+Migration başarılı olursa flag set edilir. Sonraki login'lerde no-op.
+
+## Yeni fonksiyon: `cloudPerTable.migrateAllToPerTable()`
+
+Mevcut store state'inden tüm kayıtları okur, `upsert` ile yeni tablolara yazar:
+- workspaces (flat columns + data)
+- recipes, ingredients, menus, events, suppliers, canvases, shopping_lists, checklist_templates (workspace-scoped)
+- inventory (synthetic id: `inv_{wsId}_{ingId}`)
+- user_prefs (single row, prefs+plan+onboarding+costHistory+activeWorkspaceId)
+
+Chunk size: 500 row/upsert. PostgREST payload limit'lerini geçmez.
+
+## Tetikleme noktaları
+
+- `auth.js` — SIGNED_IN event sonrası cloud pull'dan sonra
+- `auth.js` — Existing session boot sonrası cloud pull'dan sonra
+
+İkisi de `_migrateToPerTableOnce()` çağırır. Flag check yapıyor → idempotent.
+
+## Push öncesi yapılacak
+
+Yok. Sadece kod paketi.
+
+## Test (push sonrası)
+
+1. Hard refresh (Ctrl+Shift+R)
+2. Bir kaç saniye bekle
+3. Supabase Dashboard → Table Editor → recipes/ingredients/menus/events/suppliers/canvases/shopping_lists/checklist_templates/inventory/workspaces/user_prefs
+
+Mevcut tüm verilerin yeni tablolara kopyalandığını görmelisin. Workspace'teki tüm tarifler, malzemeler, vs.
+
+## Risk
+
+Düşük. Bulk upsert idempotent. Eğer migration sırasında bir tablo için hata olursa diğerleri devam eder. Hata varsa flag set edilmiyor → bir sonraki login'de tekrar denenir.
+
+Geri alma: bu paketi v2.6.70'e geri al → migration tetiklenmez. Yeni tablolar yine de dolu kalır (zarar yok).
+
+---
+
+
 
 ## Sorun
 
