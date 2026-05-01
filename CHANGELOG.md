@@ -1,4 +1,73 @@
-# v2.6.68 — Multi-device sync Faz 3: Realtime channel
+# v2.6.69 — Multi-device sync Faz 3.5: Generic table hook'ları
+
+## Amaç
+
+v2.6.67'de hook'lar sadece `recipes`, `ingredients`, `workspaces`'a eklenmişti. Bu pakette **kalan workspace-scoped tabloların hepsi** kapsanıyor: menus, events, suppliers, canvases, shopping_lists, checklist_templates.
+
+## Yaklaşım
+
+Bu tablolar için ayrı `upsertMenu`/`deleteMenu`/`upsertEvent`/... fonksiyonları yok — hepsi **generic `upsertInTable(tableKey, item)` ve `deleteFromTable(tableKey, id)` API'sinden** geçiyor.
+
+Tek değişiklik: bu iki generic API'ye hook eklemek. Sonuç: **6 yeni tablo otomatik kapsandı**, kod değişmeden.
+
+### State-key → SQL table mapping
+
+```
+'recipes'             → 'recipes'
+'ingredients'         → 'ingredients'
+'menus'               → 'menus'
+'events'              → 'events'
+'suppliers'           → 'suppliers'
+'canvases'            → 'canvases'
+'shoppingLists'       → 'shopping_lists'   (camelCase → snake_case)
+'checklistTemplates'  → 'checklist_templates'
+```
+
+Yeni private helper: `_stateKeyToSqlTable(stateKey)`.
+
+## Kapsam
+
+Şu an sync ediliyor:
+- ✅ recipes (v2.6.67)
+- ✅ ingredients (v2.6.67)
+- ✅ workspaces (v2.6.67)
+- ✅ user_prefs (activeWorkspaceId — v2.6.67)
+- ✅ menus (yeni)
+- ✅ events (yeni)
+- ✅ suppliers (yeni)
+- ✅ canvases (yeni)
+- ✅ shopping_lists (yeni)
+- ✅ checklist_templates (yeni)
+
+Henüz dışarıda kalan:
+- ⏳ inventory (workspace+ingredient pair, daha karmaşık — Faz 4'te toplu)
+- ⏳ checklistSessions (array, ayrı tablo gerekebilir)
+- ⏳ stockCountHistory (array)
+- ⏳ waste (array)
+- ⏳ haccp* tabloları (5 farklı tablo, Faz 4 sonrası ayrı paket)
+
+Bu kalanlar henüz cihazlar arasında otomatik sync olmayacak ama eski `user_data` blob'u yine de senkronize ediyor (gece backup'a girer, F5 sonrası gelir).
+
+## Push öncesi yapılacak
+
+Yok. Sadece kod paketi.
+
+## Test (push sonrası — 30 sn bekle)
+
+1. Yeni menü oluştur → Supabase Table Editor → `menus` → satır görmelisin
+2. Yeni event oluştur → `events` → satır
+3. Yeni supplier ekle → `suppliers` → satır
+4. Kitchen card oluştur → `canvases` → satır
+5. Shopping list → `shopping_lists` → satır
+6. Checklist template → `checklist_templates` → satır
+
+## Risk
+
+Sıfır. Sadece 2 fonksiyona (`upsertInTable`, `deleteFromTable`) hook eklendi. Mutate akışı aynen aynı.
+
+---
+
+
 
 ## Amaç
 

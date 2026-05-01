@@ -457,6 +457,22 @@
     }
   }
 
+  // v2.6.69 — State-key (camelCase) → SQL table name (snake_case) eşleştirme.
+  // Per-table sync hook'ları için kullanılıyor.
+  function _stateKeyToSqlTable(stateKey) {
+    const map = {
+      'recipes': 'recipes',
+      'ingredients': 'ingredients',
+      'menus': 'menus',
+      'events': 'events',
+      'suppliers': 'suppliers',
+      'canvases': 'canvases',
+      'shoppingLists': 'shopping_lists',
+      'checklistTemplates': 'checklist_templates',
+    };
+    return map[stateKey] || null;
+  }
+
   // v2.6.44 — Photo orphan check: walks ALL recipes (across every
   // workspace, including soft-deleted) and returns true if any recipe
   // OTHER than the excluded one still references this photo URL.
@@ -1018,6 +1034,12 @@
       state[table] = root;
       emit(table, root[wsId], null);
       persist();
+      // v2.6.69 — Per-table sync hook for generic tables
+      // Maps state-key (camelCase) → SQL table name (snake_case)
+      if (PCD.cloudPerTable) {
+        const sqlTable = _stateKeyToSqlTable(table);
+        if (sqlTable) PCD.cloudPerTable.queueUpsert(sqlTable, item.id, wsId, item);
+      }
       return item;
     },
     deleteFromTable: function (table, id) {
@@ -1030,6 +1052,11 @@
       state[table] = root;
       emit(table, root[wsId], null);
       persist();
+      // v2.6.69 — Per-table sync hook
+      if (PCD.cloudPerTable) {
+        const sqlTable = _stateKeyToSqlTable(table);
+        if (sqlTable) PCD.cloudPerTable.queueUpsert(sqlTable, id, wsId, root[wsId][id]);
+      }
       return true;
     },
     getFromTable: function (table, id) {
