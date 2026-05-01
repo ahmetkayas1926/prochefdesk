@@ -1,4 +1,42 @@
-# v2.6.69 — Multi-device sync Faz 3.5: Generic table hook'ları
+# v2.6.70 — Multi-device sync Faz 3 düzeltme: View auto-refresh
+
+## Sorun
+
+v2.6.68'de Realtime kanal subscribe oluyordu ama UI güncellenmiyordu.
+
+Sebep: `cloud-realtime.js` event geldiğinde state'i `PCD.store.set('recipes', ...)` ile güncelliyordu. State değişiyordu ama mevcut view (Recipe listesi) **subscriber değildi** — kendisi tekrar render olmuyordu.
+
+PCD app'inin pattern'i şu: tools (recipes, menus, vs.) sadece `router.go()` veya `_renderView` ile render oluyor, store change listener'ı yok.
+
+## Çözüm
+
+`cloud-realtime.js`'ye debounced view refresh eklendi:
+
+```js
+function scheduleViewRefresh() {
+  if (_refreshTimer) return;
+  _refreshTimer = setTimeout(function () {
+    _refreshTimer = null;
+    PCD.router._renderView(currentView, params, { skipHistory: true });
+  }, 300);
+}
+```
+
+Her apply (recipes, ingredients, menus, workspaces, inventory, vs.) sonrası bu fonksiyon çağrılıyor. 300ms debounce ile birden fazla event geldiğinde tek render.
+
+## Test
+
+1. Tab A'da recipe listesi açık
+2. Tab B'de tarif kaydet
+3. Tab A'da 1-2 saniye içinde liste güncelleniyor (artık görsel olarak)
+
+## Risk
+
+Düşük. Sadece render tetikleyici. Eğer view rendering hata fırlatırsa try/catch yutuyor.
+
+---
+
+
 
 ## Amaç
 

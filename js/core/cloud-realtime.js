@@ -31,6 +31,26 @@
   let channel = null;
   let subscribed = false;
 
+  // v2.6.70 — After applying a Realtime change, refresh the current view
+  // so the UI reflects the new data. We debounce this so multiple events
+  // arriving in quick succession trigger only one re-render.
+  let _refreshTimer = null;
+  function scheduleViewRefresh() {
+    if (_refreshTimer) return;
+    _refreshTimer = setTimeout(function () {
+      _refreshTimer = null;
+      try {
+        if (PCD.router && PCD.router.currentView) {
+          const cur = PCD.router.currentView();
+          if (cur && PCD.router.go) {
+            // Re-render same view without history push
+            PCD.router._renderView(cur, PCD.router.params(), { skipHistory: true });
+          }
+        }
+      } catch (e) { /* ignore */ }
+    }, 300);
+  }
+
   // Realtime'dan gelen event'i store'a uygula. Eski version (updated_at
   // daha eski) ise atla — bizim local versiyon daha yeni.
   function applyChange(table, eventType, newRow, oldRow) {
@@ -69,6 +89,7 @@
       if (all[wsId][id]) {
         delete all[wsId][id];
         PCD.store.set(stateKey, all);
+        scheduleViewRefresh();
       }
       return;
     }
@@ -86,6 +107,7 @@
     // Apply (incoming includes _deletedAt if soft-deleted)
     all[wsId][id] = incoming;
     PCD.store.set(stateKey, all);
+    scheduleViewRefresh();
   }
 
   function applyToWorkspaces(eventType, newRow, oldRow) {
@@ -99,6 +121,7 @@
       if (all[id]) {
         delete all[id];
         PCD.store.set('workspaces', all);
+        scheduleViewRefresh();
       }
       return;
     }
@@ -110,6 +133,7 @@
     }
     all[id] = incoming;
     PCD.store.set('workspaces', all);
+    scheduleViewRefresh();
   }
 
   function applyToInventory(eventType, newRow, oldRow) {
@@ -125,12 +149,14 @@
       if (all[wsId][ingId]) {
         delete all[wsId][ingId];
         PCD.store.set('inventory', all);
+        scheduleViewRefresh();
       }
       return;
     }
 
     all[wsId][ingId] = newRow.data;
     PCD.store.set('inventory', all);
+    scheduleViewRefresh();
   }
 
   function applyToUserPrefs(eventType, newRow, oldRow) {
