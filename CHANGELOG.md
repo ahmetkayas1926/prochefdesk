@@ -1,4 +1,73 @@
-# v2.6.67 — Multi-device sync Faz 2: cloud.js per-table çift yazma
+# v2.6.68 — Multi-device sync Faz 3: Realtime channel
+
+## Amaç
+
+Aynı kullanıcı hesabı birden fazla cihazdan açıksa, bir cihazdaki değişiklik diğerlerine **anında** yansır (1-2 saniye içinde). Sayfa yenilemeye gerek kalmaz.
+
+## Senaryo
+
+- Cihaz A: laptop'ta tarif düzenliyor → kaydet
+- Cihaz B: telefon, aynı hesap, recipe listesi açık
+- 1-2 saniye içinde **B'de tarif otomatik güncelleniyor** (F5'siz)
+
+## Yeni dosya: `js/core/cloud-realtime.js`
+
+Login sonrası 11 tabloya WebSocket subscribe oluyor (Supabase Realtime API). Postgres replication slot'tan gelen INSERT/UPDATE/DELETE event'leri bu kanaldan akıyor → ilgili record store'a uygulanır → UI otomatik yenilenir (mevcut emit/subscribe sistemi).
+
+### Loop önlemi
+
+Cihaz A bir record yazıyor → tablo güncellenir → Realtime aynı event'i Cihaz A'ya da gönderir.
+
+Bu modül **last-write-wins** check yapıyor:
+- Local record'un `updatedAt` ≥ incoming `updatedAt` → atla
+- Aksi halde apply
+
+Yani kendi yazdıklarımız idempotent (zaten store'da, no-op).
+
+### Filter
+
+Her subscribe `user_id=eq.{auth.uid()}` filter'ı ile yapılıyor. Yani başka kullanıcıların değişikliklerini almıyoruz (RLS zaten engelleyecek ama defansif).
+
+### Reconnect
+
+Subscribe başarısız olursa 10 saniyede bir retry. Network kopması, Supabase yeniden başlaması gibi durumlarda kendini toparlıyor.
+
+## Push öncesi yapılacak
+
+⚠️ **Supabase Realtime'ın açık olduğunu kontrol et**:
+1. Supabase Dashboard → sol menü **Database** (veya Project Settings)
+2. **Replication** veya **Realtime** sekmesi
+3. `supabase_realtime` publication aktif olmalı (Faz 1'de eklendi)
+
+Realtime zaten Supabase Free tier'da varsayılan açık. Sorun olmamalı. Sadece önlem amaçlı kontrol.
+
+Sonra GitHub Desktop ile push.
+
+## Test (push sonrası — 2 cihaz/tab gerek)
+
+1. **Tab 1** (gizli pencere veya başka tarayıcı): siteye gir, login ol, recipe listesi aç
+2. **Tab 2** (aynı tarayıcının normal penceresi): aynı hesapla giriş, bir tarifi düzenle, kaydet
+3. **Tab 1'e dön** → 1-3 saniye içinde tarif otomatik güncellenmiş olmalı
+
+Workspace test:
+1. Tab 1'de workspace switcher aç
+2. Tab 2'de yeni workspace oluştur
+3. Tab 1'de listede yeni workspace görünmeli (hemen)
+
+## Kapsam dışı (sonraki faz)
+
+Mevcut tek-blob `user_data` sistemi henüz kapatılmadı. Hâlâ eski sistem de yazıyor. Faz 4'te:
+- Mevcut blob veri yeni şemaya migrate edilecek
+- Eski `user_data` tablosu kullanım dışı kalacak (read-only fallback olarak kalır)
+- Eski sync döngüsü kapatılacak
+
+## Risk
+
+Düşük. Realtime sadece **dinleme** (read), kendi yazdığımızı tetiklemiyor. WebSocket bağlantısı koparsa otomatik retry, dinleme yapamayan cihaz son state'i sayfa yenilemede normal pull ile alıyor — yani fallback zaten var.
+
+---
+
+
 
 ## Amaç
 
