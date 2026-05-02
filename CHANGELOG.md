@@ -1,3 +1,74 @@
+# v2.6.77 — Realtime DELETE event fix (REPLICA IDENTITY FULL)
+
+## Sorun
+
+v2.6.76'da 4 fix uygulandı ama testlerde 4 senaryo hâlâ başarısız:
+
+1. Cihaz A waste sildi → Cihaz B'de silinmedi
+2. Cihaz A Cook & Cool **formunu** sildi → Cihaz B'de form duruyor
+3. Cihaz A workspace sildi → Cihaz B'de listede duruyor
+4. Cihaz A yeni workspace açtı → Cihaz B'de listede yok
+
+İlk üçü aynı kök sebepten — PostgreSQL Realtime DELETE event'leri istemciye ulaşmıyordu.
+
+## Kök sebep — REPLICA IDENTITY DEFAULT
+
+PostgreSQL'de bir tablo `DELETE` edildiğinde Realtime kanalına gönderilen event'in **payload'ı `REPLICA IDENTITY` ayarına bağlı**:
+
+| Ayar | DELETE event payload | Sonuç |
+|---|---|---|
+| `DEFAULT` (varsayılan) | sadece primary key | `user_id` YOK, `workspace_id` YOK |
+| `FULL` | tüm satır | tam kayıt geliyor |
+
+Realtime subscription filter'ı `user_id=eq.{user.id}`. DEFAULT ayarda DELETE event'inde `user_id` olmadığı için **filter eşleşemez → event istemciye iletilmez**.
+
+Eski tablolarda (recipes, ingredients, vs.) bu sorun ortaya çıkmamıştı çünkü silme akışı **soft-delete** kullanıyor (`_deletedAt` ekleniyor → UPDATE event). UPDATE event'lerde tüm yeni satır gelir, sorun yok.
+
+Yeni tablolarda waste/checklist_sessions ve workspace_tombstones **hard DELETE** kullanıyor (waste array'den fiziksel çıkarma; deleteWorkspace'in tombstone insert sonrası bir gün worker tarafından temizlenmesi planlanıyordu). Bu DELETE event'leri **filter'a takılıp Cihaz B'ye düşmüyordu**.
+
+## Çözüm — tek SQL migration
+
+Realtime publication'a dahil **19 tablonun hepsini** `REPLICA IDENTITY FULL` yapıyoruz. Maliyeti ihmal edilebilir (kayıtlar küçük, günlük yazım hacmi düşük). Faydası: DELETE event'leri tam payload'la geliyor, filter doğru çalışıyor, tüm Realtime senaryoları sağlam.
+
+## Yeni workspace'in mobilde gözükmemesi (4. sorun)
+
+Bu farklı bir sebepten. Workspace **INSERT** event'i, REPLICA IDENTITY DEFAULT ayarında bile tüm satırı içerir (INSERT'lerde DEFAULT da problem değil). Yani SQL fix bu sorunu **doğrudan çözmüyor**.
+
+Olası sebep: mobil PWA cache'inde **eski sürüm yüklü kalmış**. v2.6.76'daki Fix 4 (online + visibilitychange reconnect) henüz mobile yüklenmemiş. Mobilde:
+1. PWA'yı tamamen kapat
+2. Tarayıcı sekmesini de kapat
+3. Uygulamayı yeniden aç → en son sürümü çekecek
+
+Bu yapılmadıysa Fix 4 reconnect'i mobilde yok demektir, dolayısıyla WebSocket düşmüş ve INSERT event'leri gelmiyor.
+
+## Push talimatı
+
+**1. SQL çalıştır** (önce):
+- Supabase Dashboard → SQL Editor
+- `migrations/v2.6.77-replica-identity-full.sql` içeriği yapıştır → Run
+- "Success. No rows returned" gelmeli
+- Sonra dosyanın altındaki doğrulama sorgusuyla kontrol et — 19 satır, hepsi `FULL`
+
+**2. Kod push** (SQL başarılı olunca):
+- GitHub Desktop ile push
+- Cloudflare deploy bekle (1-2 dk)
+
+## Push sonrası kontrol
+
+**Mobilde TAM YENİLEME yap** (kritik):
+1. PWA'yı kapat (geçmiş uygulamalar listesinden de kaldır)
+2. Tarayıcı sekmesi açıksa onu da kapat
+3. PWA'yı (veya prochefdesk.com'u) yeniden aç
+4. F12 ile mobile'da konsol açamayız ama yeniden açma yeterli olmalı
+
+Sonra v2.6.76'nın 5 testini tekrar yap. Hepsi geçmeli.
+
+## Risk
+
+**Sıfır.** Tek SQL ALTER, sadece sistem davranışı değişiyor (event payload zenginleşiyor), veri yapısı değişmiyor. Hiçbir tablo yeniden oluşturulmuyor, sadece metadata flag.
+
+---
+
 # v2.6.76 — Multi-device sync bug fix paketi (4 fix)
 
 ## Sorun
