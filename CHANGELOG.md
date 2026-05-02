@@ -1,3 +1,82 @@
+# v2.6.79 — Realtime subscribe race condition fix (KÖK ÇÖZÜM)
+
+## Kesin teşhis
+
+v2.6.78'in debug log'u ile şu komut çıktısı geldi:
+
+```js
+const ch = PCD.cloud.getClient().getChannels()[0];
+({state: ch.state, topic: ch.topic, bindings: ch.bindings.length})
+// Sonuç:
+// { state: 'joined', topic: 'realtime:pcd-user-xxx', bindings: undefined }
+```
+
+**`bindings: undefined`** — channel oluşmuş, "joined" state'inde, ama **hiçbir tabloyu dinlemiyor**. Bu yüzden hiçbir `[RT]` log'u gelmiyordu.
+
+## Kök sebep
+
+`subscribe()` fonksiyonunun başında:
+```js
+if (subscribed) return;
+```
+
+Boot sırasında iki tetikleyici var (`store.on('user')` + `setTimeout(2000)`). İkisi yarışıyor:
+
+1. Tetikleyici 1: subscribe çağrıldı → channel oluştu → bindings eklendi → SUBSCRIBED → `subscribed = true`
+2. Tetikleyici 2 (1-2 sn sonra): subscribe çağrıldı → `if (subscribed) return` → **return**
+
+Ama bazı durumlarda (örn. PWA arka plana atılmış, sonra geri dönülmüş) channel state'i değişiyor ama flag güncellenmemiş kalıyor. Manuel `unsubscribe(); subscribe();` çağrısı sonrası da aynı yarış: removeChannel sonrası flag false ama hemen ardından subscribe gelirse iç state tutarsız.
+
+Sonuç: channel kurulduktan sonra **subscribe çağrısı bindings eklemeden return ediyor** — ama yine de yeni channel oluşturuluyor (eski silindiyse) veya eski tutuluyor — sonuçta channel "joined" gözüküyor, bindings boş.
+
+## Fix
+
+`subscribe()` artık baştaki flag kontrolünü kaldırdı. Her çağrıda:
+
+1. **Önce mevcut channel'ı temizle** (varsa removeChannel + null)
+2. **`subscribed = false` zorla**
+3. Yeni channel oluştur
+4. 19 tablo için bindings ekle
+5. subscribe et, SUBSCRIBED gelince flag true
+
+Idempotent ve race condition'a dirençli. Aynı subscribe çağrısı 100 kez yapılsa bile her seferinde temiz başlangıç.
+
+## Push talimatı
+
+**Push öncesi:** Yok.
+**Push:** GitHub Desktop ile direkt.
+
+## Push sonrası kontrol
+
+Cloudflare deploy bitince (1-2 dk):
+
+**Desktop'ta Ctrl+Shift+R** ile sert yenile.
+
+**İki sekme:** Sekme A normal, Sekme B konsol açık.
+
+Sekme B konsoluna:
+```js
+window._dbgRT = true
+```
+
+Sekme B'de bindings'i kontrol et:
+```js
+const ch = PCD.cloud.getClient().getChannels()[0];
+({state: ch.state, bindings: ch.bindings.length})
+```
+
+Beklenen: `{state: 'joined', bindings: 19}` (19 tablo için 19 binding).
+
+Sekme A'da bir tarif düzenle, kaydet → Sekme B konsolunda `[RT] recipes UPDATE r_xxx` mesajı görmen lazım.
+
+Bu çalışırsa diğer testler (waste sil, workspace sil, yeni workspace) de **anlık** çalışacak — aynı mekanizma.
+
+## Risk
+
+Düşük. Tek değişiklik subscribe fonksiyonunun başındaki guard'ın kaldırılması ve eski channel temizleme adımının her zaman yapılması. Eski davranıştan tek farkı **çoklu çağrılar artık zarar vermiyor** — eskiden ikinci çağrı no-op'tu, şimdi temiz yeniden bağlanma.
+
+---
+
 # v2.6.78 — Realtime watchdog + debug log
 
 ## Sorun

@@ -342,13 +342,27 @@
     scheduleViewRefresh();
   }
 
-  // Subscribe to all 11 tables for the current user
+  // Subscribe to all tables for the current user
+  // v2.6.79 — Kritik fix: subscribed flag race condition'ı.
+  // Önceden: if (subscribed) return; → sonradan gelen subscribe çağrıları
+  // hiç bindings eklemeden return ediyordu (boot'ta iki tetikleyici yarışı,
+  // veya manuel unsubscribe-subscribe sonrası). Sonuç: channel 'joined'
+  // gözüküyor ama bindings boş, hiç event gelmiyor.
+  //
+  // Yeni: her çağrıda önce mevcut channel'ı temizle, sonra yenisini kur.
+  // Idempotent ve yarışa dirençli.
   function subscribe() {
-    if (subscribed) return;
     if (!PCD.cloud || !PCD.cloud.ready) return;
     const supabase = PCD.cloud.getClient();
     const user = PCD.store && PCD.store.get('user');
     if (!user || !user.id) return;
+
+    // ÖNCEDEN VAR OLAN CHANNEL'I HER ŞARTTA TEMİZLE
+    if (channel) {
+      try { supabase.removeChannel(channel); } catch (e) { /* ignore */ }
+      channel = null;
+    }
+    subscribed = false;
 
     const TABLES = [
       'workspaces', 'recipes', 'ingredients', 'menus', 'events',
@@ -378,7 +392,7 @@
     channel.subscribe(function (status) {
       if (status === 'SUBSCRIBED') {
         subscribed = true;
-        PCD.log && PCD.log('cloud-realtime: subscribed to all tables');
+        PCD.log && PCD.log('cloud-realtime: subscribed to all tables (' + TABLES.length + ')');
       } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
         PCD.warn && PCD.warn('cloud-realtime: subscribe failed', status);
         subscribed = false;
