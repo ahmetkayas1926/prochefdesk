@@ -13,11 +13,17 @@
   const PCD = window.PCD;
 
   // Workspace-scoped waste storage
-  function readWaste() {
+  // v2.6.79 — Soft-delete pattern (recipes/ingredients ile aynı):
+  //   readWasteAll()  → raw, _deletedAt'lı tombstone'lar dahil (delete/save handler için)
+  //   readWaste()     → görünür, _deletedAt'sız (UI render ve hesaplamalar için)
+  function readWasteAll() {
     const wsId = PCD.store.getActiveWorkspaceId();
     const all = PCD.store._read('waste') || {};
     if (Array.isArray(all)) return all; // legacy
     return all[wsId] || [];
+  }
+  function readWaste() {
+    return readWasteAll().filter(function (e) { return !e._deletedAt; });
   }
   function writeWaste(arr) {
     const wsId = PCD.store.getActiveWorkspaceId();
@@ -27,6 +33,8 @@
     next[wsId] = arr;
     PCD.store.set('waste', next);
     // v2.6.72 — Faz 4 Adım 2: çift yazma (waste array tablosu)
+    // v2.6.79 — Soft-delete pattern: tombstone'lar array'de kaldığı için
+    // queueArraySync artık DELETE atmaz, sadece UPSERT (deleted_at kolonu set olur).
     if (PCD.cloudPerTable) {
       PCD.cloudPerTable.queueArraySync('waste', wsId, oldArr, arr);
     }
@@ -368,8 +376,15 @@
         title: t('confirm_delete'), text: t('confirm_delete_desc'), okText: t('delete')
       }).then(function (ok) {
         if (!ok) return;
-        const cur = readWaste().filter(function (e) { return e.id !== existing.id; });
-        writeWaste(cur);
+        // v2.6.79 — Soft-delete: tombstone bırak, array'den çıkarma. Bu sayede
+        // çift yazma fazında pull merge'de _deletedAt'lı kayıt newest-wins ile
+        // kazanır ve item geri gelmez (recipes pattern'i).
+        const cur = readWasteAll().slice();
+        const idx = cur.findIndex(function (e) { return e.id === existing.id; });
+        if (idx !== -1) {
+          cur[idx] = Object.assign({}, cur[idx], { _deletedAt: new Date().toISOString() });
+          writeWaste(cur);
+        }
         PCD.toast.success(t('item_deleted'));
         m.close();
         setTimeout(function () {
@@ -385,7 +400,10 @@
       data.cost = calcEntryCost(data, ing);
       if (!existing) data.id = PCD.uid('w');
       else data.id = existing.id;
-      const cur = readWaste();
+      // v2.6.79 — Soft-delete pattern: raw okuma. Tombstone'ları kaybedersek
+      // queueArraySync onları "silinmiş" sanar ve hard-delete atar; A bug'ı
+      // geri döner. readWasteAll() tombstone'ları korur.
+      const cur = readWasteAll();
       let next;
       if (existing) {
         next = cur.map(function (e) { return e.id === existing.id ? data : e; });

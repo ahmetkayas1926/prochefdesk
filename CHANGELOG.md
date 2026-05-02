@@ -1,3 +1,130 @@
+# v2.6.79 — `waste`'in recipes pattern'ine taşınması (B + A bug'larının kapsamlı çözümü)
+
+## Önceki paketlerin neden yetersiz kaldığı
+
+v2.6.77'de waste Realtime'a eklendi. v2.6.78'de DELETE event'inin id-only handle edilmesi düzeltildi. Ama canlı testte v2.6.78'in de yeterli olmadığı görüldü:
+
+- B sekmesinde DELETE event **hiç gelmedi** (event log'unda tüm event'ler INSERT/UPDATE)
+- Hipotez: Supabase Realtime, REPLICA IDENTITY DEFAULT'ta DELETE event'inde sadece PK gönderdiği için `user_id=eq` filter'ını uygulayamıyor ve event'i drop ediyor
+- A sekmesinde silinen item F5 sonrası geri geliyor (eski blob union pull'dan)
+
+İki bug'ın kökü aynı: **`waste` hard-delete kullanıyor**, halbuki recipes/ingredients zaten soft-delete pattern'iyle çalışıyor ve hiçbir bug yaşamıyor. Patchwork yerine recipes pattern'ine taşımak doğru çözüm.
+
+## Recipes pattern (referans)
+
+`store.deleteRecipe`:
+```javascript
+recipes[wsId][id] = Object.assign({}, recipes[wsId][id], { _deletedAt: now });
+PCD.cloudPerTable.queueUpsert('recipes', id, wsId, recipes[wsId][id]);
+```
+- Item state'te kalıyor, `_deletedAt` flag set
+- SQL'e UPSERT olarak gidiyor (`deleted_at` kolonu set olur, satır gerçekten silinmez)
+- Realtime event UPDATE olarak gelir (DELETE değil), payload tüm sütunları içerir → workspace_id mevcut, hook çalışır
+- UI list'lerinde `!_deletedAt` filter'ı ile gizlenir
+- Pull merge `mergeRecordsByUpdatedAt` newest-wins → `_deletedAt`'lı kayıt kazanır → tombstone kalıcı
+
+## Bu pakette yapılan
+
+**Tek dosya**: `js/tools/waste.js`. Diğer hiçbir dosya dokunulmadı.
+
+### 1. `readWaste` ikiye bölündü
+
+```javascript
+// Raw — _deletedAt'lı tombstone'lar dahil (delete/save handler için)
+function readWasteAll() {
+  const wsId = PCD.store.getActiveWorkspaceId();
+  const all = PCD.store._read('waste') || {};
+  if (Array.isArray(all)) return all;
+  return all[wsId] || [];
+}
+
+// Görünür — _deletedAt'sız (UI render ve hesaplamalar için)
+function readWaste() {
+  return readWasteAll().filter(function (e) { return !e._deletedAt; });
+}
+```
+
+Tüm UI çağrıları (renderChart, renderTopItems, renderRecent, weekTotal, monthTotal hesabı) `readWaste()` kullanıyor — otomatik olarak tombstone'ları görmüyor.
+
+### 2. Delete handler — array filter yerine `_deletedAt` set
+
+```javascript
+// Eski (hard-delete)
+const cur = readWaste().filter(function (e) { return e.id !== existing.id; });
+writeWaste(cur);
+
+// Yeni (soft-delete)
+const cur = readWasteAll().slice();
+const idx = cur.findIndex(function (e) { return e.id === existing.id; });
+if (idx !== -1) {
+  cur[idx] = Object.assign({}, cur[idx], { _deletedAt: new Date().toISOString() });
+  writeWaste(cur);
+}
+```
+
+### 3. Save handler — `readWasteAll()` kullansın (kritik!)
+
+Save handler `readWaste()` (filter'lı) kullansaydı, mevcut tombstone'lar `next` array'inde olmazdı. `writeWaste` → `queueArraySync` oldArr/newArr karşılaştırırken tombstone'ları "kaybolmuş" sayar ve `queueDelete` (hard-delete) atardı. **Tüm soft-delete altyapısını çürütürdü.**
+
+```javascript
+const cur = readWasteAll();   // raw — tombstone'lar korunur
+let next;
+if (existing) {
+  next = cur.map(function (e) { return e.id === existing.id ? data : e; });
+} else {
+  next = cur.concat([data]);
+}
+writeWaste(next);
+```
+
+## Cloud katmanı neden değişmedi
+
+- `cloud-pertable.queueArraySync` zaten doğru çalışıyor: tüm newArr id'lerini upsert atıyor, oldArr'da olup newArr'da olmayan id'ler için delete atıyor. Soft-delete'te tombstone array'de kaldığı için `oldMap` ve `newMap` aynı id setini içerir, **DELETE asla tetiklenmez**, sadece UPSERT
+- SQL'e `data.{...,_deletedAt:'...'}` ile UPSERT gider, mevcut `flushNow` kodu zaten `row.deleted_at = (it.data && it.data._deletedAt) || null` ile kolonu doğru set ediyor
+- `cloud-realtime.applyToArrayWsTable` UPDATE branch'i workspace_id payload'da olduğu için zaten doğru çalışır. v2.6.78'deki DELETE branch'i artık dead code ama zararsız (gelecek array tablolar için orada kalabilir)
+- `cloud.mergeArrayByIdAndTs` newest-wins on collision: `_deletedAt` set edilen kayıt updatedAt'ı yenidir, blob'taki eski versiyonu yener → tombstone kalıcı → A bug çözülür
+
+## Hangi bug'lar çözüldü
+
+| Bug | Önceki davranış | Yeni davranış |
+|---|---|---|
+| B'de silinen item kalıcı (DELETE event hiç gelmiyordu) | Çözülmedi | UPDATE event geliyor, payload tam, hook çalışır, tombstone array'e yazılır, UI gizler |
+| A'da F5 sonrası silinen item geri geliyor (eski blob union) | Var | Newest-wins merge'de _deletedAt'lı kayıt kazanır, tombstone kalır |
+| Cihazlar arası tutarsızlık | Var | Recipes ile aynı altyapı — kanıtlanmış pattern |
+
+## Bilinmesi gereken sınırlama
+
+v2.6.79 öncesi hard-delete edilmiş **eski item'lar** (yani SQL'den gerçekten silinmiş olanlar):
+- Eski blob'ta hâlâ duruyorlarsa F5'te geri görünebilirler
+- Bir kez daha silinince yeni soft-delete pattern'iyle tombstone'lanır, kalıcı çözülür
+
+Bu sadece v2.6.79 öncesi silmelerin "garantilerinin" eksik olması nedeniyle. Yeni silmeler tutarlı.
+
+## Değişen dosyalar
+
+| Dosya | Değişiklik |
+|---|---|
+| `js/tools/waste.js` | `readWaste`/`readWasteAll` ayrımı + delete handler `_deletedAt` set + save handler `readWasteAll` kullanımı |
+| `js/core/config.js` | `APP_VERSION` → `2.6.79` |
+| `index.html:107` | Sidenav badge → `v2.6.79` |
+| `index.html`, `privacy.html`, `terms.html` | Cache-bust → `?v=2.6.79` |
+
+## Doğrulama
+
+- `node --check` 43 JS dosyasında temiz
+- waste.js'in 3 noktasında değişiklik: 2 helper (read), 1 delete handler, 1 save handler
+- Cloud, store, realtime katmanları **dokunulmadı**
+
+## Geri dönüş planı
+
+v2.6.78 zip sende mevcut. Sorun çıkarsa anlık push'lanır.
+
+## Sıradaki paket (öneri)
+
+Bu paket çalışırsa: `checklist_sessions` aynı pattern'e taşınır + Realtime kapsamına eklenir (paket 7). Sonra map-yapılı tablolar (haccp_logs vs.) — bunlar zaten map shape'inde, daha basit.
+
+---
+
 # v2.6.78 — Array tabloları DELETE event fix'i (v2.6.77 patch'i)
 
 ## Sorun
