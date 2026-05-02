@@ -1,3 +1,93 @@
+# v2.6.74 — Multi-device sync Faz 4 Adım 4: Çift kaynak pull (en kritik paket)
+
+## Amaç
+
+`cloud.pull()` artık **iki kaynaktan birden** veri çekiyor:
+1. Eski `user_data` blob (tek satır jsonb) — mevcut davranış
+2. Yeni per-table tablolar (recipes, ingredients, ...) — `cloudPerTable.pullAll()`
+
+İki kaynaktan gelen state'ler **record bazında merge** ediliyor (newest-wins). Aynı tarif iki kaynakta da varsa, daha yeni `updatedAt` olan kazanır. Bu sayede:
+
+- Cihaz A blob'a yazdı, cihaz B per-table'dan çekti → veri görünür
+- Cihaz A per-table'a yazdı, cihaz B blob'a baktı → veri görünür
+- Aynı kayıt iki cihazdan farklı zamanlarda güncellendi → en yeni kazanır
+- Bir kaynak başarısız (network/RLS sorunu) → diğer kaynak ile devam
+
+**Bu paketten sonra multi-device sync gerçek anlamda devrede.** Bir cihazda yapılan değişiklik diğer cihazda 1-2 saniye içinde görünür (Realtime kanalı zaten çalışıyor) ve login sonrası pull'da tüm değişiklikler birleşik gelir.
+
+## Değişen dosyalar
+
+| Dosya | Değişiklik |
+|---|---|
+| `js/core/cloud-pertable.js` | `pullAll()` artık 9 yeni tabloyu da çekiyor (waste, checklist_sessions, stock_count_history, haccp×4, workspace_tombstones). Soft-deleted kayıtlar `_deletedAt` mark'ı ile DAHİL ediliyor (merge için gerekli). |
+| `js/core/cloud.js` | Yeni `mergePullSources(blobRemote, perTableState)` fonksiyonu — record bazında newest-wins merge. `pull()` artık iki kaynağı paralel çekip merge ediyor, sonra mevcut tüm güvenlik mantığı (ghost ws cleanup, tombstones, activeWorkspaceId fallback) aynen uygulanıyor. |
+
+## Strateji — neden bu kadar güvenli
+
+Mevcut `cloud.js:pull()` mantığında:
+- `mergeRecordsByUpdatedAt` per-record newest-wins
+- Ghost workspace cleanup (boş "My Kitchen" duplicate'leri temizleme)
+- Workspace tombstones (silinen ws'lerin diriltilmemesi)
+- `activeWorkspaceId` fallback chain
+
+**Bu mantığın hiçbir parçasına dokunmadım.** Sadece `pull()`'un veri kaynağını değiştirdim: artık tek `remote` yerine `mergePullSources(blob, perTable)` döndürdüğü merged remote kullanılıyor. Sonrasında her şey aynen önceki gibi çalışıyor.
+
+`mergePullSources`:
+- İki kaynak da boşsa → null (queueSync tetiklenir, lokal yukarı)
+- Sadece blob varsa → eski davranış aynen
+- Sadece per-table varsa → yeni davranış
+- İkisi de varsa → record bazında merge (workspaces, tüm map tabloları, array tabloları, inventory, costHistory)
+
+## Pull öncelik kuralları
+
+| Veri tipi | Strateji | Gerekçe |
+|---|---|---|
+| Workspaces | newest-wins (updatedAt) | Aynı ws iki yerde güncel olabilir |
+| Tombstones | union | Bir kaynakta varsa mutlaka tombstone'lanmış sayılır |
+| Map tabloları (recipes, ingredients, ...) | per-record newest-wins | Standart merge |
+| Array tabloları (waste, checklistSessions) | union by id + timestamp | Append-only loglar |
+| Inventory | union (per-table birincil) | Counts genelde son yazan kazanır, timestamp yok |
+| user_prefs (prefs, plan, onboarding) | per-table birincil | user_prefs daha güncel tutuluyor (v2.6.66'dan beri) |
+| activeWorkspaceId | per-table birincil | user_prefs.active_workspace_id daha taze |
+
+## Test senaryoları
+
+Bu paketten sonra şunlar gerçekten çalışmalı:
+
+1. **Aynı cihazda reload sonrası tüm veri var** — pull merge düzgün çalışıyor olmalı
+2. **2 cihaz aynı anda farklı ws'ye yazıyor** — biri reload edince diğerinin değişikliği görmelı
+3. **Cihaz offline'da düzenliyor, online olunca sync** — push queue + Realtime ile cihaz B'ye gider
+4. **1 cihaz workspace silince diğerinde görünmez** — tombstone respect
+
+## Push öncesi yapılacak
+
+Yok. Direkt push.
+
+## Push sonrası kontrol — ÖNEMLİ
+
+**Bu paket Faz 4'ün en kritik adımı.** Sert yenile (Ctrl+Shift+R), her şeyin yerinde olduğunu kontrol et:
+- 8 tarif, 32 ingredient, 2 menu (aktif workspace'te)
+- Tüm workspace'ler listede (Recovered 1-5, adasd)
+- Bir tarifi düzenle, kaydet → reload → değişiklik orada mı
+
+Bir şey kaybolursa **PCD.cloudMigrateV4.resetFlag()** + reload migration'ı tekrar tetikler, eski blob hala duruyor, veri kaybı YOK.
+
+## Risk
+
+**Orta.** Pull mantığında değişiklik var. Ama:
+- Eski blob fetch zaten çalışıyor (sadece per-table fetch eklendi)
+- Per-table fetch fail olursa eski davranışa dönüyor (catch ile)
+- Merge fonksiyonu newest-wins — veri kaybı senaryosu yok
+- Yedek aldın (push öncesi), kötü ihtimalde geri yüklenebilir
+
+## Kapsam dışı (sonraki paket)
+
+| Paket | Ne yapacak |
+|---|---|
+| v2.6.75 | Çift yazmayı kapat, sadece yeni tablolara yaz, blob 30 gün read-only fallback olarak kalır, sonra silinir |
+
+---
+
 # v2.6.73 — Multi-device sync Faz 4 Adım 3: Migration script (blob → per-table)
 
 ## Amaç
