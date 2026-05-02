@@ -1,3 +1,75 @@
+# v2.6.80 — Rollback to v2.6.74 (v2.6.75-79 geri alındı)
+
+## Sebep
+
+v2.6.75-79 arasında 5 paket Realtime kapsamını genişletmek ve birkaç bug fix yapmak için atıldı. Sonuç:
+
+- v2.6.75: Realtime tablolarına 9 yeni tablo eklendi
+- v2.6.76: 4 fix bir arada
+- v2.6.77: REPLICA IDENTITY FULL
+- v2.6.78: Watchdog + debug log
+- v2.6.79: subscribe race condition fix
+
+**Toplam sonuç: Realtime sistemi v2.6.74'ten daha kötü duruma geldi.** v2.6.74'te recipes/ingredients arası iki cihaz arasında anlık sync çalışıyordu. v2.6.79 sonrasında bunlar bile çalışmıyor — `bindings: undefined` anomalisi tüm tablolar için event akışını kesiyor.
+
+## Karar
+
+Tahmin tabanlı fix sırasını durdur, v2.6.74'e geri dön. v2.6.74 stabildi (gerçek kullanıcı tarafından test edildi, OK verildi). O noktadan farklı bir yaklaşımla devam edilecek.
+
+## Bu pakette ne var
+
+- **Kod:** v2.6.74 ile birebir aynı (sadece cache-bust string'leri 2.6.80 ve sidenav badge 2.6.80)
+- **CHANGELOG:** Bu rollback entry'si
+
+## SQL geri alma
+
+Bu paket ile birlikte aşağıdaki SQL'i Supabase'de çalıştırarak v2.6.77'de yapılan REPLICA IDENTITY FULL değişikliği DEFAULT'a geri çevriliyor:
+
+```sql
+ALTER TABLE workspaces           REPLICA IDENTITY DEFAULT;
+ALTER TABLE recipes              REPLICA IDENTITY DEFAULT;
+ALTER TABLE ingredients          REPLICA IDENTITY DEFAULT;
+ALTER TABLE menus                REPLICA IDENTITY DEFAULT;
+ALTER TABLE events               REPLICA IDENTITY DEFAULT;
+ALTER TABLE suppliers            REPLICA IDENTITY DEFAULT;
+ALTER TABLE canvases             REPLICA IDENTITY DEFAULT;
+ALTER TABLE shopping_lists       REPLICA IDENTITY DEFAULT;
+ALTER TABLE checklist_templates  REPLICA IDENTITY DEFAULT;
+ALTER TABLE inventory            REPLICA IDENTITY DEFAULT;
+ALTER TABLE user_prefs           REPLICA IDENTITY DEFAULT;
+ALTER TABLE waste                REPLICA IDENTITY DEFAULT;
+ALTER TABLE checklist_sessions   REPLICA IDENTITY DEFAULT;
+ALTER TABLE stock_count_history  REPLICA IDENTITY DEFAULT;
+ALTER TABLE haccp_logs           REPLICA IDENTITY DEFAULT;
+ALTER TABLE haccp_units          REPLICA IDENTITY DEFAULT;
+ALTER TABLE haccp_readings       REPLICA IDENTITY DEFAULT;
+ALTER TABLE haccp_cook_cool      REPLICA IDENTITY DEFAULT;
+ALTER TABLE workspace_tombstones REPLICA IDENTITY DEFAULT;
+```
+
+## Kalan Faz 4 işleri
+
+v2.6.74'te stabil olan şu özellikler korundu:
+- Yeni şema (20 tablo) production'da
+- Çift yazma aktif
+- Migration tamamlandı
+- Pull iki kaynaktan (blob + per-table) merge ediyor
+- Realtime channel 11 eski tabloya bağlı
+
+v2.6.74'te eksik kalan, ileride **dikkatli bir şekilde** yapılacak işler:
+- Yeni 9 tablonun Realtime kapsamına eklenmesi (waste, checklist_sessions, HACCP×4, stock_count_history, workspace_tombstones)
+- Eski blob yazımının kapatılması
+
+Bu işler artık tahmin oyunu olmadan, **gerçek bir Supabase Realtime davranış teşhisinden sonra** yapılacak.
+
+## Push talimatı
+
+1. Önce SQL geri alma (yukarıdaki ALTER TABLE'lar)
+2. Sonra kod push
+3. Cache temiz açılış için Ctrl+Shift+R
+
+---
+
 # v2.6.74 — Multi-device sync Faz 4 Adım 4: Çift kaynak pull (en kritik paket)
 
 ## Amaç
