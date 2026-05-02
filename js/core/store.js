@@ -667,8 +667,6 @@
       // Refuse if it's the only one
       const remaining = Object.keys(state.workspaces).filter(function (id) { return id !== wsId; });
       if (remaining.length === 0) return false;
-      // v2.6.76 — workspaces tablosuna soft-delete UPSERT için orijinal kaydı yakala
-      const originalWs = PCD.clone(state.workspaces[wsId]);
       // v2.6.54 — Collect ALL photo URLs from this workspace's recipes
       // BEFORE wiping the data. After the wipe completes, delete each
       // orphaned blob from Storage (using isPhotoStillUsed to avoid
@@ -703,14 +701,6 @@
       // diriltmemiş olur.
       if (PCD.cloudPerTable) {
         PCD.cloudPerTable.queueUpsert('workspace_tombstones', wsId, null, { deletedAt: tombstoneAt });
-        // v2.6.76 — Workspaces tablosuna da soft-delete UPSERT.
-        // Tombstone Realtime'la diğer cihaza gidiyor (applyToTombstones)
-        // ama bu çift-yedekli — workspaces UPDATE event'i de gider,
-        // applyToWorkspaces _deletedAt mark'ını görüp sileceği için
-        // Realtime kanalı herhangi bir sebepten gecikse bile sonraki
-        // pull'da doğru veri gelir.
-        const wsCopy = Object.assign({}, originalWs, { _deletedAt: tombstoneAt, updatedAt: tombstoneAt });
-        PCD.cloudPerTable.queueUpsert('workspaces', wsId, null, wsCopy);
       }
       emit('workspaces', next, null);
       flushSync();
@@ -1074,15 +1064,7 @@
       const root = Object.assign({}, state[table]);
       root[wsId] = Object.assign({}, root[wsId]);
       // Soft delete
-      // v2.6.76 — Critical fix: updatedAt'ı da yenile. Yoksa Realtime
-      // applyToWsTable guard'ı (localExisting.updatedAt === incoming.updatedAt
-      // → return) silme event'ini "no-op" sanıp uygulamıyor, diğer cihaz
-      // silmeyi göremiyor.
-      const now = new Date().toISOString();
-      root[wsId][id] = Object.assign({}, root[wsId][id], {
-        _deletedAt: now,
-        updatedAt: now,
-      });
+      root[wsId][id] = Object.assign({}, root[wsId][id], { _deletedAt: new Date().toISOString() });
       state[table] = root;
       emit(table, root[wsId], null);
       persist();
