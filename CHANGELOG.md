@@ -1,38 +1,3 @@
-# v2.6.75 — Sürüm raporlama tutarsızlığı düzeltmesi
-
-## Amaç
-
-`APP_VERSION` config değeri ile cache-bust sürümü arasındaki sapmayı kapatmak. v2.6.71 → v2.6.74 paketlerinde `js/core/config.js` içindeki `APP_VERSION` değeri unutulmuş ve `'2.6.70'`'te kalmıştı. Bu nedenle:
-
-- Sidenav'daki sürüm rozeti `2.6.70` gösteriyordu
-- Account sayfasındaki sürüm etiketi `2.6.70` gösteriyordu
-- Sorun bildir e-postaları "App version: 2.6.70" ile geliyordu
-- JSON yedek dosyalarındaki `version` alanı `2.6.70` yazılıyordu
-- Saved state ve analytics payload'ları yanlış sürümle gidiyordu
-
-Fonksiyonel etkisi yok — sadece raporlama/teşhis kirliydi. Hangi sürümde hangi sorunun olduğunu anlamak için bu kritik.
-
-## Değişen dosyalar
-
-| Dosya | Değişiklik |
-|---|---|
-| `js/core/config.js` | `APP_VERSION: '2.6.70'` → `'2.6.75'` |
-| `index.html` | 49 yerde `?v=2.6.74` → `?v=2.6.75` (5 CSS + 43 JS + 1 yorum) |
-| `privacy.html` | 2 yerde `?v=2.6.74` → `?v=2.6.75` |
-| `terms.html` | 2 yerde `?v=2.6.74` → `?v=2.6.75` |
-
-## Doğrulama
-
-- `node --check` 43 JS dosyasında temiz
-- `diff` ile yapılan kontrolde **sadece** `v=2.6.74` → `v=2.6.75` değişiklikleri var, başka hiçbir şey değişmedi
-- Hiçbir mantık dokunulmadı
-
-## Geri dönüş planı
-
-Sorun çıkması imkansız (sadece string sürüm numarası). Yine de v2.6.74 zip'i Ahmet'te duruyor — anında push'lanabilir.
-
----
-
 # v2.6.74 — Multi-device sync Faz 4 Adım 4: Çift kaynak pull (en kritik paket)
 
 ## Amaç
