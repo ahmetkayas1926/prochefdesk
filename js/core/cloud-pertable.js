@@ -238,15 +238,8 @@
   // ============ PULL ============
   // Pulls ALL user data from new per-table tables.
   // Returns Promise<{ workspaces, recipes, ingredients, ..., user_prefs }>
-  //
-  // v2.6.74 — Faz 4 Adım 4: tüm tablolardan veri çekiyoruz (waste,
-  // checklist_sessions, stock_count_history, haccp×4, workspace_tombstones
-  // dahil). Soft-deleted kayıtlar (deleted_at IS NOT NULL veya
-  // data._deletedAt set) DAHİL ediliyor — cloud.js:pull() merge mantığı
-  // bunlara ihtiyaç duyuyor (newest-wins karşılaştırma için).
-  //
-  // Tablo bazında paralel fetch, sonra workspace-id'ye göre namespace
-  // edilmiş state objesi döner (eski format ile uyumlu).
+  // Tablo bazında paralel fetch, sonra workspace-id'ye göre namespace edilmiş
+  // state objesi döner (eski format ile uyumlu).
   function pullAll() {
     if (!isReady()) return Promise.resolve(null);
     const supabase = PCD.cloud.getClient();
@@ -264,15 +257,6 @@
       supabase.from('checklist_templates').select('*').eq('user_id', user.id),
       supabase.from('inventory').select('*').eq('user_id', user.id),
       supabase.from('user_prefs').select('*').eq('user_id', user.id).maybeSingle(),
-      // v2.6.74 — yeni tablolar
-      supabase.from('waste').select('*').eq('user_id', user.id),
-      supabase.from('checklist_sessions').select('*').eq('user_id', user.id),
-      supabase.from('stock_count_history').select('*').eq('user_id', user.id),
-      supabase.from('haccp_logs').select('*').eq('user_id', user.id),
-      supabase.from('haccp_units').select('*').eq('user_id', user.id),
-      supabase.from('haccp_readings').select('*').eq('user_id', user.id),
-      supabase.from('haccp_cook_cool').select('*').eq('user_id', user.id),
-      supabase.from('workspace_tombstones').select('*').eq('user_id', user.id),
     ];
 
     return Promise.all(fetches).then(function (results) {
@@ -282,10 +266,7 @@
         return null;
       }
       const [wsRes, recipesRes, ingsRes, menusRes, evRes, suppRes,
-             canvRes, shopRes, chkRes, invRes, prefsRes,
-             wasteRes, chkSessRes, stockHistRes,
-             haccpLogsRes, haccpUnitsRes, haccpReadingsRes, haccpCookCoolRes,
-             tombsRes] = results;
+             canvRes, shopRes, chkRes, invRes, prefsRes] = results;
 
       // Build state in the format store.js expects:
       // workspaces: { wsId: ws }
@@ -295,11 +276,11 @@
       const state = {};
 
       // Workspaces flat → { wsId: { id, name, ... } }
-      // v2.6.74 — soft-deleted ws'leri DAHİL ediyoruz (_deletedAt mark'lı).
-      // cloud.js:pull() merge mantığı bunlara ihtiyaç duyar.
       state.workspaces = {};
       (wsRes.data || []).forEach(function (w) {
-        const wsData = w.data || {
+        if (w.deleted_at) return;
+        // data jsonb içinde tüm record var
+        state.workspaces[w.id] = w.data || {
           id: w.id,
           name: w.name,
           concept: w.concept,
@@ -310,11 +291,6 @@
           periodEnd: w.period_end,
           archived: w.archived,
         };
-        // Server'da deleted_at varsa state'te _deletedAt olarak işaretle
-        if (w.deleted_at && !wsData._deletedAt) {
-          wsData._deletedAt = w.deleted_at;
-        }
-        state.workspaces[w.id] = wsData;
       });
 
       // user_prefs
@@ -326,17 +302,12 @@
       state.costHistory = prefsData.costHistory || [];
 
       // Workspace-scoped tables → { wsId: { id: row.data, ... } }
-      // v2.6.74 — soft-deleted satırları DAHİL et, _deletedAt ile mark.
       function packByWs(rows) {
         const out = {};
         (rows || []).forEach(function (r) {
-          const recordData = r.data || {};
-          // server-side deleted_at varsa data._deletedAt'e yansıt
-          if (r.deleted_at && !recordData._deletedAt) {
-            recordData._deletedAt = r.deleted_at;
-          }
+          if (r.deleted_at) return;
           if (!out[r.workspace_id]) out[r.workspace_id] = {};
-          out[r.workspace_id][r.id] = recordData;
+          out[r.workspace_id][r.id] = r.data;
         });
         return out;
       }
@@ -349,45 +320,12 @@
       state.canvases = packByWs(canvRes.data);
       state.shoppingLists = packByWs(shopRes.data);
       state.checklistTemplates = packByWs(chkRes.data);
-      // v2.6.74 — yeni map-yapılı tablolar
-      state.stockCountHistory = packByWs(stockHistRes.data);
-      state.haccpLogs = packByWs(haccpLogsRes.data);
-      state.haccpUnits = packByWs(haccpUnitsRes.data);
-      state.haccpReadings = packByWs(haccpReadingsRes.data);
-      state.haccpCookCool = packByWs(haccpCookCoolRes.data);
 
       // Inventory: { wsId: { ingredientId: row.data } }
       state.inventory = {};
       (invRes.data || []).forEach(function (r) {
         if (!state.inventory[r.workspace_id]) state.inventory[r.workspace_id] = {};
         state.inventory[r.workspace_id][r.ingredient_id] = r.data;
-      });
-
-      // v2.6.74 — Array tablolar (waste, checklist_sessions): { wsId: [items] }
-      function packArrayByWs(rows) {
-        const tmp = {};  // wsId → { id: item }
-        (rows || []).forEach(function (r) {
-          const recordData = r.data || {};
-          if (r.deleted_at && !recordData._deletedAt) {
-            recordData._deletedAt = r.deleted_at;
-          }
-          if (!tmp[r.workspace_id]) tmp[r.workspace_id] = {};
-          tmp[r.workspace_id][r.id] = recordData;
-        });
-        // Map → array (her ws için item array'i)
-        const out = {};
-        Object.keys(tmp).forEach(function (wsId) {
-          out[wsId] = Object.values(tmp[wsId]);
-        });
-        return out;
-      }
-      state.waste = packArrayByWs(wasteRes.data);
-      state.checklistSessions = packArrayByWs(chkSessRes.data);
-
-      // v2.6.74 — Workspace tombstones: { wsId: deletedAt }
-      state._deletedWorkspaces = {};
-      (tombsRes.data || []).forEach(function (t) {
-        state._deletedWorkspaces[t.workspace_id] = t.deleted_at;
       });
 
       return state;
