@@ -55,6 +55,14 @@
   // daha eski) ise atla — bizim local versiyon daha yeni.
   function applyChange(table, eventType, newRow, oldRow) {
     if (!PCD.store) return;
+    // v2.6.78 — Debug log: Realtime'dan gelen TÜM event'ler. Console'da
+    // window._dbgRT = true yapılınca açılır. Production'da default kapalı.
+    if (window._dbgRT) {
+      try {
+        const id = (newRow && newRow.id) || (oldRow && oldRow.id) || '?';
+        console.log('[RT]', table, eventType, id);
+      } catch (e) { /* ignore */ }
+    }
     try {
       switch (table) {
         case 'recipes': return applyToWsTable('recipes', eventType, newRow, oldRow);
@@ -440,6 +448,36 @@
         reconnectIfNeeded('visibility');
       }
     });
+
+    // v2.6.78 — Periyodik watchdog. Her 30 sn'de bir Realtime channel'ın
+    // gerçek state'ini kontrol et (subscribed flag yalan söyleyebilir).
+    // Channel state 'joined' değilse zorla yeniden bağlan.
+    //
+    // Sebep: Supabase JS bazen WebSocket sessizce düştüğünde subscribed
+    // flag'i true bırakır. Channel.state daha güvenilir bir gösterge.
+    // 30 sn aralık dengeli: çok sık gereksiz, çok seyrek event kaybı.
+    setInterval(function () {
+      const u = PCD.store && PCD.store.get('user');
+      if (!u || !u.id) return;
+      if (!PCD.cloud || !PCD.cloud.ready) return;
+      try {
+        const sb = PCD.cloud.getClient();
+        const channels = sb.getChannels ? sb.getChannels() : [];
+        if (channels.length === 0) {
+          PCD.log && PCD.log('cloud-realtime watchdog: no channels, subscribing');
+          subscribe();
+          return;
+        }
+        // Bizim channel her zaman ilki (tek channel kullanıyoruz)
+        const state = channels[0] && channels[0].state;
+        if (state !== 'joined') {
+          PCD.log && PCD.log('cloud-realtime watchdog: state=' + state + ', forcing reconnect');
+          reconnectIfNeeded('watchdog');
+        }
+      } catch (e) {
+        PCD.warn && PCD.warn('cloud-realtime watchdog error', e && e.message);
+      }
+    }, 30000);
   }
 
   PCD.cloudRealtime = {

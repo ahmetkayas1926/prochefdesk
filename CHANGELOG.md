@@ -1,3 +1,75 @@
+# v2.6.78 — Realtime watchdog + debug log
+
+## Sorun
+
+v2.6.77'de REPLICA IDENTITY FULL düzeltildi, fakat 3 senaryo hâlâ başarısız:
+
+1. Waste sil → mobilde silinmiyor
+2. Workspace sil → mobilde listesinden çıkmıyor
+3. Yeni workspace → mobilde listede yok
+
+Konsol teşhisi: `cloud.ready = true`, `isSubscribed() = true`, `channel.state = 'joined'` — Realtime fiilen bağlı görünüyor. Ama event'ler ya gelmiyor ya da gelse de işlenmiyor. Sebep henüz belirsiz.
+
+## Bu paketin amacı
+
+İki değişiklik: (1) sorun tekrar denenirken **konsoldan ne olduğunu görebilelim**, (2) channel "sessizce" düşse bile her 30 sn'de bir kendini onarsın.
+
+## Değişen dosya
+
+`js/core/cloud-realtime.js`:
+
+1. **Debug log** — `applyChange` fonksiyonu başına. `window._dbgRT = true` set edilince Realtime'dan gelen TÜM event'leri konsola basar (`[RT] table eventType id` formatında).
+
+2. **Periyodik watchdog** — her 30 sn channel.state kontrol. 'joined' değilse zorla yeniden bağlan. Sebep: Supabase JS bazen WebSocket sessizce düştüğünde `subscribed` flag'ini güncellemez. `channel.state` daha güvenilir gösterge.
+
+## Push talimatı
+
+**Push öncesi:** Yok.
+**Push:** GitHub Desktop ile direkt.
+
+## Push sonrası teşhis adımları (ÖNEMLİ)
+
+Bu sefer kesin teşhis için konsol kullanacağız.
+
+**Desktop'ta** (Cihaz B rolü) bir sekme aç, F12 → Console:
+
+```js
+window._dbgRT = true
+```
+
+Enter'a bas. Bundan sonra Realtime'dan gelen TÜM event'ler konsola düşecek.
+
+**Başka bir desktop sekmesi veya mobil** (Cihaz A rolü) — şu testleri yap:
+
+| Test | Cihaz A'da yap | Cihaz B konsolunda görmeli |
+|---|---|---|
+| 1 | Bir waste girdisini sil | `[RT] waste DELETE w_xxx` |
+| 2 | Yeni boş workspace oluştur | `[RT] workspaces INSERT ws_xxx` |
+| 3 | O workspace'i sil | `[RT] workspace_tombstones INSERT ws_xxx` veya `[RT] workspaces UPDATE ws_xxx` |
+
+**Üç senaryo var:**
+
+**A) Konsola `[RT]` mesajı geldi ama UI güncellenmedi:**
+→ Event geliyor, handler'da bug var. Konsol çıktısını bana yapıştır, hangi handler düzeltilecek bakalım.
+
+**B) Konsola `[RT]` mesajı hiç gelmedi:**
+→ Event hiç ulaşmıyor. Realtime publication veya RLS sorunu. Bunu da konsoldan kontrol edebiliriz.
+
+**C) Bazı testler için event geldi, bazıları için gelmedi:**
+→ Tablo bazlı sorun. Hangi tablolar geldi/gelmedi söyle.
+
+Her test için konsol çıktısını ekran görüntüsüyle veya kopyala-yapıştır olarak gönder. Bu bilgilerle kesin fix'i v2.6.79'da uygularım.
+
+## Watchdog
+
+30 sn'de bir arka planda çalışıyor, hiçbir şey yapmana gerek yok. Channel düşerse otomatik reconnect olacak.
+
+## Risk
+
+Sıfır. Sadece debug log eklendi (default kapalı) ve periyodik kontrol. Mevcut davranış değişmedi.
+
+---
+
 # v2.6.77 — Realtime DELETE event fix (REPLICA IDENTITY FULL)
 
 ## Sorun
