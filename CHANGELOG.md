@@ -1,3 +1,79 @@
+# v2.6.73 — Multi-device sync Faz 4 Adım 3: Migration script (blob → per-table)
+
+## Amaç
+
+Mevcut `user_data` blob'taki tüm veriyi tek seferlik yeni tablolara kopyala. Login sonrası arka planda sessizce çalışır, tamamlanınca flag yazar ve bir daha çalışmaz.
+
+Migration sonrasında:
+- Yeni veriler iki yere yazılmaya devam eder (v2.6.72 çift yazma aktif)
+- Eski veriler artık yeni tablolarda da mevcut
+- v2.6.74 pull priority'i değiştirebilir (yeni tablolar birincil)
+
+## Değişen / yeni dosyalar
+
+| Dosya | Değişiklik |
+|---|---|
+| `js/core/cloud-migrate-v4.js` (yeni) | Migration ana modülü. Workspaces + tombstones + 13 ws-scoped tablo + inventory + 2 array tablo. |
+| `js/core/auth.js` | İki pull yolunda da (SIGNED_IN ve mevcut oturum) migration tetikleyici |
+| `index.html` | Yeni script tag (cloud-pertable'dan sonra, cloud-realtime'dan önce) |
+
+## Strateji
+
+1. Login → `cloud.pull()` biter (state lokalde dolu)
+2. `getMigrationFlag()` kontrol et — `user_prefs.data.prefs.migrationFazV4Done === 1` mi?
+3. Flag varsa → return, hiçbir şey yapma
+4. Flag yoksa → state'teki tüm tabloları gez, her kaydı `cloudPerTable.queueUpsert(...)` ile gönder
+5. `flushNow()` ile queue'yu hemen boşalt
+6. 1.5 sn bekle (flush tamamlansın), flag yaz, tekrar flush
+
+## Idempotency garantileri
+
+- **Cloud flag** — `user_prefs.data.prefs.migrationFazV4Done`. Tarayıcı cache temizlense bile pull sonrası gelir, her cihazda görülür.
+- **UPSERT** — aynı veri 2. kez yazılsa zarar yok, sadece gereksiz trafik (test sırasında bu önemli).
+- **migrationInProgress lock** — eş zamanlı çağrılarda 2. çağrı atlanır.
+- **Hata toleransı** — migration kısmen başarısız olsa bile flag yazılmaz, sonraki login tekrar dener.
+
+## Performans
+
+Tipik kullanıcı (~70 ingredient + ~50 recipe + ~20 workspace-bound kayıt) için:
+- ~150 queueUpsert çağrısı
+- cloud-pertable batch upsert kullanıyor (tablo başına tek HTTP isteği)
+- Toplam ~10-15 HTTP request, < 5 sn
+
+## Özel handling
+
+- **Workspaces** — top-level tablo, wsId NULL ile queueUpsert
+- **Workspace tombstones** — `_deletedWorkspaces` map'inden okunup `workspace_tombstones` tablosuna PK olarak workspace_id ile yazılır
+- **Inventory** — composite ID (`wsId:ingredientId`), data jsonb'a `ingredient_id` field'ı eklenir (flushNow inventory branch için)
+- **Array tablolar** (waste, checklist_sessions) — `queueArraySync(table, wsId, [], arr)` ile tüm öğeler upsert
+- **Soft-deleted kayıtlar** — `_deletedAt` ile gönderilir (flushNow else branch'i `deleted_at` kolonuna mapler)
+
+## Geliştirici notu
+
+Test/debug için tarayıcı console'unda:
+```js
+PCD.cloudMigrateV4.getMigrationFlag()  // true/false
+PCD.cloudMigrateV4.resetFlag()          // flag'i sıfırla → reload → tekrar migrate
+PCD.cloudMigrateV4.runMigration()       // manuel tetikle (flag varsa atlar)
+```
+
+## Risk
+
+**Düşük-orta.** Migration UPSERT kullanıyor, mevcut veri silinmiyor. En kötü senaryo: bir tablo kısmen migrate olur, flag yazılmaz, sonraki login tamamlar. Eski blob hala paralel çalıştığı için veri kaybı yok.
+
+## Push öncesi yapılacak
+
+Yok. v2.6.71 SQL migration'ı zaten production'da, v2.6.72 çift yazma aktif. Bu paket sadece JS — direkt push.
+
+## Kapsam dışı (sonraki paketler)
+
+| Paket | Ne yapacak |
+|---|---|
+| v2.6.74 | `pullAll()` merge mantığı + pull priority değiştirme (yeni tablolar birincil) |
+| v2.6.75 | Çift yazmayı kapat, sadece yeni tablolara yaz, blob 30 gün read-only fallback |
+
+---
+
 # v2.6.72 — Multi-device sync Faz 4 Adım 2: Çift yazma desteği (eksik tablolar)
 
 ## Amaç

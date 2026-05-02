@@ -41,6 +41,14 @@
                     }
                   });
                 }
+                // v2.6.73 — Faz 4 Adım 3: Blob → per-table migration.
+                // Pull'dan sonra çalışır (state lokalde dolu), idempotent.
+                // Sessiz arka plan iş — kullanıcı görmez.
+                if (PCD.cloudMigrateV4 && PCD.cloudMigrateV4.runMigration) {
+                  PCD.cloudMigrateV4.runMigration().catch(function (e) {
+                    PCD.warn && PCD.warn('cloud-migrate-v4 (signed-in path) failed:', e && e.message);
+                  });
+                }
               }).catch(function (e) {
                 PCD.warn('Cloud pull on sign-in failed:', e && e.message);
               });
@@ -71,6 +79,13 @@
                   PCD.log && PCD.log('photo-migration: existing-session path migrated', r.migrated, 'recipes');
                   if (PCD.cloud && PCD.cloud.queueSync) PCD.cloud.queueSync();
                 }
+              });
+            }
+          }).then(function () {
+            // v2.6.73 — Faz 4 Adım 3: Blob → per-table migration (mevcut oturum yolu)
+            if (PCD.cloudMigrateV4 && PCD.cloudMigrateV4.runMigration) {
+              return PCD.cloudMigrateV4.runMigration().catch(function (e) {
+                PCD.warn && PCD.warn('cloud-migrate-v4 (existing-session path) failed:', e && e.message);
               });
             }
           }).then(function () {
