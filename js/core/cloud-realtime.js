@@ -68,6 +68,15 @@
         case 'workspaces': return applyToWorkspaces(eventType, newRow, oldRow);
         case 'inventory': return applyToInventory(eventType, newRow, oldRow);
         case 'user_prefs': return applyToUserPrefs(eventType, newRow, oldRow);
+        // v2.6.75 — Faz 4 tamamlama: yeni tablolar
+        case 'stock_count_history': return applyToWsTable('stockCountHistory', eventType, newRow, oldRow);
+        case 'haccp_logs': return applyToWsTable('haccpLogs', eventType, newRow, oldRow);
+        case 'haccp_units': return applyToWsTable('haccpUnits', eventType, newRow, oldRow);
+        case 'haccp_readings': return applyToWsTable('haccpReadings', eventType, newRow, oldRow);
+        case 'haccp_cook_cool': return applyToWsTable('haccpCookCool', eventType, newRow, oldRow);
+        case 'waste': return applyToWsArrayTable('waste', eventType, newRow, oldRow);
+        case 'checklist_sessions': return applyToWsArrayTable('checklistSessions', eventType, newRow, oldRow);
+        case 'workspace_tombstones': return applyToTombstones(eventType, newRow, oldRow);
       }
     } catch (e) {
       PCD.warn && PCD.warn('cloud-realtime apply error', table, e);
@@ -173,6 +182,95 @@
     if (data.plan) PCD.store.set('plan', data.plan);
   }
 
+  // v2.6.75 — Array yapılı ws-scoped tablolar (waste, checklist_sessions).
+  // State şekli: { wsId: [array of items] }. Her satırın id'si var.
+  // INSERT/UPDATE: array içinde id'ye göre upsert. DELETE: id'yi çıkar.
+  function applyToWsArrayTable(stateKey, eventType, newRow, oldRow) {
+    const row = newRow || oldRow;
+    if (!row) return;
+    const wsId = row.workspace_id;
+    const id = row.id;
+    if (!wsId || !id) return;
+    const all = PCD.clone(PCD.store.get(stateKey) || {});
+    const arr = (all[wsId] || []).slice();
+
+    if (eventType === 'DELETE') {
+      const filtered = arr.filter(function (it) { return it && it.id !== id; });
+      if (filtered.length !== arr.length) {
+        all[wsId] = filtered;
+        PCD.store.set(stateKey, all);
+        scheduleViewRefresh();
+      }
+      return;
+    }
+
+    // INSERT/UPDATE
+    const incoming = newRow.data || {};
+    const idx = arr.findIndex(function (it) { return it && it.id === id; });
+    if (idx >= 0) {
+      const localExisting = arr[idx];
+      // Last-write-wins by updatedAt
+      if (localExisting && localExisting.updatedAt && incoming.updatedAt) {
+        if (localExisting.updatedAt > incoming.updatedAt) return;
+        if (localExisting.updatedAt === incoming.updatedAt) return;
+      }
+      arr[idx] = incoming;
+    } else {
+      arr.push(incoming);
+    }
+    all[wsId] = arr;
+    PCD.store.set(stateKey, all);
+    scheduleViewRefresh();
+  }
+
+  // v2.6.75 — Workspace tombstones: silinen workspace'lerin Realtime'ı.
+  // PK doğrudan workspace_id, data jsonb yok. State: _deletedWorkspaces map.
+  // INSERT geldiğinde: o ws'yi state'ten de sil (başka cihaz silmiş demektir).
+  // DELETE: hiç olmamalı (tombstone hiç silinmiyor) ama defansif.
+  function applyToTombstones(eventType, newRow, oldRow) {
+    if (eventType === 'DELETE') return;  // tombstone hiç silinmemeli
+    const row = newRow;
+    if (!row || !row.workspace_id) return;
+    const wsId = row.workspace_id;
+    const tombs = PCD.clone(PCD.store.get('_deletedWorkspaces') || {});
+    if (tombs[wsId]) return;  // zaten biliyoruz, tekrar uygulama
+    tombs[wsId] = row.deleted_at || new Date().toISOString();
+    PCD.store.set('_deletedWorkspaces', tombs);
+
+    // Workspace'i ve ona bağlı tüm verileri lokal state'ten sil.
+    // Bu cihaz workspace silindiğini öğrenince diğer ws verilerine
+    // bakmaya devam etmeli, silinen ws diriltilmemeli.
+    const wss = PCD.clone(PCD.store.get('workspaces') || {});
+    if (wss[wsId]) {
+      delete wss[wsId];
+      PCD.store.set('workspaces', wss);
+    }
+    const WS_TABLES = [
+      'recipes','ingredients','menus','events','suppliers','inventory',
+      'waste','checklistTemplates','checklistSessions','canvases',
+      'shoppingLists','stockCountHistory','haccpLogs','haccpUnits',
+      'haccpReadings','haccpCookCool',
+    ];
+    WS_TABLES.forEach(function (tbl) {
+      const t = PCD.store.get(tbl);
+      if (t && t[wsId]) {
+        const next = PCD.clone(t);
+        delete next[wsId];
+        PCD.store.set(tbl, next);
+      }
+    });
+
+    // Aktif ws bu silinen ise, başka bir ws'ye geç
+    const activeId = PCD.store.get('activeWorkspaceId');
+    if (activeId === wsId) {
+      const remaining = Object.keys(PCD.store.get('workspaces') || {});
+      if (remaining.length > 0) {
+        PCD.store.set('activeWorkspaceId', remaining[0]);
+      }
+    }
+    scheduleViewRefresh();
+  }
+
   // Subscribe to all 11 tables for the current user
   function subscribe() {
     if (subscribed) return;
@@ -185,6 +283,10 @@
       'workspaces', 'recipes', 'ingredients', 'menus', 'events',
       'suppliers', 'canvases', 'shopping_lists', 'checklist_templates',
       'inventory', 'user_prefs',
+      // v2.6.75 — Faz 4 tamamlama: yeni tablolar
+      'waste', 'checklist_sessions', 'stock_count_history',
+      'haccp_logs', 'haccp_units', 'haccp_readings', 'haccp_cook_cool',
+      'workspace_tombstones',
     ];
 
     channel = supabase.channel('pcd-user-' + user.id);

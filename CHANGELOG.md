@@ -1,3 +1,98 @@
+# v2.6.75 — Multi-device sync Faz 4 tamamlama: Realtime kapsam genişletme
+
+## Amaç
+
+Faz 4'te eklenen 9 yeni tablo (`waste`, `checklist_sessions`, `stock_count_history`, `haccp_logs`, `haccp_units`, `haccp_readings`, `haccp_cook_cool`, `workspace_tombstones`) Realtime kanalında DEĞİLDİ. Bu cihazlar arası senkron için kritik bir eksiklikti:
+
+- Cihaz A waste log girer → Cihaz B'de gözükmüyordu (1-2 sn yerine, sadece reload sonrası)
+- Cihaz A HACCP unit ekler → Cihaz B'de Realtime'da yok
+- **EN KRİTİK:** Cihaz A workspace siler → Cihaz B'de tombstone gelmediği için ws diriltme bug'ı potansiyeli
+
+Bu paket bunları kapatıyor.
+
+## Mevcut durumu nasıl tespit ettim
+
+Kullanıcı bağlam notları biraz eski. Kodu bizzat tarayarak gerçek durumu çıkardım:
+
+| İddia (notlardan) | Gerçek durum |
+|---|---|
+| app.js debug kalıntıları (alert/console.log) var | ✅ Çoktan temizlenmiş, PCD.warn kullanılıyor |
+| Recipe editor `renderEditor()` her tuşta tüm modal'ı çiziyor | ✅ v2.6.48'de partial-update'e refactor edilmiş |
+| Memory leak: document.addEventListener her açılışta ekleniyor | ✅ `_qDDOutsideHandler` guard'ı eklenmiş |
+| Photo storage orphan cleanup yok | ✅ `isPhotoStillUsed` + `deleteByUrl` ile yapılıyor |
+| CSV parser primitif | ✅ SheetJS'e geçiş yapılmış (window.XLSX) |
+| i18n 11 dosya dağınık | ✅ 6 dosyaya birleşmiş |
+| QuotaExceededError sessiz veri kaybı | ✅ Modal eklenmiş, 3 seçenek (download/trim/later) |
+| Logout sonrası Realtime channel cleanup yok | ✅ `unsubscribe()` user null olunca tetikleniyor |
+| **Realtime kapsam yeni tabloları içermiyor** | ❌ **Bu doğru, bu paket kapatıyor** |
+
+## Değişen dosya
+
+`js/core/cloud-realtime.js`:
+
+1. **TABLES listesi** 11 → 19 tablo (8 yeni eklendi: waste, checklist_sessions, stock_count_history, haccp_logs, haccp_units, haccp_readings, haccp_cook_cool, workspace_tombstones)
+
+2. **applyChange switch** 8 yeni case ekledi:
+   - HACCP×4 + stockCountHistory → mevcut `applyToWsTable` doğrudan kullanıyor (mapping mesele değil)
+   - waste, checklist_sessions → yeni `applyToWsArrayTable` helper (state şekli `{ wsId: [array] }`)
+   - workspace_tombstones → yeni `applyToTombstones` helper
+
+3. **Yeni helper: applyToWsArrayTable**
+   - Array içinde id'ye göre upsert
+   - Last-write-wins by updatedAt
+   - DELETE: id'yi array'den çıkar
+
+4. **Yeni helper: applyToTombstones** (en önemli)
+   - Tombstone INSERT geldiğinde `_deletedWorkspaces` map'e yaz
+   - Workspace'i lokal state'ten sil
+   - Tüm ws-bound tablolardan o ws'nin verilerini temizle (16 tablo)
+   - Aktif ws bu silinen ise başka ws'ye geç
+   - DELETE event'i ignore (tombstone hiç silinmemeli)
+
+## Test senaryoları (push sonrası)
+
+Bu paketten sonra şunlar **anlık** olmalı (1-2 sn):
+
+| Test | Cihaz A | Cihaz B beklenen |
+|---|---|---|
+| 1 | Waste Log → atık ekle | Waste Log'da yeni satır görünür |
+| 2 | Checklist → Start session | Sessions listesinde yeni session |
+| 3 | HACCP → unit ekle | Unit listesinde görünür |
+| 4 | HACCP → bugünün okuması | Tablo hücresinde değer |
+| 5 | Cook & Cool → satır gir | Tabloda satır |
+| 6 | **Workspace sil** | Workspace listesinden çıkar, aktif olduysa başka ws'ye geçer |
+
+## Risk
+
+**Düşük.** Mevcut Realtime mantığına 8 case + 2 helper ekledim. Mevcut 11 tablo davranışı hiç değişmedi. Yeni helper'lar last-write-wins guard'ı ile mevcut pattern'i taklit ediyor. Channel başarısız olursa zaten 10 sn sonra retry var.
+
+## Push öncesi yapılacak
+
+Yok. SQL migration gerektirmez (Realtime publication v2.6.71'de zaten yapıldı). Direkt push.
+
+## Push sonrası kontrol
+
+Cloudflare deploy bitince (1-2 dk) → **Ctrl+Shift+R sert yenile**.
+
+**Mobil + desktop iki cihaz açık tut.** Yukarıdaki 6 test senaryosunu sırayla yap. Her birinde Cihaz A'da değişiklik yapınca Cihaz B'de 1-2 saniye içinde görünmeli.
+
+**6. test (workspace silme) en kritik** — adasd workspace'in (boş, 0 recipe 0 menu) sil, diğer cihazda workspace listesinden çıktığını gör.
+
+## Sıradaki paketler (genel plan)
+
+| Sıra | Paket | Süre | Amaç |
+|---|---|---|---|
+| **şimdi** | v2.6.74 + v2.6.75 stabilite gözlem | 1-2 gün | Multi-device sync gerçek kullanımda test edilsin |
+| v2.6.76 | Eski blob yazımını kapat (Faz 4 son adım) | 2-3 saat | sadece yeni tablolara yaz, blob 30 gün read-only |
+| v2.6.77 | Disaster recovery playbook | yarım gün | yedek geri yükleme + acil durum adımları yazılı |
+| v2.6.78 | Status page + uptime monitoring | 1-2 saat | UptimeRobot ücretsiz |
+| v2.6.79 | Staging environment | 1 gün | Cloudflare Pages preview branch + ayrı Supabase |
+| v2.6.80 | Rate limiting | 1 gün | Cloudflare Turnstile + Supabase RPC throttle |
+| v2.6.81 | IndexedDB geçişi | 3-5 gün | localStorage 5MB → ~50MB+ |
+| v2.6.82 | Playwright smoke test | 3-5 gün | otomatik regression detection |
+
+---
+
 # v2.6.74 — Multi-device sync Faz 4 Adım 4: Çift kaynak pull (en kritik paket)
 
 ## Amaç
