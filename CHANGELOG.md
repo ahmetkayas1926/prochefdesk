@@ -1,3 +1,61 @@
+# v2.6.71 — Multi-device sync Faz 4 Adım 1: Eksik tabloların şeması
+
+## Amaç
+
+Faz 4'te (eski user_data blob → yeni per-table sisteme geçiş) bu 9 veri kümesi şu an "evsiz". Migration'dan önce hedef tablolar yoksa bu veriler kaybolur.
+
+Önceki Claude konuşması v2.6.71-72'yi denemiş ama bu açığı görmeden migration'a girmiş, hata verince geri dönülmüş. Bu sürüm sadece **şema** ekler — kod değişikliği yok, mevcut akışlar etkilenmez.
+
+## Eksik tablolar (eklenenler)
+
+| Tablo | Kapsam | İçerik |
+|---|---|---|
+| `waste` | workspace-scoped | Atık kayıtları |
+| `checklist_sessions` | workspace-scoped | Tamamlanmış checklist oturumları |
+| `stock_count_history` | workspace-scoped | Geçmiş stok sayım snapshot'ları |
+| `haccp_logs` | workspace-scoped | HACCP fridge/freezer log alanları |
+| `haccp_units` | workspace-scoped | Soğutucu üniteleri |
+| `haccp_readings` | workspace-scoped | Günlük sıcaklık okumaları |
+| `haccp_cook_cool` | workspace-scoped | Cook & Cool log entry'leri |
+| `cost_history` | user-scoped | Global fiyat değişim logu |
+| `workspace_tombstones` | user-scoped | Silinmiş workspace ID'leri |
+
+## Yapı
+
+Tüm tablolar v2.6.66 pattern'iyle birebir aynı:
+- `id text PRIMARY KEY`
+- `user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE`
+- `workspace_id text NOT NULL` (ws-scoped olanlarda; cost_history ve workspace_tombstones'ta yok)
+- `data jsonb NOT NULL`
+- `created_at`, `updated_at`, `deleted_at` (workspace_tombstones hariç — immutable kayıt)
+- RLS açık, her tablo için 4 policy (SELECT/INSERT/UPDATE/DELETE) `auth.uid() = user_id`
+- `pcd_set_updated_at` trigger (workspace_tombstones hariç)
+- Realtime publication'a eklendi
+
+`workspace_tombstones` özel: PK doğrudan `workspace_id`, ws başına 1 satır, `deleted_at` PK ile beraber.
+
+## Push öncesi yapılacak
+
+Supabase Dashboard → SQL Editor:
+1. `migrations/v2.6.71-extra-tables-schema.sql` dosyasını yapıştır
+2. Run
+3. Doğrulama sorguları (dosya sonunda 5 adet) — hepsi beklenen sonuçları vermeli
+
+## Risk
+
+**Sıfır.** Sadece additive — yeni tablolar oluşturuluyor, mevcut hiçbir tablo, kod, akış etkilenmez. user_data blob aynen çalışıyor, çift yazma henüz bu yeni tabloları görmüyor.
+
+## Sonraki adımlar (Faz 4)
+
+| Paket | Ne yapacak |
+|---|---|
+| v2.6.72 | `cloud-pertable.js`'e bu 9 tablonun çift yazma desteği |
+| v2.6.73 | Migration script: mevcut blob → yeni tablolar (tek seferlik, login sonrası) |
+| v2.6.74 | `pullAll()` merge mantığı (mergeRecordsByUpdatedAt + tombstones + ghost ws cleanup) + pull priority değiştirme |
+| v2.6.75 | Çift yazmayı kapat, sadece yeni tablolara yaz, blob 30 gün read-only fallback |
+
+---
+
 # v2.6.70 — Multi-device sync Faz 3 düzeltme: View auto-refresh
 
 ## Sorun
