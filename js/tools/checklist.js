@@ -36,12 +36,18 @@
   const PCD = window.PCD;
 
   // Workspace-scoped session storage: state.checklistSessions = { wsId: [sessions] }
-  function readSessions() {
+  // v2.6.80 — Soft-delete pattern (waste.js v2.6.79 ile aynı):
+  //   readSessionsAll() → raw, _deletedAt'lı tombstone'lar dahil (delete/save/update handler için)
+  //   readSessions()    → görünür, _deletedAt'sız (UI render ve hesaplamalar için)
+  function readSessionsAll() {
     const wsId = PCD.store.getActiveWorkspaceId();
     const all = PCD.store._read('checklistSessions') || {};
     // Backward-compat: if it was a flat array (old data), treat as no-ws
     if (Array.isArray(all)) return all;
     return all[wsId] || [];
+  }
+  function readSessions() {
+    return readSessionsAll().filter(function (s) { return !s._deletedAt; });
   }
   function writeSessions(arr) {
     const wsId = PCD.store.getActiveWorkspaceId();
@@ -52,6 +58,8 @@
     next[wsId] = arr;
     PCD.store.set('checklistSessions', next);
     // v2.6.72 — Faz 4 Adım 2: çift yazma (checklist_sessions array tablosu)
+    // v2.6.80 — Soft-delete pattern: tombstone'lar array'de kaldığı için
+    // queueArraySync artık DELETE atmaz, sadece UPSERT (deleted_at kolonu set olur).
     if (PCD.cloudPerTable) {
       PCD.cloudPerTable.queueArraySync('checklist_sessions', wsId, oldArr, arr);
     }
@@ -608,9 +616,14 @@
   }
 
   function deleteSessionById(sid) {
-    const all = readSessions();
-    const next = all.filter(function (s) { return s.id !== sid; });
-    writeSessions(next);
+    // v2.6.80 — Soft-delete: tombstone bırak, array'den çıkarma. Çift yazma
+    // fazında pull merge'de _deletedAt'lı kayıt newest-wins ile kazanır ve
+    // item geri gelmez (waste.js / recipes pattern'i).
+    const cur = readSessionsAll().slice();
+    const idx = cur.findIndex(function (s) { return s && s.id === sid; });
+    if (idx === -1) return;
+    cur[idx] = Object.assign({}, cur[idx], { _deletedAt: new Date().toISOString() });
+    writeSessions(cur);
   }
 
   // ============ TEMPLATE PREVIEW ============
@@ -880,7 +893,10 @@
         };
       }),
     };
-    const all = readSessions();
+    // v2.6.80 — Soft-delete pattern: raw okuma. Tombstone'ları kaybedersek
+    // queueArraySync onları "silinmiş" sanar ve hard-delete atar; A bug'ı
+    // geri döner. readSessionsAll() tombstone'ları korur.
+    const all = readSessionsAll();
     all.push(session);
     writeSessions(all);
     openSession(session.id);
@@ -892,8 +908,10 @@
   }
 
   function updateSession(sid, mutator) {
-    const all = readSessions();
-    const idx = all.findIndex(function (s) { return s.id === sid; });
+    // v2.6.80 — Soft-delete pattern: raw okuma. Tombstone'ları korur, sadece
+    // _deletedAt'sız (görünür) kayıtlar mutate edilir.
+    const all = readSessionsAll();
+    const idx = all.findIndex(function (s) { return s && s.id === sid && !s._deletedAt; });
     if (idx < 0) return;
     mutator(all[idx]);
     writeSessions(all);

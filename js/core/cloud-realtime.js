@@ -1,5 +1,5 @@
 /* ================================================================
-   ProChefDesk — cloud-realtime.js (v2.6.78 — array DELETE event fix)
+   ProChefDesk — cloud-realtime.js (v2.6.80 — Realtime kapsam tüm tool tablolarına genişletildi)
 
    Multi-device sync, Faz 3: Supabase Realtime channel.
 
@@ -8,7 +8,7 @@
    içinde otomatik güncellenir. Sayfa yenileme gerekmez.
 
    ÇALIŞMA ŞEKLİ:
-   1. Login sonrası bu modül 12 tabloya subscribe olur.
+   1. Login sonrası bu modül 18 tabloya subscribe olur.
    2. Postgres replication slot'tan gelen INSERT/UPDATE/DELETE event'leri
       bu kanaldan akar.
    3. Her event'te ilgili record store'a uygulanır (apply hook).
@@ -21,7 +21,7 @@
      daha eski mi?" check'i yapar → ise atla. Sadece newer wins.
 
    PERFORMANS:
-   - WebSocket tek bir bağlantı (Supabase 11 tablo için tek channel)
+   - WebSocket tek bir bağlantı (Supabase 18 tablo için tek channel)
    - Her event ~1KB payload (sadece değişen record)
    - Idle bağlantı maliyeti yok (Supabase Free tier limit'leri)
    ================================================================ */
@@ -70,6 +70,14 @@
         case 'user_prefs': return applyToUserPrefs(eventType, newRow, oldRow);
         // v2.6.77 — Array tablolar (Faz 4 Adım 5: Realtime kapsam genişletme)
         case 'waste': return applyToArrayWsTable('waste', eventType, newRow, oldRow);
+        // v2.6.80 — checklist_sessions (array, soft-delete pattern v2.6.80)
+        case 'checklist_sessions': return applyToArrayWsTable('checklistSessions', eventType, newRow, oldRow);
+        // v2.6.80 — HACCP & stock map tabloları (workspace-scoped, soft-delete via store API)
+        case 'haccp_logs': return applyToWsTable('haccpLogs', eventType, newRow, oldRow);
+        case 'haccp_units': return applyToWsTable('haccpUnits', eventType, newRow, oldRow);
+        case 'haccp_readings': return applyToWsTable('haccpReadings', eventType, newRow, oldRow);
+        case 'haccp_cook_cool': return applyToWsTable('haccpCookCool', eventType, newRow, oldRow);
+        case 'stock_count_history': return applyToWsTable('stockCountHistory', eventType, newRow, oldRow);
       }
     } catch (e) {
       PCD.warn && PCD.warn('cloud-realtime apply error', table, e);
@@ -235,7 +243,7 @@
     scheduleViewRefresh();
   }
 
-  // Subscribe to all 12 tables for the current user
+  // Subscribe to all 18 tables for the current user
   function subscribe() {
     if (subscribed) return;
     if (!PCD.cloud || !PCD.cloud.ready) return;
@@ -249,6 +257,10 @@
       'inventory', 'user_prefs',
       // v2.6.77 — Faz 4 Adım 5: Realtime kapsam genişletme
       'waste',
+      // v2.6.80 — Faz 4 Adım 5 devam: tüm tool tabloları Realtime'da
+      'checklist_sessions',
+      'haccp_logs', 'haccp_units', 'haccp_readings', 'haccp_cook_cool',
+      'stock_count_history',
     ];
 
     channel = supabase.channel('pcd-user-' + user.id);
