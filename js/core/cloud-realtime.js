@@ -1,5 +1,5 @@
 /* ================================================================
-   ProChefDesk — cloud-realtime.js (v2.6.77 — waste tablosu eklendi)
+   ProChefDesk — cloud-realtime.js (v2.6.78 — array DELETE event fix)
 
    Multi-device sync, Faz 3: Supabase Realtime channel.
 
@@ -179,29 +179,46 @@
   // State'te { wsId: [items] } şeklinde, her item'in id'si var. SQL tarafında
   // her item ayrı satır. Realtime event geldiğinde id ile array'de bul, varsa
   // güncelle; yoksa ekle. DELETE'te id ile çıkar.
+  //
+  // v2.6.78 — DELETE event'i Postgres REPLICA IDENTITY DEFAULT olduğu için
+  // sadece PK (id) içeriyor; workspace_id payload'da YOK. Bu nedenle DELETE
+  // case'inde id ile TÜM ws array'lerini tarıyoruz. INSERT/UPDATE event'lerinde
+  // newRow tüm sütunları içerdiği için workspace_id mevcut.
   function applyToArrayWsTable(stateKey, eventType, newRow, oldRow) {
-    const row = newRow || oldRow;
-    if (!row) return;
-    const wsId = row.workspace_id;
-    const id = row.id;
-    if (!wsId || !id) return;
-
     const all = PCD.clone(PCD.store.get(stateKey) || {});
-    if (!all[wsId]) all[wsId] = [];
-
-    const idx = all[wsId].findIndex(function (it) { return it && it.id === id; });
 
     if (eventType === 'DELETE') {
-      if (idx !== -1) {
-        all[wsId].splice(idx, 1);
+      // workspace_id null olabilir → id ile tüm ws'lerde ara
+      const id = (oldRow && oldRow.id) || (newRow && newRow.id);
+      if (!id) return;
+      const wsKeys = Object.keys(all);
+      let changed = false;
+      for (let i = 0; i < wsKeys.length; i++) {
+        const arr = all[wsKeys[i]];
+        if (!Array.isArray(arr)) continue;
+        const idx = arr.findIndex(function (it) { return it && it.id === id; });
+        if (idx !== -1) {
+          arr.splice(idx, 1);
+          changed = true;
+        }
+      }
+      if (changed) {
         PCD.store.set(stateKey, all);
         scheduleViewRefresh();
       }
       return;
     }
 
-    // INSERT or UPDATE
-    const incoming = (newRow && newRow.data) || {};
+    // INSERT or UPDATE — newRow tam kayıt, workspace_id mevcut
+    const row = newRow;
+    if (!row) return;
+    const wsId = row.workspace_id;
+    const id = row.id;
+    if (!wsId || !id) return;
+
+    if (!all[wsId]) all[wsId] = [];
+    const idx = all[wsId].findIndex(function (it) { return it && it.id === id; });
+    const incoming = row.data || {};
 
     if (idx !== -1) {
       // Last-write-wins by updatedAt (loop önleme: kendi attığım event geri gelirse atla)

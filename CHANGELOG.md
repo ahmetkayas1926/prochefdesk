@@ -1,3 +1,85 @@
+# v2.6.78 — Array tabloları DELETE event fix'i (v2.6.77 patch'i)
+
+## Sorun
+
+v2.6.77 ile waste tablosu Realtime'a eklendi. INSERT ve UPDATE doğru çalıştı (cihaz B'de anında gözüküyor), ama **DELETE çalışmadı**:
+
+- A'da bir waste log silindiğinde, B'de "1ms refresh izi" var ama silinen item ekranda kalıyordu
+- B'ye giden DELETE event'inde sayfa render'ı tetikleniyordu (kalan item'lar için gelen UPDATE event'leri yüzünden) ama state'ten item çıkmıyordu
+
+## Kök neden
+
+Postgres replication slot **REPLICA IDENTITY DEFAULT** ayarında (v2.6.80 rollback'i ile böyle bırakılmıştı). Bu mod'da DELETE event'i sadece **Primary Key**'i içerir — yani sadece `id`. `workspace_id`, `data` gibi diğer sütunlar payload'da YOK.
+
+Benim v2.6.77 hook'um:
+```javascript
+const wsId = row.workspace_id;  // undefined
+if (!wsId || !id) return;        // ← erken çıkış, state değişmedi
+```
+
+Karşılaştırma:
+- **`recipes`, `ingredients`** vb. → silme `_deletedAt` set ile **soft-delete** (UPSERT olarak SQL'e gider). Realtime event UPDATE olarak gelir, payload tüm sütunları içerir. Hook çalışır.
+- **`waste`** → `queueArraySync` üzerinden **hard-delete** yapıyor (gerçek SQL DELETE). Realtime event DELETE olarak gelir, sadece PK içerir.
+
+Yani waste'in delete davranışı diğerlerinden farklı, hook'un buna uyumlu olması gerekiyordu.
+
+## Çözüm
+
+`applyToArrayWsTable` fonksiyonunun DELETE branch'i yeniden yazıldı:
+
+```javascript
+if (eventType === 'DELETE') {
+  // workspace_id null olabilir → id ile tüm ws'lerde ara
+  const id = (oldRow && oldRow.id) || (newRow && newRow.id);
+  if (!id) return;
+  const wsKeys = Object.keys(all);
+  let changed = false;
+  for (let i = 0; i < wsKeys.length; i++) {
+    const arr = all[wsKeys[i]];
+    if (!Array.isArray(arr)) continue;
+    const idx = arr.findIndex(function (it) { return it && it.id === id; });
+    if (idx !== -1) {
+      arr.splice(idx, 1);
+      changed = true;
+    }
+  }
+  if (changed) {
+    PCD.store.set(stateKey, all);
+    scheduleViewRefresh();
+  }
+  return;
+}
+```
+
+INSERT/UPDATE branch'ında newRow tüm kolonları içerdiği için workspace_id mevcut — orada değişiklik yok.
+
+Item id'leri global olarak unique (UUID), iki ws'de aynı id olamaz, bu yüzden global tarama güvenli.
+
+## Değişen dosyalar
+
+| Dosya | Değişiklik |
+|---|---|
+| `js/core/cloud-realtime.js` | `applyToArrayWsTable` DELETE branch'i id-only çalışacak şekilde refactor |
+| `js/core/config.js` | `APP_VERSION` → `2.6.78` |
+| `index.html:107` | Sidenav badge → `v2.6.78` |
+| `index.html`, `privacy.html`, `terms.html` | Cache-bust → `?v=2.6.78` |
+
+## Bilinen ek sorun (bu paketin kapsamı dışında)
+
+Test sırasında ikinci bir gözlem: A'da silinen item, A'ya geri dönüldüğünde **geri gelmiş**. Bu farklı bir sorun (eski blob union pull veya focus-triggered refresh). Bu paket B'nin DELETE problemini çözer. A'nın geri-gelme problemi B çözüldükten sonra izole halde teşhis edilecek (paket 6 — büyük ihtimalle eski blob yazımının kapatılmasıyla çözülür, Faz 4 bitiş).
+
+## Doğrulama
+
+- `node --check` 43 JS dosyasında temiz
+- DELETE branch artık workspace_id'ye bağımlı değil
+- INSERT/UPDATE branch davranışı aynı (sadece kod organizasyonu farklı)
+
+## Geri dönüş planı
+
+v2.6.77 → v2.6.78 sadece tek fonksiyon değişikliği. Sorun çıkarsa v2.6.77 zip'i sende mevcut. Hatta v2.6.76 (waste Realtime'sız) da mevcut — onunla %100 eski davranışa dönülür.
+
+---
+
 # v2.6.77 — Faz 4 Adım 5: Realtime kapsam genişletme — `waste` tablosu
 
 ## Amaç
