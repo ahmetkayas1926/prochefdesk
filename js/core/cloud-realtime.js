@@ -1,5 +1,5 @@
 /* ================================================================
-   ProChefDesk — cloud-realtime.js (v2.6.68)
+   ProChefDesk — cloud-realtime.js (v2.6.77 — waste tablosu eklendi)
 
    Multi-device sync, Faz 3: Supabase Realtime channel.
 
@@ -8,7 +8,7 @@
    içinde otomatik güncellenir. Sayfa yenileme gerekmez.
 
    ÇALIŞMA ŞEKLİ:
-   1. Login sonrası bu modül 11 tabloya subscribe olur.
+   1. Login sonrası bu modül 12 tabloya subscribe olur.
    2. Postgres replication slot'tan gelen INSERT/UPDATE/DELETE event'leri
       bu kanaldan akar.
    3. Her event'te ilgili record store'a uygulanır (apply hook).
@@ -68,6 +68,8 @@
         case 'workspaces': return applyToWorkspaces(eventType, newRow, oldRow);
         case 'inventory': return applyToInventory(eventType, newRow, oldRow);
         case 'user_prefs': return applyToUserPrefs(eventType, newRow, oldRow);
+        // v2.6.77 — Array tablolar (Faz 4 Adım 5: Realtime kapsam genişletme)
+        case 'waste': return applyToArrayWsTable('waste', eventType, newRow, oldRow);
       }
     } catch (e) {
       PCD.warn && PCD.warn('cloud-realtime apply error', table, e);
@@ -173,7 +175,50 @@
     if (data.plan) PCD.store.set('plan', data.plan);
   }
 
-  // Subscribe to all 11 tables for the current user
+  // v2.6.77 — Array-shaped workspace-scoped table apply (waste, checklist_sessions)
+  // State'te { wsId: [items] } şeklinde, her item'in id'si var. SQL tarafında
+  // her item ayrı satır. Realtime event geldiğinde id ile array'de bul, varsa
+  // güncelle; yoksa ekle. DELETE'te id ile çıkar.
+  function applyToArrayWsTable(stateKey, eventType, newRow, oldRow) {
+    const row = newRow || oldRow;
+    if (!row) return;
+    const wsId = row.workspace_id;
+    const id = row.id;
+    if (!wsId || !id) return;
+
+    const all = PCD.clone(PCD.store.get(stateKey) || {});
+    if (!all[wsId]) all[wsId] = [];
+
+    const idx = all[wsId].findIndex(function (it) { return it && it.id === id; });
+
+    if (eventType === 'DELETE') {
+      if (idx !== -1) {
+        all[wsId].splice(idx, 1);
+        PCD.store.set(stateKey, all);
+        scheduleViewRefresh();
+      }
+      return;
+    }
+
+    // INSERT or UPDATE
+    const incoming = (newRow && newRow.data) || {};
+
+    if (idx !== -1) {
+      // Last-write-wins by updatedAt (loop önleme: kendi attığım event geri gelirse atla)
+      const localExisting = all[wsId][idx];
+      if (localExisting && localExisting.updatedAt && incoming.updatedAt) {
+        if (localExisting.updatedAt >= incoming.updatedAt) return;
+      }
+      all[wsId][idx] = incoming;
+    } else {
+      all[wsId].push(incoming);
+    }
+
+    PCD.store.set(stateKey, all);
+    scheduleViewRefresh();
+  }
+
+  // Subscribe to all 12 tables for the current user
   function subscribe() {
     if (subscribed) return;
     if (!PCD.cloud || !PCD.cloud.ready) return;
@@ -185,6 +230,8 @@
       'workspaces', 'recipes', 'ingredients', 'menus', 'events',
       'suppliers', 'canvases', 'shopping_lists', 'checklist_templates',
       'inventory', 'user_prefs',
+      // v2.6.77 — Faz 4 Adım 5: Realtime kapsam genişletme
+      'waste',
     ];
 
     channel = supabase.channel('pcd-user-' + user.id);

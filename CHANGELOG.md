@@ -1,3 +1,61 @@
+# v2.6.77 — Faz 4 Adım 5: Realtime kapsam genişletme — `waste` tablosu
+
+## Amaç
+
+Multi-device sync %95'ten %100'e doğru ilerleme. `waste` tablosu artık Realtime kanalına bağlı — bir cihazda waste log eklendiğinde/güncellendiğinde/silindiğinde diğer cihaz 1-2 saniye içinde otomatik gösterir, sayfa yenileme gerekmez.
+
+Kalan 8 tablo (checklist_sessions, stock_count_history, haccp_logs, haccp_units, haccp_readings, haccp_cook_cool, workspace_tombstones, cost_history) sıradaki paketlerde aynı pattern'le eklenir — eğer bu paket sorunsuz çalışırsa.
+
+## Önceki başarısızlığın kökü (v2.6.75-79) — netleştirildi
+
+Notlardaki "bindings: undefined anomalisi" tezi **yanlış teşhisten** doğmuş. Doğrulama (v2.6.76 push sonrası):
+
+```
+ch.bindings  → bir Object (Array değil), 41 anahtar (35'i Phoenix WS internal, 6'sı user-defined)
+ch.bindings.length          → undefined  (Object'in length'i yok — yanlış komut)
+ch.bindings.postgres_changes.length → 11  (doğru komut, beklenen değer)
+```
+
+Yani v2.6.75-79'da sistem aslında çalışıyordu, sadece yanlış komutla "undefined" görüldü ve panik yaratıldı, üzerine tahmin tabanlı fix'ler yığıldı, gerçek bir regression doğdu. Bu paket o tuzağa düşmüyor — baseline (11 tablo) doğrulandı, üzerine tek tablo ekleniyor.
+
+## Değişen dosyalar
+
+| Dosya | Değişiklik |
+|---|---|
+| `js/core/cloud-realtime.js` | (a) `TABLES` dizisine `'waste'` eklendi (12 tablo), (b) `applyChange` switch'ine `case 'waste'` eklendi, (c) yeni `applyToArrayWsTable(stateKey, eventType, newRow, oldRow)` fonksiyonu — array-yapılı tablolar için generic apply hook (id ile bul, varsa updatedAt karşılaştır, yoksa ekle; DELETE'te id ile çıkar) |
+| `js/core/config.js` | `APP_VERSION: '2.6.76'` → `'2.6.77'` |
+| `index.html:107` | Sidenav badge → `v2.6.77` |
+| `index.html`, `privacy.html`, `terms.html` | Cache-bust → `?v=2.6.77` |
+
+## Loop önleme
+
+`applyToArrayWsTable` içinde `localExisting.updatedAt >= incoming.updatedAt → return`. Yani Cihaz A bir waste log attığında, kendi attığı event Realtime'dan A'ya geri geldiğinde yine atlar. Loop yok.
+
+## Test akışı (push sonrası)
+
+1. Cihaz A (desktop Chrome) ve Cihaz B (mobile veya başka tarayıcı) — ikisinde de aynı hesap, aynı workspace açık
+2. A'da Waste sayfasına git → yeni atık ekle (örn. "Domates, 500g")
+3. B'de **sayfa yenilemeden** Waste sayfasını aç (zaten açıksa yenile değil, route değiştirip geri gel) → yeni atık görünmeli
+4. A'da bu atığı sil → B'de otomatik kaybolmalı
+5. Aksi durumda: console'da error var mı, `PCD.cloudRealtime.isSubscribed()` hâlâ `true` mu — bunlardan teşhis ederiz
+
+## Doğrulama (kod tarafı)
+
+- `node --check` 43 JS dosyasında temiz
+- `applyToArrayWsTable` 2 yerde geçiyor: bir tanım, bir çağrı (waste case)
+- `TABLES` dizisi 12 elemanlı
+- Cache-bust ve hardcoded badge tutarlı (2.6.77)
+
+## Geri dönüş planı
+
+Sorun çıkarsa v2.6.76 zip'i sende mevcut, push'la → eski 11 tablo davranışına döner. Yeni waste apply hook izole — başka bir şeyi etkilemez.
+
+## Sıradaki paket (öneri)
+
+waste tek başına sorunsuz çalışırsa: `checklist_sessions` aynı pattern'le eklenir (paket 5). HACCP tabloları map-yapılı, mevcut `applyToWsTable` zaten kullanılabilir, daha kolay.
+
+---
+
 # v2.6.76 — Sidenav hardcoded sürüm fix'i (v2.6.75 patch'i)
 
 ## Amaç
