@@ -113,7 +113,21 @@
       if (localExisting.updatedAt === incoming.updatedAt) return; // no-op
     }
 
-    // Apply (incoming includes _deletedAt if soft-deleted)
+    // v2.6.76 — Soft-deleted UPDATE event geldiyse (data._deletedAt set
+    // veya server'da deleted_at IS NOT NULL), state'ten FİİLEN sil.
+    // Yoksa kayıt _deletedAt mark'ıyla state'te kalıyor, listTable
+    // filtresine bel bağlanıyor, ama bazı view'larda direkt object key
+    // erişiminde gözüküyor. Açık silme her zaman daha güvenli.
+    if (incoming._deletedAt || newRow.deleted_at) {
+      if (all[wsId][id]) {
+        delete all[wsId][id];
+        PCD.store.set(stateKey, all);
+        scheduleViewRefresh();
+      }
+      return;
+    }
+
+    // Apply (normal upsert)
     all[wsId][id] = incoming;
     PCD.store.set(stateKey, all);
     scheduleViewRefresh();
@@ -136,6 +150,43 @@
     }
 
     const incoming = newRow.data || {};
+
+    // v2.6.76 — Soft-deleted workspace: state'ten fiilen sil ve bağlı
+    // tüm ws-scoped tabloları temizle. applyToTombstones zaten benzeri
+    // yapıyor ama workspace UPDATE event'i tombstone INSERT event'inden
+    // önce gelirse (sıralama garantisi yok), bu da aynı temizliği yapsın.
+    if (incoming._deletedAt || newRow.deleted_at) {
+      if (all[id]) {
+        delete all[id];
+        PCD.store.set('workspaces', all);
+        // Bağlı tabloları temizle
+        const WS_TABLES = [
+          'recipes','ingredients','menus','events','suppliers','inventory',
+          'waste','checklistTemplates','checklistSessions','canvases',
+          'shoppingLists','stockCountHistory','haccpLogs','haccpUnits',
+          'haccpReadings','haccpCookCool',
+        ];
+        WS_TABLES.forEach(function (tbl) {
+          const t = PCD.store.get(tbl);
+          if (t && t[id]) {
+            const next = PCD.clone(t);
+            delete next[id];
+            PCD.store.set(tbl, next);
+          }
+        });
+        // Aktif ws bu silinen ise, başka bir ws'ye geç
+        const activeId = PCD.store.get('activeWorkspaceId');
+        if (activeId === id) {
+          const remainingIds = Object.keys(PCD.store.get('workspaces') || {});
+          if (remainingIds.length > 0) {
+            PCD.store.set('activeWorkspaceId', remainingIds[0]);
+          }
+        }
+        scheduleViewRefresh();
+      }
+      return;
+    }
+
     const local = all[id];
     if (local && local.updatedAt && incoming.updatedAt) {
       if (local.updatedAt >= incoming.updatedAt) return;
@@ -207,6 +258,18 @@
     // INSERT/UPDATE
     const incoming = newRow.data || {};
     const idx = arr.findIndex(function (it) { return it && it.id === id; });
+
+    // v2.6.76 — Soft-deleted UPDATE event'i fiilen sil
+    if (incoming._deletedAt || newRow.deleted_at) {
+      if (idx >= 0) {
+        arr.splice(idx, 1);
+        all[wsId] = arr;
+        PCD.store.set(stateKey, all);
+        scheduleViewRefresh();
+      }
+      return;
+    }
+
     if (idx >= 0) {
       const localExisting = arr[idx];
       // Last-write-wins by updatedAt
@@ -344,6 +407,39 @@
       const u = PCD.store.get('user');
       if (u && u.id) subscribe();
     }, 2000);
+
+    // v2.6.76 — Reconnect strategy: WebSocket düşmeleri (mobilde özellikle
+    // PWA ekranı kapatıp açınca, ağ değişiminde, vb.) yaygın. Channel
+    // subscribe başarılı olduktan sonra düşerse retry mekanizması yok.
+    // İki ek tetikleyici ekliyoruz:
+    //   1. window.online event — ağ geri gelince yeniden bağlan
+    //   2. document.visibilitychange — sekme/PWA tekrar görünür olunca
+    //      bağlantıyı doğrula, gerekirse yeniden bağlan
+    function reconnectIfNeeded(reason) {
+      const u = PCD.store && PCD.store.get('user');
+      if (!u || !u.id) return;  // login yoksa hiçbir şey yapma
+      if (subscribed && channel) {
+        // Channel görünüşte canlı, ama emin olmak için unsubscribe + subscribe
+        // ağ değişimi sonrası "zombi" olmuş olabilir. Re-subscribe ucuz.
+        PCD.log && PCD.log('cloud-realtime: forcing reconnect (' + reason + ')');
+        try { unsubscribe(); } catch (e) { /* ignore */ }
+        setTimeout(subscribe, 500);
+      } else if (!subscribed) {
+        PCD.log && PCD.log('cloud-realtime: subscribing (' + reason + ')');
+        subscribe();
+      }
+    }
+    window.addEventListener('online', function () {
+      reconnectIfNeeded('online');
+    });
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible') {
+        // Sayfa tekrar görünür oldu — son aktiflikten 30 sn'den fazla
+        // geçtiyse reconnect (uzun arka plan = WebSocket muhtemelen
+        // ölmüş). Eşik düşük tutuyoruz çünkü reconnect zararsız.
+        reconnectIfNeeded('visibility');
+      }
+    });
   }
 
   PCD.cloudRealtime = {

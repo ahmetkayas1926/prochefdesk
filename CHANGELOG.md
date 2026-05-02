@@ -1,3 +1,98 @@
+# v2.6.76 — Multi-device sync bug fix paketi (4 fix)
+
+## Sorun
+
+v2.6.75 testlerinde Ahmet 4 farklı senaryoda multi-device sync'in beklendiği gibi çalışmadığını tespit etti:
+
+1. Cihaz A waste log girdiği siler → Cihaz B'de silinmiyor
+2. Cihaz A Cook & Cool sıcaklık girdisini siler → Cihaz B'de hücrede kalıyor
+3. Cihaz A Cook & Cool formunu (logu) siler → Cihaz B'de form duruyor
+4. Cihaz A workspace siler → Cihaz B'de workspace listesinde duruyor
+5. Cihaz A yeni workspace açar → Cihaz B'de listede yok
+
+Hepsinin kök sebebi tek bir bug ve onun varyasyonları idi.
+
+## Kök sebep — soft delete + Realtime guard çakışması
+
+`store.deleteFromTable` soft-delete yapıyor: kayda `_deletedAt: timestamp` ekliyor ama **`updatedAt`'ı güncellemiyor**. Cloud-pertable bunu UPDATE olarak Supabase'e gönderiyor. Realtime karşı cihaza UPDATE event'i gidiyor. Karşı cihazdaki `applyToWsTable` last-write-wins guard'ı çalışıyor:
+
+```js
+if (localExisting.updatedAt === incoming.updatedAt) return; // no-op  ← BURASI
+```
+
+Local'deki `updatedAt` ile incoming'in `updatedAt`'ı **AYNI** (silme akışı yenilemediği için). Guard "değişiklik yok" diyor, silmeyi uygulamıyor. Cihaz B kaydı silinmiş olarak görmüyor.
+
+## Fix 1 — store.deleteFromTable updatedAt'ı yenilesin
+
+`_deletedAt` eklenirken `updatedAt` da `now`'a set ediliyor. Realtime guard artık doğru çalışıyor.
+
+## Fix 2 — Realtime UPDATE event'i `_deletedAt` mark'lı geldiğinde fiilen sil
+
+Önceden: `applyToWsTable` ve `applyToWsArrayTable` soft-deleted kaydı state'e yazıyordu. `listTable` filtresine bel bağlanıyordu. Bazı view'larda direkt key erişimi (`map[id]`) filtre uygulanmadan o kaydı görüyordu.
+
+Yeni: cloud-realtime.js `applyToWsTable`, `applyToWsArrayTable`, `applyToWorkspaces`'da `_deletedAt` veya `deleted_at` mark'lı UPDATE event'i geldiğinde state'ten **fiilen sil** — view re-render kayıdı tamamen yok sayıyor.
+
+## Fix 3 — Workspace silme akışı: workspaces tablosuna soft-delete UPSERT
+
+`store.deleteWorkspace` önceden sadece `workspace_tombstones` tablosuna kayıt atıyordu. Şimdi **workspaces tablosuna da soft-delete UPSERT** yapıyor (`_deletedAt` + `updatedAt` set).
+
+Çift-yedekli senkron:
+- Tombstone Realtime → applyToTombstones → workspace ve bağlı tablolar silinir
+- Workspace Realtime UPDATE (_deletedAt) → applyToWorkspaces → aynı temizliği yapar
+
+Hangisi önce gelirse o uygulanır, ikincisi no-op. Network gecikmesi/sıralama garanti edilemediği için ikili güvenlik.
+
+`applyToWorkspaces` da Cihaz B'de soft-delete UPDATE event'i gelirse workspace'i ve 16 ws-bound tabloyu temizliyor + aktif ws bu silinen ise başka birine geçiyor.
+
+## Fix 4 — Realtime reconnect: online + visibilitychange
+
+Önceden Realtime channel `subscribe()` başarılı olduktan sonra düştüyse (mobilde PWA arka plana geçince, ağ değiştiğinde, vb.) **otomatik tekrar bağlanma yoktu**. Sadece subscribe sırasında error/timeout olursa retry vardı.
+
+Yeni: cloud-realtime.js init'inde 2 yeni tetikleyici:
+
+1. **`window.online`** event — ağ geri geldiğinde force reconnect (unsubscribe + setTimeout subscribe)
+2. **`document.visibilitychange`** — sekme/PWA tekrar görünür olduğunda force reconnect
+
+Bu, "yeni workspace mobile'de gözükmüyor" sorununun nedeni olan WebSocket zombi state'ini kapatıyor. Mobilde PWA arka planda 5+ dakika kalmış → WebSocket ölmüş → sayfa tekrar açılınca otomatik yeniden bağlanır.
+
+Reconnect ucuz bir işlem (Supabase'in dahili rate limit'i var), gereksiz tetiklemelerin maliyeti yok.
+
+## Değişen dosyalar
+
+| Dosya | Değişiklik |
+|---|---|
+| `js/core/store.js` | `deleteFromTable`: updatedAt set. `deleteWorkspace`: workspaces tablosuna soft-delete UPSERT + originalWs yakalama. |
+| `js/core/cloud-realtime.js` | `applyToWsTable`/`applyToWsArrayTable`/`applyToWorkspaces`: soft-delete UPDATE'i fiilen sil. `init`: online + visibilitychange reconnect. |
+
+## Push öncesi yapılacak
+
+Yok. Direkt push.
+
+## Push sonrası kontrol
+
+Cloudflare deploy bitince **iki cihazda** (desktop + mobil) **Ctrl+Shift+R** sert yenile.
+
+Yeniden v2.6.75 testlerini yap:
+
+| Test | Beklenen |
+|---|---|
+| 1 | Desktop'ta waste sil → mobilde 1-2 sn içinde silinsin |
+| 2 | Desktop'ta Cook & Cool sıcaklık sil → mobilde hücre boşalsın |
+| 3 | Desktop'ta Cook & Cool form sil → mobilde form listesinden çıksın |
+| 4 | Desktop'ta workspace sil → mobilde listesinden çıksın |
+| 5 | Desktop'ta yeni workspace aç → mobilde listede görünsün |
+| 6 | Mobil'i 5 dk arka planda bırak, geri aç → otomatik reconnect olsun (eğer bir değişiklik varsa anlık görünmeli) |
+
+## Risk
+
+**Düşük.** Tüm fix'ler defansif/additive:
+- Fix 1: Var olan değer set ediliyor, yapı değişmedi
+- Fix 2: `_deletedAt` zaten mark'lıydı, sadece davranış değişti (yazma → silme)
+- Fix 3: Çift-yedekli senkron, eski yol da çalışmaya devam ediyor
+- Fix 4: Yeni event listener'lar, var olan retry'ı bozmuyor
+
+---
+
 # v2.6.75 — Multi-device sync Faz 4 tamamlama: Realtime kapsam genişletme
 
 ## Amaç
