@@ -1,3 +1,69 @@
+# v2.6.72 — Multi-device sync Faz 4 Adım 2: Çift yazma desteği (eksik tablolar)
+
+## Amaç
+
+v2.6.71'de oluşturulan 9 yeni tabloya **canlı yazma** desteği. Şu andan itibaren şef yeni waste log eklediğinde, HACCP unit oluşturduğunda, stok sayımı kaydettiğinde, vs. — bu veriler hem eski blob'a hem yeni tablolara yazılıyor.
+
+Migration script (v2.6.73) çalıştırılana kadar **mevcut veri** yeni tablolara taşınmaz; ama **bu paketten sonra yapılan tüm değişiklikler** her iki yere de gider.
+
+## Değişen dosyalar
+
+| Dosya | Değişiklik |
+|---|---|
+| `js/core/cloud-pertable.js` | WORKSPACE_TABLES whitelist'e 7 tablo eklendi (haccp×4, stockCountHistory, waste, checklistSessions). Yeni `queueArraySync()` API'si: array tabloları için diff bazlı sync. workspace_tombstones özel handling (PK workspace_id). |
+| `js/core/store.js` | `_stateKeyToSqlTable` mapping 5 yeni eşleştirme: stockCountHistory, haccpLogs, haccpUnits, haccpReadings, haccpCookCool. Workspace silme akışında tombstone hook'u eklendi (`workspace_tombstones` tablosuna queueUpsert). |
+| `js/tools/waste.js` | `writeWaste()` sonunda `queueArraySync('waste', ...)` çağrısı |
+| `js/tools/checklist.js` | `writeSessions()` sonunda `queueArraySync('checklist_sessions', ...)` çağrısı |
+
+## Yapı kararları
+
+**Generic API (upsertInTable) kullananlar — mapping tek satır:**
+HACCP araçları (haccp_logs, haccp_units, haccp_readings, haccp_cook_cool) ve stockCountHistory zaten `PCD.store.upsertInTable` üzerinden çalışıyor. Mapping'e tek satır ekleyince otomatik kapsama girdiler. Ek hook gerekmedi.
+
+**Array tablolar — yeni queueArraySync helper'ı:**
+`waste` ve `checklistSessions` state'te `{ wsId: [array] }` şeklinde. Bunlar her seferinde array'in tamamını yazar. `queueArraySync(table, wsId, oldArr, newArr)` eski ve yeni array'i karşılaştırıp:
+- yeni array'deki tüm ID'leri queueUpsert eder (cloud-pertable'ın dedupe queue'su zaten aynı kaydı 2. kez yazmaz)
+- eski'de olup yenisinde olmayan ID'leri queueDelete eder
+
+**Workspace tombstones — özel kayıt:**
+Workspace silinince `_deletedWorkspaces[wsId] = timestamp` blob'a yazılıyor. Yeni `workspace_tombstones` tablosuna da yazılması için store.js'deki silme akışına hook eklendi. Tablo PK doğrudan `workspace_id`, `id`/`data` kolonu yok — flushNow upsert'inde özel branch.
+
+**costHistory dahil edilmedi:**
+Projede `costHistory` array'i tanımlı ama hiçbir tool kod yazmıyor (dead code). v2.6.71 SQL'inde tablo oluşturuldu ama hook eklemedim. İleride biri kullanmaya başlarsa eklenebilir.
+
+## Push öncesi yapılacak
+
+Yok. Sadece kod paketi. v2.6.71 SQL migration'ı zaten production'da. Bu paket pushlanınca yeni veri yazımları otomatik olarak yeni tablolara da gitmeye başlar.
+
+## Test (push sonrası — ~1 dk)
+
+Supabase Dashboard → Table Editor:
+
+1. **waste** — uygulamada Waste Log'a yeni atık ekle → tabloda satır görmelisin
+2. **checklist_sessions** — checklist başlat (Start session) → satır
+3. **stock_count_history** — Inventory → Bulk Count → Save snapshot → satır
+4. **haccp_logs** — HACCP Forms → Add new log → satır
+5. **haccp_units** — bir log içinde Add unit → satır
+6. **haccp_readings** — bir unit'e bugünün okumasını gir → satır
+7. **haccp_cook_cool** — Cook & Cool log'a bugün için satır gir → satır
+8. **workspace_tombstones** — bir workspace sil → workspace_id PK'lı satır
+
+Her test için ~5 saniye debounce var. Hemen değil, biraz bekle.
+
+## Risk
+
+**Düşük.** Tüm yazımlar **fire-and-forget** + **try/catch** içinde. Yeni tablolara yazma başarısız olursa `PCD.warn` logu basar, eski blob yazımı zaten paralel çalıştığı için veri kaybı olmaz. Pull hala eski blob'tan — yeni tablolar henüz okunmuyor.
+
+## Kapsam dışı (sonraki paketler)
+
+| Paket | Ne yapacak |
+|---|---|
+| v2.6.73 | **Migration script:** Mevcut blob'taki tüm veriyi yeni tablolara kopyala (tek seferlik, login sonrası arka planda) |
+| v2.6.74 | `pullAll()` merge mantığı (mergeRecordsByUpdatedAt + tombstones + ghost ws cleanup) + pull priority değiştirme |
+| v2.6.75 | Çift yazmayı kapat, sadece yeni tablolara yaz, blob 30 gün read-only fallback |
+
+---
+
 # v2.6.71 — Multi-device sync Faz 4 Adım 1: Eksik tabloların şeması
 
 ## Amaç

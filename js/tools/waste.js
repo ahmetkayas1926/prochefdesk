@@ -23,8 +23,13 @@
     const wsId = PCD.store.getActiveWorkspaceId();
     const root = PCD.store._read('waste') || {};
     let next = Array.isArray(root) ? {} : Object.assign({}, root);
+    const oldArr = Array.isArray(root) ? root : (root[wsId] || []);
     next[wsId] = arr;
     PCD.store.set('waste', next);
+    // v2.6.72 — Faz 4 Adım 2: çift yazma (waste array tablosu)
+    if (PCD.cloudPerTable) {
+      PCD.cloudPerTable.queueArraySync('waste', wsId, oldArr, arr);
+    }
   }
 
   const REASONS = ['spoilage', 'overcooked', 'dropped', 'wrong_order', 'trim', 'expired', 'other'];

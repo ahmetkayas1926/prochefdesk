@@ -38,6 +38,15 @@
     canvases:             { stateKey: 'canvases',             wsScoped: true },
     shopping_lists:       { stateKey: 'shoppingLists',        wsScoped: true },
     checklist_templates:  { stateKey: 'checklistTemplates',   wsScoped: true },
+    // v2.6.72 — Faz 4 Adım 2: Eksik tablolar (mapping ile generic API'den geçenler)
+    stock_count_history:  { stateKey: 'stockCountHistory',    wsScoped: true },
+    haccp_logs:           { stateKey: 'haccpLogs',            wsScoped: true },
+    haccp_units:          { stateKey: 'haccpUnits',           wsScoped: true },
+    haccp_readings:       { stateKey: 'haccpReadings',        wsScoped: true },
+    haccp_cook_cool:      { stateKey: 'haccpCookCool',        wsScoped: true },
+    // Array tablolar (ayrı queueArraySync API'si ile yazılır)
+    waste:                { stateKey: 'waste',                wsScoped: true, isArray: true },
+    checklist_sessions:   { stateKey: 'checklistSessions',    wsScoped: true, isArray: true },
   };
 
   // Pending changes queue. Her item: { table, op, id, wsId?, data?, updated_at? }
@@ -54,7 +63,7 @@
   }
 
   function queueUpsert(table, id, wsId, data) {
-    if (!WORKSPACE_TABLES[table] && table !== 'workspaces' && table !== 'inventory' && table !== 'user_prefs') {
+    if (!WORKSPACE_TABLES[table] && table !== 'workspaces' && table !== 'inventory' && table !== 'user_prefs' && table !== 'workspace_tombstones') {
       PCD.warn && PCD.warn('cloud-pertable: unknown table', table);
       return;
     }
@@ -92,6 +101,41 @@
       queue.push(item);
     }
     scheduleFlush();
+  }
+
+  // v2.6.72 — Array tablolar için (waste, checklist_sessions).
+  // Bu tablolar state'te { wsId: [array] } şeklinde tutulur, generic
+  // upsertInTable API'sinden geçmezler. writeWaste/writeSessions her
+  // çağrıldığında array tamamı verilir; eski ve yeni array'i karşılaştırıp
+  // sadece değişen kayıtları cloud'a göndeririz.
+  //
+  // Strateji: yeni array'deki tüm ID'leri queueUpsert et (cloud-pertable'ın
+  // dedupe queue'su zaten aynı ID'yi gelse 2. kez yazmaz). Eski array'de
+  // olup yenisinde olmayan ID'ler queueDelete edilir.
+  //
+  // Args:
+  //   table   — SQL tablo adı (waste, checklist_sessions)
+  //   wsId    — workspace ID
+  //   oldArr  — önceki array (null ise hepsi insert)
+  //   newArr  — yeni array
+  function queueArraySync(table, wsId, oldArr, newArr) {
+    if (!WORKSPACE_TABLES[table] || !WORKSPACE_TABLES[table].isArray) {
+      PCD.warn && PCD.warn('cloud-pertable queueArraySync: not array table', table);
+      return;
+    }
+    const oldMap = {};
+    (oldArr || []).forEach(function (it) { if (it && it.id) oldMap[it.id] = it; });
+    const newMap = {};
+    (newArr || []).forEach(function (it) { if (it && it.id) newMap[it.id] = it; });
+
+    // Upsert: yeni array'in tamamı (queue dedupe zaten halleder)
+    Object.keys(newMap).forEach(function (id) {
+      queueUpsert(table, id, wsId, newMap[id]);
+    });
+    // Delete: eski'de olup yeni'de olmayan ID'ler
+    Object.keys(oldMap).forEach(function (id) {
+      if (!newMap[id]) queueDelete(table, id, wsId);
+    });
   }
 
   function scheduleFlush() {
@@ -156,6 +200,15 @@
               data: it.data,
               active_workspace_id: it.data && it.data.activeWorkspaceId,
             };
+          } else if (table === 'workspace_tombstones') {
+            // workspace_tombstones: PK doğrudan workspace_id, id ve data
+            // jsonb yok — minimal kayıt (ws silindi mi?). Yapı v2.6.71 SQL'inde:
+            //   workspace_id text PK, user_id uuid, deleted_at timestamptz, created_at
+            return {
+              workspace_id: it.id,  // queueUpsert'ten gelen "id" parametresi aslında wsId
+              user_id: user.id,
+              deleted_at: (it.data && it.data.deletedAt) || new Date().toISOString(),
+            };
           } else {
             row.workspace_id = it.wsId;
             row.deleted_at = (it.data && it.data._deletedAt) || null;
@@ -163,7 +216,9 @@
           return row;
         });
 
-        const conflictKey = (table === 'user_prefs') ? 'user_id' : 'id';
+        const conflictKey = (table === 'user_prefs') ? 'user_id'
+                          : (table === 'workspace_tombstones') ? 'workspace_id'
+                          : 'id';
         supabase.from(table).upsert(rows, { onConflict: conflictKey })
           .then(function (res) {
             if (res.error) PCD.warn && PCD.warn('cloud-pertable upsert ' + table, res.error.message || res.error);
@@ -284,6 +339,7 @@
   PCD.cloudPerTable = {
     queueUpsert: queueUpsert,
     queueDelete: queueDelete,
+    queueArraySync: queueArraySync,  // v2.6.72 — array tablolar için
     flushNow: flushNow,
     pullAll: pullAll,
     // Re-flush queued items when back online

@@ -459,6 +459,9 @@
 
   // v2.6.69 — State-key (camelCase) → SQL table name (snake_case) eşleştirme.
   // Per-table sync hook'ları için kullanılıyor.
+  // v2.6.72 — Faz 4 Adım 2: HACCP ve stockCountHistory mapping'leri eklendi.
+  // (waste ve checklistSessions array yapıdadır, generic upsertInTable
+  //  kullanmazlar — onlar için cloud-pertable.js'de queueArraySync API'si var.)
   function _stateKeyToSqlTable(stateKey) {
     const map = {
       'recipes': 'recipes',
@@ -469,6 +472,12 @@
       'canvases': 'canvases',
       'shoppingLists': 'shopping_lists',
       'checklistTemplates': 'checklist_templates',
+      // v2.6.72 — yeni eşleştirmeler
+      'stockCountHistory': 'stock_count_history',
+      'haccpLogs': 'haccp_logs',
+      'haccpUnits': 'haccp_units',
+      'haccpReadings': 'haccp_readings',
+      'haccpCookCool': 'haccp_cook_cool',
     };
     return map[stateKey] || null;
   }
@@ -685,7 +694,14 @@
       // Mark as deleted in tombstones so cloud merge won't resurrect
       if (!state._deletedWorkspaces) state._deletedWorkspaces = {};
       state._deletedWorkspaces = Object.assign({}, state._deletedWorkspaces);
-      state._deletedWorkspaces[wsId] = new Date().toISOString();
+      const tombstoneAt = new Date().toISOString();
+      state._deletedWorkspaces[wsId] = tombstoneAt;
+      // v2.6.72 — Tombstone'u workspace_tombstones tablosuna da gönder.
+      // Diğer cihazlar pull yapınca bu kaydı görüp silinen workspace'i
+      // diriltmemiş olur.
+      if (PCD.cloudPerTable) {
+        PCD.cloudPerTable.queueUpsert('workspace_tombstones', wsId, null, { deletedAt: tombstoneAt });
+      }
       emit('workspaces', next, null);
       flushSync();
       persist();

@@ -48,8 +48,13 @@
     const root = PCD.store._read('checklistSessions') || {};
     // If legacy array, migrate it under current ws
     let next = Array.isArray(root) ? {} : Object.assign({}, root);
+    const oldArr = Array.isArray(root) ? root : (root[wsId] || []);
     next[wsId] = arr;
     PCD.store.set('checklistSessions', next);
+    // v2.6.72 — Faz 4 Adım 2: çift yazma (checklist_sessions array tablosu)
+    if (PCD.cloudPerTable) {
+      PCD.cloudPerTable.queueArraySync('checklist_sessions', wsId, oldArr, arr);
+    }
   }
 
   // Categories + priorities (carry over from v1.5)
