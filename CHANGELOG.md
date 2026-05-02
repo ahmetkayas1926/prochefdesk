@@ -1,3 +1,37 @@
+# v2.6.76 — Sidenav hardcoded sürüm fix'i (v2.6.75 patch'i)
+
+## Amaç
+
+v2.6.75 paketinde **eksik kalan** bir hardcoded sürüm string'ini düzeltmek.
+
+`index.html:107` sidenav footer'ında JS yüklenmeden gözüksün diye **statik HTML olarak** `<div>v2.6.74</div>` yazılıydı (FOUC önlemek için bilinçli tasarım — premium badge için aynı yaklaşım kullanılıyor). v2.6.75 paketinde bu satır atlandı, sadece `APP_VERSION` ve cache-bust güncellendi. Sonuç: kullanıcı sayfayı açtığında hâlâ "v2.6.74" görüyordu çünkü gördüğü yer **bu statik HTML satırı**, JS-rendered badge değil.
+
+Notlardaki "Sidenav badge'i de güncellenir" kuralı tam olarak buna işaret ediyordu — bir önceki paket bunu kaçırdı.
+
+## Değişen dosyalar
+
+| Dosya | Değişiklik |
+|---|---|
+| `index.html:107` | `<div>v2.6.74</div>` → `<div>v2.6.76</div>` |
+| `js/core/config.js` | `APP_VERSION: '2.6.75'` → `'2.6.76'` |
+| `index.html`, `privacy.html`, `terms.html` | Tüm `?v=2.6.75` → `?v=2.6.76` (53 yer toplam) |
+
+## Doğrulama
+
+- `node --check` 43 JS dosyasında temiz
+- Hardcoded sürüm string'leri taraması: tek aktif yer `index.html:107` ve `js/core/config.js:30` — ikisi de `2.6.76`. Diğer `2.6.7x` referansları sadece kod yorumlarında (tarihsel notlar)
+- `diff` ile sadece v= ve sidenav badge satırı değişti, başka hiçbir şey değişmedi
+
+## Geri dönüş planı
+
+Sıfır risk. Yine de v2.6.74 zip'i Ahmet'te duruyor, anında push'lanabilir.
+
+## Not
+
+Bu hata, ileride yapılması gereken bir refactor için iyi bir gerekçe: **sidenav hardcoded badge'i `js/core/app.js` içinden `PCD_CONFIG.APP_VERSION` ile populate edilmeli** ki tek-noktadan-güncelleme prensibi tutsun. Şu an FOUC riski yaratır mı? Genellikle JS hızlı yükleniyor (~50-100ms), badge'in 100ms boş gözükmesi kabul edilebilir. Bu refactor öncelik listesinin sonuna eklendi.
+
+---
+
 # v2.6.75 — Sürüm raporlama tutarsızlığı düzeltmesi
 
 ## Amaç
