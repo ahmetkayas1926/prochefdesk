@@ -1,9 +1,10 @@
 # ProChefDesk — Sürüm geçmişi
 
-Mevcut sürüm: **v2.6.80**
+Mevcut sürüm: **v2.6.81**
 
 Yapısal kilometre taşları (kronolojik tersine):
 
+- **v2.6.81** — `workspace_tombstones` Realtime'a eklendi (18 → 19 binding). Bir cihaz workspace silince diğer cihazda 1-2 sn içinde cascade wipe (workspaces map + 16 ws-bound tablo). `cost_history` tablosu hâlâ kullanılmıyor (costHistory verisi user_prefs.data altında); ileride taşınırsa eklenecek.
 - **v2.6.80** — Realtime kapsamı tüm tool tablolarına genişletildi (12 → 18 binding). `checklist_sessions` soft-delete pattern'e taşındı. HACCP×4 + `stock_count_history` Realtime'a eklendi.
 - **v2.6.79** — Soft-delete pattern `waste`'e taşındı (tüm tablolar artık aynı pattern'de)
 - **v2.6.74** — Çift kaynak pull merge (eski blob + per-table newest-wins)

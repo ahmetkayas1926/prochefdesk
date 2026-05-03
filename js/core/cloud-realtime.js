@@ -1,5 +1,5 @@
 /* ================================================================
-   ProChefDesk — cloud-realtime.js (v2.6.80 — Realtime kapsam tüm tool tablolarına genişletildi)
+   ProChefDesk — cloud-realtime.js (v2.6.81 — workspace_tombstones eklendi: cross-device cascade wipe)
 
    Multi-device sync, Faz 3: Supabase Realtime channel.
 
@@ -8,7 +8,7 @@
    içinde otomatik güncellenir. Sayfa yenileme gerekmez.
 
    ÇALIŞMA ŞEKLİ:
-   1. Login sonrası bu modül 18 tabloya subscribe olur.
+   1. Login sonrası bu modül 19 tabloya subscribe olur.
    2. Postgres replication slot'tan gelen INSERT/UPDATE/DELETE event'leri
       bu kanaldan akar.
    3. Her event'te ilgili record store'a uygulanır (apply hook).
@@ -21,9 +21,16 @@
      daha eski mi?" check'i yapar → ise atla. Sadece newer wins.
 
    PERFORMANS:
-   - WebSocket tek bir bağlantı (Supabase 18 tablo için tek channel)
+   - WebSocket tek bir bağlantı (Supabase 19 tablo için tek channel)
    - Her event ~1KB payload (sadece değişen record)
    - Idle bağlantı maliyeti yok (Supabase Free tier limit'leri)
+
+   SUBSCRIBE EDİLMEYEN:
+   - cost_history: tablo şeması v2.6.71'de açıldı ama bugüne dek hiçbir yere
+     yazılmıyor — costHistory verisi user_prefs.data.costHistory içinde
+     yaşıyor. Tabloyu Realtime'a almak şu an cargo-cult olur. Eğer ileride
+     costHistory bu tabloya taşınırsa (user_prefs blob'undan ayrılırsa),
+     o zaman binding eklenir.
    ================================================================ */
 (function () {
   'use strict';
@@ -78,6 +85,8 @@
         case 'haccp_readings': return applyToWsTable('haccpReadings', eventType, newRow, oldRow);
         case 'haccp_cook_cool': return applyToWsTable('haccpCookCool', eventType, newRow, oldRow);
         case 'stock_count_history': return applyToWsTable('stockCountHistory', eventType, newRow, oldRow);
+        // v2.6.81 — workspace silindi → diğer cihazlarda lokal cascade wipe
+        case 'workspace_tombstones': return applyToTombstones(eventType, newRow, oldRow);
       }
     } catch (e) {
       PCD.warn && PCD.warn('cloud-realtime apply error', table, e);
@@ -144,6 +153,89 @@
     all[id] = incoming;
     PCD.store.set('workspaces', all);
     scheduleViewRefresh();
+  }
+
+  // v2.6.81 — workspace_tombstones özel hook. Şema diğerlerinden farklı:
+  //   workspace_id text PK, user_id uuid, deleted_at timestamptz, created_at
+  //   (id, data, updated_at YOK)
+  //
+  // Cihaz A bir workspace siler → store.deleteWorkspace lokali wipe eder
+  // ve workspace_tombstones tablosuna upsert atar. Bu event Cihaz B'ye düşer.
+  // B'nin yapması gerekenler:
+  //   1) _deletedWorkspaces[wsId] = deleted_at  (gelecek pull merge'lerde diriltmeyi engellemek için)
+  //   2) state.workspaces[wsId] var ise sil
+  //   3) 16 ws-bound tablodaki [wsId] alanını sil (cascade wipe)
+  //   4) activeWorkspaceId tombstone'lanan ws ise kalan bir ws'e geç
+  //   5) Görünüm refresh
+  //
+  // DELETE event'i bu tabloda nadir (tombstone bir kez yazılıp kalır), ama
+  // REPLICA IDENTITY DEFAULT yüzünden payload'da sadece workspace_id (PK)
+  // gelir. Tombstone'un kendisinin silinmesi durumunda lokali de temizleriz.
+  const WS_BOUND_TABLES = [
+    'recipes','ingredients','menus','events','suppliers','canvases',
+    'shoppingLists','checklistTemplates','inventory',
+    'waste','checklistSessions','stockCountHistory',
+    'haccpLogs','haccpUnits','haccpReadings','haccpCookCool'
+  ];
+  function applyToTombstones(eventType, newRow, oldRow) {
+    const row = newRow || oldRow;
+    if (!row) return;
+    const wsId = row.workspace_id;
+    if (!wsId) return;
+
+    const tombs = PCD.clone(PCD.store.get('_deletedWorkspaces') || {});
+
+    if (eventType === 'DELETE') {
+      // Tombstone kaydının kendisi silindi (manual cleanup). Lokali de düş.
+      if (tombs[wsId]) {
+        delete tombs[wsId];
+        PCD.store.set('_deletedWorkspaces', tombs);
+      }
+      return;
+    }
+
+    // INSERT / UPDATE — yeni tombstone geldi
+    const deletedAt = newRow.deleted_at;
+    if (!deletedAt) return;
+    // Loop önleme: lokalde aynı veya daha yeni tombstone var ise atla
+    if (tombs[wsId] && tombs[wsId] >= deletedAt) return;
+
+    tombs[wsId] = deletedAt;
+    PCD.store.set('_deletedWorkspaces', tombs);
+
+    // Cascade wipe: workspaces map'inden ve ws-bound 16 tablodan ilgili wsId'yi düş.
+    // store.set burada cloudPerTable'a queueUpsert ETMEZ (set sadece emit + persist),
+    // dolayısıyla feedback loop yok.
+    const wsMap = PCD.clone(PCD.store.get('workspaces') || {});
+    let wsExisted = false;
+    if (wsMap[wsId]) {
+      delete wsMap[wsId];
+      wsExisted = true;
+      PCD.store.set('workspaces', wsMap);
+    }
+
+    WS_BOUND_TABLES.forEach(function (tbl) {
+      const cur = PCD.store.get(tbl);
+      if (cur && typeof cur === 'object' && cur[wsId] !== undefined) {
+        const next = Object.assign({}, cur);
+        delete next[wsId];
+        PCD.store.set(tbl, next);
+      }
+    });
+
+    // Active workspace tombstone'landı ise kalan ilk ws'e geç. Cihaz B'nin
+    // user_prefs'i güncel kalsın diye direct set kullanıyoruz (cloud'a yansımayacak;
+    // user_prefs Realtime'dan zaten güncellenmiş olabilir, ama olmamış ihtimaline
+    // karşı lokali tutarlı tutuyoruz).
+    const active = PCD.store.get('activeWorkspaceId');
+    if (active === wsId) {
+      const remainingIds = Object.keys(wsMap);
+      if (remainingIds.length > 0) {
+        PCD.store.set('activeWorkspaceId', remainingIds[0]);
+      }
+    }
+
+    if (wsExisted || active === wsId) scheduleViewRefresh();
   }
 
   function applyToInventory(eventType, newRow, oldRow) {
@@ -243,7 +335,7 @@
     scheduleViewRefresh();
   }
 
-  // Subscribe to all 18 tables for the current user
+  // Subscribe to all 19 tables for the current user
   function subscribe() {
     if (subscribed) return;
     if (!PCD.cloud || !PCD.cloud.ready) return;
@@ -261,6 +353,8 @@
       'checklist_sessions',
       'haccp_logs', 'haccp_units', 'haccp_readings', 'haccp_cook_cool',
       'stock_count_history',
+      // v2.6.81 — workspace_tombstones (cross-device cascade wipe trigger)
+      'workspace_tombstones',
     ];
 
     channel = supabase.channel('pcd-user-' + user.id);
