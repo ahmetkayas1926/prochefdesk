@@ -1367,10 +1367,16 @@
         message: desc + debugBlock,
         // Honeypot (Web3Forms ignores submissions where botcheck != "")
         botcheck: '',
-        // v2.6.82 — hCaptcha token. Web3Forms validates server-side using
-        // the Secret Key configured in their dashboard. If the token is
-        // missing or invalid, Web3Forms rejects with a non-success response.
-        'h-captcha-response': captchaToken,
+        // v2.6.82 — hCaptcha widget shown to user as a bot gate (client-side only).
+        // Web3Forms Free tier does not validate the h-captcha-response token
+        // (no Secret Key field in their dashboard for hCaptcha), so we do NOT
+        // send the token in the payload — sending it caused server-side rejection
+        // ("Could not validate hCaptcha. Please try later"). Bot protection here
+        // is layered: (1) hCaptcha widget blocks most bots from submitting at all,
+        // (2) client-side gate requires a valid token before fetch fires,
+        // (3) honeypot 'botcheck' catches naive bots, (4) Web3Forms Advanced Spam
+        // Filter screens the rest. Real coverage is high; we just can't claim
+        // server-side hCaptcha validation without a paid Web3Forms plan.
       };
 
       fetch('https://api.web3forms.com/submit', {
