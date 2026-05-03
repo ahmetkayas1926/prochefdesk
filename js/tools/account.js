@@ -731,6 +731,10 @@
   // Public Web3Forms key — submissions land in hello@prochefdesk.com.
   // Safe to ship in client code (this is a public access key, not a secret).
   const WEB3FORMS_KEY = 'f5039b66-3003-485b-9b72-5fdd9c9abaa1';
+  // v2.6.82 — hCaptcha (bot protection). Site key is public and safe to commit.
+  // Web3Forms validates the h-captcha-response token server-side using the
+  // matching Secret Key configured in Web3Forms dashboard.
+  const HCAPTCHA_SITEKEY = '2a3e9f54-70aa-4078-a5b6-fec0e2266ac4';
 
   // v2.6.60 — Account deletion flow (GDPR Art. 17 — Right to erasure)
   // Deletes:
@@ -1194,6 +1198,12 @@
         '<label for="reportDesc" style="display:block;font-weight:600;font-size:13px;margin-bottom:4px;">' + PCD.escapeHtml(t('report_issue_desc_label')) + '</label>' +
         '<textarea id="reportDesc" rows="6" maxlength="2000" placeholder="' + PCD.escapeHtml(t('report_issue_desc_placeholder')) + '" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-1);font-size:14px;font-family:inherit;resize:vertical;box-sizing:border-box;"></textarea>' +
       '</div>' +
+      // v2.6.82 — hCaptcha bot protection. Container is filled in by
+      // ensureHcaptchaLoaded() once the script loads. Min-height keeps modal
+      // from jumping when widget appears.
+      '<div id="reportCaptchaWrap" style="margin-bottom:12px;min-height:78px;display:flex;align-items:center;justify-content:center;">' +
+        '<div id="reportCaptchaStatus" class="text-muted text-sm">' + PCD.escapeHtml(t('report_issue_captcha_loading')) + '</div>' +
+      '</div>' +
       '<div class="text-muted" style="font-size:11px;line-height:1.5;padding:8px 10px;background:var(--surface-2);border-radius:6px;">ℹ️ ' + PCD.escapeHtml(t('report_issue_debug_note')) + '</div>';
 
     const cancelBtn = PCD.el('button', { type: 'button', class: 'btn btn-secondary', text: t('close'), style: { flex: '1' } });
@@ -1203,6 +1213,81 @@
     footer.appendChild(sendBtn);
 
     const m = PCD.modal.open({ title: '🐛 ' + t('report_issue_title'), body: body, footer: footer, size: 'md', closable: true });
+
+    // v2.6.82 — hCaptcha lazy load. Loaded only when this modal opens
+    // (not at first paint), so we don't pay for third-party JS unless
+    // the user actually wants to report something. State machine:
+    //   loading → ready (token reset on each refresh) | error
+    let captchaWidgetId = null; // hCaptcha widget id, used to read token
+    let captchaToken = null;    // most recent valid token
+    let captchaScriptStatus = 'loading'; // 'loading' | 'ready' | 'error'
+
+    function setCaptchaStatus(text, isError) {
+      const wrap = body.querySelector('#reportCaptchaWrap');
+      if (!wrap) return;
+      wrap.innerHTML = '<div id="reportCaptcha" class="text-muted text-sm" style="' + (isError ? 'color:var(--danger);' : '') + '">' + PCD.escapeHtml(text) + '</div>';
+    }
+
+    function renderHcaptchaWidget() {
+      const wrap = body.querySelector('#reportCaptchaWrap');
+      if (!wrap || !window.hcaptcha) return;
+      // Replace the loading text with an empty container hCaptcha can attach to.
+      wrap.innerHTML = '<div id="reportCaptchaSlot"></div>';
+      try {
+        captchaWidgetId = window.hcaptcha.render('reportCaptchaSlot', {
+          sitekey: HCAPTCHA_SITEKEY,
+          // Track the user's current theme so the widget doesn't look out of place.
+          theme: (document.documentElement.getAttribute('data-theme') === 'dark') ? 'dark' : 'light',
+          size: 'normal',
+          callback: function (token) { captchaToken = token; },
+          'expired-callback': function () { captchaToken = null; },
+          'error-callback': function () { captchaToken = null; },
+        });
+      } catch (err) {
+        // Render can throw if container already attached or invalid sitekey.
+        captchaScriptStatus = 'error';
+        setCaptchaStatus(t('report_issue_captcha_error'), true);
+        PCD.err && PCD.err('hcaptcha render', err);
+      }
+    }
+
+    function ensureHcaptchaLoaded() {
+      // Already loaded by an earlier modal open — reuse.
+      if (window.hcaptcha) {
+        captchaScriptStatus = 'ready';
+        renderHcaptchaWidget();
+        return;
+      }
+      // Already loading from another tab/modal? Wait for it.
+      const existing = document.querySelector('script[data-hcaptcha-loader="1"]');
+      if (existing) {
+        existing.addEventListener('load', function () {
+          captchaScriptStatus = 'ready';
+          renderHcaptchaWidget();
+        });
+        existing.addEventListener('error', function () {
+          captchaScriptStatus = 'error';
+          setCaptchaStatus(t('report_issue_captcha_error'), true);
+        });
+        return;
+      }
+      const s = document.createElement('script');
+      s.src = 'https://js.hcaptcha.com/1/api.js?render=explicit';
+      s.async = true;
+      s.defer = true;
+      s.setAttribute('data-hcaptcha-loader', '1');
+      s.onload = function () {
+        captchaScriptStatus = 'ready';
+        renderHcaptchaWidget();
+      };
+      s.onerror = function () {
+        captchaScriptStatus = 'error';
+        setCaptchaStatus(t('report_issue_captcha_error'), true);
+      };
+      document.head.appendChild(s);
+    }
+
+    ensureHcaptchaLoaded();
     cancelBtn.addEventListener('click', function () { m.close(); });
     sendBtn.addEventListener('click', function () {
       const nameEl = body.querySelector('#reportName');
@@ -1221,6 +1306,18 @@
       // Light email shape check (server validates too).
       if (reporterEmail.indexOf('@') < 1 || reporterEmail.indexOf('.') < 0) {
         PCD.toast.error(t('report_issue_email_invalid'));
+        return;
+      }
+      // v2.6.82 — Captcha gate: don't even attempt submit if captcha
+      // hasn't been completed. Web3Forms would reject without a valid
+      // h-captcha-response anyway, but this gives a clearer error and
+      // avoids a wasted Web3Forms quota hit.
+      if (captchaScriptStatus === 'error') {
+        PCD.toast.error(t('report_issue_captcha_error'));
+        return;
+      }
+      if (!captchaToken) {
+        PCD.toast.error(t('report_issue_captcha_required'));
         return;
       }
 
@@ -1270,6 +1367,10 @@
         message: desc + debugBlock,
         // Honeypot (Web3Forms ignores submissions where botcheck != "")
         botcheck: '',
+        // v2.6.82 — hCaptcha token. Web3Forms validates server-side using
+        // the Secret Key configured in their dashboard. If the token is
+        // missing or invalid, Web3Forms rejects with a non-success response.
+        'h-captcha-response': captchaToken,
       };
 
       fetch('https://api.web3forms.com/submit', {
@@ -1287,12 +1388,23 @@
           sendBtn.textContent = origLabel;
           PCD.toast.error(t('report_issue_send_failed'));
           PCD.err && PCD.err('web3forms response', result);
+          // v2.6.82 — Reset captcha so the user can try again with a fresh
+          // token. hCaptcha tokens are single-use; reusing causes failures.
+          captchaToken = null;
+          if (window.hcaptcha && captchaWidgetId !== null) {
+            try { window.hcaptcha.reset(captchaWidgetId); } catch (e) { /* ignore */ }
+          }
         }
       }).catch(function (err) {
         sendBtn.disabled = false;
         sendBtn.textContent = origLabel;
         PCD.toast.error(t('report_issue_send_failed'));
         PCD.err && PCD.err('web3forms error', err);
+        // v2.6.82 — Reset captcha on network error too.
+        captchaToken = null;
+        if (window.hcaptcha && captchaWidgetId !== null) {
+          try { window.hcaptcha.reset(captchaWidgetId); } catch (e) { /* ignore */ }
+        }
       });
     });
   }

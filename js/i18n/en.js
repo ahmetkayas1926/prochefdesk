@@ -400,6 +400,10 @@ window.PCD.i18n.register('en', {
   report_issue_send_failed: "Could not send. Check your connection and try again.",
   report_issue_validation: "Please fill in all fields.",
   report_issue_opened: "Email app opened",
+  // v2.6.82 — hCaptcha bot protection strings
+  report_issue_captcha_loading: "Loading bot protection…",
+  report_issue_captcha_required: "Please complete the bot check first.",
+  report_issue_captcha_error: "Bot protection failed to load. Please refresh and try again.",
   qr_generating: "Generating QR…",
   qr_share_error: "Could not create QR",
   qr_signin_required: "Sign in to create a shareable QR",

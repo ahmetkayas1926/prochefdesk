@@ -276,6 +276,10 @@ window.PCD.i18n.register('es', {
   report_issue_send_failed: "No se pudo enviar. Verifica tu conexión e inténtalo de nuevo.",
   report_issue_validation: "Por favor completa todos los campos.",
   report_issue_opened: "Aplicación de correo abierta",
+  // v2.6.82 — hCaptcha bot protection strings
+  report_issue_captcha_loading: "Cargando protección anti-bot…",
+  report_issue_captcha_required: "Por favor completa la verificación primero.",
+  report_issue_captcha_error: "No se pudo cargar la protección. Recarga e inténtalo de nuevo.",
   qr_generating: "Generando QR…",
   qr_share_error: "No se pudo crear el QR",
   qr_signin_required: "Inicia sesión para crear un QR compartible",

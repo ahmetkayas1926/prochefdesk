@@ -400,6 +400,10 @@ window.PCD.i18n.register('tr', {
   report_issue_send_failed: "Gönderilemedi. Bağlantını kontrol edip tekrar dene.",
   report_issue_validation: "Lütfen tüm alanları doldurun.",
   report_issue_opened: "E-posta uygulaması açıldı",
+  // v2.6.82 — hCaptcha bot protection strings
+  report_issue_captcha_loading: "Bot koruması yükleniyor…",
+  report_issue_captcha_required: "Önce bot kontrolünü tamamlayın.",
+  report_issue_captcha_error: "Bot koruması yüklenemedi. Sayfayı yenileyip tekrar deneyin.",
   qr_generating: "QR oluşturuluyor…",
   qr_share_error: "QR oluşturulamadı",
   qr_signin_required: "Paylaşılabilir QR için giriş yapın",

@@ -276,6 +276,10 @@ window.PCD.i18n.register('de', {
   report_issue_send_failed: "Senden fehlgeschlagen. Verbindung prüfen und erneut versuchen.",
   report_issue_validation: "Bitte füllen Sie alle Felder aus.",
   report_issue_opened: "E-Mail-App geöffnet",
+  // v2.6.82 — hCaptcha bot protection strings
+  report_issue_captcha_loading: "Bot-Schutz wird geladen…",
+  report_issue_captcha_required: "Bitte zuerst die Bot-Prüfung abschließen.",
+  report_issue_captcha_error: "Bot-Schutz konnte nicht geladen werden. Bitte neu laden und erneut versuchen.",
   qr_generating: "QR wird erstellt…",
   qr_share_error: "QR konnte nicht erstellt werden",
   qr_signin_required: "Melden Sie sich an, um einen teilbaren QR zu erstellen",

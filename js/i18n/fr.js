@@ -276,6 +276,10 @@ window.PCD.i18n.register('fr', {
   report_issue_send_failed: "Envoi impossible. Vérifiez votre connexion et réessayez.",
   report_issue_validation: "Veuillez remplir tous les champs.",
   report_issue_opened: "Application de messagerie ouverte",
+  // v2.6.82 — hCaptcha bot protection strings
+  report_issue_captcha_loading: "Chargement de la protection anti-bot…",
+  report_issue_captcha_required: "Veuillez compléter la vérification d'abord.",
+  report_issue_captcha_error: "La protection n'a pas pu se charger. Actualisez et réessayez.",
   qr_generating: "Génération du QR…",
   qr_share_error: "Impossible de créer le QR",
   qr_signin_required: "Connectez-vous pour créer un QR partageable",

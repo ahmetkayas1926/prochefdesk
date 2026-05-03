@@ -276,6 +276,10 @@ window.PCD.i18n.register('ar', {
   report_issue_send_failed: "تعذّر الإرسال. تحقق من الاتصال وحاول مجددًا.",
   report_issue_validation: "يرجى ملء جميع الحقول.",
   report_issue_opened: "تم فتح تطبيق البريد الإلكتروني",
+  // v2.6.82 — hCaptcha bot protection strings
+  report_issue_captcha_loading: "جارٍ تحميل الحماية من الروبوتات…",
+  report_issue_captcha_required: "يرجى إكمال التحقق من الروبوت أولًا.",
+  report_issue_captcha_error: "تعذّر تحميل الحماية. يرجى التحديث والمحاولة مجددًا.",
   qr_generating: "جارٍ إنشاء رمز QR…",
   qr_share_error: "تعذّر إنشاء رمز QR",
   qr_signin_required: "سجّل الدخول لإنشاء رمز QR قابل للمشاركة",
