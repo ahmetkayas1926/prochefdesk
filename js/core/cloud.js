@@ -21,12 +21,7 @@
   let supabase = null;
   let syncing = false;
   let pendingSync = false;
-  // v2.6.85 — Pull-in-progress flag. Sign-in akışında lokalde bootstrap
-  // edilen ghost "My Kitchen" workspace'i, cloud pull tamamlanmadan
-  // queueSync/flushNow tarafından push ediliyor ve cloud workspaces
-  // tablosunda kalıcı duplikat yaratıyordu. Pull başlarken bu flag açılır,
-  // queueSync/flushNow flag açıkken push'u erteler ve pull bittiğinde
-  // pendingSync varsa güncel (ghost'tan arındırılmış) state ile flush'lar.
+  // v2.6.85 — Pull-in-progress flag.
   let pullInProgress = false;
   let onlineListenerAdded = false;
 
@@ -261,130 +256,34 @@
 
     getClient: function () { return supabase; },
 
-    // Called by store.js after every change (debounced)
+    // v2.6.87 — Faz 4 son adım: BLOB YAZIMI KAPATILDI.
+    // Eski user_data tablosuna yazım artık yok. Tüm mutation'lar
+    // cloud-pertable üzerinden ilgili tablolara gider. Per-table sistemin
+    // güvenilirliği v2.6.84-86 ile doğrulandı (workspaces, demo cleanup,
+    // ghost prevention). Bu fonksiyon backward-compat için bırakıldı —
+    // store.persist hâlâ çağırıyor; no-op döner.
     queueSync: function () {
-      if (!cloud.ready) return;
-      const user = PCD.store.get('user');
-      if (!user || !user.id) return;
-      if (!navigator.onLine) { pendingSync = true; return; }
-      // v2.6.85 — Pull devam ederken push erteleme. Bu olmadan ghost
-      // workspace pull'dan önce cloud'a yazılıyor.
-      if (pullInProgress) { pendingSync = true; return; }
-      if (syncing) { pendingSync = true; return; }
-      cloud._doSync();
+      // No-op. Blob yazımı v2.6.87'de kapatıldı.
+      // Per-table writes cloud-pertable.queueUpsert üzerinden gider.
     },
 
-    // v2.6.85 — cloud-pertable.flushNow ve diğer pull-aware kodlar için
-    // public getter. Bu olmadan flushNow pull sırasında push edebiliyor.
+    // v2.6.85 — cloud-pertable.flushNow için public getter.
     isPullInProgress: function () { return pullInProgress; },
 
-    // Force-push current state to cloud, return promise that resolves when done.
-    // Use this before reload() to guarantee cloud has latest data.
+    // v2.6.87 — Faz 4 son adım: BLOB YAZIMI KAPATILDI.
+    // pushNow ve _doSync no-op'a çevrildi. Önceden reload öncesi flush
+    // emniyet için kullanılıyordu; artık per-table cloud-pertable.flushNow
+    // tarafından sağlanıyor. Backward-compat için promise döndürüyor.
     pushNow: function () {
-      return new Promise(function (resolve) {
-        if (!cloud.ready) return resolve(false);
-        const user = PCD.store.get('user');
-        if (!user || !user.id) return resolve(false);
-        if (!navigator.onLine) return resolve(false);
-
-        const state = PCD.store.get();
-        const payload = {
-          plan: state.plan,
-          prefs: state.prefs,
-          onboarding: state.onboarding,
-          workspaces: state.workspaces,
-          activeWorkspaceId: state.activeWorkspaceId,
-          ingredients: state.ingredients,
-          costHistory: state.costHistory,
-          recipes: state.recipes,
-          menus: state.menus,
-          events: state.events,
-          suppliers: state.suppliers,
-          inventory: state.inventory,
-          waste: state.waste,
-          checklistTemplates: state.checklistTemplates,
-          checklistSessions: state.checklistSessions,
-          canvases: state.canvases,
-          shoppingLists: state.shoppingLists,
-          pendingStockCount: state.pendingStockCount,
-          stockCountHistory: state.stockCountHistory,
-          _deletedWorkspaces: state._deletedWorkspaces,
-        };
-
-        supabase.from('user_data').upsert({
-          user_id: user.id,
-          key: 'state',
-          value: payload,
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'user_id,key' }).then(function (res) {
-          if (res.error) {
-            PCD.err('pushNow error', res.error);
-            resolve(false);
-          } else {
-            PCD.log('pushNow OK');
-            resolve(true);
-          }
-        }).catch(function (e) {
-          PCD.err('pushNow exception', e);
-          resolve(false);
-        });
-      });
+      // Per-table flushNow varsa onu tetikle (tüm pending writes gönderilsin).
+      if (PCD.cloudPerTable && PCD.cloudPerTable.flushNow) {
+        try { PCD.cloudPerTable.flushNow(); } catch (e) {}
+      }
+      return Promise.resolve(true);
     },
 
     _doSync: function () {
-      if (!cloud.ready) return;
-      const user = PCD.store.get('user');
-      if (!user || !user.id) return;
-      syncing = true;
-      pendingSync = false;
-
-      // Build a slimmed payload — exclude _meta
-      const state = PCD.store.get();
-      const payload = {
-        plan: state.plan,
-        prefs: state.prefs,
-        onboarding: state.onboarding,
-        // Workspaces (v2.2)
-        workspaces: state.workspaces,
-        activeWorkspaceId: state.activeWorkspaceId,
-        // Library (shared)
-        ingredients: state.ingredients,
-        costHistory: state.costHistory,
-        // Workspace-bound (now namespaced by wsId inside)
-        recipes: state.recipes,
-        menus: state.menus,
-        events: state.events,
-        suppliers: state.suppliers,
-        inventory: state.inventory,
-        waste: state.waste,
-        checklistTemplates: state.checklistTemplates,
-        checklistSessions: state.checklistSessions,
-        canvases: state.canvases,
-        shoppingLists: state.shoppingLists,
-        pendingStockCount: state.pendingStockCount,
-        stockCountHistory: state.stockCountHistory,
-          _deletedWorkspaces: state._deletedWorkspaces,
-      };
-
-      supabase.from('user_data').upsert({
-        user_id: user.id,
-        key: 'state',
-        value: payload,
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'user_id,key' }).then(function (res) {
-        syncing = false;
-        if (res.error) {
-          PCD.err('sync error', res.error);
-          PCD.store.update('_meta', { pendingChanges: (PCD.store.get('_meta.pendingChanges') || 0) + 1 });
-        } else {
-          PCD.store.update('_meta', { lastSyncAt: new Date().toISOString(), pendingChanges: 0 });
-          PCD.log('synced OK');
-        }
-        if (pendingSync) setTimeout(cloud._doSync, 500);
-      }).catch(function (e) {
-        syncing = false;
-        PCD.err('sync exception', e);
-      });
+      // No-op. Blob yazımı v2.6.87'de kapatıldı.
     },
 
     // Pull from cloud (on sign-in)
@@ -394,48 +293,29 @@
         const user = PCD.store.get('user');
         if (!user || !user.id) return resolve(null);
 
-        // v2.6.85 — Ghost workspace duplicate fix. Pull başlarken flag açılır,
-        // queueSync ve cloudPerTable.flushNow flag açıkken push'u erteler.
-        // Pull bitince (success/null/error) _done() flag'i kapatır ve
-        // ertelenmiş push'ları tetikler.
+        // v2.6.85 — Pull-in-progress flag + ertelenmiş push tetikleyici.
         pullInProgress = true;
         function _done() {
           pullInProgress = false;
-          // Flag kapanır kapanmaz, pull boyunca biriken pending push'ları
-          // tetikle. Artık state ghost'tan arındırılmış (pull merge ghost
-          // filter'ı isEmptyGhostWs'i çalıştırdı), bu yüzden bu push'lar
-          // güvenle gider.
           if (pendingSync) {
             pendingSync = false;
-            setTimeout(function () { cloud._doSync(); }, 100);
+            // queueSync v2.6.87'de no-op olduğu için _doSync çağırmaya gerek yok.
+            // Ertelenmiş per-table push'lar zaten cloud-pertable kuyruğunda.
           }
           if (PCD.cloudPerTable && PCD.cloudPerTable.flushNow) {
             setTimeout(function () { PCD.cloudPerTable.flushNow(); }, 100);
           }
         }
 
-        // v2.6.74 — Faz 4 Adım 4: ÇİFT KAYNAK PULL
-        // İki yerden de paralel olarak çek:
-        //   1. Eski user_data blob (tek satır jsonb)
-        //   2. Yeni per-table tablolar (cloudPerTable.pullAll)
-        //
-        // İki kaynağı record bazında merge et — newest-wins.
-        //   - Bir tabloda kayıt sadece blob'da: blob'tan gelir
-        //   - Sadece per-table'da: per-table'dan gelir
-        //   - İkisinde de var: timestamp karşılaştırılır, yeni olan kazanır
-        //
-        // Bu yaklaşım veri kaybını imkansız kılar: hangi cihaz hangi
-        // sisteme yazmış olursa olsun, en yeni hali kazanır.
-        //
-        // Per-table pull başarısız olursa (RLS/network sorunu) sadece
-        // blob ile devam ediyoruz (eski davranış). Tersi de geçerli.
-
-        const blobPromise = supabase.from('user_data').select('*')
-          .eq('user_id', user.id).eq('key', 'state').maybeSingle();
+        // v2.6.87 — Faz 4 son adım: BLOB OKUMA KAPATILDI.
+        // Eski user_data tablosundan okuma artık yok. Per-table sistem
+        // tüm verinin tek kaynağı. mergePullSources null blob ile çağrıldı
+        // mı per-table'ı tek başına döndürüyor (zaten desteklenen path).
+        const blobPromise = Promise.resolve({ data: null, error: null });
 
         const perTablePromise = (PCD.cloudPerTable && PCD.cloudPerTable.pullAll)
           ? PCD.cloudPerTable.pullAll().catch(function (e) {
-              PCD.warn && PCD.warn('per-table pull failed, falling back to blob only:', e && e.message);
+              PCD.warn && PCD.warn('per-table pull failed:', e && e.message);
               return null;
             })
           : Promise.resolve(null);
@@ -446,15 +326,15 @@
             const perTableState = results[1];
             if (res.error) { PCD.err('pull error', res.error); _done(); return reject(res.error); }
 
-            // Kaynak verilerini hazırla
+            // Kaynak verilerini hazırla (blob artık null)
             const blobRemote = (res.data && res.data.value) || null;
             const remote = mergePullSources(blobRemote, perTableState);
 
             if (!remote) {
-              // İki kaynak da boş — yeni hesap, lokal'i yukarı push
+              // Per-table boş — yeni hesap. Lokal varsa per-table'a yazılması
+              // store API çağrıları (upsertWorkspace, vs.) ile gerçekleşir.
               _done();
               resolve(null);
-              cloud.queueSync();
               return;
             }
             PCD.log('pulled state from cloud (blob:', !!blobRemote, ', per-table:', !!perTableState, ')');

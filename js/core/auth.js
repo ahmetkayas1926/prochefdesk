@@ -19,20 +19,9 @@
       supabase.auth.onAuthStateChange(function (event, session) {
         PCD.log('auth event:', event);
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
-          // v2.6.86 — Demo seed cleanup on actual sign-in. Boot sırasında
-          // demo onboarding workspace + recipes/menus/events seed ediliyor
-          // (yeni ziyaretçilerin örnek görmesi için). Kullanıcı SIGNED_IN
-          // yaptığında bu lokal demo, gerçek cloud verisinin üzerine push
-          // edilmesin diye sıfırlanır. Sign-out → reload → sign-in
-          // döngüsünde demo "My Kitchen"in cloud'da birikmesini engeller.
-          //
-          // Sadece SIGNED_IN'de — INITIAL_SESSION sayfa reload (mevcut
-          // kullanıcı), TOKEN_REFRESHED arka plan token yenileme. Bu
-          // ikisinde state zaten kullanıcının gerçek verisi, dokunulmaz.
-          //
-          // !hasUser kontrolü: SIGNED_IN aynı session için tekrar fires
-          // ederse (rare, supabase davranışı), ikinci kez clearUserData
-          // çağırmayız — gerçek state'i silmiş oluruz.
+          // v2.6.86 — Demo seed cleanup on actual sign-in. Boot'ta demo
+          // workspace + içeriği seed ediliyor. Sign-in'de bu lokal demo,
+          // gerçek cloud verisinin üzerine push edilmesin diye sıfırlanır.
           if (event === 'SIGNED_IN' && session && session.user) {
             const seeded = PCD.store && PCD.store.get && PCD.store.get('onboarding.demoSeeded');
             const hasUser = PCD.store && PCD.store.get && PCD.store.get('user');
