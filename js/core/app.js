@@ -6,7 +6,7 @@
 (function () {
   'use strict';
 
-  async function boot() {
+  function boot() {
     const PCD = window.PCD;
     const t = PCD.i18n.t;
 
@@ -20,9 +20,7 @@
     }
 
     // 1) Load persisted state
-    // v2.6.90 — Faz 4 Adım 4b: store.init artık async (IDB-first read).
-    // Sonraki adımlar (theme, locale, auth) state'e bağlı olduğu için await şart.
-    await PCD.store.init();
+    PCD.store.init();
     // Auto-purge trash older than 30 days
     try { PCD.store.autoPurgeOldTrash && PCD.store.autoPurgeOldTrash(30); } catch (e) {}
 

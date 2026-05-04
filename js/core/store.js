@@ -233,69 +233,41 @@
   // ---------- STATE ----------
   let state = PCD.clone(defaultState);
 
-  // v2.6.90 — Faz 4 Adım 4b: Okuma IDB-first.
-  // Helper'lar: her iki kaynak da null veya parsed-object döndürür.
-  // Hata yakalama içeride; load() basit kalır.
-  function _loadFromLs() {
+  function load() {
     try {
       const raw = localStorage.getItem(LS_KEY_STATE);
-      return raw ? JSON.parse(raw) : null;
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        // deep merge defaults + parsed so new fields in newer versions still exist
+        state = deepMerge(PCD.clone(defaultState), parsed);
+      }
     } catch (e) {
-      PCD.warn && PCD.warn('LS load failed:', e && e.message);
-      return null;
+      PCD.warn('Failed to load state:', e);
+      state = PCD.clone(defaultState);
     }
-  }
-  function _loadFromIdb() {
-    if (!PCD.idb || !PCD.idb.get) return Promise.resolve(null);
-    return PCD.idb.get('state', 'main').then(function (data) {
-      return data || null;
-    }).catch(function (e) {
-      PCD.warn && PCD.warn('idb load failed, falling back to LS:', e && e.message);
-      return null;
-    });
-  }
-
-  // v2.6.90 — load() artık Promise döndürüyor. Önce IDB, fallback LS.
-  // IDB boşsa veya hatalıysa LS denenir; o da boşsa state default'ta kalır.
-  function load() {
-    return _loadFromIdb().then(function (idbState) {
-      let parsed = idbState;
-      if (!parsed) {
-        parsed = _loadFromLs();
-      }
-      try {
-        if (parsed) {
-          // deep merge defaults + parsed so new fields in newer versions still exist
-          state = deepMerge(PCD.clone(defaultState), parsed);
-        }
-      } catch (e) {
-        PCD.warn('Failed to apply loaded state:', e);
-        state = PCD.clone(defaultState);
-      }
-      // v2.6.62 — Run schema migrations BEFORE other normalization so that
-      // any added migration logic (e.g. ensure updatedAt) sees data first.
-      state = runMigrations(state);
-      // Normalize ingredient unit case (v2.6.35). Some CSV imports stored
-      // 'L', 'KG', 'ML' in uppercase. The convertUnit utility is now
-      // case-insensitive (also v2.6.35) but to keep the edit-modal dropdown
-      // showing the right unit and to make data consistent, lowercase them.
-      if (state.ingredients && typeof state.ingredients === 'object') {
-        Object.keys(state.ingredients).forEach(function (wsId) {
-          const wsIngs = state.ingredients[wsId];
-          if (!wsIngs || typeof wsIngs !== 'object') return;
-          Object.keys(wsIngs).forEach(function (ingId) {
-            const ing = wsIngs[ingId];
-            if (ing && typeof ing.unit === 'string') {
-              const lc = ing.unit.toLowerCase();
-              // Only normalize if it maps to a known canonical unit
-              if (lc !== ing.unit && (lc === 'l' || lc === 'kg' || lc === 'ml' || lc === 'g' || lc === 'pcs')) {
-                ing.unit = lc;
-              }
+    // v2.6.62 — Run schema migrations BEFORE other normalization so that
+    // any added migration logic (e.g. ensure updatedAt) sees data first.
+    state = runMigrations(state);
+    // Normalize ingredient unit case (v2.6.35). Some CSV imports stored
+    // 'L', 'KG', 'ML' in uppercase. The convertUnit utility is now
+    // case-insensitive (also v2.6.35) but to keep the edit-modal dropdown
+    // showing the right unit and to make data consistent, lowercase them.
+    if (state.ingredients && typeof state.ingredients === 'object') {
+      Object.keys(state.ingredients).forEach(function (wsId) {
+        const wsIngs = state.ingredients[wsId];
+        if (!wsIngs || typeof wsIngs !== 'object') return;
+        Object.keys(wsIngs).forEach(function (ingId) {
+          const ing = wsIngs[ingId];
+          if (ing && typeof ing.unit === 'string') {
+            const lc = ing.unit.toLowerCase();
+            // Only normalize if it maps to a known canonical unit
+            if (lc !== ing.unit && (lc === 'l' || lc === 'kg' || lc === 'ml' || lc === 'g' || lc === 'pcs')) {
+              ing.unit = lc;
             }
-          });
+          }
         });
-      }
-    });
+      });
+    }
   }
 
   function deepMerge(target, source) {
@@ -351,6 +323,10 @@
     try {
       localStorage.setItem(LS_KEY_STATE, JSON.stringify(stateCopy));
       state = stateCopy;
+      // v2.6.89 — IDB write-through (fire-and-forget).
+      if (PCD.idb && PCD.idb.put) {
+        PCD.idb.put('state', 'main', state).catch(function () {});
+      }
       return true;
     } catch (e) {
       return false;
@@ -478,11 +454,18 @@
   function flushSync() {
     try {
       localStorage.setItem(LS_KEY_STATE, JSON.stringify(state));
-      return true;
     } catch (e) {
       PCD.err && PCD.err('flushSync fail', e);
       return false;
     }
+    // v2.6.89 — Faz 4 Adım 4a: IDB write-through (fire-and-forget).
+    // flushSync sync API olarak kalıyor (caller'lar reload öncesi await
+    // bekleyemez); IDB write paralel async. LS zaten yazıldığı için
+    // veri kaybı riski yok.
+    if (PCD.idb && PCD.idb.put) {
+      PCD.idb.put('state', 'main', state).catch(function () {});
+    }
+    return true;
   }
 
   // v2.6.69 — State-key (camelCase) → SQL table name (snake_case) eşleştirme.
@@ -559,6 +542,16 @@
         }
       }
     }
+    // v2.6.89 — Faz 4 Adım 4a: IndexedDB write-through.
+    // Aynı state'i IDB'ye de yaz (async, fire-and-forget). LS write
+    // zaten yapıldı (veya quota fail oldu); IDB sadece paralel kanal.
+    // Hata sessizce loglanır; LS yedek görevi görür. 4b'de okuma IDB'ye
+    // geçecek, 4c'de LS yazma kapatılacak.
+    if (PCD.idb && PCD.idb.put) {
+      PCD.idb.put('state', 'main', state).catch(function (e) {
+        PCD.warn && PCD.warn('idb persist failed:', e && e.message);
+      });
+    }
     // tell cloud module to sync
     if (PCD.cloud && PCD.cloud.queueSync) PCD.cloud.queueSync();
   }, 400);
@@ -592,14 +585,8 @@
   // ---------- PUBLIC API ----------
   const store = {
     init: function () {
-      // v2.6.90 — Faz 4 Adım 4b: load() artık async; init promise döndürür.
-      // app.js'in boot fonksiyonu await ediyor.
-      return load().then(function () {
-        PCD.log('store initialized');
-      }).catch(function (e) {
-        PCD.err && PCD.err('store init failed:', e);
-        // Failure path: state default'ta kalır, app yine açılır.
-      });
+      load();
+      PCD.log('store initialized');
     },
 
     // get('path.to.value') or get() for all state
@@ -1313,6 +1300,10 @@
     reset: function () {
       state = PCD.clone(defaultState);
       localStorage.removeItem(LS_KEY_STATE);
+      // v2.6.89 — Faz 4 Adım 4a: IDB'yi de temizle (fire-and-forget).
+      if (PCD.idb && PCD.idb.delete) {
+        PCD.idb.delete('state', 'main').catch(function () {});
+      }
       emit('*:reset', state);
       ['recipes','ingredients','menus','events','suppliers','inventory','waste','prefs','onboarding','user','plan'].forEach(function (k) {
         emit(k, state[k]);
