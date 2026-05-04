@@ -179,7 +179,13 @@
             data: it.data,
           };
           if (table === 'workspaces') {
-            // Workspace: flat columns + data jsonb (data tutar full record)
+            // v2.6.84 — Workspaces tablosunda 'data' jsonb kolonu YOK,
+            // sadece flat kolonlar var (v2.6.66 şeması). Bu yüzden default
+            // olarak eklenen row.data alanını kaldır; aksi halde Postgres
+            // "column 'data' does not exist" hatası verir ve tüm workspace
+            // upsert'leri sessizce başarısız olur. (Şefin 2026-05 hesabında
+            // Nazzar workspace'i tam bu sebeple per-table'a hiç yazılamadı.)
+            delete row.data;
             row.name = (it.data && it.data.name) || '';
             row.concept = (it.data && it.data.concept) || null;
             row.role = (it.data && it.data.role) || null;

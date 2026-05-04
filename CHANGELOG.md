@@ -1,9 +1,10 @@
 # ProChefDesk — Sürüm geçmişi
 
-Mevcut sürüm: **v2.6.83**
+Mevcut sürüm: **v2.6.84**
 
 Yapısal kilometre taşları (kronolojik tersine):
 
+- **v2.6.84** — Faz 4 tamlık hotfix: `cloud-pertable.js`'in workspaces upsert builder'ı, şemada bulunmayan `data` jsonb kolonuna yazmaya çalışıyordu (Postgres `column "data" does not exist` hatası → tüm workspace per-table yazımları sessizce başarısız oluyordu). Sebep: workspaces tablosu (v2.6.66 şeması) sadece flat kolon kullanıyor, ama generic upsert path'i her satıra `data: it.data` ekliyordu. Düzeltme: workspaces branch'inde `delete row.data`. v2.6.73 migration `migrationFazV4Done=1` flag'ini set etmiş olmasına rağmen workspaces tablosu boş kalıyordu; bu fix sonrası sonraki sign-in/mutation'da parent workspace per-table'a doğru yazılır.
 - **v2.6.83** — hCaptcha hotfix: `h-captcha-response` token'ı Web3Forms payload'undan çıkarıldı. Web3Forms Free tier hCaptcha doğrulaması (Secret Key alanı yok) → token gönderilince "Could not validate hCaptcha" reddi. Widget + client-side gate + honeypot yaklaşımıyla %95+ koruma sağlanıyor.
 - **v2.6.82** — "Sorun bildir" formuna hCaptcha bot koruması eklendi. Lazy-loaded (modal açıldığında yüklenir, ilk paint'i etkilemez). Web3Forms server-side doğrulaması.
 - **v2.6.81** — `workspace_tombstones` Realtime'a eklendi (18 → 19 binding). Bir cihaz workspace silince diğer cihazda 1-2 sn içinde cascade wipe (workspaces map + 16 ws-bound tablo). `cost_history` tablosu hâlâ kullanılmıyor (costHistory verisi user_prefs.data altında); ileride taşınırsa eklenecek.
