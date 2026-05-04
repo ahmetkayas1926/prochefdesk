@@ -323,6 +323,10 @@
     try {
       localStorage.setItem(LS_KEY_STATE, JSON.stringify(stateCopy));
       state = stateCopy;
+      // v2.6.89 — IDB write-through (fire-and-forget).
+      if (PCD.idb && PCD.idb.put) {
+        PCD.idb.put('state', 'main', state).catch(function () {});
+      }
       return true;
     } catch (e) {
       return false;
@@ -450,11 +454,18 @@
   function flushSync() {
     try {
       localStorage.setItem(LS_KEY_STATE, JSON.stringify(state));
-      return true;
     } catch (e) {
       PCD.err && PCD.err('flushSync fail', e);
       return false;
     }
+    // v2.6.89 — Faz 4 Adım 4a: IDB write-through (fire-and-forget).
+    // flushSync sync API olarak kalıyor (caller'lar reload öncesi await
+    // bekleyemez); IDB write paralel async. LS zaten yazıldığı için
+    // veri kaybı riski yok.
+    if (PCD.idb && PCD.idb.put) {
+      PCD.idb.put('state', 'main', state).catch(function () {});
+    }
+    return true;
   }
 
   // v2.6.69 — State-key (camelCase) → SQL table name (snake_case) eşleştirme.
@@ -530,6 +541,16 @@
           showQuotaModal();
         }
       }
+    }
+    // v2.6.89 — Faz 4 Adım 4a: IndexedDB write-through.
+    // Aynı state'i IDB'ye de yaz (async, fire-and-forget). LS write
+    // zaten yapıldı (veya quota fail oldu); IDB sadece paralel kanal.
+    // Hata sessizce loglanır; LS yedek görevi görür. 4b'de okuma IDB'ye
+    // geçecek, 4c'de LS yazma kapatılacak.
+    if (PCD.idb && PCD.idb.put) {
+      PCD.idb.put('state', 'main', state).catch(function (e) {
+        PCD.warn && PCD.warn('idb persist failed:', e && e.message);
+      });
     }
     // tell cloud module to sync
     if (PCD.cloud && PCD.cloud.queueSync) PCD.cloud.queueSync();
@@ -1279,6 +1300,10 @@
     reset: function () {
       state = PCD.clone(defaultState);
       localStorage.removeItem(LS_KEY_STATE);
+      // v2.6.89 — Faz 4 Adım 4a: IDB'yi de temizle (fire-and-forget).
+      if (PCD.idb && PCD.idb.delete) {
+        PCD.idb.delete('state', 'main').catch(function () {});
+      }
       emit('*:reset', state);
       ['recipes','ingredients','menus','events','suppliers','inventory','waste','prefs','onboarding','user','plan'].forEach(function (k) {
         emit(k, state[k]);
