@@ -151,6 +151,13 @@
       // Will retry when online listener fires (cloud.js handles it)
       return;
     }
+    // v2.6.85 — Pull devam ediyorsa push'u ertele. Sign-in akışında ghost
+    // workspace'in pull tamamlanmadan per-table'a yazılmasını engeller.
+    // cloud.js:pull bittiğinde _done() flushNow'u tekrar çağırır.
+    if (PCD.cloud && PCD.cloud.isPullInProgress && PCD.cloud.isPullInProgress()) {
+      flushTimer = setTimeout(flushNow, 200);
+      return;
+    }
     const batch = queue.splice(0, queue.length);
     // Reset index
     Object.keys(queueIndex).forEach(function (k) { delete queueIndex[k]; });
@@ -183,8 +190,7 @@
             // sadece flat kolonlar var (v2.6.66 şeması). Bu yüzden default
             // olarak eklenen row.data alanını kaldır; aksi halde Postgres
             // "column 'data' does not exist" hatası verir ve tüm workspace
-            // upsert'leri sessizce başarısız olur. (Şefin 2026-05 hesabında
-            // Nazzar workspace'i tam bu sebeple per-table'a hiç yazılamadı.)
+            // upsert'leri sessizce başarısız olur.
             delete row.data;
             row.name = (it.data && it.data.name) || '';
             row.concept = (it.data && it.data.concept) || null;

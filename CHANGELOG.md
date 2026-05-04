@@ -1,9 +1,10 @@
 # ProChefDesk — Sürüm geçmişi
 
-Mevcut sürüm: **v2.6.84**
+Mevcut sürüm: **v2.6.85**
 
 Yapısal kilometre taşları (kronolojik tersine):
 
+- **v2.6.85** — Ghost workspace duplicate kök çözüm: `cloud.js`'e `pullInProgress` flag eklendi. `pull()` başlarken set edilir, success/null/error path'lerinde `_done()` helper'ı tarafından sıfırlanır. `cloud.queueSync` ve `cloud-pertable.flushNow` flag açıkken push'u erteler (pendingSync = true). Pull bitince `_done()` ertelenmiş push'ları tetikler — bu noktada state pull merge ghost filter'ından geçtiği için ghost'tan arındırılmıştır. Sonuç: lokal bootstrap'in yarattığı ghost "My Kitchen" workspace'i artık cloud'a hiç gitmiyor; mevcut `isEmptyGhostWs` merge filter'ı çift güvenlik olarak devrede kalır.
 - **v2.6.84** — Faz 4 tamlık hotfix: `cloud-pertable.js`'in workspaces upsert builder'ı, şemada bulunmayan `data` jsonb kolonuna yazmaya çalışıyordu (Postgres `column "data" does not exist` hatası → tüm workspace per-table yazımları sessizce başarısız oluyordu). Sebep: workspaces tablosu (v2.6.66 şeması) sadece flat kolon kullanıyor, ama generic upsert path'i her satıra `data: it.data` ekliyordu. Düzeltme: workspaces branch'inde `delete row.data`. v2.6.73 migration `migrationFazV4Done=1` flag'ini set etmiş olmasına rağmen workspaces tablosu boş kalıyordu; bu fix sonrası sonraki sign-in/mutation'da parent workspace per-table'a doğru yazılır.
 - **v2.6.83** — hCaptcha hotfix: `h-captcha-response` token'ı Web3Forms payload'undan çıkarıldı. Web3Forms Free tier hCaptcha doğrulaması (Secret Key alanı yok) → token gönderilince "Could not validate hCaptcha" reddi. Widget + client-side gate + honeypot yaklaşımıyla %95+ koruma sağlanıyor.
 - **v2.6.82** — "Sorun bildir" formuna hCaptcha bot koruması eklendi. Lazy-loaded (modal açıldığında yüklenir, ilk paint'i etkilemez). Web3Forms server-side doğrulaması.

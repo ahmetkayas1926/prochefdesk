@@ -21,6 +21,13 @@
   let supabase = null;
   let syncing = false;
   let pendingSync = false;
+  // v2.6.85 — Pull-in-progress flag. Sign-in akışında lokalde bootstrap
+  // edilen ghost "My Kitchen" workspace'i, cloud pull tamamlanmadan
+  // queueSync/flushNow tarafından push ediliyor ve cloud workspaces
+  // tablosunda kalıcı duplikat yaratıyordu. Pull başlarken bu flag açılır,
+  // queueSync/flushNow flag açıkken push'u erteler ve pull bittiğinde
+  // pendingSync varsa güncel (ghost'tan arındırılmış) state ile flush'lar.
+  let pullInProgress = false;
   let onlineListenerAdded = false;
 
   // v2.6.58 — Per-record merge helpers. The previous pull() did a
@@ -260,9 +267,16 @@
       const user = PCD.store.get('user');
       if (!user || !user.id) return;
       if (!navigator.onLine) { pendingSync = true; return; }
+      // v2.6.85 — Pull devam ederken push erteleme. Bu olmadan ghost
+      // workspace pull'dan önce cloud'a yazılıyor.
+      if (pullInProgress) { pendingSync = true; return; }
       if (syncing) { pendingSync = true; return; }
       cloud._doSync();
     },
+
+    // v2.6.85 — cloud-pertable.flushNow ve diğer pull-aware kodlar için
+    // public getter. Bu olmadan flushNow pull sırasında push edebiliyor.
+    isPullInProgress: function () { return pullInProgress; },
 
     // Force-push current state to cloud, return promise that resolves when done.
     // Use this before reload() to guarantee cloud has latest data.
@@ -380,6 +394,26 @@
         const user = PCD.store.get('user');
         if (!user || !user.id) return resolve(null);
 
+        // v2.6.85 — Ghost workspace duplicate fix. Pull başlarken flag açılır,
+        // queueSync ve cloudPerTable.flushNow flag açıkken push'u erteler.
+        // Pull bitince (success/null/error) _done() flag'i kapatır ve
+        // ertelenmiş push'ları tetikler.
+        pullInProgress = true;
+        function _done() {
+          pullInProgress = false;
+          // Flag kapanır kapanmaz, pull boyunca biriken pending push'ları
+          // tetikle. Artık state ghost'tan arındırılmış (pull merge ghost
+          // filter'ı isEmptyGhostWs'i çalıştırdı), bu yüzden bu push'lar
+          // güvenle gider.
+          if (pendingSync) {
+            pendingSync = false;
+            setTimeout(function () { cloud._doSync(); }, 100);
+          }
+          if (PCD.cloudPerTable && PCD.cloudPerTable.flushNow) {
+            setTimeout(function () { PCD.cloudPerTable.flushNow(); }, 100);
+          }
+        }
+
         // v2.6.74 — Faz 4 Adım 4: ÇİFT KAYNAK PULL
         // İki yerden de paralel olarak çek:
         //   1. Eski user_data blob (tek satır jsonb)
@@ -410,7 +444,7 @@
           .then(function (results) {
             const res = results[0];
             const perTableState = results[1];
-            if (res.error) { PCD.err('pull error', res.error); return reject(res.error); }
+            if (res.error) { PCD.err('pull error', res.error); _done(); return reject(res.error); }
 
             // Kaynak verilerini hazırla
             const blobRemote = (res.data && res.data.value) || null;
@@ -418,6 +452,7 @@
 
             if (!remote) {
               // İki kaynak da boş — yeni hesap, lokal'i yukarı push
+              _done();
               resolve(null);
               cloud.queueSync();
               return;
@@ -585,9 +620,10 @@
               });
 
               PCD.store.replaceAll(merged);
+              _done();
               resolve(merged);
           })
-          .catch(function (e) { PCD.err('pull exception', e); reject(e); });
+          .catch(function (e) { PCD.err('pull exception', e); _done(); reject(e); });
       });
     },
 
