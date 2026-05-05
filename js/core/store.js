@@ -886,6 +886,91 @@
       });
     },
 
+    // v2.8.0 — List soft-deleted workspaces (for Trash UI in Workspaces modal).
+    // Returns: [{ id, name, color, _deletedAt, recipeCount, menuCount, ... }]
+    listDeletedWorkspaces: function () {
+      const out = [];
+      Object.values(state.workspaces || {}).forEach(function (w) {
+        if (!w._deletedAt) return;
+        const wsId = w.id;
+        const recipes = (state.recipes && state.recipes[wsId]) || {};
+        const ingredients = (state.ingredients && state.ingredients[wsId]) || {};
+        const menus = (state.menus && state.menus[wsId]) || {};
+        out.push({
+          id: w.id,
+          name: w.name || '',
+          color: w.color,
+          icon: w.icon,
+          concept: w.concept,
+          _deletedAt: w._deletedAt,
+          recipeCount: Object.keys(recipes).length,
+          ingredientCount: Object.keys(ingredients).length,
+          menuCount: Object.keys(menus).length,
+        });
+      });
+      // Newest first
+      return out.sort(function (a, b) { return (b._deletedAt || '').localeCompare(a._deletedAt || ''); });
+    },
+
+    // v2.8.0 — Permanently delete a workspace and all its data (cloud + local).
+    // Used by Workspaces modal "Delete forever" button.
+    // Returns Promise<boolean>.
+    purgeWorkspace: function (wsId) {
+      if (!state.workspaces[wsId]) return Promise.resolve(false);
+
+      // 1) Lokal hard delete: state.workspaces'ten + 16 ws-scoped tablodan
+      const next = Object.assign({}, state.workspaces);
+      delete next[wsId];
+      state.workspaces = next;
+      ['recipes','ingredients','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','pendingStockCount','stockCountHistory','haccpLogs','haccpUnits','haccpReadings','haccpCookCool'].forEach(function (tbl) {
+        if (state[tbl] && state[tbl][wsId] !== undefined) {
+          const t = Object.assign({}, state[tbl]);
+          delete t[wsId];
+          state[tbl] = t;
+        }
+      });
+      // Tombstone hâlâ kalsın — cross-device cascade için
+      emit('workspaces', next, null);
+      persist();
+
+      // 2) Cloud hard DELETE: workspaces + 16 ws-scoped tables
+      const sb = (PCD.supabase && typeof PCD.supabase.from === 'function') ? PCD.supabase : null;
+      if (!sb) return Promise.resolve(true); // Lokal silindi, cloud sync sonra
+
+      const wsScopedTables = [
+        'recipes', 'ingredients', 'menus', 'events', 'suppliers',
+        'canvases', 'shopping_lists', 'checklist_templates', 'inventory',
+        'waste', 'checklist_sessions', 'stock_count_history',
+        'haccp_logs', 'haccp_units', 'haccp_readings', 'haccp_cook_cool'
+      ];
+
+      return sb.auth.getUser().then(function (res) {
+        const user = res && res.data && res.data.user;
+        if (!user) return false;
+
+        // 16 ws-scoped tables: workspace_id eşleşen tüm satırları DELETE
+        const tableDeletes = wsScopedTables.map(function (t) {
+          return sb.from(t)
+            .delete()
+            .eq('workspace_id', wsId)
+            .eq('user_id', user.id);
+        });
+
+        // workspaces row DELETE
+        const wsDelete = sb.from('workspaces')
+          .delete()
+          .eq('id', wsId)
+          .eq('user_id', user.id);
+
+        return Promise.all(tableDeletes.concat([wsDelete])).then(function () {
+          return true;
+        });
+      }).catch(function (err) {
+        if (PCD.warn) PCD.warn('purgeWorkspace error:', err);
+        return false;
+      });
+    },
+
     // Copy a single recipe / menu / etc from one workspace into another
     copyToWorkspace: function (table, itemId, fromWsId, toWsId) {
       if (!state[table] || !state[table][fromWsId]) return null;
