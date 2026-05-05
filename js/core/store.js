@@ -233,41 +233,68 @@
   // ---------- STATE ----------
   let state = PCD.clone(defaultState);
 
-  function load() {
+  // v2.6.91 — Faz 4 Adım 4b: Okuma IDB-first.
+  function _loadFromLs() {
     try {
       const raw = localStorage.getItem(LS_KEY_STATE);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        // deep merge defaults + parsed so new fields in newer versions still exist
-        state = deepMerge(PCD.clone(defaultState), parsed);
-      }
+      return raw ? JSON.parse(raw) : null;
     } catch (e) {
-      PCD.warn('Failed to load state:', e);
-      state = PCD.clone(defaultState);
+      console.warn('[store] LS load failed:', e && e.message);
+      return null;
     }
-    // v2.6.62 — Run schema migrations BEFORE other normalization so that
-    // any added migration logic (e.g. ensure updatedAt) sees data first.
-    state = runMigrations(state);
-    // Normalize ingredient unit case (v2.6.35). Some CSV imports stored
-    // 'L', 'KG', 'ML' in uppercase. The convertUnit utility is now
-    // case-insensitive (also v2.6.35) but to keep the edit-modal dropdown
-    // showing the right unit and to make data consistent, lowercase them.
-    if (state.ingredients && typeof state.ingredients === 'object') {
-      Object.keys(state.ingredients).forEach(function (wsId) {
-        const wsIngs = state.ingredients[wsId];
-        if (!wsIngs || typeof wsIngs !== 'object') return;
-        Object.keys(wsIngs).forEach(function (ingId) {
-          const ing = wsIngs[ingId];
-          if (ing && typeof ing.unit === 'string') {
-            const lc = ing.unit.toLowerCase();
-            // Only normalize if it maps to a known canonical unit
-            if (lc !== ing.unit && (lc === 'l' || lc === 'kg' || lc === 'ml' || lc === 'g' || lc === 'pcs')) {
-              ing.unit = lc;
+  }
+  function _loadFromIdb() {
+    if (!PCD.idb || !PCD.idb.get) {
+      return Promise.resolve(null);
+    }
+    return PCD.idb.get('state', 'main').then(function (data) {
+      return data || null;
+    }).catch(function (e) {
+      console.warn('[store] IDB load failed:', e && e.message);
+      return null;
+    });
+  }
+
+  // load() artık Promise döndürür. Önce IDB, fallback LS.
+  // Hatada state default'ta kalır — caller catch içinde app yine açılabilir.
+  function load() {
+    console.log('[store] load: start');
+    return _loadFromIdb().then(function (idbState) {
+      let parsed = idbState;
+      let source = 'idb';
+      if (!parsed) {
+        parsed = _loadFromLs();
+        source = 'ls';
+      }
+      console.log('[store] load: source=' + (parsed ? source : 'empty'));
+      try {
+        if (parsed) {
+          state = deepMerge(PCD.clone(defaultState), parsed);
+        }
+      } catch (e) {
+        console.warn('[store] deepMerge failed:', e && e.message);
+        state = PCD.clone(defaultState);
+      }
+      // v2.6.62 — Run schema migrations BEFORE other normalization.
+      state = runMigrations(state);
+      // v2.6.35 — Lowercase ingredient units (CSV import normalization).
+      if (state.ingredients && typeof state.ingredients === 'object') {
+        Object.keys(state.ingredients).forEach(function (wsId) {
+          const wsIngs = state.ingredients[wsId];
+          if (!wsIngs || typeof wsIngs !== 'object') return;
+          Object.keys(wsIngs).forEach(function (ingId) {
+            const ing = wsIngs[ingId];
+            if (ing && typeof ing.unit === 'string') {
+              const lc = ing.unit.toLowerCase();
+              if (lc !== ing.unit && (lc === 'l' || lc === 'kg' || lc === 'ml' || lc === 'g' || lc === 'pcs')) {
+                ing.unit = lc;
+              }
             }
-          }
+          });
         });
-      });
-    }
+      }
+      console.log('[store] load: done');
+    });
   }
 
   function deepMerge(target, source) {
@@ -458,10 +485,6 @@
       PCD.err && PCD.err('flushSync fail', e);
       return false;
     }
-    // v2.6.89 — Faz 4 Adım 4a: IDB write-through (fire-and-forget).
-    // flushSync sync API olarak kalıyor (caller'lar reload öncesi await
-    // bekleyemez); IDB write paralel async. LS zaten yazıldığı için
-    // veri kaybı riski yok.
     if (PCD.idb && PCD.idb.put) {
       PCD.idb.put('state', 'main', state).catch(function () {});
     }
@@ -533,26 +556,17 @@
     } catch (e) {
       PCD.err('Failed to persist state:', e);
       if (e && (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014)) {
-        // v2.6.42 — Storage full. Show explicit modal to user instead of
-        // silently trimming priceHistory/waste/cost behind their back.
-        // The modal lets them download a backup first, then decide whether
-        // to trim. See trimAndPersist() and showQuotaModal() above.
         if (!_quotaModalOpen) {
           showQuotaModal();
         }
       }
     }
-    // v2.6.89 — Faz 4 Adım 4a: IndexedDB write-through.
-    // Aynı state'i IDB'ye de yaz (async, fire-and-forget). LS write
-    // zaten yapıldı (veya quota fail oldu); IDB sadece paralel kanal.
-    // Hata sessizce loglanır; LS yedek görevi görür. 4b'de okuma IDB'ye
-    // geçecek, 4c'de LS yazma kapatılacak.
+    // v2.6.89 — IDB write-through (fire-and-forget).
     if (PCD.idb && PCD.idb.put) {
       PCD.idb.put('state', 'main', state).catch(function (e) {
         PCD.warn && PCD.warn('idb persist failed:', e && e.message);
       });
     }
-    // tell cloud module to sync
     if (PCD.cloud && PCD.cloud.queueSync) PCD.cloud.queueSync();
   }, 400);
 
@@ -585,8 +599,13 @@
   // ---------- PUBLIC API ----------
   const store = {
     init: function () {
-      load();
-      PCD.log('store initialized');
+      // v2.6.91 — load async; init Promise döndürür. Boot await ediyor.
+      return load().then(function () {
+        console.log('[store] init: done');
+      }).catch(function (e) {
+        console.error('[store] init: failed:', e);
+        // Failure path: state default'ta kalır, app yine açılır.
+      });
     },
 
     // get('path.to.value') or get() for all state
@@ -1300,7 +1319,6 @@
     reset: function () {
       state = PCD.clone(defaultState);
       localStorage.removeItem(LS_KEY_STATE);
-      // v2.6.89 — Faz 4 Adım 4a: IDB'yi de temizle (fire-and-forget).
       if (PCD.idb && PCD.idb.delete) {
         PCD.idb.delete('state', 'main').catch(function () {});
       }
