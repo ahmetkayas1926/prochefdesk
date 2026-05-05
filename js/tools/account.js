@@ -868,12 +868,7 @@
         .then(function (res) { if (res.error) errors.push('shares: ' + res.error.message); })
         .catch(function (e) { errors.push('shares step: ' + (e.message || e)); });
 
-      // 3) Delete user_data
-      const deleteUserData = supabase.from('user_data').delete().eq('user_id', user.id)
-        .then(function (res) { if (res.error) errors.push('user_data: ' + res.error.message); })
-        .catch(function (e) { errors.push('user_data step: ' + (e.message || e)); });
-
-      Promise.all([deletePhotos, deleteShares, deleteUserData]).then(function () {
+      Promise.all([deletePhotos, deleteShares]).then(function () {
         try {
           if (PCD.store && PCD.store.clearUserData) PCD.store.clearUserData();
         } catch (e) { errors.push('local: ' + (e.message || e)); }
