@@ -520,16 +520,23 @@
         localStorage.setItem(LS_KEY_STATE, JSON.stringify(state));
       } catch (e) {
         PCD.err && PCD.err('flushSync fail', e);
-        return false;
+        return Promise.resolve(false);
       }
     }
     // v2.6.89 — IDB write-through. v2.6.92 — Migration tetikle.
+    // v2.6.93 — IDB put Promise'ini döndür → restore akışı await edebilir.
+    // Eski sync caller'lar Promise'i discard eder (dönüş değerini truthy
+    // boolean olarak kullanıyorlardı; Promise truthy, davranış aynı).
     if (PCD.idb && PCD.idb.put) {
-      PCD.idb.put('state', 'main', state).then(function () {
+      return PCD.idb.put('state', 'main', state).then(function () {
         if (!_migrationDone) _completeMigration();
-      }).catch(function () {});
+        return true;
+      }).catch(function (e) {
+        console.warn('[store] flushSync IDB write failed:', e && e.message);
+        return false;
+      });
     }
-    return true;
+    return Promise.resolve(true);
   }
 
   // v2.6.69 — State-key (camelCase) → SQL table name (snake_case) eşleştirme.
@@ -1351,12 +1358,60 @@
       // from backup. The cloud blob might still be at an older schema if
       // another device wrote it before being upgraded.
       state = runMigrations(state);
+
+      // v2.6.93 — Orphan workspace namespace cleanup. Eski (v2.6.85 öncesi)
+      // ghost workspace bug'ı veya yedek dump'ında silinmiş ws'in temizlenmemiş
+      // recipes/ingredients namespace'leri olabilir. Bunlar workspaces objesinde
+      // yok ama state.recipes[wsId] gibi yerlerde ID namespace'i var; restore
+      // sonrası cloud'a push'a giderler ve sonraki pull'da geri gelirler →
+      // kalıcı kirlilik. replaceAll'da bunları siliyoruz.
+      try {
+        const validWsIds = new Set(Object.keys(state.workspaces || {}));
+        const wsScopedKeys = [
+          'recipes', 'ingredients', 'menus', 'events', 'suppliers',
+          'canvases', 'shoppingLists', 'checklistTemplates',
+          'stockCountHistory', 'haccpLogs', 'haccpUnits',
+          'haccpReadings', 'haccpCookCool',
+          'inventory', 'waste', 'checklistSessions',
+        ];
+        wsScopedKeys.forEach(function (key) {
+          const ns = state[key];
+          if (!ns || typeof ns !== 'object') return;
+          Object.keys(ns).forEach(function (wsId) {
+            if (!validWsIds.has(wsId)) delete ns[wsId];
+          });
+        });
+      } catch (e) {
+        PCD.err && PCD.err('replaceAll: orphan ws cleanup failed', e);
+      }
+
+      // v2.6.93 — activeWorkspaceId validation. Backup'taki id workspaces
+      // objesinde yoksa (silinmiş ws veya temizlenmiş orphan) ilk geçerli
+      // ws'e ata. Aksi halde tools wsId üzerinden filtre yapar, hiçbir şey
+      // görünmez ve UI sıkışır.
+      try {
+        const ws = state.workspaces || {};
+        const activeId = state.activeWorkspaceId;
+        const isValid = activeId && ws[activeId] && !ws[activeId]._deletedAt;
+        if (!isValid) {
+          const firstValid = Object.keys(ws).find(function (id) {
+            return ws[id] && !ws[id]._deletedAt;
+          });
+          state.activeWorkspaceId = firstValid || null;
+        }
+      } catch (e) {
+        PCD.err && PCD.err('replaceAll: activeWorkspaceId validation failed', e);
+      }
+
       emit('*:replaced', state);
-      // Trigger a broad refresh
-      ['recipes','ingredients','menus','events','suppliers','inventory','waste','prefs','onboarding','user','plan'].forEach(function (k) {
+      // v2.6.93 — workspaces ve activeWorkspaceId emit'leri eklendi; restore
+      // sonrası workspace switcher ve aktif tool yeniden render olsun.
+      ['recipes','ingredients','menus','events','suppliers','inventory','waste','prefs','onboarding','user','plan','workspaces','activeWorkspaceId'].forEach(function (k) {
         emit(k, state[k]);
       });
-      persist();
+      // v2.6.93 — flushSync ile IDB yazımının tamamlandığını garanti et,
+      // Promise'ini döndür ki restore akışı await edebilsin.
+      return flushSync();
     },
 
     // Reset everything (e.g. on sign-out)

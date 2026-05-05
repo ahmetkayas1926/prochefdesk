@@ -91,6 +91,15 @@
   }
 
   function finishTour() {
+    // v2.6.93 — Tour tamamlama bayrağı localStorage'a taşındı. Önceden
+    // state.onboarding.mainTourDone idi; ama state.onboarding cloud-pertable
+    // sync zincirinde güvenilir yazılmıyor (sadece setActiveWorkspaceId
+    // chain'inden dolaylı gidiyor) → her F5'te boot pull onboarding'i boş
+    // çekiyor → tour yeniden açılıyordu. localStorage cloud-bağımsız ve
+    // tek seferlik; tarayıcı temizlenmediği sürece F5/sign-in/out'tan
+    // etkilenmez. Geriye dönük uyumluluk için state flag'i de yine set
+    // ediliyor (Account → Restart welcome tour gibi yerler bunu okuyabilir).
+    try { localStorage.setItem('pcd_tour_done', '1'); } catch (e) {}
     PCD.store.update('onboarding', { mainTourDone: true });
     closeAll();
   }

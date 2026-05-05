@@ -145,16 +145,16 @@
 
   function flushNow() {
     flushTimer = null;
-    if (!isReady()) return;
-    if (!queue.length) return;
+    if (!isReady()) return Promise.resolve();
+    if (!queue.length) return Promise.resolve();
     if (!navigator.onLine) {
       // Will retry when online listener fires (cloud.js handles it)
-      return;
+      return Promise.resolve();
     }
     // v2.6.85 — Pull devam ediyorsa push'u ertele.
     if (PCD.cloud && PCD.cloud.isPullInProgress && PCD.cloud.isPullInProgress()) {
       flushTimer = setTimeout(flushNow, 200);
-      return;
+      return Promise.resolve();
     }
     const batch = queue.splice(0, queue.length);
     // Reset index
@@ -171,7 +171,9 @@
       byOp[k].push(it);
     });
 
-    Object.keys(byOp).forEach(function (k) {
+    // v2.6.93 — forEach yerine map → Promise.all. flushNow artık tüm batch
+    // işlemleri tamamlanana kadar await edilebilir. Restore akışı bunu kullanır.
+    const ops = Object.keys(byOp).map(function (k) {
       const items = byOp[k];
       const table = items[0].table;
       const op = items[0].op;
@@ -209,11 +211,8 @@
               active_workspace_id: it.data && it.data.activeWorkspaceId,
             };
           } else if (table === 'workspace_tombstones') {
-            // workspace_tombstones: PK doğrudan workspace_id, id ve data
-            // jsonb yok — minimal kayıt (ws silindi mi?). Yapı v2.6.71 SQL'inde:
-            //   workspace_id text PK, user_id uuid, deleted_at timestamptz, created_at
             return {
-              workspace_id: it.id,  // queueUpsert'ten gelen "id" parametresi aslında wsId
+              workspace_id: it.id,
               user_id: user.id,
               deleted_at: (it.data && it.data.deletedAt) || new Date().toISOString(),
             };
@@ -227,20 +226,23 @@
         const conflictKey = (table === 'user_prefs') ? 'user_id'
                           : (table === 'workspace_tombstones') ? 'workspace_id'
                           : 'id';
-        supabase.from(table).upsert(rows, { onConflict: conflictKey })
+        return supabase.from(table).upsert(rows, { onConflict: conflictKey })
           .then(function (res) {
             if (res.error) PCD.warn && PCD.warn('cloud-pertable upsert ' + table, res.error.message || res.error);
           })
           .catch(function (e) { PCD.warn && PCD.warn('cloud-pertable exception ' + table, e); });
       } else if (op === 'delete') {
         const ids = items.map(function (it) { return it.id; });
-        supabase.from(table).delete().in('id', ids).eq('user_id', user.id)
+        return supabase.from(table).delete().in('id', ids).eq('user_id', user.id)
           .then(function (res) {
             if (res.error) PCD.warn && PCD.warn('cloud-pertable delete ' + table, res.error.message || res.error);
           })
           .catch(function (e) { PCD.warn && PCD.warn('cloud-pertable delete exception ' + table, e); });
       }
+      return Promise.resolve();
     });
+
+    return Promise.all(ops);
   }
 
   // ============ PULL ============
@@ -406,12 +408,153 @@
   }
 
   // ============ PUBLIC API ============
+
+  // v2.6.93 — Backup restore'u "tam geri yükleme" garantisi için cloud'daki
+  // tüm user verisini RLS user_id eşleşmesi ile DELETE eder. Restore akışı:
+  // wipeAllUserData → store.replaceAll → store.flushSync → queueFullState →
+  // flushNow → reload. Bu fonksiyon yalnızca DB tablolarını temizler; foto
+  // orphan'ları Storage'da kalır (mevcut yedek geri yüklendiğinde foto URL'leri
+  // tekrar referanslanır, sorun yok). Tablo bazında DELETE atomic değil; bir
+  // tablo başarısız olursa diğerleri yine silinir, kullanıcıya hata döner.
+  function wipeAllUserData() {
+    if (!isReady()) return Promise.resolve(false);
+    const supabase = PCD.cloud.getClient();
+    const user = PCD.store.get('user');
+    if (!user || !user.id) return Promise.resolve(false);
+
+    // Pending queue ve flush timer'ı sıfırla — yarışı engelle.
+    Object.keys(queueIndex).forEach(function (k) { delete queueIndex[k]; });
+    queue.length = 0;
+    if (flushTimer) { clearTimeout(flushTimer); flushTimer = null; }
+
+    const tables = [
+      'recipes', 'ingredients', 'menus', 'events', 'suppliers',
+      'canvases', 'shopping_lists', 'checklist_templates', 'inventory',
+      'waste', 'checklist_sessions', 'stock_count_history',
+      'haccp_logs', 'haccp_units', 'haccp_readings', 'haccp_cook_cool',
+      'workspace_tombstones', 'workspaces', 'user_prefs',
+    ];
+
+    return Promise.all(tables.map(function (t) {
+      return supabase.from(t).delete().eq('user_id', user.id)
+        .then(function (res) {
+          if (res.error) {
+            PCD.warn && PCD.warn('wipeAllUserData ' + t, res.error.message || res.error);
+            return { table: t, ok: false };
+          }
+          return { table: t, ok: true };
+        })
+        .catch(function (e) {
+          PCD.warn && PCD.warn('wipeAllUserData exception ' + t, e);
+          return { table: t, ok: false };
+        });
+    })).then(function (results) {
+      const failed = results.filter(function (r) { return !r.ok; });
+      if (failed.length > 0) {
+        PCD.warn && PCD.warn('wipeAllUserData partial failures:',
+          failed.map(function (f) { return f.table; }).join(','));
+        return false;
+      }
+      return true;
+    });
+  }
+
+  // v2.6.93 — Restore sonrası mevcut state'in tamamını cloud queue'ya doldurur.
+  // Wipe yapılmış cloud'a yeni veriyi push etmek için kullanılır. Mevcut
+  // queueUpsert/queueArraySync API'lerini kullanır — flushNow row builder'ları
+  // burada da geçerli, çift kod yok.
+  function queueFullState() {
+    if (!isReady()) return;
+    const state = PCD.store && PCD.store._read ? PCD.store._read('') : null;
+    if (!state) {
+      PCD.warn && PCD.warn('queueFullState: no state');
+      return;
+    }
+
+    // 1. Workspaces (top-level)
+    const ws = state.workspaces || {};
+    Object.keys(ws).forEach(function (wsId) {
+      if (ws[wsId]) queueUpsert('workspaces', wsId, null, ws[wsId]);
+    });
+
+    // 2. Workspace-scoped key/value tablolar
+    // [stateKey, sqlTable]
+    const wsKeys = [
+      ['recipes',             'recipes'],
+      ['ingredients',         'ingredients'],
+      ['menus',               'menus'],
+      ['events',              'events'],
+      ['suppliers',           'suppliers'],
+      ['canvases',            'canvases'],
+      ['shoppingLists',       'shopping_lists'],
+      ['checklistTemplates',  'checklist_templates'],
+      ['stockCountHistory',   'stock_count_history'],
+      ['haccpLogs',           'haccp_logs'],
+      ['haccpUnits',          'haccp_units'],
+      ['haccpReadings',       'haccp_readings'],
+      ['haccpCookCool',       'haccp_cook_cool'],
+    ];
+    wsKeys.forEach(function (pair) {
+      const stateKey = pair[0];
+      const table = pair[1];
+      const data = state[stateKey] || {};
+      Object.keys(data).forEach(function (wsId) {
+        const records = data[wsId] || {};
+        Object.keys(records).forEach(function (id) {
+          const rec = records[id];
+          if (rec) queueUpsert(table, id, wsId, rec);
+        });
+      });
+    });
+
+    // 3. Inventory: { wsId: { ingId: { ingredient_id, ... } } }
+    const inv = state.inventory || {};
+    Object.keys(inv).forEach(function (wsId) {
+      const items = inv[wsId] || {};
+      Object.keys(items).forEach(function (ingId) {
+        if (items[ingId]) queueUpsert('inventory', ingId, wsId, items[ingId]);
+      });
+    });
+
+    // 4. Array tabloları: waste, checklistSessions
+    const waste = state.waste || {};
+    Object.keys(waste).forEach(function (wsId) {
+      const arr = waste[wsId];
+      if (Array.isArray(arr) && arr.length > 0) {
+        queueArraySync('waste', wsId, [], arr);
+      }
+    });
+    const sessions = state.checklistSessions || {};
+    Object.keys(sessions).forEach(function (wsId) {
+      const arr = sessions[wsId];
+      if (Array.isArray(arr) && arr.length > 0) {
+        queueArraySync('checklist_sessions', wsId, [], arr);
+      }
+    });
+
+    // 5. user_prefs (single row, PK user_id)
+    // Pull mantığı (cloud-pertable.js içinde) user_prefs.data jsonb'sinden
+    // şu üst-anahtarları arıyor: prefs, plan, onboarding, costHistory.
+    // setActiveWorkspaceId aynı yapıyı yazıyor, queueFullState de aynısını
+    // yazmalı.
+    queueUpsert('user_prefs', 'user_prefs', null, {
+      activeWorkspaceId: state.activeWorkspaceId || null,
+      prefs:        state.prefs        || {},
+      plan:         state.plan         || 'free',
+      onboarding:   state.onboarding   || {},
+      costHistory:  state.costHistory  || [],
+    });
+  }
+
   PCD.cloudPerTable = {
     queueUpsert: queueUpsert,
     queueDelete: queueDelete,
     queueArraySync: queueArraySync,  // v2.6.72 — array tablolar için
     flushNow: flushNow,
     pullAll: pullAll,
+    // v2.6.93 — restore akışı için
+    wipeAllUserData: wipeAllUserData,
+    queueFullState: queueFullState,
     // Re-flush queued items when back online
     onOnline: function () {
       if (queue.length) scheduleFlush();

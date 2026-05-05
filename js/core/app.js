@@ -85,7 +85,15 @@
       PCD.router.go(initial, null, { skipHistory: true });
 
       // 8) Seed demos if first run
-      if (!PCD.store.get('onboarding.demoSeeded')) {
+      // v2.6.93 — Demo seed artık SADECE misafir kullanıcılar için çalışıyor.
+      // Önceki davranış: `if (!demoSeeded)` → onboarding.demoSeeded cloud-bağımlı
+      // (user_prefs.data.onboarding) ve cloud'a güvenilir şekilde yazılmıyordu;
+      // her F5'te boot pull → onboarding boş → seed yeniden tetikleniyor → her
+      // F5'te demo recipe duplicate ediliyordu. Yeni gate: kullanıcı sign-in
+      // olduysa user objesi state'te dolu, seed asla çalışmaz. Sign-out misafir
+      // ilk açılışta seed bir kez çalışır, demoSeeded lokal flag'i bunu kilitler.
+      const isGuest = !PCD.store.get('user');
+      if (isGuest && !PCD.store.get('onboarding.demoSeeded')) {
         PCD.demo.seed();
         // Re-render whichever view is current now that we have data
         PCD.router.go(initial, null, { skipHistory: true });
@@ -114,7 +122,15 @@
         PCD.$('#app').classList.remove('hidden');
 
         // 12) Main tour on very first run
-        if (!PCD.store.get('onboarding.mainTourDone')) {
+        // v2.6.93 — Önceden state.onboarding.mainTourDone'a bakılıyordu; cloud
+        // sync zincirinde bu flag güvenilir yazılmıyordu, her F5'te tour geri
+        // geliyordu. Şimdi localStorage flag'i öncelikli (cloud-bağımsız).
+        // State flag'i fallback olarak kalıyor — eski cihazlardan zaten true
+        // gelen kullanıcılar için tour açılmasın diye.
+        let tourDone = false;
+        try { tourDone = localStorage.getItem('pcd_tour_done') === '1'; } catch (e) {}
+        if (!tourDone && PCD.store.get('onboarding.mainTourDone')) tourDone = true;
+        if (!tourDone) {
           setTimeout(function () {
             if (PCD.tutorial && PCD.tutorial.startMainTour) PCD.tutorial.startMainTour();
           }, 700);
