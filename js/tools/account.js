@@ -681,20 +681,29 @@
         text: t('clear_all_text'),
         okText: t('clear_all_btn'),
         cancelText: t('cancel')
-      }).then(function (ok) {
+      }).then(async function (ok) {
         if (!ok) return;
+
+        // v2.6.95 — Clear all data artık cloud'u da temizliyor. Önceki davranış
+        // PCD.store.reset() + PCD.cloud.pushNow() idi; ama cloud.pushNow v2.6.87'den
+        // beri no-op (eski blob yazımı kapatılmıştı). Sonuç: lokal sıfırlanıyor,
+        // reload sonrası pull cloud'daki eski veriyi geri çekiyordu — aslında
+        // hiç temizlenmiyordu. Şimdi: önce wipeAllUserData (RLS user_id ile
+        // 19 tabloda DELETE, user.id hâlâ state'te), sonra store.reset,
+        // sonra reload.
+        try {
+          if (PCD.cloudPerTable && PCD.cloudPerTable.wipeAllUserData) {
+            await PCD.cloudPerTable.wipeAllUserData();
+          }
+        } catch (e) {
+          PCD.warn && PCD.warn('Clear all: cloud wipe failed', e);
+          // Devam et — lokali yine de sıfırla, kullanıcı tekrar deneyebilir.
+        }
 
         PCD.store.reset();
 
-        const doReload = function () {
-          PCD.toast.success('✓ ' + t('clear_all_done'));
-          setTimeout(function () { window.location.reload(); }, 500);
-        };
-        if (PCD.cloud && typeof PCD.cloud.pushNow === 'function') {
-          PCD.cloud.pushNow().then(doReload).catch(doReload);
-        } else {
-          doReload();
-        }
+        PCD.toast.success('✓ ' + t('clear_all_done'));
+        setTimeout(function () { window.location.reload(); }, 500);
       });
     });
 
