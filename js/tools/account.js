@@ -698,8 +698,10 @@
   // Deletes:
   //   1. Recipe photos from Storage bucket (recipe-photos/{userId}/...)
   //   2. Public share rows (public_shares where owner_id = user.id)
-  //   3. user_data row (RLS allows DELETE on own rows since v2.6.47)
-  //   4. Local state (clearUserData wipes localStorage but keeps prefs)
+  //   3. Local state (clearUserData wipes localStorage but keeps prefs)
+  // Per-table tablolardaki user_id satırları auth.users CASCADE ile silinir
+  // (Edge Function auth.users.delete() çağrısını yapar). v2.6.99 — user_data
+  // adımı kaldırıldı (tablo DROP edildi).
   // Then signs out. The auth.users row itself stays (Supabase requires
   // admin SDK for that — we email the user how to delete the auth row,
   // or it's delete-on-cascade if the project is configured that way).
@@ -868,12 +870,12 @@
         .then(function (res) { if (res.error) errors.push('shares: ' + res.error.message); })
         .catch(function (e) { errors.push('shares step: ' + (e.message || e)); });
 
-      // 3) Delete user_data
-      const deleteUserData = supabase.from('user_data').delete().eq('user_id', user.id)
-        .then(function (res) { if (res.error) errors.push('user_data: ' + res.error.message); })
-        .catch(function (e) { errors.push('user_data step: ' + (e.message || e)); });
+      // v2.6.99 — user_data DELETE adımı kaldırıldı. Per-table sistem
+      // v2.6.66'dan beri tek kaynak; eski blob tablosu 0 row idi.
+      // Frontend referansları bu sürümde temizlendi, tablo deploy
+      // doğrulandıktan sonra Supabase Studio'da DROP edilecek.
 
-      Promise.all([deletePhotos, deleteShares, deleteUserData]).then(function () {
+      Promise.all([deletePhotos, deleteShares]).then(function () {
         try {
           if (PCD.store && PCD.store.clearUserData) PCD.store.clearUserData();
         } catch (e) { errors.push('local: ' + (e.message || e)); }

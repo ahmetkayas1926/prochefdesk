@@ -1,18 +1,12 @@
 /* ================================================================
    ProChefDesk — cloud.js
-   Supabase sync layer. Pushes state changes to cloud, pulls on sign-in.
-   Works offline: changes queue and sync when back online.
+   Supabase sync layer. Pulls per-table state on sign-in, merges with
+   local edits using updatedAt timestamps. Writes go through
+   cloud-pertable.js. Works offline — changes queue and sync when
+   back online.
 
-   DATA MODEL (in Supabase):
-     user_data (
-       user_id uuid,
-       key text,          -- e.g. 'state'
-       value jsonb,       -- full state blob or per-table
-       updated_at timestamptz
-       unique(user_id, key)
-     )
-   We use a single key 'state' that holds the full blob for simplicity.
-   For heavy datasets, we can split later.
+   v2.6.99 — Eski user_data blob mimari kaldırıldı (v2.6.87'den beri
+   yazma/okuma kapalıydı, bu sürümde son referans temizlendi).
    ================================================================ */
 
 (function () {
@@ -114,104 +108,6 @@
     return out;
   }
 
-  // v2.6.74 — Faz 4 Adım 4: ÇİFT KAYNAK MERGE
-  // Eski user_data blob'undan (blobRemote) ve yeni per-table sistemden
-  // (perTableState) gelen state'leri record bazında merge eder.
-  // newest-wins kuralı: aynı record her iki kaynakta da varsa updatedAt
-  // (veya _deletedAt) timestamp'i karşılaştırılır.
-  //
-  // Hangi kaynak boş olursa olsun, çalışmaya devam eder:
-  //   - Sadece blob: mevcut davranış (per-table henüz yok)
-  //   - Sadece per-table: yeni kullanıcı (blob hiç yazılmadı)
-  //   - İkisi de boş: null döner, çağıran tarafta cloud.queueSync tetiklenir
-  //   - İkisi de var: record bazında merge
-  function mergePullSources(blobRemote, perTableState) {
-    if (!blobRemote && !perTableState) return null;
-    if (!perTableState) return blobRemote;
-    if (!blobRemote) return perTableState;
-
-    // Top-level workspace map (newest-wins per ws)
-    const mergedWorkspaces = {};
-    const allWsIds = new Set();
-    if (blobRemote.workspaces) Object.keys(blobRemote.workspaces).forEach(function (id) { allWsIds.add(id); });
-    if (perTableState.workspaces) Object.keys(perTableState.workspaces).forEach(function (id) { allWsIds.add(id); });
-    allWsIds.forEach(function (wsId) {
-      const b = blobRemote.workspaces && blobRemote.workspaces[wsId];
-      const p = perTableState.workspaces && perTableState.workspaces[wsId];
-      if (!b) { mergedWorkspaces[wsId] = p; return; }
-      if (!p) { mergedWorkspaces[wsId] = b; return; }
-      mergedWorkspaces[wsId] = (_recordTs(b) > _recordTs(p)) ? b : p;
-    });
-
-    // Workspace tombstones — union (her iki kaynaktaki tüm tombstone ID'leri),
-    // çakışma varsa daha eski (önce silinen) olanı tut.
-    const mergedTombstones = {};
-    const allTombIds = new Set();
-    if (blobRemote._deletedWorkspaces) Object.keys(blobRemote._deletedWorkspaces).forEach(function (id) { allTombIds.add(id); });
-    if (perTableState._deletedWorkspaces) Object.keys(perTableState._deletedWorkspaces).forEach(function (id) { allTombIds.add(id); });
-    allTombIds.forEach(function (id) {
-      const b = blobRemote._deletedWorkspaces && blobRemote._deletedWorkspaces[id];
-      const p = perTableState._deletedWorkspaces && perTableState._deletedWorkspaces[id];
-      mergedTombstones[id] = b || p;
-    });
-
-    // Workspace-scoped map tables (recipes, ingredients, vs.)
-    const WS_MAP_TABLES = [
-      'recipes', 'ingredients', 'menus', 'events', 'suppliers',
-      'canvases', 'shoppingLists', 'checklistTemplates',
-      'stockCountHistory', 'haccpLogs', 'haccpUnits',
-      'haccpReadings', 'haccpCookCool'
-    ];
-    const merged = Object.assign({}, blobRemote, perTableState);
-    WS_MAP_TABLES.forEach(function (tbl) {
-      merged[tbl] = mergeWsScopedTable(blobRemote[tbl], perTableState[tbl]);
-    });
-
-    // Workspace-scoped array tables (waste, checklistSessions)
-    const WS_ARRAY_TABLES = ['waste', 'checklistSessions'];
-    WS_ARRAY_TABLES.forEach(function (tbl) {
-      merged[tbl] = mergeWsScopedArrayTable(blobRemote[tbl], perTableState[tbl]);
-    });
-
-    // Inventory: { wsId: { ingredientId: row } } — per-table birincil
-    // (counts genellikle son yazılan kazanır, timestamp yok bu kayıtlarda).
-    if (perTableState.inventory && Object.keys(perTableState.inventory).length > 0) {
-      // Per-table merge: ws içinde ingredient ID'leri union
-      const invMerged = {};
-      const invWsIds = new Set();
-      Object.keys(blobRemote.inventory || {}).forEach(function (id) { invWsIds.add(id); });
-      Object.keys(perTableState.inventory || {}).forEach(function (id) { invWsIds.add(id); });
-      invWsIds.forEach(function (wsId) {
-        invMerged[wsId] = Object.assign({},
-          (blobRemote.inventory && blobRemote.inventory[wsId]) || {},
-          (perTableState.inventory && perTableState.inventory[wsId]) || {}
-        );
-      });
-      merged.inventory = invMerged;
-    } else {
-      merged.inventory = blobRemote.inventory || {};
-    }
-
-    // costHistory — top-level array, newest by id timestamp
-    merged.costHistory = mergeArrayByIdAndTs(blobRemote.costHistory, perTableState.costHistory);
-
-    // Top-level metadata — per-table'dan gelirse al, yoksa blob
-    merged.workspaces = mergedWorkspaces;
-    merged._deletedWorkspaces = mergedTombstones;
-    // activeWorkspaceId — per-table kazanır (user_prefs daha güncel tutar)
-    merged.activeWorkspaceId = perTableState.activeWorkspaceId || blobRemote.activeWorkspaceId;
-    // user_prefs içerikleri — per-table'dan gelmişse onu al
-    if (perTableState.prefs && Object.keys(perTableState.prefs).length > 0) {
-      merged.prefs = perTableState.prefs;
-    }
-    if (perTableState.plan) merged.plan = perTableState.plan;
-    if (perTableState.onboarding && Object.keys(perTableState.onboarding).length > 0) {
-      merged.onboarding = perTableState.onboarding;
-    }
-
-    return merged;
-  }
-
   const cloud = {
     ready: false,
 
@@ -307,12 +203,9 @@
           }
         }
 
-        // v2.6.87 — Faz 4 son adım: BLOB OKUMA KAPATILDI.
-        // Eski user_data tablosundan okuma artık yok. Per-table sistem
-        // tüm verinin tek kaynağı. mergePullSources null blob ile çağrıldı
-        // mı per-table'ı tek başına döndürüyor (zaten desteklenen path).
-        const blobPromise = Promise.resolve({ data: null, error: null });
-
+        // v2.6.99 — Pull akışı: per-table tek kaynak. Eski user_data blob
+        // mantığı (v2.6.74 mergePullSources) v2.6.87'den beri ölüydü;
+        // bu sürümde tamamen kaldırıldı.
         const perTablePromise = (PCD.cloudPerTable && PCD.cloudPerTable.pullAll)
           ? PCD.cloudPerTable.pullAll().catch(function (e) {
               PCD.warn && PCD.warn('per-table pull failed:', e && e.message);
@@ -320,15 +213,9 @@
             })
           : Promise.resolve(null);
 
-        Promise.all([blobPromise, perTablePromise])
-          .then(function (results) {
-            const res = results[0];
-            const perTableState = results[1];
-            if (res.error) { PCD.err('pull error', res.error); _done(); return reject(res.error); }
-
-            // Kaynak verilerini hazırla (blob artık null)
-            const blobRemote = (res.data && res.data.value) || null;
-            const remote = mergePullSources(blobRemote, perTableState);
+        perTablePromise
+          .then(function (perTableState) {
+            const remote = perTableState;
 
             if (!remote) {
               // Per-table boş — yeni hesap. Lokal varsa per-table'a yazılması
@@ -337,7 +224,7 @@
               resolve(null);
               return;
             }
-            PCD.log('pulled state from cloud (blob:', !!blobRemote, ', per-table:', !!perTableState, ')');
+            PCD.log('pulled state from cloud (per-table)');
             const current = PCD.store.get();
 
             // Tombstones — workspaces deleted locally that should NOT be resurrected from cloud

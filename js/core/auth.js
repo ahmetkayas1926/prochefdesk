@@ -53,14 +53,8 @@
                     }
                   });
                 }
-                // v2.6.73 — Faz 4 Adım 3: Blob → per-table migration.
-                // Pull'dan sonra çalışır (state lokalde dolu), idempotent.
-                // Sessiz arka plan iş — kullanıcı görmez.
-                if (PCD.cloudMigrateV4 && PCD.cloudMigrateV4.runMigration) {
-                  PCD.cloudMigrateV4.runMigration().catch(function (e) {
-                    PCD.warn && PCD.warn('cloud-migrate-v4 (signed-in path) failed:', e && e.message);
-                  });
-                }
+                // v2.6.99 — cloud-migrate-v4 (Blob → per-table migration)
+                // tüm aktif kullanıcılar için tamamlandığı için kaldırıldı.
               }).catch(function (e) {
                 PCD.warn('Cloud pull on sign-in failed:', e && e.message);
               });
@@ -94,12 +88,9 @@
               });
             }
           }).then(function () {
-            // v2.6.73 — Faz 4 Adım 3: Blob → per-table migration (mevcut oturum yolu)
-            if (PCD.cloudMigrateV4 && PCD.cloudMigrateV4.runMigration) {
-              return PCD.cloudMigrateV4.runMigration().catch(function (e) {
-                PCD.warn && PCD.warn('cloud-migrate-v4 (existing-session path) failed:', e && e.message);
-              });
-            }
+            // v2.6.99 — cloud-migrate-v4 (existing-session path) kaldırıldı.
+            // Tüm aktif kullanıcıların migration'ı v2.6.73-v2.6.87 arası
+            // tamamlandı; yeni kullanıcılar için zaten gerek yok.
           }).then(function () {
             return PCD.cloud.fetchPlan();
           }).then(function (plan) {
