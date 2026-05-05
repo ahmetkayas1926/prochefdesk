@@ -507,16 +507,75 @@
             closable: true,
           });
           cancelBtn.addEventListener('click', function () { previewModal.close(); });
-          restoreBtn.addEventListener('click', function () {
-            // Replace top-level keys, but skip dangerous ones
-            const SKIP = ['_meta', 'user', '_deletedWorkspaces'];
-            Object.keys(data).forEach(function (k) {
-              if (SKIP.indexOf(k) >= 0) return;
-              PCD.store.set(k, data[k]);
-            });
-            previewModal.close();
-            PCD.toast.success(PCD.i18n.t('toast_backup_restored'));
-            setTimeout(function () { window.location.reload(); }, 800);
+          restoreBtn.addEventListener('click', async function () {
+            // v2.6.93 — Restore akışı tam yeniden yazıldı.
+            // Önceden: store.set() ile lokal'e yazıyor, cloud'da eski veriler kalıyor,
+            // reload sonrası cloud pull bunları geri getiriyor → restore boşa gidiyor.
+            // Şimdi: cloud wipe → state replace → flushSync (IDB) → flushNow await (cloud) → reload.
+            // Tüm adımlar sırayla await edilir; reload yalnızca her şey kalıcı olunca.
+
+            // Butonları disable et — kullanıcı çift basamasın
+            restoreBtn.disabled = true;
+            cancelBtn.disabled = true;
+            restoreBtn.textContent = '...';
+
+            try {
+              // 1) Backup'ta olmayan top-level alanları temizle (defansif)
+              //    SKIP listesi: kullanıcı kimliği ve meta alanları. Bunlar cloud
+              //    auth + tombstone sisteminden geliyor, backup'tan import edilmez.
+              const SKIP = ['_meta', 'user', '_deletedWorkspaces'];
+              const restoredData = {};
+              Object.keys(data).forEach(function (k) {
+                if (SKIP.indexOf(k) >= 0) return;
+                restoredData[k] = data[k];
+              });
+
+              // 2) Eğer kullanıcı sign-in olmuşsa cloud'u TAMAMEN sil.
+              //    Aksi halde reload sonrası pull eski cloud verisini geri getirir.
+              const user = PCD.store.get('user');
+              const isSignedIn = user && user.id && PCD.cloudPerTable && PCD.cloudPerTable.wipeAllUserData;
+              if (isSignedIn) {
+                await PCD.cloudPerTable.wipeAllUserData();
+              }
+
+              // 3) Lokal state'i backup ile değiştir. replaceAll defaultState'e merge,
+              //    runMigrations çalıştırır (eski sürüm backup uyumluluğu) ve persist eder.
+              PCD.store.replaceAll(restoredData);
+
+              // 4) activeWorkspaceId validation: backup'taki workspace mevcutsa kal,
+              //    yoksa ilk geçerli workspace'e geç. Hiç workspace yoksa null.
+              const ws = PCD.store.get('workspaces') || {};
+              const validWsIds = Object.keys(ws).filter(function (wsId) {
+                const w = ws[wsId];
+                return w && !w._deletedAt && !w.archived;
+              });
+              const currentActive = PCD.store.get('activeWorkspaceId');
+              if (!currentActive || validWsIds.indexOf(currentActive) < 0) {
+                PCD.store.set('activeWorkspaceId', validWsIds[0] || null);
+              }
+
+              // 5) flushSync: state'i IDB'ye sync olarak yaz (debounce'u atla).
+              if (PCD.store.flushSync) PCD.store.flushSync();
+
+              // 6) Cloud'a tüm yeni state'i yaz ve TAMAMLANANA KADAR BEKLE.
+              //    replaceAll persist tetiklemiş olabilir → cloud-pertable kuyruğu
+              //    dolu. flushNow artık Promise döndürüyor (v2.6.93).
+              if (isSignedIn && PCD.cloudPerTable && PCD.cloudPerTable.flushNow) {
+                // Kuyruğun dolması için kısa bekleme (persist debounced 400ms)
+                await new Promise(function (r) { setTimeout(r, 500); });
+                await PCD.cloudPerTable.flushNow();
+              }
+
+              previewModal.close();
+              PCD.toast.success(PCD.i18n.t('toast_backup_restored'));
+              setTimeout(function () { window.location.reload(); }, 600);
+            } catch (e) {
+              console.error('[restore] failed:', e);
+              PCD.toast.error('Restore failed: ' + (e && e.message ? e.message : 'unknown error'));
+              restoreBtn.disabled = false;
+              cancelBtn.disabled = false;
+              restoreBtn.textContent = t('backup_restore_ok');
+            }
           });
         };
         reader.readAsText(f);
