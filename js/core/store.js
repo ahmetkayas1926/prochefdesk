@@ -1392,11 +1392,6 @@
         const v = state.prefs && state.prefs[k.replace('prefs.', '')];
         if (v !== undefined) savedPrefs[k] = v;
       });
-      // v2.6.93 — Onboarding flag'lerini de koru. Aksi halde her sign-in
-      // veya her clearUserData çağrısında tour modal'ı tekrar açılıyor
-      // (kullanıcı zaten tamamlamış olsa bile). Tour kullanıcı bazlı
-      // değil, tarayıcı bazlı bir UI tercihidir.
-      const savedOnboarding = state.onboarding ? PCD.clone(state.onboarding) : null;
       // Reset everything
       state = PCD.clone(defaultState);
       // Restore prefs
@@ -1405,10 +1400,6 @@
         state.prefs = state.prefs || {};
         state.prefs[subKey] = savedPrefs[k];
       });
-      // Restore onboarding flags
-      if (savedOnboarding) {
-        state.onboarding = savedOnboarding;
-      }
       // Persist immediately
       flushSync();
       emit('*:reset', state);
