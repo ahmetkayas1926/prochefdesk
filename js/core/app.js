@@ -447,8 +447,6 @@
     const all = PCD.store.listWorkspaces(true);
     const active = all.filter(function (w) { return !w.archived; });
     const archived = all.filter(function (w) { return w.archived; });
-    // v2.8.0 — soft-deleted workspaces (Trash)
-    const deleted = (PCD.store.listDeletedWorkspaces && PCD.store.listDeletedWorkspaces()) || [];
     const activeId = PCD.store.getActiveWorkspaceId();
 
     const body = PCD.el('div');
@@ -481,30 +479,6 @@
             '<div style="font-weight:600;font-size:13px;">' + PCD.escapeHtml(w.name) + '</div>' +
             '<div class="text-muted" style="font-size:11px;">' + t('ws_archived_label') + (w.concept ? ' · ' + PCD.escapeHtml(w.concept) : '') + '</div>' +
           '</div>' +
-        '</div>';
-      });
-      html += '</div>';
-    }
-
-    // v2.8.0 — DELETED section (Trash for workspaces)
-    if (deleted.length > 0) {
-      html += '<div style="margin-top:14px;">' +
-        '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">' + t('ws_deleted_section') + '</div>';
-      deleted.forEach(function (w) {
-        // Calculate days left (30-day retention from _deletedAt)
-        const deletedDate = new Date(w._deletedAt);
-        const msLeft = (deletedDate.getTime() + 30 * 24 * 60 * 60 * 1000) - Date.now();
-        const daysLeft = Math.max(0, Math.ceil(msLeft / (24 * 60 * 60 * 1000)));
-        const stats = w.recipeCount + ' ' + t('ws_recipes_count') + ' · ' + w.menuCount + ' ' + t('ws_menus_count');
-        const wsName = w.name || ('(' + w.id.slice(0, 8) + ')');
-        html += '<div class="ws-row-deleted" style="display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);margin-bottom:6px;opacity:0.75;text-align:start;box-sizing:border-box;">' +
-          '<div style="width:32px;height:32px;border-radius:8px;background:var(--danger,#dc2626);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + PCD.icon('trash', 16) + '</div>' +
-          '<div style="flex:1;min-width:0;">' +
-            '<div style="font-weight:600;font-size:13px;">' + PCD.escapeHtml(wsName) + '</div>' +
-            '<div class="text-muted" style="font-size:11px;">' + stats + ' · ' + t('ws_days_left', { n: daysLeft }) + '</div>' +
-          '</div>' +
-          '<button type="button" class="icon-btn" data-restore-ws="' + w.id + '" title="' + PCD.escapeHtml(t('ws_restore')) + '" style="flex-shrink:0;">' + PCD.icon('rotate-ccw', 16) + '</button>' +
-          '<button type="button" class="icon-btn" data-purge-ws="' + w.id + '" title="' + PCD.escapeHtml(t('ws_purge')) + '" style="flex-shrink:0;color:var(--danger,#dc2626);">' + PCD.icon('trash-2', 16) + '</button>' +
         '</div>';
       });
       html += '</div>';
@@ -547,53 +521,6 @@
       m.close();
       // Reload to refresh all views with new workspace data
       setTimeout(function () { window.location.reload(); }, 300);
-    });
-
-    // v2.8.0 — Restore deleted workspace
-    PCD.on(body, 'click', '[data-restore-ws]', function (e) {
-      e.stopPropagation();
-      const wsId = this.getAttribute('data-restore-ws');
-      const btn = this;
-      btn.disabled = true;
-      PCD.store.restoreWorkspace(wsId).then(function (ok) {
-        if (ok) {
-          try { PCD.toast.success(PCD.i18n.t('ws_restored_toast')); } catch (e) {}
-          m.close();
-          setTimeout(function () { window.location.reload(); }, 400);
-        } else {
-          try { PCD.toast.error('Restore failed'); } catch (e) {}
-          btn.disabled = false;
-        }
-      }).catch(function () {
-        try { PCD.toast.error('Restore failed'); } catch (e) {}
-        btn.disabled = false;
-      });
-    });
-
-    // v2.8.0 — Permanently delete workspace
-    PCD.on(body, 'click', '[data-purge-ws]', function (e) {
-      e.stopPropagation();
-      const wsId = this.getAttribute('data-purge-ws');
-      const ws = (PCD.store.listDeletedWorkspaces() || []).find(function (x) { return x.id === wsId; });
-      const wsName = ws ? (ws.name || '(unnamed)') : 'workspace';
-      PCD.modal.confirm({
-        icon: '🗑', iconKind: 'danger', danger: true,
-        title: PCD.i18n.t('ws_purge_title'),
-        text: PCD.i18n.t('ws_purge_text', { name: wsName }),
-        okText: PCD.i18n.t('ws_purge_confirm'),
-        cancelText: PCD.i18n.t('cancel')
-      }).then(function (ok) {
-        if (!ok) return;
-        PCD.store.purgeWorkspace(wsId).then(function (ok2) {
-          if (ok2) {
-            try { PCD.toast.success(PCD.i18n.t('ws_purged_toast')); } catch (e) {}
-            m.close();
-            setTimeout(function () { window.location.reload(); }, 400);
-          } else {
-            try { PCD.toast.error('Delete failed'); } catch (e) {}
-          }
-        });
-      });
     });
 
     PCD.on(body, 'click', '[data-edit-ws]', function (e) {
@@ -760,50 +687,20 @@
         cancelText: T('cancel')
       }).then(function (ok) {
         if (!ok) return;
-        const wsName = existing.name;
         const success = PCD.store.deleteWorkspace(wsId);
         if (!success) {
           PCD.toast.error(PCD.i18n.t('toast_workspace_min_one'));
           return;
         }
+        try { PCD.toast.success(PCD.i18n.t('toast_workspace_deleted')); } catch (e) {}
         try { m.close(); } catch (e) {}
 
-        // v2.7.0 — Push deletion to cloud, then show UNDO toast for 5 seconds.
-        // If user clicks UNDO: tombstone is deleted from cloud (trigger
-        // trg_reverse_cascade_workspace_tombstone restores all data), then reload.
-        // If 5sec passes: reload (cloud already has the soft-delete).
+        // Push deletion to cloud BEFORE reload (otherwise reload pulls stale state with the ws back)
         const doReload = function () { window.location.reload(); };
-        const showUndoToast = function () {
-          let undone = false;
-          const reloadTimer = setTimeout(function () {
-            if (!undone) doReload();
-          }, 5000);
-          PCD.toast.success(PCD.i18n.t('toast_workspace_deleted'), 5000, {
-            action: {
-              label: PCD.i18n.t('btn_undo'),
-              onClick: function () {
-                undone = true;
-                clearTimeout(reloadTimer);
-                PCD.store.restoreWorkspace(wsId).then(function (ok) {
-                  if (ok) {
-                    try { PCD.toast.success(PCD.i18n.t('toast_restored')); } catch (e) {}
-                  } else {
-                    try { PCD.toast.error('Restore failed — reloading'); } catch (e) {}
-                  }
-                  // Reload either way — fresh pull from cloud
-                  setTimeout(doReload, 300);
-                }).catch(function () {
-                  setTimeout(doReload, 300);
-                });
-              }
-            }
-          });
-        };
-
         if (PCD.cloud && typeof PCD.cloud.pushNow === 'function') {
-          PCD.cloud.pushNow().then(showUndoToast);
+          PCD.cloud.pushNow().then(function () { setTimeout(doReload, 100); });
         } else {
-          showUndoToast();
+          setTimeout(doReload, 250);
         }
       });
     });

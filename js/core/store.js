@@ -153,10 +153,9 @@
   function ensureActiveWorkspace() {
     // If schema is already v2 with workspaces, just verify active id
     if (state.workspaces && Object.keys(state.workspaces).length > 0) {
-      if (!state.activeWorkspaceId || !state.workspaces[state.activeWorkspaceId] || state.workspaces[state.activeWorkspaceId]._deletedAt) {
-        // v2.7.1 — Pick a live (non-deleted, non-archived) workspace
-        const first = Object.values(state.workspaces).filter(function (w) { return !w.archived && !w._deletedAt; })[0]
-                   || Object.values(state.workspaces).filter(function (w) { return !w._deletedAt; })[0];
+      if (!state.activeWorkspaceId || !state.workspaces[state.activeWorkspaceId]) {
+        const first = Object.values(state.workspaces).filter(function (w) { return !w.archived; })[0]
+                   || Object.values(state.workspaces)[0];
         state.activeWorkspaceId = first ? first.id : null;
       }
       return;
@@ -715,9 +714,7 @@
     listWorkspaces: function (includeArchived) {
       ensureActiveWorkspace();
       const list = Object.values(PCD.clone(state.workspaces));
-      // v2.7.1 — Hide soft-deleted workspaces from all UI lists
-      const live = list.filter(function (w) { return !w._deletedAt; });
-      return includeArchived ? live : live.filter(function (w) { return !w.archived; });
+      return includeArchived ? list : list.filter(function (w) { return !w.archived; });
     },
     getWorkspace: function (wsId) {
       return PCD.clone(state.workspaces[wsId]) || null;
@@ -758,11 +755,9 @@
     },
     deleteWorkspace: function (wsId) {
       if (!state.workspaces[wsId]) return false;
-      // v2.7.1 — Soft-deleted workspaces don't count toward "min 1 active" check
-      const remainingLive = Object.values(state.workspaces).filter(function (w) {
-        return w.id !== wsId && !w._deletedAt;
-      });
-      if (remainingLive.length === 0) return false;
+      // Refuse if it's the only one
+      const remaining = Object.keys(state.workspaces).filter(function (id) { return id !== wsId; });
+      if (remaining.length === 0) return false;
       // v2.6.54 — Collect ALL photo URLs from this workspace's recipes
       // BEFORE wiping the data. After the wipe completes, delete each
       // orphaned blob from Storage (using isPhotoStillUsed to avoid
@@ -785,8 +780,7 @@
         }
       });
       if (state.activeWorkspaceId === wsId) {
-        // v2.7.1 — remainingLive is array of objects, use .id
-        state.activeWorkspaceId = remainingLive[0].id;
+        state.activeWorkspaceId = remaining[0];
       }
       // Mark as deleted in tombstones so cloud merge won't resurrect
       if (!state._deletedWorkspaces) state._deletedWorkspaces = {};
@@ -814,161 +808,6 @@
         });
       }
       return true;
-    },
-
-    // v2.7.0 — Restore a deleted workspace (UNDO toast).
-    // v2.7.1 — Trigger-independent: direct UPDATE on workspaces + 16 ws-scoped
-    // tables, then DELETE tombstone. Works even if v2.7.0 SQL trigger isn't deployed.
-    //
-    // Akış:
-    //   1) Lokal tombstone'u temizle (state._deletedWorkspaces[wsId] sil)
-    //   2) Cloud workspaces.deleted_at = NULL (direct UPDATE)
-    //   3) 16 ws-scoped table.deleted_at = NULL (where workspace_id matches)
-    //   4) Cloud workspace_tombstones DELETE (cleanup; trigger varsa idempotent)
-    //   5) Caller (app.js) reload yapar — pull cloud'dan diri veriyi getirir
-    //
-    // Returns Promise<boolean> — true if all updates succeeded.
-    restoreWorkspace: function (wsId) {
-      if (!state._deletedWorkspaces || !state._deletedWorkspaces[wsId]) {
-        return Promise.resolve(false);
-      }
-      // Lokal tombstone temizle
-      const tombs = Object.assign({}, state._deletedWorkspaces);
-      delete tombs[wsId];
-      state._deletedWorkspaces = tombs;
-      persist();
-
-      const sb = (PCD.supabase && typeof PCD.supabase.from === 'function') ? PCD.supabase : null;
-      if (!sb) return Promise.resolve(false);
-
-      // 16 ws-scoped table names (DB names, snake_case)
-      const wsScopedTables = [
-        'recipes', 'ingredients', 'menus', 'events', 'suppliers',
-        'canvases', 'shopping_lists', 'checklist_templates', 'inventory',
-        'waste', 'checklist_sessions', 'stock_count_history',
-        'haccp_logs', 'haccp_units', 'haccp_readings', 'haccp_cook_cool'
-      ];
-
-      return sb.auth.getUser().then(function (res) {
-        const user = res && res.data && res.data.user;
-        if (!user) return false;
-        const now = new Date().toISOString();
-
-        // 1) workspaces.deleted_at = NULL
-        const wsUpdate = sb.from('workspaces')
-          .update({ deleted_at: null, updated_at: now })
-          .eq('id', wsId)
-          .eq('user_id', user.id)
-          .not('deleted_at', 'is', null);
-
-        // 2) 16 ws-scoped tables: only update soft-deleted rows
-        const tableUpdates = wsScopedTables.map(function (t) {
-          return sb.from(t)
-            .update({ deleted_at: null, updated_at: now })
-            .eq('workspace_id', wsId)
-            .eq('user_id', user.id)
-            .not('deleted_at', 'is', null);
-        });
-
-        return Promise.all([wsUpdate].concat(tableUpdates)).then(function () {
-          // 3) Tombstone DELETE en son
-          return sb.from('workspace_tombstones')
-            .delete()
-            .eq('workspace_id', wsId)
-            .eq('user_id', user.id)
-            .then(function (r) {
-              return !r.error;
-            });
-        });
-      }).catch(function (err) {
-        if (PCD.warn) PCD.warn('restoreWorkspace error:', err);
-        return false;
-      });
-    },
-
-    // v2.8.0 — List soft-deleted workspaces (for Trash UI in Workspaces modal).
-    // Returns: [{ id, name, color, _deletedAt, recipeCount, menuCount, ... }]
-    listDeletedWorkspaces: function () {
-      const out = [];
-      Object.values(state.workspaces || {}).forEach(function (w) {
-        if (!w._deletedAt) return;
-        const wsId = w.id;
-        const recipes = (state.recipes && state.recipes[wsId]) || {};
-        const ingredients = (state.ingredients && state.ingredients[wsId]) || {};
-        const menus = (state.menus && state.menus[wsId]) || {};
-        out.push({
-          id: w.id,
-          name: w.name || '',
-          color: w.color,
-          icon: w.icon,
-          concept: w.concept,
-          _deletedAt: w._deletedAt,
-          recipeCount: Object.keys(recipes).length,
-          ingredientCount: Object.keys(ingredients).length,
-          menuCount: Object.keys(menus).length,
-        });
-      });
-      // Newest first
-      return out.sort(function (a, b) { return (b._deletedAt || '').localeCompare(a._deletedAt || ''); });
-    },
-
-    // v2.8.0 — Permanently delete a workspace and all its data (cloud + local).
-    // Used by Workspaces modal "Delete forever" button.
-    // Returns Promise<boolean>.
-    purgeWorkspace: function (wsId) {
-      if (!state.workspaces[wsId]) return Promise.resolve(false);
-
-      // 1) Lokal hard delete: state.workspaces'ten + 16 ws-scoped tablodan
-      const next = Object.assign({}, state.workspaces);
-      delete next[wsId];
-      state.workspaces = next;
-      ['recipes','ingredients','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','pendingStockCount','stockCountHistory','haccpLogs','haccpUnits','haccpReadings','haccpCookCool'].forEach(function (tbl) {
-        if (state[tbl] && state[tbl][wsId] !== undefined) {
-          const t = Object.assign({}, state[tbl]);
-          delete t[wsId];
-          state[tbl] = t;
-        }
-      });
-      // Tombstone hâlâ kalsın — cross-device cascade için
-      emit('workspaces', next, null);
-      persist();
-
-      // 2) Cloud hard DELETE: workspaces + 16 ws-scoped tables
-      const sb = (PCD.supabase && typeof PCD.supabase.from === 'function') ? PCD.supabase : null;
-      if (!sb) return Promise.resolve(true); // Lokal silindi, cloud sync sonra
-
-      const wsScopedTables = [
-        'recipes', 'ingredients', 'menus', 'events', 'suppliers',
-        'canvases', 'shopping_lists', 'checklist_templates', 'inventory',
-        'waste', 'checklist_sessions', 'stock_count_history',
-        'haccp_logs', 'haccp_units', 'haccp_readings', 'haccp_cook_cool'
-      ];
-
-      return sb.auth.getUser().then(function (res) {
-        const user = res && res.data && res.data.user;
-        if (!user) return false;
-
-        // 16 ws-scoped tables: workspace_id eşleşen tüm satırları DELETE
-        const tableDeletes = wsScopedTables.map(function (t) {
-          return sb.from(t)
-            .delete()
-            .eq('workspace_id', wsId)
-            .eq('user_id', user.id);
-        });
-
-        // workspaces row DELETE
-        const wsDelete = sb.from('workspaces')
-          .delete()
-          .eq('id', wsId)
-          .eq('user_id', user.id);
-
-        return Promise.all(tableDeletes.concat([wsDelete])).then(function () {
-          return true;
-        });
-      }).catch(function (err) {
-        if (PCD.warn) PCD.warn('purgeWorkspace error:', err);
-        return false;
-      });
     },
 
     // Copy a single recipe / menu / etc from one workspace into another
