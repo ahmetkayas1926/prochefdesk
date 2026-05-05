@@ -1360,6 +1360,33 @@
       // another device wrote it before being upgraded.
       state = runMigrations(state);
 
+      // v2.6.94 — Orphan ws namespace cleanup. Eski (v2.6.85 öncesi) ghost
+      // workspace bug'ı veya manuel düzenlenmiş yedek nedeniyle, recipes/
+      // ingredients/menus vb. ws-scoped tablolarda workspaces objesinde
+      // bulunmayan wsId namespace'leri olabilir (örn. silinmiş bir ws'in
+      // recipes namespace'i tombstone'lanmamış). Bunlar UI'da görünmez ama
+      // restore akışında cloud'a push edilir, bir sonraki pull'da geri gelir
+      // ve yarış durumlarına yol açar. replaceAll'da temizliyoruz.
+      try {
+        const validWsIds = new Set(Object.keys(state.workspaces || {}));
+        const wsScopedKeys = [
+          'recipes', 'ingredients', 'menus', 'events', 'suppliers',
+          'canvases', 'shoppingLists', 'checklistTemplates',
+          'stockCountHistory', 'haccpLogs', 'haccpUnits',
+          'haccpReadings', 'haccpCookCool',
+          'inventory', 'waste', 'checklistSessions',
+        ];
+        wsScopedKeys.forEach(function (key) {
+          const ns = state[key];
+          if (!ns || typeof ns !== 'object') return;
+          Object.keys(ns).forEach(function (wsId) {
+            if (!validWsIds.has(wsId)) delete ns[wsId];
+          });
+        });
+      } catch (e) {
+        PCD.err && PCD.err('replaceAll: orphan ws cleanup failed', e);
+      }
+
       // v2.6.93 — activeWorkspaceId validation. Backup'taki id state.workspaces'te
       // yoksa veya silinmişse ilk geçerli (silinmemiş) workspace'e ata. Aksi
       // halde tools wsId üzerinden filtre yapar, hiçbir şey görünmez.

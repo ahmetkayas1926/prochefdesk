@@ -542,14 +542,19 @@
     });
 
     // 5. user_prefs (single row, PK user_id)
-    if (state.prefs) {
-      // flushNow'un user_prefs branch'i id parametresine bakmaz; user_id
-      // queue içinde set edilir, biz placeholder geçiyoruz.
-      const prefsPayload = Object.assign({}, state.prefs, {
-        activeWorkspaceId: state.activeWorkspaceId,
-      });
-      queueUpsert('user_prefs', 'user_prefs', null, prefsPayload);
-    }
+    // v2.6.94 — Pull mantığı (cloud-pertable.js içinde) user_prefs.data jsonb'sinden
+    // şu üst-anahtarları arıyor: prefs, plan, onboarding, costHistory.
+    // setActiveWorkspaceId (store.js) da aynı yapıyı yazıyor. v2.6.93'te yanlışlıkla
+    // state.prefs'i spread edip activeWorkspaceId eklemiştim → onboarding, plan,
+    // costHistory hiç gönderilmedi → reload'da bunlar boş geldi → demoSeeded ve
+    // mainTourDone false oldu → demo seed yeniden çalıştı + welcome tour açıldı.
+    queueUpsert('user_prefs', 'user_prefs', null, {
+      activeWorkspaceId: state.activeWorkspaceId || null,
+      prefs:        state.prefs        || {},
+      plan:         state.plan         || 'free',
+      onboarding:   state.onboarding   || {},
+      costHistory:  state.costHistory  || [],
+    });
   }
 
   PCD.cloudPerTable = {
