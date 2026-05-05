@@ -520,24 +520,16 @@
         localStorage.setItem(LS_KEY_STATE, JSON.stringify(state));
       } catch (e) {
         PCD.err && PCD.err('flushSync fail', e);
-        return Promise.resolve(false);
+        return false;
       }
     }
     // v2.6.89 — IDB write-through. v2.6.92 — Migration tetikle.
-    // v2.6.93 — IDB put Promise'ini döndür → restore akışı await edebilir.
-    // Eski sync caller'lar (set/upsert sonrası flushSync) Promise'i discard eder
-    // çünkü dönüş değerini truthy boolean olarak değerlendiriyorlardı; Promise
-    // truthy olduğundan davranış değişmedi.
     if (PCD.idb && PCD.idb.put) {
-      return PCD.idb.put('state', 'main', state).then(function () {
+      PCD.idb.put('state', 'main', state).then(function () {
         if (!_migrationDone) _completeMigration();
-        return true;
-      }).catch(function (e) {
-        console.warn('[store] flushSync IDB write failed:', e && e.message);
-        return false;
-      });
+      }).catch(function () {});
     }
-    return Promise.resolve(true);
+    return true;
   }
 
   // v2.6.69 — State-key (camelCase) → SQL table name (snake_case) eşleştirme.
@@ -1359,61 +1351,12 @@
       // from backup. The cloud blob might still be at an older schema if
       // another device wrote it before being upgraded.
       state = runMigrations(state);
-
-      // v2.6.94 — Orphan ws namespace cleanup. Eski (v2.6.85 öncesi) ghost
-      // workspace bug'ı veya manuel düzenlenmiş yedek nedeniyle, recipes/
-      // ingredients/menus vb. ws-scoped tablolarda workspaces objesinde
-      // bulunmayan wsId namespace'leri olabilir (örn. silinmiş bir ws'in
-      // recipes namespace'i tombstone'lanmamış). Bunlar UI'da görünmez ama
-      // restore akışında cloud'a push edilir, bir sonraki pull'da geri gelir
-      // ve yarış durumlarına yol açar. replaceAll'da temizliyoruz.
-      try {
-        const validWsIds = new Set(Object.keys(state.workspaces || {}));
-        const wsScopedKeys = [
-          'recipes', 'ingredients', 'menus', 'events', 'suppliers',
-          'canvases', 'shoppingLists', 'checklistTemplates',
-          'stockCountHistory', 'haccpLogs', 'haccpUnits',
-          'haccpReadings', 'haccpCookCool',
-          'inventory', 'waste', 'checklistSessions',
-        ];
-        wsScopedKeys.forEach(function (key) {
-          const ns = state[key];
-          if (!ns || typeof ns !== 'object') return;
-          Object.keys(ns).forEach(function (wsId) {
-            if (!validWsIds.has(wsId)) delete ns[wsId];
-          });
-        });
-      } catch (e) {
-        PCD.err && PCD.err('replaceAll: orphan ws cleanup failed', e);
-      }
-
-      // v2.6.93 — activeWorkspaceId validation. Backup'taki id state.workspaces'te
-      // yoksa veya silinmişse ilk geçerli (silinmemiş) workspace'e ata. Aksi
-      // halde tools wsId üzerinden filtre yapar, hiçbir şey görünmez.
-      try {
-        const ws = state.workspaces || {};
-        const activeId = state.activeWorkspaceId;
-        const isValid = activeId && ws[activeId] && !ws[activeId]._deletedAt;
-        if (!isValid) {
-          const firstValid = Object.keys(ws).find(function (id) {
-            return ws[id] && !ws[id]._deletedAt;
-          });
-          state.activeWorkspaceId = firstValid || null;
-        }
-      } catch (e) {
-        PCD.err && PCD.err('replaceAll: activeWorkspaceId validation failed', e);
-      }
-
       emit('*:replaced', state);
-      // v2.6.93 — workspaces ve activeWorkspaceId emit'leri eklendi; restore
-      // sonrası workspace switcher ve aktif tool yeniden render olsun.
-      ['recipes','ingredients','menus','events','suppliers','inventory','waste','prefs','onboarding','user','plan','workspaces','activeWorkspaceId'].forEach(function (k) {
+      // Trigger a broad refresh
+      ['recipes','ingredients','menus','events','suppliers','inventory','waste','prefs','onboarding','user','plan'].forEach(function (k) {
         emit(k, state[k]);
       });
-      // v2.6.93 — flushSync ile IDB yazımının tamamlandığını garanti et,
-      // Promise'ini döndür ki restore akışı await edebilsin. Eski caller'lar
-      // (cloud.js pull merge) Promise'i discard ediyor, davranış aynı.
-      return flushSync();
+      persist();
     },
 
     // Reset everything (e.g. on sign-out)

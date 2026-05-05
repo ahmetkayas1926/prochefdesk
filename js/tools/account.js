@@ -507,60 +507,16 @@
             closable: true,
           });
           cancelBtn.addEventListener('click', function () { previewModal.close(); });
-          restoreBtn.addEventListener('click', async function () {
-            // v2.6.93 — Restore akışı tam zincir:
-            //   1. wipeAllUserData → cloud'da kalan eski kayıtlar temizlensin,
-            //      reload sonrası pull onları geri sızdırmasın.
-            //   2. replaceAll(data) → lokal state, runMigrations, activeWorkspaceId
-            //      validation, flushSync (await edilir, IDB yazımı tamamlanır).
-            //   3. queueFullState + flushNow → mevcut backup içeriği cloud'a
-            //      tam push edilsin (pull'un newest-wins'inde sızıntı olmasın).
-            //   4. reload.
-            // Önceki davranış: store.set debounced + 800ms timeout + reload =
-            // hiçbir adım garantili tamamlanmıyordu.
+          restoreBtn.addEventListener('click', function () {
+            // Replace top-level keys, but skip dangerous ones
             const SKIP = ['_meta', 'user', '_deletedWorkspaces'];
-            const replaceState = {};
             Object.keys(data).forEach(function (k) {
               if (SKIP.indexOf(k) >= 0) return;
-              replaceState[k] = data[k];
+              PCD.store.set(k, data[k]);
             });
-
-            restoreBtn.disabled = true;
-            cancelBtn.disabled = true;
-            const origText = restoreBtn.textContent;
-            restoreBtn.textContent = t('backup_restore_in_progress', 'Restoring…');
-
-            try {
-              // 1. Cloud wipe.
-              if (PCD.cloudPerTable && PCD.cloudPerTable.wipeAllUserData) {
-                const wiped = await PCD.cloudPerTable.wipeAllUserData();
-                if (!wiped) {
-                  throw new Error(t('backup_restore_wipe_failed', 'Cloud could not be cleared. Restore aborted to prevent data corruption. Try again.'));
-                }
-              }
-
-              // 2. Local replace + runMigrations + activeWorkspaceId validation
-              //    + IDB yaz.
-              await PCD.store.replaceAll(replaceState);
-
-              // 3. Cloud'a yeni veriyi push.
-              if (PCD.cloudPerTable) {
-                if (PCD.cloudPerTable.queueFullState) PCD.cloudPerTable.queueFullState();
-                if (PCD.cloudPerTable.flushNow) await PCD.cloudPerTable.flushNow();
-              }
-
-              previewModal.close();
-              PCD.toast.success(PCD.i18n.t('toast_backup_restored'));
-              // 4. Reload — UI baştan kurulsun, pull cloud'daki yeni state'i çekecek.
-              setTimeout(function () { window.location.reload(); }, 600);
-            } catch (err) {
-              restoreBtn.disabled = false;
-              cancelBtn.disabled = false;
-              restoreBtn.textContent = origText;
-              PCD.err && PCD.err('Restore failed', err);
-              PCD.toast.error((err && err.message) ? err.message :
-                (t('backup_restore_failed', 'Restore failed. Please try again.')));
-            }
+            previewModal.close();
+            PCD.toast.success(PCD.i18n.t('toast_backup_restored'));
+            setTimeout(function () { window.location.reload(); }, 800);
           });
         };
         reader.readAsText(f);
@@ -681,29 +637,20 @@
         text: t('clear_all_text'),
         okText: t('clear_all_btn'),
         cancelText: t('cancel')
-      }).then(async function (ok) {
+      }).then(function (ok) {
         if (!ok) return;
-
-        // v2.6.95 — Clear all data artık cloud'u da temizliyor. Önceki davranış
-        // PCD.store.reset() + PCD.cloud.pushNow() idi; ama cloud.pushNow v2.6.87'den
-        // beri no-op (eski blob yazımı kapatılmıştı). Sonuç: lokal sıfırlanıyor,
-        // reload sonrası pull cloud'daki eski veriyi geri çekiyordu — aslında
-        // hiç temizlenmiyordu. Şimdi: önce wipeAllUserData (RLS user_id ile
-        // 19 tabloda DELETE, user.id hâlâ state'te), sonra store.reset,
-        // sonra reload.
-        try {
-          if (PCD.cloudPerTable && PCD.cloudPerTable.wipeAllUserData) {
-            await PCD.cloudPerTable.wipeAllUserData();
-          }
-        } catch (e) {
-          PCD.warn && PCD.warn('Clear all: cloud wipe failed', e);
-          // Devam et — lokali yine de sıfırla, kullanıcı tekrar deneyebilir.
-        }
 
         PCD.store.reset();
 
-        PCD.toast.success('✓ ' + t('clear_all_done'));
-        setTimeout(function () { window.location.reload(); }, 500);
+        const doReload = function () {
+          PCD.toast.success('✓ ' + t('clear_all_done'));
+          setTimeout(function () { window.location.reload(); }, 500);
+        };
+        if (PCD.cloud && typeof PCD.cloud.pushNow === 'function') {
+          PCD.cloud.pushNow().then(doReload).catch(doReload);
+        } else {
+          doReload();
+        }
       });
     });
 
