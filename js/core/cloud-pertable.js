@@ -56,6 +56,64 @@
   let flushTimer = null;
   const FLUSH_DELAY_MS = 600;
 
+  // ============ v2.6.95 — QUEUE PERSISTENCE ============
+  // Sorun: queue JS hafızasında. Offline yazımda (Wi-Fi kesik mutfakta) sekme
+  // kapanırsa cloud'a hiç gitmemiş yazımlar uçuyordu. Çözüm: her queue
+  // mutation'ı IDB'ye persist et; boot'ta yükle; online olunca flush et.
+  // Idempotent — flushNow upsert'leri onConflict kullanıyor, duplicate güvenli.
+  const QUEUE_IDB_KEY = 'pertable_queue';
+  const QUEUE_PERSIST_DELAY_MS = 250;
+  let _queuePersistTimer = null;
+
+  function _persistQueueNow() {
+    _queuePersistTimer = null;
+    if (!PCD.idb || !PCD.idb.put) return;
+    // Snapshot al — queue arada mutate olabilir
+    const snapshot = queue.slice();
+    PCD.idb.put('state', QUEUE_IDB_KEY, snapshot).catch(function (e) {
+      PCD.warn && PCD.warn('queue persist failed:', e && e.message);
+    });
+  }
+
+  function _persistQueueDebounced() {
+    if (_queuePersistTimer) clearTimeout(_queuePersistTimer);
+    _queuePersistTimer = setTimeout(_persistQueueNow, QUEUE_PERSIST_DELAY_MS);
+  }
+
+  function _clearPersistedQueue() {
+    if (!PCD.idb || !PCD.idb.delete) return;
+    if (_queuePersistTimer) { clearTimeout(_queuePersistTimer); _queuePersistTimer = null; }
+    PCD.idb.delete('state', QUEUE_IDB_KEY).catch(function () {});
+  }
+
+  function _loadPersistedQueue() {
+    if (!PCD.idb || !PCD.idb.get) return Promise.resolve();
+    return PCD.idb.get('state', QUEUE_IDB_KEY).then(function (saved) {
+      if (!saved || !Array.isArray(saved) || saved.length === 0) return;
+      // Persisted item'ları queue'ya ekle. Eğer aynı dedupeKey için canlı
+      // queue'da daha yeni item varsa, persisted'i atla (race koruması).
+      let added = 0;
+      saved.forEach(function (item) {
+        if (!item || !item.table || !item.id) return;
+        const dedupeKey = item.table + ':' + item.id + (item.wsId ? ':' + item.wsId : '');
+        if (queueIndex[dedupeKey] !== undefined) return;
+        queueIndex[dedupeKey] = queue.length;
+        queue.push(item);
+        added++;
+      });
+      if (added > 0) {
+        PCD.log && PCD.log('cloud-pertable: loaded ' + added + ' persisted queue items');
+        // Online + ready ise flush'ı tetikle. Değilse online listener veya bir
+        // sonraki user mutation tetikleyecek.
+        if (isReady() && navigator.onLine) {
+          scheduleFlush();
+        }
+      }
+    }).catch(function (e) {
+      PCD.warn && PCD.warn('queue load failed:', e && e.message);
+    });
+  }
+
   function isReady() {
     if (!PCD.cloud || !PCD.cloud.ready) return false;
     const user = PCD.store && PCD.store.get('user');
@@ -84,6 +142,7 @@
       queue.push(item);
     }
     scheduleFlush();
+    _persistQueueDebounced();
   }
 
   function queueDelete(table, id, wsId) {
@@ -101,6 +160,7 @@
       queue.push(item);
     }
     scheduleFlush();
+    _persistQueueDebounced();
   }
 
   // v2.6.72 — Array tablolar için (waste, checklist_sessions).
@@ -242,7 +302,13 @@
       return Promise.resolve();
     });
 
-    return Promise.all(ops);
+    return Promise.all(ops).then(function () {
+      // v2.6.95 — Flush başarılı tamamlandı; queue mevcut durumunu IDB'ye
+      // yansıt. Splice batch'i çıkardı; bu sırada başka queueUpsert/Delete
+      // gelmiş olabilir (yeni item'lar queue'da, eski'ler değil). Persist
+      // güncel halini diske yazar.
+      _persistQueueNow();
+    });
   }
 
   // ============ PULL ============
@@ -426,6 +492,9 @@
     Object.keys(queueIndex).forEach(function (k) { delete queueIndex[k]; });
     queue.length = 0;
     if (flushTimer) { clearTimeout(flushTimer); flushTimer = null; }
+    // v2.6.95 — IDB'deki persisted queue'yu da temizle ki reload sonrası
+    // boot _loadPersistedQueue yapay item'ları geri yüklemesin.
+    _clearPersistedQueue();
 
     const tables = [
       'recipes', 'ingredients', 'menus', 'events', 'suppliers',
@@ -565,4 +634,10 @@
   window.addEventListener('online', function () {
     if (PCD.cloudPerTable.onOnline) PCD.cloudPerTable.onOnline();
   });
+
+  // v2.6.95 — Boot init: IDB'de bekleyen kuyruk varsa yükle. Async,
+  // beklemiyoruz — yüklenince scheduleFlush kendi başına tetiklenir.
+  // Diğer modüller (cloud, store) henüz hazır olmayabilir; flush isReady()
+  // koşulunu kontrol ediyor, ready olunca tetiklenecek.
+  _loadPersistedQueue();
 })();
