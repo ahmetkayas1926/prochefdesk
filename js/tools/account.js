@@ -187,13 +187,6 @@
               </div>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
-            <button class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;border-bottom:1px solid var(--border);" id="demoToggleBtn">
-              <div>
-                <div style="font-weight:600;">${PCD.store.get('onboarding.demoSeeded') ? t('clear_demo') : t('reset_demo')}</div>
-                <div class="text-muted text-sm">${t('demo_3_recipes')}</div>
-              </div>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
             <button class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;color:var(--danger);" id="clearAllBtn">
               <div>
                 <div style="font-weight:600;">${t('clear_all_data')}</div>
@@ -653,25 +646,6 @@
       const csv = rows.map(function (r) { return r.map(function (c) { return '"' + String(c == null ? '' : c).replace(/"/g, '""') + '"'; }).join(','); }).join('\n');
       PCD.download(csv, 'ingredients-' + new Date().toISOString().slice(0, 10) + '.csv', 'text/csv');
       PCD.toast.success(PCD.i18n.t('toast_ingredients_exported_n', { n: ings.length }));
-    });
-
-    PCD.$('#demoToggleBtn', view).addEventListener('click', function () {
-      const seeded = PCD.store.get('onboarding.demoSeeded');
-      if (seeded) {
-        PCD.modal.confirm({
-          icon: '🗑', title: t('clear_demo'), text: PCD.i18n.t('confirm_delete_desc'),
-          okText: t('delete'), danger: true
-        }).then(function (ok) {
-          if (!ok) return;
-          PCD.demo.remove();
-          PCD.toast.success(t('item_deleted'));
-          render(view);
-        });
-      } else {
-        PCD.demo.seed();
-        PCD.toast.success(t('saved'));
-        render(view);
-      }
     });
 
     PCD.$('#clearAllBtn', view).addEventListener('click', function () {

@@ -334,34 +334,11 @@
     PCD.log('Demo data seeded.');
   }
 
-  function removeDemo() {
-    const ings = PCD.store.listIngredients().filter(function (i) { return i._demo; }).map(function (i) { return i.id; });
-    const recs = PCD.store.listRecipes().filter(function (r) { return r._demo; }).map(function (r) { return r.id; });
-    PCD.store.deleteRecipes(recs);
-    PCD.store.deleteIngredients(ings);
-    // Remove demo entries from generic tables (menus, events, suppliers, canvases, shoppingLists)
-    ['menus','events','suppliers','canvases','shoppingLists'].forEach(function (table) {
-      const items = PCD.store.listTable(table) || [];
-      items.forEach(function (it) {
-        if (it._demo) PCD.store.deleteFromTable(table, it.id);
-      });
-    });
-    // Remove demo inventory entries (v2.6.30)
-    // Inventory is keyed by ingredientId, not a generic table — clean
-    // up entries marked with _demo flag in the active workspace.
-    const wsId = PCD.store.getActiveWorkspaceId();
-    const inv = PCD.store.get('inventory') || {};
-    if (inv[wsId]) {
-      const wsInv = Object.assign({}, inv[wsId]);
-      Object.keys(wsInv).forEach(function (ingId) {
-        if (wsInv[ingId] && wsInv[ingId]._demo) delete wsInv[ingId];
-      });
-      const newInv = Object.assign({}, inv);
-      newInv[wsId] = wsInv;
-      PCD.store.set('inventory', newInv);
-    }
-    PCD.store.update('onboarding', { demoSeeded: false });
-  }
-
-  PCD.demo = { seed: seedDemo, remove: removeDemo };
+  // v2.6.94 — removeDemo() kaldırıldı. Account ekranındaki "Re-add/Remove demo
+  // recipes" butonu silindi. Yeni mantık: misafir kullanıcılar siteye girdiğinde
+  // demo bir kez seed olur (Fix #2 ile sign-in sonrası demo seed asla yeniden
+  // tetiklenmez); sign-in olunca auth.js'in clearUserData çağrısı tüm demo'yu
+  // (ve diğer lokal state'i) temizler ve cloud'dan gerçek user data pull edilir.
+  // Kullanıcı için "Add/Remove demo" opsiyonu artık yok.
+  PCD.demo = { seed: seedDemo };
 })();

@@ -247,8 +247,6 @@ window.PCD.i18n.register('de', {
   last_synced: "Letzte Sync",
   sync_now: "Jetzt syncen",
   export_data: "Daten exportieren",
-  reset_demo: "Demos hinzufügen",
-  clear_demo: "Demos entfernen",
   clear_all_data: "Alles löschen",
   about: "Über",
   version: "Version",

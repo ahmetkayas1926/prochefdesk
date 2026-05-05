@@ -247,8 +247,6 @@ window.PCD.i18n.register('ar', {
   last_synced: "آخر مزامنة",
   sync_now: "مزامنة الآن",
   export_data: "تصدير البيانات",
-  reset_demo: "إضافة التجريبية",
-  clear_demo: "إزالة التجريبية",
   clear_all_data: "مسح كل البيانات",
   about: "حول",
   version: "الإصدار",
