@@ -1294,7 +1294,7 @@ window.PCD.i18n.register('en', {
   acc_export_ings_done: "Ingredients exported ({n})",
   acc_nothing_to_export: "No items to export",
   copied: "Copied",
-  offline_msg: "You are offline — changes will sync when you reconnect",
+  offline_msg: "Offline — your changes are safe and will sync automatically when you're back online",
   pwa_install_title: "Install ProChefDesk",
   pwa_install_desc: "Add to home screen for faster access",
   pwa_install_btn: "Install",

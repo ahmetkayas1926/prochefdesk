@@ -87,6 +87,7 @@ window.PCD.i18n.register('de', {
   sign_out: "Abmelden",
   upgrade_to_pro: "Auf Pro upgraden",
   offline_mode: "Offline — synchronisiert bei Rückkehr online",
+  offline_msg: "Offline — Ihre Änderungen sind sicher und werden bei Online-Rückkehr automatisch synchronisiert",
   just_now: "gerade eben",
   ago: "her",
   today: "Heute",

@@ -1294,7 +1294,7 @@ window.PCD.i18n.register('tr', {
   acc_export_ings_done: "Malzemeler dışa aktarıldı ({n})",
   acc_nothing_to_export: "Dışa aktarılacak bir şey yok",
   copied: "Kopyalandı",
-  offline_msg: "Çevrimdışısın — bağlanınca değişiklikler senkronlanacak",
+  offline_msg: "Çevrimdışısın — değişikliklerin güvende, internet gelince otomatik gönderilir",
   pwa_install_title: "ProChefDesk'i yükle",
   pwa_install_desc: "Ana ekrana ekle, daha hızlı erişim",
   pwa_install_btn: "Yükle",

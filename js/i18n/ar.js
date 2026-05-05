@@ -87,6 +87,7 @@ window.PCD.i18n.register('ar', {
   sign_out: "تسجيل الخروج",
   upgrade_to_pro: "ترقية إلى Pro",
   offline_mode: "غير متصل — ستتم المزامنة عند العودة",
+  offline_msg: "غير متصل — تغييراتك محفوظة وستتم مزامنتها تلقائياً عند عودة الاتصال",
   just_now: "الآن",
   ago: "منذ",
   today: "اليوم",
