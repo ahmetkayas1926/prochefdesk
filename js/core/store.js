@@ -720,6 +720,34 @@
       const list = Object.values(PCD.clone(state.workspaces)).filter(function (w) { return !w._deletedAt; });
       return includeArchived ? list : list.filter(function (w) { return !w.archived; });
     },
+    // v2.7.3 — Soft-deleted workspace'leri Trash UI için listele.
+    // Kaynak: state._deletedWorkspaces (workspace_tombstones tablosundan
+    // pull edilen { wsId: deletedAt } map'i). Workspace meta-bilgisi
+    // (name, color, concept) state.workspaces[wsId]'den alınır — DB cascade
+    // trigger workspaces row'unu fiziksel silmiyor, sadece deleted_at SET
+    // ediyor, yani 30-gün retention süresince meta-bilgi pull akışında geliyor.
+    // Eğer bir wsId tombstone'da var ama state.workspaces'te yoksa (örn. başka
+    // cihazda silinip pcd_cleanup_old_deleted ile temizlenmiş), o entry
+    // listeye eklenir ama name boş gösterilir.
+    // Returns: [{ id, name, color, concept, role, deletedAt }] — deletedAt
+    // descending sıralı (en yeni silinen en üstte).
+    listDeletedWorkspaces: function () {
+      const tombs = state._deletedWorkspaces || {};
+      const all = state.workspaces || {};
+      const out = [];
+      Object.keys(tombs).forEach(function (wsId) {
+        const ws = all[wsId];
+        out.push({
+          id: wsId,
+          name: (ws && ws.name) || '',
+          color: ws && ws.color,
+          concept: ws && ws.concept,
+          role: ws && ws.role,
+          deletedAt: tombs[wsId] || (ws && ws._deletedAt) || null,
+        });
+      });
+      return out.sort(function (a, b) { return (b.deletedAt || '').localeCompare(a.deletedAt || ''); });
+    },
     getWorkspace: function (wsId) {
       return PCD.clone(state.workspaces[wsId]) || null;
     },
