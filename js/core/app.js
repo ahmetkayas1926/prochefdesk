@@ -17,21 +17,17 @@
 
     // 0.5) Check for ?share= URL — if present, render share page and skip normal app
     if (PCD.share && PCD.share.initShareCheck && PCD.share.initShareCheck()) {
-      // Share page shown; do NOT continue normal boot
       console.log('[boot] share page shown, exiting');
       return;
     }
 
     // 1) Load persisted state (v2.6.91 — async, IDB-first)
-    // Sonraki adımlar (theme, locale, auth) state'e bağlı olduğu için await şart.
     try {
       await PCD.store.init();
       console.log('[boot] store.init resolved');
     } catch (e) {
       console.error('[boot] store.init failed:', e);
-      // Devam — state default'ta, app yine açılabilir.
     }
-    // Auto-purge trash older than 30 days
     try { PCD.store.autoPurgeOldTrash && PCD.store.autoPurgeOldTrash(30); } catch (e) {}
 
     // 2) Apply saved theme BEFORE showing UI
@@ -48,10 +44,9 @@
     PCD.i18n.setLocale(savedLocale);
     console.log('[boot] theme/locale applied');
 
-    // 5) Init auth (may check session and hydrate user)
-    // v2.6.91 — await auth.init: getSession + cloud.pull + photo migrate + cloud-migrate
-    // bu zincir tamamlanmadan onAuthResolved çağrılmamalı. Aksi halde pull'un
-    // emit ettiği state değişiklikleri router/UI listener'larına ulaşamaz.
+    // 5) Init auth (await — getSession + cloud.pull + photo migrate + cloud-migrate)
+    // v2.6.91 — Pull tamamlanmadan onAuthResolved çağrılmamalı; aksi halde
+    // pull'un emit ettiği state değişiklikleri router/UI listener'larına ulaşmaz.
     try {
       await PCD.auth.init();
       console.log('[boot] auth.init resolved');
