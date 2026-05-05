@@ -687,20 +687,50 @@
         cancelText: T('cancel')
       }).then(function (ok) {
         if (!ok) return;
+        const wsName = existing.name;
         const success = PCD.store.deleteWorkspace(wsId);
         if (!success) {
           PCD.toast.error(PCD.i18n.t('toast_workspace_min_one'));
           return;
         }
-        try { PCD.toast.success(PCD.i18n.t('toast_workspace_deleted')); } catch (e) {}
         try { m.close(); } catch (e) {}
 
-        // Push deletion to cloud BEFORE reload (otherwise reload pulls stale state with the ws back)
+        // v2.7.0 — Push deletion to cloud, then show UNDO toast for 5 seconds.
+        // If user clicks UNDO: tombstone is deleted from cloud (trigger
+        // trg_reverse_cascade_workspace_tombstone restores all data), then reload.
+        // If 5sec passes: reload (cloud already has the soft-delete).
         const doReload = function () { window.location.reload(); };
+        const showUndoToast = function () {
+          let undone = false;
+          const reloadTimer = setTimeout(function () {
+            if (!undone) doReload();
+          }, 5000);
+          PCD.toast.success(PCD.i18n.t('toast_workspace_deleted'), 5000, {
+            action: {
+              label: PCD.i18n.t('btn_undo'),
+              onClick: function () {
+                undone = true;
+                clearTimeout(reloadTimer);
+                PCD.store.restoreWorkspace(wsId).then(function (ok) {
+                  if (ok) {
+                    try { PCD.toast.success(PCD.i18n.t('toast_restored')); } catch (e) {}
+                  } else {
+                    try { PCD.toast.error('Restore failed — reloading'); } catch (e) {}
+                  }
+                  // Reload either way — fresh pull from cloud
+                  setTimeout(doReload, 300);
+                }).catch(function () {
+                  setTimeout(doReload, 300);
+                });
+              }
+            }
+          });
+        };
+
         if (PCD.cloud && typeof PCD.cloud.pushNow === 'function') {
-          PCD.cloud.pushNow().then(function () { setTimeout(doReload, 100); });
+          PCD.cloud.pushNow().then(showUndoToast);
         } else {
-          setTimeout(doReload, 250);
+          showUndoToast();
         }
       });
     });

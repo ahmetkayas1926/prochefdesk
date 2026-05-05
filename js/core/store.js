@@ -810,6 +810,46 @@
       return true;
     },
 
+    // v2.7.0 — Restore a deleted workspace (UNDO toast).
+    // Akış:
+    //   1) Lokal tombstone'u temizle (state._deletedWorkspaces[wsId] sil)
+    //   2) Cloud workspace_tombstones tablosundan DELETE et
+    //      (trigger trg_reverse_cascade_workspace_tombstone tetiklenir,
+    //       workspaces + 16 ws-scoped tabloda deleted_at NULL set edilir)
+    //   3) Caller (app.js) reload yapar — pull cloud'dan diri veriyi getirir
+    //
+    // Returns Promise<boolean> — true if cloud delete succeeded.
+    restoreWorkspace: function (wsId) {
+      if (!state._deletedWorkspaces || !state._deletedWorkspaces[wsId]) {
+        return Promise.resolve(false);
+      }
+      // Lokal tombstone temizle
+      const tombs = Object.assign({}, state._deletedWorkspaces);
+      delete tombs[wsId];
+      state._deletedWorkspaces = tombs;
+      persist();
+
+      // Cloud tombstone DELETE — trigger reverse cascade çalışacak
+      const sb = (PCD.supabase && typeof PCD.supabase.from === 'function') ? PCD.supabase : null;
+      if (!sb) {
+        // Offline fallback: tombstone lokal olarak temizlendi, cloud reconcile sonra
+        return Promise.resolve(false);
+      }
+      return sb.auth.getUser().then(function (res) {
+        const user = res && res.data && res.data.user;
+        if (!user) return false;
+        return sb.from('workspace_tombstones')
+          .delete()
+          .eq('workspace_id', wsId)
+          .eq('user_id', user.id)
+          .then(function (r) {
+            return !r.error;
+          });
+      }).catch(function () {
+        return false;
+      });
+    },
+
     // Copy a single recipe / menu / etc from one workspace into another
     copyToWorkspace: function (table, itemId, fromWsId, toWsId) {
       if (!state[table] || !state[table][fromWsId]) return null;
