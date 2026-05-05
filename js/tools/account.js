@@ -507,16 +507,60 @@
             closable: true,
           });
           cancelBtn.addEventListener('click', function () { previewModal.close(); });
-          restoreBtn.addEventListener('click', function () {
-            // Replace top-level keys, but skip dangerous ones
+          restoreBtn.addEventListener('click', async function () {
+            // v2.6.93 — Restore akışı tam zincir:
+            //   1. wipeAllUserData → cloud'da kalan eski kayıtlar temizlensin,
+            //      reload sonrası pull onları geri sızdırmasın.
+            //   2. replaceAll(data) → lokal state, runMigrations, activeWorkspaceId
+            //      validation, flushSync (await edilir, IDB yazımı tamamlanır).
+            //   3. queueFullState + flushNow → mevcut backup içeriği cloud'a
+            //      tam push edilsin (pull'un newest-wins'inde sızıntı olmasın).
+            //   4. reload.
+            // Önceki davranış: store.set debounced + 800ms timeout + reload =
+            // hiçbir adım garantili tamamlanmıyordu.
             const SKIP = ['_meta', 'user', '_deletedWorkspaces'];
+            const replaceState = {};
             Object.keys(data).forEach(function (k) {
               if (SKIP.indexOf(k) >= 0) return;
-              PCD.store.set(k, data[k]);
+              replaceState[k] = data[k];
             });
-            previewModal.close();
-            PCD.toast.success(PCD.i18n.t('toast_backup_restored'));
-            setTimeout(function () { window.location.reload(); }, 800);
+
+            restoreBtn.disabled = true;
+            cancelBtn.disabled = true;
+            const origText = restoreBtn.textContent;
+            restoreBtn.textContent = t('backup_restore_in_progress', 'Restoring…');
+
+            try {
+              // 1. Cloud wipe.
+              if (PCD.cloudPerTable && PCD.cloudPerTable.wipeAllUserData) {
+                const wiped = await PCD.cloudPerTable.wipeAllUserData();
+                if (!wiped) {
+                  throw new Error(t('backup_restore_wipe_failed', 'Cloud could not be cleared. Restore aborted to prevent data corruption. Try again.'));
+                }
+              }
+
+              // 2. Local replace + runMigrations + activeWorkspaceId validation
+              //    + IDB yaz.
+              await PCD.store.replaceAll(replaceState);
+
+              // 3. Cloud'a yeni veriyi push.
+              if (PCD.cloudPerTable) {
+                if (PCD.cloudPerTable.queueFullState) PCD.cloudPerTable.queueFullState();
+                if (PCD.cloudPerTable.flushNow) await PCD.cloudPerTable.flushNow();
+              }
+
+              previewModal.close();
+              PCD.toast.success(PCD.i18n.t('toast_backup_restored'));
+              // 4. Reload — UI baştan kurulsun, pull cloud'daki yeni state'i çekecek.
+              setTimeout(function () { window.location.reload(); }, 600);
+            } catch (err) {
+              restoreBtn.disabled = false;
+              cancelBtn.disabled = false;
+              restoreBtn.textContent = origText;
+              PCD.err && PCD.err('Restore failed', err);
+              PCD.toast.error((err && err.message) ? err.message :
+                (t('backup_restore_failed', 'Restore failed. Please try again.')));
+            }
           });
         };
         reader.readAsText(f);

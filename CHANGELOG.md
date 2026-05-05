@@ -1,15 +1,29 @@
 # ProChefDesk — Sürüm geçmişi
 
-Mevcut sürüm: **v2.6.92**
+Mevcut sürüm: **v2.6.93**
 
 Yapısal kilometre taşları (kronolojik tersine):
 
-- **v2.6.92** — Faz 4 Adım 4c: localStorage yazma yolu kapatıldı + tek seferlik LS cleanup. `store.js`'de iki module-level flag (`_idbWriteOnly`, `_migrationDone`). İlk başarılı IDB persist'inden sonra `_completeMigration()` çağrılır: `state.prefs.idbWriteOnly = true` (kalıcı flag), `localStorage.removeItem(LS_KEY_STATE)`, module flag'leri set. Boot'ta `load()` flag'i okur ve `_idbWriteOnly` aktif eder; LS'de kalan veri varsa defansif olarak temizler. `persist`, `flushSync`, `trimAndPersist` artık `_idbWriteOnly === true` iken LS yazımını atlar — sadece IDB'ye yazar. `reset()` sign-out döngüsünde flag'leri sıfırlar (yeni hesap normal akışla yeniden migrate olur). Sonuç: localStorage 5 MB sınırı fiilen kaldırıldı; tek state kaynağı IDB. Adım 4 tamamlandı.
-- **v2.6.91** — Faz 4 Adım 4b: Okuma IDB-first. `app.js` boot async; hem `await PCD.store.init()` hem `await PCD.auth.init()` ediyor — pull tamamlanmadan router register edilmiyor.
-- **v2.6.89** — Faz 4 Adım 4a: IndexedDB altyapısı + write-through.
-- **v2.6.88 (schema-only)** — `cost_history` tablosu drop edildi.
-- **v2.6.87** — Faz 4 son adım: Eski blob yazımı/okuması kapatıldı.
-- **v2.6.86** — Demo onboarding seed cloud sızması durduruldu.
-- **v2.6.85** — Ghost workspace duplicate çözümü: pullInProgress flag.
-- **v2.6.84** — Faz 4 hotfix: workspaces upsert'inde `delete row.data`.
-- **v2.6.83** — hCaptcha hotfix.
+* **v2.6.93** — Faz 5 Adım 1: Backup restore tam zincir. Önceki davranış `store.set()` debounced + 800ms timeout + reload idi; ne IDB ne cloud yazımının tamamlandığı garanti değildi, cloud'da kalan eski kayıtlar pull ile geri sızıyordu. Yeni akış: (1) `cloud-pertable.wipeAllUserData()` — RLS user_id eşleşmesi ile 19 tabloda DELETE; (2) `store.replaceAll(data)` — runMigrations + yeni `activeWorkspaceId` validation (backup'taki id geçersizse ilk geçerli ws'e fallback) + `flushSync` await; (3) `cloud-pertable.queueFullState()` — mevcut state'in tamamı queueUpsert/queueArraySync ile cloud queue'ya doldurulur; (4) `flushNow()` await — cloud push tam tamamlanır; (5) reload. Tüm zincir async/await sıralı, hata yakalama ile. `store.flushSync` ve `cloud-pertable.flushNow` artık Promise döndürür (eski sync caller'lar Promise'i discard ediyor, davranış değişmedi). Yeni public API: `PCD.cloudPerTable.wipeAllUserData()`, `PCD.cloudPerTable.queueFullState()`. Restore handler içinde restore butonu disabled + "Restoring…" feedback, hata halinde rollback (modal kapanmaz, kullanıcıya toast).
+* **v2.6.92** — Faz 4 Adım 4c: localStorage yazma yolu kapatıldı + tek seferlik LS cleanup. `store.js`'e iki module-level flag eklendi (`\_idbWriteOnly`, `\_migrationDone`). İlk başarılı IDB persist'inden sonra `\_completeMigration()` çağrılır: `state.prefs.idbWriteOnly = true` (kalıcı flag), `localStorage.removeItem(LS\_KEY\_STATE)`, modül flag'leri set. Boot'ta `load()` flag'i okur ve `\_idbWriteOnly` aktif eder. `persist`, `flushSync`, `trimAndPersist` artık `\_idbWriteOnly === true` iken LS yazımını atlar — sadece IDB'ye yazar. `reset()` sign-out döngüsünde flag'leri sıfırlar. Sonuç: localStorage 5 MB sınırı fiilen kaldırıldı; tek state kaynağı IDB. **Faz 4 tamamlandı.**
+* **v2.6.91** — Faz 4 Adım 4b: Okuma yolu IndexedDB'ye geçti. `store.js` `load()` async oldu — önce IDB'den (`prochefdesk` DB, `state` store, `main` key) okuyor, IDB boşsa `localStorage` fallback'i. `store.init()` Promise döndürür. `app.js` `boot()` async function olarak hem `await PCD.store.init()` hem `await PCD.auth.init()` ediyor — auth zinciri (getSession → cloud.pull → photo migrate → cloud-migrate) tamamlanmadan `onAuthResolved()` çağrılmıyor, router register pull'dan SONRA, UI listener'lar pull-edilmiş state üzerine kuruluyor. Boot'un her adımına teşhis için `console.log('\[boot] ...')` eklendi.
+* **v2.6.89** — Faz 4 Adım 4a: IndexedDB altyapısı + write-through. Yeni dosya `js/core/idb-wrapper.js` (\~110 satır, native IndexedDB üzerine Promise wrapper). `store.js`'in 4 yazma noktası (`persist`, `flushSync`, `trimAndPersist`, `reset`) artık LS'ye yazdıktan sonra IDB'ye de paralel yazıyor (fire-and-forget). Okuma hâlâ LS'den. Migration script gereksiz: write-through pattern'inde ilk persist çağrısı IDB'yi otomatik dolduruyor.
+* **v2.6.88 (schema-only)** — `cost\_history` tablosu drop edildi. v2.6.71'de Faz 4 hazırlığı sırasında eklenmişti ama hiç yazılmadı; costHistory verisi `user\_prefs.data.costHistory` jsonb içinde yaşıyor. Migration: `migrations/v2.6.88-drop-cost-history.sql`. Kod tarafında değişiklik yok.
+* **v2.6.87** — Faz 4 son adım: Eski blob yazımı/okuması tamamen kapatıldı. `cloud.js`'de `queueSync`, `\_doSync`, `pushNow` artık no-op (per-table cloud-pertable.flushNow yeterli emniyet); `pull()` artık sadece per-table'dan okuyor (blob promise null sonuca sabitlendi). `user\_data` tablosu DB'de duruyor ama kullanılmıyor.
+* **v2.6.86** — Demo onboarding seed cloud'a sızması durduruldu. `auth.js`'de SIGNED\_IN handler'ında pull başlamadan önce `(demoSeeded \&\& !hasUser)` ise `store.clearUserData()` çağrılır. Sign-out → reload → sign-in döngüsünde demo "My Kitchen" + içeriği lokal'den temizlenir, sonra cloud'dan kullanıcının gerçek state'i pull edilir.
+* **v2.6.85** — Ghost workspace duplicate kök çözüm: `cloud.js`'e `pullInProgress` flag eklendi. Pull başlarken set, success/null/error path'lerinde `\_done()` helper'ı tarafından sıfırlanır. `cloud.queueSync` ve `cloud-pertable.flushNow` flag açıkken push'u erteler. Pull bitince ertelenmiş push'lar tetiklenir — bu noktada state pull merge ghost filter'ından geçtiği için ghost'tan arındırılmıştır.
+* **v2.6.84** — Faz 4 tamlık hotfix: `cloud-pertable.js`'in workspaces upsert builder'ı, şemada bulunmayan `data` jsonb kolonuna yazmaya çalışıyordu (Postgres `column "data" does not exist` hatası → tüm workspace per-table yazımları sessizce başarısız oluyordu). Düzeltme: workspaces branch'inde `delete row.data`. v2.6.73 migration `migrationFazV4Done=1` flag'ini set etmiş olmasına rağmen workspaces tablosu boş kalıyordu; bu fix sonrası parent workspace per-table'a doğru yazılır.
+* **v2.6.83** — hCaptcha hotfix: `h-captcha-response` token'ı Web3Forms payload'undan çıkarıldı. Web3Forms Free tier hCaptcha doğrulaması (Secret Key alanı yok) → token gönderilince "Could not validate hCaptcha" reddi.
+* **v2.6.82** — "Sorun bildir" formuna hCaptcha bot koruması eklendi.
+* **v2.6.81** — `workspace\_tombstones` Realtime'a eklendi (cross-device cascade wipe).
+* **v2.6.80** — Realtime kapsamı tüm tool tablolarına genişletildi (12 → 18 binding).
+* **v2.6.79** — Soft-delete pattern `waste`'e taşındı.
+* **v2.6.74** — Çift kaynak pull merge (eski blob + per-table newest-wins).
+* **v2.6.71–73** — 9 yeni Supabase tablosu + şema migration + çift yazma desteği.
+* **v2.6.66** — Per-table sync ilk 11 tablo.
+* **v2.6.0–9** — Checklist session history, HACCP Forms (Fridge/Freezer + Cook \& Cool).
+* **v2.5.9** — Recipe fotoları Supabase Storage'a (WebP @ 0.82, \~100-150 KB).
+* **v2.5.7** — Public share lifecycle (list/pause/delete).
+* **v2.5.4** — Privacy Policy + Terms of Service.
+* **v2.5.3** — TR/EN i18n tam tutarlı baseline.
+

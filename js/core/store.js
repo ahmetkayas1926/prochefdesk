@@ -520,16 +520,24 @@
         localStorage.setItem(LS_KEY_STATE, JSON.stringify(state));
       } catch (e) {
         PCD.err && PCD.err('flushSync fail', e);
-        return false;
+        return Promise.resolve(false);
       }
     }
     // v2.6.89 — IDB write-through. v2.6.92 — Migration tetikle.
+    // v2.6.93 — IDB put Promise'ini döndür → restore akışı await edebilir.
+    // Eski sync caller'lar (set/upsert sonrası flushSync) Promise'i discard eder
+    // çünkü dönüş değerini truthy boolean olarak değerlendiriyorlardı; Promise
+    // truthy olduğundan davranış değişmedi.
     if (PCD.idb && PCD.idb.put) {
-      PCD.idb.put('state', 'main', state).then(function () {
+      return PCD.idb.put('state', 'main', state).then(function () {
         if (!_migrationDone) _completeMigration();
-      }).catch(function () {});
+        return true;
+      }).catch(function (e) {
+        console.warn('[store] flushSync IDB write failed:', e && e.message);
+        return false;
+      });
     }
-    return true;
+    return Promise.resolve(true);
   }
 
   // v2.6.69 — State-key (camelCase) → SQL table name (snake_case) eşleştirme.
@@ -1351,12 +1359,34 @@
       // from backup. The cloud blob might still be at an older schema if
       // another device wrote it before being upgraded.
       state = runMigrations(state);
+
+      // v2.6.93 — activeWorkspaceId validation. Backup'taki id state.workspaces'te
+      // yoksa veya silinmişse ilk geçerli (silinmemiş) workspace'e ata. Aksi
+      // halde tools wsId üzerinden filtre yapar, hiçbir şey görünmez.
+      try {
+        const ws = state.workspaces || {};
+        const activeId = state.activeWorkspaceId;
+        const isValid = activeId && ws[activeId] && !ws[activeId]._deletedAt;
+        if (!isValid) {
+          const firstValid = Object.keys(ws).find(function (id) {
+            return ws[id] && !ws[id]._deletedAt;
+          });
+          state.activeWorkspaceId = firstValid || null;
+        }
+      } catch (e) {
+        PCD.err && PCD.err('replaceAll: activeWorkspaceId validation failed', e);
+      }
+
       emit('*:replaced', state);
-      // Trigger a broad refresh
-      ['recipes','ingredients','menus','events','suppliers','inventory','waste','prefs','onboarding','user','plan'].forEach(function (k) {
+      // v2.6.93 — workspaces ve activeWorkspaceId emit'leri eklendi; restore
+      // sonrası workspace switcher ve aktif tool yeniden render olsun.
+      ['recipes','ingredients','menus','events','suppliers','inventory','waste','prefs','onboarding','user','plan','workspaces','activeWorkspaceId'].forEach(function (k) {
         emit(k, state[k]);
       });
-      persist();
+      // v2.6.93 — flushSync ile IDB yazımının tamamlandığını garanti et,
+      // Promise'ini döndür ki restore akışı await edebilsin. Eski caller'lar
+      // (cloud.js pull merge) Promise'i discard ediyor, davranış aynı.
+      return flushSync();
     },
 
     // Reset everything (e.g. on sign-out)
