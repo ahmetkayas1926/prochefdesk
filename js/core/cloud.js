@@ -129,87 +129,10 @@
     if (!blobRemote && !perTableState) return null;
     if (!perTableState) return blobRemote;
     if (!blobRemote) return perTableState;
-
-    // Top-level workspace map (newest-wins per ws)
-    const mergedWorkspaces = {};
-    const allWsIds = new Set();
-    if (blobRemote.workspaces) Object.keys(blobRemote.workspaces).forEach(function (id) { allWsIds.add(id); });
-    if (perTableState.workspaces) Object.keys(perTableState.workspaces).forEach(function (id) { allWsIds.add(id); });
-    allWsIds.forEach(function (wsId) {
-      const b = blobRemote.workspaces && blobRemote.workspaces[wsId];
-      const p = perTableState.workspaces && perTableState.workspaces[wsId];
-      if (!b) { mergedWorkspaces[wsId] = p; return; }
-      if (!p) { mergedWorkspaces[wsId] = b; return; }
-      mergedWorkspaces[wsId] = (_recordTs(b) > _recordTs(p)) ? b : p;
-    });
-
-    // Workspace tombstones — union (her iki kaynaktaki tüm tombstone ID'leri),
-    // çakışma varsa daha eski (önce silinen) olanı tut.
-    const mergedTombstones = {};
-    const allTombIds = new Set();
-    if (blobRemote._deletedWorkspaces) Object.keys(blobRemote._deletedWorkspaces).forEach(function (id) { allTombIds.add(id); });
-    if (perTableState._deletedWorkspaces) Object.keys(perTableState._deletedWorkspaces).forEach(function (id) { allTombIds.add(id); });
-    allTombIds.forEach(function (id) {
-      const b = blobRemote._deletedWorkspaces && blobRemote._deletedWorkspaces[id];
-      const p = perTableState._deletedWorkspaces && perTableState._deletedWorkspaces[id];
-      mergedTombstones[id] = b || p;
-    });
-
-    // Workspace-scoped map tables (recipes, ingredients, vs.)
-    const WS_MAP_TABLES = [
-      'recipes', 'ingredients', 'menus', 'events', 'suppliers',
-      'canvases', 'shoppingLists', 'checklistTemplates',
-      'stockCountHistory', 'haccpLogs', 'haccpUnits',
-      'haccpReadings', 'haccpCookCool'
-    ];
-    const merged = Object.assign({}, blobRemote, perTableState);
-    WS_MAP_TABLES.forEach(function (tbl) {
-      merged[tbl] = mergeWsScopedTable(blobRemote[tbl], perTableState[tbl]);
-    });
-
-    // Workspace-scoped array tables (waste, checklistSessions)
-    const WS_ARRAY_TABLES = ['waste', 'checklistSessions'];
-    WS_ARRAY_TABLES.forEach(function (tbl) {
-      merged[tbl] = mergeWsScopedArrayTable(blobRemote[tbl], perTableState[tbl]);
-    });
-
-    // Inventory: { wsId: { ingredientId: row } } — per-table birincil
-    // (counts genellikle son yazılan kazanır, timestamp yok bu kayıtlarda).
-    if (perTableState.inventory && Object.keys(perTableState.inventory).length > 0) {
-      // Per-table merge: ws içinde ingredient ID'leri union
-      const invMerged = {};
-      const invWsIds = new Set();
-      Object.keys(blobRemote.inventory || {}).forEach(function (id) { invWsIds.add(id); });
-      Object.keys(perTableState.inventory || {}).forEach(function (id) { invWsIds.add(id); });
-      invWsIds.forEach(function (wsId) {
-        invMerged[wsId] = Object.assign({},
-          (blobRemote.inventory && blobRemote.inventory[wsId]) || {},
-          (perTableState.inventory && perTableState.inventory[wsId]) || {}
-        );
-      });
-      merged.inventory = invMerged;
-    } else {
-      merged.inventory = blobRemote.inventory || {};
-    }
-
-    // costHistory — top-level array, newest by id timestamp
-    merged.costHistory = mergeArrayByIdAndTs(blobRemote.costHistory, perTableState.costHistory);
-
-    // Top-level metadata — per-table'dan gelirse al, yoksa blob
-    merged.workspaces = mergedWorkspaces;
-    merged._deletedWorkspaces = mergedTombstones;
-    // activeWorkspaceId — per-table kazanır (user_prefs daha güncel tutar)
-    merged.activeWorkspaceId = perTableState.activeWorkspaceId || blobRemote.activeWorkspaceId;
-    // user_prefs içerikleri — per-table'dan gelmişse onu al
-    if (perTableState.prefs && Object.keys(perTableState.prefs).length > 0) {
-      merged.prefs = perTableState.prefs;
-    }
-    if (perTableState.plan) merged.plan = perTableState.plan;
-    if (perTableState.onboarding && Object.keys(perTableState.onboarding).length > 0) {
-      merged.onboarding = perTableState.onboarding;
-    }
-
-    return merged;
+    // v2.7.2 — Blob okuma v2.6.87'den itibaren kapalı (blobPromise sabit
+    // olarak {data:null} dönüyor), blobRemote daima null. Buraya ulaşılmaz
+    // ama imza geriye dönük uyum için korunuyor.
+    return perTableState;
   }
 
   const cloud = {
