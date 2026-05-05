@@ -1,12 +1,11 @@
 # ProChefDesk — Sürüm geçmişi
 
-Mevcut sürüm: **v2.6.93**
+Mevcut sürüm: **v2.6.92**
 
 Yapısal kilometre taşları (kronolojik tersine):
 
-- **v2.6.93** — Backup restore akışı tam yeniden yazıldı. Önceki davranış: store.set() ile lokal'e yazıyor, ama cloud'da silinmiş kayıtlar yine duruyor → reload sonrası cloud pull eski silinmemişleri geri getiriyor → restore boşa gidiyor (test edilince doğrulandı). Yeni davranış: (1) `cloud-pertable.wipeAllUserData()` ile kullanıcının tüm cloud tabloları DELETE edilir (RLS user_id ile sadece kendi verisini siler), (2) `replaceAll(data)` ile lokal state backup ile değiştirilir + runMigrations çalışır (eski sürüm backup uyumluluğu), (3) activeWorkspaceId backup'ta yoksa ilk geçerli workspace'e ata, (4) flushSync ile IDB'ye sync yazım, (5) `cloud-pertable.flushNow()` artık Promise döndürür → tüm cloud yazımları bitene kadar await edilir, (6) reload. Tüm akış async/await ile sıralı; restore butonu işlem sırasında disable. Hata yakalama: fail durumunda butonlar yeniden aktif, toast hata mesajı. Sonuç: backup → restore "tam geri yükleme" anlamına gelir, sıfır veri tutarsızlığı.
-- **v2.6.92** — Faz 4 Adım 4c: localStorage yazma yolu kapatıldı + tek seferlik LS cleanup. `_idbWriteOnly` ve `_migrationDone` flag'leri. İlk başarılı IDB persist'inden sonra `state.prefs.idbWriteOnly = true`, LS temizlenir, sonraki yazmalar sadece IDB'ye.
-- **v2.6.91** — Faz 4 Adım 4b: Okuma IDB-first. `app.js` boot async; hem `await PCD.store.init()` hem `await PCD.auth.init()` ediyor.
+- **v2.6.92** — Faz 4 Adım 4c: localStorage yazma yolu kapatıldı + tek seferlik LS cleanup. `store.js`'de iki module-level flag (`_idbWriteOnly`, `_migrationDone`). İlk başarılı IDB persist'inden sonra `_completeMigration()` çağrılır: `state.prefs.idbWriteOnly = true` (kalıcı flag), `localStorage.removeItem(LS_KEY_STATE)`, module flag'leri set. Boot'ta `load()` flag'i okur ve `_idbWriteOnly` aktif eder; LS'de kalan veri varsa defansif olarak temizler. `persist`, `flushSync`, `trimAndPersist` artık `_idbWriteOnly === true` iken LS yazımını atlar — sadece IDB'ye yazar. `reset()` sign-out döngüsünde flag'leri sıfırlar (yeni hesap normal akışla yeniden migrate olur). Sonuç: localStorage 5 MB sınırı fiilen kaldırıldı; tek state kaynağı IDB. Adım 4 tamamlandı.
+- **v2.6.91** — Faz 4 Adım 4b: Okuma IDB-first. `app.js` boot async; hem `await PCD.store.init()` hem `await PCD.auth.init()` ediyor — pull tamamlanmadan router register edilmiyor.
 - **v2.6.89** — Faz 4 Adım 4a: IndexedDB altyapısı + write-through.
 - **v2.6.88 (schema-only)** — `cost_history` tablosu drop edildi.
 - **v2.6.87** — Faz 4 son adım: Eski blob yazımı/okuması kapatıldı.

@@ -145,11 +145,16 @@
 
   function flushNow() {
     flushTimer = null;
-    if (!isReady()) return Promise.resolve();
-    if (!queue.length) return Promise.resolve();
+    if (!isReady()) return;
+    if (!queue.length) return;
     if (!navigator.onLine) {
       // Will retry when online listener fires (cloud.js handles it)
-      return Promise.resolve();
+      return;
+    }
+    // v2.6.85 — Pull devam ediyorsa push'u ertele.
+    if (PCD.cloud && PCD.cloud.isPullInProgress && PCD.cloud.isPullInProgress()) {
+      flushTimer = setTimeout(flushNow, 200);
+      return;
     }
     const batch = queue.splice(0, queue.length);
     // Reset index
@@ -166,9 +171,6 @@
       byOp[k].push(it);
     });
 
-    // v2.6.93 — collect all promises so caller can await full flush
-    const pending = [];
-
     Object.keys(byOp).forEach(function (k) {
       const items = byOp[k];
       const table = items[0].table;
@@ -182,7 +184,10 @@
             data: it.data,
           };
           if (table === 'workspaces') {
-            // Workspace: flat columns + data jsonb (data tutar full record)
+            // v2.6.84 — Workspaces tablosunda 'data' jsonb kolonu YOK,
+            // sadece flat kolonlar var (v2.6.66 şeması). Bu yüzden default
+            // olarak eklenen row.data alanını kaldır.
+            delete row.data;
             row.name = (it.data && it.data.name) || '';
             row.concept = (it.data && it.data.concept) || null;
             row.role = (it.data && it.data.role) || null;
@@ -222,21 +227,20 @@
         const conflictKey = (table === 'user_prefs') ? 'user_id'
                           : (table === 'workspace_tombstones') ? 'workspace_id'
                           : 'id';
-        pending.push(supabase.from(table).upsert(rows, { onConflict: conflictKey })
+        supabase.from(table).upsert(rows, { onConflict: conflictKey })
           .then(function (res) {
             if (res.error) PCD.warn && PCD.warn('cloud-pertable upsert ' + table, res.error.message || res.error);
           })
-          .catch(function (e) { PCD.warn && PCD.warn('cloud-pertable exception ' + table, e); }));
+          .catch(function (e) { PCD.warn && PCD.warn('cloud-pertable exception ' + table, e); });
       } else if (op === 'delete') {
         const ids = items.map(function (it) { return it.id; });
-        pending.push(supabase.from(table).delete().in('id', ids).eq('user_id', user.id)
+        supabase.from(table).delete().in('id', ids).eq('user_id', user.id)
           .then(function (res) {
             if (res.error) PCD.warn && PCD.warn('cloud-pertable delete ' + table, res.error.message || res.error);
           })
-          .catch(function (e) { PCD.warn && PCD.warn('cloud-pertable delete exception ' + table, e); }));
+          .catch(function (e) { PCD.warn && PCD.warn('cloud-pertable delete exception ' + table, e); });
       }
     });
-    return Promise.all(pending);
   }
 
   // ============ PULL ============
@@ -402,46 +406,12 @@
   }
 
   // ============ PUBLIC API ============
-  // v2.6.93 — Faz 4 sonrası ilave: tüm kullanıcı verisini cloud'dan sil.
-  // Backup restore akışında "full replace" yapılabilmesi için kullanılıyor.
-  // Tüm tabloları kullanıcı_id'ye göre hard-delete eder. RLS yetkisi kendi
-  // verisini silmesine izin veriyor. Sonuç: cloud temiz, sadece backup'tan
-  // gelen veri yazılır → restore "tam geri yükleme" anlamına gelir.
-  function wipeAllUserData() {
-    const supabase = PCD.cloud.getClient();
-    const user = PCD.store.get('user');
-    if (!supabase || !user || !user.id) {
-      return Promise.reject(new Error('No user session'));
-    }
-    const tables = [
-      'recipes', 'ingredients', 'menus', 'events', 'suppliers',
-      'canvases', 'shopping_lists', 'checklist_templates', 'inventory',
-      'waste', 'checklist_sessions', 'stock_count_history',
-      'haccp_logs', 'haccp_units', 'haccp_readings', 'haccp_cook_cool',
-      'workspace_tombstones',
-      // workspaces and user_prefs deleted last (FK considerations)
-      'workspaces',
-      'user_prefs',
-    ];
-    const ops = tables.map(function (t) {
-      return supabase.from(t).delete().eq('user_id', user.id)
-        .then(function (res) {
-          if (res.error) {
-            console.warn('[wipeAllUserData] ' + t + ':', res.error.message);
-          }
-        })
-        .catch(function (e) { console.warn('[wipeAllUserData] ' + t + ' exception:', e); });
-    });
-    return Promise.all(ops);
-  }
-
   PCD.cloudPerTable = {
     queueUpsert: queueUpsert,
     queueDelete: queueDelete,
     queueArraySync: queueArraySync,  // v2.6.72 — array tablolar için
     flushNow: flushNow,
     pullAll: pullAll,
-    wipeAllUserData: wipeAllUserData,  // v2.6.93
     // Re-flush queued items when back online
     onOnline: function () {
       if (queue.length) scheduleFlush();

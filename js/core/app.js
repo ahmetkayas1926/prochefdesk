@@ -44,7 +44,9 @@
     PCD.i18n.setLocale(savedLocale);
     console.log('[boot] theme/locale applied');
 
-    // 5) Init auth (await — pull tamamlanmadan onAuthResolved çağrılmamalı)
+    // 5) Init auth (await — getSession + cloud.pull + photo migrate + cloud-migrate)
+    // v2.6.91 — Pull tamamlanmadan onAuthResolved çağrılmamalı; aksi halde
+    // pull'un emit ettiği state değişiklikleri router/UI listener'larına ulaşmaz.
     try {
       await PCD.auth.init();
       console.log('[boot] auth.init resolved');

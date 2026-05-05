@@ -12,6 +12,11 @@
   const LS_KEY_STATE = LS_PREFIX + 'state';
 
   // v2.6.92 — Faz 4 Adım 4c: IDB-only writes + LS cleanup.
+  // _idbWriteOnly: true ise persist/flushSync/trimAndPersist artık LS'ye yazmaz.
+  // _migrationDone: tek seferlik LS cleanup'ı tekrar tetiklemeyi engeller.
+  // Boot'ta load() içinde state.prefs.idbWriteOnly === true ise her ikisi de
+  // true'ya set edilir. Aksi halde ilk başarılı IDB persist'inden sonra
+  // migration tamamlanır.
   let _idbWriteOnly = false;
   let _migrationDone = false;
 
@@ -237,7 +242,11 @@
   // ---------- STATE ----------
   let state = PCD.clone(defaultState);
 
-  // v2.6.92 — Migration tamamlama helper'ı.
+  // v2.6.92 — Migration tamamlama helper'ı. Tek seferlik:
+  // - state.prefs.idbWriteOnly = true (kalıcı flag)
+  // - localStorage.removeItem(LS_KEY_STATE) (eski veri temizle)
+  // - module-level _idbWriteOnly + _migrationDone set
+  // Sonraki tüm persist/flushSync/trimAndPersist çağrıları LS'yi atlayacak.
   function _completeMigration() {
     if (_migrationDone) return;
     _migrationDone = true;
@@ -245,9 +254,6 @@
     if (!state.prefs) state.prefs = {};
     state.prefs.idbWriteOnly = true;
     _idbWriteOnly = true;
-    if (PCD.idb && PCD.idb.put) {
-      PCD.idb.put('state', 'main', state).catch(function () {});
-    }
     console.log('[store] migrated to IDB-only writes, LS cleared');
   }
 
@@ -262,7 +268,9 @@
     }
   }
   function _loadFromIdb() {
-    if (!PCD.idb || !PCD.idb.get) return Promise.resolve(null);
+    if (!PCD.idb || !PCD.idb.get) {
+      return Promise.resolve(null);
+    }
     return PCD.idb.get('state', 'main').then(function (data) {
       return data || null;
     }).catch(function (e) {
@@ -289,13 +297,17 @@
         console.warn('[store] deepMerge failed:', e && e.message);
         state = PCD.clone(defaultState);
       }
+      // v2.6.92 — Migration flag boot zamanında oku. Set edilmişse
+      // _idbWriteOnly aktif edilir; LS'de kalan veri varsa temizlenir.
       if (state.prefs && state.prefs.idbWriteOnly === true) {
         _idbWriteOnly = true;
         _migrationDone = true;
         try { localStorage.removeItem(LS_KEY_STATE); } catch (e) {}
         console.log('[store] LS write disabled (idbWriteOnly=true)');
       }
+      // v2.6.62 — Run schema migrations BEFORE other normalization.
       state = runMigrations(state);
+      // v2.6.35 — Lowercase ingredient units (CSV import normalization).
       if (state.ingredients && typeof state.ingredients === 'object') {
         Object.keys(state.ingredients).forEach(function (wsId) {
           const wsIngs = state.ingredients[wsId];
@@ -371,7 +383,7 @@
         localStorage.setItem(LS_KEY_STATE, JSON.stringify(stateCopy));
       }
       state = stateCopy;
-      // v2.6.89 — IDB write-through (fire-and-forget). v2.6.92 — Migration tetikle.
+      // v2.6.89 — IDB write-through (fire-and-forget).
       if (PCD.idb && PCD.idb.put) {
         PCD.idb.put('state', 'main', state).then(function () {
           if (!_migrationDone) _completeMigration();
@@ -502,6 +514,7 @@
   // where we need the change persisted before a navigation/reload happens.
   // Centralizes 6 copy-pasted try/catch blocks across the file.
   function flushSync() {
+    // v2.6.92 — IDB-only modunda LS atla.
     if (!_idbWriteOnly) {
       try {
         localStorage.setItem(LS_KEY_STATE, JSON.stringify(state));
@@ -510,6 +523,7 @@
         return false;
       }
     }
+    // v2.6.89 — IDB write-through. v2.6.92 — Migration tetikle.
     if (PCD.idb && PCD.idb.put) {
       PCD.idb.put('state', 'main', state).then(function () {
         if (!_migrationDone) _completeMigration();
@@ -578,6 +592,7 @@
       PCD.err('Failed to serialize state:', e);
       return;
     }
+    // v2.6.92 — IDB-only modunda LS yazma. Geçiş öncesi her ikisine.
     if (!_idbWriteOnly) {
       try {
         localStorage.setItem(LS_KEY_STATE, serialized);
@@ -590,6 +605,7 @@
         }
       }
     }
+    // v2.6.89 — IDB write-through. v2.6.92 — Migration tetikle.
     if (PCD.idb && PCD.idb.put) {
       PCD.idb.put('state', 'main', state).then(function () {
         if (!_migrationDone) _completeMigration();
@@ -1347,9 +1363,12 @@
     reset: function () {
       state = PCD.clone(defaultState);
       localStorage.removeItem(LS_KEY_STATE);
+      // v2.6.89 — IDB'yi de temizle (fire-and-forget).
       if (PCD.idb && PCD.idb.delete) {
         PCD.idb.delete('state', 'main').catch(function () {});
       }
+      // v2.6.92 — Sign-out sonrası flag'leri sıfırla. Yeni hesabın ilk
+      // persist'i normal akışta migration'ı yeniden tetikleyebilir.
       _idbWriteOnly = false;
       _migrationDone = false;
       emit('*:reset', state);
