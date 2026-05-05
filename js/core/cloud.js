@@ -369,7 +369,7 @@
                       : (Object.keys(mergedWorkspaces)[0] || null)),
                 user: current.user,
                 _meta: Object.assign({}, current._meta, {
-                  lastSyncAt: (res.data && res.data.updated_at) || new Date().toISOString()
+                  lastSyncAt: new Date().toISOString()
                 })
               });
 
