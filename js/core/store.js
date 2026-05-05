@@ -713,7 +713,11 @@
     },
     listWorkspaces: function (includeArchived) {
       ensureActiveWorkspace();
-      const list = Object.values(PCD.clone(state.workspaces));
+      // v2.6.99 — Soft-deleted ws'leri (DB cascade trigger'dan _deletedAt
+      // flag'i ile pull edilmiş olanlar) listeden dışarıda tut. includeArchived
+      // archive'e işaret eder, deleted'a değil — deleted ileride Trash UI'nda
+      // ayrı bir bölümde gösterilecek.
+      const list = Object.values(PCD.clone(state.workspaces)).filter(function (w) { return !w._deletedAt; });
       return includeArchived ? list : list.filter(function (w) { return !w.archived; });
     },
     getWorkspace: function (wsId) {
