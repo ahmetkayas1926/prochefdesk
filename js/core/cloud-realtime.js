@@ -338,6 +338,13 @@
   // Subscribe to all 19 tables for the current user
   function subscribe() {
     if (subscribed) return;
+    // v2.7.9 — Eski channel orphan koruması: CHANNEL_ERROR retry akışında
+    // subscribed=false set edilir ama channel referansı kalır. Bu noktada
+    // yeni channel oluşturmak öncekini cleanup etmeden orphan WebSocket
+    // subscription'ı bırakır. Önce eskiyi temizle.
+    if (channel) {
+      unsubscribe();
+    }
     if (!PCD.cloud || !PCD.cloud.ready) return;
     const supabase = PCD.cloud.getClient();
     const user = PCD.store && PCD.store.get('user');
