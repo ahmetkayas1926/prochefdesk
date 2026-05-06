@@ -1,12 +1,45 @@
 // =============================================================
-// ProChefDesk — backup-to-r2 Edge Function (v2)
+// ProChefDesk — backup-to-r2 Edge Function (v3)
 // =============================================================
-// Triggered nightly by pg_cron. Snapshots all user_data rows and
-// recipe-photos files to Cloudflare R2.
+// Triggered nightly by pg_cron. Snapshots all per-table data and
+// recipe-photos manifest to Cloudflare R2.
 //
-// Auth: caller must send X-Cron-Token header matching BACKUP_CRON_TOKEN
-// secret. URL is not enough on its own — public Supabase Functions
-// expose the URL but the token gate prevents random access.
+// CHANGES vs v2 (2026-05)
+// - v2 read from `user_data` (legacy blob table, DROPPED in v2.6.87).
+//   Result: v2 silently produced empty backups for ~6 months.
+// - v3 reads from the 21 per-table tables that replaced user_data.
+//   Each table is written to its own JSONL file under the date prefix.
+//
+// AUTH
+//   Caller must send X-Cron-Token header matching BACKUP_CRON_TOKEN secret.
+//
+// R2 LAYOUT
+//   <bucket>/<YYYY-MM-DD>/
+//     workspaces.jsonl
+//     workspace_tombstones.jsonl
+//     user_prefs.jsonl
+//     public_shares.jsonl
+//     subscriptions.jsonl
+//     recipes.jsonl
+//     ingredients.jsonl
+//     menus.jsonl
+//     events.jsonl
+//     suppliers.jsonl
+//     canvases.jsonl
+//     shopping_lists.jsonl
+//     checklist_templates.jsonl
+//     inventory.jsonl
+//     waste.jsonl
+//     checklist_sessions.jsonl
+//     stock_count_history.jsonl
+//     haccp_logs.jsonl
+//     haccp_units.jsonl
+//     haccp_readings.jsonl
+//     haccp_cook_cool.jsonl
+//     photos-manifest.json
+//     summary.json
+//
+//   client_errors is intentionally skipped — it is debug-only data.
 //
 // 30-day retention: backups older than 30 days are deleted on next run.
 // =============================================================
@@ -20,12 +53,39 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
+// All tables we want in the backup. client_errors is excluded by design.
+const BACKUP_TABLES = [
+  // Top-level (5)
+  'workspaces',
+  'workspace_tombstones',
+  'user_prefs',
+  'public_shares',
+  'subscriptions',
+  // Workspace-scoped (16)
+  'recipes',
+  'ingredients',
+  'menus',
+  'events',
+  'suppliers',
+  'canvases',
+  'shopping_lists',
+  'checklist_templates',
+  'inventory',
+  'waste',
+  'checklist_sessions',
+  'stock_count_history',
+  'haccp_logs',
+  'haccp_units',
+  'haccp_readings',
+  'haccp_cook_cool',
+]
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
-  // Auth gate: require BACKUP_CRON_TOKEN in X-Cron-Token header.
+  // Auth gate
   const expectedToken = Deno.env.get('BACKUP_CRON_TOKEN')
   const sentToken = req.headers.get('X-Cron-Token')
   if (!expectedToken || sentToken !== expectedToken) {
@@ -53,55 +113,65 @@ Deno.serve(async (req) => {
     const today = new Date().toISOString().slice(0, 10)
     const stats = {
       date: today,
-      userDataRows: 0,
-      userDataBytes: 0,
+      version: 'v3',
+      tables: {} as Record<string, { rows: number; bytes: number; ok: boolean }>,
       photoFiles: 0,
       photoBytes: 0,
       oldBackupsDeleted: 0,
       errors: [] as string[],
     }
 
-    // 1. Snapshot user_data
-    try {
-      let from = 0
-      const pageSize = 1000
-      const lines: string[] = []
-      while (true) {
-        const { data, error } = await admin
-          .from('user_data')
-          .select('user_id, key, value, updated_at')
-          .range(from, from + pageSize - 1)
-        if (error) {
-          stats.errors.push('user_data fetch: ' + error.message)
-          break
+    // ----------------------------------------------------------------
+    // 1. Snapshot each per-table table
+    // ----------------------------------------------------------------
+    for (const table of BACKUP_TABLES) {
+      const tableStats = { rows: 0, bytes: 0, ok: false }
+      try {
+        let from = 0
+        const pageSize = 1000
+        const lines: string[] = []
+        while (true) {
+          const { data, error } = await admin
+            .from(table)
+            .select('*')
+            .range(from, from + pageSize - 1)
+          if (error) {
+            stats.errors.push(`${table} fetch: ${error.message}`)
+            break
+          }
+          if (!data || data.length === 0) break
+          for (const row of data) {
+            lines.push(JSON.stringify(row))
+          }
+          if (data.length < pageSize) break
+          from += pageSize
         }
-        if (!data || data.length === 0) break
-        for (const row of data) {
-          lines.push(JSON.stringify(row))
-        }
-        if (data.length < pageSize) break
-        from += pageSize
-      }
-      const jsonl = lines.join('\n')
-      const body = new TextEncoder().encode(jsonl)
-      stats.userDataRows = lines.length
-      stats.userDataBytes = body.length
+        const jsonl = lines.join('\n')
+        const body = new TextEncoder().encode(jsonl)
+        tableStats.rows = lines.length
+        tableStats.bytes = body.length
 
-      const userDataKey = `${today}/user-data.jsonl`
-      const putUrl = `${r2Endpoint}/${r2Bucket}/${userDataKey}`
-      const putRes = await r2.fetch(putUrl, {
-        method: 'PUT',
-        body: body,
-        headers: { 'Content-Type': 'application/x-ndjson' },
-      })
-      if (!putRes.ok) {
-        stats.errors.push(`user_data upload: ${putRes.status} ${await putRes.text()}`)
+        const key = `${today}/${table}.jsonl`
+        const putUrl = `${r2Endpoint}/${r2Bucket}/${key}`
+        const putRes = await r2.fetch(putUrl, {
+          method: 'PUT',
+          body: body,
+          headers: { 'Content-Type': 'application/x-ndjson' },
+        })
+        if (putRes.ok) {
+          tableStats.ok = true
+        } else {
+          stats.errors.push(`${table} upload: ${putRes.status} ${await putRes.text()}`)
+        }
+      } catch (e) {
+        stats.errors.push(`${table} exception: ${e instanceof Error ? e.message : String(e)}`)
       }
-    } catch (e) {
-      stats.errors.push('user_data exception: ' + (e instanceof Error ? e.message : String(e)))
+      stats.tables[table] = tableStats
     }
 
-    // 2. Photo manifest
+    // ----------------------------------------------------------------
+    // 2. Photo manifest (file list, not the photo bytes themselves)
+    // ----------------------------------------------------------------
     try {
       const allEntries: { path: string; size: number; updated_at?: string }[] = []
       const { data: rootList, error: rootErr } = await admin.storage
@@ -156,7 +226,9 @@ Deno.serve(async (req) => {
       stats.errors.push('photos exception: ' + (e instanceof Error ? e.message : String(e)))
     }
 
-    // 3. Summary
+    // ----------------------------------------------------------------
+    // 3. Summary.json (per-table row counts + bytes + errors)
+    // ----------------------------------------------------------------
     try {
       const summaryKey = `${today}/summary.json`
       const summaryBody = new TextEncoder().encode(JSON.stringify(stats, null, 2))
@@ -170,7 +242,9 @@ Deno.serve(async (req) => {
       stats.errors.push('summary upload: ' + (e instanceof Error ? e.message : String(e)))
     }
 
+    // ----------------------------------------------------------------
     // 4. Delete backups older than 30 days
+    // ----------------------------------------------------------------
     try {
       const cutoff = new Date()
       cutoff.setDate(cutoff.getDate() - 30)
