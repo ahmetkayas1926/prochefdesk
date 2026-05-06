@@ -35,8 +35,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const CONFIG_PATH = path.join(__dirname, 'js', 'core', 'config.js');
-const HTML_PATH = path.join(__dirname, 'index.html');
+const CONFIG_PATH = path.join(__dirname, 'app', 'js', 'core', 'config.js');
+const HTML_PATH = path.join(__dirname, 'app', 'index.html');
 const PLACEHOLDER = '__VERSION__';
 
 function fail(msg) {

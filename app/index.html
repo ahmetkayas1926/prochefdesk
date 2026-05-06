@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#16a34a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="description" content="ProChefDesk — Kitchen OS for professional chefs. Recipe costing, menu engineering, inventory, and more.">
+<title>ProChefDesk — Kitchen OS for Professional Chefs</title>
+
+<!-- Favicon (inline SVG, no external dependency) -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%2316a34a'/%3E%3Ctext x='50' y='68' font-size='56' text-anchor='middle' fill='white' font-family='system-ui' font-weight='800'%3EPC%3C/text%3E%3C/svg%3E">
+
+<!-- iOS home-screen icon (Safari ignores manifest icons; uses this) -->
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon-180.png">
+
+<!-- PWA manifest (real file — v2.6.70). The previous data-URL manifest
+     was rejected by some iOS Safari versions, blocking install. -->
+<link rel="manifest" href="manifest.webmanifest">
+
+<!-- Google Fonts - Inter -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<!-- Stylesheets: cache-bust with ?v=__VERSION__ on deploy -->
+<link rel="stylesheet" href="css/core.css?v=__VERSION__">
+<link rel="stylesheet" href="css/components.css?v=__VERSION__">
+<link rel="stylesheet" href="css/mobile.css?v=__VERSION__">
+<link rel="stylesheet" href="css/themes.css?v=__VERSION__">
+<link rel="stylesheet" href="css/print.css?v=__VERSION__">
+
+<!-- hCaptcha (v2.6.83) — bot protection for the "Report an issue" form.
+     Loaded lazily by js/tools/account.js when the modal opens, so it
+     doesn't add network cost or third-party JS to first paint. -->
+</head>
+<body>
+
+<!-- ============= SPLASH (shows while JS loads) ============= -->
+<div id="splash" class="splash">
+  <div class="splash-logo">
+    <div class="splash-mark">PC</div>
+    <div class="splash-name">ProChefDesk</div>
+    <div class="splash-tag">Kitchen OS</div>
+  </div>
+  <div class="splash-spinner"></div>
+</div>
+
+<!-- ============= APP ROOT (hidden until ready) ============= -->
+<div id="app" class="app hidden">
+
+  <!-- ===== TOP BAR (desktop + mobile) ===== -->
+  <header id="topbar" class="topbar">
+    <button id="btnMenu" class="icon-btn" aria-label="Menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18" stroke-linecap="round"/></svg>
+    </button>
+    <div class="topbar-brand" data-nav="dashboard">
+      <span class="brand-mark">PC</span>
+      <span class="brand-name">ProChefDesk</span>
+    </div>
+    <button id="wsSwitcher" class="ws-switcher" aria-label="Switch workspace">
+      <span class="ws-dot" id="wsDot"></span>
+      <span class="ws-name" id="wsName">My Kitchen</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="topbar-actions">
+      <button id="btnSync" class="icon-btn" aria-label="Sync status" title="Sync status">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 11-3-6.7L21 8" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 3v5h-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button id="btnTheme" class="icon-btn" aria-label="Toggle theme">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" stroke-linecap="round"/></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button id="btnLang" class="icon-btn lang-btn" aria-label="Change language">
+        <span id="langLabel">EN</span>
+      </button>
+      <button id="btnUser" class="icon-btn user-btn" aria-label="Account">
+        <span id="userAvatar">👤</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ===== SIDE NAV (desktop slides in) ===== -->
+  <nav id="sidenav" class="sidenav">
+    <div class="sidenav-backdrop" data-close-sidenav></div>
+    <div class="sidenav-panel">
+      <div class="sidenav-header">
+        <div class="sidenav-brand">
+          <span class="brand-mark">PC</span>
+          <span>ProChefDesk</span>
+        </div>
+        <button class="icon-btn" data-close-sidenav aria-label="Close menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="sidenav-items" id="sidenavItems"><!-- populated by app.js --></div>
+      <div class="sidenav-footer">
+        <!-- Premium UI is hidden until Stripe tier launches. JS in app.js
+             also enforces display:none, but inline style prevents the
+             "flash of unstyled content" on first paint. When premium
+             ships, remove these `style="display:none"` attributes and
+             unblock the JS hide in updatePlanBadge(). -->
+        <div id="planBadge" class="plan-badge plan-free" style="display:none;">Free Plan</div>
+        <button id="btnUpgrade" class="btn btn-primary btn-sm w-full" data-i18n="upgrade_to_pro" style="display:none;">Upgrade to Pro</button>
+        <div class="sidenav-legal" style="margin-top:10px;text-align:center;font-size:11px;color:var(--text-3);line-height:1.5;">
+          <a href="/privacy.html" target="_blank" rel="noopener" data-i18n="legal_privacy" style="color:var(--text-3);text-decoration:none;">Privacy</a>
+          <span style="margin:0 4px;">·</span>
+          <a href="/terms.html" target="_blank" rel="noopener" data-i18n="legal_terms" style="color:var(--text-3);text-decoration:none;">Terms</a>
+          <div style="margin-top:2px;opacity:0.7;">v__VERSION__</div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ===== MAIN CONTENT AREA ===== -->
+  <main id="main" class="main">
+    <div id="view" class="view"><!-- current view is rendered here --></div>
+  </main>
+
+  <!-- ===== MOBILE BOTTOM NAV ===== -->
+  <nav id="bottomnav" class="bottomnav">
+    <button class="bn-item active" data-nav="dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span data-i18n="nav_home">Home</span>
+    </button>
+    <button class="bn-item" data-nav="recipes">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20" stroke-linecap="round"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span data-i18n="nav_recipes">Recipes</span>
+    </button>
+    <button class="bn-item bn-center" id="bnCreateBtn" type="button" aria-label="Create new">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>
+    </button>
+    <button class="bn-item" data-nav="kitchen_cards">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 9h18M8 14h2M8 17h6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span data-i18n="nav_kitchen_cards">Cards</span>
+    </button>
+    <button class="bn-item" data-nav="account">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="7" r="4"/></svg>
+      <span data-i18n="nav_account">Me</span>
+    </button>
+  </nav>
+
+  <!-- ===== MODAL STACK HOST ===== -->
+  <div id="modalStack" class="modal-stack"></div>
+
+  <!-- ===== TOAST HOST ===== -->
+  <div id="toastHost" class="toast-host"></div>
+
+  <!-- ===== OFFLINE BANNER ===== -->
+  <div id="offlineBanner" class="offline-banner hidden">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 1l22 22M16.72 11.06A10.94 10.94 0 0119 12.55M5 12.55a10.94 10.94 0 015.17-2.39M10.71 5.05A16 16 0 0122.58 9M1.42 9a15.91 15.91 0 014.7-2.88M8.53 16.11a6 6 0 016.95 0M12 20h.01" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span data-i18n="offline_mode">Offline — changes will sync when you're back online</span>
+  </div>
+
+</div>
+
+<!-- ===== Supabase JS (loaded from CDN, small and cached) ===== -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.0/dist/umd/supabase.min.js"></script>
+<!-- xlsx-js-style for Excel export with cell styling (borders, colors, fonts) -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+
+<!-- ===== Core modules (order matters) ===== -->
+<script src="js/core/config.js?v=__VERSION__"></script>
+<script src="js/core/utils.js?v=__VERSION__"></script>
+<script src="js/core/idb-wrapper.js?v=__VERSION__"></script>
+<script src="js/core/store.js?v=__VERSION__"></script>
+<script src="js/core/i18n.js?v=__VERSION__"></script>
+<!-- Locale dictionaries (consolidated v2.6.70 — was 11 files, now 6) -->
+<script src="js/i18n/en.js?v=__VERSION__"></script>
+<script src="js/i18n/tr.js?v=__VERSION__"></script>
+<script src="js/i18n/es.js?v=__VERSION__"></script>
+<script src="js/i18n/fr.js?v=__VERSION__"></script>
+<script src="js/i18n/de.js?v=__VERSION__"></script>
+<script src="js/i18n/ar.js?v=__VERSION__"></script>
+<script src="js/core/allergens-db.js?v=__VERSION__"></script>
+<script src="js/core/qr.js?v=__VERSION__"></script>
+<script src="js/core/cloud.js?v=__VERSION__"></script>
+<script src="js/core/cloud-pertable.js?v=__VERSION__"></script>
+<script src="js/core/cloud-realtime.js?v=__VERSION__"></script>
+<script src="js/core/photo-storage.js?v=__VERSION__"></script>
+<script src="js/core/share.js?v=__VERSION__"></script>
+<script src="js/core/auth.js?v=__VERSION__"></script>
+<script src="js/core/router.js?v=__VERSION__"></script>
+
+<!-- UI primitives -->
+<script src="js/ui/modal.js?v=__VERSION__"></script>
+<script src="js/ui/toast.js?v=__VERSION__"></script>
+<script src="js/ui/tutorial.js?v=__VERSION__"></script>
+<script src="js/ui/cropper.js?v=__VERSION__"></script>
+<script src="js/ui/picker.js?v=__VERSION__"></script>
+<script src="js/ui/dragdrop.js?v=__VERSION__"></script>
+
+<!-- Seed data -->
+<script src="js/seed/demo-recipes.js?v=__VERSION__"></script>
+
+<!-- Tools -->
+<script src="js/tools/dashboard.js?v=__VERSION__"></script>
+<script src="js/tools/recipes.js?v=__VERSION__"></script>
+<script src="js/tools/ingredients.js?v=__VERSION__"></script>
+<script src="js/tools/account.js?v=__VERSION__"></script>
+<!-- Phase 2 tools -->
+<script src="js/tools/menus.js?v=__VERSION__"></script>
+<script src="js/tools/kitchen_cards.js?v=__VERSION__"></script>
+<script src="js/tools/shopping.js?v=__VERSION__"></script>
+<script src="js/tools/portion.js?v=__VERSION__"></script>
+<!-- Phase 3 tools -->
+<script src="js/tools/inventory.js?v=__VERSION__"></script>
+<script src="js/tools/waste.js?v=__VERSION__"></script>
+<script src="js/tools/suppliers.js?v=__VERSION__"></script>
+<script src="js/tools/events.js?v=__VERSION__"></script>
+<script src="js/tools/checklist.js?v=__VERSION__"></script>
+<script src="js/tools/haccp_logs.js?v=__VERSION__"></script>
+<script src="js/tools/haccp_cooling.js?v=__VERSION__"></script>
+
+<!-- Bootstrap -->
+<script src="js/core/app.js?v=__VERSION__"></script>
+
+</body>
+</html>

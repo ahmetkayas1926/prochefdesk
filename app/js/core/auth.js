@@ -151,7 +151,10 @@
       if (!supabase) return Promise.reject(new Error('no_backend'));
       return supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: window.location.origin }
+        // v2.8.2 — App moved to /app/. Without explicit /app/ in redirectTo,
+        // Supabase falls back to Site URL (root) and OAuth callback lands on
+        // the landing page instead of the app, losing the auth token.
+        options: { redirectTo: window.location.origin + '/app/' }
       });
     },
 
