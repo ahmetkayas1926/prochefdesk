@@ -296,8 +296,12 @@
                 return true;
               }
 
-              // Special handling for workspaces: union by id (don't drop local-only ws)
-              // BUT respect tombstones: deleted ws stays deleted even if cloud still has it
+              // Special handling for workspaces: union by id (don't drop local-only ws).
+              // v2.7.4 — Tombstone filter kaldırıldı. Silinmiş workspace'ler artık
+              // state.workspaces'ta _deletedAt flag'iyle yaşıyor. listWorkspaces
+              // (store.js v2.6.99) flag'i filter ediyor → switcher'da görünmüyor.
+              // listDeletedWorkspaces (v2.7.3) flag'i kullanarak Trash UI'ya gösteriyor.
+              // Ghost workspace bug'ı isEmptyGhostWs() ikinci pass'ı ile çözülüyor (aşağıda).
               const mergedWorkspaces = {};
               const allIds = new Set();
               if (remote.workspaces) Object.keys(remote.workspaces).forEach(function (id) { allIds.add(id); });
@@ -305,7 +309,6 @@
 
               // First pass: build merge result the normal way.
               allIds.forEach(function (wsId) {
-                if (tombstones[wsId]) return;
                 const localWs = current.workspaces && current.workspaces[wsId];
                 const remoteWs = remote.workspaces && remote.workspaces[wsId];
                 if (localWs && remoteWs) {
@@ -409,18 +412,12 @@
                 })
               });
 
-              // Also clean up workspace-bound tables for tombstoned workspaces
-              ['recipes','ingredients','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','pendingStockCount','stockCountHistory','haccpLogs','haccpUnits','haccpReadings','haccpCookCool'].forEach(function (tbl) {
-                if (merged[tbl]) {
-                  Object.keys(tombstones).forEach(function (deadWsId) {
-                    if (merged[tbl][deadWsId]) {
-                      const t = Object.assign({}, merged[tbl]);
-                      delete t[deadWsId];
-                      merged[tbl] = t;
-                    }
-                  });
-                }
-              });
+              // v2.7.4 — Önceden burada tombstoned ws'lerin children'ı state'ten
+              // siliniyordu. Artık bırakılıyor: ws-bound table'ların satırları zaten
+              // DB cascade trigger ile _deletedAt flag'lendi (cloud-pertable pull bunları
+              // state'e _deletedAt ile getiriyor); store.list*/get* fonksiyonları flag'i
+              // filter ediyor → kullanıcıya görünmüyor. Trash UI children sayısını
+              // göstermek için bu veriye ihtiyaç duyacak.
 
               PCD.store.replaceAll(merged);
               _done();
