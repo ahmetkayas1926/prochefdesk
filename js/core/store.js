@@ -842,7 +842,107 @@
       return true;
     },
 
-    // Copy a single recipe / menu / etc from one workspace into another
+    // v2.7.5 — Trash UI'dan workspace restore eden fonksiyon.
+    // İki katman: (1) lokal state — workspace ve children'ın _deletedAt
+    // flag'leri temizlenir, tombstone state'ten kaldırılır. (2) bulut —
+    // DB'den workspace_tombstones row'u silinir; reverse cascade trigger
+    // (trg_reverse_cascade_workspace_tombstone, v2.6.98) otomatik çalışır
+    // ve workspaces + 16 ws-scoped tabloda deleted_at = NULL yapar.
+    //
+    // workspace_tombstones tablosunun PK'sı workspace_id (id değil),
+    // dolayısıyla generic cloud-pertable queueDelete kullanılmaz —
+    // doğrudan supabase client ile DELETE atılır.
+    //
+    // Returns Promise<boolean>. Lokal state hemen restore edilir; bulut
+    // DELETE arka planda çalışır, hata olursa next pull'da düzeltilir.
+    restoreWorkspace: function (wsId) {
+      const ws = state.workspaces[wsId];
+      const tomb = state._deletedWorkspaces && state._deletedWorkspaces[wsId];
+      if (!tomb) return Promise.resolve(false);
+
+      // 1) Lokal state — workspace _deletedAt flag'i temizle
+      if (ws && ws._deletedAt) {
+        const nextWs = Object.assign({}, ws);
+        delete nextWs._deletedAt;
+        const next = Object.assign({}, state.workspaces);
+        next[wsId] = nextWs;
+        state.workspaces = next;
+      }
+
+      // 2) Lokal state — ws-bound tabloların satırlarındaki _deletedAt temizle
+      ['recipes','ingredients','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','pendingStockCount','stockCountHistory','haccpLogs','haccpUnits','haccpReadings','haccpCookCool'].forEach(function (tbl) {
+        const tblData = state[tbl] && state[tbl][wsId];
+        if (!tblData) return;
+        if (Array.isArray(tblData)) {
+          // Array tablolar (waste, checklistSessions)
+          const cleaned = tblData.map(function (row) {
+            if (row && row._deletedAt) {
+              const r = Object.assign({}, row);
+              delete r._deletedAt;
+              return r;
+            }
+            return row;
+          });
+          const t = Object.assign({}, state[tbl]);
+          t[wsId] = cleaned;
+          state[tbl] = t;
+        } else if (typeof tblData === 'object') {
+          // Map tablolar (recipes, ingredients, menus, vb.)
+          const cleaned = {};
+          Object.keys(tblData).forEach(function (rid) {
+            const row = tblData[rid];
+            if (row && row._deletedAt) {
+              const r = Object.assign({}, row);
+              delete r._deletedAt;
+              cleaned[rid] = r;
+            } else {
+              cleaned[rid] = row;
+            }
+          });
+          const t = Object.assign({}, state[tbl]);
+          t[wsId] = cleaned;
+          state[tbl] = t;
+        }
+      });
+
+      // 3) Tombstone'u state'ten kaldır
+      if (state._deletedWorkspaces) {
+        const t = Object.assign({}, state._deletedWorkspaces);
+        delete t[wsId];
+        state._deletedWorkspaces = t;
+      }
+
+      emit('workspaces', state.workspaces, null);
+      flushSync();
+      persist();
+
+      // 4) Bulut — workspace_tombstones'tan DELETE; reverse cascade trigger
+      // workspaces + 16 ws-scoped tabloda deleted_at = NULL yapar.
+      if (PCD.cloud && PCD.cloud.getClient) {
+        const supabase = PCD.cloud.getClient();
+        if (supabase) {
+          return supabase.auth.getUser().then(function (res) {
+            const user = res && res.data && res.data.user;
+            if (!user) return false;
+            return supabase.from('workspace_tombstones')
+              .delete()
+              .eq('workspace_id', wsId)
+              .eq('user_id', user.id)
+              .then(function (delRes) {
+                if (delRes.error) {
+                  PCD.warn && PCD.warn('restoreWorkspace cloud delete failed', delRes.error.message || delRes.error);
+                  return false;
+                }
+                return true;
+              });
+          }).catch(function (e) {
+            PCD.warn && PCD.warn('restoreWorkspace exception', e && e.message);
+            return false;
+          });
+        }
+      }
+      return Promise.resolve(true);
+    },
     copyToWorkspace: function (table, itemId, fromWsId, toWsId) {
       if (!state[table] || !state[table][fromWsId]) return null;
       const orig = state[table][fromWsId][itemId];

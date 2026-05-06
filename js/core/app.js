@@ -484,6 +484,34 @@
       html += '</div>';
     }
 
+    // v2.7.5 — Deleted (Trash) bölümü
+    const deleted = (PCD.store.listDeletedWorkspaces && PCD.store.listDeletedWorkspaces()) || [];
+    if (deleted.length > 0) {
+      html += '<div style="margin-top:14px;">' +
+        '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">' + t('ws_deleted_section') + '</div>';
+      deleted.forEach(function (w) {
+        const stats = workspaceStats(w.id);
+        // 30 günlük retention sayacı (DB pcd_cleanup_old_deleted cron'u her gün kontrol eder)
+        let daysLeft = '';
+        if (w.deletedAt) {
+          const deletedTs = new Date(w.deletedAt).getTime();
+          const expiresTs = deletedTs + 30 * 24 * 60 * 60 * 1000;
+          const remaining = Math.max(0, Math.ceil((expiresTs - Date.now()) / (24 * 60 * 60 * 1000)));
+          daysLeft = ' · ' + t('ws_days_left', { n: remaining });
+        }
+        const displayName = w.name || ('(' + t('ws_unnamed') + ')');
+        html += '<div class="ws-row" style="display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;border:1px dashed var(--border);border-radius:var(--r-md);background:var(--surface);margin-bottom:6px;opacity:0.75;text-align:start;box-sizing:border-box;">' +
+          '<div style="width:32px;height:32px;border-radius:8px;background:' + wsColorHex(w.color) + ';color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;opacity:0.6;">' + PCD.icon('trash-2', 16) + '</div>' +
+          '<div style="flex:1;min-width:0;">' +
+            '<div style="font-weight:600;font-size:13px;">' + PCD.escapeHtml(displayName) + '</div>' +
+            '<div class="text-muted" style="font-size:11px;">' + stats.recipes + ' ' + t('ws_recipes_count') + ' · ' + stats.menus + ' ' + t('ws_menus_count') + daysLeft + '</div>' +
+          '</div>' +
+          '<button type="button" class="btn btn-outline" data-restore-ws="' + w.id + '" style="flex-shrink:0;font-size:12px;padding:6px 10px;">' + PCD.icon('rotate-ccw', 14) + ' <span>' + t('btn_restore') + '</span></button>' +
+        '</div>';
+      });
+      html += '</div>';
+    }
+
     html += '<button class="btn btn-outline" id="newWsBtn" style="width:100%;margin-top:12px;">' + PCD.icon('plus', 16) + ' <span>' + t('ws_new_workspace') + '</span></button>';
 
     body.innerHTML = html;
@@ -533,6 +561,30 @@
     PCD.$('#newWsBtn', body).addEventListener('click', function () {
       m.close();
       setTimeout(function () { openWorkspaceEditor(); }, 200);
+    });
+
+    // v2.7.5 — Restore button (silinmiş ws için)
+    PCD.on(body, 'click', '[data-restore-ws]', function (e) {
+      e.stopPropagation();
+      const wsId = this.getAttribute('data-restore-ws');
+      const list = (PCD.store.listDeletedWorkspaces && PCD.store.listDeletedWorkspaces()) || [];
+      const w = list.find(function (x) { return x.id === wsId; });
+      const wsName = (w && w.name) || PCD.i18n.t('ws_unnamed');
+      PCD.modal.confirm({
+        title: PCD.i18n.t('modal_restore_ws_title'),
+        text: PCD.i18n.t('modal_restore_ws_text', { name: wsName }),
+        okText: PCD.i18n.t('btn_restore')
+      }).then(function (ok) {
+        if (!ok) return;
+        const p = PCD.store.restoreWorkspace(wsId);
+        Promise.resolve(p).then(function () {
+          PCD.toast.success(PCD.i18n.t('toast_workspace_restored', { name: wsName }));
+          m.close();
+          setTimeout(function () { window.location.reload(); }, 400);
+        }).catch(function () {
+          PCD.toast.error(PCD.i18n.t('toast_workspace_restore_failed'));
+        });
+      });
     });
   }
 
