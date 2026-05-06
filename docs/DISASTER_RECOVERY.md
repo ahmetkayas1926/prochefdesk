@@ -1,9 +1,9 @@
 # ProChefDesk — Disaster Recovery Playbook
 
-> **Version:** 1.0  
-> **Last verified:** 2026-05-03  
+> **Version:** 2.0 (R2 automated backup era)  
+> **Last verified:** 2026-05-06 (R2 restore prosedürü prod'da kanıtlandı)  
 > **Owner:** Ahmet Kaya (hello@prochefdesk.com)  
-> **Stack:** Cloudflare Pages + Supabase Free tier (PostgreSQL 17, project: `prochefdesk`, region: ap-northeast-1)
+> **Stack:** Cloudflare Pages + Supabase Free tier (PostgreSQL 17, project: `prochefdesk`, region: ap-northeast-1) + Cloudflare R2 (nightly backup target)
 
 ---
 
@@ -46,6 +46,8 @@ Keep this table accurate. Outdated values here means wrong commands during an in
 
 ## 2. Routine: Weekly manual backup
 
+> **2026-05 update:** As of v2.7.x, automated nightly backups to Cloudflare R2 are running (every 03:00 UTC, 30-day retention, full per-table snapshot + photo manifest). See **§2A** below for monitoring. The weekly `pg_dump` routine in this section is **no longer the primary backup** — it is now a redundant second line of defense, optional but recommended (R2 region failure or Supabase project loss scenarios). Skip §2 only if you are explicitly accepting "no second-line backup".
+
 **Why this matters more than anything else in this document:** Free tier Supabase does not run automated backups. PITR is Pro-only. If you skip this routine, every other recovery procedure in this document depends on a backup that does not exist.
 
 **Cadence:** Every Sunday morning. Set a phone reminder. Takes 60 seconds.
@@ -81,6 +83,73 @@ Keep this table accurate. Outdated values here means wrong commands during an in
 5. Retention: keep last 8 weekly backups locally. Delete older ones manually each month. For longer-term: copy one backup per month to Google Drive or another offsite location (the file is small, ~1 MB).
 
 **If `pg_dump` fails:** see Section 6 (troubleshooting).
+
+---
+
+## 2A. Routine: Automated R2 backup monitoring
+
+The nightly cron job + backup-to-r2 Edge Function is the **primary backup**. It is fully automated, but it can fail silently (network issue, R2 outage, expired token, Edge Function regression). This section describes the monthly check that catches silent failures.
+
+**Cadence:** First Monday of every month, takes 2 minutes.
+
+### Procedure
+
+1. **Confirm last 7 cron runs succeeded.** Open Supabase SQL Editor and run:
+
+   ```sql
+   SELECT 
+     start_time AT TIME ZONE 'UTC' AS run_at_utc,
+     status,
+     LEFT(return_message, 80) AS msg
+   FROM cron.job_run_details
+   WHERE jobid = (SELECT jobid FROM cron.job WHERE jobname = 'nightly-backup-to-r2')
+   ORDER BY start_time DESC
+   LIMIT 7;
+   ```
+
+   Expected: all 7 rows have `status = 'succeeded'`. If any are `failed`, investigate that row's `return_message` and the corresponding Edge Function log in Supabase Dashboard → Edge Functions → backup-to-r2 → Logs.
+
+2. **Confirm last HTTP response was a 200 with real data.**
+
+   ```sql
+   SELECT 
+     id, 
+     created, 
+     status_code, 
+     LEFT(content::text, 600) AS body
+   FROM net._http_response
+   ORDER BY id DESC
+   LIMIT 1;
+   ```
+
+   Expected: `status_code = 200`. The `body` field should be JSON with non-empty `tables` object and `errors: []`. If `status_code` is NULL, the cron timeout is again too short — re-apply `migrations/v2.7.8-backup-cron-timeout.sql`.
+
+3. **Confirm R2 has a recent dated folder.** Open `dash.cloudflare.com` → R2 Object Storage → `prochefdesk-backups`. There should be a folder named `<today>` (UTC date) with 21 `.jsonl` files + `summary.json` + `photos-manifest.json`. The `summary.json`'s `tables.*` row counts should approximately match production (e.g. `recipes.rows ≈ count(*) from recipes`).
+
+4. **Confirm 30-day retention is working.** In the same R2 view, the oldest dated folder should be no more than ~31 days old. If older folders exist, the cleanup branch of the Edge Function is regressing — check Edge Function code, specifically the `Delete backups older than 30 days` block.
+
+### What "good" looks like vs what "bad" looks like
+
+| Signal | Good | Bad — investigate |
+|---|---|---|
+| `cron.job_run_details.status` last 7 | All `succeeded` | Any `failed` |
+| `net._http_response.status_code` | 200 | NULL or 4xx/5xx |
+| R2 today's folder file count | 23 files | < 23 or missing |
+| R2 today's `summary.json` `errors` | `[]` | Non-empty |
+| R2 oldest folder age | ≤ 31 days | > 31 days |
+
+### If the backup is broken
+
+1. Stop chef onboarding (don't add new users until fixed).
+2. Take a manual `pg_dump` immediately (§2 procedure) — bridge backup until automated path resumes.
+3. Manually trigger the backup function to confirm root cause:
+
+   ```sql
+   SELECT command FROM cron.job WHERE jobname = 'nightly-backup-to-r2';
+   ```
+   Copy the output's `command` column content (the multi-line `SELECT net.http_post(...)`), paste in a fresh SQL tab, run it. Wait 30 seconds, then re-run step 2 above.
+
+4. If still failing, check Edge Function logs (Supabase Dashboard → Edge Functions → backup-to-r2 → Logs) for runtime errors.
 
 ---
 
@@ -251,6 +320,83 @@ docker stop pg_restore_temp && docker rm pg_restore_temp
 ```
 
 Then in Supabase SQL Editor, INSERT the specific rows back, taking care of conflicts with `ON CONFLICT (id) DO UPDATE`.
+
+### Step 3.5 — Restore from R2 (PRIMARY METHOD, post v2.7.x)
+
+This is the recommended path. R2 has 30 days of nightly snapshots. Each backup is a folder `<YYYY-MM-DD>/` containing one `.jsonl` file per table. Each line is one row as JSON, schema-identical to the live table.
+
+**Tested 2026-05-06: prosedürün her adımı bir kez fiilen uygulandı, prod'da `workspaces.NAZZAR TEST` upsert'i başarıyla çalıştı.**
+
+**Use cases handled by this procedure:**
+- A workspace was Delete-Forever'd by accident → restore that one workspace + its children (16 child tables)
+- A specific recipe / menu / supplier disappeared → restore that one row
+- A whole table was truncated → restore the whole table
+- Full account loss → restore everything
+
+#### 3.5.1 — Pick a backup date
+
+Open `dash.cloudflare.com` → R2 Object Storage → `prochefdesk-backups`. Pick the most recent folder where the data you need was still alive. Restore from a date *before* the loss happened.
+
+If unsure, look at `<date>/summary.json` for that day's row counts.
+
+#### 3.5.2 — Download the relevant `.jsonl` file(s)
+
+Click into the date folder, click on the table file (e.g. `recipes.jsonl`), then **Download**. Open with Notepad — each line is one JSON record.
+
+For full account restore, download all 21 files. For single-row restore, you only need the file containing that table.
+
+#### 3.5.3 — Load lines into a staging temp table, then upsert
+
+In Supabase SQL Editor, paste this template. Replace `<TABLE>` with the actual table name (e.g. `recipes`) and put each JSONL line as a separate `INSERT INTO ... VALUES` statement.
+
+```sql
+-- 1) Staging temp table
+CREATE TEMP TABLE _restore_staging (line jsonb);
+
+-- 2) Paste each .jsonl line as a single quoted string with ::jsonb cast
+INSERT INTO _restore_staging VALUES
+  ('{"id":"...","user_id":"...", ...}'::jsonb),
+  ('{"id":"...","user_id":"...", ...}'::jsonb);
+  -- one row per line, separated by commas, terminated with a single semicolon
+
+-- 3) Upsert into the live table using jsonb_populate_record
+--    (auto-maps every column by name, handles all type casts)
+INSERT INTO <TABLE>
+SELECT (jsonb_populate_record(NULL::<TABLE>, line)).*
+FROM _restore_staging
+ON CONFLICT (id) DO UPDATE SET
+  -- list every non-id, non-user_id column = EXCLUDED.<col>
+  -- e.g. for recipes:
+  -- name = EXCLUDED.name,
+  -- data = EXCLUDED.data,
+  -- updated_at = EXCLUDED.updated_at,
+  -- ...
+  updated_at = EXCLUDED.updated_at;
+
+-- 4) Verify
+SELECT COUNT(*) FROM <TABLE> WHERE user_id = '<YOUR_USER_ID>';
+```
+
+**Special cases:**
+
+- **`workspaces` table:** `ON CONFLICT (id)`.
+- **Workspace-scoped tables** (recipes, ingredients, etc.): `ON CONFLICT (id)`.
+- **`workspace_tombstones`:** PK is `workspace_id`, not `id`. Use `ON CONFLICT (workspace_id)`.
+- **`user_prefs`:** PK is `user_id`. Use `ON CONFLICT (user_id)`.
+- **`inventory`:** PK is `(workspace_id, ingredient_id)` composite. Use `ON CONFLICT (workspace_id, ingredient_id)`.
+- **For full restore order:** workspaces FIRST (other tables may foreign-key to it), then ws-scoped tables in any order, then workspace_tombstones last (its trigger will fire harmless no-op restores).
+
+#### 3.5.4 — Photo restore (only if photos were lost)
+
+The R2 `photos-manifest.json` is a list, not the photo bytes. The actual photos live in Supabase Storage `recipe-photos` bucket — they are not duplicated to R2 because they are large. If photos are lost, contact Supabase support; for free tier, deleted Storage files are permanently lost. The manifest only helps you know which paths *should* exist for a given date — useful for telling a user "we restored your recipe but the photo URL is dead, you'll need to re-upload."
+
+#### 3.5.5 — User cache invalidation
+
+After a DB restore, the user's local IndexedDB cache may still hold the old (post-loss) state and try to write it back to cloud, overwriting your restore. Tell the user:
+
+> *"Lütfen tarayıcı sekmenizi kapatıp tekrar açın ve Ctrl+F5 ile sayfayı zorla yenileyin. Eğer veriniz hâlâ eksik görünüyorsa, sağ üstteki profil → Account → Storage Tools → Clear local data butonuna basın ve tekrar deneyin."*
+
+---
 
 ### Step 3.4 — Verify and resume
 1. Verify with the user (Section 7 communication)
