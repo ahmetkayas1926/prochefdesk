@@ -507,6 +507,7 @@
             '<div class="text-muted" style="font-size:11px;">' + stats.recipes + ' ' + t('ws_recipes_count') + ' · ' + stats.menus + ' ' + t('ws_menus_count') + daysLeft + '</div>' +
           '</div>' +
           '<button type="button" class="btn btn-outline" data-restore-ws="' + w.id + '" style="flex-shrink:0;font-size:12px;padding:6px 10px;">' + PCD.icon('rotate-ccw', 14) + ' <span>' + t('btn_restore') + '</span></button>' +
+          '<button type="button" class="icon-btn" data-purge-ws="' + w.id + '" title="' + PCD.escapeHtml(t('btn_delete_forever')) + '" style="flex-shrink:0;color:var(--danger);">' + PCD.icon('trash-2', 16) + '</button>' +
         '</div>';
       });
       html += '</div>';
@@ -583,6 +584,35 @@
           setTimeout(function () { window.location.reload(); }, 400);
         }).catch(function () {
           PCD.toast.error(PCD.i18n.t('toast_workspace_restore_failed'));
+        });
+      });
+    });
+
+    // v2.7.6 — Delete forever button (kalıcı silme)
+    PCD.on(body, 'click', '[data-purge-ws]', function (e) {
+      e.stopPropagation();
+      const wsId = this.getAttribute('data-purge-ws');
+      const list = (PCD.store.listDeletedWorkspaces && PCD.store.listDeletedWorkspaces()) || [];
+      const w = list.find(function (x) { return x.id === wsId; });
+      const wsName = (w && w.name) || PCD.i18n.t('ws_unnamed');
+      PCD.modal.confirm({
+        title: PCD.i18n.t('modal_purge_ws_title'),
+        text: PCD.i18n.t('modal_purge_ws_text', { name: wsName }),
+        okText: PCD.i18n.t('btn_delete_forever'),
+        danger: true
+      }).then(function (ok) {
+        if (!ok) return;
+        const p = PCD.store.purgeWorkspace(wsId);
+        Promise.resolve(p).then(function (success) {
+          if (success === false) {
+            PCD.toast.error(PCD.i18n.t('toast_workspace_purge_failed'));
+            return;
+          }
+          PCD.toast.success(PCD.i18n.t('toast_workspace_purged', { name: wsName }));
+          m.close();
+          setTimeout(function () { window.location.reload(); }, 400);
+        }).catch(function () {
+          PCD.toast.error(PCD.i18n.t('toast_workspace_purge_failed'));
         });
       });
     });

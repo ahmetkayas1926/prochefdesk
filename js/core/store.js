@@ -943,6 +943,75 @@
       }
       return Promise.resolve(true);
     },
+
+    // v2.7.6 — Trash UI'dan workspace permanent delete (purge).
+    // Üç adım: (1) lokal state'te workspace, children, tombstone tamamen
+    // silinir (state'ten map entry'leri çıkarılır). (2) DB'de
+    // pcd_purge_workspace SQL fonksiyonu RPC ile çağrılır — atomik
+    // transaction'da 16 ws-scoped tablo + workspaces + workspace_tombstones'tan
+    // ilgili satırları fiziksel siler.
+    //
+    // Geri dönüş yok — UI confirm modal'ı kullanıcıyı bu konuda uyarır.
+    //
+    // Returns Promise<boolean>. Lokal state hemen temizlenir; bulut RPC
+    // arka planda çalışır, hata olursa next pull verileri geri getirebilir
+    // (RPC fail = state inconsistent; nadir senaryo, network kesintisi).
+    purgeWorkspace: function (wsId) {
+      const tomb = state._deletedWorkspaces && state._deletedWorkspaces[wsId];
+      if (!tomb) return Promise.resolve(false);
+
+      // 1) Lokal state — workspace map'ten sil
+      if (state.workspaces[wsId]) {
+        const next = Object.assign({}, state.workspaces);
+        delete next[wsId];
+        state.workspaces = next;
+      }
+
+      // 2) Lokal state — 17 ws-scoped tablodan workspace entry'sini sil
+      ['recipes','ingredients','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','pendingStockCount','stockCountHistory','haccpLogs','haccpUnits','haccpReadings','haccpCookCool'].forEach(function (tbl) {
+        if (state[tbl] && state[tbl][wsId] !== undefined) {
+          const t = Object.assign({}, state[tbl]);
+          delete t[wsId];
+          state[tbl] = t;
+        }
+      });
+
+      // 3) Tombstone'u state'ten sil
+      if (state._deletedWorkspaces) {
+        const t = Object.assign({}, state._deletedWorkspaces);
+        delete t[wsId];
+        state._deletedWorkspaces = t;
+      }
+
+      emit('workspaces', state.workspaces, null);
+      flushSync();
+      persist();
+
+      // 4) Bulut — pcd_purge_workspace RPC çağrısı (atomik DB silme)
+      if (PCD.cloud && PCD.cloud.getClient) {
+        const supabase = PCD.cloud.getClient();
+        if (supabase) {
+          return supabase.auth.getUser().then(function (res) {
+            const user = res && res.data && res.data.user;
+            if (!user) return false;
+            return supabase.rpc('pcd_purge_workspace', {
+              p_workspace_id: wsId,
+              p_user_id: user.id
+            }).then(function (rpcRes) {
+              if (rpcRes.error) {
+                PCD.warn && PCD.warn('purgeWorkspace rpc failed', rpcRes.error.message || rpcRes.error);
+                return false;
+              }
+              return true;
+            });
+          }).catch(function (e) {
+            PCD.warn && PCD.warn('purgeWorkspace exception', e && e.message);
+            return false;
+          });
+        }
+      }
+      return Promise.resolve(true);
+    },
     copyToWorkspace: function (table, itemId, fromWsId, toWsId) {
       if (!state[table] || !state[table][fromWsId]) return null;
       const orig = state[table][fromWsId][itemId];
