@@ -501,13 +501,13 @@
         }
         const displayName = w.name || ('(' + t('ws_unnamed') + ')');
         html += '<div class="ws-row" style="display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;border:1px dashed var(--border);border-radius:var(--r-md);background:var(--surface);margin-bottom:6px;opacity:0.75;text-align:start;box-sizing:border-box;">' +
-          '<div style="width:32px;height:32px;border-radius:8px;background:' + wsColorHex(w.color) + ';color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;opacity:0.6;">' + PCD.icon('trash-2', 16) + '</div>' +
+          '<div style="width:32px;height:32px;border-radius:8px;background:' + wsColorHex(w.color) + ';color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;opacity:0.6;">' + PCD.icon('trash', 16) + '</div>' +
           '<div style="flex:1;min-width:0;">' +
             '<div style="font-weight:600;font-size:13px;">' + PCD.escapeHtml(displayName) + '</div>' +
             '<div class="text-muted" style="font-size:11px;">' + stats.recipes + ' ' + t('ws_recipes_count') + ' · ' + stats.menus + ' ' + t('ws_menus_count') + daysLeft + '</div>' +
           '</div>' +
-          '<button type="button" class="btn btn-outline" data-restore-ws="' + w.id + '" style="flex-shrink:0;font-size:12px;padding:6px 10px;">' + PCD.icon('rotate-ccw', 14) + ' <span>' + t('btn_restore') + '</span></button>' +
-          '<button type="button" class="icon-btn" data-purge-ws="' + w.id + '" title="' + PCD.escapeHtml(t('btn_delete_forever')) + '" style="flex-shrink:0;color:var(--danger);">' + PCD.icon('trash-2', 16) + '</button>' +
+          '<button type="button" class="btn btn-outline" data-restore-ws="' + w.id + '" style="flex-shrink:0;font-size:12px;padding:6px 10px;">' + PCD.icon('refresh', 14) + ' <span>' + t('btn_restore') + '</span></button>' +
+          '<button type="button" class="icon-btn" data-purge-ws="' + w.id + '" title="' + PCD.escapeHtml(t('btn_delete_forever')) + '" style="flex-shrink:0;color:var(--danger);">' + PCD.icon('trash', 16) + '</button>' +
         '</div>';
       });
       html += '</div>';
