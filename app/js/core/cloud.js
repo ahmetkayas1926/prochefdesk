@@ -419,6 +419,28 @@
               // filter ediyor → kullanıcıya görünmüyor. Trash UI children sayısını
               // göstermek için bu veriye ihtiyaç duyacak.
 
+	      // v2.8.3 — BUG FIX: Onboarding seed cloud push.
+              // Bootstrap (store.ensureActiveWorkspace) "My Kitchen" workspace'ini
+              // direkt state mutation ile yaratıyor — store.upsertWorkspace API'sini
+              // kullanmadığı için cloud-pertable.queueUpsert tetiklenmiyor. Sonuç:
+              // yeni signup'taki kullanıcının "My Kitchen" workspace'i lokal IDB'de
+              // kalıyor, cloud'a hiç push olmuyor → mobil cihazda görünmüyor.
+              // Recipes/ingredients gibi child kayıtlar normal store API'siyle push
+              // ediliyor ama parent workspace'siz orphan oluyor.
+              //
+              // Fix: Pull tamamlandığında, mergedWorkspaces içinde olup remote'ta
+              // bulunmayan (yani lokal-only kalan) workspace'leri queueUpsert et.
+              // Idempotent — workspace zaten cloud'da varsa onConflict ile güvenli.
+              if (PCD.cloudPerTable && PCD.cloudPerTable.queueUpsert) {
+                const remoteWsIds = (remote.workspaces) ? remote.workspaces : {};
+                Object.keys(mergedWorkspaces).forEach(function (wsId) {
+                  if (!remoteWsIds[wsId]) {
+                    PCD.log && PCD.log('cloud pull: pushing local-only workspace to cloud:', wsId, mergedWorkspaces[wsId].name);
+                    PCD.cloudPerTable.queueUpsert('workspaces', wsId, null, mergedWorkspaces[wsId]);
+                  }
+                });
+              }
+
               PCD.store.replaceAll(merged);
               _done();
               resolve(merged);
