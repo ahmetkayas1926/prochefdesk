@@ -86,6 +86,23 @@
     PCD.idb.delete('state', QUEUE_IDB_KEY).catch(function () {});
   }
 
+  // v2.8.4 — Public queue cleanup. store.clearUserData başında çağrılır.
+  // Sebep: clearUserData state'i sıfırlıyordu ama cloud-pertable queue'su
+  // (canlı + IDB persist) dokunulmuyordu. İki bug doğuruyordu:
+  //   - Bug 2: Boot guest seed → queue dolar → SIGNED_IN cleanup state'i
+  //     temizler ama queue dolu kalır → flushNow demo recipe'leri yeni
+  //     user'ın user_id'sine yazar → orphan satırlar
+  //   - Bug 3: User A logout → queue dolu kalır → User B login boot'ta
+  //     _loadPersistedQueue → User A'nın değişiklikleri User B'nin
+  //     user_id'sine yazılır → cross-user veri sızıntısı
+  // Fix: in-memory queue + queueIndex + flushTimer + IDB persist'i sıfırla.
+  function clearQueue() {
+    if (flushTimer) { clearTimeout(flushTimer); flushTimer = null; }
+    Object.keys(queueIndex).forEach(function (k) { delete queueIndex[k]; });
+    queue.length = 0;
+    _clearPersistedQueue();
+  }
+
   function _loadPersistedQueue() {
     if (!PCD.idb || !PCD.idb.get) return Promise.resolve();
     return PCD.idb.get('state', QUEUE_IDB_KEY).then(function (saved) {
@@ -624,6 +641,8 @@
     // v2.6.93 — restore akışı için
     wipeAllUserData: wipeAllUserData,
     queueFullState: queueFullState,
+    // v2.8.4 — logout / demo cleanup için queue temizleme
+    clearQueue: clearQueue,
     // Re-flush queued items when back online
     onOnline: function () {
       if (queue.length) scheduleFlush();

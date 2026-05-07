@@ -1641,6 +1641,19 @@
     // recipes, menus, etc. in localStorage. Anyone using the same
     // browser would see the previous user's data.
     clearUserData: function () {
+      // v2.8.4 — Bug 2 (demo seed orphan) & Bug 3 (cross-user queue leak) fix.
+      // clearUserData state'i sıfırlıyordu ama cloud-pertable queue'sunu (canlı +
+      // IDB persist) temizlemiyordu. Sonuç:
+      //   - Boot guest seed → queue dolar → SIGNED_IN cleanup state'i temizler
+      //     ama queue dolu kalır → flushNow demo recipe'leri yeni user'ın
+      //     user_id'sine yazar → orphan satırlar
+      //   - User A logout → queue dolu kalır → User B login boot'ta
+      //     _loadPersistedQueue → User A'nın değişiklikleri User B'ye yazılır
+      // Bu çağrı ile state reset öncesi pending push'lar iptal edilir.
+      if (PCD.cloudPerTable && PCD.cloudPerTable.clearQueue) {
+        PCD.cloudPerTable.clearQueue();
+      }
+
       // Save the prefs we want to keep
       const savedPrefs = {};
       const prefKeys = ['prefs.theme', 'prefs.locale', 'prefs.currency', 'prefs.haccpTempUnit', 'prefs.haccpCurrentLogId'];
