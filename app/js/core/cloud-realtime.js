@@ -406,6 +406,14 @@
   // We listen to PCD.store user changes.
   function init() {
     if (!PCD.store || !PCD.store.on) return;
+    // v2.8.5 — CHANNEL_ERROR fix. Önceden iki subscribe path vardı:
+    //   (1) PCD.store.on('user') listener → setTimeout(subscribe, 1000)
+    //   (2) setTimeout 2000 fallback "zaten signed-in iken" durumu için
+    // İki path race ediyordu: yeni signup'ta (1) t≈1700ms'de subscribe, (2) t=2000ms'de
+    // tekrar subscribe → ikinci çağrı ilk channel'ı (henüz SUBSCRIBED olmadan)
+    // unsubscribe ediyor → ilk callback CHANNEL_ERROR alıyor → 10s retry sonrası başarılı.
+    // Fallback gereksiz: hem SIGNED_IN hem mevcut session getSession() path'leri
+    // auth._setUser çağırıyor → store.set('user') → bu listener tetikleniyor. Tek path yeter.
     PCD.store.on('user', function (user) {
       if (user && user.id) {
         // Defer slightly so cloud.js has time to be ready
@@ -414,11 +422,6 @@
         unsubscribe();
       }
     });
-    // Also handle case where user is already signed in at boot
-    setTimeout(function () {
-      const u = PCD.store.get('user');
-      if (u && u.id) subscribe();
-    }, 2000);
   }
 
   PCD.cloudRealtime = {
