@@ -1210,14 +1210,24 @@
     const r = PCD.store.getRecipe(rid);
     if (!r) { PCD.toast.error(PCD.i18n.t('toast_recipe_not_found')); return; }
     const ingMap = currentIngMap();
-    const cost = PCD.recipes.computeFoodCost(r, ingMap, PCD.recipes.buildRecipeMap());
+    const recipeMap = PCD.recipes.buildRecipeMap();
+    const cost = PCD.recipes.computeFoodCost(r, ingMap, recipeMap);
     const costPerServing = r.servings ? cost / r.servings : cost;
     const pct = (r.salePrice && cost > 0 && r.servings) ? (costPerServing / r.salePrice) * 100 : null;
 
     let ingsHtml = '';
+    // v2.8.14 — Sub-recipe rows (ri.recipeId set) were showing as
+    // "(removed)" because this loop only looked up ri.ingredientId.
+    // Now resolves the sub-recipe name from recipeMap when present.
     (r.ingredients || []).forEach(function (ri) {
-      const ing = ingMap[ri.ingredientId];
-      const name = ing ? ing.name : '(removed)';
+      let name;
+      if (ri.recipeId) {
+        const sub = recipeMap[ri.recipeId];
+        name = sub ? sub.name : '(removed sub-recipe)';
+      } else {
+        const ing = ingMap[ri.ingredientId];
+        name = ing ? ing.name : '(removed ingredient)';
+      }
       ingsHtml += `<li style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;">
         <span>${PCD.escapeHtml(name)}</span>
         <span class="text-muted">${PCD.fmtNumber(ri.amount)} ${ri.unit || ''}</span>
@@ -1312,21 +1322,32 @@
     shareBtn.addEventListener('click', function () {
       const ingMap = {};
       PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
+      // v2.8.14 — Build recipeMap so sub-recipe rows resolve to their
+      // names instead of showing "(removed)". Also passed through to
+      // openRecipeShareSheet so the downstream print path uses it.
+      const recipeMap = PCD.recipes.buildRecipeMap();
       const lines = [r.name, ''];
       lines.push(t('recipe_servings') + ': ' + (r.servings || 1));
       if (r.salePrice) lines.push(t('sale_price') + ': ' + PCD.fmtMoney(r.salePrice));
       lines.push('');
       lines.push(t('recipe_ingredients') + ':');
       (r.ingredients || []).forEach(function (ri) {
-        const ing = ingMap[ri.ingredientId];
-        lines.push('• ' + (ing ? ing.name : '(removed)') + ' — ' + PCD.fmtNumber(ri.amount) + ' ' + (ri.unit || ''));
+        let name;
+        if (ri.recipeId) {
+          const sub = recipeMap[ri.recipeId];
+          name = sub ? sub.name : '(removed sub-recipe)';
+        } else {
+          const ing = ingMap[ri.ingredientId];
+          name = ing ? ing.name : '(removed ingredient)';
+        }
+        lines.push('• ' + name + ' — ' + PCD.fmtNumber(ri.amount) + ' ' + (ri.unit || ''));
       });
       if (r.steps) {
         lines.push('');
         lines.push('Method:');
         lines.push(r.steps);
       }
-      openRecipeShareSheet({ title: r.name, text: lines.join('\n'), recipe: r, ingMap: ingMap });
+      openRecipeShareSheet({ title: r.name, text: lines.join('\n'), recipe: r, ingMap: ingMap, recipeMap: recipeMap });
     });
 
     qrBtn.addEventListener('click', function () {
@@ -1481,10 +1502,21 @@
     PCD.$('#rShPrint', body).addEventListener('click', function () {
       const r = opts.recipe;
       const ingMap = opts.ingMap;
+      // v2.8.14 — Defensive build if caller didn't supply recipeMap, so
+      // sub-recipe rows always resolve to their names instead of showing
+      // "(removed)" on print/email.
+      const recipeMap = opts.recipeMap || PCD.recipes.buildRecipeMap();
       const tt = PCD.i18n.t;
       const rows = (r.ingredients || []).map(function (ri) {
-        const ing = ingMap[ri.ingredientId];
-        return '<tr><td>' + PCD.escapeHtml(ing ? ing.name : '(removed)') + '</td><td style="text-align:right">' + PCD.fmtNumber(ri.amount) + ' ' + PCD.escapeHtml(ri.unit || '') + '</td></tr>';
+        let name;
+        if (ri.recipeId) {
+          const sub = recipeMap[ri.recipeId];
+          name = sub ? sub.name : '(removed sub-recipe)';
+        } else {
+          const ing = ingMap[ri.ingredientId];
+          name = ing ? ing.name : '(removed ingredient)';
+        }
+        return '<tr><td>' + PCD.escapeHtml(name) + '</td><td style="text-align:right">' + PCD.fmtNumber(ri.amount) + ' ' + PCD.escapeHtml(ri.unit || '') + '</td></tr>';
       }).join('');
       const html =
         '<div style="max-width:680px;margin:0 auto">' +
