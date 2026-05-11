@@ -405,14 +405,32 @@
       previewEl.innerHTML =
         '<div class="kc-preview-frame" style="width:' + pageW + 'px;height:' + pageH + 'px;padding:8mm;box-sizing:border-box;">' + html + '</div>';
 
-      requestAnimationFrame(function () {
+      // v2.8.11 — Container width is 0 on initial mount after F5 reload
+      // before the surrounding grid layout settles; the previous code
+      // early-returned on !containerW, leaving the A4 frame unscaled at
+      // ~1123px and the preview visibly oversized until the user clicked
+      // any control (which triggered a re-run of updatePreview when width
+      // was stable). ResizeObserver fires once the element actually has a
+      // size and again on any container resize, so the scale always
+      // applies. The rAF path remains for the common case where width is
+      // already known. Previous observer is disconnected to avoid leaks
+      // across re-renders.
+      function applyScale() {
         const containerW = previewEl.clientWidth;
         if (!containerW) return;
         const scale = containerW / pageW;
         const frame = previewEl.querySelector('.kc-preview-frame');
         if (frame) frame.style.transform = 'scale(' + scale + ')';
-        wireInteractions(frame);
+      }
+      requestAnimationFrame(function () {
+        applyScale();
+        wireInteractions(previewEl.querySelector('.kc-preview-frame'));
       });
+      if (typeof ResizeObserver !== 'undefined') {
+        if (updatePreview._ro) updatePreview._ro.disconnect();
+        updatePreview._ro = new ResizeObserver(applyScale);
+        updatePreview._ro.observe(previewEl);
+      }
     }
 
     // ============ DRAG & RESIZE ============
