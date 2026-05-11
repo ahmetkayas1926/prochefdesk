@@ -1680,7 +1680,7 @@
     }
 
     const data = existing ? PCD.clone(existing) : {
-      name: '', category: 'cat_main', servings: 4,
+      name: '', category: 'cat_main', servings: 1,
       prepTime: null, cookTime: null,
       photo: null, ingredients: [], steps: '', plating: '',
       salePrice: null, allergens: []
