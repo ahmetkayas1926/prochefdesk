@@ -1556,7 +1556,19 @@
     footer.appendChild(saveBtn);
 
     const m = PCD.modal.open({ title: 'New ingredient', body: body, footer: footer, size: 'sm', closable: true });
-    setTimeout(function () { const inp = PCD.$('#niPrice', body); if (inp) inp.focus(); }, 100);
+    // v2.8.6 — Focus Name field on open (desktop only). Override modal's
+    // default auto-focus which lands on the header close (X) button. 300ms
+    // wins the race against modal.js's own 250ms auto-focus. Enter-walk
+    // through fields (Name → Buy Unit → Price → Qty → Qty Unit → Save & Add)
+    // is provided by modal.js keydown handler — no extra wiring needed here.
+    setTimeout(function () {
+      if (PCD.isTouch && PCD.isTouch()) return;
+      const inp = PCD.$('#niName', body);
+      if (inp) {
+        inp.focus();
+        try { inp.select(); } catch (e) {}
+      }
+    }, 300);
 
     cancelBtn.addEventListener('click', function () { m.close(); });
     saveBtn.addEventListener('click', function () {
