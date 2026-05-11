@@ -135,13 +135,13 @@
             </div>
 
             <div class="flex gap-2 mt-3">
-              <button type="button" class="btn btn-outline" id="saveCanvasBtn" style="flex:1;" ${layout.length === 0 ? 'disabled' : ''}>
-                ${PCD.icon('check', 16)} <span>${t('kc_save_canvas')}</span>
+              <button type="button" class="btn btn-outline" id="saveCanvasBtn" style="flex:0 0 auto;padding-inline:12px;" ${layout.length === 0 ? 'disabled' : ''} title="${PCD.escapeHtml(t('kc_save_canvas'))}" aria-label="${PCD.escapeHtml(t('kc_save_canvas'))}">
+                ${PCD.icon('check', 18)}
               </button>
-              <button type="button" class="btn btn-outline" id="shareCanvasBtn" style="flex:1;" ${layout.length === 0 ? 'disabled' : ''} title="${PCD.escapeHtml((PCD.i18n && PCD.i18n.t) ? PCD.i18n.t('canvas_share_btn') : 'Share QR')}">
-                ${PCD.icon('share', 16)} <span>${(PCD.i18n && PCD.i18n.t) ? PCD.i18n.t('canvas_share_btn') : 'Share QR'}</span>
+              <button type="button" class="btn btn-outline" id="shareCanvasBtn" style="flex:0 0 auto;padding-inline:12px;" ${layout.length === 0 ? 'disabled' : ''} title="${PCD.escapeHtml((PCD.i18n && PCD.i18n.t) ? PCD.i18n.t('canvas_share_btn') : 'Share QR')}" aria-label="${PCD.escapeHtml((PCD.i18n && PCD.i18n.t) ? PCD.i18n.t('canvas_share_btn') : 'Share QR')}">
+                ${PCD.icon('share', 18)}
               </button>
-              <button type="button" class="btn btn-primary" id="printSheetBtn" style="flex:2;" ${layout.length === 0 ? 'disabled' : ''}>
+              <button type="button" class="btn btn-primary" id="printSheetBtn" style="flex:1;min-width:0;" ${layout.length === 0 ? 'disabled' : ''}>
                 ${PCD.icon('print', 16)} <span>${t('kc_print_x_recipes', { n: layout.length })}</span>
               </button>
             </div>
@@ -572,8 +572,8 @@
         if (steps.length > 0) {
           methodHtml = '<div class="kc-method">' +
             steps.map(function (s, i) {
-              return '<span class="kc-step"><b>' + (i + 1) + '.</b> ' + PCD.escapeHtml(s) + '</span>';
-            }).join(' ') +
+              return '<div class="kc-step"><span class="kc-step-num">' + (i + 1) + '.</span><span class="kc-step-text">' + PCD.escapeHtml(s) + '</span></div>';
+            }).join('') +
           '</div>';
         }
       }
@@ -689,9 +689,30 @@
           'line-height: 1.35;' +
           'color: #444;' +
         '}' +
-        '.kc-step b {' +
-          'color: #16a34a; font-weight: 800;' +
-          'margin-inline-end: 2px;' +
+        // v2.8.10 — Each step is its own block so numbered steps stack
+        // vertically (1. … 2. … 3. …) instead of flowing inline. The
+        // text span uses white-space: pre-wrap so internal newlines the
+        // chef types (e.g. "6 SPEED - 4 min" / "8 SPEED - 6 min") are
+        // preserved on the printed card. page-break-inside: avoid keeps
+        // a single step from being split across two A4 pages.
+        '.kc-step {' +
+          'display: flex;' +
+          'align-items: baseline;' +
+          'margin-top: 1.5mm;' +
+          'page-break-inside: avoid;' +
+        '}' +
+        '.kc-step:first-child { margin-top: 0; }' +
+        '.kc-step-num {' +
+          'color: #16a34a;' +
+          'font-weight: 800;' +
+          'margin-inline-end: 4px;' +
+          'flex-shrink: 0;' +
+          'min-width: 10px;' +
+          'font-variant-numeric: tabular-nums;' +
+        '}' +
+        '.kc-step-text {' +
+          'flex: 1;' +
+          'white-space: pre-wrap;' +
         '}' +
 
         '@media print {' +
