@@ -624,6 +624,7 @@
           'grid-template-columns: repeat(' + opts.columns + ', minmax(0, 1fr));' +
           'grid-auto-flow: dense;' +    // fill gaps automatically
           'grid-auto-rows: min-content;' + // each row sized to its content
+          'align-items: start;' +       // v2.8.12 — short cards size to their own content instead of stretching to match the tallest card in the row; empty area below a short card becomes canvas background (no green border around wasted space)
           'gap: 2mm;' +
         '}' +
 
