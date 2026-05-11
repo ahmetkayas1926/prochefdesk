@@ -1922,6 +1922,13 @@
         const unitOptions = isSubRecipe
           ? ['portion','g','kg','ml','l','batch','tray','pcs']
           : ['g','kg','ml','l','tsp','tbsp','cup','oz','lb','pcs','unit'];
+        // v2.8.8 — Reorder buttons. Up disabled on first row, down on last.
+        // Disabled styling: 0.3 opacity + not-allowed cursor (icon-btn CSS
+        // doesn't define :disabled). The `disabled` attribute alone prevents
+        // click event firing, so handler defensive checks are belt-and-braces.
+        const _total = data.ingredients.length;
+        const _upDis = (idx === 0) ? 'disabled style="opacity:0.3;cursor:not-allowed;"' : '';
+        const _dnDis = (idx === _total - 1) ? 'disabled style="opacity:0.3;cursor:not-allowed;"' : '';
         row.innerHTML = `
           <div class="list-item-body">
             <div class="list-item-title">${PCD.escapeHtml(name)}${subBadge}</div>
@@ -1934,6 +1941,8 @@
               <span data-line-cost data-idx="${idx}" style="font-weight:600;">${PCD.fmtMoney(lineCost)}</span>
             </div>
           </div>
+          <button type="button" class="icon-btn" data-moveup="${idx}" ${_upDis} aria-label="Move up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 15l-6-6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <button type="button" class="icon-btn" data-movedown="${idx}" ${_dnDis} aria-label="Move down"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
           <button type="button" class="icon-btn" data-remove="${idx}" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/></svg></button>
         `;
         ingListEl.appendChild(row);
@@ -2198,6 +2207,29 @@
         // List structure changed, but inputs outside the list keep state
         renderIngList();
         renderAllergenChips();  // auto-detected allergens may shift
+        updateCostStripDOM();
+      });
+
+      // v2.8.8 — Reorder ingredients up/down. Defensive bounds check belt-
+      // and-braces with the disabled attribute on edge rows. Allergen chips
+      // don't need re-render (set of ingredients unchanged), but cost strip
+      // does (some downstream layouts care about order).
+      PCD.on(body, 'click', '[data-moveup]', function () {
+        const idx = parseInt(this.getAttribute('data-moveup'), 10);
+        if (isNaN(idx) || idx <= 0 || idx >= data.ingredients.length) return;
+        const tmp = data.ingredients[idx];
+        data.ingredients[idx] = data.ingredients[idx - 1];
+        data.ingredients[idx - 1] = tmp;
+        renderIngList();
+        updateCostStripDOM();
+      });
+      PCD.on(body, 'click', '[data-movedown]', function () {
+        const idx = parseInt(this.getAttribute('data-movedown'), 10);
+        if (isNaN(idx) || idx < 0 || idx >= data.ingredients.length - 1) return;
+        const tmp = data.ingredients[idx];
+        data.ingredients[idx] = data.ingredients[idx + 1];
+        data.ingredients[idx + 1] = tmp;
+        renderIngList();
         updateCostStripDOM();
       });
 
