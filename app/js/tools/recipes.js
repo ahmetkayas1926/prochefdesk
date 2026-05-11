@@ -1525,7 +1525,7 @@
       '<div class="field-row">' +
         '<div class="field"><label class="field-label">Purchase unit</label>' +
         '<select class="select" id="niBuyUnit">' +
-          UNITS.map(function (u) { return '<option value="' + u + '"' + (u === 'kg' ? ' selected' : '') + '>' + u + '</option>'; }).join('') +
+          UNITS.map(function (u) { return '<option value="' + u + '"' + (u === 'kg' ? ' selected' : '') + '>' + PCD.unitLabel(u) + '</option>'; }).join('') +
         '</select></div>' +
         '<div class="field"><label class="field-label">Price / unit</label>' +
           '<div class="input-group">' +
@@ -1543,7 +1543,7 @@
           '</div></div>' +
           '<div class="field">' +
             '<select class="select" id="niQtyUnit">' +
-              UNITS.map(function (u) { return '<option value="' + u + '"' + (u === 'g' ? ' selected' : '') + '>' + u + '</option>'; }).join('') +
+              UNITS.map(function (u) { return '<option value="' + u + '"' + (u === 'g' ? ' selected' : '') + '>' + PCD.unitLabel(u) + '</option>'; }).join('') +
             '</select>' +
           '</div>' +
         '</div>' +
@@ -1935,7 +1935,7 @@
             <div class="list-item-meta">
               <input type="number" class="input" data-amount data-idx="${idx}" value="${ri.amount || 0}" step="0.01" min="0" style="width:90px;padding:6px 8px;min-height:32px;font-size:14px;">
               <select class="select" data-unit data-idx="${idx}" style="width:auto;padding:6px 8px;min-height:32px;font-size:14px;padding-right:28px;">
-                ${unitOptions.map(function (u) { return '<option value="' + u + '"' + ((ri.unit || defaultUnit) === u ? ' selected' : '') + '>' + u + '</option>'; }).join('')}
+                ${unitOptions.map(function (u) { return '<option value="' + u + '"' + ((ri.unit || defaultUnit) === u ? ' selected' : '') + '>' + PCD.unitLabel(u) + '</option>'; }).join('')}
               </select>
               <span class="text-muted">·</span>
               <span data-line-cost data-idx="${idx}" style="font-weight:600;">${PCD.fmtMoney(lineCost)}</span>

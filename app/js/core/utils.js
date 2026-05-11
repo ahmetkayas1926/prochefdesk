@@ -210,6 +210,17 @@
     return null;
   };
 
+  // v2.8.9 — Annotate volume units with their ml value in dropdown labels.
+  // Real-world tbsp/tsp/cup standards vary by country (US 14.79/4.93/240,
+  // metric 15/5/250, AU 20/5/250); we use international metric 15/5 (v2.8.7)
+  // and US legal cup 240. Showing the ml value next to the unit removes
+  // ambiguity for the user without changing the option value (so conversion
+  // logic is unaffected). Unannotated units fall through to the unit name.
+  PCD.unitLabel = function (u) {
+    const labels = { tsp: 'tsp (5ml)', tbsp: 'tbsp (15ml)', cup: 'cup (240ml)' };
+    return labels[u] || u;
+  };
+
   // ---------- HAPTIC ----------
   PCD.haptic = function (kind) {
     if (!navigator.vibrate) return;

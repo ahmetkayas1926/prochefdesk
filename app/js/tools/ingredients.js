@@ -326,7 +326,7 @@
         <div class="field">
           <label class="field-label">${t('ingredient_unit')}</label>
           <select class="select" id="ingUnit">
-            ${UNITS.map(function (u) { return '<option value="' + u + '"' + (data.unit === u ? ' selected' : '') + '>' + u + '</option>'; }).join('')}
+            ${UNITS.map(function (u) { return '<option value="' + u + '"' + (data.unit === u ? ' selected' : '') + '>' + PCD.unitLabel(u) + '</option>'; }).join('')}
           </select>
         </div>
       </div>

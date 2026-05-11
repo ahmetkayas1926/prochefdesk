@@ -272,7 +272,7 @@
               <div class="input-group">
                 <input type="number" class="input" id="wAmt" value="${data.amount || ''}" step="0.01" min="0">
                 <select class="select" id="wUnit" style="border:0;background:var(--surface-2);">
-                  ${['g','kg','ml','l','tsp','tbsp','cup','pcs','unit'].map(function (u) { return '<option value="' + u + '"' + ((data.unit || ing.unit) === u ? ' selected' : '') + '>' + u + '</option>'; }).join('')}
+                  ${['g','kg','ml','l','tsp','tbsp','cup','pcs','unit'].map(function (u) { return '<option value="' + u + '"' + ((data.unit || ing.unit) === u ? ' selected' : '') + '>' + PCD.unitLabel(u) + '</option>'; }).join('')}
                 </select>
               </div>
             </div>
