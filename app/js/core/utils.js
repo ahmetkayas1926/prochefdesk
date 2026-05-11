@@ -182,7 +182,7 @@
   // ---------- UNITS ----------
   PCD.UNITS = {
     mass: { g: 1, kg: 1000, oz: 28.3495, lb: 453.592 },
-    volume: { ml: 1, l: 1000, tsp: 4.92892, tbsp: 14.7868, cup: 240, 'fl_oz': 29.5735 },
+    volume: { ml: 1, l: 1000, tsp: 5, tbsp: 15, cup: 240, 'fl_oz': 29.5735 },
     count: { unit: 1, pcs: 1, piece: 1, each: 1 }
   };
 
