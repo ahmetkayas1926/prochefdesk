@@ -169,12 +169,6 @@
           }
           .kc-block.dragging { opacity: 0.4; }
           .kc-block.drag-over { outline: 3px dashed #16a34a; outline-offset: -3px; }
-          .kc-resize-handle {
-            position: absolute; top: 0; right: 0; bottom: 0; width: 8px;
-            cursor: ew-resize; background: transparent;
-            user-select: none;
-          }
-          .kc-resize-handle:hover { background: rgba(22,163,74,0.18); }
           .kc-block { position: relative; }
           .kc-block-header { cursor: grab; }
           .kc-block-header:active { cursor: grabbing; }
@@ -487,41 +481,6 @@
             renderBody();
           });
         }
-
-        // === RESIZE (right edge) ===
-        const handle = block.querySelector('.kc-resize-handle');
-        if (handle) {
-          handle.addEventListener('pointerdown', function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            const startX = e.clientX;
-            // Compute one-column width (in unscaled px) from grid-template-columns
-            const sheet = frame.querySelector('.kc-sheet');
-            if (!sheet) return;
-            const sheetRect = sheet.getBoundingClientRect();
-            const scaleFactor = sheetRect.width / sheet.offsetWidth || 1;
-            const oneColUnscaled = sheet.offsetWidth / columns;  // unscaled
-            const item = layout.find(function (l) { return l.recipeId === rid; });
-            if (!item) return;
-            const startSpan = item.span || 1;
-
-            function onMove(ev) {
-              const dx = (ev.clientX - startX) / scaleFactor;  // back to unscaled
-              const deltaCols = Math.round(dx / oneColUnscaled);
-              const newSpan = Math.max(1, Math.min(columns, startSpan + deltaCols));
-              if (newSpan !== item.span) {
-                item.span = newSpan;
-                updatePreview();
-              }
-            }
-            function onUp() {
-              window.removeEventListener('pointermove', onMove);
-              window.removeEventListener('pointerup', onUp);
-            }
-            window.addEventListener('pointermove', onMove);
-            window.addEventListener('pointerup', onUp);
-          });
-        }
       });
     }
 
@@ -568,6 +527,13 @@
     let blocksHtml = '';
     (opts.layoutRecipes || []).forEach(function (item) {
       const r = item.recipe;
+      // v2.8.15 — Multi-column (masonry-style) layout replaces CSS grid.
+      // Previously rows were sized to the tallest item which left short
+      // cards stretched into empty space. With column layout each card
+      // is its natural height and the next card flows below in the same
+      // column, packing the A4 sheet efficiently. Trade-off: `span`
+      // (multi-column-wide cards) and the resize handle are removed —
+      // operator confirmed neither was in use.
       const span = Math.max(1, Math.min(opts.columns, item.span || 1));
 
       let ingsHtml = '';
@@ -597,12 +563,11 @@
       }
 
       const interactiveExtras = opts.interactive
-        ? '<button type="button" class="remove-btn" title="Remove from canvas">×</button>' +
-          '<div class="kc-resize-handle" title="Drag to resize"></div>'
+        ? '<button type="button" class="remove-btn" title="Remove from canvas">×</button>'
         : '';
 
       blocksHtml +=
-        '<div class="kc-block" data-rid="' + r.id + '" style="grid-column: span ' + span + ';">' +
+        '<div class="kc-block" data-rid="' + r.id + '">' +
           '<div class="kc-name kc-block-header" title="Drag to reorder">' + PCD.escapeHtml(r.name || '') +
             (r.servings ? '<span class="kc-srv"> · ' + r.servings + 'p</span>' : '') +
           '</div>' +
@@ -620,16 +585,17 @@
         '.kc-sheet {' +
           'box-sizing: border-box;' +
           'padding: 4mm;' +
-          'display: grid;' +
-          'grid-template-columns: repeat(' + opts.columns + ', minmax(0, 1fr));' +
-          'grid-auto-flow: dense;' +    // fill gaps automatically
-          'grid-auto-rows: min-content;' + // each row sized to its content
-          'align-items: start;' +       // v2.8.12 — short cards size to their own content instead of stretching to match the tallest card in the row; empty area below a short card becomes canvas background (no green border around wasted space)
-          'gap: 2mm;' +
+          // v2.8.15 — CSS multi-column instead of grid: short cards no
+          // longer leave wasted row space; recipes flow down each column
+          // and wrap to the next. column-fill: balance distributes
+          // content evenly across the chosen column count.
+          'column-count: ' + opts.columns + ';' +
+          'column-gap: 2mm;' +
+          'column-fill: balance;' +
         '}' +
 
         '.kc-header {' +
-          'grid-column: 1 / -1;' +
+          'column-span: all;' +
           'display: flex; justify-content: space-between; align-items: baseline;' +
           'border-bottom: 2px solid #16a34a;' +
           'padding-bottom: 3px;' +
@@ -647,12 +613,14 @@
         '.kc-block {' +
           'break-inside: avoid;' +
           'page-break-inside: avoid;' +
+          '-webkit-column-break-inside: avoid;' + // v2.8.15 — keep card together within a column on legacy WebKit
           'border: 1.5px solid #16a34a;' +
           'border-radius: 3px;' +
           'background: #fff;' +
           'min-width: 0; min-height: 0;' +
           'display: flex; flex-direction: column;' +
           'overflow: hidden;' +
+          'margin-bottom: 2mm;' +       // v2.8.15 — vertical spacing between stacked cards in a column
         '}' +
         '.kc-name {' +
           'font-size: ' + fs.name + 'pt;' +
@@ -736,7 +704,7 @@
 
         '@media print {' +
           '* { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }' +
-          '.kc-resize-handle, .remove-btn { display: none !important; }' +
+          '.remove-btn { display: none !important; }' +
         '}' +
       '</style>' +
       '<div class="kc-sheet">' +
