@@ -78,9 +78,68 @@
     return map;
   }
 
+  // v2.8.16 — Normalize an ingredient OR sub-recipe row to a single shape
+  // for display (cost reports, xlsx exports, etc). Encapsulates the math
+  // so all callers stay consistent. Returns null when the referenced
+  // ingredient/sub-recipe was deleted, letting callers skip or render
+  // a placeholder. For sub-recipes the effective "unit price" is the
+  // sub-recipe's total cost divided by its yield, in the yield unit;
+  // for ingredients it's pricePerUnit adjusted by yieldPercent.
+  function resolveRow(ri, ingMap, recipeMap) {
+    if (!ri) return null;
+    const amt = Number(ri.amount) || 0;
+
+    if (ri.recipeId) {
+      const sub = recipeMap ? recipeMap[ri.recipeId] : null;
+      if (!sub) return { found: false, isSub: true, name: '(removed sub-recipe)' };
+      const subTotalCost = computeFoodCost(sub, ingMap, recipeMap);
+      const subYield = Number(sub.yieldAmount) || Number(sub.servings) || 1;
+      const stockUnit = sub.yieldUnit || 'portion';
+      const unitPrice = subTotalCost / (subYield || 1);
+      let qtyInStock = amt;
+      if (ri.unit && stockUnit && ri.unit !== stockUnit) {
+        try { qtyInStock = PCD.convertUnit(amt, ri.unit, stockUnit); } catch (e) {}
+      }
+      return {
+        found: true,
+        isSub: true,
+        name: sub.name || '',
+        unitPrice: unitPrice,
+        stockUnit: stockUnit,
+        amount: amt,
+        qtyUnit: ri.unit || stockUnit,
+        qtyInStock: qtyInStock,
+        lineCost: unitPrice * qtyInStock,
+      };
+    }
+
+    const ing = ingMap ? ingMap[ri.ingredientId] : null;
+    if (!ing) return { found: false, isSub: false, name: '(removed ingredient)' };
+    let unitPrice = Number(ing.pricePerUnit) || 0;
+    const yld = Number(ing.yieldPercent);
+    if (yld && yld > 0 && yld < 100) unitPrice = unitPrice / (yld / 100);
+    const stockUnit = ing.unit || '';
+    let qtyInStock = amt;
+    if (ri.unit && stockUnit && ri.unit !== stockUnit) {
+      try { qtyInStock = PCD.convertUnit(amt, ri.unit, stockUnit); } catch (e) {}
+    }
+    return {
+      found: true,
+      isSub: false,
+      name: ing.name || '',
+      unitPrice: unitPrice,
+      stockUnit: stockUnit,
+      amount: amt,
+      qtyUnit: ri.unit || stockUnit,
+      qtyInStock: qtyInStock,
+      lineCost: unitPrice * qtyInStock,
+    };
+  }
+
   PCD.recipes = PCD.recipes || {};
   PCD.recipes.computeFoodCost = computeFoodCost;
   PCD.recipes.buildRecipeMap = buildRecipeMap;
+  PCD.recipes.resolveRow = resolveRow;
 
   // ============ TODAY-FOCUSED DASHBOARD ============
   function render(view) {

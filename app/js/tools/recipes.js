@@ -344,6 +344,10 @@
     const t = PCD.i18n.t;
     const TARGET_FOOD_COST_PCT = 30;  // industry standard
     const ingMap = currentIngMap();
+    // v2.8.16 — recipeMap for resolving sub-recipe rows in the breakdown
+    // table. Without this, sub-recipe lines were silently dropped, so
+    // the per-line costs didn't sum to the (correct) totalCost.
+    const recipeMap = PCD.recipes.buildRecipeMap();
 
     // Collect recipes + working prices (user-editable copy)
     const items = [];
@@ -394,20 +398,17 @@
         // Ingredient table
         let ingRowsHtml = '';
         (r.ingredients || []).forEach(function (ri) {
-          const ing = ingMap[ri.ingredientId];
-          if (!ing) return;
-          const unitPrice = Number(ing.pricePerUnit) || 0;
-          const amt = Number(ri.amount) || 0;
-          let lineCost = amt * unitPrice;
-          if (ri.unit && ing.unit && ri.unit !== ing.unit) {
-            try { lineCost = PCD.convertUnit(amt, ri.unit, ing.unit) * unitPrice; } catch (e) {}
-          }
+          const row = PCD.recipes.resolveRow(ri, ingMap, recipeMap);
+          if (!row || !row.found) return;
+          const subBadge = row.isSub
+            ? ' <span style="display:inline-block;background:var(--brand-50);color:var(--brand-700);font-size:9px;font-weight:700;padding:2px 6px;border-radius:999px;letter-spacing:0.06em;text-transform:uppercase;">SUB</span>'
+            : '';
           ingRowsHtml +=
             '<tr>' +
-              '<td style="padding:4px 8px;border-bottom:1px solid var(--border);">' + PCD.escapeHtml(ing.name) + '</td>' +
-              '<td style="padding:4px 8px;border-bottom:1px solid var(--border);text-align:end;font-family:var(--font-mono);font-size:12px;color:var(--text-3);">' + PCD.fmtMoney(unitPrice) + '/' + PCD.escapeHtml(ing.unit) + '</td>' +
-              '<td style="padding:4px 8px;border-bottom:1px solid var(--border);text-align:end;font-family:var(--font-mono);font-size:13px;">' + PCD.fmtNumber(amt) + ' ' + PCD.escapeHtml(ri.unit || ing.unit) + '</td>' +
-              '<td style="padding:4px 8px;border-bottom:1px solid var(--border);text-align:end;font-family:var(--font-mono);font-weight:700;color:var(--brand-700);">' + PCD.fmtMoney(lineCost) + '</td>' +
+              '<td style="padding:4px 8px;border-bottom:1px solid var(--border);">' + PCD.escapeHtml(row.name) + subBadge + '</td>' +
+              '<td style="padding:4px 8px;border-bottom:1px solid var(--border);text-align:end;font-family:var(--font-mono);font-size:12px;color:var(--text-3);">' + PCD.fmtMoney(row.unitPrice) + '/' + PCD.escapeHtml(row.stockUnit) + '</td>' +
+              '<td style="padding:4px 8px;border-bottom:1px solid var(--border);text-align:end;font-family:var(--font-mono);font-size:13px;">' + PCD.fmtNumber(row.amount) + ' ' + PCD.escapeHtml(row.qtyUnit) + '</td>' +
+              '<td style="padding:4px 8px;border-bottom:1px solid var(--border);text-align:end;font-family:var(--font-mono);font-weight:700;color:var(--brand-700);">' + PCD.fmtMoney(row.lineCost) + '</td>' +
             '</tr>';
         });
 
@@ -514,6 +515,8 @@
   function exportCostReportPDF(items, targetPct) {
     const t = PCD.i18n.t;
     const ingMap = currentIngMap();
+    // v2.8.16 — recipeMap for sub-recipe rows (same fix as openCostReport)
+    const recipeMap = PCD.recipes.buildRecipeMap();
     const dateStr = new Date().toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || 'en');
     const ws = PCD.store.getActiveWorkspace ? PCD.store.getActiveWorkspace() : null;
     const wsName = ws ? ws.name : '';
@@ -529,20 +532,16 @@
 
       let ingRows = '';
       (r.ingredients || []).forEach(function (ri) {
-        const ing = ingMap[ri.ingredientId];
-        if (!ing) return;
-        const unitPrice = Number(ing.pricePerUnit) || 0;
-        const amt = Number(ri.amount) || 0;
-        let lineCost = amt * unitPrice;
-        if (ri.unit && ing.unit && ri.unit !== ing.unit) {
-          try { lineCost = PCD.convertUnit(amt, ri.unit, ing.unit) * unitPrice; } catch (e) {}
-        }
+        const row = PCD.recipes.resolveRow(ri, ingMap, recipeMap);
+        if (!row || !row.found) return;
+        // For PDF: small inline (SUB) marker keeps the badge in monochrome print
+        const subMark = row.isSub ? ' <span style="font-size:8pt;color:#16a34a;font-weight:700;">(SUB)</span>' : '';
         ingRows +=
           '<tr>' +
-            '<td>' + PCD.escapeHtml(ing.name) + '</td>' +
-            '<td class="num">' + PCD.fmtMoney(unitPrice) + '/' + PCD.escapeHtml(ing.unit) + '</td>' +
-            '<td class="num">' + PCD.fmtNumber(amt) + ' ' + PCD.escapeHtml(ri.unit || ing.unit) + '</td>' +
-            '<td class="num bold">' + PCD.fmtMoney(lineCost) + '</td>' +
+            '<td>' + PCD.escapeHtml(row.name) + subMark + '</td>' +
+            '<td class="num">' + PCD.fmtMoney(row.unitPrice) + '/' + PCD.escapeHtml(row.stockUnit) + '</td>' +
+            '<td class="num">' + PCD.fmtNumber(row.amount) + ' ' + PCD.escapeHtml(row.qtyUnit) + '</td>' +
+            '<td class="num bold">' + PCD.fmtMoney(row.lineCost) + '</td>' +
           '</tr>';
       });
 
@@ -643,6 +642,8 @@
       return;
     }
     const ingMap = currentIngMap();
+    // v2.8.16 — recipeMap for sub-recipe rows (same fix pattern)
+    const recipeMap = PCD.recipes.buildRecipeMap();
     const wb = XLSX.utils.book_new();
 
     // ============ STYLE PRESETS ============
@@ -989,21 +990,22 @@
       let lastIngRow = row - 1;
 
       (r.ingredients || []).forEach(function (ri, ingIdx) {
-        const ing = ingMap[ri.ingredientId];
-        if (!ing) return;
-        let qtyForFormula = Number(ri.amount) || 0;
-        if (ri.unit && ing.unit && ri.unit !== ing.unit) {
-          try { qtyForFormula = PCD.convertUnit(qtyForFormula, ri.unit, ing.unit); } catch (e) {}
-        }
-        const unitPrice = Number(ing.pricePerUnit) || 0;
-        const lineCost = unitPrice * qtyForFormula;
+        const rRow = PCD.recipes.resolveRow(ri, ingMap, recipeMap);
+        if (!rRow || !rRow.found) return;
+        // v2.8.16 — Sub-recipe rows were silently dropped; now included.
+        // D holds qty in stock unit so the B*D formula stays valid (the
+        // existing xlsx behavior shows converted quantities, e.g. "1 kg"
+        // entered → "1000 g" displayed when stockUnit is g). E shows the
+        // stock unit to match D. Sub-recipes get a "(SUB)" suffix in the
+        // name cell since xlsx cells can't carry HTML badges.
+        const displayName = rRow.isSub ? rRow.name + ' (SUB)' : rRow.name;
         const isAlt = ingIdx % 2 === 1;
-        setCell(ws, 'A' + row, ing.name, isAlt ? cellAltStyle : cellStyle);
-        setCell(ws, 'B' + row, unitPrice, isAlt ? cellNumAltStyle : cellNumStyle);
-        setCell(ws, 'C' + row, ing.unit || '', isAlt ? cellAltStyle : cellStyle);
-        setCell(ws, 'D' + row, qtyForFormula, isAlt ? cellQtyAltStyle : cellQtyStyle);
-        setCell(ws, 'E' + row, ing.unit || '', isAlt ? cellAltStyle : cellStyle);
-        setCell(ws, 'F' + row, lineCost, isAlt ? cellNumAltStyle : cellNumStyle, 'B' + row + '*D' + row);
+        setCell(ws, 'A' + row, displayName, isAlt ? cellAltStyle : cellStyle);
+        setCell(ws, 'B' + row, rRow.unitPrice, isAlt ? cellNumAltStyle : cellNumStyle);
+        setCell(ws, 'C' + row, rRow.stockUnit, isAlt ? cellAltStyle : cellStyle);
+        setCell(ws, 'D' + row, rRow.qtyInStock, isAlt ? cellQtyAltStyle : cellQtyStyle);
+        setCell(ws, 'E' + row, rRow.stockUnit, isAlt ? cellAltStyle : cellStyle);
+        setCell(ws, 'F' + row, rRow.lineCost, isAlt ? cellNumAltStyle : cellNumStyle, 'B' + row + '*D' + row);
         lastIngRow = row;
         row++;
       });
@@ -1124,15 +1126,21 @@
         [t('cr_ingredient'), t('cr_unit_price'), t('cr_unit'), t('cr_qty'), t('cr_qty_unit'), t('cr_line_cost')],
       ];
       (r.ingredients || []).forEach(function (ri) {
-        const ing = ingMap[ri.ingredientId];
-        if (!ing) return;
+        const rRow = PCD.recipes.resolveRow(ri, ingMap, recipeMap);
+        if (!rRow || !rRow.found) return;
+        // v2.8.16 — Sub-recipe rows are now included. Also incidentally
+        // fixes a pre-existing unit-conversion bug: the old code did
+        // `pricePerUnit × ri.amount` without converting when ri.unit
+        // differed from ing.unit, so a "1 kg" line against a g-priced
+        // ingredient showed cost as ~$0.0004 instead of correct value.
+        const displayName = rRow.isSub ? rRow.name + ' (SUB)' : rRow.name;
         detailRows.push([
-          ing.name,
-          '$' + (Number(ing.pricePerUnit) || 0).toFixed(2),
-          ing.unit || '',
-          String(Number(ri.amount) || 0),
-          ing.unit || '',
-          '$' + ((Number(ing.pricePerUnit) || 0) * (Number(ri.amount) || 0)).toFixed(2),
+          displayName,
+          '$' + rRow.unitPrice.toFixed(2),
+          rRow.stockUnit,
+          String(rRow.qtyInStock),
+          rRow.stockUnit,
+          '$' + rRow.lineCost.toFixed(2),
         ]);
       });
       detailRows.push(['', '', '', '', t('cr_total_food_cost_xlsx'), '$' + it.totalCost.toFixed(2)]);
