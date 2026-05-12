@@ -144,6 +144,19 @@
               <button type="button" class="btn btn-primary" id="printSheetBtn" style="flex:1;min-width:0;" ${layout.length === 0 ? 'disabled' : ''}>
                 ${PCD.icon('print', 16)} <span>${t('kc_print_x_recipes', { n: layout.length })}</span>
               </button>
+              <!-- v2.8.20 — Clear canvas (destructive, icon-only, danger style). -->
+              <button type="button" class="btn btn-outline" id="clearCanvasBtn" style="flex:0 0 auto;padding-inline:12px;color:var(--danger);border-color:var(--danger);" ${layout.length === 0 ? 'disabled' : ''} title="${PCD.escapeHtml(t('kc_clear_canvas_btn'))}" aria-label="${PCD.escapeHtml(t('kc_clear_canvas_btn'))}">
+                ${PCD.icon('trash', 18)}
+              </button>
+            </div>
+
+            <!-- v2.8.20 — Save reminder. Gentle accent banner shown when
+                 there are recipes on the canvas; nudges the user to name +
+                 save before they leave / refresh the page. Single line,
+                 brand color, info icon. -->
+            <div id="kcSaveReminder" style="margin-top:10px;padding:8px 10px;background:var(--brand-50);border:1px solid var(--brand-200,#bbf7d0);border-radius:6px;font-size:11px;color:var(--brand-700);display:${layout.length > 0 ? 'flex' : 'none'};align-items:center;gap:8px;line-height:1.4;">
+              ${PCD.icon('info', 14)}
+              <span>${t('kc_save_reminder')}</span>
             </div>
           </div>
 
@@ -273,6 +286,26 @@
         }
       });
 
+      // v2.8.20 — Clear canvas: empty the layout (recipes selected),
+      // keep canvas name + settings. Confirms first because it's
+      // destructive — the in-memory selection is wiped, though saved
+      // copies in the store remain untouched.
+      const clearBtn = PCD.$('#clearCanvasBtn', bodyEl);
+      if (clearBtn) clearBtn.addEventListener('click', function () {
+        if (layout.length === 0) return;
+        const t = PCD.i18n.t;
+        PCD.modal.confirm({
+          icon: '🗑', iconKind: 'danger', danger: true,
+          title: t('kc_clear_canvas_confirm_title'),
+          text: t('kc_clear_canvas_confirm_text'),
+          okText: t('kc_clear_canvas_btn'),
+        }).then(function (ok) {
+          if (!ok) return;
+          layout = [];
+          renderBody();
+        });
+      });
+
       // Share canvas as QR (v2.5.8) — auto-saves the canvas first if it has no ID yet.
       PCD.$('#shareCanvasBtn', bodyEl).addEventListener('click', function () {
         const t = PCD.i18n.t;
@@ -343,6 +376,16 @@
             layout = recipes.map(function (r) { return { recipeId: r.id, span: 1 }; });
           }
           renderBody();
+        }, function (deletedId) {
+          // v2.8.20 — If user deleted the canvas they currently have
+          // loaded in the editor, clear the in-memory state so the
+          // stale recipe selection doesn't linger until F5.
+          if (deletedId === canvasId) {
+            canvasId = null;
+            canvasName = '';
+            layout = [];
+            renderBody();
+          }
         });
       });
 
@@ -632,10 +675,20 @@
         ? '<button type="button" class="remove-btn" title="Remove from canvas">×</button>'
         : '';
 
+      // v2.8.20 — Sub-recipe header shows yield ("2 kg") instead of
+      // servings ("1p"). A 2-kg batch of toum sauce isn't 1 portion;
+      // showing the yield gives the kitchen the actual prepared amount.
+      // Falls back to servings for non-sub recipes (regular menu items).
+      let srvLabel = '';
+      if (r.yieldAmount && r.yieldUnit) {
+        srvLabel = PCD.fmtNumber(r.yieldAmount) + ' ' + PCD.escapeHtml(r.yieldUnit);
+      } else if (r.servings) {
+        srvLabel = r.servings + 'p';
+      }
       blocksHtml +=
         '<div class="kc-block" data-rid="' + r.id + '">' +
           '<div class="kc-name kc-block-header" title="Drag to reorder">' + PCD.escapeHtml(r.name || '') +
-            (r.servings ? '<span class="kc-srv"> · ' + r.servings + 'p</span>' : '') +
+            (srvLabel ? '<span class="kc-srv"> · ' + srvLabel + '</span>' : '') +
           '</div>' +
           (ingsHtml ? '<div class="kc-ings">' + ingsHtml + '</div>' : '') +
           methodHtml +
@@ -658,8 +711,30 @@
         // A4 page (previously it overflowed to page 2 because of its 24px
         // top margin + .kc-sheet at height: 100%). Live preview path
         // (interactive: true) keeps height: 100% inside .kc-preview-frame.
+        //
+        // v2.8.20 — Share path (shareMode: true) needs a third branch:
+        // body must stay a normal web page (toolbar + tip + sheet wrap), so
+        // we instead wrap the sheet in a .kc-page A4-sized flex container
+        // inside buildSheetHtml's output. Without this, v2.8.18's body
+        // sizing made the share viewer body itself A4-tall on screen,
+        // squashing the page. The .kc-page wrapper is A4-mm, centered,
+        // with a subtle shadow for an "on paper" feel; in @media print it
+        // collapses to the page (no margin/shadow) so the saved PDF is
+        // identical to the direct-print path.
         (opts.interactive
           ? '.kc-sheet { height: 100%; }'
+          : opts.shareMode
+          ?
+            '.kc-page { ' +
+              'box-sizing: border-box; ' +
+              'width: ' + (opts.orientation === 'landscape' ? 297 : 210) + 'mm; ' +
+              'height: ' + (opts.orientation === 'landscape' ? 210 : 297) + 'mm; ' +
+              'display: flex; flex-direction: column; ' +
+              'background: #fff; margin: 0 auto; ' +
+              'box-shadow: 0 1px 3px rgba(0,0,0,0.08); ' +
+            '}' +
+            '.kc-sheet { flex: 1 1 auto; min-height: 0; height: auto; }' +
+            '@media print { .kc-page { box-shadow: none !important; margin: 0 !important; } }'
           :
             'body { ' +
               'width: ' + (opts.orientation === 'landscape' ? 297 : 210) + 'mm; ' +
@@ -807,13 +882,15 @@
           '.remove-btn { display: none !important; }' +
         '}' +
       '</style>' +
+      (opts.shareMode ? '<div class="kc-page">' : '') +
       '<div class="kc-sheet">' +
         '<div class="kc-header">' +
           '<h1>' + PCD.escapeHtml(opts.title || 'Kitchen Reference') + '</h1>' +
           '<div class="meta">' + (opts.layoutRecipes || []).length + ' recipes · ' + new Date().toLocaleDateString() + '</div>' +
         '</div>' +
         blocksHtml +
-      '</div>'
+      '</div>' +
+      (opts.shareMode ? '</div>' : '')
     );
   }
 
@@ -855,7 +932,11 @@
   }
 
   // ============ CANVAS PICKER ============
-  function openCanvasPicker(onPick) {
+  // v2.8.20 — onDelete(id) lets the caller learn which canvas was just
+  // removed, so the editor can clear in-memory state when the deleted
+  // canvas was the one currently loaded (otherwise it stays visible in
+  // the editor until F5).
+  function openCanvasPicker(onPick, onDelete) {
     const body = PCD.el('div');
     function paintList() {
       const list = (PCD.store.listTable('canvases') || []).slice();
@@ -911,6 +992,7 @@
         PCD.store.deleteFromTable('canvases', id);
         PCD.toast.success(PCD.i18n.t('toast_canvas_deleted'));
         paintList();
+        if (typeof onDelete === 'function') onDelete(id);
       });
     });
   }
@@ -990,6 +1072,12 @@
       showAmounts: payload.showAmounts,
       title: payload.name,
       interactive: false,
+      // v2.8.20 — shareMode wraps the sheet in an A4-sized .kc-page
+      // container instead of sizing the body. Share viewer body stays a
+      // normal web page (toolbar + tip + sheet wrap), the sheet renders
+      // at proper A4 dimensions with multi-column working from first
+      // render (no "two-click to fix" issue from v2.8.18 print path).
+      shareMode: true,
     });
 
     // Wrap with a small toolbar so mobile users can trigger Save-as-PDF.
