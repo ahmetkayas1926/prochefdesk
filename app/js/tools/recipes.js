@@ -55,8 +55,8 @@
            features. -->
       <div id="recipeFilterTabs" class="flex gap-2 mb-3" style="background:var(--surface-2);padding:4px;border-radius:8px;">
         <button type="button" class="btn btn-sm" data-tab="all" style="flex:1;background:transparent;">${t('recipes_tab_all', { n: recipes.length })}</button>
-        <button type="button" class="btn btn-sm" data-tab="menu" style="flex:1;background:transparent;">${t('recipes_tab_menu', { n: recipes.filter(function(r){return !(r.yieldAmount && r.yieldUnit);}).length })}</button>
-        <button type="button" class="btn btn-sm" data-tab="preps" style="flex:1;background:transparent;">${t('recipes_tab_preps', { n: recipes.filter(function(r){return r.yieldAmount && r.yieldUnit;}).length })}</button>
+        <button type="button" class="btn btn-sm" data-tab="menu" style="flex:1;background:transparent;">${t('recipes_tab_menu', { n: recipes.filter(function(r){return !PCD.recipes.isPrep(r);}).length })}</button>
+        <button type="button" class="btn btn-sm" data-tab="preps" style="flex:1;background:transparent;">${t('recipes_tab_preps', { n: recipes.filter(function(r){return PCD.recipes.isPrep(r);}).length })}</button>
       </div>
 
       <div id="bulkBar" class="card" style="display:none;padding:10px 12px;margin-bottom:12px;background:var(--brand-50);border-color:var(--brand-300);position:sticky;top:0;z-index:5;">
@@ -66,6 +66,12 @@
           </div>
           <div class="flex gap-2" style="flex-wrap:wrap;">
             <button type="button" class="btn btn-primary btn-sm" id="bulkCostReport">${PCD.icon('activity',14)} <span>Cost Report</span></button>
+            <!-- v2.8.25 — Bulk yield set/clear: flips recipes between Menu
+                 and Preps in one go. "To Prep" opens a small modal to pick
+                 a default yield (amount + unit) applied to all selected.
+                 "To Menu" just clears yieldAmount/yieldUnit. -->
+            <button type="button" class="btn btn-outline btn-sm" id="bulkToPrep" title="${PCD.escapeHtml(t('recipes_bulk_to_prep'))}">${PCD.icon('check',14)} <span>${t('recipes_bulk_to_prep')}</span></button>
+            <button type="button" class="btn btn-outline btn-sm" id="bulkToMenu" title="${PCD.escapeHtml(t('recipes_bulk_to_menu'))}">${PCD.icon('book',14)} <span>${t('recipes_bulk_to_menu')}</span></button>
             <button type="button" class="btn btn-danger btn-sm" id="bulkDelete">${PCD.icon('trash',14)} ${t('delete')}</button>
             <button type="button" class="btn btn-ghost btn-sm" id="exitSelect">${t('cancel')}</button>
           </div>
@@ -83,7 +89,12 @@
     let activeTab = 'all';
     let sorted = recipes.slice().sort(function (a, b) { return (b.updatedAt || '').localeCompare(a.updatedAt || ''); });
 
-    function isPrep(r) { return !!(r.yieldAmount && r.yieldUnit); }
+    function isPrep(r) {
+      // v2.8.26 — Delegated to PCD.recipes.isPrep so all tools share the
+      // same classification logic (explicit isSubRecipe flag wins, legacy
+      // yield-based fallback for unflagged records).
+      return PCD.recipes && PCD.recipes.isPrep ? PCD.recipes.isPrep(r) : !!(r.yieldAmount && r.yieldUnit);
+    }
 
     function paintTabs() {
       const tabsWrap = PCD.$('#recipeFilterTabs', view);
@@ -322,6 +333,61 @@
         return;
       }
       openCostReport(Array.from(selectedIds));
+    });
+
+    // v2.8.26 — Bulk "Convert to Prep": flips the isSubRecipe flag on
+    // every selected recipe. No more yield modal — yield is a separate
+    // factual measurement the chef enters when known; the prep
+    // classification is independent of it. (Replaces v2.8.25's modal
+    // which forced fake yield data just to categorise.)
+    PCD.$('#bulkToPrep', view).addEventListener('click', function () {
+      if (selectedIds.size === 0) {
+        PCD.toast.info(PCD.i18n.t('toast_select_at_least_one_recipe'));
+        return;
+      }
+      let n = 0;
+      Array.from(selectedIds).forEach(function (rid) {
+        const r = PCD.store.getRecipe(rid);
+        if (!r) return;
+        const copy = PCD.clone(r);
+        copy.isSubRecipe = true;
+        PCD.store.upsertRecipe(copy);
+        n++;
+      });
+      PCD.toast.success(PCD.i18n.t('recipes_bulk_to_prep_done', { n: n }));
+      selectedIds = new Set();
+      selectMode = false;
+      renderList(view);
+    });
+
+    // v2.8.26 — Bulk "Convert to Menu": clears the isSubRecipe flag.
+    // Yield fields are preserved — if the chef had recorded a yield it
+    // stays for reference; only the classification changes.
+    PCD.$('#bulkToMenu', view).addEventListener('click', function () {
+      if (selectedIds.size === 0) {
+        PCD.toast.info(PCD.i18n.t('toast_select_at_least_one_recipe'));
+        return;
+      }
+      PCD.modal.confirm({
+        title: PCD.i18n.t('recipes_bulk_to_menu_confirm_title', { n: selectedIds.size }),
+        text: PCD.i18n.t('recipes_bulk_to_menu_confirm_text'),
+        okText: PCD.i18n.t('recipes_bulk_apply'),
+      }).then(function (ok) {
+        if (!ok) return;
+        let n = 0;
+        Array.from(selectedIds).forEach(function (rid) {
+          const r = PCD.store.getRecipe(rid);
+          if (!r) return;
+          const copy = PCD.clone(r);
+          copy.isSubRecipe = false;
+          PCD.store.upsertRecipe(copy);
+          n++;
+        });
+        PCD.toast.success(PCD.i18n.t('recipes_bulk_to_menu_done', { n: n }));
+        selectedIds = new Set();
+        selectMode = false;
+        renderList(view);
+      });
     });
 
     PCD.$('#recipeSearch', view).addEventListener('input', PCD.debounce(function (e) {
@@ -1809,7 +1875,9 @@
       // visible effect because removing from `allergens` left the auto
       // detection active. Now: included = data.allergens (user adds),
       // excluded = data.allergensExcluded (user removes from auto).
-      salePrice: null, allergens: [], allergensExcluded: []
+      salePrice: null, allergens: [], allergensExcluded: [],
+      // v2.8.26 — Explicit prep classification (default false = menu item)
+      isSubRecipe: false
     };
 
     const body = PCD.el('div');
@@ -1877,6 +1945,21 @@
             <label class="field-label">${t('recipe_cook_time')}</label>
             <input type="number" class="input" id="recipeCook" value="${data.cookTime || ''}" min="0">
           </div>
+        </div>
+
+        <!-- v2.8.26 — Explicit "Mark as Prep / Sub-recipe" toggle.
+             Decouples classification (binary) from yield (factual data).
+             Previously the system inferred prep-ness from yieldAmount
+             being set, which forced fake yield values when the chef
+             only knew "this is a prep" but hadn't measured the batch. -->
+        <div class="field" style="margin-bottom:14px;">
+          <label class="checkbox" style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
+            <input type="checkbox" id="recipeIsSubRecipe" ${(PCD.recipes && PCD.recipes.isPrep ? PCD.recipes.isPrep(data) : !!(data.yieldAmount && data.yieldUnit)) ? 'checked' : ''} style="margin-top:2px;flex-shrink:0;">
+            <span>
+              <span style="font-weight:600;">${t('recipe_is_subrecipe_label')}</span>
+              <div class="text-muted" style="font-size:12px;line-height:1.4;margin-top:2px;">${t('recipe_is_subrecipe_hint')}</div>
+            </span>
+          </label>
         </div>
 
         <div class="field-row">
@@ -2598,6 +2681,9 @@
       const yldUnitInp = PCD.$('#recipeYieldUnit', body);
       data.yieldAmount = (yldAmtInp && yldAmtInp.value) ? parseFloat(yldAmtInp.value) : null;
       data.yieldUnit = (yldUnitInp && yldUnitInp.value) ? yldUnitInp.value : 'portion';
+      // v2.8.26 — Explicit prep classification flag, independent of yield
+      const isSubInp = PCD.$('#recipeIsSubRecipe', body);
+      data.isSubRecipe = isSubInp ? !!isSubInp.checked : false;
       data.salePrice = parseFloat(PCD.$('#recipeSalePrice', body).value) || null;
       data.steps = PCD.$('#recipeSteps', body).value;
       data.plating = PCD.$('#recipePlating', body).value;

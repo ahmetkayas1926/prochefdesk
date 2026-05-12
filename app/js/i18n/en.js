@@ -611,6 +611,19 @@ window.PCD.i18n.register('en', {
   // v2.8.23
   kc_new_canvas: "New canvas",
   kc_no_saved_canvases: "No saved canvases yet",
+  // v2.8.25
+  recipes_bulk_to_prep: "Convert to Prep",
+  recipes_bulk_to_menu: "Convert to Menu",
+  recipes_bulk_apply: "Apply",
+  recipes_bulk_to_prep_intro: "Set a default yield for the {n} selected recipes. You can refine each yield later by opening the recipe.",
+  recipes_bulk_to_prep_done: "{n} recipes marked as Preps",
+  recipes_bulk_to_menu_confirm_title: "Convert {n} recipes to Menu items?",
+  recipes_bulk_to_menu_confirm_text: "Yield amount and unit will be cleared on the selected recipes. They will return to the Menu items section.",
+  recipes_bulk_to_menu_done: "{n} recipes returned to Menu items",
+  recipes_bulk_invalid_yield: "Yield amount must be greater than 0",
+  // v2.8.26
+  recipe_is_subrecipe_label: "Mark as Prep / Sub-recipe",
+  recipe_is_subrecipe_hint: "Categorises this recipe as a batch prep / sub-recipe (sauces, dressings, spice mixes) instead of a 1-portion menu item. Yield amount stays optional — record it when measured.",
   pc_subtitle: "Scale one or more recipes for an event",
   pc_step1: "Step 1 — Guest count",
   pc_guests: "guests",

@@ -611,6 +611,19 @@ window.PCD.i18n.register('tr', {
   // v2.8.23
   kc_new_canvas: "Yeni kanvas",
   kc_no_saved_canvases: "Kayıtlı kanvas bulunmamaktadır",
+  // v2.8.25
+  recipes_bulk_to_prep: "Hazırlığa taşı",
+  recipes_bulk_to_menu: "Menüye taşı",
+  recipes_bulk_apply: "Uygula",
+  recipes_bulk_to_prep_intro: "Seçili {n} tarif için varsayılan yield gir. Her tarifin gerçek yield değerini sonradan tarifi açıp düzenleyebilirsin.",
+  recipes_bulk_to_prep_done: "{n} tarif Hazırlık olarak işaretlendi",
+  recipes_bulk_to_menu_confirm_title: "{n} tarif menüye taşınsın mı?",
+  recipes_bulk_to_menu_confirm_text: "Seçili tariflerin yield miktarı ve birimi temizlenecek. Menü tarifleri bölümüne dönecekler.",
+  recipes_bulk_to_menu_done: "{n} tarif Menüye geri taşındı",
+  recipes_bulk_invalid_yield: "Yield miktarı 0'dan büyük olmalı",
+  // v2.8.26
+  recipe_is_subrecipe_label: "Hazırlık / Sub-recipe olarak işaretle",
+  recipe_is_subrecipe_hint: "Bu tarifi 1-porsiyonluk menü tarifi değil, toplu hazırlık tarifi (sos, sosis, baharat karışımı) olarak sınıflandırır. Yield miktarı isteğe bağlıdır — ölçtüğünde gir.",
   pc_subtitle: "Bir veya daha fazla tarifi etkinlik için ölçeklendir",
   pc_step1: "Adım 1 — Misafir sayısı",
   pc_guests: "misafir",

@@ -233,10 +233,14 @@
       // mixes) from menu plate cost calculations — they shouldn't sit
       // alphabetically interleaved on the same screen. Empty sections
       // hide their header so the panel stays clean.
+      // v2.8.26 — Classification now goes through PCD.recipes.isPrep so
+      // recipes explicitly flagged via the editor toggle (or bulk action)
+      // are categorised correctly even when they have no recorded yield.
       const recipeListEl = PCD.$('#recipeList', bodyEl);
       const onCanvas = new Set(layout.map(function (l) { return l.recipeId; }));
-      const preps = recipes.filter(function (r) { return r.yieldAmount && r.yieldUnit; });
-      const mains = recipes.filter(function (r) { return !(r.yieldAmount && r.yieldUnit); });
+      const _isPrep = (PCD.recipes && PCD.recipes.isPrep) ? PCD.recipes.isPrep : function (r) { return !!(r.yieldAmount && r.yieldUnit); };
+      const preps = recipes.filter(_isPrep);
+      const mains = recipes.filter(function (r) { return !_isPrep(r); });
 
       function appendRow(r) {
         const isOn = onCanvas.has(r.id);

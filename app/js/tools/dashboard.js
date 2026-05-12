@@ -136,10 +136,23 @@
     };
   }
 
+  // v2.8.26 — Single source of truth for "is this a prep / sub-recipe?"
+  // Explicit `isSubRecipe` flag wins. Legacy recipes saved before the
+  // flag existed fall back to the original heuristic (yieldAmount +
+  // yieldUnit set), so the categorisation doesn't shift under the
+  // chef's feet on upgrade. Once a recipe is edited and the flag is
+  // explicitly set/cleared, the legacy fallback is no longer consulted.
+  function isPrep(r) {
+    if (!r) return false;
+    if (typeof r.isSubRecipe === 'boolean') return r.isSubRecipe;
+    return !!(r.yieldAmount && r.yieldUnit);
+  }
+
   PCD.recipes = PCD.recipes || {};
   PCD.recipes.computeFoodCost = computeFoodCost;
   PCD.recipes.buildRecipeMap = buildRecipeMap;
   PCD.recipes.resolveRow = resolveRow;
+  PCD.recipes.isPrep = isPrep;
 
   // ============ TODAY-FOCUSED DASHBOARD ============
   function render(view) {
