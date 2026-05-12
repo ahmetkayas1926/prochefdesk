@@ -608,6 +608,9 @@ window.PCD.i18n.register('en', {
   recipes_section_preps: "Preps / Sub-recipes",
   recipes_empty_menu: "No menu items yet — uncheck Yield in the editor to keep one out of the Preps bucket.",
   recipes_empty_preps: "No preps yet — set Yield (e.g. 250 g) in a recipe to mark it as a prep / sub-recipe.",
+  // v2.8.23
+  kc_new_canvas: "New canvas",
+  kc_no_saved_canvases: "No saved canvases yet",
   pc_subtitle: "Scale one or more recipes for an event",
   pc_step1: "Step 1 — Guest count",
   pc_guests: "guests",

@@ -91,10 +91,22 @@
         <div style="display:grid;grid-template-columns:minmax(260px,1fr) minmax(380px,2fr);gap:14px;align-items:start;" class="kc-layout">
           <div>
             <div class="card mb-3" style="padding:14px;">
-              <div class="flex items-center justify-between mb-2" style="gap:6px;flex-wrap:wrap;">
-                <input type="text" class="input" id="canvasName" value="${PCD.escapeHtml(canvasName)}" placeholder="${PCD.escapeHtml(t('kc_canvas_name_placeholder'))}" style="flex:1;min-width:120px;font-weight:700;">
-                <button type="button" class="btn btn-outline btn-sm" id="newCanvasBtn" title="${PCD.escapeHtml(t('kc_new_canvas_tooltip'))}">${PCD.icon('plus', 14)}</button>
-                ${allCanvases.length > 0 ? '<button type="button" class="btn btn-outline btn-sm" id="loadCanvasBtn" title="' + PCD.escapeHtml(t('kc_load_canvas_tooltip')) + '">' + PCD.icon('book-open', 14) + ' <span>' + allCanvases.length + '</span></button>' : ''}
+              <!-- v2.8.23 — Canvas controls modernized. Row 1: name input
+                   + always-visible Saved Canvases button with count badge.
+                   Row 2: two prominent labeled buttons (Save Canvas /
+                   New Canvas) replacing the cramped icon-only buttons
+                   that confused new users. -->
+              <div class="flex items-center gap-2 mb-2" style="flex-wrap:nowrap;">
+                <input type="text" class="input" id="canvasName" value="${PCD.escapeHtml(canvasName)}" placeholder="${PCD.escapeHtml(t('kc_canvas_name_placeholder'))}" style="flex:1;min-width:0;font-weight:700;">
+                <button type="button" class="btn btn-outline btn-sm" id="loadCanvasBtn" style="flex:0 0 auto;" title="${PCD.escapeHtml(t('kc_load_canvas_tooltip'))}">${PCD.icon('book-open', 14)} <span>${allCanvases.length}</span></button>
+              </div>
+              <div class="flex gap-2 mb-2">
+                <button type="button" class="btn btn-primary btn-sm" id="saveCanvasTopBtn" style="flex:1;min-width:0;" ${layout.length === 0 ? 'disabled' : ''}>
+                  ${PCD.icon('check', 14)} <span>${t('kc_save_canvas')}</span>
+                </button>
+                <button type="button" class="btn btn-outline btn-sm" id="newCanvasBtn" style="flex:1;min-width:0;">
+                  ${PCD.icon('plus', 14)} <span>${t('kc_new_canvas')}</span>
+                </button>
               </div>
 
               <div class="mb-2">
@@ -140,16 +152,14 @@
             </div>
 
             <div class="flex gap-2 mt-3">
-              <button type="button" class="btn btn-outline" id="saveCanvasBtn" style="flex:0 0 auto;padding-inline:12px;" ${layout.length === 0 ? 'disabled' : ''} title="${PCD.escapeHtml(t('kc_save_canvas'))}" aria-label="${PCD.escapeHtml(t('kc_save_canvas'))}">
-                ${PCD.icon('check', 18)}
-              </button>
+              <!-- v2.8.23 — Save moved to the top of the canvas card.
+                   Remaining bottom-row actions: Share, Print, Clear. -->
               <button type="button" class="btn btn-outline" id="shareCanvasBtn" style="flex:0 0 auto;padding-inline:12px;" ${layout.length === 0 ? 'disabled' : ''} title="${PCD.escapeHtml((PCD.i18n && PCD.i18n.t) ? PCD.i18n.t('canvas_share_btn') : 'Share QR')}" aria-label="${PCD.escapeHtml((PCD.i18n && PCD.i18n.t) ? PCD.i18n.t('canvas_share_btn') : 'Share QR')}">
                 ${PCD.icon('share', 18)}
               </button>
               <button type="button" class="btn btn-primary" id="printSheetBtn" style="flex:1;min-width:0;" ${layout.length === 0 ? 'disabled' : ''}>
                 ${PCD.icon('print', 16)} <span>${t('kc_print_x_recipes', { n: layout.length })}</span>
               </button>
-              <!-- v2.8.20 — Clear canvas (destructive, icon-only, danger style). -->
               <button type="button" class="btn btn-outline" id="clearCanvasBtn" style="flex:0 0 auto;padding-inline:12px;color:var(--danger);border-color:var(--danger);" ${layout.length === 0 ? 'disabled' : ''} title="${PCD.escapeHtml(t('kc_clear_canvas_btn'))}" aria-label="${PCD.escapeHtml(t('kc_clear_canvas_btn'))}">
                 ${PCD.icon('trash', 18)}
               </button>
@@ -304,12 +314,15 @@
         return null;
       }
 
-      // Save canvas
-      PCD.$('#saveCanvasBtn', bodyEl).addEventListener('click', function () {
+      // v2.8.23 — Save handler now uses the prominent top button id
+      // (saveCanvasTopBtn). After a successful save we re-render so the
+      // Saved Canvases count badge updates immediately without F5.
+      PCD.$('#saveCanvasTopBtn', bodyEl).addEventListener('click', function () {
         if (layout.length === 0) return;
         const id = persistCanvas();
         if (id) {
           PCD.toast.success(PCD.i18n.t('toast_canvas_saved', { name: ((canvasName || '').trim() || 'Untitled canvas') }));
+          renderBody();
         } else {
           PCD.toast.error(PCD.i18n.t('toast_save_failed'));
         }
@@ -975,7 +988,16 @@
       const list = (PCD.store.listTable('canvases') || []).slice();
       list.sort(function (a, b) { return (b.updatedAt || '').localeCompare(a.updatedAt || ''); });
       if (list.length === 0) {
-        body.innerHTML = '<div class="text-muted" style="padding:20px;text-align:center;">No saved canvases yet</div>';
+        // v2.8.23 — Friendlier empty state with icon + i18n message
+        // ("Kayıtlı kanvas bulunmamaktadır" in TR). Shown when the user
+        // clicks Saved Canvases without having saved any yet.
+        body.innerHTML =
+          '<div style="padding:32px 20px;text-align:center;color:var(--text-3);">' +
+            '<div style="font-size:32px;margin-bottom:8px;opacity:0.6;">📋</div>' +
+            '<div style="font-size:14px;font-weight:600;color:var(--text-2);">' +
+              PCD.escapeHtml(PCD.i18n.t('kc_no_saved_canvases')) +
+            '</div>' +
+          '</div>';
         return;
       }
       body.innerHTML = '<div class="flex flex-col gap-2">' +

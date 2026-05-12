@@ -586,7 +586,7 @@ window.PCD.i18n.register('tr', {
   kc_tip_2: "Kartı sağ kenarından sürükleyerek yeniden boyutlandır",
   kc_tip_3: "Aşağıdan tarif ekle/çıkar",
   kc_recipes_on_canvas: "Karttaki tarifler",
-  kc_save_canvas: "Kartı kaydet",
+  kc_save_canvas: "Kanvası kaydet",
   kc_print_x_recipes: "Yazdır · {n} tarif",
   kc_live_preview: "Canlı önizleme · sürükle & boyutlandır",
   kc_a4_summary: "A4 · {orient} · {cols} sütun",
@@ -608,6 +608,9 @@ window.PCD.i18n.register('tr', {
   recipes_section_preps: "Hazırlıklar / Sub-recipes",
   recipes_empty_menu: "Henüz menü tarifi yok — bir tarifte Yield alanını boş bırakırsan menü tarifi sayılır.",
   recipes_empty_preps: "Henüz hazırlık tarifi yok — bir tarifte Yield gir (örn. 250 g) ki o tarif hazırlık / sub-recipe olarak işaretlensin.",
+  // v2.8.23
+  kc_new_canvas: "Yeni kanvas",
+  kc_no_saved_canvases: "Kayıtlı kanvas bulunmamaktadır",
   pc_subtitle: "Bir veya daha fazla tarifi etkinlik için ölçeklendir",
   pc_step1: "Adım 1 — Misafir sayısı",
   pc_guests: "misafir",
