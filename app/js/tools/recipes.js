@@ -1554,7 +1554,7 @@
   // Captures unit + price/unit + amount-used-in-this-recipe.
   // On save: creates Ingredient in library, then calls onDone(savedIng, qty, qtyUnit).
   function promptNewIngredientDetails(name, onDone) {
-    const UNITS = ['g', 'kg', 'ml', 'l', 'tbsp', 'tsp', 'cup', 'oz', 'lb', 'pcs', 'bunch'];
+    const UNITS = ['g', 'kg', 'ml', 'l', 'tsp', 'tbsp', 'cup', 'oz', 'lb', 'pcs', 'each', 'bottle', 'bunch'];
     const draft = { name: name, unit: 'g', pricePerUnit: 0, category: 'cat_other' };
     const recipeQty = { amount: 100, unit: 'g' };
     const body = PCD.el('div');
@@ -1723,7 +1723,12 @@
       name: '', category: 'cat_main', servings: 1,
       prepTime: null, cookTime: null,
       photo: null, ingredients: [], steps: '', plating: '',
-      salePrice: null, allergens: []
+      // v2.8.19 — allergensExcluded enables overriding auto-detected
+      // allergens. Without it, clicking an auto-detected chip had no
+      // visible effect because removing from `allergens` left the auto
+      // detection active. Now: included = data.allergens (user adds),
+      // excluded = data.allergensExcluded (user removes from auto).
+      salePrice: null, allergens: [], allergensExcluded: []
     };
 
     const body = PCD.el('div');
@@ -1868,13 +1873,22 @@
       const auto = (PCD.allergensDB && PCD.allergensDB.recipeAllergens)
         ? PCD.allergensDB.recipeAllergens(data, ingMap)
         : [];
-      const manual = data.allergens || [];
+      const included = data.allergens || [];
+      // v2.8.19 — allergensExcluded: user-overridden auto-detections.
+      // Defensive default for recipes saved before this field existed.
+      if (!data.allergensExcluded) data.allergensExcluded = [];
+      const excluded = data.allergensExcluded;
       const all = (PCD.allergensDB && PCD.allergensDB.list) || [];
       wrap.innerHTML = '';
       all.forEach(function (a) {
-        const isAuto = auto.indexOf(a.key) >= 0;
-        const isManual = manual.indexOf(a.key) >= 0;
-        const active = isAuto || isManual;
+        const inAuto = auto.indexOf(a.key) >= 0;
+        const inIncluded = included.indexOf(a.key) >= 0;
+        const inExcluded = excluded.indexOf(a.key) >= 0;
+        // Effective active: explicitly included always wins; otherwise
+        // auto-detected unless excluded.
+        const active = inIncluded || (inAuto && !inExcluded);
+        // Show (auto) tag only when active via auto (not explicit include)
+        const showAutoTag = inAuto && !inIncluded && !inExcluded;
         const chip = PCD.el('button', {
           type: 'button',
           'data-allerg': a.key,
@@ -1890,19 +1904,32 @@
             fontSize: '12px',
             fontWeight: '600',
             cursor: 'pointer',
-            opacity: isAuto && !isManual ? '1' : (active ? '1' : '0.55')
+            opacity: active ? '1' : '0.55'
           },
         });
-        chip.innerHTML = (a.icon || '') + ' ' + (a.label_en || a.key) + (isAuto ? ' <span style="font-size:9px;opacity:0.6;">(auto)</span>' : '');
+        chip.innerHTML = (a.icon || '') + ' ' + (a.label_en || a.key) + (showAutoTag ? ' <span style="font-size:9px;opacity:0.6;">(auto)</span>' : '');
         wrap.appendChild(chip);
       });
-      // Click to toggle manual override
+      // Click to toggle: if active → deactivate; if inactive → activate.
+      // For auto-detected chips, deactivation records the override in
+      // allergensExcluded so future renders respect the user's choice.
       PCD.on(wrap, 'click', '[data-allerg]', function () {
         const key = this.getAttribute('data-allerg');
         if (!data.allergens) data.allergens = [];
-        const idx = data.allergens.indexOf(key);
-        if (idx >= 0) data.allergens.splice(idx, 1);
-        else data.allergens.push(key);
+        if (!data.allergensExcluded) data.allergensExcluded = [];
+        const inAuto = auto.indexOf(key) >= 0;
+        const idxIncluded = data.allergens.indexOf(key);
+        const idxExcluded = data.allergensExcluded.indexOf(key);
+        const wasActive = (idxIncluded >= 0) || (inAuto && idxExcluded < 0);
+        if (wasActive) {
+          // Deactivate
+          if (idxIncluded >= 0) data.allergens.splice(idxIncluded, 1);
+          if (inAuto && idxExcluded < 0) data.allergensExcluded.push(key);
+        } else {
+          // Activate
+          if (idxExcluded >= 0) data.allergensExcluded.splice(idxExcluded, 1);
+          if (!inAuto && idxIncluded < 0) data.allergens.push(key);
+        }
         renderAllergenChips();
       });
     }
@@ -1961,7 +1988,7 @@
         const subBadge = isSubRecipe ? '<span style="display:inline-block;background:var(--brand-50);color:var(--brand-700);font-size:9px;font-weight:700;padding:2px 6px;border-radius:999px;letter-spacing:0.06em;text-transform:uppercase;margin-inline-start:6px;">SUB</span>' : '';
         const unitOptions = isSubRecipe
           ? ['portion','g','kg','ml','l','batch','tray','pcs']
-          : ['g','kg','ml','l','tsp','tbsp','cup','oz','lb','pcs','unit'];
+          : ['g','kg','ml','l','tsp','tbsp','cup','oz','lb','pcs','each','bottle','bunch','unit'];
         // v2.8.8 — Reorder buttons. Up disabled on first row, down on last.
         // Disabled styling: 0.3 opacity + not-allowed cursor (icon-btn CSS
         // doesn't define :disabled). The `disabled` attribute alone prevents

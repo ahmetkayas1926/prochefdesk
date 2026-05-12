@@ -183,7 +183,10 @@
   PCD.UNITS = {
     mass: { g: 1, kg: 1000, oz: 28.3495, lb: 453.592 },
     volume: { ml: 1, l: 1000, tsp: 5, tbsp: 15, cup: 240, 'fl_oz': 29.5735 },
-    count: { unit: 1, pcs: 1, piece: 1, each: 1 }
+    // v2.8.19 — 'bottle' added so chef can record items bought by the
+    // bottle (vinegar, sauce, oil). Like 'pcs'/'each'/'unit' it's a count
+    // unit with no conversion path (bottles vary in size).
+    count: { unit: 1, pcs: 1, piece: 1, each: 1, bottle: 1, bunch: 1 }
   };
 
   PCD.convertUnit = function (value, fromUnit, toUnit) {
@@ -215,10 +218,20 @@
   // metric 15/5/250, AU 20/5/250); we use international metric 15/5 (v2.8.7)
   // and US legal cup 240. Showing the ml value next to the unit removes
   // ambiguity for the user without changing the option value (so conversion
-  // logic is unaffected). Unannotated units fall through to the unit name.
+  // logic is unaffected).
+  // v2.8.19 — Now i18n-aware: prefers PCD.i18n.t('unit_<key>') if the
+  // current locale defines it (so Turkish kitchens see "yk (15ml)" instead
+  // of "tbsp (15ml)" etc). Falls back to the hardcoded English labels when
+  // i18n hasn't loaded yet, then to the raw unit string.
   PCD.unitLabel = function (u) {
-    const labels = { tsp: 'tsp (5ml)', tbsp: 'tbsp (15ml)', cup: 'cup (240ml)' };
-    return labels[u] || u;
+    if (!u) return '';
+    if (PCD.i18n && PCD.i18n.t) {
+      const key = 'unit_' + u;
+      const label = PCD.i18n.t(key);
+      if (label && label !== key) return label;
+    }
+    const fallback = { tsp: 'tsp (5ml)', tbsp: 'tbsp (15ml)', cup: 'cup (240ml)' };
+    return fallback[u] || u;
   };
 
   // ---------- HAPTIC ----------

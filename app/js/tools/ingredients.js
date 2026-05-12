@@ -12,7 +12,7 @@
   'use strict';
   const PCD = window.PCD;
   const ING_CATEGORIES = ['cat_meat', 'cat_poultry', 'cat_seafood', 'cat_dairy', 'cat_produce', 'cat_dry_goods', 'cat_spices', 'cat_oils', 'cat_beverages', 'cat_baking', 'cat_other'];
-  const UNITS = ['g', 'kg', 'ml', 'l', 'tsp', 'tbsp', 'cup', 'fl_oz', 'oz', 'lb', 'pcs', 'unit'];
+  const UNITS = ['g', 'kg', 'ml', 'l', 'tsp', 'tbsp', 'cup', 'fl_oz', 'oz', 'lb', 'pcs', 'each', 'bottle', 'bunch', 'unit'];
 
   let selectMode = false;
   let selectedIds = new Set();
@@ -326,7 +326,7 @@
         <div class="field">
           <label class="field-label">${t('ingredient_unit')}</label>
           <select class="select" id="ingUnit">
-            ${UNITS.map(function (u) { return '<option value="' + u + '"' + (data.unit === u ? ' selected' : '') + '>' + PCD.unitLabel(u) + '</option>'; }).join('')}
+            ${UNITS.map(function (u) { return '<option value="' + u + '"' + (data.unit === u ? ' selected' : '') + '>' + u + '</option>'; }).join('')}
           </select>
         </div>
       </div>
