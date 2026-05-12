@@ -153,8 +153,19 @@
   function ensureActiveWorkspace() {
     // If schema is already v2 with workspaces, just verify active id
     if (state.workspaces && Object.keys(state.workspaces).length > 0) {
-      if (!state.activeWorkspaceId || !state.workspaces[state.activeWorkspaceId]) {
-        const first = Object.values(state.workspaces).filter(function (w) { return !w.archived; })[0]
+      // v2.8.24 — Defensive reassign when the active workspace is missing,
+      // archived, or soft-deleted. Previously this only checked for
+      // missing/non-existent, so a stale activeWorkspaceId pulled from
+      // cloud user_prefs (e.g. the chef archived their active workspace
+      // on another device but archiveWorkspace pushed only the workspaces
+      // table, not the prefs entry) would land the chef on an empty
+      // archived workspace on every mobile login. Now we always redirect
+      // to the first live workspace.
+      const activeWs = state.activeWorkspaceId ? state.workspaces[state.activeWorkspaceId] : null;
+      const needsReassign = !activeWs || activeWs.archived || activeWs._deletedAt;
+      if (needsReassign) {
+        const first = Object.values(state.workspaces).filter(function (w) { return !w.archived && !w._deletedAt; })[0]
+                   || Object.values(state.workspaces).filter(function (w) { return !w._deletedAt; })[0]
                    || Object.values(state.workspaces)[0];
         state.activeWorkspaceId = first ? first.id : null;
       }

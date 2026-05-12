@@ -193,22 +193,10 @@
     const tikkaR = all.find(function (r) { return r.name === 'Chicken Tikka Masala'; });
     const burgerR = all.find(function (r) { return r.name === 'Classic Cheeseburger'; });
 
-    // === DEMO MENU ===
-    if (carbonaraR && tikkaR && burgerR) {
-      PCD.store.upsertInTable('menus', {
-        name: 'Lunch Menu',
-        subtitle: 'Sample · Customize me',
-        sections: [
-          { id: PCD.uid('sec'), title: 'Mains', items: [
-            { id: PCD.uid('mi'), recipeId: tikkaR.id, price: 18 },
-            { id: PCD.uid('mi'), recipeId: carbonaraR.id, price: 16 },
-            { id: PCD.uid('mi'), recipeId: burgerR.id, price: 14 },
-          ]},
-        ],
-        printDensity: 'comfortable',
-        _demo: true,
-      }, 'm');
-    }
+    // v2.8.24 — Removed the older "DEMO MENU" seed block here. A second
+    // identical "DEMO MENU (added v2.6.30)" block further down was the
+    // intended one; this earlier copy was a leftover that duplicated the
+    // "Lunch Menu" entry in the demo workspace.
 
     // === DEMO SUPPLIERS ===
     const supplierData = [
