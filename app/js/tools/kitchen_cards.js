@@ -168,7 +168,12 @@
             background: #fff;
           }
           .kc-block.dragging { opacity: 0.4; }
-          .kc-block.drag-over { outline: 3px dashed #16a34a; outline-offset: -3px; }
+          /* v2.8.17 — Drop indicator on the precise insertion edge.
+             Top-half hover → green stripe above; bottom-half hover → below.
+             Replaces the old whole-card outline that didn't convey position. */
+          .kc-block.drop-before { box-shadow: 0 -4px 0 0 #16a34a; }
+          .kc-block.drop-after { box-shadow: 0 4px 0 0 #16a34a; }
+          .kc-sheet.drop-end-active { outline: 3px dashed #16a34a; outline-offset: -3px; }
           .kc-block { position: relative; }
           .kc-block-header { cursor: grab; }
           .kc-block-header:active { cursor: grabbing; }
@@ -430,7 +435,26 @@
     // ============ DRAG & RESIZE ============
     function wireInteractions(frame) {
       if (!frame) return;
+      const sheet = frame.querySelector('.kc-sheet');
       const blocks = frame.querySelectorAll('.kc-block');
+
+      // v2.8.17 — Drag-drop rewrite for predictable reordering.
+      // Old behavior: drop-on-card always inserted at toIdx (regardless
+      // of fromIdx/toIdx relation), producing inconsistent "sometimes
+      // swap, sometimes insert" results. Empty-space drops did nothing.
+      // New behavior:
+      //   - Top half of target card → insert BEFORE target
+      //   - Bottom half of target card → insert AFTER target
+      //   - Drop on empty area of the sheet → append to end
+      // Combined with column-fill: auto, the array order matches the
+      // visual order so the operator sees exactly what they're crafting.
+      function clearDropMarkers() {
+        frame.querySelectorAll('.drop-before, .drop-after').forEach(function (b) {
+          b.classList.remove('drop-before');
+          b.classList.remove('drop-after');
+        });
+        if (sheet) sheet.classList.remove('drop-end-active');
+      }
 
       blocks.forEach(function (block) {
         const rid = block.getAttribute('data-rid');
@@ -446,28 +470,41 @@
           });
           header.addEventListener('dragend', function () {
             block.classList.remove('dragging');
-            frame.querySelectorAll('.drag-over').forEach(function (b) { b.classList.remove('drag-over'); });
+            clearDropMarkers();
           });
         }
 
         block.addEventListener('dragover', function (e) {
           e.preventDefault();
-          if (!block.classList.contains('dragging')) block.classList.add('drag-over');
+          if (block.classList.contains('dragging')) return;
+          const rect = block.getBoundingClientRect();
+          const isTopHalf = (e.clientY - rect.top) < rect.height / 2;
+          // Clear other blocks' markers, then set this one
+          frame.querySelectorAll('.kc-block').forEach(function (b) {
+            if (b !== block) { b.classList.remove('drop-before'); b.classList.remove('drop-after'); }
+          });
+          if (sheet) sheet.classList.remove('drop-end-active');
+          block.classList.toggle('drop-before', isTopHalf);
+          block.classList.toggle('drop-after', !isTopHalf);
         });
-        block.addEventListener('dragleave', function () { block.classList.remove('drag-over'); });
+        block.addEventListener('dragleave', function () {
+          block.classList.remove('drop-before');
+          block.classList.remove('drop-after');
+        });
         block.addEventListener('drop', function (e) {
           e.preventDefault();
-          block.classList.remove('drag-over');
+          e.stopPropagation();
+          const isAfter = block.classList.contains('drop-after');
+          clearDropMarkers();
           const draggedRid = e.dataTransfer.getData('text/plain') || (frame.querySelector('.dragging') && frame.querySelector('.dragging').getAttribute('data-rid'));
           if (!draggedRid || draggedRid === rid) return;
-          // Reorder: move draggedRid before this rid
           const fromIdx = layout.findIndex(function (l) { return l.recipeId === draggedRid; });
-          const toIdx = layout.findIndex(function (l) { return l.recipeId === rid; });
+          let toIdx = layout.findIndex(function (l) { return l.recipeId === rid; });
           if (fromIdx < 0 || toIdx < 0) return;
           const moved = layout.splice(fromIdx, 1)[0];
-          // Adjust toIdx if we removed before it
-          const insertAt = fromIdx < toIdx ? toIdx : toIdx;
-          layout.splice(insertAt, 0, moved);
+          // Splice shifts indices >= fromIdx down by one
+          if (fromIdx < toIdx) toIdx -= 1;
+          layout.splice(isAfter ? toIdx + 1 : toIdx, 0, moved);
           updatePreview();
         });
 
@@ -482,6 +519,35 @@
           });
         }
       });
+
+      // === SHEET-LEVEL DROP (empty space → append to end) ===
+      if (sheet) {
+        sheet.addEventListener('dragover', function (e) {
+          // Only show end-of-list indicator if cursor isn't over a block
+          if (e.target.closest('.kc-block')) return;
+          e.preventDefault();
+          frame.querySelectorAll('.drop-before, .drop-after').forEach(function (b) {
+            b.classList.remove('drop-before'); b.classList.remove('drop-after');
+          });
+          sheet.classList.add('drop-end-active');
+        });
+        sheet.addEventListener('dragleave', function (e) {
+          // Only clear if leaving the sheet entirely
+          if (e.target === sheet) sheet.classList.remove('drop-end-active');
+        });
+        sheet.addEventListener('drop', function (e) {
+          if (e.target.closest('.kc-block')) return;  // handled by block
+          e.preventDefault();
+          clearDropMarkers();
+          const draggedRid = e.dataTransfer.getData('text/plain') || (frame.querySelector('.dragging') && frame.querySelector('.dragging').getAttribute('data-rid'));
+          if (!draggedRid) return;
+          const fromIdx = layout.findIndex(function (l) { return l.recipeId === draggedRid; });
+          if (fromIdx < 0) return;
+          const moved = layout.splice(fromIdx, 1)[0];
+          layout.push(moved);
+          updatePreview();
+        });
+      }
     }
 
     renderBody();
@@ -585,13 +651,16 @@
         '.kc-sheet {' +
           'box-sizing: border-box;' +
           'padding: 4mm;' +
+          'height: 100%;' +             // v2.8.17 — required for column-fill: auto to know when to break to the next column
           // v2.8.15 — CSS multi-column instead of grid: short cards no
           // longer leave wasted row space; recipes flow down each column
-          // and wrap to the next. column-fill: balance distributes
-          // content evenly across the chosen column count.
+          // and wrap to the next.
+          // v2.8.17 — column-fill: auto so the order array maps directly
+          // to visual placement (col 1 fills first, then col 2, etc.).
+          // Operator wanted predictable drag-to-position behavior.
           'column-count: ' + opts.columns + ';' +
           'column-gap: 2mm;' +
-          'column-fill: balance;' +
+          'column-fill: auto;' +
         '}' +
 
         '.kc-header {' +
