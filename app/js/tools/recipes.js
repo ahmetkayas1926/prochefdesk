@@ -1923,7 +1923,21 @@
           <input type="text" class="input" id="recipeName" value="${PCD.escapeHtml(data.name || '')}" placeholder="${t('recipe_name_placeholder')}">
         </div>
 
-        <div class="field-row">
+        <!-- v2.8.26 — Mode toggle: "Mark as Prep / Sub-recipe". Moved
+             above Category+Servings so the chef picks the mode first;
+             form below adapts (v2.8.27: Category and Servings hide when
+             toggled on — they're meaningless for a batch prep). -->
+        <div class="field" style="margin-bottom:14px;">
+          <label class="checkbox" style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
+            <input type="checkbox" id="recipeIsSubRecipe" ${(PCD.recipes && PCD.recipes.isPrep ? PCD.recipes.isPrep(data) : !!(data.yieldAmount && data.yieldUnit)) ? 'checked' : ''} style="margin-top:2px;flex-shrink:0;">
+            <span>
+              <span style="font-weight:600;">${t('recipe_is_subrecipe_label')}</span>
+              <div class="text-muted" style="font-size:12px;line-height:1.4;margin-top:2px;">${t('recipe_is_subrecipe_hint')}</div>
+            </span>
+          </label>
+        </div>
+
+        <div class="field-row" id="catServingsRow"${(PCD.recipes && PCD.recipes.isPrep && PCD.recipes.isPrep(data)) ? ' style="display:none;"' : ''}>
           <div class="field">
             <label class="field-label">${t('recipe_category')}</label>
             <select class="select" id="recipeCategory">
@@ -1945,21 +1959,6 @@
             <label class="field-label">${t('recipe_cook_time')}</label>
             <input type="number" class="input" id="recipeCook" value="${data.cookTime || ''}" min="0">
           </div>
-        </div>
-
-        <!-- v2.8.26 — Explicit "Mark as Prep / Sub-recipe" toggle.
-             Decouples classification (binary) from yield (factual data).
-             Previously the system inferred prep-ness from yieldAmount
-             being set, which forced fake yield values when the chef
-             only knew "this is a prep" but hadn't measured the batch. -->
-        <div class="field" style="margin-bottom:14px;">
-          <label class="checkbox" style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
-            <input type="checkbox" id="recipeIsSubRecipe" ${(PCD.recipes && PCD.recipes.isPrep ? PCD.recipes.isPrep(data) : !!(data.yieldAmount && data.yieldUnit)) ? 'checked' : ''} style="margin-top:2px;flex-shrink:0;">
-            <span>
-              <span style="font-weight:600;">${t('recipe_is_subrecipe_label')}</span>
-              <div class="text-muted" style="font-size:12px;line-height:1.4;margin-top:2px;">${t('recipe_is_subrecipe_hint')}</div>
-            </span>
-          </label>
         </div>
 
         <div class="field-row">
@@ -2028,6 +2027,18 @@
       renderAllergenChips();
       renderIngList();
       wireEditor();
+
+      // v2.8.27 — Live toggle: hide Category + Servings row when
+      // "Mark as Prep" is checked. Field values are preserved (untoggling
+      // restores them), only DOM visibility changes. Hidden inputs still
+      // submit so save logic stays simple.
+      const subCb = PCD.$('#recipeIsSubRecipe', body);
+      const catRow = PCD.$('#catServingsRow', body);
+      if (subCb && catRow) {
+        subCb.addEventListener('change', function () {
+          catRow.style.display = this.checked ? 'none' : '';
+        });
+      }
     }
 
     function renderAllergenChips() {
