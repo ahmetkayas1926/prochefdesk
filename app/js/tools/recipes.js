@@ -49,6 +49,16 @@
         <input type="search" id="recipeSearch" placeholder="${t('search_recipes_placeholder')}" autocomplete="off">
       </div>
 
+      <!-- v2.8.22 — Filter tabs: All / Menu / Preps. Splits the library
+           between 1-portion plates and batch preps (recipes with
+           yieldAmount set). Combines with the search and bulk-select
+           features. -->
+      <div id="recipeFilterTabs" class="flex gap-2 mb-3" style="background:var(--surface-2);padding:4px;border-radius:8px;">
+        <button type="button" class="btn btn-sm" data-tab="all" style="flex:1;background:transparent;">${t('recipes_tab_all', { n: recipes.length })}</button>
+        <button type="button" class="btn btn-sm" data-tab="menu" style="flex:1;background:transparent;">${t('recipes_tab_menu', { n: recipes.filter(function(r){return !(r.yieldAmount && r.yieldUnit);}).length })}</button>
+        <button type="button" class="btn btn-sm" data-tab="preps" style="flex:1;background:transparent;">${t('recipes_tab_preps', { n: recipes.filter(function(r){return r.yieldAmount && r.yieldUnit;}).length })}</button>
+      </div>
+
       <div id="bulkBar" class="card" style="display:none;padding:10px 12px;margin-bottom:12px;background:var(--brand-50);border-color:var(--brand-300);position:sticky;top:0;z-index:5;">
         <div class="flex items-center justify-between" style="flex-wrap:wrap;gap:8px;">
           <div class="flex items-center gap-3">
@@ -67,7 +77,26 @@
 
     const listEl = PCD.$('#recipeList', view);
     let filter = '';
+    // v2.8.22 — Active filter tab: 'all' | 'menu' | 'preps'. Combines
+    // with the search filter. Menu = no yieldAmount (1-portion plates).
+    // Preps = recipes with yieldAmount + yieldUnit set (batch/sub-recipes).
+    let activeTab = 'all';
     let sorted = recipes.slice().sort(function (a, b) { return (b.updatedAt || '').localeCompare(a.updatedAt || ''); });
+
+    function isPrep(r) { return !!(r.yieldAmount && r.yieldUnit); }
+
+    function paintTabs() {
+      const tabsWrap = PCD.$('#recipeFilterTabs', view);
+      if (!tabsWrap) return;
+      tabsWrap.querySelectorAll('[data-tab]').forEach(function (b) {
+        const isActive = b.getAttribute('data-tab') === activeTab;
+        // Active tab: white card-style background with shadow; inactive: transparent
+        b.style.background = isActive ? 'var(--surface)' : 'transparent';
+        b.style.boxShadow = isActive ? '0 1px 2px rgba(0,0,0,0.08)' : 'none';
+        b.style.fontWeight = isActive ? '700' : '500';
+        b.style.color = isActive ? 'var(--text)' : 'var(--text-3)';
+      });
+    }
 
     function paint() {
       PCD.clear(listEl);
@@ -85,7 +114,12 @@
           });
         });
       }
-      if (visible.length === 0 && !filter) {
+      // v2.8.22 — Tab filter applies AFTER search filter so the count in
+      // search results stays scoped to the chosen tab.
+      if (activeTab === 'menu') visible = visible.filter(function (r) { return !isPrep(r); });
+      else if (activeTab === 'preps') visible = visible.filter(isPrep);
+
+      if (visible.length === 0 && !filter && activeTab === 'all') {
         const ws = PCD.store.getActiveWorkspace();
         const wsLabel = ws ? PCD.escapeHtml(ws.name) : '';
         listEl.innerHTML = `
@@ -104,12 +138,25 @@
         return;
       }
       if (visible.length === 0) {
-        listEl.innerHTML = '<div class="empty"><div class="empty-desc">No results for "' + PCD.escapeHtml(filter) + '"</div></div>';
+        const msg = filter
+          ? 'No results for "' + PCD.escapeHtml(filter) + '"'
+          : (activeTab === 'preps' ? t('recipes_empty_preps') : t('recipes_empty_menu'));
+        listEl.innerHTML = '<div class="empty"><div class="empty-desc">' + msg + '</div></div>';
         return;
       }
 
       const cont = PCD.el('div', { class: 'flex flex-col gap-2' });
-      visible.forEach(function (r) {
+
+      // v2.8.22 — On "All" tab, group rows into Menu items + Preps
+      // sections with headers (preserves sort order within each section).
+      // On a specific tab, render a single flat list.
+      function appendSectionHeader(labelKey, count) {
+        const h = PCD.el('div');
+        h.style.cssText = 'padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--brand-700);text-transform:uppercase;letter-spacing:0.08em;background:var(--brand-50);border-radius:6px;margin-top:6px;';
+        h.textContent = t(labelKey) + ' · ' + count;
+        cont.appendChild(h);
+      }
+      function appendRow(r) {
         const cost = computeCost(r);
         const costPerServing = r.servings ? cost / r.servings : cost;
         const pct = (r.salePrice && cost > 0 && r.servings) ? (costPerServing / r.salePrice) * 100 : null;
@@ -133,12 +180,20 @@
           thumb.appendChild(img);
         } else thumb.textContent = '🍽️';
 
+        // v2.8.22 — Small SUB badge in the row meta for prep recipes,
+        // so the chef can tell at a glance even when scrolling fast.
+        const subBadge = isPrep(r) ? '<span class="chip" style="background:var(--brand-50);color:var(--brand-700);font-size:9px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:2px 6px;">SUB</span>' : '';
+        // Yield label for prep recipes; servings for menu items.
+        const yieldOrServings = isPrep(r)
+          ? '<span>' + PCD.fmtNumber(r.yieldAmount) + ' ' + PCD.escapeHtml(r.yieldUnit) + '</span>'
+          : (r.servings ? '<span>' + r.servings + 'p</span>' : '');
+
         const body = PCD.el('div', { class: 'list-item-body' });
         body.innerHTML = `
-          <div class="list-item-title">${PCD.escapeHtml(r.name)}</div>
+          <div class="list-item-title">${PCD.escapeHtml(r.name)} ${subBadge}</div>
           <div class="list-item-meta">
             <span>${t(r.category || 'cat_main')}</span>
-            ${r.servings ? '<span>·</span><span>' + r.servings + 'p</span>' : ''}
+            ${yieldOrServings ? '<span>·</span>' + yieldOrServings : ''}
             ${cost > 0 ? '<span>·</span><span>' + PCD.fmtMoney(cost) + '</span>' : ''}
             ${pct !== null ? '<span class="chip chip-' + (pct <= 35 ? 'success' : (pct <= 45 ? 'warning' : 'danger')) + '">' + PCD.fmtPercent(pct, 0) + '</span>' : ''}
           </div>
@@ -173,7 +228,23 @@
           row.insertBefore(cb, row.firstChild);
         }
         cont.appendChild(row);
-      });
+      }
+
+      if (activeTab === 'all') {
+        const mains = visible.filter(function (r) { return !isPrep(r); });
+        const preps = visible.filter(isPrep);
+        if (mains.length > 0) {
+          appendSectionHeader('recipes_section_menu', mains.length);
+          mains.forEach(appendRow);
+        }
+        if (preps.length > 0) {
+          appendSectionHeader('recipes_section_preps', preps.length);
+          preps.forEach(appendRow);
+        }
+      } else {
+        visible.forEach(appendRow);
+      }
+
       listEl.appendChild(cont);
     }
 
@@ -208,6 +279,16 @@
     const toggleSel = PCD.$('#toggleSelectMode', view);
     if (toggleSel) toggleSel.addEventListener('click', enterSelect);
     PCD.$('#exitSelect', view).addEventListener('click', exitSelect);
+    // v2.8.22 — Filter tabs: clicking switches activeTab and repaints
+    // both the tab visual state and the list contents.
+    PCD.on(view, 'click', '#recipeFilterTabs [data-tab]', function () {
+      const tab = this.getAttribute('data-tab');
+      if (tab === activeTab) return;
+      activeTab = tab;
+      paintTabs();
+      paint();
+    });
+    paintTabs();
     PCD.$('#selAll', view).addEventListener('change', function () {
       const currentShown = sorted.filter(function (r) {
         if (!filter) return true;

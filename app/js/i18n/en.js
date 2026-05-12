@@ -600,6 +600,14 @@ window.PCD.i18n.register('en', {
   // v2.8.21
   kc_recipes_section_preps: "Preps · {n}",
   kc_recipes_section_menu: "Menu items · {n}",
+  // v2.8.22
+  recipes_tab_all: "All · {n}",
+  recipes_tab_menu: "Menu · {n}",
+  recipes_tab_preps: "Preps · {n}",
+  recipes_section_menu: "Menu items",
+  recipes_section_preps: "Preps / Sub-recipes",
+  recipes_empty_menu: "No menu items yet — uncheck Yield in the editor to keep one out of the Preps bucket.",
+  recipes_empty_preps: "No preps yet — set Yield (e.g. 250 g) in a recipe to mark it as a prep / sub-recipe.",
   pc_subtitle: "Scale one or more recipes for an event",
   pc_step1: "Step 1 — Guest count",
   pc_guests: "guests",

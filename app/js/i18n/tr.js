@@ -600,6 +600,14 @@ window.PCD.i18n.register('tr', {
   // v2.8.21
   kc_recipes_section_preps: "Hazırlıklar · {n}",
   kc_recipes_section_menu: "Menü tarifleri · {n}",
+  // v2.8.22
+  recipes_tab_all: "Tümü · {n}",
+  recipes_tab_menu: "Menü · {n}",
+  recipes_tab_preps: "Hazırlık · {n}",
+  recipes_section_menu: "Menü tarifleri",
+  recipes_section_preps: "Hazırlıklar / Sub-recipes",
+  recipes_empty_menu: "Henüz menü tarifi yok — bir tarifte Yield alanını boş bırakırsan menü tarifi sayılır.",
+  recipes_empty_preps: "Henüz hazırlık tarifi yok — bir tarifte Yield gir (örn. 250 g) ki o tarif hazırlık / sub-recipe olarak işaretlensin.",
   pc_subtitle: "Bir veya daha fazla tarifi etkinlik için ölçeklendir",
   pc_step1: "Adım 1 — Misafir sayısı",
   pc_guests: "misafir",
