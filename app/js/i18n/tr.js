@@ -597,6 +597,9 @@ window.PCD.i18n.register('tr', {
   kc_clear_canvas_btn: "Kanvası temizle",
   kc_clear_canvas_confirm_title: "Kanvas temizlensin mi?",
   kc_clear_canvas_confirm_text: "Tüm tarifler bu kanvastan kaldırılır. Ayarlar (yönlendirme, sütun, yazı boyutu) korunur. Kaydedilmiş kopyalar etkilenmez.",
+  // v2.8.21
+  kc_recipes_section_preps: "Hazırlıklar · {n}",
+  kc_recipes_section_menu: "Menü tarifleri · {n}",
   pc_subtitle: "Bir veya daha fazla tarifi etkinlik için ölçeklendir",
   pc_step1: "Adım 1 — Misafir sayısı",
   pc_guests: "misafir",

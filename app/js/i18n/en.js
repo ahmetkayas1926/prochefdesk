@@ -597,6 +597,9 @@ window.PCD.i18n.register('en', {
   kc_clear_canvas_btn: "Clear canvas",
   kc_clear_canvas_confirm_title: "Clear canvas?",
   kc_clear_canvas_confirm_text: "All recipes will be removed from this canvas. Settings (orientation, columns, font size) are kept. Saved copies are not affected.",
+  // v2.8.21
+  kc_recipes_section_preps: "Preps · {n}",
+  kc_recipes_section_menu: "Menu items · {n}",
   pc_subtitle: "Scale one or more recipes for an event",
   pc_step1: "Step 1 — Guest count",
   pc_guests: "guests",

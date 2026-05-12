@@ -61,9 +61,14 @@
     let showAmounts = lastCanvas ? !!lastCanvas.showAmounts : true;
 
     // Layout: ordered list of { recipeId, span }
+    // v2.8.21 — Default empty when no saved canvas. Previously auto-added
+    // every recipe in the library which conflated preps (sub-recipes) and
+    // 1-portion menu items on the kitchen reference sheet. Kitchen Cards
+    // is meant as a quick-reference for batch preps the kitchen needs at
+    // hand — the chef opts in to whatever belongs on the sheet.
     let layout = (lastCanvas && Array.isArray(lastCanvas.layout))
       ? lastCanvas.layout.filter(function (it) { return recipes.some(function (r) { return r.id === it.recipeId; }); })
-      : recipes.map(function (r) { return { recipeId: r.id, span: 1 }; });
+      : [];
 
     function renderBody() {
       const allCanvases = (PCD.store.listTable('canvases') || []).slice();
@@ -211,15 +216,39 @@
       `;
 
       // Recipe list (toggleable)
+      // v2.8.21 — Split into two sections: Preps (recipes with
+      // yieldAmount + yieldUnit set, intended for batch prep / use as
+      // sub-recipe) on top, then Menu items (1-portion plates). This
+      // separates the kitchen-reference targets (sauces, dressings, spice
+      // mixes) from menu plate cost calculations — they shouldn't sit
+      // alphabetically interleaved on the same screen. Empty sections
+      // hide their header so the panel stays clean.
       const recipeListEl = PCD.$('#recipeList', bodyEl);
       const onCanvas = new Set(layout.map(function (l) { return l.recipeId; }));
-      recipes.forEach(function (r) {
+      const preps = recipes.filter(function (r) { return r.yieldAmount && r.yieldUnit; });
+      const mains = recipes.filter(function (r) { return !(r.yieldAmount && r.yieldUnit); });
+
+      function appendRow(r) {
         const isOn = onCanvas.has(r.id);
         const row = PCD.el('label', { class: 'kc-recipe-row' });
         row.innerHTML = '<input type="checkbox" data-rid="' + r.id + '"' + (isOn ? ' checked' : '') + '>' +
           '<div style="flex:1;font-size:13px;font-weight:' + (isOn ? '600' : '400') + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + PCD.escapeHtml(r.name) + '</div>';
         recipeListEl.appendChild(row);
-      });
+      }
+      function appendHeader(labelKey, count) {
+        const h = PCD.el('div');
+        h.style.cssText = 'padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--brand-700);text-transform:uppercase;letter-spacing:0.08em;background:var(--brand-50);';
+        h.textContent = t(labelKey, { n: count });
+        recipeListEl.appendChild(h);
+      }
+      if (preps.length > 0) {
+        appendHeader('kc_recipes_section_preps', preps.length);
+        preps.forEach(appendRow);
+      }
+      if (mains.length > 0) {
+        appendHeader('kc_recipes_section_menu', mains.length);
+        mains.forEach(appendRow);
+      }
 
       // Wire all controls
       PCD.on(bodyEl, 'click', '[data-orient]', function () {
@@ -354,7 +383,8 @@
         canvasName = 'Kitchen Reference';
         columns = 3; orientation = 'landscape'; fontSize = 'medium';
         showMethod = true; showAmounts = true;
-        layout = recipes.map(function (r) { return { recipeId: r.id, span: 1 }; });
+        // v2.8.21 — Default empty (was: auto-select every recipe)
+        layout = [];
         renderBody();
         PCD.toast.info(PCD.i18n.t('toast_new_canvas'));
       });
@@ -373,7 +403,10 @@
           if (Array.isArray(cvs.layout)) {
             layout = cvs.layout.filter(function (it) { return recipes.some(function (r) { return r.id === it.recipeId; }); });
           } else {
-            layout = recipes.map(function (r) { return { recipeId: r.id, span: 1 }; });
+            // v2.8.21 — Loaded canvas without a layout array → default
+            // empty. Chef picks recipes manually instead of inheriting
+            // the entire library.
+            layout = [];
           }
           renderBody();
         }, function (deletedId) {
