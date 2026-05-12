@@ -648,10 +648,41 @@
         '@page { size: A4 ' + opts.orientation + '; margin: 0; }' +
         'body { margin: 0; padding: 0; font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif; color: #1a1a1a; background: #fff; }' +
 
+        // v2.8.18 — Print-path-only body sizing + flex column layout.
+        // Without explicit body dimensions, column-fill: auto cannot compute
+        // column breaks in the new-window print preview → all cards stack
+        // in column 1 (operator's "first preview wrong, second correct"
+        // issue). Sizing body to A4 mm makes the on-screen preview match
+        // the @page print dimensions, so the first render is correct.
+        // The flex column lets PCD.print's injected footer fit on the same
+        // A4 page (previously it overflowed to page 2 because of its 24px
+        // top margin + .kc-sheet at height: 100%). Live preview path
+        // (interactive: true) keeps height: 100% inside .kc-preview-frame.
+        (opts.interactive
+          ? '.kc-sheet { height: 100%; }'
+          :
+            'body { ' +
+              'width: ' + (opts.orientation === 'landscape' ? 297 : 210) + 'mm; ' +
+              'height: ' + (opts.orientation === 'landscape' ? 210 : 297) + 'mm; ' +
+              'display: flex; flex-direction: column; ' +
+            '}' +
+            '.kc-sheet { flex: 1 1 auto; min-height: 0; height: auto; }' +
+            // Override PCD.print's injected footer: compact, no top margin,
+            // sits as a flex item at the bottom of the A4 body.
+            '.pcd-print-footer { ' +
+              'margin: 0 !important; padding: 1.5mm 4mm !important; ' +
+              'border-top: none !important; flex: 0 0 auto; ' +
+              'font-size: 7pt !important; line-height: 1.2 !important; ' +
+            '}'
+        ) +
+
         '.kc-sheet {' +
           'box-sizing: border-box;' +
-          'padding: 4mm;' +
-          'height: 100%;' +             // v2.8.17 — required for column-fill: auto to know when to break to the next column
+          // v2.8.18 — 4mm → 2mm for tighter use of the canvas surface
+          // (operator: "kenar boşluklarını olabildiğince azaltalım").
+          // 2mm is conservative against typical home/office printer
+          // unprintable margins; safe for laminate-quality print.
+          'padding: 2mm;' +
           // v2.8.15 — CSS multi-column instead of grid: short cards no
           // longer leave wasted row space; recipes flow down each column
           // and wrap to the next.
