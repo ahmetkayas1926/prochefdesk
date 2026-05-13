@@ -195,16 +195,20 @@
         // so the chef can tell at a glance even when scrolling fast.
         const subBadge = isPrep(r) ? '<span class="chip" style="background:var(--brand-50);color:var(--brand-700);font-size:9px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:2px 6px;">SUB</span>' : '';
         // Yield label for prep recipes; servings for menu items.
+        // v2.8.28 — Prep without yield → empty (was rendering "0 " junk).
         const yieldOrServings = isPrep(r)
-          ? '<span>' + PCD.fmtNumber(r.yieldAmount) + ' ' + PCD.escapeHtml(r.yieldUnit) + '</span>'
+          ? ((r.yieldAmount && r.yieldUnit) ? '<span>' + PCD.fmtNumber(r.yieldAmount) + ' ' + PCD.escapeHtml(r.yieldUnit) + '</span>' : '')
           : (r.servings ? '<span>' + r.servings + 'p</span>' : '');
 
         const body = PCD.el('div', { class: 'list-item-body' });
+        // v2.8.28 — Preps hide the category meta ("Main") since the SUB
+        // badge in the title already conveys classification and category
+        // is a menu-item concept.
         body.innerHTML = `
           <div class="list-item-title">${PCD.escapeHtml(r.name)} ${subBadge}</div>
           <div class="list-item-meta">
-            <span>${t(r.category || 'cat_main')}</span>
-            ${yieldOrServings ? '<span>·</span>' + yieldOrServings : ''}
+            ${!isPrep(r) ? '<span>' + t(r.category || 'cat_main') + '</span>' : ''}
+            ${yieldOrServings ? (!isPrep(r) ? '<span>·</span>' : '') + yieldOrServings : ''}
             ${cost > 0 ? '<span>·</span><span>' + PCD.fmtMoney(cost) + '</span>' : ''}
             ${pct !== null ? '<span class="chip chip-' + (pct <= 35 ? 'success' : (pct <= 45 ? 'warning' : 'danger')) + '">' + PCD.fmtPercent(pct, 0) + '</span>' : ''}
           </div>
@@ -1390,20 +1394,26 @@
     });
 
     const body = PCD.el('div');
+    // v2.8.28 — Preps hide Category, Servings, and "cost per serving"
+    // in the preview popup. These fields are menu-item concepts; a
+    // prep showing "Main · 1 servings · $X per serving" is misleading.
+    // The prep's yield (if set) is shown via the kitchen card label.
+    const _isPrepForView = (PCD.recipes && PCD.recipes.isPrep) ? PCD.recipes.isPrep(r) : !!(r.yieldAmount && r.yieldUnit);
     body.innerHTML = `
       ${r.photo ? `<img src="${PCD.escapeHtml(r.photo)}" loading="lazy" alt="" style="width:100%;height:220px;object-fit:cover;border-radius:var(--r-lg);margin-bottom:14px;">` : ''}
       <div class="flex flex-col gap-2 mb-3">
         <div class="flex gap-2" style="flex-wrap:wrap;">
-          <span class="chip chip-brand">${t(r.category || 'cat_main')}</span>
+          ${_isPrepForView ? '<span class="chip chip-brand" style="background:var(--brand-50);color:var(--brand-700);font-weight:700;letter-spacing:0.06em;">SUB-RECIPE</span>' : '<span class="chip chip-brand">' + t(r.category || 'cat_main') + '</span>'}
           ${r.cuisine ? '<span class="chip">' + PCD.escapeHtml(r.cuisine) + '</span>' : ''}
-          ${r.servings ? '<span class="chip">' + r.servings + ' ' + t('recipe_servings').toLowerCase() + '</span>' : ''}
+          ${(!_isPrepForView && r.servings) ? '<span class="chip">' + r.servings + ' ' + t('recipe_servings').toLowerCase() + '</span>' : ''}
+          ${(_isPrepForView && r.yieldAmount && r.yieldUnit) ? '<span class="chip">' + PCD.fmtNumber(r.yieldAmount) + ' ' + PCD.escapeHtml(r.yieldUnit) + '</span>' : ''}
           ${(r.prepTime || r.cookTime) ? '<span class="chip">⏱ ' + ((r.prepTime||0) + (r.cookTime||0)) + 'min</span>' : ''}
         </div>
       </div>
 
       <div class="grid grid-2 mb-3" style="gap:8px;">
         <div class="stat" style="padding:10px;"><div class="stat-label">${t('food_cost')}</div><div class="stat-value" style="font-size:18px;">${PCD.fmtMoney(cost)}</div></div>
-        <div class="stat" style="padding:10px;"><div class="stat-label">${t('cost_per_serving')}</div><div class="stat-value" style="font-size:18px;">${PCD.fmtMoney(costPerServing)}</div></div>
+        ${!_isPrepForView ? '<div class="stat" style="padding:10px;"><div class="stat-label">' + t('cost_per_serving') + '</div><div class="stat-value" style="font-size:18px;">' + PCD.fmtMoney(costPerServing) + '</div></div>' : ''}
         ${r.salePrice ? '<div class="stat" style="padding:10px;"><div class="stat-label">' + t('recipe_sale_price') + '</div><div class="stat-value" style="font-size:18px;">' + PCD.fmtMoney(r.salePrice) + '</div></div>' : ''}
         ${pct !== null ? '<div class="stat" style="padding:10px;"><div class="stat-label">' + t('food_cost_percent') + '</div><div class="stat-value" style="font-size:18px;color:' + (pct <= 35 ? 'var(--success)' : (pct <= 45 ? 'var(--warning)' : 'var(--danger)')) + ';">' + PCD.fmtPercent(pct, 1) + '</div></div>' : ''}
       </div>

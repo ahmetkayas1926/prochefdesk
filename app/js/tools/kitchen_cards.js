@@ -728,11 +728,15 @@
       // v2.8.20 — Sub-recipe header shows yield ("2 kg") instead of
       // servings ("1p"). A 2-kg batch of toum sauce isn't 1 portion;
       // showing the yield gives the kitchen the actual prepared amount.
-      // Falls back to servings for non-sub recipes (regular menu items).
+      // v2.8.28 — When a recipe is flagged as Prep but has no recorded
+      // yield, show NOTHING instead of falling back to servings — a prep
+      // without yield is unmeasured, not a 1-portion plate, so "1p" was
+      // misleading. Menu items still show servings as before.
+      const _isPrepForLabel = (PCD.recipes && PCD.recipes.isPrep) ? PCD.recipes.isPrep(r) : !!(r.yieldAmount && r.yieldUnit);
       let srvLabel = '';
       if (r.yieldAmount && r.yieldUnit) {
         srvLabel = PCD.fmtNumber(r.yieldAmount) + ' ' + PCD.escapeHtml(r.yieldUnit);
-      } else if (r.servings) {
+      } else if (!_isPrepForLabel && r.servings) {
         srvLabel = r.servings + 'p';
       }
       blocksHtml +=
