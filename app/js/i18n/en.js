@@ -624,6 +624,8 @@ window.PCD.i18n.register('en', {
   // v2.8.26
   recipe_is_subrecipe_label: "Mark as Prep / Sub-recipe",
   recipe_is_subrecipe_hint: "Categorises this recipe as a batch prep / sub-recipe (sauces, dressings, spice mixes) instead of a 1-portion menu item. Yield amount stays optional — record it when measured.",
+  // v2.8.29
+  recipes_subrecipe_subtitle: "Sub-recipe",
   pc_subtitle: "Scale one or more recipes for an event",
   pc_step1: "Step 1 — Guest count",
   pc_guests: "guests",

@@ -23,6 +23,22 @@
     return PCD.recipes.computeFoodCost(recipe, currentIngMap(), PCD.recipes.buildRecipeMap());
   }
 
+  // v2.8.29 — Subtitle for cost reports (HTML / PDF / XLSX). Was using
+  // raw `r.category` ("Cat_main" after CSS capitalize) and always
+  // appending "X servings" which is wrong for preps. Now translates
+  // the category key, and for preps shows "Sub-recipe" (+ yield when
+  // recorded) instead of menu-item phrasing.
+  function recipeSubtitle(r, it) {
+    const t = PCD.i18n.t;
+    const isPrep = (PCD.recipes && PCD.recipes.isPrep) ? PCD.recipes.isPrep(r) : !!(r.yieldAmount && r.yieldUnit);
+    if (isPrep) {
+      const yieldStr = (r.yieldAmount && r.yieldUnit) ? ' · ' + PCD.fmtNumber(r.yieldAmount) + ' ' + r.yieldUnit : '';
+      return t('recipes_subrecipe_subtitle') + yieldStr;
+    }
+    const servings = (it && it.servings) || r.servings || 1;
+    return t(r.category || 'cat_main') + ' · ' + servings + ' ' + t('cr_servings').toLowerCase();
+  }
+
   // ============ LIST VIEW ============
   let selectMode = false;
   let selectedIds = new Set();
@@ -568,7 +584,7 @@
             '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px;">' +
               '<div>' +
                 '<div style="font-weight:800;font-size:16px;">' + PCD.escapeHtml(r.name) + '</div>' +
-                '<div class="text-muted" style="font-size:12px;">' + (r.category || 'recipe') + ' · ' + it.servings + ' ' + t('cr_servings').toLowerCase() + '</div>' +
+                '<div class="text-muted" style="font-size:12px;">' + PCD.escapeHtml(recipeSubtitle(r, it)) + '</div>' +
               '</div>' +
               '<div style="text-align:end;">' +
                 '<div class="text-muted" style="font-size:11px;text-transform:uppercase;letter-spacing:0.04em;font-weight:700;">' + t('cr_food_cost_pct') + '</div>' +
@@ -701,7 +717,7 @@
           '<div class="recipe-header">' +
             '<div>' +
               '<h2>' + PCD.escapeHtml(r.name) + '</h2>' +
-              '<div class="meta">' + (r.category || 'recipe') + ' · ' + it.servings + ' ' + t('cr_servings').toLowerCase() + '</div>' +
+              '<div class="meta">' + PCD.escapeHtml(recipeSubtitle(r, it)) + '</div>' +
             '</div>' +
             '<div class="fc-badge">FC <b>' + fcPct.toFixed(1) + '%</b></div>' +
           '</div>' +
@@ -1120,7 +1136,7 @@
       // Back-link in F column same row
       setCell(ws, 'F' + row, t('cr_go_to_summary'), linkStyle, null, "#'" + t('cr_summary') + "'!A1");
       row++;
-      setCell(ws, 'A' + row, (r.category || 'recipe') + ' · ' + it.servings + ' ' + t('cr_servings').toLowerCase(), subtitleStyle);
+      setCell(ws, 'A' + row, recipeSubtitle(r, it), subtitleStyle);
       row++;
       row++;  // blank
 
@@ -1272,7 +1288,7 @@
       // Column widths — compute based on actual content for this sheet
       const detailRows = [
         [r.name],
-        [(r.category || 'recipe') + ' · ' + it.servings + ' ' + t('cr_servings').toLowerCase()],
+        [recipeSubtitle(r, it)],
         [t('cr_ingredient_breakdown')],
         [t('cr_ingredient'), t('cr_unit_price'), t('cr_unit'), t('cr_qty'), t('cr_qty_unit'), t('cr_line_cost')],
       ];
@@ -1492,7 +1508,15 @@
       // openRecipeShareSheet so the downstream print path uses it.
       const recipeMap = PCD.recipes.buildRecipeMap();
       const lines = [r.name, ''];
-      lines.push(t('recipe_servings') + ': ' + (r.servings || 1));
+      // v2.8.29 — Text share: skip servings line for preps; show yield instead when set.
+      const _isPrepText = (PCD.recipes && PCD.recipes.isPrep) ? PCD.recipes.isPrep(r) : !!(r.yieldAmount && r.yieldUnit);
+      if (_isPrepText) {
+        if (r.yieldAmount && r.yieldUnit) {
+          lines.push(t('recipe_yield_amount_label') + ': ' + PCD.fmtNumber(r.yieldAmount) + ' ' + r.yieldUnit);
+        }
+      } else {
+        lines.push(t('recipe_servings') + ': ' + (r.servings || 1));
+      }
       if (r.salePrice) lines.push(t('sale_price') + ': ' + PCD.fmtMoney(r.salePrice));
       lines.push('');
       lines.push(t('recipe_ingredients') + ':');
@@ -1683,11 +1707,24 @@
         }
         return '<tr><td>' + PCD.escapeHtml(name) + '</td><td style="text-align:right">' + PCD.fmtNumber(ri.amount) + ' ' + PCD.escapeHtml(ri.unit || '') + '</td></tr>';
       }).join('');
+      // v2.8.29 — Preview/print HTML respects prep classification:
+      // preps with yield show "X kg" subtitle; preps without yield show
+      // nothing (instead of "1 servings" which is meaningless for an
+      // unmeasured batch prep); menu items show servings as before.
+      const _isPrepShare = (PCD.recipes && PCD.recipes.isPrep) ? PCD.recipes.isPrep(r) : !!(r.yieldAmount && r.yieldUnit);
+      let subtitleHtml = '';
+      if (_isPrepShare) {
+        if (r.yieldAmount && r.yieldUnit) {
+          subtitleHtml = '<div style="color:#666;font-size:12px;margin-bottom:16px">' + PCD.fmtNumber(r.yieldAmount) + ' ' + PCD.escapeHtml(r.yieldUnit) + '</div>';
+        }
+      } else if (r.servings) {
+        subtitleHtml = '<div style="color:#666;font-size:12px;margin-bottom:16px">' + r.servings + ' ' + tt('recipe_servings').toLowerCase() + '</div>';
+      }
       const html =
         '<div style="max-width:680px;margin:0 auto">' +
         (r.photo ? '<img src="' + r.photo + '" style="width:100%;max-height:300px;object-fit:cover;border-radius:8px;margin-bottom:16px">' : '') +
         '<h1>' + PCD.escapeHtml(r.name) + '</h1>' +
-        '<div style="color:#666;font-size:12px;margin-bottom:16px">' + (r.servings || 1) + ' ' + tt('recipe_servings').toLowerCase() + '</div>' +
+        subtitleHtml +
         '<h3 style="margin-top:16px">' + tt('recipe_ingredients') + '</h3>' +
         '<table>' + rows + '</table>' +
         (r.steps ? '<h3 style="margin-top:16px">' + tt('recipe_steps') + '</h3><pre>' + PCD.escapeHtml(r.steps) + '</pre>' : '') +
