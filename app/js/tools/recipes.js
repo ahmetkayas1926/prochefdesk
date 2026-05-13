@@ -557,7 +557,10 @@
       items.forEach(function (it, idx) {
         const r = it.recipe;
         summaryTotalCost += it.totalCost;
-        summaryTotalRevenue += (it.testPrice || 0) * it.servings;
+        // v2.8.30 — Preps don't contribute to revenue (no sale price).
+        if (!PCD.recipes.isPrep(r)) {
+          summaryTotalRevenue += (it.testPrice || 0) * it.servings;
+        }
         const fcPct = (it.testPrice && it.testPrice > 0) ? (it.costPerServing / it.testPrice) * 100 : 0;
         const status = fcPct === 0 ? 'gray' : fcPct < 25 ? 'green' : fcPct < 35 ? 'amber' : 'red';
         const statusColor = status === 'green' ? 'var(--success)' : status === 'amber' ? '#d97706' : status === 'red' ? 'var(--danger)' : 'var(--text-3)';
@@ -603,13 +606,27 @@
                 '</tr></thead><tbody>' + ingRowsHtml +
                 '<tr><td colspan="3" style="padding:6px 8px;border-top:2px solid var(--border);font-weight:700;text-align:end;">' + t('cr_total_food_cost') + '</td>' +
                 '<td style="padding:6px 8px;border-top:2px solid var(--border);text-align:end;font-weight:800;color:var(--brand-700);font-family:var(--font-mono);">' + PCD.fmtMoney(it.totalCost) + '</td></tr>' +
-                '<tr><td colspan="3" style="padding:4px 8px;text-align:end;color:var(--text-3);font-size:12px;">' + t('cr_cost_per_serving') + '</td>' +
-                '<td style="padding:4px 8px;text-align:end;font-weight:700;font-family:var(--font-mono);">' + PCD.fmtMoney(it.costPerServing) + '</td></tr>' +
+                // v2.8.30 — Prep handling: hide "Cost per serving" (menu-item
+                // concept). For preps with recorded yield, show "Cost per
+                // [yieldUnit]" instead (genuinely useful: cost of 1 kg of
+                // muhammara). Preps without yield → only Total food cost.
+                (PCD.recipes.isPrep(it.recipe)
+                  ? ((it.recipe.yieldAmount && it.recipe.yieldUnit)
+                    ? '<tr><td colspan="3" style="padding:4px 8px;text-align:end;color:var(--text-3);font-size:12px;">' + t('cr_cost_per_yield', { unit: it.recipe.yieldUnit }) + '</td>' +
+                      '<td style="padding:4px 8px;text-align:end;font-weight:700;font-family:var(--font-mono);">' + PCD.fmtMoney(it.totalCost / it.recipe.yieldAmount) + '</td></tr>'
+                    : '')
+                  : '<tr><td colspan="3" style="padding:4px 8px;text-align:end;color:var(--text-3);font-size:12px;">' + t('cr_cost_per_serving') + '</td>' +
+                    '<td style="padding:4px 8px;text-align:end;font-weight:700;font-family:var(--font-mono);">' + PCD.fmtMoney(it.costPerServing) + '</td></tr>'
+                ) +
                 '</tbody>' +
               '</table>' +
             '</div>' +
 
-            // Pricing area — current + test (live)
+            // v2.8.30 — Pricing area (Current / Suggested / Test / Margin)
+            // hidden entirely for preps. Preps aren't sold directly; their
+            // cost rolls into the parent menu item's cost. Showing a
+            // suggested price for a sauce is misleading.
+            (PCD.recipes.isPrep(it.recipe) ? '' :
             '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;padding:10px;background:var(--surface-2);border-radius:var(--r-md);">' +
               '<div>' +
                 '<div class="text-muted" style="font-size:10px;text-transform:uppercase;letter-spacing:0.04em;font-weight:700;">' + t('cr_current_price') + '</div>' +
@@ -627,20 +644,27 @@
                 '<div class="text-muted" style="font-size:10px;text-transform:uppercase;letter-spacing:0.04em;font-weight:700;">' + t('cr_margin_serving') + '</div>' +
                 '<div style="font-weight:700;font-size:15px;color:' + statusColor + ';">' + PCD.fmtMoney(Math.max(0, (it.testPrice || 0) - it.costPerServing)) + '</div>' +
               '</div>' +
-            '</div>' +
+            '</div>'
+            ) +
           '</div>';
       });
 
       // Summary
       const summaryFcPct = summaryTotalRevenue > 0 ? (summaryTotalCost / summaryTotalRevenue) * 100 : 0;
+      // v2.8.30 — Hide revenue/avg-fc/profit cells when no menu items
+      // contributed (all-prep report). Total food cost remains useful.
+      const hasMenuItems = items.some(function (it) { return !PCD.recipes.isPrep(it.recipe); });
       html +=
         '<div class="card" style="padding:14px;background:linear-gradient(135deg,var(--brand-50),var(--surface));">' +
           '<div style="font-weight:800;font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">' + t('cr_summary_across', { n: items.length }) + '</div>' +
           '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;">' +
             '<div><div class="text-muted text-sm">' + t('cr_total_food_cost') + '</div><div style="font-weight:800;font-size:18px;">' + PCD.fmtMoney(summaryTotalCost) + '</div></div>' +
-            '<div><div class="text-muted text-sm">' + t('cr_total_revenue') + '</div><div style="font-weight:800;font-size:18px;">' + PCD.fmtMoney(summaryTotalRevenue) + '</div></div>' +
-            '<div><div class="text-muted text-sm">' + t('cr_avg_food_cost') + '</div><div style="font-weight:800;font-size:18px;color:' + (summaryFcPct < 30 ? 'var(--success)' : summaryFcPct < 40 ? '#d97706' : 'var(--danger)') + ';">' + summaryFcPct.toFixed(1) + '%</div></div>' +
-            '<div><div class="text-muted text-sm">' + t('cr_total_profit') + '</div><div style="font-weight:800;font-size:18px;color:var(--success);">' + PCD.fmtMoney(Math.max(0, summaryTotalRevenue - summaryTotalCost)) + '</div></div>' +
+            (hasMenuItems ?
+              '<div><div class="text-muted text-sm">' + t('cr_total_revenue') + '</div><div style="font-weight:800;font-size:18px;">' + PCD.fmtMoney(summaryTotalRevenue) + '</div></div>' +
+              '<div><div class="text-muted text-sm">' + t('cr_avg_food_cost') + '</div><div style="font-weight:800;font-size:18px;color:' + (summaryFcPct < 30 ? 'var(--success)' : summaryFcPct < 40 ? '#d97706' : 'var(--danger)') + ';">' + summaryFcPct.toFixed(1) + '%</div></div>' +
+              '<div><div class="text-muted text-sm">' + t('cr_total_profit') + '</div><div style="font-weight:800;font-size:18px;color:var(--success);">' + PCD.fmtMoney(Math.max(0, summaryTotalRevenue - summaryTotalCost)) + '</div></div>'
+              : ''
+            ) +
           '</div>' +
         '</div>';
 
@@ -694,7 +718,10 @@
     items.forEach(function (it) {
       const r = it.recipe;
       summaryTotalCost += it.totalCost;
-      summaryTotalRevenue += (it.testPrice || 0) * it.servings;
+      // v2.8.30 — Preps don't contribute to revenue.
+      if (!PCD.recipes.isPrep(r)) {
+        summaryTotalRevenue += (it.testPrice || 0) * it.servings;
+      }
       const fcPct = (it.testPrice && it.testPrice > 0) ? (it.costPerServing / it.testPrice) * 100 : 0;
 
       let ingRows = '';
@@ -729,16 +756,26 @@
             '<tbody>' + ingRows + '</tbody>' +
             '<tfoot>' +
               '<tr><td colspan="3" class="num">' + t('cr_total_food_cost') + '</td><td class="num bold">' + PCD.fmtMoney(it.totalCost) + '</td></tr>' +
-              '<tr><td colspan="3" class="num minor">' + t('cr_cost_per_serving') + '</td><td class="num">' + PCD.fmtMoney(it.costPerServing) + '</td></tr>' +
+              // v2.8.30 — Prep: hide "Cost per serving"; show "Cost per
+              // [yieldUnit]" when yield is recorded. Menu items unchanged.
+              (PCD.recipes.isPrep(it.recipe)
+                ? ((it.recipe.yieldAmount && it.recipe.yieldUnit)
+                  ? '<tr><td colspan="3" class="num minor">' + t('cr_cost_per_yield', { unit: it.recipe.yieldUnit }) + '</td><td class="num">' + PCD.fmtMoney(it.totalCost / it.recipe.yieldAmount) + '</td></tr>'
+                  : '')
+                : '<tr><td colspan="3" class="num minor">' + t('cr_cost_per_serving') + '</td><td class="num">' + PCD.fmtMoney(it.costPerServing) + '</td></tr>'
+              ) +
             '</tfoot>' +
           '</table>' +
 
+          // v2.8.30 — Pricing block hidden for preps (not sold directly).
+          (PCD.recipes.isPrep(it.recipe) ? '' :
           '<div class="pricing">' +
             '<div><div class="lbl">' + t('cr_current_price') + '</div><div class="val">' + (it.currentPrice != null ? PCD.fmtMoney(it.currentPrice) : '—') + '</div></div>' +
             '<div><div class="lbl">' + t('cr_suggested', { n: targetPct }) + '</div><div class="val brand">' + PCD.fmtMoney(it.suggestedPrice) + '</div></div>' +
             '<div><div class="lbl">' + t('cr_test_price') + '</div><div class="val">' + PCD.fmtMoney(it.testPrice || 0) + '</div></div>' +
             '<div><div class="lbl">' + t('cr_margin_serving') + '</div><div class="val">' + PCD.fmtMoney(Math.max(0, (it.testPrice || 0) - it.costPerServing)) + '</div></div>' +
-          '</div>' +
+          '</div>'
+          ) +
         '</section>';
     });
 
@@ -791,9 +828,13 @@
         '<h3>' + t('cr_summary') + '</h3>' +
         '<div class="summary-grid">' +
           '<div class="pricing"><div><div class="lbl">' + t('cr_total_food_cost') + '</div><div class="val">' + PCD.fmtMoney(summaryTotalCost) + '</div></div></div>' +
-          '<div class="pricing"><div><div class="lbl">' + t('cr_total_revenue') + '</div><div class="val">' + PCD.fmtMoney(summaryTotalRevenue) + '</div></div></div>' +
-          '<div class="pricing"><div><div class="lbl">' + t('cr_avg_food_cost') + '</div><div class="val brand">' + summaryFcPct.toFixed(1) + '%</div></div></div>' +
-          '<div class="pricing"><div><div class="lbl">' + t('cr_total_profit') + '</div><div class="val">' + PCD.fmtMoney(Math.max(0, summaryTotalRevenue - summaryTotalCost)) + '</div></div></div>' +
+          // v2.8.30 — Hide revenue/avg-fc/profit cells in PDF summary when no menu items (all-prep report).
+          (items.some(function (it) { return !PCD.recipes.isPrep(it.recipe); }) ?
+            '<div class="pricing"><div><div class="lbl">' + t('cr_total_revenue') + '</div><div class="val">' + PCD.fmtMoney(summaryTotalRevenue) + '</div></div></div>' +
+            '<div class="pricing"><div><div class="lbl">' + t('cr_avg_food_cost') + '</div><div class="val brand">' + summaryFcPct.toFixed(1) + '%</div></div></div>' +
+            '<div class="pricing"><div><div class="lbl">' + t('cr_total_profit') + '</div><div class="val">' + PCD.fmtMoney(Math.max(0, summaryTotalRevenue - summaryTotalCost)) + '</div></div></div>'
+            : ''
+          ) +
         '</div>' +
       '</div>' : '') +
       '<div class="cr-foot">' + t('cr_made_with') + '</div>';
@@ -1189,13 +1230,27 @@
       setCell(ws, 'F' + row, it.totalCost, totalRowStyle, 'SUM(F' + startIngRow + ':F' + lastIngRow + ')');
       row++;
 
+      // v2.8.30 — Prep handling: replace Servings + Cost-per-serving
+      // rows with Yield + Cost-per-yield (when yield is set), and skip
+      // the entire pricing section (Target/Suggested/Test/FC%/Margin/
+      // Revenue/Profit) since preps aren't sold directly.
+      const isPrepXlsx = PCD.recipes.isPrep(it.recipe);
+
       const servingsRow = row;
       setCell(ws, 'A' + row, '', cellStyle);
       setCell(ws, 'B' + row, '', cellStyle);
       setCell(ws, 'C' + row, '', cellStyle);
       setCell(ws, 'D' + row, '', cellStyle);
-      setCell(ws, 'E' + row, t('cr_servings'), pricingLabelStyle);
-      setCell(ws, 'F' + row, it.servings, Object.assign({}, pricingValStyle, { numFmt: '0' }));
+      if (isPrepXlsx) {
+        if (it.recipe.yieldAmount && it.recipe.yieldUnit) {
+          setCell(ws, 'E' + row, t('cr_yield_label', { unit: it.recipe.yieldUnit }), pricingLabelStyle);
+          setCell(ws, 'F' + row, it.recipe.yieldAmount, Object.assign({}, pricingValStyle, { numFmt: '0.##' }));
+        }
+        // If no yield, skip this row entirely (leave blank cells already set)
+      } else {
+        setCell(ws, 'E' + row, t('cr_servings'), pricingLabelStyle);
+        setCell(ws, 'F' + row, it.servings, Object.assign({}, pricingValStyle, { numFmt: '0' }));
+      }
       row++;
 
       const cpsRow = row;
@@ -1203,9 +1258,22 @@
       setCell(ws, 'B' + row, '', cellStyle);
       setCell(ws, 'C' + row, '', cellStyle);
       setCell(ws, 'D' + row, '', cellStyle);
-      setCell(ws, 'E' + row, t('cr_cost_per_serving'), pricingLabelStyle);
-      setCell(ws, 'F' + row, it.costPerServing, pricingValStyle, 'F' + detailTotalRow + '/F' + servingsRow);
+      if (isPrepXlsx) {
+        if (it.recipe.yieldAmount && it.recipe.yieldUnit) {
+          setCell(ws, 'E' + row, t('cr_cost_per_yield', { unit: it.recipe.yieldUnit }), pricingLabelStyle);
+          setCell(ws, 'F' + row, it.totalCost / it.recipe.yieldAmount, pricingValStyle, 'F' + detailTotalRow + '/F' + servingsRow);
+        }
+      } else {
+        setCell(ws, 'E' + row, t('cr_cost_per_serving'), pricingLabelStyle);
+        setCell(ws, 'F' + row, it.costPerServing, pricingValStyle, 'F' + detailTotalRow + '/F' + servingsRow);
+      }
       row++;
+
+      // v2.8.30 — For preps, skip the entire pricing section.
+      // Their cost rolls into parent menu items; suggesting a sale
+      // price for a sauce is misleading.
+      let suggRow = null, testRow = null;  // hoisted for detailRefs.push below
+      if (!isPrepXlsx) {
 
       row++;  // blank
 
@@ -1222,7 +1290,7 @@
       setCell(ws, 'F' + row, targetPct / 100, Object.assign({}, pricingValStyle, { numFmt: '0%' }));
       row++;
 
-      const suggRow = row;
+      suggRow = row;
       setCell(ws, 'A' + row, '', cellStyle);
       setCell(ws, 'B' + row, '', cellStyle);
       setCell(ws, 'C' + row, '', cellStyle);
@@ -1232,7 +1300,7 @@
       row++;
 
       const testPriceVal = it.testPrice || it.suggestedPrice || 0;
-      const testRow = row;
+      testRow = row;
       setCell(ws, 'A' + row, '', editableLabelStyle);
       setCell(ws, 'B' + row, '', editableLabelStyle);
       setCell(ws, 'C' + row, '', editableLabelStyle);
@@ -1280,6 +1348,8 @@
       setCell(ws, 'E' + row, t('cr_total_profit_xlsx'), totalLabelStyle);
       setCell(ws, 'F' + row, profitVal, totalRowStyle, 'F' + testRow + '*F' + servingsRow + '-F' + detailTotalRow);
       row++;
+
+      }  // end !isPrepXlsx pricing section
 
       // Footer
       const detailFooterRow = row + 1;
@@ -1353,10 +1423,13 @@
 
       // Cross-sheet formulas: pull live values from Detail sheet so that
       // editing Test price on EITHER sheet keeps the report consistent.
+      // v2.8.30 — Preps skip the pricing section in the Detail sheet,
+      // so suggRow/testRow are null; for those rows, leave the
+      // pre-populated literal values in place (no formula overlay).
       summaryWs['C' + r].f = qsn + 'F' + ref.totalRow;
       summaryWs['D' + r].f = qsn + 'F' + ref.cpsRow;
-      summaryWs['E' + r].f = qsn + 'F' + ref.suggRow;
-      summaryWs['F' + r].f = qsn + 'F' + ref.testRow;
+      if (ref.suggRow != null) summaryWs['E' + r].f = qsn + 'F' + ref.suggRow;
+      if (ref.testRow != null) summaryWs['F' + r].f = qsn + 'F' + ref.testRow;
       // G = D / F (food cost % on this row, live)
       summaryWs['G' + r].f = 'IF(F' + r + '>0, D' + r + '/F' + r + ', 0)';
       // H = F - D (profit per serving, live)

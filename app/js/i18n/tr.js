@@ -626,6 +626,9 @@ window.PCD.i18n.register('tr', {
   recipe_is_subrecipe_hint: "Bu tarifi 1-porsiyonluk menü tarifi değil, toplu hazırlık tarifi (sos, sosis, baharat karışımı) olarak sınıflandırır. Yield miktarı isteğe bağlıdır — ölçtüğünde gir.",
   // v2.8.29
   recipes_subrecipe_subtitle: "Hazırlık tarifi",
+  // v2.8.30
+  cr_cost_per_yield: "Birim maliyet ({unit})",
+  cr_yield_label: "Yield ({unit})",
   pc_subtitle: "Bir veya daha fazla tarifi etkinlik için ölçeklendir",
   pc_step1: "Adım 1 — Misafir sayısı",
   pc_guests: "misafir",

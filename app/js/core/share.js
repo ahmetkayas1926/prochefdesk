@@ -49,6 +49,12 @@
       name: r.name,
       category: r.category,
       servings: r.servings,
+      // v2.8.30 — Capture prep classification so the share page renders
+      // the correct subtitle. Older shares (created before this) lack
+      // these fields; the renderer falls back to legacy servings line.
+      isSubRecipe: r.isSubRecipe,
+      yieldAmount: r.yieldAmount,
+      yieldUnit: r.yieldUnit,
       prepTime: r.prepTime,
       cookTime: r.cookTime,
       photo: r.photo,
@@ -364,7 +370,17 @@
     if (p.kind === 'recipe') {
       html += '<h1>' + escapeHtml(p.name || t('share_default_recipe', 'Recipe')) + '</h1>';
       html += '<div class="share-meta">';
-      if (p.servings) html += p.servings + ' ' + t('share_servings_unit', 'servings');
+      // v2.8.30 — Prep-aware subtitle. Snapshot includes isSubRecipe +
+      // yield since v2.8.30; older snapshots fall back to the legacy
+      // servings line (treated as menu item).
+      const isPrepShare = (p.isSubRecipe === true) || (p.isSubRecipe == null && !!(p.yieldAmount && p.yieldUnit));
+      if (isPrepShare) {
+        if (p.yieldAmount && p.yieldUnit) {
+          html += p.yieldAmount + ' ' + p.yieldUnit;
+        }
+      } else if (p.servings) {
+        html += p.servings + ' ' + t('share_servings_unit', 'servings');
+      }
       if (p.prepTime) html += ' · ' + p.prepTime + ' ' + t('share_min_prep', 'min prep');
       if (p.cookTime) html += ' · ' + p.cookTime + ' ' + t('share_min_cook', 'min cook');
       html += '</div>';
