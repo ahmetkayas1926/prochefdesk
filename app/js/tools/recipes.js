@@ -1055,17 +1055,20 @@
       const fcPct = (it.testPrice && it.testPrice > 0) ? (it.costPerServing / it.testPrice) : 0;
       const profit = Math.max(0, (it.testPrice || 0) - it.costPerServing);
       const isAlt = idx % 2 === 1;
+      // v2.8.30 — Preps leave Servings/Suggested/Test/FC%/Profit blank
+      // in Summary (menu-item concepts). Total cost stays.
+      const isPrepSum = PCD.recipes.isPrep(r);
       // Cells filled with cached values now; we'll add formulas after detail sheets exist.
       setCell(summaryWs, 'A' + sumRow, r.name, isAlt ? cellAltStyle : cellStyle);
-      setCell(summaryWs, 'B' + sumRow, it.servings, isAlt ? cellQtyAltStyle : cellQtyStyle);
+      setCell(summaryWs, 'B' + sumRow, isPrepSum ? '' : it.servings, isAlt ? cellQtyAltStyle : cellQtyStyle);
       setCell(summaryWs, 'C' + sumRow, it.totalCost, isAlt ? cellNumAltStyle : cellNumStyle);
-      setCell(summaryWs, 'D' + sumRow, it.costPerServing, isAlt ? cellNumAltStyle : cellNumStyle);
-      setCell(summaryWs, 'E' + sumRow, it.suggestedPrice, isAlt ? cellNumAltStyle : cellNumStyle);
-      setCell(summaryWs, 'F' + sumRow, it.testPrice || 0, isAlt
+      setCell(summaryWs, 'D' + sumRow, isPrepSum ? '' : it.costPerServing, isAlt ? cellNumAltStyle : cellNumStyle);
+      setCell(summaryWs, 'E' + sumRow, isPrepSum ? '' : it.suggestedPrice, isAlt ? cellNumAltStyle : cellNumStyle);
+      setCell(summaryWs, 'F' + sumRow, isPrepSum ? '' : (it.testPrice || 0), isAlt
         ? Object.assign({}, editableStyle, { fill: { fgColor: { rgb: TEST_BG } } })
         : editableStyle);
-      setCell(summaryWs, 'G' + sumRow, fcPct, isAlt ? Object.assign({}, pctStyle, { fill: { fgColor: { rgb: ROW_ALT } } }) : pctStyle);
-      setCell(summaryWs, 'H' + sumRow, profit, isAlt ? cellNumAltStyle : cellNumStyle);
+      setCell(summaryWs, 'G' + sumRow, isPrepSum ? '' : fcPct, isAlt ? Object.assign({}, pctStyle, { fill: { fgColor: { rgb: ROW_ALT } } }) : pctStyle);
+      setCell(summaryWs, 'H' + sumRow, isPrepSum ? '' : profit, isAlt ? cellNumAltStyle : cellNumStyle);
       // Hyperlink to detail sheet (added below once sheet name is known)
       sumRow++;
     });
@@ -1381,16 +1384,28 @@
         ]);
       });
       detailRows.push(['', '', '', '', t('cr_total_food_cost_xlsx'), '$' + it.totalCost.toFixed(2)]);
-      detailRows.push(['', '', '', '', t('cr_servings'), String(it.servings)]);
-      detailRows.push(['', '', '', '', t('cr_cost_per_serving'), '$' + it.costPerServing.toFixed(2)]);
-      detailRows.push(['', '', '', '', t('cr_pricing_section')]);
-      detailRows.push(['', '', '', '', t('cr_target_pct'), targetPct + '%']);
-      detailRows.push(['', '', '', '', t('cr_suggested_price'), '$' + it.suggestedPrice.toFixed(2)]);
-      detailRows.push(['', '', '', '', t('cr_test_price_edit'), '$' + testPriceVal.toFixed(2)]);
-      detailRows.push(['', '', '', '', t('cr_food_cost_at_test'), '0.00%']);
-      detailRows.push(['', '', '', '', t('cr_margin_per_serving'), '$' + marginVal.toFixed(2)]);
-      detailRows.push(['', '', '', '', t('cr_total_revenue'), '$' + revVal.toFixed(2)]);
-      detailRows.push(['', '', '', '', t('cr_total_profit_xlsx'), '$' + profitVal.toFixed(2)]);
+      // v2.8.30 — Mirror the actual rendered rows. Preps render Yield +
+      // Cost-per-yield-unit (or nothing if no yield) and skip the entire
+      // pricing block, so detailRows must match — otherwise autoFit
+      // references undefined vars (testPriceVal, marginVal, etc.) and
+      // throws "Something went wrong" before download.
+      if (isPrepXlsx) {
+        if (it.recipe.yieldAmount && it.recipe.yieldUnit) {
+          detailRows.push(['', '', '', '', t('cr_yield_label', { unit: it.recipe.yieldUnit }), String(it.recipe.yieldAmount)]);
+          detailRows.push(['', '', '', '', t('cr_cost_per_yield', { unit: it.recipe.yieldUnit }), '$' + (it.totalCost / it.recipe.yieldAmount).toFixed(2)]);
+        }
+      } else {
+        detailRows.push(['', '', '', '', t('cr_servings'), String(it.servings)]);
+        detailRows.push(['', '', '', '', t('cr_cost_per_serving'), '$' + it.costPerServing.toFixed(2)]);
+        detailRows.push(['', '', '', '', t('cr_pricing_section')]);
+        detailRows.push(['', '', '', '', t('cr_target_pct'), targetPct + '%']);
+        detailRows.push(['', '', '', '', t('cr_suggested_price'), '$' + it.suggestedPrice.toFixed(2)]);
+        detailRows.push(['', '', '', '', t('cr_test_price_edit'), '$' + testPriceVal.toFixed(2)]);
+        detailRows.push(['', '', '', '', t('cr_food_cost_at_test'), '0.00%']);
+        detailRows.push(['', '', '', '', t('cr_margin_per_serving'), '$' + marginVal.toFixed(2)]);
+        detailRows.push(['', '', '', '', t('cr_total_revenue'), '$' + revVal.toFixed(2)]);
+        detailRows.push(['', '', '', '', t('cr_total_profit_xlsx'), '$' + profitVal.toFixed(2)]);
+      }
       ws['!cols'] = autoFit(detailRows);
 
       ws['!ref'] = 'A1:F' + detailFooterRow;
@@ -1408,6 +1423,7 @@
         cpsRow: cpsRow,
         suggRow: suggRow,
         testRow: testRow,
+        isPrep: isPrepXlsx,  // v2.8.30 — drives Summary formula skipping
       });
 
       XLSX.utils.book_append_sheet(wb, ws, sheetName);
@@ -1426,14 +1442,19 @@
       // v2.8.30 — Preps skip the pricing section in the Detail sheet,
       // so suggRow/testRow are null; for those rows, leave the
       // pre-populated literal values in place (no formula overlay).
+      // CPS/G/H are also skipped for preps — Summary cells for those
+      // columns are blank for preps and shouldn't be overlaid with
+      // formulas referencing menu-item-only rows.
       summaryWs['C' + r].f = qsn + 'F' + ref.totalRow;
-      summaryWs['D' + r].f = qsn + 'F' + ref.cpsRow;
-      if (ref.suggRow != null) summaryWs['E' + r].f = qsn + 'F' + ref.suggRow;
-      if (ref.testRow != null) summaryWs['F' + r].f = qsn + 'F' + ref.testRow;
-      // G = D / F (food cost % on this row, live)
-      summaryWs['G' + r].f = 'IF(F' + r + '>0, D' + r + '/F' + r + ', 0)';
-      // H = F - D (profit per serving, live)
-      summaryWs['H' + r].f = 'F' + r + '-D' + r;
+      if (!ref.isPrep) {
+        summaryWs['D' + r].f = qsn + 'F' + ref.cpsRow;
+        if (ref.suggRow != null) summaryWs['E' + r].f = qsn + 'F' + ref.suggRow;
+        if (ref.testRow != null) summaryWs['F' + r].f = qsn + 'F' + ref.testRow;
+        // G = D / F (food cost % on this row, live)
+        summaryWs['G' + r].f = 'IF(F' + r + '>0, D' + r + '/F' + r + ', 0)';
+        // H = F - D (profit per serving, live)
+        summaryWs['H' + r].f = 'F' + r + '-D' + r;
+      }
 
       // Hyperlink in column I to the detail sheet
       const linkCell = {
