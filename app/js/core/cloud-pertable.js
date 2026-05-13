@@ -222,16 +222,16 @@
 
   function flushNow() {
     flushTimer = null;
-    if (!isReady()) return Promise.resolve();
-    if (!queue.length) return Promise.resolve();
+    if (!isReady()) return Promise.resolve({ success: true, pushed: 0, errors: [] });
+    if (!queue.length) return Promise.resolve({ success: true, pushed: 0, errors: [] });
     if (!navigator.onLine) {
       // Will retry when online listener fires (cloud.js handles it)
-      return Promise.resolve();
+      return Promise.resolve({ success: false, pushed: 0, errors: [{ table: '*', error: 'offline' }] });
     }
     // v2.6.85 — Pull devam ediyorsa push'u ertele.
     if (PCD.cloud && PCD.cloud.isPullInProgress && PCD.cloud.isPullInProgress()) {
       flushTimer = setTimeout(flushNow, 200);
-      return Promise.resolve();
+      return Promise.resolve({ success: true, pushed: 0, errors: [], deferred: true });
     }
     const batch = queue.splice(0, queue.length);
     // Reset index
@@ -239,6 +239,13 @@
 
     const supabase = PCD.cloud.getClient();
     const user = PCD.store.get('user');
+
+    // v2.8.32 — Track failures so callers (especially restore) can detect
+    // partial failures. Previously errors were warn-logged and swallowed,
+    // making flushNow appear successful even when 0 rows actually
+    // reached the cloud (e.g. RLS denial, schema mismatch, network drop).
+    const errors = [];
+    let successCount = 0;
 
     // Group by table+op for batch upsert/delete
     const byOp = {};
@@ -305,16 +312,32 @@
                           : 'id';
         return supabase.from(table).upsert(rows, { onConflict: conflictKey })
           .then(function (res) {
-            if (res.error) PCD.warn && PCD.warn('cloud-pertable upsert ' + table, res.error.message || res.error);
+            if (res.error) {
+              errors.push({ table: table, op: 'upsert', count: rows.length, error: res.error.message || res.error.code || String(res.error) });
+              PCD.warn && PCD.warn('cloud-pertable upsert ' + table, res.error.message || res.error);
+            } else {
+              successCount += rows.length;
+            }
           })
-          .catch(function (e) { PCD.warn && PCD.warn('cloud-pertable exception ' + table, e); });
+          .catch(function (e) {
+            errors.push({ table: table, op: 'upsert', count: rows.length, error: (e && e.message) || String(e) });
+            PCD.warn && PCD.warn('cloud-pertable exception ' + table, e);
+          });
       } else if (op === 'delete') {
         const ids = items.map(function (it) { return it.id; });
         return supabase.from(table).delete().in('id', ids).eq('user_id', user.id)
           .then(function (res) {
-            if (res.error) PCD.warn && PCD.warn('cloud-pertable delete ' + table, res.error.message || res.error);
+            if (res.error) {
+              errors.push({ table: table, op: 'delete', count: ids.length, error: res.error.message || res.error.code || String(res.error) });
+              PCD.warn && PCD.warn('cloud-pertable delete ' + table, res.error.message || res.error);
+            } else {
+              successCount += ids.length;
+            }
           })
-          .catch(function (e) { PCD.warn && PCD.warn('cloud-pertable delete exception ' + table, e); });
+          .catch(function (e) {
+            errors.push({ table: table, op: 'delete', count: ids.length, error: (e && e.message) || String(e) });
+            PCD.warn && PCD.warn('cloud-pertable delete exception ' + table, e);
+          });
       }
       return Promise.resolve();
     });
@@ -325,6 +348,13 @@
       // gelmiş olabilir (yeni item'lar queue'da, eski'ler değil). Persist
       // güncel halini diske yazar.
       _persistQueueNow();
+      // v2.8.32 — Return success/error summary so restore + force-resync
+      // flows can verify the push really hit the cloud.
+      return {
+        success: errors.length === 0,
+        pushed: successCount,
+        errors: errors
+      };
     });
   }
 

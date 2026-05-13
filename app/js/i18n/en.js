@@ -629,6 +629,18 @@ window.PCD.i18n.register('en', {
   // v2.8.30
   cr_cost_per_yield: "Cost per {unit}",
   cr_yield_label: "Yield ({unit})",
+  // v2.8.32 — Force re-sync to cloud + restore failure surfacing
+  force_resync_title: "Force re-sync to cloud",
+  force_resync_desc: "Push all local data to cloud (recovery tool when devices show different data)",
+  force_resync_confirm_title: "Push all local data to cloud?",
+  force_resync_confirm_text: "This will upload everything in this device ({r} recipe(s), {i} ingredient(s), plus all workspaces, menus and other data) to your cloud account. Use this if other devices show stale or missing data.",
+  force_resync_ok: "Push to cloud",
+  force_resync_in_progress: "Pushing to cloud…",
+  force_resync_success: "✓ Pushed {n} item(s) to cloud.",
+  force_resync_partial_failed: "{n} push operation(s) failed. {summary}. Check internet connection and try again.",
+  force_resync_failed: "Force re-sync failed: {msg}",
+  force_resync_unavailable: "Cloud sync module is not available. Sign in and try again.",
+  backup_restore_cloud_push_failed: "Local restore succeeded but {n} cloud push operation(s) failed: {summary}. Click \"Force re-sync to cloud\" in Data & Sync after this dialog closes to retry.",
   pc_subtitle: "Scale one or more recipes for an event",
   pc_step1: "Step 1 — Guest count",
   pc_guests: "guests",

@@ -173,6 +173,17 @@
               </div>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
+            <!-- v2.8.32 — Universal "Force re-sync to cloud" escape hatch.
+                 Useful when local and cloud diverge for any reason (restore
+                 failure, sync error, partial network issues). Pushes
+                 everything in local IDB to cloud explicitly. -->
+            <button class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;border-bottom:1px solid var(--border);" id="forceResyncBtn">
+              <div>
+                <div style="font-weight:600;">🔄 ${t('force_resync_title')}</div>
+                <div class="text-muted text-sm">${t('force_resync_desc')}</div>
+              </div>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
             <button class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;color:var(--danger);" id="clearAllBtn">
               <div>
                 <div style="font-weight:600;">${t('clear_all_data')}</div>
@@ -503,9 +514,25 @@
               await PCD.store.replaceAll(replaceState);
 
               // 3. Cloud'a yeni veriyi push.
+              // v2.8.32 — flushNow artık sonuç objesi döndürüyor; başarısızlığı
+              // kontrol ediyoruz. Eski davranış sessizdi: cloud push tamamen
+              // başarısız olsa bile restore "başarılı" gözüküyordu, reload
+              // sonrası kullanıcı diğer cihazlarda eski/eksik state görüyordu.
               if (PCD.cloudPerTable) {
                 if (PCD.cloudPerTable.queueFullState) PCD.cloudPerTable.queueFullState();
-                if (PCD.cloudPerTable.flushNow) await PCD.cloudPerTable.flushNow();
+                if (PCD.cloudPerTable.flushNow) {
+                  const result = await PCD.cloudPerTable.flushNow();
+                  if (result && result.success === false) {
+                    const errSummary = (result.errors || []).slice(0, 3).map(function (e) {
+                      return e.table + ': ' + e.error;
+                    }).join('; ');
+                    throw new Error(
+                      t('backup_restore_cloud_push_failed',
+                        'Local restore succeeded but {n} cloud push operation(s) failed: {summary}. Click "Force re-sync to cloud" in Data & Sync after this dialog closes to retry.',
+                        { n: (result.errors || []).length, summary: errSummary })
+                    );
+                  }
+                }
               }
 
               previewModal.close();
@@ -519,6 +546,10 @@
               PCD.err && PCD.err('Restore failed', err);
               PCD.toast.error((err && err.message) ? err.message :
                 (t('backup_restore_failed', 'Restore failed. Please try again.')));
+              // v2.8.32 — NO reload on failure. Local IDB has whatever
+              // replaceAll wrote; cloud may be partial. Reload would pull
+              // partial cloud over good local state. User should run
+              // "Force re-sync to cloud" manually to recover.
             }
           });
         };
@@ -577,6 +608,67 @@
       if (data.canvases) lines.push(countDeep(data.canvases) + ' ' + T('backup_summary_canvases', 'kitchen card(s)'));
       if (lines.length === 0) lines.push(T('backup_summary_empty', '(metadata only — no recipes or workspaces)'));
       return { lines: lines };
+    }
+
+    // v2.8.32 — Force re-sync to cloud. Universal escape hatch when
+    // local and cloud diverge. Enqueues full local state (workspaces,
+    // recipes, ingredients, every other table) and awaits flushNow,
+    // surfacing partial failures clearly so the user knows what
+    // happened — unlike the old silent-warn flow that hid errors.
+    const forceResyncBtn = PCD.$('#forceResyncBtn', view);
+    if (forceResyncBtn) {
+      forceResyncBtn.addEventListener('click', function () {
+        if (!PCD.cloudPerTable || !PCD.cloudPerTable.queueFullState || !PCD.cloudPerTable.flushNow) {
+          PCD.toast.error(t('force_resync_unavailable', 'Cloud sync module is not available. Sign in and try again.'));
+          return;
+        }
+        // Best-effort local counts for the confirmation text.
+        let recipeCount = 0, ingCount = 0;
+        try {
+          recipeCount = (PCD.store.listRecipes && PCD.store.listRecipes().length) || 0;
+          ingCount = (PCD.store.listIngredients && PCD.store.listIngredients().length) || 0;
+        } catch (e) { /* ignore */ }
+
+        PCD.modal.confirm({
+          icon: '🔄', iconKind: 'info',
+          title: t('force_resync_confirm_title', 'Push all local data to cloud?'),
+          text: t('force_resync_confirm_text', 'This will upload everything in this device ({r} recipe(s), {i} ingredient(s), plus all workspaces, menus and other data) to your cloud account. Use this if other devices show stale or missing data.', { r: recipeCount, i: ingCount }),
+          okText: t('force_resync_ok', 'Push to cloud'),
+          cancelText: t('cancel')
+        }).then(async function (ok) {
+          if (!ok) return;
+          const btn = forceResyncBtn;
+          const titleEl = btn.querySelector('div > div:first-child');
+          const origTitle = titleEl ? titleEl.textContent : null;
+          if (titleEl) titleEl.textContent = '⏳ ' + t('force_resync_in_progress', 'Pushing to cloud…');
+          btn.style.pointerEvents = 'none';
+          try {
+            PCD.cloudPerTable.queueFullState();
+            const result = await PCD.cloudPerTable.flushNow();
+            if (result && result.success === false) {
+              const errSummary = (result.errors || []).slice(0, 3).map(function (e) {
+                return e.table + ': ' + e.error;
+              }).join('; ');
+              PCD.toast.error(
+                t('force_resync_partial_failed',
+                  '{n} push operation(s) failed. {summary}. Check internet connection and try again.',
+                  { n: (result.errors || []).length, summary: errSummary })
+              );
+            } else {
+              PCD.toast.success(
+                t('force_resync_success', '✓ Pushed {n} item(s) to cloud.',
+                  { n: (result && result.pushed) || 0 })
+              );
+            }
+          } catch (e) {
+            PCD.err && PCD.err('force-resync failed', e);
+            PCD.toast.error(t('force_resync_failed', 'Force re-sync failed: {msg}', { msg: (e && e.message) || String(e) }));
+          } finally {
+            if (titleEl && origTitle) titleEl.textContent = origTitle;
+            btn.style.pointerEvents = '';
+          }
+        });
+      });
     }
 
     PCD.$('#clearAllBtn', view).addEventListener('click', function () {

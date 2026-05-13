@@ -629,6 +629,18 @@ window.PCD.i18n.register('tr', {
   // v2.8.30
   cr_cost_per_yield: "Birim maliyet ({unit})",
   cr_yield_label: "Yield ({unit})",
+  // v2.8.32
+  force_resync_title: "Bulut'a zorla yeniden senkronize et",
+  force_resync_desc: "Tüm yerel veriyi bulut'a gönder (cihazlar farklı veri gösterdiğinde kurtarma aracı)",
+  force_resync_confirm_title: "Tüm yerel veri bulut'a gönderilsin mi?",
+  force_resync_confirm_text: "Bu cihazdaki her şey ({r} tarif, {i} malzeme, ayrıca tüm çalışma alanları, menüler ve diğer veriler) bulut hesabına yüklenecek. Diğer cihazlar eski/eksik veri gösteriyorsa bunu kullan.",
+  force_resync_ok: "Bulut'a gönder",
+  force_resync_in_progress: "Bulut'a gönderiliyor…",
+  force_resync_success: "✓ {n} kayıt bulut'a gönderildi.",
+  force_resync_partial_failed: "{n} gönderim işlemi başarısız. {summary}. İnternet bağlantını kontrol et ve tekrar dene.",
+  force_resync_failed: "Yeniden senkronizasyon başarısız: {msg}",
+  force_resync_unavailable: "Bulut sync modülü kullanılamıyor. Giriş yapıp tekrar dene.",
+  backup_restore_cloud_push_failed: "Yerel restore tamamlandı ama {n} bulut gönderim işlemi başarısız: {summary}. Bu pencere kapandıktan sonra Data & Sync → \"Bulut'a zorla yeniden senkronize et\" tıklayarak tekrar dene.",
   pc_subtitle: "Bir veya daha fazla tarifi etkinlik için ölçeklendir",
   pc_step1: "Adım 1 — Misafir sayısı",
   pc_guests: "misafir",
