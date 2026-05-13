@@ -220,11 +220,104 @@
     flushTimer = setTimeout(flushNow, FLUSH_DELAY_MS);
   }
 
+  // v2.8.33 — Auto-retry helper. Most cloud push failures are transient
+  // (network blip, 5xx server, rate limit). Retrying 1-2 times almost
+  // always heals them — and the user never sees it. We only retry
+  // errors that LOOK transient (no code = network, code 5xx, timeout
+  // keyword); hard errors like RLS denials or 4xx schema mismatches
+  // wouldn't succeed on retry, so we surface them immediately.
+  function _isTransientError(err) {
+    if (!err) return false;
+    const code = err.code || err.status || '';
+    const msg = (err.message || '').toLowerCase();
+    if (!code) return true;  // no code → network/connection level
+    const codeStr = String(code);
+    if (codeStr[0] === '5') return true;  // 5xx server
+    if (codeStr === '408' || codeStr === '429') return true;  // timeout, rate limit
+    if (/timeout|network|fetch failed|connection/i.test(msg)) return true;
+    return false;
+  }
+
+  function _retryUpsert(supabase, table, rows, conflictKey, attempt) {
+    attempt = attempt || 1;
+    return supabase.from(table).upsert(rows, { onConflict: conflictKey })
+      .then(function (res) {
+        if (!res.error) return { success: true, count: rows.length };
+        if (_isTransientError(res.error) && attempt < 3) {
+          const delay = attempt * 1000;  // 1s, 2s
+          PCD.log && PCD.log('cloud-pertable retry upsert ' + table + ' attempt ' + (attempt + 1) + ' after ' + delay + 'ms (transient: ' + (res.error.message || res.error.code) + ')');
+          return new Promise(function (resolve) {
+            setTimeout(function () {
+              _retryUpsert(supabase, table, rows, conflictKey, attempt + 1).then(resolve);
+            }, delay);
+          });
+        }
+        return { success: false, error: res.error };
+      })
+      .catch(function (e) {
+        if (_isTransientError(e) && attempt < 3) {
+          const delay = attempt * 1000;
+          return new Promise(function (resolve) {
+            setTimeout(function () {
+              _retryUpsert(supabase, table, rows, conflictKey, attempt + 1).then(resolve);
+            }, delay);
+          });
+        }
+        return { success: false, error: e };
+      });
+  }
+
+  function _retryDelete(supabase, table, ids, userId, attempt) {
+    attempt = attempt || 1;
+    return supabase.from(table).delete().in('id', ids).eq('user_id', userId)
+      .then(function (res) {
+        if (!res.error) return { success: true, count: ids.length };
+        if (_isTransientError(res.error) && attempt < 3) {
+          const delay = attempt * 1000;
+          return new Promise(function (resolve) {
+            setTimeout(function () {
+              _retryDelete(supabase, table, ids, userId, attempt + 1).then(resolve);
+            }, delay);
+          });
+        }
+        return { success: false, error: res.error };
+      })
+      .catch(function (e) {
+        if (_isTransientError(e) && attempt < 3) {
+          const delay = attempt * 1000;
+          return new Promise(function (resolve) {
+            setTimeout(function () {
+              _retryDelete(supabase, table, ids, userId, attempt + 1).then(resolve);
+            }, delay);
+          });
+        }
+        return { success: false, error: e };
+      });
+  }
+
+  // v2.8.33 — Sync status event emission. Lets a tiny ambient
+  // indicator widget show "syncing…" during pushes and "error" if
+  // anything fails, so the chef has passive reassurance without
+  // having to know what "sync" means. No-op if PCD.events isn't
+  // wired (backward compat).
+  function _emitSyncStatus(state, detail) {
+    try {
+      if (PCD.events && PCD.events.emit) {
+        PCD.events.emit('sync:status', { state: state, detail: detail || null, at: Date.now() });
+      }
+      // Dispatch a DOM event too for indicator widgets that don't use PCD.events.
+      if (typeof window !== 'undefined' && window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('pcd-sync-status', { detail: { state: state, detail: detail || null, at: Date.now() } }));
+      }
+    } catch (e) { /* ignore */ }
+  }
+
   function flushNow() {
     flushTimer = null;
     if (!isReady()) return Promise.resolve({ success: true, pushed: 0, errors: [] });
     if (!queue.length) return Promise.resolve({ success: true, pushed: 0, errors: [] });
     if (!navigator.onLine) {
+      _emitSyncStatus('offline');
       // Will retry when online listener fires (cloud.js handles it)
       return Promise.resolve({ success: false, pushed: 0, errors: [{ table: '*', error: 'offline' }] });
     }
@@ -236,6 +329,9 @@
     const batch = queue.splice(0, queue.length);
     // Reset index
     Object.keys(queueIndex).forEach(function (k) { delete queueIndex[k]; });
+
+    // v2.8.33 — Inform UI that a sync push is in flight.
+    _emitSyncStatus('syncing', { items: batch.length });
 
     const supabase = PCD.cloud.getClient();
     const user = PCD.store.get('user');
@@ -310,34 +406,25 @@
         const conflictKey = (table === 'user_prefs') ? 'user_id'
                           : (table === 'workspace_tombstones') ? 'workspace_id'
                           : 'id';
-        return supabase.from(table).upsert(rows, { onConflict: conflictKey })
-          .then(function (res) {
-            if (res.error) {
-              errors.push({ table: table, op: 'upsert', count: rows.length, error: res.error.message || res.error.code || String(res.error) });
-              PCD.warn && PCD.warn('cloud-pertable upsert ' + table, res.error.message || res.error);
-            } else {
-              successCount += rows.length;
-            }
-          })
-          .catch(function (e) {
-            errors.push({ table: table, op: 'upsert', count: rows.length, error: (e && e.message) || String(e) });
-            PCD.warn && PCD.warn('cloud-pertable exception ' + table, e);
-          });
+        // v2.8.33 — _retryUpsert auto-retries transient failures.
+        return _retryUpsert(supabase, table, rows, conflictKey).then(function (result) {
+          if (result.success) {
+            successCount += result.count;
+          } else {
+            errors.push({ table: table, op: 'upsert', count: rows.length, error: (result.error && (result.error.message || result.error.code)) || String(result.error) });
+            PCD.warn && PCD.warn('cloud-pertable upsert ' + table + ' failed after retries', result.error);
+          }
+        });
       } else if (op === 'delete') {
         const ids = items.map(function (it) { return it.id; });
-        return supabase.from(table).delete().in('id', ids).eq('user_id', user.id)
-          .then(function (res) {
-            if (res.error) {
-              errors.push({ table: table, op: 'delete', count: ids.length, error: res.error.message || res.error.code || String(res.error) });
-              PCD.warn && PCD.warn('cloud-pertable delete ' + table, res.error.message || res.error);
-            } else {
-              successCount += ids.length;
-            }
-          })
-          .catch(function (e) {
-            errors.push({ table: table, op: 'delete', count: ids.length, error: (e && e.message) || String(e) });
-            PCD.warn && PCD.warn('cloud-pertable delete exception ' + table, e);
-          });
+        return _retryDelete(supabase, table, ids, user.id).then(function (result) {
+          if (result.success) {
+            successCount += result.count;
+          } else {
+            errors.push({ table: table, op: 'delete', count: ids.length, error: (result.error && (result.error.message || result.error.code)) || String(result.error) });
+            PCD.warn && PCD.warn('cloud-pertable delete ' + table + ' failed after retries', result.error);
+          }
+        });
       }
       return Promise.resolve();
     });
@@ -348,6 +435,14 @@
       // gelmiş olabilir (yeni item'lar queue'da, eski'ler değil). Persist
       // güncel halini diske yazar.
       _persistQueueNow();
+      // v2.8.33 — Notify UI of final state. Ambient indicator goes
+      // from "syncing" to "synced" (or "error" if anything failed
+      // even after retries).
+      if (errors.length === 0) {
+        _emitSyncStatus('synced', { pushed: successCount });
+      } else {
+        _emitSyncStatus('error', { errors: errors.length, pushed: successCount });
+      }
       // v2.8.32 — Return success/error summary so restore + force-resync
       // flows can verify the push really hit the cloud.
       return {

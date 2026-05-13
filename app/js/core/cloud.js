@@ -419,7 +419,7 @@
               // filter ediyor → kullanıcıya görünmüyor. Trash UI children sayısını
               // göstermek için bu veriye ihtiyaç duyacak.
 
-	      // v2.8.3 — BUG FIX: Onboarding seed cloud push.
+              // v2.8.3 — BUG FIX: Onboarding seed cloud push.
               // Bootstrap (store.ensureActiveWorkspace) "My Kitchen" workspace'ini
               // direkt state mutation ile yaratıyor — store.upsertWorkspace API'sini
               // kullanmadığı için cloud-pertable.queueUpsert tetiklenmiyor. Sonuç:
@@ -439,6 +439,62 @@
                     PCD.cloudPerTable.queueUpsert('workspaces', wsId, null, mergedWorkspaces[wsId]);
                   }
                 });
+
+                // v2.8.33 — DRIFT DETECTION: same logic extended to ALL
+                // per-workspace tables. Any local record that the cloud
+                // pull didn't return is treated as local-only and queued
+                // for upload. Self-healing: catches the v2.8.32 restore
+                // bug, transient push failures, network drops mid-save,
+                // any state where local and cloud diverged. Silent —
+                // user never has to think about sync.
+                const wsTables = [
+                  ['recipes',            'recipes'],
+                  ['ingredients',        'ingredients'],
+                  ['menus',              'menus'],
+                  ['events',             'events'],
+                  ['suppliers',          'suppliers'],
+                  ['canvases',           'canvases'],
+                  ['shoppingLists',      'shopping_lists'],
+                  ['checklistTemplates', 'checklist_templates'],
+                  ['stockCountHistory',  'stock_count_history'],
+                  ['haccpLogs',          'haccp_logs'],
+                  ['haccpUnits',         'haccp_units'],
+                  ['haccpReadings',      'haccp_readings'],
+                  ['haccpCookCool',      'haccp_cook_cool'],
+                ];
+                let driftedCount = 0;
+                wsTables.forEach(function (pair) {
+                  const stateKey = pair[0];
+                  const table = pair[1];
+                  const localData = merged[stateKey] || {};
+                  const remoteData = remote[stateKey] || {};
+                  Object.keys(localData).forEach(function (wsId) {
+                    const localItems = localData[wsId] || {};
+                    const remoteItems = remoteData[wsId] || {};
+                    Object.keys(localItems).forEach(function (id) {
+                      if (localItems[id] && !remoteItems[id]) {
+                        PCD.cloudPerTable.queueUpsert(table, id, wsId, localItems[id]);
+                        driftedCount++;
+                      }
+                    });
+                  });
+                });
+                // Inventory (different structure: { wsId: { ingId: row } })
+                const localInv = merged.inventory || {};
+                const remoteInv = remote.inventory || {};
+                Object.keys(localInv).forEach(function (wsId) {
+                  const localItems = localInv[wsId] || {};
+                  const remoteItems = remoteInv[wsId] || {};
+                  Object.keys(localItems).forEach(function (ingId) {
+                    if (localItems[ingId] && !remoteItems[ingId]) {
+                      PCD.cloudPerTable.queueUpsert('inventory', ingId, wsId, localItems[ingId]);
+                      driftedCount++;
+                    }
+                  });
+                });
+                if (driftedCount > 0) {
+                  PCD.log && PCD.log('cloud pull: drift detected, queued', driftedCount, 'local-only item(s) for cloud sync');
+                }
               }
 
               PCD.store.replaceAll(merged);

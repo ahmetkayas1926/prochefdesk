@@ -173,17 +173,6 @@
               </div>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
-            <!-- v2.8.32 — Universal "Force re-sync to cloud" escape hatch.
-                 Useful when local and cloud diverge for any reason (restore
-                 failure, sync error, partial network issues). Pushes
-                 everything in local IDB to cloud explicitly. -->
-            <button class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;border-bottom:1px solid var(--border);" id="forceResyncBtn">
-              <div>
-                <div style="font-weight:600;">🔄 ${t('force_resync_title')}</div>
-                <div class="text-muted text-sm">${t('force_resync_desc')}</div>
-              </div>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
             <button class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;color:var(--danger);" id="clearAllBtn">
               <div>
                 <div style="font-weight:600;">${t('clear_all_data')}</div>
@@ -228,13 +217,25 @@
               </div>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
-            <a href="mailto:hello@prochefdesk.com?subject=ProChefDesk Feedback" class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;text-decoration:none;color:inherit;">
+            <a href="mailto:hello@prochefdesk.com?subject=ProChefDesk Feedback" class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;text-decoration:none;color:inherit;border-bottom:1px solid var(--border);">
               <div>
                 <div style="font-weight:600;">✉️ ${t('feedback_title')}</div>
                 <div class="text-muted text-sm">${t('feedback_subtitle')}</div>
               </div>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </a>
+            <!-- v2.8.33 — Force re-sync moved here from Data & Sync.
+                 It's a troubleshooting tool for the rare case automatic
+                 drift detection + retries didn't heal the issue. Most
+                 chefs will never see or need it; placed under Help so
+                 support can guide them to it when needed. -->
+            <button class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;" id="forceResyncBtn">
+              <div>
+                <div style="font-weight:600;">🔄 ${t('force_resync_title')}</div>
+                <div class="text-muted text-sm">${t('force_resync_desc')}</div>
+              </div>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
           </div>
         </div>
       </div>

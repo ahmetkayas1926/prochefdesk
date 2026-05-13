@@ -1161,10 +1161,124 @@
     reportErrorToCloud({ message: 'unhandledrejection: ' + message, stack: stack });
   });
 
+  // v2.8.33 — Ambient sync status indicator. Tiny floating dot
+  // bottom-right of the viewport. Default: invisible. Only appears
+  // when syncing (pulse animation), offline (gray dot), or error
+  // (red dot, tap to retry). Chef-friendly — no jargon, just a
+  // passive visual that says "things are fine" by its absence.
+  function _installSyncIndicator() {
+    if (document.getElementById('pcd-sync-dot')) return;  // already installed
+    const dot = document.createElement('div');
+    dot.id = 'pcd-sync-dot';
+    dot.setAttribute('role', 'status');
+    dot.setAttribute('aria-live', 'polite');
+    dot.style.cssText = [
+      'position:fixed',
+      'bottom:14px',
+      'right:14px',
+      'width:10px',
+      'height:10px',
+      'border-radius:50%',
+      'background:transparent',
+      'box-shadow:0 0 0 2px transparent',
+      'z-index:9999',
+      'opacity:0',
+      'transition:opacity 0.3s ease, background 0.3s ease, transform 0.2s ease',
+      'pointer-events:none',
+      'cursor:default',
+    ].join(';');
+    // Hidden tooltip span (used on hover / when shown).
+    dot.title = '';
+    document.body.appendChild(dot);
+
+    // Inject pulsing animation keyframes once.
+    if (!document.getElementById('pcd-sync-dot-style')) {
+      const style = document.createElement('style');
+      style.id = 'pcd-sync-dot-style';
+      style.textContent =
+        '@keyframes pcd-sync-pulse { 0%,100% { transform: scale(1); opacity: 0.85; } 50% { transform: scale(1.35); opacity: 1; } }' +
+        '#pcd-sync-dot.pcd-sync-syncing { animation: pcd-sync-pulse 1s ease-in-out infinite; }';
+      document.head.appendChild(style);
+    }
+
+    let hideTimer = null;
+    function render(state, detail) {
+      if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+      dot.classList.remove('pcd-sync-syncing');
+      dot.style.pointerEvents = 'none';
+      dot.onclick = null;
+      switch (state) {
+        case 'syncing':
+          dot.style.background = '#3b82f6';
+          dot.style.boxShadow = '0 0 0 3px rgba(59,130,246,0.18)';
+          dot.style.opacity = '1';
+          dot.classList.add('pcd-sync-syncing');
+          dot.title = (PCD.i18n && PCD.i18n.t) ? PCD.i18n.t('sync_state_syncing', 'Syncing…') : 'Syncing…';
+          break;
+        case 'synced':
+          dot.style.background = '#16a34a';
+          dot.style.boxShadow = '0 0 0 3px rgba(22,163,74,0.18)';
+          dot.style.opacity = '1';
+          dot.title = (PCD.i18n && PCD.i18n.t) ? PCD.i18n.t('sync_state_synced', 'Up to date') : 'Up to date';
+          // Fade out after 2s — confirmation glimpse, then disappear.
+          hideTimer = setTimeout(function () {
+            dot.style.opacity = '0';
+            hideTimer = null;
+          }, 2000);
+          break;
+        case 'offline':
+          dot.style.background = '#6b7280';
+          dot.style.boxShadow = '0 0 0 3px rgba(107,114,128,0.18)';
+          dot.style.opacity = '1';
+          dot.title = (PCD.i18n && PCD.i18n.t) ? PCD.i18n.t('sync_state_offline', 'Offline — changes will sync when back online') : 'Offline';
+          break;
+        case 'error':
+          dot.style.background = '#dc2626';
+          dot.style.boxShadow = '0 0 0 3px rgba(220,38,38,0.18)';
+          dot.style.opacity = '1';
+          dot.style.pointerEvents = 'auto';
+          dot.style.cursor = 'pointer';
+          dot.title = (PCD.i18n && PCD.i18n.t) ? PCD.i18n.t('sync_state_error_tap', 'Sync issue — tap to retry') : 'Tap to retry sync';
+          dot.onclick = function () {
+            if (PCD.cloudPerTable && PCD.cloudPerTable.queueFullState && PCD.cloudPerTable.flushNow) {
+              PCD.cloudPerTable.queueFullState();
+              PCD.cloudPerTable.flushNow();
+            }
+          };
+          break;
+        default:
+          dot.style.opacity = '0';
+      }
+    }
+
+    window.addEventListener('pcd-sync-status', function (e) {
+      const d = e && e.detail;
+      if (!d) return;
+      render(d.state, d.detail);
+    });
+
+    window.addEventListener('online', function () {
+      // Triggers a flushNow to push anything that queued during offline.
+      if (PCD.cloudPerTable && PCD.cloudPerTable.flushNow) {
+        try { PCD.cloudPerTable.flushNow(); } catch (e) {}
+      }
+    });
+    window.addEventListener('offline', function () { render('offline'); });
+
+    // If we boot offline, reflect that.
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      render('offline');
+    }
+  }
+
   // Boot on DOMContentLoaded
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', boot);
+    document.addEventListener('DOMContentLoaded', function () {
+      boot();
+      _installSyncIndicator();
+    });
   } else {
     boot();
+    _installSyncIndicator();
   }
 })();
