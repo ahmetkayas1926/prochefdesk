@@ -1076,6 +1076,8 @@ window.PCD.i18n.register('en', {
   allerg_tag_ingredient: "Tag ingredient",
   allerg_none: "No allergens declared",
   allerg_auto_detect: "Auto-detect from ingredient name",
+  // v2.8.37 — Auto-detect removed; allergens are manual-only
+  allerg_manual_intro: "Tap an allergen chip to toggle it on or off for each ingredient. No auto-detection — you choose what applies.",
   allerg_manual: "Manual tagging",
   allerg_recipe_contains: "Contains",
   allerg_recipe_clean: "Allergen-free",

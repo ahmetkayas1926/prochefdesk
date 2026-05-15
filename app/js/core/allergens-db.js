@@ -79,9 +79,9 @@
     recipe.ingredients.forEach(function (ri) {
       const ing = ingMap[ri.ingredientId];
       if (!ing) return;
-      // Prefer explicit allergens array on ingredient, else auto-detect
-      let tags = ing.allergens;
-      if (!tags || !tags.length) tags = autoDetect(ing.name);
+      // v2.8.37 — Auto-detect kaldırıldı. Sadece kullanıcının manuel
+      // işaretlediği allergen'ler. ing.allergens boşsa allergen yok sayılır.
+      const tags = (ing.allergens && ing.allergens.length) ? ing.allergens : [];
       tags.forEach(function (k) { set[k] = true; });
     });
 

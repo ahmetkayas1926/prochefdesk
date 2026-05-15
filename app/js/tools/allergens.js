@@ -126,14 +126,14 @@
     const body = PCD.el('div');
 
     function render() {
-      let html = '<div class="text-muted text-sm mb-3">' + t('allerg_auto_detect') + '. Click to override.</div>';
+      // v2.8.37 — Auto-detect kaldırıldı (operatör spec'i: keyword matching
+      // %100 doğruluk imkansız, yanlış işaretler güveni bozuyor — manuel kalsın).
+      let html = '<div class="text-muted text-sm mb-3">' + t('allerg_manual_intro') + '</div>';
       html += '<div style="max-height:60vh;overflow-y:auto;">';
       ings.forEach(function (ing) {
-        const current = ing.allergens && ing.allergens.length ? ing.allergens : PCD.allergensDB.autoDetect(ing.name);
-        const isAuto = !ing.allergens || !ing.allergens.length;
+        const current = (ing.allergens && ing.allergens.length) ? ing.allergens : [];
         html += '<div class="list-item" style="min-height:auto;padding:10px;margin-bottom:6px;display:flex;flex-direction:column;align-items:stretch;" data-iid="' + ing.id + '">';
         html += '<div class="flex items-center justify-between mb-2"><div style="font-weight:600;">' + PCD.escapeHtml(ing.name) + '</div>';
-        if (isAuto && current.length) html += '<span class="chip" style="font-size:10px;">auto</span>';
         html += '</div>';
         html += '<div style="display:flex;gap:4px;flex-wrap:wrap;">';
         ALLERGENS.forEach(function (a) {
@@ -152,8 +152,7 @@
         const iid = this.closest('[data-iid]').getAttribute('data-iid');
         const ing = PCD.store.getIngredient(iid);
         if (!ing) return;
-        // If ing has no explicit allergens array yet, initialize from auto-detect
-        let current = (ing.allergens && ing.allergens.length) ? ing.allergens : PCD.allergensDB.autoDetect(ing.name);
+        let current = (ing.allergens && ing.allergens.length) ? ing.allergens.slice() : [];
         const idx = current.indexOf(key);
         if (idx >= 0) current.splice(idx, 1);
         else current.push(key);

@@ -1076,6 +1076,8 @@ window.PCD.i18n.register('tr', {
   allerg_tag_ingredient: "Malzemeyi etiketle",
   allerg_none: "Alerjen beyan edilmemiş",
   allerg_auto_detect: "Malzeme adından otomatik tespit",
+  // v2.8.37 — Auto-detect kaldırıldı; allergen'ler artık sadece manuel seçilir
+  allerg_manual_intro: "Her malzemenin allerjenlerini açıp kapatmak için ilgili rozete tıkla. Otomatik tespit yok — uygun olanları sen seçiyorsun.",
   allerg_manual: "Manuel etiketleme",
   allerg_recipe_contains: "İçerir",
   allerg_recipe_clean: "Alerjen içermez",
