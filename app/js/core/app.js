@@ -80,6 +80,8 @@
       PCD.router.register('haccp_receiving', PCD.tools.haccpReceiving.render);
       // v2.8.39 — Hot/Cold Holding check (yemek bazlı saatlik). IDB-only.
       PCD.router.register('haccp_holding', PCD.tools.haccpHolding.render);
+      // v2.8.41 — Discover (frontend skeleton; backend Faz 2'de gelecek).
+      PCD.router.register('discover', PCD.tools.discover.render);
 
       // 7) Start router + render initial view
       // BUG FIX (v2.6.36): Read the route from the URL hash so F5 keeps
@@ -327,6 +329,9 @@
         { key: 'haccp_cooling', icon: 'clock', route: 'haccp_cooling' },
         { key: 'haccp_receiving', icon: 'archive', route: 'haccp_receiving' },
         { key: 'haccp_holding', icon: 'activity', route: 'haccp_holding' },
+      ]},
+      { title: t('section_discover'), items: [
+        { key: 'discover', icon: 'grid', route: 'discover' },
       ]},
       { title: null, items: [
         { key: 'account', icon: 'user', route: 'account' },

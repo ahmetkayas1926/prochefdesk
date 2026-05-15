@@ -2020,7 +2020,12 @@
       // excluded = data.allergensExcluded (user removes from auto).
       salePrice: null, allergens: [], allergensExcluded: [],
       // v2.8.26 — Explicit prep classification (default false = menu item)
-      isSubRecipe: false
+      isSubRecipe: false,
+      // v2.8.41 — Discover MVP: kullanıcı bu tarifi Discover keşfet ekranında
+      // herkese açık paylaşmak isterse true yapar. Backend (RLS, anonymous
+      // SELECT, likes/views tabloları) henüz yok — bu round'da sadece
+      // veri modeli + UI toggle. recipe.data jsonb içinde sync ediliyor.
+      isPublic: false
     };
 
     const body = PCD.el('div');
@@ -2076,6 +2081,20 @@
             <span>
               <span style="font-weight:600;">${t('recipe_is_subrecipe_label')}</span>
               <div class="text-muted" style="font-size:12px;line-height:1.4;margin-top:2px;">${t('recipe_is_subrecipe_hint')}</div>
+            </span>
+          </label>
+        </div>
+
+        <!-- v2.8.41 — Discover MVP: kullanıcı tarifini herkese açık paylaşmak istiyor mu?
+             Backend (anonymous SELECT, likes, views) henüz yok; bu round'da veri modeli +
+             UI toggle. recipe.data jsonb içinde sync edilir, mevcut cloud-pertable akışı
+             yeterli — yeni tablo veya RLS değişikliği yok. -->
+        <div class="field" style="margin-bottom:14px;">
+          <label class="checkbox" style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
+            <input type="checkbox" id="recipeIsPublic" ${data.isPublic ? 'checked' : ''} style="margin-top:2px;flex-shrink:0;">
+            <span>
+              <span style="font-weight:600;">${t('recipe_is_public_label')}</span>
+              <div class="text-muted" style="font-size:12px;line-height:1.4;margin-top:2px;">${t('recipe_is_public_hint')}</div>
             </span>
           </label>
         </div>
@@ -2838,6 +2857,9 @@
       // v2.8.26 — Explicit prep classification flag, independent of yield
       const isSubInp = PCD.$('#recipeIsSubRecipe', body);
       data.isSubRecipe = isSubInp ? !!isSubInp.checked : false;
+      // v2.8.41 — Discover MVP isPublic toggle
+      const isPublicInp = PCD.$('#recipeIsPublic', body);
+      data.isPublic = isPublicInp ? !!isPublicInp.checked : false;
       data.salePrice = parseFloat(PCD.$('#recipeSalePrice', body).value) || null;
       data.steps = PCD.$('#recipeSteps', body).value;
       data.plating = PCD.$('#recipePlating', body).value;
