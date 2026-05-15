@@ -444,17 +444,39 @@
             return;
           }
 
-          // Build a preview summary so the chef knows what's about to be restored
-          const summary = buildBackupSummary(data);
+          // v2.8.35 — Side-by-side compare: current device vs backup.
+          // Operatör backup'tan ne kazanacağını / kaybedeceğini görerek karar versin.
+          const currentItems = summarizeData(PCD.store.get());
+          const backupItems  = summarizeData(data);
+          const compareRows = currentItems.map(function (cur, idx) {
+            const bk = backupItems[idx];
+            const diff = bk.n - cur.n;
+            const diffColor = diff > 0 ? 'var(--success)' : diff < 0 ? 'var(--danger)' : 'var(--text-3)';
+            const diffLabel = diff === 0 ? '' : (diff > 0 ? '+' : '') + diff;
+            return '<tr>' +
+              '<td style="padding:6px 8px;color:var(--text-2);font-size:13px;">' + cur.label + '</td>' +
+              '<td style="padding:6px 8px;text-align:right;font-variant-numeric:tabular-nums;color:var(--text-1);">' + cur.n + '</td>' +
+              '<td style="padding:6px 8px;text-align:right;font-variant-numeric:tabular-nums;color:var(--text-1);font-weight:700;">' + bk.n + '</td>' +
+              '<td style="padding:6px 8px;text-align:right;font-variant-numeric:tabular-nums;font-size:12px;color:' + diffColor + ';font-weight:600;">' + diffLabel + '</td>' +
+            '</tr>';
+          }).join('');
           const versionInfo = parsed.version ? '<div class="text-muted" style="font-size:11px;margin-bottom:8px;">' +
             t('backup_restore_meta', { version: PCD.escapeHtml(parsed.version), date: parsed.exportedAt ? new Date(parsed.exportedAt).toLocaleString() : '?' }) +
             '</div>' : '';
           const previewHtml = versionInfo +
-            '<div style="font-size:13px;color:var(--text-2);line-height:1.6;margin-bottom:12px;">' +
-              t('backup_restore_preview_intro', 'This backup contains:') +
+            '<div style="font-size:13px;color:var(--text-2);line-height:1.5;margin-bottom:12px;">' +
+              t('backup_restore_compare_intro', 'Compare what is on this device now vs what the backup will load. Restoring REPLACES the current data with the backup.') +
             '</div>' +
-            '<div style="background:var(--surface-2);border-radius:var(--r-sm);padding:10px 14px;margin-bottom:14px;font-size:13px;">' +
-              summary.lines.map(function (l) { return '<div>· ' + l + '</div>'; }).join('') +
+            '<div style="background:var(--surface-2);border-radius:var(--r-sm);padding:6px 8px;margin-bottom:14px;overflow-x:auto;">' +
+              '<table style="width:100%;border-collapse:collapse;">' +
+                '<thead><tr style="border-bottom:1px solid var(--border);">' +
+                  '<th style="padding:6px 8px;text-align:left;"></th>' +
+                  '<th style="padding:6px 8px;text-align:right;font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;">' + t('backup_restore_compare_current', 'Now on device') + '</th>' +
+                  '<th style="padding:6px 8px;text-align:right;font-size:11px;font-weight:600;color:var(--brand-700);text-transform:uppercase;letter-spacing:0.04em;">' + t('backup_restore_compare_backup', 'In backup') + '</th>' +
+                  '<th style="padding:6px 8px;text-align:right;font-size:11px;font-weight:600;color:var(--text-3);">Δ</th>' +
+                '</tr></thead>' +
+                '<tbody>' + compareRows + '</tbody>' +
+              '</table>' +
             '</div>' +
             '<div style="background:#fef3c7;color:#92400e;padding:10px 14px;border-radius:var(--r-sm);font-size:12px;line-height:1.5;">' +
               '⚠️ ' + t('backup_restore_warning', 'Restoring will OVERWRITE your current workspaces, recipes, ingredients and other data. Make a fresh backup of the current state first if you might want to come back.') +
@@ -582,8 +604,9 @@
     }
 
     // v2.6.57 — Build a short human-readable preview of backup contents.
-    function buildBackupSummary(data) {
-      const lines = [];
+    // v2.8.35 — Returns per-table counts as objects so the restore modal
+    // can render a side-by-side compare (current device vs backup).
+    function summarizeData(data) {
       function countDeep(obj) {
         // For workspace-scoped data: { wsId: { id: {...} } } — count inner items across all wsIds
         if (!obj || typeof obj !== 'object') return 0;
@@ -599,16 +622,17 @@
         return total;
       }
       const T = PCD.i18n.t;
-      if (data.workspaces) lines.push(Object.keys(data.workspaces).length + ' ' + T('backup_summary_workspaces', 'workspace(s)'));
-      if (data.recipes) lines.push(countDeep(data.recipes) + ' ' + T('backup_summary_recipes', 'recipe(s)'));
-      if (data.ingredients) lines.push(countDeep(data.ingredients) + ' ' + T('backup_summary_ingredients', 'ingredient(s)'));
-      if (data.menus) lines.push(countDeep(data.menus) + ' ' + T('backup_summary_menus', 'menu(s)'));
-      if (data.events) lines.push(countDeep(data.events) + ' ' + T('backup_summary_events', 'event(s)'));
-      if (data.suppliers) lines.push(countDeep(data.suppliers) + ' ' + T('backup_summary_suppliers', 'supplier(s)'));
-      if (data.checklistTemplates) lines.push(countDeep(data.checklistTemplates) + ' ' + T('backup_summary_checklists', 'checklist template(s)'));
-      if (data.canvases) lines.push(countDeep(data.canvases) + ' ' + T('backup_summary_canvases', 'kitchen card(s)'));
-      if (lines.length === 0) lines.push(T('backup_summary_empty', '(metadata only — no recipes or workspaces)'));
-      return { lines: lines };
+      const d = data || {};
+      return [
+        { label: T('backup_summary_workspaces', 'workspace(s)'),    n: d.workspaces         ? Object.keys(d.workspaces).length : 0 },
+        { label: T('backup_summary_recipes', 'recipe(s)'),          n: d.recipes            ? countDeep(d.recipes)             : 0 },
+        { label: T('backup_summary_ingredients', 'ingredient(s)'),  n: d.ingredients        ? countDeep(d.ingredients)         : 0 },
+        { label: T('backup_summary_menus', 'menu(s)'),              n: d.menus              ? countDeep(d.menus)               : 0 },
+        { label: T('backup_summary_events', 'event(s)'),            n: d.events             ? countDeep(d.events)              : 0 },
+        { label: T('backup_summary_suppliers', 'supplier(s)'),      n: d.suppliers          ? countDeep(d.suppliers)           : 0 },
+        { label: T('backup_summary_checklists', 'checklist template(s)'), n: d.checklistTemplates ? countDeep(d.checklistTemplates) : 0 },
+        { label: T('backup_summary_canvases', 'kitchen card(s)'),   n: d.canvases           ? countDeep(d.canvases)            : 0 }
+      ];
     }
 
     // v2.8.32 — Force re-sync to cloud. Universal escape hatch when

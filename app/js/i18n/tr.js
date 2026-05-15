@@ -1510,6 +1510,10 @@ window.PCD.i18n.register('tr', {
   backup_summary_checklists: "kontrol listesi şablonu",
   backup_summary_canvases: "mutfak kartı",
   backup_summary_empty: "(sadece meta veri — tarif veya çalışma alanı yok)",
+  // v2.8.35 — Restore modal: mevcut cihaz vs backup yan yana karşılaştırma
+  backup_restore_compare_intro: "Şu an cihazda olan veriler ile backup'ta yüklenecek veriler karşılaştırılıyor. Geri yükleme mevcut veriyi backup ile DEĞİŞTİRİR.",
+  backup_restore_compare_current: "Şu an cihazda",
+  backup_restore_compare_backup: "Backup'ta",
 
   // v2.6.60 — Account deletion (GDPR right-to-erasure)
   danger_zone_title: "Tehlikeli Bölge",

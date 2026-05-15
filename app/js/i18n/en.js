@@ -1510,6 +1510,10 @@ window.PCD.i18n.register('en', {
   backup_summary_checklists: "checklist template(s)",
   backup_summary_canvases: "kitchen card(s)",
   backup_summary_empty: "(metadata only — no recipes or workspaces)",
+  // v2.8.35 — Restore modal: current device vs backup side-by-side compare
+  backup_restore_compare_intro: "Compare what is on this device now vs what the backup will load. Restoring REPLACES the current data with the backup.",
+  backup_restore_compare_current: "Now on device",
+  backup_restore_compare_backup: "In backup",
 
   // v2.6.60 — Account deletion (GDPR right-to-erasure)
   danger_zone_title: "Danger Zone",
