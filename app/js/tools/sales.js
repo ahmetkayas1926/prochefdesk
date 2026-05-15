@@ -104,7 +104,7 @@
       }).then(function (ok) {
         if (!ok) return;
         PCD.store.deleteFromTable('salesLog', id);
-        PCD.toast.success('Deleted');
+        PCD.toast.success(t('toast_deleted'));
         render(view);
       });
     });
@@ -113,7 +113,7 @@
   function openSaleEditor(saleId) {
     const t = PCD.i18n.t;
     const recipes = PCD.store.listRecipes().sort(function (a, b) { return (a.name || '').localeCompare(b.name || ''); });
-    if (recipes.length === 0) { PCD.toast.warning('Create some recipes first'); return; }
+    if (recipes.length === 0) { PCD.toast.warning(t('toast_create_recipes_first')); return; }
 
     const existing = saleId ? PCD.store.getFromTable('salesLog', saleId) : null;
     const data = existing ? Object.assign({}, existing) : {
@@ -154,9 +154,9 @@
       data.recipeId = PCD.$('#saleRecipe', body).value;
       data.qty = parseInt(PCD.$('#saleQty', body).value, 10) || 1;
       data.note = (PCD.$('#saleNote', body).value || '').trim();
-      if (!data.date) { PCD.toast.error('Date required'); return; }
-      if (!data.recipeId) { PCD.toast.error('Recipe required'); return; }
-      if (data.qty < 1) { PCD.toast.error('Quantity must be 1 or more'); return; }
+      if (!data.date) { PCD.toast.error(t('toast_date_required')); return; }
+      if (!data.recipeId) { PCD.toast.error(t('toast_recipe_required')); return; }
+      if (data.qty < 1) { PCD.toast.error(t('toast_quantity_min')); return; }
       if (existing) data.id = existing.id;
       PCD.store.upsertInTable('salesLog', data, 'sl');
       PCD.toast.success(t('saved'));

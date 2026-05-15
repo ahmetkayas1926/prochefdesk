@@ -678,11 +678,11 @@
 
     const startBtn = PCD.el('button', { class: 'btn btn-primary', style: { flex: '1' } });
     startBtn.innerHTML = PCD.icon('clock', 16) + ' <span>' + PCD.i18n.t('btn_start_session') + '</span>';
-    const editBtn = PCD.el('button', { class: 'btn btn-outline', title: 'Edit template' });
+    const editBtn = PCD.el('button', { class: 'btn btn-outline', title: t('chk_btn_edit_template') });
     editBtn.innerHTML = PCD.icon('edit', 16);
-    const dupBtn = PCD.el('button', { class: 'btn btn-outline', title: 'Duplicate' });
+    const dupBtn = PCD.el('button', { class: 'btn btn-outline', title: t('chk_btn_duplicate') });
     dupBtn.innerHTML = PCD.icon('copy', 16);
-    const printBtn = PCD.el('button', { class: 'btn btn-outline', title: 'Print blank checklist' });
+    const printBtn = PCD.el('button', { class: 'btn btn-outline', title: t('chk_btn_print_blank') });
     printBtn.innerHTML = PCD.icon('print', 16);
     const shareBtn = PCD.el('button', { class: 'btn btn-outline', title: 'Share' });
     shareBtn.innerHTML = PCD.icon('share', 16);
@@ -1030,7 +1030,7 @@
           : '';
         inputHtml =
           '<div style="display:flex;gap:8px;align-items:center;">' +
-            '<input type="number" class="input" data-numinput="' + idx + '" value="' + (it.value !== null && it.value !== undefined ? it.value : '') + '" step="0.1" placeholder="Enter value" style="flex:1;font-weight:600;font-family:var(--font-mono);' + (outOfRange ? 'border-color:var(--danger);color:var(--danger);' : '') + '">' +
+            '<input type="number" class="input" data-numinput="' + idx + '" value="' + (it.value !== null && it.value !== undefined ? it.value : '') + '" step="0.1" placeholder="' + PCD.escapeHtml(t('chk_placeholder_value')) + '" style="flex:1;font-weight:600;font-family:var(--font-mono);' + (outOfRange ? 'border-color:var(--danger);color:var(--danger);' : '') + '">' +
             (it.unit ? '<span style="font-weight:600;color:var(--text-2);min-width:40px;">' + PCD.escapeHtml(it.unit) + '</span>' : '') +
           '</div>' +
           (rangeStr ? '<div class="text-muted text-sm mt-1" style="font-size:11px;">' + rangeStr + (outOfRange ? ' · <strong style="color:var(--danger);">OUT OF RANGE</strong>' : '') + '</div>' : '');
@@ -1045,7 +1045,7 @@
         wrap.innerHTML = headerHtml + inputHtml;
       } else if (type === 'text') {
         inputHtml =
-          '<input type="text" class="input" data-textinput="' + idx + '" value="' + PCD.escapeHtml(it.value || '') + '" placeholder="Enter text">';
+          '<input type="text" class="input" data-textinput="' + idx + '" value="' + PCD.escapeHtml(it.value || '') + '" placeholder="' + PCD.escapeHtml(t('chk_placeholder_text')) + '">';
         wrap.innerHTML = headerHtml + inputHtml;
       }
 
@@ -1063,7 +1063,7 @@
           (hasComment ? '✏️ Comment' : '+ Add comment') +
         '</button>' +
         '<div data-cmwrap="' + idx + '" style="display:' + (hasComment ? 'block' : 'none') + ';margin-top:4px;">' +
-          '<input type="text" class="input" data-cminput="' + idx + '" value="' + PCD.escapeHtml(it.comment || '') + '" placeholder="Notes for this item..." style="font-size:13px;padding:6px 10px;min-height:32px;">' +
+          '<input type="text" class="input" data-cminput="' + idx + '" value="' + PCD.escapeHtml(it.comment || '') + '" placeholder="' + PCD.escapeHtml(t('chk_placeholder_notes')) + '" style="font-size:13px;padding:6px 10px;min-height:32px;">' +
         '</div>';
       wrap.appendChild(commentRow);
 
@@ -1175,7 +1175,7 @@
     renderBody();
 
     const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('close') });
-    const printBtn = PCD.el('button', { class: 'btn btn-outline', title: 'Print / PDF' });
+    const printBtn = PCD.el('button', { class: 'btn btn-outline', title: t('print_pdf') });
     printBtn.innerHTML = PCD.icon('print', 16);
     const shareBtn = PCD.el('button', { class: 'btn btn-outline', title: 'Share' });
     shareBtn.innerHTML = PCD.icon('share', 16);

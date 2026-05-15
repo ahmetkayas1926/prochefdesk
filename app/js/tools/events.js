@@ -354,7 +354,7 @@
     if (existing) deleteBtn = PCD.el('button', { class: 'btn btn-ghost', text: t('delete'), style: { color: 'var(--danger)' } });
     let printBtn = null, shareBtn = null;
     if (existing) {
-      printBtn = PCD.el('button', { class: 'btn btn-outline', title: 'Print / PDF' });
+      printBtn = PCD.el('button', { class: 'btn btn-outline', title: t('print_pdf') });
       printBtn.innerHTML = PCD.icon('print', 16);
       shareBtn = PCD.el('button', { class: 'btn btn-outline', title: 'Share' });
       shareBtn.innerHTML = PCD.icon('share', 16);

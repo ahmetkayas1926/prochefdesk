@@ -64,7 +64,7 @@
       const active = this.getAttribute('data-active') === 'true';
       if (!active || !route) {
         PCD.haptic('error');
-        PCD.toast.info('Coming in a future update');
+        PCD.toast.info(PCD.i18n.t('toast_coming_in_future'));
         return;
       }
       PCD.router.go(route);
