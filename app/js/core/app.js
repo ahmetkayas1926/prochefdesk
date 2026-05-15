@@ -76,6 +76,8 @@
       // HACCP Forms (v2.6.1+) — fridge/freezer log first; cooling/cleaning later
       PCD.router.register('haccp_logs', PCD.tools.haccpLogs.render);
       PCD.router.register('haccp_cooling', PCD.tools.haccpCooling.render);
+      // v2.8.38 — Receiving log (mal kabul). IDB-only; cloud sync henüz yok.
+      PCD.router.register('haccp_receiving', PCD.tools.haccpReceiving.render);
 
       // 7) Start router + render initial view
       // BUG FIX (v2.6.36): Read the route from the URL hash so F5 keeps
@@ -244,6 +246,7 @@
           inventory:   function () { PCD.tools.inventory && PCD.tools.inventory.openEditor && PCD.tools.inventory.openEditor(); },
           haccp_logs:  function () { PCD.tools.haccpLogs && PCD.tools.haccpLogs.openEditor && PCD.tools.haccpLogs.openEditor(); },
           haccp_cooling: function () { PCD.tools.haccpCooling && PCD.tools.haccpCooling.openEditor && PCD.tools.haccpCooling.openEditor(); },
+          haccp_receiving: function () { PCD.tools.haccpReceiving && PCD.tools.haccpReceiving.openEditor && PCD.tools.haccpReceiving.openEditor(); },
         };
         if (directCreators[cur]) {
           directCreators[cur]();
@@ -319,6 +322,7 @@
       { title: t('section_haccp_forms'), items: [
         { key: 'haccp_logs', icon: 'thermometer', route: 'haccp_logs' },
         { key: 'haccp_cooling', icon: 'clock', route: 'haccp_cooling' },
+        { key: 'haccp_receiving', icon: 'archive', route: 'haccp_receiving' },
       ]},
       { title: null, items: [
         { key: 'account', icon: 'user', route: 'account' },
