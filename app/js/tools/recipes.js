@@ -672,7 +672,9 @@
 
       // Wire test-price inputs (live update)
       // v2.8.34: 200 → 300ms — kısa debounce çok haneli sayı yazarken paint() innerHTML
-      // değiştirip input'tan focus atıyordu. 300ms tipik şef yazım hızı için yeterli.
+      // değiştirip input'tan focus atıyordu.
+      // v2.8.48: 300 → 400ms — operatör test sonrası 400ms istedi (yazım hızı için
+      // 300 hâlâ kısa kalıyordu, kullanıcının elini durdurduğu doğal pause noktası).
       PCD.on(body, 'input', '[data-test-price]', PCD.debounce(function () {
         const idx = parseInt(this.getAttribute('data-test-price'), 10);
         const val = parseFloat(this.value);
@@ -680,7 +682,7 @@
           items[idx].testPrice = val;
           paint();
         }
-      }, 300));
+      }, 400));
     }
     paint();
 
