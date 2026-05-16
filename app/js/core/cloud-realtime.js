@@ -335,6 +335,34 @@
     scheduleViewRefresh();
   }
 
+  // v2.8.43 — Realtime JWT auth helper. Supabase JS v2'de createClient ile
+  // Realtime client başlatılır ama JWT token otomatik propagate edilmez —
+  // realtime.setAuth(token) explicit çağrı gerekir. Token olmadan channel
+  // subscribe RLS check'inde reject olur → CHANNEL_ERROR. Bu fonksiyon
+  // current session'ın access_token'ını çekip realtime client'a set eder.
+  function setRealtimeAuth(supabase) {
+    if (!supabase || !supabase.auth || !supabase.auth.getSession) {
+      return Promise.resolve(false);
+    }
+    return supabase.auth.getSession().then(function (res) {
+      const session = res && res.data && res.data.session;
+      const token = session && session.access_token;
+      if (token && supabase.realtime && supabase.realtime.setAuth) {
+        try {
+          supabase.realtime.setAuth(token);
+          return true;
+        } catch (e) {
+          PCD.warn && PCD.warn('cloud-realtime: setAuth failed', e);
+          return false;
+        }
+      }
+      return false;
+    }).catch(function (e) {
+      PCD.warn && PCD.warn('cloud-realtime: getSession failed', e);
+      return false;
+    });
+  }
+
   // Subscribe to all 19 tables for the current user
   function subscribe() {
     if (subscribed) return;
@@ -349,6 +377,21 @@
     const supabase = PCD.cloud.getClient();
     const user = PCD.store && PCD.store.get('user');
     if (!user || !user.id) return;
+
+    // v2.8.43 — Önce JWT'yi Realtime client'a set et, sonra subscribe.
+    // Bu çağrı senkron başlar (Promise), subscribe ondan sonra _doSubscribe
+    // ile devam eder. Token alınamazsa yine de subscribe denemesi yapılır
+    // (anon JWT ile, eski davranış — fallback).
+    setRealtimeAuth(supabase).then(function () {
+      _doSubscribe(supabase, user);
+    });
+  }
+
+  function _doSubscribe(supabase, user) {
+    // Double-check user is still signed in by the time setAuth resolved
+    const currentUser = PCD.store && PCD.store.get('user');
+    if (!currentUser || !currentUser.id || currentUser.id !== user.id) return;
+    if (subscribed) return;
 
     const TABLES = [
       'workspaces', 'recipes', 'ingredients', 'menus', 'events',
@@ -422,6 +465,28 @@
         unsubscribe();
       }
     });
+
+    // v2.8.43 — Token refresh sonrası Realtime client'ın JWT'sini güncelle.
+    // Supabase access_token tipik olarak 1 saatte bir refresh edilir; eski
+    // token Realtime tarafında expire olur → channel düşer → CHANNEL_ERROR.
+    // TOKEN_REFRESHED event'inde re-setAuth yapıp aktif channel'ı koruyoruz.
+    try {
+      if (PCD.cloud && PCD.cloud.getClient) {
+        const supabase = PCD.cloud.getClient();
+        if (supabase && supabase.auth && supabase.auth.onAuthStateChange) {
+          supabase.auth.onAuthStateChange(function (event, session) {
+            if (event === 'TOKEN_REFRESHED' && session && session.access_token) {
+              if (supabase.realtime && supabase.realtime.setAuth) {
+                try {
+                  supabase.realtime.setAuth(session.access_token);
+                  PCD.log && PCD.log('cloud-realtime: setAuth on TOKEN_REFRESHED');
+                } catch (e) { /* ignore */ }
+              }
+            }
+          });
+        }
+      }
+    } catch (e) { /* ignore */ }
   }
 
   PCD.cloudRealtime = {
