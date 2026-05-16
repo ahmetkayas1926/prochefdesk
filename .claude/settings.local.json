@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -c app/js/tools/recipes.js)",
+      "Bash(node -c app/js/core/config.js)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(node -c app/js/tools/account.js)",
+      "Bash(node -c app/js/i18n/en.js)",
+      "Bash(node -c app/js/i18n/tr.js)",
+      "Bash(node -c app/js/tools/haccp_cooling.js)",
+      "Bash(git log *)",
+      "Bash(node -c app/js/tools/allergens.js)",
+      "Bash(node -c app/js/core/allergens-db.js)",
+      "WebSearch",
+      "Bash(node -c app/js/tools/haccp_receiving.js)",
+      "Bash(node -c app/js/core/app.js)",
+      "Bash(node -c app/js/tools/haccp_holding.js)",
+      "Bash(node -c app/js/tools/sales.js)",
+      "Bash(node -c app/js/tools/tools-hub.js)",
+      "Bash(node -c app/js/tools/checklist.js)",
+      "Bash(node -c app/js/tools/events.js)",
+      "Bash(node -c app/js/tools/discover.js)"
+    ]
+  }
+}
