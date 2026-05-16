@@ -204,6 +204,7 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
   height: calc(var(--topbar-h) + var(--sa-t));
   background: var(--surface);
   border-bottom: 1px solid var(--border);
+  -webkit-backdrop-filter: saturate(180%) blur(8px); /* v2.8.49: iOS Safari + macOS Safari 16-17 için vendor prefix; modern Safari 18+ aşağıdaki standart property'i kullanır */
   backdrop-filter: saturate(180%) blur(8px);
 }
 .topbar-brand {
