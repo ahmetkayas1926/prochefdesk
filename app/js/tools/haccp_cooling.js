@@ -1,25 +1,38 @@
 /* ================================================================
-   ProChefDesk — haccp_cooling.js (v2.6.26 redesign)
+   ProChefDesk — haccp_cooling.js (v2.8.47 — aylık 31 satır format)
    HACCP Forms · Cook & Cool Log
 
-   Date-based form: each day = one A4 landscape page with 15 rows.
-   Rows can be filled directly via tap (popup), printed blank for
-   manual writing, or printed with current data baked in.
+   v2.8.47 — REFACTOR: günlük 15 satır → AYLIK 31 SATIR
+   ----------------------------------------------------------------
+   Operatör spec: şef ay başında bir kez form indirir, ay boyunca
+   elle doldurur. Bu yüzden in-app görünüm de aylık olmalı —
+   günlük navigasyon yerine ay navigasyonu, 31 satır sabit.
+
+   Veri modeli değişti:
+     ESKİ (v2.6.26-v2.8.36): { date: 'YYYY-MM-DD', rowIndex: 0..14, ... }
+     YENİ (v2.8.47+):        { monthYM: 'YYYY-MM', rowIndex: 0..30, day?: 1-31, ... }
+
+   Eski kayıtlarla backward compat: render anında r.monthYM yoksa
+   r.date.slice(0,7), r.day yoksa parseInt(r.date.slice(8,10)).
+   Bu sayede mevcut kayıtlar görünmeye devam eder; sadece yeni
+   kayıtlar yeni format yazılır. Eski kayıt edit'lendiğinde
+   monthYM + day fields'a tahkim edilir.
 
    HACCP gates (FDA Food Code 2017):
      - Cook end ≥ 60°C / 135°F
      - 2h checkpoint ≤ 21°C / 70°F
      - 6h end ≤ 5°C / 41°F
 
-   Storage: workspace-bound table 'haccpCookCool'.
-   Each record has a `date` (YYYY-MM-DD) so we can group by day.
+   Storage: workspace-bound table 'haccpCookCool' (cloud-sync aktif
+   via cloud-pertable per-table sync). Schema değişmedi — data jsonb
+   içinde monthYM/day field'leri ek olarak yaşıyor.
    ================================================================ */
 
 (function () {
   'use strict';
   const PCD = window.PCD;
   const TABLE = 'haccpCookCool';
-  const ROWS_PER_PAGE = 15;
+  const ROWS_PER_PAGE = 31;  // v2.8.47: 15 → 31
 
   // HACCP cooling targets
   const TARGET_2H_C = 21;
@@ -41,85 +54,113 @@
     return getTempUnit() === 'F' ? ctoF(c) + '°F' : c + '°C';
   }
 
+  // ============ DATE / MONTH HELPERS ============
   function ymd(date) {
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, '0');
     const d = String(date.getDate()).padStart(2, '0');
     return y + '-' + m + '-' + d;
   }
-  function todayYmd() { return ymd(new Date()); }
-  function shiftDate(yymmdd, days) {
-    const d = new Date(yymmdd + 'T00:00:00');
-    d.setDate(d.getDate() + days);
-    return ymd(d);
+  function ym(date) {
+    return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
   }
-  function dateLabel(yymmdd) {
-    const d = new Date(yymmdd + 'T00:00:00');
-    return d.toLocaleDateString(locale(), { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  function todayYM() { return ym(new Date()); }
+  function shiftMonth(yymm, delta) {
+    const parts = yymm.split('-');
+    const y = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10);
+    const d = new Date(y, m - 1 + delta, 1);
+    return ym(d);
+  }
+  function monthLabel(yymm) {
+    const parts = yymm.split('-');
+    const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, 1);
+    return d.toLocaleDateString(locale(), { month: 'long', year: 'numeric' });
+  }
+  function daysInMonth(yymm) {
+    const parts = yymm.split('-');
+    const y = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10);
+    return new Date(y, m, 0).getDate();
   }
 
-  function listForDate(dateStr) {
+  // Backward compat: eski kayıtlardan monthYM çıkar
+  function recordMonthYM(r) {
+    if (r.monthYM) return r.monthYM;
+    if (r.date && typeof r.date === 'string' && r.date.length >= 7) return r.date.slice(0, 7);
+    return null;
+  }
+  // Backward compat: eski kayıtlardan day çıkar
+  function recordDay(r) {
+    if (r.day != null) return r.day;
+    if (r.date && typeof r.date === 'string' && r.date.length >= 10) {
+      const d = parseInt(r.date.slice(8, 10), 10);
+      return isNaN(d) ? null : d;
+    }
+    return null;
+  }
+
+  function listForMonth(monthYM) {
     return (PCD.store.listTable(TABLE) || []).filter(function (r) {
-      return r.date === dateStr;
+      return recordMonthYM(r) === monthYM;
     }).slice().sort(function (a, b) {
       return (a.rowIndex || 0) - (b.rowIndex || 0);
     });
   }
-  function listDatesWithRecords() {
-    const dates = {};
+  function listMonthsWithRecords() {
+    const months = {};
     (PCD.store.listTable(TABLE) || []).forEach(function (r) {
-      if (r.date) dates[r.date] = true;
+      const m = recordMonthYM(r);
+      if (m) months[m] = true;
     });
-    return Object.keys(dates).sort().reverse();
+    return Object.keys(months).sort().reverse();
   }
 
-  let _viewDate = todayYmd();
+  let _viewMonth = todayYM();
 
   // ============ MAIN VIEW ============
   function render(view) {
     const t = PCD.i18n.t;
     const u = getTempUnit();
-    const records = listForDate(_viewDate);
-    const dates = listDatesWithRecords();
+    const records = listForMonth(_viewMonth);
+    const months = listMonthsWithRecords();
 
     view.innerHTML =
       '<div class="page-header">' +
         '<div class="page-header-text">' +
           '<div class="page-title">🌡 ' + (t('hcc_title') || 'Cook & Cool Log') + '</div>' +
-          '<div class="page-subtitle">' + (t('hcc_subtitle') || 'HACCP cooling: 60°C → 21°C in 2h → 5°C in 6h total') + '</div>' +
+          '<div class="page-subtitle">' + (t('hcc_subtitle_monthly') || 'HACCP cooling: 60°C → 21°C in 2h → 5°C in 6h · Aylık 31 satır') + '</div>' +
         '</div>' +
         '<div class="page-header-actions">' +
-          '<button class="btn btn-outline btn-sm" id="hccPrintMonthBtn" title="' + PCD.escapeHtml(t('hcc_print_month_tip') || '31 satırlık aylık form, ay başında bir kez yazdır') + '">' + PCD.icon('calendar', 14) + ' <span>' + PCD.escapeHtml(t('hcc_print_month') || 'Aylık boş') + '</span></button>' +
-          '<button class="btn btn-outline btn-sm" id="hccPrintBlankBtn" title="' + PCD.escapeHtml(t('hcc_print_blank_tip') || 'Boş formu yazdır, elle doldur') + '">' + PCD.icon('print', 14) + ' <span>' + PCD.escapeHtml(t('hcc_print_blank') || 'Boş yazdır') + '</span></button>' +
-          '<button class="btn btn-primary btn-sm" id="hccPrintDayBtn">' + PCD.icon('print', 14) + ' <span>' + PCD.escapeHtml(t('hcc_print_day') || 'Bu günü yazdır') + '</span></button>' +
+          '<button class="btn btn-outline btn-sm" id="hccPrintBlankBtn" title="' + PCD.escapeHtml(t('hcc_print_month_tip') || '31 satırlık aylık boş form yazdır') + '">' + PCD.icon('print', 14) + ' <span>' + PCD.escapeHtml(t('hcc_print_blank') || 'Boş yazdır') + '</span></button>' +
+          '<button class="btn btn-primary btn-sm" id="hccPrintMonthBtn" title="' + PCD.escapeHtml(t('hcc_print_filled_month_tip') || 'Bu ayın doldurulmuş satırlarını yazdır') + '">' + PCD.icon('print', 14) + ' <span>' + PCD.escapeHtml(t('hcc_print_filled_month') || 'Bu ayı yazdır') + '</span></button>' +
         '</div>' +
       '</div>';
 
-    const isToday = _viewDate === todayYmd();
-    const dateNav = PCD.el('div', { class: 'card', style: { padding: '10px 14px', marginTop: '12px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '12px' } });
-    dateNav.innerHTML =
-      '<button class="btn btn-outline btn-sm" id="hccPrevDay" aria-label="' + PCD.escapeHtml(t('prev_day') || 'Önceki gün') + '">' + PCD.icon('chevronLeft', 16) + '</button>' +
+    const isThisMonth = _viewMonth === todayYM();
+    const monthNav = PCD.el('div', { class: 'card', style: { padding: '10px 14px', marginTop: '12px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '12px' } });
+    monthNav.innerHTML =
+      '<button class="btn btn-outline btn-sm" id="hccPrevMonth" aria-label="' + PCD.escapeHtml(t('prev_month') || 'Önceki ay') + '">' + PCD.icon('chevronLeft', 16) + '</button>' +
       '<div style="flex:1;text-align:center;">' +
-        '<div style="font-weight:700;font-size:15px;">' + PCD.escapeHtml(dateLabel(_viewDate)) + (isToday ? ' · <span style="color:var(--brand-700);font-size:11px;">' + PCD.escapeHtml(t('today') || 'Bugün') + '</span>' : '') + '</div>' +
+        '<div style="font-weight:700;font-size:15px;">' + PCD.escapeHtml(monthLabel(_viewMonth)) + (isThisMonth ? ' · <span style="color:var(--brand-700);font-size:11px;">' + PCD.escapeHtml(t('this_month') || 'Bu ay') + '</span>' : '') + '</div>' +
         '<div class="text-muted" style="font-size:11px;">' + records.length + ' / ' + ROWS_PER_PAGE + ' ' + PCD.escapeHtml(t('hcc_filled') || 'dolu') + '</div>' +
       '</div>' +
-      '<button class="btn btn-outline btn-sm" id="hccTodayBtn" ' + (isToday ? 'disabled' : '') + '>' + PCD.escapeHtml(t('today') || 'Bugün') + '</button>' +
-      '<button class="btn btn-outline btn-sm" id="hccNextDay" aria-label="' + PCD.escapeHtml(t('next_day') || 'Sonraki gün') + '">' + PCD.icon('chevronRight', 16) + '</button>';
-    view.appendChild(dateNav);
+      '<button class="btn btn-outline btn-sm" id="hccThisMonthBtn" ' + (isThisMonth ? 'disabled' : '') + '>' + PCD.escapeHtml(t('this_month') || 'Bu ay') + '</button>' +
+      '<button class="btn btn-outline btn-sm" id="hccNextMonth" aria-label="' + PCD.escapeHtml(t('next_month') || 'Sonraki ay') + '">' + PCD.icon('chevronRight', 16) + '</button>';
+    view.appendChild(monthNav);
 
-    if (dates.length > 0) {
+    if (months.length > 0) {
       const quickJump = PCD.el('div', { style: { display: 'flex', gap: '6px', marginBottom: '10px', flexWrap: 'wrap', alignItems: 'center' } });
-      const label = PCD.el('span', { style: { fontSize: '11px', color: 'var(--text-3)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }, text: (t('hcc_recent_days') || 'Son kayıtlı günler') + ':' });
+      const label = PCD.el('span', { style: { fontSize: '11px', color: 'var(--text-3)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }, text: (t('hcc_recent_months') || 'Son kayıtlı aylar') + ':' });
       quickJump.appendChild(label);
-      dates.slice(0, 5).forEach(function (d) {
-        const isActive = d === _viewDate;
+      months.slice(0, 6).forEach(function (m) {
+        const isActive = m === _viewMonth;
         const btn = PCD.el('button', {
           class: 'btn btn-' + (isActive ? 'primary' : 'outline') + ' btn-sm',
           style: { fontSize: '12px', padding: '4px 10px' },
-          'data-jump': d,
+          'data-jump-month': m,
         });
-        const dDate = new Date(d + 'T00:00:00');
-        btn.textContent = dDate.toLocaleDateString(locale(), { month: 'short', day: 'numeric' });
+        btn.textContent = monthLabel(m);
         quickJump.appendChild(btn);
       });
       view.appendChild(quickJump);
@@ -134,13 +175,13 @@
       '<table style="width:100%;min-width:1100px;border-collapse:collapse;font-size:12px;table-layout:fixed;">' +
         '<thead style="background:var(--surface-2);">' +
           '<tr>' +
-            '<th style="width:32px;padding:8px 4px;text-align:center;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);">#</th>' +
+            '<th style="width:36px;padding:8px 4px;text-align:center;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);">' + PCD.escapeHtml(t('hcc_col_day') || 'Gün') + '</th>' +
             '<th style="padding:8px 8px;text-align:start;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);border-left:1px solid var(--border);width:22%;">' + PCD.escapeHtml(t('hcc_col_food') || 'Yemek / Parti') + '</th>' +
             '<th style="padding:8px 6px;text-align:center;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);border-left:1px solid var(--border);width:9%;">' + PCD.escapeHtml(t('hcc_col_qty') || 'Miktar') + '</th>' +
             '<th colspan="2" style="padding:8px 6px;text-align:center;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);border-left:1px solid var(--border);">' + PCD.escapeHtml(t('hcc_col_cook_end') || 'Pişirme sonu') + '</th>' +
             '<th colspan="2" style="padding:8px 6px;text-align:center;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);border-left:1px solid var(--border);">+2h <span style="font-weight:400;color:var(--text-3);">≤' + target2h + '</span></th>' +
             '<th colspan="2" style="padding:8px 6px;text-align:center;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);border-left:1px solid var(--border);">' + PCD.escapeHtml(t('hcc_col_final') || 'Son') + ' <span style="font-weight:400;color:var(--text-3);">≤' + target6h + '</span></th>' +
-            '<th style="padding:8px 6px;text-align:start;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);border-left:1px solid var(--border);width:14%;">' + PCD.escapeHtml(t('hcc_col_note') || 'Düzeltici eylem') + '</th>' +
+            '<th style="padding:8px 6px;text-align:start;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);border-left:1px solid var(--border);width:13%;">' + PCD.escapeHtml(t('hcc_col_note') || 'Düzeltici eylem') + '</th>' +
             '<th style="padding:8px 6px;text-align:center;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);border-left:1px solid var(--border);width:9%;">' + PCD.escapeHtml(t('hcc_col_chef') || 'Şef') + '</th>' +
           '</tr>' +
           '<tr>' +
@@ -166,7 +207,12 @@
       const filled = !!r;
       const rowBg = i % 2 === 0 ? 'var(--surface)' : 'var(--surface-1)';
       table += '<tr data-row="' + i + '" style="background:' + rowBg + ';cursor:pointer;height:32px;" class="hcc-row">';
-      table += '<td style="padding:4px;text-align:center;font-size:11px;color:var(--text-3);border-bottom:1px solid var(--border);font-weight:600;">' + (i + 1) + '</td>';
+      // Gün kolonu: kullanıcının verdiği day veya satır numarası (1-31)
+      const dayLabel = filled && recordDay(r) != null ? recordDay(r) : (i + 1);
+      const dayStyle = filled && recordDay(r) != null
+        ? 'font-weight:700;color:var(--text-1);'
+        : 'font-weight:400;color:var(--text-3);font-style:italic;';
+      table += '<td style="padding:4px;text-align:center;font-size:11px;' + dayStyle + 'border-bottom:1px solid var(--border);">' + dayLabel + '</td>';
       if (filled) {
         const cookTime = r.cookEndAt ? new Date(r.cookEndAt).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' }) : '';
         const cp2hTime = r.cp2hAt ? new Date(r.cp2hAt).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' }) : '';
@@ -197,25 +243,24 @@
     wrap.innerHTML = table;
     view.appendChild(wrap);
 
-    PCD.$('#hccPrevDay', view).addEventListener('click', function () {
-      _viewDate = shiftDate(_viewDate, -1);
+    PCD.$('#hccPrevMonth', view).addEventListener('click', function () {
+      _viewMonth = shiftMonth(_viewMonth, -1);
       render(view);
     });
-    PCD.$('#hccNextDay', view).addEventListener('click', function () {
-      _viewDate = shiftDate(_viewDate, 1);
+    PCD.$('#hccNextMonth', view).addEventListener('click', function () {
+      _viewMonth = shiftMonth(_viewMonth, 1);
       render(view);
     });
-    const todayBtn = PCD.$('#hccTodayBtn', view);
-    if (todayBtn) todayBtn.addEventListener('click', function () {
-      _viewDate = todayYmd();
+    const thisMonthBtn = PCD.$('#hccThisMonthBtn', view);
+    if (thisMonthBtn) thisMonthBtn.addEventListener('click', function () {
+      _viewMonth = todayYM();
       render(view);
     });
-    PCD.$('#hccPrintBlankBtn', view).addEventListener('click', function () { printDay(_viewDate, true); });
-    PCD.$('#hccPrintDayBtn', view).addEventListener('click', function () { printDay(_viewDate, false); });
-    PCD.$('#hccPrintMonthBtn', view).addEventListener('click', function () { openMonthPickerModal(); });
+    PCD.$('#hccPrintBlankBtn', view).addEventListener('click', function () { openMonthPickerModal(true); });
+    PCD.$('#hccPrintMonthBtn', view).addEventListener('click', function () { printMonth(_viewMonth, false); });
 
-    PCD.on(view, 'click', '[data-jump]', function () {
-      _viewDate = this.getAttribute('data-jump');
+    PCD.on(view, 'click', '[data-jump-month]', function () {
+      _viewMonth = this.getAttribute('data-jump-month');
       render(view);
     });
     PCD.on(view, 'click', '[data-row]', function () {
@@ -231,34 +276,57 @@
     const u = getTempUnit();
     const target2h = targetForUI(TARGET_2H_C);
     const target6h = targetForUI(TARGET_6H_C);
+    const dim = daysInMonth(_viewMonth);
 
     const data = existing ? Object.assign({}, existing) : {
-      date: _viewDate, rowIndex: rowIndex,
+      monthYM: _viewMonth, rowIndex: rowIndex,
+      day: null,
       foodName: '', quantity: '', quantityUnit: '',
       cookEndTemp: null, cookEndAt: null,
       cp2hTemp: null, cp2hAt: null,
       endedTemp: null, endedAt: null,
       note: '', chef: '',
     };
+    // Eski formatta açıldıysa backward compat: monthYM + day türet
+    if (!data.monthYM && data.date) data.monthYM = data.date.slice(0, 7);
+    if (data.day == null && data.date) {
+      const dd = parseInt(data.date.slice(8, 10), 10);
+      if (!isNaN(dd)) data.day = dd;
+    }
 
     function hhmmFromIso(iso) {
       if (!iso) return '';
       try { return new Date(iso).toTimeString().slice(0, 5); } catch (e) { return ''; }
     }
-    function isoFromHhmm(hhmm, dateStr) {
+    function isoFromHhmm(hhmm, monthYM, day) {
       if (!hhmm) return null;
+      // Eğer day verilmemişse ay başını kullan (tarih kaba; saat doğru)
+      const useDay = (day && day > 0 && day <= 31) ? day : 1;
+      const dateStr = monthYM + '-' + String(useDay).padStart(2, '0');
       const d = new Date(dateStr + 'T' + hhmm + ':00');
       return isNaN(d.getTime()) ? null : d.toISOString();
+    }
+
+    // Gün seçim seçenekleri (1..dim ay sonu, opsiyonel boş)
+    let dayOptions = '<option value="">' + PCD.escapeHtml(t('hcc_day_optional') || '— (opsiyonel)') + '</option>';
+    for (let dd = 1; dd <= dim; dd++) {
+      dayOptions += '<option value="' + dd + '"' + (data.day === dd ? ' selected' : '') + '>' + dd + '</option>';
     }
 
     const body = PCD.el('div');
     body.innerHTML =
       '<div style="background:var(--surface-2);padding:8px 12px;border-radius:8px;margin-bottom:14px;font-size:12px;color:var(--text-2);">' +
-        '🌡 ' + PCD.escapeHtml(t('hcc_row_intro') || 'Bu satırı doldur. Boş bıraktığın alanlar tabloda — olarak görünür.') +
+        '🌡 ' + PCD.escapeHtml(t('hcc_row_intro_monthly') || 'Bu satırı doldur. Gün opsiyoneldir — boş bırakırsan sadece satır numarası görünür.') +
       '</div>' +
-      '<div style="margin-bottom:10px;">' +
-        '<label style="display:block;font-weight:600;font-size:13px;margin-bottom:4px;">' + PCD.escapeHtml(t('hcc_food_name') || 'Yemek / Parti adı') + '</label>' +
-        '<input id="rfFood" type="text" maxlength="60" value="' + PCD.escapeHtml(data.foodName || '') + '" placeholder="' + PCD.escapeHtml(t('hcc_food_placeholder') || 'örn. Domates çorbası, tavuk göğsü') + '" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-1);font-size:14px;box-sizing:border-box;">' +
+      '<div style="display:flex;gap:8px;margin-bottom:10px;">' +
+        '<div style="width:110px;">' +
+          '<label style="display:block;font-weight:600;font-size:12px;margin-bottom:4px;">' + PCD.escapeHtml(t('hcc_col_day') || 'Gün') + ' <span style="font-weight:400;color:var(--text-3);">(' + PCD.escapeHtml(monthLabel(_viewMonth)) + ')</span></label>' +
+          '<select id="rfDay" style="width:100%;padding:8px 8px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-1);font-size:13px;box-sizing:border-box;">' + dayOptions + '</select>' +
+        '</div>' +
+        '<div style="flex:1;">' +
+          '<label style="display:block;font-weight:600;font-size:13px;margin-bottom:4px;">' + PCD.escapeHtml(t('hcc_food_name') || 'Yemek / Parti adı') + '</label>' +
+          '<input id="rfFood" type="text" maxlength="60" value="' + PCD.escapeHtml(data.foodName || '') + '" placeholder="' + PCD.escapeHtml(t('hcc_food_placeholder') || 'örn. Domates çorbası, tavuk göğsü') + '" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-1);font-size:14px;box-sizing:border-box;">' +
+        '</div>' +
       '</div>' +
       '<div style="display:flex;gap:8px;margin-bottom:14px;">' +
         '<div style="flex:1.4;">' +
@@ -341,17 +409,23 @@
     });
     saveBtn.addEventListener('click', function () {
       const food = body.querySelector('#rfFood').value.trim();
+      const dayVal = body.querySelector('#rfDay').value;
+      data.day = dayVal ? parseInt(dayVal, 10) : null;
+      data.monthYM = _viewMonth;
+      // Eski `date` field'ını da senkron tut (geri uyumluluk + diğer cihaz pull akışı)
+      data.date = data.day ? (_viewMonth + '-' + String(data.day).padStart(2, '0')) : null;
+
       data.foodName = food;
       data.quantity = body.querySelector('#rfQty').value.trim();
       data.quantityUnit = body.querySelector('#rfQtyU').value.trim();
 
       const num = function (v) { const n = parseFloat(v); return isNaN(n) ? null : n; };
       data.cookEndTemp = num(body.querySelector('#rfCookT').value);
-      data.cookEndAt = isoFromHhmm(body.querySelector('#rfCookH').value, _viewDate);
+      data.cookEndAt = isoFromHhmm(body.querySelector('#rfCookH').value, _viewMonth, data.day);
       data.cp2hTemp = num(body.querySelector('#rfCp2hT').value);
-      data.cp2hAt = isoFromHhmm(body.querySelector('#rfCp2hH').value, _viewDate);
+      data.cp2hAt = isoFromHhmm(body.querySelector('#rfCp2hH').value, _viewMonth, data.day);
       data.endedTemp = num(body.querySelector('#rfEndT').value);
-      data.endedAt = isoFromHhmm(body.querySelector('#rfEndH').value, _viewDate);
+      data.endedAt = isoFromHhmm(body.querySelector('#rfEndH').value, _viewMonth, data.day);
       data.note = body.querySelector('#rfNote').value.trim();
       data.chef = body.querySelector('#rfChef').value.trim();
 
@@ -367,20 +441,21 @@
     });
   }
 
-  // ============ PRINT ============
-  function printDay(dateStr, blank) {
+  // ============ PRINT (MONTH) ============
+  // Tek fonksiyon: blank=true ise satırlar boş, blank=false ise mevcut data ile dolu.
+  // 31 satır sabit, sol kolonda gün numarası (kullanıcı verdiği day veya satır no).
+  function printMonth(monthYM, blank) {
     const t = PCD.i18n.t;
     const u = getTempUnit();
     const target2h = targetForUI(TARGET_2H_C);
     const target6h = targetForUI(TARGET_6H_C);
     const ws = PCD.store.getActiveWorkspace ? PCD.store.getActiveWorkspace() : null;
     const wsName = (ws && ws.name) || 'Kitchen';
+    const label = monthLabel(monthYM);
 
-    const records = (blank || !dateStr) ? [] : listForDate(dateStr);
+    const records = blank ? [] : listForMonth(monthYM);
     const byRow = {};
     records.forEach(function (r) { if (typeof r.rowIndex === 'number') byRow[r.rowIndex] = r; });
-
-    const headerDate = dateStr && !blank ? new Date(dateStr + 'T00:00:00').toLocaleDateString(locale(), { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '________________________';
 
     let html =
       '<style>' +
@@ -392,13 +467,13 @@
         'table.h-grid{width:100%;border-collapse:collapse;font-size:9px;table-layout:fixed;}' +
         'table.h-grid th, table.h-grid td{border:1px solid #999;padding:3px 4px;vertical-align:middle;}' +
         'table.h-grid th{background:#f3f4f6;font-weight:700;font-size:8px;text-align:center;text-transform:uppercase;letter-spacing:0.04em;}' +
-        'table.h-grid td.idx{text-align:center;width:3%;font-weight:700;color:#666;}' +
-        'table.h-grid td.food{width:22%;font-weight:600;}' +
+        'table.h-grid td.day{text-align:center;width:4%;font-weight:700;color:#444;}' +
+        'table.h-grid td.food{width:21%;font-weight:600;}' +
         'table.h-grid td.qty{width:9%;text-align:center;}' +
-        'table.h-grid td.t{width:7%;text-align:center;font-weight:600;}' +
-        'table.h-grid td.h{width:7%;text-align:center;color:#666;font-size:8px;}' +
-        'table.h-grid td.note{width:14%;font-size:8px;}' +
-        'table.h-grid td.chef{width:9%;text-align:center;}' +
+        'table.h-grid td.t{width:6.5%;text-align:center;font-weight:600;}' +
+        'table.h-grid td.h{width:6.5%;text-align:center;color:#666;font-size:8px;}' +
+        'table.h-grid td.note{width:13%;font-size:8px;}' +
+        'table.h-grid td.chef{width:8%;text-align:center;}' +
         'table.h-grid td.fail{background:#fee2e2;color:#991b1b;font-weight:700;}' +
         '.h-foot{margin-top:6px;display:flex;justify-content:space-between;font-size:9px;}' +
         '.h-foot .legend{color:#666;}' +
@@ -409,7 +484,7 @@
       '<div class="h-head">' +
         '<div>' +
           '<h1>HACCP · ' + PCD.escapeHtml(t('hcc_title') || 'Cook & Cool Log') + '</h1>' +
-          '<div class="sub">' + PCD.escapeHtml(wsName) + ' · ' + PCD.escapeHtml(headerDate) + ' · °' + u + '</div>' +
+          '<div class="sub">' + PCD.escapeHtml(wsName) + ' · ' + PCD.escapeHtml(label) + ' · °' + u + '</div>' +
         '</div>' +
         '<div class="right">' +
           '<div><strong>' + PCD.escapeHtml(t('hcc_target_2h') || '2h hedef') + ':</strong> ≤' + target2h + '</div>' +
@@ -418,7 +493,7 @@
       '</div>' +
       '<table class="h-grid"><thead>' +
         '<tr>' +
-          '<th rowspan="2">#</th>' +
+          '<th rowspan="2">' + PCD.escapeHtml(t('hcc_col_day') || 'Gün') + '</th>' +
           '<th rowspan="2">' + PCD.escapeHtml(t('hcc_col_food') || 'Yemek / Parti') + '</th>' +
           '<th rowspan="2">' + PCD.escapeHtml(t('hcc_col_qty') || 'Miktar') + '</th>' +
           '<th colspan="2">' + PCD.escapeHtml(t('hcc_col_cook_end') || 'Pişirme sonu') + '</th>' +
@@ -436,6 +511,7 @@
 
     for (let i = 0; i < ROWS_PER_PAGE; i++) {
       const r = byRow[i];
+      const dayLabel = r && recordDay(r) != null ? recordDay(r) : (i + 1);
       const cookT = r && r.cookEndTemp != null ? (u === 'F' ? ctoF(r.cookEndTemp) : r.cookEndTemp) + '°' : '';
       const cookH = r && r.cookEndAt ? new Date(r.cookEndAt).toTimeString().slice(0, 5) : '';
       const cp2hT = r && r.cp2hTemp != null ? (u === 'F' ? ctoF(r.cp2hTemp) : r.cp2hTemp) + '°' : '';
@@ -446,7 +522,7 @@
       const endFail = r && r.endedTemp != null && r.endedTemp > TARGET_6H_C;
 
       html += '<tr style="height:22px;">' +
-        '<td class="idx">' + (i + 1) + '</td>' +
+        '<td class="day">' + dayLabel + '</td>' +
         '<td class="food">' + (r ? PCD.escapeHtml(r.foodName || '') : '') + '</td>' +
         '<td class="qty">' + (r && r.quantity ? PCD.escapeHtml(r.quantity) + (r.quantityUnit ? ' ' + PCD.escapeHtml(r.quantityUnit) : '') : '') + '</td>' +
         '<td class="t">' + cookT + '</td>' +
@@ -472,22 +548,18 @@
       '</div>' +
       '<div class="h-brand">Made with ProChefDesk · prochefdesk.com</div>';
 
-    PCD.print(html, 'HACCP Cook & Cool · ' + (dateStr || 'Blank'));
+    PCD.print(html, 'HACCP Cook & Cool · ' + label);
   }
 
-  // ============ MONTHLY BLANK ============
-  // v2.8.36 — Operatör spec: şef ay başında bir kez indirip ay boyunca elle
-  // doldurur, yoğunsa aynı ayı 2-3 form olarak çıkarır. 31 satır sabit
-  // (Şubat'ta 29-31 boş kalır), sol kolonda Gün 1-31 önceden basılı.
-  function openMonthPickerModal() {
+  // ============ MONTH PICKER (boş yazdır için ay seç) ============
+  function openMonthPickerModal(blank) {
     const t = PCD.i18n.t;
-    const today = new Date();
-    const defaultYM = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
+    const defaultYM = _viewMonth || todayYM();
 
     const body = PCD.el('div');
     body.innerHTML =
       '<div style="font-size:13px;color:var(--text-2);line-height:1.5;margin-bottom:12px;">' +
-        PCD.escapeHtml(t('hcc_month_picker_intro') || 'Ay seçin. Yazdırılan form 31 satırlık — ay boyunca elle doldurun.') +
+        PCD.escapeHtml(blank ? (t('hcc_month_picker_intro') || 'Ay seçin. Yazdırılan form 31 satırlık — ay boyunca elle doldurun.') : (t('hcc_month_picker_filled_intro') || 'Yazdırılacak ayı seçin.')) +
       '</div>' +
       '<input id="hccMonthIn" type="month" value="' + defaultYM + '" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-1);font-size:14px;box-sizing:border-box;">';
 
@@ -498,114 +570,21 @@
     footer.appendChild(printBtn);
 
     const m = PCD.modal.open({
-      title: '📄 ' + (t('hcc_month_picker_title') || 'Aylık boş form yazdır'),
+      title: '📄 ' + (blank ? (t('hcc_month_picker_title') || 'Aylık boş form yazdır') : (t('hcc_month_picker_filled_title') || 'Aylık dolu form yazdır')),
       body: body, footer: footer, size: 'sm', closable: true,
     });
     cancelBtn.addEventListener('click', function () { m.close(); });
     printBtn.addEventListener('click', function () {
       const ymVal = body.querySelector('#hccMonthIn').value;
       if (!ymVal) { PCD.toast.error(t('hcc_month_picker_required') || 'Lütfen bir ay seçin'); return; }
-      const parts = ymVal.split('-');
-      const y = parseInt(parts[0], 10);
-      const mo = parseInt(parts[1], 10);
-      if (isNaN(y) || isNaN(mo) || mo < 1 || mo > 12) {
+      // YYYY-MM format validation
+      if (!/^\d{4}-\d{2}$/.test(ymVal)) {
         PCD.toast.error(t('hcc_month_picker_required') || 'Lütfen bir ay seçin');
         return;
       }
       m.close();
-      printMonthBlank(y, mo);
+      printMonth(ymVal, blank);
     });
-  }
-
-  function printMonthBlank(year, month) {
-    const t = PCD.i18n.t;
-    const u = getTempUnit();
-    const target2h = targetForUI(TARGET_2H_C);
-    const target6h = targetForUI(TARGET_6H_C);
-    const ws = PCD.store.getActiveWorkspace ? PCD.store.getActiveWorkspace() : null;
-    const wsName = (ws && ws.name) || 'Kitchen';
-    const monthLabel = new Date(year, month - 1, 1).toLocaleDateString(locale(), { month: 'long', year: 'numeric' });
-
-    let html =
-      '<style>' +
-        'body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#000;margin:0;padding:0;}' +
-        '.h-head{margin-bottom:6px;border-bottom:2px solid #16a34a;padding-bottom:4px;display:flex;justify-content:space-between;align-items:flex-end;}' +
-        '.h-head h1{margin:0;font-size:14px;}' +
-        '.h-head .sub{font-size:10px;color:#555;margin-top:1px;}' +
-        '.h-head .right{font-size:10px;color:#555;text-align:end;}' +
-        'table.h-grid{width:100%;border-collapse:collapse;font-size:9px;table-layout:fixed;}' +
-        'table.h-grid th, table.h-grid td{border:1px solid #999;padding:3px 4px;vertical-align:middle;}' +
-        'table.h-grid th{background:#f3f4f6;font-weight:700;font-size:8px;text-align:center;text-transform:uppercase;letter-spacing:0.04em;}' +
-        'table.h-grid td.day{text-align:center;width:4%;font-weight:700;color:#444;}' +
-        'table.h-grid td.food{width:21%;}' +
-        'table.h-grid td.qty{width:9%;}' +
-        'table.h-grid td.t{width:6.5%;text-align:center;}' +
-        'table.h-grid td.h{width:6.5%;text-align:center;color:#666;font-size:8px;}' +
-        'table.h-grid td.note{width:13%;font-size:8px;}' +
-        'table.h-grid td.chef{width:8%;}' +
-        '.h-foot{margin-top:6px;display:flex;justify-content:space-between;font-size:9px;}' +
-        '.h-foot .legend{color:#666;}' +
-        '.h-brand{margin-top:4px;text-align:center;font-size:7px;color:#999;}' +
-        '.pcd-print-footer{display:none !important;}' +
-        '@page{size:A4 landscape;margin:6mm;}' +
-      '</style>' +
-      '<div class="h-head">' +
-        '<div>' +
-          '<h1>HACCP · ' + PCD.escapeHtml(t('hcc_title') || 'Cook & Cool Log') + '</h1>' +
-          '<div class="sub">' + PCD.escapeHtml(wsName) + ' · ' + PCD.escapeHtml(monthLabel) + ' · °' + u + '</div>' +
-        '</div>' +
-        '<div class="right">' +
-          '<div><strong>' + PCD.escapeHtml(t('hcc_target_2h') || '2h hedef') + ':</strong> ≤' + target2h + '</div>' +
-          '<div><strong>' + PCD.escapeHtml(t('hcc_target_6h') || '6h hedef') + ':</strong> ≤' + target6h + '</div>' +
-        '</div>' +
-      '</div>' +
-      '<table class="h-grid"><thead>' +
-        '<tr>' +
-          '<th rowspan="2">' + PCD.escapeHtml(t('hcc_col_day') || 'Gün') + '</th>' +
-          '<th rowspan="2">' + PCD.escapeHtml(t('hcc_col_food') || 'Yemek / Parti') + '</th>' +
-          '<th rowspan="2">' + PCD.escapeHtml(t('hcc_col_qty') || 'Miktar') + '</th>' +
-          '<th colspan="2">' + PCD.escapeHtml(t('hcc_col_cook_end') || 'Pişirme sonu') + '</th>' +
-          '<th colspan="2">+2h <span style="font-weight:400;">≤' + target2h + '</span></th>' +
-          '<th colspan="2">' + PCD.escapeHtml(t('hcc_col_final') || 'Son') + ' <span style="font-weight:400;">≤' + target6h + '</span></th>' +
-          '<th rowspan="2">' + PCD.escapeHtml(t('hcc_col_note') || 'Düzeltici eylem') + '</th>' +
-          '<th rowspan="2">' + PCD.escapeHtml(t('hcc_col_chef') || 'Şef') + '</th>' +
-        '</tr>' +
-        '<tr>' +
-          '<th>°' + u + '</th><th>' + PCD.escapeHtml(t('hcc_col_time') || 'Saat') + '</th>' +
-          '<th>°' + u + '</th><th>' + PCD.escapeHtml(t('hcc_col_time') || 'Saat') + '</th>' +
-          '<th>°' + u + '</th><th>' + PCD.escapeHtml(t('hcc_col_time') || 'Saat') + '</th>' +
-        '</tr>' +
-      '</thead><tbody>';
-
-    for (let d = 1; d <= 31; d++) {
-      html += '<tr style="height:22px;">' +
-        '<td class="day">' + d + '</td>' +
-        '<td class="food"></td>' +
-        '<td class="qty"></td>' +
-        '<td class="t"></td>' +
-        '<td class="h"></td>' +
-        '<td class="t"></td>' +
-        '<td class="h"></td>' +
-        '<td class="t"></td>' +
-        '<td class="h"></td>' +
-        '<td class="note"></td>' +
-        '<td class="chef"></td>' +
-      '</tr>';
-    }
-
-    html += '</tbody></table>' +
-      '<div class="h-foot">' +
-        '<div class="legend">' +
-          '<strong>' + PCD.escapeHtml(t('hcc_legend') || 'HACCP gates') + ':</strong> ' +
-          PCD.escapeHtml(t('hcc_col_cook_end') || 'Pişirme sonu') + ' ≥' + targetForUI(60) + ' · ' +
-          '+2h ≤' + target2h + ' · ' +
-          PCD.escapeHtml(t('hcc_col_final') || 'Son') + ' ≤' + target6h +
-        '</div>' +
-        '<div><strong>' + PCD.escapeHtml(t('reviewed_by') || 'Kontrol eden') + ':</strong> ____________________</div>' +
-      '</div>' +
-      '<div class="h-brand">Made with ProChefDesk · prochefdesk.com</div>';
-
-    PCD.print(html, 'HACCP Cook & Cool · ' + monthLabel);
   }
 
   // ============ EXPORT ============
@@ -613,13 +592,13 @@
   PCD.tools.haccpCooling = {
     render: render,
     openEditor: function () {
-      const records = listForDate(_viewDate);
+      const records = listForMonth(_viewMonth);
       const used = {};
       records.forEach(function (r) { if (typeof r.rowIndex === 'number') used[r.rowIndex] = true; });
       let firstEmpty = 0;
       while (used[firstEmpty] && firstEmpty < ROWS_PER_PAGE) firstEmpty++;
       if (firstEmpty >= ROWS_PER_PAGE) {
-        PCD.toast.info((PCD.i18n.t && PCD.i18n.t('hcc_day_full')) || 'Bu gün dolu, sonraki güne geç');
+        PCD.toast.info((PCD.i18n.t && PCD.i18n.t('hcc_month_full')) || 'Bu ay dolu, sonraki aya geç');
         return;
       }
       openRowEditor(firstEmpty, null, function () {
