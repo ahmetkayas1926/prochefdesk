@@ -7,9 +7,15 @@
 //   1. Delete all files in recipe-photos/{user_id}/ (defensive — RLS
 //      should let the client do this, but if it didn't, we clean up here)
 //   2. Delete public_shares rows owned by user (same — defensive)
-//   3. Delete user_data rows (same — defensive)
-//   4. Delete the auth.users row itself (this is the part that REQUIRES
-//      service_role and was the bug in v2.6.60)
+//   3. Delete the auth.users row itself (this is the part that REQUIRES
+//      service_role and was the bug in v2.6.60). The 22+ workspace-scoped
+//      tables (recipes, ingredients, menus, …, haccp_*, recipe_likes)
+//      auto-delete via `REFERENCES auth.users(id) ON DELETE CASCADE` FK.
+//
+// v2.8.50 — Removed the `user_data` DELETE block. That table was DROPPED
+// in v2.6.87; the call returned "relation does not exist" and pushed a
+// false error into the response → frontend showed users a "partial
+// failure" message even though account deletion actually succeeded.
 //
 // DEPLOY:
 //   1. Install Supabase CLI: brew install supabase/tap/supabase
@@ -77,7 +83,6 @@ Deno.serve(async (req) => {
     const errors: string[] = []
     let photosDeleted = 0
     let sharesDeleted = 0
-    let userDataDeleted = 0
 
     // 1. Delete all files in recipe-photos/{userId}/
     try {
@@ -116,22 +121,8 @@ Deno.serve(async (req) => {
       errors.push('shares exception: ' + (e instanceof Error ? e.message : String(e)))
     }
 
-    // 3. Delete user_data
-    try {
-      const { error: udErr, count } = await adminClient
-        .from('user_data')
-        .delete({ count: 'exact' })
-        .eq('user_id', userId)
-      if (udErr) {
-        errors.push('user_data: ' + udErr.message)
-      } else {
-        userDataDeleted = count || 0
-      }
-    } catch (e) {
-      errors.push('user_data exception: ' + (e instanceof Error ? e.message : String(e)))
-    }
-
-    // 4. Delete the auth.users row (THIS is the part that needs service_role)
+    // 3. Delete the auth.users row (THIS is the part that needs service_role).
+    //    All 22+ workspace-scoped tables auto-cascade via FK to auth.users.
     let authUserDeleted = false
     try {
       const { error: authErr } = await adminClient.auth.admin.deleteUser(userId)
@@ -149,7 +140,6 @@ Deno.serve(async (req) => {
       userId,
       photosDeleted,
       sharesDeleted,
-      userDataDeleted,
       authUserDeleted,
       errors,
     }), {
