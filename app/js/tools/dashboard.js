@@ -148,11 +148,50 @@
     return !!(r.yieldAmount && r.yieldUnit);
   }
 
+  // v2.8.45 — Diet compatibility hesabı. Recipe'ın ingredient'larının
+  // dietFlags'larına bakar, conservative (yanlış pozitif vermez) tri-state
+  // sonuç döndürür: true (uyumlu), false (uyumsuz), null (bilinmiyor).
+  // Mantık per-flag:
+  //   - Bir ingredient flag=false → tarif false (uyumsuz)
+  //   - Bir ingredient flag=null (bilinmiyor) ve hiçbir flag=false yok → null
+  //   - Tüm ingredient'lar flag=true → true (uyumlu)
+  // Boş tarif (ingredient yok) → tüm flag'ler null.
+  // unknownIngs object'i UI'da tooltip için "X malzemenin bilgisi eksik" gösterir.
+  function computeDietCompat(recipe, ingMap) {
+    const flags = ['vegan', 'vegetarian', 'glutenFree', 'dairyFree'];
+    const result = { vegan: null, vegetarian: null, glutenFree: null, dairyFree: null, unknownIngs: { vegan: [], vegetarian: [], glutenFree: [], dairyFree: [] } };
+    if (!recipe || !recipe.ingredients || !recipe.ingredients.length) return result;
+
+    flags.forEach(function (flag) {
+      let hasNo = false;
+      let hasUnknown = false;
+      recipe.ingredients.forEach(function (ri) {
+        const ing = ingMap[ri.ingredientId];
+        if (!ing) { hasUnknown = true; return; }
+        const v = ing.dietFlags ? ing.dietFlags[flag] : null;
+        if (v === false) {
+          hasNo = true;
+        } else if (v === null || v === undefined) {
+          hasUnknown = true;
+          if (ing.name && result.unknownIngs[flag].indexOf(ing.name) < 0) {
+            result.unknownIngs[flag].push(ing.name);
+          }
+        }
+      });
+      if (hasNo) result[flag] = false;
+      else if (hasUnknown) result[flag] = null;
+      else result[flag] = true;
+    });
+
+    return result;
+  }
+
   PCD.recipes = PCD.recipes || {};
   PCD.recipes.computeFoodCost = computeFoodCost;
   PCD.recipes.buildRecipeMap = buildRecipeMap;
   PCD.recipes.resolveRow = resolveRow;
   PCD.recipes.isPrep = isPrep;
+  PCD.recipes.computeDietCompat = computeDietCompat;
 
   // ============ TODAY-FOCUSED DASHBOARD ============
   function render(view) {

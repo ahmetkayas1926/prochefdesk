@@ -2175,6 +2175,15 @@
           <div id="allergenChips" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
         </div>
 
+        <!-- v2.8.45 — Diet compatibility chips. Her ingredient'ın
+             dietFlags'ından otomatik hesaplanır (computeDietCompat).
+             Sadece okunabilir — düzenleme ingredient editor'ünde. -->
+        <div class="field">
+          <label class="field-label">${t('recipe_diet_label')}</label>
+          <div class="text-muted text-sm mb-2" style="font-size:12px;">${t('recipe_diet_hint')}</div>
+          <div id="dietChips" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+        </div>
+
         <div class="field">
           <label class="field-label">${t('recipe_steps')}</label>
           <textarea class="textarea" id="recipeSteps" rows="8" placeholder="${t('recipe_steps_placeholder')}">${PCD.escapeHtml(data.steps || '')}</textarea>
@@ -2201,6 +2210,67 @@
           catRow.style.display = this.checked ? 'none' : '';
         });
       }
+    }
+
+    // v2.8.45 — Diet compatibility chips render. Recipe'ın ingredient'larının
+    // dietFlags'larına bakar, conservative hesap yapar:
+    //   - Tüm ingredient'lar flag=true → tarif uyumlu (yeşil)
+    //   - En az bir ingredient flag=false → tarif uyumsuz (kırmızı)
+    //   - En az bir ingredient flag=null + yok flag=false → bilinmiyor (gri)
+    function renderDietChips() {
+      const wrap = PCD.$('#dietChips', body);
+      if (!wrap) return;
+      const ingMap = currentIngMap();
+      const compat = (PCD.recipes && PCD.recipes.computeDietCompat)
+        ? PCD.recipes.computeDietCompat(data, ingMap)
+        : null;
+      wrap.innerHTML = '';
+      if (!data.ingredients || data.ingredients.length === 0) {
+        wrap.innerHTML = '<div class="text-muted text-sm" style="font-size:12px;font-style:italic;">' + PCD.escapeHtml(t('recipe_diet_no_ingredients')) + '</div>';
+        return;
+      }
+      const DIET_DISPLAY = [
+        { key: 'vegan',       labelKey: 'diet_vegan',       icon: '🌱' },
+        { key: 'vegetarian',  labelKey: 'diet_vegetarian',  icon: '🥗' },
+        { key: 'glutenFree',  labelKey: 'diet_gluten_free', icon: '🌾' },
+        { key: 'dairyFree',   labelKey: 'diet_dairy_free',  icon: '🥛' }
+      ];
+      DIET_DISPLAY.forEach(function (df) {
+        const v = compat && compat[df.key];
+        let bg, color, border, mark;
+        if (v === true) {
+          bg = 'var(--brand-50)';
+          color = 'var(--brand-700)';
+          border = 'var(--brand-600)';
+          mark = '✓';
+        } else if (v === false) {
+          bg = '#fee2e2';
+          color = '#991b1b';
+          border = '#fca5a5';
+          mark = '✗';
+        } else {
+          bg = 'var(--surface)';
+          color = 'var(--text-3)';
+          border = 'var(--border)';
+          mark = '?';
+        }
+        const unknownIngs = (compat && compat.unknownIngs && compat.unknownIngs[df.key]) || [];
+        const titleAttr = (v === null && unknownIngs.length > 0)
+          ? PCD.escapeHtml(t('recipe_diet_unknown_tooltip', { n: unknownIngs.length, names: unknownIngs.slice(0, 3).join(', ') + (unknownIngs.length > 3 ? '…' : '') }))
+          : '';
+        const chip = PCD.el('span', {
+          style: {
+            display: 'inline-flex', alignItems: 'center', gap: '4px',
+            padding: '6px 10px',
+            border: '1.5px solid ' + border,
+            background: bg, color: color,
+            borderRadius: '999px', fontSize: '12px', fontWeight: '600',
+          },
+          title: titleAttr
+        });
+        chip.innerHTML = df.icon + ' ' + PCD.escapeHtml(t(df.labelKey)) + ' <span style="opacity:0.85;font-size:11px;">' + mark + '</span>';
+        wrap.appendChild(chip);
+      });
     }
 
     function renderAllergenChips() {
@@ -2247,6 +2317,10 @@
         chip.innerHTML = (a.icon || '') + ' ' + (a.label_en || a.key) + (showAutoTag ? ' <span style="font-size:9px;opacity:0.6;">(auto)</span>' : '');
         wrap.appendChild(chip);
       });
+      // v2.8.45 — Diet chips paralel render. Allergen chip değişimiyle diet
+      // hesabı değişmez ama her render'da sync tutmak en güvenlisi (recipe
+      // ingredient list değişiminde ikisi de güncellenmeli).
+      renderDietChips();
       // Click to toggle: if active → deactivate; if inactive → activate.
       // For auto-detected chips, deactivation records the override in
       // allergensExcluded so future renders respect the user's choice.

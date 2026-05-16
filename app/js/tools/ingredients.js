@@ -357,6 +357,16 @@
         ` : ''}
       </div>
 
+      <!-- v2.8.45 — Auto diet rebuild: per-ingredient diet flags.
+           Tri-state (yes/no/unknown). Recipe detail'de toplu diet
+           uyumu chip'leri bu flag'lerden hesaplanır. Conservative
+           default: hepsi null (bilinmiyor) — yanlış pozitif vermez. -->
+      <div class="field">
+        <label class="field-label">${t('ingredient_diet_label')}</label>
+        <div class="text-muted text-sm mb-2" style="font-size:12px;">${t('ingredient_diet_hint')}</div>
+        <div id="dietFlagsWrap" style="display:flex;flex-direction:column;gap:6px;"></div>
+      </div>
+
       ${existing && existing.priceHistory && existing.priceHistory.length > 0 ? `
         <div class="section">
           <div class="section-title" style="font-size:14px;color:var(--text-3);margin-bottom:6px;">${t('price_history')}</div>
@@ -368,6 +378,43 @@
         </div>
       ` : ''}
     `;
+
+    // v2.8.45 — Diet flags initialise + render
+    if (!data.dietFlags) data.dietFlags = { vegan: null, vegetarian: null, glutenFree: null, dairyFree: null };
+    const DIET_KEYS = [
+      { key: 'vegan',       labelKey: 'diet_vegan',       icon: '🌱' },
+      { key: 'vegetarian',  labelKey: 'diet_vegetarian',  icon: '🥗' },
+      { key: 'glutenFree',  labelKey: 'diet_gluten_free', icon: '🌾' },
+      { key: 'dairyFree',   labelKey: 'diet_dairy_free',  icon: '🥛' }
+    ];
+    function renderDietFlags() {
+      const wrap = PCD.$('#dietFlagsWrap', body);
+      if (!wrap) return;
+      wrap.innerHTML = '';
+      DIET_KEYS.forEach(function (df) {
+        const cur = data.dietFlags[df.key];  // true | false | null
+        const row = PCD.el('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } });
+        const label = PCD.el('div', { style: { flex: '1', fontSize: '13px', fontWeight: '600' } });
+        label.innerHTML = df.icon + ' ' + PCD.escapeHtml(t(df.labelKey));
+        const btnGroup = PCD.el('div', { style: { display: 'flex', gap: '4px' } });
+        const yesBtn = PCD.el('button', { type: 'button', 'data-df': df.key, 'data-val': 'yes', class: 'btn btn-sm ' + (cur === true ? 'btn-primary' : 'btn-outline'), style: { minWidth: '52px', fontSize: '12px' }, text: '✓ ' + t('diet_yes') });
+        const noBtn = PCD.el('button', { type: 'button', 'data-df': df.key, 'data-val': 'no', class: 'btn btn-sm ' + (cur === false ? 'btn-danger' : 'btn-outline'), style: { minWidth: '52px', fontSize: '12px' }, text: '✗ ' + t('diet_no') });
+        const unkBtn = PCD.el('button', { type: 'button', 'data-df': df.key, 'data-val': 'unk', class: 'btn btn-sm ' + (cur === null || cur === undefined ? 'btn-secondary' : 'btn-outline'), style: { minWidth: '52px', fontSize: '12px' }, text: '— ' + t('diet_unknown') });
+        btnGroup.appendChild(yesBtn);
+        btnGroup.appendChild(noBtn);
+        btnGroup.appendChild(unkBtn);
+        row.appendChild(label);
+        row.appendChild(btnGroup);
+        wrap.appendChild(row);
+      });
+    }
+    renderDietFlags();
+    PCD.on(body, 'click', '[data-df]', function () {
+      const key = this.getAttribute('data-df');
+      const val = this.getAttribute('data-val');
+      data.dietFlags[key] = (val === 'yes') ? true : (val === 'no') ? false : null;
+      renderDietFlags();
+    });
 
     // Update symbol on unit change
     PCD.$('#ingUnit', body).addEventListener('change', function () {
