@@ -20,7 +20,16 @@
       "Bash(node -c app/js/tools/tools-hub.js)",
       "Bash(node -c app/js/tools/checklist.js)",
       "Bash(node -c app/js/tools/events.js)",
-      "Bash(node -c app/js/tools/discover.js)"
+      "Bash(node -c app/js/tools/discover.js)",
+      "Bash(node -c app/js/tools/suppliers.js)",
+      "Bash(node -c app/js/tools/ingredients.js)",
+      "Bash(node -c app/js/tools/menus.js)",
+      "Bash(node -c app/js/tools/whatif.js)",
+      "Bash(node -c app/js/core/cloud-realtime.js)",
+      "Bash(node -c app/js/core/store.js)",
+      "Bash(node -c app/js/core/cloud-pertable.js)",
+      "Bash(node -c app/js/core/cloud.js)",
+      "Bash(node -c app/js/tools/dashboard.js)"
     ]
   }
 }
