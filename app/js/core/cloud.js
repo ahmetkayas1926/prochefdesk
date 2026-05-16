@@ -461,6 +461,9 @@
                   ['haccpUnits',         'haccp_units'],
                   ['haccpReadings',      'haccp_readings'],
                   ['haccpCookCool',      'haccp_cook_cool'],
+                  // v2.8.44 — HACCP Receiving + Holding drift detection
+                  ['haccpReceiving',     'haccp_receiving'],
+                  ['haccpHolding',       'haccp_holding'],
                 ];
                 let driftedCount = 0;
                 wsTables.forEach(function (pair) {

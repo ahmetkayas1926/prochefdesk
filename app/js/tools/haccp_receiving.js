@@ -13,10 +13,14 @@
      - Hot goods: ≥60°C (≥140°F)
    Condition check covers packaging integrity, visible spoilage, smell.
 
-   Storage: workspace-bound IDB table 'haccpReceiving' (local-only;
-   cloud sync not enabled — operatör sonra Supabase tablosu açıp
-   cloud-pertable kaydına ekleyebilir). Backed up/restored via
-   PCD.store.get() snapshot (account.js export/import flow).
+   Storage: workspace-bound table 'haccpReceiving'.
+   v2.8.38: IDB-only (cloud sync ertelendi)
+   v2.8.44: cloud sync devrede — migrations/v2.8.44-haccp-receiving-holding.sql
+            ile haccp_receiving tablosu + RLS + realtime publication açıldı.
+            store.upsertInTable() artık _stateKeyToSqlTable map'inden
+            'haccp_receiving' karşılığını alıp cloud-pertable queue'ya
+            push ediyor. Pull/realtime/drift detection da bu tabloyu
+            tanıyor — diğer cihazlar 1-2 sn içinde güncellenir.
    Each record has a `date` (YYYY-MM-DD) so we can group by day.
    ================================================================ */
 

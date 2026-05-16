@@ -10,10 +10,14 @@
      - Hot holding: ≥60°C / 140°F (Danger zone if below)
      - Cold holding: ≤5°C / 41°F (Danger zone if above)
 
-   Storage: workspace-bound IDB table 'haccpHolding' (local-only;
-   cloud sync not enabled — operatör sonra Supabase tablosu açıp
-   cloud-pertable kaydına ekleyebilir). Backed up/restored via
-   PCD.store.get() snapshot (account.js export/import flow).
+   Storage: workspace-bound table 'haccpHolding'.
+   v2.8.39: IDB-only (cloud sync ertelendi)
+   v2.8.44: cloud sync devrede — migrations/v2.8.44-haccp-receiving-holding.sql
+            ile haccp_holding tablosu + RLS + realtime publication açıldı.
+            store.upsertInTable() artık _stateKeyToSqlTable map'inden
+            'haccp_holding' karşılığını alıp cloud-pertable queue'ya
+            push ediyor. Pull/realtime/drift detection da bu tabloyu
+            tanıyor — diğer cihazlar 1-2 sn içinde güncellenir.
    Each record has a `date` (YYYY-MM-DD) so we can group by day.
    ================================================================ */
 

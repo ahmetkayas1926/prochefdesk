@@ -44,6 +44,9 @@
     haccp_units:          { stateKey: 'haccpUnits',           wsScoped: true },
     haccp_readings:       { stateKey: 'haccpReadings',        wsScoped: true },
     haccp_cook_cool:      { stateKey: 'haccpCookCool',        wsScoped: true },
+    // v2.8.44 — HACCP Receiving + Holding cloud sync (mevcut HACCP pattern)
+    haccp_receiving:      { stateKey: 'haccpReceiving',       wsScoped: true },
+    haccp_holding:        { stateKey: 'haccpHolding',         wsScoped: true },
     // Array tablolar (ayrı queueArraySync API'si ile yazılır)
     waste:                { stateKey: 'waste',                wsScoped: true, isArray: true },
     checklist_sessions:   { stateKey: 'checklistSessions',    wsScoped: true, isArray: true },
@@ -490,6 +493,9 @@
       supabase.from('haccp_units').select('*').eq('user_id', user.id),
       supabase.from('haccp_readings').select('*').eq('user_id', user.id),
       supabase.from('haccp_cook_cool').select('*').eq('user_id', user.id),
+      // v2.8.44 — HACCP Receiving + Holding cloud sync
+      supabase.from('haccp_receiving').select('*').eq('user_id', user.id),
+      supabase.from('haccp_holding').select('*').eq('user_id', user.id),
       supabase.from('workspace_tombstones').select('*').eq('user_id', user.id),
     ];
 
@@ -503,6 +509,7 @@
              canvRes, shopRes, chkRes, invRes, prefsRes,
              wasteRes, chkSessRes, stockHistRes,
              haccpLogsRes, haccpUnitsRes, haccpReadingsRes, haccpCookCoolRes,
+             haccpReceivingRes, haccpHoldingRes,
              tombsRes] = results;
 
       // Build state in the format store.js expects:
@@ -573,6 +580,9 @@
       state.haccpUnits = packByWs(haccpUnitsRes.data);
       state.haccpReadings = packByWs(haccpReadingsRes.data);
       state.haccpCookCool = packByWs(haccpCookCoolRes.data);
+      // v2.8.44 — HACCP Receiving + Holding cloud sync
+      state.haccpReceiving = packByWs(haccpReceivingRes.data);
+      state.haccpHolding = packByWs(haccpHoldingRes.data);
 
       // Inventory: { wsId: { ingredientId: row.data } }
       state.inventory = {};
@@ -643,6 +653,8 @@
       'canvases', 'shopping_lists', 'checklist_templates', 'inventory',
       'waste', 'checklist_sessions', 'stock_count_history',
       'haccp_logs', 'haccp_units', 'haccp_readings', 'haccp_cook_cool',
+      // v2.8.44 — HACCP Receiving + Holding cloud sync
+      'haccp_receiving', 'haccp_holding',
       'workspace_tombstones', 'workspaces', 'user_prefs',
     ];
 
@@ -704,6 +716,9 @@
       ['haccpUnits',          'haccp_units'],
       ['haccpReadings',       'haccp_readings'],
       ['haccpCookCool',       'haccp_cook_cool'],
+      // v2.8.44 — HACCP Receiving + Holding cloud sync
+      ['haccpReceiving',      'haccp_receiving'],
+      ['haccpHolding',        'haccp_holding'],
     ];
     wsKeys.forEach(function (pair) {
       const stateKey = pair[0];

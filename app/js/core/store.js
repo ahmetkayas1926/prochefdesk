@@ -571,6 +571,9 @@
       'haccpUnits': 'haccp_units',
       'haccpReadings': 'haccp_readings',
       'haccpCookCool': 'haccp_cook_cool',
+      // v2.8.44 — HACCP Receiving + Holding cloud sync
+      'haccpReceiving': 'haccp_receiving',
+      'haccpHolding': 'haccp_holding',
     };
     return map[stateKey] || null;
   }

@@ -84,6 +84,9 @@
         case 'haccp_units': return applyToWsTable('haccpUnits', eventType, newRow, oldRow);
         case 'haccp_readings': return applyToWsTable('haccpReadings', eventType, newRow, oldRow);
         case 'haccp_cook_cool': return applyToWsTable('haccpCookCool', eventType, newRow, oldRow);
+        // v2.8.44 — HACCP Receiving + Holding realtime apply
+        case 'haccp_receiving': return applyToWsTable('haccpReceiving', eventType, newRow, oldRow);
+        case 'haccp_holding': return applyToWsTable('haccpHolding', eventType, newRow, oldRow);
         case 'stock_count_history': return applyToWsTable('stockCountHistory', eventType, newRow, oldRow);
         // v2.6.81 — workspace silindi → diğer cihazlarda lokal cascade wipe
         case 'workspace_tombstones': return applyToTombstones(eventType, newRow, oldRow);
@@ -175,7 +178,9 @@
     'recipes','ingredients','menus','events','suppliers','canvases',
     'shoppingLists','checklistTemplates','inventory',
     'waste','checklistSessions','stockCountHistory',
-    'haccpLogs','haccpUnits','haccpReadings','haccpCookCool'
+    'haccpLogs','haccpUnits','haccpReadings','haccpCookCool',
+    // v2.8.44 — Workspace cascade wipe için yeni tablolar
+    'haccpReceiving','haccpHolding'
   ];
   function applyToTombstones(eventType, newRow, oldRow) {
     const row = newRow || oldRow;
@@ -403,6 +408,8 @@
       'checklist_sessions',
       'haccp_logs', 'haccp_units', 'haccp_readings', 'haccp_cook_cool',
       'stock_count_history',
+      // v2.8.44 — HACCP Receiving + Holding realtime
+      'haccp_receiving', 'haccp_holding',
       // v2.6.81 — workspace_tombstones (cross-device cascade wipe trigger)
       'workspace_tombstones',
     ];
