@@ -487,7 +487,7 @@ Pasta,0.003,g,cat_dry_goods,</code></pre>
 
       <div class="field">
         <label class="field-label">${t('import_paste') || 'Paste CSV/TSV'}</label>
-        <textarea class="textarea" id="importText" rows="8" placeholder="Name,Price,Unit,Category,Supplier&#10;Olive oil,0.012,ml,cat_oils,Perth Fresh" style="font-family:var(--font-mono);font-size:13px;"></textarea>
+        <textarea class="textarea" id="importText" rows="8" placeholder="${PCD.escapeHtml(t('ingredients_csv_placeholder'))}" style="font-family:var(--font-mono);font-size:13px;"></textarea>
       </div>
 
       <div class="flex gap-2 items-center mb-2">

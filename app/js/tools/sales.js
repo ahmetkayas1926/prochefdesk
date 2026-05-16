@@ -99,8 +99,8 @@
       const id = this.getAttribute('data-del-sale');
       PCD.modal.confirm({
         icon: '🗑', iconKind: 'danger', danger: true,
-        title: 'Delete sale entry?',
-        okText: 'Delete'
+        title: t('sales_delete_title'),
+        okText: t('sales_delete_ok')
       }).then(function (ok) {
         if (!ok) return;
         PCD.store.deleteFromTable('salesLog', id);

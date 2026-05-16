@@ -182,7 +182,7 @@
       if (items.length === 0) { PCD.toast.warning(t('no_ingredients_yet')); return; }
       const excluded = changes.map(function (c) { return c.ingredientId; });
       const available = items.filter(function (it) { return excluded.indexOf(it.id) < 0; });
-      if (available.length === 0) { PCD.toast.info('All ingredients already in scenario'); return; }
+      if (available.length === 0) { PCD.toast.info(t('whatif_all_ingredients_in_scenario')); return; }
       PCD.picker.open({
         title: t('whatif_ingredient'), items: available, multi: false,
       }).then(function (sel) {

@@ -691,7 +691,7 @@
     printBtn.innerHTML = PCD.icon('print',16) + ' <span>' + t('print') + '</span>';
     const qrBtn = PCD.el('button', { class: 'btn btn-outline' });
     qrBtn.innerHTML = PCD.icon('grid',16) + ' <span>QR</span>';
-    const shareLinkBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: 'Public share link' });
+    const shareLinkBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: PCD.i18n.t('menus_share_link_title') });
     shareLinkBtn.innerHTML = PCD.icon('share',16) + ' <span>' + PCD.i18n.t('btn_share_link') + '</span>';
     const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('close') });
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
@@ -773,7 +773,7 @@
         qrBtn.innerHTML = origHTML;
         PCD.qr.show({
           title: menu.name || 'Menu',
-          subtitle: 'Scan to view',
+          subtitle: t('menus_qr_subtitle'),
           text: url
         });
       }).catch(function (e) {

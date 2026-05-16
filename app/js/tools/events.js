@@ -356,7 +356,7 @@
     if (existing) {
       printBtn = PCD.el('button', { class: 'btn btn-outline', title: t('print_pdf') });
       printBtn.innerHTML = PCD.icon('print', 16);
-      shareBtn = PCD.el('button', { class: 'btn btn-outline', title: 'Share' });
+      shareBtn = PCD.el('button', { class: 'btn btn-outline', title: t('btn_share') });
       shareBtn.innerHTML = PCD.icon('share', 16);
     }
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });

@@ -1542,13 +1542,13 @@
 
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
     const editBtn = PCD.el('button', { type: 'button', class: 'btn btn-primary', text: t('edit'), style: { flex: '1', minWidth: '100px' } });
-    const duplicateBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: 'Duplicate' });
+    const duplicateBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: t('recipe_btn_duplicate') });
     duplicateBtn.innerHTML = PCD.icon('copy', 16);
     const copyToWsBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: PCD.i18n.t('modal_copy_to_workspace_title') });
     copyToWsBtn.innerHTML = PCD.icon('truck', 16);
-    const costReportBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: 'Cost Report' });
+    const costReportBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: t('recipe_btn_cost_report') });
     costReportBtn.innerHTML = PCD.icon('activity', 16) + ' <span>' + PCD.i18n.t('btn_cost_report') + '</span>';
-    const shareBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: 'Share' });
+    const shareBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: t('btn_share') });
     shareBtn.innerHTML = PCD.icon('share', 16);
     const qrBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: 'QR' });
     qrBtn.innerHTML = PCD.icon('grid', 16);
@@ -1724,7 +1724,7 @@
     const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('btn_close') });
     const footer = PCD.el('div', { style: { display: 'flex', width: '100%' } });
     footer.appendChild(closeBtn);
-    const m = PCD.modal.open({ title: 'Share · ' + opts.title, body: body, footer: footer, size: 'md', closable: true });
+    const m = PCD.modal.open({ title: PCD.i18n.t('share_modal_title', { name: opts.title }), body: body, footer: footer, size: 'md', closable: true });
 
     function getText() { return PCD.$('#rShareText', body).value; }
     closeBtn.addEventListener('click', function () { m.close(); });
@@ -1885,7 +1885,7 @@
     footer.appendChild(cancelBtn);
     footer.appendChild(saveBtn);
 
-    const m = PCD.modal.open({ title: 'New ingredient', body: body, footer: footer, size: 'sm', closable: true });
+    const m = PCD.modal.open({ title: PCD.i18n.t('recipe_new_ingredient_title'), body: body, footer: footer, size: 'sm', closable: true });
     // v2.8.6 — Focus Name field on open (desktop only). Override modal's
     // default auto-focus which lands on the header close (X) button. 300ms
     // wins the race against modal.js's own 250ms auto-focus. Enter-walk
@@ -2808,7 +2808,7 @@
     const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') });
     let versionsBtn = null;
     if (existing && PCD.store.snapshotRecipeVersion) {
-      versionsBtn = PCD.el('button', { class: 'btn btn-outline', title: 'Versions' });
+      versionsBtn = PCD.el('button', { class: 'btn btn-outline', title: t('recipe_btn_versions') });
       const vCount = (existing.versions || []).length;
       versionsBtn.innerHTML = PCD.icon('clock', 16) + ' <span>Versions' + (vCount > 0 ? ' (' + vCount + ')' : '') + '</span>';
     }

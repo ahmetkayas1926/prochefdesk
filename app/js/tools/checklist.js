@@ -684,7 +684,7 @@
     dupBtn.innerHTML = PCD.icon('copy', 16);
     const printBtn = PCD.el('button', { class: 'btn btn-outline', title: t('chk_btn_print_blank') });
     printBtn.innerHTML = PCD.icon('print', 16);
-    const shareBtn = PCD.el('button', { class: 'btn btn-outline', title: 'Share' });
+    const shareBtn = PCD.el('button', { class: 'btn btn-outline', title: t('btn_share') });
     shareBtn.innerHTML = PCD.icon('share', 16);
     // History button — shows past completed sessions for this template.
     const completedCount = listCompletedSessions(tid).length;
@@ -1177,7 +1177,7 @@
     const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('close') });
     const printBtn = PCD.el('button', { class: 'btn btn-outline', title: t('print_pdf') });
     printBtn.innerHTML = PCD.icon('print', 16);
-    const shareBtn = PCD.el('button', { class: 'btn btn-outline', title: 'Share' });
+    const shareBtn = PCD.el('button', { class: 'btn btn-outline', title: t('btn_share') });
     shareBtn.innerHTML = PCD.icon('share', 16);
     const completeBtn = PCD.el('button', { class: 'btn btn-primary', text: t('checklist_complete') || 'Complete', style: { flex: '1' } });
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
@@ -1581,7 +1581,7 @@
     const footer = PCD.el('div', { style: { display: 'flex', width: '100%' } });
     footer.appendChild(closeBtn);
 
-    const m = PCD.modal.open({ title: 'Share · ' + title, body: body, footer: footer, size: 'md', closable: true });
+    const m = PCD.modal.open({ title: t('share_modal_title', { name: title }), body: body, footer: footer, size: 'md', closable: true });
 
     PCD.$('#shPdf', body).addEventListener('click', function () {
       m.close();

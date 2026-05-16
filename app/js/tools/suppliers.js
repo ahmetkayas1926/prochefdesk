@@ -374,7 +374,7 @@
       // Use Web Share API if available (system share sheet)
       if (navigator.share) {
         navigator.share({
-          title: 'Order for ' + supplier.name,
+          title: PCD.i18n.t('supplier_order_title', { name: supplier.name }),
           text: txt
         }).then(function () {
           onSentSuccess(supplier);
@@ -432,7 +432,7 @@
           </div>
           <div class="field">
             <label class="field-label">WhatsApp</label>
-            <input type="tel" class="input" id="sWa" value="${PCD.escapeHtml(data.whatsapp || '')}" placeholder="Leave empty to use phone">
+            <input type="tel" class="input" id="sWa" value="${PCD.escapeHtml(data.whatsapp || '')}" placeholder="${PCD.escapeHtml(t('supplier_whatsapp_placeholder'))}">
           </div>
         </div>
         <div class="field">
@@ -441,7 +441,7 @@
         </div>
         <div class="field">
           <label class="field-label">Notes</label>
-          <textarea class="textarea" id="sNotes" rows="2" placeholder="Delivery days, min order, etc.">${PCD.escapeHtml(data.notes || '')}</textarea>
+          <textarea class="textarea" id="sNotes" rows="2" placeholder="${PCD.escapeHtml(t('supplier_notes_placeholder'))}">${PCD.escapeHtml(data.notes || '')}</textarea>
         </div>
 
         <div class="section-title mt-4 mb-2" style="font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;">Products (${data.products.length})</div>
