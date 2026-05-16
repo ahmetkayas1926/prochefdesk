@@ -8,7 +8,7 @@ ProChefDesk — profesyonel şef'ler için web tabanlı mutfak yönetim sistemi.
 
 Stack: Vanilla JavaScript (no bundling, no service worker), IndexedDB ana storage, Supabase (Postgres 17 + Auth + Storage + Realtime + Edge Functions), Cloudflare Pages (auto-deploy on GitHub push), Cloudflare R2 (backups).
 
-**Mevcut sürüm: v2.8.33** (production).
+**Mevcut sürüm: v2.8.50** (push'a hazır local; production hâlâ v2.8.33 — push edilene kadar). Detay: `CHANGELOG.md`.
 
 ## Çalışma akışı
 
@@ -20,26 +20,22 @@ Operatör Türkçe konuşur, Türkçe cevap ver. Operatör "BUNU SEN SÖYLE" vey
 
 ## Backlog (öncelik sırasına göre)
 
-**Gündelik kullanımda hissedilen, hızlı bitirilebilir:**
+**v2.8.34-v2.8.50 sweep ile 1-6 + 8 + 9 + 10 tamamlandı. Kalan açık maddeler:**
 
-1. **Cost report test price input — 300ms debounce.** Cost report'ta canlı fiyat girerken her keystroke'ta recalc tetikleniyor, input'tan focus atıyor, çok haneli sayı yazılamıyor. 300-400ms debounce ekleyince son rakam yazılınca hesaplar.
-2. **Restore modal — current vs backup karşılaştırma görünümü.** Şu an modal sadece backup içeriğini gösteriyor. İki sütun göstersin: "Şu an cihazda" (workspaces, recipes, ingredients, menus, suppliers, checklist templates sayıları) vs "Backup'ta (yüklenecek)". Kullanıcı kaybedeceğini görerek karar versin.
-3. **HACCP Cooking & Cooling — aylık 31 satırlık tek form.** Şu an günlük format. Şef ay başında indirir, ay boyunca elle doldurur, yoğunsa 2-3 forma böler.
-4. **Auto diet detection — kaldır.** Keyword-matching ile %100 doğruluk imkansız (yanlış vegan/gluten-free tick'leri var). Manuel kalsın, kullanıcı kendisi seçsin. Post-launch'ta küratörlü ingredient DB ile yeniden inşa edilecek.
+7. **iOS/Safari cross-browser test pass** — Safari iOS + Safari macOS + Chrome iOS. v2.8.49'da kod tarama yapıldı (temiz, sadece backdrop-filter vendor prefix eklendi). Manuel cihaz testi operatör tarafına bekliyor.
 
-**Kapsamı büyük, planlı çalışma gerek:**
-
-5. **Yeni HACCP formları** — Fridge/Freezer daily temperature + Receiving log + Hot/Cold holding temperature. Restoran/mutfak denetimlerinde en çok denetlenen üçü.
-6. **Hardcoded EN string süpürmesi.** ~30+ string TR i18n'de eksik (sidenav titles, toasts, modals, placeholders, Account/Help label'ları). Manuel, dosya-by-dosya. Uzun iş.
-7. **iOS/Safari cross-browser test pass** — Safari iOS + Safari macOS + Chrome iOS. Sadece Android Chrome + Desktop Chrome'da test edildi.
-
-**Büyük feature / sonraya:**
-
-8. **Discover MVP** — public recipe grid + like + view count. Pinterest tarzı keşif alanı, "Discover" / "Keşfet" tab'ı. Faz 1: recipe başına `is_public` toggle, anonymous SELECT, grid layout, like butonu, view counter. **Rating sistemi yok** (drama getirir). Şu an boş kalır → 60+ aktif kullanıcı sonrası anlamlı.
-9. **Auto diet rebuild — küratörlü ingredient DB ile.** Her ingredient'a vegan/vegetarian/gluten-free/dairy-free flag eklenir (ingredient editörü içinde). Recipe otomatik diet kontrolü güvenilir hale gelir.
-10. **Realtime CHANNEL_ERROR.** Console'da `cloud-realtime: subscribe failed CHANNEL_ERROR`. Diğer cihazda canlı görünüm yok (sayfa açıldığında pull yine günceller — solo workflow etkilenmiyor). Çoklu cihaz canlı görünüm veya ekip kullanımı gerekirse bakılır.
 11. **Categories functional.** Şu an menu kategorileri kozmetik label. 50+ menu item olursa filter/grouping/Prep-specific kategoriler değerli olur.
+
 12. **Marketing / SEO / blog kurulumu** — Faz 2 işi.
+
+**Audit (v2.8.50) sonrası yeni bekleyenler:**
+
+13. **Edge function deploy** — `supabase/functions/delete-account/` v2.8.50'de değişti. Operatör Supabase CLI veya Dashboard'dan `supabase functions deploy delete-account` yapacak.
+14. **Discover view spam rate limit** — `increment_recipe_view` RPC anonymous'a açık (MVP kabul). Viral olursa Edge Function ile IP+recipe başına 1 saat 1 view.
+15. **R2 foto bytes yedekleme** — şu an sadece manifest. Pro tier'a geçişte Storage PITR ile çözülür.
+16. **`supabase-functions/` duplicate silme** — operatör Dashboard'dan deploy doğrulaması yapana kadar bekliyor (v2.8.50'de senkron tutuldu).
+
+**Tamamlanmış maddelerin sürüm referansı:** `CHANGELOG.md`. `HANDOVER.md §5` tablosu da güncel.
 
 ## Güvenlik sınırları (onay zorunlu)
 
@@ -69,7 +65,7 @@ Geçmişte bug üreten yerler, bilmeden dokunma:
 
 **PCD.icon registry silent fallback.** `PCD.icon(name, size)` registry'de olmayan isim için **sessizce info ikonuna fallback** yapar (kırmızı yuvarlak içinde "i"). Lucide isimleri (`trash-2`, `rotate-ccw`) çalışmaz. Yeni ikon kullanmadan önce: `grep -n "<name>:" app/js/core/utils.js` ile registry'de olduğunu doğrula.
 
-**Per-table sync 3 yönlü.** Push (cloud-pertable.js, debounced, retry'lı), Pull (cloud.js, boot'ta tüm tablolar, drift detection v2.8.33'te eklendi), Realtime (cloud-realtime.js, WebSocket, şu an CHANNEL_ERROR'lu — solo için kritik değil). Sync bug'ında ÖNCE hangi yön sor.
+**Per-table sync 3 yönlü.** Push (cloud-pertable.js, debounced, retry'lı), Pull (cloud.js, boot'ta tüm tablolar, drift detection v2.8.33'te eklendi), Realtime (cloud-realtime.js, WebSocket, v2.8.43'te JWT setAuth fix ile CHANNEL_ERROR temizlendi — TOKEN_REFRESHED dinleyici 1-saatlik token refresh sonrası re-setAuth yapıyor). Sync bug'ında ÖNCE hangi yön sor.
 
 **RLS tüm 22 tabloda aktif.** Frontend `anon` key kullanıyor. Yeni tablo eklersen RLS policy şart:
 ```sql

@@ -8,7 +8,7 @@
 
 **Ürün:** ProChefDesk — profesyonel chef'ler için web tabanlı mutfak yönetim sistemi.
 **Operatör:** Ahmet Kaya, Perth Western Australia, profesyonel şef. Solo non-commercial proje.
-**Mevcut sürüm:** **v2.8.33** (production, canlı kullanımda).
+**Mevcut sürüm:** **v2.8.50** (push'a hazır local; production hâlâ v2.8.33'te — operatör push edince Cloudflare Pages otomatik deploy eder).
 **Domain:** prochefdesk.com (Cloudflare Pages, SSL Full, GitHub push'ta auto build + deploy).
 
 **URL yapısı:**
@@ -100,16 +100,16 @@ canvases, checklist_sessions, checklist_templates, events, haccp_cook_cool, hacc
 
 ### 3 Edge Function (deployed)
 
-- `backup-to-r2` — v3 (2026-05-06). 21 per-table tabloyu jsonl olarak R2'ye yazar (`<YYYY-MM-DD>/<table>.jsonl` + summary.json + photos-manifest.json). 30-day retention.
+- `backup-to-r2` — v3 (2026-05-06). 23 per-table tabloyu (v2.8.44'te haccp_receiving + haccp_holding eklendi) jsonl olarak R2'ye yazar (`<YYYY-MM-DD>/<table>.jsonl` + summary.json + photos-manifest.json). 30-day retention. **Foto bytes'ı yedeklenmiyor**, sadece manifest — Supabase Storage kaybı = foto kaybı (kabul edilebilir trade-off, Pro tier'a geçince Storage PITR var).
 - `cleanup-photos` — Storage orphan foto temizliği. `x-cleanup-secret` header zorunlu.
-- `delete-account` — kullanıcı hesap silme.
+- `delete-account` — kullanıcı hesap silme. **v2.8.50**: `user_data` (DROP edilmiş tablo) DELETE bloğu kaldırıldı; false-error response artık üretmiyor. CASCADE FK ile 24 tabloda owner satırları auto-delete.
 
-**R2 bucket:** `prochefdesk-backups`. Restore prod'da test edildi (docs/DISASTER_RECOVERY.md §5.3.5).
+**R2 bucket:** `prochefdesk-backups`. Restore prod'da test edildi (docs/DISASTER_RECOVERY.md §5.3.5). **Public Access KAPALI olmalı** — Cloudflare R2 → bucket → Settings'ten her ay teyit (operatör görsel kontrol).
 
 ### Storage / Auth
 
-- **Storage:** `recipe-photos` bucket (private, signed URL)
-- **Auth:** Email + Google OAuth (production'da aktif)
+- **Storage:** `recipe-photos` bucket — **PUBLIC bucket**, RLS path-based write (`{user_id}/...`). SELECT herkes (Discover akışında anonymous `<img src>` için zorunlu); INSERT/UPDATE/DELETE sadece owner. Trade-off: URL bilinirse paylaşılmamış foto da görünür, format predictable (`{user_id}/{recipe_id}.jpg`). Lansman + Discover için kabul edilebilir.
+- **Auth:** Email + Google OAuth (production'da aktif). `auth.js:157` `redirectTo: origin + '/app/'`. Supabase Dashboard → Authentication → URL Configuration → Redirect URLs whitelist'inde `https://prochefdesk.com/app/**` olmalı.
 
 ## 5. Tamamlanmış İşler (kategori özeti)
 
@@ -131,31 +131,40 @@ Tek tek sürüm için → CHANGELOG.md.
 | 8 | Units + i18n + allergen override + Kitchen Cards modernization | v2.8.19-v2.8.23 | ✅ |
 | 9 | Recipes list redesign + isSubRecipe data model + prep render her path'te | v2.8.22, v2.8.26-v2.8.31 | ✅ |
 | 10 | Cloud sync invisible reliability (drift detection + auto-retry + ambient indicator) | v2.8.32-v2.8.33 | ✅ |
+| 11 | Backlog 1-6 + 8 + 9 + 10 sweep (debounce, restore compare, Cook&Cool aylık form, allergen auto-detect kaldır, 2 yeni HACCP form + cloud sync, i18n round 1+2, Discover Faz 1+2, dietFlags, Realtime JWT fix) | v2.8.34-v2.8.47 | ✅ |
+| 12 | Cross-browser tarama (backdrop-filter prefix, 100dvh fallback teyit) + delete-account false-error fix | v2.8.49-v2.8.50 | ✅ |
 | Ops | Backup function v3 + restore prosedürü prod test | Edge deploy + docs | ✅ |
 | Ops | DISASTER_RECOVERY.md güncel | docs | ✅ |
 
 ## 6. Yapılacaklar (öncelik sırasına göre)
 
-### Gündelik kullanımda hissedilen, hızlı bitirilebilir
+### Gündelik kullanımda hissedilen — hepsi tamamlandı
 
-1. **Cost report test price input — 300ms debounce.** Canlı fiyat girerken her keystroke'ta recalc, focus kaybı, çok haneli sayı yazılamıyor.
-2. **Restore modal — current vs backup karşılaştırma.** İki sütun: "şu an cihazda" vs "backup'ta". Kullanıcı kaybedeceğini görerek karar versin.
-3. **HACCP Cooking & Cooling — aylık 31 satırlık tek form.** Şu an günlük format yanlış.
-4. **Auto diet detection — kaldır.** Yanlış işaretler güveni bozuyor. Manuel kalsın.
+1. ~~Cost report test price input debounce~~ → **✅ v2.8.34 (300ms) → v2.8.48 (400ms operatör isteğiyle)**
+2. ~~Restore modal — current vs backup karşılaştırma~~ → **✅ v2.8.35** (delta sütunu ile)
+3. ~~HACCP Cooking & Cooling — aylık 31 satırlık tek form~~ → **✅ v2.8.36 (aylık boş print) + v2.8.47 (tool tamamen aylık formata geçti)**
+4. ~~Auto diet detection — kaldır~~ → **✅ v2.8.37 (kaldırıldı) + v2.8.45 (küratörlü dietFlags ile yeniden inşa)**
 
-### Kapsamı büyük, planlı çalışma gerek
+### Kapsamı büyük — hepsi tamamlandı
 
-5. **Yeni HACCP formları** — Fridge/Freezer + Receiving + Hot/Cold holding (en çok denetlenen üçü).
-6. **Hardcoded EN string süpürmesi** — TR i18n eksiklikleri. Manuel, file-by-file.
-7. **iOS/Safari cross-browser test pass** — Safari iOS + Safari macOS + Chrome iOS.
+5. ~~Yeni HACCP formları~~ → **✅ v2.8.38 (Receiving) + v2.8.39 (Hot/Cold Holding) + v2.8.44 (her ikisi cloud sync)**. Fridge/Freezer zaten haccp_logs'ta vardı.
+6. ~~Hardcoded EN string süpürmesi~~ → **✅ v2.8.40 (round 1, 13 string) + v2.8.42 (round 2, 17 string) = 30+ string TR'ye geçti**
+7. **iOS/Safari cross-browser test pass** ⏳ — Safari iOS + Safari macOS + Chrome iOS. v2.8.49'da kod tarama yapıldı (temiz), gerçek cihaz manuel testi operatör tarafına bekliyor.
 
-### Büyük feature / sonraya
+### Büyük feature — tamamlananlar + bekleyenler
 
-8. **Discover MVP** — public recipe grid + like + view (rating yok). 60+ aktif kullanıcı sonrası anlamlı.
-9. **Auto diet rebuild — küratörlü ingredient DB ile.** Her ingredient'a vegan/vegetarian/gluten-free/dairy-free flag.
-10. **Realtime CHANNEL_ERROR.** Solo workflow etkilenmiyor, çoklu cihaz canlı görünüm gerekirse bakılır.
-11. **Categories functional.** Şu an kozmetik. 50+ menu item olursa anlamlı.
-12. **Marketing / SEO / blog kurulumu** — ileri faz.
+8. ~~Discover MVP~~ → **✅ v2.8.41 (skeleton + isPublic toggle) + v2.8.46 (backend: anonymous SELECT RLS + recipe_likes + view counter RPC + like buton + view bumper)**
+9. ~~Auto diet rebuild — küratörlü ingredient DB~~ → **✅ v2.8.45 (ingredient tri-state diet flags + computeDietCompat helper + recipe diet chips)**
+10. ~~Realtime CHANNEL_ERROR~~ → **✅ v2.8.43 (explicit JWT setAuth + TOKEN_REFRESHED dinleyici)**
+11. **Categories functional** ⏳ — şu an kozmetik. 50+ menu item olursa anlamlı.
+12. **Marketing / SEO / blog kurulumu** ⏳ — ileri faz.
+
+### Yeni bekleyen işler (audit sonrası)
+
+13. **CHANGELOG.md güncel hazırla zincirleme commit yöntemi** — bu sürümde manuel hatırlamayla yapıldı (v2.8.34-v2.8.50). İleride otomatize edilebilir (CI hook: her commit'te entry kontrolü).
+14. **`supabase-functions/` duplicate silme** — operatör Supabase Dashboard'dan deploy doğrulaması yapana kadar bekliyor.
+15. **Discover view count rate limit** — `increment_recipe_view` RPC anonymous'a açık, spam riski (MVP'de kabul). Viral olursa Edge Function ile IP+recipe başına 1 saat 1 view.
+16. **R2 backup foto bytes yedekleme** — şu an sadece manifest; Supabase Storage kaybı = foto kaybı. Solo workflow için kabul edilebilir; Pro tier'da Storage PITR var.
 
 ## 7. ❌ Önerme
 
@@ -218,7 +227,7 @@ Bu işleri spontan öneri olarak ortaya çıkarma:
 |---|---|
 | Repo path (operatör Windows) | `C:\Users\ahmet\Desktop\prochefdesk` |
 | GitHub repo | `ahmetkayas1926/prochefdesk` |
-| Production sürümü | **v2.8.33** |
+| Production sürümü | **v2.8.50** (push'a hazır local; production hâlâ v2.8.33) |
 | Supabase project ref | `muuwhrcogikpqylsfvgg` (Tokyo, Postgres 17, Free tier) |
 | Cloudflare R2 bucket | `prochefdesk-backups` |
 | CLEANUP_SECRET | `ec79a445-7e92-499b-9322-5c2c949788d4d2886e66-d556-4498-ba9e-17fda6c11ac1` |
@@ -228,6 +237,16 @@ Bu işleri spontan öneri olarak ortaya çıkarma:
 | Test edilmemiş | iOS Safari + Safari macOS + Chrome iOS |
 | Cloudflare Pages build command | `node build.js` |
 | Aylık altyapı maliyeti | $1 (sadece domain). 50 aktif kullanıcıya kadar Supabase Free tier. |
+
+## 9.5 Push Öncesi Rutin Kontrol Listesi (v2.8.50 audit sonrası eklendi)
+
+Her büyük push'tan önce operatör Cloudflare/Supabase Dashboard'dan görsel olarak doğrulayacak:
+
+1. ☐ **R2 bucket Public Access KAPALI** — Cloudflare R2 → `prochefdesk-backups` → Settings. Açıksa felaket (30 gün tüm backup + jsonb içerik herkese açık).
+2. ☐ **OAuth Redirect URLs whitelist** — Supabase → Authentication → URL Configuration → `https://prochefdesk.com/app/**` listede mi?
+3. ☐ **3 cron job son run tarihi** — Supabase → Database → Cron Jobs → `nightly-backup-to-r2`, `pcd-cleanup-old-deleted`, `pcd-cleanup-photos-weekly` son 1-2 gün içinde çalışmış mı?
+4. ☐ **Migration'lar Dashboard'da çalıştırıldı mı** (varsa) — push'tan ÖNCE. Frontend henüz Supabase'de olmayan tabloyu push'lamaya çalışırsa hata.
+5. ☐ **Edge function deploy gerek mi** — `supabase/functions/*` değişti mi? Gerekirse CLI ile `supabase functions deploy <name>`.
 
 ## 10. Yeni Claude Başlangıç Kontrol Listesi
 
