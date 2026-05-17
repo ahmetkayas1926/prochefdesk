@@ -1188,6 +1188,8 @@
         if (!r.ingredients || !r.ingredients.length) return;
         const brokenLines = [];
         r.ingredients.forEach(function (ri, idx) {
+          // v2.8.52 — Separator satırları integrity check'in dışında.
+          if (ri && ri.separator) return;
           if (ri.recipeId) {
             // Sub-recipe reference — broken if target recipe is missing/deleted
             // Or if it points to itself (cycle)

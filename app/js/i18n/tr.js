@@ -1245,6 +1245,11 @@ window.PCD.i18n.register('tr', {
   recipe_diet_hint: "Kullanılan malzemelerin beslenme bilgisinden otomatik hesaplanır. Değiştirmek için malzemeyi düzenle.",
   recipe_diet_no_ingredients: "Beslenme uyumunu görmek için malzeme ekle.",
   recipe_diet_unknown_tooltip: "{n} malzemenin beslenme bilgisi yok: {names}",
+  // v2.8.52 — Malzeme grup ayracı (malzeme listesinde görsel ayraç)
+  ing_add_separator: "+ Ayraç",
+  ing_add_separator_tip: "Malzeme grupları arasına görsel ayraç ekle (örn. \"Soslar\", \"Garnitür\")",
+  ing_separator_label: "Grup",
+  ing_separator_placeholder: "Opsiyonel grup etiketi (örn. Soslar, Garnitür)",
   allerg_manual: "Manuel etiketleme",
   allerg_recipe_contains: "İçerir",
   allerg_recipe_clean: "Alerjen içermez",

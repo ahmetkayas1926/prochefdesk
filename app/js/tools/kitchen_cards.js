@@ -697,6 +697,16 @@
 
       let ingsHtml = '';
       (r.ingredients || []).forEach(function (ri) {
+        // v2.8.52 — Separator satırı: Kitchen Card'da grup ayracı (şef
+        // tezgahta okurken malzeme gruplarını ayırt edebilsin).
+        // Inline style: opsiyonel label varsa uppercase küçük yazı + border.
+        if (ri && ri.separator) {
+          const lbl = ri.label
+            ? '<span style="font-size:0.8em;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#666;">' + PCD.escapeHtml(ri.label) + '</span>'
+            : '&nbsp;';
+          ingsHtml += '<div style="border-top:1px dashed #999;margin:4px 0 2px;padding-top:2px;">' + lbl + '</div>';
+          return;
+        }
         // Public-form (snapshot): ri.name is set directly.
         // Owner-form (live editor): ri.ingredientId resolves via ingMap.
         const ing = ri.ingredientId ? ingMap[ri.ingredientId] : null;
@@ -1077,6 +1087,10 @@
       const r = item.recipeId ? PCD.store.getRecipe(item.recipeId) : null;
       if (!r) return null;
       const ingredients = (r.ingredients || []).map(function (ri) {
+        // v2.8.52 — Separator satırı snapshot'a olduğu gibi geçer
+        if (ri && ri.separator) {
+          return { separator: true, label: ri.label || '' };
+        }
         const ing = ingMap[ri.ingredientId];
         return {
           name: ing ? ing.name : '?',

@@ -47,6 +47,8 @@
       _visited[recipe.id] = true;
     }
     recipe.ingredients.forEach(function (ri) {
+      // v2.8.52 — Separator satırları varyans hesabına girmez.
+      if (ri && ri.separator) return;
       const amt = (Number(ri.amount) || 0) * factor;
       if (amt <= 0) return;
 

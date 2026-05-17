@@ -1493,6 +1493,14 @@
     // "(removed)" because this loop only looked up ri.ingredientId.
     // Now resolves the sub-recipe name from recipeMap when present.
     (r.ingredients || []).forEach(function (ri) {
+      // v2.8.52 — Separator satırı (preview modal'da görsel ayraç)
+      if (ri && ri.separator) {
+        const lbl = ri.label
+          ? '<span style="display:block;font-weight:700;color:var(--text-3);font-size:11px;text-transform:uppercase;letter-spacing:0.04em;padding:6px 0 0;">' + PCD.escapeHtml(ri.label) + '</span>'
+          : '';
+        ingsHtml += '<li style="list-style:none;padding:8px 0 4px;border-bottom:1px dashed var(--border);">' + lbl + '</li>';
+        return;
+      }
       let name;
       if (ri.recipeId) {
         const sub = recipeMap[ri.recipeId];
@@ -1619,6 +1627,12 @@
       lines.push('');
       lines.push(t('recipe_ingredients') + ':');
       (r.ingredients || []).forEach(function (ri) {
+        // v2.8.52 — Separator satırı text-share'de ayraç çizgisi olarak
+        if (ri && ri.separator) {
+          lines.push('');
+          lines.push(ri.label ? ('— ' + ri.label + ' —') : '────────────────');
+          return;
+        }
         let name;
         if (ri.recipeId) {
           const sub = recipeMap[ri.recipeId];
@@ -1795,6 +1809,13 @@
       const recipeMap = opts.recipeMap || PCD.recipes.buildRecipeMap();
       const tt = PCD.i18n.t;
       const rows = (r.ingredients || []).map(function (ri) {
+        // v2.8.52 — Print/share HTML'inde ayraç çizgisi + opsiyonel label
+        if (ri && ri.separator) {
+          const lbl = ri.label
+            ? '<strong style="color:#666;font-size:11px;text-transform:uppercase;letter-spacing:0.04em;">' + PCD.escapeHtml(ri.label) + '</strong>'
+            : '&nbsp;';
+          return '<tr><td colspan="2" style="border-top:1px dashed #999;padding:6px 0 2px;">' + lbl + '</td></tr>';
+        }
         let name;
         if (ri.recipeId) {
           const sub = recipeMap[ri.recipeId];
@@ -2142,7 +2163,10 @@
         <div class="section" style="margin-bottom:16px;">
           <div class="section-header">
             <div class="section-title">${t('recipe_ingredients')}</div>
-            <button type="button" class="btn btn-outline btn-sm" id="addIngBtn">+ ${t('add')}</button>
+            <div style="display:flex;gap:6px;">
+              <button type="button" class="btn btn-outline btn-sm" id="addSeparatorBtn" title="${PCD.escapeHtml(t('ing_add_separator_tip'))}">${t('ing_add_separator')}</button>
+              <button type="button" class="btn btn-outline btn-sm" id="addIngBtn">+ ${t('add')}</button>
+            </div>
           </div>
 
           <!-- Quick-add autocomplete -->
@@ -2359,6 +2383,25 @@
         return;
       }
       data.ingredients.forEach(function (ri, idx) {
+        // v2.8.52 — Separator satırı (grup ayracı): editor'de dashed çizgi +
+        // opsiyonel label input + up/down/remove butonları. Cost'a girmez.
+        if (ri && ri.separator) {
+          const _total = data.ingredients.length;
+          const _upDis = (idx === 0) ? 'disabled style="opacity:0.3;cursor:not-allowed;"' : '';
+          const _dnDis = (idx === _total - 1) ? 'disabled style="opacity:0.3;cursor:not-allowed;"' : '';
+          const sepRow = PCD.el('div', { class: 'list-item', style: { minHeight: 'auto', padding: '8px 10px', background: 'var(--surface-2)', borderTop: '1px dashed var(--border)', borderBottom: '1px dashed var(--border)' } });
+          sepRow.innerHTML =
+            '<div class="list-item-body" style="display:flex;align-items:center;gap:8px;">' +
+              '<span style="color:var(--text-3);font-size:11px;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;flex-shrink:0;">' + PCD.escapeHtml(t('ing_separator_label')) + '</span>' +
+              '<input type="text" class="input" data-sep-label data-idx="' + idx + '" value="' + PCD.escapeHtml(ri.label || '') + '" placeholder="' + PCD.escapeHtml(t('ing_separator_placeholder')) + '" style="flex:1;padding:6px 8px;min-height:32px;font-size:13px;">' +
+            '</div>' +
+            '<button type="button" class="icon-btn" data-moveup="' + idx + '" ' + _upDis + ' aria-label="Move up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 15l-6-6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
+            '<button type="button" class="icon-btn" data-movedown="' + idx + '" ' + _dnDis + ' aria-label="Move down"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
+            '<button type="button" class="icon-btn" data-remove="' + idx + '" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/></svg></button>';
+          ingListEl.appendChild(sepRow);
+          return;
+        }
+
         const isSubRecipe = !!ri.recipeId;
         let name, lineCost, defaultUnit;
 
@@ -2610,6 +2653,20 @@
         return u;
       }
 
+      // v2.8.52 — "Ayraç ekle" butonu: malzeme listesine separator satırı
+      // ekler (görsel grup ayracı). Cost/diet/allergen hesabına girmez.
+      const _addSepBtn = PCD.$('#addSeparatorBtn', body);
+      if (_addSepBtn) _addSepBtn.addEventListener('click', function () {
+        data.ingredients = data.ingredients.concat([{ separator: true, label: '' }]);
+        renderIngList();
+        // Yeni eklenen separator'ın label input'una odaklan (UX kolaylığı)
+        setTimeout(function () {
+          const inputs = body.querySelectorAll('[data-sep-label]');
+          const last = inputs[inputs.length - 1];
+          if (last) last.focus();
+        }, 50);
+      });
+
       PCD.$('#addIngBtn', body).addEventListener('click', function () {
         const items = PCD.store.listIngredients().map(function (i) {
           return { id: i.id, name: i.name, meta: t(i.category || 'cat_other') + ' · ' + PCD.fmtMoney(i.pricePerUnit) + '/' + i.unit };
@@ -2680,6 +2737,13 @@
         data.ingredients[idx].unit = this.value;
         updateLineCostsDOM();
         updateCostStripDOM();
+      });
+      // v2.8.52 — Separator label input (debounced, sadece state'i günceller,
+      // re-render gerekmez; çizgi/label görünümü kayıtta zaten doğru olacak)
+      PCD.on(body, 'input', '[data-sep-label]', function () {
+        const idx = parseInt(this.getAttribute('data-idx'), 10);
+        if (!data.ingredients[idx] || !data.ingredients[idx].separator) return;
+        data.ingredients[idx].label = this.value;
       });
       PCD.on(body, 'click', '[data-remove]', function () {
         const idx = parseInt(this.getAttribute('data-remove'), 10);

@@ -331,9 +331,17 @@
     const ingsHtml = (d.ingredients && d.ingredients.length)
       ? '<div style="font-size:13px;line-height:1.7;">' +
           d.ingredients.map(function (ri) {
-            const qty = (ri.qty != null && ri.qty !== '') ? ri.qty : '';
+            // v2.8.52 — Separator satırı
+            if (ri && ri.separator) {
+              const lbl = ri.label
+                ? '<div style="font-weight:700;color:var(--text-3);font-size:11px;text-transform:uppercase;letter-spacing:0.04em;margin:8px 0 2px;">' + PCD.escapeHtml(ri.label) + '</div>'
+                : '';
+              return '<div style="border-top:1px dashed var(--border);margin:6px 0;"></div>' + lbl;
+            }
+            const qty = (ri.qty != null && ri.qty !== '') ? ri.qty
+                       : (ri.amount != null && ri.amount !== '') ? ri.amount : '';
             const unit = ri.unit || '';
-            return '<div>• ' + PCD.escapeHtml(qty) + ' ' + PCD.escapeHtml(unit) + ' — ' + PCD.escapeHtml(ri.ingredientName || ri.name || '(?)') + '</div>';
+            return '<div>• ' + PCD.escapeHtml(String(qty)) + ' ' + PCD.escapeHtml(unit) + ' — ' + PCD.escapeHtml(ri.ingredientName || ri.name || '(?)') + '</div>';
           }).join('') +
         '</div>'
       : '<div class="text-muted text-sm">' + PCD.escapeHtml(t('discover_no_ingredients') || 'Malzeme listesi yok.') + '</div>';

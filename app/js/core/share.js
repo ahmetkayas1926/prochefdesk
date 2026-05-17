@@ -37,6 +37,11 @@
     PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
     // Embed ingredient names + units inline so public viewer doesn't need the user's library
     const ingredients = (r.ingredients || []).map(function (ri) {
+      // v2.8.52 — Separator satırı snapshot'a olduğu gibi geçer (renderer
+      // bunu ince dashed çizgi olarak gösterir).
+      if (ri && ri.separator) {
+        return { separator: true, label: ri.label || '' };
+      }
       const ing = ingMap[ri.ingredientId];
       return {
         name: ing ? ing.name : '?',
@@ -389,6 +394,12 @@
       if (p.ingredients && p.ingredients.length > 0) {
         html += '<div class="share-section"><h2>' + escapeHtml(t('share_ingredients', 'Ingredients')) + '</h2>';
         p.ingredients.forEach(function (ri) {
+          // v2.8.52 — Separator satırı: ince ayraç çizgisi + opsiyonel label
+          if (ri && ri.separator) {
+            const label = ri.label ? ('<span style="display:block;font-weight:600;color:#666;font-size:12px;text-transform:uppercase;letter-spacing:0.04em;margin:8px 0 2px;">' + escapeHtml(ri.label) + '</span>') : '';
+            html += '<div style="border-top:1px dashed #999;margin:6px 0;"></div>' + label;
+            return;
+          }
           html += '<div class="ing-row"><span>' + escapeHtml(ri.name) + '</span><strong>' + escapeHtml(formatAmt(ri.amount, ri.unit)) + '</strong></div>';
         });
         html += '</div>';

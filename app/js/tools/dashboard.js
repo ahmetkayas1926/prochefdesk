@@ -24,6 +24,8 @@
 
     let total = 0;
     recipe.ingredients.forEach(function (ri) {
+      // v2.8.52 — Separator satırları (görsel grup ayracı) cost'a girmez.
+      if (ri && ri.separator) return;
       const amt = Number(ri.amount) || 0;
       if (amt <= 0) return;
 
@@ -87,6 +89,9 @@
   // for ingredients it's pricePerUnit adjusted by yieldPercent.
   function resolveRow(ri, ingMap, recipeMap) {
     if (!ri) return null;
+    // v2.8.52 — Separator satırları cost/qty hesabına girmez; resolveRow
+    // çağıranların hepsi { found: false } kontrolüyle skip ediyor.
+    if (ri.separator) return { found: false, isSeparator: true, label: ri.label || '' };
     const amt = Number(ri.amount) || 0;
 
     if (ri.recipeId) {
@@ -166,6 +171,8 @@
       let hasNo = false;
       let hasUnknown = false;
       recipe.ingredients.forEach(function (ri) {
+        // v2.8.52 — Separator satırları diet hesabına girmez.
+        if (ri && ri.separator) return;
         const ing = ingMap[ri.ingredientId];
         if (!ing) { hasUnknown = true; return; }
         const v = ing.dietFlags ? ing.dietFlags[flag] : null;

@@ -1245,6 +1245,11 @@ window.PCD.i18n.register('en', {
   recipe_diet_hint: "Computed from the diet flags of the ingredients used. To change, edit the ingredient.",
   recipe_diet_no_ingredients: "Add ingredients to see diet compatibility.",
   recipe_diet_unknown_tooltip: "{n} ingredient(s) without diet info: {names}",
+  // v2.8.52 — Ingredient group separator (visual divider in ingredients list)
+  ing_add_separator: "+ Divider",
+  ing_add_separator_tip: "Add a visual divider between ingredient groups (e.g. \"Sauces\", \"Garnish\")",
+  ing_separator_label: "Group",
+  ing_separator_placeholder: "Optional group label (e.g. Sauces, Garnish)",
   allerg_manual: "Manual tagging",
   allerg_recipe_contains: "Contains",
   allerg_recipe_clean: "Allergen-free",

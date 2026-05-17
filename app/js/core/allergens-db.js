@@ -77,6 +77,8 @@
     }
 
     recipe.ingredients.forEach(function (ri) {
+      // v2.8.52 — Separator satırları allergen hesabına girmez.
+      if (ri && ri.separator) return;
       const ing = ingMap[ri.ingredientId];
       if (!ing) return;
       // v2.8.37 — Auto-detect kaldırıldı. Sadece kullanıcının manuel
