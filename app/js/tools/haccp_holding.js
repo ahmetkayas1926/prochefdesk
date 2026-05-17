@@ -486,7 +486,7 @@
       const c3Fail = r && isPass(r.holdType, r.check3Temp) === false;
       const typeMark = r ? (r.holdType === 'cold' ? '❄' : '🔥') : '';
 
-      html += '<tr style="height:22px;">' +
+      html += '<tr>' +
         '<td class="idx">' + (isMonthly ? (i + 1) : (i + 1)) + '</td>' +
         '<td class="type">' + typeMark + '</td>' +
         '<td class="food">' + (r ? PCD.escapeHtml(r.foodName || '') : '') + '</td>' +
@@ -510,28 +510,32 @@
     const targetHot = targetForUI(TARGET_HOT_C);
     const targetCold = targetForUI(TARGET_COLD_C);
     return '<style>' +
+      // v2.8.53 — Tek-sayfa optimize (Cook & Cool ile aynı yaklaşım):
+      // 31 satır A4 landscape'e sığsın. Margin 6→4mm, row height 22→14px,
+      // td font 9→8px, th 8→7px, paddings + line-height küçültüldü.
       'body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#000;margin:0;padding:0;}' +
-      '.h-head{margin-bottom:6px;border-bottom:2px solid #16a34a;padding-bottom:4px;display:flex;justify-content:space-between;align-items:flex-end;}' +
-      '.h-head h1{margin:0;font-size:14px;}' +
-      '.h-head .sub{font-size:10px;color:#555;margin-top:1px;}' +
-      '.h-head .right{font-size:10px;color:#555;text-align:end;}' +
-      'table.h-grid{width:100%;border-collapse:collapse;font-size:9px;table-layout:fixed;}' +
-      'table.h-grid th, table.h-grid td{border:1px solid #999;padding:3px 4px;vertical-align:middle;}' +
-      'table.h-grid th{background:#f3f4f6;font-weight:700;font-size:8px;text-align:center;text-transform:uppercase;letter-spacing:0.04em;}' +
+      '.h-head{margin-bottom:4px;border-bottom:1.5px solid #16a34a;padding-bottom:3px;display:flex;justify-content:space-between;align-items:flex-end;}' +
+      '.h-head h1{margin:0;font-size:12px;}' +
+      '.h-head .sub{font-size:9px;color:#555;margin-top:1px;}' +
+      '.h-head .right{font-size:9px;color:#555;text-align:end;}' +
+      'table.h-grid{width:100%;border-collapse:collapse;font-size:8px;table-layout:fixed;page-break-inside:avoid;}' +
+      'table.h-grid th, table.h-grid td{border:1px solid #999;padding:1px 3px;vertical-align:middle;line-height:1.2;}' +
+      'table.h-grid th{background:#f3f4f6;font-weight:700;font-size:7px;text-align:center;text-transform:uppercase;letter-spacing:0.03em;}' +
+      'table.h-grid tr{height:14px;page-break-inside:avoid;}' +
       'table.h-grid td.idx{text-align:center;width:3.5%;font-weight:700;color:#444;}' +
-      'table.h-grid td.type{text-align:center;width:4%;font-size:11px;}' +
+      'table.h-grid td.type{text-align:center;width:4%;font-size:10px;}' +
       'table.h-grid td.food{width:18%;font-weight:600;}' +
       'table.h-grid td.loc{width:12%;}' +
       'table.h-grid td.t{width:6.5%;text-align:center;font-weight:600;}' +
-      'table.h-grid td.h{width:6.5%;text-align:center;color:#666;font-size:8px;}' +
-      'table.h-grid td.corr{width:14%;font-size:8px;}' +
+      'table.h-grid td.h{width:6.5%;text-align:center;color:#666;font-size:7px;}' +
+      'table.h-grid td.corr{width:14%;font-size:7px;}' +
       'table.h-grid td.chef{width:8%;text-align:center;}' +
       'table.h-grid td.fail{background:#fee2e2;color:#991b1b;font-weight:700;}' +
-      '.h-foot{margin-top:6px;display:flex;justify-content:space-between;font-size:9px;}' +
+      '.h-foot{margin-top:4px;display:flex;justify-content:space-between;font-size:8px;}' +
       '.h-foot .legend{color:#666;}' +
-      '.h-brand{margin-top:4px;text-align:center;font-size:7px;color:#999;}' +
+      '.h-brand{margin-top:2px;text-align:center;font-size:6px;color:#999;}' +
       '.pcd-print-footer{display:none !important;}' +
-      '@page{size:A4 landscape;margin:6mm;}' +
+      '@page{size:A4 landscape;margin:4mm;}' +
     '</style>' +
     '<div class="h-head">' +
       '<div>' +

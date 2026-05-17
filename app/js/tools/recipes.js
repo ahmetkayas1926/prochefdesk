@@ -1558,8 +1558,10 @@
     copyToWsBtn.innerHTML = PCD.icon('truck', 16);
     const costReportBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: t('recipe_btn_cost_report') });
     costReportBtn.innerHTML = PCD.icon('activity', 16) + ' <span>' + PCD.i18n.t('btn_cost_report') + '</span>';
+    // v2.8.53 — Share buton text label eklendi (önce icon-only idi, kullanıcı
+    // butonu bulamadığını rapor etti; Cost Report ile aynı görsel ağırlıkta).
     const shareBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: t('btn_share') });
-    shareBtn.innerHTML = PCD.icon('share', 16);
+    shareBtn.innerHTML = PCD.icon('share', 16) + ' <span>' + PCD.escapeHtml(t('btn_share')) + '</span>';
     const qrBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: 'QR' });
     qrBtn.innerHTML = PCD.icon('grid', 16);
     const deleteBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: t('delete'), style: { color: 'var(--danger)' } });
