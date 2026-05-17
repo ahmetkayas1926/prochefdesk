@@ -8,7 +8,7 @@
 
 **Ürün:** ProChefDesk — profesyonel chef'ler için web tabanlı mutfak yönetim sistemi.
 **Operatör:** Ahmet Kaya, Perth Western Australia, profesyonel şef. Solo non-commercial proje.
-**Mevcut sürüm:** **v2.8.50** (push'a hazır local; production hâlâ v2.8.33'te — operatör push edince Cloudflare Pages otomatik deploy eder).
+**Mevcut sürüm:** **v2.8.55** (push'a hazır local; production v2.8.50 — operatör push edince Cloudflare Pages otomatik deploy eder).
 **Domain:** prochefdesk.com (Cloudflare Pages, SSL Full, GitHub push'ta auto build + deploy).
 
 **URL yapısı:**
@@ -133,6 +133,8 @@ Tek tek sürüm için → CHANGELOG.md.
 | 10 | Cloud sync invisible reliability (drift detection + auto-retry + ambient indicator) | v2.8.32-v2.8.33 | ✅ |
 | 11 | Backlog 1-6 + 8 + 9 + 10 sweep (debounce, restore compare, Cook&Cool aylık form, allergen auto-detect kaldır, 2 yeni HACCP form + cloud sync, i18n round 1+2, Discover Faz 1+2, dietFlags, Realtime JWT fix) | v2.8.34-v2.8.47 | ✅ |
 | 12 | Cross-browser tarama (backdrop-filter prefix, 100dvh fallback teyit) + delete-account false-error fix | v2.8.49-v2.8.50 | ✅ |
+| 13 | HACCP print tek-sayfa optimize (Cook & Cool + Hot/Cold Holding) + recipe preview share label + ingredient grup ayracı (separator, tam paket) | v2.8.51-v2.8.53 | ✅ |
+| 14 | Standart tıklanabilir footer (tüm print/share/QR tek format) + Kitchen Cards print preview uyum fix (window 900→1200px) | v2.8.54-v2.8.55 | ✅ |
 | Ops | Backup function v3 + restore prosedürü prod test | Edge deploy + docs | ✅ |
 | Ops | DISASTER_RECOVERY.md güncel | docs | ✅ |
 
@@ -227,7 +229,7 @@ Bu işleri spontan öneri olarak ortaya çıkarma:
 |---|---|
 | Repo path (operatör Windows) | `C:\Users\ahmet\Desktop\prochefdesk` |
 | GitHub repo | `ahmetkayas1926/prochefdesk` |
-| Production sürümü | **v2.8.50** (push'a hazır local; production hâlâ v2.8.33) |
+| Production sürümü | **v2.8.55** (push'a hazır local; production v2.8.50) |
 | Supabase project ref | `muuwhrcogikpqylsfvgg` (Tokyo, Postgres 17, Free tier) |
 | Cloudflare R2 bucket | `prochefdesk-backups` |
 | CLEANUP_SECRET | `ec79a445-7e92-499b-9322-5c2c949788d4d2886e66-d556-4498-ba9e-17fda6c11ac1` |
@@ -333,7 +335,17 @@ typeof r.isSubRecipe === 'boolean'
 
 Tüm prep/menu ayrımı bu helper'dan geçer (recipes.js, kitchen_cards.js, share.js, cost report render). Yield bilgisi (yieldAmount, yieldUnit) factual üretim miktarı; classification'dan ayrı.
 
-### 11.11 Çoklu kullanıcı / paid tier hazırlığı
+### 11.11.5 Print akışı standartları (v2.8.54-v2.8.55)
+
+`PCD.print(html, title)` (utils.js) tüm yazdırma akışlarının **tek noktası**. Önemli kurallar:
+
+- **Footer otomatik enjekte edilir.** Tüm caller'lar standart `<div class="pcd-print-footer">Made with <a>ProChefDesk</a> · <a>prochefdesk.com</a></div>` alır. Custom footer (örn. eski `.h-brand`) **YAZMA** — duplicate olur veya tutarsız görünür.
+- **`.pcd-print-footer{display:none}` override YASAK.** Eskiden HACCP dosyaları tek-sayfa optimizasyonu için bu hack'i kullanıyordu; v2.8.54'te footer margin'i 24→6px düşürüldüğü için artık tek-sayfa bozmuyor.
+- **Window boyutu 1200×850px** (utils.js'te sabit). Daha küçük yaparsan Kitchen Cards landscape A4 (≈1122px) body sizing'i taşırır, CSS multi-column hesaplaması bozulur, tek sütun stack olur.
+- **Caller HTML formatı:** PCD.print(html) full HTML (`<!DOCTYPE...`) veya partial content kabul eder. Partial verilirse wrapper + style + toolbar otomatik ekler. Full verilirse sadece footer enjekte edilir (body close öncesi).
+- **Print path'lerinde A4 zorlanan body sizing kuralları print-only @media içinde olmalı** veya body sizing'i window viewport'a göre seçmeli — aksi halde popup preview ile gerçek print farklı görünür.
+
+### 11.12 Çoklu kullanıcı / paid tier hazırlığı
 
 `subscriptions` tablosu DB'de hazır, kullanılmıyor. Operatör 50+ aktif kullanıcı + %40 retention kanıtlanana kadar paid tier eklemiyor.
 

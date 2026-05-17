@@ -8,7 +8,7 @@ ProChefDesk — profesyonel şef'ler için web tabanlı mutfak yönetim sistemi.
 
 Stack: Vanilla JavaScript (no bundling, no service worker), IndexedDB ana storage, Supabase (Postgres 17 + Auth + Storage + Realtime + Edge Functions), Cloudflare Pages (auto-deploy on GitHub push), Cloudflare R2 (backups).
 
-**Mevcut sürüm: v2.8.50** (push'a hazır local; production hâlâ v2.8.33 — push edilene kadar). Detay: `CHANGELOG.md`.
+**Mevcut sürüm: v2.8.55** (push'a hazır local; production v2.8.50 — push edilene kadar). Detay: `CHANGELOG.md`.
 
 ## Çalışma akışı
 
@@ -66,6 +66,10 @@ Geçmişte bug üreten yerler, bilmeden dokunma:
 **PCD.icon registry silent fallback.** `PCD.icon(name, size)` registry'de olmayan isim için **sessizce info ikonuna fallback** yapar (kırmızı yuvarlak içinde "i"). Lucide isimleri (`trash-2`, `rotate-ccw`) çalışmaz. Yeni ikon kullanmadan önce: `grep -n "<name>:" app/js/core/utils.js` ile registry'de olduğunu doğrula.
 
 **Per-table sync 3 yönlü.** Push (cloud-pertable.js, debounced, retry'lı), Pull (cloud.js, boot'ta tüm tablolar, drift detection v2.8.33'te eklendi), Realtime (cloud-realtime.js, WebSocket, v2.8.43'te JWT setAuth fix ile CHANNEL_ERROR temizlendi — TOKEN_REFRESHED dinleyici 1-saatlik token refresh sonrası re-setAuth yapıyor). Sync bug'ında ÖNCE hangi yön sor.
+
+**Print akışı tek nokta (v2.8.54-v2.8.55).** Tüm yazdırma `PCD.print(html, title)` (utils.js) üzerinden. Footer otomatik enjekte edilir (standart tıklanabilir "Made with ProChefDesk · prochefdesk.com"); custom footer YAZMA, `.pcd-print-footer{display:none}` override KOYMA. Window genişliği 1200px (Kitchen Cards landscape A4 1122px body sizing'e sığsın). Eski "first preview wrong, second correct" bug'ı bu boyutla kapandı. Detay HANDOVER §11.11.5.
+
+**Recipe ingredient separator (v2.8.52).** `data.ingredients` array'inde yeni satır tipi: `{ separator: true, label?: '' }`. Hesap path'leri (cost/diet/allergen/variance) `if (ri.separator) return;` skip etmeli. Display path'leri (editor/preview/kitchen card/share/PDF/discover) render etmeli — `dashboard.resolveRow` separator için `{ found: false, isSeparator: true }` döndürüyor, cost report ve XLSX detail otomatik atlar. Yeni `recipe.ingredients` üzerinde forEach yazarken iki path'ten birini seç.
 
 **RLS tüm 22 tabloda aktif.** Frontend `anon` key kullanıyor. Yeni tablo eklersen RLS policy şart:
 ```sql
