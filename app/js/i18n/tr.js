@@ -1250,6 +1250,9 @@ window.PCD.i18n.register('tr', {
   ing_add_separator_tip: "Malzeme grupları arasına görsel ayraç ekle (örn. \"Soslar\", \"Garnitür\")",
   ing_separator_label: "Grup",
   ing_separator_placeholder: "Opsiyonel grup etiketi (örn. Soslar, Garnitür)",
+  // v2.8.56 — Sürükle-bırak handle tooltips (recipe editor + menu builder)
+  ing_drag_handle: "Sıralamak için sürükle",
+  menu_drag_handle: "Sıralamak için sürükle",
   allerg_manual: "Manuel etiketleme",
   allerg_recipe_contains: "İçerir",
   allerg_recipe_clean: "Alerjen içermez",

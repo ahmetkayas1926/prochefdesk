@@ -189,20 +189,23 @@
       `;
 
       // Render sections
+      // v2.8.56 — Drag-drop ile section ve item sıralama. Up/down butonları
+      // ('pratik değil' operatör raporu) kaldırıldı; her satır başında
+      // 6-nokta grip handle ile basılı tutup sürükle/bırak.
+      // Section ve item handle'ları farklı CSS class'ları kullanır
+      // (.sec-drag-handle vs .item-drag-handle) — iki sortable çakışmasın.
       const secListEl = PCD.$('#sectionsList', body);
-      const totalSections = (data.sections || []).length;
+      const dragHandleSvg = '<svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>';
+      function makeDragHandle(extraCls) {
+        return '<button type="button" class="drag-handle ' + extraCls + '" aria-label="' + PCD.escapeHtml(t('menu_drag_handle')) + '" title="' + PCD.escapeHtml(t('menu_drag_handle')) + '" style="cursor:grab;background:transparent;border:0;padding:6px 4px;color:var(--text-3);touch-action:none;flex-shrink:0;">' + dragHandleSvg + '</button>';
+      }
+      const sectionDragHandleHtml = makeDragHandle('sec-drag-handle');
+      const itemDragHandleHtml = makeDragHandle('item-drag-handle');
       (data.sections || []).forEach(function (sec, sIdx) {
         const secEl = PCD.el('div', { class: 'card', 'data-sid': sec.id, style: { padding: '12px' } });
-        const isFirst = sIdx === 0;
-        const isLast = sIdx === totalSections - 1;
         secEl.innerHTML = `
           <div class="flex items-center gap-2 mb-2">
-            <button class="icon-btn" data-secup="${sIdx}" ${isFirst ? 'disabled style="opacity:0.3;"' : 'title="Move section up"'}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M18 15l-6-6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
-            <button class="icon-btn" data-secdown="${sIdx}" ${isLast ? 'disabled style="opacity:0.3;"' : 'title="Move section down"'}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
+            ${sectionDragHandleHtml}
             <input type="text" class="input" data-secname value="${PCD.escapeHtml(sec.name || '')}" placeholder="${PCD.i18n.t('menu_section_name')}" style="flex:1;font-weight:600;">
             <button class="icon-btn" data-secdel title="${PCD.i18n.t('delete')}">${PCD.icon('trash',18)}</button>
           </div>
@@ -222,8 +225,10 @@
             style: { display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 8px', background: 'var(--surface-2)', borderRadius: 'var(--r-sm)' }
           });
           // Manual items: editable name field. Recipe items: static name.
+          // v2.8.56 — Drag handle eklendi; aynı section içinde sıralama.
           if (isManual) {
             row.innerHTML = `
+              ${itemDragHandleHtml}
               <div style="flex:1;min-width:0;">
                 <input type="text" class="input" data-itemname="${sIdx}:${iIdx}" value="${PCD.escapeHtml(name)}" placeholder="${PCD.i18n.t('menu_item_name_ph') || 'Dish name'}" style="padding:4px 8px;min-height:26px;font-size:14px;font-weight:600;">
                 <input type="text" class="input" data-itemdesc="${sIdx}:${iIdx}" value="${PCD.escapeHtml(it.description || '')}" placeholder="${PCD.i18n.t('menu_item_desc_ph')}" style="padding:4px 8px;min-height:26px;font-size:12px;margin-top:4px;">
@@ -233,6 +238,7 @@
             `;
           } else {
             row.innerHTML = `
+              ${itemDragHandleHtml}
               <div style="flex:1;min-width:0;">
                 <div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${PCD.escapeHtml(name)}</div>
                 <input type="text" class="input" data-itemdesc="${sIdx}:${iIdx}" value="${PCD.escapeHtml(it.description || '')}" placeholder="${PCD.i18n.t('menu_item_desc_ph')}" style="padding:4px 8px;min-height:26px;font-size:12px;margin-top:4px;">
@@ -243,8 +249,37 @@
           }
           itemsEl.appendChild(row);
         });
+        // v2.8.56 — Section içi item drag-drop sortable (item handle'a göre)
+        if (PCD.dragdrop && PCD.dragdrop.makeSortable) {
+          PCD.dragdrop.makeSortable(itemsEl, {
+            handle: '.item-drag-handle',
+            onEnd: function (oldIndex, newIndex) {
+              if (oldIndex === newIndex) return;
+              if (!sec.items) return;
+              const moved = sec.items[oldIndex];
+              sec.items.splice(oldIndex, 1);
+              sec.items.splice(newIndex, 0, moved);
+              render();  // section reindex için tam render
+            }
+          });
+        }
         secListEl.appendChild(secEl);
       });
+
+      // v2.8.56 — Sections seviyesi drag-drop sortable (sadece section handle)
+      if (PCD.dragdrop && PCD.dragdrop.makeSortable) {
+        PCD.dragdrop.makeSortable(secListEl, {
+          handle: '.sec-drag-handle',
+          itemSelector: '[data-sid]',
+          onEnd: function (oldIndex, newIndex) {
+            if (oldIndex === newIndex) return;
+            const moved = data.sections[oldIndex];
+            data.sections.splice(oldIndex, 1);
+            data.sections.splice(newIndex, 0, moved);
+            render();
+          }
+        });
+      }
 
       wire();
     }

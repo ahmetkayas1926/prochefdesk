@@ -2386,19 +2386,16 @@
       }
       data.ingredients.forEach(function (ri, idx) {
         // v2.8.52 — Separator satırı (grup ayracı): editor'de dashed çizgi +
-        // opsiyonel label input + up/down/remove butonları. Cost'a girmez.
+        // opsiyonel label input + remove butonu. Cost'a girmez.
+        // v2.8.56 — Drag handle ile sürükle-bırak, up/down butonları kaldırıldı.
         if (ri && ri.separator) {
-          const _total = data.ingredients.length;
-          const _upDis = (idx === 0) ? 'disabled style="opacity:0.3;cursor:not-allowed;"' : '';
-          const _dnDis = (idx === _total - 1) ? 'disabled style="opacity:0.3;cursor:not-allowed;"' : '';
           const sepRow = PCD.el('div', { class: 'list-item', style: { minHeight: 'auto', padding: '8px 10px', background: 'var(--surface-2)', borderTop: '1px dashed var(--border)', borderBottom: '1px dashed var(--border)' } });
           sepRow.innerHTML =
+            '<button type="button" class="drag-handle" aria-label="' + PCD.escapeHtml(t('ing_drag_handle')) + '" title="' + PCD.escapeHtml(t('ing_drag_handle')) + '" style="cursor:grab;background:transparent;border:0;padding:6px 4px;color:var(--text-3);touch-action:none;flex-shrink:0;"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg></button>' +
             '<div class="list-item-body" style="display:flex;align-items:center;gap:8px;">' +
               '<span style="color:var(--text-3);font-size:11px;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;flex-shrink:0;">' + PCD.escapeHtml(t('ing_separator_label')) + '</span>' +
               '<input type="text" class="input" data-sep-label data-idx="' + idx + '" value="' + PCD.escapeHtml(ri.label || '') + '" placeholder="' + PCD.escapeHtml(t('ing_separator_placeholder')) + '" style="flex:1;padding:6px 8px;min-height:32px;font-size:13px;">' +
             '</div>' +
-            '<button type="button" class="icon-btn" data-moveup="' + idx + '" ' + _upDis + ' aria-label="Move up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 15l-6-6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
-            '<button type="button" class="icon-btn" data-movedown="' + idx + '" ' + _dnDis + ' aria-label="Move down"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
             '<button type="button" class="icon-btn" data-remove="' + idx + '" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/></svg></button>';
           ingListEl.appendChild(sepRow);
           return;
@@ -2447,14 +2444,13 @@
         const unitOptions = isSubRecipe
           ? ['portion','g','kg','ml','l','batch','tray','pcs']
           : ['g','kg','ml','l','tsp','tbsp','cup','oz','lb','pcs','each','bottle','bunch','unit'];
-        // v2.8.8 — Reorder buttons. Up disabled on first row, down on last.
-        // Disabled styling: 0.3 opacity + not-allowed cursor (icon-btn CSS
-        // doesn't define :disabled). The `disabled` attribute alone prevents
-        // click event firing, so handler defensive checks are belt-and-braces.
-        const _total = data.ingredients.length;
-        const _upDis = (idx === 0) ? 'disabled style="opacity:0.3;cursor:not-allowed;"' : '';
-        const _dnDis = (idx === _total - 1) ? 'disabled style="opacity:0.3;cursor:not-allowed;"' : '';
+        // v2.8.56 — Drag handle ile sürükle-bırak sıralama. v2.8.8'in
+        // up/down buton sistemi (data-moveup, data-movedown) operatör
+        // tarafından "pratik değil" raporlandı; kaldırıldı. Drag handle
+        // sol başta küçük 6-nokta grip ikon, basılı tutup sürükle/bırak.
+        // PCD.dragdrop.makeSortable (ui/dragdrop.js) touch + mouse destekli.
         row.innerHTML = `
+          <button type="button" class="drag-handle" aria-label="${PCD.escapeHtml(t('ing_drag_handle'))}" title="${PCD.escapeHtml(t('ing_drag_handle'))}" style="cursor:grab;background:transparent;border:0;padding:6px 4px;color:var(--text-3);touch-action:none;flex-shrink:0;align-self:center;"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg></button>
           <div class="list-item-body">
             <div class="list-item-title">${PCD.escapeHtml(name)}${subBadge}</div>
             <div class="list-item-meta">
@@ -2466,11 +2462,26 @@
               <span data-line-cost data-idx="${idx}" style="font-weight:600;">${PCD.fmtMoney(lineCost)}</span>
             </div>
           </div>
-          <button type="button" class="icon-btn" data-moveup="${idx}" ${_upDis} aria-label="Move up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 15l-6-6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-          <button type="button" class="icon-btn" data-movedown="${idx}" ${_dnDis} aria-label="Move down"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
           <button type="button" class="icon-btn" data-remove="${idx}" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/></svg></button>
         `;
         ingListEl.appendChild(row);
+      });
+
+      // v2.8.56 — Drag-drop sıralama activate. Her renderIngList sonrası
+      // destroy + recreate; container DOM aynı, child'lar değişiyor.
+      if (renderIngList._sortable && renderIngList._sortable.destroy) {
+        renderIngList._sortable.destroy();
+      }
+      renderIngList._sortable = PCD.dragdrop.makeSortable(ingListEl, {
+        handle: '.drag-handle',
+        onEnd: function (oldIndex, newIndex) {
+          if (oldIndex === newIndex) return;
+          const moved = data.ingredients[oldIndex];
+          data.ingredients.splice(oldIndex, 1);
+          data.ingredients.splice(newIndex, 0, moved);
+          renderIngList();
+          updateCostStripDOM();  // sıra değişiminin görsel cost akışına etkisi yok ama tutarlılık için
+        }
       });
     }
 

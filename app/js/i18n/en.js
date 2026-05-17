@@ -1250,6 +1250,9 @@ window.PCD.i18n.register('en', {
   ing_add_separator_tip: "Add a visual divider between ingredient groups (e.g. \"Sauces\", \"Garnish\")",
   ing_separator_label: "Group",
   ing_separator_placeholder: "Optional group label (e.g. Sauces, Garnish)",
+  // v2.8.56 — Drag handle tooltips (recipe editor + menu builder reorder)
+  ing_drag_handle: "Drag to reorder",
+  menu_drag_handle: "Drag to reorder",
   allerg_manual: "Manual tagging",
   allerg_recipe_contains: "Contains",
   allerg_recipe_clean: "Allergen-free",
