@@ -894,13 +894,18 @@
   function startSession(templateId) {
     const tpl = PCD.store.getFromTable('checklistTemplates', templateId);
     if (!tpl) return;
+    // v2.8.64 — completedBy o anki kullanıcı adıyla pre-fill (oturum
+    // başlangıcında). Kullanıcı isterse session sırasında değiştirebilir.
+    // Yerine "Unknown" çıkması engellendi; print'te user.name fallback'i
+    // zaten vardı ama session içinde alan boş kalıyordu.
+    const _user = PCD.store.get('user') || {};
     const session = {
       id: PCD.uid('s'),
       templateId: templateId,
       templateName: tpl.name,
       startedAt: new Date().toISOString(),
       completedAt: null,
-      completedBy: null,
+      completedBy: _user.name || _user.email || null,
       items: (tpl.items || []).map(function (it) {
         return {
           id: it.id,
@@ -908,6 +913,7 @@
           cat: it.cat,
           prio: it.prio,
           type: it.type || 'task',
+          hint: it.hint || '',  // v2.8.63
           min: it.min,
           max: it.max,
           unit: it.unit,
