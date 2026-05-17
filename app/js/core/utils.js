@@ -429,10 +429,17 @@
       '$&<div class="no-print"><button onclick="window.print()" style="padding:8px 18px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer">' + labelPrintSavePdf + '</button><button onclick="window.close()" style="padding:8px 14px;background:#f0f0f0;color:#333;border:none;border-radius:6px;font-size:13px;cursor:pointer">' + labelClose + '</button><span style="font-size:11px;color:#888">' + labelTip + '</span></div>'
     );
 
-    // Try popup (desktop / allowing browsers)
+    // Try popup (desktop / allowing browsers).
+    // v2.8.55 — Window genişliği 900 → 1200px. Kitchen Cards (A4 landscape
+    // = 297mm ≈ 1122px @96dpi) body sizing'i 900px window'a sığmıyor,
+    // CSS column-count viewport'a göre hesaplayamıyor → tüm kartlar tek
+    // sütuna düşüyor (operatör raporu: preview window 1 col, gerçek print
+    // dialog 5 col → uyumsuz). 1200px hem landscape A4'e sığıyor hem de
+    // portrait için fazlasıyla yeterli. Yükseklik 750 → 850 (toolbar +
+    // sayfa görüntüsü için biraz fazla yer).
     let w = null;
     try {
-      w = window.open('', '_blank', 'width=900,height=750,scrollbars=yes');
+      w = window.open('', '_blank', 'width=1200,height=850,scrollbars=yes');
       if (w && w.document && w.document.write) {
         w.document.write(printableHtml);
         w.document.close();
