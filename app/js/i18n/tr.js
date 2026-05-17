@@ -864,6 +864,10 @@ window.PCD.i18n.register('tr', {
   discover_chip_public: "Public",
   recipe_is_public_label: "Discover'da herkese açık paylaş",
   recipe_is_public_hint: "Bu tarif Discover keşfet akışında diğer şeflerin görmesi, beğenmesi ve öğrenmesi için yayınlanır. İstediğin zaman işareti kaldırıp geri çekebilirsin.",
+  // v2.8.58 — Discover paylaş toggle preview modal'a taşındı
+  recipe_is_public_privacy_note: "Sadece tarif adı, malzeme listesi (isim + miktar + birim) ve hazırlanış adımları paylaşılır. Fiyatların, tedarikçilerin, maliyet hesabın ve satış fiyatın ASLA paylaşılmaz. İstediğin zaman kapatıp Discover'dan kaldırabilirsin.",
+  toast_recipe_made_public: "Tarif Discover'da görünüyor",
+  toast_recipe_made_private: "Tarif Discover'dan kaldırıldı",
   // v2.8.46 — Discover Faz 2 backend aktif
   discover_subtitle_live: "Şefler arası tarif paylaşımı · En çok görüntülenenler",
   discover_refresh: "Yenile",

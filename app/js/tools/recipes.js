@@ -1548,6 +1548,19 @@
 
       ${r.plating ? `<div class="section-title mt-3 mb-2">${t('recipe_plating')}</div>
         <div style="white-space:pre-wrap;line-height:1.7;font-size:15px;color:var(--text-2);">${PCD.escapeHtml(r.plating)}</div>` : ''}
+
+      <!-- v2.8.58 — Discover paylaş toggle preview modal'a taşındı (editor'den).
+           Görsel ağırlık: tarif gövdesinden ayrı bir card, açıkça "ne paylaşılır"
+           sorusunu cevaplayan privacy notu altında. -->
+      <div style="margin-top:18px;padding:12px 14px;background:var(--surface-2);border-radius:var(--r-md);border:1px solid var(--border);">
+        <label class="checkbox" style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;margin:0;">
+          <input type="checkbox" id="previewIsPublic" ${r.isPublic ? 'checked' : ''} style="margin-top:2px;flex-shrink:0;accent-color:var(--brand-600);">
+          <span style="flex:1;">
+            <span style="font-weight:700;font-size:14px;color:var(--text-1);">🌍 ${t('recipe_is_public_label')}</span>
+            <div class="text-muted" style="font-size:12px;line-height:1.5;margin-top:4px;">${t('recipe_is_public_privacy_note')}</div>
+          </span>
+        </label>
+      </div>
     `;
 
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
@@ -1575,6 +1588,22 @@
     footer.appendChild(editBtn);
 
     const m = PCD.modal.open({ title: r.name, body: body, footer: footer, size: 'md', closable: true });
+
+    // v2.8.58 — isPublic toggle event handler. Anlık kaydeder (debounce yok —
+    // checkbox değişimi tek bir tıklama, gereksiz). Cloud-pertable queue
+    // mekanizması otomatik olarak yeni isPublic değerini push'lar.
+    const publicCb = body.querySelector('#previewIsPublic');
+    if (publicCb) {
+      publicCb.addEventListener('change', function () {
+        const fresh = PCD.store.getRecipe(rid);
+        if (!fresh) return;
+        fresh.isPublic = !!this.checked;
+        PCD.store.upsertRecipe(fresh);
+        PCD.toast.success(fresh.isPublic
+          ? (PCD.i18n.t('toast_recipe_made_public') || 'Tarif Discover\'da görünüyor')
+          : (PCD.i18n.t('toast_recipe_made_private') || 'Tarif Discover\'dan kaldırıldı'));
+      });
+    }
 
     copyToWsBtn.addEventListener('click', function () {
       if (PCD.openCopyToWorkspace) PCD.openCopyToWorkspace('recipes', rid, r.name);
@@ -2110,19 +2139,10 @@
           </label>
         </div>
 
-        <!-- v2.8.41 — Discover MVP: kullanıcı tarifini herkese açık paylaşmak istiyor mu?
-             Backend (anonymous SELECT, likes, views) henüz yok; bu round'da veri modeli +
-             UI toggle. recipe.data jsonb içinde sync edilir, mevcut cloud-pertable akışı
-             yeterli — yeni tablo veya RLS değişikliği yok. -->
-        <div class="field" style="margin-bottom:14px;">
-          <label class="checkbox" style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
-            <input type="checkbox" id="recipeIsPublic" ${data.isPublic ? 'checked' : ''} style="margin-top:2px;flex-shrink:0;">
-            <span>
-              <span style="font-weight:600;">${t('recipe_is_public_label')}</span>
-              <div class="text-muted" style="font-size:12px;line-height:1.4;margin-top:2px;">${t('recipe_is_public_hint')}</div>
-            </span>
-          </label>
-        </div>
+        <!-- v2.8.58 — Discover paylaş toggle preview modal'a taşındı (operatör
+             kararı: editor yaratma/düzenleme, preview okuma/paylaşma noktası;
+             ayrıca editor kalabalığı azalsın). isPublic değeri burada
+             tutuluyor (save'de mevcut değer korunur), preview'da değiştirilir. -->
 
         <div class="field-row" id="catServingsRow"${(PCD.recipes && PCD.recipes.isPrep && PCD.recipes.isPrep(data)) ? ' style="display:none;"' : ''}>
           <div class="field">
@@ -3010,9 +3030,8 @@
       // v2.8.26 — Explicit prep classification flag, independent of yield
       const isSubInp = PCD.$('#recipeIsSubRecipe', body);
       data.isSubRecipe = isSubInp ? !!isSubInp.checked : false;
-      // v2.8.41 — Discover MVP isPublic toggle
-      const isPublicInp = PCD.$('#recipeIsPublic', body);
-      data.isPublic = isPublicInp ? !!isPublicInp.checked : false;
+      // v2.8.58 — Discover paylaş toggle preview modal'a taşındı; data.isPublic
+      // mevcut değerinden korunur (data zaten PCD.clone(existing) ile başlıyor).
       data.salePrice = parseFloat(PCD.$('#recipeSalePrice', body).value) || null;
       data.steps = PCD.$('#recipeSteps', body).value;
       data.plating = PCD.$('#recipePlating', body).value;

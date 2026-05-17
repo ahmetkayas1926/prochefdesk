@@ -8,7 +8,7 @@
 
 **Ürün:** ProChefDesk — profesyonel chef'ler için web tabanlı mutfak yönetim sistemi.
 **Operatör:** Ahmet Kaya, Perth Western Australia, profesyonel şef. Solo non-commercial proje.
-**Mevcut sürüm:** **v2.8.57** (push'a hazır local; production v2.8.50 — operatör push edince Cloudflare Pages otomatik deploy eder).
+**Mevcut sürüm:** **v2.8.58** (push'a hazır local; production v2.8.50 — operatör push edince Cloudflare Pages otomatik deploy eder).
 **Domain:** prochefdesk.com (Cloudflare Pages, SSL Full, GitHub push'ta auto build + deploy).
 
 **URL yapısı:**
@@ -137,6 +137,7 @@ Tek tek sürüm için → CHANGELOG.md.
 | 14 | Standart tıklanabilir footer (tüm print/share/QR tek format) + Kitchen Cards print preview uyum fix (window 900→1200px) | v2.8.54-v2.8.55 | ✅ |
 | 15 | Drag-drop sıralama (recipe ingredients + menu sections/items): up/down butonları → 6-nokta grip handle, PCD.dragdrop.makeSortable activate | v2.8.56 | ✅ |
 | 16 | Kitchen Cards recipe arama: başlık altında anlık substring filter | v2.8.57 | ✅ |
+| 17 | Discover/Kitchen Card snapshot sub-recipe fix + isPublic toggle preview modal'a taşındı + privacy notu | v2.8.58 | ✅ |
 | Ops | Backup function v3 + restore prosedürü prod test | Edge deploy + docs | ✅ |
 | Ops | DISASTER_RECOVERY.md güncel | docs | ✅ |
 
@@ -231,7 +232,7 @@ Bu işleri spontan öneri olarak ortaya çıkarma:
 |---|---|
 | Repo path (operatör Windows) | `C:\Users\ahmet\Desktop\prochefdesk` |
 | GitHub repo | `ahmetkayas1926/prochefdesk` |
-| Production sürümü | **v2.8.57** (push'a hazır local; production v2.8.50) |
+| Production sürümü | **v2.8.58** (push'a hazır local; production v2.8.50) |
 | Supabase project ref | `muuwhrcogikpqylsfvgg` (Tokyo, Postgres 17, Free tier) |
 | Cloudflare R2 bucket | `prochefdesk-backups` |
 | CLEANUP_SECRET | `ec79a445-7e92-499b-9322-5c2c949788d4d2886e66-d556-4498-ba9e-17fda6c11ac1` |

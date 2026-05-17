@@ -1128,6 +1128,9 @@
     // Resolve each recipe in the layout, embedding ingredient details inline.
     const ingMap = {};
     PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
+    // v2.8.58 — Sub-recipe name resolve için recipeMap
+    const recipeMap = {};
+    PCD.store.listRecipes().forEach(function (rr) { recipeMap[rr.id] = rr; });
 
     const layoutResolved = (cvs.layout || []).map(function (item) {
       const r = item.recipeId ? PCD.store.getRecipe(item.recipeId) : null;
@@ -1136,6 +1139,16 @@
         // v2.8.52 — Separator satırı snapshot'a olduğu gibi geçer
         if (ri && ri.separator) {
           return { separator: true, label: ri.label || '' };
+        }
+        // v2.8.58 — Sub-recipe satırı: name'i recipeMap'ten al
+        // (share.js snapshotRecipe ile aynı pattern).
+        if (ri.recipeId) {
+          const sub = recipeMap[ri.recipeId];
+          return {
+            name: sub ? sub.name : '(sub-recipe)',
+            amount: ri.amount,
+            unit: ri.unit || (sub && sub.yieldUnit) || 'portion',
+          };
         }
         const ing = ingMap[ri.ingredientId];
         return {

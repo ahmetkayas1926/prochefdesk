@@ -864,6 +864,10 @@ window.PCD.i18n.register('en', {
   discover_chip_public: "Public",
   recipe_is_public_label: "Share publicly in Discover",
   recipe_is_public_hint: "This recipe will appear in the Discover feed for other chefs to see, like, and learn from. You can untick anytime to remove it.",
+  // v2.8.58 — Discover paylaş toggle preview modal'a taşındı
+  recipe_is_public_privacy_note: "Only the recipe name, ingredients list (names + amounts + units), and method steps are shared. Your prices, suppliers, cost calculation and sale price are NEVER shared. Untick anytime to remove.",
+  toast_recipe_made_public: "Recipe is now visible in Discover",
+  toast_recipe_made_private: "Recipe removed from Discover",
   // v2.8.46 — Discover Faz 2 backend live
   discover_subtitle_live: "Recipe sharing between chefs · Most viewed first",
   discover_refresh: "Refresh",

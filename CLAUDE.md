@@ -8,7 +8,7 @@ ProChefDesk — profesyonel şef'ler için web tabanlı mutfak yönetim sistemi.
 
 Stack: Vanilla JavaScript (no bundling, no service worker), IndexedDB ana storage, Supabase (Postgres 17 + Auth + Storage + Realtime + Edge Functions), Cloudflare Pages (auto-deploy on GitHub push), Cloudflare R2 (backups).
 
-**Mevcut sürüm: v2.8.57** (push'a hazır local; production v2.8.50 — push edilene kadar). Detay: `CHANGELOG.md`.
+**Mevcut sürüm: v2.8.58** (push'a hazır local; production v2.8.50 — push edilene kadar). Detay: `CHANGELOG.md`.
 
 ## Çalışma akışı
 

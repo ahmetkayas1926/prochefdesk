@@ -35,12 +35,32 @@
     if (!r) return null;
     const ingMap = {};
     PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
-    // Embed ingredient names + units inline so public viewer doesn't need the user's library
+    // v2.8.58 — Sub-recipe lookup. v2.8.41-v2.8.52'de snapshot sadece
+    // ingMap[ri.ingredientId] kontrolü yapıyordu; sub-recipe satırlarında
+    // ri.recipeId var (ingredientId yok) → ing=undefined → name='?'.
+    // Şimdi recipeMap'ten sub-recipe adı resolve ediliyor.
+    const recipeMap = {};
+    if (PCD.store.listRecipes) {
+      PCD.store.listRecipes().forEach(function (rr) { recipeMap[rr.id] = rr; });
+    }
+    // Embed ingredient names + units inline so public viewer doesn't need the user's library.
+    // FİYAT/COST KASTLI OLARAK DAHİL EDİLMİYOR — sadece isim + miktar + birim.
+    // pricePerUnit, supplier, yieldPercent vs. private kalır; Discover'da
+    // viewer sadece tarifin profil görüntüsünü alır.
     const ingredients = (r.ingredients || []).map(function (ri) {
       // v2.8.52 — Separator satırı snapshot'a olduğu gibi geçer (renderer
       // bunu ince dashed çizgi olarak gösterir).
       if (ri && ri.separator) {
         return { separator: true, label: ri.label || '' };
+      }
+      // v2.8.58 — Sub-recipe satırı: name'i recipeMap'ten al.
+      if (ri.recipeId) {
+        const sub = recipeMap[ri.recipeId];
+        return {
+          name: sub ? sub.name : '(sub-recipe)',
+          amount: ri.amount,
+          unit: ri.unit || (sub && sub.yieldUnit) || 'portion',
+        };
       }
       const ing = ingMap[ri.ingredientId];
       return {
