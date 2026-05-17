@@ -459,27 +459,34 @@
 
     let html =
       '<style>' +
+        // v2.8.51 — Tek-sayfa optimize: 31 satır A4 landscape'e sığsın.
+        // Önceki: 6mm margin + 22px row height + 9px font → 2 sayfa.
+        // Şimdi: 4mm margin + 14px row height + 8px font → 1 sayfa.
+        // Yazdırılan tablo yüksekliği ~115mm; A4 landscape 210mm × 297mm,
+        // 4mm margin × 2 = 202mm kullanılabilir → header + tablo + footer
+        // toplam ~150mm, geriye ~50mm rahat boşluk.
         'body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#000;margin:0;padding:0;}' +
-        '.h-head{margin-bottom:6px;border-bottom:2px solid #16a34a;padding-bottom:4px;display:flex;justify-content:space-between;align-items:flex-end;}' +
-        '.h-head h1{margin:0;font-size:14px;}' +
-        '.h-head .sub{font-size:10px;color:#555;margin-top:1px;}' +
-        '.h-head .right{font-size:10px;color:#555;text-align:end;}' +
-        'table.h-grid{width:100%;border-collapse:collapse;font-size:9px;table-layout:fixed;}' +
-        'table.h-grid th, table.h-grid td{border:1px solid #999;padding:3px 4px;vertical-align:middle;}' +
-        'table.h-grid th{background:#f3f4f6;font-weight:700;font-size:8px;text-align:center;text-transform:uppercase;letter-spacing:0.04em;}' +
+        '.h-head{margin-bottom:4px;border-bottom:1.5px solid #16a34a;padding-bottom:3px;display:flex;justify-content:space-between;align-items:flex-end;}' +
+        '.h-head h1{margin:0;font-size:12px;}' +
+        '.h-head .sub{font-size:9px;color:#555;margin-top:1px;}' +
+        '.h-head .right{font-size:9px;color:#555;text-align:end;}' +
+        'table.h-grid{width:100%;border-collapse:collapse;font-size:8px;table-layout:fixed;page-break-inside:avoid;}' +
+        'table.h-grid th, table.h-grid td{border:1px solid #999;padding:1px 3px;vertical-align:middle;line-height:1.2;}' +
+        'table.h-grid th{background:#f3f4f6;font-weight:700;font-size:7px;text-align:center;text-transform:uppercase;letter-spacing:0.03em;}' +
+        'table.h-grid tr{height:14px;page-break-inside:avoid;}' +
         'table.h-grid td.day{text-align:center;width:4%;font-weight:700;color:#444;}' +
         'table.h-grid td.food{width:21%;font-weight:600;}' +
         'table.h-grid td.qty{width:9%;text-align:center;}' +
         'table.h-grid td.t{width:6.5%;text-align:center;font-weight:600;}' +
-        'table.h-grid td.h{width:6.5%;text-align:center;color:#666;font-size:8px;}' +
-        'table.h-grid td.note{width:13%;font-size:8px;}' +
+        'table.h-grid td.h{width:6.5%;text-align:center;color:#666;font-size:7px;}' +
+        'table.h-grid td.note{width:13%;font-size:7px;}' +
         'table.h-grid td.chef{width:8%;text-align:center;}' +
         'table.h-grid td.fail{background:#fee2e2;color:#991b1b;font-weight:700;}' +
-        '.h-foot{margin-top:6px;display:flex;justify-content:space-between;font-size:9px;}' +
+        '.h-foot{margin-top:4px;display:flex;justify-content:space-between;font-size:8px;}' +
         '.h-foot .legend{color:#666;}' +
-        '.h-brand{margin-top:4px;text-align:center;font-size:7px;color:#999;}' +
+        '.h-brand{margin-top:2px;text-align:center;font-size:6px;color:#999;}' +
         '.pcd-print-footer{display:none !important;}' +
-        '@page{size:A4 landscape;margin:6mm;}' +
+        '@page{size:A4 landscape;margin:4mm;}' +
       '</style>' +
       '<div class="h-head">' +
         '<div>' +
@@ -521,7 +528,7 @@
       const cp2hFail = r && r.cp2hTemp != null && r.cp2hTemp > TARGET_2H_C;
       const endFail = r && r.endedTemp != null && r.endedTemp > TARGET_6H_C;
 
-      html += '<tr style="height:22px;">' +
+      html += '<tr>' +
         '<td class="day">' + dayLabel + '</td>' +
         '<td class="food">' + (r ? PCD.escapeHtml(r.foodName || '') : '') + '</td>' +
         '<td class="qty">' + (r && r.quantity ? PCD.escapeHtml(r.quantity) + (r.quantityUnit ? ' ' + PCD.escapeHtml(r.quantityUnit) : '') : '') + '</td>' +
