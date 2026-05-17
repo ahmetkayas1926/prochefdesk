@@ -1551,7 +1551,7 @@
     // The prep's yield (if set) is shown via the kitchen card label.
     const _isPrepForView = (PCD.recipes && PCD.recipes.isPrep) ? PCD.recipes.isPrep(r) : !!(r.yieldAmount && r.yieldUnit);
     body.innerHTML = `
-      ${r.photo ? `<img src="${PCD.escapeHtml(r.photo)}" loading="lazy" alt="" style="width:100%;height:220px;object-fit:cover;border-radius:var(--r-lg);margin-bottom:14px;">` : ''}
+      ${r.photo ? `<img src="${PCD.escapeHtml(r.photo)}" loading="lazy" alt="" style="display:block;width:100%;max-width:360px;aspect-ratio:1/1;object-fit:cover;border-radius:var(--r-lg);margin:0 auto 14px;">` : ''}
       <div class="flex flex-col gap-2 mb-3">
         <div class="flex gap-2" style="flex-wrap:wrap;">
           ${_isPrepForView ? '<span class="chip chip-brand" style="background:var(--brand-50);color:var(--brand-700);font-weight:700;letter-spacing:0.06em;">SUB-RECIPE</span>' : '<span class="chip chip-brand">' + t(r.category || 'cat_main') + '</span>'}
@@ -1904,7 +1904,7 @@
       }
       const html =
         '<div style="max-width:680px;margin:0 auto">' +
-        (r.photo ? '<img src="' + r.photo + '" style="width:100%;max-height:300px;object-fit:cover;border-radius:8px;margin-bottom:16px">' : '') +
+        (r.photo ? '<img src="' + r.photo + '" style="display:block;width:100%;max-width:360px;aspect-ratio:1/1;object-fit:cover;border-radius:8px;margin:0 auto 16px">' : '') +
         '<h1>' + PCD.escapeHtml(r.name) + '</h1>' +
         subtitleHtml +
         '<h3 style="margin-top:16px">' + tt('recipe_ingredients') + '</h3>' +
@@ -2140,7 +2140,7 @@
       body.innerHTML = `
         <div class="field">
           <label class="field-label">${t('recipe_photo')}</label>
-          <div id="photoZone" style="position:relative;width:100%;height:180px;border-radius:var(--r-lg);background:${data.photo ? 'url(' + data.photo + ') center/cover' : 'var(--surface-2)'};display:flex;align-items:center;justify-content:center;cursor:pointer;border:2px dashed ${data.photo ? 'transparent' : 'var(--border-strong)'};overflow:hidden;">
+          <div id="photoZone" style="position:relative;width:100%;max-width:280px;aspect-ratio:1/1;border-radius:var(--r-lg);background:${data.photo ? 'url(' + data.photo + ') center/cover' : 'var(--surface-2)'};display:flex;align-items:center;justify-content:center;cursor:pointer;border:2px dashed ${data.photo ? 'transparent' : 'var(--border-strong)'};overflow:hidden;">
             ${!data.photo ? '<div class="text-center text-muted"><div style="font-size:32px;margin-bottom:4px;">📷</div><div class="text-sm">' + t('recipe_photo_hint') + '</div></div>' : ''}
             ${data.photo ? '<button type="button" id="removePhoto" class="icon-btn" style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.6);color:white;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/></svg></button>' : ''}
           </div>

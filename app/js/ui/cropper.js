@@ -3,8 +3,10 @@
    Draggable, resizable image cropper. Works on mouse + touch.
    - 4 corner handles to resize
    - Center drag to move frame
-   - Ratio presets (Free, 1:1, 4:3, 3:2, 16:9)
-   - Rotate 90°
+   - v2.8.67 — Locked to 1:1 (square). Free/4:3/3:2/16:9 removed because
+     8 display surfaces (editor, list, preview, print, share, QR, Discover
+     grid + detail) are all 1:1 cover. Single canonical crop = predictable
+     output everywhere. Rotate 90° still available.
    - Exports cropped image as dataURL (JPEG, max 1200px wide)
 
    Usage:
@@ -15,12 +17,10 @@
   'use strict';
   const PCD = window.PCD;
 
+  // v2.8.67 — Only 1:1. Other ratios removed to eliminate display
+  // inconsistency across the 8 surfaces that show recipe photos.
   const RATIOS = [
-    { key: 'cropper_ratio_free', ratio: null },
     { key: 'cropper_ratio_square', ratio: 1 },
-    { key: 'cropper_ratio_4_3', ratio: 4/3 },
-    { key: 'cropper_ratio_3_2', ratio: 3/2 },
-    { key: 'cropper_ratio_16_9', ratio: 16/9 },
   ];
 
   function open(imageSrc) {
@@ -39,7 +39,7 @@
         imgOffsetY: 0,
         rotation: 0,   // 0, 90, 180, 270
         crop: { x: 0, y: 0, w: 0, h: 0 }, // in stage coords
-        ratio: null,
+        ratio: 1, // v2.8.67 — 1:1 locked
       };
 
       const stage = PCD.el('div', { class: 'cropper-stage' });

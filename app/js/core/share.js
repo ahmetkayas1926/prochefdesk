@@ -366,7 +366,9 @@
       '.share-topbrand a:hover { text-decoration:underline; }' +
       '.share-content h1 { font-size:28px;margin:0 0 8px; }' +
       '.share-meta { color:#666;font-size:14px;margin-bottom:18px; }' +
-      '.share-photo { width:100%;max-height:400px;object-fit:cover;border-radius:12px;margin-bottom:18px; }' +
+      /* v2.8.67 — 1:1 standartı (8 surface tutarlı). max-w 360px masaüstünde,
+         mobilde 100% width sığar ama yine kare. */
+      '.share-photo { display:block;width:100%;max-width:360px;aspect-ratio:1/1;object-fit:cover;border-radius:12px;margin:0 auto 18px; }' +
       '.share-section { margin-bottom:22px; }' +
       '.share-section h2 { font-size:16px;color:#16a34a;margin:0 0 10px;text-transform:uppercase;letter-spacing:0.04em; }' +
       '.ing-row { display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #eee;font-size:14px; }' +

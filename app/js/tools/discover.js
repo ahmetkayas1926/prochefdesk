@@ -351,7 +351,7 @@
       : '<div class="text-muted text-sm">' + PCD.escapeHtml(t('discover_no_steps') || 'Hazırlanış yazılmamış.') + '</div>';
 
     body.innerHTML =
-      (d.photo ? '<div style="aspect-ratio:16/9;width:100%;background:url(' + d.photo + ') center/cover;border-radius:var(--r-md);margin-bottom:12px;"></div>' : '') +
+      (d.photo ? '<div style="aspect-ratio:1/1;width:100%;max-width:360px;background:url(' + d.photo + ') center/cover;border-radius:var(--r-md);margin:0 auto 12px;"></div>' : '') +
       '<div style="display:flex;gap:14px;margin-bottom:14px;font-size:12px;color:var(--text-3);">' +
         '<span>👁 ' + (recipe.view_count || 0) + '</span>' +
         '<span>❤ ' + (recipe.like_count || 0) + '</span>' +
