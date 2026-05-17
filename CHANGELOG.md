@@ -1,8 +1,10 @@
 # ProChefDesk — Sürüm geçmişi
 
-Mevcut sürüm: **v2.8.55**
+Mevcut sürüm: **v2.8.56**
 
 Yapısal kilometre taşları (kronolojik tersine):
+
+* **v2.8.56** — Drag-drop sıralama: recipe ingredients + menu sections/items. Operatör isteği: up/down ok butonları pratik değil, basılı tut + sürükle/bırak modern UX. `PCD.dragdrop.makeSortable()` (`ui/dragdrop.js`) helper'ı v2.6.x'ten beri repoda hazırdı ama hiçbir yerde aktif değildi — şimdi recipe editor + menu builder'da devreye girdi. (1) Recipe editor `renderIngList`: her satır (ingredient + sub-recipe + separator) başına 6-nokta grip handle (inline SVG, `cursor:grab`, `touch-action:none`); eski `data-moveup`/`data-movedown` butonları kaldırıldı. `renderIngList` sonunda `PCD.dragdrop.makeSortable(ingListEl, {handle:'.drag-handle', onEnd:reorder})`; destroy/recreate her render'da. (2) Menu builder render: section row başına `.sec-drag-handle` + item row başına `.item-drag-handle` (CSS class ayrımı iki sortable arasında çakışmasın diye — outer section sortable `handle:'.sec-drag-handle'`, inner items sortable `handle:'.item-drag-handle'`). 2 yeni sortable: section list (`itemSelector: '[data-sid]'`) + her section'ın items list. Touch destek mevcut `dragdrop.js`'te (mousedown + touchstart, haptic feedback). 2 yeni i18n key (TR+EN: `ing_drag_handle` + `menu_drag_handle`).
 
 * **v2.8.55** — `PCD.print()` window genişliği 900 → 1200px (Kitchen Cards preview uyum fix). Operatör raporu: live canvas (5 col) → PCD.print preview window (1 col, kartlar dikey stack) → Chrome print dialog (5 col küçük). 1. ile 3. eşleşiyor ama 2. yanlış. Root cause: window.open boyutu 900×750px açılıyordu; Kitchen Cards body sizing 297mm × 210mm (A4 landscape ≈ 1122×794px @96dpi); 900px window'a sığmıyor → body taşıyor → CSS `column-count: 5` viewport'a göre hesaplayamıyor → fallback tek sütun stack. Chrome print dialog A4 viewport'unda hesaplayınca multi-column doğru oluyor. Fix: window genişliği 900→1200px (landscape A4 + biraz pay), yükseklik 750→850. Tüm print path'lerinde (15 yer) preview window ile gerçek print artık tutarlı. Portrait A4 zaten 210mm ≈ 794px, eski 900px window'da çalışıyordu — yeni boyut hem landscape hem portrait için yeterli.
 
