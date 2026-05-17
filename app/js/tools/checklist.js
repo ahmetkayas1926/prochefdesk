@@ -752,55 +752,66 @@
       const type = it.type || 'task';
 
       let valueCol;
-      if (type === 'task') valueCol = '<span style="display:inline-block;width:18px;height:18px;border:2px solid #999;border-radius:3px;"></span>';
-      else if (type === 'temperature' || type === 'numeric') valueCol = '<span style="display:inline-block;border-bottom:1px solid #999;min-width:80px;height:18px;"></span> ' + (it.unit || '') +
-        ((it.min !== undefined || it.max !== undefined) ? '<div style="font-size:8pt;color:#999;margin-top:2px;">Target ' + (it.min !== undefined ? it.min : '?') + '–' + (it.max !== undefined ? it.max : '?') + '</div>' : '');
-      else if (type === 'pass-fail') valueCol = '<span style="font-size:9pt;">PASS &nbsp;<span style="display:inline-block;width:14px;height:14px;border:1.5px solid #999;border-radius:3px;vertical-align:middle;"></span> &nbsp;FAIL &nbsp;<span style="display:inline-block;width:14px;height:14px;border:1.5px solid #999;border-radius:3px;vertical-align:middle;"></span> &nbsp;N/A &nbsp;<span style="display:inline-block;width:14px;height:14px;border:1.5px solid #999;border-radius:3px;vertical-align:middle;"></span></span>';
-      else valueCol = '<span style="display:inline-block;border-bottom:1px solid #999;min-width:200px;height:18px;"></span>';
+      if (type === 'task') valueCol = '<span style="display:inline-block;width:14px;height:14px;border:1.5px solid #999;border-radius:2px;"></span>';
+      else if (type === 'temperature' || type === 'numeric') valueCol = '<span style="display:inline-block;border-bottom:1px solid #999;min-width:60px;height:14px;"></span> ' + (it.unit || '') +
+        ((it.min !== undefined || it.max !== undefined) ? '<span style="font-size:7pt;color:#999;margin-inline-start:6px;">Target ' + (it.min !== undefined ? it.min : '?') + '–' + (it.max !== undefined ? it.max : '?') + '</span>' : '');
+      else if (type === 'pass-fail') valueCol = '<span style="font-size:8pt;">P <span style="display:inline-block;width:11px;height:11px;border:1px solid #999;border-radius:2px;vertical-align:middle;"></span> F <span style="display:inline-block;width:11px;height:11px;border:1px solid #999;border-radius:2px;vertical-align:middle;"></span> N/A <span style="display:inline-block;width:11px;height:11px;border:1px solid #999;border-radius:2px;vertical-align:middle;"></span></span>';
+      else valueCol = '<span style="display:inline-block;border-bottom:1px solid #999;min-width:160px;height:14px;"></span>';
 
       rowsHtml +=
         '<tr>' +
-          '<td style="padding:10px 8px;border-bottom:1px solid #e5e5e5;width:30px;font-weight:700;color:#999;font-size:9pt;">' + (idx + 1) + '</td>' +
-          '<td style="padding:10px 8px;border-bottom:1px solid #e5e5e5;">' +
-            '<div style="font-weight:600;font-size:11pt;">' + PCD.escapeHtml(it.text) + '</div>' +
-            (cat ? '<div style="font-size:8pt;color:' + cat.color + ';font-weight:700;text-transform:uppercase;letter-spacing:0.04em;margin-top:2px;">' + catLabel(cat) + '</div>' : '') +
+          '<td style="padding:3px 6px;border-bottom:1px solid #e5e5e5;width:22px;font-weight:700;color:#999;font-size:8pt;">' + (idx + 1) + '</td>' +
+          '<td style="padding:3px 6px;border-bottom:1px solid #e5e5e5;">' +
+            '<span style="font-weight:600;font-size:9.5pt;">' + PCD.escapeHtml(it.text) + '</span>' +
+            (cat ? ' <span style="font-size:7pt;color:' + cat.color + ';font-weight:700;text-transform:uppercase;letter-spacing:0.03em;margin-inline-start:4px;">' + catLabel(cat) + '</span>' : '') +
           '</td>' +
-          '<td style="padding:10px 8px;border-bottom:1px solid #e5e5e5;text-align:center;width:200px;">' + valueCol + '</td>' +
-          '<td style="padding:10px 8px;border-bottom:1px solid #e5e5e5;width:80px;font-size:9pt;color:#999;text-align:center;">__:__</td>' +
+          '<td style="padding:3px 6px;border-bottom:1px solid #e5e5e5;text-align:center;width:155px;font-size:8.5pt;">' + valueCol + '</td>' +
+          '<td style="padding:3px 6px;border-bottom:1px solid #e5e5e5;width:50px;font-size:8pt;color:#999;text-align:center;">__:__</td>' +
         '</tr>';
     });
 
+    // v2.8.59 — Print kompaktlaştırma: 12+ item için tek sayfa.
+    // Önceki: @page margin 15mm + h1 22pt + row padding 10px + signoff 30px
+    // → 12 item rahatlıkla 2 sayfa. Şimdi: margin 8mm, h1 14pt, kategori
+    // ve item adı tek satırda (yan yana), row padding 3px, signoff inline
+    // single-line. ~24 item'a kadar tek sayfa hedeflenir.
     const html =
       '<style>' +
-        '@page { size: A4; margin: 15mm; }' +
-        'body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; color: #1a1a1a; }' +
-        '.h-row { border-bottom: 3px solid #16a34a; padding-bottom: 10px; margin-bottom: 16px; }' +
-        '.h-row h1 { margin: 0; font-size: 22pt; color: #16a34a; }' +
-        '.h-meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 12px 0 18px; padding: 12px; background: #f8f8f8; border-radius: 6px; }' +
-        '.h-meta-item .lbl { color: #888; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; font-size: 8pt; }' +
-        '.h-meta-item .val { font-size: 11pt; font-weight: 600; }' +
-        'table { width: 100%; border-collapse: collapse; font-size: 10pt; }' +
-        'thead th { background: #f1f1f1; padding: 8px; text-align: left; font-size: 9pt; text-transform: uppercase; letter-spacing: 0.04em; color: #555; }' +
-        '.h-signoff { margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; font-size: 10pt; }' +
-        '.h-signoff .sig-line { border-bottom: 1px solid #888; padding-bottom: 30px; margin-bottom: 4px; }' +
-        '.h-signoff .sig-label { font-size: 8pt; color: #888; text-transform: uppercase; letter-spacing: 0.04em; }' +
+        '@page { size: A4; margin: 8mm; }' +
+        'body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; color: #1a1a1a; margin: 0; }' +
+        '.h-row { border-bottom: 2px solid #16a34a; padding-bottom: 4px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: flex-end; }' +
+        '.h-row h1 { margin: 0; font-size: 14pt; color: #16a34a; }' +
+        '.h-row .sub { color: #666; font-size: 9pt; }' +
+        '.h-meta { display: flex; gap: 14px; margin: 6px 0 8px; padding: 6px 10px; background: #f7f7f7; border-radius: 4px; align-items: center; }' +
+        '.h-meta-item { display: flex; align-items: baseline; gap: 6px; flex: 1; }' +
+        '.h-meta-item .lbl { color: #888; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; font-size: 7pt; flex-shrink: 0; }' +
+        '.h-meta-item .val { font-size: 9pt; font-weight: 600; border-bottom: 1px solid #ccc; flex: 1; padding-bottom: 1px; min-height: 12px; }' +
+        'table { width: 100%; border-collapse: collapse; font-size: 9pt; page-break-inside: auto; }' +
+        'thead th { background: #f1f1f1; padding: 4px 6px; text-align: left; font-size: 7pt; text-transform: uppercase; letter-spacing: 0.03em; color: #555; }' +
+        'tr { page-break-inside: avoid; }' +
+        '.h-signoff { margin-top: 8px; padding-top: 6px; border-top: 1px solid #ddd; display: flex; justify-content: space-between; gap: 20px; font-size: 8pt; color: #666; }' +
+        '.h-signoff .sig-block { flex: 1; display: flex; align-items: baseline; gap: 6px; }' +
+        '.h-signoff .sig-label { text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; flex-shrink: 0; }' +
+        '.h-signoff .sig-line { flex: 1; border-bottom: 1px solid #888; min-height: 14px; }' +
       '</style>' +
       '<div class="h-row">' +
-        '<h1>' + PCD.escapeHtml(tpl.name) + '</h1>' +
-        '<div style="color:#666;font-size:11pt;margin-top:4px;">Blank checklist · ' + items.length + ' items</div>' +
+        '<div>' +
+          '<h1>' + PCD.escapeHtml(tpl.name) + '</h1>' +
+          '<div class="sub">Blank checklist · ' + items.length + ' items</div>' +
+        '</div>' +
       '</div>' +
       '<div class="h-meta">' +
-        '<div class="h-meta-item"><div class="lbl">Date</div><div class="val">__/__/____</div></div>' +
-        '<div class="h-meta-item"><div class="lbl">Shift / Time</div><div class="val">______</div></div>' +
-        '<div class="h-meta-item"><div class="lbl">Performed by</div><div class="val">______</div></div>' +
+        '<div class="h-meta-item"><span class="lbl">Date</span><span class="val">&nbsp;</span></div>' +
+        '<div class="h-meta-item"><span class="lbl">Shift</span><span class="val">&nbsp;</span></div>' +
+        '<div class="h-meta-item"><span class="lbl">By</span><span class="val">&nbsp;</span></div>' +
       '</div>' +
       '<table>' +
-        '<thead><tr><th style="width:30px;">#</th><th>Item</th><th style="text-align:center;width:200px;">Result / Value</th><th style="width:80px;text-align:center;">Time</th></tr></thead>' +
+        '<thead><tr><th style="width:22px;">#</th><th>Item</th><th style="text-align:center;width:155px;">Result / Value</th><th style="width:50px;text-align:center;">Time</th></tr></thead>' +
         '<tbody>' + rowsHtml + '</tbody>' +
       '</table>' +
       '<div class="h-signoff">' +
-        '<div><div class="sig-line">&nbsp;</div><div class="sig-label">Performed by</div></div>' +
-        '<div><div class="sig-line">&nbsp;</div><div class="sig-label">Verified by (signature & date)</div></div>' +
+        '<div class="sig-block"><span class="sig-label">Performed by</span><span class="sig-line">&nbsp;</span></div>' +
+        '<div class="sig-block"><span class="sig-label">Verified by</span><span class="sig-line">&nbsp;</span></div>' +
       '</div>';
 
     PCD.print(html, tpl.name + ' — blank');
@@ -1648,8 +1659,12 @@
           style: { padding: '10px', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', background: 'var(--surface-2)' }
         });
         const type = it.type || 'task';
+        // v2.8.59 — Drag handle eklendi. Checklist item editor'de eskiden
+        // sıralama imkânı yoktu (up/down buton bile yok, sadece sil).
+        // Şimdi her row başında 6-nokta grip handle ile sürükle-bırak.
         row.innerHTML = `
           <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
+            <button type="button" class="drag-handle" aria-label="${PCD.escapeHtml(PCD.i18n.t('ing_drag_handle'))}" title="${PCD.escapeHtml(PCD.i18n.t('ing_drag_handle'))}" style="cursor:grab;background:transparent;border:0;padding:4px 2px;color:var(--text-3);touch-action:none;flex-shrink:0;"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg></button>
             <div style="color:var(--text-3);font-size:12px;width:24px;text-align:right;font-weight:700;">${idx + 1}.</div>
             <input type="text" class="input" data-itemtext="${idx}" value="${PCD.escapeHtml(it.text || '')}" placeholder="${PCD.escapeHtml(PCD.i18n.t('chk_item_description'))}" style="flex:1;font-weight:500;">
             <button class="icon-btn" data-itemdel="${idx}">${PCD.icon('x',16)}</button>
@@ -1675,6 +1690,24 @@
         `;
         itemsListEl.appendChild(row);
       });
+
+      // v2.8.59 — Drag-drop ile item sıralama. Her renderEditor sonrası
+      // destroy + recreate (DOM rebuild ediliyor).
+      if (PCD.dragdrop && PCD.dragdrop.makeSortable) {
+        if (renderEditor._sortable && renderEditor._sortable.destroy) {
+          renderEditor._sortable.destroy();
+        }
+        renderEditor._sortable = PCD.dragdrop.makeSortable(itemsListEl, {
+          handle: '.drag-handle',
+          onEnd: function (oldIndex, newIndex) {
+            if (oldIndex === newIndex) return;
+            const moved = data.items[oldIndex];
+            data.items.splice(oldIndex, 1);
+            data.items.splice(newIndex, 0, moved);
+            renderEditor();
+          }
+        });
+      }
 
       PCD.$('#tplName', body).addEventListener('input', function () { data.name = this.value; });
       PCD.$('#addItemBtn', body).addEventListener('click', function () {
