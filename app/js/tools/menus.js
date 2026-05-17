@@ -1,16 +1,142 @@
 /* ================================================================
    ProChefDesk — menus.js
-   Menu Builder:
+   Menu Builder (v2.8.68 / v2.8.69 — full builder):
+   - 4 themes (fine-dining, modern bistro, cafe, minimalist)
+   - 6 accent colour overrides
+   - Logo + optional cover photo (1:1, v2.8.67 cropper)
+   - 1-column or 2-column layout
+   - Page size: A4 / A5 / US Letter / Landscape A4
    - Multiple sections (Appetizer, Main, Dessert, etc.)
-   - Drag-to-reorder sections and items
-   - Per-item description + price override
-   - A4 elegant print preview
+   - Drag-to-reorder sections + items
+   - Per-item: description, price override, dietary auto-badge,
+     special badge (chef pick / signature / new / spicy)
+   - Quick-insert legal notices (VAT, service, allergen disclaimer)
+   - Duplicate menu from list (variant workflow)
    - Revenue + avg margin stats
+   - Print + share link + QR
    ================================================================ */
 
 (function () {
   'use strict';
   const PCD = window.PCD;
+
+  // v2.8.68 — 4 hazır tema. Her tema font + accent + section divider
+  // stilini belirler. Şef tema seçtikten sonra accent color'ı override
+  // edebilir (PALETTES). Print/preview build sırasında bu config okunur.
+  const THEMES = {
+    fine_dining: {
+      labelKey: 'menu_theme_fine_dining',
+      titleFont: '"Cormorant Garamond", Georgia, serif',
+      bodyFont: '"Inter", -apple-system, BlinkMacSystemFont, sans-serif',
+      bodyWeight: 300,
+      titleWeight: 500,
+      itemWeight: 600,
+      accent: '#c5a572',           // gold default
+      bg: '#ffffff',
+      ink: '#111111',
+      mutedInk: '#666666',
+      sectionTransform: 'uppercase',
+      sectionLetterSpacing: '0.18em',
+      sectionDecor: 'lines',       // small accent lines flanking section title
+      titleLetterSpacing: '0.02em',
+    },
+    modern_bistro: {
+      labelKey: 'menu_theme_modern_bistro',
+      titleFont: '"Playfair Display", Georgia, serif',
+      bodyFont: '"Inter", -apple-system, sans-serif',
+      bodyWeight: 400,
+      titleWeight: 700,
+      itemWeight: 700,
+      accent: '#c2410c',           // burnt orange
+      bg: '#fffaf5',
+      ink: '#1a1a1a',
+      mutedInk: '#7a6b5d',
+      sectionTransform: 'none',
+      sectionLetterSpacing: '0',
+      sectionDecor: 'underline',
+      titleLetterSpacing: '-0.01em',
+    },
+    cafe: {
+      labelKey: 'menu_theme_cafe',
+      titleFont: '"Caveat", "Brush Script MT", cursive',
+      bodyFont: '"Nunito", -apple-system, sans-serif',
+      bodyWeight: 400,
+      titleWeight: 700,
+      itemWeight: 700,
+      accent: '#b45309',           // warm amber
+      bg: '#fdf6e3',
+      ink: '#3a2e1f',
+      mutedInk: '#8a7355',
+      sectionTransform: 'none',
+      sectionLetterSpacing: '0',
+      sectionDecor: 'wavy',
+      titleLetterSpacing: '0',
+    },
+    minimalist: {
+      labelKey: 'menu_theme_minimalist',
+      titleFont: '"Inter", -apple-system, sans-serif',
+      bodyFont: '"Inter", -apple-system, sans-serif',
+      bodyWeight: 400,
+      titleWeight: 800,
+      itemWeight: 600,
+      accent: '#111111',           // black
+      bg: '#ffffff',
+      ink: '#0a0a0a',
+      mutedInk: '#666666',
+      sectionTransform: 'uppercase',
+      sectionLetterSpacing: '0.16em',
+      sectionDecor: 'none',
+      titleLetterSpacing: '-0.02em',
+    },
+  };
+
+  // 6 hazır renk — tema accent'ini override eder. Şef boş bırakırsa
+  // (data.accentColor undefined) tema default accent'i kullanılır.
+  const PALETTES = [
+    { id: 'gold',    label: 'Gold',     color: '#c5a572' },
+    { id: 'burgundy',label: 'Burgundy', color: '#8b1a1a' },
+    { id: 'navy',    label: 'Navy',     color: '#1e3a5f' },
+    { id: 'forest',  label: 'Forest',   color: '#2d5016' },
+    { id: 'black',   label: 'Black',    color: '#111111' },
+    { id: 'choco',   label: 'Chocolate',color: '#5c2c0f' },
+  ];
+
+  // Per-item special badges. Yok / chef_pick / signature / new / spicy.
+  // Print'te item adının yanında küçük renkli chip.
+  const ITEM_BADGES = [
+    { id: '',           labelKey: 'menu_badge_none',      icon: '',  color: '' },
+    { id: 'chef_pick',  labelKey: 'menu_badge_chef_pick', icon: '★', color: '#c5a572' },
+    { id: 'signature',  labelKey: 'menu_badge_signature', icon: '✦', color: '#8b1a1a' },
+    { id: 'new',        labelKey: 'menu_badge_new',       icon: '◆', color: '#2d5016' },
+    { id: 'spicy',      labelKey: 'menu_badge_spicy',     icon: '🌶', color: '#c2410c' },
+  ];
+
+  // v2.8.69 — Sayfa boyutu seçenekleri.
+  const PAGE_SIZES = [
+    { id: 'a4',        labelKey: 'menu_page_a4',        cssSize: 'A4',           orientation: 'portrait'  },
+    { id: 'a5',        labelKey: 'menu_page_a5',        cssSize: 'A5',           orientation: 'portrait'  },
+    { id: 'us_letter', labelKey: 'menu_page_us_letter', cssSize: 'letter',       orientation: 'portrait'  },
+    { id: 'a4_land',   labelKey: 'menu_page_a4_land',   cssSize: 'A4 landscape', orientation: 'landscape' },
+  ];
+
+  // Quick-insert legal note templates. Footer'a tek tıkla eklenir.
+  function getLegalTemplates() {
+    const t = PCD.i18n.t;
+    return [
+      { id: 'vat',      label: t('menu_legal_vat')      || 'Prices include VAT',         text: t('menu_legal_vat_text')      || 'All prices include VAT.' },
+      { id: 'service',  label: t('menu_legal_service')  || '10% service charge',         text: t('menu_legal_service_text')  || '10% service charge added to all bills.' },
+      { id: 'allergen', label: t('menu_legal_allergen') || 'Allergen disclaimer',        text: t('menu_legal_allergen_text') || 'Please inform staff of any allergies before ordering.' },
+    ];
+  }
+
+  function resolveAccent(menu) {
+    const theme = THEMES[menu.theme] || THEMES.fine_dining;
+    if (menu.accentColor) {
+      const p = PALETTES.find(function (x) { return x.id === menu.accentColor; });
+      if (p) return p.color;
+    }
+    return theme.accent;
+  }
 
   // Localized default section names — built at call time so the chef's
   // current language is used when creating a new menu.
@@ -71,6 +197,7 @@
               <span>${PCD.fmtRelTime(m.updatedAt)}</span>
             </div>
           </div>
+          <button class="icon-btn" data-dup-mid="${m.id}" title="${PCD.escapeHtml(t('menu_duplicate') || 'Duplicate')}">${PCD.icon('copy', 18)}</button>
           <button class="icon-btn" data-copy-mid="${m.id}" data-name="${PCD.escapeHtml(m.name || 'menu')}" title="Copy to workspace">${PCD.icon('truck', 18)}</button>
           <button class="icon-btn" data-edit-mid="${m.id}" title="${PCD.escapeHtml(t('edit_menu_tooltip'))}">${PCD.icon('edit', 18)}</button>
         `;
@@ -81,8 +208,8 @@
 
     PCD.$('#newMenuBtn', view).addEventListener('click', function () { openEditor(); });
     PCD.on(listEl, 'click', '[data-mid]', function (e) {
-      // If user clicked the inline edit/delete icon let those handlers fire
-      if (e.target.closest('[data-edit-mid]') || e.target.closest('[data-del-mid]') || e.target.closest('[data-copy-mid]')) return;
+      // If user clicked the inline edit/delete/duplicate icon let those handlers fire
+      if (e.target.closest('[data-edit-mid]') || e.target.closest('[data-del-mid]') || e.target.closest('[data-copy-mid]') || e.target.closest('[data-dup-mid]')) return;
       openPrintView(this.getAttribute('data-mid'));
     });
     PCD.on(listEl, 'click', '[data-edit-mid]', function (e) {
@@ -95,6 +222,27 @@
       const name = this.getAttribute('data-name');
       PCD.openCopyToWorkspace('menus', mid, name);
     });
+    // v2.8.68 — Menu duplicate. Recipes/Checklist pattern: clone data,
+    // strip id/createdAt, append "(Copy)" to name, regenerate section/item ids,
+    // open editor on the new copy. Sezonluk varyant / Sunday special akışı.
+    PCD.on(listEl, 'click', '[data-dup-mid]', function (e) {
+      e.stopPropagation();
+      const mid = this.getAttribute('data-dup-mid');
+      const src = PCD.store.getFromTable('menus', mid);
+      if (!src) return;
+      const copy = PCD.clone(src);
+      delete copy.id; delete copy.createdAt; delete copy.updatedAt;
+      copy.name = (copy.name || t('untitled')) + ' (Copy)';
+      // Regenerate section + item ids so drag-drop / edit doesn't collide
+      (copy.sections || []).forEach(function (s) {
+        s.id = PCD.uid('sec');
+        (s.items || []).forEach(function (it) { it.id = PCD.uid('mi'); });
+      });
+      const saved = PCD.store.upsertInTable('menus', copy, 'm');
+      PCD.toast.success(t('menu_duplicated') || 'Menu duplicated');
+      render(view);
+      setTimeout(function () { openEditor(saved.id); }, 200);
+    });
   }
 
   // ============ EDITOR ============
@@ -106,14 +254,31 @@
       subtitle: '',
       footer: '',
       hidePrices: false,
+      hideAllergens: false,
+      hideDietary: false,          // v2.8.68 — dietary badges toggle
+      theme: 'fine_dining',        // v2.8.68 — theme picker default
+      accentColor: '',             // v2.8.68 — '' = theme default
+      columns: 1,                  // v2.8.69 — 1 or 2 print columns
+      pageSize: 'a4',              // v2.8.69 — a4 | a5 | us_letter | a4_land
+      logo: null,                  // v2.8.69 — base64 (1:1 cropped)
+      coverPhoto: null,            // v2.8.69 — base64 (1:1 cropped)
       sections: getDefaultSections().map(function (s) {
         return { id: PCD.uid('sec'), name: s.name, items: [] };
       }),
     };
+    // v2.8.68 — Defansif: eski menüler için yeni alanların default'u
+    if (!data.theme) data.theme = 'fine_dining';
+    if (typeof data.accentColor !== 'string') data.accentColor = '';
+    if (typeof data.columns !== 'number') data.columns = 1;
+    if (!data.pageSize) data.pageSize = 'a4';
+    if (typeof data.hideDietary !== 'boolean') data.hideDietary = false;
     // Ensure existing sections have IDs
     (data.sections || []).forEach(function (s) {
       if (!s.id) s.id = PCD.uid('sec');
-      (s.items || []).forEach(function (it) { if (!it.id) it.id = PCD.uid('mi'); });
+      (s.items || []).forEach(function (it) {
+        if (!it.id) it.id = PCD.uid('mi');
+        if (typeof it.badge !== 'string') it.badge = '';
+      });
     });
 
     const body = PCD.el('div');
@@ -145,6 +310,33 @@
 
     function render() {
       const stats = computeStats();
+      // v2.8.68/v2.8.69 — Builder UI: Identity + Design + Layout + Sections + Footer/Toggles
+      const themeBtns = Object.keys(THEMES).map(function (k) {
+        const th = THEMES[k];
+        const active = (data.theme || 'fine_dining') === k;
+        return '<button type="button" class="btn btn-sm ' + (active ? 'btn-primary' : 'btn-outline') + '" data-theme="' + k + '" style="flex:1;min-width:130px;">' + PCD.escapeHtml(t(th.labelKey) || k) + '</button>';
+      }).join('');
+      const accentSwatches = '<button type="button" data-accent="" class="' + ((!data.accentColor) ? 'pcd-swatch-active' : '') + '" title="' + PCD.escapeHtml(t('menu_accent_default') || 'Theme default') + '" style="width:28px;height:28px;border-radius:50%;border:2px solid ' + ((!data.accentColor) ? 'var(--brand-600)' : 'var(--border)') + ';background:linear-gradient(135deg,#fff 50%,#999 50%);cursor:pointer;"></button>' +
+        PALETTES.map(function (p) {
+          const active = data.accentColor === p.id;
+          return '<button type="button" data-accent="' + p.id + '" title="' + PCD.escapeHtml(p.label) + '" style="width:28px;height:28px;border-radius:50%;border:2px solid ' + (active ? 'var(--brand-600)' : 'var(--border)') + ';background:' + p.color + ';cursor:pointer;' + (active ? 'box-shadow:0 0 0 2px var(--brand-200);' : '') + '"></button>';
+        }).join('');
+      const colsBtns = '<button type="button" class="btn btn-sm ' + (data.columns === 1 ? 'btn-primary' : 'btn-outline') + '" data-cols="1" style="flex:1;">1 ' + (t('menu_column') || 'column') + '</button>' +
+                       '<button type="button" class="btn btn-sm ' + (data.columns === 2 ? 'btn-primary' : 'btn-outline') + '" data-cols="2" style="flex:1;">2 ' + (t('menu_columns') || 'columns') + '</button>';
+      const pageBtns = PAGE_SIZES.map(function (ps) {
+        const active = (data.pageSize || 'a4') === ps.id;
+        return '<button type="button" class="btn btn-sm ' + (active ? 'btn-primary' : 'btn-outline') + '" data-pagesize="' + ps.id + '" style="flex:1;min-width:100px;">' + PCD.escapeHtml(t(ps.labelKey) || ps.id) + '</button>';
+      }).join('');
+      // Logo + cover photo preview tiles (1:1, v2.8.67 standard)
+      const logoTile = '<div id="menuLogoZone" style="position:relative;width:90px;height:90px;border-radius:var(--r-md);background:' + (data.logo ? 'url(' + data.logo + ') center/cover' : 'var(--surface-2)') + ';border:2px dashed ' + (data.logo ? 'transparent' : 'var(--border-strong)') + ';cursor:pointer;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;">' +
+        (!data.logo ? '<div class="text-center text-muted" style="font-size:11px;">📷<br>' + PCD.escapeHtml(t('menu_logo') || 'Logo') + '</div>' : '') +
+        (data.logo ? '<button type="button" id="menuLogoRemove" class="icon-btn" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.6);color:#fff;width:20px;height:20px;padding:0;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/></svg></button>' : '') +
+      '</div>';
+      const coverTile = '<div id="menuCoverZone" style="position:relative;flex:1;height:90px;border-radius:var(--r-md);background:' + (data.coverPhoto ? 'url(' + data.coverPhoto + ') center/cover' : 'var(--surface-2)') + ';border:2px dashed ' + (data.coverPhoto ? 'transparent' : 'var(--border-strong)') + ';cursor:pointer;display:flex;align-items:center;justify-content:center;overflow:hidden;">' +
+        (!data.coverPhoto ? '<div class="text-center text-muted" style="font-size:11px;">🖼<br>' + PCD.escapeHtml(t('menu_cover') || 'Cover photo (optional)') + '</div>' : '') +
+        (data.coverPhoto ? '<button type="button" id="menuCoverRemove" class="icon-btn" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.6);color:#fff;width:22px;height:22px;padding:0;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/></svg></button>' : '') +
+      '</div>';
+
       body.innerHTML = `
         <div class="field">
           <label class="field-label">${t('menu_name')} *</label>
@@ -154,6 +346,28 @@
           <label class="field-label">${t('menu_subtitle_ph')}</label>
           <input type="text" class="input" id="menuSubtitle" value="${PCD.escapeHtml(data.subtitle || '')}">
         </div>
+
+        <details class="field" open style="border:1px solid var(--border);border-radius:var(--r-md);padding:10px 12px;background:var(--surface-2);">
+          <summary style="cursor:pointer;font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-2);">🎨 ${PCD.escapeHtml(t('menu_design') || 'Design')}</summary>
+          <div style="margin-top:10px;">
+            <div class="field-label" style="font-size:12px;">${PCD.escapeHtml(t('menu_theme') || 'Theme')}</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">${themeBtns}</div>
+            <div class="field-label" style="font-size:12px;">${PCD.escapeHtml(t('menu_accent') || 'Accent colour')}</div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">${accentSwatches}</div>
+            <div class="field-label" style="font-size:12px;">${PCD.escapeHtml(t('menu_branding') || 'Logo + cover')}</div>
+            <div style="display:flex;gap:8px;align-items:stretch;">${logoTile}${coverTile}</div>
+          </div>
+        </details>
+
+        <details class="field" style="border:1px solid var(--border);border-radius:var(--r-md);padding:10px 12px;background:var(--surface-2);">
+          <summary style="cursor:pointer;font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-2);">📐 ${PCD.escapeHtml(t('menu_layout') || 'Layout & paper')}</summary>
+          <div style="margin-top:10px;">
+            <div class="field-label" style="font-size:12px;">${PCD.escapeHtml(t('menu_columns_label') || 'Columns')}</div>
+            <div style="display:flex;gap:6px;margin-bottom:12px;">${colsBtns}</div>
+            <div class="field-label" style="font-size:12px;">${PCD.escapeHtml(t('menu_page_size') || 'Page size')}</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">${pageBtns}</div>
+          </div>
+        </details>
 
         <div class="stat mb-3" style="background:var(--brand-50);border-color:var(--brand-300);">
           <div class="flex items-center justify-between">
@@ -175,7 +389,12 @@
 
         <div class="field">
           <label class="field-label">${t('menu_footer_ph')}</label>
-          <textarea class="textarea" id="menuFooter" rows="2">${PCD.escapeHtml(data.footer || '')}</textarea>
+          <textarea class="textarea" id="menuFooter" rows="2" placeholder="${PCD.escapeHtml(t('menu_footer_placeholder') || 'Custom footer text (optional)')}">${PCD.escapeHtml(data.footer || '')}</textarea>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">
+            ${getLegalTemplates().map(function (lg) {
+              return '<button type="button" class="btn btn-ghost btn-sm" data-legal="' + lg.id + '" style="font-size:11px;">+ ' + PCD.escapeHtml(lg.label) + '</button>';
+            }).join('')}
+          </div>
         </div>
 
         <div class="checkbox">
@@ -184,7 +403,11 @@
         </div>
         <div class="checkbox">
           <input type="checkbox" id="menuHideAllergens" ${data.hideAllergens ? 'checked' : ''}>
-          <span>Hide allergen icons</span>
+          <span>${PCD.escapeHtml(t('menu_hide_allergens') || 'Hide allergen icons')}</span>
+        </div>
+        <div class="checkbox">
+          <input type="checkbox" id="menuHideDietary" ${data.hideDietary ? 'checked' : ''}>
+          <span>${PCD.escapeHtml(t('menu_hide_dietary') || 'Hide dietary badges (vegan/veg/GF)')}</span>
         </div>
       `;
 
@@ -224,6 +447,13 @@
           const row = PCD.el('div', {
             style: { display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 8px', background: 'var(--surface-2)', borderRadius: 'var(--r-sm)' }
           });
+          // v2.8.68 — Badge dropdown: chef pick / signature / new / spicy.
+          // Aynı satırda yer almasın diye küçük; print'te item adı yanında chip olur.
+          const badgeOpts = ITEM_BADGES.map(function (b) {
+            const sel = (it.badge || '') === b.id ? ' selected' : '';
+            const lbl = (b.icon ? b.icon + ' ' : '') + (PCD.i18n.t(b.labelKey) || b.id || '—');
+            return '<option value="' + b.id + '"' + sel + '>' + lbl + '</option>';
+          }).join('');
           // Manual items: editable name field. Recipe items: static name.
           // v2.8.56 — Drag handle eklendi; aynı section içinde sıralama.
           if (isManual) {
@@ -232,6 +462,7 @@
               <div style="flex:1;min-width:0;">
                 <input type="text" class="input" data-itemname="${sIdx}:${iIdx}" value="${PCD.escapeHtml(name)}" placeholder="${PCD.i18n.t('menu_item_name_ph') || 'Dish name'}" style="padding:4px 8px;min-height:26px;font-size:14px;font-weight:600;">
                 <input type="text" class="input" data-itemdesc="${sIdx}:${iIdx}" value="${PCD.escapeHtml(it.description || '')}" placeholder="${PCD.i18n.t('menu_item_desc_ph')}" style="padding:4px 8px;min-height:26px;font-size:12px;margin-top:4px;">
+                <select class="select" data-itembadge="${sIdx}:${iIdx}" style="padding:2px 6px;min-height:24px;font-size:11px;margin-top:4px;max-width:160px;">${badgeOpts}</select>
               </div>
               <input type="number" class="input" data-itemprice="${sIdx}:${iIdx}" value="${it.price || ''}" placeholder="0" step="0.01" min="0" style="width:70px;padding:4px 8px;min-height:26px;font-size:13px;">
               <button class="icon-btn" data-itemdel="${sIdx}:${iIdx}">${PCD.icon('x',14)}</button>
@@ -242,6 +473,7 @@
               <div style="flex:1;min-width:0;">
                 <div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${PCD.escapeHtml(name)}</div>
                 <input type="text" class="input" data-itemdesc="${sIdx}:${iIdx}" value="${PCD.escapeHtml(it.description || '')}" placeholder="${PCD.i18n.t('menu_item_desc_ph')}" style="padding:4px 8px;min-height:26px;font-size:12px;margin-top:4px;">
+                <select class="select" data-itembadge="${sIdx}:${iIdx}" style="padding:2px 6px;min-height:24px;font-size:11px;margin-top:4px;max-width:160px;">${badgeOpts}</select>
               </div>
               <input type="number" class="input" data-itemprice="${sIdx}:${iIdx}" value="${it.price || defaultPrice}" placeholder="${defaultPrice}" step="0.01" min="0" style="width:70px;padding:4px 8px;min-height:26px;font-size:13px;">
               <button class="icon-btn" data-itemdel="${sIdx}:${iIdx}">${PCD.icon('x',14)}</button>
@@ -292,6 +524,92 @@
       PCD.$('#menuHidePrice', body).addEventListener('change', function () { data.hidePrices = this.checked; render(); });
       const hideAllergEl = PCD.$('#menuHideAllergens', body);
       if (hideAllergEl) hideAllergEl.addEventListener('change', function () { data.hideAllergens = this.checked; render(); });
+      const hideDietEl = PCD.$('#menuHideDietary', body);
+      if (hideDietEl) hideDietEl.addEventListener('change', function () { data.hideDietary = this.checked; render(); });
+
+      // v2.8.68 — Theme picker
+      PCD.on(body, 'click', '[data-theme]', function () {
+        data.theme = this.getAttribute('data-theme');
+        render();
+      });
+      // Accent color swatches
+      PCD.on(body, 'click', '[data-accent]', function () {
+        data.accentColor = this.getAttribute('data-accent');
+        render();
+      });
+      // v2.8.69 — Columns + page size
+      PCD.on(body, 'click', '[data-cols]', function () {
+        data.columns = parseInt(this.getAttribute('data-cols'), 10) === 2 ? 2 : 1;
+        render();
+      });
+      PCD.on(body, 'click', '[data-pagesize]', function () {
+        data.pageSize = this.getAttribute('data-pagesize');
+        render();
+      });
+      // v2.8.69 — Logo + cover upload (uses v2.8.67 1:1 cropper)
+      function pickAndCrop(onDone) {
+        const inp = document.createElement('input');
+        inp.type = 'file';
+        inp.accept = 'image/*';
+        inp.addEventListener('change', function (e) {
+          const f = e.target.files && e.target.files[0];
+          if (!f) return;
+          const reader = new FileReader();
+          reader.onload = function (ev) {
+            if (PCD.cropper && PCD.cropper.open) {
+              PCD.cropper.open(ev.target.result).then(function (cropped) {
+                if (cropped) onDone(cropped);
+              });
+            } else {
+              onDone(ev.target.result);
+            }
+          };
+          reader.readAsDataURL(f);
+        });
+        inp.click();
+      }
+      const logoZone = PCD.$('#menuLogoZone', body);
+      if (logoZone) logoZone.addEventListener('click', function (e) {
+        if (e.target.closest('#menuLogoRemove')) return;
+        pickAndCrop(function (url) { data.logo = url; render(); });
+      });
+      const logoRemove = PCD.$('#menuLogoRemove', body);
+      if (logoRemove) logoRemove.addEventListener('click', function (e) {
+        e.stopPropagation();
+        data.logo = null; render();
+      });
+      const coverZone = PCD.$('#menuCoverZone', body);
+      if (coverZone) coverZone.addEventListener('click', function (e) {
+        if (e.target.closest('#menuCoverRemove')) return;
+        pickAndCrop(function (url) { data.coverPhoto = url; render(); });
+      });
+      const coverRemove = PCD.$('#menuCoverRemove', body);
+      if (coverRemove) coverRemove.addEventListener('click', function (e) {
+        e.stopPropagation();
+        data.coverPhoto = null; render();
+      });
+      // v2.8.68 — Legal note quick-insert
+      PCD.on(body, 'click', '[data-legal]', function () {
+        const id = this.getAttribute('data-legal');
+        const lg = getLegalTemplates().find(function (x) { return x.id === id; });
+        if (!lg) return;
+        const cur = (data.footer || '').trim();
+        if (cur.indexOf(lg.text) >= 0) {
+          PCD.toast && PCD.toast.warning && PCD.toast.warning(t('menu_legal_already') || 'Already added');
+          return;
+        }
+        data.footer = cur ? (cur + '\n' + lg.text) : lg.text;
+        const fEl = PCD.$('#menuFooter', body);
+        if (fEl) fEl.value = data.footer;
+      });
+      // v2.8.68 — Item badge dropdown
+      PCD.on(body, 'change', '[data-itembadge]', function () {
+        const parts = this.getAttribute('data-itembadge').split(':').map(Number);
+        const sIdx = parts[0], iIdx = parts[1];
+        if (data.sections[sIdx] && data.sections[sIdx].items[iIdx]) {
+          data.sections[sIdx].items[iIdx].badge = this.value;
+        }
+      });
 
       // Section name
       PCD.on(body, 'input', '[data-secname]', PCD.debounce(function () {
@@ -501,6 +819,34 @@
     PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
     PCD.store.listRecipes().forEach(function (r) { recipeMap[r.id] = r; });
 
+    // v2.8.68 — Resolve theme + accent
+    const theme = THEMES[menu.theme] || THEMES.fine_dining;
+    const accent = resolveAccent(menu);
+
+    // v2.8.68 — Dietary badge builder (vegan/veg/GF). Uses computeDietCompat
+    // from dashboard.js (added in v2.8.45). Conservative tri-state: only
+    // shows badge if ALL ingredients confirmed compatible.
+    function dietaryBadges(r) {
+      if (menu.hideDietary || !r) return '';
+      const fn = PCD.recipes && PCD.recipes.computeDietCompat;
+      if (!fn) return '';
+      const compat = fn(r, ingMap);
+      if (!compat) return '';
+      const out = [];
+      if (compat.vegan === true)       out.push('<span class="m-diet" title="Vegan" style="background:#dcfce7;color:#166534;">🌱 V</span>');
+      else if (compat.vegetarian === true) out.push('<span class="m-diet" title="Vegetarian" style="background:#ecfccb;color:#3f6212;">🥬 VG</span>');
+      if (compat.glutenFree === true)  out.push('<span class="m-diet" title="Gluten-free" style="background:#fef3c7;color:#92400e;">🌾 GF</span>');
+      return out.length ? ' ' + out.join(' ') : '';
+    }
+
+    // v2.8.68 — Item special badge (chef pick / signature / new / spicy)
+    function itemBadge(it) {
+      if (!it.badge) return '';
+      const b = ITEM_BADGES.find(function (x) { return x.id === it.badge; });
+      if (!b || !b.icon) return '';
+      return ' <span class="m-itembadge" style="background:' + b.color + '20;color:' + b.color + ';border:1px solid ' + b.color + '60;">' + b.icon + '</span>';
+    }
+
     // Build sections HTML using a simple, professional layout
     let sectionsBody = '';
     (menu.sections || []).forEach(function (sec) {
@@ -533,7 +879,7 @@
         }
 
         sectionsBody += '<div class="m-item">';
-        sectionsBody += '<div class="m-item-row"><div class="m-item-name">' + PCD.escapeHtml(itemName) + allergenIcons + '</div>';
+        sectionsBody += '<div class="m-item-row"><div class="m-item-name">' + PCD.escapeHtml(itemName) + itemBadge(it) + dietaryBadges(r) + allergenIcons + '</div>';
         sectionsBody += '<div class="m-item-leader"></div>';
         if (!menu.hidePrices && price > 0) {
           sectionsBody += '<div class="m-item-price">' + PCD.fmtMoney(price) + '</div>';
@@ -571,61 +917,69 @@
 
     function buildStyledHtml() {
       const O = printOpts;
+      // v2.8.69 — Page size + orientation. Default A4 portrait.
+      const pageSpec = PAGE_SIZES.find(function (p) { return p.id === (menu.pageSize || 'a4'); }) || PAGE_SIZES[0];
+      const pageMaxWidth = (pageSpec.id === 'a5') ? 420 : (pageSpec.orientation === 'landscape' ? 820 : 580);
+      // v2.8.69 — Multi-column layout (1 or 2). Sadece items akışına uygulanır.
+      const cols = (menu.columns === 2) ? 2 : 1;
+      // Section decoration helpers (theme-specific)
+      const decorBefore = (theme.sectionDecor === 'lines')
+        ? '.m-section-title::before,.m-section-title::after{content:"";display:inline-block;width:24px;height:1px;background:' + accent + ';vertical-align:middle;margin:0 16px;}'
+        : (theme.sectionDecor === 'underline')
+          ? '.m-section-title{border-bottom:2px solid ' + accent + ';padding-bottom:6px;display:inline-block;padding-left:24px;padding-right:24px;}'
+          : (theme.sectionDecor === 'wavy')
+            ? '.m-section-title::after{content:"~";display:block;color:' + accent + ';font-size:1.4em;line-height:0.4;margin-top:6px;}'
+            : '';
       return (
       '<style>' +
-        '@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap");' +
+        '@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=Caveat:wght@400;600;700&family=Inter:wght@300;400;500;600;700;800&family=Nunito:wght@300;400;500;600;700&display=swap");' +
         '.m-page {' +
-          'background: #fff; color: #1a1a1a;' +
-          'max-width: 580px; margin: 0 auto; padding: ' + O.pagePadding + 'px ' + (O.pagePadding + 8) + 'px;' +
-          'font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;' +
-          'font-weight: 300;' +
+          'background: ' + theme.bg + '; color: ' + theme.ink + ';' +
+          'max-width: ' + pageMaxWidth + 'px; margin: 0 auto; padding: ' + O.pagePadding + 'px ' + (O.pagePadding + 8) + 'px;' +
+          'font-family: ' + theme.bodyFont + ';' +
+          'font-weight: ' + theme.bodyWeight + ';' +
         '}' +
+        '.m-cover { width: 100%; aspect-ratio: 1/1; max-width: 360px; margin: 0 auto ' + Math.round(O.pagePadding * 0.4) + 'px; background-size: cover; background-position: center; border-radius: 4px; }' +
+        '.m-logo { display:block; width: 64px; height: 64px; margin: 0 auto 12px; background-size: cover; background-position: center; border-radius: 50%; }' +
         '.m-header { text-align: center; margin-bottom: ' + Math.round(O.pagePadding * 0.75) + 'px; padding-bottom: 0; }' +
         '.m-title {' +
-          'font-family: "Cormorant Garamond", Georgia, serif;' +
-          'font-size: ' + O.titleSize + 'px; font-weight: 500;' +
-          'letter-spacing: 0.02em;' +
-          'margin: 0 0 8px; color: #111;' +
+          'font-family: ' + theme.titleFont + ';' +
+          'font-size: ' + O.titleSize + 'px; font-weight: ' + theme.titleWeight + ';' +
+          'letter-spacing: ' + theme.titleLetterSpacing + ';' +
+          'margin: 0 0 8px; color: ' + theme.ink + ';' +
           'line-height: 1.1;' +
         '}' +
         '.m-subtitle {' +
-          'font-size: 11px; color: #888;' +
+          'font-size: 11px; color: ' + theme.mutedInk + ';' +
           'letter-spacing: 0.24em;' +
           'text-transform: uppercase; font-weight: 400;' +
           'margin-bottom: 24px;' +
         '}' +
         '.m-divider {' +
           'width: 60px; height: 1px;' +
-          'background: #c5a572;' +
+          'background: ' + accent + ';' +
           'margin: 18px auto 0;' +
         '}' +
+        '.m-sections { ' + (cols === 2 ? 'column-count: 2; column-gap: ' + (O.pagePadding * 0.7) + 'px;' : '') + ' }' +
         '.m-section { margin: ' + Math.round(O.itemGap * 1.8) + 'px 0 ' + Math.round(O.itemGap * 1.4) + 'px; break-inside: avoid; page-break-inside: avoid; }' +
         '.m-section-title {' +
-          'font-family: "Cormorant Garamond", Georgia, serif;' +
-          'font-size: ' + O.sectionSize + 'px; font-weight: 500;' +
-          'letter-spacing: 0.18em;' +
-          'text-transform: uppercase;' +
+          'font-family: ' + theme.titleFont + ';' +
+          'font-size: ' + O.sectionSize + 'px; font-weight: ' + theme.titleWeight + ';' +
+          'letter-spacing: ' + theme.sectionLetterSpacing + ';' +
+          'text-transform: ' + theme.sectionTransform + ';' +
           'text-align: center;' +
-          'color: #111;' +
+          'color: ' + theme.ink + ';' +
           'margin: 0 0 ' + Math.round(O.itemGap * 1.3) + 'px;' +
           'position: relative;' +
         '}' +
-        '.m-section-title::before,' +
-        '.m-section-title::after {' +
-          'content: "";' +
-          'display: inline-block;' +
-          'width: 24px; height: 1px;' +
-          'background: #c5a572;' +
-          'vertical-align: middle;' +
-          'margin: 0 16px;' +
-        '}' +
+        decorBefore +
         '.m-items { display: flex; flex-direction: column; gap: ' + O.itemGap + 'px; }' +
         '.m-item { break-inside: avoid; page-break-inside: avoid; }' +
         '.m-item-row { display: flex; align-items: baseline; gap: 0; }' +
         '.m-item-name {' +
-          'font-family: "Cormorant Garamond", Georgia, serif;' +
-          'font-size: ' + O.itemSize + 'px; font-weight: 600;' +
-          'color: #111;' +
+          'font-family: ' + theme.titleFont + ';' +
+          'font-size: ' + O.itemSize + 'px; font-weight: ' + theme.itemWeight + ';' +
+          'color: ' + theme.ink + ';' +
           'letter-spacing: 0.02em;' +
           'flex-shrink: 0;' +
         '}' +
@@ -636,50 +990,70 @@
           'letter-spacing: 0.06em;' +
           'vertical-align: middle;' +
         '}' +
+        '.m-diet {' +
+          'font-size: 9px;' +
+          'font-weight: 700;' +
+          'padding: 1px 5px;' +
+          'border-radius: 999px;' +
+          'margin-inline-start: 4px;' +
+          'letter-spacing: 0.04em;' +
+          'vertical-align: middle;' +
+        '}' +
+        '.m-itembadge {' +
+          'font-size: 10px;' +
+          'font-weight: 700;' +
+          'padding: 1px 6px;' +
+          'border-radius: 4px;' +
+          'margin-inline-start: 6px;' +
+          'vertical-align: middle;' +
+        '}' +
         '.m-item-leader {' +
           'flex: 1;' +
-          'border-bottom: 1px dotted #c5a572;' +
+          'border-bottom: 1px dotted ' + accent + ';' +
           'margin: 0 8px 4px;' +
           'min-width: 30px;' +
           'opacity: 0.6;' +
         '}' +
         '.m-item-price {' +
-          'font-family: "Cormorant Garamond", Georgia, serif;' +
-          'font-size: ' + O.itemSize + 'px; font-weight: 600;' +
-          'color: #c5a572;' +
+          'font-family: ' + theme.titleFont + ';' +
+          'font-size: ' + O.itemSize + 'px; font-weight: ' + theme.itemWeight + ';' +
+          'color: ' + accent + ';' +
           'flex-shrink: 0;' +
           'white-space: nowrap;' +
         '}' +
         '.m-item-desc {' +
-          'font-size: ' + Math.max(11, O.itemSize - 6) + 'px; color: #666;' +
+          'font-size: ' + Math.max(11, O.itemSize - 6) + 'px; color: ' + theme.mutedInk + ';' +
           'font-style: italic;' +
           'margin-top: 4px;' +
           'line-height: 1.5;' +
           'max-width: 90%;' +
-          'font-weight: 300;' +
+          'font-weight: ' + theme.bodyWeight + ';' +
         '}' +
         '.m-footer {' +
           'text-align: center;' +
-          'font-size: 11px; color: #888;' +
+          'font-size: 11px; color: ' + theme.mutedInk + ';' +
           'letter-spacing: 0.12em;' +
           'text-transform: uppercase;' +
           'margin-top: 40px;' +
           'padding-top: 20px;' +
-          'border-top: 1px solid #e8e8e8;' +
+          'border-top: 1px solid ' + accent + '40;' +
           'font-weight: 400;' +
+          'white-space: pre-wrap;' +
         '}' +
         '@media print {' +
-          '@page { size: A4; margin: 0; }' +
+          '@page { size: ' + pageSpec.cssSize + '; margin: 0; }' +
           '.m-page { padding: ' + (O.pagePadding * 0.4) + 'px ' + (O.pagePadding * 0.45) + 'px; max-width: 100%; }' +
         '}' +
       '</style>' +
       '<div class="m-page">' +
         '<div class="m-header">' +
+          (menu.coverPhoto ? '<div class="m-cover" style="background-image:url(' + menu.coverPhoto + ');"></div>' : '') +
+          (menu.logo ? '<div class="m-logo" style="background-image:url(' + menu.logo + ');"></div>' : '') +
           '<h1 class="m-title">' + PCD.escapeHtml(menu.name || t('untitled')) + '</h1>' +
           (menu.subtitle ? '<div class="m-subtitle">' + PCD.escapeHtml(menu.subtitle) + '</div>' : '') +
           '<div class="m-divider"></div>' +
         '</div>' +
-        sectionsBody +
+        '<div class="m-sections">' + sectionsBody + '</div>' +
         (menu.footer ? '<div class="m-footer">' + PCD.escapeHtml(menu.footer) + '</div>' : '') +
       '</div>'
       );
