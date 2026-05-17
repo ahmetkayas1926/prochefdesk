@@ -23,6 +23,35 @@
     return PCD.recipes.computeFoodCost(recipe, currentIngMap(), PCD.recipes.buildRecipeMap());
   }
 
+  // v2.8.66 — Discover'da ziyaretçinin workspace'inde ingredient/sub-recipe
+  // ID'leri olmadığı için recipe.data.ingredients[].name inline yazılmalı.
+  // Aksi halde discover.js detail modal `ri.ingredientName || ri.name`'i
+  // bulamaz → "(?)" fallback. Bu fix: recipe public ise her save'de
+  // ingredient + sub-recipe adlarını inline gömer. Fiyat/cost ASLA inline
+  // edilmez — gizlilik notuyla uyumlu (sadece name + amount + unit).
+  function enrichPublicIngredientNames(recipe) {
+    if (!recipe || !recipe.isPublic || !Array.isArray(recipe.ingredients)) return recipe;
+    const ingMap = currentIngMap();
+    const recMap = {};
+    PCD.store.listRecipes().forEach(function (rr) { recMap[rr.id] = rr; });
+    recipe.ingredients = recipe.ingredients.map(function (ri) {
+      // Separator satırı dokunulmaz
+      if (ri && ri.separator) return ri;
+      const next = Object.assign({}, ri);
+      if (ri.recipeId) {
+        const sub = recMap[ri.recipeId];
+        next.name = sub ? sub.name : '(sub-recipe)';
+        if (!next.unit && sub && sub.yieldUnit) next.unit = sub.yieldUnit;
+      } else if (ri.ingredientId) {
+        const ing = ingMap[ri.ingredientId];
+        next.name = ing ? ing.name : '?';
+        if (!next.unit && ing && ing.unit) next.unit = ing.unit;
+      }
+      return next;
+    });
+    return recipe;
+  }
+
   // v2.8.29 — Subtitle for cost reports (HTML / PDF / XLSX). Was using
   // raw `r.category` ("Cat_main" after CSS capitalize) and always
   // appending "X servings" which is wrong for preps. Now translates
@@ -1598,6 +1627,9 @@
         const fresh = PCD.store.getRecipe(rid);
         if (!fresh) return;
         fresh.isPublic = !!this.checked;
+        // v2.8.66 — public'e geçirilirken inline ingredient adlarını göm.
+        // Aksi halde Discover detail modal'da "(?)" görünür.
+        enrichPublicIngredientNames(fresh);
         PCD.store.upsertRecipe(fresh);
         PCD.toast.success(fresh.isPublic
           ? (PCD.i18n.t('toast_recipe_made_public') || 'Tarif Discover\'da görünüyor')
@@ -3055,6 +3087,10 @@
           }
         }
       }
+      // v2.8.66 — Public recipe save edilirken inline ingredient adlarını
+      // yeniden gömme (Discover detail modal "(?)" sorununu önler).
+      // No-op if isPublic = false; ingredient/sub-recipe değişimleri de yakalanır.
+      enrichPublicIngredientNames(data);
       const saved = PCD.store.upsertRecipe(data);
       PCD.toast.success(t('recipe_saved'));
       m.close();

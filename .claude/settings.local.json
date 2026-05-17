@@ -40,7 +40,8 @@
       "Bash(node -c \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\i18n\\\\tr.js\")",
       "Bash(node -c \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\core\\\\config.js\")",
       "Bash(git -C \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\" status --short)",
-      "Bash(git -C \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\" log --oneline origin/main..HEAD)"
+      "Bash(git -C \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\" log --oneline origin/main..HEAD)",
+      "Bash(node -c \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\tools\\\\recipes.js\")"
     ]
   }
 }
