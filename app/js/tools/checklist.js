@@ -766,6 +766,7 @@
         '<td style="padding:3px 6px;border-bottom:1px solid #e5e5e5;">' +
           '<span style="font-weight:600;font-size:9.5pt;">' + PCD.escapeHtml(it.text) + '</span>' +
           (cat ? ' <span style="font-size:7pt;color:' + cat.color + ';font-weight:700;text-transform:uppercase;letter-spacing:0.03em;margin-inline-start:4px;">' + catLabel(cat) + '</span>' : '') +
+          (it.hint ? '<div style="font-size:7.5pt;color:#888;font-style:italic;margin-top:1px;">' + PCD.escapeHtml(it.hint) + '</div>' : '') +
         '</td>' +
         '<td style="padding:3px 6px;border-bottom:1px solid #e5e5e5;text-align:center;width:155px;font-size:8.5pt;">' + valueCol + '</td>' +
         '<td style="padding:3px 6px;border-bottom:1px solid #e5e5e5;width:50px;font-size:8pt;color:#999;text-align:center;">__:__</td>' +
@@ -1036,12 +1037,15 @@
       const catChip = cat ? '<span style="font-size:10px;padding:2px 7px;border-radius:999px;background:' + cat.color + '22;color:' + cat.color + ';font-weight:700;text-transform:uppercase;letter-spacing:0.04em;white-space:nowrap;flex-shrink:0;">' + catLabel(cat) + '</span>' : '';
       const prioDot = prio ? '<span style="width:8px;height:8px;border-radius:50%;background:' + prio.color + ';flex-shrink:0;display:inline-block;" title="' + prioLabel(prio) + '"></span>' : '';
 
+      // v2.8.63 — Hint görünür: item adı altında küçük gri italik.
+      const hintHtml = it.hint ? '<div style="font-size:12px;color:var(--text-3);font-style:italic;margin:2px 0 ' + (type === 'task' ? '0' : '8px') + ' 16px;">' + PCD.escapeHtml(it.hint) + '</div>' : '';
       let headerHtml =
-        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:' + (type === 'task' ? '0' : '10px') + ';">' +
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:' + (type === 'task' ? (it.hint ? '4px' : '0') : (it.hint ? '4px' : '10px')) + ';">' +
           prioDot +
           '<div style="flex:1;min-width:0;font-weight:500;font-size:14px;' + (complete && type === 'task' ? 'text-decoration:line-through;color:var(--text-3);' : '') + '">' + PCD.escapeHtml(it.text) + '</div>' +
           catChip +
-        '</div>';
+        '</div>' +
+        hintHtml;
 
       // Type-specific input
       let inputHtml = '';
@@ -1506,6 +1510,7 @@
           '<td style="padding:3px 6px;border-bottom:1px solid #e5e5e5;">' +
             '<span style="font-weight:500;font-size:9.5pt;">' + PCD.escapeHtml(it.text) + '</span>' +
             (cat ? ' <span style="font-size:7pt;color:' + cat.color + ';font-weight:700;text-transform:uppercase;letter-spacing:0.03em;margin-inline-start:4px;">' + catLabel(cat) + '</span>' : '') +
+            (it.hint ? '<div style="font-size:7.5pt;color:#888;font-style:italic;margin-top:1px;">' + PCD.escapeHtml(it.hint) + '</div>' : '') +
             comment +
           '</td>' +
           '<td style="padding:3px 6px;border-bottom:1px solid #e5e5e5;text-align:center;font-size:9pt;">' + valueCell + '</td>' +
@@ -1705,6 +1710,10 @@
             <input type="text" class="input" data-itemtext="${idx}" value="${PCD.escapeHtml(it.text || '')}" placeholder="${PCD.escapeHtml(PCD.i18n.t('chk_item_description'))}" style="flex:1;font-weight:500;">
             <button class="icon-btn" data-itemdel="${idx}">${PCD.icon('x',16)}</button>
           </div>
+          <!-- v2.8.63 — Hint/açıklama: şefin item'ı nasıl yapacağını
+               hatırlatan kısa not. Print'te italik gri olarak görünür,
+               session run'da item adı altında küçük gri yazı. -->
+          <input type="text" class="input" data-itemhint="${idx}" value="${PCD.escapeHtml(it.hint || '')}" placeholder="${PCD.escapeHtml(PCD.i18n.t('chk_item_hint_placeholder'))}" style="margin-bottom:6px;font-size:12px;font-style:italic;color:var(--text-2);">
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
             <select class="select" data-itemtype="${idx}" style="font-size:12px;">
               ${ITEM_TYPES.map(function (it) { return '<option value="' + it.id + '"' + (type === it.id ? ' selected' : '') + '>' + PCD.i18n.t(it.labelKey) + '</option>'; }).join('')}
@@ -1763,6 +1772,11 @@
       PCD.on(body, 'input', '[data-itemtext]', function () {
         const idx = parseInt(this.getAttribute('data-itemtext'), 10);
         if (data.items[idx]) data.items[idx].text = this.value;
+      });
+      // v2.8.63 — Hint field event handler
+      PCD.on(body, 'input', '[data-itemhint]', function () {
+        const idx = parseInt(this.getAttribute('data-itemhint'), 10);
+        if (data.items[idx]) data.items[idx].hint = this.value;
       });
       PCD.on(body, 'change', '[data-itemcat]', function () {
         const idx = parseInt(this.getAttribute('data-itemcat'), 10);

@@ -1264,6 +1264,8 @@ window.PCD.i18n.register('en', {
   chk_print_layout_hint: "Single column reads big; double column fits longer checklists on one page.",
   chk_print_layout_1col: "Single column",
   chk_print_layout_2col: "Double column",
+  // v2.8.63 — Item hint/açıklama field
+  chk_item_hint_placeholder: "Optional hint (how to do it, e.g. \"Use probe thermometer, take 2 readings\")",
   allerg_manual: "Manual tagging",
   allerg_recipe_contains: "Contains",
   allerg_recipe_clean: "Allergen-free",

@@ -1264,6 +1264,8 @@ window.PCD.i18n.register('tr', {
   chk_print_layout_hint: "Tek sütun büyük okunur; çift sütun uzun checklist'leri tek sayfaya sığdırır.",
   chk_print_layout_1col: "Tek sütun",
   chk_print_layout_2col: "Çift sütun",
+  // v2.8.63 — Item hint/açıklama field
+  chk_item_hint_placeholder: "Opsiyonel açıklama (nasıl yapılır, örn. \"Prob termometre ile 2 ölçüm al\")",
   allerg_manual: "Manuel etiketleme",
   allerg_recipe_contains: "İçerir",
   allerg_recipe_clean: "Alerjen içermez",
