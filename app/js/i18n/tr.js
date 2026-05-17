@@ -1253,6 +1253,8 @@ window.PCD.i18n.register('tr', {
   // v2.8.56 — Sürükle-bırak handle tooltips (recipe editor + menu builder)
   ing_drag_handle: "Sıralamak için sürükle",
   menu_drag_handle: "Sıralamak için sürükle",
+  // v2.8.57 — Kitchen Cards tarif arama
+  kc_search_placeholder: "Tarif ara…",
   allerg_manual: "Manuel etiketleme",
   allerg_recipe_contains: "İçerir",
   allerg_recipe_clean: "Alerjen içermez",

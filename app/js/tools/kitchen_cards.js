@@ -146,9 +146,18 @@
               </div>
             </div>
 
-            <div class="card" style="padding:8px 0;max-height:320px;overflow-y:auto;">
+            <div class="card" style="padding:8px 0;">
               <div style="padding:6px 12px;font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;">${t('kc_recipes_on_canvas')}</div>
-              <div id="recipeList"></div>
+              <!-- v2.8.57 — Recipe arama. Anlık filter (case-insensitive,
+                   substring). Section header'ları match yoksa gizlenir.
+                   Search input scroll'un dışında — kullanıcı liste içinde
+                   ne kadar aşağı kayarsa kaysın search üstte sabit. -->
+              <div style="padding:4px 10px 6px;">
+                <input type="search" id="kcRecipeSearch" placeholder="${PCD.escapeHtml(t('kc_search_placeholder'))}" autocomplete="off" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface-1);color:var(--text-1);font-size:13px;box-sizing:border-box;">
+              </div>
+              <div style="max-height:280px;overflow-y:auto;">
+                <div id="recipeList"></div>
+              </div>
             </div>
 
             <div class="flex gap-2 mt-3">
@@ -244,13 +253,13 @@
 
       function appendRow(r) {
         const isOn = onCanvas.has(r.id);
-        const row = PCD.el('label', { class: 'kc-recipe-row' });
+        const row = PCD.el('label', { class: 'kc-recipe-row', 'data-recipe-row': '', 'data-recipe-name': (r.name || '').toLowerCase() });
         row.innerHTML = '<input type="checkbox" data-rid="' + r.id + '"' + (isOn ? ' checked' : '') + '>' +
           '<div style="flex:1;font-size:13px;font-weight:' + (isOn ? '600' : '400') + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + PCD.escapeHtml(r.name) + '</div>';
         recipeListEl.appendChild(row);
       }
       function appendHeader(labelKey, count) {
-        const h = PCD.el('div');
+        const h = PCD.el('div', { 'data-recipe-header': '' });
         h.style.cssText = 'padding:8px 12px 4px;font-size:10px;font-weight:700;color:var(--brand-700);text-transform:uppercase;letter-spacing:0.08em;background:var(--brand-50);';
         h.textContent = t(labelKey, { n: count });
         recipeListEl.appendChild(h);
@@ -262,6 +271,43 @@
       if (mains.length > 0) {
         appendHeader('kc_recipes_section_menu', mains.length);
         mains.forEach(appendRow);
+      }
+
+      // v2.8.57 — Recipe arama: anlık filter (case-insensitive substring).
+      // Empty değer → tümü görünür. Match: row.style.display + section
+      // header'ları altında match var mı ona göre gizle/göster.
+      const searchEl = PCD.$('#kcRecipeSearch', bodyEl);
+      if (searchEl) {
+        const allRows = recipeListEl.querySelectorAll('[data-recipe-row]');
+        const allHeaders = recipeListEl.querySelectorAll('[data-recipe-header]');
+        function applySearch() {
+          const q = (searchEl.value || '').trim().toLowerCase();
+          if (!q) {
+            // Tümünü göster
+            allRows.forEach(function (r) { r.style.display = ''; });
+            allHeaders.forEach(function (h) { h.style.display = ''; });
+            return;
+          }
+          // Her satır için match check
+          allRows.forEach(function (r) {
+            const name = r.getAttribute('data-recipe-name') || '';
+            r.style.display = name.indexOf(q) >= 0 ? '' : 'none';
+          });
+          // Her header için: altındaki ilk header'a kadar olan görünür row var mı?
+          allHeaders.forEach(function (h) {
+            let n = h.nextElementSibling;
+            let anyVisible = false;
+            while (n && !n.hasAttribute('data-recipe-header')) {
+              if (n.hasAttribute('data-recipe-row') && n.style.display !== 'none') {
+                anyVisible = true;
+                break;
+              }
+              n = n.nextElementSibling;
+            }
+            h.style.display = anyVisible ? '' : 'none';
+          });
+        }
+        searchEl.addEventListener('input', applySearch);
       }
 
       // Wire all controls

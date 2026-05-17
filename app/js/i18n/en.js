@@ -1253,6 +1253,8 @@ window.PCD.i18n.register('en', {
   // v2.8.56 — Drag handle tooltips (recipe editor + menu builder reorder)
   ing_drag_handle: "Drag to reorder",
   menu_drag_handle: "Drag to reorder",
+  // v2.8.57 — Kitchen Cards recipe search
+  kc_search_placeholder: "Search recipes…",
   allerg_manual: "Manual tagging",
   allerg_recipe_contains: "Contains",
   allerg_recipe_clean: "Allergen-free",

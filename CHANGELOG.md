@@ -1,8 +1,10 @@
 # ProChefDesk — Sürüm geçmişi
 
-Mevcut sürüm: **v2.8.56**
+Mevcut sürüm: **v2.8.57**
 
 Yapısal kilometre taşları (kronolojik tersine):
+
+* **v2.8.57** — Kitchen Cards recipe arama. Operatör isteği: "RECIPES ON CANVAS" altında 45+ tarif alfabetik liste, istediğini bulmak yavaş — recipes ekranındaki gibi anlık search istiyor. Fix: başlık altına `<input type="search" id="kcRecipeSearch">` (full-width, sticky outside-of-scroll). Filter: case-insensitive substring, `recipe.name.toLowerCase().indexOf(query) >= 0`. Her recipe row'una `data-recipe-name` attribute eklendi (preprocess); search input event'inde tüm rowlar üzerinde tek pass + section header'ları (Preps / Menu) altındaki ilk row'a kadar bakarak görünür satır yoksa o header'ı da gizle. UX: scroll wrapper içeri alındı (`max-height:280px;overflow-y:auto`), search input scroll'un dışında → kullanıcı liste içinde ne kadar aşağı kayarsa kaysın search üstte sabit. Empty query → tümü göster. 1 yeni i18n key (TR+EN: `kc_search_placeholder`).
 
 * **v2.8.56** — Drag-drop sıralama: recipe ingredients + menu sections/items. Operatör isteği: up/down ok butonları pratik değil, basılı tut + sürükle/bırak modern UX. `PCD.dragdrop.makeSortable()` (`ui/dragdrop.js`) helper'ı v2.6.x'ten beri repoda hazırdı ama hiçbir yerde aktif değildi — şimdi recipe editor + menu builder'da devreye girdi. (1) Recipe editor `renderIngList`: her satır (ingredient + sub-recipe + separator) başına 6-nokta grip handle (inline SVG, `cursor:grab`, `touch-action:none`); eski `data-moveup`/`data-movedown` butonları kaldırıldı. `renderIngList` sonunda `PCD.dragdrop.makeSortable(ingListEl, {handle:'.drag-handle', onEnd:reorder})`; destroy/recreate her render'da. (2) Menu builder render: section row başına `.sec-drag-handle` + item row başına `.item-drag-handle` (CSS class ayrımı iki sortable arasında çakışmasın diye — outer section sortable `handle:'.sec-drag-handle'`, inner items sortable `handle:'.item-drag-handle'`). 2 yeni sortable: section list (`itemSelector: '[data-sid]'`) + her section'ın items list. Touch destek mevcut `dragdrop.js`'te (mousedown + touchstart, haptic feedback). 2 yeni i18n key (TR+EN: `ing_drag_handle` + `menu_drag_handle`).
 
