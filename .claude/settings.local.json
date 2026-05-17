@@ -29,7 +29,12 @@
       "Bash(node -c app/js/core/store.js)",
       "Bash(node -c app/js/core/cloud-pertable.js)",
       "Bash(node -c app/js/core/cloud.js)",
-      "Bash(node -c app/js/tools/dashboard.js)"
+      "Bash(node -c app/js/tools/dashboard.js)",
+      "Bash(node -c app/js/core/variance.js)",
+      "Bash(node -c app/js/core/share.js)",
+      "Bash(node -c app/js/tools/kitchen_cards.js)",
+      "Bash(node -c app/js/core/utils.js)",
+      "Bash(node -c app/js/tools/haccp_logs.js)"
     ]
   }
 }
