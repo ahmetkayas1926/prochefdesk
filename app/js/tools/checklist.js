@@ -367,6 +367,370 @@
     },
   ];
 
+  // v2.8.65 — Template Library presets.
+  // İlk açılışta tek seferlik seed haricinde, "Library" butonu ile şef
+  // istediği zaman ekstra hazır template'leri ekleyebilir. Defaults
+  // (getDefaultTemplates) zaten 8 temel kart kuruyor; library bunlara
+  // ek 5 preset daha sunar (Pre-Service Brief, Allergen Cross-Contact,
+  // Staff Hygiene, Pest Control, Stock Take, Oil Quality) ve hepsini
+  // 4 kategoride gruplar.
+  function getLibraryExtras() {
+    const lang = (PCD.i18n && PCD.i18n.currentLocale) || 'en';
+    if (lang === 'tr') {
+      return [
+        {
+          presetKey: 'pre_service',
+          category: 'daily',
+          name: 'Servis Öncesi Brifing',
+          desc: 'Servisten 10 dk önce 5 dakikalık ekip brifingi',
+          icon: 'users',
+          items: [
+            { text: 'Bugünün özel menüsü ve 86\'lı ürünler okundu', cat: 'service', prio: 'high', type: 'task' },
+            { text: 'Aktif rezervasyonlar ve VIP misafirler', cat: 'service', prio: 'high', type: 'text' },
+            { text: 'Bilinen alerjen / diyet talepleri', cat: 'service', prio: 'high', type: 'text' },
+            { text: 'Tüm mise en place hazır', cat: 'prep', prio: 'high', type: 'pass-fail' },
+            { text: 'Sıcak tutma sıcaklığı (≥63°C)', cat: 'cooking', prio: 'high', type: 'temperature', min: 63, max: 90, unit: '°C' },
+            { text: 'Pass / expo alanı kuruldu', cat: 'service', prio: 'high', type: 'pass-fail' },
+            { text: 'İstasyon sorumluları görevlerini onayladı', cat: 'admin', prio: 'high', type: 'task' },
+          ]
+        },
+        {
+          presetKey: 'allergen_audit',
+          category: 'haccp',
+          name: 'Alerjen Çapraz Bulaşma Denetimi',
+          desc: 'Alerjen prosedürleri ve çapraz bulaşma kontrolü',
+          icon: 'alert-triangle',
+          items: [
+            { text: 'Alerjen tabakları ayrı renkli tahtalarda hazırlandı', cat: 'prep', prio: 'high', type: 'pass-fail' },
+            { text: 'Alerjen kaplar ve aletler ayrı tutuluyor', cat: 'prep', prio: 'high', type: 'pass-fail' },
+            { text: 'Alerjen porsiyonlar son adımda hazırlanıyor', cat: 'prep', prio: 'high', type: 'pass-fail' },
+            { text: 'Garnitür alanı çapraz bulaşmadan ayrı', cat: 'service', prio: 'high', type: 'pass-fail' },
+            { text: 'Personel alerjen prosedürünü hatırlıyor', cat: 'admin', prio: 'high', type: 'pass-fail' },
+            { text: 'Etiketleme tam (alerjen içerik yazılı)', cat: 'admin', prio: 'high', type: 'pass-fail' },
+            { text: 'Şef imzası', cat: 'admin', prio: 'high', type: 'text' },
+          ]
+        },
+        {
+          presetKey: 'staff_hygiene',
+          category: 'haccp',
+          name: 'Personel Hijyen Denetimi',
+          desc: 'Vardiya başında ekip hijyen kontrolü',
+          icon: 'user',
+          items: [
+            { text: 'Tüm personel temiz üniforma giyiyor', cat: 'admin', prio: 'high', type: 'pass-fail' },
+            { text: 'Saçlar bone / şapka altında', cat: 'admin', prio: 'high', type: 'pass-fail' },
+            { text: 'Tırnaklar kısa ve temiz', cat: 'admin', prio: 'high', type: 'pass-fail' },
+            { text: 'Takı / saat yok (alyans dışında)', cat: 'admin', prio: 'med', type: 'pass-fail' },
+            { text: 'Açık yara / kesik kapalı (mavi yara bandı)', cat: 'admin', prio: 'high', type: 'pass-fail' },
+            { text: 'Hastalık bildirimi yok', cat: 'admin', prio: 'high', type: 'pass-fail' },
+            { text: 'El yıkama uygun şekilde yapıldı', cat: 'admin', prio: 'high', type: 'pass-fail' },
+            { text: 'Eldiven değişim sıklığı doğru', cat: 'admin', prio: 'med', type: 'pass-fail' },
+          ]
+        },
+        {
+          presetKey: 'pest_check',
+          category: 'weekly',
+          name: 'Haşere Kontrol Denetimi',
+          desc: 'Haftalık haşere izi ve önleyici kontrol',
+          icon: 'search',
+          items: [
+            { text: 'Yiyecek depolama alanları temiz, dökülme yok', cat: 'admin', prio: 'high', type: 'pass-fail' },
+            { text: 'Çöp alanları kapalı ve temiz', cat: 'cleaning', prio: 'high', type: 'pass-fail' },
+            { text: 'Dış kapı ve pencereler sızdırmaz', cat: 'admin', prio: 'high', type: 'pass-fail' },
+            { text: 'Fare / kemirgen izi (dışkı, ısırık) yok', cat: 'admin', prio: 'high', type: 'pass-fail' },
+            { text: 'Hamamböceği izi yok', cat: 'admin', prio: 'high', type: 'pass-fail' },
+            { text: 'Sinek tuzakları kontrol edildi', cat: 'admin', prio: 'med', type: 'pass-fail' },
+            { text: 'Drenajlar kapaklı ve temiz', cat: 'cleaning', prio: 'med', type: 'pass-fail' },
+            { text: 'Profesyonel ilaçlama tarihi (varsa)', cat: 'admin', prio: 'low', type: 'text' },
+          ]
+        },
+        {
+          presetKey: 'stock_take',
+          category: 'weekly',
+          name: 'Stok Sayımı — Yüksek Değerli',
+          desc: 'Haftalık protein ve premium ürün sayımı',
+          icon: 'package',
+          items: [
+            { text: 'Dana eti (kg)', cat: 'admin', prio: 'high', type: 'numeric', unit: 'kg' },
+            { text: 'Kuzu eti (kg)', cat: 'admin', prio: 'high', type: 'numeric', unit: 'kg' },
+            { text: 'Tavuk (kg)', cat: 'admin', prio: 'high', type: 'numeric', unit: 'kg' },
+            { text: 'Deniz ürünleri (kg)', cat: 'admin', prio: 'high', type: 'numeric', unit: 'kg' },
+            { text: 'Tereyağı (kg)', cat: 'admin', prio: 'med', type: 'numeric', unit: 'kg' },
+            { text: 'Peynir (kg)', cat: 'admin', prio: 'med', type: 'numeric', unit: 'kg' },
+            { text: 'Trüf / safran / vanilya (g)', cat: 'admin', prio: 'high', type: 'numeric', unit: 'g' },
+            { text: 'Premium içecek (şişe)', cat: 'admin', prio: 'med', type: 'numeric', unit: 'şişe' },
+            { text: 'Sayan kişi', cat: 'admin', prio: 'high', type: 'text' },
+          ]
+        },
+        {
+          presetKey: 'oil_quality',
+          category: 'weekly',
+          name: 'Fritöz Yağ Kalite Kontrolü',
+          desc: 'TPM ölçümü ve yağ değişim takibi',
+          icon: 'activity',
+          items: [
+            { text: 'Fritöz 1 — TPM (%)', cat: 'cooking', prio: 'high', type: 'numeric', min: 0, max: 24, unit: '%' },
+            { text: 'Fritöz 2 — TPM (%)', cat: 'cooking', prio: 'high', type: 'numeric', min: 0, max: 24, unit: '%' },
+            { text: 'Yağ rengi koyu / yanık değil', cat: 'cooking', prio: 'high', type: 'pass-fail' },
+            { text: 'Köpürme / kötü koku yok', cat: 'cooking', prio: 'high', type: 'pass-fail' },
+            { text: 'Yağ seviyesi yeterli (min işaret üstünde)', cat: 'cooking', prio: 'med', type: 'pass-fail' },
+            { text: 'Fritöz iç yüzeyi temiz', cat: 'cleaning', prio: 'med', type: 'pass-fail' },
+            { text: 'Yağ değiştirildi mi (E/H)', cat: 'cooking', prio: 'high', type: 'text' },
+          ]
+        },
+      ];
+    }
+    // EN (default for non-TR locales)
+    return [
+      {
+        presetKey: 'pre_service',
+        category: 'daily',
+        name: 'Pre-Service Brief',
+        desc: '5-min team brief 10 min before service',
+        icon: 'megaphone',
+        items: [
+          { text: 'Today\'s specials and 86\'d items read out', cat: 'service', prio: 'high', type: 'task' },
+          { text: 'Active reservations and VIP guests', cat: 'service', prio: 'high', type: 'text' },
+          { text: 'Known allergen / dietary requests', cat: 'service', prio: 'high', type: 'text' },
+          { text: 'All mise en place ready', cat: 'prep', prio: 'high', type: 'pass-fail' },
+          { text: 'Hot holding temperature (≥63°C)', cat: 'cooking', prio: 'high', type: 'temperature', min: 63, max: 90, unit: '°C' },
+          { text: 'Pass / expo station set up', cat: 'service', prio: 'high', type: 'pass-fail' },
+          { text: 'Station leads confirmed assignments', cat: 'admin', prio: 'high', type: 'task' },
+        ]
+      },
+      {
+        presetKey: 'allergen_audit',
+        category: 'haccp',
+        name: 'Allergen Cross-Contact Audit',
+        desc: 'Allergen procedure and cross-contact check',
+        icon: 'shield',
+        items: [
+          { text: 'Allergen plates prepared on separate colour boards', cat: 'prep', prio: 'high', type: 'pass-fail' },
+          { text: 'Allergen containers and utensils kept separate', cat: 'prep', prio: 'high', type: 'pass-fail' },
+          { text: 'Allergen portions prepared as last step', cat: 'prep', prio: 'high', type: 'pass-fail' },
+          { text: 'Garnish station free of cross-contact', cat: 'service', prio: 'high', type: 'pass-fail' },
+          { text: 'Staff recall allergen procedure', cat: 'admin', prio: 'high', type: 'pass-fail' },
+          { text: 'Labels complete (allergen contents listed)', cat: 'admin', prio: 'high', type: 'pass-fail' },
+          { text: 'Chef signature', cat: 'admin', prio: 'high', type: 'text' },
+        ]
+      },
+      {
+        presetKey: 'staff_hygiene',
+        category: 'haccp',
+        name: 'Staff Hygiene Audit',
+        desc: 'Pre-shift team hygiene check',
+        icon: 'user-check',
+        items: [
+          { text: 'All staff in clean uniforms', cat: 'admin', prio: 'high', type: 'pass-fail' },
+          { text: 'Hair restrained (hat / hairnet)', cat: 'admin', prio: 'high', type: 'pass-fail' },
+          { text: 'Nails short and clean', cat: 'admin', prio: 'high', type: 'pass-fail' },
+          { text: 'No jewellery / watches (plain band only)', cat: 'admin', prio: 'med', type: 'pass-fail' },
+          { text: 'Open cuts covered (blue waterproof plaster)', cat: 'admin', prio: 'high', type: 'pass-fail' },
+          { text: 'No illness reported', cat: 'admin', prio: 'high', type: 'pass-fail' },
+          { text: 'Hand-washing performed properly', cat: 'admin', prio: 'high', type: 'pass-fail' },
+          { text: 'Glove change frequency adequate', cat: 'admin', prio: 'med', type: 'pass-fail' },
+        ]
+      },
+      {
+        presetKey: 'pest_check',
+        category: 'weekly',
+        name: 'Pest Control Inspection',
+        desc: 'Weekly pest activity and prevention check',
+        icon: 'search',
+        items: [
+          { text: 'Food storage areas clean, no spills', cat: 'admin', prio: 'high', type: 'pass-fail' },
+          { text: 'Bin areas closed and clean', cat: 'cleaning', prio: 'high', type: 'pass-fail' },
+          { text: 'External doors and windows sealed', cat: 'admin', prio: 'high', type: 'pass-fail' },
+          { text: 'No rodent activity (droppings, gnaw marks)', cat: 'admin', prio: 'high', type: 'pass-fail' },
+          { text: 'No cockroach activity', cat: 'admin', prio: 'high', type: 'pass-fail' },
+          { text: 'Fly traps inspected', cat: 'admin', prio: 'med', type: 'pass-fail' },
+          { text: 'Drains covered and clean', cat: 'cleaning', prio: 'med', type: 'pass-fail' },
+          { text: 'Professional pest control date (if applicable)', cat: 'admin', prio: 'low', type: 'text' },
+        ]
+      },
+      {
+        presetKey: 'stock_take',
+        category: 'weekly',
+        name: 'Stock Take — High Value',
+        desc: 'Weekly protein and premium item count',
+        icon: 'package',
+        items: [
+          { text: 'Beef (kg)', cat: 'admin', prio: 'high', type: 'numeric', unit: 'kg' },
+          { text: 'Lamb (kg)', cat: 'admin', prio: 'high', type: 'numeric', unit: 'kg' },
+          { text: 'Chicken (kg)', cat: 'admin', prio: 'high', type: 'numeric', unit: 'kg' },
+          { text: 'Seafood (kg)', cat: 'admin', prio: 'high', type: 'numeric', unit: 'kg' },
+          { text: 'Butter (kg)', cat: 'admin', prio: 'med', type: 'numeric', unit: 'kg' },
+          { text: 'Cheese (kg)', cat: 'admin', prio: 'med', type: 'numeric', unit: 'kg' },
+          { text: 'Truffle / saffron / vanilla (g)', cat: 'admin', prio: 'high', type: 'numeric', unit: 'g' },
+          { text: 'Premium beverages (bottles)', cat: 'admin', prio: 'med', type: 'numeric', unit: 'btl' },
+          { text: 'Counted by', cat: 'admin', prio: 'high', type: 'text' },
+        ]
+      },
+      {
+        presetKey: 'oil_quality',
+        category: 'weekly',
+        name: 'Fryer Oil Quality Check',
+        desc: 'TPM reading and oil change tracking',
+        icon: 'droplet',
+        items: [
+          { text: 'Fryer 1 — TPM (%)', cat: 'cooking', prio: 'high', type: 'numeric', min: 0, max: 24, unit: '%' },
+          { text: 'Fryer 2 — TPM (%)', cat: 'cooking', prio: 'high', type: 'numeric', min: 0, max: 24, unit: '%' },
+          { text: 'Oil colour not dark / burnt', cat: 'cooking', prio: 'high', type: 'pass-fail' },
+          { text: 'No foaming / off-smell', cat: 'cooking', prio: 'high', type: 'pass-fail' },
+          { text: 'Oil level adequate (above min mark)', cat: 'cooking', prio: 'med', type: 'pass-fail' },
+          { text: 'Fryer interior clean', cat: 'cleaning', prio: 'med', type: 'pass-fail' },
+          { text: 'Oil changed? (Y/N)', cat: 'cooking', prio: 'high', type: 'text' },
+        ]
+      },
+    ];
+  }
+
+  // v2.8.65 — Library categories. Defaults (8 templates from
+  // getDefaultTemplates) + extras (6 from getLibraryExtras) bir araya
+  // gelip 4 kategoride gruplanır. Library modal bu yapıyı render eder.
+  const LIBRARY_CATEGORIES = [
+    { id: 'daily',  labelKey: 'chk_lib_cat_daily',  icon: 'clock',       color: '#f59e0b' },
+    { id: 'haccp',  labelKey: 'chk_lib_cat_haccp',  icon: 'thermometer', color: '#ef4444' },
+    { id: 'weekly', labelKey: 'chk_lib_cat_weekly', icon: 'recycle',     color: '#8b5cf6' },
+    { id: 'events', labelKey: 'chk_lib_cat_events', icon: 'calendar',    color: '#3b82f6' },
+  ];
+
+  // Default 8 template'lere kategori atar — Library modal'da
+  // grup başlıkları altında doğru yerde gözüksünler.
+  function categorizeDefaultTemplate(name) {
+    if (/opening|kapan|açılış|closing/i.test(name)) return 'daily';
+    if (/temp|haccp|cooler|receiving|kabul|sıcaklık/i.test(name)) return 'haccp';
+    if (/weekly|haftalık|deep clean/i.test(name)) return 'weekly';
+    if (/banquet|event|banket|etkinlik/i.test(name)) return 'events';
+    return 'daily';
+  }
+
+  // Library presets'in tümünü kategori bazlı dön. Defaults + extras.
+  function getLibraryPresets() {
+    const all = [];
+    getDefaultTemplates().forEach(function (def) {
+      all.push({
+        presetKey: 'default_' + (def.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '_').slice(0, 30),
+        category: categorizeDefaultTemplate(def.name),
+        name: def.name,
+        desc: '', // defaults için kısa açıklama yok; isim yeterli
+        icon: def.icon,
+        items: def.items,
+      });
+    });
+    getLibraryExtras().forEach(function (extra) { all.push(extra); });
+    return all;
+  }
+
+  // Library modal — kategorilere bölünmüş preset kartları.
+  // Her karttan "Import" → workspace'e kopyalanır, isDefault=false,
+  // sortIndex listenin sonuna eklenir, ardından template editör açılır.
+  function openTemplateLibrary(view) {
+    const t = PCD.i18n.t;
+    const presets = getLibraryPresets();
+
+    // Kategorilere göre grupla
+    const byCat = {};
+    LIBRARY_CATEGORIES.forEach(function (c) { byCat[c.id] = []; });
+    presets.forEach(function (p) {
+      if (!byCat[p.category]) byCat[p.category] = [];
+      byCat[p.category].push(p);
+    });
+
+    const body = PCD.el('div');
+    let html = '<div style="margin-bottom:14px;padding:12px 14px;background:linear-gradient(135deg,var(--brand-50),var(--surface));border-radius:var(--r-md);">' +
+      '<div style="font-size:11px;font-weight:700;color:var(--brand-700);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">' +
+        PCD.escapeHtml(t('chk_lib_title') || 'Template Library') +
+      '</div>' +
+      '<div class="text-muted text-sm">' +
+        PCD.escapeHtml(t('chk_lib_subtitle') || 'Pick a ready-made checklist. You can edit it after importing.') +
+      '</div>' +
+    '</div>';
+
+    LIBRARY_CATEGORIES.forEach(function (cat) {
+      const list = byCat[cat.id] || [];
+      if (!list.length) return;
+      html += '<div style="margin-bottom:18px;">' +
+        '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1.5px solid ' + cat.color + '33;margin-bottom:10px;">' +
+          '<span style="color:' + cat.color + ';">' + PCD.icon(cat.icon, 16) + '</span>' +
+          '<span style="font-size:11px;font-weight:700;color:' + cat.color + ';text-transform:uppercase;letter-spacing:0.06em;">' +
+            PCD.escapeHtml(t(cat.labelKey) || cat.id) +
+          '</span>' +
+        '</div>';
+      list.forEach(function (p, idx) {
+        const typeCount = (function () {
+          const types = new Set((p.items || []).map(function (i) { return i.type || 'task'; }));
+          return Array.from(types).filter(function (x) { return x !== 'task'; });
+        })();
+        const badges = typeCount.map(function (tp) {
+          return '<span style="font-size:9px;padding:1px 6px;border-radius:999px;background:var(--brand-50);color:var(--brand-700);font-weight:700;letter-spacing:0.04em;text-transform:uppercase;margin-inline-end:4px;">' + tp + '</span>';
+        }).join('');
+        const desc = p.desc ? '<div class="text-muted text-sm" style="margin-top:2px;font-size:12px;">' + PCD.escapeHtml(p.desc) + '</div>' : '';
+        html += '<div class="card" style="padding:12px;margin-bottom:8px;display:flex;align-items:center;gap:12px;">' +
+          '<div class="list-item-thumb" style="background:var(--surface-2);color:' + cat.color + ';flex-shrink:0;">' + PCD.icon(p.icon || 'check-square', 20) + '</div>' +
+          '<div style="flex:1;min-width:0;">' +
+            '<div style="font-weight:700;font-size:14px;">' + PCD.escapeHtml(p.name) + '</div>' +
+            desc +
+            '<div class="text-muted text-sm" style="margin-top:4px;">' + (p.items || []).length + ' ' + (t('chk_lib_items') || 'items') + ' ' + badges + '</div>' +
+          '</div>' +
+          '<button type="button" class="btn btn-primary btn-sm" data-import-preset="' + cat.id + ':' + idx + '">' + PCD.icon('plus', 14) + ' ' + PCD.escapeHtml(t('chk_lib_import') || 'Import') + '</button>' +
+        '</div>';
+      });
+      html += '</div>';
+    });
+
+    body.innerHTML = html;
+
+    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('close') });
+    const footer = PCD.el('div', { style: { display: 'flex', justifyContent: 'flex-end', width: '100%' } });
+    footer.appendChild(closeBtn);
+
+    const m = PCD.modal.open({
+      title: t('chk_lib_title') || 'Template Library',
+      body: body,
+      footer: footer,
+      size: 'md',
+      closable: true,
+    });
+    closeBtn.addEventListener('click', function () { m.close(); });
+
+    PCD.on(body, 'click', '[data-import-preset]', function () {
+      const ref = this.getAttribute('data-import-preset').split(':');
+      const catId = ref[0];
+      const idx = parseInt(ref[1], 10);
+      const preset = (byCat[catId] || [])[idx];
+      if (!preset) return;
+      // Listenin sonuna sortIndex ata
+      const existing = listTemplates();
+      const newTpl = {
+        name: preset.name,
+        icon: preset.icon || 'check-square',
+        sortIndex: existing.length,
+        printColumns: 1,
+        items: (preset.items || []).map(function (it) {
+          const item = {
+            id: PCD.uid('it'),
+            text: it.text, cat: it.cat || 'prep', prio: it.prio || 'med',
+            type: it.type || 'task',
+          };
+          if (it.min !== undefined) item.min = it.min;
+          if (it.max !== undefined) item.max = it.max;
+          if (it.unit) item.unit = it.unit;
+          if (it.hint) item.hint = it.hint;
+          return item;
+        }),
+        isDefault: false,
+      };
+      const saved = PCD.store.upsertInTable('checklistTemplates', newTpl, 'tpl');
+      PCD.toast.success(t('chk_lib_imported') || 'Template imported');
+      m.close();
+      setTimeout(function () {
+        if (view && PCD.router.currentView() === 'checklist') render(view);
+        setTimeout(function () { openTemplateEditor(saved.id); }, 200);
+      }, 150);
+    });
+  }
+
   // ============ MAIN VIEW ============
   function render(view) {
     const t = PCD.i18n.t;
@@ -380,6 +744,7 @@
           <div class="page-subtitle">${t('checklist_subtitle') || 'Standardize opening, prep, closing, and HACCP routines'}</div>
         </div>
         <div class="page-header-actions">
+          <button class="btn btn-outline btn-sm" id="libraryBtn">${PCD.icon('package',16)} ${t('chk_lib_btn') || 'Library'}</button>
           <button class="btn btn-outline btn-sm" id="newTplBtn">${PCD.icon('plus',16)} ${t('checklist_new_template') || 'Template'}</button>
         </div>
       </div>
@@ -511,6 +876,8 @@
     });
 
     PCD.$('#newTplBtn', view).addEventListener('click', function () { openTemplateEditor(); });
+    const libBtn = PCD.$('#libraryBtn', view);
+    if (libBtn) libBtn.addEventListener('click', function () { openTemplateLibrary(view); });
     // Click on the card body (not on inner buttons) → preview
     PCD.on(view, 'click', '[data-tid]', function (e) {
       if (e.target.closest('[data-startrun]')) return;

@@ -34,7 +34,13 @@
       "Bash(node -c app/js/core/share.js)",
       "Bash(node -c app/js/tools/kitchen_cards.js)",
       "Bash(node -c app/js/core/utils.js)",
-      "Bash(node -c app/js/tools/haccp_logs.js)"
+      "Bash(node -c app/js/tools/haccp_logs.js)",
+      "Bash(node -c \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\tools\\\\checklist.js\")",
+      "Bash(node -c \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\i18n\\\\en.js\")",
+      "Bash(node -c \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\i18n\\\\tr.js\")",
+      "Bash(node -c \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\core\\\\config.js\")",
+      "Bash(git -C \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\" status --short)",
+      "Bash(git -C \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\" log --oneline origin/main..HEAD)"
     ]
   }
 }
