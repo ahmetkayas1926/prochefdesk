@@ -505,8 +505,7 @@
       'table.h-grid td.fail{background:#fee2e2;color:#991b1b;}' +
       '.h-foot{margin-top:6px;display:flex;justify-content:space-between;font-size:9px;}' +
       '.h-foot .legend{color:#666;}' +
-      '.h-brand{margin-top:4px;text-align:center;font-size:7px;color:#999;}' +
-      '.pcd-print-footer{display:none !important;}' +
+      // v2.8.54 — Standart footer'a geçildi (utils.js PCD.print otomatik)
       '@page{size:A4 landscape;margin:6mm;}' +
     '</style>' +
     '<div class="h-head">' +
@@ -531,7 +530,7 @@
         '</div>' +
         '<div><strong>' + PCD.escapeHtml(t('reviewed_by') || 'Kontrol eden') + ':</strong> ____________________</div>' +
       '</div>' +
-      '<div class="h-brand">Made with ProChefDesk · prochefdesk.com</div>';
+      '';  // v2.8.54: footer artık PCD.print() tarafından otomatik enjekte edilir
   }
 
   // ============ EXPORT ============

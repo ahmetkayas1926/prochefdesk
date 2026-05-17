@@ -433,8 +433,11 @@
     }
 
     html += '</div>';
+    // v2.8.54 — STANDART tıklanabilir footer. Hem marka adı hem URL link;
+    // tüm uygulama print + share + QR akışlarında aynı format
+    // (utils.js PCD.print ile aynı, görsel tutarlılık).
     html += '<div class="share-footer">' +
-      'Made with <a href="' + location.origin + location.pathname + '" target="_blank" rel="noopener"><strong>ProChefDesk</strong></a> · prochefdesk.com' +
+      'Made with <a href="https://prochefdesk.com" target="_blank" rel="noopener"><strong>ProChefDesk</strong></a> · <a href="https://prochefdesk.com" target="_blank" rel="noopener">prochefdesk.com</a>' +
     '</div>';
     html += '</div>';
 

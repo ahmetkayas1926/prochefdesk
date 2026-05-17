@@ -741,11 +741,9 @@
         '.h-notes .nh{font-weight:700;margin-bottom:3px;font-size:9px;}' +
         '.h-notes .ni{padding:1px 0;border-bottom:1px solid #eee;}' +
         '.h-sign{margin-top:6px;padding-top:4px;border-top:1px solid #ccc;font-size:9px;display:flex;justify-content:space-between;}' +
-        // The global PCD.print() footer ("Made with ProChefDesk") would be
-        // injected below the table and push everything to page 2 on a
-        // tight landscape A4. Hide it; we render our own compact footer.
-        '.pcd-print-footer{display:none !important;}' +
-        '.h-foot{margin-top:4px;text-align:center;font-size:7px;color:#999;}' +
+        // v2.8.54 — Eski .h-foot custom footer + .pcd-print-footer{display:none}
+        // kaldırıldı. Standart kompakt footer (utils.js v2.8.54, margin-top
+        // 6px) artık tek sayfa bozmuyor. Tıklanabilir + tutarlı.
         '@page{size:A4 landscape;margin:5mm;}' +
         (units.length > 6 ? '.h-warn{padding:3px 6px;background:#fef3c7;color:#92400e;font-size:8px;border-radius:3px;margin-bottom:4px;}' : '') +
       '</style>' +
@@ -804,8 +802,7 @@
 
     const user = PCD.store.get('user') || {};
     html += '<div class="h-sign"><div>' + PCD.escapeHtml(t('reviewed_by') || 'Reviewed by') + ': ____________________________</div><div>' + PCD.escapeHtml(t('haccp_print_date') || 'Date') + ': ' + new Date().toLocaleDateString(locale()) + '</div></div>';
-    html += '<div class="h-foot">Made with ProChefDesk · prochefdesk.com</div>';
-
+    // v2.8.54: footer artık PCD.print() tarafından otomatik enjekte edilir
     PCD.print(html, 'HACCP Fridge Log — ' + monthLabel(year, monthIdx0));
   }
 

@@ -484,8 +484,9 @@
         'table.h-grid td.fail{background:#fee2e2;color:#991b1b;font-weight:700;}' +
         '.h-foot{margin-top:4px;display:flex;justify-content:space-between;font-size:8px;}' +
         '.h-foot .legend{color:#666;}' +
-        '.h-brand{margin-top:2px;text-align:center;font-size:6px;color:#999;}' +
-        '.pcd-print-footer{display:none !important;}' +
+        // v2.8.54 — Eski .h-brand custom footer ve .pcd-print-footer{display:none}
+      // kaldırıldı; artık PCD.print()'in standart tıklanabilir footer'ı
+      // (utils.js) kullanılıyor. Tutarlı görünüm + tüm print yerlerinde aynı.
         '@page{size:A4 landscape;margin:4mm;}' +
       '</style>' +
       '<div class="h-head">' +
@@ -553,7 +554,7 @@
         '</div>' +
         '<div><strong>' + PCD.escapeHtml(t('reviewed_by') || 'Kontrol eden') + ':</strong> ____________________</div>' +
       '</div>' +
-      '<div class="h-brand">Made with ProChefDesk · prochefdesk.com</div>';
+      '';  // v2.8.54: footer artık PCD.print() tarafından otomatik enjekte edilir
 
     PCD.print(html, 'HACCP Cook & Cool · ' + label);
   }
