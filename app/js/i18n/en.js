@@ -1259,6 +1259,11 @@ window.PCD.i18n.register('en', {
   menu_drag_handle: "Drag to reorder",
   // v2.8.57 — Kitchen Cards recipe search
   kc_search_placeholder: "Search recipes…",
+  // v2.8.61 — Checklist multi-column print toggle
+  chk_print_layout_label: "Print layout",
+  chk_print_layout_hint: "Single column reads big; double column fits longer checklists on one page.",
+  chk_print_layout_1col: "Single column",
+  chk_print_layout_2col: "Double column",
   allerg_manual: "Manual tagging",
   allerg_recipe_contains: "Contains",
   allerg_recipe_clean: "Allergen-free",

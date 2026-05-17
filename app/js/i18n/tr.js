@@ -1259,6 +1259,11 @@ window.PCD.i18n.register('tr', {
   menu_drag_handle: "Sıralamak için sürükle",
   // v2.8.57 — Kitchen Cards tarif arama
   kc_search_placeholder: "Tarif ara…",
+  // v2.8.61 — Checklist çift sütun print toggle
+  chk_print_layout_label: "Yazdırma düzeni",
+  chk_print_layout_hint: "Tek sütun büyük okunur; çift sütun uzun checklist'leri tek sayfaya sığdırır.",
+  chk_print_layout_1col: "Tek sütun",
+  chk_print_layout_2col: "Çift sütun",
   allerg_manual: "Manuel etiketleme",
   allerg_recipe_contains: "İçerir",
   allerg_recipe_clean: "Alerjen içermez",

@@ -744,37 +744,52 @@
     });
   }
 
+  // v2.8.59 — Print kompaktlaştırma.
+  // v2.8.61 — Multi-column toggle: tpl.printColumns (1|2). 1 col = tek tablo;
+  // 2 col = items ortadan ikiye bölünüp iki tablo CSS grid'de yan yana →
+  // 24 item rahatlıkla tek sayfa.
+  function _chkBuildRowHtml(it, idx) {
+    const cat = CATS.find(function (c) { return c.id === it.cat; });
+    const type = it.type || 'task';
+    let valueCol;
+    if (type === 'task') valueCol = '<span style="display:inline-block;width:14px;height:14px;border:1.5px solid #999;border-radius:2px;"></span>';
+    else if (type === 'temperature' || type === 'numeric') valueCol = '<span style="display:inline-block;border-bottom:1px solid #999;min-width:60px;height:14px;"></span> ' + (it.unit || '') +
+      ((it.min !== undefined || it.max !== undefined) ? '<span style="font-size:7pt;color:#999;margin-inline-start:6px;">Target ' + (it.min !== undefined ? it.min : '?') + '–' + (it.max !== undefined ? it.max : '?') + '</span>' : '');
+    else if (type === 'pass-fail') valueCol = '<span style="font-size:8pt;">P <span style="display:inline-block;width:11px;height:11px;border:1px solid #999;border-radius:2px;vertical-align:middle;"></span> F <span style="display:inline-block;width:11px;height:11px;border:1px solid #999;border-radius:2px;vertical-align:middle;"></span> N/A <span style="display:inline-block;width:11px;height:11px;border:1px solid #999;border-radius:2px;vertical-align:middle;"></span></span>';
+    else valueCol = '<span style="display:inline-block;border-bottom:1px solid #999;min-width:160px;height:14px;"></span>';
+    return '<tr>' +
+        '<td style="padding:3px 6px;border-bottom:1px solid #e5e5e5;width:22px;font-weight:700;color:#999;font-size:8pt;">' + (idx + 1) + '</td>' +
+        '<td style="padding:3px 6px;border-bottom:1px solid #e5e5e5;">' +
+          '<span style="font-weight:600;font-size:9.5pt;">' + PCD.escapeHtml(it.text) + '</span>' +
+          (cat ? ' <span style="font-size:7pt;color:' + cat.color + ';font-weight:700;text-transform:uppercase;letter-spacing:0.03em;margin-inline-start:4px;">' + catLabel(cat) + '</span>' : '') +
+        '</td>' +
+        '<td style="padding:3px 6px;border-bottom:1px solid #e5e5e5;text-align:center;width:155px;font-size:8.5pt;">' + valueCol + '</td>' +
+        '<td style="padding:3px 6px;border-bottom:1px solid #e5e5e5;width:50px;font-size:8pt;color:#999;text-align:center;">__:__</td>' +
+      '</tr>';
+  }
+  function _chkBlankTableHtml(itemsSubset, startIdx) {
+    let rows = '';
+    itemsSubset.forEach(function (it, i) { rows += _chkBuildRowHtml(it, startIdx + i); });
+    return '<table>' +
+      '<thead><tr><th style="width:22px;">#</th><th>Item</th><th style="text-align:center;width:155px;">Result / Value</th><th style="width:50px;text-align:center;">Time</th></tr></thead>' +
+      '<tbody>' + rows + '</tbody>' +
+    '</table>';
+  }
+
   function printBlankTemplate(tpl) {
     const items = tpl.items || [];
-    let rowsHtml = '';
-    items.forEach(function (it, idx) {
-      const cat = CATS.find(function (c) { return c.id === it.cat; });
-      const type = it.type || 'task';
+    const cols = (tpl.printColumns === 2) ? 2 : 1;
+    let mainContent;
+    if (cols === 1) {
+      mainContent = _chkBlankTableHtml(items, 0);
+    } else {
+      const half = Math.ceil(items.length / 2);
+      mainContent = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:5mm;">' +
+        _chkBlankTableHtml(items.slice(0, half), 0) +
+        _chkBlankTableHtml(items.slice(half), half) +
+      '</div>';
+    }
 
-      let valueCol;
-      if (type === 'task') valueCol = '<span style="display:inline-block;width:14px;height:14px;border:1.5px solid #999;border-radius:2px;"></span>';
-      else if (type === 'temperature' || type === 'numeric') valueCol = '<span style="display:inline-block;border-bottom:1px solid #999;min-width:60px;height:14px;"></span> ' + (it.unit || '') +
-        ((it.min !== undefined || it.max !== undefined) ? '<span style="font-size:7pt;color:#999;margin-inline-start:6px;">Target ' + (it.min !== undefined ? it.min : '?') + '–' + (it.max !== undefined ? it.max : '?') + '</span>' : '');
-      else if (type === 'pass-fail') valueCol = '<span style="font-size:8pt;">P <span style="display:inline-block;width:11px;height:11px;border:1px solid #999;border-radius:2px;vertical-align:middle;"></span> F <span style="display:inline-block;width:11px;height:11px;border:1px solid #999;border-radius:2px;vertical-align:middle;"></span> N/A <span style="display:inline-block;width:11px;height:11px;border:1px solid #999;border-radius:2px;vertical-align:middle;"></span></span>';
-      else valueCol = '<span style="display:inline-block;border-bottom:1px solid #999;min-width:160px;height:14px;"></span>';
-
-      rowsHtml +=
-        '<tr>' +
-          '<td style="padding:3px 6px;border-bottom:1px solid #e5e5e5;width:22px;font-weight:700;color:#999;font-size:8pt;">' + (idx + 1) + '</td>' +
-          '<td style="padding:3px 6px;border-bottom:1px solid #e5e5e5;">' +
-            '<span style="font-weight:600;font-size:9.5pt;">' + PCD.escapeHtml(it.text) + '</span>' +
-            (cat ? ' <span style="font-size:7pt;color:' + cat.color + ';font-weight:700;text-transform:uppercase;letter-spacing:0.03em;margin-inline-start:4px;">' + catLabel(cat) + '</span>' : '') +
-          '</td>' +
-          '<td style="padding:3px 6px;border-bottom:1px solid #e5e5e5;text-align:center;width:155px;font-size:8.5pt;">' + valueCol + '</td>' +
-          '<td style="padding:3px 6px;border-bottom:1px solid #e5e5e5;width:50px;font-size:8pt;color:#999;text-align:center;">__:__</td>' +
-        '</tr>';
-    });
-
-    // v2.8.59 — Print kompaktlaştırma: 12+ item için tek sayfa.
-    // Önceki: @page margin 15mm + h1 22pt + row padding 10px + signoff 30px
-    // → 12 item rahatlıkla 2 sayfa. Şimdi: margin 8mm, h1 14pt, kategori
-    // ve item adı tek satırda (yan yana), row padding 3px, signoff inline
-    // single-line. ~24 item'a kadar tek sayfa hedeflenir.
     const html =
       '<style>' +
         '@page { size: A4; margin: 8mm; }' +
@@ -797,7 +812,7 @@
       '<div class="h-row">' +
         '<div>' +
           '<h1>' + PCD.escapeHtml(tpl.name) + '</h1>' +
-          '<div class="sub">Blank checklist · ' + items.length + ' items</div>' +
+          '<div class="sub">Blank checklist · ' + items.length + ' items' + (cols === 2 ? ' · 2-col' : '') + '</div>' +
         '</div>' +
       '</div>' +
       '<div class="h-meta">' +
@@ -805,10 +820,7 @@
         '<div class="h-meta-item"><span class="lbl">Shift</span><span class="val">&nbsp;</span></div>' +
         '<div class="h-meta-item"><span class="lbl">By</span><span class="val">&nbsp;</span></div>' +
       '</div>' +
-      '<table>' +
-        '<thead><tr><th style="width:22px;">#</th><th>Item</th><th style="text-align:center;width:155px;">Result / Value</th><th style="width:50px;text-align:center;">Time</th></tr></thead>' +
-        '<tbody>' + rowsHtml + '</tbody>' +
-      '</table>' +
+      mainContent +
       '<div class="h-signoff">' +
         '<div class="sig-block"><span class="sig-label">Performed by</span><span class="sig-line">&nbsp;</span></div>' +
         '<div class="sig-block"><span class="sig-label">Verified by</span><span class="sig-line">&nbsp;</span></div>' +
@@ -1634,8 +1646,11 @@
     const existing = tid ? PCD.store.getFromTable('checklistTemplates', tid) : null;
     const data = existing ? PCD.clone(existing) : {
       name: '', icon: 'check-square',
+      printColumns: 1,  // v2.8.61: 1 | 2 — print layout
       items: [{ id: PCD.uid('it'), text: '', cat: 'prep', prio: 'med', type: 'task' }],
     };
+    // v2.8.61 — Defansif: eski template'lerde printColumns yok
+    if (typeof data.printColumns !== 'number') data.printColumns = 1;
 
     const body = PCD.el('div');
 
@@ -1644,6 +1659,15 @@
         <div class="field">
           <label class="field-label">${PCD.i18n.t('chk_tpl_name')} *</label>
           <input type="text" class="input" id="tplName" value="${PCD.escapeHtml(data.name || '')}" placeholder="${PCD.escapeHtml(PCD.i18n.t('chk_tpl_name_placeholder'))}">
+        </div>
+
+        <div class="field">
+          <label class="field-label">${PCD.i18n.t('chk_print_layout_label')}</label>
+          <div class="text-muted text-sm mb-2" style="font-size:12px;">${PCD.i18n.t('chk_print_layout_hint')}</div>
+          <div style="display:flex;gap:6px;">
+            <button type="button" class="btn btn-sm ${data.printColumns === 1 ? 'btn-primary' : 'btn-outline'}" data-printcols="1" style="flex:1;">${PCD.i18n.t('chk_print_layout_1col')}</button>
+            <button type="button" class="btn btn-sm ${data.printColumns === 2 ? 'btn-primary' : 'btn-outline'}" data-printcols="2" style="flex:1;">${PCD.i18n.t('chk_print_layout_2col')}</button>
+          </div>
         </div>
 
         <div class="field">
@@ -1710,6 +1734,12 @@
       }
 
       PCD.$('#tplName', body).addEventListener('input', function () { data.name = this.value; });
+      // v2.8.61 — Print columns toggle (1 col / 2 col)
+      PCD.on(body, 'click', '[data-printcols]', function () {
+        const c = parseInt(this.getAttribute('data-printcols'), 10);
+        data.printColumns = (c === 2) ? 2 : 1;
+        renderEditor();
+      });
       PCD.$('#addItemBtn', body).addEventListener('click', function () {
         data.items.push({ id: PCD.uid('it'), text: '', cat: 'prep', prio: 'med', type: 'task' });
         renderEditor();
