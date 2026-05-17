@@ -1478,61 +1478,61 @@
 
       rowsHtml +=
         '<tr style="' + (isOOR || it.result === 'fail' ? 'background:#fef2f2;' : '') + '">' +
-          '<td style="padding:8px 10px;border-bottom:1px solid #e5e5e5;width:24px;font-weight:700;color:#999;">' + (idx + 1) + '</td>' +
-          '<td style="padding:8px 10px;border-bottom:1px solid #e5e5e5;">' +
-            '<div style="font-weight:500;">' + PCD.escapeHtml(it.text) + '</div>' +
-            (cat ? '<span style="font-size:8pt;color:' + cat.color + ';font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">' + catLabel(cat) + '</span>' : '') +
+          '<td style="padding:3px 6px;border-bottom:1px solid #e5e5e5;width:22px;font-weight:700;color:#999;font-size:8pt;">' + (idx + 1) + '</td>' +
+          '<td style="padding:3px 6px;border-bottom:1px solid #e5e5e5;">' +
+            '<span style="font-weight:500;font-size:9.5pt;">' + PCD.escapeHtml(it.text) + '</span>' +
+            (cat ? ' <span style="font-size:7pt;color:' + cat.color + ';font-weight:700;text-transform:uppercase;letter-spacing:0.03em;margin-inline-start:4px;">' + catLabel(cat) + '</span>' : '') +
             comment +
           '</td>' +
-          '<td style="padding:8px 10px;border-bottom:1px solid #e5e5e5;text-align:center;">' + valueCell + '</td>' +
-          '<td style="padding:8px 10px;border-bottom:1px solid #e5e5e5;font-size:10pt;color:#666;">' + time + '</td>' +
+          '<td style="padding:3px 6px;border-bottom:1px solid #e5e5e5;text-align:center;font-size:9pt;">' + valueCell + '</td>' +
+          '<td style="padding:3px 6px;border-bottom:1px solid #e5e5e5;font-size:8pt;color:#666;text-align:center;width:50px;">' + time + '</td>' +
         '</tr>';
     });
 
+    // v2.8.60 — Session print kompakt: blank ile aynı CSS pattern (v2.8.59).
+    // 12+ item tek sayfa, 24+ doğal multi-page. Meta 4-col stat'lar inline
+    // chip'ler olarak, h1 sıkıştırıldı, sign-off single-line.
     const html =
       '<style>' +
-        '@page { size: A4; margin: 15mm; }' +
-        'body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; color: #1a1a1a; }' +
-        '.h-row { border-bottom: 3px solid #16a34a; padding-bottom: 10px; margin-bottom: 16px; }' +
-        '.h-row h1 { margin: 0; font-size: 22pt; color: #16a34a; }' +
-        '.h-meta { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 12px 0 18px; padding: 12px; background: #f8f8f8; border-radius: 6px; }' +
-        '.h-meta-item { font-size: 9pt; }' +
-        '.h-meta-item .lbl { color: #888; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; font-size: 8pt; }' +
-        '.h-meta-item .val { font-size: 13pt; font-weight: 700; color: #111; }' +
+        '@page { size: A4; margin: 8mm; }' +
+        'body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; color: #1a1a1a; margin: 0; }' +
+        '.h-row { border-bottom: 2px solid #16a34a; padding-bottom: 4px; margin-bottom: 6px; }' +
+        '.h-row h1 { margin: 0; font-size: 14pt; color: #16a34a; }' +
+        '.h-row .sub { color: #666; font-size: 9pt; }' +
+        '.h-meta { display: flex; gap: 12px; margin: 6px 0 8px; padding: 6px 10px; background: #f7f7f7; border-radius: 4px; flex-wrap: wrap; }' +
+        '.h-meta-item { display: flex; align-items: baseline; gap: 6px; font-size: 9pt; }' +
+        '.h-meta-item .lbl { color: #888; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; font-size: 7pt; }' +
+        '.h-meta-item .val { font-size: 11pt; font-weight: 700; color: #111; }' +
         '.h-meta-item.fail .val { color: #dc2626; }' +
         '.h-meta-item.ok .val { color: #16a34a; }' +
-        'table { width: 100%; border-collapse: collapse; font-size: 10pt; }' +
-        'thead th { background: #f1f1f1; padding: 8px 10px; text-align: left; font-size: 9pt; text-transform: uppercase; letter-spacing: 0.04em; color: #555; }' +
-        '.h-signoff { margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; font-size: 10pt; }' +
-        '.h-signoff .sig-line { border-bottom: 1px solid #888; padding-bottom: 30px; margin-bottom: 4px; }' +
-        '.h-signoff .sig-label { font-size: 8pt; color: #888; text-transform: uppercase; letter-spacing: 0.04em; }' +
+        'table { width: 100%; border-collapse: collapse; font-size: 9pt; page-break-inside: auto; }' +
+        'thead th { background: #f1f1f1; padding: 4px 6px; text-align: left; font-size: 7pt; text-transform: uppercase; letter-spacing: 0.03em; color: #555; }' +
+        'tr { page-break-inside: avoid; }' +
+        '.h-signoff { margin-top: 8px; padding-top: 6px; border-top: 1px solid #ddd; display: flex; justify-content: space-between; gap: 20px; font-size: 8pt; color: #666; }' +
+        '.h-signoff .sig-block { flex: 1; display: flex; align-items: baseline; gap: 6px; }' +
+        '.h-signoff .sig-label { text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; flex-shrink: 0; }' +
+        '.h-signoff .sig-line { flex: 1; border-bottom: 1px solid #888; min-height: 14px; padding-bottom: 1px; color: #111; font-size: 9pt; font-weight: 500; }' +
       '</style>' +
       '<div class="h-row">' +
         '<h1>' + PCD.escapeHtml((tpl && tpl.name) || s.templateName || 'Checklist') + '</h1>' +
-        '<div style="color:#666;font-size:11pt;margin-top:4px;">' +
+        '<div class="sub">' +
           new Date(s.startedAt).toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || "en", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) +
           (s.completedAt ? ' · Completed ' + new Date(s.completedAt).toLocaleTimeString((PCD.i18n && PCD.i18n.currentLocale) || "en", {hour:'2-digit', minute:'2-digit'}) : '') +
         '</div>' +
       '</div>' +
       '<div class="h-meta">' +
-        '<div class="h-meta-item"><div class="lbl">Items</div><div class="val">' + total + '</div></div>' +
-        '<div class="h-meta-item ' + (done === total ? 'ok' : '') + '"><div class="lbl">Completed</div><div class="val">' + done + '/' + total + '</div></div>' +
-        '<div class="h-meta-item ' + (failed > 0 ? 'fail' : '') + '"><div class="lbl">Failed</div><div class="val">' + failed + '</div></div>' +
-        '<div class="h-meta-item ' + (oor > 0 ? 'fail' : '') + '"><div class="lbl">Out of range</div><div class="val">' + oor + '</div></div>' +
+        '<div class="h-meta-item"><span class="lbl">Items</span><span class="val">' + total + '</span></div>' +
+        '<div class="h-meta-item ' + (done === total ? 'ok' : '') + '"><span class="lbl">Done</span><span class="val">' + done + '/' + total + '</span></div>' +
+        '<div class="h-meta-item ' + (failed > 0 ? 'fail' : '') + '"><span class="lbl">Failed</span><span class="val">' + failed + '</span></div>' +
+        '<div class="h-meta-item ' + (oor > 0 ? 'fail' : '') + '"><span class="lbl">Out of range</span><span class="val">' + oor + '</span></div>' +
       '</div>' +
       '<table>' +
-        '<thead><tr><th style="width:24px;">#</th><th>Item</th><th style="text-align:center;width:140px;">Result / Value</th><th style="width:60px;">Time</th></tr></thead>' +
+        '<thead><tr><th style="width:22px;">#</th><th>Item</th><th style="text-align:center;width:140px;">Result / Value</th><th style="width:50px;text-align:center;">Time</th></tr></thead>' +
         '<tbody>' + rowsHtml + '</tbody>' +
       '</table>' +
       '<div class="h-signoff">' +
-        '<div>' +
-          '<div class="sig-line">' + PCD.escapeHtml(s.completedBy || user.name || '') + '</div>' +
-          '<div class="sig-label">Completed by</div>' +
-        '</div>' +
-        '<div>' +
-          '<div class="sig-line">&nbsp;</div>' +
-          '<div class="sig-label">Verified by (signature & date)</div>' +
-        '</div>' +
+        '<div class="sig-block"><span class="sig-label">Completed by</span><span class="sig-line">' + PCD.escapeHtml(s.completedBy || user.name || '') + '</span></div>' +
+        '<div class="sig-block"><span class="sig-label">Verified by</span><span class="sig-line">&nbsp;</span></div>' +
       '</div>';
 
     PCD.print(html, ((tpl && tpl.name) || 'Checklist') + ' — ' + PCD.fmtDate(s.startedAt, { month: 'short', day: 'numeric' }));
