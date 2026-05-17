@@ -757,8 +757,12 @@
       ((it.min !== undefined || it.max !== undefined) ? '<span style="font-size:7pt;color:#999;margin-inline-start:6px;">Target ' + (it.min !== undefined ? it.min : '?') + '–' + (it.max !== undefined ? it.max : '?') + '</span>' : '');
     else if (type === 'pass-fail') valueCol = '<span style="font-size:8pt;">P <span style="display:inline-block;width:11px;height:11px;border:1px solid #999;border-radius:2px;vertical-align:middle;"></span> F <span style="display:inline-block;width:11px;height:11px;border:1px solid #999;border-radius:2px;vertical-align:middle;"></span> N/A <span style="display:inline-block;width:11px;height:11px;border:1px solid #999;border-radius:2px;vertical-align:middle;"></span></span>';
     else valueCol = '<span style="display:inline-block;border-bottom:1px solid #999;min-width:160px;height:14px;"></span>';
+    // v2.8.62 — Kategori renkli stripe: ilk td'nin sol kenarında 4px renk
+    // şeridi. Şef tarama sırasında "cleaning" / "cooking" / "prep" gibi
+    // grupları görsel olarak ayırt eder.
+    const stripeColor = cat ? cat.color : 'transparent';
     return '<tr>' +
-        '<td style="padding:3px 6px;border-bottom:1px solid #e5e5e5;width:22px;font-weight:700;color:#999;font-size:8pt;">' + (idx + 1) + '</td>' +
+        '<td style="padding:3px 6px 3px 8px;border-bottom:1px solid #e5e5e5;border-left:4px solid ' + stripeColor + ';width:22px;font-weight:700;color:#999;font-size:8pt;">' + (idx + 1) + '</td>' +
         '<td style="padding:3px 6px;border-bottom:1px solid #e5e5e5;">' +
           '<span style="font-weight:600;font-size:9.5pt;">' + PCD.escapeHtml(it.text) + '</span>' +
           (cat ? ' <span style="font-size:7pt;color:' + cat.color + ';font-weight:700;text-transform:uppercase;letter-spacing:0.03em;margin-inline-start:4px;">' + catLabel(cat) + '</span>' : '') +
@@ -1012,10 +1016,16 @@
       const complete = isItemComplete(it);
       const outOfRange = isValueOutOfRange(it);
 
+      // v2.8.62 — Kategori renkli stripe (session run row, ekran tarafı):
+      // sol kenarda 4px renk şeridi → şef tarama sırasında "Cleaning",
+      // "Cooking" gibi grupları hızlıca ayırt eder.
+      const stripeColor = cat ? cat.color : 'transparent';
       const wrap = PCD.el('div', {
         style: {
           padding: '12px',
+          paddingLeft: '14px',
           border: '1px solid ' + (outOfRange || it.result === 'fail' ? 'var(--danger)' : (complete ? 'var(--brand-300)' : 'var(--border)')),
+          borderLeft: '4px solid ' + stripeColor,
           borderRadius: 'var(--r-sm)',
           background: outOfRange || it.result === 'fail' ? '#fef2f2' : (complete ? 'var(--brand-50)' : 'var(--surface)'),
           transition: 'all 0.2s',
@@ -1488,9 +1498,11 @@
       const time = it.doneAt ? new Date(it.doneAt).toLocaleTimeString((PCD.i18n && PCD.i18n.currentLocale) || "en", { hour: '2-digit', minute: '2-digit' }) : '';
       const comment = it.comment ? '<div style="font-size:9pt;color:#666;font-style:italic;margin-top:3px;">📝 ' + PCD.escapeHtml(it.comment) + '</div>' : '';
 
+      // v2.8.62 — Kategori renkli stripe (session print, aynı pattern).
+      const stripeColor = cat ? cat.color : 'transparent';
       rowsHtml +=
         '<tr style="' + (isOOR || it.result === 'fail' ? 'background:#fef2f2;' : '') + '">' +
-          '<td style="padding:3px 6px;border-bottom:1px solid #e5e5e5;width:22px;font-weight:700;color:#999;font-size:8pt;">' + (idx + 1) + '</td>' +
+          '<td style="padding:3px 6px 3px 8px;border-bottom:1px solid #e5e5e5;border-left:4px solid ' + stripeColor + ';width:22px;font-weight:700;color:#999;font-size:8pt;">' + (idx + 1) + '</td>' +
           '<td style="padding:3px 6px;border-bottom:1px solid #e5e5e5;">' +
             '<span style="font-weight:500;font-size:9.5pt;">' + PCD.escapeHtml(it.text) + '</span>' +
             (cat ? ' <span style="font-size:7pt;color:' + cat.color + ';font-weight:700;text-transform:uppercase;letter-spacing:0.03em;margin-inline-start:4px;">' + catLabel(cat) + '</span>' : '') +
