@@ -39,12 +39,19 @@
   function computeRecipeNutrition(recipe, ingMap) {
     const totals = { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0, sodium: 0 };
     let hasMissing = false;
-    (recipe.ingredients || []).forEach(function (ri) {
-      const ing = ingMap[ri.ingredientId];
+    // v2.8.69 — Sub-recipe cascade. Önceden marinade içindeki ingredient'lar
+    // nutrition'a girmiyordu → parent recipe kalori hesabı eksik.
+    const flat = (PCD.recipes && PCD.recipes.flattenIngredients)
+      ? PCD.recipes.flattenIngredients(recipe, ingMap, PCD.recipes.buildRecipeMap())
+      : (recipe.ingredients || []).map(function (ri) {
+          return { ingredient: ingMap[ri.ingredientId], amount: ri.amount, unit: ri.unit };
+        });
+    flat.forEach(function (item) {
+      const ing = item.ingredient;
       if (!ing) return;
       const nut = ing.nutrition;
       if (!nut) { hasMissing = true; return; }
-      const grams = approxGrams(ri.amount, ri.unit, ing.unit);
+      const grams = approxGrams(item.amount, item.unit, ing.unit);
       const factor = grams / (nut.per || 100);
       MACROS.forEach(function (m) {
         totals[m] += (Number(nut[m]) || 0) * factor;

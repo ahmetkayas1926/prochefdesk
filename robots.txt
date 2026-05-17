@@ -1,0 +1,9 @@
+# ProChefDesk — robots.txt
+# Public marketing pages + blog: indexable.
+# The /app/ tree is a dynamic SPA — exclude from search results.
+
+User-agent: *
+Allow: /
+Disallow: /app/
+
+Sitemap: https://prochefdesk.com/sitemap.xml

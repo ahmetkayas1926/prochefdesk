@@ -128,6 +128,9 @@
 
       const ingMap = {};
       PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
+      // v2.8.69 — Sub-recipe expansion. recipeMap'i bir kez build et,
+      // selectedRecipes içindeki her r için flattenIngredients çağır.
+      const recipeMap = PCD.recipes.buildRecipeMap();
       const selectedRecipes = recipes.filter(function (r) { return selected.has(r.id); });
 
       let blocksHtml = '';
@@ -136,17 +139,22 @@
         const baseServings = r.servings || 1;
         const factor = targetPortions / baseServings;
 
+        // v2.8.69 — Recipe içindeki sub-recipe'leri ingredient seviyesine düşür.
+        // Tag'lenmiş viaSubRecipe alanı ile satır altında "via Labneh" ipucu gösterilir.
+        const flat = PCD.recipes.flattenIngredients(r, ingMap, recipeMap);
         let ingsHtml = '';
-        (r.ingredients || []).forEach(function (ri, idx) {
-          const ing = ingMap[ri.ingredientId];
-          const name = ing ? ing.name : '?';
-          const baseAmt = Number(ri.amount) || 0;
+        flat.forEach(function (item, idx) {
+          const name = item.ingredient && item.ingredient.name || '?';
+          const baseAmt = Number(item.amount) || 0;
           const scaledAmt = baseAmt * factor;
+          const viaHint = item.viaSubRecipe
+            ? '<div style="font-size:11px;color:var(--text-3);font-style:italic;margin-top:2px;">via ' + PCD.escapeHtml(item.viaSubRecipe) + '</div>'
+            : '';
           ingsHtml +=
             '<tr>' +
-              '<td style="padding:6px 10px;border-bottom:1px solid var(--border);">' + PCD.escapeHtml(name) + '</td>' +
-              '<td style="padding:6px 10px;border-bottom:1px solid var(--border);text-align:end;font-weight:700;font-family:var(--font-mono);color:var(--brand-700);white-space:nowrap;" data-amt-cell="' + r.id + ':' + idx + '" data-base-amt="' + baseAmt + '" data-unit="' + PCD.escapeHtml(ri.unit || '') + '">' +
-                PCD.fmtNumber(scaledAmt) + ' ' + PCD.escapeHtml(ri.unit || '') +
+              '<td style="padding:6px 10px;border-bottom:1px solid var(--border);">' + PCD.escapeHtml(name) + viaHint + '</td>' +
+              '<td style="padding:6px 10px;border-bottom:1px solid var(--border);text-align:end;font-weight:700;font-family:var(--font-mono);color:var(--brand-700);white-space:nowrap;" data-amt-cell="' + r.id + ':' + idx + '" data-base-amt="' + baseAmt + '" data-unit="' + PCD.escapeHtml(item.unit || '') + '">' +
+                PCD.fmtNumber(scaledAmt) + ' ' + PCD.escapeHtml(item.unit || '') +
               '</td>' +
             '</tr>';
         });
@@ -238,10 +246,12 @@
         const factorEl = resultEl.querySelector('[data-recipe-factor="' + r.id + '"]');
         if (factorEl) factorEl.textContent = t('pc_factor_from_base', { factor: factor.toFixed(2), n: baseServings });
 
-        // Update each ingredient amount cell
-        (r.ingredients || []).forEach(function (ri, idx) {
-          const cell = resultEl.querySelector('[data-amt-cell="' + r.id + ':' + idx + '"]');
-          if (!cell) return;
+        // v2.8.69 — Cells read base amount + unit from data attributes
+        // (already set during buildResult flatten). Recompute scaledAmt.
+        // Sub-recipe expanded rows just work because they share the same
+        // [data-amt-cell="recipeId:flatIdx"] convention.
+        const cells = resultEl.querySelectorAll('[data-amt-cell^="' + r.id + ':"]');
+        cells.forEach(function (cell) {
           const baseAmt = Number(cell.getAttribute('data-base-amt')) || 0;
           const unit = cell.getAttribute('data-unit') || '';
           const scaledAmt = baseAmt * factor;
@@ -408,15 +418,19 @@
       const scaledCost = baseCost * factor;
       totalCost += scaledCost;
 
+      // v2.8.69 — flattenIngredients: sub-recipe satırları gerçek ingredient'lara açılır
+      const flatPrint = PCD.recipes.flattenIngredients(r, ingMap, PCD.recipes.buildRecipeMap());
       let ingRows = '';
-      (r.ingredients || []).forEach(function (ri) {
-        const ing = ingMap[ri.ingredientId];
-        const name = ing ? ing.name : '?';
-        const scaled = (Number(ri.amount) || 0) * factor;
+      flatPrint.forEach(function (item) {
+        const name = item.ingredient && item.ingredient.name || '?';
+        const scaled = (Number(item.amount) || 0) * factor;
+        const viaHint = item.viaSubRecipe
+          ? ' <span style="font-size:8pt;color:#999;font-style:italic;">(via ' + PCD.escapeHtml(item.viaSubRecipe) + ')</span>'
+          : '';
         ingRows +=
           '<tr>' +
-            '<td>' + PCD.escapeHtml(name) + '</td>' +
-            '<td style="text-align:right;font-weight:700;color:#16a34a;font-family:monospace;white-space:nowrap;">' + PCD.fmtNumber(scaled) + ' ' + PCD.escapeHtml(ri.unit || '') + '</td>' +
+            '<td>' + PCD.escapeHtml(name) + viaHint + '</td>' +
+            '<td style="text-align:right;font-weight:700;color:#16a34a;font-family:monospace;white-space:nowrap;">' + PCD.fmtNumber(scaled) + ' ' + PCD.escapeHtml(item.unit || '') + '</td>' +
           '</tr>';
       });
 
@@ -479,11 +493,13 @@
       const baseCost = PCD.recipes.computeFoodCost(r, ingMap);
       totalCost += baseCost * factor;
       lines.push('— ' + r.name + ' (' + target + ' portions · ' + factor.toFixed(2) + '×) —');
-      (r.ingredients || []).forEach(function (ri) {
-        const ing = ingMap[ri.ingredientId];
-        const name = ing ? ing.name : '?';
-        const scaled = (Number(ri.amount) || 0) * factor;
-        lines.push('• ' + name + ' — ' + PCD.fmtNumber(scaled) + ' ' + (ri.unit || ''));
+      // v2.8.69 — flattenIngredients: sub-recipe satırları açılır
+      const flatShare = PCD.recipes.flattenIngredients(r, ingMap, PCD.recipes.buildRecipeMap());
+      flatShare.forEach(function (item) {
+        const name = item.ingredient && item.ingredient.name || '?';
+        const scaled = (Number(item.amount) || 0) * factor;
+        const via = item.viaSubRecipe ? ' (via ' + item.viaSubRecipe + ')' : '';
+        lines.push('• ' + name + via + ' — ' + PCD.fmtNumber(scaled) + ' ' + (item.unit || ''));
       });
       lines.push('');
     });

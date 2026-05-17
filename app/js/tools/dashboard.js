@@ -153,27 +153,106 @@
     return !!(r.yieldAmount && r.yieldUnit);
   }
 
+  // v2.8.69 — RECURSIVE INGREDIENT FLATTENING.
+  //
+  // Tek mimari fix: bir tarifin tüm sub-recipe satırlarını recursive olarak
+  // gerçek ingredient seviyesine düşürür. Operatör örnek: "Beef Skewer
+  // Marination" recipe'sinin altında "Labneh" sub-recipe → portion calculator,
+  // shopping list, nutrition, variance, allergen, diet hesaplarında labneh
+  // satırı atlanıyordu ("?" görünüyor veya tamamen kayboluyor). Şimdi
+  // flatten ile labneh içindeki yogurt+salt gerçek ingredient olarak çıkar.
+  //
+  // Scale cascading: ri.amount/sub.yieldAmount oranı her seviyede çarpılır.
+  // Birim dönüşümü best-effort (PCD.convertUnit).
+  // Cycle protection: visited set ile A→B→A döngüsü engellenir.
+  // Separator satırları skip edilir.
+  //
+  // Returns: [{ ingredient, ingredientId, amount, unit, viaSubRecipe }]
+  // viaSubRecipe: null (direkt ingredient) | "Sub-recipe name" (en sığ kaynak)
+  //
+  // KULLANIM YERLERİ (v2.8.69'da bağlandı):
+  //   - portion.js (canvas + printScaled + shareScaled + sendToShoppingList)
+  //   - shopping.js (render + print consolidation)
+  //   - nutrition.js (kalori/protein cascade)
+  //   - variance.js (sub-recipe ingredient stoktan düşürme)
+  //   - allergens-db.js recipeAllergens (sub-recipe allergen cascade)
+  //   - dashboard.js computeDietCompat (sub-recipe diet flag cascade)
+  function flattenIngredients(recipe, ingMap, recipeMap, opts) {
+    opts = opts || {};
+    const scale = opts.scale || 1;
+    const visited = opts.visited || {};
+    const out = [];
+
+    if (!recipe || !Array.isArray(recipe.ingredients)) return out;
+    if (recipe.id && visited[recipe.id]) return out; // cycle — bail
+    const newVisited = Object.assign({}, visited);
+    if (recipe.id) newVisited[recipe.id] = true;
+
+    if (!recipeMap) recipeMap = buildRecipeMap();
+
+    recipe.ingredients.forEach(function (ri) {
+      if (!ri || ri.separator) return;
+
+      // SUB-RECIPE LINE — recurse and tag flattened items with source name.
+      if (ri.recipeId) {
+        const sub = recipeMap[ri.recipeId];
+        if (!sub) return;
+        const amt = Number(ri.amount) || 0;
+        if (amt <= 0) return;
+        const subYield = Number(sub.yieldAmount) || Number(sub.servings) || 1;
+        const stockUnit = sub.yieldUnit || 'portion';
+        let qtyInStock = amt;
+        if (ri.unit && stockUnit && ri.unit !== stockUnit) {
+          try { qtyInStock = PCD.convertUnit(amt, ri.unit, stockUnit); } catch (e) {}
+        }
+        const subScale = qtyInStock / (subYield || 1);
+        const flattened = flattenIngredients(sub, ingMap, recipeMap, {
+          scale: scale * subScale,
+          visited: newVisited,
+        });
+        flattened.forEach(function (item) {
+          // En sığ sub-recipe kaynağı kazanır (nested durumda en dış sub-recipe etiketi)
+          if (!item.viaSubRecipe) item.viaSubRecipe = sub.name || '';
+          out.push(item);
+        });
+        return;
+      }
+
+      // INGREDIENT LINE — direct, scaled.
+      if (ri.ingredientId) {
+        const ing = ingMap[ri.ingredientId];
+        if (!ing) return;
+        out.push({
+          ingredient: ing,
+          ingredientId: ri.ingredientId,
+          amount: (Number(ri.amount) || 0) * scale,
+          unit: ri.unit || ing.unit || '',
+          viaSubRecipe: null,
+        });
+      }
+    });
+
+    return out;
+  }
+
   // v2.8.45 — Diet compatibility hesabı. Recipe'ın ingredient'larının
   // dietFlags'larına bakar, conservative (yanlış pozitif vermez) tri-state
   // sonuç döndürür: true (uyumlu), false (uyumsuz), null (bilinmiyor).
-  // Mantık per-flag:
-  //   - Bir ingredient flag=false → tarif false (uyumsuz)
-  //   - Bir ingredient flag=null (bilinmiyor) ve hiçbir flag=false yok → null
-  //   - Tüm ingredient'lar flag=true → true (uyumlu)
-  // Boş tarif (ingredient yok) → tüm flag'ler null.
-  // unknownIngs object'i UI'da tooltip için "X malzemenin bilgisi eksik" gösterir.
+  // v2.8.69 — Sub-recipe cascading: artık flattenIngredients ile marinade
+  // içindeki süt parent recipe'i dairy-free=false yapar. Önceden atlanıyordu.
   function computeDietCompat(recipe, ingMap) {
     const flags = ['vegan', 'vegetarian', 'glutenFree', 'dairyFree'];
     const result = { vegan: null, vegetarian: null, glutenFree: null, dairyFree: null, unknownIngs: { vegan: [], vegetarian: [], glutenFree: [], dairyFree: [] } };
     if (!recipe || !recipe.ingredients || !recipe.ingredients.length) return result;
 
+    // v2.8.69 — Flatten recursively so sub-recipe ingredient'ları da diet'e dahil.
+    const flat = flattenIngredients(recipe, ingMap, buildRecipeMap());
+
     flags.forEach(function (flag) {
       let hasNo = false;
       let hasUnknown = false;
-      recipe.ingredients.forEach(function (ri) {
-        // v2.8.52 — Separator satırları diet hesabına girmez.
-        if (ri && ri.separator) return;
-        const ing = ingMap[ri.ingredientId];
+      flat.forEach(function (item) {
+        const ing = item.ingredient;
         if (!ing) { hasUnknown = true; return; }
         const v = ing.dietFlags ? ing.dietFlags[flag] : null;
         if (v === false) {
@@ -199,6 +278,7 @@
   PCD.recipes.resolveRow = resolveRow;
   PCD.recipes.isPrep = isPrep;
   PCD.recipes.computeDietCompat = computeDietCompat;
+  PCD.recipes.flattenIngredients = flattenIngredients;
 
   // ============ TODAY-FOCUSED DASHBOARD ============
   function render(view) {
@@ -259,6 +339,47 @@
       });
     }
     const criticalStock = lowStockItems.filter(function (x) { return x.status === 'critical' || x.status === 'out'; });
+
+    // v2.8.72 — Cost Health: proactive margin erosion detection. Real-world
+    // chef pain point: silent price drift on a few key ingredients erodes
+    // 2-4 points of food cost over a quarter, only spotted when the
+    // accountant flags it. This widget surfaces it daily.
+    //
+    // Two signals computed:
+    //   (a) Over-budget recipes: menu items where current food cost % > 35%
+    //       (industry "concern" threshold). Uses live computeFoodCost +
+    //       salePrice. Ignores preps (no salePrice expected).
+    //   (b) Stale-price ingredients: ingredient rows that haven't been
+    //       updated in 60+ days (proxy for "price not refreshed since last
+    //       invoice"). Only counts ingredients with pricePerUnit > 0,
+    //       used by at least one recipe.
+    const SIXTY_DAYS_MS = 60 * 24 * 60 * 60 * 1000;
+    const now60 = Date.now();
+    const recipeMapForCost = (PCD.recipes && PCD.recipes.buildRecipeMap) ? PCD.recipes.buildRecipeMap() : {};
+    const usedIngIds = {};
+    recipes.forEach(function (r) {
+      (r.ingredients || []).forEach(function (ri) {
+        if (ri && ri.ingredientId) usedIngIds[ri.ingredientId] = true;
+      });
+    });
+    const overBudgetRecipes = [];
+    recipes.forEach(function (r) {
+      if (PCD.recipes && PCD.recipes.isPrep && PCD.recipes.isPrep(r)) return; // preps skipped
+      if (!r.salePrice || r.salePrice <= 0) return;
+      const cost = PCD.recipes.computeFoodCost(r, ingMap, recipeMapForCost);
+      const perServing = (r.servings && r.servings > 0) ? cost / r.servings : cost;
+      const pct = (perServing / r.salePrice) * 100;
+      if (pct > 35) overBudgetRecipes.push({ recipe: r, pct: pct });
+    });
+    overBudgetRecipes.sort(function (a, b) { return b.pct - a.pct; });
+    const stalePriceIngs = ings.filter(function (i) {
+      if (!usedIngIds[i.id]) return false;
+      if (!i.pricePerUnit || i.pricePerUnit <= 0) return false;
+      if (!i.updatedAt) return true; // never updated = stale
+      const ts = new Date(i.updatedAt).getTime();
+      if (isNaN(ts)) return false;
+      return (now60 - ts) > SIXTY_DAYS_MS;
+    });
 
     // 5) Today's waste cost
     const allWaste = PCD.store._read('waste') || {};
@@ -391,6 +512,34 @@
       });
     }
 
+    // v2.8.72 — CARD: Cost Health (over-budget recipes + stale ingredient prices)
+    if (overBudgetRecipes.length > 0 || stalePriceIngs.length >= 5) {
+      const topNames = overBudgetRecipes.slice(0, 2).map(function (x) {
+        return PCD.escapeHtml(x.recipe.name) + ' ' + x.pct.toFixed(0) + '%';
+      }).join(' · ');
+      const moreOver = overBudgetRecipes.length > 2 ? ' +' + (overBudgetRecipes.length - 2) : '';
+      const parts = [];
+      if (overBudgetRecipes.length > 0) {
+        parts.push(t('dash_cost_health_over', { n: overBudgetRecipes.length }) || (overBudgetRecipes.length + ' recipe(s) over 35% food cost'));
+      }
+      if (stalePriceIngs.length >= 5) {
+        parts.push(t('dash_cost_health_stale', { n: stalePriceIngs.length }) || (stalePriceIngs.length + ' ingredient prices not updated in 60+ days'));
+      }
+      const desc = parts.join(' · ') + (topNames ? ' — ' + topNames + moreOver : '');
+      cards.push({
+        priority: 2,
+        html:
+          '<div class="dash-card priority-warn" data-action="view-recipes" style="cursor:pointer;">' +
+            '<div class="dash-card-icon" style="background:#fef3c7;color:#92400e;">' + PCD.icon('activity', 22) + '</div>' +
+            '<div class="dash-card-body">' +
+              '<div class="dash-card-title">' + (t('dash_cost_health_title') || 'Cost health alert') + '</div>' +
+              '<div class="dash-card-desc">' + desc + '</div>' +
+            '</div>' +
+            '<div class="dash-card-cta">' + (t('dash_review_cta') || 'Review') + ' →</div>' +
+          '</div>'
+      });
+    }
+
     // CARD: Today's waste cost (if any)
     if (todayWasteCost > 0) {
       cards.push({
@@ -486,6 +635,10 @@
     });
     PCD.on(view, 'click', '[data-action="kitchen-cards"]', function () {
       PCD.router.go('kitchen_cards');
+    });
+    // v2.8.72 — Cost health card → recipes view
+    PCD.on(view, 'click', '[data-action="view-recipes"]', function () {
+      PCD.router.go('recipes');
     });
     PCD.on(view, 'click', '[data-action="view-inventory"]', function () {
       PCD.router.go('inventory');

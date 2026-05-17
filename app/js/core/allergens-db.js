@@ -76,10 +76,17 @@
       ingMap = {};
     }
 
-    recipe.ingredients.forEach(function (ri) {
-      // v2.8.52 — Separator satırları allergen hesabına girmez.
-      if (ri && ri.separator) return;
-      const ing = ingMap[ri.ingredientId];
+    // v2.8.69 — Sub-recipe allergen cascade. Önceden marinade'de süt
+    // olsa bile parent recipe'in allergen listesinde gözükmüyordu.
+    // flattenIngredients ile sub-recipe ingredient'lar dahil olur.
+    const flat = (PCD.recipes && PCD.recipes.flattenIngredients)
+      ? PCD.recipes.flattenIngredients(recipe, ingMap, PCD.recipes.buildRecipeMap())
+      : recipe.ingredients.map(function (ri) {
+          if (ri && ri.separator) return { ingredient: null };
+          return { ingredient: ingMap[ri.ingredientId] };
+        });
+    flat.forEach(function (item) {
+      const ing = item.ingredient;
       if (!ing) return;
       // v2.8.37 — Auto-detect kaldırıldı. Sadece kullanıcının manuel
       // işaretlediği allergen'ler. ing.allergens boşsa allergen yok sayılır.

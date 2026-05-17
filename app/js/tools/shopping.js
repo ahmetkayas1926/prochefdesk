@@ -89,31 +89,39 @@
       PCD.store.listRecipes().forEach(function (r) { recipeMap[r.id] = r; });
 
       // Compute consolidated ingredient list
+      // v2.8.69 — flattenIngredients ile sub-recipe satırları gerçek ingredient'a
+      // genişler. Eskiden `if (!ing) return;` sub-recipe satırını atlıyordu →
+      // marinade içindeki ingredient'lar shopping listesinden kayboluyordu.
       const consolidated = {}; // key: ingredientId_unit, value: { ingredient, unit, totalAmount, totalCost }
       (data.items || []).forEach(function (it) {
         const r = recipeMap[it.recipeId];
         if (!r) return;
         const factor = (it.portions || r.servings || 1) / (r.servings || 1);
-        (r.ingredients || []).forEach(function (ri) {
-          const ing = ingMap[ri.ingredientId];
+        const flat = PCD.recipes.flattenIngredients(r, ingMap, recipeMap, { scale: factor });
+        flat.forEach(function (item) {
+          const ing = item.ingredient;
           if (!ing) return;
-          const key = ri.ingredientId + '|' + (ri.unit || ing.unit);
+          const key = item.ingredientId + '|' + (item.unit || ing.unit);
           if (!consolidated[key]) {
             consolidated[key] = {
               ingredient: ing,
-              unit: ri.unit || ing.unit,
+              unit: item.unit || ing.unit,
               totalAmount: 0,
               totalCost: 0,
               perRecipe: [],
             };
           }
-          const amt = (ri.amount || 0) * factor;
+          const amt = item.amount || 0;
           consolidated[key].totalAmount += amt;
-          consolidated[key].perRecipe.push({ recipeName: r.name, amount: amt, unit: ri.unit || ing.unit });
+          // "By recipe" grouping için recipe name + sub-recipe ipucu
+          const recipeLabel = item.viaSubRecipe
+            ? r.name + ' → ' + item.viaSubRecipe
+            : r.name;
+          consolidated[key].perRecipe.push({ recipeName: recipeLabel, amount: amt, unit: item.unit || ing.unit });
           // cost calculation
           let cost = amt * (ing.pricePerUnit || 0);
-          if (ri.unit && ing.unit && ri.unit !== ing.unit) {
-            try { cost = PCD.convertUnit(amt, ri.unit, ing.unit) * (ing.pricePerUnit || 0); } catch(e){}
+          if (item.unit && ing.unit && item.unit !== ing.unit) {
+            try { cost = PCD.convertUnit(amt, item.unit, ing.unit) * (ing.pricePerUnit || 0); } catch(e){}
           }
           consolidated[key].totalCost += cost;
         });
@@ -384,30 +392,33 @@
     const recipeMap = {};
     PCD.store.listRecipes().forEach(function (r) { recipeMap[r.id] = r; });
 
+    // v2.8.69 — flattenIngredients ile sub-recipe satırları açılır
     const consolidated = {};
     (list.items || []).forEach(function (it) {
       const r = recipeMap[it.recipeId];
       if (!r) return;
       const factor = (it.portions || r.servings || 1) / (r.servings || 1);
-      (r.ingredients || []).forEach(function (ri) {
-        const ing = ingMap[ri.ingredientId];
+      const flat = PCD.recipes.flattenIngredients(r, ingMap, recipeMap, { scale: factor });
+      flat.forEach(function (item) {
+        const ing = item.ingredient;
         if (!ing) return;
-        const key = ri.ingredientId + '|' + (ri.unit || ing.unit);
+        const key = item.ingredientId + '|' + (item.unit || ing.unit);
         if (!consolidated[key]) {
           consolidated[key] = {
             ingredient: ing,
-            unit: ri.unit || ing.unit,
+            unit: item.unit || ing.unit,
             totalAmount: 0,
             perRecipe: [],
           };
         }
-        const scaled = (ri.amount || 0) * factor;
+        const scaled = item.amount || 0;
         consolidated[key].totalAmount += scaled;
+        const recipeLabel = item.viaSubRecipe ? r.name + ' → ' + item.viaSubRecipe : r.name;
         consolidated[key].perRecipe.push({
-          recipeName: r.name,
+          recipeName: recipeLabel,
           recipeId: r.id,
           amount: scaled,
-          unit: ri.unit || ing.unit,
+          unit: item.unit || ing.unit,
         });
       });
     });

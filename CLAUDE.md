@@ -26,7 +26,7 @@ Operatör Türkçe konuşur, Türkçe cevap ver. Operatör "BUNU SEN SÖYLE" vey
 
 11. **Categories functional.** Şu an menu kategorileri kozmetik label. 50+ menu item olursa filter/grouping/Prep-specific kategoriler değerli olur.
 
-12. **Marketing / SEO / blog kurulumu** — Faz 2 işi.
+12. **Marketing / SEO / blog kurulumu** — 2026-05-18'de PARÇA 1+2+3 tamamlandı (blog altyapı + sitemap.xml + robots.txt + meta tag sweep + ilk 3 yazı). Kalan: operatör eve dönünce ~15 dk Google Search Console ekleme + TXT verify + sitemap submit. Detay HANDOVER §11.9.1 (yeni).
 
 **Audit (v2.8.50) sonrası yeni bekleyenler:**
 
@@ -34,6 +34,7 @@ Operatör Türkçe konuşur, Türkçe cevap ver. Operatör "BUNU SEN SÖYLE" vey
 14. **Discover view spam rate limit** — `increment_recipe_view` RPC anonymous'a açık (MVP kabul). Viral olursa Edge Function ile IP+recipe başına 1 saat 1 view.
 15. **R2 foto bytes yedekleme** — şu an sadece manifest. Pro tier'a geçişte Storage PITR ile çözülür.
 16. **`supabase-functions/` duplicate silme** — operatör Dashboard'dan deploy doğrulaması yapana kadar bekliyor (v2.8.50'de senkron tutuldu).
+17. **App mobil performans L1 optimizasyonu** — Dashboard FCP/LCP 5.6 sn (Mobile PageSpeed 65). Tanı: 48 sync `<script>` + 5 blocking CSS, defer/async yok. Önerim L1 (sadece `<script defer>` + `preload` CDN) tek dosya değişikliği, düşük risk, tahmini 5.6→3.0-3.5 sn. Operatör onayı bekliyor (PARÇA 4 raporu 2026-05-18). L2 (lazy i18n + lazy tools) ve L3 (cloud sync defer) sonraki round'larda ayrı onay gerekir.
 
 **Tamamlanmış maddelerin sürüm referansı:** `CHANGELOG.md`. `HANDOVER.md §5` tablosu da güncel.
 
@@ -80,7 +81,7 @@ CREATE POLICY <table>_owner_all ON <table>
 
 **Misafir vs üye davranışı.** Misafir (login yok): sadece IDB, cloud yazma KAPALI, demo seed yüklenir. Üye (login var): IDB + cloud çift yönlü. Yeni feature'da misafir için cloud push tetiklenmemeli.
 
-**Root dosyalar (landing, privacy, terms) app'ten BAĞIMSIZ.** `prochefdesk.com/index.html`, `/privacy.html`, `/terms.html` kendi inline CSS'leriyle çalışır. App CSS değişiklikleri bu üç dosyayı etkilemez, tersi de.
+**Root dosyalar (landing, privacy, terms, blog/) app'ten BAĞIMSIZ.** `prochefdesk.com/index.html`, `/privacy.html`, `/terms.html` ve `/blog/*.html` kendi inline CSS'leriyle çalışır. App CSS değişiklikleri bu dosyaları etkilemez, tersi de. Blog yazıları her biri standalone HTML (Inter + Fraunces, cream paper palette, brand green CTA). Yeni yazı eklerken: (1) mevcut bir post HTML'i kopyala + meta/içerik değiştir, (2) `/blog/index.html`'de en üste yeni `<a class="post-card">` kart bloku ekle (newest first), (3) `sitemap.xml`'e yeni `<url>` girdisi. Build step yok. Detay HANDOVER §11.9.
 
 **`supabase-functions/` klasörü duplicate** — `supabase/functions/delete-account/` ile identical, repoda referans yok. Operatör Supabase Dashboard'dan deploy doğrulaması yapana kadar **silinmeyecek**.
 

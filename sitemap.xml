@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ProChefDesk — sitemap.xml
+  Lists every public, indexable page. The /app/ tree is intentionally
+  excluded (see robots.txt) — it's a dynamic SPA, not crawlable content.
+
+  TO ADD A NEW BLOG POST:
+  1. Add a new <url> block below in the blog section.
+  2. Set <loc> to the absolute https URL.
+  3. Set <lastmod> to the post's publish/edit date (YYYY-MM-DD).
+  4. Keep <changefreq>monthly</changefreq> and <priority>0.7</priority>
+     unless you have a specific reason to change.
+  No build step. Static file, Cloudflare Pages serves as-is.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+
+  <!-- Landing -->
+  <url>
+    <loc>https://prochefdesk.com/</loc>
+    <lastmod>2026-05-18</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <!-- Legal -->
+  <url>
+    <loc>https://prochefdesk.com/privacy.html</loc>
+    <lastmod>2026-04-28</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/terms.html</loc>
+    <lastmod>2026-04-28</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+
+  <!-- Blog index -->
+  <url>
+    <loc>https://prochefdesk.com/blog/</loc>
+    <lastmod>2026-05-18</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Blog posts (newest first) -->
+  <url>
+    <loc>https://prochefdesk.com/blog/menu-engineering-profitable-dishes.html</loc>
+    <lastmod>2026-05-17</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/haccp-audit-preparation.html</loc>
+    <lastmod>2026-05-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/food-cost-percentage-restaurant.html</loc>
+    <lastmod>2026-05-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+</urlset>

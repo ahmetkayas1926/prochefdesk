@@ -80,6 +80,8 @@
       PCD.router.register('haccp_receiving', PCD.tools.haccpReceiving.render);
       // v2.8.39 — Hot/Cold Holding check (yemek bazlı saatlik). IDB-only.
       PCD.router.register('haccp_holding', PCD.tools.haccpHolding.render);
+      // v2.8.70 — HACCP Hub (4 form'u tek navigation noktasına topla)
+      if (PCD.tools.haccp) PCD.router.register('haccp', PCD.tools.haccp.render);
       // v2.8.41 — Discover (frontend skeleton; backend Faz 2'de gelecek).
       PCD.router.register('discover', PCD.tools.discover.render);
 
@@ -324,11 +326,10 @@
       { title: t('section_catering'), items: [
         { key: 'events',  icon: 'calendar', route: 'events' },
       ]},
+      // v2.8.70 — 4 ayrı HACCP item, tek "HACCP" hub'a konsolide edildi.
+      // Form sayfaları silinmedi; hub içinden tıklanarak açılır.
       { title: t('section_haccp_forms'), items: [
-        { key: 'haccp_logs', icon: 'thermometer', route: 'haccp_logs' },
-        { key: 'haccp_cooling', icon: 'clock', route: 'haccp_cooling' },
-        { key: 'haccp_receiving', icon: 'archive', route: 'haccp_receiving' },
-        { key: 'haccp_holding', icon: 'activity', route: 'haccp_holding' },
+        { key: 'haccp', icon: 'thermometer', route: 'haccp' },
       ]},
       { title: t('section_discover'), items: [
         { key: 'discover', icon: 'grid', route: 'discover' },

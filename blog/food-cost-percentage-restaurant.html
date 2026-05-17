@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#FAF7F2">
+  <meta name="robots" content="index, follow">
+  <title>How to Calculate Food Cost Percentage in a Restaurant — ProChefDesk</title>
+  <meta name="description" content="The food cost formula is one line. Getting it right involves sub-recipes, yield loss, supplier drift, and the gap between theoretical and actual. Honest walkthrough.">
+  <link rel="canonical" href="https://prochefdesk.com/blog/food-cost-percentage-restaurant.html">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="How to Calculate Food Cost Percentage in a Restaurant">
+  <meta property="og:description" content="The real method, not the textbook one. Sub-recipes, yield loss, supplier drift, theoretical vs. actual.">
+  <meta property="og:url" content="https://prochefdesk.com/blog/food-cost-percentage-restaurant.html">
+  <meta property="og:type" content="article">
+  <meta property="og:image" content="https://prochefdesk.com/blog/og-food-cost.png">
+  <meta property="article:published_time" content="2026-05-12">
+  <meta property="article:author" content="Ahmet Kaya">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="How to Calculate Food Cost Percentage in a Restaurant">
+  <meta name="twitter:description" content="Sub-recipes, yield loss, supplier drift, theoretical vs. actual — what the textbook leaves out.">
+  <meta name="twitter:image" content="https://prochefdesk.com/blog/og-food-cost.png">
+
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%2316a34a'/%3E%3Ctext x='50' y='68' font-size='56' text-anchor='middle' fill='white' font-family='system-ui' font-weight='800'%3EPC%3C/text%3E%3C/svg%3E">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* Single source of truth for blog post styling. To create a new
+       post, copy this entire file, rename, replace meta tags above
+       and the <article> content below. CSS stays identical. */
+
+    :root {
+      --bg: #FAF7F2;
+      --paper: #FFFEFA;
+      --text-1: #1A1916;
+      --text-2: #3A3631;
+      --text-3: #8A857C;
+      --line: #E5DFD2;
+      --primary: #2D4A3E;
+      --brand: #16a34a;
+      --copper: #B85C3C;
+      --code-bg: #F0EBE0;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 28px 24px 80px;
+      line-height: 1.72;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-size: 17px;
+      background: var(--bg);
+      color: var(--text-1);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    a { color: var(--primary); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+    a:hover { color: var(--text-1); }
+
+    /* ---------- HEADER ---------- */
+    .blog-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 40px;
+      font-family: 'Inter', sans-serif;
+    }
+    .brand {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 600;
+      font-size: 18px;
+      letter-spacing: -0.015em;
+      color: var(--text-1);
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+    .brand:hover { color: var(--primary); }
+    .brand-mark {
+      width: 28px; height: 28px;
+      border-radius: 7px;
+      background: var(--brand);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Inter', sans-serif;
+      font-weight: 700;
+      font-size: 11px;
+    }
+    .crumbs {
+      font-size: 13px;
+      color: var(--text-3);
+    }
+    .crumbs a { color: var(--text-3); text-decoration: none; }
+    .crumbs a:hover { color: var(--text-1); }
+
+    /* ---------- ARTICLE ---------- */
+    article header { margin-bottom: 36px; }
+    .tag {
+      display: inline-block;
+      color: var(--primary);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-size: 11px;
+      margin-bottom: 16px;
+    }
+    h1 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 500;
+      font-size: clamp(32px, 5vw, 44px);
+      line-height: 1.08;
+      letter-spacing: -0.025em;
+      margin: 0 0 18px;
+      color: var(--text-1);
+    }
+    .lede {
+      font-size: 19px;
+      color: var(--text-2);
+      line-height: 1.55;
+      margin: 0 0 24px;
+    }
+    .article-meta {
+      font-size: 13px;
+      color: var(--text-3);
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    article h2 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 500;
+      font-size: 28px;
+      line-height: 1.18;
+      letter-spacing: -0.018em;
+      margin: 56px 0 16px;
+      color: var(--text-1);
+    }
+    article h3 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 500;
+      font-size: 21px;
+      line-height: 1.25;
+      letter-spacing: -0.012em;
+      margin: 36px 0 12px;
+      color: var(--text-1);
+    }
+    article p { color: var(--text-2); margin: 0 0 20px; }
+    article ul, article ol { color: var(--text-2); margin: 0 0 20px; padding-inline-start: 24px; }
+    article li { margin-bottom: 6px; }
+    article strong { color: var(--text-1); font-weight: 600; }
+
+    blockquote {
+      border-left: 3px solid var(--primary);
+      padding: 6px 0 6px 20px;
+      margin: 28px 0;
+      font-family: 'Fraunces', Georgia, serif;
+      font-style: italic;
+      font-size: 19px;
+      color: var(--text-1);
+      line-height: 1.5;
+    }
+
+    .formula {
+      background: var(--code-bg);
+      border-radius: 8px;
+      padding: 18px 22px;
+      margin: 24px 0;
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+      font-size: 16px;
+      text-align: center;
+      color: var(--text-1);
+      border: 1px solid var(--line);
+    }
+    .formula .var { color: var(--primary); font-weight: 600; }
+
+    .callout {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--copper);
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin: 28px 0;
+      font-size: 16px;
+    }
+    .callout strong { color: var(--copper); }
+
+    .tool-mention {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 18px 22px;
+      margin: 28px 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      font-size: 15px;
+    }
+    .tool-mention .icon {
+      width: 36px; height: 36px;
+      flex-shrink: 0;
+      border-radius: 8px;
+      background: var(--brand);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 13px;
+    }
+    .tool-mention p { margin: 0 0 6px; color: var(--text-2); }
+    .tool-mention p:last-child { margin: 0; }
+    .tool-mention .label {
+      font-weight: 600;
+      color: var(--text-1);
+      font-family: 'Inter', sans-serif;
+    }
+    .tool-mention a { color: var(--primary); font-weight: 600; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 24px 0;
+      font-size: 15px;
+    }
+    th, td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--line);
+    }
+    th {
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      color: var(--text-1);
+      background: var(--paper);
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    td { color: var(--text-2); }
+
+    .end-mark {
+      width: 24px; height: 4px;
+      background: var(--primary);
+      margin: 56px auto 32px;
+    }
+
+    /* ---------- FOOTER ---------- */
+    .blog-footer {
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      font-size: 14px;
+      color: var(--text-3);
+    }
+    .blog-footer a { color: var(--text-2); font-weight: 500; text-decoration: none; }
+    .blog-footer a:hover { color: var(--text-1); text-decoration: underline; }
+    .blog-footer .left {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .blog-footer .foot-mark {
+      width: 22px; height: 22px;
+      border-radius: 6px;
+      background: var(--brand);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .blog-footer .right { display: flex; gap: 18px; }
+
+    /* ---------- MOBILE ---------- */
+    @media (max-width: 640px) {
+      body { padding: 20px 18px 60px; font-size: 16px; }
+      .blog-header { margin-bottom: 32px; }
+      .lede { font-size: 17px; }
+      article h2 { font-size: 24px; margin-top: 44px; }
+      article h3 { font-size: 19px; }
+      .formula { font-size: 14px; padding: 14px 16px; }
+      .tool-mention { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="blog-header">
+    <a href="/" class="brand">
+      <span class="brand-mark">PC</span>
+      <span>ProChefDesk</span>
+    </a>
+    <div class="crumbs">
+      <a href="/blog/">← Blog</a>
+    </div>
+  </header>
+
+  <article>
+    <header>
+      <div class="tag">Cost Control</div>
+      <h1>How to Calculate Food Cost Percentage in a Restaurant</h1>
+      <p class="lede">The formula takes one line. Getting it right takes everything else: sub-recipes, yield loss, supplier price drift, the wedge between theoretical and actual. Here's the real method, not the textbook one.</p>
+      <div class="article-meta">
+        <span>By Ahmet Kaya</span>
+        <span>12 min read</span>
+        <span>May 2026</span>
+      </div>
+    </header>
+
+    <p>Every chef has heard the food cost percentage formula. Almost no one applies it well. The reason isn't lack of effort — it's that the formula hides everything that actually matters about the number.</p>
+
+    <p>This piece walks through how to calculate food cost percentage <em>properly</em>: not as a quarterly accountant exercise, but as a working tool you check before every menu change, every supplier negotiation, every guest-count forecast. By the end you'll know which corners to cut (some, honestly), which to never cut, and where most kitchens silently bleed two to four points of margin without realising.</p>
+
+    <h2>The formula, briefly</h2>
+
+    <div class="formula">
+      Food Cost % = <span class="var">(Cost of Ingredients)</span> ÷ <span class="var">(Selling Price)</span> × 100
+    </div>
+
+    <p>If a dish costs you $4.20 in ingredients and you sell it for $14, your food cost is 30%. Most casual restaurants target 28–32% per dish. Fine dining sometimes runs 35–38% on signature plates, balanced by lower-cost sides. Quick service operators push toward 25%. None of those numbers matter in isolation — what matters is whether your <em>blended</em> menu cost lines up with your business model.</p>
+
+    <p>That's the easy part. Now the hard part begins.</p>
+
+    <h2>Why almost every food cost calculation is wrong</h2>
+
+    <p>The dish doesn't cost what the recipe card says it costs. Three forces pull the real number around, and most chefs only adjust for one of them:</p>
+
+    <h3>1. Sub-recipes hide most of the cost</h3>
+
+    <p>A lamb shank plate has a shank cooked overnight in stock, served on yellow rice, topped with fried shallots, sumac dressing, and almond flakes. The sumac dressing alone has eight ingredients. The yellow rice has its own stock. The "ingredients" line on your recipe card needs to recursively cost <em>every prep</em>, not just the items you grab at plating.</p>
+
+    <p>This is where spreadsheets die. The moment you change the supplier price of sumac, every dressing that uses it should recompute, and every dish that uses that dressing should recompute again. Cascading manually is how kitchens end up with food cost figures that are six months out of date.</p>
+
+    <div class="tool-mention">
+      <span class="icon">PC</span>
+      <div>
+        <p class="label">In ProChefDesk</p>
+        <p>Mark any recipe as a <strong>prep / sub-recipe</strong> (it gets a yield amount and unit, e.g. "1.2 kg sauce"). Then when you build a menu dish, drop the prep in like an ingredient. The cost cascades automatically. Update the sumac price once and every dressing-using dish revalues. The <a href="/app/" target="_blank" rel="noopener">Cost Report</a> tool then ranks your entire menu by food cost % and flags anything over your target.</p>
+      </div>
+    </div>
+
+    <h3>2. Yield loss is the second leak nobody adjusts for</h3>
+
+    <p>You buy 1 kg of whole lamb shoulder at $24. You don't get 1 kg of plate-ready meat. After bone, trim, sinew, and shrinkage, you might get 620 g of usable yield — a 38% loss. That means your <em>true</em> cost per kilo of usable meat is $24 ÷ 0.62 = $38.70, not $24.</p>
+
+    <p>If you cost the dish at $24/kg, you've underestimated by 60%. Multiply that across every protein in the kitchen and you can see why the P&L at the end of the month doesn't match the food cost report.</p>
+
+    <p>The fix is to record yield as either:</p>
+
+    <ul>
+      <li><strong>A yield percentage on the ingredient</strong>: lamb shoulder = 62% yield. Then every recipe multiplies the price by 1/0.62 internally.</li>
+      <li><strong>A separate "broken-down" sub-recipe</strong>: e.g. "Lamb shoulder, trimmed" as a prep with yieldAmount 620 g from a 1 kg input. The cost-per-gram is then locked in at the trimmed rate.</li>
+    </ul>
+
+    <p>The second approach is more work upfront but more honest — it shows the yield loss as a visible line in your prep, instead of burying it in a percentage that future-you will forget about. Pick one approach per ingredient class and stay consistent.</p>
+
+    <h3>3. Supplier price drift is the silent killer</h3>
+
+    <p>Olive oil cost $8.50 last March. It's $11.20 this March. Your recipe cost is computing on $8.50 because nobody updated the ingredient master. Cumulatively across every dish that uses oil — which is most of them — you're now underestimating menu cost by maybe 1.5 points.</p>
+
+    <p>Two practices kill this:</p>
+
+    <ul>
+      <li><strong>Every delivery, update at least one ingredient price.</strong> Don't try to do all 200. Do the most expensive five. Within a few months, your high-impact ingredients are accurate, and that's what matters most.</li>
+      <li><strong>Once a quarter, audit your top 20 ingredients by spend.</strong> Anything over $15/unit. Compare to the most recent invoice. Update.</li>
+    </ul>
+
+    <div class="callout">
+      <strong>Counter-intuitive but true:</strong> updating cheap ingredients (salt, herbs, garnish) is largely a waste of time. They contribute a few cents per plate. Focus your maintenance attention on proteins, oils, dairy, premium spices, and seafood. Those move the needle.</p>
+    </div>
+
+    <h2>Theoretical vs actual: the gap that pays your rent</h2>
+
+    <p>If you calculate everything perfectly above, you get the <strong>theoretical food cost</strong>: what the dish <em>should</em> cost if every gram was used, no waste, no overpour, no mistakes, no staff meals, no comp.</p>
+
+    <p>The <strong>actual food cost</strong> is what your P&L says: total food purchased ÷ total food revenue, over a real period (week, month). It's always higher than theoretical. The gap is real.</p>
+
+    <p>A well-run kitchen sits 2–4 percentage points above theoretical. A poorly-run one sits 8–10 points above. Where the gap comes from:</p>
+
+    <table>
+      <thead>
+        <tr><th>Source</th><th>Typical gap added</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Over-portioning ("a generous hand")</td><td>1.5–3 pts</td></tr>
+        <tr><td>Waste (prep trim, expired, cooking errors)</td><td>1–2 pts</td></tr>
+        <tr><td>Staff meal, comp, breakage</td><td>0.5–1 pt</td></tr>
+        <tr><td>Theft (yes, even in small kitchens)</td><td>0.3–1 pt</td></tr>
+        <tr><td>Wrong recipe being made (chef intuited a substitution)</td><td>0.5–2 pts</td></tr>
+      </tbody>
+    </table>
+
+    <p>You close that gap one source at a time. Portion control via scales and printed portion guides. Waste logging via a simple form that takes 60 seconds at end of service. Staff meal as a separately tracked line. Recipe adherence by physically having the recipe at the station.</p>
+
+    <div class="tool-mention">
+      <span class="icon">PC</span>
+      <div>
+        <p class="label">In ProChefDesk</p>
+        <p>Kitchen Cards print A4 landscape cards of every menu item at the right size for the station. The Waste log records what's thrown out and why. The Variance tool compares theoretical use (from sold dishes × recipe) to actual use (from inventory count), giving you a per-ingredient picture of the leak.</p>
+      </div>
+    </div>
+
+    <h2>The menu mix problem</h2>
+
+    <p>Here's the trap nobody warns you about. You can have every dish individually at 30% food cost, and your overall menu cost can still be 36%.</p>
+
+    <p>It happens because customers don't order evenly. They over-index on the dishes with the most expensive ingredients (your "showpiece" plates) and under-index on the cheap-but-profitable sides and sandwiches. Your <em>weighted</em> food cost is what hits the bank.</p>
+
+    <p>Calculate it properly:</p>
+
+    <div class="formula">
+      Blended Food Cost % = Σ(<span class="var">dish_cost</span> × <span class="var">units_sold</span>) ÷ Σ(<span class="var">dish_price</span> × <span class="var">units_sold</span>)
+    </div>
+
+    <p>If you don't track units sold per dish, you're flying blind on this. POS exports work. Even a clipboard tally for a week works. Once you have it, you'll spot which dishes are dragging the blended number up — and you'll have actionable choices: reprice them, reduce portion, drop the dish, or feature a higher-margin alternative more prominently.</p>
+
+    <h2>What to actually do this week</h2>
+
+    <p>If you've been reading this nodding along and thinking "I really should fix this someday" — here's the smallest useful action:</p>
+
+    <ol>
+      <li><strong>Pick your five top-selling dishes.</strong> Just five.</li>
+      <li><strong>Cost them properly</strong> using current invoice prices and realistic yield. Not the prices from when you opened. Today's prices.</li>
+      <li><strong>Calculate the % for each.</strong> Anything above 35% is bleeding. Anything below 25% has room to either increase quality or hold price.</li>
+      <li><strong>Pick ONE dish to fix this week.</strong> Reduce a portion by 10 g, swap a garnish, renegotiate one supplier line, or raise the price by $1. One change.</li>
+      <li><strong>Repeat next week with the next dish.</strong></li>
+    </ol>
+
+    <p>You're not trying to optimise the whole menu in a day. You're trying to build the habit of looking at food cost weekly, with current numbers, and acting on what you see. In six months that habit is worth more than any spreadsheet.</p>
+
+    <h2>The point</h2>
+
+    <p>Food cost percentage isn't a number to report. It's a feedback loop. The formula is trivial; the discipline of keeping the inputs honest — current prices, real yields, sub-recipes that cascade — is where the work lives. Get that right and the number takes care of itself.</p>
+
+    <p>Get it wrong and you'll spend years wondering why the books don't match the kitchen. Most chefs do.</p>
+
+    <blockquote>"I thought I was at 31%. The accountant said 38%. I'd been using prices from two years ago."</blockquote>
+
+    <p>That sentence has been spoken in every restaurant I've ever worked. It's the most common preventable mistake in food service. Now you know how to not make it.</p>
+
+    <div class="end-mark"></div>
+  </article>
+
+  <footer class="blog-footer">
+    <div class="left">
+      <span class="foot-mark">PC</span>
+      <span>ProChefDesk · written from a working kitchen</span>
+    </div>
+    <div class="right">
+      <a href="/blog/">All posts</a>
+      <a href="/app/">Open app</a>
+      <a href="/privacy.html">Privacy</a>
+    </div>
+  </footer>
+
+</body>
+</html>

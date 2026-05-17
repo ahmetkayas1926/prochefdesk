@@ -104,6 +104,21 @@
         <button type="button" class="btn btn-sm" data-tab="preps" style="flex:1;background:transparent;">${t('recipes_tab_preps', { n: recipes.filter(function(r){return PCD.recipes.isPrep(r);}).length })}</button>
       </div>
 
+      <!-- v2.8.71 — Allergen Guardrail: "Free from" filter chips.
+           Real-world: server reports "table 5 has a dairy allergy" — chef
+           taps "dairy-free" chip and instantly sees safe options across
+           the entire library. Multi-select (vegan + GF + nut-free combined). -->
+      <div id="recipeFreeFromFilter" class="flex items-center gap-2 mb-3" style="flex-wrap:wrap;font-size:13px;">
+        <span style="color:var(--text-3);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.04em;margin-inline-end:4px;">${t('recipes_filter_free_from') || 'Free from'}:</span>
+        <button type="button" class="chip" data-ff="vegan" style="cursor:pointer;background:var(--surface);border:1px solid var(--border-strong);">🌱 ${t('diet_vegan') || 'Vegan'}</button>
+        <button type="button" class="chip" data-ff="vegetarian" style="cursor:pointer;background:var(--surface);border:1px solid var(--border-strong);">🥬 ${t('diet_vegetarian') || 'Vegetarian'}</button>
+        <button type="button" class="chip" data-ff="gluten" style="cursor:pointer;background:var(--surface);border:1px solid var(--border-strong);">🌾 ${t('diet_gluten_free') || 'Gluten-free'}</button>
+        <button type="button" class="chip" data-ff="dairy" style="cursor:pointer;background:var(--surface);border:1px solid var(--border-strong);">🥛 ${t('diet_dairy_free') || 'Dairy-free'}</button>
+        <button type="button" class="chip" data-ff="nuts" style="cursor:pointer;background:var(--surface);border:1px solid var(--border-strong);">🥜 ${t('diet_nut_free') || 'Nut-free'}</button>
+        <button type="button" class="chip" data-ff="fish" style="cursor:pointer;background:var(--surface);border:1px solid var(--border-strong);">🐟 ${t('diet_fish_free') || 'Fish-free'}</button>
+        <button type="button" class="chip" data-ff-clear style="cursor:pointer;background:transparent;border:0;color:var(--text-3);display:none;font-size:11px;text-decoration:underline;">${t('recipes_filter_clear') || 'Clear'}</button>
+      </div>
+
       <div id="bulkBar" class="card" style="display:none;padding:10px 12px;margin-bottom:12px;background:var(--brand-50);border-color:var(--brand-300);position:sticky;top:0;z-index:5;">
         <div class="flex items-center justify-between" style="flex-wrap:wrap;gap:8px;">
           <div class="flex items-center gap-3">
@@ -132,6 +147,10 @@
     // with the search filter. Menu = no yieldAmount (1-portion plates).
     // Preps = recipes with yieldAmount + yieldUnit set (batch/sub-recipes).
     let activeTab = 'all';
+    // v2.8.71 — "Free from" filter set. Each toggled chip adds an entry.
+    // 'vegan' | 'vegetarian' | 'gluten' | 'dairy' | 'nuts' | 'fish'.
+    // Recipe must satisfy ALL active filters to be shown.
+    const freeFromSet = new Set();
     let sorted = recipes.slice().sort(function (a, b) { return (b.updatedAt || '').localeCompare(a.updatedAt || ''); });
 
     function isPrep(r) {
@@ -174,6 +193,39 @@
       // search results stays scoped to the chosen tab.
       if (activeTab === 'menu') visible = visible.filter(function (r) { return !isPrep(r); });
       else if (activeTab === 'preps') visible = visible.filter(isPrep);
+
+      // v2.8.71 — "Free from" allergen + dietary filter. Conservative match:
+      // - vegan / vegetarian / gluten / dairy → computeDietCompat must return true
+      //   (tri-state: null = unknown → DO NOT pass, only true passes)
+      // - nuts / fish → recipeAllergens must NOT contain that allergen tag
+      // Logic: a recipe passes only if EVERY active filter is satisfied.
+      if (freeFromSet.size > 0) {
+        const ingMapLocal = currentIngMap();
+        visible = visible.filter(function (r) {
+          let pass = true;
+          freeFromSet.forEach(function (ff) {
+            if (!pass) return;
+            if (ff === 'vegan' || ff === 'vegetarian' || ff === 'gluten' || ff === 'dairy') {
+              const compat = PCD.recipes.computeDietCompat ? PCD.recipes.computeDietCompat(r, ingMapLocal) : null;
+              if (!compat) { pass = false; return; }
+              const map = { vegan: 'vegan', vegetarian: 'vegetarian', gluten: 'glutenFree', dairy: 'dairyFree' };
+              if (compat[map[ff]] !== true) pass = false; // null (unknown) or false → exclude
+            } else if (ff === 'nuts' || ff === 'fish') {
+              // Allergen tags via allergens-db
+              if (!PCD.allergensDB || !PCD.allergensDB.recipeAllergens) return;
+              const tags = PCD.allergensDB.recipeAllergens(r, ingMapLocal) || [];
+              if (ff === 'nuts') {
+                // Tree nuts + peanuts cover the "nut allergy" scenario
+                if (tags.indexOf('nuts') >= 0 || tags.indexOf('peanuts') >= 0) pass = false;
+              }
+              if (ff === 'fish') {
+                if (tags.indexOf('fish') >= 0 || tags.indexOf('shellfish') >= 0 || tags.indexOf('molluscs') >= 0) pass = false;
+              }
+            }
+          });
+          return pass;
+        });
+      }
 
       if (visible.length === 0 && !filter && activeTab === 'all') {
         const ws = PCD.store.getActiveWorkspace();
@@ -349,6 +401,35 @@
       paint();
     });
     paintTabs();
+
+    // v2.8.71 — Free-from chip toggles. Single source of truth: freeFromSet.
+    function paintFreeFrom() {
+      const wrap = PCD.$('#recipeFreeFromFilter', view);
+      if (!wrap) return;
+      wrap.querySelectorAll('[data-ff]').forEach(function (b) {
+        const k = b.getAttribute('data-ff');
+        const active = freeFromSet.has(k);
+        b.style.background = active ? 'var(--brand-50)' : 'var(--surface)';
+        b.style.borderColor = active ? 'var(--brand-600)' : 'var(--border-strong)';
+        b.style.color = active ? 'var(--brand-700)' : 'var(--text-2)';
+        b.style.fontWeight = active ? '700' : '500';
+      });
+      const clearBtn = wrap.querySelector('[data-ff-clear]');
+      if (clearBtn) clearBtn.style.display = freeFromSet.size > 0 ? 'inline' : 'none';
+    }
+    PCD.on(view, 'click', '#recipeFreeFromFilter [data-ff]', function () {
+      const k = this.getAttribute('data-ff');
+      if (freeFromSet.has(k)) freeFromSet.delete(k);
+      else freeFromSet.add(k);
+      paintFreeFrom();
+      paint();
+    });
+    PCD.on(view, 'click', '#recipeFreeFromFilter [data-ff-clear]', function () {
+      freeFromSet.clear();
+      paintFreeFrom();
+      paint();
+    });
+    paintFreeFrom();
     PCD.$('#selAll', view).addEventListener('change', function () {
       const currentShown = sorted.filter(function (r) {
         if (!filter) return true;

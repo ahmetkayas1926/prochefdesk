@@ -45,7 +45,17 @@
       "Bash(node -c \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\ui\\\\cropper.js\")",
       "Bash(node -c \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\tools\\\\discover.js\")",
       "Bash(node -c \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\core\\\\share.js\")",
-      "Bash(node -c \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\tools\\\\menus.js\")"
+      "Bash(node -c \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\tools\\\\menus.js\")",
+      "Bash(python -c \"import xml.etree.ElementTree as ET; ET.parse\\('sitemap.xml'\\); print\\('sitemap.xml OK'\\)\")",
+      "Bash(awk '{print $1 \"KB\"}')",
+      "Bash(python -c \"import xml.etree.ElementTree as ET; ET.parse\\('sitemap.xml'\\); print\\('sitemap valid'\\)\")",
+      "Bash(node -c \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\tools\\\\dashboard.js\")",
+      "Bash(node -c \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\tools\\\\portion.js\")",
+      "Bash(node -c \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\tools\\\\shopping.js\")",
+      "Bash(node -c \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\tools\\\\nutrition.js\")",
+      "Bash(node -c \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\core\\\\allergens-db.js\")",
+      "Bash(node -c \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\tools\\\\haccp.js\")",
+      "Bash(node -c \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\core\\\\app.js\")"
     ]
   }
 }

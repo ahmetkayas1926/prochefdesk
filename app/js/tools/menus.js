@@ -409,6 +409,26 @@
           <input type="checkbox" id="menuHideDietary" ${data.hideDietary ? 'checked' : ''}>
           <span>${PCD.escapeHtml(t('menu_hide_dietary') || 'Hide dietary badges (vegan/veg/GF)')}</span>
         </div>
+
+        <!-- v2.8.71 — Allergen-safe print filter. Real-world: special menu
+             for a coeliac event or a peanut-free childrens' birthday.
+             Toggle one or more "free from" filters; the print/preview
+             only includes dishes that pass. The full menu data is not
+             modified — this is a print-time view only. -->
+        <details class="field" style="border:1px solid var(--border);border-radius:var(--r-md);padding:10px 12px;background:var(--surface-2);">
+          <summary style="cursor:pointer;font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-2);">🛡 ${PCD.escapeHtml(t('menu_safe_print_title') || 'Allergen-safe print')}</summary>
+          <div style="margin-top:10px;">
+            <div class="text-muted text-sm mb-2" style="font-size:12px;">${PCD.escapeHtml(t('menu_safe_print_hint') || 'Print/preview only items free from the selected categories. Empty = show all.')}</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              ${['vegan','vegetarian','gluten','dairy','nuts','fish'].map(function (k) {
+                const arr = Array.isArray(data.safePrintFilter) ? data.safePrintFilter : [];
+                const active = arr.indexOf(k) >= 0;
+                const labels = { vegan: '🌱 Vegan', vegetarian: '🥬 Veg', gluten: '🌾 GF', dairy: '🥛 DF', nuts: '🥜 Nut-free', fish: '🐟 Fish-free' };
+                return '<button type="button" class="chip" data-safeprint="' + k + '" style="cursor:pointer;background:' + (active ? 'var(--brand-50)' : 'var(--surface)') + ';border:1px solid ' + (active ? 'var(--brand-600)' : 'var(--border-strong)') + ';color:' + (active ? 'var(--brand-700)' : 'var(--text-2)') + ';font-weight:' + (active ? '700' : '500') + ';">' + labels[k] + '</button>';
+              }).join('')}
+            </div>
+          </div>
+        </details>
       `;
 
       // Render sections
@@ -602,6 +622,17 @@
         const fEl = PCD.$('#menuFooter', body);
         if (fEl) fEl.value = data.footer;
       });
+      // v2.8.71 — Safe-print filter chip toggle (multi-select; print/preview
+       // filters items not satisfying ALL active "free from" categories).
+      PCD.on(body, 'click', '[data-safeprint]', function () {
+        const k = this.getAttribute('data-safeprint');
+        if (!Array.isArray(data.safePrintFilter)) data.safePrintFilter = [];
+        const i = data.safePrintFilter.indexOf(k);
+        if (i >= 0) data.safePrintFilter.splice(i, 1);
+        else data.safePrintFilter.push(k);
+        render();
+      });
+
       // v2.8.68 — Item badge dropdown
       PCD.on(body, 'change', '[data-itembadge]', function () {
         const parts = this.getAttribute('data-itembadge').split(':').map(Number);
@@ -847,14 +878,43 @@
       return ' <span class="m-itembadge" style="background:' + b.color + '20;color:' + b.color + ';border:1px solid ' + b.color + '60;">' + b.icon + '</span>';
     }
 
+    // v2.8.71 — Safe-print filter: drop any item that fails any active "free from"
+    // category. Manual items (no recipe link) cannot be diet-checked, so they
+    // are excluded when ANY filter is active (chef can't certify them anyway).
+    const safeFilters = Array.isArray(menu.safePrintFilter) ? menu.safePrintFilter : [];
+    function itemPassesSafeFilter(it) {
+      if (!safeFilters.length) return true;
+      if (!it.recipeId) return false; // manual item — can't verify
+      const r = recipeMap[it.recipeId];
+      if (!r) return false;
+      // Check diet flags via computeDietCompat (cascades sub-recipes per v2.8.69)
+      const dietMap = { vegan: 'vegan', vegetarian: 'vegetarian', gluten: 'glutenFree', dairy: 'dairyFree' };
+      const compat = (PCD.recipes && PCD.recipes.computeDietCompat) ? PCD.recipes.computeDietCompat(r, ingMap) : null;
+      // Allergen tags via allergens-db (cascades sub-recipes per v2.8.69)
+      const tags = (PCD.allergensDB && PCD.allergensDB.recipeAllergens) ? (PCD.allergensDB.recipeAllergens(r, ingMap) || []) : [];
+      for (let i = 0; i < safeFilters.length; i++) {
+        const k = safeFilters[i];
+        if (dietMap[k]) {
+          if (!compat || compat[dietMap[k]] !== true) return false; // null (unknown) also fails — auditor safety
+        } else if (k === 'nuts') {
+          if (tags.indexOf('nuts') >= 0 || tags.indexOf('peanuts') >= 0) return false;
+        } else if (k === 'fish') {
+          if (tags.indexOf('fish') >= 0 || tags.indexOf('shellfish') >= 0 || tags.indexOf('molluscs') >= 0) return false;
+        }
+      }
+      return true;
+    }
+
     // Build sections HTML using a simple, professional layout
     let sectionsBody = '';
     (menu.sections || []).forEach(function (sec) {
       if (!sec.items || sec.items.length === 0) return;
+      const safeItems = (sec.items || []).filter(itemPassesSafeFilter);
+      if (!safeItems.length) return; // v2.8.71 — skip entire section if no items pass
       sectionsBody += '<div class="m-section">';
       sectionsBody += '<div class="m-section-title">' + PCD.escapeHtml(sec.name || '') + '</div>';
       sectionsBody += '<div class="m-items">';
-      sec.items.forEach(function (it) {
+      safeItems.forEach(function (it) {
         const r = it.recipeId ? recipeMap[it.recipeId] : null;
         const isManual = !it.recipeId;
         if (!r && !isManual) return;

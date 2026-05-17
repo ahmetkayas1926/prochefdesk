@@ -324,7 +324,53 @@ Yeni feature: misafir kullanıcı için cloud push tetiklenmemeli (v2.6.93'te bu
 
 ### 11.9 Root dosyalar app'ten BAĞIMSIZ
 
-`index.html`, `privacy.html`, `terms.html` — üçü de kendi inline CSS'i var (Inter + green palette). App CSS değişiklikleri etkilemez, tersi de. Sadece **brand tutarlılığı** için: renk, font, "PC" mark hep tutarlı.
+`index.html`, `privacy.html`, `terms.html`, `/blog/*.html` — hepsi kendi inline CSS'i var. App CSS değişiklikleri etkilemez, tersi de. Sadece **brand tutarlılığı** için: renk (green #16a34a brand CTA, #2D4A3E primary editorial), font, "PC" mark hep tutarlı.
+
+**Font seçimi:**
+- Landing (`index.html`): Inter (modern marketing tone)
+- Legal (`privacy.html`, `terms.html`): Fraunces (serif başlık) + Manrope (sans body), editorial uzun-okuma feel'i
+- Blog (`/blog/*.html`): Fraunces (serif başlık) + Inter (sans body), editorial + brand bridge
+
+**Palette farkları:**
+- Landing: `#fafaf9` bg, brand green CTA dominant
+- Legal + blog: `#FAF7F2` cream paper bg, `#2D4A3E` deep forest editorial accent, brand green sadece CTA + "PC" mark'ta
+
+### 11.9.1 Blog ekleme prosedürü
+
+`prochefdesk.com/blog/` altında her yazı **standalone HTML**. Build step / template engine YOK.
+
+**Yeni yazı eklemek (5 dk):**
+1. Mevcut bir post HTML'i (örn. `/blog/food-cost-percentage-restaurant.html`) → `/blog/your-slug.html` olarak kopyala
+2. `<head>` içindeki tüm meta tag'leri yeni içeriğe göre güncelle: `<title>`, `<meta name="description">`, `<link rel="canonical">`, tüm `og:*`, tüm `twitter:*`, `og:image`, `article:published_time`
+3. `<article>` içindeki tag/h1/lede/article-meta'yı yenile, body content'i yaz
+4. `/blog/index.html`'de `<div class="post-grid">` içine **en üste** yeni `<a class="post-card">` bloku ekle (newest first pattern)
+5. `/sitemap.xml`'e yeni `<url>` girdisi ekle (newest first), `<lastmod>` doğru
+6. Push → Cloudflare Pages otomatik yayınlar
+
+**SEO standartı per post:**
+- `<title>` 60 karakter altı, "— ProChefDesk" suffix
+- `<meta description>` 155 karakter altı, ilk cümle hook
+- `og:image` ve `twitter:image` 1200×630 px PNG (henüz placeholder URL'ler — `og-food-cost.png` vs. ileride üret)
+- `article:published_time` ISO YYYY-MM-DD
+- `<link rel="canonical">` absolute https URL
+
+**Stil değiştirmek:**
+Her post kendi inline `<style>` taşır. Bir postu değiştirmek diğerlerini etkilemez. Genel stil değişimi için her dosyayı tek tek edit et (DRY değil ama Cloudflare'de bundling yok, herşey statik HTML; bilinçli bir takas).
+
+### 11.9.2 SEO altyapısı
+
+`sitemap.xml` (root) — tüm public sayfalar. Blog ekleme talimatı yorum bloğu içinde.
+`robots.txt` (root) — `Disallow: /app/` (uygulama dynamic SPA, crawlable değil) + `Sitemap:` satırı.
+`index.html` `<head>` — Google Search Console doğrulama meta-tag yorumlu placeholder (`<!-- <meta name="google-site-verification" content="..."> -->`). Operatör GSC'den token alıp yorumu açar.
+
+**GSC kurulumu (operatör ~15 dk eve gelince):**
+1. Search Console → "Add property" → `https://prochefdesk.com`
+2. Verification method: "HTML tag" → token kopyala
+3. `index.html`'deki yorumlu satırı aç, `content="..."` doldur, push
+4. Cloudflare deploy ~2 dk
+5. Search Console "Verify" → onay
+6. Sol menü "Sitemaps" → `https://prochefdesk.com/sitemap.xml` submit
+7. İlk indexleme ~3-7 gün
 
 ### 11.10 isSubRecipe data model (v2.8.26)
 
@@ -351,6 +397,22 @@ Tüm prep/menu ayrımı bu helper'dan geçer (recipes.js, kitchen_cards.js, shar
 ### 11.12 Çoklu kullanıcı / paid tier hazırlığı
 
 `subscriptions` tablosu DB'de hazır, kullanılmıyor. Operatör 50+ aktif kullanıcı + %40 retention kanıtlanana kadar paid tier eklemiyor.
+
+### 11.13 App boot performansı (2026-05-18 tanı)
+
+`app/index.html` boot: 48 sync `<script>` tag + 5 blocking `<link rel="stylesheet">` + 2 CDN script (supabase-js ~200KB, xlsx-js-style ~500KB), tümü `defer`/`async` YOK. Toplam ~1.9MB local JS. Mobile PageSpeed (4G simülasyonu) FCP/LCP 5.6 sn / 65 puan, TBT=0/CLS=0 (CPU değil, network bound).
+
+**3 katmanlı optimizasyon yolu:**
+
+**L1 — DÜŞÜK RİSK (operatör onayı bekliyor):** Tüm `<script>` tag'lerine `defer` + 2 CDN'e `<link rel="preload">` + `dns-prefetch`. Tek dosya (`app/index.html`) değişikliği. Sequential execution korunur. Tahmin: 5.6 → 3.0-3.5 sn FCP. Cross-device sync'e dokunmaz, onay zorunluluğu yok ama yine de "değişiklik yap" onayı istenir.
+
+**L2 — ORTA RİSK:** Lazy-load i18n (sadece seçilen dil) + lazy-load tool modülleri (router-driven). Router'a dokunur. +1.0-1.5 sn kazanım. Operatör onayı ve dikkatli race-condition testi gerekir.
+
+**L3 — YÜKSEK RİSK:** Cloud sync'i ilk paint sonrasına ertele. CLAUDE.md "cross-device sync mantığı değişikliği" listesinde — **onay şart**. Multi-device deneyimi zarar görme riski (1 sn gecikme → "veri kayıp" hissi). Önerilmedi.
+
+**L4 (rewrite):** ESM modules + Service Worker pre-cache. Mimari "no bundling, no SW" kararıyla çelişir, yapılmaz.
+
+İlk hamle: L1. Sonra ölç. Yetmiyorsa L2.
 
 ## 12. Operatör Bağlamı
 

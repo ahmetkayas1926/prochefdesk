@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#FAF7F2">
+  <meta name="robots" content="index, follow">
+  <title>Blog — ProChefDesk</title>
+  <meta name="description" content="Plain-spoken writing for working chefs: food cost, HACCP, menu engineering, and the kind of operational detail nobody else covers honestly.">
+  <link rel="canonical" href="https://prochefdesk.com/blog/">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="ProChefDesk Blog — Writing for working chefs">
+  <meta property="og:description" content="Food cost, HACCP, menu engineering — practical, no fluff, written by someone who's actually run a kitchen.">
+  <meta property="og:url" content="https://prochefdesk.com/blog/">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://prochefdesk.com/blog/og-blog.png">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="ProChefDesk Blog">
+  <meta name="twitter:description" content="Practical writing for working chefs — food cost, HACCP, menu engineering.">
+  <meta name="twitter:image" content="https://prochefdesk.com/blog/og-blog.png">
+
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%2316a34a'/%3E%3Ctext x='50' y='68' font-size='56' text-anchor='middle' fill='white' font-family='system-ui' font-weight='800'%3EPC%3C/text%3E%3C/svg%3E">
+
+  <!-- Fonts: Inter (UI) + Fraunces (editorial headlines) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* ============================================================
+       ProChefDesk — blog/index.html
+       This file is independent of the app (no shared CSS). Editorial
+       palette: cream paper + deep forest accent (sits between landing
+       and privacy/terms in feel).
+
+       TO ADD A NEW POST:
+       1. Copy /blog/_template.html (or any existing post file) to
+          /blog/your-post-slug.html, fill in content + meta tags.
+       2. Add a new <article class="post-card"> block below in this
+          file (newest first). Match the existing pattern.
+       3. Add a new <url> entry to /sitemap.xml.
+       That's it — no build step, no JS framework.
+    ============================================================ */
+
+    :root {
+      --bg: #FAF7F2;
+      --paper: #FFFEFA;
+      --text-1: #1A1916;
+      --text-2: #4A4640;
+      --text-3: #8A857C;
+      --line: #E5DFD2;
+      --primary: #2D4A3E;       /* deep forest — editorial */
+      --brand: #16a34a;          /* app green — for app CTA only */
+      --copper: #B85C3C;
+      --surface-1: #FFFEFA;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 28px 24px 80px;
+      line-height: 1.65;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-size: 16px;
+      background: var(--bg);
+      color: var(--text-1);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    a { color: var(--primary); text-decoration: none; transition: color 0.15s ease; }
+    a:hover { text-decoration: underline; }
+
+    /* ---------- HEADER ---------- */
+    .blog-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 48px;
+    }
+    .brand {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 600;
+      font-size: 20px;
+      letter-spacing: -0.015em;
+      color: var(--text-1);
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .brand-mark {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      background: var(--brand);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Inter', system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 12px;
+    }
+    .nav-links {
+      display: flex;
+      gap: 22px;
+      font-size: 14px;
+      color: var(--text-2);
+      align-items: center;
+    }
+    .nav-links a { color: var(--text-2); font-weight: 500; }
+    .nav-links a:hover { color: var(--text-1); text-decoration: none; }
+    .nav-links .app-cta {
+      padding: 8px 16px;
+      border: 1px solid var(--text-1);
+      border-radius: 8px;
+      color: var(--text-1);
+      font-weight: 600;
+      transition: all 0.15s ease;
+    }
+    .nav-links .app-cta:hover {
+      background: var(--text-1);
+      color: #fff;
+      text-decoration: none;
+    }
+
+    /* ---------- INTRO ---------- */
+    .intro {
+      max-width: 720px;
+      margin-bottom: 64px;
+    }
+    .intro .eyebrow {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--primary);
+      margin-bottom: 16px;
+    }
+    .intro h1 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 500;
+      font-size: clamp(36px, 5vw, 52px);
+      line-height: 1.08;
+      letter-spacing: -0.025em;
+      margin: 0 0 18px;
+      color: var(--text-1);
+    }
+    .intro p {
+      font-size: 18px;
+      color: var(--text-2);
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    /* ---------- POST LIST ---------- */
+    .post-grid {
+      display: grid;
+      gap: 32px;
+    }
+    .post-card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 32px;
+      transition: border-color 0.18s ease, transform 0.18s ease;
+      display: block;
+    }
+    .post-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-2px);
+      text-decoration: none;
+    }
+    .post-card .meta {
+      font-size: 13px;
+      color: var(--text-3);
+      letter-spacing: 0.02em;
+      margin-bottom: 12px;
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    .post-card .meta .tag {
+      color: var(--primary);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-size: 11px;
+    }
+    .post-card h2 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 500;
+      font-size: clamp(22px, 2.4vw, 28px);
+      line-height: 1.2;
+      letter-spacing: -0.018em;
+      margin: 0 0 14px;
+      color: var(--text-1);
+    }
+    .post-card p {
+      color: var(--text-2);
+      margin: 0 0 18px;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+    .post-card .read-more {
+      color: var(--primary);
+      font-weight: 600;
+      font-size: 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .post-card .read-more::after {
+      content: '→';
+      transition: transform 0.15s ease;
+    }
+    .post-card:hover .read-more::after { transform: translateX(3px); }
+
+    /* ---------- FOOTER ---------- */
+    .blog-footer {
+      margin-top: 80px;
+      padding-top: 28px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      font-size: 14px;
+      color: var(--text-3);
+    }
+    .blog-footer a { color: var(--text-2); font-weight: 500; }
+    .blog-footer a:hover { color: var(--text-1); text-decoration: underline; }
+    .blog-footer .left {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .blog-footer .foot-mark {
+      width: 22px; height: 22px;
+      border-radius: 6px;
+      background: var(--brand);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .blog-footer .right { display: flex; gap: 20px; }
+
+    /* ---------- MOBILE ---------- */
+    @media (max-width: 640px) {
+      body { padding: 20px 18px 60px; font-size: 15px; }
+      .blog-header { margin-bottom: 36px; }
+      .nav-links { gap: 14px; font-size: 13px; }
+      .nav-links .app-cta { padding: 7px 12px; }
+      .intro { margin-bottom: 48px; }
+      .post-card { padding: 24px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ============ HEADER ============ -->
+  <header class="blog-header">
+    <a href="/" class="brand">
+      <span class="brand-mark">PC</span>
+      <span>ProChefDesk</span>
+    </a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="/">Home</a>
+      <a href="/blog/">Blog</a>
+      <a href="/app/" class="app-cta">Open app</a>
+    </nav>
+  </header>
+
+  <!-- ============ INTRO ============ -->
+  <section class="intro">
+    <div class="eyebrow">The ProChefDesk Blog</div>
+    <h1>Writing for chefs who actually run kitchens.</h1>
+    <p>No SEO fluff, no AI-generated padding. Just useful pieces about food cost, HACCP, menu engineering, and the operational detail that nobody else seems willing to cover honestly.</p>
+  </section>
+
+  <!-- ============ POSTS ============ -->
+  <!--
+    Add new posts at the TOP (newest first). Each card is a self-contained
+    <a> wrapping an <article>. Match this pattern exactly.
+  -->
+  <div class="post-grid">
+
+    <a class="post-card" href="/blog/menu-engineering-profitable-dishes.html">
+      <article>
+        <div class="meta">
+          <span class="tag">Menu Strategy</span>
+          <span>11 min read</span>
+          <span>May 2026</span>
+        </div>
+        <h2>Menu Engineering: Which Dishes Actually Make You Money</h2>
+        <p>Most chefs intuit which dishes are "good sellers." Far fewer know which are good for the business. The gap between those two answers is where margin lives — and the four-box menu matrix that any kitchen can run on a Sunday afternoon.</p>
+        <span class="read-more">Read the piece</span>
+      </article>
+    </a>
+
+    <a class="post-card" href="/blog/haccp-audit-preparation.html">
+      <article>
+        <div class="meta">
+          <span class="tag">Food Safety</span>
+          <span>10 min read</span>
+          <span>May 2026</span>
+        </div>
+        <h2>How to Prepare Your Kitchen for a HACCP Audit</h2>
+        <p>The audit you fail isn't the one with the worst kitchen. It's the one with the worst paperwork. Here's the boring, methodical preparation that turns a 90-minute interrogation into a polite walkthrough.</p>
+        <span class="read-more">Read the piece</span>
+      </article>
+    </a>
+
+    <a class="post-card" href="/blog/food-cost-percentage-restaurant.html">
+      <article>
+        <div class="meta">
+          <span class="tag">Cost Control</span>
+          <span>12 min read</span>
+          <span>May 2026</span>
+        </div>
+        <h2>How to Calculate Food Cost Percentage in a Restaurant</h2>
+        <p>The formula takes one line. Getting it right takes everything else: sub-recipes, yield loss, supplier price drift, the wedge between theoretical and actual. The real method, not the textbook one.</p>
+        <span class="read-more">Read the piece</span>
+      </article>
+    </a>
+
+  </div>
+
+  <!-- ============ FOOTER ============ -->
+  <footer class="blog-footer">
+    <div class="left">
+      <span class="foot-mark">PC</span>
+      <span>ProChefDesk · written from a working kitchen in Perth</span>
+    </div>
+    <div class="right">
+      <a href="/">Home</a>
+      <a href="/app/">App</a>
+      <a href="/privacy.html">Privacy</a>
+      <a href="/terms.html">Terms</a>
+    </div>
+  </footer>
+
+</body>
+</html>
