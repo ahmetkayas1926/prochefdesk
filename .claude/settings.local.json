@@ -73,7 +73,8 @@
       "Bash(node -c C:/Users/ahmet/Desktop/prochefdesk/app/js/tools/yield.js)",
       "Bash(node -c C:/Users/ahmet/Desktop/prochefdesk/app/js/i18n/en.js)",
       "Bash(node -c C:/Users/ahmet/Desktop/prochefdesk/app/js/i18n/tr.js)",
-      "Bash(node -c C:/Users/ahmet/Desktop/prochefdesk/app/js/tools/waste.js)"
+      "Bash(node -c C:/Users/ahmet/Desktop/prochefdesk/app/js/tools/waste.js)",
+      "Bash(node -c C:/Users/ahmet/Desktop/prochefdesk/app/js/tools/variance.js)"
     ]
   }
 }

@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.9.1 · 2026-05-19
+**Mevcut sürüm:** v2.9.2 · 2026-05-19
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -11,6 +11,12 @@ Format: kronolojik tersine (en son sürüm üstte). Her sürüm kısa başlık +
 ## v2.9.x — NAKED araç sweep
 
 Operatör vizyonu: her araç Buffet Planner seviyesinde RICH (kapatılabilir inline guide + per-field hint + stats hero + empty state CTA). Round 1 = yield + waste + variance.
+
+### v2.9.2 — Variance Report NAKED→RICH + full i18n sweep · 2026-05-19
+- **Added:** Tam i18n sweep — önceden sıfır key vardı, tüm hardcoded EN string'ler `t()` çağrısına çevrildi (page title/subtitle, step labels, table headers, button text, status labels, print PDF, no-data fallback).
+- **Added:** 4-step kapatılabilir inline guide (`pcd_variance_guide_hidden` localStorage) + Pro tip (best-in-class <2% benchmark + run cadence).
+- **Added:** Stats hero refactor — Variance % primary (42px) + status chip (Tight control <2% / Worth investigating <5% / Significant variance ≥5%) + colored card border. Secondary: Theoretical + Actual + Variance ($) 3-grid.
+- **i18n:** +44 key TR/EN.
 
 ### v2.9.1 — Waste Log NAKED→RICH · 2026-05-19
 - **Added:** 4-step kapatılabilir inline guide (`pcd_waste_guide_hidden` localStorage) + Pro tip (industry <2% benchmark).
