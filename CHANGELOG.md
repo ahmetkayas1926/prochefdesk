@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.9.0 · 2026-05-19
+**Mevcut sürüm:** v2.9.1 · 2026-05-19
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -11,6 +11,13 @@ Format: kronolojik tersine (en son sürüm üstte). Her sürüm kısa başlık +
 ## v2.9.x — NAKED araç sweep
 
 Operatör vizyonu: her araç Buffet Planner seviyesinde RICH (kapatılabilir inline guide + per-field hint + stats hero + empty state CTA). Round 1 = yield + waste + variance.
+
+### v2.9.1 — Waste Log NAKED→RICH · 2026-05-19
+- **Added:** 4-step kapatılabilir inline guide (`pcd_waste_guide_hidden` localStorage) + Pro tip (industry <2% benchmark).
+- **Added:** Stats hero refactor — This week primary (42px) + week-on-week trend chip (Down sharply / Down / Stable / Up / Up sharply / New) + colored card border + delta line ("↑ 18% vs previous 7 days"). Secondary: Month + All-time.
+- **Added:** Per-field hints in editor modal (Amount: what got binned, Cost: auto-calculated, Reason: pattern detection).
+- **Changed:** "Recent" hardcoded string → `waste_recent` i18n key.
+- **i18n:** +27 key TR/EN.
 
 ### v2.9.0 — Yield Calculator NAKED→RICH · 2026-05-19
 - **Added:** 4-step kapatılabilir inline guide (`pcd_yield_guide_hidden` localStorage) + Pro tip.

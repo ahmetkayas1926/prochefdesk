@@ -6,6 +6,10 @@
    Data: PCD.store.waste = [ {
      id, ingredientId, amount, unit, reason, cost, notes, at
    } ]
+
+   v2.9.1 — NAKED→RICH upgrade: closeable inline guide, stats hero with
+   week-on-week trend chip, per-field hints in editor. Pattern: buffet
+   v2.8.77 + v2.8.88, yield v2.9.0.
    ================================================================ */
 
 (function () {
@@ -54,6 +58,25 @@
     return amt * price;
   }
 
+  // v2.9.1 — Week-on-week trend status. Color signals direction.
+  function wasteTrendColor(s) {
+    if (s === 'down_sharply' || s === 'down') return '#16a34a';
+    if (s === 'stable' || s === 'first') return '#6b7280';
+    if (s === 'up') return '#f59e0b';
+    if (s === 'up_sharply') return '#dc2626';
+    return 'var(--danger)';
+  }
+  function wasteTrendLabel(s) {
+    const t = PCD.i18n.t;
+    if (s === 'down_sharply') return t('waste_trend_down_sharply') || 'Down sharply';
+    if (s === 'down') return t('waste_trend_down') || 'Down';
+    if (s === 'stable') return t('waste_trend_stable') || 'Stable';
+    if (s === 'up') return t('waste_trend_up') || 'Up';
+    if (s === 'up_sharply') return t('waste_trend_up_sharply') || 'Up sharply';
+    if (s === 'first') return t('waste_trend_first') || 'New';
+    return '';
+  }
+
   function render(view) {
     const t = PCD.i18n.t;
     const entries = readWaste().slice();
@@ -65,17 +88,39 @@
       if (e.cost == null) e.cost = calcEntryCost(e, ingMap[e.ingredientId]);
     });
 
-    // Stats
+    // Stats — week + previous-week (for trend) + month + all-time
     const now = Date.now();
     const weekAgo = now - 7 * 24 * 3600 * 1000;
+    const prevWeekAgo = now - 14 * 24 * 3600 * 1000;
     const monthAgo = now - 30 * 24 * 3600 * 1000;
-    let weekTotal = 0, monthTotal = 0, allTotal = 0;
+    let weekTotal = 0, prevWeekTotal = 0, monthTotal = 0, allTotal = 0;
     entries.forEach(function (e) {
       const ts = new Date(e.at).getTime();
       allTotal += e.cost || 0;
       if (ts >= weekAgo) weekTotal += e.cost || 0;
+      else if (ts >= prevWeekAgo) prevWeekTotal += e.cost || 0;
       if (ts >= monthAgo) monthTotal += e.cost || 0;
     });
+
+    // v2.9.1 — Trend status: this week vs previous 7 days
+    let trendStatus = null;
+    let trendPct = null;
+    if (prevWeekTotal > 0) {
+      trendPct = ((weekTotal - prevWeekTotal) / prevWeekTotal) * 100;
+      if (trendPct >= 20) trendStatus = 'up_sharply';
+      else if (trendPct >= 5) trendStatus = 'up';
+      else if (trendPct >= -5) trendStatus = 'stable';
+      else if (trendPct >= -20) trendStatus = 'down';
+      else trendStatus = 'down_sharply';
+    } else if (weekTotal > 0) {
+      trendStatus = 'first';
+    }
+    const trendColor = wasteTrendColor(trendStatus);
+
+    // v2.9.1 — Closeable inline guide
+    const guideHidden = (function () {
+      try { return localStorage.getItem('pcd_waste_guide_hidden') === '1'; } catch (e) { return false; }
+    })();
 
     view.innerHTML = `
       <div class="page-header">
@@ -88,14 +133,47 @@
         </div>
       </div>
 
-      <div class="grid mb-3" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));">
-        <div class="stat">
-          <div class="stat-label">${t('waste_total_week')}</div>
-          <div class="stat-value" style="color:var(--danger);">${PCD.fmtMoney(weekTotal)}</div>
+      ${!guideHidden ? `
+        <details class="card" open style="padding:0;margin-bottom:14px;background:linear-gradient(135deg,var(--brand-50),var(--surface));border:1px solid var(--brand-300);">
+          <summary style="cursor:pointer;padding:12px 14px;font-weight:700;font-size:13px;color:var(--brand-700);display:flex;align-items:center;gap:8px;list-style:none;">
+            <span style="font-size:16px;">💡</span>
+            <span style="flex:1;">${PCD.escapeHtml(t('waste_guide_title') || 'How to track waste effectively')}</span>
+            <button type="button" id="wasteGuideDismiss" style="background:transparent;border:0;color:var(--text-3);cursor:pointer;font-size:11px;padding:2px 6px;" title="${PCD.escapeHtml(t('waste_guide_dismiss') || 'Hide')}">✕</button>
+          </summary>
+          <div style="padding:0 14px 14px;font-size:13px;color:var(--text-2);line-height:1.65;">
+            <ol style="margin:0;padding-inline-start:20px;">
+              <li><strong>${PCD.escapeHtml(t('waste_guide_step1_title') || 'Log every bin')}</strong> — ${PCD.escapeHtml(t('waste_guide_step1_body') || 'Whatever ends up in the trash — spoilage, dropped plates, trim — log it with weight + reason. Takes 10 seconds per entry.')}</li>
+              <li><strong>${PCD.escapeHtml(t('waste_guide_step2_title') || 'Watch the trend chip')}</strong> — ${PCD.escapeHtml(t('waste_guide_step2_body') || 'The week-on-week comparison tells you if waste is climbing. Up sharply = investigate this week. Down = whatever you changed is working.')}</li>
+              <li><strong>${PCD.escapeHtml(t('waste_guide_step3_title') || 'Hit the top items')}</strong> — ${PCD.escapeHtml(t('waste_guide_step3_body') || 'Top 5 ingredients show where the money is bleeding. Fix portion sizes, ordering or rotation for those — small change, big saving.')}</li>
+              <li><strong>${PCD.escapeHtml(t('waste_guide_step4_title') || 'Use reasons to find patterns')}</strong> — ${PCD.escapeHtml(t('waste_guide_step4_body') || 'After 2-3 weeks the reason breakdown reveals systemic issues — spoilage = ordering too much, trim = bad yield, dropped = staff training.')}</li>
+            </ol>
+            <div style="margin-top:10px;padding:8px 10px;background:var(--surface-2);border-radius:6px;font-size:12px;color:var(--text-3);">
+              <strong>💎 ${PCD.escapeHtml(t('waste_guide_tip_title') || 'Pro tip')}:</strong> ${PCD.escapeHtml(t('waste_guide_tip_body') || 'Industry benchmark: aim for under 2% of food revenue as waste. If your weekly waste cost equals a day of food sales, you have a real problem to chase.')}
+            </div>
+          </div>
+        </details>
+      ` : ''}
+
+      <div class="stat mb-3" style="background:linear-gradient(135deg,${trendColor}18,var(--surface));border-color:${trendColor};padding:18px;">
+        <div style="display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:14px;">
+          <div style="flex-shrink:0;">
+            <div class="stat-label" style="font-size:11px;">${t('waste_total_week')}</div>
+            <div style="font-size:42px;font-weight:900;color:${trendColor};line-height:1;letter-spacing:-0.02em;">${PCD.fmtMoney(weekTotal)}</div>
+          </div>
+          <div style="flex:1;min-width:180px;">
+            ${trendStatus ? `
+              <span style="display:inline-block;padding:4px 10px;background:${trendColor}25;color:${trendColor};font-weight:700;font-size:11px;text-transform:uppercase;border-radius:6px;letter-spacing:0.06em;">
+                ${PCD.escapeHtml(wasteTrendLabel(trendStatus))}
+              </span>
+            ` : ''}
+            <div class="text-muted text-sm" style="font-size:11px;margin-top:5px;line-height:1.4;">
+              ${trendPct !== null ? (trendPct > 0 ? '↑ ' : (trendPct < 0 ? '↓ ' : '')) + PCD.fmtPercent(Math.abs(trendPct), 0) + ' ' + PCD.escapeHtml(t('waste_vs_prev') || 'vs previous 7 days') : PCD.escapeHtml(t('waste_first_week') || 'First week of data — keep logging')}
+            </div>
+          </div>
         </div>
-        <div class="stat">
-          <div class="stat-label">${t('waste_total_month')}</div>
-          <div class="stat-value" style="color:var(--danger);">${PCD.fmtMoney(monthTotal)}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div><div class="stat-label" style="font-size:11px;">${t('waste_total_month')}</div><div style="font-size:18px;font-weight:700;color:var(--danger);">${PCD.fmtMoney(monthTotal)}</div></div>
+          <div><div class="stat-label" style="font-size:11px;">${PCD.escapeHtml(t('waste_total_all') || 'All-time')}</div><div style="font-size:18px;font-weight:700;color:var(--text-2);">${PCD.fmtMoney(allTotal)}</div></div>
         </div>
       </div>
 
@@ -111,13 +189,24 @@
         </div>
 
         <div class="section">
-          <div class="section-title" style="font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">Recent</div>
+          <div class="section-title" style="font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">${PCD.escapeHtml(t('waste_recent') || 'Recent')}</div>
           <div id="wasteList" class="flex flex-col gap-2"></div>
         </div>
       ` : ''}
 
       <div id="wasteEmpty"></div>
     `;
+
+    // Guide dismiss handler
+    const dismissBtn = PCD.$('#wasteGuideDismiss', view);
+    if (dismissBtn) {
+      dismissBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        try { localStorage.setItem('pcd_waste_guide_hidden', '1'); } catch (er) {}
+        render(view);
+      });
+    }
 
     if (entries.length === 0) {
       PCD.$('#wasteEmpty', view).innerHTML = `
@@ -275,10 +364,12 @@
                   ${['g','kg','ml','l','tsp','tbsp','cup','pcs','each','bottle','bunch','unit'].map(function (u) { return '<option value="' + u + '"' + ((data.unit || ing.unit) === u ? ' selected' : '') + '>' + u + '</option>'; }).join('')}
                 </select>
               </div>
+              <div class="text-muted text-sm" style="font-size:11px;margin-top:2px;">${PCD.escapeHtml(t('waste_amount_help') || 'What got binned — weight, volume or count.')}</div>
             </div>
             <div class="field">
               <label class="field-label">${t('waste_cost')}</label>
               <div class="input" style="background:var(--surface-2);display:flex;align-items:center;color:var(--danger);font-weight:700;">${PCD.fmtMoney(liveCost)}</div>
+              <div class="text-muted text-sm" style="font-size:11px;margin-top:2px;">${PCD.escapeHtml(t('waste_cost_help') || 'Auto-calculated from ingredient price.')}</div>
             </div>
           </div>
 
@@ -287,6 +378,7 @@
             <select class="select" id="wReason">
               ${REASONS.map(function (r) { return '<option value="' + r + '"' + (data.reason === r ? ' selected' : '') + '>' + t('waste_reason_' + r) + '</option>'; }).join('')}
             </select>
+            <div class="text-muted text-sm" style="font-size:11px;margin-top:2px;">${PCD.escapeHtml(t('waste_reason_help') || 'Helps spot patterns (spoilage = order less, trim = check yield, dropped = staff training).')}</div>
           </div>
 
           <div class="field">

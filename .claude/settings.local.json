@@ -72,7 +72,8 @@
       "Bash(powershell -Command \"Get-Content 'C:\\\\Users\\\\ahmet\\\\.claude\\\\projects\\\\C--Users-ahmet-Desktop-prochefdesk\\\\4a173825-aa72-4922-9ef3-6af1e1c27372.jsonl' | Select-Object -Last 30\")",
       "Bash(node -c C:/Users/ahmet/Desktop/prochefdesk/app/js/tools/yield.js)",
       "Bash(node -c C:/Users/ahmet/Desktop/prochefdesk/app/js/i18n/en.js)",
-      "Bash(node -c C:/Users/ahmet/Desktop/prochefdesk/app/js/i18n/tr.js)"
+      "Bash(node -c C:/Users/ahmet/Desktop/prochefdesk/app/js/i18n/tr.js)",
+      "Bash(node -c C:/Users/ahmet/Desktop/prochefdesk/app/js/tools/waste.js)"
     ]
   }
 }
