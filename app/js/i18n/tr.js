@@ -1216,7 +1216,12 @@ window.PCD.i18n.register('tr', {
   buffet_stat_food_cost_pct: "Food cost %",
   buffet_stat_profit: "Kişi başı kar",
   buffet_stat_waste: "Beklenen atık",
-  buffet_target: "hedef",
+  buffet_target: "Hedef",
+  // v2.8.88 — Status labels (Stats hero chip)
+  buffet_status_good: "İyi",
+  buffet_status_warn: "Dikkat",
+  buffet_status_over: "Bütçe aştı",
+  buffet_search_placeholder: "İsim, tip veya tarihe göre ara…",
   buffet_stations_title: "İstasyonlar",
   buffet_add_station: "İstasyon Ekle",
   buffet_new_station: "Yeni İstasyon",

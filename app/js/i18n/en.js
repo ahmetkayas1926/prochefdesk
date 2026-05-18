@@ -1216,7 +1216,12 @@ window.PCD.i18n.register('en', {
   buffet_stat_food_cost_pct: "Food cost %",
   buffet_stat_profit: "Profit / cover",
   buffet_stat_waste: "Expected waste",
-  buffet_target: "target",
+  buffet_target: "Target",
+  // v2.8.88 — Status labels (Stats hero chip)
+  buffet_status_good: "Good",
+  buffet_status_warn: "Watch",
+  buffet_status_over: "Over budget",
+  buffet_search_placeholder: "Search by name, type, or date…",
   buffet_stations_title: "Stations",
   buffet_add_station: "Add Station",
   buffet_new_station: "New Station",

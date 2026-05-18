@@ -8,7 +8,7 @@
 
 **Ürün:** ProChefDesk — profesyonel chef'ler için web tabanlı mutfak yönetim sistemi.
 **Operatör:** Ahmet Kaya, Perth Western Australia, profesyonel şef. Solo non-commercial proje.
-**Mevcut sürüm:** **v2.8.87** (push'a hazır local; production v2.8.79).
+**Mevcut sürüm:** **v2.8.88** (push'a hazır local; production v2.8.79).
 **Domain:** prochefdesk.com (Cloudflare Pages, SSL Full, GitHub push'ta auto build + deploy).
 
 **URL yapısı:**
@@ -165,6 +165,7 @@ Tek tek sürüm için → CHANGELOG.md.
 | 38 | **Profile↔Discover gerçek bağlantı + eski v3.x placeholder temizliği**: (a) Save profile her zaman re-enrich (oldName check kaldırıldı). (b) openPublicProfilePreview baştan modernize — "Career stats" → "Discover stats" (gerçek public recipe sayısı + view + like 3-col grid + empty hint kartı), "View on Discover" CTA, Workplace ayrı chip, "Community sharing launches v3.x" placeholder KALDIRILDI. (c) Form etiketleri güncel — "Country" → "Location", "Workplace" → "Workplace / concept", intro/bio_hint Discover canlı dili. (d) Discover live fallback — kendi recipe'lerinde authorName boşsa current user.name göster (card + detail modal). 9 yeni i18n key TR+EN + 5 mevcut key güncel. | v2.8.85 | ✅ |
 | 39 | **Excel cost report bug fix (try/catch debug) + Buffet list view'da Cost Report parite**: (a) exportCostReportXLSX (recipes.js) ve exportBuffetXLSX (buffet.js) try/catch ile sarıldı — operatöre meaningful "Excel export failed: [actual error]" toast + console'a tam stack. Refactor: lazy load wrapper try'ın dışında, iç fonksiyon `_doExport...`'a split. (b) Buffet list view'da her kart için Prep List + PDF Cost Report + Excel butonları (editor açmadan doğrudan print/export). 1 yeni i18n key. | v2.8.86 | ✅ |
 | 40 | **Excel menu-item scope bug fix** (testPriceVal is not defined): recipes.js `if (!isPrepXlsx)` block içindeki const'lar (testPriceVal/marginVal/revVal/profitVal) block kapanınca kayboluyor, autoFit else branch'i bunları kullanmaya çalışıyordu → runtime crash. Else branch'inde local scope yeniden hesap (5 satır). v2.8.30 yorumu bug'ı tanımış ama sadece prep path için fix yapmış, menu item path kırık kalmıştı. v2.8.86'daki try/catch sayesinde operatör hatayı yakalayıp raporlayabildi. | v2.8.87 | ✅ |
+| 41 | **Buffet UX modernize Faz 1** (operatör vizyon turu — kafa karıştırmayan, modern, akıllı): (a) Smart industry defaults — BUFFET_TYPES'a defaultCovers + defaultPrice (breakfast 80/35 vb.), type change'de auto-fill. (b) Stats hero refactor — 42px primary Food cost % + renkli status chip + target alt-text + secondary 5-metric grid (Apple Health hissi). (c) statusLabel helper i18n. (d) Liste polish — search input (1+ buffet'te) + her satıra renkli sol kenarlık (food cost % status'a göre yeşil/sarı/kırmızı). (e) Item card compactify — uzun pickup hint kaldır, kompakt cost preview (prep cost + waste, waste 25%+ kırmızı ⚠). 4 yeni i18n key TR+EN. Quick start preset v2.8.89'a ertelendi. | v2.8.88 | ✅ |
 | Ops | GSC verify + sitemap submit + 7 sayfa Google'a keşfedildi (landing + 2 legal + blog index + 3 post) | 2026-05-18 | ✅ |
 | Ops | Edge function deploy: `delete-account` (v2.8.50 fix CANLI) + `backup-to-r2` (v2.8.79 BACKUP_TABLES haccp_receiving/holding CANLI) | 2026-05-18 | ✅ |
 | Ops | Marketing + SEO + Blog altyapısı (PARÇA 1+2+3): `/blog/` 3 yazı + sitemap.xml + robots.txt + meta tag sweep + privacy/terms OG cards. App'ten bağımsız stil. GSC verify operatöre kaldı | 2026-05-18 | ✅ |
@@ -267,7 +268,7 @@ Bu işleri spontan öneri olarak ortaya çıkarma:
 |---|---|
 | Repo path (operatör Windows) | `C:\Users\ahmet\Desktop\prochefdesk` |
 | GitHub repo | `ahmetkayas1926/prochefdesk` |
-| Production sürümü | **v2.8.87** (push'a hazır local; production v2.8.79) |
+| Production sürümü | **v2.8.88** (push'a hazır local; production v2.8.79) |
 | Supabase project ref | `muuwhrcogikpqylsfvgg` (Tokyo, Postgres 17, Free tier) |
 | Cloudflare R2 bucket | `prochefdesk-backups` |
 | CLEANUP_SECRET | `ec79a445-7e92-499b-9322-5c2c949788d4d2886e66-d556-4498-ba9e-17fda6c11ac1` |

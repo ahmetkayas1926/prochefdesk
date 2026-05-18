@@ -78,13 +78,17 @@
     { id: 'other',    labelKey: 'buffet_station_other',    icon: 'grid',        color: '#64748b' },
   ];
 
+  // v2.8.88 — Smart industry defaults: type seçince Cover/Price otomatik
+  // plausible doldurur (kullanıcı override edebilir). Defaults 4-5★ hotel
+  // banquet ops orta-büyük operasyon baseline'ı (Cornell hospitality +
+  // Marriott banquet handbook tipik değerleri).
   const BUFFET_TYPES = [
-    { id: 'breakfast', labelKey: 'buffet_type_breakfast', priceHint: '25-45' },
-    { id: 'brunch',    labelKey: 'buffet_type_brunch',    priceHint: '60-95' },
-    { id: 'lunch',     labelKey: 'buffet_type_lunch',     priceHint: '35-60' },
-    { id: 'dinner',    labelKey: 'buffet_type_dinner',    priceHint: '55-85' },
-    { id: 'cocktail',  labelKey: 'buffet_type_cocktail',  priceHint: '40-70' },
-    { id: 'custom',    labelKey: 'buffet_type_custom',    priceHint: '—' },
+    { id: 'breakfast', labelKey: 'buffet_type_breakfast', priceHint: '25-45', defaultCovers: 80,  defaultPrice: 35 },
+    { id: 'brunch',    labelKey: 'buffet_type_brunch',    priceHint: '60-95', defaultCovers: 80,  defaultPrice: 75 },
+    { id: 'lunch',     labelKey: 'buffet_type_lunch',     priceHint: '35-60', defaultCovers: 100, defaultPrice: 45 },
+    { id: 'dinner',    labelKey: 'buffet_type_dinner',    priceHint: '55-85', defaultCovers: 120, defaultPrice: 70 },
+    { id: 'cocktail',  labelKey: 'buffet_type_cocktail',  priceHint: '40-70', defaultCovers: 150, defaultPrice: 55 },
+    { id: 'custom',    labelKey: 'buffet_type_custom',    priceHint: '—',     defaultCovers: 50,  defaultPrice: 50 },
   ];
 
   // v2.8.79 — Unit dropdown (recipes.js ile aynı liste). Manuel yazım yerine
@@ -255,6 +259,15 @@
     return '#dc2626';
   }
 
+  // v2.8.88 — Status label (i18n) — Stats hero card primary metric'in altında
+  // "Good" / "Watch" / "Over budget" chip olarak gösterilir.
+  function statusLabel(s) {
+    const t = PCD.i18n.t;
+    if (s === 'good') return t('buffet_status_good') || 'Good';
+    if (s === 'warn') return t('buffet_status_warn') || 'Watch';
+    return t('buffet_status_over') || 'Over budget';
+  }
+
   // ---------- LIST VIEW ----------
 
   function render(view) {
@@ -276,6 +289,12 @@
           <button class="btn btn-primary" id="newBuffetBtn">+ ${t('buffet_new') || 'New Buffet'}</button>
         </div>
       </div>
+      ${buffets.length > 1 ? `
+        <div class="searchbar mb-3">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35" stroke-linecap="round"/></svg>
+          <input type="search" id="bufSearch" placeholder="${PCD.escapeHtml(t('buffet_search_placeholder') || 'Search by name, type, or date…')}" autocomplete="off">
+        </div>
+      ` : ''}
       <div id="buffetList"></div>
     `;
 
@@ -296,7 +315,11 @@
         const totals = computeBuffetTotals(b, ingMap, recipeMap);
         const dateStr = b.serviceDate ? PCD.fmtDate(b.serviceDate) : '—';
         const typeLabel = (BUFFET_TYPES.find(function (x) { return x.id === b.type; }) || {});
-        const row = PCD.el('div', { class: 'list-item', 'data-bid': b.id, style: { cursor: 'pointer' } });
+        // v2.8.88 — Renkli sol kenarlık (food cost % status'a göre yeşil/sarı/kırmızı)
+        // — listede gözden geçirilirken hangi buffet'in margin'i tehlikede anında belli.
+        const row = PCD.el('div', { class: 'list-item', 'data-bid': b.id,
+          'data-buf-name': (b.name || '').toLowerCase(),
+          style: { cursor: 'pointer', borderLeft: '4px solid ' + statusColor(totals.status) } });
         row.innerHTML =
           '<div class="list-item-thumb" style="background:' + statusColor(totals.status) + '20;color:' + statusColor(totals.status) + ';font-weight:700;font-size:14px;">' + totals.foodCostPct.toFixed(0) + '%</div>' +
           '<div class="list-item-body">' +
@@ -325,6 +348,19 @@
     }
 
     PCD.$('#newBuffetBtn', view).addEventListener('click', function () { openEditor(); });
+    // v2.8.88 — Liste search (case-insensitive substring filter, name + type + date)
+    const bufSearch = PCD.$('#bufSearch', view);
+    if (bufSearch) {
+      bufSearch.addEventListener('input', function () {
+        const q = (this.value || '').toLowerCase().trim();
+        const rows = listEl.querySelectorAll('[data-bid]');
+        rows.forEach(function (row) {
+          const hay = (row.getAttribute('data-buf-name') || '') + ' ' +
+                      (row.querySelector('.list-item-meta')?.textContent || '').toLowerCase();
+          row.style.display = (!q || hay.indexOf(q) >= 0) ? '' : 'none';
+        });
+      });
+    }
     PCD.on(listEl, 'click', '[data-bid]', function (e) {
       // v2.8.86 — Edit/Dup butonları + yeni Prep/PDF/Excel butonları satır click'i tetiklemesin
       if (e.target.closest('[data-buf-edit]') || e.target.closest('[data-buf-dup]') ||
@@ -506,33 +542,49 @@
           </div>
         </div>
 
-        <!-- Live stats panel — sektör benchmark + renk uyarısı -->
-        <div class="stat mb-3" style="background:linear-gradient(135deg,${statusColor(totals.status)}15,var(--surface));border-color:${statusColor(totals.status)};padding:14px;">
-          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(120px, 1fr));gap:10px;">
+        <!-- v2.8.88 — Stats hero refactor: primary metric (Food cost %) hero,
+             secondary 5 metric grid altında. Apple Health / Stripe dashboard
+             hissi. Eski 6 metric tek grid çok yassı görünüyordu. -->
+        <div class="stat mb-3" style="background:linear-gradient(135deg,${statusColor(totals.status)}18,var(--surface));border-color:${statusColor(totals.status)};padding:18px;">
+          <!-- Hero: Food cost % primary -->
+          <div style="display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:14px;">
+            <div style="flex-shrink:0;">
+              <div class="stat-label" style="font-size:11px;">${t('buffet_stat_food_cost_pct') || 'Food cost %'}</div>
+              <div style="font-size:42px;font-weight:900;color:${statusColor(totals.status)};line-height:1;letter-spacing:-0.02em;">
+                ${totals.foodCostPct.toFixed(1)}<span style="font-size:24px;">%</span>
+              </div>
+            </div>
+            <div style="flex:1;min-width:180px;">
+              <span style="display:inline-block;padding:4px 10px;background:${statusColor(totals.status)}25;color:${statusColor(totals.status)};font-weight:700;font-size:11px;text-transform:uppercase;border-radius:6px;letter-spacing:0.06em;">
+                ${PCD.escapeHtml(statusLabel(totals.status))}
+              </span>
+              <div class="text-muted text-sm" style="font-size:11px;margin-top:5px;line-height:1.4;">
+                ${PCD.escapeHtml(t('buffet_target') || 'Target')}: ≤${totals.targets.good}% ${PCD.escapeHtml(t('buffet_status_good') || 'good')} · ≤${totals.targets.warn}% ${PCD.escapeHtml(t('buffet_status_warn') || 'watch')}
+              </div>
+            </div>
+          </div>
+
+          <!-- Secondary: 5 metric grid -->
+          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(110px, 1fr));gap:10px;border-top:1px solid var(--border);padding-top:12px;">
             <div>
               <div class="stat-label">${t('buffet_stat_revenue') || 'Revenue'}</div>
-              <div style="font-size:18px;font-weight:800;">${PCD.fmtMoney(totals.revenue)}</div>
+              <div style="font-size:16px;font-weight:700;">${PCD.fmtMoney(totals.revenue)}</div>
             </div>
             <div>
               <div class="stat-label">${t('buffet_stat_total_cost') || 'Spread cost'}</div>
-              <div style="font-size:18px;font-weight:800;">${PCD.fmtMoney(totals.totalPrepCost)}</div>
+              <div style="font-size:16px;font-weight:700;">${PCD.fmtMoney(totals.totalPrepCost)}</div>
             </div>
             <div>
               <div class="stat-label">${t('buffet_stat_per_cover') || 'Per cover'}</div>
-              <div style="font-size:18px;font-weight:800;">${PCD.fmtMoney(totals.perGuestCost)}</div>
-            </div>
-            <div>
-              <div class="stat-label">${t('buffet_stat_food_cost_pct') || 'Food cost %'}</div>
-              <div style="font-size:18px;font-weight:800;color:${statusColor(totals.status)};">${totals.foodCostPct.toFixed(1)}%</div>
-              <div class="text-muted text-sm" style="font-size:10px;">${t('buffet_target') || 'target'}: ≤${totals.targets.good}% / ≤${totals.targets.warn}%</div>
+              <div style="font-size:16px;font-weight:700;">${PCD.fmtMoney(totals.perGuestCost)}</div>
             </div>
             <div>
               <div class="stat-label">${t('buffet_stat_profit') || 'Profit / cover'}</div>
-              <div style="font-size:18px;font-weight:800;color:${totals.profitPerCover > 0 ? 'var(--success)' : 'var(--danger)'};">${PCD.fmtMoney(totals.profitPerCover)}</div>
+              <div style="font-size:16px;font-weight:700;color:${totals.profitPerCover > 0 ? 'var(--success)' : 'var(--danger)'};">${PCD.fmtMoney(totals.profitPerCover)}</div>
             </div>
             <div>
               <div class="stat-label">${t('buffet_stat_waste') || 'Expected waste'}</div>
-              <div style="font-size:18px;font-weight:800;color:var(--text-3);">${PCD.fmtMoney(totals.totalExpectedWaste)}</div>
+              <div style="font-size:16px;font-weight:700;color:var(--text-3);">${PCD.fmtMoney(totals.totalExpectedWaste)}</div>
             </div>
           </div>
         </div>
@@ -614,14 +666,15 @@
                   '<div style="padding:4px 6px;font-weight:700;color:' + stTypeMeta.color + ';font-size:13px;">' + (c ? PCD.fmtNumber(c.prepAmount) + ' ' + (it.unit || '') : '—') + '</div>' +
                 '</div>' +
               '</div>' +
-              // v2.8.79 — Consumption % anlam hint (operatör request: "Pickup % ne demek ?")
-              '<div class="text-muted text-sm" style="margin-top:3px;font-size:10px;font-style:italic;color:var(--text-3);">' +
-                PCD.escapeHtml(t('buffet_pickup_inline_hint') || 'Tüketim % = hazırlananın yüzde kaçı yenecek. Düşük % = çok atık. Endüstri norm: protein 85%, peynir 35%, içecek 95%.') +
-              '</div>' +
-              (c ? '<div class="text-muted text-sm" style="margin-top:4px;font-size:11px;">' +
-                  PCD.fmtMoney(c.prepCost) + ' ' + (t('buffet_prep_cost') || 'prep cost') + ' · ' +
-                  PCD.fmtMoney(c.expectedWaste) + ' ' + (t('buffet_expected_waste') || 'expected waste') +
-                  (c.wastePct > 25 ? ' <span style="color:var(--danger);font-weight:700;">⚠ ' + c.wastePct.toFixed(0) + '%</span>' : '') +
+              // v2.8.88 — Compact cost preview. Eski uzun "Tüketim % = hazırlananın yüzde
+              // kaçı yenecek..." hint her satırda repeat ediyordu → gürültü. Operatör
+              // istek: kafa karıştırmayan modern tasarım. Pickup tooltip zaten label
+              // title attribute'unda var (satır 609). Inline hint kaldırıldı.
+              (c ? '<div style="margin-top:6px;display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--text-2);">' +
+                  '<span><strong style="color:var(--text-1);">' + PCD.fmtMoney(c.prepCost) + '</strong> ' + (t('buffet_prep_cost') || 'prep cost') + '</span>' +
+                  '<span><strong style="color:' + (c.wastePct > 25 ? 'var(--danger)' : 'var(--text-3)') + ';">' + PCD.fmtMoney(c.expectedWaste) + '</strong> ' + (t('buffet_expected_waste') || 'waste') +
+                    (c.wastePct > 25 ? ' <span style="color:var(--danger);font-weight:700;">⚠ ' + c.wastePct.toFixed(0) + '%</span>' : '') +
+                  '</span>' +
               '</div>' : '') +
             '</div>';
         });
@@ -676,6 +729,13 @@
         data.type = this.value;
         // Reset refill to industry default for this type
         data.refillMultiplier = null;
+        // v2.8.88 — Smart industry defaults: type change → covers + ticket price
+        // otomatik plausible güncellenir (kullanıcı override edebilir).
+        const newType = BUFFET_TYPES.find(function (b) { return b.id === data.type; });
+        if (newType) {
+          if (newType.defaultCovers) data.coverCount = newType.defaultCovers;
+          if (newType.defaultPrice) data.ticketPrice = newType.defaultPrice;
+        }
         renderEditor();
       });
       PCD.$('#bufDate', body).addEventListener('change', function () { data.serviceDate = this.value; });
