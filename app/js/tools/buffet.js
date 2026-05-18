@@ -96,6 +96,128 @@
   // olmalı. recipe builderdeki gibi".
   const UNITS = ['g', 'kg', 'ml', 'l', 'tsp', 'tbsp', 'cup', 'oz', 'lb', 'pcs', 'each', 'portion', 'bottle', 'bunch', 'slice'];
 
+  // v2.8.89 — Quick start presets. Yeni şef "+ New Buffet" tıklayınca chooser
+  // modal'da bu 3 hazır şablon + "Start blank" görür. Custom items olarak
+  // ekleniyor (recipeId/ingredientId yok) — şef sonradan kendi recipe/ing
+  // library'sine bağlayabilir. amountPerGuest + unit + pickupRatio sektör
+  // norm'larıyla doldurulmuş; cost=0 (bağlama sonrası gerçek hesaba geçer).
+  const PRESETS = [
+    {
+      id: 'continental',
+      icon: '🥐',
+      nameKey: 'buffet_preset_continental',
+      descKey: 'buffet_preset_continental_desc',
+      template: {
+        name: 'Continental Breakfast',
+        type: 'breakfast',
+        coverCount: 60, ticketPrice: 30, durationHours: 2.5, refillMultiplier: null, notes: '',
+        stations: [
+          { name: 'Cold', type: 'cold', items: [
+            { customName: 'Greek yogurt with honey', amountPerGuest: 120, unit: 'g',  pickupRatio: 0.70, refillX: null },
+            { customName: 'Seasonal fruit platter',  amountPerGuest: 100, unit: 'g',  pickupRatio: 0.55, refillX: null },
+            { customName: 'Cheese selection',        amountPerGuest: 40,  unit: 'g',  pickupRatio: 0.35, refillX: null },
+          ]},
+          { name: 'Hot', type: 'hot', items: [
+            { customName: 'Scrambled eggs', amountPerGuest: 80, unit: 'g', pickupRatio: 0.85, refillX: null },
+            { customName: 'Pork sausages',  amountPerGuest: 60, unit: 'g', pickupRatio: 0.85, refillX: null },
+            { customName: 'Hash browns',    amountPerGuest: 70, unit: 'g', pickupRatio: 0.75, refillX: null },
+          ]},
+          { name: 'Bakery', type: 'bakery', items: [
+            { customName: 'Croissants',       amountPerGuest: 1, unit: 'pcs',   pickupRatio: 0.80, refillX: null },
+            { customName: 'Sourdough slices', amountPerGuest: 2, unit: 'slice', pickupRatio: 0.60, refillX: null },
+            { customName: 'Mini pastries',    amountPerGuest: 1, unit: 'pcs',   pickupRatio: 0.50, refillX: null },
+          ]},
+          { name: 'Beverage', type: 'beverage', items: [
+            { customName: 'Filter coffee',  amountPerGuest: 200, unit: 'ml', pickupRatio: 0.95, refillX: null },
+            { customName: 'Orange juice',   amountPerGuest: 150, unit: 'ml', pickupRatio: 0.85, refillX: null },
+            { customName: 'Tea selection',  amountPerGuest: 100, unit: 'ml', pickupRatio: 0.65, refillX: null },
+          ]},
+        ],
+      },
+    },
+    {
+      id: 'mediterranean',
+      icon: '🌿',
+      nameKey: 'buffet_preset_mediterranean',
+      descKey: 'buffet_preset_mediterranean_desc',
+      template: {
+        name: 'Mediterranean Lunch',
+        type: 'lunch',
+        coverCount: 100, ticketPrice: 48, durationHours: 2, refillMultiplier: null, notes: '',
+        stations: [
+          { name: 'Mezze', type: 'cold', items: [
+            { customName: 'Hummus',         amountPerGuest: 40, unit: 'g', pickupRatio: 0.60, refillX: null },
+            { customName: 'Tzatziki',       amountPerGuest: 35, unit: 'g', pickupRatio: 0.55, refillX: null },
+            { customName: 'Baba ganoush',   amountPerGuest: 30, unit: 'g', pickupRatio: 0.50, refillX: null },
+            { customName: 'Mixed olives',   amountPerGuest: 25, unit: 'g', pickupRatio: 0.45, refillX: null },
+          ]},
+          { name: 'Mains', type: 'hot', items: [
+            { customName: 'Grilled chicken souvlaki', amountPerGuest: 120, unit: 'g', pickupRatio: 0.85, refillX: null },
+            { customName: 'Slow-roast lamb shoulder', amountPerGuest: 100, unit: 'g', pickupRatio: 0.85, refillX: null },
+            { customName: 'Vegetable tagine',         amountPerGuest: 90,  unit: 'g', pickupRatio: 0.70, refillX: null },
+            { customName: 'Saffron rice pilaf',       amountPerGuest: 110, unit: 'g', pickupRatio: 0.75, refillX: null },
+          ]},
+          { name: 'Salads', type: 'other', items: [
+            { customName: 'Greek salad',  amountPerGuest: 80, unit: 'g', pickupRatio: 0.55, refillX: null },
+            { customName: 'Tabouleh',     amountPerGuest: 60, unit: 'g', pickupRatio: 0.45, refillX: null },
+          ]},
+          { name: 'Bread', type: 'bakery', items: [
+            { customName: 'Pita bread',        amountPerGuest: 1, unit: 'pcs', pickupRatio: 0.80, refillX: null },
+            { customName: 'Lavash',            amountPerGuest: 1, unit: 'pcs', pickupRatio: 0.45, refillX: null },
+          ]},
+          { name: 'Beverage', type: 'beverage', items: [
+            { customName: 'House lemonade',  amountPerGuest: 200, unit: 'ml', pickupRatio: 0.85, refillX: null },
+            { customName: 'Sparkling water', amountPerGuest: 250, unit: 'ml', pickupRatio: 0.75, refillX: null },
+            { customName: 'Espresso',        amountPerGuest: 60,  unit: 'ml', pickupRatio: 0.60, refillX: null },
+          ]},
+        ],
+      },
+    },
+    {
+      id: 'sunday_brunch',
+      icon: '🥞',
+      nameKey: 'buffet_preset_sunday_brunch',
+      descKey: 'buffet_preset_sunday_brunch_desc',
+      template: {
+        name: 'Sunday Brunch',
+        type: 'brunch',
+        coverCount: 80, ticketPrice: 75, durationHours: 3, refillMultiplier: null, notes: '',
+        stations: [
+          { name: 'Cold seafood & charcuterie', type: 'cold', items: [
+            { customName: 'Smoked salmon',          amountPerGuest: 60, unit: 'g', pickupRatio: 0.75, refillX: null },
+            { customName: 'Charcuterie board',      amountPerGuest: 50, unit: 'g', pickupRatio: 0.55, refillX: null },
+            { customName: 'Artisan cheese board',   amountPerGuest: 45, unit: 'g', pickupRatio: 0.45, refillX: null },
+            { customName: 'Fresh fruit display',    amountPerGuest: 80, unit: 'g', pickupRatio: 0.50, refillX: null },
+            { customName: 'Yogurt parfait',         amountPerGuest: 100, unit: 'g', pickupRatio: 0.70, refillX: null },
+          ]},
+          { name: 'Live hot station', type: 'hot', items: [
+            { customName: 'Eggs Benedict (live)',   amountPerGuest: 150, unit: 'g', pickupRatio: 0.90, refillX: null },
+            { customName: 'French toast',           amountPerGuest: 100, unit: 'g', pickupRatio: 0.75, refillX: null },
+            { customName: 'Pan-seared salmon',      amountPerGuest: 90,  unit: 'g', pickupRatio: 0.85, refillX: null },
+            { customName: 'Slow-roast beef',        amountPerGuest: 80,  unit: 'g', pickupRatio: 0.85, refillX: null },
+            { customName: 'Streaky bacon',          amountPerGuest: 40,  unit: 'g', pickupRatio: 0.90, refillX: null },
+          ]},
+          { name: 'Bakery', type: 'bakery', items: [
+            { customName: 'Croissants',  amountPerGuest: 1, unit: 'pcs', pickupRatio: 0.80, refillX: null },
+            { customName: 'Danish',      amountPerGuest: 1, unit: 'pcs', pickupRatio: 0.55, refillX: null },
+            { customName: 'Brioche',     amountPerGuest: 1, unit: 'slice', pickupRatio: 0.55, refillX: null },
+          ]},
+          { name: 'Sweet finish', type: 'dessert', items: [
+            { customName: 'Mini cheesecakes',     amountPerGuest: 1, unit: 'pcs', pickupRatio: 0.65, refillX: null },
+            { customName: 'Assorted macarons',    amountPerGuest: 2, unit: 'pcs', pickupRatio: 0.55, refillX: null },
+            { customName: 'Chocolate fondue',     amountPerGuest: 50, unit: 'g',  pickupRatio: 0.45, refillX: null },
+          ]},
+          { name: 'Beverage', type: 'beverage', items: [
+            { customName: 'Sparkling wine / mimosa', amountPerGuest: 150, unit: 'ml', pickupRatio: 0.85, refillX: null },
+            { customName: 'Specialty coffee',        amountPerGuest: 200, unit: 'ml', pickupRatio: 0.95, refillX: null },
+            { customName: 'Fresh-pressed juices',    amountPerGuest: 180, unit: 'ml', pickupRatio: 0.80, refillX: null },
+            { customName: 'Filtered water',          amountPerGuest: 350, unit: 'ml', pickupRatio: 0.95, refillX: null },
+          ]},
+        ],
+      },
+    },
+  ];
+
   // ---------- IDB STORAGE (workspace-scoped) ----------
 
   function readBuffets() {
@@ -308,7 +430,7 @@
           '<div class="empty-action"><button class="btn btn-primary" id="emptyNewBuffet">+ ' + PCD.escapeHtml(t('buffet_new') || 'New Buffet') + '</button></div>' +
         '</div>';
       const eb = PCD.$('#emptyNewBuffet', listEl);
-      if (eb) eb.addEventListener('click', function () { openEditor(); });
+      if (eb) eb.addEventListener('click', function () { openPresetChooser(view); });
     } else {
       const cont = PCD.el('div', { class: 'flex flex-col gap-2' });
       buffets.forEach(function (b) {
@@ -347,7 +469,10 @@
       listEl.appendChild(cont);
     }
 
-    PCD.$('#newBuffetBtn', view).addEventListener('click', function () { openEditor(); });
+    // v2.8.89 — "+ New Buffet" tıklayınca preset chooser modal aç (4 seçenek:
+    // Continental / Mediterranean / Sunday Brunch / Start blank). Eski direkt
+    // openEditor() yerine. Boş empty-state'teki buton da aynı chooser'a gider.
+    PCD.$('#newBuffetBtn', view).addEventListener('click', function () { openPresetChooser(view); });
     // v2.8.88 — Liste search (case-insensitive substring filter, name + type + date)
     const bufSearch = PCD.$('#bufSearch', view);
     if (bufSearch) {
@@ -403,6 +528,81 @@
       PCD.toast.success(t('buffet_duplicated') || 'Buffet duplicated');
       render(view);
       setTimeout(function () { openEditor(saved.id); }, 200);
+    });
+  }
+
+  // ---------- PRESET CHOOSER (v2.8.89) ----------
+  // "+ New Buffet" tıklaması açar. 4 seçenek:
+  //   1) 🥐 Continental Breakfast — 60 cover · $30 · 12 item
+  //   2) 🌿 Mediterranean Lunch    — 100 cover · $48 · 16 item
+  //   3) 🥞 Sunday Brunch           — 80 cover · $75 · 20 item
+  //   4) ✨ Start blank             — mevcut openEditor() akışı
+  //
+  // Preset seçilince: template clone'lanır, yeni uid'ler atanır (buffet/station/
+  // item), upsertBuffet ile kaydedilir, sonra editor o id ile açılır. Şef
+  // anında item'ları görür, kendi recipe/ingredient'larıyla bağlayabilir.
+  function openPresetChooser(view) {
+    const t = PCD.i18n.t;
+    const body = PCD.el('div');
+    body.innerHTML =
+      '<div class="text-muted text-sm mb-3" style="font-size:13px;line-height:1.5;">' +
+        PCD.escapeHtml(t('buffet_chooser_intro') || 'Pick a ready-to-edit template, or start with a blank buffet. All template items are placeholders — link them to your recipes or ingredients afterwards.') +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:10px;">' +
+        PRESETS.map(function (p) {
+          const itemCount = p.template.stations.reduce(function (n, st) { return n + (st.items || []).length; }, 0);
+          const stationCount = p.template.stations.length;
+          return '<button type="button" class="card card-hover" data-preset="' + p.id + '" style="padding:14px;text-align:left;cursor:pointer;border:1px solid var(--border);background:var(--surface);">' +
+              '<div style="font-size:34px;line-height:1;margin-bottom:8px;">' + p.icon + '</div>' +
+              '<div style="font-weight:700;font-size:14px;margin-bottom:4px;letter-spacing:-0.01em;">' + PCD.escapeHtml(t(p.nameKey) || p.template.name) + '</div>' +
+              '<div class="text-muted text-sm" style="font-size:11px;line-height:1.5;margin-bottom:8px;color:var(--text-3);">' + PCD.escapeHtml(t(p.descKey) || '') + '</div>' +
+              '<div style="display:flex;gap:8px;flex-wrap:wrap;font-size:10px;color:var(--text-3);">' +
+                '<span style="padding:2px 7px;background:var(--surface-2);border-radius:999px;font-weight:600;">' + p.template.coverCount + ' ' + PCD.escapeHtml(t('buffet_covers') || 'covers') + '</span>' +
+                '<span style="padding:2px 7px;background:var(--surface-2);border-radius:999px;font-weight:600;">' + PCD.fmtMoney(p.template.ticketPrice) + '</span>' +
+                '<span style="padding:2px 7px;background:var(--surface-2);border-radius:999px;font-weight:600;">' + stationCount + '+' + itemCount + ' ' + PCD.escapeHtml(t('buffet_chooser_items_label') || 'items') + '</span>' +
+              '</div>' +
+            '</button>';
+        }).join('') +
+        // Start blank — daha sade card
+        '<button type="button" class="card card-hover" data-preset="__blank__" style="padding:14px;text-align:left;cursor:pointer;border:1px dashed var(--border-strong);background:var(--surface-2);">' +
+          '<div style="font-size:34px;line-height:1;margin-bottom:8px;opacity:0.6;">✨</div>' +
+          '<div style="font-weight:700;font-size:14px;margin-bottom:4px;letter-spacing:-0.01em;">' + PCD.escapeHtml(t('buffet_start_blank') || 'Start blank') + '</div>' +
+          '<div class="text-muted text-sm" style="font-size:11px;line-height:1.5;color:var(--text-3);">' + PCD.escapeHtml(t('buffet_start_blank_desc') || 'Empty buffet, add your own stations and items from scratch.') + '</div>' +
+        '</button>' +
+      '</div>';
+
+    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') || 'Cancel', style: { width: '100%' } });
+    const footer = PCD.el('div', { style: { width: '100%' } });
+    footer.appendChild(cancelBtn);
+
+    const m = PCD.modal.open({
+      title: t('buffet_chooser_title') || 'Start a new buffet',
+      body: body, footer: footer, size: 'lg', closable: true,
+    });
+    cancelBtn.addEventListener('click', function () { m.close(); });
+
+    PCD.on(body, 'click', '[data-preset]', function () {
+      const pid = this.getAttribute('data-preset');
+      m.close();
+      if (pid === '__blank__') {
+        setTimeout(function () { openEditor(); }, 150);
+        return;
+      }
+      const preset = PRESETS.find(function (p) { return p.id === pid; });
+      if (!preset) { openEditor(); return; }
+      // Clone template + yeni uid'ler
+      const clone = PCD.clone(preset.template);
+      // Lokalize edilmiş name (var ise) — chef sonra düzenleyebilir
+      const localName = t(preset.nameKey);
+      if (localName && localName !== preset.nameKey) clone.name = localName;
+      clone.serviceDate = new Date().toISOString().slice(0, 10);
+      (clone.stations || []).forEach(function (st) {
+        st.id = PCD.uid('bst');
+        (st.items || []).forEach(function (it) { it.id = PCD.uid('bit'); });
+      });
+      const saved = upsertBuffet(clone);
+      PCD.toast.success(t('buffet_preset_loaded') || 'Template loaded — customize and save');
+      setTimeout(function () { openEditor(saved.id); }, 150);
     });
   }
 
