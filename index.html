@@ -133,6 +133,20 @@
     letter-spacing: 0;
   }
 
+  nav .nav-right {
+    display: inline-flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  nav .nav-link {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-2);
+    transition: color 0.15s ease;
+  }
+  nav .nav-link:hover { color: var(--text-1); }
+
   nav .nav-cta {
     font-size: 14px;
     font-weight: 600;
@@ -580,6 +594,8 @@
   @media (max-width: 480px) {
     body { font-size: 15px; }
     .container { padding: 0 18px; }
+    nav .nav-right { gap: 14px; }
+    nav .nav-link { font-size: 13px; }
     nav .nav-cta { padding: 8px 14px; font-size: 13px; }
     .hero-meta { gap: 14px; }
     .btn-primary, .btn-secondary { padding: 13px 20px; font-size: 14px; }
@@ -595,7 +611,10 @@
       <span class="logo-mark">PC</span>
       <span>ProChefDesk</span>
     </a>
-    <a class="nav-cta" href="/app/">Open app</a>
+    <div class="nav-right">
+      <a class="nav-link" href="/blog/">Blog</a>
+      <a class="nav-cta" href="/app/">Open app</a>
+    </div>
   </nav>
 
   <!-- ============ HERO ============ -->
