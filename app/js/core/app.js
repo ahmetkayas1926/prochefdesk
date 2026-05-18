@@ -82,6 +82,10 @@
       PCD.router.register('haccp_holding', PCD.tools.haccpHolding.render);
       // v2.8.70 — HACCP Hub (4 form'u tek navigation noktasına topla)
       if (PCD.tools.haccp) PCD.router.register('haccp', PCD.tools.haccp.render);
+      // v2.8.73 — Buffet Planner (hotel/catering buffet cost + station + waste)
+      if (PCD.tools.buffet) PCD.router.register('buffet', PCD.tools.buffet.render);
+      // v2.8.74 — Mise en Place Planner (auto prep list from events + buffets)
+      if (PCD.tools.mise) PCD.router.register('mise', PCD.tools.mise.render);
       // v2.8.41 — Discover (frontend skeleton; backend Faz 2'de gelecek).
       PCD.router.register('discover', PCD.tools.discover.render);
 
@@ -315,6 +319,8 @@
       { title: t('section_kitchen'), items: [
         { key: 'kitchen_cards', icon: 'id-card', route: 'kitchen_cards' },
         { key: 'portion',       icon: 'scale', route: 'portion' },
+        // v2.8.74 — Mise en Place Planner (sabah prep planlama)
+        { key: 'mise',          icon: 'list', route: 'mise' },
         { key: 'checklist',     icon: 'check-square', route: 'checklist' },
         { key: 'waste',         icon: 'recycle', route: 'waste' },
       ]},
@@ -325,6 +331,8 @@
       ]},
       { title: t('section_catering'), items: [
         { key: 'events',  icon: 'calendar', route: 'events' },
+        // v2.8.73 — Buffet Planner
+        { key: 'buffet',  icon: 'grid',     route: 'buffet' },
       ]},
       // v2.8.70 — 4 ayrı HACCP item, tek "HACCP" hub'a konsolide edildi.
       // Form sayfaları silinmedi; hub içinden tıklanarak açılır.

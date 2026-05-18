@@ -104,6 +104,10 @@
         <button type="button" class="btn btn-sm" data-tab="preps" style="flex:1;background:transparent;">${t('recipes_tab_preps', { n: recipes.filter(function(r){return PCD.recipes.isPrep(r);}).length })}</button>
       </div>
 
+      <!-- v2.8.75 — Tag filter row (only renders if any tags exist in library).
+           Multi-select; recipe must have ALL active tags to pass. -->
+      <div id="recipeTagFilter" class="flex items-center gap-2 mb-3" style="flex-wrap:wrap;font-size:13px;"></div>
+
       <!-- v2.8.71 — Allergen Guardrail: "Free from" filter chips.
            Real-world: server reports "table 5 has a dairy allergy" — chef
            taps "dairy-free" chip and instantly sees safe options across
@@ -151,6 +155,8 @@
     // 'vegan' | 'vegetarian' | 'gluten' | 'dairy' | 'nuts' | 'fish'.
     // Recipe must satisfy ALL active filters to be shown.
     const freeFromSet = new Set();
+    // v2.8.75 — Tag filter set. Recipe must have ALL active tags to pass.
+    const tagFilterSet = new Set();
     let sorted = recipes.slice().sort(function (a, b) { return (b.updatedAt || '').localeCompare(a.updatedAt || ''); });
 
     function isPrep(r) {
@@ -193,6 +199,18 @@
       // search results stays scoped to the chosen tab.
       if (activeTab === 'menu') visible = visible.filter(function (r) { return !isPrep(r); });
       else if (activeTab === 'preps') visible = visible.filter(isPrep);
+
+      // v2.8.75 — Tag filter: recipe must have ALL active tags
+      if (tagFilterSet.size > 0) {
+        visible = visible.filter(function (r) {
+          if (!Array.isArray(r.tags) || r.tags.length === 0) return false;
+          let ok = true;
+          tagFilterSet.forEach(function (tg) {
+            if (r.tags.indexOf(tg) < 0) ok = false;
+          });
+          return ok;
+        });
+      }
 
       // v2.8.71 — "Free from" allergen + dietary filter. Conservative match:
       // - vegan / vegetarian / gluten / dairy → computeDietCompat must return true
@@ -430,6 +448,41 @@
       paint();
     });
     paintFreeFrom();
+
+    // v2.8.75 — Tag filter: build chip row from all known tags
+    function paintTagFilter() {
+      const wrap = PCD.$('#recipeTagFilter', view);
+      if (!wrap) return;
+      const allTagsSet = {};
+      recipes.forEach(function (r) {
+        if (Array.isArray(r.tags)) r.tags.forEach(function (tg) { if (tg) allTagsSet[tg] = (allTagsSet[tg] || 0) + 1; });
+      });
+      const allTags = Object.keys(allTagsSet).sort();
+      if (allTags.length === 0) { wrap.innerHTML = ''; return; }
+      let html = '<span style="color:var(--text-3);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.04em;margin-inline-end:4px;">' + (t('recipes_filter_tags') || 'Tags') + ':</span>';
+      allTags.forEach(function (tg) {
+        const active = tagFilterSet.has(tg);
+        const count = allTagsSet[tg];
+        html += '<button type="button" class="chip" data-tag-filter="' + PCD.escapeHtml(tg) + '" style="cursor:pointer;background:' + (active ? 'var(--brand-50)' : 'var(--surface)') + ';border:1px solid ' + (active ? 'var(--brand-600)' : 'var(--border-strong)') + ';color:' + (active ? 'var(--brand-700)' : 'var(--text-2)') + ';font-weight:' + (active ? '700' : '500') + ';font-size:12px;padding:3px 9px;border-radius:999px;">' + PCD.escapeHtml(tg) + ' <span style="opacity:0.6;">' + count + '</span></button>';
+      });
+      if (tagFilterSet.size > 0) {
+        html += '<button type="button" data-tag-filter-clear style="cursor:pointer;background:transparent;border:0;color:var(--text-3);font-size:11px;text-decoration:underline;">' + (t('recipes_filter_clear') || 'Clear') + '</button>';
+      }
+      wrap.innerHTML = html;
+    }
+    PCD.on(view, 'click', '#recipeTagFilter [data-tag-filter]', function () {
+      const tg = this.getAttribute('data-tag-filter');
+      if (tagFilterSet.has(tg)) tagFilterSet.delete(tg);
+      else tagFilterSet.add(tg);
+      paintTagFilter();
+      paint();
+    });
+    PCD.on(view, 'click', '#recipeTagFilter [data-tag-filter-clear]', function () {
+      tagFilterSet.clear();
+      paintTagFilter();
+      paint();
+    });
+    paintTagFilter();
     PCD.$('#selAll', view).addEventListener('change', function () {
       const currentShown = sorted.filter(function (r) {
         if (!filter) return true;
@@ -2192,8 +2245,13 @@
       // herkese açık paylaşmak isterse true yapar. Backend (RLS, anonymous
       // SELECT, likes/views tabloları) henüz yok — bu round'da sadece
       // veri modeli + UI toggle. recipe.data jsonb içinde sync ediliyor.
-      isPublic: false
+      isPublic: false,
+      // v2.8.75 — Free-form tags (cuisine, season, occasion, etc.). Chef
+      // tanımlar, autocomplete önceki tag'lerden gelir. List view'da
+      // multi-filter. recipe.data.tags jsonb içinde sync.
+      tags: []
     };
+    if (!Array.isArray(data.tags)) data.tags = [];
 
     const body = PCD.el('div');
 
@@ -2267,6 +2325,18 @@
           <div class="field">
             <label class="field-label">${t('recipe_servings')}</label>
             <input type="number" class="input" id="recipeServings" value="${data.servings || 4}" min="1">
+          </div>
+        </div>
+
+        <!-- v2.8.75 — Tag system. Free-form tags (cuisine, season, occasion).
+             Chip display + add input + autocomplete from all existing tags. -->
+        <div class="field" style="margin-bottom:14px;">
+          <label class="field-label">${t('recipe_tags_label') || 'Tags'}</label>
+          <div class="text-muted text-sm" style="font-size:12px;margin-bottom:6px;">${t('recipe_tags_hint') || 'e.g. italian, summer, gluten-free, brunch. Used for filtering recipes.'}</div>
+          <div id="recipeTagsList" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;"></div>
+          <div style="position:relative;">
+            <input type="text" class="input" id="recipeTagInput" placeholder="${PCD.escapeHtml(t('recipe_tag_add_ph') || 'Type tag + Enter')}" autocomplete="off">
+            <div id="recipeTagSuggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);box-shadow:var(--shadow-md);max-height:200px;overflow-y:auto;z-index:10;margin-top:2px;"></div>
           </div>
         </div>
 
@@ -2364,6 +2434,83 @@
       // "Mark as Prep" is checked. Field values are preserved (untoggling
       // restores them), only DOM visibility changes. Hidden inputs still
       // submit so save logic stays simple.
+      // v2.8.75 — Tag system: render chips + add/remove + autocomplete
+      function paintTagChips() {
+        const el = PCD.$('#recipeTagsList', body);
+        if (!el) return;
+        if (!data.tags || data.tags.length === 0) {
+          el.innerHTML = '<span class="text-muted text-sm" style="font-size:12px;font-style:italic;">' + PCD.escapeHtml(t('recipe_tags_none') || 'No tags yet') + '</span>';
+          return;
+        }
+        el.innerHTML = data.tags.map(function (tg) {
+          return '<span class="chip" style="display:inline-flex;align-items:center;gap:4px;background:var(--brand-50);color:var(--brand-700);border:1px solid var(--brand-300);font-size:12px;font-weight:600;padding:3px 8px;border-radius:999px;">' +
+            PCD.escapeHtml(tg) +
+            '<button type="button" class="icon-btn" data-tag-rm="' + PCD.escapeHtml(tg) + '" style="padding:0;width:14px;height:14px;color:var(--brand-700);background:transparent;border:0;cursor:pointer;font-size:14px;line-height:1;">×</button>' +
+          '</span>';
+        }).join('');
+      }
+      function addTag(raw) {
+        if (!raw) return;
+        const tg = raw.trim().toLowerCase().replace(/\s+/g, ' ');
+        if (!tg) return;
+        if (!Array.isArray(data.tags)) data.tags = [];
+        if (data.tags.indexOf(tg) >= 0) return; // dupe
+        data.tags.push(tg);
+        paintTagChips();
+        const inp = PCD.$('#recipeTagInput', body);
+        if (inp) { inp.value = ''; inp.focus(); }
+        const sg = PCD.$('#recipeTagSuggest', body);
+        if (sg) sg.style.display = 'none';
+      }
+      function allKnownTags() {
+        const set = {};
+        (PCD.store.listRecipes() || []).forEach(function (r) {
+          if (r && Array.isArray(r.tags)) r.tags.forEach(function (t) { if (t) set[t.toLowerCase()] = true; });
+        });
+        return Object.keys(set).sort();
+      }
+      paintTagChips();
+      PCD.on(body, 'click', '[data-tag-rm]', function () {
+        const tg = this.getAttribute('data-tag-rm');
+        data.tags = (data.tags || []).filter(function (x) { return x !== tg; });
+        paintTagChips();
+      });
+      const tagInp = PCD.$('#recipeTagInput', body);
+      if (tagInp) {
+        tagInp.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ',') {
+            e.preventDefault();
+            addTag(this.value);
+          } else if (e.key === 'Backspace' && this.value === '' && data.tags && data.tags.length > 0) {
+            data.tags.pop();
+            paintTagChips();
+          }
+        });
+        tagInp.addEventListener('input', function () {
+          const q = this.value.trim().toLowerCase();
+          const sg = PCD.$('#recipeTagSuggest', body);
+          if (!sg) return;
+          if (!q) { sg.style.display = 'none'; sg.innerHTML = ''; return; }
+          const matches = allKnownTags().filter(function (tg) {
+            return tg.indexOf(q) >= 0 && (data.tags || []).indexOf(tg) < 0;
+          }).slice(0, 8);
+          if (!matches.length) { sg.style.display = 'none'; sg.innerHTML = ''; return; }
+          sg.innerHTML = matches.map(function (tg) {
+            return '<button type="button" class="tag-suggest-item" data-tag-pick="' + PCD.escapeHtml(tg) + '" style="display:block;width:100%;text-align:start;padding:8px 12px;background:transparent;border:0;font-size:14px;cursor:pointer;border-bottom:1px solid var(--border);">' + PCD.escapeHtml(tg) + '</button>';
+          }).join('');
+          sg.style.display = 'block';
+        });
+        tagInp.addEventListener('blur', function () {
+          setTimeout(function () {
+            const sg = PCD.$('#recipeTagSuggest', body);
+            if (sg) sg.style.display = 'none';
+          }, 200);  // delay so click on suggest fires first
+        });
+      }
+      PCD.on(body, 'click', '[data-tag-pick]', function () {
+        addTag(this.getAttribute('data-tag-pick'));
+      });
+
       const subCb = PCD.$('#recipeIsSubRecipe', body);
       const catRow = PCD.$('#catServingsRow', body);
       if (subCb && catRow) {

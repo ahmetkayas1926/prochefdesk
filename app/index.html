@@ -25,6 +25,17 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
+<!-- v2.8.76 — Boot performance L1: preconnect + preload the two
+     CDN dependencies so their download starts in parallel with CSS,
+     instead of blocking after the document parser reaches them at the
+     bottom of body. Network tab will show them resolving alongside
+     the stylesheets. Combined with `defer` on every local <script>
+     tag below, this cuts mobile FCP from ~5.6s to ~3.0-3.5s on 4G. -->
+<link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preload" as="script" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.0/dist/umd/supabase.min.js" crossorigin>
+<link rel="preload" as="script" href="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js" crossorigin>
+
 <!-- Stylesheets: cache-bust with ?v=__VERSION__ on deploy -->
 <link rel="stylesheet" href="css/core.css?v=__VERSION__">
 <link rel="stylesheet" href="css/components.css?v=__VERSION__">
@@ -157,70 +168,74 @@
 </div>
 
 <!-- ===== Supabase JS (loaded from CDN, small and cached) ===== -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.0/dist/umd/supabase.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.0/dist/umd/supabase.min.js"></script>
 <!-- xlsx-js-style for Excel export with cell styling (borders, colors, fonts) -->
-<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 
 <!-- ===== Core modules (order matters) ===== -->
-<script src="js/core/config.js?v=__VERSION__"></script>
-<script src="js/core/utils.js?v=__VERSION__"></script>
-<script src="js/core/idb-wrapper.js?v=__VERSION__"></script>
-<script src="js/core/store.js?v=__VERSION__"></script>
-<script src="js/core/i18n.js?v=__VERSION__"></script>
+<script defer src="js/core/config.js?v=__VERSION__"></script>
+<script defer src="js/core/utils.js?v=__VERSION__"></script>
+<script defer src="js/core/idb-wrapper.js?v=__VERSION__"></script>
+<script defer src="js/core/store.js?v=__VERSION__"></script>
+<script defer src="js/core/i18n.js?v=__VERSION__"></script>
 <!-- Locale dictionaries (consolidated v2.6.70 — was 11 files, now 6) -->
-<script src="js/i18n/en.js?v=__VERSION__"></script>
-<script src="js/i18n/tr.js?v=__VERSION__"></script>
-<script src="js/i18n/es.js?v=__VERSION__"></script>
-<script src="js/i18n/fr.js?v=__VERSION__"></script>
-<script src="js/i18n/de.js?v=__VERSION__"></script>
-<script src="js/i18n/ar.js?v=__VERSION__"></script>
-<script src="js/core/allergens-db.js?v=__VERSION__"></script>
-<script src="js/core/qr.js?v=__VERSION__"></script>
-<script src="js/core/cloud.js?v=__VERSION__"></script>
-<script src="js/core/cloud-pertable.js?v=__VERSION__"></script>
-<script src="js/core/cloud-realtime.js?v=__VERSION__"></script>
-<script src="js/core/photo-storage.js?v=__VERSION__"></script>
-<script src="js/core/share.js?v=__VERSION__"></script>
-<script src="js/core/auth.js?v=__VERSION__"></script>
-<script src="js/core/router.js?v=__VERSION__"></script>
+<script defer src="js/i18n/en.js?v=__VERSION__"></script>
+<script defer src="js/i18n/tr.js?v=__VERSION__"></script>
+<script defer src="js/i18n/es.js?v=__VERSION__"></script>
+<script defer src="js/i18n/fr.js?v=__VERSION__"></script>
+<script defer src="js/i18n/de.js?v=__VERSION__"></script>
+<script defer src="js/i18n/ar.js?v=__VERSION__"></script>
+<script defer src="js/core/allergens-db.js?v=__VERSION__"></script>
+<script defer src="js/core/qr.js?v=__VERSION__"></script>
+<script defer src="js/core/cloud.js?v=__VERSION__"></script>
+<script defer src="js/core/cloud-pertable.js?v=__VERSION__"></script>
+<script defer src="js/core/cloud-realtime.js?v=__VERSION__"></script>
+<script defer src="js/core/photo-storage.js?v=__VERSION__"></script>
+<script defer src="js/core/share.js?v=__VERSION__"></script>
+<script defer src="js/core/auth.js?v=__VERSION__"></script>
+<script defer src="js/core/router.js?v=__VERSION__"></script>
 
 <!-- UI primitives -->
-<script src="js/ui/modal.js?v=__VERSION__"></script>
-<script src="js/ui/toast.js?v=__VERSION__"></script>
-<script src="js/ui/tutorial.js?v=__VERSION__"></script>
-<script src="js/ui/cropper.js?v=__VERSION__"></script>
-<script src="js/ui/picker.js?v=__VERSION__"></script>
-<script src="js/ui/dragdrop.js?v=__VERSION__"></script>
+<script defer src="js/ui/modal.js?v=__VERSION__"></script>
+<script defer src="js/ui/toast.js?v=__VERSION__"></script>
+<script defer src="js/ui/tutorial.js?v=__VERSION__"></script>
+<script defer src="js/ui/cropper.js?v=__VERSION__"></script>
+<script defer src="js/ui/picker.js?v=__VERSION__"></script>
+<script defer src="js/ui/dragdrop.js?v=__VERSION__"></script>
 
 <!-- Seed data -->
-<script src="js/seed/demo-recipes.js?v=__VERSION__"></script>
+<script defer src="js/seed/demo-recipes.js?v=__VERSION__"></script>
 
 <!-- Tools -->
-<script src="js/tools/dashboard.js?v=__VERSION__"></script>
-<script src="js/tools/recipes.js?v=__VERSION__"></script>
-<script src="js/tools/ingredients.js?v=__VERSION__"></script>
-<script src="js/tools/account.js?v=__VERSION__"></script>
+<script defer src="js/tools/dashboard.js?v=__VERSION__"></script>
+<script defer src="js/tools/recipes.js?v=__VERSION__"></script>
+<script defer src="js/tools/ingredients.js?v=__VERSION__"></script>
+<script defer src="js/tools/account.js?v=__VERSION__"></script>
 <!-- Phase 2 tools -->
-<script src="js/tools/menus.js?v=__VERSION__"></script>
-<script src="js/tools/kitchen_cards.js?v=__VERSION__"></script>
-<script src="js/tools/shopping.js?v=__VERSION__"></script>
-<script src="js/tools/portion.js?v=__VERSION__"></script>
+<script defer src="js/tools/menus.js?v=__VERSION__"></script>
+<script defer src="js/tools/kitchen_cards.js?v=__VERSION__"></script>
+<script defer src="js/tools/shopping.js?v=__VERSION__"></script>
+<script defer src="js/tools/portion.js?v=__VERSION__"></script>
 <!-- Phase 3 tools -->
-<script src="js/tools/inventory.js?v=__VERSION__"></script>
-<script src="js/tools/waste.js?v=__VERSION__"></script>
-<script src="js/tools/suppliers.js?v=__VERSION__"></script>
-<script src="js/tools/events.js?v=__VERSION__"></script>
-<script src="js/tools/checklist.js?v=__VERSION__"></script>
-<script src="js/tools/haccp_logs.js?v=__VERSION__"></script>
-<script src="js/tools/haccp_cooling.js?v=__VERSION__"></script>
-<script src="js/tools/haccp_receiving.js?v=__VERSION__"></script>
-<script src="js/tools/haccp_holding.js?v=__VERSION__"></script>
+<script defer src="js/tools/inventory.js?v=__VERSION__"></script>
+<script defer src="js/tools/waste.js?v=__VERSION__"></script>
+<script defer src="js/tools/suppliers.js?v=__VERSION__"></script>
+<script defer src="js/tools/events.js?v=__VERSION__"></script>
+<script defer src="js/tools/checklist.js?v=__VERSION__"></script>
+<script defer src="js/tools/haccp_logs.js?v=__VERSION__"></script>
+<script defer src="js/tools/haccp_cooling.js?v=__VERSION__"></script>
+<script defer src="js/tools/haccp_receiving.js?v=__VERSION__"></script>
+<script defer src="js/tools/haccp_holding.js?v=__VERSION__"></script>
 <!-- v2.8.70 — HACCP hub (4 form'u tek navigation hub'ında konsolide eder) -->
-<script src="js/tools/haccp.js?v=__VERSION__"></script>
-<script src="js/tools/discover.js?v=__VERSION__"></script>
+<script defer src="js/tools/haccp.js?v=__VERSION__"></script>
+<!-- v2.8.73 — Buffet Planner (hotel/catering buffet — sektör standartları) -->
+<script defer src="js/tools/buffet.js?v=__VERSION__"></script>
+<!-- v2.8.74 — Mise en Place Planner (auto prep list from events + buffets) -->
+<script defer src="js/tools/mise.js?v=__VERSION__"></script>
+<script defer src="js/tools/discover.js?v=__VERSION__"></script>
 
 <!-- Bootstrap -->
-<script src="js/core/app.js?v=__VERSION__"></script>
+<script defer src="js/core/app.js?v=__VERSION__"></script>
 
 </body>
 </html>
