@@ -1073,6 +1073,7 @@ window.PCD.i18n.register('en', {
   cr_no_recipes: "No recipes to report",
   cr_xlsx_unavailable: "Excel library not loaded — try refreshing the page",
   cr_xlsx_done: "Excel downloaded · edit yellow Test price cells to see live updates",
+  cr_xlsx_export_failed: "Excel export failed",
   cr_pdf: "PDF",
   cr_excel: "Excel",
   cr_close: "Close",

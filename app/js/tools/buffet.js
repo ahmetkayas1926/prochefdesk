@@ -311,6 +311,12 @@
               '<span style="font-weight:700;color:' + statusColor(totals.status) + ';">' + PCD.fmtMoney(totals.totalPrepCost) + '</span>' +
             '</div>' +
           '</div>' +
+          // v2.8.86 — Liste kartında Prep / PDF (Cost Report) / Excel butonları
+          // (operatör: "kaydedilmiş büfelerde de cost report, pdf ve excel olmalı").
+          // Editor açmadan doğrudan print/export. Mobile'da sığması için kompakt.
+          '<button type="button" class="icon-btn" data-buf-prep="' + b.id + '" title="' + PCD.escapeHtml(t('buffet_print_prep') || 'Prep List') + '">' + PCD.icon('list', 18) + '</button>' +
+          '<button type="button" class="icon-btn" data-buf-pdf="' + b.id + '" title="' + PCD.escapeHtml(t('buffet_print_report') || 'Cost Report') + '">' + PCD.icon('print', 18) + '</button>' +
+          '<button type="button" class="icon-btn" data-buf-excel="' + b.id + '" title="Excel">' + PCD.icon('book-open', 18) + '</button>' +
           '<button type="button" class="icon-btn" data-buf-dup="' + b.id + '" title="' + PCD.escapeHtml(t('buffet_duplicate') || 'Duplicate') + '">' + PCD.icon('copy', 18) + '</button>' +
           '<button type="button" class="icon-btn" data-buf-edit="' + b.id + '" title="' + PCD.escapeHtml(t('edit') || 'Edit') + '">' + PCD.icon('edit', 18) + '</button>';
         cont.appendChild(row);
@@ -320,12 +326,31 @@
 
     PCD.$('#newBuffetBtn', view).addEventListener('click', function () { openEditor(); });
     PCD.on(listEl, 'click', '[data-bid]', function (e) {
-      if (e.target.closest('[data-buf-edit]') || e.target.closest('[data-buf-dup]')) return;
+      // v2.8.86 — Edit/Dup butonları + yeni Prep/PDF/Excel butonları satır click'i tetiklemesin
+      if (e.target.closest('[data-buf-edit]') || e.target.closest('[data-buf-dup]') ||
+          e.target.closest('[data-buf-prep]') || e.target.closest('[data-buf-pdf]') ||
+          e.target.closest('[data-buf-excel]')) return;
       openEditor(this.getAttribute('data-bid'));
     });
     PCD.on(listEl, 'click', '[data-buf-edit]', function (e) {
       e.stopPropagation();
       openEditor(this.getAttribute('data-buf-edit'));
+    });
+    // v2.8.86 — Liste kartından direkt print/export (editor açmadan)
+    PCD.on(listEl, 'click', '[data-buf-prep]', function (e) {
+      e.stopPropagation();
+      const b = getBuffet(this.getAttribute('data-buf-prep'));
+      if (b) printPrepList(b);
+    });
+    PCD.on(listEl, 'click', '[data-buf-pdf]', function (e) {
+      e.stopPropagation();
+      const b = getBuffet(this.getAttribute('data-buf-pdf'));
+      if (b) printCostReport(b);
+    });
+    PCD.on(listEl, 'click', '[data-buf-excel]', function (e) {
+      e.stopPropagation();
+      const b = getBuffet(this.getAttribute('data-buf-excel'));
+      if (b) exportBuffetXLSX(b);
     });
     PCD.on(listEl, 'click', '[data-buf-dup]', function (e) {
       e.stopPropagation();
@@ -1156,6 +1181,17 @@
       });
       return;
     }
+    // v2.8.86 — Try/catch sargı (recipes.js paritesi)
+    try {
+      _doExportBuffetXLSX(buffet);
+    } catch (err) {
+      PCD.error && PCD.error('exportBuffetXLSX failed:', err);
+      PCD.toast.error((t('cr_xlsx_export_failed') || 'Excel export failed') + ': ' + (err && err.message ? err.message : 'unknown'));
+    }
+  }
+
+  function _doExportBuffetXLSX(buffet) {
+    const t = PCD.i18n.t;
     const ingMap = {};
     PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
     const recipeMap = PCD.recipes.buildRecipeMap();

@@ -1042,6 +1042,20 @@
       });
       return;
     }
+    // v2.8.86 — Try/catch sargı. Operatör "Something went wrong" generic
+    // error görüyor (global onerror handler tetikleniyor). Asıl hatayı
+    // console'a logla + meaningful toast göster.
+    try {
+      _doExportCostReportXLSX(items, targetPct);
+    } catch (err) {
+      PCD.error && PCD.error('exportCostReportXLSX failed:', err);
+      // Console'da tam hata + stack görünür; toast'ta operatöre kısa mesaj
+      PCD.toast.error((t('cr_xlsx_export_failed') || 'Excel export failed') + ': ' + (err && err.message ? err.message : 'unknown'));
+    }
+  }
+
+  function _doExportCostReportXLSX(items, targetPct) {
+    const t = PCD.i18n.t;
     const ingMap = currentIngMap();
     // v2.8.16 — recipeMap for sub-recipe rows (same fix pattern)
     const recipeMap = PCD.recipes.buildRecipeMap();

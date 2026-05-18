@@ -1073,6 +1073,7 @@ window.PCD.i18n.register('tr', {
   cr_no_recipes: "Raporlanacak tarif yok",
   cr_xlsx_unavailable: "Excel kitaplığı yüklenmedi — sayfayı yenile",
   cr_xlsx_done: "Excel indirildi · canlı güncelleme için sarı Test fiyatı hücrelerini düzenle",
+  cr_xlsx_export_failed: "Excel dışa aktarma başarısız",
   cr_pdf: "PDF",
   cr_excel: "Excel",
   cr_close: "Kapat",
