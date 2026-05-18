@@ -26,6 +26,32 @@
 
   const ROLES = ['owner', 'manager', 'cook', 'viewer'];
 
+  // v2.9.17 — Workspace-scoped team storage with soft-delete pattern (waste benzeri).
+  //   readTeamAll() → raw, _deletedAt'lı tombstone'lar dahil
+  //   readTeam()    → görünür, _deletedAt'sız (UI render için)
+  //   writeTeam()   → queueArraySync ile cloud'a push (UPSERT only, tombstone hard-delete atmaz)
+  // Legacy global array (workspace-scoped olmadan) tespit edilirse aktif ws'e taşınır.
+  function readTeamAll() {
+    const wsId = PCD.store.getActiveWorkspaceId();
+    const all = PCD.store._read('team') || {};
+    if (Array.isArray(all)) return all; // legacy: pre-v2.9.17 global array — current ws'e map
+    return all[wsId] || [];
+  }
+  function readTeam() {
+    return readTeamAll().filter(function (e) { return !e._deletedAt; });
+  }
+  function writeTeam(arr) {
+    const wsId = PCD.store.getActiveWorkspaceId();
+    const root = PCD.store._read('team') || {};
+    let next = Array.isArray(root) ? {} : Object.assign({}, root);
+    const oldArr = Array.isArray(root) ? root : (root[wsId] || []);
+    next[wsId] = arr;
+    PCD.store.set('team', next);
+    if (PCD.cloudPerTable) {
+      PCD.cloudPerTable.queueArraySync('team', wsId, oldArr, arr);
+    }
+  }
+
   function roleColor(role) {
     return {
       owner: 'var(--brand-700)',
@@ -38,7 +64,7 @@
   function render(view) {
     const t = PCD.i18n.t;
     const plan = PCD.store.get('plan') || 'free';
-    const team = PCD.store._read('team') || [];
+    const team = readTeam(); // v2.9.17 — workspace-scoped, soft-delete filtered
     const user = PCD.store.get('user') || {};
 
     // v2.9.9 — Closeable inline guide
@@ -228,7 +254,8 @@
       const email = (PCD.$('#tmEmail', body).value || '').trim();
       const role = PCD.$('#tmRole', body).value;
       if (!email || email.indexOf('@') < 0) { PCD.toast.error(t('team_invalid_email') || 'Valid email required'); return null; }
-      const existing = PCD.store._read('team') || [];
+      // v2.9.17 — workspace-scoped read (visible only — already filtered by ws + soft-delete)
+      const existing = readTeam();
       if (existing.some(function (x) { return x.email === email; })) {
         PCD.toast.warning(t('team_already_invited') || 'Already invited'); return null;
       }
@@ -236,8 +263,10 @@
         id: PCD.uid('mem'), email: email, name: '', role: role,
         status: 'pending', invitedAt: new Date().toISOString()
       };
-      const next = existing.concat([member]);
-      PCD.store.set('team', next);
+      // v2.9.17 — readTeamAll keeps tombstones so queueArraySync diff is correct
+      const allCur = readTeamAll();
+      const next = allCur.concat([member]);
+      writeTeam(next);
       return member;
     }
 
@@ -271,7 +300,7 @@
 
   function openMemberEditor(mid) {
     const t = PCD.i18n.t;
-    const team = PCD.store._read('team') || [];
+    const team = readTeam(); // v2.9.17 — workspace-scoped, visible
     const existing = team.find(function (m) { return m.id === mid; });
     if (!existing) return;
     const data = PCD.clone(existing);
@@ -329,8 +358,15 @@
         title: t('confirm_delete'), text: t('team_remove') + ' ' + data.email + '?', okText: t('team_remove')
       }).then(function (ok) {
         if (!ok) return;
-        const next = (PCD.store._read('team') || []).filter(function (x) { return x.id !== mid; });
-        PCD.store.set('team', next);
+        // v2.9.17 — Soft-delete pattern: tombstone bırak, array'den çıkarma.
+        // Cross-device sync'te _deletedAt'lı kayıt newest-wins ile kazanır,
+        // item geri gelmez (waste/recipes pattern).
+        const cur = readTeamAll().slice();
+        const idx = cur.findIndex(function (x) { return x.id === mid; });
+        if (idx !== -1) {
+          cur[idx] = Object.assign({}, cur[idx], { _deletedAt: new Date().toISOString() });
+          writeTeam(cur);
+        }
         PCD.toast.success(t('item_deleted'));
         m.close();
         setTimeout(function () {
@@ -342,8 +378,9 @@
     saveBtn.addEventListener('click', function () {
       data.name = PCD.$('#tmName', body).value.trim();
       data.role = PCD.$('#tmRole', body).value;
-      const next = (PCD.store._read('team') || []).map(function (x) { return x.id === mid ? data : x; });
-      PCD.store.set('team', next);
+      // v2.9.17 — readTeamAll keeps tombstones for correct diff
+      const next = readTeamAll().map(function (x) { return x.id === mid ? data : x; });
+      writeTeam(next);
       PCD.toast.success(t('saved'));
       m.close();
       setTimeout(function () {

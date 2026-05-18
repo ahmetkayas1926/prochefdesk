@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.9.16 · 2026-05-19
+**Mevcut sürüm:** v2.9.21 · 2026-05-19
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -16,6 +16,44 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH (kapatılabilir inl
 - **Round 3 (v2.9.7-9):** discover + account + team ✅
 - **Round 4 (v2.9.10-12):** sales + whatif + menu_matrix ✅
 - **Round 5 (v2.9.13):** haccp hub ✅ — **NAKED→RICH sweep tamamlandı**
+
+### v2.9.21 — Kitchen Cards bug fixes + UX (4 fix) · 2026-05-19
+- **Fixed (overflow):** Operatör raporu — kanvasta boş yer varken yeni kart eklendiğinde CSS multi-column o boş yeri kullanmıyor, sanal 7. sütun yaratıp sayfanın sağına taşıyor (görünmez, yarısı kesik). Çözüm: post-render ölçüm (rAF×2) → kart sheet sağ kenarını aşıyor mu → tüm bloklar visual column index'e göre gruplandır → boş yer olan sütuna layout array'inde taşı + yeniden render. Sığmazsa toast info.
+- **Fixed (sub-recipe ?):** Operatör raporu — sub-recipe referansları (`ri.recipeId`) Kitchen Card preview'da `?` olarak görünüyordu. v2.8.66 sadece public/Discover yolu için inline name gömüyordu; owner-form'da lookup eksikti. `buildSheetHtml` artık `PCD.recipes.buildRecipeMap()` çağırıp `ri.recipeId` varsa sub-recipe adını çekiyor.
+- **Fixed (scroll teleport):** Operatör raporu — recipe listesinde aşağı scroll edip checkbox işaretleyince liste en üste teleport oluyordu. `renderBody()` tüm DOM'u yeniden çiziyordu. Çözüm: checkbox handler scrollTop'u capture eder, rAF ile post-render restore eder. 100 recipe'lik listede her toggle'da scroll kaybolmaz.
+- **Added (canvas usage indicator):** Operatör isteği — chef başka kanvasta kullandığı tarifi yanlışlıkla yeni kanvasa eklemek istemiyor. Recipe yanında `↳N` chip (kaç başka kanvasta kullanılıyor) + search altında "Hide recipes used in other canvases" checkbox filter. Mevcut kanvastaki checked tarifler her zaman görünür (chef kendi seçimini görmeli).
+- **i18n:** +3 key TR/EN.
+
+### v2.9.20 — Ingredient export (current list, CSV + Excel) · 2026-05-19
+- **Added:** Ingredients sayfası header'ında "Export" butonu (Import yanında). Tıklayınca modal: 2 buton (CSV + Excel). Round-trip uyumlu format (Name,Price,Unit,Category,Supplier,Yield%).
+- **Use case:** Toplu fiyat güncellemesi — Export → Excel'de B sütunu ×1.05 → re-import → 50 malzeme tek seferde update. Import handler'da isim-match → güncelle mantığı zaten var (v2.9.19'da yield% de eklendi).
+- **Dosya adı:** `prochefdesk-ingredients-YYYY-MM-DD.csv` veya `.xlsx`. CSV'de UTF-8 BOM (Excel'de Türkçe karakterler doğru render eder).
+- **xlsx lazy load** (v2.8.78 pattern) — Excel ilk tıklamada CDN'den yüklenir, eager yüklenmez.
+- **i18n:** +9 key TR/EN.
+
+### v2.9.19 — Ingredient import UX rework · 2026-05-19
+- **Changed:** Örnek CSV daha gerçekçi → `0.012 ml` (kafa karıştırıcı) yerine `18 l` / `18 kg` / `5 kg` / `3 kg` (chef'in faturada gördüğü tipte değerler).
+- **Added:** Currency hint chip (`Prices in $ (USD)` / chef'in seçili currency'sine göre). Hangi para biriminde olduğu net.
+- **Added:** Yield% opsiyonel 6. sütun. `Name,Price,Unit,Category,Supplier,Yield%`. Tavuk göğsü 88, somon 58 gibi batch yield ayarlama tek import'la. Mevcut malzemeler de güncellenir.
+- **Added:** "Download blank template (.csv)" butonu — chef Excel'de açıp doldurabilir.
+- **Changed:** Açıklamalar netleştirildi — Price, Yield%, Optional, Existing items başlıkları ile yapı. "5 kg torba 75 TL → 15 TL/kg gir" gibi pratik örnek.
+- **Changed:** Preview iyileştirildi — `X rows detected · +N new · ↻ M update` (import öncesi ne olacağı net), ilk 5 satır + "… +N more", parse fail durumunda uyarı kartı.
+- **Changed:** Hardcoded EN string'ler i18n'lendi (`Could not parse`, `rows detected`, `or`, `First 3` vb.).
+- **i18n:** +22 key TR/EN.
+
+### v2.9.18 — Discover view spam rate limit (Edge Function) · 2026-05-19
+- **Added:** Migration `v2.9.18-discover-view-rate-limit.sql` — `discover_view_logs` tablosu (composite PK ip+recipe_id), `pcd_rate_limited_view_bump` RPC (SECURITY DEFINER, service_role only), `pcd_cleanup_view_logs` saatlik cron (2 saatten eski log silme).
+- **Added:** Yeni Edge Function `rate-limited-view` (`supabase/functions/rate-limited-view/index.ts`). Body'den recipe_id alır, header'dan IP çıkarır (cf-connecting-ip → x-forwarded-for → x-real-ip fallback), RPC çağırır, atomic insert-or-check ile 60dk window per (IP, recipe).
+- **Changed:** `discover.js` `bumpViewCount` artık `supabase.rpc('increment_recipe_view')` yerine `supabase.functions.invoke('rate-limited-view')` çağırıyor. Eski RPC kalır (legacy fallback).
+- **Operatör manuel iş:** (1) Migration Dashboard SQL Editor'da çalıştır, (2) Edge Function `supabase functions deploy rate-limited-view` ile deploy et. Backlog #7 kapatıldı.
+
+### v2.9.17 — Buffet + Mise + Team cloud sync · 2026-05-19
+- **Added:** Migration `v2.9.17-buffets-mise-team-sync.sql` — 3 yeni tablo (`buffets`, `mise_plans`, `team`) workspace-scoped, isArray pattern (waste/checklist_sessions ile birebir). RLS 4 policy/tablo, updated_at trigger, realtime publication, cascade soft-delete + restore trigger güncellendi (18 → 21 ws-bound tablo), REPLICA IDENTITY FULL.
+- **Added:** Frontend wire (5 dosya): `cloud-pertable.js` WORKSPACE_TABLES'a 3 mapping (isArray:true), `cloud.js` ghost-ws audit listesi +3, `cloud-realtime.js` applyChange switch +3 case + WS_BOUND_TABLES +3 + TABLES subscribe +3.
+- **Changed:** `buffet.js` ve `mise.js` soft-delete pattern (waste paterni): `readBuffetsAll`/`readPlansAll` (tombstone dahil) + `readBuffets`/`readPlans` (filtered) + `writeBuffets`/`writePlans` queueArraySync wire. `deleteBuffet` hard-delete → soft-delete. `mise.js` rebuild handler aynı şekilde soft-delete (cross-device delete propagation).
+- **Changed:** `team.js` workspace-scoped'a çevrildi (eski: global array). `readTeam` + `readTeamAll` + `writeTeam` helper'ları. addMember/save/remove tüm path'ler queueArraySync ile cloud'a push. Soft-delete pattern: remove handler tombstone bırakır.
+- **Changed:** `backup-to-r2` Edge Function BACKUP_TABLES'a 3 tablo eklendi (nightly R2 archive).
+- **Operatör manuel iş:** (1) Migration Dashboard SQL Editor'da çalıştır, (2) `supabase functions deploy backup-to-r2` ile re-deploy. Backlog #2 kapatıldı.
 
 ### v2.9.16 — Discover Allergen "Free-from" filter · 2026-05-19
 - **Added:** `enrichPublicIngredientNames` (recipes.js v2.8.66) helper genişletildi — public recipe save sırasında `recipe.computedAllergens` array'i de embed ediliyor (PCD.allergensDB.recipeAllergens cascade ile, sub-recipe ingredient'lar dahil).

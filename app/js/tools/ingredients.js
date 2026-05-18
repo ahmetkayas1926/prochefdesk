@@ -32,6 +32,7 @@
         <div class="page-header-actions">
           ${ings.length > 0 ? `<button class="btn btn-outline btn-sm" id="toggleSelIng">${PCD.icon('check-square',14)} ${t('select_mode')}</button>` : ''}
           <button class="btn btn-outline btn-sm" id="importBtn" title="${t('ingredients_import_title') || 'Bulk import'}">${PCD.icon('upload',14)} ${t('ingredients_import') || 'Import'}</button>
+          ${ings.length > 0 ? `<button class="btn btn-outline btn-sm" id="exportBtn" title="${PCD.escapeHtml(t('ingredients_export_title') || 'Export to CSV / Excel for bulk edit or backup')}">${PCD.icon('download',14)} ${PCD.escapeHtml(t('ingredients_export') || 'Export')}</button>` : ''}
           <button class="btn btn-primary" id="newIngBtn">${PCD.icon('plus',14)} ${t('new_ingredient')}</button>
         </div>
       </div>
@@ -161,6 +162,9 @@
     PCD.$('#newIngBtn', view).addEventListener('click', function () { openEditor(); });
     const importBtn = PCD.$('#importBtn', view);
     if (importBtn) importBtn.addEventListener('click', function () { openImportDialog(); });
+    // v2.9.20 — Export current list (CSV + Excel) for bulk edit / backup workflow
+    const exportBtn = PCD.$('#exportBtn', view);
+    if (exportBtn) exportBtn.addEventListener('click', function () { openExportDialog(); });
     const togSel = PCD.$('#toggleSelIng', view);
     if (togSel) togSel.addEventListener('click', enterSelect);
     PCD.$('#exitSelectI', view).addEventListener('click', exitSelect);
@@ -511,25 +515,168 @@
   }
 
   // ============ BULK IMPORT ============
+  // v2.9.20 — Export current ingredient list (CSV + Excel)
+  // Round-trip compatible with import format: Name,Price,Unit,Category,Supplier,Yield%
+  // Use case: bulk price update (export → edit in Excel → re-import as updates)
+  function buildExportRows() {
+    const rows = [['Name', 'Price', 'Unit', 'Category', 'Supplier', 'Yield%']];
+    PCD.store.listIngredients().slice().sort(function (a, b) {
+      return (a.name || '').localeCompare(b.name || '');
+    }).forEach(function (ing) {
+      rows.push([
+        ing.name || '',
+        Number(ing.pricePerUnit) || 0,
+        ing.unit || '',
+        ing.category || '',
+        ing.supplier || '',
+        ing.yieldPercent != null ? Number(ing.yieldPercent) : '',
+      ]);
+    });
+    return rows;
+  }
+  function downloadCsvFromRows(rows, filename) {
+    // CSV escape: any cell with comma, quote or newline gets wrapped in quotes
+    // with inner quotes doubled. Standard RFC 4180 behavior.
+    const csv = rows.map(function (row) {
+      return row.map(function (cell) {
+        const s = String(cell == null ? '' : cell);
+        if (s.indexOf(',') >= 0 || s.indexOf('"') >= 0 || s.indexOf('\n') >= 0) {
+          return '"' + s.replace(/"/g, '""') + '"';
+        }
+        return s;
+      }).join(',');
+    }).join('\n');
+    // BOM for Excel UTF-8 compat (Turkish characters render correctly)
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 100);
+  }
+  function downloadXlsxFromRows(rows, filename) {
+    if (!window.XLSX || !window.XLSX.utils) {
+      PCD.toast.error(PCD.i18n.t('toast_excel_parser_unavailable'));
+      return;
+    }
+    const ws = window.XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{ wch: 28 }, { wch: 10 }, { wch: 8 }, { wch: 16 }, { wch: 20 }, { wch: 8 }];
+    const wb = window.XLSX.utils.book_new();
+    window.XLSX.utils.book_append_sheet(wb, ws, 'Ingredients');
+    window.XLSX.writeFile(wb, filename);
+  }
+  function todayIsoForFilename() {
+    const d = new Date();
+    return d.getFullYear() + '-' +
+      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
+  }
+
+  function openExportDialog() {
+    const t = PCD.i18n.t;
+    const rows = buildExportRows();
+    const count = rows.length - 1; // exclude header
+
+    const body = PCD.el('div');
+    body.innerHTML = `
+      <div class="text-muted" style="font-size:13px;line-height:1.6;margin-bottom:14px;">
+        ${PCD.escapeHtml(t('ingredients_export_intro') || 'Export your current ingredient library. The exported file uses the same column order as Import — edit in Excel and re-import to bulk-update prices, suppliers, or yield %.')}
+      </div>
+      <div class="card" style="padding:12px;background:var(--brand-50);border-color:var(--brand-300);margin-bottom:14px;">
+        <div style="font-size:13px;color:var(--brand-700);font-weight:700;">
+          ${count} ${PCD.escapeHtml(t('ingredients_export_items') || 'ingredients ready to export')}
+        </div>
+        <div class="text-muted text-sm" style="font-size:11px;margin-top:4px;">
+          ${PCD.escapeHtml(t('ingredients_export_columns') || 'Columns: Name, Price, Unit, Category, Supplier, Yield%')}
+        </div>
+      </div>
+    `;
+
+    const csvBtn = PCD.el('button', { class: 'btn btn-primary', style: { flex: '1' } });
+    csvBtn.innerHTML = PCD.icon('download', 14) + ' <span>' + PCD.escapeHtml(t('ingredients_export_csv') || 'Download .csv') + '</span>';
+    const xlsxBtn = PCD.el('button', { class: 'btn btn-outline', style: { flex: '1' } });
+    xlsxBtn.innerHTML = PCD.icon('download', 14) + ' <span>' + PCD.escapeHtml(t('ingredients_export_xlsx') || 'Download Excel (.xlsx)') + '</span>';
+    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') });
+    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
+    footer.appendChild(cancelBtn);
+    footer.appendChild(xlsxBtn);
+    footer.appendChild(csvBtn);
+
+    const m = PCD.modal.open({
+      title: t('ingredients_export') || 'Export ingredients',
+      body: body, footer: footer, size: 'sm', closable: true,
+    });
+
+    cancelBtn.addEventListener('click', function () { m.close(); });
+    csvBtn.addEventListener('click', function () {
+      downloadCsvFromRows(rows, 'prochefdesk-ingredients-' + todayIsoForFilename() + '.csv');
+      PCD.toast.success(t('ingredients_export_done') || 'Exported');
+      m.close();
+    });
+    xlsxBtn.addEventListener('click', function () {
+      const filename = 'prochefdesk-ingredients-' + todayIsoForFilename() + '.xlsx';
+      // xlsx lazy-load (v2.8.78 pattern)
+      if (window.XLSX && window.XLSX.utils) {
+        downloadXlsxFromRows(rows, filename);
+        PCD.toast.success(t('ingredients_export_done') || 'Exported');
+        m.close();
+      } else if (PCD.loadXLSX) {
+        PCD.loadXLSX().then(function () {
+          downloadXlsxFromRows(rows, filename);
+          PCD.toast.success(t('ingredients_export_done') || 'Exported');
+          m.close();
+        }).catch(function () {
+          PCD.toast.error(t('toast_excel_parser_unavailable'));
+        });
+      } else {
+        PCD.toast.error(t('toast_excel_parser_unavailable'));
+      }
+    });
+  }
+
   function openImportDialog() {
     const t = PCD.i18n.t;
     const body = PCD.el('div');
 
+    // v2.9.19 — Currency hint (chef'in seçili currency'sini göster ki "Price"
+    // hangi para birimi anlaşılsın)
+    const prefs = PCD.store.get('prefs') || {};
+    const curCode = prefs.currency || 'USD';
+    const curSymbol = (function () {
+      const list = (window.PCD_CONFIG && window.PCD_CONFIG.CURRENCIES) || [];
+      const found = list.find(function (c) { return c.code === curCode; });
+      return found ? found.symbol : '$';
+    })();
+
     body.innerHTML = `
       <div style="padding:12px;background:var(--surface-2);border-radius:var(--r-sm);margin-bottom:16px;">
-        <div style="font-weight:700;font-size:13px;margin-bottom:6px;">${t('import_format_title') || 'Format'}</div>
-        <div class="text-muted" style="font-size:13px;line-height:1.6;">
-          ${t('import_format_desc') || 'Paste CSV/TSV or upload a file. Columns in this order:'}
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+          <div style="font-weight:700;font-size:13px;">${PCD.escapeHtml(t('import_format_title') || 'Format')}</div>
+          <span style="font-size:11px;color:var(--text-3);background:var(--surface);padding:2px 8px;border-radius:6px;border:1px solid var(--border);">${PCD.escapeHtml(t('import_currency_note') || 'Prices in')} ${curSymbol} (${curCode})</span>
         </div>
-        <pre style="background:var(--surface);padding:10px;border-radius:var(--r-sm);margin-top:8px;font-family:var(--font-mono);font-size:12px;overflow-x:auto;border:1px solid var(--border);"><code>Name,Price,Unit,Category,Supplier
-Olive oil,0.012,ml,cat_oils,Perth Fresh
-Chicken breast,0.018,g,cat_poultry,Meat Co
-Tomato,0.005,g,cat_produce,
-Pasta,0.003,g,cat_dry_goods,</code></pre>
-        <div class="text-muted" style="font-size:11px;margin-top:6px;">
-          <strong>Price</strong> is per unit (g / ml / pcs). Category and Supplier are optional.<br>
-          Supported units: <code>g, kg, ml, l, tsp, tbsp, cup, oz, lb, pcs, unit</code><br>
-          Supported categories: <code>cat_meat, cat_poultry, cat_seafood, cat_dairy, cat_produce, cat_dry_goods, cat_spices, cat_oils, cat_beverages, cat_baking, cat_other</code>
+        <div class="text-muted" style="font-size:13px;line-height:1.6;">
+          ${PCD.escapeHtml(t('import_format_desc') || 'Paste CSV/TSV or upload a file. Columns in this order:')}
+        </div>
+        <pre style="background:var(--surface);padding:10px;border-radius:var(--r-sm);margin-top:8px;font-family:var(--font-mono);font-size:12px;overflow-x:auto;border:1px solid var(--border);"><code>Name,Price,Unit,Category,Supplier,Yield%
+Olive Oil,18,l,cat_oils,Perth Fresh,
+Chicken Breast,18,kg,cat_poultry,Meat Co,88
+Tomato,5,kg,cat_produce,,90
+Pasta,3,kg,cat_dry_goods,,</code></pre>
+        <div class="text-muted" style="font-size:11px;margin-top:8px;line-height:1.6;">
+          <strong>${PCD.escapeHtml(t('import_help_price_title') || 'Price')}</strong> = ${PCD.escapeHtml(t('import_help_price_desc') || 'how much you pay for ONE unit. Buying a 5 kg sack of pasta for $15? Per-kg price is $3 — enter 3 and kg.')}<br>
+          <strong>${PCD.escapeHtml(t('import_help_yield_title') || 'Yield %')}</strong> = ${PCD.escapeHtml(t('import_help_yield_desc') || 'optional. Usable portion after trim/peel. Chicken breast ~88%, whole salmon ~58%, tomato ~90%. Leave empty if unknown.')}<br>
+          <strong>${PCD.escapeHtml(t('import_help_optional_title') || 'Optional')}</strong>: ${PCD.escapeHtml(t('import_help_optional_desc') || 'Category, Supplier and Yield can be left empty (keep the comma).')}<br>
+          <strong>${PCD.escapeHtml(t('import_help_existing_title') || 'Existing items')}</strong>: ${PCD.escapeHtml(t('import_help_existing_desc') || 'If a row name matches an existing ingredient, its price/unit/category/supplier/yield will be UPDATED. New names are added.')}<br>
+          <span style="display:inline-block;margin-top:6px;">${PCD.escapeHtml(t('import_help_units') || 'Supported units')}: <code>g, kg, ml, l, tsp, tbsp, cup, oz, lb, pcs, unit</code></span><br>
+          <span style="display:inline-block;margin-top:2px;">${PCD.escapeHtml(t('import_help_cats') || 'Supported categories')}: <code>cat_meat, cat_poultry, cat_seafood, cat_dairy, cat_produce, cat_dry_goods, cat_spices, cat_oils, cat_beverages, cat_baking, cat_other</code></span>
+        </div>
+        <div style="margin-top:10px;">
+          <button type="button" class="btn btn-outline btn-sm" id="dlTemplateBtn">${PCD.icon('download', 14)} ${PCD.escapeHtml(t('import_download_template') || 'Download blank template (.csv)')}</button>
         </div>
       </div>
 
@@ -540,7 +687,7 @@ Pasta,0.003,g,cat_dry_goods,</code></pre>
 
       <div class="flex gap-2 items-center mb-2">
         <div style="height:1px;flex:1;background:var(--border);"></div>
-        <div class="text-muted text-sm">or</div>
+        <div class="text-muted text-sm">${PCD.escapeHtml(t('import_or') || 'or')}</div>
         <div style="height:1px;flex:1;background:var(--border);"></div>
       </div>
 
@@ -552,6 +699,27 @@ Pasta,0.003,g,cat_dry_goods,</code></pre>
 
       <div id="importPreview"></div>
     `;
+
+    // v2.9.19 — Template download button
+    const dlBtn = PCD.$('#dlTemplateBtn', body);
+    if (dlBtn) dlBtn.addEventListener('click', function () {
+      const tplCsv = 'Name,Price,Unit,Category,Supplier,Yield%\n' +
+        'Olive Oil,18,l,cat_oils,Perth Fresh,\n' +
+        'Chicken Breast,18,kg,cat_poultry,Meat Co,88\n' +
+        'Tomato,5,kg,cat_produce,,90\n' +
+        'Pasta,3,kg,cat_dry_goods,,\n';
+      const blob = new Blob([tplCsv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'prochefdesk-ingredients-template.csv';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function () {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 100);
+    });
 
     let parsed = null;
 
@@ -617,14 +785,34 @@ Pasta,0.003,g,cat_dry_goods,</code></pre>
       const rows = parseCSV(text);
       parsed = rows;
       if (!rows.length) {
-        prev.innerHTML = '<div class="text-muted text-sm mt-2">Could not parse.</div>';
+        prev.innerHTML = '<div class="mt-2" style="padding:10px;background:var(--warning-bg);color:var(--warning);border-radius:var(--r-sm);font-size:13px;">⚠️ ' + PCD.escapeHtml(t('import_parse_failed') || 'Could not parse. Check that you have at least Name and Price columns.') + '</div>';
         return;
       }
+      // v2.9.19 — Existing vs new split (so chef sees update count BEFORE import)
+      const existingMap = {};
+      PCD.store.listIngredients().forEach(function (i) { existingMap[i.name.toLowerCase()] = true; });
+      let willUpdate = 0;
+      let willAdd = 0;
+      rows.forEach(function (r) {
+        if (existingMap[r.name.toLowerCase()]) willUpdate++;
+        else willAdd++;
+      });
+      const previewLines = rows.slice(0, 5).map(function (r) {
+        const yieldStr = r.yieldPercent ? ' · ' + PCD.escapeHtml(t('import_yield_short') || 'yield') + ' ' + r.yieldPercent + '%' : '';
+        return PCD.escapeHtml(r.name) + ' · ' + curSymbol + r.pricePerUnit + '/' + PCD.escapeHtml(r.unit) + (r.category ? ' · ' + PCD.escapeHtml(r.category) : '') + (r.supplier ? ' · ' + PCD.escapeHtml(r.supplier) : '') + yieldStr;
+      }).join('<br>');
       prev.innerHTML = `
         <div class="mt-3" style="padding:10px;background:var(--brand-50);border-radius:var(--r-sm);">
-          <strong>${rows.length}</strong> rows detected. First 3:
-          <div style="margin-top:6px;font-family:var(--font-mono);font-size:12px;color:var(--text-2);">
-            ${rows.slice(0, 3).map(function (r) { return PCD.escapeHtml(r.name) + ' · $' + r.pricePerUnit + '/' + r.unit + (r.category ? ' · ' + r.category : '') + (r.supplier ? ' · ' + r.supplier : ''); }).join('<br>')}
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+            <strong>${rows.length} ${PCD.escapeHtml(t('import_rows_detected') || 'rows detected')}</strong>
+            <span style="font-size:11px;color:var(--text-3);">
+              ${willAdd > 0 ? '<span style="color:var(--success);font-weight:700;">+' + willAdd + ' ' + PCD.escapeHtml(t('import_new') || 'new') + '</span>' : ''}
+              ${willAdd > 0 && willUpdate > 0 ? ' · ' : ''}
+              ${willUpdate > 0 ? '<span style="color:var(--brand-700);font-weight:700;">↻ ' + willUpdate + ' ' + PCD.escapeHtml(t('import_update') || 'update') + '</span>' : ''}
+            </span>
+          </div>
+          <div style="margin-top:6px;font-family:var(--font-mono);font-size:12px;color:var(--text-2);line-height:1.6;">
+            ${previewLines}${rows.length > 5 ? '<br><span style="color:var(--text-3);">… +' + (rows.length - 5) + ' ' + PCD.escapeHtml(t('import_more_rows') || 'more') + '</span>' : ''}
           </div>
         </div>
       `;
@@ -650,22 +838,25 @@ Pasta,0.003,g,cat_dry_goods,</code></pre>
       parsed.forEach(function (row) {
         const key = row.name.toLowerCase();
         if (existing[key]) {
-          // Update existing: price, unit, category, supplier
+          // Update existing: price, unit, category, supplier, yield (v2.9.19)
           const ing = existing[key];
           ing.pricePerUnit = row.pricePerUnit;
           if (row.unit) ing.unit = row.unit;
           if (row.category) ing.category = row.category;
           if (row.supplier) ing.supplier = row.supplier;
+          if (row.yieldPercent != null) ing.yieldPercent = row.yieldPercent;
           PCD.store.upsertIngredient(ing);
           updated++;
         } else {
-          PCD.store.upsertIngredient({
+          const newIng = {
             name: row.name,
             unit: row.unit || 'g',
             pricePerUnit: row.pricePerUnit,
             category: row.category || 'cat_other',
             supplier: row.supplier || '',
-          });
+          };
+          if (row.yieldPercent != null) newIng.yieldPercent = row.yieldPercent;
+          PCD.store.upsertIngredient(newIng);
           added++;
         }
       });
@@ -784,12 +975,21 @@ Pasta,0.003,g,cat_dry_goods,</code></pre>
       let rawUnit = String(cells[2] || '').trim() || 'g';
       const lcUnit = rawUnit.toLowerCase();
       if (UNITS.indexOf(lcUnit) >= 0) rawUnit = lcUnit;
+      // v2.9.19 — Yield% optional 6th column (cells[5]). Strip non-numeric
+      // (handles "88%" → 88). Valid range 1-100, else ignored.
+      let yieldPct = null;
+      const yieldRaw = String(cells[5] || '').replace(/[^0-9.\-]/g, '');
+      if (yieldRaw) {
+        const y = parseFloat(yieldRaw);
+        if (!isNaN(y) && y > 0 && y <= 100) yieldPct = y;
+      }
       rows.push({
         name: name,
         pricePerUnit: price,
         unit: rawUnit,
         category: String(cells[3] || '').trim() || 'cat_other',
         supplier: String(cells[4] || '').trim() || '',
+        yieldPercent: yieldPct,
       });
     });
     return rows;

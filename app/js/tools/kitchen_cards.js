@@ -154,6 +154,11 @@
                    ne kadar aşağı kayarsa kaysın search üstte sabit. -->
               <div style="padding:4px 10px 6px;">
                 <input type="search" id="kcRecipeSearch" placeholder="${PCD.escapeHtml(t('kc_search_placeholder'))}" autocomplete="off" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface-1);color:var(--text-1);font-size:13px;box-sizing:border-box;">
+                <!-- v2.9.21 — Filter: hide recipes already used in another canvas -->
+                <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-3);margin-top:6px;cursor:pointer;user-select:none;">
+                  <input type="checkbox" id="kcHideUsedElsewhere" style="margin:0;cursor:pointer;">
+                  <span>${PCD.escapeHtml(t('kc_hide_used_elsewhere') || 'Hide recipes used in other canvases')}</span>
+                </label>
               </div>
               <div style="max-height:280px;overflow-y:auto;">
                 <div id="recipeList"></div>
@@ -251,11 +256,31 @@
       const preps = recipes.filter(_isPrep);
       const mains = recipes.filter(function (r) { return !_isPrep(r); });
 
+      // v2.9.21 — "Used in N other canvases" indicator (operator request).
+      // Build recipe→canvas-count map from all OTHER canvases (exclude
+      // the canvas currently being edited). Helps chef avoid accidentally
+      // reusing a recipe across canvases.
+      const recipeCanvasCount = {};
+      allCanvases.forEach(function (cv) {
+        if (canvasId && cv.id === canvasId) return; // skip current canvas
+        if (cv._deletedAt) return;
+        const lyt = Array.isArray(cv.layout) ? cv.layout : [];
+        lyt.forEach(function (it) {
+          if (!it || !it.recipeId) return;
+          recipeCanvasCount[it.recipeId] = (recipeCanvasCount[it.recipeId] || 0) + 1;
+        });
+      });
+
       function appendRow(r) {
         const isOn = onCanvas.has(r.id);
-        const row = PCD.el('label', { class: 'kc-recipe-row', 'data-recipe-row': '', 'data-recipe-name': (r.name || '').toLowerCase() });
+        const otherCount = recipeCanvasCount[r.id] || 0;
+        const usedChip = otherCount > 0
+          ? '<span title="' + PCD.escapeHtml(t('kc_recipe_in_other_canvases', { n: otherCount }) || 'Used in ' + otherCount + ' other canvas(es)') + '" style="flex-shrink:0;font-size:9px;font-weight:700;color:var(--brand-700);background:var(--brand-50);padding:1px 5px;border-radius:999px;letter-spacing:0.04em;border:1px solid var(--brand-300);">↳' + otherCount + '</span>'
+          : '';
+        const row = PCD.el('label', { class: 'kc-recipe-row', 'data-recipe-row': '', 'data-recipe-name': (r.name || '').toLowerCase(), 'data-used-elsewhere': otherCount > 0 ? '1' : '0' });
         row.innerHTML = '<input type="checkbox" data-rid="' + r.id + '"' + (isOn ? ' checked' : '') + '>' +
-          '<div style="flex:1;font-size:13px;font-weight:' + (isOn ? '600' : '400') + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + PCD.escapeHtml(r.name) + '</div>';
+          '<div style="flex:1;font-size:13px;font-weight:' + (isOn ? '600' : '400') + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + PCD.escapeHtml(r.name) + '</div>' +
+          usedChip;
         recipeListEl.appendChild(row);
       }
       function appendHeader(labelKey, count) {
@@ -276,24 +301,34 @@
       // v2.8.57 — Recipe arama: anlık filter (case-insensitive substring).
       // Empty değer → tümü görünür. Match: row.style.display + section
       // header'ları altında match var mı ona göre gizle/göster.
+      // v2.9.21 — "Hide recipes used in other canvases" toggle eklendi.
+      // Search + hide-used kombine filter.
       const searchEl = PCD.$('#kcRecipeSearch', bodyEl);
+      const hideUsedEl = PCD.$('#kcHideUsedElsewhere', bodyEl);
       if (searchEl) {
         const allRows = recipeListEl.querySelectorAll('[data-recipe-row]');
         const allHeaders = recipeListEl.querySelectorAll('[data-recipe-header]');
-        function applySearch() {
+        function applyFilters() {
           const q = (searchEl.value || '').trim().toLowerCase();
-          if (!q) {
-            // Tümünü göster
-            allRows.forEach(function (r) { r.style.display = ''; });
-            allHeaders.forEach(function (h) { h.style.display = ''; });
-            return;
-          }
-          // Her satır için match check
+          const hideUsed = hideUsedEl && hideUsedEl.checked;
           allRows.forEach(function (r) {
-            const name = r.getAttribute('data-recipe-name') || '';
-            r.style.display = name.indexOf(q) >= 0 ? '' : 'none';
+            let visible = true;
+            if (q) {
+              const name = r.getAttribute('data-recipe-name') || '';
+              if (name.indexOf(q) < 0) visible = false;
+            }
+            // Hide if used elsewhere AND not currently on this canvas
+            // (rows checked on current canvas stay visible — chef should
+            // see their own selections even with hide-used active).
+            if (visible && hideUsed) {
+              const usedElsewhere = r.getAttribute('data-used-elsewhere') === '1';
+              const rid = r.querySelector('input[data-rid]');
+              const isOnCurrent = rid && rid.checked;
+              if (usedElsewhere && !isOnCurrent) visible = false;
+            }
+            r.style.display = visible ? '' : 'none';
           });
-          // Her header için: altındaki ilk header'a kadar olan görünür row var mı?
+          // Section header'ı: altında görünür row varsa göster
           allHeaders.forEach(function (h) {
             let n = h.nextElementSibling;
             let anyVisible = false;
@@ -307,7 +342,8 @@
             h.style.display = anyVisible ? '' : 'none';
           });
         }
-        searchEl.addEventListener('input', applySearch);
+        searchEl.addEventListener('input', applyFilters);
+        if (hideUsedEl) hideUsedEl.addEventListener('change', applyFilters);
       }
 
       // Wire all controls
@@ -333,17 +369,117 @@
       PCD.$('#showAmounts', bodyEl).addEventListener('change', function () { showAmounts = this.checked; updatePreview(); });
 
       // Recipe checkbox toggles add/remove from layout
+      // v2.9.21 — When ADD: after render, detect if the new card overflowed
+      // beyond the visible sheet (CSS multi-column creates a virtual extra
+      // column when a card doesn't fit in the last column's remaining space).
+      // Auto-reposition: find any earlier column with enough empty bottom
+      // space and move the new card there in the layout array. If no
+      // column fits, leave at end and toast a warning.
+      // v2.9.21 — Operator UX fix: preserve recipe list scroll position
+      // across re-render. Previously each checkbox toggle teleported the
+      // chef back to top of list (~100 recipes meant re-scrolling every add).
       PCD.on(recipeListEl, 'change', 'input[data-rid]', function () {
         const rid = this.getAttribute('data-rid');
+        const savedScroll = recipeListEl.scrollTop;
         if (this.checked) {
           if (!layout.some(function (l) { return l.recipeId === rid; })) {
             layout.push({ recipeId: rid, span: 1 });
+            renderBody();
+            requestAnimationFrame(function () {
+              // Restore scroll on the new (post-render) list element
+              const newList = PCD.$('#recipeList', bodyEl);
+              if (newList) newList.scrollTop = savedScroll;
+              // Then defer auto-fit measurement another frame
+              requestAnimationFrame(function () { attemptAutoFit(rid); });
+            });
+            return;
           }
         } else {
           layout = layout.filter(function (l) { return l.recipeId !== rid; });
         }
         renderBody();
+        requestAnimationFrame(function () {
+          const newList = PCD.$('#recipeList', bodyEl);
+          if (newList) newList.scrollTop = savedScroll;
+        });
       });
+
+      // v2.9.21 — Smart auto-fit for newly added cards.
+      // Detects DOM overflow → reorders layout array to use empty bottom
+      // space in earlier columns. Re-renders if a better position found.
+      function attemptAutoFit(addedRid) {
+        const previewEl = PCD.$('#kcPreview', bodyEl);
+        if (!previewEl) return;
+        const frame = previewEl.querySelector('.kc-preview-frame');
+        if (!frame) return;
+        const sheet = frame.querySelector('.kc-sheet');
+        if (!sheet) return;
+
+        const sheetRect = sheet.getBoundingClientRect();
+        if (!sheetRect.width || !sheetRect.height) return;
+
+        const newBlock = frame.querySelector('.kc-block[data-rid="' + addedRid + '"]');
+        if (!newBlock) return;
+        const newRect = newBlock.getBoundingClientRect();
+
+        // Overflow check: new block's left position is at/past sheet's
+        // right edge → it landed in a virtual overflow column.
+        // 8px tolerance for sub-pixel rounding.
+        const overflowing = newRect.left >= sheetRect.right - 8;
+        if (!overflowing) return;
+
+        const newH = newRect.height;
+        const colWidth = sheetRect.width / columns;
+        const blocks = Array.from(frame.querySelectorAll('.kc-block'));
+
+        // Group non-overflow blocks by visual column index
+        const blocksByCol = {};
+        blocks.forEach(function (b) {
+          if (b === newBlock) return;
+          const r = b.getBoundingClientRect();
+          if (r.left >= sheetRect.right - 8) return; // skip other overflows
+          const colIdx = Math.floor((r.left - sheetRect.left) / colWidth);
+          if (colIdx < 0 || colIdx >= columns) return;
+          if (!blocksByCol[colIdx]) blocksByCol[colIdx] = [];
+          blocksByCol[colIdx].push({ block: b, bottom: r.bottom });
+        });
+
+        // Find column with most empty bottom space that fits newH
+        let bestColIdx = -1;
+        let bestSpace = 0;
+        for (let i = 0; i < columns; i++) {
+          const colBlocks = blocksByCol[i] || [];
+          if (colBlocks.length === 0) continue; // empty col is rare here
+          const lastBottom = Math.max.apply(null, colBlocks.map(function (cb) { return cb.bottom; }));
+          const space = sheetRect.bottom - lastBottom;
+          if (space >= newH && space > bestSpace) {
+            bestSpace = space;
+            bestColIdx = i;
+          }
+        }
+
+        if (bestColIdx === -1) {
+          // No column has enough room — show informative warning.
+          // Card stays at end (still visible to drag manually). Toast
+          // info, not error, since this is expected when canvas full.
+          PCD.toast.info(PCD.i18n.t('kc_autofit_no_space') || 'Card didn’t fit. Try increasing columns, shrinking font size, or removing another card.');
+          return;
+        }
+
+        // Move newBlock in layout array: right after the last block of
+        // bestColIdx (in DOM order, which matches layout order with
+        // column-fill: auto)
+        const targetColBlocks = blocksByCol[bestColIdx];
+        const lastInColRid = targetColBlocks[targetColBlocks.length - 1].block.getAttribute('data-rid');
+        const targetIdx = layout.findIndex(function (l) { return l.recipeId === lastInColRid; });
+        const newIdx = layout.findIndex(function (l) { return l.recipeId === addedRid; });
+        if (targetIdx < 0 || newIdx < 0) return;
+        const item = layout.splice(newIdx, 1)[0];
+        // After splice removes newIdx, adjust targetIdx if needed
+        const adjustedTarget = newIdx < targetIdx ? targetIdx : targetIdx + 1;
+        layout.splice(adjustedTarget, 0, item);
+        renderBody();
+      }
 
       // Helper: persist current canvas state. Used by both Save and Share buttons.
       // Returns the canvas ID (newly created or existing).
@@ -708,10 +844,26 @@
   //     -> uses ri.name directly, never touches PCD.store
   function buildSheetHtml(opts) {
     let ingMap = {};
+    let recipeMap = {};
     if (PCD.store && PCD.store.listIngredients) {
       try {
         PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
       } catch (e) { /* public viewer — store not initialised */ }
+    }
+    // v2.9.21 — Sub-recipe name lookup. Owner kanvasında bir tarifin
+    // içinde sub-recipe (ri.recipeId) referansı varsa, adını çekmek için
+    // recipeMap gerek. Önceki kod sadece ri.ingredientId'ye bakıyordu →
+    // sub-recipe satırları "?" olarak render oluyordu. (Public share /
+    // Discover yolu zaten enrichPublicIngredientNames v2.8.66 ile inline
+    // name gömüyor; bu fix owner-form için.)
+    if (PCD.recipes && PCD.recipes.buildRecipeMap) {
+      try {
+        recipeMap = PCD.recipes.buildRecipeMap();
+      } catch (e) { /* fall through */ }
+    } else if (PCD.store && PCD.store.listRecipes) {
+      try {
+        PCD.store.listRecipes().forEach(function (r) { recipeMap[r.id] = r; });
+      } catch (e) { /* fall through */ }
     }
 
     const fontSizes = {
@@ -754,9 +906,12 @@
           return;
         }
         // Public-form (snapshot): ri.name is set directly.
-        // Owner-form (live editor): ri.ingredientId resolves via ingMap.
+        // Owner-form (live editor): ri.ingredientId or ri.recipeId resolves
+        // via local maps. v2.9.21 — sub-recipe (ri.recipeId) lookup added;
+        // previously sub-recipe rows showed "?".
         const ing = ri.ingredientId ? ingMap[ri.ingredientId] : null;
-        const name = ri.name || (ing ? ing.name : '?');
+        const sub = ri.recipeId ? recipeMap[ri.recipeId] : null;
+        const name = ri.name || (ing ? ing.name : (sub ? sub.name : '?'));
         const amt = opts.showAmounts ? formatAmount(ri.amount, ri.unit) : '';
         ingsHtml +=
           '<div class="kc-ing">' +

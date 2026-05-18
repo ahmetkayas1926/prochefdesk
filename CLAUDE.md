@@ -10,7 +10,7 @@ ProChefDesk — profesyonel şef'ler için web tabanlı mutfak yönetim sistemi.
 
 **Stack:** Vanilla JavaScript (no bundling, no service worker), IndexedDB ana storage, Supabase (Postgres 17 + Auth + Storage + Realtime + Edge Functions), Cloudflare Pages (auto-deploy on GitHub push), Cloudflare R2 (backups).
 
-**Mevcut sürüm:** v2.9.16 (push'a hazır local; production v2.9.3). **NAKED→RICH sweep TAMAMLANDI** + backlog #3 (Discover Tag + Allergen filter) + #6 (Buffet Excel footer). Detay: `CHANGELOG.md`.
+**Mevcut sürüm:** v2.9.21 (push'a hazır local; production v2.9.3). **NAKED→RICH sweep** + backlog kapatma + ingredient import/export + Kitchen Cards smart auto-fit. Detay: `CHANGELOG.md`.
 
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı). SEO standardı aşağıda `## Blog SEO standardı` bölümünde.
 
@@ -42,15 +42,15 @@ Her tur baseline: kapatılabilir inline guide + per-field hint + örnek placehol
 
 Öncelik sırasıyla açık maddeler:
 
-1. **iOS/Safari cross-browser test** — v2.8.49 kod tarama temiz (backdrop-filter vendor prefix). Manuel cihaz testi operatör tarafına bekliyor.
-2. **Buffet + Mise cloud sync** — `buffets` (v2.8.73) + `misePlans` (v2.8.74) IDB-only. Supabase tablo + RLS + per-table sync wire gerekiyor. Pattern: v2.8.44 (haccp_receiving/holding). **Onay zorunlu** (yeni tablo + RLS + sync mantığı).
-3. ~~**Discover'a Tag + Allergen filter**~~ ✅ v2.9.15-16'da kapatıldı.
-4. **Categories functional** — şu an menu kategorileri kozmetik label. 50+ menu item ölçeğinde anlamlı.
-5. **`supabase-functions/` duplicate silme** — operatör Dashboard'dan deploy doğrulaması yaptı; klasör güvenle silinebilir, ayrı round'da.
-6. ~~**Buffet Excel footer**~~ ✅ **v2.9.14'te kapatıldı.**
-7. **Discover view spam rate limit** — `increment_recipe_view` RPC anonymous'a açık (MVP kabul). Viral olursa Edge Function ile IP+recipe başına 1 saat 1 view.
-8. **R2 foto bytes yedekleme** — şu an sadece manifest. Pro tier'a geçişte Storage PITR ile çözülür.
-9. **App boot perf L3** (cloud sync ilk paint sonrasına ertele) — yüksek risk, **önerilmedi**. L1+L2 yeterli (PageSpeed ~85 hedef, LCP 3.0-3.5 sn).
+1. **iOS/Safari cross-browser test** — v2.8.49 kod tarama temiz. Manuel cihaz testi operatör tarafına bekliyor.
+2. ~~**Buffet + Mise cloud sync**~~ ✅ **v2.9.17'de kapatıldı** (buffets + mise_plans + team).
+3. ~~**Discover'a Tag + Allergen filter**~~ ✅ v2.9.15-16.
+4. ~~**Categories functional**~~ ❌ Operatör v2.9.18'de listeden çıkardı.
+5. ~~**`supabase-functions/` duplicate silme**~~ ✅ v2.9.18'de silindi.
+6. ~~**Buffet Excel footer**~~ ✅ v2.9.14.
+7. ~~**Discover view spam rate limit**~~ ✅ **v2.9.18'de kapatıldı** (Edge Function + saatlik cleanup cron).
+8. **R2 foto bytes yedekleme** — operatör v2.9.18: "para ödeyeceksem şimdilik kalsın". Bekliyor.
+9. ~~**App boot perf L3**~~ ❌ Operatör v2.9.18'de listeden çıkardı (yüksek risk).
 
 ## Güvenlik sınırları (onay zorunlu)
 

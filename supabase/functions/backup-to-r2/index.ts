@@ -82,6 +82,10 @@ const BACKUP_TABLES = [
   // iki HACCP tablosu. Cloud sync oluyorlardı ama nightly R2 archive'da yoktu.
   'haccp_receiving',
   'haccp_holding',
+  // v2.9.17 — Buffet Planner + Mise en Place + Team cloud sync (3 yeni tablo)
+  'buffets',
+  'mise_plans',
+  'team',
 ]
 
 Deno.serve(async (req) => {

@@ -50,6 +50,10 @@
     // Array tablolar (ayrı queueArraySync API'si ile yazılır)
     waste:                { stateKey: 'waste',                wsScoped: true, isArray: true },
     checklist_sessions:   { stateKey: 'checklistSessions',    wsScoped: true, isArray: true },
+    // v2.9.17 — Buffet Planner + Mise en Place + Team cloud sync
+    buffets:              { stateKey: 'buffets',              wsScoped: true, isArray: true },
+    mise_plans:           { stateKey: 'misePlans',            wsScoped: true, isArray: true },
+    team:                 { stateKey: 'team',                 wsScoped: true, isArray: true },
   };
 
   // Pending changes queue. Her item: { table, op, id, wsId?, data?, updated_at? }

@@ -79,26 +79,38 @@
   ];
 
   // ---------- IDB STORAGE ----------
+  // v2.9.17 — Cloud sync wire (waste pattern):
+  //   readPlansAll() → raw, _deletedAt tombstone'lar dahil
+  //   readPlans()    → görünür, soft-delete filtered (UI render için)
+  //   writePlans()   → queueArraySync ile cloud'a push
 
-  function readPlans() {
+  function readPlansAll() {
     const wsId = PCD.store.getActiveWorkspaceId();
     const root = PCD.store._read('misePlans') || {};
     if (Array.isArray(root)) return root;
     return root[wsId] || [];
   }
+  function readPlans() {
+    return readPlansAll().filter(function (p) { return !p._deletedAt; });
+  }
   function writePlans(arr) {
     const wsId = PCD.store.getActiveWorkspaceId();
     const root = PCD.store._read('misePlans') || {};
     const next = Array.isArray(root) ? {} : Object.assign({}, root);
+    const oldArr = Array.isArray(root) ? root : (root[wsId] || []);
     next[wsId] = arr;
     PCD.store.set('misePlans', next);
+    // v2.9.17 — Cloud sync (array tablo, mise_plans DB tablosu)
+    if (PCD.cloudPerTable) {
+      PCD.cloudPerTable.queueArraySync('mise_plans', wsId, oldArr, arr);
+    }
   }
   function todayIso() { return new Date().toISOString().slice(0, 10); }
   function getPlanForDate(d) {
     return readPlans().find(function (p) { return p.date === d; }) || null;
   }
   function upsertPlan(p) {
-    const all = readPlans().slice();
+    const all = readPlansAll().slice(); // tombstones persist through diff
     const i = all.findIndex(function (x) { return x.date === p.date; });
     if (i >= 0) all[i] = Object.assign({}, p, { updatedAt: new Date().toISOString() });
     else all.push(Object.assign({}, p, { id: PCD.uid('mp'), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }));
@@ -402,9 +414,15 @@
           okText: t('mise_rebuild') || 'Rebuild',
         }).then(function (ok) {
           if (!ok) return;
-          // Remove saved plan for this date — refresh will regenerate
-          const all = readPlans().filter(function (p) { return p.date !== selectedDate; });
-          writePlans(all);
+          // v2.9.17 — Soft-delete pattern (waste/recipes): tombstone bırak, hard-delete atma.
+          // Cross-device sync'te _deletedAt'lı kayıt drift detection'da newest-wins ile
+          // kazanır, eski plan geri gelmez.
+          const all = readPlansAll().slice();
+          const idx = all.findIndex(function (p) { return p.date === selectedDate; });
+          if (idx !== -1) {
+            all[idx] = Object.assign({}, all[idx], { _deletedAt: new Date().toISOString() });
+            writePlans(all);
+          }
           refresh();
         });
       });

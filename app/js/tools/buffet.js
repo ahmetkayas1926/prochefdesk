@@ -380,20 +380,34 @@
   ];
 
   // ---------- IDB STORAGE (workspace-scoped) ----------
+  // v2.9.17 — Cloud sync wire (waste pattern):
+  //   readBuffetsAll()  → raw, _deletedAt tombstone'lar dahil
+  //   readBuffets()     → görünür, soft-delete filtered (UI render için)
+  //   writeBuffets()    → queueArraySync ile cloud'a push
+  //   deleteBuffet()    → soft-delete (tombstone bırakır)
 
-  function readBuffets() {
+  function readBuffetsAll() {
     const wsId = PCD.store.getActiveWorkspaceId();
     const root = PCD.store._read('buffets') || {};
     if (Array.isArray(root)) return root; // legacy flat
     return root[wsId] || [];
   }
 
+  function readBuffets() {
+    return readBuffetsAll().filter(function (b) { return !b._deletedAt; });
+  }
+
   function writeBuffets(arr) {
     const wsId = PCD.store.getActiveWorkspaceId();
     const root = PCD.store._read('buffets') || {};
     const next = Array.isArray(root) ? {} : Object.assign({}, root);
+    const oldArr = Array.isArray(root) ? root : (root[wsId] || []);
     next[wsId] = arr;
     PCD.store.set('buffets', next);
+    // v2.9.17 — Cloud sync (array tablo, soft-delete pattern)
+    if (PCD.cloudPerTable) {
+      PCD.cloudPerTable.queueArraySync('buffets', wsId, oldArr, arr);
+    }
   }
 
   function getBuffet(id) {
@@ -401,7 +415,7 @@
   }
 
   function upsertBuffet(b) {
-    const all = readBuffets().slice();
+    const all = readBuffetsAll().slice(); // soft-delete pattern: tombstones must persist through diff
     if (b.id) {
       const i = all.findIndex(function (x) { return x.id === b.id; });
       if (i >= 0) all[i] = Object.assign({}, b, { updatedAt: new Date().toISOString() });
@@ -417,7 +431,13 @@
   }
 
   function deleteBuffet(id) {
-    writeBuffets(readBuffets().filter(function (b) { return b.id !== id; }));
+    // v2.9.17 — Soft-delete: tombstone bırak, queueArraySync UPSERT atar
+    const all = readBuffetsAll().slice();
+    const idx = all.findIndex(function (b) { return b.id === id; });
+    if (idx !== -1) {
+      all[idx] = Object.assign({}, all[idx], { _deletedAt: new Date().toISOString() });
+      writeBuffets(all);
+    }
   }
 
   // ---------- COST HESAP ----------

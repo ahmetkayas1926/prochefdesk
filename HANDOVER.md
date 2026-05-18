@@ -9,7 +9,7 @@
 
 **Ürün:** ProChefDesk — profesyonel chef'ler için web tabanlı mutfak yönetim sistemi.
 **Operatör:** Ahmet Kaya, Perth Western Australia, profesyonel şef. Solo non-commercial proje.
-**Mevcut sürüm:** **v2.9.16** (push'a hazır local; production v2.9.3). **NAKED→RICH sweep tamamlandı — 13 araç buffet seviyesinde RICH.** Backlog #3 (Discover Tag + Allergen filter) + #6 (Buffet Excel footer) kapatıldı.
+**Mevcut sürüm:** **v2.9.21** (push'a hazır local; production v2.9.3). **NAKED→RICH sweep + büyük backlog kapatma + Kitchen Cards overflow bug fix**.
 **Blog:** 13 yazı yayında (Faz A SEO upgrade + Faz B 5-round, MENA niş + uluslararası coverage).
 **Domain:** prochefdesk.com (Cloudflare Pages, SSL Full, GitHub push'ta auto build + deploy).
 
@@ -64,14 +64,14 @@ account.js, allergens.js, buffet.js, checklist.js, dashboard.js, discover.js, ev
 
 **Project ref:** `muuwhrcogikpqylsfvgg` (Tokyo, Postgres 17, **Free tier**)
 
-### 25 Aktif tablo
+### 29 Aktif tablo (v2.9.18)
 
-**Workspace-scoped (18):** recipes, ingredients, menus, events, suppliers, canvases, shopping_lists, checklist_templates, inventory, waste, checklist_sessions, stock_count_history, haccp_logs, haccp_units, haccp_readings, haccp_cook_cool, **haccp_receiving** (v2.8.44), **haccp_holding** (v2.8.44)
+**Workspace-scoped (21):** recipes, ingredients, menus, events, suppliers, canvases, shopping_lists, checklist_templates, inventory, waste, checklist_sessions, stock_count_history, haccp_logs, haccp_units, haccp_readings, haccp_cook_cool, haccp_receiving (v2.8.44), haccp_holding (v2.8.44), **buffets** (v2.9.17), **mise_plans** (v2.9.17), **team** (v2.9.17)
 > Hepsinde `workspace_id` + `user_id` PK, `data` jsonb, `deleted_at` timestamptz.
 
-**Top-level (7):** workspaces (flat schema), workspace_tombstones, user_prefs, public_shares, client_errors (insert-only), subscriptions, **recipe_likes** (v2.8.46, Discover Phase 2).
+**Top-level (8):** workspaces (flat schema), workspace_tombstones, user_prefs, public_shares, client_errors (insert-only), subscriptions, recipe_likes (v2.8.46, Discover Phase 2), **discover_view_logs** (v2.9.18, rate limit).
 
-**Sadece IDB (cloud sync YOK):** `buffets` (v2.8.73), `misePlans` (v2.8.74). Sonraki round'da Supabase tablo + RLS + per-table sync wire (backlog).
+**Sadece IDB (cloud sync YOK):** Yok — v2.9.17'de buffets + misePlans + team tamamlandı.
 
 **DROP edilmiş:** `user_data` (v2.6.87), `cost_history` (v2.6.88). Frontend referansları temizlendi.
 
@@ -93,24 +93,26 @@ account.js, allergens.js, buffet.js, checklist.js, dashboard.js, discover.js, ev
 - `increment_recipe_view(text)` (v2.8.46) — Discover view counter, anonymous EXECUTE
 - `pcd_update_like_count` (v2.8.46) trigger — `recipes.like_count`'u `recipe_likes COUNT(*)`'tan senkron
 
-### 3 Aktif pg_cron Job
+### 4 Aktif pg_cron Job
 
 | Job | Schedule (UTC) | Süre limit |
 |---|---|---|
 | nightly-backup-to-r2 | 03:00 her gün | 60sn |
 | pcd-cleanup-old-deleted | 03:00 her gün | — |
 | pcd-cleanup-photos-weekly | Pazar 04:00 | — |
+| pcd-cleanup-view-logs (v2.9.18) | Her saat başı (0 * * * *) | — |
 
-### Realtime: 21 tablo subscribed
+### Realtime: 24 tablo subscribed (v2.9.17)
 
-19 tablo + `haccp_receiving` + `haccp_holding` (v2.8.44).
+21 tablo + v2.9.17'de `buffets` + `mise_plans` + `team` (3 array tablosu) eklendi. Total 24 ws-bound table'da realtime aktif.
 **CHANNEL_ERROR çözüldü:** v2.8.43 — explicit `realtime.setAuth(token)` + `TOKEN_REFRESHED` dinleyici. Multi-device canlı sync güvenilir.
 
-### 3 Edge Function (deployed)
+### 4 Edge Function (deployed)
 
-- **`backup-to-r2`** v3 (2026-05-06, v2.8.79'da BACKUP_TABLES'a `haccp_receiving` + `haccp_holding` eklendi; operatör 2026-05-18 deploy etti). 25 per-table tabloyu jsonl olarak R2'ye yazar. 30-day retention. **Foto bytes yedeklenmiyor**, sadece manifest.
+- **`backup-to-r2`** v4 (v2.9.17, BACKUP_TABLES'a 3 yeni tablo eklendi: buffets + mise_plans + team; **operatör re-deploy etmeli**). Per-table tabloyu jsonl olarak R2'ye yazar. 30-day retention. **Foto bytes yedeklenmiyor**, sadece manifest.
 - **`cleanup-photos`** — Storage orphan foto temizliği. `x-cleanup-secret` header zorunlu.
-- **`delete-account`** — v2.8.50 fix (user_data DELETE bloğu kaldırıldı; operatör 2026-05-18 deploy etti).
+- **`delete-account`** — v2.8.50 fix (user_data DELETE bloğu kaldırıldı).
+- **`rate-limited-view`** (v2.9.18 YENİ, operatör deploy etmeli) — Discover view counter rate limit. POST recipe_id, IP header'dan çıkarır, `pcd_rate_limited_view_bump` RPC (service_role) çağırır. 60dk window per (IP, recipe).
 
 **R2 bucket:** `prochefdesk-backups`. Restore prod'da test edildi. **Public Access KAPALI olmalı** — operatör görsel kontrol.
 
@@ -168,14 +170,14 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH. 13 araç paketleri
 ### Açık backlog (öncelik sırası)
 
 1. **iOS/Safari cross-browser test** — v2.8.49 kod tarama temiz; gerçek cihaz testi operatör tarafına bekliyor.
-2. **Buffet + Mise cloud sync** — `buffets` + `misePlans` şu an IDB-only. Supabase tablo + RLS + per-table sync wire gerekiyor (pattern: v2.8.44 haccp_receiving/holding). **Onay zorunlu.**
+2. ~~**Buffet + Mise cloud sync**~~ ✅ **v2.9.17'de kapatıldı** (buffets + mise_plans + team 3 tablo).
 3. ~~**Discover'a Tag + Allergen filter**~~ ✅ **v2.9.15-16'da kapatıldı.** Backfill notu: mevcut public recipe'lerde `computedAllergens` yok; chef her recipe'i bir kez açıp save edince embed olur.
-4. **Categories functional** — şu an kozmetik label. 50+ menu item ölçeğinde anlamlı.
-5. **`supabase-functions/` duplicate silme** — operatör deploy doğrulaması yaptı; klasör güvenle silinebilir, ayrı round.
+4. ~~**Categories functional**~~ ❌ **Operatör v2.9.18'de listeden çıkardı** (gereksiz).
+5. ~~**`supabase-functions/` duplicate silme**~~ ✅ **v2.9.18'de kapatıldı** (klasör silindi).
 6. ~~**Buffet Excel footer**~~ ✅ **v2.9.14'te kapatıldı.**
-7. **Discover view count rate limit** — `increment_recipe_view` RPC anonymous'a açık (MVP kabul). Viral olursa Edge Function ile IP+recipe başına 1 saat 1 view.
-8. **R2 backup foto bytes yedekleme** — şu an sadece manifest. Solo workflow için kabul edilebilir; Pro tier'da Storage PITR çözer.
-9. **App boot perf L3** — cloud sync ilk paint sonrasına ertele. **Önerilmedi** (yüksek risk, "veri kayıp" hissi). L1+L2 yeterli; beklenen PageSpeed ~85, LCP 3.0-3.5 sn.
+7. ~~**Discover view count rate limit**~~ ✅ **v2.9.18'de kapatıldı** (Edge Function + saatlik cleanup cron).
+8. **R2 backup foto bytes yedekleme** — şu an sadece manifest. Solo workflow için kabul edilebilir; Pro tier'da Storage PITR çözer. Operatör v2.9.18: "para ödeyecek miyim → şimdilik kalsın".
+9. ~~**App boot perf L3**~~ ❌ **Operatör v2.9.18'de listeden çıkardı** (yüksek risk).
 10. **CHANGELOG.md otomatize CI hook** — manuel hatırlamayla yapılıyor; ileride opsiyonel.
 
 ## 7. ❌ Önerme
@@ -232,7 +234,7 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH. 13 araç paketleri
 |---|---|
 | Repo path (operatör Windows) | `C:\Users\ahmet\Desktop\prochefdesk` |
 | GitHub repo | `ahmetkayas1926/prochefdesk` |
-| Production sürümü | **v2.9.16** (push'a hazır local; production v2.9.3) |
+| Production sürümü | **v2.9.21** (push'a hazır local; production v2.9.3) |
 | Supabase project ref | `muuwhrcogikpqylsfvgg` (Tokyo, Postgres 17, Free tier) |
 | Cloudflare R2 bucket | `prochefdesk-backups` |
 | CLEANUP_SECRET | `ec79a445-7e92-499b-9322-5c2c949788d4d2886e66-d556-4498-ba9e-17fda6c11ac1` |

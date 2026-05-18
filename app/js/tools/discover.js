@@ -127,17 +127,21 @@
       });
   }
 
-  // Increment view counter (anonymous + authenticated). Fire-and-forget.
+  // v2.9.18 — Rate-limited view counter via Edge Function.
+  // Anonymous + authenticated. Fire-and-forget. Server-side rate limit:
+  // 60min window per (client IP + recipe). Backlog #7 kapatma.
   function bumpViewCount(recipeId) {
     const supabase = getSupabase();
     if (!supabase) return;
-    supabase.rpc('increment_recipe_view', { _recipe_id: recipeId })
+    supabase.functions.invoke('rate-limited-view', {
+      body: { recipe_id: recipeId },
+    })
       .then(function (res) {
-        if (res.error) {
-          PCD.warn && PCD.warn('discover: bumpViewCount error', res.error);
+        if (res && res.error) {
+          PCD.warn && PCD.warn('discover: bumpViewCount edge function error', res.error);
         }
       })
-      .catch(function () { /* ignore */ });
+      .catch(function () { /* ignore — fire-and-forget */ });
   }
 
   // Toggle like. Auth gerekir. Optimistic UI — UI önce güncellenir, sonra DB.
