@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#FAF7F2">
+  <meta name="robots" content="index, follow">
+  <title>Buffet Food Cost Calculator: Hotel Banquet Math — ProChefDesk</title>
+  <meta name="description" content="Buffet cost per cover is not the same as à la carte food cost. Covers, pickup ratio, refill multiplier, waste — the real banquet math hotel kitchens use.">
+  <link rel="canonical" href="https://prochefdesk.com/blog/buffet-food-cost-calculator.html">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Buffet Food Cost Calculator: Hotel Banquet Math">
+  <meta property="og:description" content="Covers × per-guest × refill × pickup % — the real banquet math the hotel groups have used for forty years.">
+  <meta property="og:url" content="https://prochefdesk.com/blog/buffet-food-cost-calculator.html">
+  <meta property="og:type" content="article">
+  <meta property="og:image" content="https://prochefdesk.com/blog/og-buffet-cost.png">
+  <meta property="article:published_time" content="2026-05-19">
+  <meta property="article:author" content="Ahmet Kaya">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Buffet Food Cost Calculator: Hotel Banquet Math">
+  <meta name="twitter:description" content="Covers, refill, pickup % — and why à la carte food cost math gets buffet pricing wrong every time.">
+  <meta name="twitter:image" content="https://prochefdesk.com/blog/og-buffet-cost.png">
+
+  <!-- JSON-LD Article schema -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "Buffet Food Cost Calculator: Hotel Banquet Math",
+    "description": "Buffet cost per cover is not the same as à la carte food cost. Covers, pickup ratio, refill multiplier, waste — the real banquet math hotel kitchens use.",
+    "image": "https://prochefdesk.com/blog/og-buffet-cost.png",
+    "datePublished": "2026-05-19",
+    "dateModified": "2026-05-19",
+    "author": {
+      "@type": "Person",
+      "name": "Ahmet Kaya",
+      "jobTitle": "Professional Chef",
+      "worksFor": {
+        "@type": "Organization",
+        "name": "ProChefDesk"
+      }
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "ProChefDesk",
+      "url": "https://prochefdesk.com",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://prochefdesk.com/og-image.png"
+      }
+    },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": "https://prochefdesk.com/blog/buffet-food-cost-calculator.html"
+    },
+    "wordCount": 1850,
+    "keywords": "buffet food cost calculator, buffet cost per cover, banquet pricing, pickup ratio, refill multiplier, hotel buffet math"
+  }
+  </script>
+
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%2316a34a'/%3E%3Ctext x='50' y='68' font-size='56' text-anchor='middle' fill='white' font-family='system-ui' font-weight='800'%3EPC%3C/text%3E%3C/svg%3E">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #FAF7F2;
+      --paper: #FFFEFA;
+      --text-1: #1A1916;
+      --text-2: #3A3631;
+      --text-3: #8A857C;
+      --line: #E5DFD2;
+      --primary: #2D4A3E;
+      --brand: #16a34a;
+      --copper: #B85C3C;
+      --code-bg: #F0EBE0;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body { max-width: 720px; margin: 0 auto; padding: 28px 24px 80px; line-height: 1.72; font-family: 'Inter', system-ui, -apple-system, sans-serif; font-size: 17px; background: var(--bg); color: var(--text-1); -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+    a { color: var(--primary); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+    a:hover { color: var(--text-1); }
+    .blog-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding-bottom: 20px; border-bottom: 1px solid var(--line); margin-bottom: 40px; }
+    .blog-header .brand { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; color: var(--text-1); text-decoration: none; letter-spacing: -0.01em; }
+    .blog-header .brand .mark { width: 30px; height: 30px; background: var(--brand); border-radius: 7px; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; font-weight: 800; letter-spacing: -0.02em; }
+    .blog-header nav a { color: var(--text-2); text-decoration: none; margin-inline-start: 18px; font-size: 14px; font-weight: 500; }
+    .blog-header nav a:hover { color: var(--text-1); }
+
+    .article-tag { display: inline-block; font-size: 12px; font-weight: 700; color: var(--copper); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 16px; }
+    .article-title { font-family: 'Fraunces', Georgia, serif; font-size: 38px; line-height: 1.15; letter-spacing: -0.02em; font-weight: 500; margin: 0 0 14px; color: var(--text-1); }
+    .article-meta { font-size: 14px; color: var(--text-3); margin-bottom: 32px; }
+    .article-meta .author { font-weight: 500; color: var(--text-2); }
+
+    article { font-family: 'Fraunces', Georgia, serif; font-weight: 400; }
+    article p { margin: 0 0 22px; color: var(--text-2); font-size: 18px; line-height: 1.78; }
+    article p.lede { font-size: 21px; line-height: 1.65; color: var(--text-1); margin-bottom: 32px; font-weight: 400; }
+    article h2 { font-family: 'Fraunces', Georgia, serif; font-size: 26px; line-height: 1.25; letter-spacing: -0.01em; margin: 44px 0 18px; color: var(--text-1); font-weight: 500; }
+    article h3 { font-family: 'Fraunces', Georgia, serif; font-size: 19px; margin: 32px 0 14px; color: var(--text-1); font-weight: 600; }
+    article strong { color: var(--text-1); font-weight: 600; }
+    article em { font-style: italic; color: var(--text-1); }
+    article ul, article ol { margin: 0 0 22px; padding-inline-start: 22px; color: var(--text-2); font-size: 18px; line-height: 1.7; }
+    article li { margin-bottom: 8px; }
+    article blockquote { border-inline-start: 3px solid var(--copper); padding: 4px 0 4px 18px; margin: 24px 0; font-style: italic; color: var(--text-2); font-size: 18px; }
+
+    .formula { background: var(--code-bg); border-radius: 8px; padding: 14px 18px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 15px; color: var(--text-1); margin: 22px 0; line-height: 1.7; }
+    .formula .label { display: block; font-family: 'Inter', sans-serif; font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; font-weight: 700; }
+
+    .callout { background: var(--paper); border: 1px solid var(--line); border-inline-start: 4px solid var(--copper); border-radius: 8px; padding: 18px 22px; margin: 28px 0; font-family: 'Inter', sans-serif; font-size: 15px; color: var(--text-2); line-height: 1.65; }
+    .callout strong { color: var(--copper); }
+
+    .tool-mention { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 18px 22px; margin: 28px 0; display: flex; align-items: flex-start; gap: 14px; font-size: 15px; font-family: 'Inter', sans-serif; }
+    .tool-mention .icon { width: 36px; height: 36px; flex-shrink: 0; border-radius: 8px; background: var(--brand); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; }
+    .tool-mention p { margin: 0 0 6px; color: var(--text-2); }
+    .tool-mention p:last-child { margin: 0; }
+    .tool-mention .label { font-weight: 600; color: var(--text-1); }
+    .tool-mention a { color: var(--primary); font-weight: 600; }
+
+    table { width: 100%; border-collapse: collapse; margin: 24px 0; font-size: 15px; font-family: 'Inter', sans-serif; }
+    table th, table td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--line); }
+    table th { font-weight: 600; color: var(--text-1); background: var(--paper); }
+    table td { color: var(--text-2); }
+
+    .end-mark { width: 32px; height: 4px; background: var(--copper); margin: 48px auto 0; border-radius: 2px; }
+
+    .related-posts { margin: 56px 0 24px; padding: 24px 0; border-top: 1px solid var(--line); }
+    .related-posts h3 { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 600; margin: 0 0 18px; color: var(--primary); }
+    .related-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+    .related-card { display: block; padding: 16px 18px; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; text-decoration: none; color: var(--text-1); transition: border-color .15s ease, transform .15s ease; }
+    .related-card:hover { border-color: var(--brand); transform: translateY(-2px); }
+    .related-card .related-tag { font-size: 11px; color: var(--brand); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+    .related-card .related-title { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 600; line-height: 1.3; margin-bottom: 4px; }
+    .related-card .related-desc { font-size: 13px; color: var(--text-3); line-height: 1.5; }
+
+    .blog-footer { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; font-size: 14px; color: var(--text-3); font-family: 'Inter', sans-serif; }
+    .blog-footer a { color: var(--text-2); font-weight: 500; text-decoration: none; }
+    .blog-footer a:hover { color: var(--text-1); text-decoration: underline; }
+    .blog-footer .left { display: inline-flex; align-items: center; gap: 10px; }
+    .blog-footer .foot-mark { width: 22px; height: 22px; background: var(--brand); color: #fff; border-radius: 5px; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; }
+    .blog-footer .right { display: flex; gap: 18px; }
+
+    @media (max-width: 640px) {
+      body { padding: 20px 18px 60px; font-size: 16px; }
+      .article-title { font-size: 30px; }
+      article p, article ul, article ol { font-size: 17px; }
+      .related-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="blog-header">
+    <a href="/" class="brand"><span class="mark">PC</span>ProChefDesk</a>
+    <nav>
+      <a href="/blog/">All posts</a>
+      <a href="/app/">Open app</a>
+    </nav>
+  </header>
+
+  <span class="article-tag">Banquet & Catering</span>
+  <h1 class="article-title">Buffet Food Cost Calculator: Hotel Banquet Math</h1>
+  <div class="article-meta"><span class="author">Ahmet Kaya</span> · May 2026 · 9 min read</div>
+
+  <article>
+
+    <p class="lede">If you cost a buffet the way you cost an à la carte plate, your numbers will be wrong by 15-30%. Buffet math has four variables à la carte ignores: covers, per-guest amount, refill multiplier, and pickup ratio. Here's how the hotel groups have done it for forty years — and how to do it in your own kitchen this week.</p>
+
+    <h2>Why à la carte food cost % is the wrong tool for buffet</h2>
+
+    <p>À la carte food cost is plate-driven: 320 g of lamb, $24/kg, $7.68 per portion. Sell at $32, get 24% food cost. Clean math, clean attribution.</p>
+
+    <p>Buffet doesn't work that way. You prepare for 100 covers but you don't put 100 plates on a station. You put a tray of lamb that holds 8 kg, knowing some guests will take 250 g and some will take 50 g and some will not approach the station at all. You also know that if it empties in the first hour, that's a service failure — so you over-prep. You also know that whatever doesn't leave the tray is waste, weighed and binned at end of service.</p>
+
+    <p>Three things happen that à la carte costing never has to model:</p>
+
+    <ol>
+      <li><strong>Refill over-production</strong> — you intentionally prep more than the room will eat, because running out mid-service is unacceptable</li>
+      <li><strong>Variable pickup</strong> — the % of prepared product that actually gets eaten varies wildly by item type (protein 85%, salad 55%, cheese 35%, beverage 95%)</li>
+      <li><strong>Cost spreads across the entire room</strong>, not per plate — the unit you cost against is "cover," meaning "paying guest in the door"</li>
+    </ol>
+
+    <p>If you ignore these and just total raw food cost ÷ servings, you'll undercount waste, underprice the ticket, and wonder why a "30% food cost" buffet shows up as 42% on the monthly P&L.</p>
+
+    <h2>The four variables</h2>
+
+    <h3>1. Covers</h3>
+    <p>The number of paying guests expected. This is the denominator for every per-guest calculation. Sounds obvious but the common error is using <em>attended</em> covers instead of <em>paid</em> covers — paid covers are what drive revenue, attended covers (some children, free staff meals) drive consumption.</p>
+
+    <h3>2. Per-guest amount</h3>
+    <p>How much of each item, on average, one guest will take. This is per item, not per buffet — a guest takes 120 g of scrambled eggs but only 25 g of cheese.</p>
+
+    <p>Industry baselines for breakfast buffet (these are starting points, not gospel):</p>
+    <table>
+      <thead><tr><th>Item type</th><th>Per-guest amount</th></tr></thead>
+      <tbody>
+        <tr><td>Hot protein (eggs, sausage)</td><td>60-100 g</td></tr>
+        <tr><td>Hot starch (potato, rice)</td><td>70-110 g</td></tr>
+        <tr><td>Yogurt / dairy</td><td>100-150 g</td></tr>
+        <tr><td>Fresh fruit</td><td>80-120 g</td></tr>
+        <tr><td>Cheese</td><td>30-50 g</td></tr>
+        <tr><td>Bakery (croissant)</td><td>1 piece</td></tr>
+        <tr><td>Coffee</td><td>180-250 ml</td></tr>
+      </tbody>
+    </table>
+
+    <p>These are tracked and refined by hotel banquet operations over decades. The <a href="https://hospitality.cornell.edu/research/" target="_blank" rel="noopener">Cornell School of Hotel Administration</a> publishes hospitality research that includes per-guest consumption baselines; Marriott, Hilton, and IHG banquet operating manuals codify similar numbers internally. Your own kitchen's data — collected by weighing tray-in vs tray-out for a week — will be more accurate than any external reference.</p>
+
+    <h3>3. Refill multiplier</h3>
+    <p>The factor you multiply prep by to account for refills and "running out is unacceptable" safety margin. Industry defaults:</p>
+    <ul>
+      <li>Breakfast buffet: 1.20× (low-stress, predictable consumption)</li>
+      <li>Brunch: 1.35× (higher variability, premium expectation)</li>
+      <li>Lunch: 1.25× (moderate)</li>
+      <li>Dinner: 1.30× (slower, more selective)</li>
+      <li>Cocktail / canapé: 1.15× (small bites, easy refill from kitchen)</li>
+    </ul>
+
+    <p>Higher refill = safer (less stockout risk), more waste. Lower refill = leaner, higher risk of an embarrassing empty tray at 09:45 with twenty late breakfast guests still arriving.</p>
+
+    <h3>4. Pickup ratio</h3>
+    <p>The percentage of <em>prepared</em> product that actually leaves the buffet on guest plates. This is where buffet math gets brutal.</p>
+
+    <p>Industry pickup % norms by item type:</p>
+    <table>
+      <thead><tr><th>Item</th><th>Typical pickup %</th></tr></thead>
+      <tbody>
+        <tr><td>Hot protein</td><td>85%</td></tr>
+        <tr><td>Cold protein (salmon, charcuterie)</td><td>70%</td></tr>
+        <tr><td>Fresh fruit</td><td>55%</td></tr>
+        <tr><td>Cheese platter</td><td>35%</td></tr>
+        <tr><td>Bakery / bread</td><td>60-80%</td></tr>
+        <tr><td>Dessert</td><td>50-65%</td></tr>
+        <tr><td>Hot beverage (coffee, tea)</td><td>95%</td></tr>
+        <tr><td>Cold beverage (juice, water)</td><td>85%</td></tr>
+        <tr><td>Soft fruit garnish</td><td>25-40%</td></tr>
+      </tbody>
+    </table>
+
+    <p>A cheese platter at 35% pickup means: prep 5 kg, guests eat 1.75 kg, you bin 3.25 kg. That waste is real food cost — it just doesn't appear on the plate, it appears in the bin. <em>Every</em> buffet cost calculation that ignores pickup is wrong by exactly this amount.</p>
+
+    <div class="callout">
+      <strong>The hardest item to cost on a buffet is whatever has the lowest pickup ratio.</strong> A 35% pickup cheese platter is doing more damage to your food cost than the lamb shank everybody worries about. Track it. Reduce the tray. Refill from a cold prep instead of restocking a giant display.
+    </div>
+
+    <h2>The actual formula</h2>
+
+    <p>For one item on one buffet:</p>
+
+    <div class="formula">
+      <span class="label">Prep amount (the kitchen prepares this much)</span>
+      Covers × Per-guest amount × Refill multiplier
+    </div>
+
+    <div class="formula">
+      <span class="label">Expected consumption (this much actually gets eaten)</span>
+      Covers × Per-guest amount × Pickup %
+    </div>
+
+    <div class="formula">
+      <span class="label">Expected waste (the bin total)</span>
+      Prep cost − Consumption cost
+    </div>
+
+    <div class="formula">
+      <span class="label">Cost per cover (this is what you compare against ticket price)</span>
+      Total prep cost across all items ÷ Covers
+    </div>
+
+    <p>Worked example: scrambled eggs station on a 100-cover breakfast at $35/cover ticket.</p>
+
+    <ul>
+      <li>Per-guest: 80 g · Refill: 1.20× · Pickup: 85% · Ingredient cost: $4.50/kg</li>
+      <li>Prep amount: 100 × 0.08 × 1.20 = 9.6 kg</li>
+      <li>Prep cost: 9.6 × $4.50 = <strong>$43.20</strong></li>
+      <li>Expected consumption: 100 × 0.08 × 0.85 = 6.8 kg</li>
+      <li>Consumption cost: 6.8 × $4.50 = $30.60</li>
+      <li>Expected waste: $43.20 − $30.60 = <strong>$12.60 in eggs alone</strong></li>
+    </ul>
+
+    <p>Multiply this across 12-15 items on a typical breakfast buffet and you'll see per-cover cost land around $8-$12. At $35 ticket that's 23-34% food cost — industry-target territory. Skip the pickup % math and you'll think your eggs cost $4.30/cover when they actually cost $4.30/cover <em>plus $1.26 of bin</em>.</p>
+
+    <h2>Food cost % targets by buffet type</h2>
+
+    <p>The chart hotel groups use internally (these are industry benchmarks; your operation's targets depend on your concept, market, and labour structure):</p>
+
+    <table>
+      <thead><tr><th>Buffet type</th><th>Good (≤)</th><th>Watch (≤)</th><th>Over budget (>)</th></tr></thead>
+      <tbody>
+        <tr><td>Breakfast</td><td>22%</td><td>28%</td><td>35%</td></tr>
+        <tr><td>Brunch</td><td>26%</td><td>32%</td><td>38%</td></tr>
+        <tr><td>Lunch</td><td>26%</td><td>32%</td><td>38%</td></tr>
+        <tr><td>Dinner</td><td>28%</td><td>35%</td><td>42%</td></tr>
+        <tr><td>Cocktail / reception</td><td>22%</td><td>28%</td><td>35%</td></tr>
+      </tbody>
+    </table>
+
+    <p>Breakfast and cocktail target lower food cost % because product cost itself is lower (eggs vs prime rib) — there's less room to absorb pickup waste. Dinner allows higher % because the ticket carries premium product margins.</p>
+
+    <h2>What this looks like in practice</h2>
+
+    <p>The reason most independent operators struggle with buffet costing isn't the math — it's the data discipline. Tracking per-guest amounts, pickup ratios, and refill behaviour across 15 stations over a service night is genuinely hard to do on a clipboard.</p>
+
+    <div class="tool-mention">
+      <span class="icon">PC</span>
+      <div>
+        <p class="label">In ProChefDesk</p>
+        <p>The Buffet Planner tool encodes all four variables natively. Pick a buffet type (breakfast, brunch, lunch, dinner, cocktail) and industry-default refill multiplier + per-guest amounts + pickup ratios load automatically (overridable). Per-station and per-item cost + waste calculate live as you build. Food cost % displays with traffic-light status (Good / Watch / Over budget) against industry targets. Seven ready-to-edit templates ship in the box: Continental Breakfast, Mediterranean Lunch, Sunday Brunch 5★, Iftar Buffet, Wedding Banquet, Cocktail Reception, BBQ Grill — each pre-loaded with sector-baseline items you can link to your own recipes. <a href="/app/">Open the app</a> to try it.</p>
+      </div>
+    </div>
+
+    <h2>What to do this week</h2>
+
+    <ol>
+      <li><strong>Pick your next buffet event.</strong> Don't try to retroactively cost the last one — too messy.</li>
+      <li><strong>Write down each station and item.</strong> One per row.</li>
+      <li><strong>Estimate per-guest, refill, pickup %</strong> using the tables above as starting points. Don't be precious; first-pass estimates are fine.</li>
+      <li><strong>Run the formula.</strong> Compare cost-per-cover to your ticket price. If food cost % is above the target band for your buffet type, you have a pricing or pickup problem.</li>
+      <li><strong>After the event, weigh the bin per station.</strong> Compare actual waste to your model's expected waste. Adjust your per-guest and pickup numbers. Repeat.</li>
+    </ol>
+
+    <p>After three or four events your numbers will be more honest than any industry handbook. The chart above gives you a starting position. The work is making it yours.</p>
+
+    <h2>The point</h2>
+
+    <p>Buffet food cost is not à la carte food cost with a different denominator. It's a different model — multiple variables interacting per item, waste built into the design, ticket price spread across the whole room. Get the four variables right (covers, per-guest, refill, pickup) and you'll price tickets accurately and stop being surprised by month-end P&L.</p>
+
+    <p>Get them wrong and you'll either underprice and lose money, or overprice and lose covers. Neither is a good place to be.</p>
+
+    <div class="end-mark"></div>
+  </article>
+
+  <section class="related-posts" aria-label="Related articles">
+    <h3>Related reading</h3>
+    <div class="related-grid">
+      <a href="/blog/food-cost-percentage-restaurant.html" class="related-card">
+        <div class="related-tag">Food Cost</div>
+        <div class="related-title">Restaurant Food Cost %: The Real Method</div>
+        <div class="related-desc">À la carte food cost done properly — sub-recipes, yield loss, supplier drift. The foundation under buffet math.</div>
+      </a>
+      <a href="/blog/menu-engineering-profitable-dishes.html" class="related-card">
+        <div class="related-tag">Menu Engineering</div>
+        <div class="related-title">Which Dishes Actually Make You Money</div>
+        <div class="related-desc">The four-box matrix for à la carte. Buffet has its own equivalent — track per-station margin and waste together.</div>
+      </a>
+    </div>
+  </section>
+
+  <footer class="blog-footer">
+    <div class="left">
+      <span class="foot-mark">PC</span>
+      <span>ProChefDesk · written from a working kitchen</span>
+    </div>
+    <div class="right">
+      <a href="/blog/">All posts</a>
+      <a href="/app/">Open app</a>
+      <a href="/privacy.html">Privacy</a>
+    </div>
+  </footer>
+
+</body>
+</html>

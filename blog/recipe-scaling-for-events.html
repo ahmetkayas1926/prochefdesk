@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#FAF7F2">
+  <meta name="robots" content="index, follow">
+  <title>Recipe Scaling for Events: Portion Math Beyond Multiplication — ProChefDesk</title>
+  <meta name="description" content="Scaling a 4-portion recipe to 200 portions isn't just multiplying by 50. Seasoning, cooking time, equipment capacity, and waste behaviour all break linearity. Here's how to scale properly.">
+  <link rel="canonical" href="https://prochefdesk.com/blog/recipe-scaling-for-events.html">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Recipe Scaling for Events: Portion Math Beyond Multiplication">
+  <meta property="og:description" content="Multiply by 50 and you'll over-salt, undercook the centre, and run out of oven capacity. The non-linear adjustments banquet kitchens apply.">
+  <meta property="og:url" content="https://prochefdesk.com/blog/recipe-scaling-for-events.html">
+  <meta property="og:type" content="article">
+  <meta property="og:image" content="https://prochefdesk.com/blog/og-recipe-scaling.png">
+  <meta property="article:published_time" content="2026-05-19">
+  <meta property="article:author" content="Ahmet Kaya">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Recipe Scaling for Events: Beyond Multiplication">
+  <meta name="twitter:description" content="Seasoning, cook time, equipment capacity, waste — the non-linear adjustments banquet kitchens make when scaling a 4-portion recipe to 200.">
+  <meta name="twitter:image" content="https://prochefdesk.com/blog/og-recipe-scaling.png">
+
+  <!-- JSON-LD Article schema -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "Recipe Scaling for Events: Portion Math Beyond Multiplication",
+    "description": "Scaling a 4-portion recipe to 200 portions isn't just multiplying by 50. Seasoning, cooking time, equipment capacity, and waste behaviour all break linearity.",
+    "image": "https://prochefdesk.com/blog/og-recipe-scaling.png",
+    "datePublished": "2026-05-19",
+    "dateModified": "2026-05-19",
+    "author": {"@type": "Person", "name": "Ahmet Kaya", "jobTitle": "Professional Chef", "worksFor": {"@type": "Organization", "name": "ProChefDesk"}},
+    "publisher": {"@type": "Organization", "name": "ProChefDesk", "url": "https://prochefdesk.com", "logo": {"@type": "ImageObject", "url": "https://prochefdesk.com/og-image.png"}},
+    "mainEntityOfPage": {"@type": "WebPage", "@id": "https://prochefdesk.com/blog/recipe-scaling-for-events.html"},
+    "wordCount": 1700,
+    "keywords": "recipe scaling, scaling recipes for catering, portion calculation, banquet recipe math, non-linear scaling, event cooking"
+  }
+  </script>
+
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%2316a34a'/%3E%3Ctext x='50' y='68' font-size='56' text-anchor='middle' fill='white' font-family='system-ui' font-weight='800'%3EPC%3C/text%3E%3C/svg%3E">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root { --bg: #FAF7F2; --paper: #FFFEFA; --text-1: #1A1916; --text-2: #3A3631; --text-3: #8A857C; --line: #E5DFD2; --primary: #2D4A3E; --brand: #16a34a; --copper: #B85C3C; --code-bg: #F0EBE0; }
+    *, *::before, *::after { box-sizing: border-box; }
+    body { max-width: 720px; margin: 0 auto; padding: 28px 24px 80px; line-height: 1.72; font-family: 'Inter', system-ui, -apple-system, sans-serif; font-size: 17px; background: var(--bg); color: var(--text-1); -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+    a { color: var(--primary); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+    a:hover { color: var(--text-1); }
+    .blog-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding-bottom: 20px; border-bottom: 1px solid var(--line); margin-bottom: 40px; }
+    .blog-header .brand { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; color: var(--text-1); text-decoration: none; letter-spacing: -0.01em; }
+    .blog-header .brand .mark { width: 30px; height: 30px; background: var(--brand); border-radius: 7px; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; font-weight: 800; letter-spacing: -0.02em; }
+    .blog-header nav a { color: var(--text-2); text-decoration: none; margin-inline-start: 18px; font-size: 14px; font-weight: 500; }
+    .blog-header nav a:hover { color: var(--text-1); }
+    .article-tag { display: inline-block; font-size: 12px; font-weight: 700; color: var(--copper); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 16px; }
+    .article-title { font-family: 'Fraunces', Georgia, serif; font-size: 38px; line-height: 1.15; letter-spacing: -0.02em; font-weight: 500; margin: 0 0 14px; color: var(--text-1); }
+    .article-meta { font-size: 14px; color: var(--text-3); margin-bottom: 32px; }
+    .article-meta .author { font-weight: 500; color: var(--text-2); }
+    article { font-family: 'Fraunces', Georgia, serif; font-weight: 400; }
+    article p { margin: 0 0 22px; color: var(--text-2); font-size: 18px; line-height: 1.78; }
+    article p.lede { font-size: 21px; line-height: 1.65; color: var(--text-1); margin-bottom: 32px; font-weight: 400; }
+    article h2 { font-family: 'Fraunces', Georgia, serif; font-size: 26px; line-height: 1.25; letter-spacing: -0.01em; margin: 44px 0 18px; color: var(--text-1); font-weight: 500; }
+    article h3 { font-family: 'Fraunces', Georgia, serif; font-size: 19px; margin: 32px 0 14px; color: var(--text-1); font-weight: 600; }
+    article strong { color: var(--text-1); font-weight: 600; }
+    article em { font-style: italic; color: var(--text-1); }
+    article ul, article ol { margin: 0 0 22px; padding-inline-start: 22px; color: var(--text-2); font-size: 18px; line-height: 1.7; }
+    article li { margin-bottom: 8px; }
+    article blockquote { border-inline-start: 3px solid var(--copper); padding: 4px 0 4px 18px; margin: 24px 0; font-style: italic; color: var(--text-2); font-size: 18px; }
+    .formula { background: var(--code-bg); border-radius: 8px; padding: 14px 18px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 15px; color: var(--text-1); margin: 22px 0; line-height: 1.7; }
+    .formula .label { display: block; font-family: 'Inter', sans-serif; font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; font-weight: 700; }
+    .callout { background: var(--paper); border: 1px solid var(--line); border-inline-start: 4px solid var(--copper); border-radius: 8px; padding: 18px 22px; margin: 28px 0; font-family: 'Inter', sans-serif; font-size: 15px; color: var(--text-2); line-height: 1.65; }
+    .callout strong { color: var(--copper); }
+    .tool-mention { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 18px 22px; margin: 28px 0; display: flex; align-items: flex-start; gap: 14px; font-size: 15px; font-family: 'Inter', sans-serif; }
+    .tool-mention .icon { width: 36px; height: 36px; flex-shrink: 0; border-radius: 8px; background: var(--brand); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; }
+    .tool-mention p { margin: 0 0 6px; color: var(--text-2); }
+    .tool-mention p:last-child { margin: 0; }
+    .tool-mention .label { font-weight: 600; color: var(--text-1); }
+    .tool-mention a { color: var(--primary); font-weight: 600; }
+    table { width: 100%; border-collapse: collapse; margin: 24px 0; font-size: 15px; font-family: 'Inter', sans-serif; }
+    table th, table td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--line); }
+    table th { font-weight: 600; color: var(--text-1); background: var(--paper); }
+    table td { color: var(--text-2); }
+    .end-mark { width: 32px; height: 4px; background: var(--copper); margin: 48px auto 0; border-radius: 2px; }
+    .related-posts { margin: 56px 0 24px; padding: 24px 0; border-top: 1px solid var(--line); }
+    .related-posts h3 { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 600; margin: 0 0 18px; color: var(--primary); }
+    .related-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+    .related-card { display: block; padding: 16px 18px; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; text-decoration: none; color: var(--text-1); transition: border-color .15s ease, transform .15s ease; }
+    .related-card:hover { border-color: var(--brand); transform: translateY(-2px); }
+    .related-card .related-tag { font-size: 11px; color: var(--brand); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+    .related-card .related-title { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 600; line-height: 1.3; margin-bottom: 4px; }
+    .related-card .related-desc { font-size: 13px; color: var(--text-3); line-height: 1.5; }
+    .blog-footer { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; font-size: 14px; color: var(--text-3); font-family: 'Inter', sans-serif; }
+    .blog-footer a { color: var(--text-2); font-weight: 500; text-decoration: none; }
+    .blog-footer a:hover { color: var(--text-1); text-decoration: underline; }
+    .blog-footer .left { display: inline-flex; align-items: center; gap: 10px; }
+    .blog-footer .foot-mark { width: 22px; height: 22px; background: var(--brand); color: #fff; border-radius: 5px; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; }
+    .blog-footer .right { display: flex; gap: 18px; }
+    @media (max-width: 640px) { body { padding: 20px 18px 60px; font-size: 16px; } .article-title { font-size: 30px; } article p, article ul, article ol { font-size: 17px; } .related-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+  <header class="blog-header">
+    <a href="/" class="brand"><span class="mark">PC</span>ProChefDesk</a>
+    <nav>
+      <a href="/blog/">All posts</a>
+      <a href="/app/">Open app</a>
+    </nav>
+  </header>
+
+  <span class="article-tag">Catering · Production</span>
+  <h1 class="article-title">Recipe Scaling for Events: Portion Math Beyond Multiplication</h1>
+  <div class="article-meta"><span class="author">Ahmet Kaya</span> · May 2026 · 9 min read</div>
+
+  <article>
+
+    <p class="lede">A recipe that serves 4 doesn't always serve 200 if you multiply every ingredient by 50. Seasoning, cooking time, equipment capacity, batch behaviour and waste — they all break linearity at scale. The chefs who run events well aren't faster at multiplication; they know which numbers to round, which to under-scale, and which equipment constraint is about to become the bottleneck. Here's the working framework.</p>
+
+    <h2>The seven things that break when you just multiply</h2>
+
+    <h3>1. Salt and aggressive seasoning</h3>
+    <p>Salt scales sub-linearly. A 4-portion stew that calls for 8 g of salt does not need 400 g for 200 portions — somewhere between 250 and 320 g will taste correct. The same is true of chilli, garlic, anchovy, fish sauce, smoked paprika, anything that intensifies as the dish concentrates over a longer cook (which is what happens at scale — bigger pots, longer cook time, more reduction).</p>
+
+    <p>Practical rule: scale "aggressive" seasonings to 70-85% of the multiplied amount initially, then taste and adjust. It is always easier to add salt than to remove it.</p>
+
+    <h3>2. Cooking time</h3>
+    <p>A casserole that braises 4 portions in 90 minutes does not braise 200 portions in 90 minutes. Larger volumes take longer to come to temperature, longer to reach equilibrium, and the centre of a 50-litre pot is genuinely cooler than the centre of a 5-litre pot for the first hour.</p>
+
+    <p>Practical rule: scaled-up braises and slow cooks typically need 30-60% more time, with active stirring or repositioning of large pieces. Scaled-up baking and roasting often needs <em>less</em> time per item because thermal mass evens out — but the oven also takes longer to recover after the door opens, so plan to load and not re-open.</p>
+
+    <h3>3. Equipment capacity</h3>
+    <p>Your stove has 6 burners. Your largest pot is 30 litres. Your oven holds 4 gastronorms. None of those numbers care about your recipe. If you scaled your demi-glace recipe by 25× and the result is 60 litres of reduction needed in one stockpot, you don't have a pot for it.</p>
+
+    <p>This isn't usually addressed in the recipe — it's an equipment audit that happens before scaling. Cap each component's scaled volume to what your equipment can actually handle in a reasonable time window; split into batches above that cap; schedule the batches into your prep timeline.</p>
+
+    <h3>4. Cooling, holding, and reheating</h3>
+    <p>Small batches cool fast; large batches don't. Scaling a recipe past about 15× typically means the dish moves into hot-hold (in a chafer, water bath, or warmer) for service, which changes texture. Pasta that was perfect <em>al dente</em> at 4 portions becomes soggy at 200 if held for the same service window. Sauces split. Vegetables overcook by carry-over.</p>
+
+    <p>The fix usually involves slightly under-cooking the component knowing it'll finish during holding — but this requires testing once at scale to calibrate. Don't guess on event day.</p>
+
+    <h3>5. Waste behaviour</h3>
+    <p>Small batches have low waste because you measure precisely. Large batches have predictable waste: the residue left in the pot after pouring, the ingredient you measured generously because the scale was busy, the sauce that sticks to the kitchen container during transfer to the chafer. <a href="https://www.usda.gov/oce/sustainability/food-waste" target="_blank" rel="noopener">USDA food waste research</a> consistently shows banquet operations run higher per-portion waste than à la carte for exactly these reasons.</p>
+
+    <p>Practical rule: add a 5-8% buffer to scaled ingredient quantities for "operational waste" (not customer-facing waste, just normal handling loss at scale). Above 100 portions this becomes essential rather than optional.</p>
+
+    <h3>6. Acid, leavening, and chemistry</h3>
+    <p>Baking is the most obvious case. A cake that uses 1 tsp baking powder per 4 portions does not need 50 tsp for 200 portions — you'll get a stripped, bitter result. Leavening, acidic adjustments (vinegar, lemon), and yeast all scale sub-linearly. For pastry and bread at event scale, work from professional bakery recipes (calibrated for kilos) rather than scaled home recipes.</p>
+
+    <p>For savoury chemistry: emulsions (hollandaise, mayonnaise) become unstable above a certain volume — split into multiple smaller batches rather than one giant one, and hold separately.</p>
+
+    <h3>7. Service speed</h3>
+    <p>The recipe scales. The service window doesn't always. A 4-portion plating that takes 90 seconds per cover scales to 200 covers in 5 hours of plating — but your service window is 90 minutes. This means more plating stations, simpler plating, or buffet/family-style format rather than à la carte at scale.</p>
+
+    <p>This is a menu-design implication, not a recipe-scaling implication: choose dishes that can be plated quickly or held safely at volume. The recipe that wins on a 4-cover tasting menu is often the worst possible choice for a 200-cover wedding.</p>
+
+    <h2>Scaling factors: the simple part</h2>
+
+    <p>The arithmetic part of scaling is straightforward:</p>
+
+    <div class="formula">
+      <span class="label">Scaling factor</span>
+      Factor = Target portions ÷ Recipe base portions
+    </div>
+
+    <p>A recipe that bases at 4 portions, scaled to 60 covers, has a factor of 15. Multiply each ingredient line by 15, with the seven adjustments above as overrides.</p>
+
+    <p>For a multi-recipe event (8 dishes, 80 covers each, but some dishes for some covers only), the better mental model is:</p>
+
+    <ul>
+      <li>Each dish has its own target portion count for the event (not always equal to total covers — e.g. only 60 of 80 guests will eat the lamb if salmon is also offered)</li>
+      <li>Each ingredient's total required quantity = sum across all dishes that use it, each scaled to its dish's portion count</li>
+      <li>This aggregated quantity drives the shopping list, not the per-dish recipe view</li>
+    </ul>
+
+    <p>The aggregation step is where sub-recipes matter: a salsa that appears in three different dishes needs to be ordered/prepped at the combined quantity, not at the per-dish quantity. Manual scaling gets this wrong consistently; structured scaling does it automatically.</p>
+
+    <h2>The shopping-list cascade</h2>
+
+    <p>Scaled recipes produce scaled ingredient lists. Combine those into a single shopping list for the event:</p>
+
+    <ol>
+      <li><strong>Scale each recipe</strong> to its target portion count for the event</li>
+      <li><strong>Expand sub-recipes</strong> down to base ingredients (labneh ingredient list, not "1 portion labneh")</li>
+      <li><strong>Aggregate by ingredient</strong> across all dishes (chicken thigh from dish A + dish C = total chicken thigh needed)</li>
+      <li><strong>Apply yield % adjustment</strong> — your supplier delivers AP weight, your recipe needs EP. Order AP = EP needed ÷ yield %</li>
+      <li><strong>Add 5-8% operational buffer</strong> for waste at scale</li>
+      <li><strong>Group by supplier and category</strong> for placing orders</li>
+    </ol>
+
+    <p>This is the part that's almost impossible to do reliably on a clipboard for an 8-dish 200-cover event. Either you under-order (and run out of garlic at 13:00 the day of) or you over-order (and bin food next week).</p>
+
+    <div class="callout">
+      <strong>The most expensive mistake in event catering is consistently under-ordering one or two ingredients</strong>, which forces a panicked emergency supply run on event day at retail prices — sometimes 3× wholesale. A structured scaling and shopping process eliminates this almost entirely.
+    </div>
+
+    <h2>What this looks like in practice</h2>
+
+    <div class="tool-mention">
+      <span class="icon">PC</span>
+      <div>
+        <p class="label">In ProChefDesk</p>
+        <p>The Portion Calculator picks one or more recipes from your library, lets you set portion count per recipe, and produces scaled ingredient quantities live. Sub-recipes expand automatically (labneh component breaks down to its yogurt and salt lines). One click sends the aggregated quantities to a Shopping List, which groups by ingredient and applies yield % if set on the ingredient master. Print the scaled recipe sheets for the kitchen, send the shopping list to suppliers. The Events tool ties everything together: an event books a menu, the menu drives recipe selection, the calculator scales each, and the shopping list rolls up across the menu. <a href="/app/">Open the app</a> to set up your next event end-to-end.</p>
+      </div>
+    </div>
+
+    <h2>What to do this week</h2>
+
+    <ol>
+      <li><strong>Pick your most recent event.</strong> Look at the recipes you used and the portions served.</li>
+      <li><strong>Re-cost them through a proper scaling process.</strong> Apply yield %, operational buffer, sub-recipe expansion.</li>
+      <li><strong>Compare to what you actually ordered and used.</strong> Where did you over-order? Where did you under-order and emergency-buy? Both are quantifiable losses.</li>
+      <li><strong>For your next event, scale up front</strong> using the structured process. Aim to land within ±5% of actual usage.</li>
+      <li><strong>After the event, weigh waste per dish.</strong> Refine your scaling factors and buffer % for the next event.</li>
+    </ol>
+
+    <p>This is a two-event learning loop. By event three your numbers will be substantially more accurate than guesswork, and your food cost on catering will drop several points.</p>
+
+    <h2>The point</h2>
+
+    <p>Scaling a recipe is multiplication. Scaling an event is a system: dependency mapping, equipment capacity audit, sub-recipe expansion, ingredient aggregation, yield-aware ordering, operational buffer, and service-time constraints. Each is a small adjustment; together they're the difference between a catering operation that makes money and one that does not.</p>
+
+    <p>The chefs who run profitable events aren't more talented. They're more structured. The recipe is the smallest part of the work.</p>
+
+    <div class="end-mark"></div>
+  </article>
+
+  <section class="related-posts" aria-label="Related articles">
+    <h3>Related reading</h3>
+    <div class="related-grid">
+      <a href="/blog/buffet-food-cost-calculator.html" class="related-card">
+        <div class="related-tag">Buffet Math</div>
+        <div class="related-title">Buffet Food Cost Calculator: Hotel Banquet Math</div>
+        <div class="related-desc">For buffet events specifically, scaling combines with pickup ratio and refill multiplier. Same scaling logic, additional variables.</div>
+      </a>
+      <a href="/blog/ingredient-yield-percentage.html" class="related-card">
+        <div class="related-tag">Ingredient Math</div>
+        <div class="related-title">Ingredient Yield Percentage: Hidden Cost in Raw Weight</div>
+        <div class="related-desc">Yield % is the AP→EP adjustment that turns scaled ingredient quantities into accurate supplier orders.</div>
+      </a>
+    </div>
+  </section>
+
+  <footer class="blog-footer">
+    <div class="left">
+      <span class="foot-mark">PC</span>
+      <span>ProChefDesk · written from a working kitchen</span>
+    </div>
+    <div class="right">
+      <a href="/blog/">All posts</a>
+      <a href="/app/">Open app</a>
+      <a href="/privacy.html">Privacy</a>
+    </div>
+  </footer>
+
+</body>
+</html>

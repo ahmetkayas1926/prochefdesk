@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#FAF7F2">
+  <meta name="robots" content="index, follow">
+  <title>Restaurant Inventory Par Levels: Data-Driven Sizing — ProChefDesk</title>
+  <meta name="description" content="Par level isn't a guess. It's the calculated stock quantity that survives until your next delivery, plus a safety buffer. Here's the formula, the data inputs, and the weekly review that keeps it honest.">
+  <link rel="canonical" href="https://prochefdesk.com/blog/restaurant-inventory-par-levels.html">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Restaurant Inventory Par Levels: Data-Driven Sizing">
+  <meta property="og:description" content="Par level = (avg daily usage × days until next delivery) + safety buffer. The formula, the inputs, the weekly review.">
+  <meta property="og:url" content="https://prochefdesk.com/blog/restaurant-inventory-par-levels.html">
+  <meta property="og:type" content="article">
+  <meta property="og:image" content="https://prochefdesk.com/blog/og-par-levels.png">
+  <meta property="article:published_time" content="2026-05-19">
+  <meta property="article:author" content="Ahmet Kaya">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Restaurant Inventory Par Levels: Data-Driven Sizing">
+  <meta name="twitter:description" content="Par level = (avg daily usage × days until next delivery) + safety buffer. The structured method that replaces guessing.">
+  <meta name="twitter:image" content="https://prochefdesk.com/blog/og-par-levels.png">
+
+  <!-- JSON-LD Article schema -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "Restaurant Inventory Par Levels: Data-Driven Sizing",
+    "description": "Par level isn't a guess. It's the calculated stock quantity that survives until your next delivery, plus a safety buffer.",
+    "image": "https://prochefdesk.com/blog/og-par-levels.png",
+    "datePublished": "2026-05-19",
+    "dateModified": "2026-05-19",
+    "author": {"@type": "Person", "name": "Ahmet Kaya", "jobTitle": "Professional Chef", "worksFor": {"@type": "Organization", "name": "ProChefDesk"}},
+    "publisher": {"@type": "Organization", "name": "ProChefDesk", "url": "https://prochefdesk.com", "logo": {"@type": "ImageObject", "url": "https://prochefdesk.com/og-image.png"}},
+    "mainEntityOfPage": {"@type": "WebPage", "@id": "https://prochefdesk.com/blog/restaurant-inventory-par-levels.html"},
+    "wordCount": 1700,
+    "keywords": "restaurant par level, par stock calculation, restaurant inventory management, kitchen par sheet, min max inventory"
+  }
+  </script>
+
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%2316a34a'/%3E%3Ctext x='50' y='68' font-size='56' text-anchor='middle' fill='white' font-family='system-ui' font-weight='800'%3EPC%3C/text%3E%3C/svg%3E">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root { --bg: #FAF7F2; --paper: #FFFEFA; --text-1: #1A1916; --text-2: #3A3631; --text-3: #8A857C; --line: #E5DFD2; --primary: #2D4A3E; --brand: #16a34a; --copper: #B85C3C; --code-bg: #F0EBE0; }
+    *, *::before, *::after { box-sizing: border-box; }
+    body { max-width: 720px; margin: 0 auto; padding: 28px 24px 80px; line-height: 1.72; font-family: 'Inter', system-ui, -apple-system, sans-serif; font-size: 17px; background: var(--bg); color: var(--text-1); -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+    a { color: var(--primary); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+    a:hover { color: var(--text-1); }
+    .blog-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding-bottom: 20px; border-bottom: 1px solid var(--line); margin-bottom: 40px; }
+    .blog-header .brand { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; color: var(--text-1); text-decoration: none; letter-spacing: -0.01em; }
+    .blog-header .brand .mark { width: 30px; height: 30px; background: var(--brand); border-radius: 7px; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; font-weight: 800; letter-spacing: -0.02em; }
+    .blog-header nav a { color: var(--text-2); text-decoration: none; margin-inline-start: 18px; font-size: 14px; font-weight: 500; }
+    .blog-header nav a:hover { color: var(--text-1); }
+    .article-tag { display: inline-block; font-size: 12px; font-weight: 700; color: var(--copper); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 16px; }
+    .article-title { font-family: 'Fraunces', Georgia, serif; font-size: 38px; line-height: 1.15; letter-spacing: -0.02em; font-weight: 500; margin: 0 0 14px; color: var(--text-1); }
+    .article-meta { font-size: 14px; color: var(--text-3); margin-bottom: 32px; }
+    .article-meta .author { font-weight: 500; color: var(--text-2); }
+    article { font-family: 'Fraunces', Georgia, serif; font-weight: 400; }
+    article p { margin: 0 0 22px; color: var(--text-2); font-size: 18px; line-height: 1.78; }
+    article p.lede { font-size: 21px; line-height: 1.65; color: var(--text-1); margin-bottom: 32px; font-weight: 400; }
+    article h2 { font-family: 'Fraunces', Georgia, serif; font-size: 26px; line-height: 1.25; letter-spacing: -0.01em; margin: 44px 0 18px; color: var(--text-1); font-weight: 500; }
+    article h3 { font-family: 'Fraunces', Georgia, serif; font-size: 19px; margin: 32px 0 14px; color: var(--text-1); font-weight: 600; }
+    article strong { color: var(--text-1); font-weight: 600; }
+    article em { font-style: italic; color: var(--text-1); }
+    article ul, article ol { margin: 0 0 22px; padding-inline-start: 22px; color: var(--text-2); font-size: 18px; line-height: 1.7; }
+    article li { margin-bottom: 8px; }
+    article blockquote { border-inline-start: 3px solid var(--copper); padding: 4px 0 4px 18px; margin: 24px 0; font-style: italic; color: var(--text-2); font-size: 18px; }
+    .formula { background: var(--code-bg); border-radius: 8px; padding: 14px 18px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 15px; color: var(--text-1); margin: 22px 0; line-height: 1.7; }
+    .formula .label { display: block; font-family: 'Inter', sans-serif; font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; font-weight: 700; }
+    .callout { background: var(--paper); border: 1px solid var(--line); border-inline-start: 4px solid var(--copper); border-radius: 8px; padding: 18px 22px; margin: 28px 0; font-family: 'Inter', sans-serif; font-size: 15px; color: var(--text-2); line-height: 1.65; }
+    .callout strong { color: var(--copper); }
+    .tool-mention { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 18px 22px; margin: 28px 0; display: flex; align-items: flex-start; gap: 14px; font-size: 15px; font-family: 'Inter', sans-serif; }
+    .tool-mention .icon { width: 36px; height: 36px; flex-shrink: 0; border-radius: 8px; background: var(--brand); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; }
+    .tool-mention p { margin: 0 0 6px; color: var(--text-2); }
+    .tool-mention p:last-child { margin: 0; }
+    .tool-mention .label { font-weight: 600; color: var(--text-1); }
+    .tool-mention a { color: var(--primary); font-weight: 600; }
+    table { width: 100%; border-collapse: collapse; margin: 24px 0; font-size: 15px; font-family: 'Inter', sans-serif; }
+    table th, table td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--line); }
+    table th { font-weight: 600; color: var(--text-1); background: var(--paper); }
+    table td { color: var(--text-2); }
+    .end-mark { width: 32px; height: 4px; background: var(--copper); margin: 48px auto 0; border-radius: 2px; }
+    .related-posts { margin: 56px 0 24px; padding: 24px 0; border-top: 1px solid var(--line); }
+    .related-posts h3 { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 600; margin: 0 0 18px; color: var(--primary); }
+    .related-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+    .related-card { display: block; padding: 16px 18px; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; text-decoration: none; color: var(--text-1); transition: border-color .15s ease, transform .15s ease; }
+    .related-card:hover { border-color: var(--brand); transform: translateY(-2px); }
+    .related-card .related-tag { font-size: 11px; color: var(--brand); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+    .related-card .related-title { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 600; line-height: 1.3; margin-bottom: 4px; }
+    .related-card .related-desc { font-size: 13px; color: var(--text-3); line-height: 1.5; }
+    .blog-footer { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; font-size: 14px; color: var(--text-3); font-family: 'Inter', sans-serif; }
+    .blog-footer a { color: var(--text-2); font-weight: 500; text-decoration: none; }
+    .blog-footer a:hover { color: var(--text-1); text-decoration: underline; }
+    .blog-footer .left { display: inline-flex; align-items: center; gap: 10px; }
+    .blog-footer .foot-mark { width: 22px; height: 22px; background: var(--brand); color: #fff; border-radius: 5px; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; }
+    .blog-footer .right { display: flex; gap: 18px; }
+    @media (max-width: 640px) { body { padding: 20px 18px 60px; font-size: 16px; } .article-title { font-size: 30px; } article p, article ul, article ol { font-size: 17px; } .related-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+  <header class="blog-header">
+    <a href="/" class="brand"><span class="mark">PC</span>ProChefDesk</a>
+    <nav>
+      <a href="/blog/">All posts</a>
+      <a href="/app/">Open app</a>
+    </nav>
+  </header>
+
+  <span class="article-tag">Inventory & Stock Control</span>
+  <h1 class="article-title">Restaurant Inventory Par Levels: Data-Driven Sizing</h1>
+  <div class="article-meta"><span class="author">Ahmet Kaya</span> · May 2026 · 9 min read</div>
+
+  <article>
+
+    <p class="lede">Par level isn't a guess. It's the calculated stock quantity each ingredient should be brought up to at each delivery, derived from usage rate, delivery frequency, and a safety buffer. Most kitchens set par levels once and never revisit them. The result is consistent over-ordering on some items, consistent under-ordering on others, and cash tied up in inventory that didn't need to be. Here's the formula, the data inputs, and the weekly review discipline.</p>
+
+    <h2>What "par" actually means</h2>
+
+    <p>Par level is the target stock quantity for an ingredient — the amount you should have on hand immediately after a delivery. When stock falls below that level, the difference is what you order. The order arrives, brings stock back up to par, and the cycle repeats.</p>
+
+    <p>The system is simple in concept and surprisingly hard to do well, because the right par level depends on three numbers that all move:</p>
+
+    <ul>
+      <li><strong>Average daily usage</strong> — changes with menu, season, business volume</li>
+      <li><strong>Days between deliveries</strong> — supplier schedule, sometimes weather-disrupted</li>
+      <li><strong>Safety buffer</strong> — how much risk of stock-out you're willing to accept</li>
+    </ul>
+
+    <p>Set par once and forget it and at least one of these three numbers will drift, breaking the par. Most independent kitchens don't have a review process. Hotel groups and chains do — usually a monthly par review by the F&B controller — because at scale, drift becomes expensive fast.</p>
+
+    <h2>The formula</h2>
+
+    <div class="formula">
+      <span class="label">Par level calculation</span>
+      Par = (Avg daily usage × Days until next delivery) + Safety buffer
+    </div>
+
+    <p>Worked example: a small restaurant uses 4 kg of chicken thigh per day on average. Delivery is twice a week (Monday and Thursday), so between Mon delivery and Thu delivery is 3 days. Safety buffer: 1.5 kg (just over half a day's usage).</p>
+
+    <ul>
+      <li>Par = (4 × 3) + 1.5 = <strong>13.5 kg</strong></li>
+    </ul>
+
+    <p>Monday morning the stock check shows 2 kg of chicken thigh. Order quantity = Par − Current = 13.5 − 2 = <strong>11.5 kg</strong>. That order arrives Monday afternoon, brings stock to roughly 13.5 kg, and the kitchen runs until Thursday's delivery without stock-out.</p>
+
+    <p>The same logic applies to every ingredient: oil, salt, herbs, vegetables, frozen items, even non-food (foil, gloves, blue paper). Each one has its own usage rate, often its own supplier schedule, and its own safety buffer.</p>
+
+    <h2>Setting the safety buffer</h2>
+
+    <p>Safety buffer is the protection against the deliveries that don't arrive on time, the day a large unexpected booking turns up, the ingredient that gets used in a new special and exhausts the rest. It's the cushion that distinguishes a kitchen that runs smoothly from one that frequently 86s items.</p>
+
+    <p>How much buffer is right depends on the ingredient class. Industry typical:</p>
+
+    <table>
+      <thead><tr><th>Ingredient class</th><th>Safety buffer (as % of cycle usage)</th></tr></thead>
+      <tbody>
+        <tr><td>Critical-recipe proteins (your signature dish)</td><td>50-75%</td></tr>
+        <tr><td>Standard fresh proteins</td><td>30-50%</td></tr>
+        <tr><td>Fresh vegetables (high-spoilage)</td><td>15-25%</td></tr>
+        <tr><td>Dry stores (rice, oil, flour)</td><td>20-30%</td></tr>
+        <tr><td>Spices and seasonings</td><td>50-100%</td></tr>
+        <tr><td>Non-food consumables</td><td>50-100%</td></tr>
+        <tr><td>Imported/specialty items</td><td>100-200%</td></tr>
+      </tbody>
+    </table>
+
+    <p>The asymmetry matters: the cost of over-buffering a fresh vegetable is wasted spoiled product (high cost, fast). The cost of under-buffering a signature-dish protein is service failure, refund, possibly a one-star review (very high cost, reputational).</p>
+
+    <p>Apply the buffer judgement per-ingredient, not as a single percentage across the inventory. The most-cited error in par level setting is using a uniform buffer that's right on average but wrong for every individual ingredient.</p>
+
+    <h2>How to measure usage rate</h2>
+
+    <p>The formula needs "average daily usage." This is the input most kitchens guess at rather than measure.</p>
+
+    <p>Three ways to get a real number, from most to least accurate:</p>
+
+    <h3>1. From recipe data × menu mix</h3>
+    <p>Each menu item has a recipe; each recipe has ingredient quantities; the POS knows how many of each item sold. Multiply: for each ingredient, sum across all menu items = total daily usage. This is the theoretical-usage approach and is the most precise but requires the recipe data and POS integration to be live.</p>
+
+    <h3>2. From stock count history</h3>
+    <p>Weekly stock counts at Monday opening. Subtract this week's count from last week's count, add this week's deliveries — the difference is what got used. Spread over 7 days = average daily usage. Works for any ingredient even without recipe data, but only as accurate as your stock counts (and stock counts are notoriously inaccurate without discipline).</p>
+
+    <h3>3. From order history</h3>
+    <p>Pull 8 weeks of invoices for a given ingredient. Total quantity ordered ÷ 56 days = approximate daily usage. Lowest precision (assumes order = usage which isn't quite true), but works in the absence of any other data. <a href="https://www.bls.gov/iag/tgs/iag722.htm" target="_blank" rel="noopener">US Bureau of Labor Statistics restaurant sector data</a> confirms food procurement patterns are seasonal — your usage number from January will not be the same in July, and a multi-month averaging approach helps smooth this.</p>
+
+    <p>Whichever method you use, the principle is the same: <strong>par levels driven by data beat par levels driven by gut feel</strong>. The data doesn't need to be perfect; it needs to exist.</p>
+
+    <h2>The weekly review</h2>
+
+    <p>Par levels aren't set once and forgotten. The discipline that separates managed inventory from drifted inventory is the weekly (or fortnightly) review:</p>
+
+    <ol>
+      <li><strong>Pull the last 4-8 weeks of usage</strong> for each significant ingredient (top 20 by spend covers ~80% of the inventory budget — focus there)</li>
+      <li><strong>Re-calculate par</strong> using current usage rate, current supplier schedule, current safety buffer assumption</li>
+      <li><strong>Compare new par to current par</strong>. Differences of >15% in either direction warrant adjustment.</li>
+      <li><strong>Investigate the outliers</strong>. Why did usage of an ingredient jump 40% this month? New menu item? Promotion? Wastage problem? Each has a different action.</li>
+      <li><strong>Update the par sheet</strong>. Both the printed copy at the back door (for receiving) and the digital record.</li>
+    </ol>
+
+    <p>This review is a 30-minute weekly task for a small kitchen, an hour or two for a large one. The payback is in cash freed up (reduced over-stocking) and stock-outs eliminated (improved under-stocking).</p>
+
+    <div class="callout">
+      <strong>The hidden cost of bad par levels</strong> is the inventory you don't notice you're carrying. A kitchen carrying 20% excess across the board on a $50,000 monthly food spend has $10,000 in working capital tied up in food that just sits in storage longer than it needs to. That's real cash, and reducing it doesn't require working harder — just sizing par properly.
+    </div>
+
+    <h2>Common par-level mistakes</h2>
+
+    <h3>Setting par from "what I usually order"</h3>
+    <p>This circular logic perpetuates whatever the previous chef happened to do. A genuine calculation, even a rough one, will produce different numbers.</p>
+
+    <h3>Not adjusting for seasonality</h3>
+    <p>Salads in winter sell less than salads in summer. Stews in summer sell less than stews in winter. Par for "tomato" in January and July will be radically different. Either run seasonal par sheets or update the active sheet at season changes.</p>
+
+    <h3>Treating all ingredients equally</h3>
+    <p>The 20% of ingredients by spend that account for 80% of cost (Pareto applies in kitchens too) deserve weekly review. The 80% of ingredients that are 20% of cost can be reviewed monthly or quarterly. Spending the same attention on each is wasteful.</p>
+
+    <h3>Ignoring shelf life</h3>
+    <p>Par level math assumes you'll use the stock before it spoils. For fresh ingredients with 3-5 day shelf life, your par calculation must respect this. If math says par should be 8 kg of basil but the basil dies in 4 days and you use 1 kg/day, you'll bin 4 kg every cycle. The fix: more frequent smaller deliveries (renegotiate with supplier) or accept that par is constrained by shelf life rather than usage math.</p>
+
+    <h3>Not connecting par to stock-out events</h3>
+    <p>When you run out of an ingredient mid-service, that's data. It means par was too low for that ingredient. Log the event, identify which ingredient, re-check par. If three stock-outs happen in a month on the same ingredient, you have a systemic par error not bad luck.</p>
+
+    <h2>What this looks like in practice</h2>
+
+    <div class="tool-mention">
+      <span class="icon">PC</span>
+      <div>
+        <p class="label">In ProChefDesk</p>
+        <p>The Inventory tool stores par level + min level (the floor that triggers an automatic restock alert on the dashboard) per ingredient. Stock counts (manual or generated from a sale-and-prep theoretical) live alongside, and the "Generate Order" button produces a supplier-grouped restock list of items below par. Dashboard shows real-time critical-stock alerts when ingredients hit min level. Stock count history lets you derive usage rate from actual count-to-count differences — feeding back into smarter par adjustments. <a href="/app/">Open the app</a> and Inventory is under the Operations section.</p>
+      </div>
+    </div>
+
+    <h2>The point</h2>
+
+    <p>Inventory is one of the largest cash positions in any restaurant. Par levels are the lever that determines how much of that cash you're carrying at any moment — too much and you're funding spoilage and tied capital; too little and you're funding stock-out service failures.</p>
+
+    <p>Most kitchens accept this as a fact of operations rather than as a problem to manage. The chains and hotel groups don't — they have a formula, they review it, they adjust. The independent sector that adopts the same discipline finds that "the chains have lower food cost because of scale" was only half the explanation. The other half is structured par-level management.</p>
+
+    <p>Three months of weekly review and your par sheet will be tighter, your cash freer, and your service interruptions rarer. None of that requires new equipment, new staff, or new menu. Just structure.</p>
+
+    <div class="end-mark"></div>
+  </article>
+
+  <section class="related-posts" aria-label="Related articles">
+    <h3>Related reading</h3>
+    <div class="related-grid">
+      <a href="/blog/ingredient-yield-percentage.html" class="related-card">
+        <div class="related-tag">Ingredient Math</div>
+        <div class="related-title">Ingredient Yield Percentage: Hidden Cost in Raw Weight</div>
+        <div class="related-desc">Yield % affects how much AP weight you actually need to order to meet EP demand. Par calculations should account for yield.</div>
+      </a>
+      <a href="/blog/food-cost-percentage-restaurant.html" class="related-card">
+        <div class="related-tag">Food Cost</div>
+        <div class="related-title">Restaurant Food Cost %: The Real Method</div>
+        <div class="related-desc">Excess par-level inventory is direct cost-of-goods drag. Tight par = better food cost % at constant menu.</div>
+      </a>
+    </div>
+  </section>
+
+  <footer class="blog-footer">
+    <div class="left">
+      <span class="foot-mark">PC</span>
+      <span>ProChefDesk · written from a working kitchen</span>
+    </div>
+    <div class="right">
+      <a href="/blog/">All posts</a>
+      <a href="/app/">Open app</a>
+      <a href="/privacy.html">Privacy</a>
+    </div>
+  </footer>
+
+</body>
+</html>

@@ -44,9 +44,71 @@
     <priority>0.8</priority>
   </url>
 
-  <!-- Blog posts (newest first). v2.8.94 — all 3 posts SEO-upgraded (JSON-LD
-       Article schema + authority outbound links + internal cross-linking).
-       Bumped <lastmod> to 2026-05-19 to signal Google for re-crawl. -->
+  <!-- Blog posts (newest first). v2.8.94 — 3 SEO-upgraded.
+       v2.8.95 — +2 (buffet-food-cost + iftar). v2.8.96 — +2 (cook-cool + yield).
+       v2.8.97 — +2 (prep-list + recipe-scaling). v2.8.98 — +2 (kitchen-cards + par-levels).
+       v2.8.99 — +2 (waste-tracking + allergen-menu, FİNAL: Faz B 5-round plan tamam).
+       Total 13 posts published. -->
+  <url>
+    <loc>https://prochefdesk.com/blog/allergen-safe-menu-design.html</loc>
+    <lastmod>2026-05-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/food-waste-tracking-restaurant.html</loc>
+    <lastmod>2026-05-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/restaurant-inventory-par-levels.html</loc>
+    <lastmod>2026-05-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/kitchen-cards-recipe-printing.html</loc>
+    <lastmod>2026-05-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/recipe-scaling-for-events.html</loc>
+    <lastmod>2026-05-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/kitchen-prep-list-mise-en-place.html</loc>
+    <lastmod>2026-05-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/ingredient-yield-percentage.html</loc>
+    <lastmod>2026-05-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/cook-and-cool-haccp-temperature.html</loc>
+    <lastmod>2026-05-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/iftar-buffet-planning.html</loc>
+    <lastmod>2026-05-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/buffet-food-cost-calculator.html</loc>
+    <lastmod>2026-05-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
   <url>
     <loc>https://prochefdesk.com/blog/menu-engineering-profitable-dishes.html</loc>
     <lastmod>2026-05-19</lastmod>
