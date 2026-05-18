@@ -3315,5 +3315,8 @@
     render: renderList,
     openPreview: openPreview,
     openEditor: openEditor,
+    // v2.8.84 — Account "Save profile" handler'ı tüm public recipe'leri
+    // re-enrich edebilmek için expose edildi.
+    enrichPublicIngredientNames: enrichPublicIngredientNames,
   };
 })();

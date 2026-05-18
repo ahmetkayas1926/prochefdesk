@@ -416,7 +416,7 @@
   font-size: 15px;
 }
 
-/* ---------- TUTORIAL SPOTLIGHT ---------- */
+/* ---------- TUTORIAL SPOTLIGHT (v2.8.83 modernize) ---------- */
 .tutorial {
   position: fixed; inset: 0;
   z-index: var(--z-tutorial);
@@ -424,30 +424,122 @@
 }
 .tutorial-backdrop {
   position: absolute; inset: 0;
-  background: rgba(0,0,0,0.6);
+  background: radial-gradient(ellipse at center, rgba(15,23,42,0.55) 0%, rgba(15,23,42,0.78) 100%);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   transition: opacity var(--dur-med) var(--ease);
 }
 .tutorial-bubble {
   position: absolute;
-  max-width: 340px;
+  max-width: 440px;
   width: calc(100vw - 32px);
   background: var(--surface);
   border-radius: var(--r-xl);
-  box-shadow: var(--shadow-xl);
-  padding: 20px;
+  box-shadow: 0 25px 50px -12px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05);
+  padding: 28px 24px 22px;
   transform: scale(0.95);
   opacity: 0;
   transition: transform var(--dur-med) var(--ease), opacity var(--dur-med) var(--ease);
 }
 .tutorial.show .tutorial-bubble { transform: scale(1); opacity: 1; }
-.tutorial-step { font-size: 12px; font-weight: 600; color: var(--brand-600); letter-spacing: 0.04em; text-transform: uppercase; }
-.tutorial-title { font-size: 18px; font-weight: 700; margin: 6px 0 8px; letter-spacing: -0.01em; }
-.tutorial-text { font-size: 14px; color: var(--text-2); line-height: 1.6; }
+
+/* Hero illustration — gradient circle + emoji */
+.tutorial-illustration {
+  display: flex; justify-content: center;
+  margin-bottom: 18px;
+}
+.tutorial-illust-circle {
+  width: 88px; height: 88px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 10px 25px -8px rgba(0,0,0,0.35);
+  animation: tutorial-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.tutorial-illust-emoji {
+  font-size: 44px;
+  line-height: 1;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
+}
+@keyframes tutorial-pop {
+  0% { transform: scale(0.5) rotate(-20deg); opacity: 0; }
+  60% { transform: scale(1.08) rotate(8deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+
+.tutorial-step {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--brand-600);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: center;
+}
+.tutorial-title {
+  font-size: 22px;
+  font-weight: 800;
+  margin: 8px 0 6px;
+  letter-spacing: -0.02em;
+  text-align: center;
+  line-height: 1.2;
+}
+.tutorial-tagline {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--brand-700);
+  text-align: center;
+  margin-bottom: 12px;
+  letter-spacing: -0.01em;
+}
+.tutorial-text {
+  font-size: 14px;
+  color: var(--text-2);
+  line-height: 1.6;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+/* Feature chips — 3 keywords below body, quick scan */
+.tutorial-chips {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  justify-content: center;
+  margin-bottom: 18px;
+}
+.tutorial-chip {
+  display: inline-flex;
+  padding: 4px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-2);
+  letter-spacing: 0.01em;
+}
+
+/* Progress bar (replaces dots) — fluid % indicator */
+.tutorial-progress {
+  height: 4px;
+  background: var(--surface-3);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.tutorial-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--brand-500), var(--brand-600));
+  border-radius: 2px;
+  transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 .tutorial-actions {
   display: flex; align-items: center; justify-content: space-between;
   gap: 8px;
-  margin-top: 18px;
 }
+.tutorial-actions-right {
+  display: flex; align-items: center; gap: 8px;
+}
+
+/* Legacy dots (kept for per-tool tooltip compat — no-op for main tour) */
 .tutorial-dots { display: flex; gap: 4px; }
 .tutorial-dot {
   width: 6px; height: 6px;
@@ -455,6 +547,18 @@
   background: var(--surface-3);
 }
 .tutorial-dot.active { background: var(--brand-500); width: 18px; border-radius: 3px; }
+
+/* Mobile bottom-sheet feel — bubble grows, padding tightens */
+@media (max-width: 480px) {
+  .tutorial-bubble {
+    padding: 24px 18px 18px;
+    max-width: none;
+    width: calc(100vw - 24px);
+  }
+  .tutorial-illust-circle { width: 76px; height: 76px; }
+  .tutorial-illust-emoji { font-size: 38px; }
+  .tutorial-title { font-size: 19px; }
+}
 
 /* ---------- IMAGE CROPPER ---------- */
 .cropper {

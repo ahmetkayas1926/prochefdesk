@@ -1,10 +1,18 @@
 /* ================================================================
-   ProChefDesk — tutorial.js
+   ProChefDesk — tutorial.js (v2.8.83 modernize)
    Two modes:
    1) Main onboarding tour (4 steps) shown once on first app open
    2) Per-tool first-visit tooltips (Skip + Don't show again)
 
    Tool tooltips are stored in store.onboarding.toolsSeen[name]
+
+   v2.8.83 modernization:
+   - Hero illustration per step (gradient circle + emoji, brand-themed)
+   - Feature chips (3 chips per step — quick scan)
+   - Modern progress bar (replaces simple dots)
+   - Back/Next/Skip layout with smoother transitions
+   - Larger card (440px) on desktop, full-bleed mobile sheet
+   - Each step has title + tagline + body (3-tier content hierarchy)
    ================================================================ */
 
 (function () {
@@ -19,7 +27,6 @@
     bubble.innerHTML = html;
     overlay.appendChild(bubble);
     document.body.appendChild(overlay);
-    // Position bubble center of screen initially
     bubble.style.left = '50%';
     bubble.style.top = '50%';
     bubble.style.transform = 'translate(-50%, -50%) scale(0.95)';
@@ -41,31 +48,86 @@
   }
 
   // ============ MAIN ONBOARDING TOUR ============
+  // Step model: each step has illustration + brand gradient + 3 feature chips +
+  // tagline + body. i18n keys are looked up at render time so language switching
+  // mid-tour works correctly.
   const mainSteps = [
-    { title: 'tour_welcome_title', text: 'tour_welcome_text' },
-    { title: 'tour_nav_title', text: 'tour_nav_text' },
-    { title: 'tour_recipes_title', text: 'tour_recipes_text' },
-    { title: 'tour_demo_title', text: 'tour_demo_text' },
+    {
+      emoji: '👨‍🍳',
+      gradient: 'linear-gradient(135deg, #22c55e, #15803d)',
+      titleKey: 'tour_welcome_title',
+      taglineKey: 'tour_welcome_tagline',
+      bodyKey: 'tour_welcome_body',
+      chipKeys: ['tour_chip_live_cost', 'tour_chip_auto_sync', 'tour_chip_offline'],
+    },
+    {
+      emoji: '📊',
+      gradient: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+      titleKey: 'tour_cost_title',
+      taglineKey: 'tour_cost_tagline',
+      bodyKey: 'tour_cost_body',
+      chipKeys: ['tour_chip_recipes', 'tour_chip_kitchen_cards', 'tour_chip_portion'],
+    },
+    {
+      emoji: '🌡️',
+      gradient: 'linear-gradient(135deg, #f59e0b, #d97706)',
+      titleKey: 'tour_haccp_title',
+      taglineKey: 'tour_haccp_tagline',
+      bodyKey: 'tour_haccp_body',
+      chipKeys: ['tour_chip_temp_logs', 'tour_chip_cook_cool', 'tour_chip_receiving'],
+    },
+    {
+      emoji: '🚀',
+      gradient: 'linear-gradient(135deg, #a855f7, #7e22ce)',
+      titleKey: 'tour_start_title',
+      taglineKey: 'tour_start_tagline',
+      bodyKey: 'tour_start_body',
+      chipKeys: ['tour_chip_try_free', 'tour_chip_no_card', 'tour_chip_sign_later'],
+    },
   ];
   let stepIndex = 0;
 
   function renderStep() {
     const t = PCD.i18n.t;
     const s = mainSteps[stepIndex];
-    const dots = mainSteps.map(function (_, i) {
-      return '<div class="tutorial-dot' + (i === stepIndex ? ' active' : '') + '"></div>';
+    const totalSteps = mainSteps.length;
+    const isFirst = stepIndex === 0;
+    const isLast = stepIndex === totalSteps - 1;
+    const progressPct = Math.round(((stepIndex + 1) / totalSteps) * 100);
+
+    const chipsHtml = s.chipKeys.map(function (k) {
+      return '<span class="tutorial-chip">' + PCD.escapeHtml(t(k)) + '</span>';
     }).join('');
-    const finishBtn = (stepIndex === mainSteps.length - 1)
-      ? '<button class="btn btn-primary" data-tour-next>' + t('tour_finish') + '</button>'
-      : '<button class="btn btn-primary" data-tour-next>' + t('next') + '</button>';
+
+    const stepLabel = (t('tour_step_label') || 'STEP') + ' ' + (stepIndex + 1) + ' / ' + totalSteps;
+
+    const nextLabel = isLast ? (t('tour_finish') || "Let's cook") : (t('next') || 'Next');
+    const nextIcon = isLast ? '🚀' : '→';
+
     const html = `
-      <div class="tutorial-step">STEP ${stepIndex + 1} / ${mainSteps.length}</div>
-      <div class="tutorial-title">${PCD.escapeHtml(t(s.title))}</div>
-      <div class="tutorial-text">${PCD.escapeHtml(t(s.text))}</div>
+      <div class="tutorial-illustration" aria-hidden="true">
+        <div class="tutorial-illust-circle" style="background:${s.gradient};">
+          <span class="tutorial-illust-emoji">${s.emoji}</span>
+        </div>
+      </div>
+
+      <div class="tutorial-step">${PCD.escapeHtml(stepLabel)}</div>
+      <div class="tutorial-title">${PCD.escapeHtml(t(s.titleKey))}</div>
+      <div class="tutorial-tagline">${PCD.escapeHtml(t(s.taglineKey))}</div>
+      <div class="tutorial-text">${PCD.escapeHtml(t(s.bodyKey))}</div>
+
+      <div class="tutorial-chips">${chipsHtml}</div>
+
+      <div class="tutorial-progress">
+        <div class="tutorial-progress-bar" style="width:${progressPct}%;"></div>
+      </div>
+
       <div class="tutorial-actions">
-        <button class="btn btn-ghost btn-sm" data-tour-skip>${t('skip')}</button>
-        <div class="tutorial-dots">${dots}</div>
-        ${finishBtn}
+        <button class="btn btn-ghost btn-sm" data-tour-skip>${PCD.escapeHtml(t('skip'))}</button>
+        <div class="tutorial-actions-right">
+          ${!isFirst ? `<button class="btn btn-secondary btn-sm" data-tour-back>${PCD.escapeHtml(t('tour_back') || 'Back')}</button>` : ''}
+          <button class="btn btn-primary" data-tour-next>${PCD.escapeHtml(nextLabel)} <span style="margin-left:4px;">${nextIcon}</span></button>
+        </div>
       </div>
     `;
     if (currentOverlay) {
@@ -81,8 +143,15 @@
     if (!currentOverlay) return;
     const b = currentOverlay.bubble;
     const skip = b.querySelector('[data-tour-skip]');
+    const back = b.querySelector('[data-tour-back]');
     const next = b.querySelector('[data-tour-next]');
     if (skip) skip.addEventListener('click', finishTour);
+    if (back) back.addEventListener('click', function () {
+      if (stepIndex > 0) {
+        stepIndex--;
+        renderStep();
+      }
+    });
     if (next) next.addEventListener('click', function () {
       stepIndex++;
       if (stepIndex >= mainSteps.length) finishTour();
@@ -93,12 +162,9 @@
   function finishTour() {
     // v2.6.93 — Tour tamamlama bayrağı localStorage'a taşındı. Önceden
     // state.onboarding.mainTourDone idi; ama state.onboarding cloud-pertable
-    // sync zincirinde güvenilir yazılmıyor (sadece setActiveWorkspaceId
-    // chain'inden dolaylı gidiyor) → her F5'te boot pull onboarding'i boş
-    // çekiyor → tour yeniden açılıyordu. localStorage cloud-bağımsız ve
-    // tek seferlik; tarayıcı temizlenmediği sürece F5/sign-in/out'tan
-    // etkilenmez. Geriye dönük uyumluluk için state flag'i de yine set
-    // ediliyor (Account → Restart welcome tour gibi yerler bunu okuyabilir).
+    // sync zincirinde güvenilir yazılmıyor → her F5'te boot pull onboarding'i
+    // boş çekiyor → tour yeniden açılıyordu. localStorage cloud-bağımsız ve
+    // tek seferlik; tarayıcı temizlenmediği sürece F5/sign-in/out'tan etkilenmez.
     try { localStorage.setItem('pcd_tour_done', '1'); } catch (e) {}
     PCD.store.update('onboarding', { mainTourDone: true });
     closeAll();
@@ -119,25 +185,24 @@
     const textKey = 'tip_' + toolKey + '_text';
     const title = t(titleKey);
     const text = t(textKey);
-    // If no translation, skip
     if (title === titleKey) { PCD.store.markToolSeen(toolKey); return; }
 
     const html = `
-      <div class="tutorial-step">💡 ${t('new').toUpperCase()}</div>
+      <div class="tutorial-step">💡 ${PCD.escapeHtml(t('new').toUpperCase())}</div>
       <div class="tutorial-title">${PCD.escapeHtml(title)}</div>
       <div class="tutorial-text">${PCD.escapeHtml(text)}</div>
       <div class="tutorial-actions" style="margin-top:16px;">
         <label class="checkbox" style="font-size:12px;">
           <input type="checkbox" data-dontshow>
-          <span>${t('dont_show_again')}</span>
+          <span>${PCD.escapeHtml(t('dont_show_again'))}</span>
         </label>
-        <button class="btn btn-primary btn-sm" data-tip-ok>${t('done')}</button>
+        <button class="btn btn-primary btn-sm" data-tip-ok>${PCD.escapeHtml(t('done'))}</button>
       </div>
     `;
     currentOverlay = createOverlay(html);
     const dontshow = currentOverlay.bubble.querySelector('[data-dontshow]');
     const okBtn = currentOverlay.bubble.querySelector('[data-tip-ok]');
-    dontshow.checked = true; // default to "don't show" (user hit OK = dismiss permanently)
+    dontshow.checked = true; // default to "don't show" (user hits OK = dismiss permanently)
     okBtn.addEventListener('click', function () {
       if (dontshow.checked) PCD.store.markToolSeen(toolKey);
       closeAll();

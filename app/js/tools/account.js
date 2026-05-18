@@ -351,13 +351,62 @@
     const saveChefBtn = PCD.$('#saveChefProfileBtn', view);
     if (saveChefBtn) saveChefBtn.addEventListener('click', function () {
       const u = PCD.store.get('user') || {};
+      const oldName = u.name || '';
       u.name = (PCD.$('#chefName', view).value || '').trim();
       u.role = PCD.$('#chefRole', view).value;
       u.country = (PCD.$('#chefCountry', view).value || '').trim();
       u.workplace = (PCD.$('#chefWorkplace', view).value || '').trim();
       u.bio = (PCD.$('#chefBio', view).value || '').trim();
       PCD.store.set('user', u);
-      PCD.toast.success(PCD.i18n.t('toast_profile_saved'));
+
+      // v2.8.84 — Name değiştiğinde tüm public recipe'leri re-enrich et.
+      // Operatör senaryosu: Account → Profile'da "Ahmet KAYA" yazılı ama eski
+      // public recipe'lerde authorName boş (yalnız toggle on/editor save'de
+      // enrich oluyordu) → Discover'da "Anonim Şef" görünüyor. Şimdi tek tıkla
+      // tüm public recipe'lerde authorName güncellenir.
+      //
+      // recipes.js lazy yüklü (v2.8.78) — Account.js eager. Save profile
+      // butonu tıklanınca recipes.js'i lazy load et, sonra enrich. Buffet
+      // "_openNewIngredientFlow" pattern'i (v2.8.79) ile aynı.
+      function _doEnrich() {
+        if (!u.name || u.name === oldName) {
+          PCD.toast.success(PCD.i18n.t('toast_profile_saved'));
+          return;
+        }
+        if (!PCD.tools.recipes || !PCD.tools.recipes.enrichPublicIngredientNames) {
+          PCD.toast.success(PCD.i18n.t('toast_profile_saved'));
+          return;
+        }
+        let enrichedCount = 0;
+        try {
+          const allRecipes = PCD.store.listRecipes() || [];
+          allRecipes.forEach(function (r) {
+            if (r && r.isPublic === true) {
+              PCD.tools.recipes.enrichPublicIngredientNames(r);
+              PCD.store.upsertRecipe(r);
+              enrichedCount++;
+            }
+          });
+        } catch (e) { PCD.warn && PCD.warn('Profile save: re-enrich public recipes failed', e); }
+        if (enrichedCount > 0) {
+          PCD.toast.success(PCD.i18n.t('toast_profile_saved_with_enrich', { n: enrichedCount }));
+        } else {
+          PCD.toast.success(PCD.i18n.t('toast_profile_saved'));
+        }
+      }
+      if (!u.name || u.name === oldName) {
+        PCD.toast.success(PCD.i18n.t('toast_profile_saved'));
+      } else if (PCD.tools.recipes && PCD.tools.recipes.enrichPublicIngredientNames) {
+        _doEnrich();
+      } else {
+        // Lazy load recipes.js, then enrich
+        const s = document.createElement('script');
+        const v = (window.PCD_CONFIG && window.PCD_CONFIG.APP_VERSION) || '';
+        s.src = 'js/tools/recipes.js' + (v ? '?v=' + v : '');
+        s.onload = function () { _doEnrich(); };
+        s.onerror = function () { PCD.toast.success(PCD.i18n.t('toast_profile_saved')); };
+        document.head.appendChild(s);
+      }
     });
     const previewChefBtn = PCD.$('#previewChefProfileBtn', view);
     if (previewChefBtn) previewChefBtn.addEventListener('click', function () {
