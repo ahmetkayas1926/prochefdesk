@@ -389,7 +389,10 @@
       const _active = document.activeElement;
       let _restoreFocus = null;
       if (_active && body.contains(_active)) {
-        const _attrs = ['data-it-amt', 'data-it-pickup', 'data-it-unit', 'data-st-name', 'data-st-type', 'data-it-custom-name'];
+        // v2.8.82 — `data-buf-field` eklendi: bufCovers/bufPrice/bufRefill üst form
+        // input'larında focus restoration. Eskiden bu üç input listede yoktu →
+        // operatör "20" yazmaya başlayınca render rebuild focus'u atıyordu.
+        const _attrs = ['data-it-amt', 'data-it-pickup', 'data-it-unit', 'data-st-name', 'data-st-type', 'data-it-custom-name', 'data-buf-field'];
         for (let k = 0; k < _attrs.length; k++) {
           const v = _active.getAttribute(_attrs[k]);
           if (v != null) {
@@ -463,17 +466,17 @@
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
           <div class="field">
             <label class="field-label">${t('buffet_covers_label') || 'Covers (guests)'}</label>
-            <input type="number" class="input" id="bufCovers" value="${data.coverCount}" min="1" step="1">
+            <input type="number" class="input" id="bufCovers" data-buf-field="coverCount" value="${data.coverCount}" min="1" step="1">
             <div class="text-muted text-sm" style="font-size:11px;margin-top:2px;">${PCD.escapeHtml(t('buffet_covers_help') || 'Expected paying guests. Drives all prep calculations.')}</div>
           </div>
           <div class="field">
             <label class="field-label">${t('buffet_price_label') || 'Ticket price'}</label>
-            <input type="number" class="input" id="bufPrice" value="${data.ticketPrice}" min="0" step="0.01">
+            <input type="number" class="input" id="bufPrice" data-buf-field="ticketPrice" value="${data.ticketPrice}" min="0" step="0.01">
             <div class="text-muted text-sm" style="font-size:11px;margin-top:2px;">${PCD.escapeHtml(t('buffet_price_help') || 'Per-guest flat price. Used for revenue + food cost % targeting.')}</div>
           </div>
           <div class="field">
             <label class="field-label" title="${PCD.escapeHtml(t('buffet_refill_hint') || 'How much to over-prep for refills. Industry default by type. Override for tight events.')}">${t('buffet_refill_label') || 'Refill ×'}</label>
-            <input type="number" class="input" id="bufRefill" value="${refillEffective}" min="1" step="0.05" placeholder="${refillForType}">
+            <input type="number" class="input" id="bufRefill" data-buf-field="refillMultiplier" value="${refillEffective}" min="1" step="0.05" placeholder="${refillForType}">
             <div class="text-muted text-sm" style="font-size:11px;margin-top:2px;">${(t('buffet_refill_default') || 'Industry default for')} ${PCD.escapeHtml(t((BUFFET_TYPES.find(function(x){return x.id===data.type;})||{}).labelKey) || data.type)}: ${refillForType}× · ${PCD.escapeHtml(t('buffet_refill_help_short') || 'Higher = safer (less stockout), more waste')}</div>
           </div>
         </div>
@@ -651,27 +654,31 @@
         renderEditor();
       });
       PCD.$('#bufDate', body).addEventListener('change', function () { data.serviceDate = this.value; });
-      PCD.$('#bufCovers', body).addEventListener('input', function () {
+      // v2.8.82 — Debounce 700ms (item editor pattern v2.8.79 ile birebir).
+      // Operatör "23", "35", "5567" gibi çok-haneli sayı yazmaya çalışıyordu;
+      // ilk basışta render rebuild + focus loss vardı. Debounce + focus restore
+      // (renderEditor başında data-buf-field listede) artık doğal akış sağlar.
+      PCD.$('#bufCovers', body).addEventListener('input', PCD.debounce(function () {
         const v = parseInt(this.value, 10);
         if (!isNaN(v) && v >= 1) {
           data.coverCount = v;
           renderEditor();
         }
-      });
-      PCD.$('#bufPrice', body).addEventListener('input', function () {
+      }, 700));
+      PCD.$('#bufPrice', body).addEventListener('input', PCD.debounce(function () {
         const v = parseFloat(this.value);
         if (!isNaN(v) && v >= 0) {
           data.ticketPrice = v;
           renderEditor();
         }
-      });
-      PCD.$('#bufRefill', body).addEventListener('input', function () {
+      }, 700));
+      PCD.$('#bufRefill', body).addEventListener('input', PCD.debounce(function () {
         const v = parseFloat(this.value);
         if (!isNaN(v) && v >= 1) {
           data.refillMultiplier = v;
           renderEditor();
         }
-      });
+      }, 700));
       PCD.$('#bufNotes', body).addEventListener('input', function () { data.notes = this.value; });
 
       // Add station

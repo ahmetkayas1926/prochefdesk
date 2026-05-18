@@ -187,9 +187,13 @@
         requestAnimationFrame(function () { root.classList.add('open'); });
         modal._isOpen = true;
 
-        // Focus first input if any (desktop only — mobile keyboard pop-up is annoying)
+        // Focus first form field in BODY (desktop only — mobile keyboard pop-up is annoying)
+        // v2.8.81 root cause fix: previously the selector included `button` and
+        // searched the whole panel — header's X close button matched first in
+        // DOM order, so focus landed on X instead of the first input. Now we
+        // restrict to body and form fields only.
         setTimeout(function () {
-          const inp = panel.querySelector('input:not([type=hidden]), textarea, select, button');
+          const inp = bodyEl.querySelector('input:not([type=hidden]):not([disabled]), textarea:not([disabled]), select:not([disabled])');
           if (inp && PCD.isTouch && !PCD.isTouch()) {
             inp.focus();
             // Select text in editable inputs so users can overwrite immediately

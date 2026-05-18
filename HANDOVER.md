@@ -8,7 +8,7 @@
 
 **Ürün:** ProChefDesk — profesyonel chef'ler için web tabanlı mutfak yönetim sistemi.
 **Operatör:** Ahmet Kaya, Perth Western Australia, profesyonel şef. Solo non-commercial proje.
-**Mevcut sürüm:** **v2.8.79** (production canlı, push edildi; Cloudflare Pages otomatik deploy etti).
+**Mevcut sürüm:** **v2.8.82** (push'a hazır local; production v2.8.79).
 **Domain:** prochefdesk.com (Cloudflare Pages, SSL Full, GitHub push'ta auto build + deploy).
 
 **URL yapısı:**
@@ -157,6 +157,11 @@ Tek tek sürüm için → CHANGELOG.md.
 | 30 | Buffet inline guide (5-adımlık dismissible) + per-field help texts (Name/Covers/Price/Stations + Refill + station onboarding empty state) | v2.8.77 | ✅ |
 | 31 | App boot perf **L2** + a11y: viewport zoom unblock (WCAG fix +5 puan), xlsx-js-style lazy (~500KB), i18n lazy 5 dil (~150KB sadece en eager), 16 tool lazy router (~450KB; dashboard+account+inventory eager). Toplam boot bundle ~1.1MB azalış. Beklenen PageSpeed 72→85 | v2.8.78 | ✅ |
 | 32 | Buffet overhaul (4 ekleme yöntemi: Recipe/Ingredient/New Ingredient/Custom Label + numeric input debounce 400→700ms + focus restoration + Unit dropdown + "Tüketim %" rename + Excel export) + Excel cost report bug fix (toast.info API geri çevirme) + HACCP "Add unit" → "Add fridge/freezer" + R2 backup `haccp_receiving`+`haccp_holding` BACKUP_TABLES ekleme | v2.8.79 | ✅ |
+| 33 | Recipe editor "+ Add new" modal → `ingredients.openEditor()` tam detay (category + supplier + yield % + diet flags) — buffet pattern'i ile birleştirme. `promptNewIngredientDetails` silindi (~70 satır), buffet `_openNewIngredientFlow` pattern'i kopyalandı + lazy load check. `ingredients.openEditor(iid, callback, opts)` 3. arg `opts.initialName` opsiyonel (geri uyumlu). | v2.8.80 | ✅ |
+| 34 | **Modal focus root cause fix** (evrensel — tüm modal'lar etkilenir): `modal.js:192` selector body'ye restrict + `button` çıkarıldı + disabled atlama. Eskiden header'daki "X" close butonuna focus oluyordu. **Discover'da paylaşan şefin adı**: `enrichPublicIngredientNames` recipe.authorName inline gömme (gizlilik için email→authorName mapping engellendi). Card + detail modal author display. 2 yeni i18n key. | v2.8.81 | ✅ |
+| 35 | **Buffet üst form input focus bug fix**: Covers/Ticket price/Refill × input'larına `data-buf-field` attribute + focus restoration listesine ekle + 3 handler `PCD.debounce(...,700)` ile sar. v2.8.79 item editor pattern'i (sadece per-guest amount/pickup için yapılmıştı) top form'a da uygulandı. Operatör çok-haneli sayı yazabilir artık. | v2.8.82 | ✅ |
+| Ops | GSC verify + sitemap submit + 7 sayfa Google'a keşfedildi (landing + 2 legal + blog index + 3 post) | 2026-05-18 | ✅ |
+| Ops | Edge function deploy: `delete-account` (v2.8.50 fix CANLI) + `backup-to-r2` (v2.8.79 BACKUP_TABLES haccp_receiving/holding CANLI) | 2026-05-18 | ✅ |
 | Ops | Marketing + SEO + Blog altyapısı (PARÇA 1+2+3): `/blog/` 3 yazı + sitemap.xml + robots.txt + meta tag sweep + privacy/terms OG cards. App'ten bağımsız stil. GSC verify operatöre kaldı | 2026-05-18 | ✅ |
 | Ops | Backup function v3 + restore prosedürü prod test | Edge deploy + docs | ✅ |
 | Ops | DISASTER_RECOVERY.md güncel | docs | ✅ |
@@ -182,16 +187,16 @@ Tek tek sürüm için → CHANGELOG.md.
 9. ~~Auto diet rebuild — küratörlü ingredient DB~~ → **✅ v2.8.45 (ingredient tri-state diet flags + computeDietCompat helper + recipe diet chips)**
 10. ~~Realtime CHANNEL_ERROR~~ → **✅ v2.8.43 (explicit JWT setAuth + TOKEN_REFRESHED dinleyici)**
 11. **Categories functional** ⏳ — şu an kozmetik. 50+ menu item olursa anlamlı.
-12. **Marketing / SEO / blog kurulumu** — ✅ altyapı tamam (2026-05-18), GSC verify ⏳ operatör ~15 dk eve gelince. Detay §11.9.2.
+12. ~~Marketing / SEO / blog kurulumu~~ — ✅ **TAM TAMAM**. Altyapı 2026-05-18, GSC verify + sitemap submit + 7 sayfa Google'a keşfedildi.
 
-### Yeni bekleyen işler (audit + v2.8.79 sonrası)
+### Yeni bekleyen işler (v2.8.80 sonrası)
 
-13. **CHANGELOG.md güncel hazırla zincirleme commit yöntemi** — manuel hatırlamayla yapılıyor (v2.8.34-v2.8.79). İleride otomatize edilebilir (CI hook: her commit'te entry kontrolü).
-14. **`supabase-functions/` duplicate silme** — operatör Supabase Dashboard'dan deploy doğrulaması yapana kadar bekliyor.
+13. **CHANGELOG.md güncel hazırla zincirleme commit yöntemi** — manuel hatırlamayla yapılıyor (v2.8.34-v2.8.80). İleride otomatize edilebilir (CI hook: her commit'te entry kontrolü).
+14. **`supabase-functions/` duplicate silme** — operatör 2026-05-18'de deploy doğrulaması yaptı (`supabase/functions/`'tan kopyalanıyor); klasör artık güvenle silinebilir, ayrı round'da yapılır.
 15. **Discover view count rate limit** — `increment_recipe_view` RPC anonymous'a açık, spam riski (MVP'de kabul). Viral olursa Edge Function ile IP+recipe başına 1 saat 1 view.
 16. **R2 backup foto bytes yedekleme** — şu an sadece manifest; Supabase Storage kaybı = foto kaybı. Solo workflow için kabul edilebilir; Pro tier'da Storage PITR var.
-17. **Edge function deploy: `delete-account`** ⏳ — v2.8.50'de değişti. Operatör `supabase functions deploy delete-account`.
-18. **Edge function deploy: `backup-to-r2`** ⚠ — v2.8.79'da `haccp_receiving` + `haccp_holding` BACKUP_TABLES'a eklendi. Operatör `supabase functions deploy backup-to-r2` YAPMALI. Yapılmazsa R2 nightly archive iki tabloyu yedeklemez (cloud sync zaten çalışıyor; sadece R2 archive eksik = disaster recovery boşluk).
+17. ~~Edge function deploy: `delete-account`~~ — ✅ operatör deploy etti (2026-05-18). v2.8.50 fix CANLI.
+18. ~~Edge function deploy: `backup-to-r2`~~ — ✅ operatör deploy etti (2026-05-18). BACKUP_TABLES'da `haccp_receiving` + `haccp_holding` doğrulandı. İlk doğrulama: yarın sabah UTC 03:00 (Perth 11:00) cron run sonrası Cloudflare R2 bucket'ında iki yeni jsonl dosyası gör.
 19. **Buffet + Mise cloud sync** ⏳ — v2.8.73 (`buffets`) + v2.8.74 (`misePlans`) IDB-only. Supabase tablo + RLS + per-table sync wire gerekiyor (pattern: v2.8.44 haccp_receiving/holding migration). **Onay zorunlu** (yeni tablo + RLS + sync mantığı).
 20. **Discover'a Tag + Allergen filter** ⏳ — v2.8.75 tag + v2.8.71 allergen guardrail Discover'a inmedi. Public recipe save edilirken `enrichPublicIngredientNames` pattern'i (v2.8.66) ile tag + dietFlags inline gömme; Discover frontend filter chip'leri tek tıkla.
 21. **App boot perf L3** — cloud sync ilk paint sonrasına ertele. **Önerilmedi** (CLAUDE.md "cross-device sync değişikliği" yüksek risk). L1 (v2.8.76) + L2 (v2.8.78) yeterli; beklenen PageSpeed ~85, LCP 3.0-3.5 sn.
@@ -257,7 +262,7 @@ Bu işleri spontan öneri olarak ortaya çıkarma:
 |---|---|
 | Repo path (operatör Windows) | `C:\Users\ahmet\Desktop\prochefdesk` |
 | GitHub repo | `ahmetkayas1926/prochefdesk` |
-| Production sürümü | **v2.8.79** (production canlı) |
+| Production sürümü | **v2.8.82** (push'a hazır local; production v2.8.79) |
 | Supabase project ref | `muuwhrcogikpqylsfvgg` (Tokyo, Postgres 17, Free tier) |
 | Cloudflare R2 bucket | `prochefdesk-backups` |
 | CLEANUP_SECRET | `ec79a445-7e92-499b-9322-5c2c949788d4d2886e66-d556-4498-ba9e-17fda6c11ac1` |

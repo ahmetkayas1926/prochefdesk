@@ -8,7 +8,7 @@ ProChefDesk — profesyonel şef'ler için web tabanlı mutfak yönetim sistemi.
 
 Stack: Vanilla JavaScript (no bundling, no service worker), IndexedDB ana storage, Supabase (Postgres 17 + Auth + Storage + Realtime + Edge Functions), Cloudflare Pages (auto-deploy on GitHub push), Cloudflare R2 (backups).
 
-**Mevcut sürüm: v2.8.79** (production canlı, push edildi). Detay: `CHANGELOG.md`.
+**Mevcut sürüm: v2.8.82** (push'a hazır local; production v2.8.79 — push edilene kadar). Detay: `CHANGELOG.md`.
 
 ## Çalışma akışı
 
@@ -26,15 +26,15 @@ Operatör Türkçe konuşur, Türkçe cevap ver. Operatör "BUNU SEN SÖYLE" vey
 
 11. **Categories functional.** Şu an menu kategorileri kozmetik label. 50+ menu item olursa filter/grouping/Prep-specific kategoriler değerli olur.
 
-12. **Marketing / SEO / blog kurulumu** — 2026-05-18'de PARÇA 1+2+3 tamamlandı (blog altyapı + sitemap.xml + robots.txt + meta tag sweep + ilk 3 yazı). Kalan: operatör eve dönünce ~15 dk Google Search Console ekleme + TXT verify + sitemap submit. Detay HANDOVER §11.9.2.
+12. **Marketing / SEO / blog kurulumu** — ✅ tüm fazlar tamam. 2026-05-18 altyapı + GSC verify + sitemap submit + 7 sayfa Google'a keşfedildi. Backlog'da kalan iş yok.
 
 **Audit sonrası yeni bekleyenler:**
 
-13. **Edge function deploy: `delete-account`** — `supabase/functions/delete-account/` v2.8.50'de değişti. Operatör `supabase functions deploy delete-account` yapacak.
-14. **Edge function deploy: `backup-to-r2`** ⚠ — v2.8.79'da `haccp_receiving` + `haccp_holding` tabloları BACKUP_TABLES array'ine eklendi. Operatör `supabase functions deploy backup-to-r2` YAPMALI. Yapılmazsa R2 nightly archive iki tabloyu yedeklemez (disaster recovery boşluk; cloud sync zaten çalışıyor, sadece R2 backup eksik).
+13. ~~Edge function deploy: `delete-account`~~ — ✅ operatör Supabase Dashboard'dan deploy etti (2026-05-18).
+14. ~~Edge function deploy: `backup-to-r2`~~ — ✅ operatör deploy etti, BACKUP_TABLES'da `haccp_receiving` + `haccp_holding` doğrulandı (2026-05-18). İlk doğrulama: yarın sabah UTC 03:00 (Perth 11:00) cron run sonrası Cloudflare R2 bucket'ında iki yeni jsonl dosyası gör.
 15. **Discover view spam rate limit** — `increment_recipe_view` RPC anonymous'a açık (MVP kabul). Viral olursa Edge Function ile IP+recipe başına 1 saat 1 view.
 16. **R2 foto bytes yedekleme** — şu an sadece manifest. Pro tier'a geçişte Storage PITR ile çözülür.
-17. **`supabase-functions/` duplicate silme** — operatör Dashboard'dan deploy doğrulaması yapana kadar bekliyor (v2.8.50'de senkron tutuldu).
+17. **`supabase-functions/` duplicate silme** — operatör Dashboard'dan deploy doğrulaması yaptı; klasör artık güvenle silinebilir (deploy artık her zaman `supabase/functions/`'tan kopyalanıyor).
 18. **Buffet + Mise cloud sync** — v2.8.73 (`buffets`) + v2.8.74 (`misePlans`) IDB-only. Cloud sync için Supabase tablo + RLS + per-table sync wire gerekiyor. Pattern: v2.8.44 (haccp_receiving/holding) örnek alınabilir. **Onay zorunlu** (yeni tablo + RLS + sync mantığı).
 19. **Discover'a Tag + Allergen filter** — v2.8.75 tag + v2.8.71 allergen guardrail Discover'a inmedi (public snapshot enrichment gerekli). Public recipe save edilirken inline `tags` + `dietFlags` gömme — v2.8.66 `enrichPublicIngredientNames` pattern'i izlenir.
 20. **App boot perf L3** (cloud sync ilk paint sonrasına ertele) — yüksek risk, **önerilmedi**. L1 (v2.8.76 defer) + L2 (v2.8.78 lazy xlsx + i18n + tools) yeterli; beklenen PageSpeed Performance ~85, LCP 3.0-3.5 sn.
@@ -72,6 +72,8 @@ Geçmişte bug üreten yerler, bilmeden dokunma:
 **Per-table sync 3 yönlü.** Push (cloud-pertable.js, debounced, retry'lı), Pull (cloud.js, boot'ta tüm tablolar, drift detection v2.8.33'te eklendi), Realtime (cloud-realtime.js, WebSocket, v2.8.43'te JWT setAuth fix ile CHANNEL_ERROR temizlendi — TOKEN_REFRESHED dinleyici 1-saatlik token refresh sonrası re-setAuth yapıyor). Sync bug'ında ÖNCE hangi yön sor.
 
 **Print akışı tek nokta (v2.8.54-v2.8.55).** Tüm yazdırma `PCD.print(html, title)` (utils.js) üzerinden. Footer otomatik enjekte edilir (standart tıklanabilir "Made with ProChefDesk · prochefdesk.com"); custom footer YAZMA, `.pcd-print-footer{display:none}` override KOYMA. Window genişliği 1200px (Kitchen Cards landscape A4 1122px body sizing'e sığsın). Eski "first preview wrong, second correct" bug'ı bu boyutla kapandı. Detay HANDOVER §11.11.5.
+
+**Modal focus (v2.8.81).** `PCD.modal.open()` açılışta body'deki ilk form field'ına (input/textarea/select) focus eder — header'daki "X" close butonuna DEĞİL. `modal.js:192` selector `bodyEl` ile restrict + button çıkarılmış + disabled atlama. Yeni modal yazarken: özel focus istemiyorsan hiçbir şey yapma, evrensel davranış body'deki ilk input'u focus eder. Özel field'a focus istersen modal açtıktan sonra setTimeout 300ms ile manuel `.focus()` çağır (recipe editor quick-add v2.8.6 pattern'i — root cause fix sonrası gereksiz ama zararsız).
 
 **Recipe ingredient separator (v2.8.52).** `data.ingredients` array'inde yeni satır tipi: `{ separator: true, label?: '' }`. Hesap path'leri (cost/diet/allergen/variance) `if (ri.separator) return;` skip etmeli. Display path'leri (editor/preview/kitchen card/share/PDF/discover) render etmeli — `dashboard.resolveRow` separator için `{ found: false, isSeparator: true }` döndürüyor, cost report ve XLSX detail otomatik atlar. Yeni `recipe.ingredients` üzerinde forEach yazarken iki path'ten birini seç.
 

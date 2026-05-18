@@ -303,11 +303,12 @@
     closeBtn.addEventListener('click', function () { m.close(); });
   }
 
-  function openEditor(iid, callback) {
+  function openEditor(iid, callback, opts) {
     const t = PCD.i18n.t;
     const existing = iid ? PCD.store.getIngredient(iid) : null;
     const data = existing ? PCD.clone(existing) : {
-      name: '', unit: 'g', pricePerUnit: 0, supplier: '', category: 'cat_other'
+      name: (opts && opts.initialName) || '',
+      unit: 'g', pricePerUnit: 0, supplier: '', category: 'cat_other'
     };
 
     const body = PCD.el('div');

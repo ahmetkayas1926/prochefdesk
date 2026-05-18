@@ -906,6 +906,8 @@ window.PCD.i18n.register('en', {
   discover_like_failed: "Couldn't save your like — try again",
   discover_no_ingredients: "No ingredients listed.",
   discover_no_steps: "No steps written.",
+  discover_by_chef: "by {name}",
+  discover_anonymous_chef: "Anonymous Chef",
   hcc_title: "Cook & Cool Log",
   hcc_subtitle: "HACCP cooling: 60°C → 21°C in 2h → 5°C in 6h total",
   hcc_new_event: "New cook",

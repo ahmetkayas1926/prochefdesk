@@ -906,6 +906,8 @@ window.PCD.i18n.register('tr', {
   discover_like_failed: "Beğeni kaydedilemedi — tekrar dene",
   discover_no_ingredients: "Malzeme listesi yok.",
   discover_no_steps: "Hazırlanış yazılmamış.",
+  discover_by_chef: "Şef: {name}",
+  discover_anonymous_chef: "Anonim Şef",
   hcc_title: "Pişirme & Soğutma Kaydı",
   hcc_subtitle: "HACCP soğutma: 60°C → 21°C 2 saatte → 5°C 6 saat içinde",
   hcc_new_event: "Yeni pişirme",

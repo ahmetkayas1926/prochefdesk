@@ -49,6 +49,22 @@
       }
       return next;
     });
+    // v2.8.81 — Public recipe'lere author adını da gömeriz. Discover ziyaretçi
+    // public feed'i sadece recipes.data jsonb'sini görüyor; user_prefs RLS
+    // anonymous SELECT yok. Inline gömme tek yol.
+    //
+    // auth._setUser user.name'i full_name yoksa email ile dolduruyor; Discover'da
+    // email görünmesin diye email ise authorName GÖMÜLMEZ (kart "Anonymous Chef"
+    // gösterir). Sadece Google OAuth full_name veya kullanıcının manuel set ettiği
+    // ad gömülür.
+    try {
+      const u = (PCD.auth && PCD.auth.getUser) ? PCD.auth.getUser() : null;
+      if (u && u.name && typeof u.name === 'string' && u.name.trim() && u.name !== u.email) {
+        recipe.authorName = u.name.trim();
+      } else {
+        delete recipe.authorName;
+      }
+    } catch (e) { /* offline / not logged in */ }
     return recipe;
   }
 
@@ -2070,79 +2086,9 @@
   }
 
   // ============ EDITOR ============
-  // Prompt user for details of a brand-new ingredient created inline.
-  // Captures unit + price/unit + amount-used-in-this-recipe.
-  // On save: creates Ingredient in library, then calls onDone(savedIng, qty, qtyUnit).
-  function promptNewIngredientDetails(name, onDone) {
-    const UNITS = ['g', 'kg', 'ml', 'l', 'tsp', 'tbsp', 'cup', 'oz', 'lb', 'pcs', 'each', 'bottle', 'bunch'];
-    const draft = { name: name, unit: 'g', pricePerUnit: 0, category: 'cat_other' };
-    const recipeQty = { amount: 100, unit: 'g' };
-    const body = PCD.el('div');
-    body.innerHTML =
-      '<div class="text-muted text-sm mb-3">This ingredient is not in your library yet. Quickly fill its purchase price so cost auto-calculates and it gets added to Ingredients.</div>' +
-      '<div class="field"><label class="field-label">Name</label>' +
-      '<input type="text" class="input" id="niName" value="' + PCD.escapeHtml(name) + '"></div>' +
-      '<div class="field-row">' +
-        '<div class="field"><label class="field-label">Purchase unit</label>' +
-        '<select class="select" id="niBuyUnit">' +
-          UNITS.map(function (u) { return '<option value="' + u + '"' + (u === 'kg' ? ' selected' : '') + '>' + PCD.unitLabel(u) + '</option>'; }).join('') +
-        '</select></div>' +
-        '<div class="field"><label class="field-label">Price / unit</label>' +
-          '<div class="input-group">' +
-          '<span class="input-group-addon">' + (PCD.fmtCurrencySymbol ? PCD.fmtCurrencySymbol() : '$') + '</span>' +
-          '<input type="number" class="input" id="niPrice" placeholder="0.00" step="0.01" min="0">' +
-          '</div>' +
-          '<div class="field-hint">e.g. you buy chicken at $8 / kg → enter 8</div>' +
-        '</div>' +
-      '</div>' +
-      '<div class="field" style="border-top:1px solid var(--border);padding-top:12px;margin-top:8px;">' +
-        '<label class="field-label">In this recipe</label>' +
-        '<div class="field-row">' +
-          '<div class="field"><div class="input-group">' +
-            '<input type="number" class="input" id="niQty" value="100" step="0.1" min="0">' +
-          '</div></div>' +
-          '<div class="field">' +
-            '<select class="select" id="niQtyUnit">' +
-              UNITS.map(function (u) { return '<option value="' + u + '"' + (u === 'g' ? ' selected' : '') + '>' + PCD.unitLabel(u) + '</option>'; }).join('') +
-            '</select>' +
-          '</div>' +
-        '</div>' +
-      '</div>';
-
-    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('cancel') });
-    const saveBtn = PCD.el('button', { class: 'btn btn-primary', text: 'Save & Add', style: { flex: '1' } });
-    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
-    footer.appendChild(cancelBtn);
-    footer.appendChild(saveBtn);
-
-    const m = PCD.modal.open({ title: PCD.i18n.t('recipe_new_ingredient_title'), body: body, footer: footer, size: 'sm', closable: true });
-    // v2.8.6 — Focus Name field on open (desktop only). Override modal's
-    // default auto-focus which lands on the header close (X) button. 300ms
-    // wins the race against modal.js's own 250ms auto-focus. Enter-walk
-    // through fields (Name → Buy Unit → Price → Qty → Qty Unit → Save & Add)
-    // is provided by modal.js keydown handler — no extra wiring needed here.
-    setTimeout(function () {
-      if (PCD.isTouch && PCD.isTouch()) return;
-      const inp = PCD.$('#niName', body);
-      if (inp) {
-        inp.focus();
-        try { inp.select(); } catch (e) {}
-      }
-    }, 300);
-
-    cancelBtn.addEventListener('click', function () { m.close(); });
-    saveBtn.addEventListener('click', function () {
-      draft.name = (PCD.$('#niName', body).value || '').trim();
-      if (!draft.name) { PCD.toast.error(PCD.i18n.t('toast_name_required')); return; }
-      draft.unit = PCD.$('#niBuyUnit', body).value || 'g';
-      draft.pricePerUnit = parseFloat(PCD.$('#niPrice', body).value) || 0;
-      const qty = parseFloat(PCD.$('#niQty', body).value) || 100;
-      const qtyUnit = PCD.$('#niQtyUnit', body).value || draft.unit;
-      const saved = PCD.store.upsertIngredient(draft);
-      m.close();
-      setTimeout(function () { onDone(saved, qty, qtyUnit); }, 200);
-    });
-  }
+  // v2.8.80 — promptNewIngredientDetails() removed. Inline "+ Add new" now
+  // calls PCD.tools.ingredients.openEditor() for full detail (category +
+  // supplier + yield % + diet flags). Same pattern as buffet.js.
 
   // Versions panel — shows all snapshots of a recipe, lets user view/restore/delete each.
   function openVersionsPanel(recipeId, onAfterRestore) {
@@ -3197,21 +3143,42 @@
             const newName = this.getAttribute('data-name') || qInput.value.trim();
             if (!newName) return;
             qDD.style.display = 'none';
-            promptNewIngredientDetails(newName, function (saved, qty, qtyUnit) {
-              data.ingredients = (data.ingredients || []).concat([{
-                ingredientId: saved.id, amount: qty || 100, unit: qtyUnit || defaultRecipeUnit(saved)
-              }]);
-              PCD.toast.success(PCD.i18n.t('toast_quick_added_synced', { name: newName }));
-              qInput.value = '';
-              // v2.6.48 — targeted re-render
-              renderIngList();
-              renderAllergenChips();
-              updateCostStripDOM();
-              setTimeout(function () {
-                const fresh = PCD.$('#quickIngInput', body);
-                if (fresh) fresh.focus();
-              }, 50);
-            });
+            // v2.8.80 — Use ingredients.openEditor() for full detail (category,
+            // supplier, yield %, diet flags) instead of the old quick-fill modal.
+            // Same pattern as buffet.js "New Ingredient" action.
+            function _openFullEditor() {
+              const prevCount = (PCD.store.listIngredients() || []).length;
+              PCD.tools.ingredients.openEditor(null, function () {
+                setTimeout(function () {
+                  const after = PCD.store.listIngredients() || [];
+                  if (after.length <= prevCount) return; // user cancelled
+                  const saved = after[after.length - 1]; // most recent
+                  data.ingredients = (data.ingredients || []).concat([{
+                    ingredientId: saved.id, amount: 100, unit: defaultRecipeUnit(saved)
+                  }]);
+                  PCD.toast.success(PCD.i18n.t('toast_quick_added_synced', { name: saved.name || newName }));
+                  qInput.value = '';
+                  renderIngList();
+                  renderAllergenChips();
+                  updateCostStripDOM();
+                  setTimeout(function () {
+                    const fresh = PCD.$('#quickIngInput', body);
+                    if (fresh) fresh.focus();
+                  }, 50);
+                }, 150);
+              }, { initialName: newName });
+            }
+            // Lazy load: ingredients.js may not be loaded yet (v2.8.78 lazy tools)
+            if (!PCD.tools.ingredients || !PCD.tools.ingredients.openEditor) {
+              const s = document.createElement('script');
+              const v = (window.PCD_CONFIG && window.PCD_CONFIG.APP_VERSION) || '';
+              s.src = 'js/tools/ingredients.js' + (v ? '?v=' + v : '');
+              s.onload = function () { _openFullEditor(); };
+              s.onerror = function () { PCD.toast.error('Could not load ingredient editor'); };
+              document.head.appendChild(s);
+            } else {
+              _openFullEditor();
+            }
             return;
           }
           const ing = PCD.store.getIngredient(id);
