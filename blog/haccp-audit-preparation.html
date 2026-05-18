@@ -24,6 +24,43 @@
   <meta name="twitter:description" content="Paperwork beats spotlessness. A working chef's walkthrough.">
   <meta name="twitter:image" content="https://prochefdesk.com/blog/og-haccp.png">
 
+  <!-- v2.8.94 — JSON-LD Article schema -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "Preparing Your Kitchen for a HACCP Audit",
+    "description": "The audit you fail isn't the worst kitchen — it's the worst paperwork. A working chef's walkthrough on how to get audit-ready properly.",
+    "image": "https://prochefdesk.com/blog/og-haccp.png",
+    "datePublished": "2026-05-15",
+    "dateModified": "2026-05-19",
+    "author": {
+      "@type": "Person",
+      "name": "Ahmet Kaya",
+      "jobTitle": "Professional Chef",
+      "worksFor": {
+        "@type": "Organization",
+        "name": "ProChefDesk"
+      }
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "ProChefDesk",
+      "url": "https://prochefdesk.com",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://prochefdesk.com/og-image.png"
+      }
+    },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": "https://prochefdesk.com/blog/haccp-audit-preparation.html"
+    },
+    "wordCount": 1800,
+    "keywords": "HACCP audit preparation, food safety records, temperature log, cook and cool, kitchen inspection checklist"
+  }
+  </script>
+
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%2316a34a'/%3E%3Ctext x='50' y='68' font-size='56' text-anchor='middle' fill='white' font-family='system-ui' font-weight='800'%3EPC%3C/text%3E%3C/svg%3E">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -79,6 +116,16 @@
     th { font-family: 'Inter', sans-serif; font-weight: 600; color: var(--text-1); background: var(--paper); font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; }
     td { color: var(--text-2); }
     .end-mark { width: 24px; height: 4px; background: var(--primary); margin: 56px auto 32px; }
+    /* v2.8.94 — Related posts section */
+    .related-posts { margin: 56px 0 24px; padding: 24px 0; border-top: 1px solid var(--line); }
+    .related-posts h3 { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 600; margin: 0 0 18px; color: var(--primary); }
+    .related-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+    .related-card { display: block; padding: 16px 18px; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; text-decoration: none; color: var(--text-1); transition: border-color .15s ease, transform .15s ease; }
+    .related-card:hover { border-color: var(--brand); transform: translateY(-2px); }
+    .related-card .related-tag { font-size: 11px; color: var(--brand); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+    .related-card .related-title { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 600; line-height: 1.3; margin-bottom: 4px; }
+    .related-card .related-desc { font-size: 13px; color: var(--text-3); line-height: 1.5; }
+
     .blog-footer { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; font-size: 14px; color: var(--text-3); }
     .blog-footer a { color: var(--text-2); font-weight: 500; text-decoration: none; }
     .blog-footer a:hover { color: var(--text-1); text-decoration: underline; }
@@ -137,7 +184,7 @@
 
     <h2>The records that absolutely must exist</h2>
 
-    <p>Different jurisdictions name them differently (FSANZ, FDA Food Code, EU FIC 1169/2011, UK FSA), but the practical list converges. Have these going back at least 90 days, ideally 12 months:</p>
+    <p>Different jurisdictions name them differently — <a href="https://www.foodstandards.gov.au/" target="_blank" rel="noopener">FSANZ (Australia/NZ)</a>, the <a href="https://www.fda.gov/food/retail-food-protection/fda-food-code" target="_blank" rel="noopener">FDA Food Code (US)</a>, <a href="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=celex%3A32011R1169" target="_blank" rel="noopener">EU FIC Regulation 1169/2011</a>, the <a href="https://www.food.gov.uk/business-guidance/hazard-analysis-and-critical-control-point-haccp" target="_blank" rel="noopener">UK FSA HACCP guidance</a> — but the practical list converges. Have these going back at least 90 days, ideally 12 months:</p>
 
     <h3>1. Temperature logs (the foundation)</h3>
 
@@ -239,6 +286,23 @@
 
     <div class="end-mark"></div>
   </article>
+
+  <!-- v2.8.94 — Related posts cross-link (internal linking for SEO + reader retention) -->
+  <section class="related-posts" aria-label="Related articles">
+    <h3>Related reading</h3>
+    <div class="related-grid">
+      <a href="/blog/food-cost-percentage-restaurant.html" class="related-card">
+        <div class="related-tag">Food Cost</div>
+        <div class="related-title">Restaurant Food Cost %: The Real Method</div>
+        <div class="related-desc">Sub-recipes, yield loss, supplier drift — why theoretical and actual food cost diverge, and how to close the gap.</div>
+      </a>
+      <a href="/blog/menu-engineering-profitable-dishes.html" class="related-card">
+        <div class="related-tag">Menu Engineering</div>
+        <div class="related-title">Which Dishes Actually Make You Money</div>
+        <div class="related-desc">Star / plowhorse / puzzle / dog — the 4-box matrix every restaurant should run quarterly.</div>
+      </a>
+    </div>
+  </section>
 
   <footer class="blog-footer">
     <div class="left">

@@ -39,27 +39,29 @@
   <!-- Blog index -->
   <url>
     <loc>https://prochefdesk.com/blog/</loc>
-    <lastmod>2026-05-18</lastmod>
+    <lastmod>2026-05-19</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
 
-  <!-- Blog posts (newest first) -->
+  <!-- Blog posts (newest first). v2.8.94 — all 3 posts SEO-upgraded (JSON-LD
+       Article schema + authority outbound links + internal cross-linking).
+       Bumped <lastmod> to 2026-05-19 to signal Google for re-crawl. -->
   <url>
     <loc>https://prochefdesk.com/blog/menu-engineering-profitable-dishes.html</loc>
-    <lastmod>2026-05-17</lastmod>
+    <lastmod>2026-05-19</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://prochefdesk.com/blog/haccp-audit-preparation.html</loc>
-    <lastmod>2026-05-15</lastmod>
+    <lastmod>2026-05-19</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://prochefdesk.com/blog/food-cost-percentage-restaurant.html</loc>
-    <lastmod>2026-05-12</lastmod>
+    <lastmod>2026-05-19</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>

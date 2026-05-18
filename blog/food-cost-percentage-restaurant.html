@@ -24,6 +24,43 @@
   <meta name="twitter:description" content="Sub-recipes, yield loss, supplier drift, theoretical vs. actual — what the textbook leaves out.">
   <meta name="twitter:image" content="https://prochefdesk.com/blog/og-food-cost.png">
 
+  <!-- v2.8.94 — JSON-LD Article schema (Google rich results, sıralama bonus) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "Restaurant Food Cost %: The Real Method",
+    "description": "Food cost % is one line of math — but getting it right means sub-recipes, yield loss, supplier drift, and the theoretical vs actual gap.",
+    "image": "https://prochefdesk.com/blog/og-food-cost.png",
+    "datePublished": "2026-05-12",
+    "dateModified": "2026-05-19",
+    "author": {
+      "@type": "Person",
+      "name": "Ahmet Kaya",
+      "jobTitle": "Professional Chef",
+      "worksFor": {
+        "@type": "Organization",
+        "name": "ProChefDesk"
+      }
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "ProChefDesk",
+      "url": "https://prochefdesk.com",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://prochefdesk.com/og-image.png"
+      }
+    },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": "https://prochefdesk.com/blog/food-cost-percentage-restaurant.html"
+    },
+    "wordCount": 2400,
+    "keywords": "restaurant food cost percentage, food cost calculation, sub-recipe costing, yield loss, theoretical vs actual food cost"
+  }
+  </script>
+
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%2316a34a'/%3E%3Ctext x='50' y='68' font-size='56' text-anchor='middle' fill='white' font-family='system-ui' font-weight='800'%3EPC%3C/text%3E%3C/svg%3E">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -262,6 +299,59 @@
       margin: 56px auto 32px;
     }
 
+    /* v2.8.94 — Related posts section (footer'dan önce, cross-link için) */
+    .related-posts {
+      margin: 56px 0 24px;
+      padding: 24px 0;
+      border-top: 1px solid var(--line);
+    }
+    .related-posts h3 {
+      font-family: 'Fraunces', serif;
+      font-size: 22px;
+      font-weight: 600;
+      margin: 0 0 18px;
+      color: var(--primary);
+    }
+    .related-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+    }
+    .related-card {
+      display: block;
+      padding: 16px 18px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      text-decoration: none;
+      color: var(--text-1);
+      transition: border-color .15s ease, transform .15s ease;
+    }
+    .related-card:hover {
+      border-color: var(--brand);
+      transform: translateY(-2px);
+    }
+    .related-card .related-tag {
+      font-size: 11px;
+      color: var(--brand);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+    .related-card .related-title {
+      font-family: 'Fraunces', serif;
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 1.3;
+      margin-bottom: 4px;
+    }
+    .related-card .related-desc {
+      font-size: 13px;
+      color: var(--text-3);
+      line-height: 1.5;
+    }
+
     /* ---------- FOOTER ---------- */
     .blog-footer {
       margin-top: 32px;
@@ -367,7 +457,7 @@
 
     <p>You buy 1 kg of whole lamb shoulder at $24. You don't get 1 kg of plate-ready meat. After bone, trim, sinew, and shrinkage, you might get 620 g of usable yield — a 38% loss. That means your <em>true</em> cost per kilo of usable meat is $24 ÷ 0.62 = $38.70, not $24.</p>
 
-    <p>If you cost the dish at $24/kg, you've underestimated by 60%. Multiply that across every protein in the kitchen and you can see why the P&L at the end of the month doesn't match the food cost report.</p>
+    <p>If you cost the dish at $24/kg, you've underestimated by 60%. Multiply that across every protein in the kitchen and you can see why the P&L at the end of the month doesn't match the food cost report. Industry-standard yield tables — like the <a href="https://www.ers.usda.gov/data-products/meat-price-spreads" target="_blank" rel="noopener">USDA meat price spreads dataset</a> and historical butcher's yield references — give you starting baselines, but your real numbers come from weighing trimmed product yourself for a week and recording it. Don't trust a textbook number for an ingredient you handle daily.</p>
 
     <p>The fix is to record yield as either:</p>
 
@@ -464,6 +554,23 @@
 
     <div class="end-mark"></div>
   </article>
+
+  <!-- v2.8.94 — Related posts cross-link (internal linking for SEO + reader retention) -->
+  <section class="related-posts" aria-label="Related articles">
+    <h3>Related reading</h3>
+    <div class="related-grid">
+      <a href="/blog/menu-engineering-profitable-dishes.html" class="related-card">
+        <div class="related-tag">Menu Engineering</div>
+        <div class="related-title">Which Dishes Actually Make You Money</div>
+        <div class="related-desc">Star / plowhorse / puzzle / dog — the 4-box matrix every restaurant should run quarterly.</div>
+      </a>
+      <a href="/blog/haccp-audit-preparation.html" class="related-card">
+        <div class="related-tag">Food Safety</div>
+        <div class="related-title">HACCP Audit Preparation</div>
+        <div class="related-desc">Temperature logs, cook & cool records, receiving checks — the 8 records auditors check first.</div>
+      </a>
+    </div>
+  </section>
 
   <footer class="blog-footer">
     <div class="left">

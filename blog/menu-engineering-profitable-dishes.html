@@ -24,6 +24,43 @@
   <meta name="twitter:description" content="The four-box matrix every kitchen should run quarterly. Stars, Plowhorses, Puzzles, Dogs.">
   <meta name="twitter:image" content="https://prochefdesk.com/blog/og-menu-engineering.png">
 
+  <!-- v2.8.94 — JSON-LD Article schema -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "Menu Engineering: Which Dishes Actually Make You Money",
+    "description": "Most chefs know which dishes sell. Far fewer know which pay the bills. The four-box menu matrix any kitchen can run on a Sunday.",
+    "image": "https://prochefdesk.com/blog/og-menu-engineering.png",
+    "datePublished": "2026-05-17",
+    "dateModified": "2026-05-19",
+    "author": {
+      "@type": "Person",
+      "name": "Ahmet Kaya",
+      "jobTitle": "Professional Chef",
+      "worksFor": {
+        "@type": "Organization",
+        "name": "ProChefDesk"
+      }
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "ProChefDesk",
+      "url": "https://prochefdesk.com",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://prochefdesk.com/og-image.png"
+      }
+    },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": "https://prochefdesk.com/blog/menu-engineering-profitable-dishes.html"
+    },
+    "wordCount": 1600,
+    "keywords": "menu engineering, profitable menu items, star plowhorse puzzle dog matrix, restaurant menu profitability, Kasavana Smith menu analysis"
+  }
+  </script>
+
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%2316a34a'/%3E%3Ctext x='50' y='68' font-size='56' text-anchor='middle' fill='white' font-family='system-ui' font-weight='800'%3EPC%3C/text%3E%3C/svg%3E">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -88,6 +125,16 @@
     th { font-family: 'Inter', sans-serif; font-weight: 600; color: var(--text-1); background: var(--paper); font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; }
     td { color: var(--text-2); }
     .end-mark { width: 24px; height: 4px; background: var(--primary); margin: 56px auto 32px; }
+    /* v2.8.94 — Related posts section */
+    .related-posts { margin: 56px 0 24px; padding: 24px 0; border-top: 1px solid var(--line); }
+    .related-posts h3 { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 600; margin: 0 0 18px; color: var(--primary); }
+    .related-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+    .related-card { display: block; padding: 16px 18px; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; text-decoration: none; color: var(--text-1); transition: border-color .15s ease, transform .15s ease; }
+    .related-card:hover { border-color: var(--brand); transform: translateY(-2px); }
+    .related-card .related-tag { font-size: 11px; color: var(--brand); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+    .related-card .related-title { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 600; line-height: 1.3; margin-bottom: 4px; }
+    .related-card .related-desc { font-size: 13px; color: var(--text-3); line-height: 1.5; }
+
     .blog-footer { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; font-size: 14px; color: var(--text-3); }
     .blog-footer a { color: var(--text-2); font-weight: 500; text-decoration: none; }
     .blog-footer a:hover { color: var(--text-1); text-decoration: underline; }
@@ -131,7 +178,7 @@
 
     <p>Here's a small exercise. Look at last month's POS report. Pick the dish you think is your biggest contributor to the kitchen's bottom line. Now do the actual math: units sold × (price − food cost). The dish you guessed is rarely the dish on top. Usually it's something cheaper, less glamorous, and ordered more often than you remember — the side, the burger, the simple pasta.</p>
 
-    <p>Menu engineering is the discipline of looking at every dish through two lenses at once: <strong>how often it sells</strong> (popularity) and <strong>how much it contributes per sale</strong> (gross margin in dollars, not percent). Plot every dish on those two axes and you get a four-box matrix that tells you exactly what to do with each item. It's not new — the framework dates to Cornell in the early '80s — but most independent kitchens still don't run it.</p>
+    <p>Menu engineering is the discipline of looking at every dish through two lenses at once: <strong>how often it sells</strong> (popularity) and <strong>how much it contributes per sale</strong> (gross margin in dollars, not percent). Plot every dish on those two axes and you get a four-box matrix that tells you exactly what to do with each item. It's not new — the framework was formalised by <a href="https://scholarworks.umass.edu/cgi/viewcontent.cgi?article=1673&context=refereed" target="_blank" rel="noopener">Michael Kasavana and Donald Smith at Michigan State University in 1982</a>, building on hospitality research at Cornell — but most independent kitchens still don't run it.</p>
 
     <p>This is the working version: how to actually do it on a Sunday afternoon, what the four boxes mean in practice, and the awkward decisions the matrix forces you to make.</p>
 
@@ -271,6 +318,23 @@
 
     <div class="end-mark"></div>
   </article>
+
+  <!-- v2.8.94 — Related posts cross-link (internal linking for SEO + reader retention) -->
+  <section class="related-posts" aria-label="Related articles">
+    <h3>Related reading</h3>
+    <div class="related-grid">
+      <a href="/blog/food-cost-percentage-restaurant.html" class="related-card">
+        <div class="related-tag">Food Cost</div>
+        <div class="related-title">Restaurant Food Cost %: The Real Method</div>
+        <div class="related-desc">Before menu engineering can work, your food cost data has to be honest. Sub-recipes, yield, supplier drift.</div>
+      </a>
+      <a href="/blog/haccp-audit-preparation.html" class="related-card">
+        <div class="related-tag">Food Safety</div>
+        <div class="related-title">HACCP Audit Preparation</div>
+        <div class="related-desc">The 8 records auditors check first, and how to keep them current without losing your week.</div>
+      </a>
+    </div>
+  </section>
 
   <footer class="blog-footer">
     <div class="left">
