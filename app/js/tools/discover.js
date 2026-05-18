@@ -209,6 +209,11 @@
     const myRecipes = (PCD.store.listRecipes && PCD.store.listRecipes()) || [];
     const myPublics = myRecipes.filter(function (r) { return r && r.isPublic === true; });
     const myUid = currentUserId();
+    // v2.8.85 — Live fallback için current user'ın adı (kendi recipe'lerinde
+    // authorName henüz enrich edilmediyse). Email değil, manuel set edilen ad
+    // veya Supabase metadata.full_name (auth.js _setUser ile alınmış).
+    const myUser = (PCD.store && PCD.store.get && PCD.store.get('user')) || null;
+    const myDisplayName = (myUser && myUser.name && myUser.name !== myUser.email) ? myUser.name : null;
     const banner = PCD.el('div', { class: 'card', style: { padding: '12px 16px', marginBottom: '14px', background: 'var(--surface-2)' } });
     banner.innerHTML =
       '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">' +
@@ -255,10 +260,15 @@
         '</div>' +
         '<div style="padding:10px 12px;">' +
           '<div style="font-weight:600;font-size:13px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:34px;">' + PCD.escapeHtml(d.name || '—') + '</div>' +
-          // v2.8.81 — Author satırı. authorName boşsa "Anonymous Chef" italik.
-          (d.authorName
-            ? '<div style="font-size:11px;color:var(--text-3);margin-top:3px;line-height:1.2;">' + PCD.escapeHtml(t('discover_by_chef', { name: d.authorName })) + '</div>'
-            : '<div style="font-size:11px;color:var(--text-3);margin-top:3px;line-height:1.2;font-style:italic;opacity:0.7;">' + PCD.escapeHtml(t('discover_anonymous_chef')) + '</div>') +
+          // v2.8.81 — Author satırı. v2.8.85: kendi recipe'imizse ve authorName
+          // boşsa myDisplayName live fallback (Save profile gerekmez, anında
+          // görünür). Başkasının recipe'i ise sadece authorName veya Anonim.
+          (function () {
+            const liveAuthor = d.authorName || (isMine && myDisplayName) || null;
+            return liveAuthor
+              ? '<div style="font-size:11px;color:var(--text-3);margin-top:3px;line-height:1.2;">' + PCD.escapeHtml(t('discover_by_chef', { name: liveAuthor })) + '</div>'
+              : '<div style="font-size:11px;color:var(--text-3);margin-top:3px;line-height:1.2;font-style:italic;opacity:0.7;">' + PCD.escapeHtml(t('discover_anonymous_chef')) + '</div>';
+          })() +
           '<div style="display:flex;gap:10px;margin-top:6px;font-size:12px;color:var(--text-3);align-items:center;">' +
             '<button data-like="' + PCD.escapeHtml(r.id) + '" data-liked="' + (liked ? '1' : '0') + '" class="btn-like" style="background:transparent;border:0;padding:2px 4px;cursor:pointer;color:' + heartColor + ';font-size:13px;display:inline-flex;align-items:center;gap:3px;" title="' + PCD.escapeHtml(t('discover_like_tip') || 'Beğen') + '">' +
               '<span style="font-size:14px;">' + heartIcon + '</span>' +
@@ -330,6 +340,13 @@
     const t = PCD.i18n.t;
     const d = recipe.data || {};
     const liked = !!(myLikes && myLikes[recipe.id]);
+    // v2.8.85 — Live fallback: kendi recipe'imizse + authorName boşsa current
+    // user.name göster (Save profile gerekmez, anında doğru görünür).
+    const myUid = currentUserId();
+    const isMine = (myUid && recipe.user_id === myUid);
+    const myUser = (PCD.store && PCD.store.get && PCD.store.get('user')) || null;
+    const myDisplayName = (myUser && myUser.name && myUser.name !== myUser.email) ? myUser.name : null;
+    const liveAuthor = d.authorName || (isMine && myDisplayName) || null;
 
     const body = PCD.el('div');
     const ingsHtml = (d.ingredients && d.ingredients.length)
@@ -356,9 +373,10 @@
 
     body.innerHTML =
       (d.photo ? '<div style="aspect-ratio:1/1;width:100%;max-width:360px;background:url(' + d.photo + ') center/cover;border-radius:var(--r-md);margin:0 auto 12px;"></div>' : '') +
-      // v2.8.81 — Author satırı (detail modal). Stats bar'ın hemen üstünde.
-      (d.authorName
-        ? '<div style="font-size:13px;color:var(--text-2);margin-bottom:10px;display:flex;align-items:center;gap:6px;">👨‍🍳 <strong>' + PCD.escapeHtml(t('discover_by_chef', { name: d.authorName })) + '</strong></div>'
+      // v2.8.81 — Author satırı (detail modal). v2.8.85: liveAuthor fallback
+      // ile kendi recipe'lerinde anında doğru ad görünür.
+      (liveAuthor
+        ? '<div style="font-size:13px;color:var(--text-2);margin-bottom:10px;display:flex;align-items:center;gap:6px;">👨‍🍳 <strong>' + PCD.escapeHtml(t('discover_by_chef', { name: liveAuthor })) + '</strong></div>'
         : '<div style="font-size:13px;color:var(--text-3);margin-bottom:10px;display:flex;align-items:center;gap:6px;font-style:italic;">👨‍🍳 ' + PCD.escapeHtml(t('discover_anonymous_chef')) + '</div>') +
       '<div style="display:flex;gap:14px;margin-bottom:14px;font-size:12px;color:var(--text-3);">' +
         '<span>👁 ' + (recipe.view_count || 0) + '</span>' +

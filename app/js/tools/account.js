@@ -351,7 +351,6 @@
     const saveChefBtn = PCD.$('#saveChefProfileBtn', view);
     if (saveChefBtn) saveChefBtn.addEventListener('click', function () {
       const u = PCD.store.get('user') || {};
-      const oldName = u.name || '';
       u.name = (PCD.$('#chefName', view).value || '').trim();
       u.role = PCD.$('#chefRole', view).value;
       u.country = (PCD.$('#chefCountry', view).value || '').trim();
@@ -359,21 +358,16 @@
       u.bio = (PCD.$('#chefBio', view).value || '').trim();
       PCD.store.set('user', u);
 
-      // v2.8.84 — Name değiştiğinde tüm public recipe'leri re-enrich et.
-      // Operatör senaryosu: Account → Profile'da "Ahmet KAYA" yazılı ama eski
-      // public recipe'lerde authorName boş (yalnız toggle on/editor save'de
-      // enrich oluyordu) → Discover'da "Anonim Şef" görünüyor. Şimdi tek tıkla
-      // tüm public recipe'lerde authorName güncellenir.
+      // v2.8.85 — Her save'de tüm public recipe'leri re-enrich et (oldName
+      // check kaldırıldı). Operatör senaryosu: hiçbir şey değiştirmeden Save
+      // basınca da Discover'da "Anonim Şef" görünüyordu çünkü enrich
+      // tetiklenmiyordu. Şimdi tek tıkla her zaman güncellenir — fiyatı
+      // düşük (recipe sayısı × ~1ms enrich), kazanım kesin.
       //
       // recipes.js lazy yüklü (v2.8.78) — Account.js eager. Save profile
-      // butonu tıklanınca recipes.js'i lazy load et, sonra enrich. Buffet
-      // "_openNewIngredientFlow" pattern'i (v2.8.79) ile aynı.
+      // butonu tıklanınca recipes.js'i lazy load et, sonra enrich.
       function _doEnrich() {
-        if (!u.name || u.name === oldName) {
-          PCD.toast.success(PCD.i18n.t('toast_profile_saved'));
-          return;
-        }
-        if (!PCD.tools.recipes || !PCD.tools.recipes.enrichPublicIngredientNames) {
+        if (!u.name || !PCD.tools.recipes || !PCD.tools.recipes.enrichPublicIngredientNames) {
           PCD.toast.success(PCD.i18n.t('toast_profile_saved'));
           return;
         }
@@ -394,7 +388,7 @@
           PCD.toast.success(PCD.i18n.t('toast_profile_saved'));
         }
       }
-      if (!u.name || u.name === oldName) {
+      if (!u.name) {
         PCD.toast.success(PCD.i18n.t('toast_profile_saved'));
       } else if (PCD.tools.recipes && PCD.tools.recipes.enrichPublicIngredientNames) {
         _doEnrich();
@@ -1427,25 +1421,23 @@
     return card;
   }
 
-  // ============ PUBLIC PROFILE PREVIEW ============
-  // Shows what other chefs will see when community sharing launches.
+  // ============ PUBLIC PROFILE PREVIEW (v2.8.85 modernize) ============
+  // Shows what other chefs see in Discover — Discover community is LIVE
+  // (v2.8.41+v2.8.46), so this preview reflects real public-recipe stats,
+  // not v3.x placeholder language anymore.
   function openPublicProfilePreview(user) {
-    const recipes = PCD.store.listRecipes();
+    const t = PCD.i18n.t;
+    const recipes = PCD.store.listRecipes() || [];
     const workspaces = (PCD.store.listWorkspaces && PCD.store.listWorkspaces(true)) || [];
     const initials = (user.name || user.email || '?').split(' ').map(function (s) { return s[0]; }).slice(0, 2).join('').toUpperCase();
 
-    // Public stats
-    const totalRecipes = recipes.length;
-    let totalAcrossWs = 0;
-    if (workspaces.length > 0) {
-      // count recipes across all workspaces
-      const allR = PCD.store.get('recipes') || {};
-      Object.keys(allR).forEach(function (wsId) {
-        totalAcrossWs += Object.keys(allR[wsId] || {}).length;
-      });
-    } else {
-      totalAcrossWs = totalRecipes;
-    }
+    // Discover-live stats — kullanıcının Discover'da paylaştığı public recipe
+    // sayısı + toplam view + toplam like. recipes.data.isPublic + view_count/
+    // like_count alanları üzerinden. Henüz Discover'a yüklenmemiş recipe'ler
+    // için view/like 0 olur.
+    const publicRecipes = recipes.filter(function (r) { return r && r.isPublic === true; });
+    const totalViews = publicRecipes.reduce(function (sum, r) { return sum + (r.view_count || 0); }, 0);
+    const totalLikes = publicRecipes.reduce(function (sum, r) { return sum + (r.like_count || 0); }, 0);
 
     const body = PCD.el('div');
     const conceptList = workspaces.filter(function (w) { return !w.archived; }).map(function (w) {
@@ -1454,47 +1446,64 @@
       '</span>';
     }).join('');
 
+    // Workplace chip (eklenen Workplace field için ayrı — Concepts ile çakışmasın)
+    const workplaceChip = user.workplace
+      ? '<span style="display:inline-block;padding:4px 10px;background:var(--surface-2);color:var(--text-2);border-radius:999px;font-size:12px;font-weight:600;border:1px solid var(--border);">' +
+          PCD.icon('briefcase', 12) + ' ' + PCD.escapeHtml(user.workplace) +
+        '</span>'
+      : '';
+
     body.innerHTML =
       '<div style="background:linear-gradient(135deg,var(--brand-600),var(--brand-700));color:#fff;border-radius:12px;padding:32px 20px;text-align:center;margin-bottom:16px;">' +
         '<div style="width:88px;height:88px;border-radius:50%;background:rgba(255,255,255,0.2);display:inline-flex;align-items:center;justify-content:center;font-size:32px;font-weight:800;margin-bottom:12px;">' +
           (user.avatar ? '<img src="' + PCD.escapeHtml(user.avatar) + '" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">' : initials) +
         '</div>' +
-        '<h1 style="margin:0;font-size:22px;font-weight:800;letter-spacing:-0.01em;">' + PCD.escapeHtml(user.name || 'Unnamed Chef') + '</h1>' +
+        '<h1 style="margin:0;font-size:22px;font-weight:800;letter-spacing:-0.01em;">' + PCD.escapeHtml(user.name || t('chef_unnamed') || 'Unnamed Chef') + '</h1>' +
         (user.role ? '<div style="font-size:13px;opacity:0.9;margin-top:4px;font-weight:500;">' + PCD.escapeHtml(user.role) + '</div>' : '') +
-        ((user.workplace || user.country) ? '<div style="font-size:12px;opacity:0.8;margin-top:8px;">' +
-          (user.workplace ? PCD.escapeHtml(user.workplace) : '') +
-          (user.workplace && user.country ? ' · ' : '') +
-          (user.country ? PCD.escapeHtml(user.country) : '') +
-        '</div>' : '') +
+        (user.country ? '<div style="font-size:12px;opacity:0.8;margin-top:8px;">📍 ' + PCD.escapeHtml(user.country) + '</div>' : '') +
       '</div>' +
 
       (user.bio ? '<div class="card mb-3" style="padding:16px;">' +
-        '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">About</div>' +
+        '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">' + PCD.escapeHtml(t('chef_about') || 'About') + '</div>' +
         '<div style="font-size:14px;line-height:1.6;color:var(--text);">' + PCD.escapeHtml(user.bio) + '</div>' +
       '</div>' : '') +
 
+      // v2.8.85 — Discover stats (community canlı). Eski "Career stats"
+      // yerine gerçek paylaşım metrikleri.
       '<div class="card mb-3" style="padding:16px;">' +
-        '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Career stats</div>' +
-        '<div style="display:flex;gap:24px;flex-wrap:wrap;">' +
-          '<div><div class="text-muted text-sm">Recipes</div><div style="font-weight:800;font-size:24px;color:var(--brand-700);">' + totalAcrossWs + '</div></div>' +
-          '<div><div class="text-muted text-sm">Workspaces</div><div style="font-weight:800;font-size:24px;color:var(--brand-700);">' + workspaces.filter(function (w) { return !w.archived; }).length + '</div></div>' +
+        '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px;">🌍 ' + PCD.escapeHtml(t('chef_discover_stats') || 'Discover stats') + '</div>' +
+        '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;text-align:center;">' +
+          '<div><div style="font-weight:800;font-size:24px;color:var(--brand-700);">' + publicRecipes.length + '</div><div class="text-muted text-sm">' + PCD.escapeHtml(t('chef_public_recipes') || 'Public recipes') + '</div></div>' +
+          '<div><div style="font-weight:800;font-size:24px;color:var(--brand-700);">' + totalViews + '</div><div class="text-muted text-sm">👁 ' + PCD.escapeHtml(t('chef_total_views') || 'Views') + '</div></div>' +
+          '<div><div style="font-weight:800;font-size:24px;color:var(--brand-700);">' + totalLikes + '</div><div class="text-muted text-sm">❤ ' + PCD.escapeHtml(t('chef_total_likes') || 'Likes') + '</div></div>' +
         '</div>' +
+        (publicRecipes.length === 0
+          ? '<div style="margin-top:12px;padding:10px 12px;background:var(--surface-2);border-radius:6px;font-size:12px;color:var(--text-3);line-height:1.5;">💡 ' + PCD.escapeHtml(t('chef_discover_hint_empty') || 'Henüz Discover\'da paylaşımın yok. Bir tarif aç → "Discover\'da paylaş" toggle → şef topluluğunda görünmeye başla.') + '</div>'
+          : '') +
       '</div>' +
 
-      (conceptList ? '<div class="card mb-3" style="padding:16px;">' +
-        '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Concepts &amp; Career</div>' +
-        '<div>' + conceptList + '</div>' +
-      '</div>' : '') +
+      ((workplaceChip || conceptList) ? '<div class="card mb-3" style="padding:16px;">' +
+        '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">' + PCD.escapeHtml(t('chef_workplace_career') || 'Workplace & career') + '</div>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:6px;">' + workplaceChip + conceptList + '</div>' +
+      '</div>' : '');
 
-      '<div style="background:var(--surface-2);padding:14px;border-radius:8px;text-align:center;font-size:13px;color:var(--text-3);">' +
-        PCD.icon('users', 16) + ' Community sharing launches in v3.x — your profile, recipe shares, and chef-to-chef ratings will live here.' +
-      '</div>';
-
-    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('btn_close'), style: { width: '100%' } });
-    const footer = PCD.el('div', { style: { width: '100%' } });
+    // Footer: Close + "View on Discover" CTA (sadece public recipe varsa)
+    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('btn_close') || 'Close', style: { flex: '1' } });
+    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
     footer.appendChild(closeBtn);
 
-    const m = PCD.modal.open({ title: PCD.i18n.t('modal_public_profile_preview'), body: body, footer: footer, size: 'md', closable: true });
+    let m = null;
+    if (publicRecipes.length > 0) {
+      const goDiscoverBtn = PCD.el('button', { class: 'btn btn-primary', style: { flex: '1' } });
+      goDiscoverBtn.innerHTML = '🌍 ' + PCD.escapeHtml(t('chef_view_on_discover') || 'View on Discover');
+      goDiscoverBtn.addEventListener('click', function () {
+        if (m) m.close();
+        if (PCD.router && PCD.router.go) PCD.router.go('discover');
+      });
+      footer.appendChild(goDiscoverBtn);
+    }
+
+    m = PCD.modal.open({ title: t('modal_public_profile_preview') || 'Public profile preview', body: body, footer: footer, size: 'md', closable: true });
     closeBtn.addEventListener('click', function () { m.close(); });
   }
 

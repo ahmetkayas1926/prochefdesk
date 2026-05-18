@@ -8,9 +8,9 @@ ProChefDesk — profesyonel şef'ler için web tabanlı mutfak yönetim sistemi.
 
 Stack: Vanilla JavaScript (no bundling, no service worker), IndexedDB ana storage, Supabase (Postgres 17 + Auth + Storage + Realtime + Edge Functions), Cloudflare Pages (auto-deploy on GitHub push), Cloudflare R2 (backups).
 
-**Mevcut sürüm: v2.8.84** (push'a hazır local; production v2.8.79 — push edilene kadar). Detay: `CHANGELOG.md`.
+**Mevcut sürüm: v2.8.85** (push'a hazır local; production v2.8.79 — push edilene kadar). Detay: `CHANGELOG.md`.
 
-**Master roadmap (operatör onayıyla, ~13-15 sürüm):** ✅ v2.8.83 Welcome tour modernize → ✅ v2.8.84 Author profile-priority fix → v2.8.85 Buffet derin inceleme → v2.8.86-87 Buffet iyileştirme → v2.8.88 Dashboard + Tools-hub → v2.8.89+ NAKED araçlar (15 araç, ~7-8 sürüm) → v2.8.96'a kadar tüm araçlar RICH seviyesinde. Her tur tek bir sürüm bump. Baseline her araçta: (1) kapatılabilir inline guide (buffet v2.8.77 pattern), (2) her input altında italik gri 11-12px hint, (3) yarı-transparan örnek placeholder ("e.g. 800"), (4) empty state onboarding kartı. i18n: TR + EN tam parity, ES/FR/DE/AR EN fallback (operatör onayladı).
+**Master roadmap (operatör onayıyla, ~13-15 sürüm):** ✅ v2.8.83 Welcome tour modernize → ✅ v2.8.84 Author profile-priority fix → ✅ v2.8.85 Profile↔Discover bağlantı + eski v3.x placeholder temizliği → v2.8.86 Buffet derin inceleme → v2.8.87-88 Buffet iyileştirme → v2.8.89 Dashboard + Tools-hub → v2.8.90+ NAKED araçlar (15 araç, ~7-8 sürüm) → v2.8.97'e kadar tüm araçlar RICH seviyesinde. Her tur tek bir sürüm bump. Baseline her araçta: (1) kapatılabilir inline guide (buffet v2.8.77 pattern), (2) her input altında italik gri 11-12px hint, (3) yarı-transparan örnek placeholder ("e.g. 800"), (4) empty state onboarding kartı. i18n: TR + EN tam parity, ES/FR/DE/AR EN fallback (operatör onayladı).
 
 ## Çalışma akışı
 
