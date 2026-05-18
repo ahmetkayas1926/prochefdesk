@@ -59,6 +59,9 @@
     let fontSize = (lastCanvas && lastCanvas.fontSize) || 'medium';  // xs | small | medium | large
     let showMethod = lastCanvas ? !!lastCanvas.showMethod : true;
     let showAmounts = lastCanvas ? !!lastCanvas.showAmounts : true;
+    // v2.9.22 — "Hide recipes used in other canvases" toggle state persisted
+    // across renderBody calls (operator bug: checkbox state lost after add)
+    let hideUsedElsewhere = false;
 
     // Layout: ordered list of { recipeId, span }
     // v2.8.21 — Default empty when no saved canvas. Previously auto-added
@@ -155,8 +158,9 @@
               <div style="padding:4px 10px 6px;">
                 <input type="search" id="kcRecipeSearch" placeholder="${PCD.escapeHtml(t('kc_search_placeholder'))}" autocomplete="off" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface-1);color:var(--text-1);font-size:13px;box-sizing:border-box;">
                 <!-- v2.9.21 — Filter: hide recipes already used in another canvas -->
+                <!-- v2.9.22 — Checked state persists via closure var hideUsedElsewhere -->
                 <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-3);margin-top:6px;cursor:pointer;user-select:none;">
-                  <input type="checkbox" id="kcHideUsedElsewhere" style="margin:0;cursor:pointer;">
+                  <input type="checkbox" id="kcHideUsedElsewhere" ${hideUsedElsewhere ? 'checked' : ''} style="margin:0;cursor:pointer;">
                   <span>${PCD.escapeHtml(t('kc_hide_used_elsewhere') || 'Hide recipes used in other canvases')}</span>
                 </label>
               </div>
@@ -343,7 +347,15 @@
           });
         }
         searchEl.addEventListener('input', applyFilters);
-        if (hideUsedEl) hideUsedEl.addEventListener('change', applyFilters);
+        if (hideUsedEl) {
+          hideUsedEl.addEventListener('change', function () {
+            // v2.9.22 — persist to closure so renderBody preserves it
+            hideUsedElsewhere = this.checked;
+            applyFilters();
+          });
+          // Apply on initial render if persisted state is checked
+          if (hideUsedElsewhere) applyFilters();
+        }
       }
 
       // Wire all controls
