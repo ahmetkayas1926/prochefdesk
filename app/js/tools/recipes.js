@@ -1602,6 +1602,16 @@
           detailRows.push(['', '', '', '', t('cr_cost_per_yield', { unit: it.recipe.yieldUnit }), '$' + (it.totalCost / it.recipe.yieldAmount).toFixed(2)]);
         }
       } else {
+        // v2.8.86 — Yeniden hesapla: testPriceVal/marginVal/revVal/profitVal
+        // yukarıdaki `if (!isPrepXlsx) { ... }` block scope'unda const olarak
+        // tanımlı (satır 1486-1562) — block bitince kayboluyor. Bu else branch'i
+        // o değişkenlere ulaşamıyor → "testPriceVal is not defined" runtime crash.
+        // v2.8.30 yorumu sadece prep path'i için "skip" yaptı, menu item path'i
+        // hâlâ kırıktı. Local scope yeniden hesap operasyonu ucuz, temiz çözüm.
+        const testPriceVal = it.testPrice || it.suggestedPrice || 0;
+        const marginVal = testPriceVal - it.costPerServing;
+        const revVal = testPriceVal * it.servings;
+        const profitVal = revVal - it.totalCost;
         detailRows.push(['', '', '', '', t('cr_servings'), String(it.servings)]);
         detailRows.push(['', '', '', '', t('cr_cost_per_serving'), '$' + it.costPerServing.toFixed(2)]);
         detailRows.push(['', '', '', '', t('cr_pricing_section')]);
