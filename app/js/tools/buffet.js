@@ -216,6 +216,167 @@
         ],
       },
     },
+    // v2.8.93 — 4 additional uluslararası standart preset (operator request:
+    // "makul miktarda standart buffet template" — MENA + premium banquet +
+    // cocktail + outdoor BBQ kapsamı). Total 7 preset + Start blank.
+    {
+      id: 'iftar',
+      icon: '🌙',
+      nameKey: 'buffet_preset_iftar',
+      descKey: 'buffet_preset_iftar_desc',
+      template: {
+        name: 'Iftar Buffet',
+        type: 'dinner',
+        coverCount: 100, ticketPrice: 45, durationHours: 2, refillMultiplier: null, notes: '',
+        stations: [
+          { name: 'Suhoor / Opening', type: 'cold', items: [
+            { customName: 'Medjool dates',         amountPerGuest: 30, unit: 'g', pickupRatio: 0.80, refillX: null },
+            { customName: 'Dried apricots & nuts', amountPerGuest: 25, unit: 'g', pickupRatio: 0.55, refillX: null },
+            { customName: 'White cheese & olives', amountPerGuest: 50, unit: 'g', pickupRatio: 0.60, refillX: null },
+            { customName: 'Cucumber & tomato slices', amountPerGuest: 80, unit: 'g', pickupRatio: 0.55, refillX: null },
+          ]},
+          { name: 'Soups', type: 'hot', items: [
+            { customName: 'Lentil soup (mercimek)', amountPerGuest: 200, unit: 'ml', pickupRatio: 0.85, refillX: null },
+            { customName: 'Yogurt mint soup',       amountPerGuest: 150, unit: 'ml', pickupRatio: 0.45, refillX: null },
+          ]},
+          { name: 'Mains', type: 'hot', items: [
+            { customName: 'Lamb stew with vegetables', amountPerGuest: 150, unit: 'g', pickupRatio: 0.85, refillX: null },
+            { customName: 'Chicken biryani',           amountPerGuest: 180, unit: 'g', pickupRatio: 0.80, refillX: null },
+            { customName: 'Rice pilaf',                amountPerGuest: 120, unit: 'g', pickupRatio: 0.75, refillX: null },
+            { customName: 'Grilled mixed vegetables',  amountPerGuest: 100, unit: 'g', pickupRatio: 0.65, refillX: null },
+          ]},
+          { name: 'Sweets', type: 'dessert', items: [
+            { customName: 'Baklava',         amountPerGuest: 60, unit: 'g', pickupRatio: 0.75, refillX: null },
+            { customName: 'Künefe',          amountPerGuest: 80, unit: 'g', pickupRatio: 0.60, refillX: null },
+            { customName: 'Fresh fruit platter', amountPerGuest: 100, unit: 'g', pickupRatio: 0.55, refillX: null },
+          ]},
+          { name: 'Beverages', type: 'beverage', items: [
+            { customName: 'Cold water',     amountPerGuest: 400, unit: 'ml', pickupRatio: 0.95, refillX: null },
+            { customName: 'Ayran',          amountPerGuest: 200, unit: 'ml', pickupRatio: 0.70, refillX: null },
+            { customName: 'Turkish tea',    amountPerGuest: 150, unit: 'ml', pickupRatio: 0.85, refillX: null },
+            { customName: 'Traditional sherbet', amountPerGuest: 180, unit: 'ml', pickupRatio: 0.60, refillX: null },
+          ]},
+        ],
+      },
+    },
+    {
+      id: 'wedding',
+      icon: '💍',
+      nameKey: 'buffet_preset_wedding',
+      descKey: 'buffet_preset_wedding_desc',
+      template: {
+        name: 'Wedding Banquet',
+        type: 'dinner',
+        coverCount: 200, ticketPrice: 95, durationHours: 4, refillMultiplier: null, notes: '',
+        stations: [
+          { name: 'Welcome canapés', type: 'cold', items: [
+            { customName: 'Smoked salmon canapé',  amountPerGuest: 2, unit: 'pcs', pickupRatio: 0.80, refillX: null },
+            { customName: 'Mini bruschetta',       amountPerGuest: 2, unit: 'pcs', pickupRatio: 0.75, refillX: null },
+            { customName: 'Cheese & charcuterie',  amountPerGuest: 40, unit: 'g', pickupRatio: 0.50, refillX: null },
+            { customName: 'Mini caprese skewer',   amountPerGuest: 2, unit: 'pcs', pickupRatio: 0.70, refillX: null },
+            { customName: 'Foie gras crostini',    amountPerGuest: 1, unit: 'pcs', pickupRatio: 0.65, refillX: null },
+          ]},
+          { name: 'Cold appetizers / mezze', type: 'cold', items: [
+            { customName: 'Caesar salad',          amountPerGuest: 80, unit: 'g', pickupRatio: 0.55, refillX: null },
+            { customName: 'Beetroot & feta salad', amountPerGuest: 60, unit: 'g', pickupRatio: 0.45, refillX: null },
+            { customName: 'Marinated octopus',     amountPerGuest: 50, unit: 'g', pickupRatio: 0.60, refillX: null },
+            { customName: 'Prosciutto & melon',    amountPerGuest: 40, unit: 'g', pickupRatio: 0.55, refillX: null },
+          ]},
+          { name: 'Carving & mains', type: 'hot', items: [
+            { customName: 'Roast prime rib (carving)', amountPerGuest: 180, unit: 'g', pickupRatio: 0.90, refillX: null },
+            { customName: 'Pan-seared salmon fillet',  amountPerGuest: 140, unit: 'g', pickupRatio: 0.85, refillX: null },
+            { customName: 'Chicken supreme',           amountPerGuest: 130, unit: 'g', pickupRatio: 0.80, refillX: null },
+            { customName: 'Beef tenderloin medallion', amountPerGuest: 100, unit: 'g', pickupRatio: 0.85, refillX: null },
+            { customName: 'Wild mushroom risotto',     amountPerGuest: 120, unit: 'g', pickupRatio: 0.65, refillX: null },
+          ]},
+          { name: 'Dessert station', type: 'dessert', items: [
+            { customName: 'Wedding cake slice',  amountPerGuest: 100, unit: 'g', pickupRatio: 0.85, refillX: null },
+            { customName: 'Mini éclair',         amountPerGuest: 1, unit: 'pcs', pickupRatio: 0.55, refillX: null },
+            { customName: 'Panna cotta',         amountPerGuest: 80, unit: 'g', pickupRatio: 0.50, refillX: null },
+            { customName: 'Fresh seasonal berries', amountPerGuest: 60, unit: 'g', pickupRatio: 0.55, refillX: null },
+            { customName: 'Chocolate fountain',  amountPerGuest: 40, unit: 'g', pickupRatio: 0.45, refillX: null },
+            { customName: 'Assorted macarons',   amountPerGuest: 2, unit: 'pcs', pickupRatio: 0.50, refillX: null },
+          ]},
+          { name: 'Bar & beverage', type: 'beverage', items: [
+            { customName: 'Champagne toast',     amountPerGuest: 150, unit: 'ml', pickupRatio: 0.90, refillX: null },
+            { customName: 'White wine',          amountPerGuest: 200, unit: 'ml', pickupRatio: 0.60, refillX: null },
+            { customName: 'Red wine',            amountPerGuest: 200, unit: 'ml', pickupRatio: 0.55, refillX: null },
+            { customName: 'Beer (craft selection)', amountPerGuest: 250, unit: 'ml', pickupRatio: 0.50, refillX: null },
+          ]},
+        ],
+      },
+    },
+    {
+      id: 'cocktail',
+      icon: '🍸',
+      nameKey: 'buffet_preset_cocktail',
+      descKey: 'buffet_preset_cocktail_desc',
+      template: {
+        name: 'Cocktail Reception',
+        type: 'cocktail',
+        coverCount: 80, ticketPrice: 55, durationHours: 2, refillMultiplier: null, notes: '',
+        stations: [
+          { name: 'Passed canapés (cold)', type: 'cold', items: [
+            { customName: 'Smoked salmon blini',         amountPerGuest: 3, unit: 'pcs', pickupRatio: 0.85, refillX: null },
+            { customName: 'Prawn cocktail shot',         amountPerGuest: 1, unit: 'pcs', pickupRatio: 0.80, refillX: null },
+            { customName: 'Beef carpaccio crostini',     amountPerGuest: 2, unit: 'pcs', pickupRatio: 0.75, refillX: null },
+            { customName: 'Vegetable spring roll',       amountPerGuest: 2, unit: 'pcs', pickupRatio: 0.70, refillX: null },
+          ]},
+          { name: 'Live hot station', type: 'hot', items: [
+            { customName: 'Mini wagyu slider',       amountPerGuest: 2, unit: 'pcs', pickupRatio: 0.90, refillX: null },
+            { customName: 'Tempura prawn',           amountPerGuest: 2, unit: 'pcs', pickupRatio: 0.85, refillX: null },
+            { customName: 'Mini beef meatball',      amountPerGuest: 2, unit: 'pcs', pickupRatio: 0.80, refillX: null },
+            { customName: 'Truffle arancini',        amountPerGuest: 2, unit: 'pcs', pickupRatio: 0.75, refillX: null },
+          ]},
+          { name: 'Sweet bites', type: 'dessert', items: [
+            { customName: 'Mini cupcakes',     amountPerGuest: 1, unit: 'pcs', pickupRatio: 0.65, refillX: null },
+            { customName: 'Macarons',          amountPerGuest: 2, unit: 'pcs', pickupRatio: 0.55, refillX: null },
+            { customName: 'Chocolate truffles', amountPerGuest: 2, unit: 'pcs', pickupRatio: 0.50, refillX: null },
+          ]},
+          { name: 'Bar', type: 'beverage', items: [
+            { customName: 'Signature cocktail',  amountPerGuest: 150, unit: 'ml', pickupRatio: 0.85, refillX: null },
+            { customName: 'Prosecco',            amountPerGuest: 150, unit: 'ml', pickupRatio: 0.70, refillX: null },
+            { customName: 'Craft beer',          amountPerGuest: 250, unit: 'ml', pickupRatio: 0.55, refillX: null },
+            { customName: 'Sparkling water',     amountPerGuest: 250, unit: 'ml', pickupRatio: 0.75, refillX: null },
+          ]},
+        ],
+      },
+    },
+    {
+      id: 'bbq',
+      icon: '🔥',
+      nameKey: 'buffet_preset_bbq',
+      descKey: 'buffet_preset_bbq_desc',
+      template: {
+        name: 'BBQ / Grill Buffet',
+        type: 'dinner',
+        coverCount: 80, ticketPrice: 50, durationHours: 2.5, refillMultiplier: null, notes: '',
+        stations: [
+          { name: 'Salads & sides', type: 'cold', items: [
+            { customName: 'Coleslaw',                amountPerGuest: 70, unit: 'g', pickupRatio: 0.60, refillX: null },
+            { customName: 'Potato salad',            amountPerGuest: 90, unit: 'g', pickupRatio: 0.70, refillX: null },
+            { customName: 'Grilled vegetable salad', amountPerGuest: 80, unit: 'g', pickupRatio: 0.55, refillX: null },
+            { customName: 'Corn on the cob',         amountPerGuest: 1, unit: 'pcs', pickupRatio: 0.75, refillX: null },
+          ]},
+          { name: 'Grill station', type: 'hot', items: [
+            { customName: 'Beef burger patty',         amountPerGuest: 150, unit: 'g', pickupRatio: 0.90, refillX: null },
+            { customName: 'Marinated chicken thigh',   amountPerGuest: 130, unit: 'g', pickupRatio: 0.85, refillX: null },
+            { customName: 'Lamb chops',                amountPerGuest: 120, unit: 'g', pickupRatio: 0.85, refillX: null },
+            { customName: 'Pork sausages',             amountPerGuest: 80, unit: 'g', pickupRatio: 0.80, refillX: null },
+            { customName: 'Grilled fish fillet',       amountPerGuest: 120, unit: 'g', pickupRatio: 0.70, refillX: null },
+          ]},
+          { name: 'Condiments & breads', type: 'bakery', items: [
+            { customName: 'Burger buns',     amountPerGuest: 2, unit: 'pcs', pickupRatio: 0.85, refillX: null },
+            { customName: 'Garlic bread',    amountPerGuest: 60, unit: 'g', pickupRatio: 0.65, refillX: null },
+            { customName: 'BBQ sauce selection', amountPerGuest: 25, unit: 'g', pickupRatio: 0.55, refillX: null },
+          ]},
+          { name: 'Beverage', type: 'beverage', items: [
+            { customName: 'Craft beer',      amountPerGuest: 330, unit: 'ml', pickupRatio: 0.70, refillX: null },
+            { customName: 'House lemonade',  amountPerGuest: 200, unit: 'ml', pickupRatio: 0.80, refillX: null },
+          ]},
+        ],
+      },
+    },
   ];
 
   // ---------- IDB STORAGE (workspace-scoped) ----------

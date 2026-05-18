@@ -8,7 +8,7 @@
 
 **Ürün:** ProChefDesk — profesyonel chef'ler için web tabanlı mutfak yönetim sistemi.
 **Operatör:** Ahmet Kaya, Perth Western Australia, profesyonel şef. Solo non-commercial proje.
-**Mevcut sürüm:** **v2.8.92** (push'a hazır local; production v2.8.91).
+**Mevcut sürüm:** **v2.8.93** (push'a hazır local; production v2.8.92).
 **Domain:** prochefdesk.com (Cloudflare Pages, SSL Full, GitHub push'ta auto build + deploy).
 
 **URL yapısı:**
@@ -170,6 +170,7 @@ Tek tek sürüm için → CHANGELOG.md.
 | 43 | **i18n consistency sweep — print/Excel/share Round 3**: Operatör raporu (TR seçiliyken buffet cost report karışık dil). Agent audit + 6 dosyada 40+ hardcoded EN string → `t()`. Buffet print + Excel (header + stats + tablo), events.js printEvent (Date/Guests/Venue/Menu/Recipe/Per guest/Total food cost/Profit/Notes + status chip), portion.js print + share (Scaled recipes title + meta + Total cost), checklist.js session print (✓ Done / PASS / FAIL / N/A / stat labels / sign-off), kitchen_cards.js print title, inventory.js stock count print (h1 + meta + window title). 48 yeni i18n key TR+EN parity. Eski `\|\| 'English'` fallback'lar korundu (graceful). Şef TR seçince tüm output Türkçe artık. | v2.8.90 | ✅ |
 | 44 | **Dashboard + Tools-hub UX upgrade (NAKED → RICH)**: (a) Dashboard kapatılabilir inline guide panel (buffet v2.8.77 pattern) — "What you'll see" 4-step açıklama + ✕ localStorage dismiss. (b) Yeni şef "Get started" 3-card empty state (recipes+ings=0 koşulu): 🥕 Add ingredients / 📖 Create first recipe / ✨ Load sample data — son kart confirm modal + `PCD.demo.seed()`. (c) Tools-hub phase grouping — eski tek-düz grid yerine 4 section (Essentials/Production/Operations/Compliance & extras) + section title + 1-cümle açıklama + "N tools" sayacı. 26 yeni i18n key TR+EN parity. | v2.8.91 | ✅ |
 | 45 | **Portion Calculator UX fix — Step 1 (Guest count) kaldırıldı** (operatör direct istek): Step 1 input + 4 quick chip (20/50/100/200) tamamen silindi. Yerine nazik intro/help kart (💡 "How to use" + 1 cümle açıklama, gradient brand-50 backdrop). Stat label "Cost / guest" → "Avg / portion" (hesap totalCost/totalPortions). printScaled + shareScaled + sendToShoppingList signature `guestCount` → `totalPortions` semantik refactor. Internal `guestCount=50` default state korundu (yeni tarif başlangıç portion). Print HTML: "X guests" → "X total portions". 8 yeni i18n key TR+EN. Operatör'ün şikayet ettiği "Step 1 ile Step 3 mantıksal bağ kopuk" sorunu çözüldü. | v2.8.92 | ✅ |
+| 46 | **Buffet Quick Start — 4 yeni uluslararası standart preset**: 🌙 Iftar Buffet (100c/$45/17 items, Türk/MENA), 💍 Wedding Banquet (200c/$95/24 items, 5★ banket), 🍸 Cocktail Reception (80c/$55/15 items, standing finger food), 🔥 BBQ/Grill Buffet (80c/$50/14 items, outdoor casual). Total 7 preset + Start blank. Tüm items customName tipte, sektör baseline amountPerGuest + pickupRatio. 8 yeni i18n key TR+EN. | v2.8.93 | ✅ |
 | Ops | GSC verify + sitemap submit + 7 sayfa Google'a keşfedildi (landing + 2 legal + blog index + 3 post) | 2026-05-18 | ✅ |
 | Ops | Edge function deploy: `delete-account` (v2.8.50 fix CANLI) + `backup-to-r2` (v2.8.79 BACKUP_TABLES haccp_receiving/holding CANLI) | 2026-05-18 | ✅ |
 | Ops | Marketing + SEO + Blog altyapısı (PARÇA 1+2+3): `/blog/` 3 yazı + sitemap.xml + robots.txt + meta tag sweep + privacy/terms OG cards. App'ten bağımsız stil. GSC verify operatöre kaldı | 2026-05-18 | ✅ |
@@ -274,7 +275,7 @@ Bu işleri spontan öneri olarak ortaya çıkarma:
 |---|---|
 | Repo path (operatör Windows) | `C:\Users\ahmet\Desktop\prochefdesk` |
 | GitHub repo | `ahmetkayas1926/prochefdesk` |
-| Production sürümü | **v2.8.92** (push'a hazır local; production v2.8.91) |
+| Production sürümü | **v2.8.93** (push'a hazır local; production v2.8.92) |
 | Supabase project ref | `muuwhrcogikpqylsfvgg` (Tokyo, Postgres 17, Free tier) |
 | Cloudflare R2 bucket | `prochefdesk-backups` |
 | CLEANUP_SECRET | `ec79a445-7e92-499b-9322-5c2c949788d4d2886e66-d556-4498-ba9e-17fda6c11ac1` |
