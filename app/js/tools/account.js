@@ -19,12 +19,63 @@
     const theme = prefs.theme || 'light';
     const haptic = prefs.haptic !== false;
 
+    // v2.9.8 — Closeable inline guide
+    const guideHidden = (function () {
+      try { return localStorage.getItem('pcd_account_guide_hidden') === '1'; } catch (e) { return false; }
+    })();
+
+    // v2.9.8 — Chef profile completeness (name + role + country + workplace + bio)
+    let profileFields = 0;
+    let profileFieldsTotal = 5;
+    if (user) {
+      if (user.name && user.name !== user.email) profileFields++;
+      if (user.role) profileFields++;
+      if (user.country) profileFields++;
+      if (user.workplace) profileFields++;
+      if (user.bio) profileFields++;
+    }
+    const profilePct = user ? (profileFields / profileFieldsTotal) * 100 : 0;
+    let profileStatus = null;
+    let profileColor = '#6b7280';
+    if (user) {
+      if (profilePct >= 100) { profileStatus = 'complete'; profileColor = '#16a34a'; }
+      else if (profilePct >= 60) { profileStatus = 'mostly'; profileColor = '#16a34a'; }
+      else if (profilePct >= 20) { profileStatus = 'partial'; profileColor = '#f59e0b'; }
+      else { profileStatus = 'empty'; profileColor = '#dc2626'; }
+    }
+    const profileLabel = profileStatus === 'complete' ? (t('account_profile_complete') || 'Profile complete')
+                       : profileStatus === 'mostly'   ? (t('account_profile_mostly') || 'Mostly complete')
+                       : profileStatus === 'partial'  ? (t('account_profile_partial') || 'Partial')
+                       : profileStatus === 'empty'    ? (t('account_profile_empty') || 'Empty profile')
+                       : '';
+
     view.innerHTML = `
       <div class="page-header">
         <div class="page-header-text">
           <div class="page-title">${t('account_title')}</div>
         </div>
       </div>
+
+      ${!guideHidden ? `
+        <details class="card" open style="padding:0;margin-bottom:14px;background:linear-gradient(135deg,var(--brand-50),var(--surface));border:1px solid var(--brand-300);">
+          <summary style="cursor:pointer;padding:12px 14px;font-weight:700;font-size:13px;color:var(--brand-700);display:flex;align-items:center;gap:8px;list-style:none;">
+            <span style="font-size:16px;">💡</span>
+            <span style="flex:1;">${PCD.escapeHtml(t('account_guide_title') || 'How to set up your account')}</span>
+            <button type="button" id="accountGuideDismiss" style="background:transparent;border:0;color:var(--text-3);cursor:pointer;font-size:11px;padding:2px 6px;" title="${PCD.escapeHtml(t('account_guide_dismiss') || 'Hide')}">✕</button>
+          </summary>
+          <div style="padding:0 14px 14px;font-size:13px;color:var(--text-2);line-height:1.65;">
+            <ol style="margin:0;padding-inline-start:20px;">
+              <li><strong>${PCD.escapeHtml(t('account_guide_step1_title') || 'Sign in once, sync forever')}</strong> — ${PCD.escapeHtml(t('account_guide_step1_body') || 'Email or Google. Your recipes, ingredients, menus, events, HACCP logs auto-sync to the cloud — open another device, everything appears.')}</li>
+              <li><strong>${PCD.escapeHtml(t('account_guide_step2_title') || 'Fill your chef profile')}</strong> — ${PCD.escapeHtml(t('account_guide_step2_body') || 'Name + role + country + workplace + bio. These appear on every recipe you share on Discover — build a recognisable identity.')}</li>
+              <li><strong>${PCD.escapeHtml(t('account_guide_step3_title') || 'Tune preferences')}</strong> — ${PCD.escapeHtml(t('account_guide_step3_body') || 'Currency for cost displays, language (EN + TR fully translated), dark mode for night service, haptic feedback for mobile.')}</li>
+              <li><strong>${PCD.escapeHtml(t('account_guide_step4_title') || 'Backup + safety')}</strong> — ${PCD.escapeHtml(t('account_guide_step4_body') || 'Cloud backup runs nightly automatically. Manual JSON export available below for off-platform archive. Danger Zone lets you wipe a workspace or delete your account permanently.')}</li>
+            </ol>
+            <div style="margin-top:10px;padding:8px 10px;background:var(--surface-2);border-radius:6px;font-size:12px;color:var(--text-3);">
+              <strong>💎 ${PCD.escapeHtml(t('account_guide_tip_title') || 'Pro tip')}:</strong> ${PCD.escapeHtml(t('account_guide_tip_body') || 'Multiple workspaces let you separate restaurants or concepts — switch from the top-left selector. Each has its own recipes, costs, and team.')}
+            </div>
+          </div>
+        </details>
+      ` : ''}
 
       <!-- PROFILE -->
       <div class="card mb-3">
@@ -55,7 +106,10 @@
       ${user ? `
         <!-- CHEF PROFILE -->
         <div class="section mb-3">
-          <div class="section-title" style="font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">${t('chef_profile_title')}</div>
+          <div class="section-title" style="font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+            <span>${t('chef_profile_title')}</span>
+            ${profileStatus ? '<span style="padding:3px 9px;background:' + profileColor + '25;color:' + profileColor + ';font-weight:700;font-size:10px;text-transform:uppercase;border-radius:5px;letter-spacing:0.06em;text-transform:uppercase;">' + profileFields + '/' + profileFieldsTotal + ' · ' + PCD.escapeHtml(profileLabel) + '</span>' : ''}
+          </div>
           <div class="card">
             <div class="card-body" style="padding:14px;">
               <div class="text-muted text-sm mb-3">${t('chef_profile_intro')}</div>
@@ -309,6 +363,15 @@
     // v2.6.60 — Account deletion flow (GDPR-compliant)
     const deleteAccountBtn = PCD.$('#deleteAccountBtn', view);
     if (deleteAccountBtn) deleteAccountBtn.addEventListener('click', openDeleteAccountModal);
+
+    // v2.9.8 — Guide dismiss handler
+    const accountGuideDismiss = PCD.$('#accountGuideDismiss', view);
+    if (accountGuideDismiss) accountGuideDismiss.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      try { localStorage.setItem('pcd_account_guide_hidden', '1'); } catch (er) {}
+      render(view);
+    });
 
     const signInBtn = PCD.$('#signInBtn', view);
     if (signInBtn) signInBtn.addEventListener('click', function () { PCD.auth.openAuthModal(); });

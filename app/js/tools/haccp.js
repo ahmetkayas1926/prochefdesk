@@ -17,6 +17,10 @@
    Real-world use: chef opens the app, taps HACCP → sees "Daily Temp:
    logged ✓, Cook & Cool: not started, Receiving: 2 deliveries, Hot
    Holding: 1 check" → knows exactly what's still owed.
+
+   v2.9.13 — NAKED→RICH upgrade: closeable inline guide explaining HACCP
+   workflow + audit prep, status card upgrade to hero with done/total chip.
+   Pattern: buffet v2.8.77. ROUND 5 — NAKED sweep tamamlanma sürümü.
    ================================================================ */
 
 (function () {
@@ -109,7 +113,14 @@
     const t = PCD.i18n.t;
     const cards = getCards();
     const totalToday = cards.reduce(function (a, c) { return a + c.todayCount; }, 0);
-    const allTouched = cards.every(function (c) { return c.todayCount > 0; });
+    const touchedCount = cards.filter(function (c) { return c.todayCount > 0; }).length;
+    const allTouched = touchedCount === cards.length;
+    const heroColor = allTouched ? '#16a34a' : (touchedCount >= 2 ? '#f59e0b' : '#dc2626');
+
+    // v2.9.13 — Closeable inline guide
+    const guideHidden = (function () {
+      try { return localStorage.getItem('pcd_haccp_guide_hidden') === '1'; } catch (e) { return false; }
+    })();
 
     let cardsHtml = '';
     cards.forEach(function (c) {
@@ -133,10 +144,6 @@
         '</button>';
     });
 
-    const headerStatus = allTouched
-      ? '<span style="color:var(--success);font-weight:700;">✓ ' + (t('haccp_hub_all_logged_today') || 'All forms logged today') + '</span>'
-      : '<span style="color:#92400e;font-weight:700;">⚠ ' + (t('haccp_hub_pending_today') || 'Some forms not yet logged today') + '</span>';
-
     view.innerHTML = `
       <div class="page-header">
         <div class="page-header-text">
@@ -145,15 +152,36 @@
         </div>
       </div>
 
-      <div class="card mb-3" style="padding:16px;background:linear-gradient(135deg,var(--brand-50),var(--surface));border-color:var(--brand-300);">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
-          <div>
-            <div class="text-muted text-sm" style="text-transform:uppercase;letter-spacing:0.04em;font-weight:700;margin-bottom:4px;">${t('haccp_hub_today_status') || 'Today’s status'}</div>
-            <div style="font-size:16px;">${headerStatus}</div>
+      ${!guideHidden ? `
+        <details class="card" open style="padding:0;margin-bottom:14px;background:linear-gradient(135deg,var(--brand-50),var(--surface));border:1px solid var(--brand-300);">
+          <summary style="cursor:pointer;padding:12px 14px;font-weight:700;font-size:13px;color:var(--brand-700);display:flex;align-items:center;gap:8px;list-style:none;">
+            <span style="font-size:16px;">💡</span>
+            <span style="flex:1;">${PCD.escapeHtml(t('haccp_hub_guide_title') || 'How to use the HACCP Hub')}</span>
+            <button type="button" id="haccpGuideDismiss" style="background:transparent;border:0;color:var(--text-3);cursor:pointer;font-size:11px;padding:2px 6px;" title="${PCD.escapeHtml(t('haccp_hub_guide_dismiss') || 'Hide')}">✕</button>
+          </summary>
+          <div style="padding:0 14px 14px;font-size:13px;color:var(--text-2);line-height:1.65;">
+            <ol style="margin:0;padding-inline-start:20px;">
+              <li><strong>${PCD.escapeHtml(t('haccp_hub_guide_step1_title') || 'Open daily, check the status')}</strong> — ${PCD.escapeHtml(t('haccp_hub_guide_step1_body') || 'The hero card shows today’s completion (X / 4 forms logged). Green = all done, amber = partial, red = nothing yet. Aim for full green every service day.')}</li>
+              <li><strong>${PCD.escapeHtml(t('haccp_hub_guide_step2_title') || 'Four forms cover the basics')}</strong> — ${PCD.escapeHtml(t('haccp_hub_guide_step2_body') || 'Daily Temp (fridges/freezers AM+PM), Cook & Cool (60→21→5°C verification), Receiving (delivery temps + supplier), Hot/Cold Holding (bain-marie + display). Each card jumps straight to its form.')}</li>
+              <li><strong>${PCD.escapeHtml(t('haccp_hub_guide_step3_title') || 'Log within minutes of the action')}</strong> — ${PCD.escapeHtml(t('haccp_hub_guide_step3_body') || 'Auditors expect timestamps. Don’t batch-log Sunday’s readings on Monday — each form has a date input but real-time entries are stronger evidence.')}</li>
+              <li><strong>${PCD.escapeHtml(t('haccp_hub_guide_step4_title') || 'Print monthly for the binder')}</strong> — ${PCD.escapeHtml(t('haccp_hub_guide_step4_body') || 'Every form has a print button. Generate monthly A4 PDFs, file in a binder by form type. EU/UK/US auditors all expect the same format.')}</li>
+            </ol>
+            <div style="margin-top:10px;padding:8px 10px;background:var(--surface-2);border-radius:6px;font-size:12px;color:var(--text-3);">
+              <strong>💎 ${PCD.escapeHtml(t('haccp_hub_guide_tip_title') || 'Pro tip')}:</strong> ${PCD.escapeHtml(t('haccp_hub_guide_tip_body') || 'Make the morning chef responsible for Daily Temp + Receiving as part of the opening routine. Hot Holding is whoever sets up service. Cook & Cool is whoever batch cooks — assign roles so nobody assumes it’s someone else’s job.')}
+            </div>
           </div>
-          <div style="text-align:end;">
-            <div class="text-muted text-sm" style="text-transform:uppercase;letter-spacing:0.04em;font-weight:700;margin-bottom:4px;">${t('haccp_hub_total_today') || 'Total entries today'}</div>
-            <div style="font-size:22px;font-weight:800;color:var(--brand-700);">${totalToday}</div>
+        </details>
+      ` : ''}
+
+      <div class="stat mb-3" style="background:linear-gradient(135deg,${heroColor}18,var(--surface));border-color:${heroColor};padding:18px;">
+        <div style="display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:14px;">
+          <div style="flex-shrink:0;">
+            <div class="stat-label" style="font-size:11px;">${PCD.escapeHtml(t('haccp_hub_today_status') || 'Today’s status')}</div>
+            <div style="font-size:42px;font-weight:900;color:${heroColor};line-height:1;letter-spacing:-0.02em;">${touchedCount}<span style="font-size:18px;color:var(--text-3);font-weight:600;"> / ${cards.length}</span></div>
+          </div>
+          <div style="flex:1;min-width:180px;">
+            <span style="display:inline-block;padding:4px 10px;background:${heroColor}25;color:${heroColor};font-weight:700;font-size:11px;text-transform:uppercase;border-radius:6px;letter-spacing:0.06em;">${allTouched ? (PCD.escapeHtml(t('haccp_hub_all_logged_today') || 'All forms logged today')) : (PCD.escapeHtml(t('haccp_hub_pending_today') || 'Some forms not yet logged today'))}</span>
+            <div class="text-muted text-sm" style="font-size:11px;margin-top:5px;line-height:1.4;">${totalToday} ${PCD.escapeHtml(t('haccp_hub_total_today_label') || 'total entries today')}</div>
           </div>
         </div>
       </div>
@@ -173,6 +201,17 @@
 
     const cardsEl = PCD.$('#haccpCards', view);
     if (cardsEl) cardsEl.innerHTML = cardsHtml;
+
+    // Guide dismiss handler
+    const dismissBtn = PCD.$('#haccpGuideDismiss', view);
+    if (dismissBtn) {
+      dismissBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        try { localStorage.setItem('pcd_haccp_guide_hidden', '1'); } catch (er) {}
+        render(view);
+      });
+    }
 
     PCD.on(view, 'click', '[data-haccp-route]', function () {
       const r = this.getAttribute('data-haccp-route');

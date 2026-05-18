@@ -19,6 +19,10 @@
 
    Tek bir noktada işlemiyor: misafir kullanıcı (login yok) like
    atamaz — butona basınca "giriş yap" toast'ı görür.
+
+   v2.9.7 — NAKED→RICH upgrade: closeable inline guide, sharer stats hero
+   (my public count + status chip + total views/likes), guest welcome
+   banner. Pattern: buffet v2.8.77, nutrition v2.9.3, allergens v2.9.5.
    ================================================================ */
 
 (function () {
@@ -30,6 +34,31 @@
   let _cachedAt = 0;
   let _cachedMyLikes = null;
   const CACHE_TTL_MS = 60 * 1000;  // 60sn
+
+  // v2.9.15 — Selected tag filter (resets on refresh + cache invalidation)
+  let _selectedTag = null;
+  // v2.9.16 — Selected "free-from" allergen filter (single, resets on refresh)
+  let _freeFromAllergen = null;
+
+  // v2.9.7 — Sharer status (chef's contribution level signal)
+  function sharerStatus(count) {
+    if (count >= 10) return 'expert';
+    if (count >= 5) return 'active';
+    if (count >= 1) return 'started';
+    return 'lurker';
+  }
+  function sharerColor(s) {
+    if (s === 'expert' || s === 'active') return '#16a34a';
+    if (s === 'started') return '#f59e0b';
+    return '#6b7280';
+  }
+  function sharerLabel(s) {
+    const t = PCD.i18n.t;
+    if (s === 'expert') return t('discover_status_expert') || 'Expert sharer';
+    if (s === 'active') return t('discover_status_active') || 'Active sharer';
+    if (s === 'started') return t('discover_status_started') || 'Getting started';
+    return t('discover_status_lurker') || 'Just browsing';
+  }
 
   function getSupabase() {
     if (!PCD.cloud || !PCD.cloud.getClient) return null;
@@ -175,6 +204,8 @@
       _cachedFeed = null;
       _cachedMyLikes = null;
       _cachedAt = 0;
+      _selectedTag = null; // v2.9.15 — reset tag filter on refresh
+      _freeFromAllergen = null; // v2.9.16 — reset allergen filter on refresh
       renderFeed(feedContainer);
     });
 
@@ -205,7 +236,42 @@
     const t = PCD.i18n.t;
     container.innerHTML = '';
 
-    // Üst banner: kullanıcının kendi public recipe sayısı + paylaşma çağrısı
+    // v2.9.7 — Closeable inline guide
+    const guideHidden = (function () {
+      try { return localStorage.getItem('pcd_discover_guide_hidden') === '1'; } catch (e) { return false; }
+    })();
+    if (!guideHidden) {
+      const guide = PCD.el('details', { class: 'card', style: { padding: '0', marginBottom: '14px', background: 'linear-gradient(135deg,var(--brand-50),var(--surface))', border: '1px solid var(--brand-300)' } });
+      guide.open = true;
+      guide.innerHTML =
+        '<summary style="cursor:pointer;padding:12px 14px;font-weight:700;font-size:13px;color:var(--brand-700);display:flex;align-items:center;gap:8px;list-style:none;">' +
+          '<span style="font-size:16px;">💡</span>' +
+          '<span style="flex:1;">' + PCD.escapeHtml(t('discover_guide_title') || 'How Discover works') + '</span>' +
+          '<button type="button" id="discoverGuideDismiss" style="background:transparent;border:0;color:var(--text-3);cursor:pointer;font-size:11px;padding:2px 6px;" title="' + PCD.escapeHtml(t('discover_guide_dismiss') || 'Hide') + '">✕</button>' +
+        '</summary>' +
+        '<div style="padding:0 14px 14px;font-size:13px;color:var(--text-2);line-height:1.65;">' +
+          '<ol style="margin:0;padding-inline-start:20px;">' +
+            '<li><strong>' + PCD.escapeHtml(t('discover_guide_step1_title') || 'Browse what other chefs share') + '</strong> — ' + PCD.escapeHtml(t('discover_guide_step1_body') || 'Cards are ranked by view count — most popular first. Click a card for full ingredients, method, photo, and the chef behind it.') + '</li>' +
+            '<li><strong>' + PCD.escapeHtml(t('discover_guide_step2_title') || 'Share your own recipes') + '</strong> — ' + PCD.escapeHtml(t('discover_guide_step2_body') || 'Open any recipe in your library and toggle "Public on Discover". Ingredients + method become visible — costs and supplier notes stay private.') + '</li>' +
+            '<li><strong>' + PCD.escapeHtml(t('discover_guide_step3_title') || 'Track engagement') + '</strong> — ' + PCD.escapeHtml(t('discover_guide_step3_body') || 'Each recipe shows view count + heart count. Your hero stats above aggregate views/likes across all your public recipes — see what resonates.') + '</li>' +
+            '<li><strong>' + PCD.escapeHtml(t('discover_guide_step4_title') || 'Your chef profile') + '</strong> — ' + PCD.escapeHtml(t('discover_guide_step4_body') || 'Name + location + workplace from Account → Profile appear under every shared recipe. Fill those in to build a recognisable identity in the community.') + '</li>' +
+          '</ol>' +
+          '<div style="margin-top:10px;padding:8px 10px;background:var(--surface-2);border-radius:6px;font-size:12px;color:var(--text-3);">' +
+            '<strong>💎 ' + PCD.escapeHtml(t('discover_guide_tip_title') || 'Pro tip') + ':</strong> ' + PCD.escapeHtml(t('discover_guide_tip_body') || 'Start by sharing 3–5 of your signature dishes. The view counter takes 1–2 weeks to climb — early shares win the long game.') +
+          '</div>' +
+        '</div>';
+      container.appendChild(guide);
+
+      const dismiss = guide.querySelector('#discoverGuideDismiss');
+      if (dismiss) dismiss.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        try { localStorage.setItem('pcd_discover_guide_hidden', '1'); } catch (er) {}
+        renderFeed(container);
+      });
+    }
+
+    // v2.9.7 — Stats hero (logged-in) or welcome banner (guest)
     const myRecipes = (PCD.store.listRecipes && PCD.store.listRecipes()) || [];
     const myPublics = myRecipes.filter(function (r) { return r && r.isPublic === true; });
     const myUid = currentUserId();
@@ -214,15 +280,48 @@
     // veya Supabase metadata.full_name (auth.js _setUser ile alınmış).
     const myUser = (PCD.store && PCD.store.get && PCD.store.get('user')) || null;
     const myDisplayName = (myUser && myUser.name && myUser.name !== myUser.email) ? myUser.name : null;
-    const banner = PCD.el('div', { class: 'card', style: { padding: '12px 16px', marginBottom: '14px', background: 'var(--surface-2)' } });
-    banner.innerHTML =
-      '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">' +
-        '<div style="flex:1;min-width:200px;font-size:13px;color:var(--text-2);line-height:1.5;">' +
-          '<strong style="color:var(--text-1);">' + (isLoggedIn() ? PCD.escapeHtml(t('discover_my_count_label', { n: myPublics.length })) : PCD.escapeHtml(t('discover_guest_intro') || 'Hoş geldin — toplulukta paylaşılan tarifleri keşfedebilirsin.')) + '</strong>' +
+
+    if (isLoggedIn()) {
+      // Aggregate my stats from feed (top 60 only — view/like counts)
+      let myTotalViews = 0;
+      let myTotalLikes = 0;
+      if (myUid) {
+        feed.forEach(function (r) {
+          if (r.user_id === myUid) {
+            myTotalViews += (r.view_count || 0);
+            myTotalLikes += (r.like_count || 0);
+          }
+        });
+      }
+      const shStatus = sharerStatus(myPublics.length);
+      const shColor = sharerColor(shStatus);
+
+      const hero = PCD.el('div', { class: 'stat', style: { marginBottom: '14px', background: 'linear-gradient(135deg,' + shColor + '18,var(--surface))', borderColor: shColor, padding: '18px' } });
+      hero.innerHTML =
+        '<div style="display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:14px;">' +
+          '<div style="flex-shrink:0;">' +
+            '<div class="stat-label" style="font-size:11px;">' + PCD.escapeHtml(t('discover_my_public') || 'My public recipes') + '</div>' +
+            '<div style="font-size:42px;font-weight:900;color:' + shColor + ';line-height:1;letter-spacing:-0.02em;">' + myPublics.length + '</div>' +
+          '</div>' +
+          '<div style="flex:1;min-width:180px;">' +
+            '<span style="display:inline-block;padding:4px 10px;background:' + shColor + '25;color:' + shColor + ';font-weight:700;font-size:11px;text-transform:uppercase;border-radius:6px;letter-spacing:0.06em;">' + PCD.escapeHtml(sharerLabel(shStatus)) + '</span>' +
+            '<div class="text-muted text-sm" style="font-size:11px;margin-top:5px;line-height:1.4;">' + PCD.escapeHtml(t('discover_share_target') || 'Share 5+ recipes to become an active sharer in the community') + '</div>' +
+          '</div>' +
+          '<button class="btn btn-outline btn-sm" id="discoverGotoRecipes" style="align-self:flex-end;">' + PCD.escapeHtml(t('discover_share_more') || 'Share more') + '</button>' +
         '</div>' +
-        (isLoggedIn() ? '<button class="btn btn-outline btn-sm" id="discoverGotoRecipes">' + PCD.escapeHtml(t('discover_share_more') || 'Daha çok paylaş') + '</button>' : '') +
-      '</div>';
-    container.appendChild(banner);
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
+          '<div><div class="stat-label" style="font-size:11px;">' + PCD.escapeHtml(t('discover_total_views') || 'Total views') + '</div><div style="font-size:18px;font-weight:700;color:var(--text-2);">' + myTotalViews + '</div></div>' +
+          '<div><div class="stat-label" style="font-size:11px;">' + PCD.escapeHtml(t('discover_total_likes') || 'Total likes') + '</div><div style="font-size:18px;font-weight:700;color:var(--danger);">' + myTotalLikes + '</div></div>' +
+        '</div>';
+      container.appendChild(hero);
+    } else {
+      const banner = PCD.el('div', { class: 'card', style: { padding: '12px 16px', marginBottom: '14px', background: 'var(--surface-2)' } });
+      banner.innerHTML =
+        '<div style="font-size:13px;color:var(--text-2);line-height:1.5;">' +
+          '<strong style="color:var(--text-1);">' + PCD.escapeHtml(t('discover_guest_intro') || 'Hoş geldin — toplulukta paylaşılan tarifleri keşfedebilirsin.') + '</strong>' +
+        '</div>';
+      container.appendChild(banner);
+    }
     const gotoBtn = PCD.$('#discoverGotoRecipes', container);
     if (gotoBtn) gotoBtn.addEventListener('click', function () { PCD.router.go('recipes'); });
 
@@ -236,9 +335,101 @@
       return;
     }
 
+    // v2.9.15 — Tag filter chip row (backlog #3)
+    // Aggregate unique tags across feed (case-insensitive normalized to lower).
+    const tagCounts = {};
+    feed.forEach(function (r) {
+      const tags = (r.data && Array.isArray(r.data.tags)) ? r.data.tags : [];
+      tags.forEach(function (tg) {
+        if (!tg || typeof tg !== 'string') return;
+        const norm = tg.trim();
+        if (!norm) return;
+        tagCounts[norm] = (tagCounts[norm] || 0) + 1;
+      });
+    });
+    const allTags = Object.keys(tagCounts).sort(function (a, b) { return tagCounts[b] - tagCounts[a]; });
+    if (allTags.length > 0) {
+      const tagBar = PCD.el('div', { style: { display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px', alignItems: 'center' } });
+      let html = '<span style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-3);font-weight:700;margin-inline-end:4px;">' + PCD.escapeHtml(t('discover_filter_label') || 'Filter') + ':</span>';
+      const allActive = !_selectedTag;
+      html += '<button type="button" class="chip" data-disc-tag="" style="cursor:pointer;padding:3px 10px;font-size:11px;' + (allActive ? 'background:var(--brand-600);color:white;font-weight:700;' : 'background:var(--surface-2);color:var(--text-2);') + '">' + PCD.escapeHtml(t('discover_filter_all') || 'All') + ' · ' + feed.length + '</button>';
+      allTags.slice(0, 20).forEach(function (tg) {
+        const active = _selectedTag && _selectedTag.toLowerCase() === tg.toLowerCase();
+        html += '<button type="button" class="chip" data-disc-tag="' + PCD.escapeHtml(tg) + '" style="cursor:pointer;padding:3px 10px;font-size:11px;' + (active ? 'background:var(--brand-600);color:white;font-weight:700;' : 'background:var(--surface-2);color:var(--text-2);') + '">' + PCD.escapeHtml(tg) + ' · ' + tagCounts[tg] + '</button>';
+      });
+      tagBar.innerHTML = html;
+      container.appendChild(tagBar);
+
+      PCD.on(tagBar, 'click', '[data-disc-tag]', function () {
+        const tg = this.getAttribute('data-disc-tag');
+        _selectedTag = tg || null;
+        renderGrid(container, feed, myLikes);
+      });
+    }
+
+    // v2.9.16 — Free-from allergen filter chip row (backlog #3 second half)
+    // Aggregate allergens across feed using embedded r.data.computedAllergens.
+    // Only show chips for allergens that appear in at least 1 recipe.
+    const allergenCounts = {};
+    feed.forEach(function (r) {
+      const allergens = (r.data && Array.isArray(r.data.computedAllergens)) ? r.data.computedAllergens : [];
+      allergens.forEach(function (a) {
+        if (!a) return;
+        allergenCounts[a] = (allergenCounts[a] || 0) + 1;
+      });
+    });
+    const allergenKeys = Object.keys(allergenCounts).sort(function (a, b) { return allergenCounts[b] - allergenCounts[a]; });
+    if (allergenKeys.length > 0) {
+      const aBar = PCD.el('div', { style: { display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px', alignItems: 'center' } });
+      let html = '<span style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-3);font-weight:700;margin-inline-end:4px;">' + PCD.escapeHtml(t('discover_free_from_label') || 'Free from') + ':</span>';
+      const allActive = !_freeFromAllergen;
+      html += '<button type="button" class="chip" data-disc-free="" style="cursor:pointer;padding:3px 10px;font-size:11px;' + (allActive ? 'background:var(--brand-600);color:white;font-weight:700;' : 'background:var(--surface-2);color:var(--text-2);') + '">' + PCD.escapeHtml(t('discover_free_from_all') || 'Any') + '</button>';
+      // Get the allergen labels with icons via allergensDB
+      const aDb = PCD.allergensDB && PCD.allergensDB.list ? PCD.allergensDB.list : [];
+      const aIconMap = {};
+      aDb.forEach(function (a) { aIconMap[a.key] = a.icon; });
+      allergenKeys.slice(0, 8).forEach(function (ak) {
+        const active = _freeFromAllergen && _freeFromAllergen === ak;
+        const label = t('allerg_' + ak) || ak;
+        const shortLabel = label.split(' ')[0];
+        const icon = aIconMap[ak] || '';
+        html += '<button type="button" class="chip" data-disc-free="' + PCD.escapeHtml(ak) + '" style="cursor:pointer;padding:3px 10px;font-size:11px;' + (active ? 'background:var(--brand-600);color:white;font-weight:700;' : 'background:var(--surface-2);color:var(--text-2);') + '">' + icon + ' ' + PCD.escapeHtml(shortLabel) + '</button>';
+      });
+      aBar.innerHTML = html;
+      container.appendChild(aBar);
+
+      PCD.on(aBar, 'click', '[data-disc-free]', function () {
+        const ak = this.getAttribute('data-disc-free');
+        _freeFromAllergen = ak || null;
+        renderGrid(container, feed, myLikes);
+      });
+    }
+
+    // v2.9.15 — Apply tag filter + v2.9.16 — Apply free-from allergen filter to feed
+    let filteredFeed = feed;
+    if (_selectedTag) {
+      filteredFeed = filteredFeed.filter(function (r) {
+        const tags = (r.data && Array.isArray(r.data.tags)) ? r.data.tags : [];
+        return tags.some(function (tg) { return tg && tg.toLowerCase() === _selectedTag.toLowerCase(); });
+      });
+    }
+    if (_freeFromAllergen) {
+      filteredFeed = filteredFeed.filter(function (r) {
+        const allergens = (r.data && Array.isArray(r.data.computedAllergens)) ? r.data.computedAllergens : [];
+        return allergens.indexOf(_freeFromAllergen) < 0; // recipe must NOT contain the allergen
+      });
+    }
+
+    if (filteredFeed.length === 0) {
+      const empty = PCD.el('div', { class: 'card', style: { padding: '24px 20px', textAlign: 'center', marginTop: '8px' } });
+      empty.innerHTML = '<div style="color:var(--text-3);font-size:13px;">' + PCD.escapeHtml(t('discover_filter_empty') || 'No recipes match this tag.') + '</div>';
+      container.appendChild(empty);
+      return;
+    }
+
     // Sıralama: en çok görüntülenen üstte
     const grid = PCD.el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '10px' } });
-    feed.forEach(function (r) {
+    filteredFeed.forEach(function (r) {
       const d = r.data || {};
       const isMine = (myUid && r.user_id === myUid);
       const liked = !!myLikes[r.id];

@@ -25,11 +25,36 @@
    Recipe kategorilerine göre auto-assign. Şef manuel re-order yapabilir.
 
    Storage: local-only IDB (`misePlans` table). Cloud sync sonraki round.
+
+   v2.9.6 — NAKED→RICH upgrade: closeable inline guide, progress status
+   chip, empty state CTA buttons. Pattern: buffet v2.8.77, nutrition
+   v2.9.3, allergens v2.9.5.
    ================================================================ */
 
 (function () {
   'use strict';
   const PCD = window.PCD;
+
+  // v2.9.6 — Progress status (visual signal for completion state)
+  function miseProgressStatus(donePct) {
+    if (donePct >= 100) return 'complete';
+    if (donePct >= 50) return 'almost';
+    if (donePct > 0) return 'progress';
+    return 'start';
+  }
+  function miseProgressColor(s) {
+    if (s === 'complete') return '#16a34a';
+    if (s === 'almost') return '#f59e0b';
+    if (s === 'progress') return '#3b82f6';
+    return '#6b7280';
+  }
+  function miseProgressLabel(s) {
+    const t = PCD.i18n.t;
+    if (s === 'complete') return t('mise_status_complete') || 'Complete';
+    if (s === 'almost') return t('mise_status_almost') || 'Almost done';
+    if (s === 'progress') return t('mise_status_progress') || 'In progress';
+    return t('mise_status_start') || 'Just started';
+  }
 
   // Recipe category → mise en place sırası (1=ilk, 5=son)
   const PREP_ORDER = {
@@ -232,6 +257,16 @@
       const totalMin = displayItems.reduce(function (s, it) { return s + (it.estimateMinutes || 0); }, 0);
       const remainingMin = displayItems.filter(function (it) { return !it.done; }).reduce(function (s, it) { return s + (it.estimateMinutes || 0); }, 0);
 
+      // v2.9.6 — Progress status (visual signal)
+      const donePct = displayItems.length > 0 ? (doneCount / displayItems.length) * 100 : 0;
+      const progStatus = displayItems.length > 0 ? miseProgressStatus(donePct) : null;
+      const progColor = progStatus ? miseProgressColor(progStatus) : '#6b7280';
+
+      // v2.9.6 — Closeable inline guide
+      const guideHidden = (function () {
+        try { return localStorage.getItem('pcd_mise_guide_hidden') === '1'; } catch (e) { return false; }
+      })();
+
       let phaseHtml = '';
       PHASES.forEach(function (ph) {
         const items = byPhase[ph.id] || [];
@@ -280,15 +315,39 @@
           </div>
         </div>
 
+        ${!guideHidden ? `
+          <details class="card" open style="padding:0;margin-bottom:14px;background:linear-gradient(135deg,var(--brand-50),var(--surface));border:1px solid var(--brand-300);">
+            <summary style="cursor:pointer;padding:12px 14px;font-weight:700;font-size:13px;color:var(--brand-700);display:flex;align-items:center;gap:8px;list-style:none;">
+              <span style="font-size:16px;">💡</span>
+              <span style="flex:1;">${PCD.escapeHtml(t('mise_guide_title') || 'How to use Mise en Place Planner')}</span>
+              <button type="button" id="miseGuideDismiss" style="background:transparent;border:0;color:var(--text-3);cursor:pointer;font-size:11px;padding:2px 6px;" title="${PCD.escapeHtml(t('mise_guide_dismiss') || 'Hide')}">✕</button>
+            </summary>
+            <div style="padding:0 14px 14px;font-size:13px;color:var(--text-2);line-height:1.65;">
+              <ol style="margin:0;padding-inline-start:20px;">
+                <li><strong>${PCD.escapeHtml(t('mise_guide_step1_title') || 'Pick the date')}</strong> — ${PCD.escapeHtml(t('mise_guide_step1_body') || 'Choose today (default) or any service date. The tool reads your events + buffets scheduled for that date and builds the prep list automatically.')}</li>
+                <li><strong>${PCD.escapeHtml(t('mise_guide_step2_title') || 'Auto-grouped by phase')}</strong> — ${PCD.escapeHtml(t('mise_guide_step2_body') || 'Sub-recipes flatten to real prep tasks, grouped into 5 kitchen phases (Stocks → Sauces → Protein → Garnish → Final). Same recipe across multiple events aggregates — you prep once.')}</li>
+                <li><strong>${PCD.escapeHtml(t('mise_guide_step3_title') || 'Check off as you go')}</strong> — ${PCD.escapeHtml(t('mise_guide_step3_body') || 'Tap a row to mark done. Progress + remaining time update live. Your check-marks persist across reloads — pick up where you left off.')}</li>
+                <li><strong>${PCD.escapeHtml(t('mise_guide_step4_title') || 'Print or rebuild')}</strong> — ${PCD.escapeHtml(t('mise_guide_step4_body') || 'Print A4 for the kitchen wall. If events/buffets changed after you started checking, hit Rebuild to refresh (clears check marks).')}</li>
+              </ol>
+              <div style="margin-top:10px;padding:8px 10px;background:var(--surface-2);border-radius:6px;font-size:12px;color:var(--text-3);">
+                <strong>💎 ${PCD.escapeHtml(t('mise_guide_tip_title') || 'Pro tip')}:</strong> ${PCD.escapeHtml(t('mise_guide_tip_body') || 'Open this at 8am with coffee. Skim the phase order — Stocks first, Final last — and you have your whole shift mapped before service.')}
+              </div>
+            </div>
+          </details>
+        ` : ''}
+
         <div class="card mb-3" style="padding:14px;">
           <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
             <div style="flex:1;min-width:200px;">
               <label class="field-label" style="font-size:11px;">${t('mise_date_label') || 'Date'}</label>
               <input type="date" class="input" id="miseDate" value="${selectedDate}" style="max-width:200px;">
             </div>
-            <div style="text-align:center;padding:0 14px;border-left:1px solid var(--border);">
+            <div style="padding:0 14px;border-left:1px solid var(--border);">
               <div class="text-muted text-sm" style="text-transform:uppercase;letter-spacing:0.04em;font-weight:700;font-size:10px;">${t('mise_progress') || 'Progress'}</div>
-              <div style="font-size:20px;font-weight:800;color:var(--brand-700);">${doneCount}/${displayItems.length}</div>
+              <div style="display:flex;align-items:baseline;gap:8px;">
+                <div style="font-size:24px;font-weight:900;color:${progColor};line-height:1;">${doneCount}/${displayItems.length}</div>
+                ${progStatus ? `<span style="padding:2px 8px;background:${progColor}25;color:${progColor};font-weight:700;font-size:10px;text-transform:uppercase;border-radius:5px;letter-spacing:0.06em;">${PCD.escapeHtml(miseProgressLabel(progStatus))}</span>` : ''}
+              </div>
             </div>
             <div style="text-align:center;padding:0 14px;border-left:1px solid var(--border);">
               <div class="text-muted text-sm" style="text-transform:uppercase;letter-spacing:0.04em;font-weight:700;font-size:10px;">${t('mise_remaining') || 'Remaining'}</div>
@@ -306,9 +365,31 @@
             <div class="empty-icon">🥄</div>
             <div class="empty-title">${PCD.escapeHtml(t('mise_empty_title') || 'No prep needed today')}</div>
             <div class="empty-desc">${PCD.escapeHtml(t('mise_empty_desc') || 'No events or buffets scheduled for this date. Schedule one in Events or Buffet Planner, then come back here.')}</div>
+            <div class="empty-action" style="margin-top:10px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+              <button class="btn btn-primary" data-mise-go="events">${PCD.escapeHtml(t('mise_go_events') || 'Go to Events')}</button>
+              <button class="btn btn-outline" data-mise-go="buffet">${PCD.escapeHtml(t('mise_go_buffet') || 'Go to Buffet Planner')}</button>
+            </div>
           </div>
         ` : '<div id="misePhasesList">' + phaseHtml + '</div>'}
       `;
+
+      // Guide dismiss handler
+      const dismissBtn = PCD.$('#miseGuideDismiss', view);
+      if (dismissBtn) {
+        dismissBtn.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          try { localStorage.setItem('pcd_mise_guide_hidden', '1'); } catch (er) {}
+          paint();
+        });
+      }
+
+      // Empty state navigation
+      PCD.on(view, 'click', '[data-mise-go]', function () {
+        const target = this.getAttribute('data-mise-go');
+        if (target === 'events') PCD.router.go('events');
+        else if (target === 'buffet') PCD.router.go('buffet');
+      });
 
       const dateInp = PCD.$('#miseDate', view);
       if (dateInp) dateInp.addEventListener('change', function () { selectedDate = this.value; refresh(); });

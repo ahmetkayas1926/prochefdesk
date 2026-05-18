@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.9.2 · 2026-05-19
+**Mevcut sürüm:** v2.9.16 · 2026-05-19
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -10,7 +10,109 @@ Format: kronolojik tersine (en son sürüm üstte). Her sürüm kısa başlık +
 
 ## v2.9.x — NAKED araç sweep
 
-Operatör vizyonu: her araç Buffet Planner seviyesinde RICH (kapatılabilir inline guide + per-field hint + stats hero + empty state CTA). Round 1 = yield + waste + variance.
+Operatör vizyonu: her araç Buffet Planner seviyesinde RICH (kapatılabilir inline guide + per-field hint + stats hero + empty state CTA).
+- **Round 1 (v2.9.0-2):** yield + waste + variance ✅
+- **Round 2 (v2.9.3-6):** nutrition + dark-mode-fix + allergens + mise ✅
+- **Round 3 (v2.9.7-9):** discover + account + team ✅
+- **Round 4 (v2.9.10-12):** sales + whatif + menu_matrix ✅
+- **Round 5 (v2.9.13):** haccp hub ✅ — **NAKED→RICH sweep tamamlandı**
+
+### v2.9.16 — Discover Allergen "Free-from" filter · 2026-05-19
+- **Added:** `enrichPublicIngredientNames` (recipes.js v2.8.66) helper genişletildi — public recipe save sırasında `recipe.computedAllergens` array'i de embed ediliyor (PCD.allergensDB.recipeAllergens cascade ile, sub-recipe ingredient'lar dahil).
+- **Added:** Discover'a "Free from" chip row (tag filter row'unun altında) — feed'deki public recipe'lerin embed edilmiş allergen array'leri aggregate edilip top 8 allerjen chip olarak çıkar. Tıklayınca o allerjeni İÇEREN recipe'ler gizlenir (free-from semantik).
+- **Backfill notu:** Mevcut public recipe'lerde `computedAllergens` yok — chef her recipe'i bir kez açıp save edince embed edilir. Yeni save'ler otomatik.
+- **i18n:** +2 key TR/EN. **Backlog #3 tamamen kapatıldı** (Tag + Allergen filter).
+
+### v2.9.15 — Discover Tag filter · 2026-05-19
+- **Added:** Discover sayfasına tag filter chip row — feed'deki tüm public recipe'lerin tag'leri aggregate edilip "All / Pizza · 4 / Vegan · 3 / ..." şeklinde tıklanabilir chip olarak çıkar (top 20, count'a göre sıralı). Tıklayınca grid o tag'e göre filtreleniyor. Refresh butonu tag selection'ını da sıfırlar.
+- **Data:** `r.data.tags` (public recipe blob içinde zaten var, schema değişikliği yok).
+- **Korunan:** Allergen filter ayrı round'da (allergen verisi public recipe blob'da yok, save-time enrichment gerekiyor — v2.8.66 ingredient name enrichment pattern).
+- **i18n:** +3 key TR/EN. Backlog #3'ün ilk yarısı kapatıldı.
+
+### v2.9.14 — Buffet Excel footer · 2026-05-19
+- **Added:** Buffet Excel export'una footer satırı eklendi — "Made with ProChefDesk · prochefdesk.com" italik gri 8pt, 7 sütun merged. Recipe Cost Excel paterniyle tutarlı (`cr_made_with` i18n key reused). Backlog #6 kapatıldı.
+- Sadece `buffet.js` 1 dosya değişti, 8 satır eklendi.
+
+### v2.9.13 — HACCP Hub NAKED→RICH · ROUND 5 son · 2026-05-19
+- **Added:** 5-step kapatılabilir inline guide (`pcd_haccp_guide_hidden` localStorage) workflow + audit prep + role assignment + Pro tip.
+- **Added:** Stats hero refactor — Touched/Total primary (42px, X/4 forms logged today) + status chip (All forms logged today ✓ / Some forms not yet logged today / colored card border yeşil/amber/kırmızı). Secondary: total entries today count.
+- **Korunan:** 4 HACCP form cards (Daily Temp / Cook & Cool / Receiving / Hot & Cold Holding) + audit hint footer + per-card date-aware count'lar.
+- **i18n:** +13 key TR/EN.
+- **🎯 NAKED→RICH SWEEP TAMAMLANDI** — 13 araç (yield, waste, variance, nutrition, allergens, mise, discover, account, team, sales, whatif, menu_matrix, haccp hub) artık Buffet Planner seviyesinde RICH: kapatılabilir inline guide + stats hero + per-field hint + empty state CTA + dark mode kontrast.
+
+### v2.9.12 — Menu Matrix NAKED→RICH · 2026-05-19
+- **Added:** 4-step kapatılabilir inline guide (`pcd_matrix_guide_hidden` localStorage) Kasavana-Smith framework açıklaması + Pro tip (sağlıklı menü %60-70 Star+Plowhorse).
+- **Added:** Quadrant breakdown stats hero — Stars / total primary (42px) + status chip (Healthy mix / Mixed signal / Bloated menu / No data yet) + colored card border. Secondary: 4-grid Star/Plowhorse/Puzzle/Dog count'lar her biri kendi rengi ile.
+- **Changed:** 1 hardcoded EN string ("Enter how many times each item was sold...") → `matrix_sales_editor_intro` i18n key. "click 'Set sales' above" hint de `matrix_need_data_hint` i18n.
+- **Korunan:** SVG scatter plot, menu picker, sales editor modal, quadrant grouping logic, computeFoodCost cascade.
+- **i18n:** +22 key TR/EN.
+
+### v2.9.11 — What-If Simulator NAKED→RICH · 2026-05-19
+- **Added:** 4-step kapatılabilir inline guide (`pcd_whatif_guide_hidden` localStorage) + Pro tip (yeni tedarikçi kontratı öncesi simülasyon).
+- **Added:** Impact stats hero — Recipes affected primary (42px) + worst-hit chip (en çok vurulan tarif adı) + colored card border (kırmızı/yeşil deltaya göre). Secondary: Avg cost change + Total cost shift.
+- **Korunan:** In-memory scenario, slider/number input ile change adjust, ingredient picker, computeImpact hesabı, recipe listesi (largest delta sort).
+- **i18n:** +14 key TR/EN.
+
+### v2.9.10 — Sales Log NAKED→RICH + i18n sweep · 2026-05-19
+- **Added:** Tam i18n sweep — önceden 2 key vardı (delete title + ok), tüm hardcoded EN string'ler (page title/subtitle, button labels, empty states, modal field labels, placeholder text) `t()` çağrısına çevrildi.
+- **Added:** 4-step kapatılabilir inline guide (`pcd_sales_guide_hidden` localStorage) + Pro tip (POS batch entry).
+- **Added:** Volume stats hero — Portions this week primary (42px) + status chip (Busy week ≥200 / Steady ≥50 / Slow / No data) + colored border. Secondary: Top recipe (30d) + Active days (30d).
+- **i18n:** +36 key TR/EN.
+
+### v2.9.9 — Team NAKED→RICH · 2026-05-19
+- **Added:** 4-step kapatılabilir inline guide (`pcd_team_guide_hidden` localStorage) + Pro tip (status Pending olarak setlemek vs çıkarma).
+- **Added:** Team composition stats hero (team varsa) — Total members primary (42px, owner dahil) + active/pending chip + role breakdown 3-grid (manager/cook/viewer).
+- **Changed:** 7 hardcoded EN string → `t()` çağrısı (invite note, invalid email error, already invited warning, link copied success, Name label, Optional display name placeholder, Status label).
+- **Korunan:** Roles + permissions yapısı, Pro gate (free user upsell), Owner row, invite modal flow (email + copy link), member editor (role/status edit + remove confirm).
+- **i18n:** +22 key TR/EN.
+
+### v2.9.8 — Account NAKED→RICH · 2026-05-19
+- **Added:** 4-step kapatılabilir inline guide (`pcd_account_guide_hidden` localStorage) + Pro tip (multiple workspace ayrımı).
+- **Added:** Chef profile section başlığına completeness chip — "X/5 · Profile complete / Mostly complete / Partial / Empty profile" (name + role + country + workplace + bio fields).
+- **Korunan:** Profile card (avatar/sign in/out), Chef Profile form, Preferences (currency/locale/theme/haptic), Plan info, Backup, Sessions, Danger Zone — yapısal değişiklik yok.
+- **i18n:** +18 key TR/EN.
+
+### v2.9.7 — Discover NAKED→RICH · 2026-05-19
+- **Added:** 4-step kapatılabilir inline guide (`pcd_discover_guide_hidden` localStorage) + Pro tip (3-5 imza yemekle başla).
+- **Added:** Sharer stats hero (logged-in users) — My public recipes primary (42px) + status chip (Expert sharer ≥10 / Active sharer ≥5 / Getting started ≥1 / Just browsing) + colored card border. Secondary: Total views + Total likes (feed üzerinden aggregate).
+- **Korunan:** Misafir kullanıcılar için welcome banner, public feed grid, card click → detail modal + view bump, like toggle, RLS-protected fetch, 60sn cache.
+- **i18n:** +22 key TR/EN.
+
+### v2.9.6 — Mise en Place NAKED→RICH · 2026-05-19
+- **Added:** 4-step kapatılabilir inline guide (`pcd_mise_guide_hidden` localStorage) + Pro tip (8am ritüel).
+- **Added:** Progress status chip — `doneCount/total` rakamının yanına renkli chip (Just started / In progress / Almost done / Complete) + rakam rengi de progress'e göre değişir.
+- **Added:** Empty state CTA butonları — "Go to Events" + "Go to Buffet Planner" (etkinlik/büfe yokken navigation kısayolu).
+- **Korunan:** computeAutoPrep + 5-faz grouping (Stocks/Sauces/Protein/Garnish/Final) + flattenIngredients cascade + IDB persistence + Rebuild + A4 print — hepsi aynen.
+- **i18n:** +20 key TR/EN.
+
+### v2.9.5 — Allergen Report NAKED→RICH · 2026-05-19
+- **Added:** 4-step kapatılabilir inline guide (`pcd_allergens_guide_hidden` localStorage) + Pro tip (supplier statement compliance).
+- **Added:** Tag coverage stats hero — coverage % primary (42px) + status chip (Fully reviewed / Mostly reviewed / In progress / Just started) + colored card border. Secondary: Allergen-free recipes count + With-allergens count.
+- **Korunan:** EU FIC 1169/2011 legal note info card + matrix view + tagger modal + A4 print export — hesaplama (`recipeAllergens` sub-recipe cascade) hepsi aynen.
+- **i18n:** +22 key TR/EN.
+
+### v2.9.4 — Comprehensive dark mode contrast fix · 2026-05-19
+- **Fixed:** `var(--brand-50)` (#f0fdf4 light green) dark mode'da override edilmediği için 5 farklı pattern'de okunabilirlik + görsel uyum bozuluyordu. Operatör 5 ekran raporladı (recipes section banners, portion guide, opening prep template preview, events TOPLAM YEMEK MALİYETİ stat card, çeşitli sticky/notification cards).
+- **Fixed:** brand-50 4 CSS kuralıyla kapsamlı tedavi:
+  1. Inline gradient'ler (15+ yer) → `linear-gradient(135deg, rgba(22,163,74,0.14), var(--surface-2))`
+  2. Solid brand-50 inline bg (`.stat`/`.card`/bare div, chips hariç) → `rgba(22,163,74,0.14)`
+  3. brand-50 + brand-700 birlikte → text rengini brand-300'e çevir (section banners)
+  4. `details[style*="brand-50"] summary` → brand-300
+- **Fixed:** Hardcoded açık warning/error renkleri (17+ yerde `#fef3c7` sarı warning bg + `#92400e` amber text + `#fef2f2` kırmızı error bg + `#991b1b` koyu kırmızı text + `#fecaca` kırmızı border + `#fde68a` sarı gradient end). Dark mode'da rgba tint'lere flip:
+  - `#fef3c7` → `rgba(245,158,11,0.15)` / gradient → `rgba(245,158,11,0.20)→surface-2`
+  - `#92400e` → `#fde68a` (açık amber text)
+  - `#fef2f2` → `rgba(220,38,38,0.15)`
+  - `#991b1b` → `#fca5a5` (açık kırmızı text)
+  - `#fecaca` → `rgba(220,38,38,0.4)` (border)
+- **Korunan:** `.chip` ve `[class*="chip"]` ile butonlar (intentional bright accent) dokunulmadı. `.dash-card.priority-now` injected CSS rule olduğu için ayrı override.
+- Selector pattern: `[style*="--brand-50)"]` (closing paren) ile `--brand-500` false positive engellenir, whitespace varyantları yakalanır. Hex color rules `[style*="#fef3c7"]` vb. ile substring match.
+- Tek dosya değişti: `themes.css`. JS hiç dokunulmadı.
+
+### v2.9.3 — Nutrition NAKED→RICH · 2026-05-19
+- **Added:** 4-step kapatılabilir inline guide (`pcd_nutrition_guide_hidden` localStorage) + Pro tip (USDA FoodData Central reference).
+- **Added:** Recipe coverage stats hero — Coverage % primary (42px) + status chip (Complete / Mostly covered / Half-covered / Limited data) + colored card border. Secondary: Avg kcal/serving across menu + Ingredients missing data count.
+- **Changed:** Detail modal'daki hardcoded "⚠️ Some ingredients have no nutrition data" warning → `nut_partial_warning` i18n key.
+- **i18n:** +23 key TR/EN.
 
 ### v2.9.2 — Variance Report NAKED→RICH + full i18n sweep · 2026-05-19
 - **Added:** Tam i18n sweep — önceden sıfır key vardı, tüm hardcoded EN string'ler `t()` çağrısına çevrildi (page title/subtitle, step labels, table headers, button text, status labels, print PDF, no-data fallback).

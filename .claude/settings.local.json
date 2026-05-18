@@ -74,7 +74,12 @@
       "Bash(node -c C:/Users/ahmet/Desktop/prochefdesk/app/js/i18n/en.js)",
       "Bash(node -c C:/Users/ahmet/Desktop/prochefdesk/app/js/i18n/tr.js)",
       "Bash(node -c C:/Users/ahmet/Desktop/prochefdesk/app/js/tools/waste.js)",
-      "Bash(node -c C:/Users/ahmet/Desktop/prochefdesk/app/js/tools/variance.js)"
+      "Bash(node -c C:/Users/ahmet/Desktop/prochefdesk/app/js/tools/variance.js)",
+      "Bash(node -c C:/Users/ahmet/Desktop/prochefdesk/app/js/tools/nutrition.js)",
+      "Bash(node -c C:/Users/ahmet/Desktop/prochefdesk/app/js/tools/mise.js)",
+      "Bash(node -c C:/Users/ahmet/Desktop/prochefdesk/app/js/tools/team.js)",
+      "Bash(node -c C:/Users/ahmet/Desktop/prochefdesk/app/js/tools/discover.js)",
+      "Bash(node -c C:/Users/ahmet/Desktop/prochefdesk/app/js/tools/recipes.js)"
     ]
   }
 }

@@ -10,7 +10,7 @@ ProChefDesk — profesyonel şef'ler için web tabanlı mutfak yönetim sistemi.
 
 **Stack:** Vanilla JavaScript (no bundling, no service worker), IndexedDB ana storage, Supabase (Postgres 17 + Auth + Storage + Realtime + Edge Functions), Cloudflare Pages (auto-deploy on GitHub push), Cloudflare R2 (backups).
 
-**Mevcut sürüm:** v2.9.2 (push'a hazır local; production v2.9.1). Detay: `CHANGELOG.md`.
+**Mevcut sürüm:** v2.9.16 (push'a hazır local; production v2.9.3). **NAKED→RICH sweep TAMAMLANDI** + backlog #3 (Discover Tag + Allergen filter) + #6 (Buffet Excel footer). Detay: `CHANGELOG.md`.
 
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı). SEO standardı aşağıda `## Blog SEO standardı` bölümünde.
 
@@ -28,15 +28,15 @@ Operatör Türkçe konuşur, Türkçe cevap ver. "BUNU SEN SÖYLE" veya "öneri 
 - **v2.6.x — v2.8.79:** Altyapı (per-table sync + RLS + cascade triggers + cache-busting), büyük araçlar (Buffet Planner, Mise en Place, HACCP Hub, Allergen Guardrail, Cost Health, Sub-recipe flatten helper), perf L1+L2.
 - **v2.8.80 — v2.8.93:** UX hijyen (modal focus root cause, recipe editor birleştirme, welcome tour modernize, Profile↔Discover bağlantı), Excel bug fix, Buffet UX modernize + Quick Start (7 preset), Portion Calculator semantik refactor, Dashboard + Tools-hub upgrade.
 - **v2.8.94 — v2.8.99:** Blog SEO — Faz A (3 yazı JSON-LD + authority + cross-link upgrade) + Faz B 5-round (10 yeni yazı, total 13 yayında).
+- **v2.9.0 — v2.9.13:** NAKED→RICH sweep TAMAMLANDI. 5 round'da 13 araç buffet seviyesinde RICH: kapatılabilir inline guide + stats hero + per-field hint + empty state CTA + dark mode kapsamlı kontrast fix. Tüm araçlarda artık tutarlı UX paterni.
 
-**Sıradaki (v2.9.x — NAKED araç sweep):** Operatör vizyonu — her araç Buffet Planner seviyesinde RICH. 13 araç paketleri halinde:
-1. yield + waste + variance
-2. nutrition + allergens + mise
-3. discover + account + team
-4. sales + whatif + menu_matrix
-5. haccp hub UX upgrade
+**Sıradaki (v2.10.x — yeni faz):**
+- Backlog #1: iOS/Safari cross-browser test (operatör manuel)
+- Backlog #2: Buffet + Mise cloud sync (Supabase tablo + RLS + per-table sync wire)
+- Backlog #3: Discover'a Tag + Allergen filter
+- Diğer backlog için: HANDOVER.md §6
 
-Her tur baseline: kapatılabilir inline guide + per-field hint + örnek placeholder + empty state onboarding (v2.8.77 buffet pattern).
+Her tur baseline: kapatılabilir inline guide + per-field hint + örnek placeholder + empty state onboarding (v2.8.77 buffet pattern). Dark mode kontrast otomatik (themes.css v2.9.4 universal rules).
 
 ## Backlog
 
@@ -44,10 +44,10 @@ Her tur baseline: kapatılabilir inline guide + per-field hint + örnek placehol
 
 1. **iOS/Safari cross-browser test** — v2.8.49 kod tarama temiz (backdrop-filter vendor prefix). Manuel cihaz testi operatör tarafına bekliyor.
 2. **Buffet + Mise cloud sync** — `buffets` (v2.8.73) + `misePlans` (v2.8.74) IDB-only. Supabase tablo + RLS + per-table sync wire gerekiyor. Pattern: v2.8.44 (haccp_receiving/holding). **Onay zorunlu** (yeni tablo + RLS + sync mantığı).
-3. **Discover'a Tag + Allergen filter** — v2.8.75 tag + v2.8.71 allergen Discover'a inmedi. Public recipe save edilirken inline gömme (`enrichPublicIngredientNames` pattern, v2.8.66).
+3. ~~**Discover'a Tag + Allergen filter**~~ ✅ v2.9.15-16'da kapatıldı.
 4. **Categories functional** — şu an menu kategorileri kozmetik label. 50+ menu item ölçeğinde anlamlı.
 5. **`supabase-functions/` duplicate silme** — operatör Dashboard'dan deploy doğrulaması yaptı; klasör güvenle silinebilir, ayrı round'da.
-6. **Buffet Excel footer** ("Made with ProChefDesk · prochefdesk.com") — Recipe Cost Excel'inde footer var, buffet Excel'inde yok. Tek hücre add, low-priority.
+6. ~~**Buffet Excel footer**~~ ✅ **v2.9.14'te kapatıldı.**
 7. **Discover view spam rate limit** — `increment_recipe_view` RPC anonymous'a açık (MVP kabul). Viral olursa Edge Function ile IP+recipe başına 1 saat 1 view.
 8. **R2 foto bytes yedekleme** — şu an sadece manifest. Pro tier'a geçişte Storage PITR ile çözülür.
 9. **App boot perf L3** (cloud sync ilk paint sonrasına ertele) — yüksek risk, **önerilmedi**. L1+L2 yeterli (PageSpeed ~85 hedef, LCP 3.0-3.5 sn).

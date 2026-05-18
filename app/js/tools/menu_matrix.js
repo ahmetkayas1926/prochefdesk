@@ -8,6 +8,10 @@
    - Quadrant dividers = averages across the menu
 
    Data: menu.items[i].monthlySales (integer, default 0) — user input.
+
+   v2.9.12 — NAKED→RICH upgrade: closeable inline guide explaining
+   Kasavana-Smith framework, quadrant breakdown hero (Star count + 4-grid),
+   1 hardcoded EN string i18n'd. Pattern: buffet v2.8.77.
    ================================================================ */
 
 (function () {
@@ -36,6 +40,11 @@
     const t = PCD.i18n.t;
     const menus = PCD.store.listTable('menus');
 
+    // v2.9.12 — Closeable inline guide
+    const guideHidden = (function () {
+      try { return localStorage.getItem('pcd_matrix_guide_hidden') === '1'; } catch (e) { return false; }
+    })();
+
     view.innerHTML = `
       <div class="page-header">
         <div class="page-header-text">
@@ -43,8 +52,41 @@
           <div class="page-subtitle">${t('matrix_subtitle')}</div>
         </div>
       </div>
+
+      ${!guideHidden ? `
+        <details class="card" open style="padding:0;margin-bottom:14px;background:linear-gradient(135deg,var(--brand-50),var(--surface));border:1px solid var(--brand-300);">
+          <summary style="cursor:pointer;padding:12px 14px;font-weight:700;font-size:13px;color:var(--brand-700);display:flex;align-items:center;gap:8px;list-style:none;">
+            <span style="font-size:16px;">💡</span>
+            <span style="flex:1;">${PCD.escapeHtml(t('matrix_guide_title') || 'How Menu Matrix works (Kasavana-Smith)')}</span>
+            <button type="button" id="matrixGuideDismiss" style="background:transparent;border:0;color:var(--text-3);cursor:pointer;font-size:11px;padding:2px 6px;" title="${PCD.escapeHtml(t('matrix_guide_dismiss') || 'Hide')}">✕</button>
+          </summary>
+          <div style="padding:0 14px 14px;font-size:13px;color:var(--text-2);line-height:1.65;">
+            <ol style="margin:0;padding-inline-start:20px;">
+              <li><strong>${PCD.escapeHtml(t('matrix_guide_step1_title') || 'Enter monthly sales')}</strong> — ${PCD.escapeHtml(t('matrix_guide_step1_body') || 'Click "Set sales" and type how many of each item sold last month. Without sales data the matrix can not classify dishes.')}</li>
+              <li><strong>${PCD.escapeHtml(t('matrix_guide_step2_title') || 'Two axes plot every dish')}</strong> — ${PCD.escapeHtml(t('matrix_guide_step2_body') || 'X = popularity (share of total sales). Y = contribution margin % (price − food cost). Average lines split the chart into 4 quadrants.')}</li>
+              <li><strong>${PCD.escapeHtml(t('matrix_guide_step3_title') || 'Read the quadrants')}</strong> — ${PCD.escapeHtml(t('matrix_guide_step3_body') || 'Star (high pop + high margin) = champion, push it. Plowhorse (high pop + low margin) = cost it down. Puzzle (low pop + high margin) = market harder. Dog (low pop + low margin) = drop or rework.')}</li>
+              <li><strong>${PCD.escapeHtml(t('matrix_guide_step4_title') || 'Decide quarterly')}</strong> — ${PCD.escapeHtml(t('matrix_guide_step4_body') || 'Run this every 3 months. Move Dogs off the menu, fix Plowhorses with portion or supplier work, feature Stars more visibly, give Puzzles a story (or sunset them).')}</li>
+            </ol>
+            <div style="margin-top:10px;padding:8px 10px;background:var(--surface-2);border-radius:6px;font-size:12px;color:var(--text-3);">
+              <strong>💎 ${PCD.escapeHtml(t('matrix_guide_tip_title') || 'Pro tip')}:</strong> ${PCD.escapeHtml(t('matrix_guide_tip_body') || 'A healthy menu typically has 60–70% of items in Star + Plowhorse combined. If Dogs make up more than 20%, your menu is bloated — trim it.')}
+            </div>
+          </div>
+        </details>
+      ` : ''}
+
       <div id="matrixBody"></div>
     `;
+
+    // Guide dismiss handler
+    const dismissBtn = PCD.$('#matrixGuideDismiss', view);
+    if (dismissBtn) {
+      dismissBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        try { localStorage.setItem('pcd_matrix_guide_hidden', '1'); } catch (er) {}
+        render(view);
+      });
+    }
 
     const bodyEl = PCD.$('#matrixBody', view);
 
@@ -120,20 +162,44 @@
       const groups = { star: [], plowhorse: [], puzzle: [], dog: [] };
       analyzed.forEach(function (x) { groups[x.quadrant].push(x); });
 
+      // v2.9.12 — Quadrant breakdown stats hero
+      const starCount = groups.star.length;
+      const totalItems = analyzed.length;
+      const starPct = totalItems > 0 ? (starCount / totalItems) * 100 : 0;
+      const healthyMix = (groups.star.length + groups.plowhorse.length) / Math.max(1, totalItems) >= 0.6;
+      const heroColor = totalSales > 0 ? (healthyMix ? '#16a34a' : (groups.dog.length > totalItems * 0.2 ? '#dc2626' : '#f59e0b')) : '#6b7280';
+      const heroLabel = totalSales === 0 ? (t('matrix_hero_no_data') || 'No data yet')
+                      : healthyMix ? (t('matrix_hero_healthy') || 'Healthy mix')
+                      : groups.dog.length > totalItems * 0.2 ? (t('matrix_hero_bloated') || 'Bloated menu')
+                      : (t('matrix_hero_mixed') || 'Mixed signal');
+
       bodyEl.innerHTML = `
         <div class="mb-3">${renderMenuPicker(menus, selectedMenuId)}</div>
 
-        <div class="flex items-center justify-between mb-3" style="gap:8px;flex-wrap:wrap;">
-          <div class="text-muted text-sm">
-            ${analyzed.length} items · ${totalSales} ${totalSales === 1 ? 'sale' : 'sales'} / month
+        <div class="stat mb-3" style="background:linear-gradient(135deg,${heroColor}18,var(--surface));border-color:${heroColor};padding:18px;">
+          <div style="display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:14px;">
+            <div style="flex-shrink:0;">
+              <div class="stat-label" style="font-size:11px;">${PCD.escapeHtml(t('matrix_hero_stars') || 'Stars')}</div>
+              <div style="font-size:42px;font-weight:900;color:${heroColor};line-height:1;letter-spacing:-0.02em;">${starCount}<span style="font-size:18px;color:var(--text-3);font-weight:600;"> / ${totalItems}</span></div>
+            </div>
+            <div style="flex:1;min-width:180px;">
+              <span style="display:inline-block;padding:4px 10px;background:${heroColor}25;color:${heroColor};font-weight:700;font-size:11px;text-transform:uppercase;border-radius:6px;letter-spacing:0.06em;">${PCD.escapeHtml(heroLabel)}</span>
+              <div class="text-muted text-sm" style="font-size:11px;margin-top:5px;line-height:1.4;">${totalItems} ${PCD.escapeHtml(t('matrix_items_label') || 'items')} · ${totalSales} ${PCD.escapeHtml(t('matrix_sales_per_month') || 'sales / month')}</div>
+            </div>
+            <button class="btn btn-outline btn-sm" id="setSalesBtn">📝 ${t('matrix_set_sales')}</button>
           </div>
-          <button class="btn btn-outline btn-sm" id="setSalesBtn">📝 ${t('matrix_set_sales')}</button>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;">
+            <div><div class="stat-label" style="font-size:11px;">${t('matrix_star')}</div><div style="font-size:18px;font-weight:700;color:#22c55e;">${groups.star.length}</div></div>
+            <div><div class="stat-label" style="font-size:11px;">${t('matrix_plowhorse')}</div><div style="font-size:18px;font-weight:700;color:#f59e0b;">${groups.plowhorse.length}</div></div>
+            <div><div class="stat-label" style="font-size:11px;">${t('matrix_puzzle')}</div><div style="font-size:18px;font-weight:700;color:#3b82f6;">${groups.puzzle.length}</div></div>
+            <div><div class="stat-label" style="font-size:11px;">${t('matrix_dog')}</div><div style="font-size:18px;font-weight:700;color:#ef4444;">${groups.dog.length}</div></div>
+          </div>
         </div>
 
         ${totalSales === 0 ? `
           <div class="card mb-3" style="background:var(--warning-bg);border-color:var(--warning);padding:12px;">
             <div class="text-sm" style="color:var(--warning);">
-              ⚠️ ${t('matrix_need_data')} — click "${t('matrix_set_sales')}" above to enter sales counts.
+              ⚠️ ${t('matrix_need_data')} — ${PCD.escapeHtml(t('matrix_need_data_hint') || 'click "Set sales" above to enter sales counts.')}
             </div>
           </div>
         ` : ''}
@@ -276,7 +342,7 @@
     const data = PCD.clone(menu);
 
     const body = PCD.el('div');
-    let html = '<div class="text-muted text-sm mb-3">Enter how many times each item was sold in the last month.</div>';
+    let html = '<div class="text-muted text-sm mb-3">' + PCD.escapeHtml(t('matrix_sales_editor_intro') || 'Enter how many times each item was sold in the last month.') + '</div>';
     (data.sections || []).forEach(function (sec, sIdx) {
       if (!sec.items || sec.items.length === 0) return;
       html += '<div class="section-title" style="font-size:12px;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-3);margin-bottom:6px;margin-top:12px;">' + PCD.escapeHtml(sec.name) + '</div>';

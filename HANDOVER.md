@@ -9,7 +9,7 @@
 
 **Ürün:** ProChefDesk — profesyonel chef'ler için web tabanlı mutfak yönetim sistemi.
 **Operatör:** Ahmet Kaya, Perth Western Australia, profesyonel şef. Solo non-commercial proje.
-**Mevcut sürüm:** **v2.9.2** (push'a hazır local; production v2.9.1).
+**Mevcut sürüm:** **v2.9.16** (push'a hazır local; production v2.9.3). **NAKED→RICH sweep tamamlandı — 13 araç buffet seviyesinde RICH.** Backlog #3 (Discover Tag + Allergen filter) + #6 (Buffet Excel footer) kapatıldı.
 **Blog:** 13 yazı yayında (Faz A SEO upgrade + Faz B 5-round, MENA niş + uluslararası coverage).
 **Domain:** prochefdesk.com (Cloudflare Pages, SSL Full, GitHub push'ta auto build + deploy).
 
@@ -169,10 +169,10 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH. 13 araç paketleri
 
 1. **iOS/Safari cross-browser test** — v2.8.49 kod tarama temiz; gerçek cihaz testi operatör tarafına bekliyor.
 2. **Buffet + Mise cloud sync** — `buffets` + `misePlans` şu an IDB-only. Supabase tablo + RLS + per-table sync wire gerekiyor (pattern: v2.8.44 haccp_receiving/holding). **Onay zorunlu.**
-3. **Discover'a Tag + Allergen filter** — v2.8.75 tag + v2.8.71 allergen Discover'a inmedi. Public recipe save edilirken `enrichPublicIngredientNames` pattern'i ile inline gömme.
+3. ~~**Discover'a Tag + Allergen filter**~~ ✅ **v2.9.15-16'da kapatıldı.** Backfill notu: mevcut public recipe'lerde `computedAllergens` yok; chef her recipe'i bir kez açıp save edince embed olur.
 4. **Categories functional** — şu an kozmetik label. 50+ menu item ölçeğinde anlamlı.
 5. **`supabase-functions/` duplicate silme** — operatör deploy doğrulaması yaptı; klasör güvenle silinebilir, ayrı round.
-6. **Buffet Excel footer** — Recipe Cost Excel'inde "Made with ProChefDesk · prochefdesk.com" footer var, Buffet Excel'inde yok. Tek hücre add, low-priority.
+6. ~~**Buffet Excel footer**~~ ✅ **v2.9.14'te kapatıldı.**
 7. **Discover view count rate limit** — `increment_recipe_view` RPC anonymous'a açık (MVP kabul). Viral olursa Edge Function ile IP+recipe başına 1 saat 1 view.
 8. **R2 backup foto bytes yedekleme** — şu an sadece manifest. Solo workflow için kabul edilebilir; Pro tier'da Storage PITR çözer.
 9. **App boot perf L3** — cloud sync ilk paint sonrasına ertele. **Önerilmedi** (yüksek risk, "veri kayıp" hissi). L1+L2 yeterli; beklenen PageSpeed ~85, LCP 3.0-3.5 sn.
@@ -232,7 +232,7 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH. 13 araç paketleri
 |---|---|
 | Repo path (operatör Windows) | `C:\Users\ahmet\Desktop\prochefdesk` |
 | GitHub repo | `ahmetkayas1926/prochefdesk` |
-| Production sürümü | **v2.9.2** (push'a hazır local; production v2.9.1) |
+| Production sürümü | **v2.9.16** (push'a hazır local; production v2.9.3) |
 | Supabase project ref | `muuwhrcogikpqylsfvgg` (Tokyo, Postgres 17, Free tier) |
 | Cloudflare R2 bucket | `prochefdesk-backups` |
 | CLEANUP_SECRET | `ec79a445-7e92-499b-9322-5c2c949788d4d2886e66-d556-4498-ba9e-17fda6c11ac1` |

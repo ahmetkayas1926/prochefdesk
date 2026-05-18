@@ -3,17 +3,61 @@
    Allergen matrix across all recipes (14 EU allergens).
    Auto-detects from ingredient names, allows manual tagging.
    Printable report.
+
+   v2.9.5 — NAKED→RICH upgrade: closeable inline guide, coverage stats
+   hero (ingredients tagged %), secondary metrics (allergen-free recipes,
+   flagged recipes). Pattern: buffet v2.8.77, nutrition v2.9.3.
    ================================================================ */
 
 (function () {
   'use strict';
   const PCD = window.PCD;
 
+  // v2.9.5 — Coverage status helpers (ingredient tag completeness)
+  function tagCoverageStatus(pct) {
+    if (pct >= 100) return 'complete';
+    if (pct >= 80) return 'mostly';
+    if (pct >= 50) return 'half';
+    return 'limited';
+  }
+  function tagCoverageColor(s) {
+    if (s === 'complete' || s === 'mostly') return '#16a34a';
+    if (s === 'half') return '#f59e0b';
+    return '#dc2626';
+  }
+  function tagCoverageLabel(s) {
+    const t = PCD.i18n.t;
+    if (s === 'complete') return t('allerg_status_complete') || 'Fully reviewed';
+    if (s === 'mostly') return t('allerg_status_mostly') || 'Mostly reviewed';
+    if (s === 'half') return t('allerg_status_half') || 'In progress';
+    return t('allerg_status_limited') || 'Just started';
+  }
+
   function render(view) {
     const t = PCD.i18n.t;
     const recipes = PCD.store.listRecipes();
     const ings = PCD.store.listIngredients();
     const ALLERGENS = PCD.allergensDB.list;
+
+    // v2.9.5 — Coverage stats for hero
+    const taggedCount = ings.filter(function (i) { return i.allergens && i.allergens.length > 0; }).length;
+    const coveragePct = ings.length > 0 ? (taggedCount / ings.length) * 100 : 0;
+    const covStatus = ings.length > 0 ? tagCoverageStatus(coveragePct) : null;
+    const covColor = covStatus ? tagCoverageColor(covStatus) : '#6b7280';
+
+    // Allergen-free vs flagged recipe split
+    let allergenFreeCount = 0;
+    let flaggedCount = 0;
+    recipes.forEach(function (r) {
+      const arr = PCD.allergensDB.recipeAllergens(r, ings);
+      if (arr.length === 0) allergenFreeCount++;
+      else flaggedCount++;
+    });
+
+    // v2.9.5 — Closeable inline guide
+    const guideHidden = (function () {
+      try { return localStorage.getItem('pcd_allergens_guide_hidden') === '1'; } catch (e) { return false; }
+    })();
 
     view.innerHTML = `
       <div class="page-header">
@@ -26,6 +70,46 @@
           ${recipes.length > 0 ? '<button class="btn btn-primary" id="printBtn">' + PCD.icon('print', 16) + ' ' + t('allerg_print') + '</button>' : ''}
         </div>
       </div>
+
+      ${!guideHidden ? `
+        <details class="card" open style="padding:0;margin-bottom:14px;background:linear-gradient(135deg,var(--brand-50),var(--surface));border:1px solid var(--brand-300);">
+          <summary style="cursor:pointer;padding:12px 14px;font-weight:700;font-size:13px;color:var(--brand-700);display:flex;align-items:center;gap:8px;list-style:none;">
+            <span style="font-size:16px;">💡</span>
+            <span style="flex:1;">${PCD.escapeHtml(t('allerg_guide_title') || 'How to build a reliable allergen matrix')}</span>
+            <button type="button" id="allergGuideDismiss" style="background:transparent;border:0;color:var(--text-3);cursor:pointer;font-size:11px;padding:2px 6px;" title="${PCD.escapeHtml(t('allerg_guide_dismiss') || 'Hide')}">✕</button>
+          </summary>
+          <div style="padding:0 14px 14px;font-size:13px;color:var(--text-2);line-height:1.65;">
+            <ol style="margin:0;padding-inline-start:20px;">
+              <li><strong>${PCD.escapeHtml(t('allerg_guide_step1_title') || 'Tag each ingredient')}</strong> — ${PCD.escapeHtml(t('allerg_guide_step1_body') || 'Open Tag Ingredient and walk through your library. For each ingredient toggle the EU 14 allergens that apply. No auto-detect on purpose — keyword matching gives false positives that ruin trust.')}</li>
+              <li><strong>${PCD.escapeHtml(t('allerg_guide_step2_title') || 'Recipes auto-aggregate')}</strong> — ${PCD.escapeHtml(t('allerg_guide_step2_body') || 'The matrix below sums up each recipe’s allergens from its tagged ingredients. Sub-recipes cascade — a marinade with mustard flags any main dish using it.')}</li>
+              <li><strong>${PCD.escapeHtml(t('allerg_guide_step3_title') || 'Scan the matrix')}</strong> — ${PCD.escapeHtml(t('allerg_guide_step3_body') || 'Rows = recipes, columns = 14 allergens. Filled cell = present. Bottom totals show how many recipes flag each allergen — useful for menu balance.')}</li>
+              <li><strong>${PCD.escapeHtml(t('allerg_guide_step4_title') || 'Print for staff + compliance')}</strong> — ${PCD.escapeHtml(t('allerg_guide_step4_body') || 'Print the matrix as a A4 PDF. Pin it in the kitchen for front-of-house. Required reference under EU FIC 1169/2011 + UK Natasha’s Law.')}</li>
+            </ol>
+            <div style="margin-top:10px;padding:8px 10px;background:var(--surface-2);border-radius:6px;font-size:12px;color:var(--text-3);">
+              <strong>💎 ${PCD.escapeHtml(t('allerg_guide_tip_title') || 'Pro tip')}:</strong> ${PCD.escapeHtml(t('allerg_guide_tip_body') || 'When you onboard a new supplier, ask for their allergen statement in writing. One supplier change can silently introduce sesame or sulphites — always re-tag the affected ingredient.')}
+            </div>
+          </div>
+        </details>
+      ` : ''}
+
+      ${ings.length > 0 ? `
+        <div class="stat mb-3" style="background:linear-gradient(135deg,${covColor}18,var(--surface));border-color:${covColor};padding:18px;">
+          <div style="display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:14px;">
+            <div style="flex-shrink:0;">
+              <div class="stat-label" style="font-size:11px;">${PCD.escapeHtml(t('allerg_coverage') || 'Tag coverage')}</div>
+              <div style="font-size:42px;font-weight:900;color:${covColor};line-height:1;letter-spacing:-0.02em;">${Math.round(coveragePct)}<span style="font-size:24px;">%</span></div>
+            </div>
+            <div style="flex:1;min-width:180px;">
+              <span style="display:inline-block;padding:4px 10px;background:${covColor}25;color:${covColor};font-weight:700;font-size:11px;text-transform:uppercase;border-radius:6px;letter-spacing:0.06em;">${PCD.escapeHtml(tagCoverageLabel(covStatus))}</span>
+              <div class="text-muted text-sm" style="font-size:11px;margin-top:5px;line-height:1.4;">${taggedCount} / ${ings.length} ${PCD.escapeHtml(t('allerg_ings_tagged') || 'ingredients tagged')}</div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div><div class="stat-label" style="font-size:11px;">${PCD.escapeHtml(t('allerg_recipe_clean') || 'Allergen-free')}</div><div style="font-size:18px;font-weight:700;color:var(--success);">${allergenFreeCount}</div></div>
+            <div><div class="stat-label" style="font-size:11px;">${PCD.escapeHtml(t('allerg_with_allergens') || 'With allergens')}</div><div style="font-size:18px;font-weight:700;color:var(--text-2);">${flaggedCount}</div></div>
+          </div>
+        </div>
+      ` : ''}
 
       <div class="card mb-3" style="background:var(--info-bg);border-color:var(--info);padding:12px;">
         <div class="text-sm" style="color:var(--info);font-weight:500;line-height:1.5;">
@@ -41,6 +125,17 @@
         </div>
       ` : '<div id="matrixContent"></div>'}
     `;
+
+    // Guide dismiss handler
+    const dismissBtn = PCD.$('#allergGuideDismiss', view);
+    if (dismissBtn) {
+      dismissBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        try { localStorage.setItem('pcd_allergens_guide_hidden', '1'); } catch (er) {}
+        render(view);
+      });
+    }
 
     if (recipes.length === 0) {
       PCD.$('#tagIngBtn', view).addEventListener('click', openIngTagger);

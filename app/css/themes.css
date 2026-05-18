@@ -54,6 +54,85 @@
 [data-theme="dark"] .toast-error { background: var(--danger); color: white; border: 0; }
 [data-theme="dark"] .toast-warning { background: var(--warning); color: white; border: 0; }
 
+/* v2.9.4 — Comprehensive dark mode brand-50 contrast fix
+
+   Background: var(--brand-50) (#f0fdf4 light green) is heavily used across
+   tools as accent surface — gradient guides, .stat cards, .card containers,
+   bare div sections, sticky tops, hover/selected states, chips. It does not
+   override in dark mode, so the bright bg fights with light gray text and
+   the dark theme aesthetic. Operator reported washed-out text in many places
+   (recipe section banners, events cost summary, portion guide, opening prep
+   template preview, etc.).
+
+   Strategy: surgical CSS attribute selectors using `--brand-50)` (with
+   closing paren, distinguishes from --brand-500) that retint affected
+   components to subtle dark green (`rgba(22,163,74,0.14)`) while preserving
+   green accent identity. Chips/badges intentionally stay light as visual
+   accent. */
+
+/* 1. Inline gradient guides + accent cards (15+ places) */
+[data-theme="dark"] [style*="--brand-50)"][style*="linear-gradient"] {
+  background: linear-gradient(135deg, rgba(22,163,74,0.14), var(--surface-2)) !important;
+}
+/* dash-card.priority-now uses the same gradient but as injected CSS
+   (not inline style), so the attribute selector above misses it. */
+[data-theme="dark"] .dash-card.priority-now {
+  background: linear-gradient(135deg, rgba(22,163,74,0.14), var(--surface-2)) !important;
+}
+
+/* 2. Solid brand-50 inline bg (any element except chips, gradients).
+   Covers .stat cards (events TOPLAM YEMEK MALİYETİ pattern), .card
+   containers (bulk bars, alerts), bare div sections (checklist sticky tops,
+   ingredients/inventory notification cards, hover/selected row states). */
+[data-theme="dark"] [style*="--brand-50)"]:not(.chip):not([class*="chip"]):not([style*="linear-gradient"]) {
+  background: rgba(22,163,74,0.14) !important;
+}
+
+/* 3. brand-700 text on brand-50 bg → flip text to brand-300 for contrast.
+   Covers section banners (recipes "MENÜ TARİFLERİ", kitchen_cards section
+   headers), inline notification text, icon-thumb accents. Excludes chips
+   (intentional bright accent) and buttons (manage their own colors). */
+[data-theme="dark"] [style*="--brand-50)"][style*="--brand-700)"]:not(.chip):not([class*="chip"]):not(.btn):not([class*="btn-"]) {
+  color: var(--brand-300) !important;
+}
+
+/* 4. Inline guide details summary text — brand-700 (#15803d) too dark on
+   dark surface. Use brand-300 (#86efac) for accent text. */
+[data-theme="dark"] details[style*="--brand-50)"] summary {
+  color: var(--brand-300) !important;
+}
+
+/* === Hardcoded light warning/error colors dark mode adaptation ===
+   Many places use hardcoded hex bg/text for warning (yellow) and error
+   (red) states. These don't adapt to dark mode like CSS variables would.
+   Override to dark-friendly tints + lighter text colors. */
+
+/* Yellow warning bg #fef3c7 + amber text #92400e (dashboard alert icons,
+   chips, inventory alerts, haccp warnings, ingredients warnings — 17+ uses).
+   Solid usage. */
+[data-theme="dark"] [style*="#fef3c7"]:not([style*="linear-gradient"]) {
+  background: rgba(245,158,11,0.15) !important;
+}
+/* Yellow gradient case (inventory low-stock card uses #fef3c7 → #fde68a) */
+[data-theme="dark"] [style*="#fef3c7"][style*="linear-gradient"] {
+  background: linear-gradient(135deg, rgba(245,158,11,0.20), var(--surface-2)) !important;
+}
+[data-theme="dark"] [style*="#92400e"] {
+  color: #fde68a !important;
+}
+
+/* Red error bg #fef2f2 + dark red text #991b1b + light red border #fecaca
+   (haccp warning card, checklist fail/OOR rows, variance significant rows). */
+[data-theme="dark"] [style*="#fef2f2"] {
+  background: rgba(220,38,38,0.15) !important;
+}
+[data-theme="dark"] [style*="#991b1b"] {
+  color: #fca5a5 !important;
+}
+[data-theme="dark"] [style*="#fecaca"] {
+  border-color: rgba(220,38,38,0.4) !important;
+}
+
 /* ---------- RTL ---------- */
 [data-dir="rtl"] {
   direction: rtl;

@@ -10,6 +10,10 @@
      }
 
    Computation: for each recipe ingredient, scale by (amount_in_grams / 100).
+
+   v2.9.3 — NAKED→RICH upgrade: closeable inline guide, recipe coverage
+   stats hero, partial-warning i18n, editor field hints. Pattern: buffet
+   v2.8.77, yield v2.9.0, waste v2.9.1, variance v2.9.2.
    ================================================================ */
 
 (function () {
@@ -17,6 +21,27 @@
   const PCD = window.PCD;
 
   const MACROS = ['calories', 'protein', 'carbs', 'fat', 'fiber', 'sugar', 'sodium'];
+
+  // v2.9.3 — Coverage status helpers (recipe-level completeness signal)
+  function coverageStatus(pct) {
+    if (pct >= 100) return 'complete';
+    if (pct >= 80) return 'mostly';
+    if (pct >= 50) return 'half';
+    return 'limited';
+  }
+  function coverageColor(s) {
+    if (s === 'complete') return '#16a34a';
+    if (s === 'mostly') return '#16a34a';
+    if (s === 'half') return '#f59e0b';
+    return '#dc2626';
+  }
+  function coverageLabel(s) {
+    const t = PCD.i18n.t;
+    if (s === 'complete') return t('nut_status_complete') || 'Complete coverage';
+    if (s === 'mostly') return t('nut_status_mostly') || 'Mostly covered';
+    if (s === 'half') return t('nut_status_half') || 'Half-covered';
+    return t('nut_status_limited') || 'Limited data';
+  }
 
   // Convert recipe ingredient amount to grams (approx for volumes)
   function approxGrams(amount, unit, ingUnit) {
@@ -69,6 +94,29 @@
 
     const missingCount = ings.filter(function (i) { return !i.nutrition; }).length;
 
+    // v2.9.3 — Recipe-level coverage stats for hero
+    let fullyCovered = 0;
+    let totalKcal = 0;
+    let kcalSamples = 0;
+    recipes.forEach(function (r) {
+      const n = computeRecipeNutrition(r, ingMap);
+      if (!n.hasMissing) fullyCovered++;
+      const servings = r.servings || 1;
+      if (n.totals.calories > 0) {
+        totalKcal += n.totals.calories / servings;
+        kcalSamples++;
+      }
+    });
+    const coveragePct = recipes.length > 0 ? (fullyCovered / recipes.length) * 100 : 0;
+    const covStatus = recipes.length > 0 ? coverageStatus(coveragePct) : null;
+    const covColor = covStatus ? coverageColor(covStatus) : '#6b7280';
+    const avgKcal = kcalSamples > 0 ? Math.round(totalKcal / kcalSamples) : 0;
+
+    // v2.9.3 — Closeable inline guide
+    const guideHidden = (function () {
+      try { return localStorage.getItem('pcd_nutrition_guide_hidden') === '1'; } catch (e) { return false; }
+    })();
+
     view.innerHTML = `
       <div class="page-header">
         <div class="page-header-text">
@@ -79,6 +127,46 @@
           <button class="btn btn-outline" id="setNutBtn">${t('nut_edit_ingredient')}</button>
         </div>
       </div>
+
+      ${!guideHidden ? `
+        <details class="card" open style="padding:0;margin-bottom:14px;background:linear-gradient(135deg,var(--brand-50),var(--surface));border:1px solid var(--brand-300);">
+          <summary style="cursor:pointer;padding:12px 14px;font-weight:700;font-size:13px;color:var(--brand-700);display:flex;align-items:center;gap:8px;list-style:none;">
+            <span style="font-size:16px;">💡</span>
+            <span style="flex:1;">${PCD.escapeHtml(t('nut_guide_title') || 'How nutrition analysis works')}</span>
+            <button type="button" id="nutGuideDismiss" style="background:transparent;border:0;color:var(--text-3);cursor:pointer;font-size:11px;padding:2px 6px;" title="${PCD.escapeHtml(t('nut_guide_dismiss') || 'Hide')}">✕</button>
+          </summary>
+          <div style="padding:0 14px 14px;font-size:13px;color:var(--text-2);line-height:1.65;">
+            <ol style="margin:0;padding-inline-start:20px;">
+              <li><strong>${PCD.escapeHtml(t('nut_guide_step1_title') || 'Enter per-100g values once')}</strong> — ${PCD.escapeHtml(t('nut_guide_step1_body') || 'For each ingredient, fill in calories + protein + carbs + fat + fiber + sugar + sodium per 100g. The Edit Ingredients button opens a batch editor.')}</li>
+              <li><strong>${PCD.escapeHtml(t('nut_guide_step2_title') || 'Recipes auto-compute')}</strong> — ${PCD.escapeHtml(t('nut_guide_step2_body') || 'Each recipe scales the per-100g values by your actual amounts. Sub-recipes cascade (a marinade inside a main dish contributes its own ingredients).')}</li>
+              <li><strong>${PCD.escapeHtml(t('nut_guide_step3_title') || 'Click a recipe for the breakdown')}</strong> — ${PCD.escapeHtml(t('nut_guide_step3_body') || 'Per-serving + total macros, plus a protein/carbs/fat ratio bar. Useful for menu labelling, allergen/diet pairing, and balanced menu design.')}</li>
+              <li><strong>${PCD.escapeHtml(t('nut_guide_step4_title') || 'Watch the coverage chip')}</strong> — ${PCD.escapeHtml(t('nut_guide_step4_body') || 'The hero shows what % of recipes have full data. Hit 80%+ before publishing nutrition info to guests — partial recipes show a warning chip on the list.')}</li>
+            </ol>
+            <div style="margin-top:10px;padding:8px 10px;background:var(--surface-2);border-radius:6px;font-size:12px;color:var(--text-3);">
+              <strong>💎 ${PCD.escapeHtml(t('nut_guide_tip_title') || 'Pro tip')}:</strong> ${PCD.escapeHtml(t('nut_guide_tip_body') || 'The USDA FoodData Central database (free, online) covers thousands of common ingredients. Search the item, copy per-100g values, paste once — done for life.')}
+            </div>
+          </div>
+        </details>
+      ` : ''}
+
+      ${recipes.length > 0 ? `
+        <div class="stat mb-3" style="background:linear-gradient(135deg,${covColor}18,var(--surface));border-color:${covColor};padding:18px;">
+          <div style="display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:14px;">
+            <div style="flex-shrink:0;">
+              <div class="stat-label" style="font-size:11px;">${PCD.escapeHtml(t('nut_coverage') || 'Coverage')}</div>
+              <div style="font-size:42px;font-weight:900;color:${covColor};line-height:1;letter-spacing:-0.02em;">${Math.round(coveragePct)}<span style="font-size:24px;">%</span></div>
+            </div>
+            <div style="flex:1;min-width:180px;">
+              <span style="display:inline-block;padding:4px 10px;background:${covColor}25;color:${covColor};font-weight:700;font-size:11px;text-transform:uppercase;border-radius:6px;letter-spacing:0.06em;">${PCD.escapeHtml(coverageLabel(covStatus))}</span>
+              <div class="text-muted text-sm" style="font-size:11px;margin-top:5px;line-height:1.4;">${fullyCovered} / ${recipes.length} ${PCD.escapeHtml(t('nut_recipes_full') || 'recipes fully computed')}</div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div><div class="stat-label" style="font-size:11px;">${PCD.escapeHtml(t('nut_avg_kcal') || 'Avg kcal / serving')}</div><div style="font-size:18px;font-weight:700;color:var(--text-2);">${avgKcal > 0 ? avgKcal : '—'}</div></div>
+            <div><div class="stat-label" style="font-size:11px;">${PCD.escapeHtml(t('nut_ings_missing') || 'Ingredients missing data')}</div><div style="font-size:18px;font-weight:700;color:${missingCount > 0 ? 'var(--warning)' : 'var(--success)'};">${missingCount}</div></div>
+          </div>
+        </div>
+      ` : ''}
 
       ${missingCount > 0 ? `
         <div class="card mb-3" style="background:var(--warning-bg);border-color:var(--warning);padding:12px;">
@@ -94,6 +182,17 @@
 
       <div id="nutList"></div>
     `;
+
+    // Guide dismiss handler
+    const dismissBtn = PCD.$('#nutGuideDismiss', view);
+    if (dismissBtn) {
+      dismissBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        try { localStorage.setItem('pcd_nutrition_guide_hidden', '1'); } catch (er) {}
+        render(view);
+      });
+    }
 
     const listEl = PCD.$('#nutList', view);
     if (recipes.length === 0) {
@@ -214,7 +313,7 @@
         </tbody>
       </table>
 
-      ${n.hasMissing ? '<div class="text-sm mt-3" style="color:var(--warning);">⚠️ Some ingredients have no nutrition data. Results are partial.</div>' : ''}
+      ${n.hasMissing ? '<div class="text-sm mt-3" style="color:var(--warning);">⚠️ ' + PCD.escapeHtml(t('nut_partial_warning') || 'Some ingredients have no nutrition data. Results are partial.') + '</div>' : ''}
     `;
 
     PCD.modal.open({

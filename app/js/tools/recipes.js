@@ -65,6 +65,18 @@
         delete recipe.authorName;
       }
     } catch (e) { /* offline / not logged in */ }
+    // v2.9.16 — Compute + embed allergens for Discover free-from filter.
+    // recipeAllergens cascades through sub-recipes (v2.8.69 flatten helper).
+    // Stored as recipe.computedAllergens (not "allergens" — that's the chef's
+    // manual list of ingredient-level tags, recipes derive theirs).
+    try {
+      if (PCD.allergensDB && PCD.allergensDB.recipeAllergens) {
+        const ingArr = PCD.store.listIngredients();
+        recipe.computedAllergens = PCD.allergensDB.recipeAllergens(recipe, ingArr) || [];
+      }
+    } catch (e) {
+      recipe.computedAllergens = [];
+    }
     return recipe;
   }
 

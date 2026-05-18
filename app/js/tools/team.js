@@ -14,6 +14,10 @@
 
    Free plan: show upsell gate. Actual email invites require backend
    implementation (out of scope for Phase 4 — clipboard invite link only).
+
+   v2.9.9 — NAKED→RICH upgrade: closeable inline guide, team composition
+   stats hero (member count + role breakdown), hardcoded English string
+   sweep → i18n. Pattern: buffet v2.8.77.
    ================================================================ */
 
 (function () {
@@ -37,6 +41,17 @@
     const team = PCD.store._read('team') || [];
     const user = PCD.store.get('user') || {};
 
+    // v2.9.9 — Closeable inline guide
+    const guideHidden = (function () {
+      try { return localStorage.getItem('pcd_team_guide_hidden') === '1'; } catch (e) { return false; }
+    })();
+
+    // v2.9.9 — Team composition stats
+    const roleCounts = { manager: 0, cook: 0, viewer: 0 };
+    const activeCount = team.filter(function (m) { return m.status === 'active'; }).length;
+    const pendingCount = team.filter(function (m) { return m.status === 'pending'; }).length;
+    team.forEach(function (m) { if (roleCounts[m.role] != null) roleCounts[m.role]++; });
+
     view.innerHTML = `
       <div class="page-header">
         <div class="page-header-text">
@@ -45,8 +60,61 @@
         </div>
         ${plan === 'pro' || team.length > 0 ? '<div class="page-header-actions"><button class="btn btn-primary" id="inviteBtn">+ ' + t('team_invite') + '</button></div>' : ''}
       </div>
+
+      ${!guideHidden ? `
+        <details class="card" open style="padding:0;margin-bottom:14px;background:linear-gradient(135deg,var(--brand-50),var(--surface));border:1px solid var(--brand-300);">
+          <summary style="cursor:pointer;padding:12px 14px;font-weight:700;font-size:13px;color:var(--brand-700);display:flex;align-items:center;gap:8px;list-style:none;">
+            <span style="font-size:16px;">💡</span>
+            <span style="flex:1;">${PCD.escapeHtml(t('team_guide_title') || 'How team access works')}</span>
+            <button type="button" id="teamGuideDismiss" style="background:transparent;border:0;color:var(--text-3);cursor:pointer;font-size:11px;padding:2px 6px;" title="${PCD.escapeHtml(t('team_guide_dismiss') || 'Hide')}">✕</button>
+          </summary>
+          <div style="padding:0 14px 14px;font-size:13px;color:var(--text-2);line-height:1.65;">
+            <ol style="margin:0;padding-inline-start:20px;">
+              <li><strong>${PCD.escapeHtml(t('team_guide_step1_title') || 'Pick the right role')}</strong> — ${PCD.escapeHtml(t('team_guide_step1_body') || 'Manager = everything except billing + team. Cook = recipes/ingredients/waste/inventory. Viewer = read-only. Default to least privilege, escalate if needed.')}</li>
+              <li><strong>${PCD.escapeHtml(t('team_guide_step2_title') || 'Send invite via email or link')}</strong> — ${PCD.escapeHtml(t('team_guide_step2_body') || 'Email sends a join request. Copy Link gives you a sharable URL — paste in WhatsApp or SMS. Until they accept, status stays "Pending".')}</li>
+              <li><strong>${PCD.escapeHtml(t('team_guide_step3_title') || 'Each workspace is isolated')}</strong> — ${PCD.escapeHtml(t('team_guide_step3_body') || 'A member added to one workspace does not see your other workspaces. If you run two concepts, invite the cook separately to each.')}</li>
+              <li><strong>${PCD.escapeHtml(t('team_guide_step4_title') || 'Remove + audit any time')}</strong> — ${PCD.escapeHtml(t('team_guide_step4_body') || 'Tap a member row to edit role, change status, or remove. Removal is instant — they lose access on next page load.')}</li>
+            </ol>
+            <div style="margin-top:10px;padding:8px 10px;background:var(--surface-2);border-radius:6px;font-size:12px;color:var(--text-3);">
+              <strong>💎 ${PCD.escapeHtml(t('team_guide_tip_title') || 'Pro tip')}:</strong> ${PCD.escapeHtml(t('team_guide_tip_body') || 'When a chef leaves, set status to Pending instead of removing — keeps audit trail but instantly cuts access. Remove for good once handover is done.')}
+            </div>
+          </div>
+        </details>
+      ` : ''}
+
+      ${team.length > 0 ? `
+        <div class="stat mb-3" style="background:linear-gradient(135deg,#16a34a18,var(--surface));border-color:#16a34a;padding:18px;">
+          <div style="display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:14px;">
+            <div style="flex-shrink:0;">
+              <div class="stat-label" style="font-size:11px;">${PCD.escapeHtml(t('team_total_members') || 'Team members')}</div>
+              <div style="font-size:42px;font-weight:900;color:#16a34a;line-height:1;letter-spacing:-0.02em;">${team.length + 1}</div>
+            </div>
+            <div style="flex:1;min-width:180px;">
+              <span style="display:inline-block;padding:4px 10px;background:#16a34a25;color:#16a34a;font-weight:700;font-size:11px;text-transform:uppercase;border-radius:6px;letter-spacing:0.06em;">${activeCount} ${PCD.escapeHtml(t('team_active') || 'active')}${pendingCount > 0 ? ' · ' + pendingCount + ' ' + PCD.escapeHtml(t('team_pending') || 'pending') : ''}</span>
+              <div class="text-muted text-sm" style="font-size:11px;margin-top:5px;line-height:1.4;">${PCD.escapeHtml(t('team_owner_plus') || 'You (owner) + invited members')}</div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+            <div><div class="stat-label" style="font-size:11px;">${t('team_role_manager')}</div><div style="font-size:18px;font-weight:700;color:var(--info);">${roleCounts.manager}</div></div>
+            <div><div class="stat-label" style="font-size:11px;">${t('team_role_cook')}</div><div style="font-size:18px;font-weight:700;color:var(--success);">${roleCounts.cook}</div></div>
+            <div><div class="stat-label" style="font-size:11px;">${t('team_role_viewer')}</div><div style="font-size:18px;font-weight:700;color:var(--text-3);">${roleCounts.viewer}</div></div>
+          </div>
+        </div>
+      ` : ''}
+
       <div id="teamBody"></div>
     `;
+
+    // Guide dismiss handler
+    const dismissBtn = PCD.$('#teamGuideDismiss', view);
+    if (dismissBtn) {
+      dismissBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        try { localStorage.setItem('pcd_team_guide_hidden', '1'); } catch (er) {}
+        render(view);
+      });
+    }
 
     const bodyEl = PCD.$('#teamBody', view);
 
@@ -138,7 +206,7 @@
       </div>
       <div class="card mt-3" style="background:var(--info-bg);border-color:var(--info);padding:12px;">
         <div class="text-sm" style="color:var(--info);line-height:1.5;">
-          ℹ️ The invitee will receive a link. Until they accept, their status remains "Pending".
+          ℹ️ ${PCD.escapeHtml(t('team_invite_note') || 'The invitee will receive a link. Until they accept, their status remains "Pending".')}
         </div>
       </div>
     `;
@@ -159,10 +227,10 @@
     function addMember() {
       const email = (PCD.$('#tmEmail', body).value || '').trim();
       const role = PCD.$('#tmRole', body).value;
-      if (!email || email.indexOf('@') < 0) { PCD.toast.error('Valid email required'); return null; }
+      if (!email || email.indexOf('@') < 0) { PCD.toast.error(t('team_invalid_email') || 'Valid email required'); return null; }
       const existing = PCD.store._read('team') || [];
       if (existing.some(function (x) { return x.email === email; })) {
-        PCD.toast.warning('Already invited'); return null;
+        PCD.toast.warning(t('team_already_invited') || 'Already invited'); return null;
       }
       const member = {
         id: PCD.uid('mem'), email: email, name: '', role: role,
@@ -189,7 +257,7 @@
       if (!mem) return;
       const link = (PCD.config && PCD.config.APP_URL ? PCD.config.APP_URL : 'https://prochefdesk.com') + '/join?token=' + mem.id;
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(link).then(function () { PCD.toast.success('Link copied'); });
+        navigator.clipboard.writeText(link).then(function () { PCD.toast.success(t('team_link_copied') || 'Link copied'); });
       } else {
         PCD.toast.info(link);
       }
@@ -215,8 +283,8 @@
         <input type="email" class="input" id="tmEmail" value="${PCD.escapeHtml(data.email)}" disabled>
       </div>
       <div class="field">
-        <label class="field-label">Name</label>
-        <input type="text" class="input" id="tmName" value="${PCD.escapeHtml(data.name || '')}" placeholder="Optional display name">
+        <label class="field-label">${PCD.escapeHtml(t('team_member_name') || 'Name')}</label>
+        <input type="text" class="input" id="tmName" value="${PCD.escapeHtml(data.name || '')}" placeholder="${PCD.escapeHtml(t('team_member_name_ph') || 'Optional display name')}">
       </div>
       <div class="field">
         <label class="field-label">${t('team_role')}</label>
@@ -227,7 +295,7 @@
         </select>
       </div>
       <div class="field">
-        <label class="field-label">Status</label>
+        <label class="field-label">${PCD.escapeHtml(t('team_status') || 'Status')}</label>
         <div class="flex gap-2">
           ${['pending', 'active'].map(function (s) {
             return '<button type="button" class="chip' + (data.status === s ? ' chip-brand' : '') + '" data-status="' + s + '" style="cursor:pointer;padding:6px 12px;">' + t('team_' + s) + '</button>';
