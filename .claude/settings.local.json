@@ -57,7 +57,8 @@
       "Bash(node -c \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\tools\\\\haccp.js\")",
       "Bash(node -c \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\core\\\\app.js\")",
       "Bash(node -c \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\tools\\\\buffet.js\")",
-      "Bash(node -c \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\tools\\\\mise.js\")"
+      "Bash(node -c \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\tools\\\\mise.js\")",
+      "WebFetch(domain:prochefdesk.com)"
     ]
   }
 }
