@@ -569,24 +569,32 @@ Pasta,0.003,g,cat_dry_goods,</code></pre>
         //   if (window.XLSX) return cb(null, window.XLSX);
         // Removed for clarity. If for some reason XLSX is missing
         // (CDN blocked, etc.) we surface the same friendly error.
-        if (!window.XLSX || !window.XLSX.read) {
-          PCD.toast.error(PCD.i18n.t('toast_excel_parser_unavailable'));
-          return;
-        }
-        const reader = new FileReader();
-        reader.onload = function (evt) {
-          try {
-            const data = new Uint8Array(evt.target.result);
-            const wb = window.XLSX.read(data, { type: 'array' });
-            const sheet = wb.Sheets[wb.SheetNames[0]];
-            const csv = window.XLSX.utils.sheet_to_csv(sheet);
-            PCD.$('#importText', body).value = csv;
-            previewParse(csv);
-          } catch (err) {
-            PCD.toast.error(PCD.i18n.t('toast_excel_parse_failed', { msg: err.message }));
-          }
+        // v2.8.78 — xlsx artık on-demand. İlk Excel import'unda CDN'den lazy yüklenir.
+        const doImport = function () {
+          const reader = new FileReader();
+          reader.onload = function (evt) {
+            try {
+              const data = new Uint8Array(evt.target.result);
+              const wb = window.XLSX.read(data, { type: 'array' });
+              const sheet = wb.Sheets[wb.SheetNames[0]];
+              const csv = window.XLSX.utils.sheet_to_csv(sheet);
+              PCD.$('#importText', body).value = csv;
+              previewParse(csv);
+            } catch (err) {
+              PCD.toast.error(PCD.i18n.t('toast_excel_parse_failed', { msg: err.message }));
+            }
+          };
+          reader.readAsArrayBuffer(f);
         };
-        reader.readAsArrayBuffer(f);
+        if (window.XLSX && window.XLSX.read) {
+          doImport();
+        } else if (PCD.loadXLSX) {
+          PCD.loadXLSX().then(doImport).catch(function () {
+            PCD.toast.error(PCD.i18n.t('toast_excel_parser_unavailable'));
+          });
+        } else {
+          PCD.toast.error(PCD.i18n.t('toast_excel_parser_unavailable'));
+        }
       } else {
         const reader = new FileReader();
         reader.onload = function (evt) {

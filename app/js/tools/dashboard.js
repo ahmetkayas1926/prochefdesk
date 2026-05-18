@@ -619,13 +619,28 @@
         '<div class="dash-stat" data-action="open-menus-stat" role="button" tabindex="0" title="Menus"><div class="dash-stat-num">' + stats.menus + '</div><div class="dash-stat-lbl">' + t('dash_menus_label') + '</div></div>' +
       '</div>';
 
+    // v2.8.78 — Lazy tools: poll briefly so editor opens once tool loads
+    function _afterToolLoad(toolName, cb) {
+      let attempts = 0;
+      const trial = setInterval(function () {
+        const tool = PCD.tools[toolName];
+        if (tool && tool.openEditor) {
+          clearInterval(trial);
+          cb(tool);
+        } else if (++attempts > 25) {
+          clearInterval(trial);
+        }
+      }, 120);
+    }
+
     // Wire actions
     PCD.on(view, 'click', '[data-action="new-recipe"]', function () {
       if (PCD.tools.recipes && PCD.tools.recipes.openEditor) PCD.tools.recipes.openEditor();
+      else { PCD.router.go('recipes'); _afterToolLoad('recipes', function (t) { t.openEditor(); }); }
     });
     PCD.on(view, 'click', '[data-action="new-event"]', function () {
       PCD.router.go('events');
-      setTimeout(function () { if (PCD.tools.events && PCD.tools.events.openEditor) PCD.tools.events.openEditor(); }, 200);
+      _afterToolLoad('events', function (t) { t.openEditor(); });
     });
     PCD.on(view, 'click', '[data-action="open-menus"]', function () {
       PCD.router.go('menus');
@@ -649,9 +664,7 @@
     PCD.on(view, 'click', '[data-action="view-event"]', function () {
       const eid = this.getAttribute('data-eid');
       PCD.router.go('events');
-      setTimeout(function () {
-        if (PCD.tools.events && PCD.tools.events.openEditor) PCD.tools.events.openEditor(eid);
-      }, 200);
+      _afterToolLoad('events', function (t) { t.openEditor(eid); });
     });
     PCD.on(view, 'click', '[data-action="view-waste"]', function () {
       PCD.router.go('waste');

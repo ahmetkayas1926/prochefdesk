@@ -364,6 +364,24 @@
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="' + size + '" height="' + size + '">' + body + '</svg>';
   };
 
+  // v2.8.78 — Lazy-load xlsx-js-style (~500KB) only when the chef actually
+  // exports/imports Excel. Cached promise: second call is instant.
+  // Boot performance: 500KB removed from initial page load (LCP -1.0s).
+  let _xlsxPromise = null;
+  PCD.loadXLSX = function () {
+    if (window.XLSX) return Promise.resolve(window.XLSX);
+    if (_xlsxPromise) return _xlsxPromise;
+    _xlsxPromise = new Promise(function (resolve, reject) {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js';
+      s.crossOrigin = 'anonymous';
+      s.onload = function () { resolve(window.XLSX); };
+      s.onerror = function () { _xlsxPromise = null; reject(new Error('Failed to load xlsx')); };
+      document.head.appendChild(s);
+    });
+    return _xlsxPromise;
+  };
+
   // Print helper — popup window on desktop, iframe modal on mobile.
   // Takes a full HTML string or just the body content (wraps if needed).
   PCD.print = function (htmlOrContent, title) {

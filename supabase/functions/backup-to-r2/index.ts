@@ -61,7 +61,7 @@ const BACKUP_TABLES = [
   'user_prefs',
   'public_shares',
   'subscriptions',
-  // Workspace-scoped (16)
+  // Workspace-scoped (18 — v2.8.79 fix: haccp_receiving + haccp_holding added)
   'recipes',
   'ingredients',
   'menus',
@@ -78,6 +78,10 @@ const BACKUP_TABLES = [
   'haccp_units',
   'haccp_readings',
   'haccp_cook_cool',
+  // v2.8.79 — Eksiklik düzeltildi: v2.8.44'te eklenmiş ama burada unutulmuş
+  // iki HACCP tablosu. Cloud sync oluyorlardı ama nightly R2 archive'da yoktu.
+  'haccp_receiving',
+  'haccp_holding',
 ]
 
 Deno.serve(async (req) => {

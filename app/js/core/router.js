@@ -13,6 +13,44 @@
   let currentView = null;
   let viewParams = null;
 
+  // v2.8.78 — Lazy tool loader. Tools registered for lazy loading via
+  // `router.registerLazy(name, scriptPath, toolGlobalPath)`. On navigation,
+  // if the route is unknown but lazy-registered, the script is loaded
+  // dynamically (cached promise), then routes[name] is wired and render
+  // fires. First navigation to a tool: ~150-300ms extra (network).
+  // Subsequent: instant (script cached in browser).
+  const lazyRoutes = {};   // { 'recipes': { script: 'js/tools/recipes.js', tool: 'recipes' } }
+  const lazyLoading = {};  // { 'recipes': Promise }
+
+  function loadLazyTool(name) {
+    if (lazyLoading[name]) return lazyLoading[name];
+    const spec = lazyRoutes[name];
+    if (!spec) return Promise.reject(new Error('No lazy route: ' + name));
+    lazyLoading[name] = new Promise(function (resolve, reject) {
+      const v = (window.PCD_CONFIG && window.PCD_CONFIG.APP_VERSION) || '';
+      const s = document.createElement('script');
+      s.src = spec.script + (v ? '?v=' + v : '');
+      s.onload = function () {
+        // Tool registers itself via PCD.tools.<name> on parse.
+        // Camel-case lookup mirrors app.js convention.
+        const camel = spec.tool.replace(/_([a-z])/g, function (_, c) { return c.toUpperCase(); });
+        const tool = PCD.tools[spec.tool] || PCD.tools[camel];
+        if (tool && typeof tool.render === 'function') {
+          routes[name] = tool.render;
+          resolve(tool);
+        } else {
+          reject(new Error('Lazy tool loaded but render fn missing: ' + name));
+        }
+      };
+      s.onerror = function () {
+        delete lazyLoading[name];
+        reject(new Error('Failed to load tool script: ' + spec.script));
+      };
+      document.head.appendChild(s);
+    });
+    return lazyLoading[name];
+  }
+
   // Read the route name from the URL hash (e.g. "#recipes" → "recipes").
   // Returns null if no valid hash route is present.
   function readHash() {
@@ -38,6 +76,11 @@
   const router = {
     register: function (name, renderFn) { routes[name] = renderFn; },
 
+    // v2.8.78 — Lazy register: tool not loaded yet, will be fetched on first nav
+    registerLazy: function (name, scriptPath, toolName) {
+      lazyRoutes[name] = { script: scriptPath, tool: toolName || name };
+    },
+
     start: function () {
       history.replaceState({ type: 'view', name: currentView || 'dashboard' }, '', window.location.pathname + window.location.hash);
 
@@ -53,28 +96,47 @@
           return;
         }
         const s = e.state;
+        // v2.8.78 — Use router.go() instead of _renderView so lazy routes get loaded
         if (s && s.type === 'view' && s.name) {
-          router._renderView(s.name, s.params || null, { skipHistory: true });
-          writeHash(s.name);
+          router.go(s.name, s.params || null, { skipHistory: true });
           return;
         }
         // Fallback: hash if available, else dashboard
         const fromHash = readHash();
-        const target = (fromHash && routes[fromHash]) ? fromHash : 'dashboard';
-        router._renderView(target, null, { skipHistory: true });
-        history.pushState({ type: 'view', name: target }, '', window.location.pathname + '#' + target);
+        const target = (fromHash && (routes[fromHash] || lazyRoutes[fromHash])) ? fromHash : 'dashboard';
+        router.go(target, null, { skipHistory: true });
       });
     },
 
     // Read the route to start with: prefer URL hash so F5 stays in place.
+    // v2.8.78 — Lazy routes also count as "valid" for initial route resolution.
     initialRoute: function () {
       const fromHash = readHash();
-      if (fromHash && routes[fromHash]) return fromHash;
+      if (fromHash && (routes[fromHash] || lazyRoutes[fromHash])) return fromHash;
       return 'dashboard';
     },
 
     go: function (name, params, opts) {
       opts = opts || {};
+      // v2.8.78 — Lazy load: if route not registered but lazy-known, fetch then nav
+      if (!routes[name] && lazyRoutes[name]) {
+        const view = document.getElementById('view');
+        // Show subtle loading state while script downloads (~150-300ms first time)
+        if (view) view.innerHTML = '<div style="padding:48px;text-align:center;color:var(--text-3);"><div style="font-size:13px;">' + (PCD.i18n && PCD.i18n.t ? PCD.i18n.t('loading') || 'Loading...' : 'Loading...') + '</div></div>';
+        loadLazyTool(name).then(function () {
+          // Route is now registered, fire navigation
+          if (PCD.modal && PCD.modal.isOpen()) PCD.modal.closeAll();
+          router._renderView(name, params, opts);
+          writeHash(name);
+          if (!opts.skipHistory) {
+            history.pushState({ type: 'view', name: name, params: params || null }, '', window.location.pathname + '#' + name);
+          }
+        }).catch(function (err) {
+          PCD.error && PCD.error('Lazy load failed for', name, err);
+          if (view) view.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-title">Could not load this tool</div><div class="empty-desc">Check your connection and try again.</div></div>';
+        });
+        return;
+      }
       if (!routes[name]) { PCD.warn('No route:', name); return; }
       if (PCD.modal && PCD.modal.isOpen()) PCD.modal.closeAll();
       router._renderView(name, params, opts);

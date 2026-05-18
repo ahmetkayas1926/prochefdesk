@@ -10,41 +10,90 @@
 
   const bundles = {}; // { 'en': {...}, 'tr': {...} }
   let current = 'en';
+  // v2.8.78 — Lazy load: sadece en.js boot'ta yüklenir; diğer 5 dil
+  // ilk kullanımda dynamic script tag ile çekilir. ~150 KB initial save.
+  const _loadingPromises = {};
 
-  const i18n = {
+  function loadLocaleBundle(locale) {
+    if (bundles[locale]) return Promise.resolve(bundles[locale]);
+    if (_loadingPromises[locale]) return _loadingPromises[locale];
+    _loadingPromises[locale] = new Promise(function (resolve, reject) {
+      const s = document.createElement('script');
+      // Cache-bust ile aynı versiyon tag'i. PCD_CONFIG'den okur.
+      const v = (window.PCD_CONFIG && window.PCD_CONFIG.APP_VERSION) || '';
+      s.src = 'js/i18n/' + locale + '.js' + (v ? '?v=' + v : '');
+      s.onload = function () {
+        // Locale dosyası kendi içinde PCD.i18n.register('xx', {...}) çağırır
+        // → bundles[locale] yüklü olur.
+        if (bundles[locale]) resolve(bundles[locale]);
+        else reject(new Error('Locale ' + locale + ' loaded but bundle not registered'));
+      };
+      s.onerror = function () {
+        delete _loadingPromises[locale];
+        reject(new Error('Failed to load locale ' + locale));
+      };
+      document.head.appendChild(s);
+    });
+    return _loadingPromises[locale];
+  }
+
+  // Forward declaration so _applyLocale can reference i18n object
+  // (assigned below).
+  let i18n;
+
+  function _applyLocale(locale) {
+    current = locale;
+    const cfg = (window.PCD_CONFIG.LOCALES || []).find(function (l) { return l.code === locale; });
+    const dir = cfg ? cfg.dir : 'ltr';
+    document.documentElement.setAttribute('lang', locale);
+    document.documentElement.setAttribute('data-dir', dir);
+    i18n.currentLocale = locale;
+    i18n.currentDir = dir;
+    i18n.applyAll();
+    if (PCD.store) PCD.store.set('prefs.locale', locale);
+    // Auto re-render current view so all strings update immediately.
+    // BUG FIX (v2.6.28): Route names are snake_case (e.g. haccp_logs) but
+    // tool names are camelCase (PCD.tools.haccpLogs). Convert before lookup.
+    if (PCD.router && PCD.tools) {
+      const cur = PCD.router.currentView() || 'dashboard';
+      const camel = cur.replace(/_([a-z])/g, function (_, c) { return c.toUpperCase(); });
+      const view = document.getElementById('view');
+      const tool = PCD.tools[cur] || PCD.tools[camel];
+      if (view && tool && typeof tool.render === 'function') {
+        try { tool.render(view); } catch (e) { /* ignore */ }
+      }
+    }
+    PCD.log('Locale set to', locale);
+    return true;
+  }
+
+  i18n = {
     register: function (locale, dict) {
       bundles[locale] = Object.assign({}, bundles[locale] || {}, dict);
     },
 
+    // v2.8.78 — setLocale artık async. Bundle yüklenmemişse lazy load
+    // eder; geriye uyumluluk için return değeri true/false yerine Promise.
+    // Çoğu caller dönüşü kullanmıyor zaten; kullananlar (settings UI)
+    // .then() ile chain edebilir. Sync caller'lar olduğu gibi çalışır.
     setLocale: function (locale) {
-      if (!bundles[locale]) {
-        PCD.warn('Locale not loaded:', locale);
-        return false;
+      if (bundles[locale]) {
+        return Promise.resolve(_applyLocale(locale));
       }
-      current = locale;
-      const cfg = (window.PCD_CONFIG.LOCALES || []).find(function (l) { return l.code === locale; });
-      const dir = cfg ? cfg.dir : 'ltr';
-      document.documentElement.setAttribute('lang', locale);
-      document.documentElement.setAttribute('data-dir', dir);
-      i18n.currentLocale = locale;
-      i18n.currentDir = dir;
-      i18n.applyAll();
-      if (PCD.store) PCD.store.set('prefs.locale', locale);
-      // Auto re-render current view so all strings update immediately.
-      // BUG FIX (v2.6.28): Route names are snake_case (e.g. haccp_logs) but
-      // tool names are camelCase (PCD.tools.haccpLogs). Convert before lookup.
-      if (PCD.router && PCD.tools) {
-        const cur = PCD.router.currentView() || 'dashboard';
-        const camel = cur.replace(/_([a-z])/g, function (_, c) { return c.toUpperCase(); });
-        const view = document.getElementById('view');
-        const tool = PCD.tools[cur] || PCD.tools[camel];
-        if (view && tool && typeof tool.render === 'function') {
-          try { tool.render(view); } catch (e) { /* ignore */ }
+      return loadLocaleBundle(locale).then(function () {
+        return _applyLocale(locale);
+      }).catch(function (err) {
+        PCD.warn('Locale load failed:', locale, err);
+        // Fallback to 'en' so app doesn't break
+        if (locale !== 'en' && bundles.en) {
+          _applyLocale('en');
         }
-      }
-      PCD.log('Locale set to', locale);
-      return true;
+        return false;
+      });
     },
+
+    // Eager preload helper — settings ekranı arka planda diğer dilleri çekebilir
+    preloadLocale: function (locale) { return loadLocaleBundle(locale); },
 
     t: function (key, vars) {
       const dict = bundles[current] || {};

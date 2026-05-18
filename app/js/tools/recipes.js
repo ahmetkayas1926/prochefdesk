@@ -1012,8 +1012,18 @@
   // Excel: 1 sheet per recipe + Summary sheet, with full professional styling
   function exportCostReportXLSX(items, targetPct) {
     const t = PCD.i18n.t;
+    // v2.8.78 — xlsx artık on-demand. v2.8.79 — toast.info API'si problemliydi
+    // ("Something went wrong"); kaldırıldı. Sessiz lazy load + re-call.
     if (!window.XLSX) {
-      PCD.toast.error(t('cr_xlsx_unavailable') || 'Excel library not loaded — try refreshing the page');
+      if (!PCD.loadXLSX) {
+        PCD.toast.error(t('cr_xlsx_unavailable') || 'Excel library not available');
+        return;
+      }
+      PCD.loadXLSX().then(function () {
+        exportCostReportXLSX(items, targetPct);  // re-call, XLSX hazır
+      }).catch(function () {
+        PCD.toast.error(t('cr_xlsx_unavailable') || 'Excel library failed to load. Check your connection.');
+      });
       return;
     }
     const ingMap = currentIngMap();

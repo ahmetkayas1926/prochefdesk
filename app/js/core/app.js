@@ -58,36 +58,34 @@
 
     function onAuthResolved() {
       // 6) Register views
+      // v2.8.78 — Eager: only essentials needed for first paint (dashboard
+      // is the default home, account drives auth flows that fire on boot).
+      // Everything else is lazy-registered → router fetches the JS on first nav.
       PCD.router.register('dashboard', PCD.tools.dashboard.render);
-      PCD.router.register('recipes', PCD.tools.recipes.render);
-      PCD.router.register('ingredients', PCD.tools.ingredients.render);
       PCD.router.register('account', PCD.tools.account.render);
-      // Service
-      PCD.router.register('menus', PCD.tools.menus.render);
-      PCD.router.register('kitchen_cards', PCD.tools.kitchenCards.render);
-      PCD.router.register('shopping', PCD.tools.shopping.render);
-      PCD.router.register('portion', PCD.tools.portion.render);
-      // Operations
-      PCD.router.register('inventory', PCD.tools.inventory.render);
-      PCD.router.register('waste', PCD.tools.waste.render);
-      PCD.router.register('suppliers', PCD.tools.suppliers.render);
-      PCD.router.register('events', PCD.tools.events.render);
-      PCD.router.register('checklist', PCD.tools.checklist.render);
-      // HACCP Forms (v2.6.1+) — fridge/freezer log first; cooling/cleaning later
-      PCD.router.register('haccp_logs', PCD.tools.haccpLogs.render);
-      PCD.router.register('haccp_cooling', PCD.tools.haccpCooling.render);
-      // v2.8.38 — Receiving log (mal kabul). IDB-only; cloud sync henüz yok.
-      PCD.router.register('haccp_receiving', PCD.tools.haccpReceiving.render);
-      // v2.8.39 — Hot/Cold Holding check (yemek bazlı saatlik). IDB-only.
-      PCD.router.register('haccp_holding', PCD.tools.haccpHolding.render);
-      // v2.8.70 — HACCP Hub (4 form'u tek navigation noktasına topla)
-      if (PCD.tools.haccp) PCD.router.register('haccp', PCD.tools.haccp.render);
-      // v2.8.73 — Buffet Planner (hotel/catering buffet cost + station + waste)
-      if (PCD.tools.buffet) PCD.router.register('buffet', PCD.tools.buffet.render);
+      PCD.router.register('inventory', PCD.tools.inventory.render);  // eager — dashboard alert kullanır
+
+      // Lazy routes — { route → script path, tool global name (snake or camel) }
+      PCD.router.registerLazy('recipes',         'js/tools/recipes.js',        'recipes');
+      PCD.router.registerLazy('ingredients',     'js/tools/ingredients.js',    'ingredients');
+      PCD.router.registerLazy('menus',           'js/tools/menus.js',          'menus');
+      PCD.router.registerLazy('kitchen_cards',   'js/tools/kitchen_cards.js',  'kitchen_cards');
+      PCD.router.registerLazy('shopping',        'js/tools/shopping.js',       'shopping');
+      PCD.router.registerLazy('portion',         'js/tools/portion.js',        'portion');
+      // Inventory eager-kept: dashboard kullanır (computeStatus low-stock alert için)
+      PCD.router.registerLazy('waste',           'js/tools/waste.js',          'waste');
+      PCD.router.registerLazy('suppliers',       'js/tools/suppliers.js',      'suppliers');
+      PCD.router.registerLazy('events',          'js/tools/events.js',         'events');
+      PCD.router.registerLazy('checklist',       'js/tools/checklist.js',      'checklist');
+      PCD.router.registerLazy('haccp_logs',      'js/tools/haccp_logs.js',     'haccp_logs');
+      PCD.router.registerLazy('haccp_cooling',   'js/tools/haccp_cooling.js',  'haccp_cooling');
+      PCD.router.registerLazy('haccp_receiving', 'js/tools/haccp_receiving.js','haccp_receiving');
+      PCD.router.registerLazy('haccp_holding',   'js/tools/haccp_holding.js',  'haccp_holding');
+      PCD.router.registerLazy('haccp',           'js/tools/haccp.js',          'haccp');
+      PCD.router.registerLazy('buffet',          'js/tools/buffet.js',         'buffet');
       // v2.8.74 — Mise en Place Planner (auto prep list from events + buffets)
-      if (PCD.tools.mise) PCD.router.register('mise', PCD.tools.mise.render);
-      // v2.8.41 — Discover (frontend skeleton; backend Faz 2'de gelecek).
-      PCD.router.register('discover', PCD.tools.discover.render);
+      PCD.router.registerLazy('mise',     'js/tools/mise.js',     'mise');
+      PCD.router.registerLazy('discover', 'js/tools/discover.js', 'discover');
 
       // 7) Start router + render initial view
       // BUG FIX (v2.6.36): Read the route from the URL hash so F5 keeps
@@ -279,10 +277,17 @@
         // Default for dashboard / account / shopping / unknown views:
         // jump to recipes and open the new-recipe editor — the most
         // common "create" intent.
+        // v2.8.78 — recipes is lazy; poll briefly so editor opens once tool loads
         PCD.router.go('recipes');
-        setTimeout(function () {
-          if (PCD.tools.recipes && PCD.tools.recipes.openEditor) PCD.tools.recipes.openEditor();
-        }, 150);
+        let attempts = 0;
+        const trial = setInterval(function () {
+          if (PCD.tools.recipes && PCD.tools.recipes.openEditor) {
+            clearInterval(trial);
+            PCD.tools.recipes.openEditor();
+          } else if (++attempts > 25) { // ~3s cap on slow connections
+            clearInterval(trial);
+          }
+        }, 120);
       });
     }
 
