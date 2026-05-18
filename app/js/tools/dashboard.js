@@ -559,6 +559,17 @@
     // Sort by priority
     cards.sort(function (a, b) { return a.priority - b.priority; });
 
+    // v2.8.91 — Inline guide panel (kapatılabilir, localStorage). Buffet v2.8.77
+    // pattern'i ile birebir. Deneyimli şef bir kez ✕ → bir daha görmez.
+    const guideHidden = (function () {
+      try { return localStorage.getItem('pcd_dash_guide_hidden') === '1'; } catch (e) { return false; }
+    })();
+
+    // v2.8.91 — Yeni şef için "Get started" 3-card empty state. recipes + ings
+    // ikisi de boşsa (demo seed yüklenmemiş veya yeni workspace) → action cards
+    // yerine guided onboarding göster.
+    const isNewChef = recipes.length === 0 && ings.length === 0;
+
     // === Render ===
     view.innerHTML =
       '<style>' +
@@ -586,6 +597,13 @@
         '.dash-stat:hover { background: var(--surface); border-color: var(--brand-300); transform: translateY(-1px); }' +
         '.dash-stat-num { font-size: 18px; font-weight: 700; color: var(--text); }' +
         '.dash-stat-lbl { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em; }' +
+        // v2.8.91 — New chef "Get started" 3-card grid
+        '.dash-gs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 20px; }' +
+        '.dash-gs-card { padding: 18px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); cursor: pointer; transition: all .15s ease; text-align: left; }' +
+        '.dash-gs-card:hover { border-color: var(--brand-600); transform: translateY(-2px); box-shadow: var(--shadow-md); }' +
+        '.dash-gs-emoji { font-size: 32px; line-height: 1; margin-bottom: 10px; display: block; }' +
+        '.dash-gs-title { font-weight: 700; font-size: 15px; letter-spacing: -0.01em; margin-bottom: 6px; }' +
+        '.dash-gs-desc { font-size: 12px; color: var(--text-3); line-height: 1.5; }' +
       '</style>' +
 
       '<h1 class="dash-greet">' + headline + '</h1>' +
@@ -594,6 +612,49 @@
         return ws ? ' · <strong style="color:var(--brand-700);">' + PCD.escapeHtml(ws.name) + '</strong>' + (ws.role ? ' (' + PCD.escapeHtml(ws.role) + ')' : '') : '';
       })() + '</div>' +
 
+      // v2.8.91 — Inline guide (collapsible, dismissable)
+      (!guideHidden ? (
+        '<details class="card" open style="padding:0;margin-bottom:16px;background:linear-gradient(135deg,var(--brand-50),var(--surface));border:1px solid var(--brand-300);">' +
+          '<summary style="cursor:pointer;padding:12px 14px;font-weight:700;font-size:13px;color:var(--brand-700);display:flex;align-items:center;gap:8px;list-style:none;">' +
+            '<span style="font-size:16px;">💡</span>' +
+            '<span style="flex:1;">' + PCD.escapeHtml(t('dash_guide_title') || 'What you\'ll see on your Dashboard') + '</span>' +
+            '<button type="button" id="dashGuideDismiss" style="background:transparent;border:0;color:var(--text-3);cursor:pointer;font-size:11px;padding:2px 6px;" title="' + PCD.escapeHtml(t('dash_guide_dismiss') || 'Hide') + '">✕</button>' +
+          '</summary>' +
+          '<div style="padding:0 14px 14px;font-size:13px;color:var(--text-2);line-height:1.65;">' +
+            '<ol style="margin:0;padding-inline-start:20px;">' +
+              '<li><strong>' + PCD.escapeHtml(t('dash_guide_step1_title') || "Today's focus") + '</strong> — ' + PCD.escapeHtml(t('dash_guide_step1_body') || 'Smart action cards: today\'s event, pending stock approvals, active checklists, low-stock alerts, cost-health warnings. Priority-sorted so the most urgent thing is on top.') + '</li>' +
+              '<li><strong>' + PCD.escapeHtml(t('dash_guide_step2_title') || 'Quick actions') + '</strong> — ' + PCD.escapeHtml(t('dash_guide_step2_body') || 'One-tap shortcuts to start a new recipe, menu, checklist, event, or print Kitchen Cards.') + '</li>' +
+              '<li><strong>' + PCD.escapeHtml(t('dash_guide_step3_title') || 'Library stats') + '</strong> — ' + PCD.escapeHtml(t('dash_guide_step3_body') || 'Total recipes, ingredients, menus in your workspace. Click any number to jump there.') + '</li>' +
+              '<li><strong>' + PCD.escapeHtml(t('dash_guide_step4_title') || 'Sidebar (≡ icon)') + '</strong> — ' + PCD.escapeHtml(t('dash_guide_step4_body') || 'Full tool menu: Buffet Planner, HACCP forms, Discover community, Suppliers, Variance, Nutrition, and more.') + '</li>' +
+            '</ol>' +
+          '</div>' +
+        '</details>'
+      ) : '') +
+
+      // v2.8.91 — Yeni şef "Get started" empty state veya action cards
+      (isNewChef ? (
+        '<div class="dash-empty" style="padding:20px 16px;margin-bottom:16px;text-align:left;">' +
+          '<div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:6px;">🌱 ' + PCD.escapeHtml(t('dash_get_started_title') || 'Let\'s set up your kitchen') + '</div>' +
+          '<div style="color:var(--text-2);font-size:13px;margin-bottom:14px;line-height:1.6;">' + PCD.escapeHtml(t('dash_get_started_intro') || 'Your workspace is empty. Start with one of these — or load the sample data to explore.') + '</div>' +
+          '<div class="dash-gs-grid">' +
+            '<button class="dash-gs-card" data-action="open-ingredients" type="button">' +
+              '<span class="dash-gs-emoji">🥕</span>' +
+              '<div class="dash-gs-title">' + PCD.escapeHtml(t('dash_get_started_ing_title') || 'Add ingredients') + '</div>' +
+              '<div class="dash-gs-desc">' + PCD.escapeHtml(t('dash_get_started_ing_desc') || 'Start with what you buy regularly. Set purchase prices for instant cost calculation.') + '</div>' +
+            '</button>' +
+            '<button class="dash-gs-card" data-action="new-recipe" type="button">' +
+              '<span class="dash-gs-emoji">📖</span>' +
+              '<div class="dash-gs-title">' + PCD.escapeHtml(t('dash_get_started_rec_title') || 'Create your first recipe') + '</div>' +
+              '<div class="dash-gs-desc">' + PCD.escapeHtml(t('dash_get_started_rec_desc') || 'Add ingredients, steps, and a photo. Live food cost % shows as you build.') + '</div>' +
+            '</button>' +
+            '<button class="dash-gs-card" data-action="load-demo" type="button">' +
+              '<span class="dash-gs-emoji">✨</span>' +
+              '<div class="dash-gs-title">' + PCD.escapeHtml(t('dash_get_started_demo_title') || 'Load sample data') + '</div>' +
+              '<div class="dash-gs-desc">' + PCD.escapeHtml(t('dash_get_started_demo_desc') || '3 recipes, 30+ ingredients, a menu, an event — ready to explore. Edit or delete anytime.') + '</div>' +
+            '</button>' +
+          '</div>' +
+        '</div>'
+      ) :
       // Action cards (today's focus)
       (cards.length > 0
         ? '<div>' + cards.map(function (c) { return c.html; }).join('') + '</div>'
@@ -601,7 +662,7 @@
             '<div class="dash-empty-title">' + t('dash_all_clear') + '</div>' +
             '<div>' + t('dash_nothing_pressing') + '</div>' +
           '</div>'
-      ) +
+      )) +
 
       // Quick actions
       '<div class="dash-quick">' +
@@ -632,6 +693,40 @@
         }
       }, 120);
     }
+
+    // v2.8.91 — Dashboard inline guide dismiss (kapatınca localStorage'a yaz)
+    const guideDismissBtn = PCD.$('#dashGuideDismiss', view);
+    if (guideDismissBtn) guideDismissBtn.addEventListener('click', function (e) {
+      e.preventDefault(); e.stopPropagation();
+      try { localStorage.setItem('pcd_dash_guide_hidden', '1'); } catch (e) {}
+      const detailsEl = this.closest('details');
+      if (detailsEl) detailsEl.style.display = 'none';
+    });
+
+    // v2.8.91 — New chef empty state: load-demo button → reset to demo seed
+    PCD.on(view, 'click', '[data-action="load-demo"]', function () {
+      PCD.modal.confirm({
+        icon: '✨', iconKind: 'info',
+        title: PCD.i18n.t('dash_demo_confirm_title') || 'Load sample data?',
+        text: PCD.i18n.t('dash_demo_confirm_text') || '3 recipes, 30+ ingredients, a menu, an event will be loaded. You can edit or delete anything afterwards.',
+        okText: PCD.i18n.t('dash_demo_confirm_ok') || 'Load',
+      }).then(function (ok) {
+        if (!ok) return;
+        if (PCD.demo && PCD.demo.seed) {
+          PCD.demo.seed();
+          PCD.toast.success(PCD.i18n.t('dash_demo_loaded') || 'Sample data loaded');
+          setTimeout(function () { render(view); }, 300);
+        } else {
+          PCD.router.go('account');
+          PCD.toast.info(PCD.i18n.t('dash_demo_via_account') || 'Open Account → Reset demo data');
+        }
+      });
+    });
+
+    // v2.8.91 — New chef: open-ingredients button → ingredients tool
+    PCD.on(view, 'click', '[data-action="open-ingredients"]', function () {
+      PCD.router.go('ingredients');
+    });
 
     // Wire actions
     PCD.on(view, 'click', '[data-action="new-recipe"]', function () {

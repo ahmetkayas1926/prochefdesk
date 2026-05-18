@@ -8,7 +8,7 @@
 
 **Ürün:** ProChefDesk — profesyonel chef'ler için web tabanlı mutfak yönetim sistemi.
 **Operatör:** Ahmet Kaya, Perth Western Australia, profesyonel şef. Solo non-commercial proje.
-**Mevcut sürüm:** **v2.8.90** (push'a hazır local; production v2.8.89).
+**Mevcut sürüm:** **v2.8.91** (push'a hazır local; production v2.8.89).
 **Domain:** prochefdesk.com (Cloudflare Pages, SSL Full, GitHub push'ta auto build + deploy).
 
 **URL yapısı:**
@@ -168,6 +168,7 @@ Tek tek sürüm için → CHANGELOG.md.
 | 41 | **Buffet UX modernize Faz 1** (operatör vizyon turu — kafa karıştırmayan, modern, akıllı): (a) Smart industry defaults — BUFFET_TYPES'a defaultCovers + defaultPrice (breakfast 80/35 vb.), type change'de auto-fill. (b) Stats hero refactor — 42px primary Food cost % + renkli status chip + target alt-text + secondary 5-metric grid (Apple Health hissi). (c) statusLabel helper i18n. (d) Liste polish — search input (1+ buffet'te) + her satıra renkli sol kenarlık (food cost % status'a göre yeşil/sarı/kırmızı). (e) Item card compactify — uzun pickup hint kaldır, kompakt cost preview (prep cost + waste, waste 25%+ kırmızı ⚠). 4 yeni i18n key TR+EN. Quick start preset v2.8.89'a ertelendi. | v2.8.88 | ✅ |
 | 42 | **Buffet Quick Start preset chooser** (Faz 2): "+ New Buffet" → preset chooser modal (4 kart): 🥐 Continental Breakfast (60c/$30/12 item) + 🌿 Mediterranean Lunch (100c/$48/16 item) + 🥞 Sunday Brunch 5★ (80c/$75/20 item) + ✨ Start blank. Preset items customName tipte (recipe/ingredient bağı yok, chef sonra bağlar), amountPerGuest + unit + pickupRatio Cornell/Marriott baseline'larıyla dolu. Clone + yeni uid'ler + lokalize name + upsertBuffet + openEditor. 11 yeni i18n key TR+EN. Yeni şefin "blank canvas" sorunu çözüldü. | v2.8.89 | ✅ |
 | 43 | **i18n consistency sweep — print/Excel/share Round 3**: Operatör raporu (TR seçiliyken buffet cost report karışık dil). Agent audit + 6 dosyada 40+ hardcoded EN string → `t()`. Buffet print + Excel (header + stats + tablo), events.js printEvent (Date/Guests/Venue/Menu/Recipe/Per guest/Total food cost/Profit/Notes + status chip), portion.js print + share (Scaled recipes title + meta + Total cost), checklist.js session print (✓ Done / PASS / FAIL / N/A / stat labels / sign-off), kitchen_cards.js print title, inventory.js stock count print (h1 + meta + window title). 48 yeni i18n key TR+EN parity. Eski `\|\| 'English'` fallback'lar korundu (graceful). Şef TR seçince tüm output Türkçe artık. | v2.8.90 | ✅ |
+| 44 | **Dashboard + Tools-hub UX upgrade (NAKED → RICH)**: (a) Dashboard kapatılabilir inline guide panel (buffet v2.8.77 pattern) — "What you'll see" 4-step açıklama + ✕ localStorage dismiss. (b) Yeni şef "Get started" 3-card empty state (recipes+ings=0 koşulu): 🥕 Add ingredients / 📖 Create first recipe / ✨ Load sample data — son kart confirm modal + `PCD.demo.seed()`. (c) Tools-hub phase grouping — eski tek-düz grid yerine 4 section (Essentials/Production/Operations/Compliance & extras) + section title + 1-cümle açıklama + "N tools" sayacı. 26 yeni i18n key TR+EN parity. | v2.8.91 | ✅ |
 | Ops | GSC verify + sitemap submit + 7 sayfa Google'a keşfedildi (landing + 2 legal + blog index + 3 post) | 2026-05-18 | ✅ |
 | Ops | Edge function deploy: `delete-account` (v2.8.50 fix CANLI) + `backup-to-r2` (v2.8.79 BACKUP_TABLES haccp_receiving/holding CANLI) | 2026-05-18 | ✅ |
 | Ops | Marketing + SEO + Blog altyapısı (PARÇA 1+2+3): `/blog/` 3 yazı + sitemap.xml + robots.txt + meta tag sweep + privacy/terms OG cards. App'ten bağımsız stil. GSC verify operatöre kaldı | 2026-05-18 | ✅ |
@@ -206,7 +207,8 @@ Tek tek sürüm için → CHANGELOG.md.
 17. ~~Edge function deploy: `delete-account`~~ — ✅ operatör deploy etti (2026-05-18). v2.8.50 fix CANLI.
 18. ~~Edge function deploy: `backup-to-r2`~~ — ✅ operatör deploy etti (2026-05-18). BACKUP_TABLES'da `haccp_receiving` + `haccp_holding` doğrulandı. İlk doğrulama: yarın sabah UTC 03:00 (Perth 11:00) cron run sonrası Cloudflare R2 bucket'ında iki yeni jsonl dosyası gör.
 19. **Buffet + Mise cloud sync** ⏳ — v2.8.73 (`buffets`) + v2.8.74 (`misePlans`) IDB-only. Supabase tablo + RLS + per-table sync wire gerekiyor (pattern: v2.8.44 haccp_receiving/holding migration). **Onay zorunlu** (yeni tablo + RLS + sync mantığı).
-22. **i18n consistency tarama (v2.8.90)** ⏳ — operatör raporu: buffet cost report TR seçiliyken bazı string'ler EN. Tüm output surface'larında (print preview / Cost Report PDF / Excel / URL share / QR share / Email subject + body / Discover detail modal / Kitchen Card / per-tool print path'leri) mevcut dil tercihi senkron olmalı. Audit + fix paketi: her `PCD.print` ve `XLSX.utils.book_new` ve `share.js` çağrısında `PCD.i18n.currentLocale` doğru aktif mi? Sabit string'ler (hardcoded EN) `t()` çağrısına çevrilmeli. Tahmini 20-30 hardcoded string + 10-15 yeni i18n key (TR+EN). Round 1 (v2.8.40) ve Round 2 (v2.8.42) yapıldı zaten — bu Round 3, print/output odaklı.
+22. ~~i18n consistency tarama~~ — ✅ **v2.8.90'da yapıldı**. 6 dosyada 40+ hardcoded EN string → `t()` + 48 yeni i18n key. Round 3 tamam. Sonraki ihtiyaç çıkarsa Round 4 olur.
+23. **Buffet Excel footer "Made with ProChefDesk · prochefdesk.com"** ⏳ — operatör low-priority not: Recipe Cost Excel'inde nazik footer var, buffet Excel'ine de eklenmeli. Tek hücre add operasyonu. 5 dakikalık iş, ayrı turda v2.8.92+ içinde paket halinde yapılabilir.
 20. **Discover'a Tag + Allergen filter** ⏳ — v2.8.75 tag + v2.8.71 allergen guardrail Discover'a inmedi. Public recipe save edilirken `enrichPublicIngredientNames` pattern'i (v2.8.66) ile tag + dietFlags inline gömme; Discover frontend filter chip'leri tek tıkla.
 21. **App boot perf L3** — cloud sync ilk paint sonrasına ertele. **Önerilmedi** (CLAUDE.md "cross-device sync değişikliği" yüksek risk). L1 (v2.8.76) + L2 (v2.8.78) yeterli; beklenen PageSpeed ~85, LCP 3.0-3.5 sn.
 
@@ -271,7 +273,7 @@ Bu işleri spontan öneri olarak ortaya çıkarma:
 |---|---|
 | Repo path (operatör Windows) | `C:\Users\ahmet\Desktop\prochefdesk` |
 | GitHub repo | `ahmetkayas1926/prochefdesk` |
-| Production sürümü | **v2.8.90** (push'a hazır local; production v2.8.89) |
+| Production sürümü | **v2.8.91** (push'a hazır local; production v2.8.89) |
 | Supabase project ref | `muuwhrcogikpqylsfvgg` (Tokyo, Postgres 17, Free tier) |
 | Cloudflare R2 bucket | `prochefdesk-backups` |
 | CLEANUP_SECRET | `ec79a445-7e92-499b-9322-5c2c949788d4d2886e66-d556-4498-ba9e-17fda6c11ac1` |
