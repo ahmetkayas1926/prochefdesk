@@ -38,7 +38,11 @@
 
     // Selection state
     const selected = new Set(); // recipe IDs
-    const portionsPerRecipe = {}; // rid -> target portions (default = guests * 1)
+    const portionsPerRecipe = {}; // rid -> target portions (kullanıcı her tarif için yazar)
+    // v2.8.92 — Step 1 (Guest count input) kaldırıldı. Operatör raporu: "Step 1 ile
+    // Step 3 mantıksal bağ kopuk; her tarifin kendi portion input'u var, toplu rakam
+    // kafa karıştırıyor." Yeni model: kullanıcı doğrudan her tarif için porsiyon
+    // sayısı yazar. Internal default (ilk seçim başlangıç değeri) 50 portion.
     let guestCount = 50;
 
     view.innerHTML = `
@@ -49,16 +53,14 @@
         </div>
       </div>
 
-      <div class="card mb-3" style="padding:14px;">
-        <div style="font-weight:700;font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:10px;">${t('pc_step1')}</div>
-        <div class="flex items-center gap-3" style="flex-wrap:wrap;">
-          <input type="number" class="input" id="pcGuests" value="${guestCount}" min="1" step="1" style="width:120px;font-weight:700;font-size:18px;text-align:center;">
-          <span style="color:var(--text-3);">${t('pc_guests')}</span>
-          <div style="flex:1;"></div>
-          <button class="btn btn-secondary btn-sm" data-quick="20">20</button>
-          <button class="btn btn-secondary btn-sm" data-quick="50">50</button>
-          <button class="btn btn-secondary btn-sm" data-quick="100">100</button>
-          <button class="btn btn-secondary btn-sm" data-quick="200">200</button>
+      <!-- v2.8.92 — Step 1 input kaldırıldı, yerine nazik intro/help kartı -->
+      <div class="card mb-3" style="padding:14px;background:linear-gradient(135deg,var(--brand-50),var(--surface));border:1px solid var(--brand-300);">
+        <div style="display:flex;align-items:flex-start;gap:10px;">
+          <span style="font-size:20px;line-height:1;flex-shrink:0;margin-top:2px;">💡</span>
+          <div style="flex:1;">
+            <div style="font-weight:700;font-size:14px;color:var(--brand-700);margin-bottom:4px;letter-spacing:-0.01em;">${PCD.escapeHtml(t('pc_intro_title') || 'How to use')}</div>
+            <div style="font-size:13px;color:var(--text-2);line-height:1.55;">${PCD.escapeHtml(t('pc_intro_body') || 'Pick the recipes you want to scale below, then enter how many portions you need for each one. Total food cost and average per-portion cost are calculated instantly.')}</div>
+          </div>
         </div>
       </div>
 
@@ -182,7 +184,7 @@
             '<div><div class="text-muted text-sm">' + t('pc_stat_recipes') + '</div><div style="font-weight:700;font-size:20px;" data-stat-recipes>' + selectedRecipes.length + '</div></div>' +
             '<div><div class="text-muted text-sm">' + t('pc_stat_total_portions') + '</div><div style="font-weight:700;font-size:20px;" data-stat-total-portions>0</div></div>' +
             '<div><div class="text-muted text-sm">' + t('pc_stat_total_cost') + '</div><div style="font-weight:700;font-size:20px;color:var(--brand-700);" data-stat-total-cost>$0</div></div>' +
-            '<div><div class="text-muted text-sm">' + t('pc_stat_cost_per_guest') + '</div><div style="font-weight:700;font-size:20px;" data-stat-cost-per-guest>$0</div></div>' +
+            '<div><div class="text-muted text-sm">' + (t('pc_stat_avg_per_portion') || t('pc_stat_cost_per_guest') || 'Avg / portion') + '</div><div style="font-weight:700;font-size:20px;" data-stat-cost-per-guest>$0</div></div>' +
           '</div>' +
           '<div class="flex gap-2 mt-3" style="flex-wrap:wrap;">' +
             '<button class="btn btn-primary" id="pcShop">' + PCD.icon('shopping-cart', 16) + ' <span>' + t('pc_send_to_shopping') + '</span></button>' +
@@ -205,14 +207,22 @@
         updateResult();
       });
 
+      // v2.8.92 — Print/share/shop çağrılarına `guestCount` yerine totalPortions
+      // hesaplayıp geç. Step 1 kaldırıldığı için "X guests" yerine "X portions"
+      // mantığı doğru hesap. Recompute (live, kullanıcı portion input değişebilir).
+      function _totalPortionsNow() {
+        return selectedRecipes.reduce(function (s, r) {
+          return s + (portionsPerRecipe[r.id] != null ? portionsPerRecipe[r.id] : guestCount);
+        }, 0);
+      }
       PCD.$('#pcShop', resultEl).addEventListener('click', function () {
-        sendToShoppingList(selectedRecipes, guestCount, portionsPerRecipe, ingMap);
+        sendToShoppingList(selectedRecipes, _totalPortionsNow(), portionsPerRecipe, ingMap);
       });
       PCD.$('#pcPrint', resultEl).addEventListener('click', function () {
-        printScaled(selectedRecipes, guestCount, portionsPerRecipe, ingMap);
+        printScaled(selectedRecipes, _totalPortionsNow(), portionsPerRecipe, ingMap);
       });
       PCD.$('#pcShare', resultEl).addEventListener('click', function () {
-        shareScaled(selectedRecipes, guestCount, portionsPerRecipe, ingMap);
+        shareScaled(selectedRecipes, _totalPortionsNow(), portionsPerRecipe, ingMap);
       });
 
       // Initial value computation
@@ -266,8 +276,12 @@
       if (statTotalPortions) statTotalPortions.textContent = totalPortions;
       const statTotalCost = resultEl.querySelector('[data-stat-total-cost]');
       if (statTotalCost) statTotalCost.textContent = PCD.fmtMoney(totalCost);
+      // v2.8.92 — "Cost/guest" → "Avg per portion" (totalCost / totalPortions).
+      // Eski mantık: guestCount (Step 1 input) ile bölüyordu — Step 1 kaldırıldığı
+      // için artık toplam portion'a böl. Daha doğru, çünkü tarifler farklı
+      // porsiyon sayıları olabilir.
       const statCpg = resultEl.querySelector('[data-stat-cost-per-guest]');
-      if (statCpg) statCpg.textContent = PCD.fmtMoney(guestCount > 0 ? totalCost / guestCount : 0);
+      if (statCpg) statCpg.textContent = PCD.fmtMoney(totalPortions > 0 ? totalCost / totalPortions : 0);
     }
 
     // Public refresh: rebuilds full DOM (used when selection changes)
@@ -276,54 +290,10 @@
     }
 
     // Wire root events
-    PCD.$('#pcGuests', view).addEventListener('input', function () {
-      const raw = this.value;
-      if (raw === '' || raw === null) return;
-      const v = parseInt(raw, 10);
-      if (isNaN(v) || v < 1) return;
-      const oldGuest = guestCount;
-      guestCount = v;
-      // For recipes the user hasn't manually overridden, keep them in sync with guestCount
-      // (override = portionsPerRecipe[rid] was previously equal to old guestCount)
-      Object.keys(portionsPerRecipe).forEach(function (rid) {
-        if (portionsPerRecipe[rid] === oldGuest) {
-          portionsPerRecipe[rid] = guestCount;
-          // Update the input field too
-          const inp = view.querySelector('[data-rscale="' + rid + '"]');
-          if (inp && document.activeElement !== inp) inp.value = guestCount;
-        }
-      });
-      // Surgical update — preserves focus
-      updateResult();
-      // Also update inputs for recipes never touched (use default = guestCount)
-      const resultEl = PCD.$('#pcResult', view);
-      if (resultEl) {
-        resultEl.querySelectorAll('[data-rscale]').forEach(function (inp) {
-          const rid = inp.getAttribute('data-rscale');
-          if (portionsPerRecipe[rid] == null && document.activeElement !== inp) {
-            inp.value = guestCount;
-          }
-        });
-      }
-    });
-    PCD.on(view, 'click', '[data-quick]', function () {
-      const oldGuest = guestCount;
-      guestCount = parseInt(this.getAttribute('data-quick'), 10);
-      PCD.$('#pcGuests', view).value = guestCount;
-      // Sync overrides + inputs
-      Object.keys(portionsPerRecipe).forEach(function (rid) {
-        if (portionsPerRecipe[rid] === oldGuest) portionsPerRecipe[rid] = guestCount;
-      });
-      const resultEl = PCD.$('#pcResult', view);
-      if (resultEl) {
-        resultEl.querySelectorAll('[data-rscale]').forEach(function (inp) {
-          const rid = inp.getAttribute('data-rscale');
-          const target = portionsPerRecipe[rid] != null ? portionsPerRecipe[rid] : guestCount;
-          inp.value = target;
-        });
-      }
-      updateResult();
-    });
+    // v2.8.92 — #pcGuests input handler ve [data-quick] chip handler kaldırıldı.
+    // Step 1 input artık yok; her tarif kendi portion input'unu yönetir.
+    // `guestCount` internal default state (=50) olarak korunur — yeni tarif
+    // seçildiğinde başlangıç portion sayısı.
     searchInp.addEventListener('input', paintRecipeList);
     PCD.$('#pcAll', view).addEventListener('click', function () {
       recipes.forEach(function (r) {
@@ -359,13 +329,15 @@
   }
 
   // ============ SHOPPING LIST ============
-  function sendToShoppingList(recipes, guestCount, portionsMap, ingMap) {
-    const defaultName = guestCount + ' guests · ' + new Date().toLocaleDateString();
+  // v2.8.92 — Parametre `guestCount` → `totalPortions` semantik (Step 1 kaldırıldı).
+  function sendToShoppingList(recipes, totalPortions, portionsMap, ingMap) {
+    const t = PCD.i18n.t;
+    const defaultName = totalPortions + ' ' + (t('portion_total_portions_label') || 'portions') + ' · ' + new Date().toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || 'en');
     const body = PCD.el('div');
     body.innerHTML =
-      '<div class="text-muted text-sm mb-3">Combine all ingredients into a single shopping list, grouped by category and recipe.</div>' +
-      '<div class="field"><label class="field-label">Name this shopping list</label>' +
-      '<input type="text" class="input" id="slName" value="' + PCD.escapeHtml(defaultName) + '" placeholder="e.g. Wedding · 23 May"></div>';
+      '<div class="text-muted text-sm mb-3">' + PCD.escapeHtml(t('pc_shopping_intro') || 'Combine all ingredients into a single shopping list, grouped by category and recipe.') + '</div>' +
+      '<div class="field"><label class="field-label">' + PCD.escapeHtml(t('pc_shopping_name_label') || 'Name this shopping list') + '</label>' +
+      '<input type="text" class="input" id="slName" value="' + PCD.escapeHtml(defaultName) + '" placeholder="' + PCD.escapeHtml(t('pc_shopping_name_ph') || 'e.g. Wedding · 23 May') + '"></div>';
 
     const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('cancel') });
     const okBtn = PCD.el('button', { class: 'btn btn-primary', style: { flex: '1' } });
@@ -385,14 +357,14 @@
       const itemsForShopping = recipes.map(function (r) {
         return {
           recipeId: r.id,
-          portions: portionsMap[r.id] != null ? portionsMap[r.id] : guestCount
+          portions: portionsMap[r.id] != null ? portionsMap[r.id] : 50
         };
       });
 
       const list = {
         name: name,
         items: itemsForShopping,
-        guestCount: guestCount,
+        guestCount: totalPortions,  // legacy field name kept for shopping.js compat
         groupBy: 'category',
         createdAt: new Date().toISOString(),
       };
@@ -407,12 +379,15 @@
   }
 
   // ============ PRINT ============
-  function printScaled(recipes, guestCount, portionsMap, ingMap) {
+  // v2.8.92 — Parametre `guestCount` → `totalPortions` semantik (Step 1 kaldırıldı).
+  function printScaled(recipes, totalPortions, portionsMap, ingMap) {
     let blocks = '';
     let totalCost = 0;
 
     recipes.forEach(function (r) {
-      const target = portionsMap[r.id] || guestCount;
+      // v2.8.92 — Fallback 50 (eski guestCount default'u). portionsMap[r.id]
+      // her tarif için kullanıcı override'ı, override edilmemişse 50 portion.
+      const target = portionsMap[r.id] || 50;
       const factor = target / (r.servings || 1);
       const baseCost = PCD.recipes.computeFoodCost(r, ingMap);
       const scaledCost = baseCost * factor;
@@ -472,25 +447,32 @@
       '</style>' +
       '<div class="kc-header">' +
         '<h1>' + PCD.escapeHtml(PCD.i18n.t('portion_print_title') || 'Scaled recipes') + '</h1>' +
-        '<div class="meta">' + guestCount + ' ' + PCD.escapeHtml(PCD.i18n.t('portion_guests_label') || 'guests') + ' · ' + recipes.length + ' ' + PCD.escapeHtml(PCD.i18n.t('portion_recipes_label') || 'recipes') + ' · ' + new Date().toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || 'en') + '</div>' +
+        // v2.8.92 — "X guests" → "X total portions". Step 1 (Guest count) kaldırıldı;
+        // print meta artık tüm tariflerin toplam porsiyon sayısı.
+        '<div class="meta">' + totalPortions + ' ' + PCD.escapeHtml(PCD.i18n.t('portion_total_portions_label') || 'total portions') + ' · ' + recipes.length + ' ' + PCD.escapeHtml(PCD.i18n.t('portion_recipes_label') || 'recipes') + ' · ' + new Date().toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || 'en') + '</div>' +
       '</div>' +
       blocks +
       '<div style="margin-top:14px;padding:10px 14px;background:#f0fdf4;border-radius:8px;display:flex;justify-content:space-between;font-size:11pt;font-weight:700;">' +
         '<span>' + PCD.i18n.t('label_total_food_cost') + '</span>' +
-        '<span style="color:#16a34a;">' + PCD.fmtMoney(totalCost) + ' (' + PCD.fmtMoney(guestCount > 0 ? totalCost / guestCount : 0) + ' / ' + PCD.escapeHtml(PCD.i18n.t('portion_per_guest_short') || 'guest') + ')</span>' +
+        '<span style="color:#16a34a;">' + PCD.fmtMoney(totalCost) + ' (' + PCD.fmtMoney(totalPortions > 0 ? totalCost / totalPortions : 0) + ' / ' + PCD.escapeHtml(PCD.i18n.t('portion_per_portion_short') || 'portion') + ')</span>' +
       '</div>';
 
-    PCD.print(html, (PCD.i18n.t('portion_print_title') || 'Scaled recipes') + ' — ' + guestCount + ' ' + (PCD.i18n.t('portion_guests_label') || 'guests'));
+    PCD.print(html, (PCD.i18n.t('portion_print_title') || 'Scaled recipes') + ' — ' + totalPortions + ' ' + (PCD.i18n.t('portion_total_portions_label') || 'portions'));
   }
 
   // ============ SHARE ============
-  function shareScaled(recipes, guestCount, portionsMap, ingMap) {
+  // v2.8.92 — Parametre adı `guestCount` → `totalPortions` semantik gerçeği yansıtır.
+  // (Step 1 input kaldırıldı, çağıran tarafta totalPortions hesaplanıp gönderilir.)
+  function shareScaled(recipes, totalPortions, portionsMap, ingMap) {
     const t = PCD.i18n.t;
     const dateStr = new Date().toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || 'en');
-    const lines = [(t('portion_print_title') || 'Scaled recipes') + ' — ' + guestCount + ' ' + (t('portion_guests_label') || 'guests'), dateStr, ''];
+    const lines = [(t('portion_print_title') || 'Scaled recipes') + ' — ' + totalPortions + ' ' + (t('portion_total_portions_label') || 'total portions'), dateStr, ''];
     let totalCost = 0;
     recipes.forEach(function (r) {
-      const target = portionsMap[r.id] || guestCount;
+      // v2.8.92 — Her tarif kendi portionsMap[r.id] override'ını kullanır.
+      // Fallback: 50 portion (eski guestCount default'u). Genelde her tarif
+      // override edildiği için fallback'e nadiren düşülür.
+      const target = portionsMap[r.id] || 50;
       const factor = target / (r.servings || 1);
       const baseCost = PCD.recipes.computeFoodCost(r, ingMap);
       totalCost += baseCost * factor;
@@ -505,7 +487,7 @@
       });
       lines.push('');
     });
-    lines.push((t('portion_total_cost_label') || 'Total cost') + ': ' + PCD.fmtMoney(totalCost) + ' (' + PCD.fmtMoney(guestCount > 0 ? totalCost / guestCount : 0) + ' / ' + (t('portion_per_guest_short') || 'guest') + ')');
+    lines.push((t('portion_total_cost_label') || 'Total cost') + ': ' + PCD.fmtMoney(totalCost) + ' (' + PCD.fmtMoney(totalPortions > 0 ? totalCost / totalPortions : 0) + ' / ' + (t('portion_per_portion_short') || 'portion') + ')');
     const text = lines.join('\n');
 
     const body = PCD.el('div');
