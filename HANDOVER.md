@@ -8,7 +8,7 @@
 
 **Ürün:** ProChefDesk — profesyonel chef'ler için web tabanlı mutfak yönetim sistemi.
 **Operatör:** Ahmet Kaya, Perth Western Australia, profesyonel şef. Solo non-commercial proje.
-**Mevcut sürüm:** **v2.8.58** (push'a hazır local; production v2.8.50 — operatör push edince Cloudflare Pages otomatik deploy eder).
+**Mevcut sürüm:** **v2.8.79** (production canlı, push edildi; Cloudflare Pages otomatik deploy etti).
 **Domain:** prochefdesk.com (Cloudflare Pages, SSL Full, GitHub push'ta auto build + deploy).
 
 **URL yapısı:**
@@ -61,14 +61,18 @@ account.js, allergens.js, checklist.js, dashboard.js, events.js, haccp_cooling.j
 
 **Project ref:** `muuwhrcogikpqylsfvgg` (Tokyo, Postgres 17, **Free tier**)
 
-### 22 Aktif tablo
+### 25 Aktif tablo
 
-**Workspace-scoped (16):** recipes, ingredients, menus, events, suppliers, canvases, shopping_lists, checklist_templates, inventory, waste, checklist_sessions, stock_count_history, haccp_logs, haccp_units, haccp_readings, haccp_cook_cool
+**Workspace-scoped (18):** recipes, ingredients, menus, events, suppliers, canvases, shopping_lists, checklist_templates, inventory, waste, checklist_sessions, stock_count_history, haccp_logs, haccp_units, haccp_readings, haccp_cook_cool, **haccp_receiving** (v2.8.44), **haccp_holding** (v2.8.44)
 > Hepsinde `workspace_id` + `user_id` PK, `data` jsonb, `deleted_at` timestamptz.
 
-**Top-level (6):** workspaces (flat schema, jsonb yok), workspace_tombstones, user_prefs, public_shares, client_errors (insert-only), subscriptions (premium için boş).
+**Top-level (7):** workspaces (flat schema, jsonb yok), workspace_tombstones, user_prefs, public_shares, client_errors (insert-only), subscriptions (premium için boş), **recipe_likes** (v2.8.46, Discover Phase 2 — PK = `(recipe_id, user_id)` native 1-per-user enforcement; trigger `pcd_update_like_count` recipes.like_count'u senkron tutar).
+
+**Sadece IDB (cloud sync YOK):** `buffets` (v2.8.73), `misePlans` (v2.8.74). Sonraki round'da Supabase tablosu + RLS + per-table sync wire (backlog #18).
 
 **DROP edilmiş:** `user_data` (v2.6.87), `cost_history` (v2.6.88). Frontend referansları temizlendi.
+
+**Discover ek kolonlar (v2.8.46):** `recipes` tablosuna `view_count` + `like_count` integer kolonları (denormalized hızlı okuma, trigger ile senkron) + 2 partial index (public order by DESC). Anonymous + authenticated için yeni RLS policy: `data->>'isPublic' = 'true'` herkese SELECT açık (owner-only policy korunur, PostgreSQL UNION mantığı).
 
 ### Cascade trigger zinciri (v2.6.98 + v2.7.0)
 
@@ -92,15 +96,15 @@ account.js, allergens.js, checklist.js, dashboard.js, events.js, haccp_cooling.j
 | pcd-cleanup-old-deleted | 03:00 her gün | — |
 | pcd-cleanup-photos-weekly | Pazar 04:00 | — |
 
-### Realtime: 19 tablo subscribed
+### Realtime: 21 tablo subscribed
 
-canvases, checklist_sessions, checklist_templates, events, haccp_cook_cool, haccp_logs, haccp_readings, haccp_units, ingredients, inventory, menus, recipes, shopping_lists, stock_count_history, suppliers, user_prefs, waste, workspace_tombstones, workspaces.
+canvases, checklist_sessions, checklist_templates, events, haccp_cook_cool, haccp_logs, haccp_readings, haccp_units, **haccp_receiving** (v2.8.44), **haccp_holding** (v2.8.44), ingredients, inventory, menus, recipes, shopping_lists, stock_count_history, suppliers, user_prefs, waste, workspace_tombstones, workspaces.
 
-> **Bilinen sorun:** Console'da `cloud-realtime: subscribe failed CHANNEL_ERROR`. Solo workflow için kritik değil — pull-on-open + v2.8.33 drift detection veri kaybı riskini yok ediyor. Backlog'da bekliyor (madde 10).
+> **CHANNEL_ERROR çözüldü:** v2.8.43 — explicit `realtime.setAuth(token)` + `TOKEN_REFRESHED` dinleyici. Multi-device canlı sync güvenilir (özellikle uzun açık tutulan oturumlar). 1-saatlik token refresh sonrası otomatik re-setAuth yapılıyor.
 
 ### 3 Edge Function (deployed)
 
-- `backup-to-r2` — v3 (2026-05-06). 23 per-table tabloyu (v2.8.44'te haccp_receiving + haccp_holding eklendi) jsonl olarak R2'ye yazar (`<YYYY-MM-DD>/<table>.jsonl` + summary.json + photos-manifest.json). 30-day retention. **Foto bytes'ı yedeklenmiyor**, sadece manifest — Supabase Storage kaybı = foto kaybı (kabul edilebilir trade-off, Pro tier'a geçince Storage PITR var).
+- `backup-to-r2` — v3 (2026-05-06, v2.8.79'da BACKUP_TABLES array'ine `haccp_receiving` + `haccp_holding` eklendi). 25 per-table tabloyu jsonl olarak R2'ye yazar (`<YYYY-MM-DD>/<table>.jsonl` + summary.json + photos-manifest.json). 30-day retention. **Foto bytes'ı yedeklenmiyor**, sadece manifest — Supabase Storage kaybı = foto kaybı (kabul edilebilir trade-off, Pro tier'a geçince Storage PITR var). **Deploy gerek (operatör):** `supabase functions deploy backup-to-r2`. Aksi halde v2.8.79 öncesi sürüm canlı kalır — `haccp_receiving` + `haccp_holding` cloud sync olmuş ama R2 nightly archive'da yok (disaster recovery boşluk).
 - `cleanup-photos` — Storage orphan foto temizliği. `x-cleanup-secret` header zorunlu.
 - `delete-account` — kullanıcı hesap silme. **v2.8.50**: `user_data` (DROP edilmiş tablo) DELETE bloğu kaldırıldı; false-error response artık üretmiyor. CASCADE FK ile 24 tabloda owner satırları auto-delete.
 
@@ -138,6 +142,22 @@ Tek tek sürüm için → CHANGELOG.md.
 | 15 | Drag-drop sıralama (recipe ingredients + menu sections/items): up/down butonları → 6-nokta grip handle, PCD.dragdrop.makeSortable activate | v2.8.56 | ✅ |
 | 16 | Kitchen Cards recipe arama: başlık altında anlık substring filter | v2.8.57 | ✅ |
 | 17 | Discover/Kitchen Card snapshot sub-recipe fix + isPublic toggle preview modal'a taşındı + privacy notu | v2.8.58 | ✅ |
+| 18 | Checklist polishing paketi (boş template print kompakt + drag-drop item editor, session print kompakt, multi-column print toggle, kategori sol şerit, item hint field, session completedBy auto-fill, Template Library 14 hazır şablon 4 kategori) | v2.8.59-v2.8.65 | ✅ |
+| 19 | Discover public recipe ingredient "(?)" fix: `enrichPublicIngredientNames` helper public save'de inline name gömme | v2.8.66 | ✅ |
+| 20 | Recipe fotoğrafı **1:1 standardı** (8 surface tutarlı): cropper RATIOS = [1:1], editor/preview/print/discover/share/url hepsi aspect-ratio:1/1 max-width:280-360px | v2.8.67 | ✅ |
+| 21 | Menu Builder modernizasyon (10 madde): 4 tema (Fine/Bistro/Cafe/Minimal) + 6 accent renk + logo/kapak + dietary badge + item badge (5 tip) + 2 sütun + 4 page size + duplicate + quick legal notes + Design/Layout collapsible panel | v2.8.68 | ✅ |
+| 22 | **Sub-recipe ingredient flattening helper** (mimari fix): `PCD.recipes.flattenIngredients()` 6 modüle bağlandı (portion canvas+print+share, shopping consolidation+print, nutrition, allergens-db, computeDietCompat). Cycle protection + birim dönüşümü + scale cascade. Operatör raporu "Beef Skewer içinde Labneh ?" düzeldi. | v2.8.69 | ✅ |
+| 23 | HACCP Hub konsolidasyon: 4 form (logs/cooling/receiving/holding) tek `haccp` landing widget'ı altında, mevcut route'lar korunur, sidenav 18→15 item | v2.8.70 | ✅ |
+| 24 | Allergen Guardrail: Recipes list "Free from" 6 chip filter + Menu Builder "Allergen-safe print" toggle (coeliac event, peanut-free children's party use case) | v2.8.71 | ✅ |
+| 25 | Dashboard Cost Health widget: over-budget recipes (food cost %35 üstü) + stale ingredient prices (60+ gün) — silent margin erosion erken uyarı | v2.8.72 | ✅ |
+| 26 | **Buffet Planner** — hotel/catering grade tool (~540 satır). 5-yıldız breakfast/lunch için. Industry ratios (Cornell+Marriott), refill multipliers, food cost % targets, station types, prep + cost report print 2 türde. `buffets` IDB tablosu (cloud sync sonraki round) | v2.8.73 | ✅ |
+| 27 | **Mise en Place Planner** — sabah prep listesi (~360 satır). Events + Buffets'ten otomatik prep aggregation, 5 faz grouping (Stocks/Sauces/Protein/Garnish/Final), check-off + remaining time. `misePlans` IDB tablosu | v2.8.74 | ✅ |
+| 28 | Tag system: recipes free-form tags + autocomplete + list view multi-select filter (cuisine + diet + allergen + tag kombinasyon). `data.tags` jsonb array | v2.8.75 | ✅ |
+| 29 | App boot perf **L1**: 50 sync `<script>` → `defer`, 2 CDN için `preload` + `preconnect` + `dns-prefetch`. Mobile FCP/LCP 5.6→3.0-3.5 sn beklentisi, tek dosya (index.html) | v2.8.76 | ✅ |
+| 30 | Buffet inline guide (5-adımlık dismissible) + per-field help texts (Name/Covers/Price/Stations + Refill + station onboarding empty state) | v2.8.77 | ✅ |
+| 31 | App boot perf **L2** + a11y: viewport zoom unblock (WCAG fix +5 puan), xlsx-js-style lazy (~500KB), i18n lazy 5 dil (~150KB sadece en eager), 16 tool lazy router (~450KB; dashboard+account+inventory eager). Toplam boot bundle ~1.1MB azalış. Beklenen PageSpeed 72→85 | v2.8.78 | ✅ |
+| 32 | Buffet overhaul (4 ekleme yöntemi: Recipe/Ingredient/New Ingredient/Custom Label + numeric input debounce 400→700ms + focus restoration + Unit dropdown + "Tüketim %" rename + Excel export) + Excel cost report bug fix (toast.info API geri çevirme) + HACCP "Add unit" → "Add fridge/freezer" + R2 backup `haccp_receiving`+`haccp_holding` BACKUP_TABLES ekleme | v2.8.79 | ✅ |
+| Ops | Marketing + SEO + Blog altyapısı (PARÇA 1+2+3): `/blog/` 3 yazı + sitemap.xml + robots.txt + meta tag sweep + privacy/terms OG cards. App'ten bağımsız stil. GSC verify operatöre kaldı | 2026-05-18 | ✅ |
 | Ops | Backup function v3 + restore prosedürü prod test | Edge deploy + docs | ✅ |
 | Ops | DISASTER_RECOVERY.md güncel | docs | ✅ |
 
@@ -158,18 +178,23 @@ Tek tek sürüm için → CHANGELOG.md.
 
 ### Büyük feature — tamamlananlar + bekleyenler
 
-8. ~~Discover MVP~~ → **✅ v2.8.41 (skeleton + isPublic toggle) + v2.8.46 (backend: anonymous SELECT RLS + recipe_likes + view counter RPC + like buton + view bumper)**
+8. ~~Discover MVP~~ → **✅ v2.8.41 (skeleton + isPublic toggle) + v2.8.46 (backend: anonymous SELECT RLS + recipe_likes + view counter RPC + like buton + view bumper) + v2.8.58/v2.8.66 (sub-recipe ingredient "(?)" fix)**
 9. ~~Auto diet rebuild — küratörlü ingredient DB~~ → **✅ v2.8.45 (ingredient tri-state diet flags + computeDietCompat helper + recipe diet chips)**
 10. ~~Realtime CHANNEL_ERROR~~ → **✅ v2.8.43 (explicit JWT setAuth + TOKEN_REFRESHED dinleyici)**
 11. **Categories functional** ⏳ — şu an kozmetik. 50+ menu item olursa anlamlı.
-12. **Marketing / SEO / blog kurulumu** ⏳ — ileri faz.
+12. **Marketing / SEO / blog kurulumu** — ✅ altyapı tamam (2026-05-18), GSC verify ⏳ operatör ~15 dk eve gelince. Detay §11.9.2.
 
-### Yeni bekleyen işler (audit sonrası)
+### Yeni bekleyen işler (audit + v2.8.79 sonrası)
 
-13. **CHANGELOG.md güncel hazırla zincirleme commit yöntemi** — bu sürümde manuel hatırlamayla yapıldı (v2.8.34-v2.8.50). İleride otomatize edilebilir (CI hook: her commit'te entry kontrolü).
+13. **CHANGELOG.md güncel hazırla zincirleme commit yöntemi** — manuel hatırlamayla yapılıyor (v2.8.34-v2.8.79). İleride otomatize edilebilir (CI hook: her commit'te entry kontrolü).
 14. **`supabase-functions/` duplicate silme** — operatör Supabase Dashboard'dan deploy doğrulaması yapana kadar bekliyor.
 15. **Discover view count rate limit** — `increment_recipe_view` RPC anonymous'a açık, spam riski (MVP'de kabul). Viral olursa Edge Function ile IP+recipe başına 1 saat 1 view.
 16. **R2 backup foto bytes yedekleme** — şu an sadece manifest; Supabase Storage kaybı = foto kaybı. Solo workflow için kabul edilebilir; Pro tier'da Storage PITR var.
+17. **Edge function deploy: `delete-account`** ⏳ — v2.8.50'de değişti. Operatör `supabase functions deploy delete-account`.
+18. **Edge function deploy: `backup-to-r2`** ⚠ — v2.8.79'da `haccp_receiving` + `haccp_holding` BACKUP_TABLES'a eklendi. Operatör `supabase functions deploy backup-to-r2` YAPMALI. Yapılmazsa R2 nightly archive iki tabloyu yedeklemez (cloud sync zaten çalışıyor; sadece R2 archive eksik = disaster recovery boşluk).
+19. **Buffet + Mise cloud sync** ⏳ — v2.8.73 (`buffets`) + v2.8.74 (`misePlans`) IDB-only. Supabase tablo + RLS + per-table sync wire gerekiyor (pattern: v2.8.44 haccp_receiving/holding migration). **Onay zorunlu** (yeni tablo + RLS + sync mantığı).
+20. **Discover'a Tag + Allergen filter** ⏳ — v2.8.75 tag + v2.8.71 allergen guardrail Discover'a inmedi. Public recipe save edilirken `enrichPublicIngredientNames` pattern'i (v2.8.66) ile tag + dietFlags inline gömme; Discover frontend filter chip'leri tek tıkla.
+21. **App boot perf L3** — cloud sync ilk paint sonrasına ertele. **Önerilmedi** (CLAUDE.md "cross-device sync değişikliği" yüksek risk). L1 (v2.8.76) + L2 (v2.8.78) yeterli; beklenen PageSpeed ~85, LCP 3.0-3.5 sn.
 
 ## 7. ❌ Önerme
 
@@ -232,7 +257,7 @@ Bu işleri spontan öneri olarak ortaya çıkarma:
 |---|---|
 | Repo path (operatör Windows) | `C:\Users\ahmet\Desktop\prochefdesk` |
 | GitHub repo | `ahmetkayas1926/prochefdesk` |
-| Production sürümü | **v2.8.58** (push'a hazır local; production v2.8.50) |
+| Production sürümü | **v2.8.79** (production canlı) |
 | Supabase project ref | `muuwhrcogikpqylsfvgg` (Tokyo, Postgres 17, Free tier) |
 | Cloudflare R2 bucket | `prochefdesk-backups` |
 | CLEANUP_SECRET | `ec79a445-7e92-499b-9322-5c2c949788d4d2886e66-d556-4498-ba9e-17fda6c11ac1` |
@@ -278,7 +303,7 @@ UI eylemi state değiştirip ardından `location.reload()` çağırıyorsa, arad
 | Yön | Mekanizma |
 |---|---|
 | **Push** (local→cloud) | `cloud-pertable.js` UI yazımlarını dinler, 1.5sn debounce ile Supabase'e UPSERT/DELETE. v2.8.33: auto-retry (1s/2s backoff, 3 deneme, transient hatalar için). v2.8.32: flushNow `{success, pushed, errors[]}` döndürür. |
-| **Pull** (cloud→local) | `cloud.js` boot'ta 22 tablodan kullanıcı satırlarını çeker, IDB yazar, state merge. `pullInProgress` flag ghost duplicate önler. v2.8.3: pull akışı local-only ws'leri queueUpsert ile cloud'a iletir. **v2.8.33: drift detection** — local'de olup remote'ta olmayan her tablodaki kayıt otomatik queueUpsert'lenir (self-healing). |
+| **Pull** (cloud→local) | `cloud.js` boot'ta workspace-scoped + user-scoped tablolardan kullanıcı satırlarını çeker, IDB yazar, state merge. `pullInProgress` flag ghost duplicate önler. v2.8.3: pull akışı local-only ws'leri queueUpsert ile cloud'a iletir. **v2.8.33: drift detection** — local'de olup remote'ta olmayan her tablodaki kayıt otomatik queueUpsert'lenir (self-healing). v2.8.44'te haccp_receiving + haccp_holding pull'a eklendi. |
 | **Realtime** (cloud→local canlı) | `cloud-realtime.js` 19 tabloya WebSocket subscribe. v2.7.9 orphan channel leak fix, v2.8.5 init() çift subscribe path race silindi. Şu an CHANNEL_ERROR — solo workflow için kritik değil. |
 | **Queue persistence** (v2.6.95+) | `cloud-pertable.queue` her mutation'da IDB'ye yansır. Boot'ta restore. v2.8.4 `clearQueue()` (logout cross-user leak önleme). |
 
@@ -294,7 +319,7 @@ Operatörün şu an gördüğü "her şey çalışıyor" deneyimini sağlayan 3 
 
 Force re-sync butonu **Account → Yardım** altına taşındı (v2.8.33), gündelik UI'da değil — troubleshooting aracı.
 
-### 11.5 RLS aktif (tüm 22 tablo)
+### 11.5 RLS aktif (tüm 25 tablo)
 
 Frontend `anon` key kullanıyor. Yeni tablo eklersen RLS policy şart:
 
@@ -398,21 +423,102 @@ Tüm prep/menu ayrımı bu helper'dan geçer (recipes.js, kitchen_cards.js, shar
 
 `subscriptions` tablosu DB'de hazır, kullanılmıyor. Operatör 50+ aktif kullanıcı + %40 retention kanıtlanana kadar paid tier eklemiyor.
 
-### 11.13 App boot performansı (2026-05-18 tanı)
+### 11.13 App boot performansı (v2.8.76 + v2.8.78 ile L1 + L2 uygulandı)
 
-`app/index.html` boot: 48 sync `<script>` tag + 5 blocking `<link rel="stylesheet">` + 2 CDN script (supabase-js ~200KB, xlsx-js-style ~500KB), tümü `defer`/`async` YOK. Toplam ~1.9MB local JS. Mobile PageSpeed (4G simülasyonu) FCP/LCP 5.6 sn / 65 puan, TBT=0/CLS=0 (CPU değil, network bound).
+**Başlangıç tanı (2026-05-18):** `app/index.html` boot: 48 sync `<script>` tag + 5 blocking `<link rel="stylesheet">` + 2 CDN script (supabase-js ~200KB, xlsx-js-style ~500KB), tümü `defer`/`async` YOK. Toplam ~1.9MB local JS. Mobile PageSpeed (4G simülasyonu) FCP/LCP 5.6 sn / 65 puan, TBT=0/CLS=0 (CPU değil, network bound).
 
-**3 katmanlı optimizasyon yolu:**
+**3 katmanlı optimizasyon yolu — sonuç:**
 
-**L1 — DÜŞÜK RİSK (operatör onayı bekliyor):** Tüm `<script>` tag'lerine `defer` + 2 CDN'e `<link rel="preload">` + `dns-prefetch`. Tek dosya (`app/index.html`) değişikliği. Sequential execution korunur. Tahmin: 5.6 → 3.0-3.5 sn FCP. Cross-device sync'e dokunmaz, onay zorunluluğu yok ama yine de "değişiklik yap" onayı istenir.
+**L1 ✅ (v2.8.76):** Tüm `<script>` tag'lerine `defer` + 2 CDN'e `<link rel="preload">` + `preconnect` + `dns-prefetch`. Tek dosya değişikliği. PageSpeed 65→72.
 
-**L2 — ORTA RİSK:** Lazy-load i18n (sadece seçilen dil) + lazy-load tool modülleri (router-driven). Router'a dokunur. +1.0-1.5 sn kazanım. Operatör onayı ve dikkatli race-condition testi gerekir.
+**L2 ✅ (v2.8.78):** (a) viewport `maximum-scale=1.0, user-scalable=no` kaldırıldı (WCAG a11y +5), (b) xlsx-js-style lazy load (`PCD.loadXLSX()` cached promise, ~500KB), (c) i18n lazy load (sadece `en.js` eager + dinamik `loadLocaleBundle(locale)`, ~150KB), (d) 16 tool lazy router (`registerLazy(name, scriptPath, toolName)` + `_afterToolLoad(toolName, cb)` poll, ~450KB). Eager tutulan 3 tool: dashboard (default home) + account (auth flow) + inventory (dashboard low-stock alert `computeStatus` kullanır). Toplam boot bundle ~1.1MB azalış. Beklenen PageSpeed 72→85, LCP 7.0→3.0-3.5 sn.
 
-**L3 — YÜKSEK RİSK:** Cloud sync'i ilk paint sonrasına ertele. CLAUDE.md "cross-device sync mantığı değişikliği" listesinde — **onay şart**. Multi-device deneyimi zarar görme riski (1 sn gecikme → "veri kayıp" hissi). Önerilmedi.
+**L3 — YÜKSEK RİSK, önerilmedi:** Cloud sync'i ilk paint sonrasına ertele. CLAUDE.md "cross-device sync mantığı değişikliği" listesinde — onay şart. Multi-device "veri kayıp" hissi riski.
 
 **L4 (rewrite):** ESM modules + Service Worker pre-cache. Mimari "no bundling, no SW" kararıyla çelişir, yapılmaz.
 
-İlk hamle: L1. Sonra ölç. Yetmiyorsa L2.
+### 11.14 Sub-recipe ingredient flattening (v2.8.69)
+
+`PCD.recipes.flattenIngredients(recipe, ingMap, recipeMap, opts)` (dashboard.js) — recipe'in tüm sub-recipe satırlarını recursive olarak gerçek ingredient seviyesine düşürür.
+
+**Özellikler:**
+- Scale cascading: `ri.amount / sub.yieldAmount` her seviyede çarpılır
+- Birim dönüşümü: `PCD.convertUnit` ile best-effort (mismatch'te orijinal kalır)
+- Cycle protection: visited set ile A→B→A engellenir
+- Separator skip: `ri.separator` satırlar atlanır
+- Output: her item `{ingredient, ingredientId, amount, unit, viaSubRecipe}` (viaSubRecipe = en sığ kaynak adı, gri italik "via Labneh" gösterimi için)
+
+**Bağlı modüller (6 yer, hepsi v2.8.69'da bağlandı):**
+1. `portion.js` canvas render — flat liste + via ipucu
+2. `portion.js` printScaled
+3. `portion.js` shareScaled — text share
+4. `shopping.js` render — consolidation + by-recipe group hiyerarşi
+5. `shopping.js` print
+6. `nutrition.js` computeRecipeNutrition — sub-recipe kalori cascade
+7. `allergens-db.js` recipeAllergens — sub-recipe allergen propagation
+8. `dashboard.js` computeDietCompat — sub-recipe diet flag cascade
+
+**Variance.js DOKUNULMADI** — kendi recursive sub-recipe handling'i var (v2.8.16+).
+
+Yeni "tarif → ingredient listesi" ihtiyacında: bu helper'ı kullan, manuel recursion yazma.
+
+### 11.15 Lazy tool loading + router (v2.8.78)
+
+Router'da `registerLazy(name, scriptPath, toolName)` + `loadLazyTool()` helper. 16 tool dinamik script tag ile lazy yüklenir.
+
+**Eager tool'lar (3):**
+- `dashboard` — default home, ilk açılış view'ı
+- `account` — auth flow (logout, oauth callback)
+- `inventory` — dashboard low-stock alert sync `computeStatus` kullanır
+
+**Lazy tool'lar (16):** recipes, ingredients, menus, kitchen_cards, shopping, portion, waste, suppliers, events, checklist, haccp_logs, haccp_cooling, haccp_receiving, haccp_holding, haccp, buffet, mise, discover.
+
+**Akış:**
+- `PCD.router.go(name)` lazy route varsa loading state göster → dynamic script tag enjekte → `routes[name]` wire → render
+- Popstate `_renderView` yerine `router.go()` çağırır (lazy support)
+- Dashboard handler'larında `_afterToolLoad(toolName, cb)` poll helper — `[data-action="new-recipe"]/new-event/view-event` tıklamada lazy tool yüklenene kadar 120ms aralıklı 3sn poll
+
+**Yeni tool ekleme:**
+1. Eager mi lazy mi karar ver (default lazy)
+2. `app/index.html`'e script tag EKLEME (lazy ise)
+3. `router.registerLazy(name, scriptPath, toolName)` ekle (`router.js`)
+4. Dashboard click handler kullanılıyorsa `_afterToolLoad(toolName, cb)` poll pattern'i izle
+
+**Tool ilk açılışta 100-300ms network gecikme, sonrası browser cache instant.**
+
+### 11.16 xlsx + i18n lazy load (v2.8.78)
+
+**xlsx:** `PCD.loadXLSX()` (utils.js) cached promise döndürür. xlsx-js-style (~500KB) CDN'den ilk Excel tıklamasında yüklenir. Wire'lı yerler: `recipes.js` cost report XLSX export, `ingredients.js` Excel import, `buffet.js` `exportBuffetXLSX()` (v2.8.79). İlk tıklamada 3-5sn "Loading xlsx" sessiz; sonraki instant.
+
+**API gotcha:** `PCD.toast.info()` return value pattern'i bozuk dönüyor (v2.8.78'de denenmişti). v2.8.79'da "loading-toast remove" pattern KALDIRILDI; sessiz lazy load + re-call yeterli. Yeni Excel/xlsx caller'larda toast manipülasyonu YAPMA.
+
+**i18n:** `setLocale()` async — sadece `en.js` boot'ta baseline (fallback dictionary). TR/ES/FR/DE/AR `loadLocaleBundle(locale)` cached promise ile dinamik fetch. Sync caller'lar `.then` zinciri olmadan çalışır (Promise yutar). Yeni i18n key sadece **en.js + tr.js**'e eklenir.
+
+### 11.17 HACCP Hub + Buffet/Mise tools (v2.8.70, v2.8.73-79)
+
+**HACCP Hub (v2.8.70):** 4 form (`haccp_logs`, `haccp_cooling`, `haccp_receiving`, `haccp_holding`) tek `haccp` hub route altında yaşar. `app/js/tools/haccp.js` landing view: bugünkü durum widget + 4 tıklanabilir kart. Mevcut 4 route DOKUNULMADI — bookmark + direct link korunur. Sidenav 18→15 item. Yeni HACCP form eklersen hub landing'i de güncelle.
+
+**Buffet Planner (v2.8.73, v2.8.77 inline guide, v2.8.79 overhaul):** Hotel/catering grade tool (~540+ satır). Industry standards (Cornell hospitality + Marriott/Hilton banquet ops): `INDUSTRY_RATIOS` (hot_protein %85, fruit_fresh %55, cheese %35 vb.), `INDUSTRY_REFILL` (breakfast 1.20× vb.), `INDUSTRY_TARGETS` (food cost % renk kodlu yeşil/sarı/kırmızı). Veri modeli: `buffet = { name, type, coverCount, ticketPrice, serviceDate, durationHours, refillMultiplier, notes, stations[] }`. **`buffets` IDB tablosu — cloud sync YOK (backlog #19).**
+
+**Buffet item 3 tipte (v2.8.79):** item.recipeId / item.ingredientId / item.customName ayrımı. `computeItemCost` 3 path: (a) recipe → sub-recipe cost cascade, (b) ingredient → `pricePerUnit × (1/yield)`, (c) custom label → 0. Print/Excel paths üçünü de handle eder. UI'da renkli chip badge (recipe yeşil / ingredient sarı / custom gri). Add Item butonu 4-action modal: 📖 Recipe Library / 🥬 Ingredient Library / ➕ New Ingredient (inline editor, save sonrası hem buffete hem library'e ekler) / ✎ Custom Label. Yeni computation eklerken 3 path'i de değerlendir, aksi halde custom item NaN/silinebilir.
+
+**Mise en Place Planner (v2.8.74):** Sabah prep listesi (~360 satır). Events + Buffets'ten otomatik prep aggregation, 5 faz grouping: Stocks & Bases / Sauces & Dressings / Protein & Marinade / Garnish & Veg / Final Setup (recipe.category'ye göre auto-assign). Sub-recipe expansion `flattenIngredients` ile. Each item: amount + unit + estimated prep time. Check-off ile ilerleme stats. Source attribution: 📅 Event Name · 🥘 Buffet Name. **`misePlans` IDB tablosu — cloud sync YOK (backlog #19).**
+
+### 11.18 Recipe ingredient separator (v2.8.52)
+
+`data.ingredients` array'inde yeni satır tipi: `{ separator: true, label?: '' }`.
+
+**Hesap path'leri** (cost/diet/allergen/variance/integrity): `if (ri.separator) return;` skip etmeli.
+- `dashboard.computeFoodCost` ✓
+- `dashboard.resolveRow` separator için `{ found: false, isSeparator: true }` döndürür — cost report ve XLSX detail otomatik atlar
+- `dashboard.computeDietCompat` ✓
+- `allergens-db.recipeAllergens` ✓
+- `variance.js` ✓
+- `store.findRecipesUsingIngredient` ✓
+
+**Display path'leri** (editor + preview modal + Kitchen Card + share/print + text-share + Discover detail modal): görsel çizgi + opsiyonel uppercase label olarak render eder. Share + Kitchen Card snapshot'larında separator alanı korunur — public viewer ve diğer cihazlar görür.
+
+Yeni `recipe.ingredients` üzerinde forEach yazarken iki path'ten birini seç.
 
 ## 12. Operatör Bağlamı
 
