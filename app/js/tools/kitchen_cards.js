@@ -1018,7 +1018,7 @@
       title: opts.title,
       interactive: false,
     });
-    PCD.print(html, 'Kitchen Cards — ' + layoutRecipes.length + ' recipes');
+    PCD.print(html, (PCD.i18n.t('kc_print_title') || 'Kitchen Cards') + ' — ' + layoutRecipes.length + ' ' + (PCD.i18n.t('kc_print_recipes_label') || 'recipes'));
   }
 
   // ============ HELPERS ============

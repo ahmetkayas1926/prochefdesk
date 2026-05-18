@@ -8,7 +8,7 @@
 
 **Ürün:** ProChefDesk — profesyonel chef'ler için web tabanlı mutfak yönetim sistemi.
 **Operatör:** Ahmet Kaya, Perth Western Australia, profesyonel şef. Solo non-commercial proje.
-**Mevcut sürüm:** **v2.8.89** (push'a hazır local; production v2.8.79).
+**Mevcut sürüm:** **v2.8.90** (push'a hazır local; production v2.8.89).
 **Domain:** prochefdesk.com (Cloudflare Pages, SSL Full, GitHub push'ta auto build + deploy).
 
 **URL yapısı:**
@@ -167,6 +167,7 @@ Tek tek sürüm için → CHANGELOG.md.
 | 40 | **Excel menu-item scope bug fix** (testPriceVal is not defined): recipes.js `if (!isPrepXlsx)` block içindeki const'lar (testPriceVal/marginVal/revVal/profitVal) block kapanınca kayboluyor, autoFit else branch'i bunları kullanmaya çalışıyordu → runtime crash. Else branch'inde local scope yeniden hesap (5 satır). v2.8.30 yorumu bug'ı tanımış ama sadece prep path için fix yapmış, menu item path kırık kalmıştı. v2.8.86'daki try/catch sayesinde operatör hatayı yakalayıp raporlayabildi. | v2.8.87 | ✅ |
 | 41 | **Buffet UX modernize Faz 1** (operatör vizyon turu — kafa karıştırmayan, modern, akıllı): (a) Smart industry defaults — BUFFET_TYPES'a defaultCovers + defaultPrice (breakfast 80/35 vb.), type change'de auto-fill. (b) Stats hero refactor — 42px primary Food cost % + renkli status chip + target alt-text + secondary 5-metric grid (Apple Health hissi). (c) statusLabel helper i18n. (d) Liste polish — search input (1+ buffet'te) + her satıra renkli sol kenarlık (food cost % status'a göre yeşil/sarı/kırmızı). (e) Item card compactify — uzun pickup hint kaldır, kompakt cost preview (prep cost + waste, waste 25%+ kırmızı ⚠). 4 yeni i18n key TR+EN. Quick start preset v2.8.89'a ertelendi. | v2.8.88 | ✅ |
 | 42 | **Buffet Quick Start preset chooser** (Faz 2): "+ New Buffet" → preset chooser modal (4 kart): 🥐 Continental Breakfast (60c/$30/12 item) + 🌿 Mediterranean Lunch (100c/$48/16 item) + 🥞 Sunday Brunch 5★ (80c/$75/20 item) + ✨ Start blank. Preset items customName tipte (recipe/ingredient bağı yok, chef sonra bağlar), amountPerGuest + unit + pickupRatio Cornell/Marriott baseline'larıyla dolu. Clone + yeni uid'ler + lokalize name + upsertBuffet + openEditor. 11 yeni i18n key TR+EN. Yeni şefin "blank canvas" sorunu çözüldü. | v2.8.89 | ✅ |
+| 43 | **i18n consistency sweep — print/Excel/share Round 3**: Operatör raporu (TR seçiliyken buffet cost report karışık dil). Agent audit + 6 dosyada 40+ hardcoded EN string → `t()`. Buffet print + Excel (header + stats + tablo), events.js printEvent (Date/Guests/Venue/Menu/Recipe/Per guest/Total food cost/Profit/Notes + status chip), portion.js print + share (Scaled recipes title + meta + Total cost), checklist.js session print (✓ Done / PASS / FAIL / N/A / stat labels / sign-off), kitchen_cards.js print title, inventory.js stock count print (h1 + meta + window title). 48 yeni i18n key TR+EN parity. Eski `\|\| 'English'` fallback'lar korundu (graceful). Şef TR seçince tüm output Türkçe artık. | v2.8.90 | ✅ |
 | Ops | GSC verify + sitemap submit + 7 sayfa Google'a keşfedildi (landing + 2 legal + blog index + 3 post) | 2026-05-18 | ✅ |
 | Ops | Edge function deploy: `delete-account` (v2.8.50 fix CANLI) + `backup-to-r2` (v2.8.79 BACKUP_TABLES haccp_receiving/holding CANLI) | 2026-05-18 | ✅ |
 | Ops | Marketing + SEO + Blog altyapısı (PARÇA 1+2+3): `/blog/` 3 yazı + sitemap.xml + robots.txt + meta tag sweep + privacy/terms OG cards. App'ten bağımsız stil. GSC verify operatöre kaldı | 2026-05-18 | ✅ |
@@ -270,7 +271,7 @@ Bu işleri spontan öneri olarak ortaya çıkarma:
 |---|---|
 | Repo path (operatör Windows) | `C:\Users\ahmet\Desktop\prochefdesk` |
 | GitHub repo | `ahmetkayas1926/prochefdesk` |
-| Production sürümü | **v2.8.89** (push'a hazır local; production v2.8.79) |
+| Production sürümü | **v2.8.90** (push'a hazır local; production v2.8.89) |
 | Supabase project ref | `muuwhrcogikpqylsfvgg` (Tokyo, Postgres 17, Free tier) |
 | Cloudflare R2 bucket | `prochefdesk-backups` |
 | CLEANUP_SECRET | `ec79a445-7e92-499b-9322-5c2c949788d4d2886e66-d556-4498-ba9e-17fda6c11ac1` |

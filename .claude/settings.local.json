@@ -65,7 +65,10 @@
       "Bash(node -c \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\core\\\\router.js\")",
       "Bash(node -c app/js/ui/modal.js)",
       "Bash(node -c app/js/tools/buffet.js)",
-      "Bash(node -c app/js/ui/tutorial.js)"
+      "Bash(node -c app/js/ui/tutorial.js)",
+      "Bash(findstr /R \"v: '[A-Z][^']*'\" app/js/tools/recipes.js)",
+      "Bash(node -c app/js/tools/portion.js)",
+      "Bash(node -c app/js/tools/inventory.js)"
     ]
   }
 }

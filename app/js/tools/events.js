@@ -448,6 +448,7 @@
   }
 
   function printEvent(event) {
+    const t = PCD.i18n.t;
     const ingMap = {}, recipeMap = {};
     PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
     PCD.store.listRecipes().forEach(function (r) { recipeMap[r.id] = r; });
@@ -494,31 +495,36 @@
         '.ev-notes-label { font-size: 9pt; text-transform: uppercase; color: #888; letter-spacing: 0.04em; font-weight: 700; margin-bottom: 6px; }' +
       '</style>' +
       '<div class="ev-header">' +
-        '<h1>' + PCD.escapeHtml(event.name || 'Event') + '</h1>' +
-        '<span class="ev-status ' + (event.status || 'draft') + '">' + (event.status || 'draft') + '</span>' +
+        '<h1>' + PCD.escapeHtml(event.name || (t('ev_print_default_title') || 'Event')) + '</h1>' +
+        '<span class="ev-status ' + (event.status || 'draft') + '">' + PCD.escapeHtml(t('ev_status_' + (event.status || 'draft')) || event.status || 'draft') + '</span>' +
       '</div>' +
       '<div class="ev-meta">' +
-        (dateStr ? '<div class="ev-meta-item"><div><div class="ev-meta-label">Date</div><div class="ev-meta-value">' + PCD.escapeHtml(dateStr) + (event.time ? ' · ' + PCD.escapeHtml(event.time) : '') + '</div></div></div>' : '') +
-        (event.guestCount ? '<div class="ev-meta-item"><div><div class="ev-meta-label">Guests</div><div class="ev-meta-value">' + event.guestCount + '</div></div></div>' : '') +
-        (event.venue ? '<div class="ev-meta-item"><div><div class="ev-meta-label">Venue</div><div class="ev-meta-value">' + PCD.escapeHtml(event.venue) + '</div></div></div>' : '') +
-        (event.pricePerHead ? '<div class="ev-meta-item"><div><div class="ev-meta-label">Price/person</div><div class="ev-meta-value">' + PCD.fmtMoney(event.pricePerHead) + '</div></div></div>' : '') +
+        (dateStr ? '<div class="ev-meta-item"><div><div class="ev-meta-label">' + PCD.escapeHtml(t('ev_print_date') || 'Date') + '</div><div class="ev-meta-value">' + PCD.escapeHtml(dateStr) + (event.time ? ' · ' + PCD.escapeHtml(event.time) : '') + '</div></div></div>' : '') +
+        (event.guestCount ? '<div class="ev-meta-item"><div><div class="ev-meta-label">' + PCD.escapeHtml(t('ev_print_guests') || 'Guests') + '</div><div class="ev-meta-value">' + event.guestCount + '</div></div></div>' : '') +
+        (event.venue ? '<div class="ev-meta-item"><div><div class="ev-meta-label">' + PCD.escapeHtml(t('ev_print_venue') || 'Venue') + '</div><div class="ev-meta-value">' + PCD.escapeHtml(event.venue) + '</div></div></div>' : '') +
+        (event.pricePerHead ? '<div class="ev-meta-item"><div><div class="ev-meta-label">' + PCD.escapeHtml(t('ev_print_price_person') || 'Price/person') + '</div><div class="ev-meta-value">' + PCD.fmtMoney(event.pricePerHead) + '</div></div></div>' : '') +
       '</div>' +
       (menuRows ?
-        '<div class="ev-section-title">Menu</div>' +
-        '<table class="ev-table"><thead><tr><th>Recipe</th><th style="text-align:center;">Per guest</th><th style="text-align:right;">Total portions</th><th style="text-align:right;">Cost</th></tr></thead>' +
+        '<div class="ev-section-title">' + PCD.escapeHtml(t('ev_print_menu') || 'Menu') + '</div>' +
+        '<table class="ev-table"><thead><tr>' +
+          '<th>' + PCD.escapeHtml(t('ev_print_recipe') || 'Recipe') + '</th>' +
+          '<th style="text-align:center;">' + PCD.escapeHtml(t('ev_print_per_guest') || 'Per guest') + '</th>' +
+          '<th style="text-align:right;">' + PCD.escapeHtml(t('ev_print_total_portions') || 'Total portions') + '</th>' +
+          '<th style="text-align:right;">' + PCD.escapeHtml(t('cr_cost') || 'Cost') + '</th>' +
+        '</tr></thead>' +
         '<tbody>' + menuRows + '</tbody></table>'
       : '') +
       '<div class="ev-summary">' +
-        '<div class="ev-summary-row"><span>Total food cost</span><span>' + PCD.fmtMoney(stats.totalCost) + '</span></div>' +
-        (event.budget > 0 ? '<div class="ev-summary-row"><span>Customer budget</span><span>' + PCD.fmtMoney(event.budget) + '</span></div>' : '') +
-        (stats.totalRevenue > 0 ? '<div class="ev-summary-row"><span>Total revenue</span><span>' + PCD.fmtMoney(stats.totalRevenue) + '</span></div>' : '') +
-        (stats.profit !== null ? '<div class="ev-summary-row total"><span>Profit' + (stats.margin !== null ? ' (' + PCD.fmtPercent(stats.margin, 0) + ')' : '') + '</span><span>' + PCD.fmtMoney(stats.profit) + '</span></div>' : '') +
+        '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('ev_print_total_food_cost') || 'Total food cost') + '</span><span>' + PCD.fmtMoney(stats.totalCost) + '</span></div>' +
+        (event.budget > 0 ? '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('ev_print_customer_budget') || 'Customer budget') + '</span><span>' + PCD.fmtMoney(event.budget) + '</span></div>' : '') +
+        (stats.totalRevenue > 0 ? '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('ev_print_total_revenue') || 'Total revenue') + '</span><span>' + PCD.fmtMoney(stats.totalRevenue) + '</span></div>' : '') +
+        (stats.profit !== null ? '<div class="ev-summary-row total"><span>' + PCD.escapeHtml(t('ev_print_profit') || 'Profit') + (stats.margin !== null ? ' (' + PCD.fmtPercent(stats.margin, 0) + ')' : '') + '</span><span>' + PCD.fmtMoney(stats.profit) + '</span></div>' : '') +
       '</div>' +
       (event.notes ?
-        '<div class="ev-notes"><div class="ev-notes-label">Notes</div>' + PCD.escapeHtml(event.notes) + '</div>'
+        '<div class="ev-notes"><div class="ev-notes-label">' + PCD.escapeHtml(t('ev_print_notes') || 'Notes') + '</div>' + PCD.escapeHtml(event.notes) + '</div>'
       : '');
 
-    PCD.print(html, event.name || 'Event');
+    PCD.print(html, event.name || (t('ev_print_default_title') || 'Event'));
   }
 
   function shareEvent(event) {

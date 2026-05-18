@@ -471,21 +471,23 @@
         '.kc-method li { margin-bottom: 3px; }' +
       '</style>' +
       '<div class="kc-header">' +
-        '<h1>Scaled recipes</h1>' +
-        '<div class="meta">' + guestCount + ' guests · ' + recipes.length + ' recipes · ' + new Date().toLocaleDateString() + '</div>' +
+        '<h1>' + PCD.escapeHtml(PCD.i18n.t('portion_print_title') || 'Scaled recipes') + '</h1>' +
+        '<div class="meta">' + guestCount + ' ' + PCD.escapeHtml(PCD.i18n.t('portion_guests_label') || 'guests') + ' · ' + recipes.length + ' ' + PCD.escapeHtml(PCD.i18n.t('portion_recipes_label') || 'recipes') + ' · ' + new Date().toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || 'en') + '</div>' +
       '</div>' +
       blocks +
       '<div style="margin-top:14px;padding:10px 14px;background:#f0fdf4;border-radius:8px;display:flex;justify-content:space-between;font-size:11pt;font-weight:700;">' +
         '<span>' + PCD.i18n.t('label_total_food_cost') + '</span>' +
-        '<span style="color:#16a34a;">' + PCD.fmtMoney(totalCost) + ' (' + PCD.fmtMoney(guestCount > 0 ? totalCost / guestCount : 0) + ' / guest)</span>' +
+        '<span style="color:#16a34a;">' + PCD.fmtMoney(totalCost) + ' (' + PCD.fmtMoney(guestCount > 0 ? totalCost / guestCount : 0) + ' / ' + PCD.escapeHtml(PCD.i18n.t('portion_per_guest_short') || 'guest') + ')</span>' +
       '</div>';
 
-    PCD.print(html, 'Scaled recipes — ' + guestCount + ' guests');
+    PCD.print(html, (PCD.i18n.t('portion_print_title') || 'Scaled recipes') + ' — ' + guestCount + ' ' + (PCD.i18n.t('portion_guests_label') || 'guests'));
   }
 
   // ============ SHARE ============
   function shareScaled(recipes, guestCount, portionsMap, ingMap) {
-    const lines = ['Scaled recipes — ' + guestCount + ' guests', new Date().toLocaleDateString(), ''];
+    const t = PCD.i18n.t;
+    const dateStr = new Date().toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || 'en');
+    const lines = [(t('portion_print_title') || 'Scaled recipes') + ' — ' + guestCount + ' ' + (t('portion_guests_label') || 'guests'), dateStr, ''];
     let totalCost = 0;
     recipes.forEach(function (r) {
       const target = portionsMap[r.id] || guestCount;
@@ -503,7 +505,7 @@
       });
       lines.push('');
     });
-    lines.push('Total cost: ' + PCD.fmtMoney(totalCost) + ' (' + PCD.fmtMoney(guestCount > 0 ? totalCost / guestCount : 0) + ' / guest)');
+    lines.push((t('portion_total_cost_label') || 'Total cost') + ': ' + PCD.fmtMoney(totalCost) + ' (' + PCD.fmtMoney(guestCount > 0 ? totalCost / guestCount : 0) + ' / ' + (t('portion_per_guest_short') || 'guest') + ')');
     const text = lines.join('\n');
 
     const body = PCD.el('div');

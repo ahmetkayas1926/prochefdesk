@@ -604,13 +604,13 @@
         'td { padding: 4px 8px; border-bottom: 1px solid #eee; }' +
         '.meta { color: #666; font-size: 11pt; margin: 4px 0 14px; }' +
       '</style>' +
-      '<h1>Stock Count</h1>' +
+      '<h1>' + PCD.escapeHtml(PCD.i18n.t('inv_print_title') || 'Stock Count') + '</h1>' +
       '<div class="meta">' + dateStr + ' · ' + timeStr +
-        (snap.countedBy ? ' · by ' + PCD.escapeHtml(snap.countedBy) : '') +
-        ' · ' + snap.itemCount + ' items</div>' +
+        (snap.countedBy ? ' · ' + PCD.escapeHtml(PCD.i18n.t('inv_print_by') || 'by') + ' ' + PCD.escapeHtml(snap.countedBy) : '') +
+        ' · ' + snap.itemCount + ' ' + PCD.escapeHtml(PCD.i18n.t('inv_print_items_label') || 'items') + '</div>' +
       body;
 
-    PCD.print(html, 'Stock Count ' + date.toISOString().slice(0, 10));
+    PCD.print(html, (PCD.i18n.t('inv_print_title') || 'Stock Count') + ' ' + date.toISOString().slice(0, 10));
   }
 
   function openBulkCount(options) {

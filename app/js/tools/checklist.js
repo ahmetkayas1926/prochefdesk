@@ -1851,22 +1851,23 @@
       const complete = isItemComplete(it);
       const isOOR = isValueOutOfRange(it);
 
+      const tT = PCD.i18n.t;
       let valueCell = '';
       if (type === 'task') {
-        valueCell = it.done ? '<span style="color:#16a34a;font-weight:700;">✓ Done</span>' : '<span style="color:#999;">—</span>';
+        valueCell = it.done ? '<span style="color:#16a34a;font-weight:700;">✓ ' + PCD.escapeHtml(tT('chk_print_done_label') || 'Done') + '</span>' : '<span style="color:#999;">—</span>';
       } else if (type === 'temperature' || type === 'numeric') {
         if (it.value !== null && it.value !== '') {
           const range = (it.min !== undefined || it.max !== undefined) ? ' (' + (it.min !== undefined ? it.min : '?') + '–' + (it.max !== undefined ? it.max : '?') + ' ' + (it.unit || '') + ')' : '';
           valueCell = '<span style="' + (isOOR ? 'color:#dc2626;font-weight:700;' : 'color:#16a34a;font-weight:600;') + '">' + it.value + ' ' + (it.unit || '') + '</span>' +
-            (isOOR ? ' <strong style="color:#dc2626;">OOR</strong>' : '') +
+            (isOOR ? ' <strong style="color:#dc2626;">' + PCD.escapeHtml(tT('chk_print_oor') || 'OOR') + '</strong>' : '') +
             '<div style="font-size:9px;color:#999;">' + range + '</div>';
         } else {
           valueCell = '<span style="color:#999;">—</span>';
         }
       } else if (type === 'pass-fail') {
-        if (it.result === 'pass') valueCell = '<span style="color:#16a34a;font-weight:700;">✓ PASS</span>';
-        else if (it.result === 'fail') valueCell = '<span style="color:#dc2626;font-weight:700;">✗ FAIL</span>';
-        else if (it.result === 'na') valueCell = '<span style="color:#94a3b8;">N/A</span>';
+        if (it.result === 'pass') valueCell = '<span style="color:#16a34a;font-weight:700;">✓ ' + PCD.escapeHtml(tT('chk_print_pass') || 'PASS') + '</span>';
+        else if (it.result === 'fail') valueCell = '<span style="color:#dc2626;font-weight:700;">✗ ' + PCD.escapeHtml(tT('chk_print_fail') || 'FAIL') + '</span>';
+        else if (it.result === 'na') valueCell = '<span style="color:#94a3b8;">' + PCD.escapeHtml(tT('chk_print_na') || 'N/A') + '</span>';
         else valueCell = '<span style="color:#999;">—</span>';
       } else if (type === 'text') {
         valueCell = it.value ? PCD.escapeHtml(it.value) : '<span style="color:#999;">—</span>';
@@ -1916,28 +1917,33 @@
         '.h-signoff .sig-line { flex: 1; border-bottom: 1px solid #888; min-height: 14px; padding-bottom: 1px; color: #111; font-size: 9pt; font-weight: 500; }' +
       '</style>' +
       '<div class="h-row">' +
-        '<h1>' + PCD.escapeHtml((tpl && tpl.name) || s.templateName || 'Checklist') + '</h1>' +
+        '<h1>' + PCD.escapeHtml((tpl && tpl.name) || s.templateName || (PCD.i18n.t('chk_print_default_title') || 'Checklist')) + '</h1>' +
         '<div class="sub">' +
           new Date(s.startedAt).toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || "en", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) +
-          (s.completedAt ? ' · Completed ' + new Date(s.completedAt).toLocaleTimeString((PCD.i18n && PCD.i18n.currentLocale) || "en", {hour:'2-digit', minute:'2-digit'}) : '') +
+          (s.completedAt ? ' · ' + PCD.escapeHtml(PCD.i18n.t('chk_print_completed_at') || 'Completed') + ' ' + new Date(s.completedAt).toLocaleTimeString((PCD.i18n && PCD.i18n.currentLocale) || "en", {hour:'2-digit', minute:'2-digit'}) : '') +
         '</div>' +
       '</div>' +
       '<div class="h-meta">' +
-        '<div class="h-meta-item"><span class="lbl">Items</span><span class="val">' + total + '</span></div>' +
-        '<div class="h-meta-item ' + (done === total ? 'ok' : '') + '"><span class="lbl">Done</span><span class="val">' + done + '/' + total + '</span></div>' +
-        '<div class="h-meta-item ' + (failed > 0 ? 'fail' : '') + '"><span class="lbl">Failed</span><span class="val">' + failed + '</span></div>' +
-        '<div class="h-meta-item ' + (oor > 0 ? 'fail' : '') + '"><span class="lbl">Out of range</span><span class="val">' + oor + '</span></div>' +
+        '<div class="h-meta-item"><span class="lbl">' + PCD.escapeHtml(PCD.i18n.t('chk_print_items') || 'Items') + '</span><span class="val">' + total + '</span></div>' +
+        '<div class="h-meta-item ' + (done === total ? 'ok' : '') + '"><span class="lbl">' + PCD.escapeHtml(PCD.i18n.t('chk_print_done_stat') || 'Done') + '</span><span class="val">' + done + '/' + total + '</span></div>' +
+        '<div class="h-meta-item ' + (failed > 0 ? 'fail' : '') + '"><span class="lbl">' + PCD.escapeHtml(PCD.i18n.t('chk_print_failed') || 'Failed') + '</span><span class="val">' + failed + '</span></div>' +
+        '<div class="h-meta-item ' + (oor > 0 ? 'fail' : '') + '"><span class="lbl">' + PCD.escapeHtml(PCD.i18n.t('chk_print_oor_stat') || 'Out of range') + '</span><span class="val">' + oor + '</span></div>' +
       '</div>' +
       '<table>' +
-        '<thead><tr><th style="width:22px;">#</th><th>Item</th><th style="text-align:center;width:140px;">Result / Value</th><th style="width:50px;text-align:center;">Time</th></tr></thead>' +
+        '<thead><tr>' +
+          '<th style="width:22px;">#</th>' +
+          '<th>' + PCD.escapeHtml(PCD.i18n.t('chk_print_item_col') || 'Item') + '</th>' +
+          '<th style="text-align:center;width:140px;">' + PCD.escapeHtml(PCD.i18n.t('chk_print_result_col') || 'Result / Value') + '</th>' +
+          '<th style="width:50px;text-align:center;">' + PCD.escapeHtml(PCD.i18n.t('chk_print_time_col') || 'Time') + '</th>' +
+        '</tr></thead>' +
         '<tbody>' + rowsHtml + '</tbody>' +
       '</table>' +
       '<div class="h-signoff">' +
-        '<div class="sig-block"><span class="sig-label">Completed by</span><span class="sig-line">' + PCD.escapeHtml(s.completedBy || user.name || '') + '</span></div>' +
-        '<div class="sig-block"><span class="sig-label">Verified by</span><span class="sig-line">&nbsp;</span></div>' +
+        '<div class="sig-block"><span class="sig-label">' + PCD.escapeHtml(PCD.i18n.t('chk_print_completed_by') || 'Completed by') + '</span><span class="sig-line">' + PCD.escapeHtml(s.completedBy || user.name || '') + '</span></div>' +
+        '<div class="sig-block"><span class="sig-label">' + PCD.escapeHtml(PCD.i18n.t('chk_print_verified_by') || 'Verified by') + '</span><span class="sig-line">&nbsp;</span></div>' +
       '</div>';
 
-    PCD.print(html, ((tpl && tpl.name) || 'Checklist') + ' — ' + PCD.fmtDate(s.startedAt, { month: 'short', day: 'numeric' }));
+    PCD.print(html, ((tpl && tpl.name) || (PCD.i18n.t('chk_print_default_title') || 'Checklist')) + ' — ' + PCD.fmtDate(s.startedAt, { month: 'short', day: 'numeric' }));
   }
 
   // Build human-friendly text version for sharing

@@ -1338,15 +1338,15 @@
         '.st-head { padding-top: 10px !important; }' +
       '</style>' +
       '<div class="hdr">' +
-        '<h1>' + PCD.escapeHtml(buffet.name || 'Buffet') + ' — Prep List</h1>' +
-        '<div class="meta">' + (buffet.coverCount || 0) + ' covers · ' + dateStr + ' · refill ' + refillX + '×</div>' +
+        '<h1>' + PCD.escapeHtml(buffet.name || (t('buffet_untitled') || 'Buffet')) + ' — ' + PCD.escapeHtml(t('buffet_print_prep') || 'Prep List') + '</h1>' +
+        '<div class="meta">' + (buffet.coverCount || 0) + ' ' + PCD.escapeHtml(t('buffet_covers') || 'covers') + ' · ' + dateStr + ' · ' + PCD.escapeHtml(t('buffet_refill_label') || 'Refill') + ' ' + refillX + '×</div>' +
       '</div>' +
       '<table>' +
         '<thead><tr><th>' + (t('buffet_print_item') || 'Item') + '</th><th style="text-align:right;">' + (t('buffet_print_prep_amt') || 'Prep') + '</th><th style="text-align:center;width:40px;">' + (t('buffet_print_done') || 'Done') + '</th></tr></thead>' +
         '<tbody>' + rowsHtml + '</tbody>' +
       '</table>';
 
-    PCD.print(html, (buffet.name || 'Buffet') + ' — Prep');
+    PCD.print(html, (buffet.name || (t('buffet_untitled') || 'Buffet')) + ' — ' + (t('buffet_print_prep') || 'Prep'));
   }
 
   // ---------- PRINT: COST REPORT ----------
@@ -1406,23 +1406,29 @@
         'th { background: #f5f5f4; text-align: left; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.04em; color: #666; }' +
       '</style>' +
       '<div class="hdr">' +
-        '<h1>' + PCD.escapeHtml(buffet.name || 'Buffet') + ' — Cost Report</h1>' +
-        '<div class="meta">' + (buffet.coverCount || 0) + ' covers · ' + dateStr + ' · refill ' + refillX + '×</div>' +
+        '<h1>' + PCD.escapeHtml(buffet.name || (t('buffet_untitled') || 'Buffet')) + ' — ' + PCD.escapeHtml(t('buffet_print_report') || 'Cost Report') + '</h1>' +
+        '<div class="meta">' + (buffet.coverCount || 0) + ' ' + PCD.escapeHtml(t('buffet_covers') || 'covers') + ' · ' + dateStr + ' · ' + PCD.escapeHtml(t('buffet_refill_label') || 'Refill') + ' ' + refillX + '×</div>' +
       '</div>' +
       '<div class="stats">' +
-        '<div class="stat"><div class="lbl">Revenue</div><div class="val">' + PCD.fmtMoney(totals.revenue) + '</div></div>' +
-        '<div class="stat"><div class="lbl">Spread cost</div><div class="val">' + PCD.fmtMoney(totals.totalPrepCost) + '</div></div>' +
-        '<div class="stat"><div class="lbl">Food cost %</div><div class="val ' + totals.status + '">' + totals.foodCostPct.toFixed(1) + '%</div></div>' +
-        '<div class="stat"><div class="lbl">Per cover</div><div class="val">' + PCD.fmtMoney(totals.perGuestCost) + '</div></div>' +
-        '<div class="stat"><div class="lbl">Profit / cover</div><div class="val ' + (totals.profitPerCover > 0 ? 'good' : 'bad') + '">' + PCD.fmtMoney(totals.profitPerCover) + '</div></div>' +
-        '<div class="stat"><div class="lbl">Expected waste</div><div class="val">' + PCD.fmtMoney(totals.totalExpectedWaste) + '</div></div>' +
+        '<div class="stat"><div class="lbl">' + PCD.escapeHtml(t('buffet_stat_revenue') || 'Revenue') + '</div><div class="val">' + PCD.fmtMoney(totals.revenue) + '</div></div>' +
+        '<div class="stat"><div class="lbl">' + PCD.escapeHtml(t('buffet_stat_total_cost') || 'Spread cost') + '</div><div class="val">' + PCD.fmtMoney(totals.totalPrepCost) + '</div></div>' +
+        '<div class="stat"><div class="lbl">' + PCD.escapeHtml(t('buffet_stat_food_cost_pct') || 'Food cost %') + '</div><div class="val ' + totals.status + '">' + totals.foodCostPct.toFixed(1) + '%</div></div>' +
+        '<div class="stat"><div class="lbl">' + PCD.escapeHtml(t('buffet_stat_per_cover') || 'Per cover') + '</div><div class="val">' + PCD.fmtMoney(totals.perGuestCost) + '</div></div>' +
+        '<div class="stat"><div class="lbl">' + PCD.escapeHtml(t('buffet_stat_profit') || 'Profit / cover') + '</div><div class="val ' + (totals.profitPerCover > 0 ? 'good' : 'bad') + '">' + PCD.fmtMoney(totals.profitPerCover) + '</div></div>' +
+        '<div class="stat"><div class="lbl">' + PCD.escapeHtml(t('buffet_stat_waste') || 'Expected waste') + '</div><div class="val">' + PCD.fmtMoney(totals.totalExpectedWaste) + '</div></div>' +
       '</div>' +
       '<table>' +
-        '<thead><tr><th>Item</th><th style="text-align:right;">Prep</th><th style="text-align:right;">Pickup</th><th style="text-align:right;">Cost</th><th style="text-align:right;">Waste</th></tr></thead>' +
+        '<thead><tr>' +
+          '<th>' + PCD.escapeHtml(t('buffet_print_item') || 'Item') + '</th>' +
+          '<th style="text-align:right;">' + PCD.escapeHtml(t('buffet_print_prep_amt') || 'Prep') + '</th>' +
+          '<th style="text-align:right;">' + PCD.escapeHtml(t('buffet_pickup_label') || 'Pickup') + '</th>' +
+          '<th style="text-align:right;">' + PCD.escapeHtml(t('cr_cost') || 'Cost') + '</th>' +
+          '<th style="text-align:right;">' + PCD.escapeHtml(t('buffet_expected_waste') || 'Waste') + '</th>' +
+        '</tr></thead>' +
         '<tbody>' + rowsHtml + '</tbody>' +
       '</table>';
 
-    PCD.print(html, (buffet.name || 'Buffet') + ' — Cost Report');
+    PCD.print(html, (buffet.name || (t('buffet_untitled') || 'Buffet')) + ' — ' + (t('buffet_print_report') || 'Cost Report'));
   }
 
   // ---------- EXCEL EXPORT (v2.8.79) ----------
@@ -1479,30 +1485,30 @@
     const pctStyle   = { numFmt: '0%',         alignment: { horizontal: 'right' }, border: thinBorder };
 
     const aoa = [];
-    aoa.push([{ v: (buffet.name || 'Buffet') + ' — Cost Report', s: { font: { bold: true, sz: 16, color: { rgb: BRAND } } } }]);
-    aoa.push([{ v: (buffet.coverCount || 0) + ' covers · refill ' + refillX + '× · ' + (buffet.serviceDate || ''), s: { font: { italic: true, color: { rgb: '666666' } } } }]);
+    aoa.push([{ v: (buffet.name || (t('buffet_untitled') || 'Buffet')) + ' — ' + (t('buffet_print_report') || 'Cost Report'), s: { font: { bold: true, sz: 16, color: { rgb: BRAND } } } }]);
+    aoa.push([{ v: (buffet.coverCount || 0) + ' ' + (t('buffet_covers') || 'covers') + ' · ' + (t('buffet_refill_label') || 'Refill') + ' ' + refillX + '× · ' + (buffet.serviceDate || ''), s: { font: { italic: true, color: { rgb: '666666' } } } }]);
     aoa.push([]);
     aoa.push([
-      { v: 'Revenue', s: labelStyle }, { v: totals.revenue, s: moneyStyle },
-      { v: 'Spread cost', s: labelStyle }, { v: totals.totalPrepCost, s: moneyStyle },
+      { v: t('buffet_stat_revenue') || 'Revenue', s: labelStyle }, { v: totals.revenue, s: moneyStyle },
+      { v: t('buffet_stat_total_cost') || 'Spread cost', s: labelStyle }, { v: totals.totalPrepCost, s: moneyStyle },
     ]);
     aoa.push([
-      { v: 'Per cover', s: labelStyle }, { v: totals.perGuestCost, s: moneyStyle },
-      { v: 'Food cost %', s: labelStyle }, { v: totals.foodCostPct / 100, s: pctStyle },
+      { v: t('buffet_stat_per_cover') || 'Per cover', s: labelStyle }, { v: totals.perGuestCost, s: moneyStyle },
+      { v: t('buffet_stat_food_cost_pct') || 'Food cost %', s: labelStyle }, { v: totals.foodCostPct / 100, s: pctStyle },
     ]);
     aoa.push([
-      { v: 'Profit/cover', s: labelStyle }, { v: totals.profitPerCover, s: moneyStyle },
-      { v: 'Expected waste', s: labelStyle }, { v: totals.totalExpectedWaste, s: moneyStyle },
+      { v: t('buffet_stat_profit') || 'Profit / cover', s: labelStyle }, { v: totals.profitPerCover, s: moneyStyle },
+      { v: t('buffet_stat_waste') || 'Expected waste', s: labelStyle }, { v: totals.totalExpectedWaste, s: moneyStyle },
     ]);
     aoa.push([]);
     aoa.push([
-      { v: 'Station', s: headerStyle },
-      { v: 'Item', s: headerStyle },
-      { v: 'Prep amount', s: headerStyle },
-      { v: 'Unit', s: headerStyle },
-      { v: 'Pickup %', s: headerStyle },
-      { v: 'Prep cost', s: headerStyle },
-      { v: 'Expected waste', s: headerStyle },
+      { v: t('buffet_station') || 'Station', s: headerStyle },
+      { v: t('buffet_print_item') || 'Item', s: headerStyle },
+      { v: t('buffet_print_prep_amt') || 'Prep amount', s: headerStyle },
+      { v: t('buffet_unit') || 'Unit', s: headerStyle },
+      { v: (t('buffet_pickup_label') || 'Pickup') + ' %', s: headerStyle },
+      { v: t('buffet_prep_cost') || 'Prep cost', s: headerStyle },
+      { v: t('buffet_stat_waste') || 'Expected waste', s: headerStyle },
     ]);
 
     (buffet.stations || []).forEach(function (st) {
