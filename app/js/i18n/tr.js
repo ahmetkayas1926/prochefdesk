@@ -698,6 +698,11 @@ window.PCD.i18n.register('tr', {
   kc_autofit_no_space: "Kart sığmadı. Sütun sayısını artır, yazı boyutunu küçült veya başka kart çıkar.",
   kc_recipe_in_other_canvases: "{n} başka kanvasta kullanılıyor",
   kc_hide_used_elsewhere: "Başka kanvasta kullanılan tarifleri gizle",
+  // v2.9.23 — Toplu seç butonları + scroll teleport fix
+  kc_select_all_visible: "+ Görünenleri seç",
+  kc_deselect_all_visible: "− Görünenleri çıkar",
+  kc_bulk_added: "{n} tarif kanvasa eklendi",
+  kc_bulk_removed: "{n} tarif kanvastan çıkarıldı",
   kc_clear_canvas_confirm_title: "Kanvas temizlensin mi?",
   kc_clear_canvas_confirm_text: "Tüm tarifler bu kanvastan kaldırılır. Ayarlar (yönlendirme, sütun, yazı boyutu) korunur. Kaydedilmiş kopyalar etkilenmez.",
   // v2.8.21

@@ -698,6 +698,11 @@ window.PCD.i18n.register('en', {
   kc_autofit_no_space: "Card didn’t fit. Try increasing columns, shrinking font size, or removing another card.",
   kc_recipe_in_other_canvases: "Used in {n} other canvas(es)",
   kc_hide_used_elsewhere: "Hide recipes used in other canvases",
+  // v2.9.23 — Bulk select buttons + scroll teleport fix
+  kc_select_all_visible: "+ Select all visible",
+  kc_deselect_all_visible: "− Deselect all",
+  kc_bulk_added: "{n} recipes added to canvas",
+  kc_bulk_removed: "{n} recipes removed from canvas",
   kc_clear_canvas_confirm_title: "Clear canvas?",
   kc_clear_canvas_confirm_text: "All recipes will be removed from this canvas. Settings (orientation, columns, font size) are kept. Saved copies are not affected.",
   // v2.8.21

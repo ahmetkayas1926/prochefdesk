@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.9.22 · 2026-05-19
+**Mevcut sürüm:** v2.9.23 · 2026-05-19
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -16,6 +16,11 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH (kapatılabilir inl
 - **Round 3 (v2.9.7-9):** discover + account + team ✅
 - **Round 4 (v2.9.10-12):** sales + whatif + menu_matrix ✅
 - **Round 5 (v2.9.13):** haccp hub ✅ — **NAKED→RICH sweep tamamlandı**
+
+### v2.9.23 — KC scroll teleport TRUE fix + bulk select · 2026-05-19
+- **Fixed (gerçek):** v2.9.21'de scroll fix yanlış element'i hedefliyordu — `#recipeList` scrollable değildi, parent div (`max-height:280px;overflow-y:auto`) scroll container'ıdır. scrollTop hep 0 alınıyordu, restore no-op. Operatör testte hala teleport gördü. Şimdi `recipeListEl.parentElement.scrollTop` ile gerçek scroll container hedefleniyor.
+- **Added:** Bulk select butonları — "+ Görünenleri seç" / "− Görünenleri çıkar". Search + Hide-used filter sonrası görünür kalan TÜM tarifleri tek tıkla canvasa ekle/çıkar. Tek renderBody ile (12 tarif eklerken 12 render yerine 1 render). Toast: "X tarif eklendi". Use case: chef "kebab" diye filtreler → 12 sonuç görür → "Görünenleri seç" → bitti.
+- **i18n:** +4 key TR/EN.
 
 ### v2.9.22 — Kitchen Cards "Hide used elsewhere" state persist · 2026-05-19
 - **Fixed:** Operatör raporu — "Hide recipes used in other canvases" checkbox işaretliyken bir tarif eklediğinde `renderBody()` re-render checkbox'ı default unchecked yapıyordu, tüm tarifler tekrar görünür hale geliyordu. Diğer ayarlar (column, font vb.) closure var olarak saklı ama bu yeni eklenen checkbox unutulmuştu.

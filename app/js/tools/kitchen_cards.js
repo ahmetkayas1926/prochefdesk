@@ -163,6 +163,11 @@
                   <input type="checkbox" id="kcHideUsedElsewhere" ${hideUsedElsewhere ? 'checked' : ''} style="margin:0;cursor:pointer;">
                   <span>${PCD.escapeHtml(t('kc_hide_used_elsewhere') || 'Hide recipes used in other canvases')}</span>
                 </label>
+                <!-- v2.9.23 — Bulk select buttons: act on currently visible recipes -->
+                <div style="display:flex;gap:6px;margin-top:6px;">
+                  <button type="button" class="btn btn-outline btn-sm" id="kcSelectAllVisible" style="flex:1;padding:4px 8px;font-size:11px;min-height:28px;">${PCD.escapeHtml(t('kc_select_all_visible') || '+ Select all visible')}</button>
+                  <button type="button" class="btn btn-outline btn-sm" id="kcDeselectAllVisible" style="flex:1;padding:4px 8px;font-size:11px;min-height:28px;">${PCD.escapeHtml(t('kc_deselect_all_visible') || '− Deselect all')}</button>
+                </div>
               </div>
               <div style="max-height:280px;overflow-y:auto;">
                 <div id="recipeList"></div>
@@ -387,21 +392,22 @@
       // Auto-reposition: find any earlier column with enough empty bottom
       // space and move the new card there in the layout array. If no
       // column fits, leave at end and toast a warning.
-      // v2.9.21 — Operator UX fix: preserve recipe list scroll position
-      // across re-render. Previously each checkbox toggle teleported the
-      // chef back to top of list (~100 recipes meant re-scrolling every add).
+      // v2.9.21/v2.9.23 — Operator UX: scroll position must survive
+      // re-render. The actual scrollable container is `#recipeList`'s PARENT
+      // div (style="max-height:280px;overflow-y:auto"), NOT #recipeList
+      // itself. Targeting the wrong element returned scrollTop=0 (false
+      // positive "fix" in v2.9.21).
       PCD.on(recipeListEl, 'change', 'input[data-rid]', function () {
         const rid = this.getAttribute('data-rid');
-        const savedScroll = recipeListEl.scrollTop;
+        const scrollContainer = recipeListEl.parentElement;
+        const savedScroll = scrollContainer ? scrollContainer.scrollTop : 0;
         if (this.checked) {
           if (!layout.some(function (l) { return l.recipeId === rid; })) {
             layout.push({ recipeId: rid, span: 1 });
             renderBody();
             requestAnimationFrame(function () {
-              // Restore scroll on the new (post-render) list element
               const newList = PCD.$('#recipeList', bodyEl);
-              if (newList) newList.scrollTop = savedScroll;
-              // Then defer auto-fit measurement another frame
+              if (newList && newList.parentElement) newList.parentElement.scrollTop = savedScroll;
               requestAnimationFrame(function () { attemptAutoFit(rid); });
             });
             return;
@@ -412,8 +418,61 @@
         renderBody();
         requestAnimationFrame(function () {
           const newList = PCD.$('#recipeList', bodyEl);
-          if (newList) newList.scrollTop = savedScroll;
+          if (newList && newList.parentElement) newList.parentElement.scrollTop = savedScroll;
         });
+      });
+
+      // v2.9.23 — Bulk select buttons: "Select all visible" / "Deselect
+      // all visible". Adds/removes every currently visible recipe (not
+      // hidden by search or hide-used filter) to the canvas in one go.
+      // Single renderBody at the end → no thrash.
+      const selAllBtn = PCD.$('#kcSelectAllVisible', bodyEl);
+      const desAllBtn = PCD.$('#kcDeselectAllVisible', bodyEl);
+      if (selAllBtn) selAllBtn.addEventListener('click', function () {
+        const scrollContainer = recipeListEl.parentElement;
+        const savedScroll = scrollContainer ? scrollContainer.scrollTop : 0;
+        const visibleRows = Array.from(recipeListEl.querySelectorAll('[data-recipe-row]'))
+          .filter(function (r) { return r.style.display !== 'none'; });
+        let added = 0;
+        visibleRows.forEach(function (row) {
+          const cb = row.querySelector('input[data-rid]');
+          if (!cb) return;
+          const rid = cb.getAttribute('data-rid');
+          if (!layout.some(function (l) { return l.recipeId === rid; })) {
+            layout.push({ recipeId: rid, span: 1 });
+            added++;
+          }
+        });
+        if (added === 0) return;
+        renderBody();
+        requestAnimationFrame(function () {
+          const newList = PCD.$('#recipeList', bodyEl);
+          if (newList && newList.parentElement) newList.parentElement.scrollTop = savedScroll;
+        });
+        PCD.toast.success((PCD.i18n.t('kc_bulk_added', { n: added }) || '+' + added + ' added to canvas'));
+      });
+      if (desAllBtn) desAllBtn.addEventListener('click', function () {
+        const scrollContainer = recipeListEl.parentElement;
+        const savedScroll = scrollContainer ? scrollContainer.scrollTop : 0;
+        const visibleRids = new Set(
+          Array.from(recipeListEl.querySelectorAll('[data-recipe-row]'))
+            .filter(function (r) { return r.style.display !== 'none'; })
+            .map(function (r) {
+              const cb = r.querySelector('input[data-rid]');
+              return cb ? cb.getAttribute('data-rid') : null;
+            })
+            .filter(Boolean)
+        );
+        const before = layout.length;
+        layout = layout.filter(function (l) { return !visibleRids.has(l.recipeId); });
+        const removed = before - layout.length;
+        if (removed === 0) return;
+        renderBody();
+        requestAnimationFrame(function () {
+          const newList = PCD.$('#recipeList', bodyEl);
+          if (newList && newList.parentElement) newList.parentElement.scrollTop = savedScroll;
+        });
+        PCD.toast.success((PCD.i18n.t('kc_bulk_removed', { n: removed }) || '−' + removed + ' removed from canvas'));
       });
 
       // v2.9.21 — Smart auto-fit for newly added cards.
