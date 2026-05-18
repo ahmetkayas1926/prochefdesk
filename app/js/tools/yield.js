@@ -14,9 +14,8 @@
    - Lettuce: 70-80% (core/outer leaves)
    - Onion: 85-90% (skin/root)
 
-   Data: ing.yieldPercent = 75 (stored on ingredient)
-   When set, recipe.computeFoodCost could optionally honor it, but for
-   Phase 4 we compute "true cost" separately to avoid breaking Phase 1.
+   v2.9.0 — NAKED→RICH upgrade: closeable inline guide, per-field hints,
+   stats hero, empty state CTA. Pattern: buffet v2.8.77 + v2.8.88.
    ================================================================ */
 
 (function () {
@@ -64,11 +63,31 @@
     return null;
   }
 
+  // v2.9.0 — Yield % status bands. Visual signal for quick calc hero.
+  function yieldStatus(pct) {
+    if (pct == null || pct <= 0) return null;
+    if (pct >= 80) return 'good';   // strong yield, minimal trim
+    if (pct >= 60) return 'warn';   // moderate trim
+    return 'bleed';                  // heavy trim, consider alt cut
+  }
+  function statusColor(s) {
+    if (s === 'good') return '#16a34a';
+    if (s === 'warn') return '#f59e0b';
+    if (s === 'bleed') return '#dc2626';
+    return '#6b7280';
+  }
+
   function render(view) {
     const t = PCD.i18n.t;
     const ings = PCD.store.listIngredients().sort(function (a, b) {
       return (a.name || '').localeCompare(b.name || '');
     });
+    const withYield = ings.filter(function (i) { return i.yieldPercent > 0; }).length;
+
+    // v2.9.0 — Closeable inline guide. Preference persisted in localStorage.
+    const guideHidden = (function () {
+      try { return localStorage.getItem('pcd_yield_guide_hidden') === '1'; } catch (e) { return false; }
+    })();
 
     view.innerHTML = `
       <div class="page-header">
@@ -78,42 +97,86 @@
         </div>
       </div>
 
-      <div class="card mb-3" style="background:var(--info-bg);border-color:var(--info);padding:12px;">
-        <div class="text-sm" style="color:var(--info);font-weight:500;line-height:1.5;">
-          💡 ${t('yield_why')}
-        </div>
-      </div>
+      ${!guideHidden ? `
+        <details class="card" open style="padding:0;margin-bottom:14px;background:linear-gradient(135deg,var(--brand-50),var(--surface));border:1px solid var(--brand-300);">
+          <summary style="cursor:pointer;padding:12px 14px;font-weight:700;font-size:13px;color:var(--brand-700);display:flex;align-items:center;gap:8px;list-style:none;">
+            <span style="font-size:16px;">💡</span>
+            <span style="flex:1;">${PCD.escapeHtml(t('yield_guide_title') || 'How to use the Yield Calculator')}</span>
+            <button type="button" id="yieldGuideDismiss" style="background:transparent;border:0;color:var(--text-3);cursor:pointer;font-size:11px;padding:2px 6px;" title="${PCD.escapeHtml(t('yield_guide_dismiss') || 'Hide')}">✕</button>
+          </summary>
+          <div style="padding:0 14px 14px;font-size:13px;color:var(--text-2);line-height:1.65;">
+            <ol style="margin:0;padding-inline-start:20px;">
+              <li><strong>${PCD.escapeHtml(t('yield_guide_step1_title') || 'Weigh before + after trim')}</strong> — ${PCD.escapeHtml(t('yield_guide_step1_body') || 'Weigh the ingredient as it arrives (AP = As Purchased). Trim/peel/portion, then weigh the usable part (EP = Edible Portion).')}</li>
+              <li><strong>${PCD.escapeHtml(t('yield_guide_step2_title') || 'Run the quick calculator')}</strong> — ${PCD.escapeHtml(t('yield_guide_step2_body') || 'Enter AP weight, EP weight and AP price. The tool returns yield %, trim loss and your true (EP) cost — the real number for recipe costing.')}</li>
+              <li><strong>${PCD.escapeHtml(t('yield_guide_step3_title') || 'Save % per ingredient')}</strong> — ${PCD.escapeHtml(t('yield_guide_step3_body') || 'In the list below, set each ingredient’s yield % once. Suggested values appear for common items (chicken, salmon, onion, etc.) — adjust to your butcher / supplier reality.')}</li>
+              <li><strong>${PCD.escapeHtml(t('yield_guide_step4_title') || 'Watch recipes update')}</strong> — ${PCD.escapeHtml(t('yield_guide_step4_body') || 'Recipes referencing those ingredients automatically use the trimmed cost, so your food cost % reflects what you actually pay per usable gram — not the wholesale invoice.')}</li>
+            </ol>
+            <div style="margin-top:10px;padding:8px 10px;background:var(--surface-2);border-radius:6px;font-size:12px;color:var(--text-3);">
+              <strong>💎 ${PCD.escapeHtml(t('yield_guide_tip_title') || 'Pro tip')}:</strong> ${PCD.escapeHtml(t('yield_guide_tip_body') || 'Trim a few orders, average them, lock the % in. Don’t re-measure every delivery — supplier consistency makes one careful pass enough for the year.')}
+            </div>
+          </div>
+        </details>
+      ` : ''}
 
       <div class="card mb-3" style="padding:16px;">
-        <div style="font-weight:700;margin-bottom:8px;">Quick calculator</div>
+        <div style="font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span>${PCD.escapeHtml(t('yield_quick_calc') || 'Quick calculator')}</span>
+          <span class="text-muted text-sm" style="font-size:11px;font-weight:500;">${PCD.escapeHtml(t('yield_quick_calc_hint') || 'Weigh AP + EP once, get true cost')}</span>
+        </div>
         <div class="field-row">
           <div class="field">
             <label class="field-label">${t('yield_as_purchased')} (weight)</label>
             <input type="number" class="input" id="qAP" placeholder="1000" step="0.01" min="0">
+            <div class="text-muted text-sm" style="font-size:11px;margin-top:2px;">${PCD.escapeHtml(t('yield_ap_help') || 'Raw weight before any trimming (skin, bones, stems included).')}</div>
           </div>
           <div class="field">
             <label class="field-label">${t('yield_edible_portion')} (weight)</label>
             <input type="number" class="input" id="qEP" placeholder="750" step="0.01" min="0">
+            <div class="text-muted text-sm" style="font-size:11px;margin-top:2px;">${PCD.escapeHtml(t('yield_ep_help') || 'Usable weight after trimming and prep.')}</div>
           </div>
         </div>
         <div class="field">
-          <label class="field-label">AP price</label>
+          <label class="field-label">${PCD.escapeHtml(t('yield_ap_price') || 'AP price')}</label>
           <input type="number" class="input" id="qAPprice" placeholder="10.00" step="0.01" min="0">
+          <div class="text-muted text-sm" style="font-size:11px;margin-top:2px;">${PCD.escapeHtml(t('yield_ap_price_help') || 'What you paid for the full AP amount. Used for true cost calculation.')}</div>
         </div>
-        <div class="stat" style="background:var(--brand-50);border-color:var(--brand-300);margin-top:8px;">
-          <div class="flex items-center justify-between" style="flex-wrap:wrap;gap:8px;">
-            <div><div class="stat-label">${t('yield_yield_percent')}</div><div style="font-size:22px;font-weight:800;" id="qYield">—</div></div>
-            <div><div class="stat-label">${t('yield_trim_loss')}</div><div style="font-size:22px;font-weight:800;color:var(--danger);" id="qLoss">—</div></div>
-            <div style="text-align:end;"><div class="stat-label">${t('yield_true_cost')}</div><div style="font-size:22px;font-weight:800;color:var(--brand-700);" id="qTrue">—</div></div>
+
+        <div class="stat" style="background:var(--brand-50);border-color:var(--brand-300);margin-top:12px;padding:14px;" id="qStatsCard">
+          <div style="display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:10px;">
+            <div style="flex-shrink:0;">
+              <div class="stat-label" style="font-size:11px;">${t('yield_true_cost')}</div>
+              <div style="font-size:32px;font-weight:900;color:var(--brand-700);line-height:1;letter-spacing:-0.02em;" id="qTrue">—</div>
+            </div>
+            <div style="flex:1;min-width:140px;">
+              <span id="qStatusChip" style="display:none;padding:4px 10px;font-weight:700;font-size:11px;text-transform:uppercase;border-radius:6px;letter-spacing:0.06em;"></span>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div><div class="stat-label" style="font-size:11px;">${t('yield_yield_percent')}</div><div style="font-size:18px;font-weight:700;" id="qYield">—</div></div>
+            <div><div class="stat-label" style="font-size:11px;">${t('yield_trim_loss')}</div><div style="font-size:18px;font-weight:700;color:var(--danger);" id="qLoss">—</div></div>
           </div>
         </div>
       </div>
 
       <div class="section">
-        <div class="section-title" style="font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">${t('yield_apply_to_ing')}</div>
+        <div class="section-title" style="font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+          <span>${t('yield_apply_to_ing')}</span>
+          ${ings.length ? '<span class="text-muted text-sm" style="font-size:11px;font-weight:500;text-transform:none;letter-spacing:0;">' + withYield + ' / ' + ings.length + ' ' + PCD.escapeHtml(t('yield_set_count') || 'have yield set') + '</span>' : ''}
+        </div>
         <div id="yieldList" class="flex flex-col gap-2"></div>
       </div>
     `;
+
+    // Guide dismiss handler
+    const dismissBtn = PCD.$('#yieldGuideDismiss', view);
+    if (dismissBtn) {
+      dismissBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        try { localStorage.setItem('pcd_yield_guide_hidden', '1'); } catch (er) {}
+        render(view);
+      });
+    }
 
     // Quick calculator wiring
     function recalc() {
@@ -127,6 +190,30 @@
       PCD.$('#qYield', view).textContent = yp > 0 ? PCD.fmtPercent(yp, 1) : '—';
       PCD.$('#qLoss', view).textContent = loss > 0 ? PCD.fmtNumber(loss) + ' (' + PCD.fmtPercent(lossPct, 0) + ')' : '—';
       PCD.$('#qTrue', view).textContent = truePrice > 0 ? PCD.fmtMoney(truePrice) + ' (AP total)' : '—';
+
+      // v2.9.0 — Status chip + colored hero (band by yield %)
+      const chip = PCD.$('#qStatusChip', view);
+      const card = PCD.$('#qStatsCard', view);
+      const trueEl = PCD.$('#qTrue', view);
+      const status = yp > 0 ? yieldStatus(yp) : null;
+      if (status) {
+        const color = statusColor(status);
+        const label = status === 'good' ? (t('yield_status_good') || 'Strong yield') :
+                      status === 'warn' ? (t('yield_status_warn') || 'Moderate trim') :
+                      (t('yield_status_bleed') || 'Heavy trim');
+        chip.textContent = label;
+        chip.style.display = 'inline-block';
+        chip.style.background = color + '25';
+        chip.style.color = color;
+        card.style.borderColor = color;
+        card.style.background = color + '12';
+        trueEl.style.color = color;
+      } else {
+        chip.style.display = 'none';
+        card.style.borderColor = 'var(--brand-300)';
+        card.style.background = 'var(--brand-50)';
+        trueEl.style.color = 'var(--brand-700)';
+      }
     }
     ['qAP', 'qEP', 'qAPprice'].forEach(function (id) {
       PCD.$('#' + id, view).addEventListener('input', recalc);
@@ -135,7 +222,15 @@
     // Ingredient yield list
     const listEl = PCD.$('#yieldList', view);
     if (ings.length === 0) {
-      listEl.innerHTML = '<div class="empty"><div class="empty-desc">' + t('no_ingredients_yet') + '</div></div>';
+      listEl.innerHTML = `
+        <div class="empty">
+          <div class="empty-desc">${PCD.escapeHtml(t('yield_empty_title') || 'Add ingredients to set their yield %')}</div>
+          <div style="font-size:12px;color:var(--text-3);margin-top:6px;line-height:1.5;">${PCD.escapeHtml(t('yield_empty_hint') || 'Yield % lets ProChefDesk show your real food cost — not just what you paid the supplier.')}</div>
+          <button class="btn btn-primary mt-2" data-go-ing style="margin-top:10px;">${PCD.escapeHtml(t('yield_go_ingredients') || 'Go to Ingredients')}</button>
+        </div>
+      `;
+      const goBtn = listEl.querySelector('[data-go-ing]');
+      if (goBtn) goBtn.addEventListener('click', function () { PCD.router.go('ingredients'); });
       return;
     }
     ings.forEach(function (ing) {

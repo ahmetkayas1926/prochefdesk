@@ -1,10 +1,24 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.8.99 (production) · 2026-05-19
+**Mevcut sürüm:** v2.9.0 · 2026-05-19
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
 Format: kronolojik tersine (en son sürüm üstte). Her sürüm kısa başlık + ana değişiklik özetleri. Tam teknik detay için ilgili commit message ve kod yorumlarına bakın.
+
+---
+
+## v2.9.x — NAKED araç sweep
+
+Operatör vizyonu: her araç Buffet Planner seviyesinde RICH (kapatılabilir inline guide + per-field hint + stats hero + empty state CTA). Round 1 = yield + waste + variance.
+
+### v2.9.0 — Yield Calculator NAKED→RICH · 2026-05-19
+- **Added:** 4-step kapatılabilir inline guide (`pcd_yield_guide_hidden` localStorage) + Pro tip.
+- **Added:** Per-field help text (AP weight, EP weight, AP price).
+- **Added:** Stats hero refactor — True cost primary (32px) + status chip (Strong yield ≥80% / Moderate trim ≥60% / Heavy trim <60%) + colored card border, secondary yield % + trim loss alt grid.
+- **Added:** "Apply yield" section başlığında "X / Y have yield set" sayacı.
+- **Added:** Empty state CTA — "Go to Ingredients" butonu.
+- **i18n:** +25 key TR/EN.
 
 ---
 
