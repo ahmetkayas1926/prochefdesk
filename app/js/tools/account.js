@@ -1184,38 +1184,35 @@
     }
 
     function ensureHcaptchaLoaded() {
-      // v2.9.26 — Use hCaptcha's `?onload=callbackName` URL param instead
-      // of script.onload event. Previous pattern fired BEFORE the hCaptcha
-      // API was fully initialized → render() worked but checkbox clicks
-      // didn't proceed (silent timing bug, console warning was the hint).
-      // Pattern: register window.__pcdHcaptchaOnLoad, then hCaptcha calls
-      // it when API is truly ready. Idempotent: callback flips status,
-      // any pending render attempts retry.
-
-      // Already loaded by an earlier modal open — reuse.
-      if (window.hcaptcha && window.hcaptcha.render) {
+      // v2.9.28 — Reverted to v2.6.83 original script.onload pattern.
+      // v2.9.26 onload=callback URL param fix didn't help; checkbox
+      // still inactive after CSP changes. Full revert to known-working.
+      if (window.hcaptcha) {
         captchaScriptStatus = 'ready';
         renderHcaptchaWidget();
         return;
       }
-
-      // Register global onload callback (idempotent — overwrite is fine
-      // because hCaptcha API only calls it once per script load).
-      window.__pcdHcaptchaOnLoad = function () {
-        captchaScriptStatus = 'ready';
-        renderHcaptchaWidget();
-      };
-
-      // Already loading from another tab/modal? The callback above will
-      // fire for both invocations since hCaptcha API runs onload once.
       const existing = document.querySelector('script[data-hcaptcha-loader="1"]');
-      if (existing) return;
-
+      if (existing) {
+        existing.addEventListener('load', function () {
+          captchaScriptStatus = 'ready';
+          renderHcaptchaWidget();
+        });
+        existing.addEventListener('error', function () {
+          captchaScriptStatus = 'error';
+          setCaptchaStatus(t('report_issue_captcha_error'), true);
+        });
+        return;
+      }
       const s = document.createElement('script');
-      s.src = 'https://js.hcaptcha.com/1/api.js?render=explicit&onload=__pcdHcaptchaOnLoad';
+      s.src = 'https://js.hcaptcha.com/1/api.js?render=explicit';
       s.async = true;
       s.defer = true;
       s.setAttribute('data-hcaptcha-loader', '1');
+      s.onload = function () {
+        captchaScriptStatus = 'ready';
+        renderHcaptchaWidget();
+      };
       s.onerror = function () {
         captchaScriptStatus = 'error';
         setCaptchaStatus(t('report_issue_captcha_error'), true);

@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.9.27 · 2026-05-19
+**Mevcut sürüm:** v2.9.28 · 2026-05-19
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -17,7 +17,28 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH (kapatılabilir inl
 - **Round 4 (v2.9.10-12):** sales + whatif + menu_matrix ✅
 - **Round 5 (v2.9.13):** haccp hub ✅ — **NAKED→RICH sweep tamamlandı**
 
-### v2.9.27 — hCaptcha CSP 'unsafe-eval' + photo debug log · 2026-05-19
+### v2.9.28 — REVERT v2.9.24 CSP + hCaptcha + photo sanitize · 2026-05-19
+v2.9.24'te eklenen "standart SaaS hijyen" katmanları operatör akışını bozdu — hCaptcha widget'ı (Report an issue) tıklamaya cevap vermiyor, Discover'da photo'lar yüklenmiyor (CSP veya url() quote pattern). v2.9.25/26/27 fix denemeleri yetmedi. Operatör solo kullanıcı, agresif güvenlik gereksiz — tam revert.
+
+**Geri çekilen değişiklikler:**
+- `index.html` CSP meta tag KALDIRILDI (Content-Security-Policy + X-Content-Type-Options + Referrer-Policy meta).
+- `index.html` Supabase script SRI hash KALDIRILDI (integrity + crossorigin attribute'leri).
+- `discover.js` photo URL sanitize KALDIRILDI — eski `background:url(' + d.photo + ') center/cover` direct pattern'ine dönüldü (hem grid card hem detail modal'da).
+- `discover.js` `safePhotoUrl()` helper function kod tabanında kaldı ama hiçbir yerde çağrılmıyor (gelecekte ihtiyaç olursa hazır).
+- `account.js` hCaptcha eski v2.6.83 script.onload pattern'ine geri döndü (v2.9.26 `?onload=callbackName` URL param kaldırıldı). Pre-existing console warning ("should not render before js api is fully loaded") cosmetic — fonksiyonel etkisi yok.
+
+**Korunan (faydalı + UI etkisi olmayan v2.9.24 değişiklikler):**
+- recipe_likes RLS sıkı policy + `pcd_get_recipe_like_count` RPC (migration zaten çalıştırıldı, anon scrape vector kapalı kalıyor)
+- recipe_likes BACKUP_TABLES'a ekli (backup-to-r2 re-deployed)
+- 5 orphan i18n dosya silindi (phase2/3/4/4-1/v17.js)
+- 2 window.print → PCD.print (allergens, shopping)
+- 4 hardcoded toast → i18n
+- 25 missing i18n key eklendi
+- Tüm doc stale numbers güncellendi (18 migration, 4 edge function, 29 RLS tablo, 24 realtime, 21 ws-bound, 18 lazy tool)
+
+**Sonuç:** hCaptcha + Discover photos → v2.9.23 davranışına döndü. Güvenlik tarafı: recipe_likes RLS leak + dead code temizliği + doc accuracy korundu.
+
+### v2.9.27 — hCaptcha CSP 'unsafe-eval' + photo debug log · 2026-05-19 (yetmedi, v2.9.28'de revert)
 - **Try:** hCaptcha "I am human" tıklamasında widget cevap vermiyor (v2.9.26 render pattern fix sonrası bile). En olası sebep: hCaptcha widget'ı internal'da eval/new Function kullanıyor, CSP `'unsafe-eval'` yok diye sessiz fail. script-src'ye `'unsafe-eval'` eklendi (yalnızca script-src — diğer direktifler etkilenmedi). frame-src'ye explicit `https://newassets.hcaptcha.com` eklendi (wildcard zaten kapsamalı ama bazı browser CSP parser'ları için açık entry).
 - **Debug:** Discover renderGrid'e geçici `PCD.warn` log eklendi — her recipe kartı için `d.photo` durumunu loglar (LENGTH+START preview veya EMPTY/NULL). Operatör Console'da görür → photo sync race condition mı yoksa veri yok mu net olur. Sorun çözüldükten sonra silinecek.
 

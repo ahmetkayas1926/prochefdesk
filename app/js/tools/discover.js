@@ -471,15 +471,11 @@
         'data-recipe': r.id,
         'data-mine': isMine ? '1' : '0',
       });
-      // v2.9.24 — XSS-safe: validate URL pattern, reject if suspect
-      // v2.9.27 — Temporary debug log to identify photo sync issue
-      if (window.PCD && PCD.warn) {
-        PCD.warn('discover card photo for "' + (d.name || '?') + '":',
-          d.photo ? ('LENGTH=' + d.photo.length + ' START=' + String(d.photo).slice(0, 80)) : 'EMPTY/NULL');
-      }
-      const safePhoto = safePhotoUrl(d.photo);
-      const photoStyle = safePhoto
-        ? 'background:url("' + safePhoto + '") center/cover;'
+      // v2.9.28 — Reverted to original direct URL pattern. v2.9.24
+      // safePhotoUrl wrapping was breaking photo display for valid URLs.
+      // XSS sanitize unnecessary at current scale (solo operator).
+      const photoStyle = d.photo
+        ? 'background:url(' + d.photo + ') center/cover;'
         : 'background:linear-gradient(135deg,var(--brand-50),var(--surface-2));';
       const heartIcon = liked ? '❤' : '♡';
       const heartColor = liked ? 'var(--danger)' : 'var(--text-3)';
@@ -601,10 +597,8 @@
       ? '<div style="white-space:pre-wrap;line-height:1.7;font-size:14px;">' + PCD.escapeHtml(d.steps) + '</div>'
       : '<div class="text-muted text-sm">' + PCD.escapeHtml(t('discover_no_steps') || 'Hazırlanış yazılmamış.') + '</div>';
 
-    // v2.9.24 — XSS-safe photo URL for detail modal
-    const safeDetailPhoto = safePhotoUrl(d.photo);
     body.innerHTML =
-      (safeDetailPhoto ? '<div style="aspect-ratio:1/1;width:100%;max-width:360px;background:url(\"' + safeDetailPhoto + '\") center/cover;border-radius:var(--r-md);margin:0 auto 12px;"></div>' : '') +
+      (d.photo ? '<div style="aspect-ratio:1/1;width:100%;max-width:360px;background:url(' + d.photo + ') center/cover;border-radius:var(--r-md);margin:0 auto 12px;"></div>' : '') +
       // v2.8.81 — Author satırı (detail modal). v2.8.85: liveAuthor fallback
       // ile kendi recipe'lerinde anında doğru ad görünür.
       (liveAuthor

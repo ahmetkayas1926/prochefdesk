@@ -9,7 +9,7 @@
 
 **Ürün:** ProChefDesk — profesyonel chef'ler için web tabanlı mutfak yönetim sistemi.
 **Operatör:** Ahmet Kaya, Perth Western Australia, profesyonel şef. Solo non-commercial proje.
-**Mevcut sürüm:** **v2.9.27** (push'a hazır local; production v2.9.26). hCaptcha CSP `'unsafe-eval'` eklendi (önceki render pattern fix yetmedi) + Discover photo debug log.
+**Mevcut sürüm:** **v2.9.28** (push'a hazır local; production v2.9.27). **REVERT** v2.9.24 CSP + hCaptcha onload + Discover photo sanitize — hepsi v2.9.23 working state'e döndü. recipe_likes RLS sıkılaştırma korundu.
 **Blog:** 13 yazı yayında (Faz A SEO upgrade + Faz B 5-round, MENA niş + uluslararası coverage).
 **Domain:** prochefdesk.com (Cloudflare Pages, SSL Full, GitHub push'ta auto build + deploy).
 
@@ -31,8 +31,9 @@ Yeni Claude'un bilmesi gereken: **bu hâlâ tek kullanıcılı bir ürün** — 
 ### 2.1 Son session özeti (2026-05-19, NAKED→RICH sweep + büyük audit/sertleştirme)
 
 **Geride bırakılan sürümler (kronolojik tersine):**
-- **v2.9.27 LOCAL ONLY** (henüz push edilmedi) — hCaptcha CSP `'unsafe-eval'` eklendi (v2.9.26 render pattern fix yetmedi, click still no-op) + frame-src'ye explicit `newassets.hcaptcha.com` + Discover renderGrid'e geçici photo debug log (`d.photo` LENGTH+preview veya EMPTY).
-- **v2.9.26** (production) — hCaptcha render pattern fix (`?onload=` URL param, script.onload yerine).
+- **v2.9.28 LOCAL ONLY** (henüz push edilmedi) — **REVERT v2.9.24 CSP + hCaptcha onload + photo sanitize.** v2.9.24-27 deneme katmanları operatör akışını bozdu (hCaptcha widget tıklama yok, Discover photo yüklenmiyor). Tam revert: CSP meta + SRI + photo url() quote wrap + hCaptcha onload pattern hepsi geri çekildi. Korunan: recipe_likes RLS sıkı policy + RPC, orphan i18n silme, window.print fix, missing i18n key'ler, doc accuracy.
+- **v2.9.27** (production) — hCaptcha CSP `'unsafe-eval'` ekleme denemesi + Discover photo debug log (yetmedi, v2.9.28'de revert).
+- **v2.9.26** (production) — hCaptcha `?onload=` URL param pattern (yetmedi, v2.9.28'de revert).
 - **v2.9.25 production** — CSP follow-up fix: `static.cloudflareinsights.com` script-src'ye, photo URL regex relax (`()` ve `'` allow, sadece quote/backslash/newline/angle reject), hCaptcha için `worker-src 'self' blob:` + `child-src`.
 - **v2.9.24 production** — Standart SaaS hijyen pass (3 paralel audit agent sonrası): discover.js XSS sanitize, recipe_likes RLS sıkı (migration `v2.9.24-recipe-likes-rls-tighten.sql` çalıştırıldı + onaylandı), CSP meta + X-Content-Type-Options + Referrer-Policy, Supabase SRI hash (sha384), 5 orphan i18n dosya silindi (phase2/3/4/4-1/v17.js), 2 window.print → PCD.print, 4 hardcoded toast i18n, ~25 missing i18n key eklendi, recipe_likes BACKUP_TABLES'a eklendi, HANDOVER stale numbers düzeltildi (16→18 lazy tool, 18→21 ws-bound, 21→24 realtime, 25→29 RLS, supabase-functions/ silindi notu kaldırıldı).
 - **v2.9.17 + v2.9.18 production** — Cloud sync 3 yeni tablo (buffets, mise_plans, team — backlog #2 kapatıldı) + Discover view spam rate limit Edge Function `rate-limited-view` (backlog #7).
@@ -252,7 +253,7 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH. 13 araç paketleri
 |---|---|
 | Repo path (operatör Windows) | `C:\Users\ahmet\Desktop\prochefdesk` |
 | GitHub repo | `ahmetkayas1926/prochefdesk` |
-| Production sürümü | **v2.9.27** (push'a hazır local; production v2.9.26) |
+| Production sürümü | **v2.9.28** (push'a hazır local; production v2.9.27) |
 | Supabase project ref | `muuwhrcogikpqylsfvgg` (Tokyo, Postgres 17, Free tier) |
 | Cloudflare R2 bucket | `prochefdesk-backups` |
 | CLEANUP_SECRET | `ec79a445-7e92-499b-9322-5c2c949788d4d2886e66-d556-4498-ba9e-17fda6c11ac1` |

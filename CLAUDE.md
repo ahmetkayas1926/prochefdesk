@@ -10,7 +10,7 @@ ProChefDesk — profesyonel şef'ler için web tabanlı mutfak yönetim sistemi.
 
 **Stack:** Vanilla JavaScript (no bundling, no service worker), IndexedDB ana storage, Supabase (Postgres 17 + Auth + Storage + Realtime + Edge Functions), Cloudflare Pages (auto-deploy on GitHub push), Cloudflare R2 (backups).
 
-**Mevcut sürüm:** v2.9.27 (push'a hazır local; production v2.9.26). hCaptcha CSP unsafe-eval try + photo debug log. Detay: `CHANGELOG.md`.
+**Mevcut sürüm:** v2.9.28 (push'a hazır local; production v2.9.27). **REVERT v2.9.24 CSP + hCaptcha + photo sanitize** — hepsi v2.9.23 working state'e döndü. recipe_likes RLS sıkı korundu. Detay: `CHANGELOG.md`.
 
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı). SEO standardı aşağıda `## Blog SEO standardı` bölümünde.
 
@@ -109,20 +109,14 @@ CREATE POLICY <table>_owner_all ON <table>
 
 **Buffet + Mise + Team cloud sync (v2.9.17).** `buffets`, `mise_plans`, `team` tabloları artık waste/checklist_sessions array pattern'i ile cloud-synced. Soft-delete tombstone (`_deletedAt`), `queueArraySync` ile push, realtime aktif. Eski "IDB-only" notu STALE — silindi. Yeni array tablo eklerken: store.js + cloud-pertable.js WORKSPACE_TABLES (isArray:true) + cloud-realtime.js applyChange + WS_BOUND_TABLES + TABLES + cascade trigger migration + backup-to-r2 BACKUP_TABLES'a ekle.
 
-**Content Security Policy (v2.9.24+).** `index.html` `<head>`'de CSP meta var. Yeni CDN script veya iframe eklersen CSP'yi güncelle:
-- `script-src`: jsdelivr, hCaptcha, cloudflareinsights (CF Pages auto-injects)
-- `connect-src`: Supabase REST+WS, hCaptcha, cloudflareinsights
-- `frame-src` + `child-src`: hCaptcha widgets
-- `worker-src 'self' blob:` (hCaptcha Web Worker spawn için)
-- `img-src 'self' data: blob: https:` (Supabase Storage + any https photo)
-- `'unsafe-inline'` script + style için açık (vanilla JS, inline event handler + heavy inline CSS — gelecekte nonce ile kapatılabilir)
-- Supabase script SRI hash (sha384) — versiyon pin değişirse `curl ... | openssl dgst -sha384 -binary | openssl base64 -A` ile yeniden hesapla
+**❌ CSP yok (v2.9.28'de REVERT).** `index.html`'de Content-Security-Policy meta TAG YOK. v2.9.24'te eklenmişti ama hCaptcha widget'ı tıklamaya cevap vermiyordu + Discover photo'lar yüklenmiyordu. v2.9.25-27 arası fix denemeleri (Cloudflare Insights ekleme, unsafe-eval, worker-src vb.) yetmedi → tam revert. Operatör solo kullanıcı, CSP eklemeden önce uçtan-uca test gerek.
+**Tekrar denenirse:** Önce minimal CSP `default-src 'self'; script-src * 'unsafe-inline' 'unsafe-eval'; ...` ile başla, sonra her tightening adımında hCaptcha + Discover photo test et.
 
-**Discover photo XSS sanitize (v2.9.24-25).** `discover.js safePhotoUrl(raw)` chef photo URL'lerini CSS `background:url("...")` enjekte etmeden önce filtrelers. (1) http(s) veya `data:image/*` allowlist, (2) reject `"`, `\`, `\r`, `\n`, `<`, `>`. Yeni yere user-input URL CSS'e koyarsan aynı helper'ı kullan, ya da DOM property üzerinden ata (style.backgroundImage = `url("..")` browser native escaping yapar).
+**❌ Discover photo sanitize yok (v2.9.28'de REVERT).** `discover.js`'de `safePhotoUrl()` helper kod tabanında duruyor ama HİÇ ÇAĞRILMIYOR. Photo URL'leri direkt CSS `background:url(' + d.photo + ')` pattern'i ile enjekte ediliyor (v2.9.23 behavior). XSS risk teorik + operatör scale'inde ihmal edilebilir. Gerekirse `safePhotoUrl(d.photo)` ile sarmak yeter — sade halde URL'leri olduğu gibi pass eder.
 
-**recipe_likes RLS sıkı (v2.9.24).** Anon scrape vector kapatıldı — `recipe_likes` SELECT artık sadece kendi like'larını okutur (`auth.uid() = user_id`). Public like count gerekirse `pcd_get_recipe_like_count(text)` RPC kullan (SECURITY DEFINER, aggregate-only, anon+authenticated EXECUTE). Recipes.like_count denormalized kolon zaten public, çoğu UI'da o kullanılıyor.
+**recipe_likes RLS sıkı (v2.9.24, KORUNDU).** Anon scrape vector kapatıldı — `recipe_likes` SELECT artık sadece kendi like'larını okutur (`auth.uid() = user_id`). Public like count gerekirse `pcd_get_recipe_like_count(text)` RPC kullan (SECURITY DEFINER, aggregate-only, anon+authenticated EXECUTE). Recipes.like_count denormalized kolon zaten public, çoğu UI'da o kullanılıyor.
 
-**hCaptcha render pattern (v2.9.26).** Yeni hCaptcha widget koyarken script.onload event ile `hcaptcha.render()` ÇAĞIRMA — API tam initialize olmadan çalışır, sessiz timing bug (checkbox tıklanmaz). Doğru pattern: `?onload=callbackName` URL param + global `window.callbackName` register. Mevcut implementation `account.js ensureHcaptchaLoaded()`.
+**❌ hCaptcha custom render pattern yok (v2.9.28'de REVERT).** v2.9.26'da `?onload=callbackName` URL param paterni denendi ama hCaptcha checkbox click hala çalışmadı. v2.6.83 orijinal `script.onload` patternine geri dönüldü. Console'da `should not render before js api is fully loaded` warning normal — cosmetic, fonksiyonel etki yok. **Tekrar dokunma** — biri yeni Claude session olarak gelirse bu uyarıyı görüp "fix etmeli" diye düşünebilir, etmesin.
 
 **Discover view count rate limit (v2.9.18).** `recipes.view_count` artık doğrudan RPC ile incremenetlenmez. `rate-limited-view` Edge Function üzerinden gider — header'dan IP çıkarır, `pcd_rate_limited_view_bump(ip, recipe_id, 60min)` SECURITY DEFINER RPC çağırır, atomic insert-or-check ile 60dk window per (IP, recipe). `discover_view_logs` tablosu + saatlik `pcd-cleanup-view-logs` cron eski log'ları siler. Spam protection.
 
