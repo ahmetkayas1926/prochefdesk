@@ -10,7 +10,7 @@ ProChefDesk — profesyonel şef'ler için web tabanlı mutfak yönetim sistemi.
 
 **Stack:** Vanilla JavaScript (no bundling, no service worker), IndexedDB ana storage, Supabase (Postgres 17 + Auth + Storage + Realtime + Edge Functions), Cloudflare Pages (auto-deploy on GitHub push), Cloudflare R2 (backups).
 
-**Mevcut sürüm:** v2.9.25 (push'a hazır local; production v2.9.24). CSP follow-up fix (CF Insights + photo URL relax + hCaptcha worker-src). Detay: `CHANGELOG.md`.
+**Mevcut sürüm:** v2.9.26 (push'a hazır local; production v2.9.25). hCaptcha render pattern fix (?onload=) + photo URL log iyileştirme. Detay: `CHANGELOG.md`.
 
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı). SEO standardı aşağıda `## Blog SEO standardı` bölümünde.
 
@@ -99,7 +99,7 @@ CREATE POLICY <table>_owner_all ON <table>
 
 **Sub-recipe ingredient flattening (v2.8.69).** `PCD.recipes.flattenIngredients(recipe, ingMap, recipeMap, opts)` (dashboard.js) recipe'in tüm sub-recipe satırlarını recursive olarak gerçek ingredient seviyesine düşürür (scale cascade + birim dönüşümü + cycle protection + separator skip). Her flattened item `{ingredient, ingredientId, amount, unit, viaSubRecipe}` döndürür. Bağlı 6 modül: portion.js (canvas + print + share), shopping.js (consolidation + by-recipe group), nutrition.js, allergens-db.js `recipeAllergens`, dashboard.js `computeDietCompat`. Yeni "tarif → ingredient listesi" ihtiyacında bu helper'ı kullan. Variance.js zaten kendi recursion'una sahip, dokunma.
 
-**Lazy tool loading (v2.8.78).** Router'da 16 tool dinamik script tag ile lazy yüklenir. Eager kalanlar: **dashboard** (default home), **account** (auth flow), **inventory** (dashboard low-stock alert sync). `PCD.router.go(name)` lazy route varsa loading state → script load → routes[name] wire → render. Yeni tool eklerken: (a) eager mi lazy mi karar ver (default lazy), (b) `router.registerLazy(name, scriptPath, toolName)` ekle, (c) dashboard click handler kullanılıyorsa `_afterToolLoad(toolName, cb)` poll pattern'i (120ms × 3sn).
+**Lazy tool loading (v2.8.78).** Router'da 18 tool dinamik script tag ile lazy yüklenir. Eager kalanlar: **dashboard** (default home), **account** (auth flow), **inventory** (dashboard low-stock alert sync). `PCD.router.go(name)` lazy route varsa loading state → script load → routes[name] wire → render. Yeni tool eklerken: (a) eager mi lazy mi karar ver (default lazy), (b) `router.registerLazy(name, scriptPath, toolName)` ekle, (c) dashboard click handler kullanılıyorsa `_afterToolLoad(toolName, cb)` poll pattern'i (120ms × 3sn).
 
 **xlsx + i18n lazy load (v2.8.78).** `PCD.loadXLSX()` (utils.js) cached promise — xlsx-js-style (~500KB) CDN'den ilk tıklamada yüklenir. `i18n.js` `setLocale()` async — sadece `en.js` boot'ta baseline; TR/ES/FR/DE/AR dinamik fetch. **API gotcha:** `PCD.toast.info()` return value pattern'i güvenli değil — v2.8.79'da "loading-toast remove" pattern kaldırıldı.
 
@@ -107,7 +107,26 @@ CREATE POLICY <table>_owner_all ON <table>
 
 **HACCP Hub konsolidasyon (v2.8.70).** 4 HACCP form (`haccp_logs`, `haccp_cooling`, `haccp_receiving`, `haccp_holding`) tek `haccp` hub route altında landing widget ile yaşar. Mevcut 4 route DOKUNULMADI — bookmark + direct link korunur. Sidenav 18→15 item.
 
-**Buffet + Mise IDB-only (v2.8.73, v2.8.74).** `buffets` ve `misePlans` tablolarına şu an cloud sync YOK. Misafir + üye için lokal IDB. Cloud sync sonraki round'da (backlog #6). Yeni feature lokal-only IDB tablo eklerken: `store.js`'te tablo açıkça eklenmeli, ama `cloud-pertable.js` WORKSPACE_TABLES'a EKLEME (sync isteme kadar).
+**Buffet + Mise + Team cloud sync (v2.9.17).** `buffets`, `mise_plans`, `team` tabloları artık waste/checklist_sessions array pattern'i ile cloud-synced. Soft-delete tombstone (`_deletedAt`), `queueArraySync` ile push, realtime aktif. Eski "IDB-only" notu STALE — silindi. Yeni array tablo eklerken: store.js + cloud-pertable.js WORKSPACE_TABLES (isArray:true) + cloud-realtime.js applyChange + WS_BOUND_TABLES + TABLES + cascade trigger migration + backup-to-r2 BACKUP_TABLES'a ekle.
+
+**Content Security Policy (v2.9.24+).** `index.html` `<head>`'de CSP meta var. Yeni CDN script veya iframe eklersen CSP'yi güncelle:
+- `script-src`: jsdelivr, hCaptcha, cloudflareinsights (CF Pages auto-injects)
+- `connect-src`: Supabase REST+WS, hCaptcha, cloudflareinsights
+- `frame-src` + `child-src`: hCaptcha widgets
+- `worker-src 'self' blob:` (hCaptcha Web Worker spawn için)
+- `img-src 'self' data: blob: https:` (Supabase Storage + any https photo)
+- `'unsafe-inline'` script + style için açık (vanilla JS, inline event handler + heavy inline CSS — gelecekte nonce ile kapatılabilir)
+- Supabase script SRI hash (sha384) — versiyon pin değişirse `curl ... | openssl dgst -sha384 -binary | openssl base64 -A` ile yeniden hesapla
+
+**Discover photo XSS sanitize (v2.9.24-25).** `discover.js safePhotoUrl(raw)` chef photo URL'lerini CSS `background:url("...")` enjekte etmeden önce filtrelers. (1) http(s) veya `data:image/*` allowlist, (2) reject `"`, `\`, `\r`, `\n`, `<`, `>`. Yeni yere user-input URL CSS'e koyarsan aynı helper'ı kullan, ya da DOM property üzerinden ata (style.backgroundImage = `url("..")` browser native escaping yapar).
+
+**recipe_likes RLS sıkı (v2.9.24).** Anon scrape vector kapatıldı — `recipe_likes` SELECT artık sadece kendi like'larını okutur (`auth.uid() = user_id`). Public like count gerekirse `pcd_get_recipe_like_count(text)` RPC kullan (SECURITY DEFINER, aggregate-only, anon+authenticated EXECUTE). Recipes.like_count denormalized kolon zaten public, çoğu UI'da o kullanılıyor.
+
+**hCaptcha render pattern (v2.9.26).** Yeni hCaptcha widget koyarken script.onload event ile `hcaptcha.render()` ÇAĞIRMA — API tam initialize olmadan çalışır, sessiz timing bug (checkbox tıklanmaz). Doğru pattern: `?onload=callbackName` URL param + global `window.callbackName` register. Mevcut implementation `account.js ensureHcaptchaLoaded()`.
+
+**Discover view count rate limit (v2.9.18).** `recipes.view_count` artık doğrudan RPC ile incremenetlenmez. `rate-limited-view` Edge Function üzerinden gider — header'dan IP çıkarır, `pcd_rate_limited_view_bump(ip, recipe_id, 60min)` SECURITY DEFINER RPC çağırır, atomic insert-or-check ile 60dk window per (IP, recipe). `discover_view_logs` tablosu + saatlik `pcd-cleanup-view-logs` cron eski log'ları siler. Spam protection.
+
+**Photo storage flow.** Recipe photo upload `photoStorage.upload(dataUrl)` → WebP re-encode @ 0.82 → Supabase Storage `recipe-photos/{userId}/{ts}-{rand}.webp` → public URL döner → `data.photo` set. Eski recipe'lerde data URL kalabilir (`data:image/...;base64,...`) — `migrateDataUrlPhotos()` housekeeping (üye boot'unda otomatik tetiklenir). **Race:** Photo upload promise async, save click submission o anda data.photo eski olabilir → cloud sync photo'suz gider. Operatör Discover'da photo görünmüyor raporlarsa: recipe'i editör'de aç → Save → 5sn bekle → Discover Refresh.
 
 ## Blog SEO standardı (v2.8.94'te kurulan)
 

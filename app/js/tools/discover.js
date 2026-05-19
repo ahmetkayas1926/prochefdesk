@@ -50,15 +50,19 @@
   // with parens in filenames. Only `"`, `\`, newlines, angle brackets
   // can actually escape.
   function safePhotoUrl(raw) {
-    if (!raw || typeof raw !== 'string') return null;
+    if (!raw) return null; // null/undefined/empty — no photo, normal case (no warn)
+    if (typeof raw !== 'string') {
+      if (window.PCD && PCD.warn) PCD.warn('discover safePhotoUrl rejected (not string):', typeof raw, raw);
+      return null;
+    }
     const s = raw.trim();
     if (!s) return null;
     if (!/^(https?:\/\/|data:image\/)/i.test(s)) {
-      if (window.PCD && PCD.warn) PCD.warn('discover safePhotoUrl rejected (scheme):', s.slice(0, 100));
+      if (window.PCD && PCD.warn) PCD.warn('discover safePhotoUrl rejected (bad scheme):', s.slice(0, 120));
       return null;
     }
     if (/["\\\r\n<>]/.test(s)) {
-      if (window.PCD && PCD.warn) PCD.warn('discover safePhotoUrl rejected (unsafe chars)');
+      if (window.PCD && PCD.warn) PCD.warn('discover safePhotoUrl rejected (unsafe chars):', s.slice(0, 120));
       return null;
     }
     return s;

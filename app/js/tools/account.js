@@ -1184,34 +1184,38 @@
     }
 
     function ensureHcaptchaLoaded() {
+      // v2.9.26 — Use hCaptcha's `?onload=callbackName` URL param instead
+      // of script.onload event. Previous pattern fired BEFORE the hCaptcha
+      // API was fully initialized → render() worked but checkbox clicks
+      // didn't proceed (silent timing bug, console warning was the hint).
+      // Pattern: register window.__pcdHcaptchaOnLoad, then hCaptcha calls
+      // it when API is truly ready. Idempotent: callback flips status,
+      // any pending render attempts retry.
+
       // Already loaded by an earlier modal open — reuse.
-      if (window.hcaptcha) {
+      if (window.hcaptcha && window.hcaptcha.render) {
         captchaScriptStatus = 'ready';
         renderHcaptchaWidget();
         return;
       }
-      // Already loading from another tab/modal? Wait for it.
-      const existing = document.querySelector('script[data-hcaptcha-loader="1"]');
-      if (existing) {
-        existing.addEventListener('load', function () {
-          captchaScriptStatus = 'ready';
-          renderHcaptchaWidget();
-        });
-        existing.addEventListener('error', function () {
-          captchaScriptStatus = 'error';
-          setCaptchaStatus(t('report_issue_captcha_error'), true);
-        });
-        return;
-      }
-      const s = document.createElement('script');
-      s.src = 'https://js.hcaptcha.com/1/api.js?render=explicit';
-      s.async = true;
-      s.defer = true;
-      s.setAttribute('data-hcaptcha-loader', '1');
-      s.onload = function () {
+
+      // Register global onload callback (idempotent — overwrite is fine
+      // because hCaptcha API only calls it once per script load).
+      window.__pcdHcaptchaOnLoad = function () {
         captchaScriptStatus = 'ready';
         renderHcaptchaWidget();
       };
+
+      // Already loading from another tab/modal? The callback above will
+      // fire for both invocations since hCaptcha API runs onload once.
+      const existing = document.querySelector('script[data-hcaptcha-loader="1"]');
+      if (existing) return;
+
+      const s = document.createElement('script');
+      s.src = 'https://js.hcaptcha.com/1/api.js?render=explicit&onload=__pcdHcaptchaOnLoad';
+      s.async = true;
+      s.defer = true;
+      s.setAttribute('data-hcaptcha-loader', '1');
       s.onerror = function () {
         captchaScriptStatus = 'error';
         setCaptchaStatus(t('report_issue_captcha_error'), true);

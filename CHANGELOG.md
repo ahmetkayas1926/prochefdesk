@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.9.25 · 2026-05-19
+**Mevcut sürüm:** v2.9.26 · 2026-05-19
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -16,6 +16,10 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH (kapatılabilir inl
 - **Round 3 (v2.9.7-9):** discover + account + team ✅
 - **Round 4 (v2.9.10-12):** sales + whatif + menu_matrix ✅
 - **Round 5 (v2.9.13):** haccp hub ✅ — **NAKED→RICH sweep tamamlandı**
+
+### v2.9.26 — hCaptcha render pattern fix + Discover photo log · 2026-05-19
+- **Fixed:** hCaptcha "I am human" tıklamasında checkbox çalışmıyordu. Eski kod `script.onload` event'i ile `hcaptcha.render()` çağırıyordu — script yüklendi ama API henüz initialize olmadan render çağrılıyordu (sessiz timing bug, console'da warning gözüküyordu). Çözüm: hCaptcha'nın önerdiği `?onload=callbackName` URL param pattern'i. Global `window.__pcdHcaptchaOnLoad` callback hCaptcha API tam hazır olunca çalışır. Tüm modal açılışları aynı script tag'ini paylaşır (idempotent).
+- **Changed:** Discover `safePhotoUrl()` warn log iyileştirildi — empty/null durumunda warn YOK (normal case), bad scheme/unsafe chars durumunda URL preview log'la. Photo görünmüyor sorunu için debug yardımı.
 
 ### v2.9.25 — CSP follow-up fix (Cloudflare Insights + hCaptcha + photo URL relax) · 2026-05-19
 v2.9.24 CSP'i 3 yan etki üretti, hepsi düzeltildi:
