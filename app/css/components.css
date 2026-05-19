@@ -34,7 +34,22 @@
   color: var(--text);
   border-color: var(--border);
 }
-.btn-secondary:hover { background: var(--surface-3); }
+.btn-secondary:hover:not(.active) { background: var(--surface-3); }
+
+/* v2.10.2 — Selected state for standalone secondary toggle buttons
+   (Kitchen Cards orientation/columns/font/border/weight pickers,
+   Whiteboard paper/orient, Inventory filter). Operator report: tıklanan
+   buton ile diğerleri arasında görsel fark yoktu. Brand-tinted bg +
+   inset ring + bold weight ile seçili durum net görünür. .btn-group
+   içindeki butonlara dokunulmaz (kendi active treatment'i var). */
+.btn-secondary.active {
+  background: var(--brand-50);
+  color: var(--brand-700);
+  border-color: var(--brand-600);
+  box-shadow: inset 0 0 0 1px var(--brand-600);
+  font-weight: 700;
+}
+.btn-secondary.active:hover { background: var(--brand-100); }
 
 .btn-ghost {
   background: transparent;

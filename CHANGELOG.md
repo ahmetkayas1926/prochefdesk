@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.10.0 · 2026-05-20
+**Mevcut sürüm:** v2.10.3 · 2026-05-20
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -18,6 +18,110 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH (kapatılabilir inl
 - **Round 5 (v2.9.13):** haccp hub ✅ — **NAKED→RICH sweep tamamlandı**
 
 ## v2.10.x — Whiteboard pro upgrade
+
+### v2.10.3 — Diet sistemi komple kaldırma + Kitchen Cards dark mode fix · 2026-05-20
+
+**1) Diet sistemi komple kaldırıldı (operatör A seçeneği):**
+
+Operatör analizi: v2.8.45'te eklenen tri-state per-ingredient diet flagging sistemi (vegan/vegetarian/glutenFree/dairyFree) pratikte işe yaramıyordu. Conservative match (1 unflagged ingredient → tarif "?"); 46 tarif × 100+ ingredient için manuel flag'leme yorucu; allergens-db zaten ingredient adından gluten/dairy/nuts/fish auto-detect ediyor; vegan/vegetarian ayrımını operatör menüsünü zaten biliyor.
+
+5 yer + 17 i18n key (× 2 dil) temizlendi:
+- `recipes.js` — Recipes listesi tepesindeki "Free from" filter chips (vegan/vegetarian/gluten/dairy/nuts/fish) + `freeFromSet` state + filter logic + `paintFreeFrom()` + click handlers
+- `recipes.js` — Recipe editor'deki "Diet compatibility" chip alanı (`#dietChips`) + `renderDietChips()` fonksiyonu + render call site
+- `ingredients.js` — New/Edit Ingredient modal'daki "Diet flags" tri-state UI + `renderDietFlags()` + click handler + `data.dietFlags` default init
+- `dashboard.js` — `computeDietCompat()` helper fonksiyonu + `PCD.recipes.computeDietCompat` export
+- `menus.js` — Menu Builder'daki "Hide dietary badges" checkbox + `data.hideDietary` field + `dietaryBadges()` builder + `.m-diet` CSS + dietaryBadges call site
+- `menus.js` — Allergen-safe print filter'da diet path (vegan/vegetarian seçenekleri) kaldırıldı; gluten/dairy artık allergen path'ine yönlendirildi (allergens-db.js zaten 'gluten' ve 'dairy' tag'lerini ingredient adından auto-detect ediyor — `wheat` / `un` / `milk` / `süt` keyword'leri). Net davranış aynı, daha temiz mantık.
+- `en.js` + `tr.js` — `diet_vegan`, `diet_vegetarian`, `diet_gluten_free`, `diet_dairy_free`, `diet_nut_free`, `diet_fish_free`, `diet_yes`, `diet_no`, `diet_unknown`, `ingredient_diet_label`, `ingredient_diet_hint`, `recipe_diet_label`, `recipe_diet_hint`, `recipe_diet_no_ingredients`, `recipe_diet_unknown_tooltip`, `recipes_filter_free_from`, `menu_hide_dietary` — 17 key her dilde.
+
+**Veri uyumluluğu:** Mevcut ingredient'ların `data.dietFlags` field'ı IDB+cloud'da kalır (silinmedi, sadece UI artık göstermiyor). Sub-recipe `flattenIngredients()` helper'ı korundu (portion/shopping/nutrition/variance/allergens 5 modül kullanıyor). `computeDietCompat` kaldırılınca uyumluluk kırılması yok — sadece `recipes.js`, `menus.js`, `discover.js` (zaten kullanmıyordu) kontrol edildi.
+
+**2) Kitchen Cards dark mode fix (operatör raporu):**
+
+Recipe list (RECIPES ON CANVAS) panelindeki recipe isimlerinin yazısı dark mode'da görünmüyordu — `.kc-recipe-row` label element'i bazı browser'larda parent --text inherit etmiyor. Fix `kitchen_cards.js:278` — `color: var(--text)` explicit set edildi.
+
+Live preview konteyner'ı (kcPreview div) `background:#fff` hardcoded'tı — dark mode'da A4 sheet'in altında/sağında kalan boşluk beyaz görünüyordu. Fix: container bg `var(--surface)`, A4 sheet (`.kc-preview-frame`) kendi `#fff` inline bg'sini koruyor → cards print-WYSIWYG kalıyor + container theme'i respect ediyor.
+
+### v2.10.2 — Kitchen Cards Orientation→Whiteboard sıçrama bug + segmented toggle active state · 2026-05-20
+
+**1) KRITIK BUG: Kitchen Cards Orientation butonu Whiteboard'a atıyordu.**
+
+Root cause: `router.js _renderView` aynı `#view` DOM node'unu tüm araçlar arasında yeniden kullanıyor (`view.innerHTML = ''` sadece içeriği siler, node hayatta kalır). `PCD.on(node, ev, sel, handler)` delegated listener'ları node'un `__pcdDelegated` property'sine attach ediyor. Whiteboard render'ı `PCD.on(view, 'click', '[data-orient]', ...)` çağırdığında listener `#view`'a yapıştı. Operatör Whiteboard'dan Kitchen Cards'a geçtiğinde:
+- view DOM aynı kaldı, __pcdDelegated içindeki Whiteboard handler hayatta.
+- Kitchen Cards orientation butonları (`data-orient="landscape|portrait"`) bodyEl'e kendi listener'ını ekledi.
+- KC orientation tıklaması → event bubble eder: button → kcBody (KC handler çalışır) → view (Whiteboard handler ÇALIŞIR + `render(view)` çağırır) → view innerHTML Whiteboard içeriği olur → operatör Whiteboard'a "atılır".
+
+Aynı bug ortağı `[data-paper]`, `[data-set-color]`, `[data-set-font]`, `[data-set-align]`, `[data-set-type]` selector'ları için de risk taşıyordu (KC'de bu selector'lar yok ama başka tool eklenince bug üretebilirdi).
+
+Fix: Whiteboard render'ı tüm içeriği `<div id="wbRoot">...</div>` wrapper'ında topladı. 6 delegated listener `view` yerine `wbRoot`'a attach. Her Whiteboard render'ında wbRoot yeni bir DOM node → __pcdDelegated kalıntısı yok → tool switch'te listener bleed yok. Tek dosya değişti (`whiteboard.js`), diğer 24 tool dokunulmadı.
+
+**2) Segmented toggle butonlarında "selected" görsel feedback (operatör request):**
+
+Kitchen Cards'taki Orientation/Columns/Font size/Border thickness/Text weight, Whiteboard Paper/Orient, Inventory filter butonlarında `.active` class set ediliyordu ama CSS'te `.btn-secondary.active` rule'u yoktu — seçili buton görsel olarak diğerleriyle özdeş kalıyordu (operatör: "Thin'e bastım fark yok").
+
+Fix `components.css:38-50`: `.btn-secondary.active` için brand-tinted treatment — brand-50 bg + brand-700 text + brand-600 border + inset 1px brand ring + font-weight 700 + hover brand-100. `.btn-group .btn.active` ayrı scope (kendi treatment'i korundu, dokunulmadı). Dark mode themes.css'in mevcut `--brand-50)` selector pattern'ine uyduğu için ek değişiklik gerekmedi.
+
+**Etki:** 3 tool (Kitchen Cards 5 toggle grup × 3-9 buton, Whiteboard 2 toggle grup × 2 buton, Inventory 1 toggle grup × 3 buton) — toplam ~40 buton seçili durumunda artık net görünür.
+
+**Test:**
+1. Kitchen Cards → Orientation Portrait/Landscape — seçili buton yeşil çerçeve + light green bg + bold text
+2. Kitchen Cards → Columns 1-9 — seçili sayı net görünür
+3. Kitchen Cards → Font size XS/S/M/L → Border Thin/Medium/Thick → Text weight Normal/Medium/Bold — hepsi
+4. **Kitchen Cards Orientation tıklama → Whiteboard'a SIÇRAMAZ** (kritik bug fix doğrulaması)
+5. Whiteboard → Paper A4/A3 → Orient Portrait/Landscape — seçili görünür
+6. Inventory → filter chip All/Low/Out — aktif yeşil
+
+### v2.10.1 — HACCP bug fixes + Whiteboard drag-resize + 5 şablon + user templates + Kitchen Cards ince ayar · 2026-05-20
+
+**Tek pakette 5 grup iş:**
+
+**1) HACCP bug fixes (operatör v2.10.0 push sonrası rapor):**
+- `haccp_logs.js printMonth` "Something went wrong" toast — `showFitWarning` değişkeni `render()` scope'unda tanımlıydı, `printMonth`'tan erişilemiyor (ReferenceError → global handler toast). Şimdi `FIT_LIMIT_PRINT` + `showFitWarning` local olarak printMonth içinde hesaplanıyor.
+- `hcr_print_filled_month` + `hcr_print_filled_month_tip` + `hcr_recent_months` i18n key'leri eksikti (Receiving sayfasındaki "Bu ayı yazdır" butonu literal key string gösteriyordu). EN+TR eklendi.
+- Cook & Cool + Hot/Cold Holding print row 19 → 20px + padding 2×4 → 3×4 + line-height 1.25 → 1.3 (Receiving pattern'iyle yakınlaştır, hücrede daha hava). A4 landscape hesabı: 33 row × 20px + header etc = 195mm, 7mm marj kalır. Tek sayfa garanti korunur.
+
+**2) Whiteboard 5 yeni hazır şablon (toplam 11):**
+- Hot Line Stations (4×5 landscape) — Sauté/Grill/Pass stations × Chef/Proteins/Sauces/Garnish (header type rows)
+- Knife Cuts Reference (6×3 portrait) — Brunoise/Julienne/Mirepoix/Chiffonade/Concassé × Size/Use
+- Daily Prep Checklist (6×3 portrait) — Stocks/Sauces/Protein/Garnish/Setup × By time + ☐ checkbox
+- Service Recap (6×2 portrait) — Covers/No-shows/Top dish/86 items (bigNumber type ile)
+- EU 14 Major Allergens (4×4 landscape) — 14 EU allerjen tek bakışta + cross-contact uyarı (header type)
+
+**3) Whiteboard user templates (operatör isteği: "şef tasarımı tekrar kullanabilir"):**
+- LS key `pcd_whiteboard_user_templates_v1` (array of {id, name, paper, orient, rows, cols, cells, savedAt})
+- Templates picker'da yeni "💾 Save current canvas as template" butonu (üstte)
+- 2 seksiyon: "Your templates" (kullanıcı kayıtlı) + "Built-in templates" (11 hazır)
+- Her user template item'ında 🗑 Delete butonu (inline)
+- "Apply" tıklayınca template yeni canvas olarak eklenir (mevcut canvas korunur)
+- V1 LS-only; V2'de cloud sync (workspace tablo + sharing)
+
+**4) Whiteboard drag-to-resize cell merge:**
+- Her hücrenin sağ-alt köşesinde küçük resize handle (12×12px, hover'da görünür yarım üçgen)
+- Cursor: nwse-resize
+- mousedown → drag mode aktif, cellEl `.wb-resizing` class (yeşil dashed outline)
+- mousemove (document) → real-time grid-row/grid-column span güncelle (preview)
+- mouseup → commit (rowSpan/colSpan persist + full re-render)
+- Grid bounds clamp: 1 ≤ span ≤ remaining cells
+- Module-level _wbDrag state + document listener bir kez attach (render duplicate listener engellenmiş)
+- Sağ-tık popover'daki manuel span input'lar da çalışmaya devam eder (alternatif giriş)
+
+**5) Kitchen Cards Border + Body Weight ince ayar (operatör raporu):**
+- Border thickness Thin (0.5pt) vs Medium (1pt) ayırt edilmiyordu — print 96 DPI'da ikisi de 1px'e yuvarlanıyor → görsel olarak özdeş. **0.5 / 1.5 / 3 pt** spread'i: clean 1/2/4 px üç farklı kalınlık.
+- Bold body weight canvas preview'da görünüyor, print/PDF'te görünmüyordu — 7-8pt küçük punto'da Segoe UI'nın 600 + 700 ağırlığı stroke farkı print'te belirsizleşiyor. **400 / 700 / 900** ladder'ı: Regular / Bold / Black — her ağırlık net belli olur.
+- Tek satır fix `kitchen_cards.js:994-995` (borderWidths + bodyWeights map'leri). v2.10.0 mimari korundu, sadece sayısal kontrast artırıldı.
+
+**i18n:** 11 yeni key EN+TR (5 yeni şablon adı + user template metinleri).
+
+**Test akışı:**
+1. Fridge & Freezer Log print → artık "Something went wrong" yok, PDF çıkar
+2. Receiving sayfası → "Bu ayı yazdır" butonu doğru görünür (i18n çevirisi)
+3. Cook & Cool + Holding print → row biraz daha geniş, içerikte daha hava
+4. Whiteboard → Templates butonu → 11 hazır + "Save as template" + "Your templates" seksiyonu
+5. Bir canvas hazırla → "Save current as template" → isim ver → Templates'te görünür
+6. Hücreye hover → sağ-alt köşede yarım üçgen handle → tıkla + drag → real-time span preview → bırak → commit
+7. v2.10.0 cell type/font/align/color hepsi korunur
+8. Kitchen Cards → Border thickness 3 toggle (Thin/Medium/Thick) → print preview'da 3 farklı kalınlık net görünür
+9. Kitchen Cards → Body weight 3 toggle (Normal/Medium/Bold) → print preview'da 3 farklı ağırlık net görünür
 
 ### v2.10.0 — Whiteboard professional visual upgrade · 2026-05-20
 Operatör direktifi: "verdiğim örnek index dosyası harika görünüyordu... mevcut çok ilkel". Whiteboard'ı operatörün kitchen guide A3 HTML örneğine yakın profesyonel görünüme yükseltiyor: tipografi + zengin renk paleti + cell type widget sistemi.

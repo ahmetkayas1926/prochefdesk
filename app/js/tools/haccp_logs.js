@@ -726,6 +726,11 @@
     const wsName = (ws && ws.name) || 'Kitchen';
     const currentLog = getCurrentLog();
     const logName = (currentLog && currentLog.name) || '';
+    // v2.10.1 — Operator-reported bug: showFitWarning was referenced from
+    // printMonth but only defined in render()'s inner scope → ReferenceError
+    // → global handler showed "Something went wrong" toast. Now defined here.
+    const FIT_LIMIT_PRINT = 9;
+    const showFitWarning = units.length > FIT_LIMIT_PRINT;
 
     // v2.9.40 — Cook & Cool pattern: A4 sized body + flex column + colgroup
     // widths + compact footer override + row height tuned for handwriting.

@@ -237,7 +237,11 @@
                 <div style="font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-3);">${t('kc_live_preview')}</div>
                 <div class="text-muted" style="font-size:11px;">${t('kc_a4_summary', { orient: orientation === 'landscape' ? t('kc_landscape').toLowerCase() : t('kc_portrait').toLowerCase(), cols: columns })}</div>
               </div>
-              <div id="kcPreview" style="background:#fff;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,0.08);overflow:hidden;${orientation === 'landscape' ? 'aspect-ratio:1.414/1;' : 'aspect-ratio:1/1.414;'}position:relative;"></div>
+              <!-- v2.10.3 — Dark mode: container bg → surface so the
+                   non-A4-sheet remainder of the panel respects theme.
+                   The A4 sheet itself (.kc-preview-frame) keeps its
+                   own #fff inline bg, so cards render WYSIWYG with print. -->
+              <div id="kcPreview" style="background:var(--surface);border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,0.08);overflow:hidden;${orientation === 'landscape' ? 'aspect-ratio:1.414/1;' : 'aspect-ratio:1/1.414;'}position:relative;"></div>
             </div>
           </div>
         </div>
@@ -275,9 +279,15 @@
             display: flex; align-items: center; gap: 10px;
             padding: 8px 12px; cursor: pointer;
             border-bottom: 1px solid var(--border);
+            color: var(--text);
           }
           .kc-recipe-row:hover { background: var(--surface-2); }
           .kc-recipe-row input { accent-color: var(--brand-600); }
+          /* v2.10.3 — Dark mode: live preview wrapper card uses surface-2
+             instead of fixed white. The A4 canvas itself stays white
+             (kc-preview-frame inline background: #fff) so cards render
+             accurately, but the surrounding card frame respects theme. */
+          .kc-preview-card { background: var(--surface-2); }
         </style>
       `;
 
@@ -991,8 +1001,13 @@
       large:  { name: 11.5, ing: 9.5, method: 9   },
     };
     // v2.9.40 — Border thickness (pt) and body text weight maps.
-    const borderWidths = { thin: 0.5, medium: 1, thick: 1.5 };
-    const bodyWeights = { normal: 400, medium: 600, bold: 700 };
+    // v2.10.1 — Print at 96 DPI rounds 0.5pt + 1pt to 1px (thin/medium
+    // indistinguishable). Bumped to 0.5/1.5/3pt for clean 1/2/4 px steps.
+    // Body weight 400/600/700 too close at 7-8pt print — Segoe UI's 600
+    // and 700 strokes look identical at small print sizes. 400/700/900
+    // gives clear three-step ladder (Regular / Bold / Black).
+    const borderWidths = { thin: 0.5, medium: 1.5, thick: 3 };
+    const bodyWeights = { normal: 400, medium: 700, bold: 900 };
     const bw = borderWidths[opts.borderWidth] || borderWidths.thin;
     const bdy = bodyWeights[opts.bodyWeight] || bodyWeights.normal;
     let fs = Object.assign({}, fontSizes[opts.fontSize] || fontSizes.medium);

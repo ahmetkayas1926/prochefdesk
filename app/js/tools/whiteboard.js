@@ -25,10 +25,58 @@
 (function () {
   'use strict';
   const PCD = window.PCD;
+
+  // v2.10.1 — Module-level drag state (closure) so document mousemove/mouseup
+  // listenerleri bir kez attach edilir, render() her çağrıldığında duplicate
+  // olmaz. mousedown handler (render içinde) _wbDrag'i set eder, callbacks
+  // _wbDrag.commitFn ile state'i günceller.
+  let _wbDrag = null;
+  document.addEventListener('mousemove', function (e) {
+    if (!_wbDrag) return;
+    const d = _wbDrag;
+    const distX = e.clientX - d.anchorLeft;
+    const distY = e.clientY - d.anchorTop;
+    const newCS = Math.max(1, Math.min(d.colsTotal - d.c, Math.round(distX / d.baseW)));
+    const newRS = Math.max(1, Math.min(d.rowsTotal - d.r, Math.round(distY / d.baseH)));
+    if (newCS !== d.newCS || newRS !== d.newRS) {
+      d.newCS = newCS;
+      d.newRS = newRS;
+      d.cellEl.style.gridColumn = (d.c + 1) + ' / span ' + newCS;
+      d.cellEl.style.gridRow = (d.r + 1) + ' / span ' + newRS;
+    }
+  });
+  document.addEventListener('mouseup', function () {
+    if (!_wbDrag) return;
+    const d = _wbDrag;
+    d.cellEl.classList.remove('wb-resizing');
+    d.cellEl.contentEditable = 'true';
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    if (d.newRS !== d.startRS || d.newCS !== d.startCS) {
+      d.commitFn(d.r, d.c, d.newRS, d.newCS);
+    }
+    _wbDrag = null;
+  });
   // v2.9.40 — Çoklu kanvas için yeni LS şeması. Eski `pcd_whiteboard_v1`
   // (single canvas) varsa otomatik canvases[0] olarak migrate edilir.
   const LS_KEY_OLD = 'pcd_whiteboard_v1';
   const LS_KEY = 'pcd_whiteboard_canvases_v2';
+  // v2.10.1 — Kullanıcının kendi şablonları (LS only, V2'de cloud)
+  const LS_KEY_USER_TEMPLATES = 'pcd_whiteboard_user_templates_v1';
+
+  function loadUserTemplates() {
+    try {
+      const raw = localStorage.getItem(LS_KEY_USER_TEMPLATES);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (e) {}
+    return [];
+  }
+  function saveUserTemplates(arr) {
+    try { localStorage.setItem(LS_KEY_USER_TEMPLATES, JSON.stringify(arr)); } catch (e) {}
+  }
 
   function uid() { return 'wb_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
   function nowIso() { return new Date().toISOString(); }
@@ -249,10 +297,140 @@
         { r:2, c:1, text:'', color:'white' },
         { r:3, c:0, text:'VIP / dietary tables', color:'blue' },
         { r:3, c:1, text:'', color:'white' },
-        { r:4, c:0, text:'New menu items', color:'green' },
+        { r:4, c:0, text:'New menu items', color:'mint' },
         { r:4, c:1, text:'', color:'white' },
         { r:5, c:0, text:'Reminders', color:'cream' },
         { r:5, c:1, text:'', color:'white' },
+      ],
+    },
+    // v2.10.1 — 5 yeni şablon (operatör isteği "daha çok hazır şablon")
+    {
+      id: 'hot_line_stations',
+      labelKey: 'whiteboard_tpl_hot_line',
+      label: 'Hot Line Stations',
+      title: 'HOT LINE STATIONS',
+      paper: 'A4', orient: 'landscape', rows: 4, cols: 5,
+      cells: [
+        { r:0, c:0, text:'STATION',    color:'dark',    type:'header' },
+        { r:0, c:1, text:'CHEF',       color:'dark',    type:'header' },
+        { r:0, c:2, text:'PROTEINS',   color:'dark',    type:'header' },
+        { r:0, c:3, text:'SAUCES',     color:'dark',    type:'header' },
+        { r:0, c:4, text:'GARNISH',    color:'dark',    type:'header' },
+        { r:1, c:0, text:'SAUTÉ',      color:'steak',   type:'header' },
+        { r:1, c:1, text:'',           color:'white' },
+        { r:1, c:2, text:'Lamb · Beef · Chicken', color:'cream' },
+        { r:1, c:3, text:'Jus · Demi · Beurre',  color:'cream' },
+        { r:1, c:4, text:'Microgreens · Herbs',  color:'cream' },
+        { r:2, c:0, text:'GRILL',      color:'katmer',  type:'header' },
+        { r:2, c:1, text:'',           color:'white' },
+        { r:2, c:2, text:'Steaks · Skewers',     color:'cream' },
+        { r:2, c:3, text:'Chimichurri · Compound butter', color:'cream' },
+        { r:2, c:4, text:'Lemon · Coal salt',    color:'cream' },
+        { r:3, c:0, text:'PASS',       color:'forest',  type:'header' },
+        { r:3, c:1, text:'Head Chef',  color:'white' },
+        { r:3, c:2, text:'—',          color:'white' },
+        { r:3, c:3, text:'Final dressings',      color:'cream' },
+        { r:3, c:4, text:'Plating tools',        color:'cream' },
+      ],
+    },
+    {
+      id: 'knife_cuts',
+      labelKey: 'whiteboard_tpl_knife_cuts',
+      label: 'Knife Cuts',
+      title: 'KNIFE CUTS REFERENCE',
+      paper: 'A4', orient: 'portrait', rows: 6, cols: 3,
+      cells: [
+        { r:0, c:0, text:'CUT',     color:'dark', type:'header' },
+        { r:0, c:1, text:'SIZE',    color:'dark', type:'header' },
+        { r:0, c:2, text:'USE',     color:'dark', type:'header' },
+        { r:1, c:0, text:'Brunoise',   color:'white', type:'bigNumber', fontSize:'md' },
+        { r:1, c:1, text:'3 mm cube',  color:'amber' },
+        { r:1, c:2, text:'Garnish, consommé', color:'cream' },
+        { r:2, c:0, text:'Julienne',   color:'white', type:'bigNumber', fontSize:'md' },
+        { r:2, c:1, text:'3×3×40 mm',  color:'amber' },
+        { r:2, c:2, text:'Stir-fry, salad', color:'cream' },
+        { r:3, c:0, text:'Mirepoix',   color:'white', type:'bigNumber', fontSize:'md' },
+        { r:3, c:1, text:'10 mm rough',color:'amber' },
+        { r:3, c:2, text:'Stocks, braises', color:'cream' },
+        { r:4, c:0, text:'Chiffonade', color:'white', type:'bigNumber', fontSize:'md' },
+        { r:4, c:1, text:'Thin strips',color:'amber' },
+        { r:4, c:2, text:'Leafy herbs', color:'cream' },
+        { r:5, c:0, text:'Concassé',   color:'white', type:'bigNumber', fontSize:'md' },
+        { r:5, c:1, text:'Diced peeled', color:'amber' },
+        { r:5, c:2, text:'Tomato sauce', color:'cream' },
+      ],
+    },
+    {
+      id: 'daily_prep',
+      labelKey: 'whiteboard_tpl_daily_prep',
+      label: 'Daily Prep Checklist',
+      title: 'DAILY PREP CHECKLIST',
+      paper: 'A4', orient: 'portrait', rows: 6, cols: 3,
+      cells: [
+        { r:0, c:0, text:'TASK',  color:'dark', type:'header' },
+        { r:0, c:1, text:'BY',    color:'dark', type:'header' },
+        { r:0, c:2, text:'✓',     color:'dark', type:'header' },
+        { r:1, c:0, text:'Stocks & broths', color:'white' },
+        { r:1, c:1, text:'09:00',  color:'amber' },
+        { r:1, c:2, text:'☐',      color:'white' },
+        { r:2, c:0, text:'Sauces & dressings', color:'white' },
+        { r:2, c:1, text:'10:00',  color:'amber' },
+        { r:2, c:2, text:'☐',      color:'white' },
+        { r:3, c:0, text:'Protein portion', color:'white' },
+        { r:3, c:1, text:'11:00',  color:'amber' },
+        { r:3, c:2, text:'☐',      color:'white' },
+        { r:4, c:0, text:'Garnish & herbs', color:'white' },
+        { r:4, c:1, text:'12:00',  color:'amber' },
+        { r:4, c:2, text:'☐',      color:'white' },
+        { r:5, c:0, text:'Service setup', color:'white' },
+        { r:5, c:1, text:'17:30',  color:'amber' },
+        { r:5, c:2, text:'☐',      color:'white' },
+      ],
+    },
+    {
+      id: 'service_recap',
+      labelKey: 'whiteboard_tpl_service_recap',
+      label: 'Service Recap',
+      title: 'SERVICE RECAP',
+      paper: 'A4', orient: 'portrait', rows: 6, cols: 2,
+      cells: [
+        { r:0, c:0, text:'METRIC',    color:'dark', type:'header' },
+        { r:0, c:1, text:'VALUE',     color:'dark', type:'header' },
+        { r:1, c:0, text:'Covers',    color:'cream' },
+        { r:1, c:1, text:'0',         color:'white', type:'bigNumber', fontSize:'xl' },
+        { r:2, c:0, text:'No-shows',  color:'cream' },
+        { r:2, c:1, text:'0',         color:'red', type:'bigNumber', fontSize:'lg' },
+        { r:3, c:0, text:'Top dish',  color:'cream' },
+        { r:3, c:1, text:'—',         color:'white' },
+        { r:4, c:0, text:'86 items',  color:'cream' },
+        { r:4, c:1, text:'—',         color:'red' },
+        { r:5, c:0, text:'Notes',     color:'cream' },
+        { r:5, c:1, text:'',          color:'white' },
+      ],
+    },
+    {
+      id: 'eu_allergens',
+      labelKey: 'whiteboard_tpl_eu_allergens',
+      label: 'EU 14 Major Allergens',
+      title: 'EU 14 MAJOR ALLERGENS',
+      paper: 'A4', orient: 'landscape', rows: 4, cols: 4,
+      cells: [
+        { r:0, c:0, text:'Cereals (gluten)',  color:'amber', type:'list' },
+        { r:0, c:1, text:'Crustaceans',       color:'red' },
+        { r:0, c:2, text:'Eggs',              color:'cream' },
+        { r:0, c:3, text:'Fish',              color:'blue' },
+        { r:1, c:0, text:'Peanuts',           color:'amber' },
+        { r:1, c:1, text:'Soybeans',          color:'mint' },
+        { r:1, c:2, text:'Milk (lactose)',    color:'cream' },
+        { r:1, c:3, text:'Tree nuts',         color:'katmer' },
+        { r:2, c:0, text:'Celery',            color:'mint' },
+        { r:2, c:1, text:'Mustard',           color:'amber' },
+        { r:2, c:2, text:'Sesame seeds',      color:'katmer' },
+        { r:2, c:3, text:'Sulphites (>10ppm)',color:'red' },
+        { r:3, c:0, text:'Lupin',             color:'amber' },
+        { r:3, c:1, text:'Molluscs',          color:'blue' },
+        { r:3, c:2, text:'Always declare',    color:'steak', type:'header' },
+        { r:3, c:3, text:'Cross-contact!',    color:'steak', type:'header' },
       ],
     },
   ];
@@ -540,7 +718,10 @@
             'text-align:' + align + ';' +
             'display:flex;flex-direction:column;justify-content:center;' +
             spanStyle + typeStyle +
-          '" data-color="' + palette.id + '" data-font="' + (cell.fontSize || 'md') + '" data-align="' + align + '" data-rs="' + rsClamped + '" data-cs="' + csClamped + '" data-type="' + cellType + '">' + PCD.escapeHtml(cell.text || '') + '</div>';
+          '" data-color="' + palette.id + '" data-font="' + (cell.fontSize || 'md') + '" data-align="' + align + '" data-rs="' + rsClamped + '" data-cs="' + csClamped + '" data-type="' + cellType + '">' +
+            PCD.escapeHtml(cell.text || '') +
+            '<span class="wb-resize-handle" contenteditable="false" title="Drag to resize"></span>' +
+          '</div>';
       }
     }
     gridHtml += '</div></div></div>';
@@ -588,16 +769,33 @@
 
     // v2.10.0 — Whiteboard-scoped CSS: Oswald (başlık) + Barlow (gövde)
     // Google Fonts + cell type ek stilleri (::first-line twoLine için).
-    // Diğer sayfalar etkilenmez; @import sadece view innerHTML scope'unda.
+    // v2.10.1 — Drag-to-resize handle (sağ-alt köşe, hover'da görünür).
     const wbStyles =
       '<style>' +
         '@import url("https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700;800&family=Barlow:wght@400;500;600;700;800&display=swap");' +
-        '.wb-cell { font-family: "Barlow", -apple-system, system-ui, sans-serif; }' +
+        '.wb-cell { font-family: "Barlow", -apple-system, system-ui, sans-serif; position: relative; }' +
         '.wb-cell-header { font-family: "Oswald", -apple-system, system-ui, sans-serif; }' +
         '.wb-cell-twoLine::first-line { font-size: 0.55em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.65; }' +
         '#wbSheet .wb-title { font-family: "Oswald", -apple-system, system-ui, sans-serif; }' +
+        '.wb-resize-handle { position:absolute; right:0; bottom:0; width:12px; height:12px; cursor:nwse-resize; ' +
+          'background:linear-gradient(135deg, transparent 50%, rgba(0,0,0,0.35) 50%); opacity:0; transition:opacity 0.15s; ' +
+          'z-index:5; }' +
+        '.wb-cell:hover .wb-resize-handle { opacity:1; }' +
+        '.wb-cell.wb-resizing { outline:2px dashed #16a34a; outline-offset:-2px; z-index:6; }' +
       '</style>';
-    view.innerHTML = wbStyles + buildHtml + gridHtml + paletteHtml;
+    // v2.10.2 — Root container fix for delegated event bleed:
+    // Previously `PCD.on(view, ...)` attached listeners to the shared #view
+    // DOM node, which is REUSED across tool switches (router.js _renderView
+    // only calls view.innerHTML = ''). PCD.on tracks listeners via the node's
+    // __pcdDelegated property → stale Whiteboard handlers stayed alive after
+    // user navigated to Kitchen Cards. Both tools use `[data-orient]` for
+    // Landscape/Portrait → KC's orientation click bubbled up to view, hit
+    // Whiteboard's stale listener, and `render(view)` blew KC away. Same risk
+    // for [data-paper] etc. Fix: wrap Whiteboard content in #wbRoot and bind
+    // all delegated listeners to that node. New DOM each render → no stale
+    // registry. Other tools unaffected.
+    view.innerHTML = '<div id="wbRoot">' + wbStyles + buildHtml + gridHtml + paletteHtml + '</div>';
+    const wbRoot = view.querySelector('#wbRoot');
 
     // ---------- Wire controls ----------
     function persist() {
@@ -668,12 +866,12 @@
       });
     }
 
-    PCD.on(view, 'click', '[data-paper]', function () {
+    PCD.on(wbRoot, 'click', '[data-paper]', function () {
       s.paper = this.getAttribute('data-paper');
       persist();
       render(view);
     });
-    PCD.on(view, 'click', '[data-orient]', function () {
+    PCD.on(wbRoot, 'click', '[data-orient]', function () {
       s.orient = this.getAttribute('data-orient');
       persist();
       render(view);
@@ -762,19 +960,19 @@
       persist();
     }
 
-    PCD.on(view, 'click', '[data-set-color]', function () {
+    PCD.on(wbRoot, 'click', '[data-set-color]', function () {
       applyCellProp('color', this.getAttribute('data-set-color'));
       const palette = view.querySelector('#wbPalette');
       if (palette) palette.style.display = 'none';
     });
-    PCD.on(view, 'click', '[data-set-font]', function () {
+    PCD.on(wbRoot, 'click', '[data-set-font]', function () {
       applyCellProp('fontSize', this.getAttribute('data-set-font'));
     });
-    PCD.on(view, 'click', '[data-set-align]', function () {
+    PCD.on(wbRoot, 'click', '[data-set-align]', function () {
       applyCellProp('align', this.getAttribute('data-set-align'));
     });
     // v2.10.0 — Cell type setter (re-render full grid for visual updates)
-    PCD.on(view, 'click', '[data-set-type]', function () {
+    PCD.on(wbRoot, 'click', '[data-set-type]', function () {
       const palette = view.querySelector('#wbPalette');
       if (!palette) return;
       const r = parseInt(palette.dataset.targetR, 10);
@@ -861,6 +1059,53 @@
       printSheet(s);
     });
 
+    // v2.10.1 — Drag-to-resize cell merge. Sağ-alt handle'a mousedown +
+    // document mousemove ile real-time grid-row/grid-column update.
+    // Document level mousemove/mouseup MODULE-LEVEL wire (file bottom) — render
+    // her çağrıldığında listener duplicate olmasın diye. Bu render handle'ların
+    // mousedown'una bağlanır, _wbDrag state'ine commitFn callback geçer.
+    PCD.$$('.wb-resize-handle', view).forEach(function (handleEl) {
+      handleEl.addEventListener('mousedown', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const cellEl = handleEl.parentElement;
+        if (!cellEl) return;
+        const r = parseInt(cellEl.getAttribute('data-r'), 10);
+        const c = parseInt(cellEl.getAttribute('data-c'), 10);
+        const startRS = parseInt(cellEl.getAttribute('data-rs'), 10) || 1;
+        const startCS = parseInt(cellEl.getAttribute('data-cs'), 10) || 1;
+        const cellRect = cellEl.getBoundingClientRect();
+        const baseW = cellRect.width / startCS;
+        const baseH = cellRect.height / startRS;
+        _wbDrag = {
+          cellEl: cellEl,
+          r: r, c: c,
+          startRS: startRS, startCS: startCS,
+          baseW: baseW, baseH: baseH,
+          anchorLeft: cellRect.left,
+          anchorTop: cellRect.top,
+          newRS: startRS, newCS: startCS,
+          colsTotal: s.cols, rowsTotal: s.rows,
+          commitFn: function (r, c, rs, cs) {
+            const idx = (s.cells || []).findIndex(function (x) { return x.r === r && x.c === c; });
+            if (idx >= 0) {
+              s.cells[idx].rowSpan = rs;
+              s.cells[idx].colSpan = cs;
+            } else {
+              s.cells = s.cells || [];
+              s.cells.push({ r: r, c: c, text: cellEl.innerText || '', rowSpan: rs, colSpan: cs });
+            }
+            persist();
+            render(view);
+          },
+        };
+        cellEl.classList.add('wb-resizing');
+        cellEl.contentEditable = 'false';
+        document.body.style.cursor = 'nwse-resize';
+        document.body.style.userSelect = 'none';
+      });
+    });
+
     // v2.9.40 — Template picker
     PCD.$('#wbTemplateBtn', view).addEventListener('click', function () {
       openTemplatePicker(view);
@@ -870,21 +1115,124 @@
   // ============ TEMPLATE PICKER ============
   function openTemplatePicker(view) {
     const t = PCD.i18n.t;
+    const userTpls = loadUserTemplates();
     const body = PCD.el('div');
-    let html = '<div style="font-size:13px;color:var(--text-2);margin-bottom:14px;line-height:1.5;">' +
-      PCD.escapeHtml(t('whiteboard_template_intro') || 'Pick a starter template. This replaces your current whiteboard — your in-progress work will be lost.') +
-    '</div>';
-    html += '<div style="display:flex;flex-direction:column;gap:8px;">';
-    TEMPLATES.forEach(function (tpl) {
-      html += '<button type="button" data-tpl="' + tpl.id + '" style="text-align:start;padding:12px 14px;background:var(--surface-1);border:1px solid var(--border);border-radius:8px;cursor:pointer;">' +
-        '<div style="font-weight:700;font-size:14px;color:var(--text-1);margin-bottom:3px;">' + PCD.escapeHtml(t(tpl.labelKey) || tpl.label) + '</div>' +
-        '<div style="font-size:12px;color:var(--text-3);">' + tpl.paper + ' ' + tpl.orient + ' · ' + tpl.rows + ' × ' + tpl.cols + ' · ' + tpl.cells.length + ' ' + PCD.escapeHtml(t('whiteboard_cells') || 'cells') + '</div>' +
-      '</button>';
-    });
-    html += '</div>';
-    body.innerHTML = html;
 
-    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') || 'Cancel', style: { width: '100%' } });
+    function buildHtml() {
+      const tpls = loadUserTemplates();
+      let html = '<div style="font-size:13px;color:var(--text-2);margin-bottom:12px;line-height:1.5;">' +
+        PCD.escapeHtml(t('whiteboard_template_intro') || 'Pick a starter template. Adds a new canvas; your current canvas is kept.') +
+      '</div>';
+
+      // v2.10.1 — Save current as template button
+      html += '<button type="button" id="wbSaveAsTpl" style="width:100%;text-align:center;padding:10px;background:var(--brand-50);border:1px dashed var(--brand-300);border-radius:8px;cursor:pointer;color:var(--brand-700);font-weight:700;font-size:13px;margin-bottom:14px;">' +
+        '💾 ' + PCD.escapeHtml(t('whiteboard_save_as_template') || 'Save current canvas as template') +
+      '</button>';
+
+      // User templates section
+      if (tpls.length > 0) {
+        html += '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">' + PCD.escapeHtml(t('whiteboard_your_templates') || 'Your templates') + '</div>';
+        html += '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;">';
+        tpls.forEach(function (tpl) {
+          html += '<div style="display:flex;align-items:center;gap:8px;background:var(--surface-1);border:1px solid var(--border);border-radius:8px;padding:10px 12px;">' +
+            '<button type="button" data-user-tpl="' + tpl.id + '" style="flex:1;text-align:start;background:transparent;border:0;cursor:pointer;padding:0;">' +
+              '<div style="font-weight:700;font-size:13px;color:var(--text-1);">' + PCD.escapeHtml(tpl.name || 'Untitled') + '</div>' +
+              '<div style="font-size:11px;color:var(--text-3);">' + tpl.paper + ' ' + tpl.orient + ' · ' + tpl.rows + ' × ' + tpl.cols + ' · ' + (tpl.cells || []).length + ' ' + PCD.escapeHtml(t('whiteboard_cells') || 'cells') + '</div>' +
+            '</button>' +
+            '<button type="button" data-del-user-tpl="' + tpl.id + '" style="background:transparent;border:0;color:var(--danger);cursor:pointer;padding:4px 8px;font-size:12px;" title="' + PCD.escapeHtml(t('delete') || 'Delete') + '">🗑</button>' +
+          '</div>';
+        });
+        html += '</div>';
+      }
+
+      // Built-in templates section
+      html += '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">' + PCD.escapeHtml(t('whiteboard_builtin_templates') || 'Built-in templates') + '</div>';
+      html += '<div style="display:flex;flex-direction:column;gap:6px;">';
+      TEMPLATES.forEach(function (tpl) {
+        html += '<button type="button" data-tpl="' + tpl.id + '" style="text-align:start;padding:10px 12px;background:var(--surface-1);border:1px solid var(--border);border-radius:8px;cursor:pointer;">' +
+          '<div style="font-weight:700;font-size:13px;color:var(--text-1);">' + PCD.escapeHtml(t(tpl.labelKey) || tpl.label) + '</div>' +
+          '<div style="font-size:11px;color:var(--text-3);">' + tpl.paper + ' ' + tpl.orient + ' · ' + tpl.rows + ' × ' + tpl.cols + ' · ' + tpl.cells.length + ' ' + PCD.escapeHtml(t('whiteboard_cells') || 'cells') + '</div>' +
+        '</button>';
+      });
+      html += '</div>';
+      body.innerHTML = html;
+      wireButtons();
+    }
+
+    function applyTemplateAsNewCanvas(tpl) {
+      const fresh = loadStore();
+      const nc = Object.assign(defaultCanvas(tpl.title), {
+        name: tpl.title || tpl.name,
+        title: tpl.title || tpl.name,
+        paper: tpl.paper,
+        orient: tpl.orient,
+        rows: tpl.rows,
+        cols: tpl.cols,
+        cells: (tpl.cells || []).slice(),
+      });
+      fresh.canvases.push(nc);
+      fresh.activeId = nc.id;
+      saveStore(fresh);
+    }
+
+    function wireButtons() {
+      body.querySelectorAll('[data-tpl]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          const id = this.getAttribute('data-tpl');
+          const tpl = TEMPLATES.find(function (x) { return x.id === id; });
+          if (!tpl) return;
+          applyTemplateAsNewCanvas(tpl);
+          m.close();
+          render(view);
+        });
+      });
+      body.querySelectorAll('[data-user-tpl]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          const id = this.getAttribute('data-user-tpl');
+          const tpl = loadUserTemplates().find(function (x) { return x.id === id; });
+          if (!tpl) return;
+          applyTemplateAsNewCanvas(tpl);
+          m.close();
+          render(view);
+        });
+      });
+      body.querySelectorAll('[data-del-user-tpl]').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          const id = this.getAttribute('data-del-user-tpl');
+          const arr = loadUserTemplates().filter(function (x) { return x.id !== id; });
+          saveUserTemplates(arr);
+          buildHtml();  // refresh list
+        });
+      });
+      const saveBtn = body.querySelector('#wbSaveAsTpl');
+      if (saveBtn) {
+        saveBtn.addEventListener('click', function () {
+          const current = getActive(loadStore());
+          if (!current) return;
+          const defaultName = current.title || 'My template';
+          const name = window.prompt(t('whiteboard_template_name_prompt') || 'Template name:', defaultName);
+          if (!name) return;
+          const arr = loadUserTemplates();
+          arr.push({
+            id: uid(),
+            name: name.trim() || defaultName,
+            title: current.title,
+            paper: current.paper,
+            orient: current.orient,
+            rows: current.rows,
+            cols: current.cols,
+            cells: (current.cells || []).slice(),
+            savedAt: nowIso(),
+          });
+          saveUserTemplates(arr);
+          PCD.toast.success(t('whiteboard_template_saved') || 'Template saved');
+          buildHtml();
+        });
+      }
+    }
+
+    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('close') || 'Close', style: { width: '100%' } });
     const footer = PCD.el('div', { style: { width: '100%' } });
     footer.appendChild(cancelBtn);
 
@@ -894,29 +1242,7 @@
     });
     cancelBtn.addEventListener('click', function () { m.close(); });
 
-    body.querySelectorAll('[data-tpl]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        const id = this.getAttribute('data-tpl');
-        const tpl = TEMPLATES.find(function (x) { return x.id === id; });
-        if (!tpl) return;
-        // v2.9.40 — Şablonu YENİ kanvas olarak ekle (mevcut active'ı bozma)
-        const fresh = loadStore();
-        const nc = Object.assign(defaultCanvas(tpl.title), {
-          name: tpl.title,
-          title: tpl.title,
-          paper: tpl.paper,
-          orient: tpl.orient,
-          rows: tpl.rows,
-          cols: tpl.cols,
-          cells: tpl.cells.slice(),
-        });
-        fresh.canvases.push(nc);
-        fresh.activeId = nc.id;
-        saveStore(fresh);
-        m.close();
-        render(view);
-      });
-    });
+    buildHtml();
   }
 
   // ============ PRINT ============

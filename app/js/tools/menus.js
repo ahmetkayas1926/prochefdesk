@@ -255,7 +255,6 @@
       footer: '',
       hidePrices: false,
       hideAllergens: false,
-      hideDietary: false,          // v2.8.68 — dietary badges toggle
       theme: 'fine_dining',        // v2.8.68 — theme picker default
       accentColor: '',             // v2.8.68 — '' = theme default
       columns: 1,                  // v2.8.69 — 1 or 2 print columns
@@ -271,7 +270,6 @@
     if (typeof data.accentColor !== 'string') data.accentColor = '';
     if (typeof data.columns !== 'number') data.columns = 1;
     if (!data.pageSize) data.pageSize = 'a4';
-    if (typeof data.hideDietary !== 'boolean') data.hideDietary = false;
     // Ensure existing sections have IDs
     (data.sections || []).forEach(function (s) {
       if (!s.id) s.id = PCD.uid('sec');
@@ -405,25 +403,22 @@
           <input type="checkbox" id="menuHideAllergens" ${data.hideAllergens ? 'checked' : ''}>
           <span>${PCD.escapeHtml(t('menu_hide_allergens') || 'Hide allergen icons')}</span>
         </div>
-        <div class="checkbox">
-          <input type="checkbox" id="menuHideDietary" ${data.hideDietary ? 'checked' : ''}>
-          <span>${PCD.escapeHtml(t('menu_hide_dietary') || 'Hide dietary badges (vegan/veg/GF)')}</span>
-        </div>
 
         <!-- v2.8.71 — Allergen-safe print filter. Real-world: special menu
              for a coeliac event or a peanut-free childrens' birthday.
-             Toggle one or more "free from" filters; the print/preview
-             only includes dishes that pass. The full menu data is not
-             modified — this is a print-time view only. -->
+             Toggle one or more allergen filters; the print/preview only
+             includes dishes that pass. The full menu data is not modified.
+             v2.10.3 — Diet (vegan/vegetarian) seçenekleri kaldırıldı, sadece
+             allergens-db auto-detect kullanılır (gluten/dairy/nuts/fish). -->
         <details class="field" style="border:1px solid var(--border);border-radius:var(--r-md);padding:10px 12px;background:var(--surface-2);">
           <summary style="cursor:pointer;font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-2);">🛡 ${PCD.escapeHtml(t('menu_safe_print_title') || 'Allergen-safe print')}</summary>
           <div style="margin-top:10px;">
             <div class="text-muted text-sm mb-2" style="font-size:12px;">${PCD.escapeHtml(t('menu_safe_print_hint') || 'Print/preview only items free from the selected categories. Empty = show all.')}</div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;">
-              ${['vegan','vegetarian','gluten','dairy','nuts','fish'].map(function (k) {
+              ${['gluten','dairy','nuts','fish'].map(function (k) {
                 const arr = Array.isArray(data.safePrintFilter) ? data.safePrintFilter : [];
                 const active = arr.indexOf(k) >= 0;
-                const labels = { vegan: '🌱 Vegan', vegetarian: '🥬 Veg', gluten: '🌾 GF', dairy: '🥛 DF', nuts: '🥜 Nut-free', fish: '🐟 Fish-free' };
+                const labels = { gluten: '🌾 GF', dairy: '🥛 DF', nuts: '🥜 Nut-free', fish: '🐟 Fish-free' };
                 return '<button type="button" class="chip" data-safeprint="' + k + '" style="cursor:pointer;background:' + (active ? 'var(--brand-50)' : 'var(--surface)') + ';border:1px solid ' + (active ? 'var(--brand-600)' : 'var(--border-strong)') + ';color:' + (active ? 'var(--brand-700)' : 'var(--text-2)') + ';font-weight:' + (active ? '700' : '500') + ';">' + labels[k] + '</button>';
               }).join('')}
             </div>
@@ -544,8 +539,6 @@
       PCD.$('#menuHidePrice', body).addEventListener('change', function () { data.hidePrices = this.checked; render(); });
       const hideAllergEl = PCD.$('#menuHideAllergens', body);
       if (hideAllergEl) hideAllergEl.addEventListener('change', function () { data.hideAllergens = this.checked; render(); });
-      const hideDietEl = PCD.$('#menuHideDietary', body);
-      if (hideDietEl) hideDietEl.addEventListener('change', function () { data.hideDietary = this.checked; render(); });
 
       // v2.8.68 — Theme picker
       PCD.on(body, 'click', '[data-theme]', function () {
@@ -854,22 +847,6 @@
     const theme = THEMES[menu.theme] || THEMES.fine_dining;
     const accent = resolveAccent(menu);
 
-    // v2.8.68 — Dietary badge builder (vegan/veg/GF). Uses computeDietCompat
-    // from dashboard.js (added in v2.8.45). Conservative tri-state: only
-    // shows badge if ALL ingredients confirmed compatible.
-    function dietaryBadges(r) {
-      if (menu.hideDietary || !r) return '';
-      const fn = PCD.recipes && PCD.recipes.computeDietCompat;
-      if (!fn) return '';
-      const compat = fn(r, ingMap);
-      if (!compat) return '';
-      const out = [];
-      if (compat.vegan === true)       out.push('<span class="m-diet" title="Vegan" style="background:#dcfce7;color:#166534;">🌱 V</span>');
-      else if (compat.vegetarian === true) out.push('<span class="m-diet" title="Vegetarian" style="background:#ecfccb;color:#3f6212;">🥬 VG</span>');
-      if (compat.glutenFree === true)  out.push('<span class="m-diet" title="Gluten-free" style="background:#fef3c7;color:#92400e;">🌾 GF</span>');
-      return out.length ? ' ' + out.join(' ') : '';
-    }
-
     // v2.8.68 — Item special badge (chef pick / signature / new / spicy)
     function itemBadge(it) {
       if (!it.badge) return '';
@@ -879,23 +856,23 @@
     }
 
     // v2.8.71 — Safe-print filter: drop any item that fails any active "free from"
-    // category. Manual items (no recipe link) cannot be diet-checked, so they
+    // category. Manual items (no recipe link) cannot be verified, so they
     // are excluded when ANY filter is active (chef can't certify them anyway).
+    // v2.10.3 — Diet (vegan/vegetarian) path kaldırıldı, sadece allergens-db
+    // auto-detect kullanılır. gluten/dairy/nuts/fish hepsi allergen tag'leri.
     const safeFilters = Array.isArray(menu.safePrintFilter) ? menu.safePrintFilter : [];
     function itemPassesSafeFilter(it) {
       if (!safeFilters.length) return true;
       if (!it.recipeId) return false; // manual item — can't verify
       const r = recipeMap[it.recipeId];
       if (!r) return false;
-      // Check diet flags via computeDietCompat (cascades sub-recipes per v2.8.69)
-      const dietMap = { vegan: 'vegan', vegetarian: 'vegetarian', gluten: 'glutenFree', dairy: 'dairyFree' };
-      const compat = (PCD.recipes && PCD.recipes.computeDietCompat) ? PCD.recipes.computeDietCompat(r, ingMap) : null;
-      // Allergen tags via allergens-db (cascades sub-recipes per v2.8.69)
       const tags = (PCD.allergensDB && PCD.allergensDB.recipeAllergens) ? (PCD.allergensDB.recipeAllergens(r, ingMap) || []) : [];
       for (let i = 0; i < safeFilters.length; i++) {
         const k = safeFilters[i];
-        if (dietMap[k]) {
-          if (!compat || compat[dietMap[k]] !== true) return false; // null (unknown) also fails — auditor safety
+        if (k === 'gluten') {
+          if (tags.indexOf('gluten') >= 0) return false;
+        } else if (k === 'dairy') {
+          if (tags.indexOf('dairy') >= 0) return false;
         } else if (k === 'nuts') {
           if (tags.indexOf('nuts') >= 0 || tags.indexOf('peanuts') >= 0) return false;
         } else if (k === 'fish') {
@@ -939,7 +916,7 @@
         }
 
         sectionsBody += '<div class="m-item">';
-        sectionsBody += '<div class="m-item-row"><div class="m-item-name">' + PCD.escapeHtml(itemName) + itemBadge(it) + dietaryBadges(r) + allergenIcons + '</div>';
+        sectionsBody += '<div class="m-item-row"><div class="m-item-name">' + PCD.escapeHtml(itemName) + itemBadge(it) + allergenIcons + '</div>';
         sectionsBody += '<div class="m-item-leader"></div>';
         if (!menu.hidePrices && price > 0) {
           sectionsBody += '<div class="m-item-price">' + PCD.fmtMoney(price) + '</div>';
@@ -1048,15 +1025,6 @@
           'margin-inline-start: 6px;' +
           'opacity: 0.7;' +
           'letter-spacing: 0.06em;' +
-          'vertical-align: middle;' +
-        '}' +
-        '.m-diet {' +
-          'font-size: 9px;' +
-          'font-weight: 700;' +
-          'padding: 1px 5px;' +
-          'border-radius: 999px;' +
-          'margin-inline-start: 4px;' +
-          'letter-spacing: 0.04em;' +
           'vertical-align: middle;' +
         '}' +
         '.m-itembadge {' +

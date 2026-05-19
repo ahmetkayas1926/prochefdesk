@@ -107,7 +107,14 @@
       "Bash(node -c \"C:/Users/ahmet/Desktop/prochefdesk/app/js/tools/account.js\")",
       "Bash(grep -oE \"[a-z_]+:\\\\s*\" /c/Users/ahmet/Desktop/prochefdesk/app/js/i18n/en.js | sed \"s/:\\\\s*$//\" | sort -u > /tmp/defined_keys.txt && wc -l /tmp/defined_keys.txt)",
       "Bash(node -c app/js/tools/haccp.js)",
-      "Bash(node -c app/js/tools/whiteboard.js)"
+      "Bash(node -c app/js/tools/whiteboard.js)",
+      "Bash(node -c \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\tools\\\\kitchen_cards.js\")",
+      "Bash(git -C \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\" log --oneline --all -- app/js/tools/recipes.js)",
+      "Bash(git -C \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\" log --all --oneline --grep=\"v2.8.45\\\\|v2.8.71\\\\|diet\")",
+      "Bash(git -C \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\" show --stat f29aad7)",
+      "Bash(git -C \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\" show 1abc2a9 --stat)",
+      "Bash(node -c \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\tools\\\\whiteboard.js\")",
+      "Bash(git -C \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\" diff --stat)"
     ]
   }
 }

@@ -176,7 +176,6 @@
   //   - nutrition.js (kalori/protein cascade)
   //   - variance.js (sub-recipe ingredient stoktan düşürme)
   //   - allergens-db.js recipeAllergens (sub-recipe allergen cascade)
-  //   - dashboard.js computeDietCompat (sub-recipe diet flag cascade)
   function flattenIngredients(recipe, ingMap, recipeMap, opts) {
     opts = opts || {};
     const scale = opts.scale || 1;
@@ -235,49 +234,11 @@
     return out;
   }
 
-  // v2.8.45 — Diet compatibility hesabı. Recipe'ın ingredient'larının
-  // dietFlags'larına bakar, conservative (yanlış pozitif vermez) tri-state
-  // sonuç döndürür: true (uyumlu), false (uyumsuz), null (bilinmiyor).
-  // v2.8.69 — Sub-recipe cascading: artık flattenIngredients ile marinade
-  // içindeki süt parent recipe'i dairy-free=false yapar. Önceden atlanıyordu.
-  function computeDietCompat(recipe, ingMap) {
-    const flags = ['vegan', 'vegetarian', 'glutenFree', 'dairyFree'];
-    const result = { vegan: null, vegetarian: null, glutenFree: null, dairyFree: null, unknownIngs: { vegan: [], vegetarian: [], glutenFree: [], dairyFree: [] } };
-    if (!recipe || !recipe.ingredients || !recipe.ingredients.length) return result;
-
-    // v2.8.69 — Flatten recursively so sub-recipe ingredient'ları da diet'e dahil.
-    const flat = flattenIngredients(recipe, ingMap, buildRecipeMap());
-
-    flags.forEach(function (flag) {
-      let hasNo = false;
-      let hasUnknown = false;
-      flat.forEach(function (item) {
-        const ing = item.ingredient;
-        if (!ing) { hasUnknown = true; return; }
-        const v = ing.dietFlags ? ing.dietFlags[flag] : null;
-        if (v === false) {
-          hasNo = true;
-        } else if (v === null || v === undefined) {
-          hasUnknown = true;
-          if (ing.name && result.unknownIngs[flag].indexOf(ing.name) < 0) {
-            result.unknownIngs[flag].push(ing.name);
-          }
-        }
-      });
-      if (hasNo) result[flag] = false;
-      else if (hasUnknown) result[flag] = null;
-      else result[flag] = true;
-    });
-
-    return result;
-  }
-
   PCD.recipes = PCD.recipes || {};
   PCD.recipes.computeFoodCost = computeFoodCost;
   PCD.recipes.buildRecipeMap = buildRecipeMap;
   PCD.recipes.resolveRow = resolveRow;
   PCD.recipes.isPrep = isPrep;
-  PCD.recipes.computeDietCompat = computeDietCompat;
   PCD.recipes.flattenIngredients = flattenIngredients;
 
   // ============ TODAY-FOCUSED DASHBOARD ============
