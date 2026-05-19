@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.9.30 · 2026-05-19
+**Mevcut sürüm:** v2.9.31 · 2026-05-19
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -16,6 +16,16 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH (kapatılabilir inl
 - **Round 3 (v2.9.7-9):** discover + account + team ✅
 - **Round 4 (v2.9.10-12):** sales + whatif + menu_matrix ✅
 - **Round 5 (v2.9.13):** haccp hub ✅ — **NAKED→RICH sweep tamamlandı**
+
+### v2.9.31 — HACCP Cook & Cool print: real-world handwriting fit (PILOT) · 2026-05-19
+Operatör raporu: HACCP aylık print template'inde A4 landscape sayfasının altında ~50mm boş alan vardı ama row hücreleri (14px = 3.7mm) kalemle yazmaya çok dardı. v2.8.51'de "tek sayfaya sığsın" diye sıkıştırılmıştı, fakat aslında geniş alan kullanılmıyordu. Mantıksız sıkıştırma.
+
+**Bu sürümde (PILOT — sadece Cook & Cool):**
+- `haccp_cooling.js` print CSS: row height 14px → 22px (~5.8mm). Font 7-8px → 10-12px. Cell padding 1×3 → 3×4. Line-height 1.2 → 1.3.
+- Column widths yeniden dağıtıldı: DAY 4% → 3% (3 haneli sayı), FOOD 21% → 25% (yemek adı yazılacak), °C 6.5% → 6%, TIME 6.5% → 7%, NOTE 13% → 16%, CHEF 8% → 9%. Total 100%.
+- 31 row × ~5.8mm = 180mm + header + footer ≈ 200mm. A4 landscape 202mm kullanılabilir alanda rahat sığar.
+
+**Test akışı:** Operatör Cook & Cool boş yazdırıp kağıt üzerinde kalemle hücreye yazı yazabildiğini kontrol edecek. Onay sonrası aynı pattern haccp_logs (Daily Temp), haccp_receiving, haccp_holding form'larına da uygulanacak. Risk düşük: CSS-only değişiklik, fonksiyonel davranış aynı.
 
 ### v2.9.30 — hCaptcha challenge popup viewport fix (modal scroll lock pattern) · 2026-05-19
 **v2.9.29 sonrası ikinci kanıt-tabanlı bug bulundu.** Operatör doğruladı ki "I am human" tıklaması artık çalışıyor (v2.9.29 fix başarılı), AMA açılan challenge popup ekranın üst kenarına yapışıyor → resim soruları viewport dışında kalıyor, Skip butonu görünmüyor / tepkisiz. Root cause: `app/js/ui/modal.js:177-186` scroll lock pattern'i body'i `position: fixed; top: -scrollY` ile sabitliyordu (sayfa scroll pozisyonunu korumak için standart iOS-friendly pattern). hCaptcha challenge popup `document.body.appendChild` ile body'e ekleniyor ve body-relative koordinatlarla yerleşiyor — body `-scrollY` ofsetli olduğu için popup viewport dışına kayıyor.

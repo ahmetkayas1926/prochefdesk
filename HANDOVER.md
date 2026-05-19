@@ -9,7 +9,7 @@
 
 **Ürün:** ProChefDesk — profesyonel chef'ler için web tabanlı mutfak yönetim sistemi.
 **Operatör:** Ahmet Kaya, Perth Western Australia, profesyonel şef. Solo non-commercial proje.
-**Mevcut sürüm:** **v2.9.30** (push'a hazır local; production v2.9.29). **hCaptcha challenge popup viewport fix** (modal scroll lock pattern değişti) — popup'ın üst kenara yapışması/Skip butonu tepkisizlik sorunu çözüldü.
+**Mevcut sürüm:** **v2.9.31** (push'a hazır local; production v2.9.30). **HACCP Cook & Cool print row/column fix PILOT** — operatör test bekliyor, onay sonrası diğer 3 HACCP form'a uygulanacak.
 **Blog:** 13 yazı yayında (Faz A SEO upgrade + Faz B 5-round, MENA niş + uluslararası coverage).
 **Domain:** prochefdesk.com (Cloudflare Pages, SSL Full, GitHub push'ta auto build + deploy).
 
@@ -43,9 +43,7 @@ Yeni Claude'un bilmesi gereken: **bu hâlâ tek kullanıcılı bir ürün** — 
 
 ### 2.2 Bekleyen / bilinen test gerekleri
 
-- **v2.9.30 push'a hazır** (operatör GitHub Desktop ile push edecek). Push'a dahil dosyalar: `app/js/ui/modal.js` (scroll lock pattern overflow:hidden'a geçti), `app/js/core/config.js` (APP_VERSION=2.9.30), 3 doc (CLAUDE/HANDOVER/CHANGELOG).
-- **🟡 hCaptcha challenge popup viewport fix — operatör test bekliyor.** v2.9.30 push + Cloudflare deploy sonrası challenge popup ekran ortasında doğru yerleşmeli + Skip butonu tepkili olmalı. Doğrulanırsa CLAUDE.md gotcha'sı 🟡 → ✅ güncellenecek.
-- **✅ hCaptcha "I am human" checkbox tıklaması ÇALIŞIYOR (v2.9.29 push edildi + operatör doğruladı 2026-05-19).** Widget event handler attach sorunu çözüldü.
+- **✅ v2.9.30 push edildi + operatör doğruladı 2026-05-19.** Report an issue formu ucundan uca çalışıyor: "I am human" tıklanıyor (v2.9.29 fix), challenge popup ekran ortasında açılıyor + Skip butonu çalışıyor (v2.9.30 fix). Bu iki fix BİRLİKTE çalışıyor — gelecek Claude ikisinden birini bozarsa akış tekrar kırılır (CLAUDE.md gotcha'larında "YENİ CLAUDE BU PATTERN'I BOZMA" uyarısı var).
 - **v2.9.28 push edildi** (operatör daha önce push etti). Push'a dahil dosyalar: `app/index.html` (CSP + SRI kaldırıldı), `app/js/tools/discover.js` (photo direct URL'ye geri), `app/js/tools/account.js` (hCaptcha v2.6.83 script.onload pattern — v2.9.29'da güncellendi), `app/js/core/config.js` (APP_VERSION=2.9.28), 3 doc (CLAUDE/HANDOVER/CHANGELOG).
 - **Discover photo testi** — chef'in paylaştığı recipe'lerde photo'lar (Lamb Shank vb.) Discover feed'de tekrar görünmeli. Hâlâ boş görünen recipe'ler varsa root cause sync race değil (CSP kalktı), `d.photo` cloud'da boş kalmış olabilir → recipe'i editör'de aç → Save → 5sn bekle → Discover Refresh.
 - **Migration `v2.9.24-recipe-likes-rls-tighten.sql` ZATEN ÇALIŞTIRILDI** (operatör onayladı, policy `auth.uid() = user_id`). RPC `pcd_get_recipe_like_count(text)` aktif. Bu DB tarafı korundu, revert SADECE frontend.
@@ -259,7 +257,7 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH. 13 araç paketleri
 |---|---|
 | Repo path (operatör Windows) | `C:\Users\ahmet\Desktop\prochefdesk` |
 | GitHub repo | `ahmetkayas1926/prochefdesk` |
-| Production sürümü | **v2.9.30** (push'a hazır local; production v2.9.29) |
+| Production sürümü | **v2.9.31** (push'a hazır local; production v2.9.30) |
 | Supabase project ref | `muuwhrcogikpqylsfvgg` (Tokyo, Postgres 17, Free tier) |
 | Cloudflare R2 bucket | `prochefdesk-backups` |
 | CLEANUP_SECRET | `ec79a445-7e92-499b-9322-5c2c949788d4d2886e66-d556-4498-ba9e-17fda6c11ac1` |
