@@ -674,11 +674,47 @@
   // threshold object so every HACCP form pulls from one source.
   // ============================================================
   PCD.haccp = PCD.haccp || {};
+  // v2.9.38 — LocalStorage fallback: cloud sync race condition can wipe
+  // state.prefs.haccpRegion on boot. We additionally write to LS on every
+  // change (synchronous, atomic); helper reads LS as a safety net so
+  // selection survives any cloud overwrite. LS key is intentionally
+  // non-namespaced (`pcd_haccp_region`) so the value is portable.
+  PCD.haccp.LS_KEY = 'pcd_haccp_region';
   PCD.haccp.getRegion = function () {
-    const prefs = (PCD.store && PCD.store.get && PCD.store.get('prefs')) || {};
     const cfg = window.PCD_CONFIG || {};
-    const id = prefs.haccpRegion || cfg.HACCP_REGION_DEFAULT || 'international';
+    const prefs = (PCD.store && PCD.store.get && PCD.store.get('prefs')) || {};
+    let id = prefs.haccpRegion;
+    if (!id) {
+      try {
+        const cached = localStorage.getItem(PCD.haccp.LS_KEY);
+        if (cached) id = cached;
+      } catch (e) { /* private mode etc — fall through */ }
+    }
+    if (!id) id = cfg.HACCP_REGION_DEFAULT || 'international';
     return (cfg.HACCP_REGIONS && cfg.HACCP_REGIONS[id]) ? id : (cfg.HACCP_REGION_DEFAULT || 'international');
+  };
+  PCD.haccp.setRegion = function (val) {
+    // Set in state (debounced persist + cloud upsert flow) AND LS (sync,
+    // immediate, survives any reload race condition).
+    if (PCD.store && PCD.store.set) PCD.store.set('prefs.haccpRegion', val);
+    try { localStorage.setItem(PCD.haccp.LS_KEY, val); } catch (e) {}
+    if (PCD.store && PCD.store.flushSync) { try { PCD.store.flushSync(); } catch (e) {} }
+    if (PCD.cloudPerTable && PCD.cloudPerTable.queueUpsert && PCD.store && PCD.store._read) {
+      try {
+        PCD.cloudPerTable.queueUpsert('user_prefs', 'user_prefs', null, {
+          active_workspace_id: PCD.store._read('activeWorkspaceId'),
+          data: {
+            prefs: PCD.store._read('prefs') || {},
+            plan: PCD.store._read('plan') || 'free',
+            onboarding: PCD.store._read('onboarding') || {},
+            costHistory: PCD.store._read('costHistory') || [],
+          },
+        });
+      } catch (e) { /* non-fatal */ }
+      if (PCD.cloudPerTable.flushNow) {
+        try { PCD.cloudPerTable.flushNow(); } catch (e) {}
+      }
+    }
   };
   PCD.haccp.getThresholds = function () {
     const cfg = window.PCD_CONFIG || {};

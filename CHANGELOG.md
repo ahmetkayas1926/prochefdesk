@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.9.37 · 2026-05-19
+**Mevcut sürüm:** v2.9.38 · 2026-05-19
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -16,6 +16,21 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH (kapatılabilir inl
 - **Round 3 (v2.9.7-9):** discover + account + team ✅
 - **Round 4 (v2.9.10-12):** sales + whatif + menu_matrix ✅
 - **Round 5 (v2.9.13):** haccp hub ✅ — **NAKED→RICH sweep tamamlandı**
+
+### v2.9.38 — HACCP region: localStorage fallback (kalıcı persist garantisi) · 2026-05-19
+v2.9.37 push edildi, UI ve eşik chip'i doğru göründü, print önizlemelerinde değer doğru, **AMA sayfa yenilenince hâlâ eski hale dönüyordu**. v2.9.37'de yapılan cloud-pertable.js merge fix yetmedi — cloud sync hâlâ async race condition yaratıyor (cloud upsert tamamlanmadan F5, sonraki boot cloud overwrite). 4 sürümdür aynı sorun.
+
+**Bu sürümde — pragmatik kesin çözüm: synchronous localStorage yedek.**
+
+- `app/js/core/utils.js` `PCD.haccp` namespace güçlendirildi:
+  - `PCD.haccp.LS_KEY = 'pcd_haccp_region'` — non-namespaced LS key
+  - `PCD.haccp.getRegion()` — prefs'te yoksa LS'ye fallback yapar. Cloud sync state.prefs'i siler/overwrite ederse bile LS'den orijinal değer okunur.
+  - `PCD.haccp.setRegion(val)` — TEK NOKTA: state.set + **synchronous LS write** + flushSync + cloud upsert + flushNow. LS write senkron + atomic; debounce, async, race condition ihtimali sıfır.
+- `app/js/tools/haccp.js` change handler tek satıra düştü: `PCD.haccp.setRegion(this.value)`. Render'da `PCD.haccp.getRegion()` çağırılır → LS fallback otomatik.
+
+**Mantık:** Cloud sync ileride çalışsın diye state.prefs ve cloud upsert akışı korundu. LocalStorage ise garanti yedek. Cloud-pertable.js boot'ta state.prefs'i overwrite etse bile, helper LS'den okur, doğru değer döner. LS sync ve sınırsız sayıda key/value alır — solo kullanıcı için tek user'lı pattern doğru.
+
+**Test:** HACCP Hub → "United States (FDA)" seç → **F5 hemen yap** → seçim **kalmalı**. DevTools → Application → Local Storage → "pcd_haccp_region" key'i = "usa" görmeli. Cook & Cool'a gir → chip + subtitle + yazdırılan PDF FDA değerleri (57°C / 5°C / -18°C / 57°→21°/2h→5°/6h) göstermeli.
 
 ### v2.9.37 — HACCP region: moved to HACCP Hub + root-cause persist fix · 2026-05-19
 v2.9.36 sonrası operatör test ettiğinde HÂLÂ persist çalışmıyordu: UK seç → "Saved" → F5 → "International" geri geliyor. v2.9.36'da yapılan flushSync + queueUpsert YETMİYORDU çünkü cloud-pertable.js:552 boot pull'unda `state.prefs = prefsData.prefs || {}` ile **tüm local prefs cloud'dan OVERWRITE ediliyordu**. queueUpsert async ve operatörün F5'i hızlı; cloud'a yazılmadan reload → cloud'daki eski prefs (haccpRegion yok) → local'i siliyor.

@@ -117,12 +117,10 @@
     const allTouched = touchedCount === cards.length;
     const heroColor = allTouched ? '#16a34a' : (touchedCount >= 2 ? '#f59e0b' : '#dc2626');
 
-    // v2.9.37 — HACCP region selector lives here in the Hub, not in Account.
-    // Chefs find it natively where they audit. Reads current selection and
-    // resolves thresholds so the sub-chip shows current numbers.
-    const prefs = PCD.store.get('prefs') || {};
+    // v2.9.38 — Read via PCD.haccp.getRegion() helper (handles LS fallback
+    // if cloud sync wiped state.prefs.haccpRegion on boot).
     const regions = (window.PCD_CONFIG && window.PCD_CONFIG.HACCP_REGIONS) || {};
-    const regionId = prefs.haccpRegion || (window.PCD_CONFIG && window.PCD_CONFIG.HACCP_REGION_DEFAULT) || 'international';
+    const regionId = (PCD.haccp && PCD.haccp.getRegion) ? PCD.haccp.getRegion() : ((window.PCD_CONFIG && window.PCD_CONFIG.HACCP_REGION_DEFAULT) || 'international');
     const regionData = regions[regionId] || regions.international || {};
     const regionChip = '🔥 ≥' + (regionData.hotMinC || 60) + '°C  ·  ❄ ≤' + (regionData.coldMaxC || 5) + '°C  ·  🧊 ≤' + (regionData.frozenMaxC || -18) + '°C  ·  ⏱ ' + (regionData.coolingStartC || 60) + '°→' + (regionData.cooling2hC || 21) + '°/2h→' + (regionData.cooling6hC || 5) + '°/6h';
 
@@ -254,24 +252,11 @@
     const regionSel = PCD.$('#haccpRegionSelect', view);
     if (regionSel) {
       regionSel.addEventListener('change', function () {
-        const val = this.value;
-        PCD.store.set('prefs.haccpRegion', val);
-        if (PCD.store.flushSync) { try { PCD.store.flushSync(); } catch (e) {} }
-        if (PCD.cloudPerTable && PCD.cloudPerTable.queueUpsert && PCD.store._read) {
-          try {
-            PCD.cloudPerTable.queueUpsert('user_prefs', 'user_prefs', null, {
-              active_workspace_id: PCD.store._read('activeWorkspaceId'),
-              data: {
-                prefs: PCD.store._read('prefs') || {},
-                plan: PCD.store._read('plan') || 'free',
-                onboarding: PCD.store._read('onboarding') || {},
-                costHistory: PCD.store._read('costHistory') || [],
-              },
-            });
-          } catch (e) { /* non-fatal */ }
-          if (PCD.cloudPerTable.flushNow) {
-            try { PCD.cloudPerTable.flushNow(); } catch (e) {}
-          }
+        // v2.9.38 — Single source of truth: PCD.haccp.setRegion handles
+        // state set + LS write + flushSync + cloud upsert + flushNow.
+        // LS fallback guarantees value survives any reload race.
+        if (PCD.haccp && PCD.haccp.setRegion) {
+          PCD.haccp.setRegion(this.value);
         }
         PCD.toast.success(t('saved'));
         render(view);
