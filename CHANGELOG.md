@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.9.40 · 2026-05-19
+**Mevcut sürüm:** v2.9.42 · 2026-05-19
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -16,6 +16,56 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH (kapatılabilir inl
 - **Round 3 (v2.9.7-9):** discover + account + team ✅
 - **Round 4 (v2.9.10-12):** sales + whatif + menu_matrix ✅
 - **Round 5 (v2.9.13):** haccp hub ✅ — **NAKED→RICH sweep tamamlandı**
+
+### v2.9.42 — Kitchen Whiteboard cloud sync (workspace-scoped) · 2026-05-19
+v2.9.40+'da LS-only başlayan Whiteboard tool şimdi cloud sync: çoklu cihaz + workspace-scoped (her restoran kendi kanvas listesi). Operatör isteği: "şef özel tasarımı başka restoran için tekrar kullanabilir, sadece içindeki yemek bilgilerini değiştirerek".
+
+**Yeni Supabase tablosu (buffets/mise_plans/team pattern'i ile birebir):**
+- `whiteboards` (workspace-scoped, isArray)
+- id text PK, user_id uuid, workspace_id text, data jsonb, created_at, updated_at, deleted_at
+- 4 RLS policy (select/insert/update/delete) — `auth.uid() = user_id`
+- updated_at trigger (`pcd_set_updated_at`)
+- Realtime publication
+- REPLICA IDENTITY FULL (DELETE event payload için)
+- Cascade triggers güncellendi: `cascade_soft_delete_workspace_data` + `cascade_restore_workspace_data` fonksiyonları whiteboards'i de cascade'liyor (21 → 22 ws-bound tablo)
+
+**Migration:** `migrations/v2.9.42-whiteboards-cloud-sync.sql` — operatör Supabase Dashboard SQL Editor'da çalıştırır.
+
+**Frontend wire (7 dosya değişti):**
+- `app/js/core/cloud-pertable.js` — `WORKSPACE_TABLES` mapping: `whiteboards: { stateKey: 'whiteboards', wsScoped: true, isArray: true }`
+- `app/js/core/cloud.js` — drift detection wsTables listesine 'whiteboards' eklendi (ghost-workspace audit)
+- `app/js/core/cloud-realtime.js` — applyChange switch + WS_BOUND_TABLES + TABLES subscribe listesine 'whiteboards' eklendi
+- `app/js/tools/whiteboard.js` — LS-only state → store.js + cloud sync (`queueArraySync` ile push). LS migration: eski `pcd_whiteboard_canvases_v2` ve `pcd_whiteboard_v1` ilk boot'ta workspace cloud'a aktarılır. Active canvas id `prefs.whiteboardActiveId` (cloud-synced user_prefs)
+- Soft-delete tombstone pattern: canvas Delete'lendiğinde `_deletedAt: nowIso()` set, queueArraySync DELETE upsert üretir, realtime ile diğer cihazlara cascade
+- `supabase/functions/backup-to-r2/index.ts` — BACKUP_TABLES'a 'whiteboards' eklendi (nightly R2 archive)
+- `app/js/core/config.js` — APP_VERSION 2.9.41 → 2.9.42
+
+**Operatör manuel iş:**
+1. Migration: Supabase Dashboard → SQL Editor → `migrations/v2.9.42-whiteboards-cloud-sync.sql` → Run
+2. Edge function re-deploy: `supabase functions deploy backup-to-r2` (BACKUP_TABLES güncellendi)
+3. Push frontend → Cloudflare deploy
+
+**Test akışı:**
+1. Push + migration sonrası whiteboard'a gir → mevcut LS canvas'ları workspace'in cloud'una aktarılır
+2. İkinci cihazda aynı kullanıcı ile login → workspace seç → aynı whiteboard'lar görünür
+3. Bir cihazda canvas oluştur → 1-2 sn içinde diğer cihazda realtime ile gelir
+4. Workspace switch → o ws'in kendi whiteboard listesi (operatör use case: restoran A vs restoran B)
+5. Trash'ten workspace restore → canvas'lar cascade ile geri gelir
+
+### v2.9.41 — Whiteboard cell merge (rowspan/colspan) · 2026-05-19
+v2.9.40 push edildi, devam: Whiteboard'a operatörün ilk spec'inde olan "hücre boyutu özelleştirilebilir" özelliği eklendi. Sağ-tık menüsünde **row span + col span sayı input'ları** + Reset butonu. Hücre 2×3 yapılınca komşu 5 hücreyi kaplar (içeriği korunur ama görüntüde kapanır), unmerge edilince geri gelir.
+
+**Değişiklik (whiteboard.js):**
+- Cell state: `rowSpan` ve `colSpan` field'ları (default 1)
+- Live preview render: occupied position map pre-compute (spanning cell'in kapladığı koordinatlar); occupied cell'ler render atlanır; spanning cell'e `grid-row: r+1 / span rs; grid-column: c+1 / span cs;` inline style
+- Print template: aynı occupied skip + span pattern (live preview ile birebir)
+- Sağ-tık menüsü genişledi: renk + font size + align + **merge (row × col)** + Reset
+- Span input'lar 1..10 clamp; grid bounds dışına taşma engellendi
+- Change event: render(view) full re-render (komşu hücreler reflow olur)
+
+**i18n:** 2 yeni key (whiteboard_cell_merge / whiteboard_cell_unmerge), EN + TR.
+
+**Test:** Whiteboard → grid 4×6 → bir hücreye sağ tık → "Merge (span)" alanında ↓ 2, → 3 yaz → hücre 2×3 olur, 5 komşu cell saklanır → Reset → tek hücreye döner. Print PDF aynı merge'i gösterir.
 
 ### v2.9.40 — HACCP Forms toplu elden geçirme + Kitchen Cards 3 alt-iş · 2026-05-19
 Tek pakette iki bağımsız iş kümesi (operatör: "tek seferde push").

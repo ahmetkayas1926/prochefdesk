@@ -54,6 +54,8 @@
     buffets:              { stateKey: 'buffets',              wsScoped: true, isArray: true },
     mise_plans:           { stateKey: 'misePlans',            wsScoped: true, isArray: true },
     team:                 { stateKey: 'team',                 wsScoped: true, isArray: true },
+    // v2.9.42 — Kitchen Whiteboard cloud sync
+    whiteboards:          { stateKey: 'whiteboards',          wsScoped: true, isArray: true },
   };
 
   // Pending changes queue. Her item: { table, op, id, wsId?, data?, updated_at? }

@@ -461,6 +461,8 @@ window.PCD.i18n.register('en', {
   whiteboard_delete_canvas_confirm_text: "This canvas will be permanently deleted from this browser. Other saved canvases remain.",
   whiteboard_cell_font_size: "Font size",
   whiteboard_cell_align: "Text align",
+  whiteboard_cell_merge: "Merge (span)",
+  whiteboard_cell_unmerge: "Reset",
   photo_wait_upload: "Photo uploading… save will continue once finished",
   haccp_region: "HACCP region",
   haccp_region_desc: "Sets food safety thresholds (hot/cold/cooling) on HACCP forms per your jurisdiction.",

@@ -92,6 +92,8 @@
         case 'buffets': return applyToArrayWsTable('buffets', eventType, newRow, oldRow);
         case 'mise_plans': return applyToArrayWsTable('misePlans', eventType, newRow, oldRow);
         case 'team': return applyToArrayWsTable('team', eventType, newRow, oldRow);
+        // v2.9.42 — Whiteboard cloud sync
+        case 'whiteboards': return applyToArrayWsTable('whiteboards', eventType, newRow, oldRow);
         // v2.6.81 — workspace silindi → diğer cihazlarda lokal cascade wipe
         case 'workspace_tombstones': return applyToTombstones(eventType, newRow, oldRow);
       }
@@ -186,7 +188,9 @@
     // v2.8.44 — Workspace cascade wipe için yeni tablolar
     'haccpReceiving','haccpHolding',
     // v2.9.17 — Buffet + Mise + Team workspace cascade wipe
-    'buffets','misePlans','team'
+    'buffets','misePlans','team',
+    // v2.9.42 — Whiteboard workspace cascade wipe
+    'whiteboards'
   ];
   function applyToTombstones(eventType, newRow, oldRow) {
     const row = newRow || oldRow;
@@ -418,6 +422,8 @@
       'haccp_receiving', 'haccp_holding',
       // v2.9.17 — Buffet + Mise + Team realtime (array tablolar)
       'buffets', 'mise_plans', 'team',
+      // v2.9.42 — Whiteboard realtime
+      'whiteboards',
       // v2.6.81 — workspace_tombstones (cross-device cascade wipe trigger)
       'workspace_tombstones',
     ];

@@ -219,42 +219,113 @@
     };
   }
 
+  // v2.9.42 — Cloud sync: state.whiteboards = { wsId: [canvas, ...] }
+  // (buffets/mise/team pattern, soft-delete tombstone). Eski LS v1/v2
+  // verisi ilk boot'ta workspace'e migrate edilir.
+  function activeWsId() {
+    return (PCD.store && PCD.store.getActiveWorkspaceId && PCD.store.getActiveWorkspaceId()) || 'default';
+  }
+
+  function readAllRaw() {
+    // Tombstone'lar dahil tüm canvas array (soft-delete diff için)
+    const wsId = activeWsId();
+    const root = (PCD.store && PCD.store._read && PCD.store._read('whiteboards')) || {};
+    if (Array.isArray(root)) return root;
+    return root[wsId] || [];
+  }
+
+  function readAllVisible() {
+    return readAllRaw().filter(function (c) { return !c._deletedAt; });
+  }
+
+  function writeAll(arr) {
+    const wsId = activeWsId();
+    const root = (PCD.store && PCD.store._read && PCD.store._read('whiteboards')) || {};
+    const next = Array.isArray(root) ? {} : Object.assign({}, root);
+    const oldArr = Array.isArray(root) ? root : (root[wsId] || []);
+    next[wsId] = arr;
+    if (PCD.store && PCD.store.set) PCD.store.set('whiteboards', next);
+    // Cloud sync (waste/buffets pattern)
+    if (PCD.cloudPerTable && PCD.cloudPerTable.queueArraySync) {
+      try { PCD.cloudPerTable.queueArraySync('whiteboards', wsId, oldArr, arr); } catch (e) {}
+    }
+  }
+
+  function getActiveId() {
+    return (PCD.store && PCD.store.get && PCD.store.get('prefs.whiteboardActiveId')) || null;
+  }
+  function setActiveId(id) {
+    if (PCD.store && PCD.store.set) PCD.store.set('prefs.whiteboardActiveId', id);
+  }
+
   function loadStore() {
-    // v2.9.40 — Yeni multi-canvas yapısı + eski single-canvas migration
+    // Migration: eski LS keys → cloud-backed state
+    migrateLegacyLS();
+
+    let canvases = readAllVisible();
+    if (canvases.length === 0) {
+      // Hiç canvas yok — varsayılan oluştur
+      const initial = defaultCanvas('My Whiteboard');
+      writeAll([initial]);
+      setActiveId(initial.id);
+      canvases = [initial];
+    }
+    let activeId = getActiveId();
+    // Active id mevcut canvas listesinde değilse ilkini seç
+    if (!canvases.some(function (c) { return c.id === activeId; })) {
+      activeId = canvases[0].id;
+      setActiveId(activeId);
+    }
+    return { activeId: activeId, canvases: canvases };
+  }
+
+  function saveStore(store) {
+    // store yapısı {activeId, canvases:[]}: aktif id'yi pref'e, kanvasları cloud'a yaz.
+    setActiveId(store.activeId);
+    // Soft-delete tombstone'larını koru: rawArray'deki silinmiş kayıtlar
+    // varsa yeni write'da onları geri ekle.
+    const raw = readAllRaw();
+    const tombstones = raw.filter(function (c) { return c._deletedAt && !store.canvases.some(function (x) { return x.id === c.id; }); });
+    const merged = (store.canvases || []).concat(tombstones);
+    writeAll(merged);
+  }
+
+  function migrateLegacyLS() {
+    // İlk boot'ta eski LS_KEY veya LS_KEY_OLD varsa cloud'a aktar.
     try {
       const raw = localStorage.getItem(LS_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
         if (parsed && Array.isArray(parsed.canvases) && parsed.canvases.length) {
-          return parsed;
+          // Mevcut active workspace'in canvas listesi boşsa ekle.
+          const existing = readAllVisible();
+          if (existing.length === 0) {
+            writeAll(parsed.canvases);
+            if (parsed.activeId) setActiveId(parsed.activeId);
+          }
+          localStorage.removeItem(LS_KEY);
+          return;
         }
       }
     } catch (e) { /* fall through */ }
-    // Migration: eski v1 state varsa canvases[0] olarak yükle
     try {
       const old = localStorage.getItem(LS_KEY_OLD);
       if (old) {
         const oldState = JSON.parse(old);
         if (oldState && typeof oldState === 'object') {
-          const migrated = Object.assign(defaultCanvas('My Whiteboard'), oldState);
-          migrated.id = uid();
-          migrated.name = oldState.title || 'My Whiteboard';
-          migrated.updatedAt = nowIso();
-          const store = { activeId: migrated.id, canvases: [migrated] };
-          saveStore(store);
-          // Eski key'i temizle
-          try { localStorage.removeItem(LS_KEY_OLD); } catch (e) {}
-          return store;
+          const existing = readAllVisible();
+          if (existing.length === 0) {
+            const migrated = Object.assign(defaultCanvas('My Whiteboard'), oldState);
+            migrated.id = uid();
+            migrated.name = oldState.title || 'My Whiteboard';
+            migrated.updatedAt = nowIso();
+            writeAll([migrated]);
+            setActiveId(migrated.id);
+          }
+          localStorage.removeItem(LS_KEY_OLD);
         }
       }
-    } catch (e) { /* migration failed, default */ }
-    // Default: tek boş canvas
-    const initial = defaultCanvas('My Whiteboard');
-    return { activeId: initial.id, canvases: [initial] };
-  }
-
-  function saveStore(store) {
-    try { localStorage.setItem(LS_KEY, JSON.stringify(store)); } catch (e) {}
+    } catch (e) { /* migration failed, ignore */ }
   }
 
   function getActive(store) {
@@ -292,6 +363,23 @@
     // Cell lookup map for quick access
     const cellMap = {};
     (s.cells || []).forEach(function (c) { cellMap[c.r + ':' + c.c] = c; });
+
+    // v2.9.41 — Cell merge support: pre-compute occupied positions covered
+    // by merged cells. Spanning cells claim grid coordinates beyond their
+    // anchor (r,c); we skip rendering an empty <div> at those positions
+    // because the spanning cell visually covers them.
+    const occupied = {};
+    (s.cells || []).forEach(function (cell) {
+      const rs = Math.max(1, parseInt(cell.rowSpan, 10) || 1);
+      const cs = Math.max(1, parseInt(cell.colSpan, 10) || 1);
+      if (rs === 1 && cs === 1) return;
+      for (let dr = 0; dr < rs; dr++) {
+        for (let dc = 0; dc < cs; dc++) {
+          if (dr === 0 && dc === 0) continue;  // anchor itself, not occupied
+          occupied[(cell.r + dr) + ':' + (cell.c + dc)] = true;
+        }
+      }
+    });
 
     const paperButtons = ['A4', 'A3'].map(function (p) {
       return '<button type="button" class="btn btn-secondary btn-sm' + (s.paper === p ? ' active' : '') + '" data-paper="' + p + '" style="flex:1;">' + p + '</button>';
@@ -376,10 +464,19 @@
 
     for (let r = 0; r < s.rows; r++) {
       for (let c = 0; c < s.cols; c++) {
+        // v2.9.41 — Skip cells covered by a merged neighbor
+        if (occupied[r + ':' + c]) continue;
         const cell = cellMap[r + ':' + c] || {};
         const palette = PALETTE.find(function (p) { return p.id === cell.color; }) || PALETTE[0];
         const fz = FONT_SIZES[cell.fontSize] || FONT_SIZES.md;
         const align = ALIGNS.indexOf(cell.align) >= 0 ? cell.align : 'start';
+        const rs = Math.max(1, parseInt(cell.rowSpan, 10) || 1);
+        const cs = Math.max(1, parseInt(cell.colSpan, 10) || 1);
+        // Clamp span to grid bounds
+        const rsClamped = Math.min(rs, s.rows - r);
+        const csClamped = Math.min(cs, s.cols - c);
+        const spanStyle = (rsClamped > 1 ? 'grid-row:' + (r + 1) + ' / span ' + rsClamped + ';' : '') +
+                          (csClamped > 1 ? 'grid-column:' + (c + 1) + ' / span ' + csClamped + ';' : '');
         gridHtml +=
           '<div class="wb-cell" data-r="' + r + '" data-c="' + c + '" contenteditable="true" style="' +
             'background:' + palette.bg + ';color:' + palette.text + ';' +
@@ -388,7 +485,8 @@
             'word-break:break-word;overflow-wrap:break-word;' +
             'text-align:' + align + ';' +
             'display:flex;flex-direction:column;justify-content:center;' +
-          '" data-color="' + palette.id + '" data-font="' + (cell.fontSize || 'md') + '" data-align="' + align + '">' + PCD.escapeHtml(cell.text || '') + '</div>';
+            spanStyle +
+          '" data-color="' + palette.id + '" data-font="' + (cell.fontSize || 'md') + '" data-align="' + align + '" data-rs="' + rsClamped + '" data-cs="' + csClamped + '">' + PCD.escapeHtml(cell.text || '') + '</div>';
       }
     }
     gridHtml += '</div></div></div>';
@@ -412,10 +510,19 @@
     paletteHtml += '</div>';
     // Text align selector
     paletteHtml += '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;margin-bottom:6px;">' + PCD.escapeHtml(t('whiteboard_cell_align') || 'Text align') + '</div>';
-    paletteHtml += '<div style="display:flex;gap:4px;">';
+    paletteHtml += '<div style="display:flex;gap:4px;margin-bottom:10px;">';
     ALIGNS.forEach(function (a) {
       paletteHtml += '<button type="button" data-set-align="' + a + '" style="flex:1;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface-1);color:var(--text-1);font-size:14px;cursor:pointer;">' + ALIGN_LABELS[a] + '</button>';
     });
+    paletteHtml += '</div>';
+    // v2.9.41 — Cell merge: row span / col span number inputs
+    paletteHtml += '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;margin-bottom:6px;">' + PCD.escapeHtml(t('whiteboard_cell_merge') || 'Merge (span)') + '</div>';
+    paletteHtml += '<div style="display:flex;gap:6px;align-items:center;">';
+    paletteHtml += '<label style="font-size:11px;color:var(--text-3);">↓</label>';
+    paletteHtml += '<input id="wbRowSpan" type="number" min="1" max="10" value="1" style="width:50px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface-1);color:var(--text-1);font-size:13px;text-align:center;">';
+    paletteHtml += '<label style="font-size:11px;color:var(--text-3);margin-left:6px;">→</label>';
+    paletteHtml += '<input id="wbColSpan" type="number" min="1" max="10" value="1" style="width:50px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface-1);color:var(--text-1);font-size:13px;text-align:center;">';
+    paletteHtml += '<button type="button" id="wbResetSpan" style="padding:4px 8px;border:1px solid var(--border);border-radius:4px;background:var(--surface-1);color:var(--text-1);font-size:11px;cursor:pointer;">' + PCD.escapeHtml(t('whiteboard_cell_unmerge') || 'Reset') + '</button>';
     paletteHtml += '</div></div>';
 
     view.innerHTML = buildHtml + gridHtml + paletteHtml;
@@ -466,12 +573,24 @@
           cancelText: t('cancel') || 'Cancel',
         }).then(function (ok) {
           if (!ok) return;
+          // v2.9.42 — Soft-delete (tombstone). Raw array içinde _deletedAt
+          // bırakılır → queueArraySync diff DELETE değil UPDATE upsert üretir,
+          // realtime ile diğer cihazlara cascade. Sonra visible listede yok.
+          const all = readAllRaw().slice();
           const fresh = loadStore();
-          const idx = fresh.canvases.findIndex(function (c) { return c.id === fresh.activeId; });
-          if (idx >= 0) fresh.canvases.splice(idx, 1);
-          if (fresh.canvases.length === 0) fresh.canvases.push(defaultCanvas('My Whiteboard'));
-          fresh.activeId = fresh.canvases[0].id;
-          saveStore(fresh);
+          const idx = all.findIndex(function (c) { return c.id === fresh.activeId; });
+          if (idx >= 0) {
+            all[idx] = Object.assign({}, all[idx], { _deletedAt: nowIso() });
+          }
+          writeAll(all);
+          const remaining = readAllVisible();
+          if (remaining.length === 0) {
+            const nc = defaultCanvas('My Whiteboard');
+            writeAll(all.concat([nc]));
+            setActiveId(nc.id);
+          } else {
+            setActiveId(remaining[0].id);
+          }
           render(view);
         });
       });
@@ -528,6 +647,11 @@
         palette.style.top = e.clientY + 'px';
         palette.dataset.targetR = this.getAttribute('data-r');
         palette.dataset.targetC = this.getAttribute('data-c');
+        // v2.9.41 — Sync span inputs with current cell
+        const rsEl = palette.querySelector('#wbRowSpan');
+        const csEl = palette.querySelector('#wbColSpan');
+        if (rsEl) rsEl.value = this.getAttribute('data-rs') || '1';
+        if (csEl) csEl.value = this.getAttribute('data-cs') || '1';
       });
     });
 
@@ -577,6 +701,44 @@
     PCD.on(view, 'click', '[data-set-align]', function () {
       applyCellProp('align', this.getAttribute('data-set-align'));
     });
+
+    // v2.9.41 — Span apply (row + col together so user can set both, then re-render)
+    function applySpan(rowSpan, colSpan) {
+      const palette = view.querySelector('#wbPalette');
+      if (!palette) return;
+      const r = parseInt(palette.dataset.targetR, 10);
+      const c = parseInt(palette.dataset.targetC, 10);
+      const target = view.querySelector('.wb-cell[data-r="' + r + '"][data-c="' + c + '"]');
+      const idx = (s.cells || []).findIndex(function (x) { return x.r === r && x.c === c; });
+      if (idx >= 0) {
+        s.cells[idx].rowSpan = rowSpan;
+        s.cells[idx].colSpan = colSpan;
+      } else {
+        s.cells = s.cells || [];
+        s.cells.push({ r: r, c: c, text: (target ? target.innerText : ''), rowSpan: rowSpan, colSpan: colSpan });
+      }
+      persist();
+      // Full re-render so other cells (occupied or not) reflow correctly
+      palette.style.display = 'none';
+      render(view);
+    }
+    const rsInput = view.querySelector('#wbRowSpan');
+    const csInput = view.querySelector('#wbColSpan');
+    if (rsInput && csInput) {
+      const onSpanChange = function () {
+        const rs = Math.max(1, Math.min(10, parseInt(rsInput.value, 10) || 1));
+        const cs = Math.max(1, Math.min(10, parseInt(csInput.value, 10) || 1));
+        applySpan(rs, cs);
+      };
+      rsInput.addEventListener('change', onSpanChange);
+      csInput.addEventListener('change', onSpanChange);
+    }
+    const resetBtn = view.querySelector('#wbResetSpan');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', function () {
+        applySpan(1, 1);
+      });
+    }
 
     // Close palette on outside click
     document.addEventListener('click', function (e) {
@@ -678,16 +840,34 @@
     const cellMap = {};
     (s.cells || []).forEach(function (c) { cellMap[c.r + ':' + c.c] = c; });
 
+    // v2.9.41 — Cell merge: print path mirrors live preview occupied skip + span.
+    const occupiedPrint = {};
+    (s.cells || []).forEach(function (cell) {
+      const rs = Math.max(1, parseInt(cell.rowSpan, 10) || 1);
+      const cs = Math.max(1, parseInt(cell.colSpan, 10) || 1);
+      if (rs === 1 && cs === 1) return;
+      for (let dr = 0; dr < rs; dr++) {
+        for (let dc = 0; dc < cs; dc++) {
+          if (dr === 0 && dc === 0) continue;
+          occupiedPrint[(cell.r + dr) + ':' + (cell.c + dc)] = true;
+        }
+      }
+    });
+
     let gridHtml = '';
     for (let r = 0; r < s.rows; r++) {
       for (let c = 0; c < s.cols; c++) {
+        if (occupiedPrint[r + ':' + c]) continue;
         const cell = cellMap[r + ':' + c] || {};
         const palette = PALETTE.find(function (p) { return p.id === cell.color; }) || PALETTE[0];
-        // v2.9.40 — Print respects per-cell font-size + text-align
         const fz = FONT_SIZES[cell.fontSize] || FONT_SIZES.md;
         const align = ALIGNS.indexOf(cell.align) >= 0 ? cell.align : 'start';
+        const rs = Math.max(1, Math.min(parseInt(cell.rowSpan, 10) || 1, s.rows - r));
+        const cs = Math.max(1, Math.min(parseInt(cell.colSpan, 10) || 1, s.cols - c));
+        const spanStyle = (rs > 1 ? 'grid-row:' + (r + 1) + ' / span ' + rs + ';' : '') +
+                          (cs > 1 ? 'grid-column:' + (c + 1) + ' / span ' + cs + ';' : '');
         gridHtml +=
-          '<div style="background:' + palette.bg + ';color:' + palette.text + ';padding:6px 8px;font-size:' + fz.px + 'px;line-height:1.3;overflow:hidden;border-radius:3px;word-break:break-word;overflow-wrap:break-word;text-align:' + align + ';display:flex;flex-direction:column;justify-content:center;">' +
+          '<div style="background:' + palette.bg + ';color:' + palette.text + ';padding:6px 8px;font-size:' + fz.px + 'px;line-height:1.3;overflow:hidden;border-radius:3px;word-break:break-word;overflow-wrap:break-word;text-align:' + align + ';display:flex;flex-direction:column;justify-content:center;' + spanStyle + '">' +
             PCD.escapeHtml(cell.text || '') +
           '</div>';
       }

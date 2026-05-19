@@ -90,6 +90,8 @@ const BACKUP_TABLES = [
   // Discover Phase 2 like data; not catastrophic if lost but should be
   // in nightly archive for completeness.
   'recipe_likes',
+  // v2.9.42 — Kitchen Whiteboard cloud sync
+  'whiteboards',
 ]
 
 Deno.serve(async (req) => {

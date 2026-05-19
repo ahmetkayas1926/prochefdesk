@@ -461,6 +461,8 @@ window.PCD.i18n.register('tr', {
   whiteboard_delete_canvas_confirm_text: "Bu tahta bu tarayıcıdan kalıcı olarak silinecek. Diğer kayıtlı tahtalar etkilenmez.",
   whiteboard_cell_font_size: "Yazı boyutu",
   whiteboard_cell_align: "Hizalama",
+  whiteboard_cell_merge: "Birleştir (span)",
+  whiteboard_cell_unmerge: "Sıfırla",
   photo_wait_upload: "Foto yükleniyor… kayıt foto bitince devam edecek",
   haccp_region: "HACCP bölgesi",
   haccp_region_desc: "HACCP formlarındaki sıcak/soğuk/soğutma eşik değerlerini ülkenizin gıda güvenliği standardına göre ayarlar.",
