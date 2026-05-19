@@ -18,7 +18,8 @@
     const loc = prefs.locale || 'en';
     const theme = prefs.theme || 'light';
     const haptic = prefs.haptic !== false;
-    const haccpRegion = prefs.haccpRegion || (window.PCD_CONFIG && window.PCD_CONFIG.HACCP_REGION_DEFAULT) || 'international';
+    // v2.9.37 — HACCP region moved out of Account → into HACCP Hub itself
+    // (chefs find it natively where they use it). Removed from this view.
 
     // v2.9.8 — Closeable inline guide
     const guideHidden = (function () {
@@ -179,7 +180,7 @@
               </div>
             </div>
             <!-- Haptic -->
-            <div class="flex items-center justify-between" style="padding:14px 16px;border-bottom:1px solid var(--border);">
+            <div class="flex items-center justify-between" style="padding:14px 16px;">
               <div style="flex:1;">
                 <div style="font-weight:600;">${t('haptic_feedback')}</div>
                 <div class="text-muted text-sm">${PCD.isMobile() ? '' : '(mobile only)'}</div>
@@ -188,22 +189,6 @@
                 <input type="checkbox" id="prefHaptic" ${haptic ? 'checked' : ''}>
                 <span class="switch-slider"></span>
               </label>
-            </div>
-            <!-- HACCP region (v2.9.35) — choose food safety jurisdiction
-                 so HACCP forms use correct thresholds (FSANZ AU 60°C vs
-                 UK FSA 63°C vs FDA US 57°C etc.). Default International
-                 = strictest, safe for any jurisdiction until user picks. -->
-            <div class="flex items-center justify-between" style="padding:14px 16px;">
-              <div style="flex:1;">
-                <div style="font-weight:600;">${t('haccp_region')}</div>
-                <div class="text-muted text-sm">${t('haccp_region_desc')}</div>
-              </div>
-              <select class="select" id="prefHaccpRegion" style="width:auto;min-height:36px;padding:6px 28px 6px 12px;">
-                ${Object.keys((window.PCD_CONFIG && window.PCD_CONFIG.HACCP_REGIONS) || {}).map(function (key) {
-                  const reg = window.PCD_CONFIG.HACCP_REGIONS[key];
-                  return '<option value="' + key + '"' + (haccpRegion === key ? ' selected' : '') + '>' + PCD.escapeHtml(t(reg.labelKey)) + '</option>';
-                }).join('')}
-              </select>
             </div>
           </div>
         </div>
@@ -427,33 +412,6 @@
     PCD.$('#prefHaptic', view).addEventListener('change', function () {
       PCD.store.set('prefs.haptic', this.checked);
     });
-    const haccpRegionEl = PCD.$('#prefHaccpRegion', view);
-    if (haccpRegionEl) {
-      haccpRegionEl.addEventListener('change', function () {
-        // v2.9.36 — Persist immediately (default debounce loses value on
-        // page-refresh-too-soon) + immediate cloud user_prefs upsert (so
-        // boot-time cloud restore doesn't overwrite with stale data).
-        PCD.store.set('prefs.haccpRegion', this.value);
-        if (PCD.store.flushSync) {
-          try { PCD.store.flushSync(); } catch (e) { /* non-fatal */ }
-        }
-        if (PCD.cloudPerTable && PCD.cloudPerTable.queueUpsert && PCD.store._read) {
-          try {
-            PCD.cloudPerTable.queueUpsert('user_prefs', 'user_prefs', null, {
-              active_workspace_id: PCD.store._read('activeWorkspaceId'),
-              data: {
-                prefs: PCD.store._read('prefs') || {},
-                plan: PCD.store._read('plan') || 'free',
-                onboarding: PCD.store._read('onboarding') || {},
-                costHistory: PCD.store._read('costHistory') || [],
-              },
-            });
-          } catch (e) { /* non-fatal, debounced sync will eventually catch up */ }
-        }
-        PCD.toast.success(t('saved'));
-        render(view);
-      });
-    }
 
     const saveChefBtn = PCD.$('#saveChefProfileBtn', view);
     if (saveChefBtn) saveChefBtn.addEventListener('click', function () {

@@ -549,9 +549,14 @@
       // user_prefs
       state.activeWorkspaceId = (prefsRes.data && prefsRes.data.active_workspace_id) || null;
       const prefsData = (prefsRes.data && prefsRes.data.data) || {};
-      state.prefs = prefsData.prefs || {};
+      // v2.9.37 — Merge instead of overwrite: cloud may not yet have new
+      // pref fields (e.g. haccpRegion added in v2.9.35) due to write race.
+      // Pre-merge guarded local state.prefs survives even if cloud row is
+      // older. New cloud values still win on conflict (Object.assign right
+      // wins). Same merge for onboarding (also dynamic field set).
+      state.prefs = Object.assign({}, state.prefs || {}, prefsData.prefs || {});
       state.plan = prefsData.plan || 'free';
-      state.onboarding = prefsData.onboarding || {};
+      state.onboarding = Object.assign({}, state.onboarding || {}, prefsData.onboarding || {});
       state.costHistory = prefsData.costHistory || [];
 
       // Workspace-scoped tables → { wsId: { id: row.data, ... } }

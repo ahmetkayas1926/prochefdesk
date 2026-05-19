@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.9.36 · 2026-05-19
+**Mevcut sürüm:** v2.9.37 · 2026-05-19
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -16,6 +16,24 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH (kapatılabilir inl
 - **Round 3 (v2.9.7-9):** discover + account + team ✅
 - **Round 4 (v2.9.10-12):** sales + whatif + menu_matrix ✅
 - **Round 5 (v2.9.13):** haccp hub ✅ — **NAKED→RICH sweep tamamlandı**
+
+### v2.9.37 — HACCP region: moved to HACCP Hub + root-cause persist fix · 2026-05-19
+v2.9.36 sonrası operatör test ettiğinde HÂLÂ persist çalışmıyordu: UK seç → "Saved" → F5 → "International" geri geliyor. v2.9.36'da yapılan flushSync + queueUpsert YETMİYORDU çünkü cloud-pertable.js:552 boot pull'unda `state.prefs = prefsData.prefs || {}` ile **tüm local prefs cloud'dan OVERWRITE ediliyordu**. queueUpsert async ve operatörün F5'i hızlı; cloud'a yazılmadan reload → cloud'daki eski prefs (haccpRegion yok) → local'i siliyor.
+
+Operatör ayrıca UI yerini sorguladı: "Profilde değil, HACCP aracının içinde olsa daha mantıklı" — kesinlikle haklı. Chef HACCP'e girer girmez region'u görür/değiştirir, müfettişe direkt gösterir, profilden 5 click derinliğinde aramaz.
+
+**Bu sürümde (root-cause kalıcı düzeltme + UI yer değişikliği):**
+
+**1. Cloud pull merge (kalıcı sync fix):**
+`app/js/core/cloud-pertable.js:552` — `state.prefs = prefsData.prefs || {};` → `state.prefs = Object.assign({}, state.prefs || {}, prefsData.prefs || {});`. Local prefs cloud pull'da silinmez; cloud'daki field'lar local'i override eder ama cloud'da olmayan field'lar (yeni field eklendiğinde race condition) local'den korunur. Aynı pattern `state.onboarding` için de uygulandı (o da dinamik field set).
+
+**2. UI yer değişikliği (Account → HACCP Hub):**
+`account.js`'ten HACCP region dropdown + change handler kaldırıldı (3 yer). `haccp.js` (HACCP Hub) render'ına yeni card eklendi: status hero'nun altında, 4 form cards'ın üstünde. İçerik: başlık + açıklama + dropdown (6 bölge) + monospace chip sırada "🔥 ≥63°C · ❄ ≤5°C · 🧊 ≤-18°C · ⏱ 63°→21°/2h→5°/6h" gibi seçili bölgenin **tüm eşikleri tek bakışta görünür**. Bu chip müfettişe doğrudan kanıt: "İşte hangi standartı kullanıyorum".
+
+**3. Handler 4-katmanlı persist garanti:**
+`haccp.js`'teki yeni change handler: (a) `PCD.store.set('prefs.haccpRegion', val)` in-memory, (b) `flushSync()` IDB/LS immediate yaz, (c) `cloudPerTable.queueUpsert('user_prefs', ...)` cloud queue, (d) `cloudPerTable.flushNow()` network'e push immediate. Cloud merge fix (#1) ile kombine olduğunda, F5'i ne kadar hızlı yapılırsa yapılsın değer kaybolmuyor.
+
+**Test:** HACCP Hub'a gir → status hero altında "HACCP region" card görünmeli. Dropdown'dan UK seç → toast "Saved" + chip "≥63°C · ≤5°C · ≤-18°C" → F5 → seçim KALMALI. Cook & Cool sayfasına gir → subtitle "63°C → 21°C in 2h → 5°C in 6h" → yazdır → PDF tablo başlık + footer 63°C göstermeli.
 
 ### v2.9.36 — HACCP region selector PERSIST + UI sync fix (v2.9.35 silent failure) · 2026-05-19
 v2.9.35 push edildi, dropdown göründü, "Saved" toast çıktı, AMA sayfa yenilenince eski hale dönüyordu + Cook & Cool form'larında etki görünmüyordu. 3 problem teşhis edildi ve düzeltildi:

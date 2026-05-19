@@ -117,6 +117,15 @@
     const allTouched = touchedCount === cards.length;
     const heroColor = allTouched ? '#16a34a' : (touchedCount >= 2 ? '#f59e0b' : '#dc2626');
 
+    // v2.9.37 — HACCP region selector lives here in the Hub, not in Account.
+    // Chefs find it natively where they audit. Reads current selection and
+    // resolves thresholds so the sub-chip shows current numbers.
+    const prefs = PCD.store.get('prefs') || {};
+    const regions = (window.PCD_CONFIG && window.PCD_CONFIG.HACCP_REGIONS) || {};
+    const regionId = prefs.haccpRegion || (window.PCD_CONFIG && window.PCD_CONFIG.HACCP_REGION_DEFAULT) || 'international';
+    const regionData = regions[regionId] || regions.international || {};
+    const regionChip = '🔥 ≥' + (regionData.hotMinC || 60) + '°C  ·  ❄ ≤' + (regionData.coldMaxC || 5) + '°C  ·  🧊 ≤' + (regionData.frozenMaxC || -18) + '°C  ·  ⏱ ' + (regionData.coolingStartC || 60) + '°→' + (regionData.cooling2hC || 21) + '°/2h→' + (regionData.cooling6hC || 5) + '°/6h';
+
     // v2.9.13 — Closeable inline guide
     const guideHidden = (function () {
       try { return localStorage.getItem('pcd_haccp_guide_hidden') === '1'; } catch (e) { return false; }
@@ -186,6 +195,24 @@
         </div>
       </div>
 
+      <div class="card mb-3" style="padding:14px 18px;border:1px solid var(--border);">
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:220px;">
+            <div style="font-weight:700;font-size:14px;color:var(--text-1);margin-bottom:4px;">${PCD.escapeHtml(t('haccp_region') || 'HACCP region')}</div>
+            <div class="text-muted" style="font-size:12px;line-height:1.45;">${PCD.escapeHtml(t('haccp_region_desc') || 'Sets food safety thresholds (hot/cold/cooling) on HACCP forms per your jurisdiction.')}</div>
+          </div>
+          <select class="select" id="haccpRegionSelect" style="min-width:240px;min-height:38px;padding:6px 28px 6px 12px;font-size:13px;">
+            ${Object.keys(regions).map(function (key) {
+              const reg = regions[key];
+              return '<option value="' + key + '"' + (regionId === key ? ' selected' : '') + '>' + PCD.escapeHtml(t(reg.labelKey)) + '</option>';
+            }).join('')}
+          </select>
+        </div>
+        <div style="margin-top:10px;padding:8px 12px;background:var(--surface-2);border-radius:6px;font-size:12px;color:var(--text-2);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:0.01em;">
+          ${regionChip}
+        </div>
+      </div>
+
       <div id="haccpCards" class="flex flex-col gap-2"></div>
 
       <div class="card mb-3" style="padding:14px 18px;background:var(--surface-2);margin-top:16px;border:1px dashed var(--border-strong);">
@@ -217,6 +244,39 @@
       const r = this.getAttribute('data-haccp-route');
       if (r && PCD.router && PCD.router.go) PCD.router.go(r);
     });
+
+    // v2.9.37 — HACCP region change handler. Four-layer persist guarantee:
+    // (1) in-memory state set, (2) flushSync to LS/IDB, (3) cloud queue
+    // upsert into user_prefs, (4) flushNow to force network write before
+    // the user can reload. cloud-pertable.js pull was also patched to
+    // MERGE prefs instead of overwrite, so any race condition where the
+    // cloud row is stale won't wipe the new field.
+    const regionSel = PCD.$('#haccpRegionSelect', view);
+    if (regionSel) {
+      regionSel.addEventListener('change', function () {
+        const val = this.value;
+        PCD.store.set('prefs.haccpRegion', val);
+        if (PCD.store.flushSync) { try { PCD.store.flushSync(); } catch (e) {} }
+        if (PCD.cloudPerTable && PCD.cloudPerTable.queueUpsert && PCD.store._read) {
+          try {
+            PCD.cloudPerTable.queueUpsert('user_prefs', 'user_prefs', null, {
+              active_workspace_id: PCD.store._read('activeWorkspaceId'),
+              data: {
+                prefs: PCD.store._read('prefs') || {},
+                plan: PCD.store._read('plan') || 'free',
+                onboarding: PCD.store._read('onboarding') || {},
+                costHistory: PCD.store._read('costHistory') || [],
+              },
+            });
+          } catch (e) { /* non-fatal */ }
+          if (PCD.cloudPerTable.flushNow) {
+            try { PCD.cloudPerTable.flushNow(); } catch (e) {}
+          }
+        }
+        PCD.toast.success(t('saved'));
+        render(view);
+      });
+    }
   }
 
   // -------- EXPORT --------
