@@ -459,22 +459,23 @@
 
     let html =
       '<style>' +
-        // v2.9.31 — Real-world handwriting fit: row height 14px → 22px,
-        // font 7-8px → 10-12px. The old v2.8.51 layout left ~50mm of empty
-        // space at the bottom of A4 landscape but row cells were too thin
-        // to write in by hand. New layout uses that empty space: 31 rows ×
-        // ~5.8mm = 180mm, fits A4 landscape with comfortable margin.
-        // Column widths rebalanced: DAY narrower (3 digits max), FOOD wider
-        // (dish names), °C/TIME slightly narrower (2-3 char inputs).
-        'body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#000;margin:0;padding:0;}' +
-        '.h-head{margin-bottom:5px;border-bottom:1.5px solid #16a34a;padding-bottom:4px;display:flex;justify-content:space-between;align-items:flex-end;}' +
+        // v2.9.32 — Single-page guarantee (v2.9.31 pilot overflowed to 3 pages).
+        // Pattern adapted from kitchen_cards.js: body is sized to A4 landscape
+        // with flex column layout, so PCD.print's auto-injected footer becomes
+        // a flex sibling and stays on the same page instead of overflowing.
+        // Row height tuned to 19px (~5mm) — comfortable for handwriting but
+        // total table height stays within A4 landscape usable area.
+        'body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#000;margin:0;padding:0;' +
+          'width:297mm;height:210mm;display:flex;flex-direction:column;}' +
+        '.h-sheet{flex:1 1 auto;min-height:0;padding:4mm;display:flex;flex-direction:column;}' +
+        '.h-head{margin-bottom:4px;border-bottom:1.5px solid #16a34a;padding-bottom:3px;display:flex;justify-content:space-between;align-items:flex-end;flex:0 0 auto;}' +
         '.h-head h1{margin:0;font-size:14px;}' +
         '.h-head .sub{font-size:10px;color:#555;margin-top:2px;}' +
         '.h-head .right{font-size:10px;color:#555;text-align:end;}' +
-        'table.h-grid{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed;page-break-inside:avoid;}' +
-        'table.h-grid th, table.h-grid td{border:1px solid #999;padding:3px 4px;vertical-align:middle;line-height:1.3;}' +
+        'table.h-grid{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed;flex:0 0 auto;}' +
+        'table.h-grid th, table.h-grid td{border:1px solid #999;padding:2px 4px;vertical-align:middle;line-height:1.25;}' +
         'table.h-grid th{background:#f3f4f6;font-weight:700;font-size:9px;text-align:center;text-transform:uppercase;letter-spacing:0.03em;}' +
-        'table.h-grid tr{height:22px;page-break-inside:avoid;}' +
+        'table.h-grid tr{height:19px;page-break-inside:avoid;}' +
         'table.h-grid td.day{text-align:center;width:3%;font-weight:700;color:#444;}' +
         'table.h-grid td.food{width:25%;font-weight:600;}' +
         'table.h-grid td.qty{width:8%;text-align:center;}' +
@@ -483,13 +484,17 @@
         'table.h-grid td.note{width:16%;font-size:10px;}' +
         'table.h-grid td.chef{width:9%;text-align:center;}' +
         'table.h-grid td.fail{background:#fee2e2;color:#991b1b;font-weight:700;}' +
-        '.h-foot{margin-top:5px;display:flex;justify-content:space-between;font-size:9px;}' +
+        '.h-foot{margin-top:4px;display:flex;justify-content:space-between;font-size:9px;flex:0 0 auto;}' +
         '.h-foot .legend{color:#666;}' +
-        // v2.8.54 — Eski .h-brand custom footer ve .pcd-print-footer{display:none}
-      // kaldırıldı; artık PCD.print()'in standart tıklanabilir footer'ı
-      // (utils.js) kullanılıyor. Tutarlı görünüm + tüm print yerlerinde aynı.
-        '@page{size:A4 landscape;margin:4mm;}' +
+        // v2.9.32 — PCD.print auto-injects a footer (.pcd-print-footer) at the
+        // bottom of body. Without this compact override its default margins
+        // push content past A4 landscape and force a 3rd page.
+        '.pcd-print-footer{margin:0 !important;padding:1mm 4mm !important;' +
+          'border-top:none !important;flex:0 0 auto;' +
+          'font-size:7pt !important;line-height:1.2 !important;}' +
+        '@page{size:A4 landscape;margin:0;}' +
       '</style>' +
+      '<div class="h-sheet">' +
       '<div class="h-head">' +
         '<div>' +
           '<h1>HACCP · ' + PCD.escapeHtml(t('hcc_title') || 'Cook & Cool Log') + '</h1>' +
@@ -555,7 +560,7 @@
         '</div>' +
         '<div><strong>' + PCD.escapeHtml(t('reviewed_by') || 'Kontrol eden') + ':</strong> ____________________</div>' +
       '</div>' +
-      '';  // v2.8.54: footer artık PCD.print() tarafından otomatik enjekte edilir
+      '</div>';  // /.h-sheet (v2.9.32) — PCD.print injects footer right after as flex sibling
 
     PCD.print(html, 'HACCP Cook & Cool · ' + label);
   }

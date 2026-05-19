@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.9.31 · 2026-05-19
+**Mevcut sürüm:** v2.9.32 · 2026-05-19
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -16,6 +16,20 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH (kapatılabilir inl
 - **Round 3 (v2.9.7-9):** discover + account + team ✅
 - **Round 4 (v2.9.10-12):** sales + whatif + menu_matrix ✅
 - **Round 5 (v2.9.13):** haccp hub ✅ — **NAKED→RICH sweep tamamlandı**
+
+### v2.9.32 — HACCP Cook & Cool print: single-page guarantee (PILOT fix) · 2026-05-19
+v2.9.31 pilot test sonucu: row büyütme iyiydi ama print 3 sayfaya bölündü (header alone p1, tablo p2, ProChefDesk footer p3). Kök sebep: tablo `page-break-inside: avoid` + toplam yükseklik A4 landscape'i ~10mm aştı + PCD.print otomatik footer'ı standart margin'li enjekte ediyordu.
+
+**Bu sürümde:**
+- Body fixed A4 landscape (297mm × 210mm) + flex column layout (kitchen_cards.js v2.8.18 pattern'i). PCD.print injected footer flex sibling olarak aynı sayfada kalır.
+- `.h-sheet` flex container içinde h-head + table + h-foot — toplam içerik flex:1, padding 4mm sayfa kenarından.
+- `.pcd-print-footer` compact override: margin 0, padding 1mm × 4mm, font 7pt (kitchen_cards pattern).
+- Row height 22px → 19px (~5mm). Hâlâ rahat kalemle yazılabilir.
+- Cell padding 3×4 → 2×4. Line-height 1.3 → 1.25.
+- `table.h-grid` `page-break-inside: avoid` kaldırıldı (artık tablo zaten tek sayfaya sığacak şekilde boyutlu).
+- `@page margin: 4mm` → `0` (body sized to full A4 landscape).
+
+**Test:** Operatör tekrar Cook & Cool boş yazdırıp **tek sayfa** çıktığını + row yüksekliği hâlâ yeterli olduğunu doğrulayacak.
 
 ### v2.9.31 — HACCP Cook & Cool print: real-world handwriting fit (PILOT) · 2026-05-19
 Operatör raporu: HACCP aylık print template'inde A4 landscape sayfasının altında ~50mm boş alan vardı ama row hücreleri (14px = 3.7mm) kalemle yazmaya çok dardı. v2.8.51'de "tek sayfaya sığsın" diye sıkıştırılmıştı, fakat aslında geniş alan kullanılmıyordu. Mantıksız sıkıştırma.
