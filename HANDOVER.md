@@ -41,9 +41,11 @@ Yeni Claude'un bilmesi gereken: **bu hâlâ tek kullanıcılı bir ürün** — 
 
 ### 2.2 Bekleyen / bilinen test gerekleri
 
-- **v2.9.26 push gerekir** (sadece 4 dosya: discover.js, account.js, config.js + 3 doc).
-- **hCaptcha testi** — Account → Report an issue → "I am human" tıkla → challenge açılmalı (eski timing bug çözüldü v2.9.26'da).
-- **Discover photo problemi araştırılıyor** — operatör Sumac'a parfum fotosu ekledi, Discover'da plate emoji görünüyor (`d.photo` boş). Hipotez: cloud-pertable.js sync debounce'u photo upload'tan önce save'i yakalamış olabilir, public data.photo eksik. Çözüm denemesi: recipe'i editör'de aç → Save → 5sn bekle → Discover Refresh. Hâlâ yoksa `safePhotoUrl rejected` console warn'ı bakılacak.
+- **v2.9.28 push gerekir** (operatör GitHub Desktop ile yapacak). Push edilecek dosyalar: `app/index.html` (CSP + SRI kaldırıldı), `app/js/tools/discover.js` (photo direct URL'ye geri), `app/js/tools/account.js` (hCaptcha v2.6.83 script.onload pattern), `app/js/core/config.js` (APP_VERSION=2.9.28), 3 doc (CLAUDE/HANDOVER/CHANGELOG).
+- **Push sonrası hCaptcha testi** — Account → Report an issue → "I am human" tıkla → checkbox işaretlenmeli + (gerekirse) challenge açılmalı. v2.9.23 davranışına döndü. Console'da `should not render before js api is fully loaded` warning normal (cosmetic, fonksiyonel etki yok) — dokunma.
+- **Push sonrası Discover photo testi** — chef'in paylaştığı recipe'lerde photo'lar (Lamb Shank vb.) Discover feed'de tekrar görünmeli. Hâlâ boş görünen recipe'ler varsa root cause sync race değil (CSP kalktı), `d.photo` cloud'da boş kalmış olabilir → recipe'i editör'de aç → Save → 5sn bekle → Discover Refresh.
+- **Migration `v2.9.24-recipe-likes-rls-tighten.sql` ZATEN ÇALIŞTIRILDI** (operatör onayladı, policy `auth.uid() = user_id`). RPC `pcd_get_recipe_like_count(text)` aktif. Bu DB tarafı korundu, revert SADECE frontend.
+- **Edge Function `backup-to-r2` v4 zaten deploy edildi** (v2.9.24'te recipe_likes BACKUP_TABLES'a eklenmişti). Yeni deploy gerekmez.
 
 ### 2.3 Aktif Edge Function'lar (4 deployed)
 
