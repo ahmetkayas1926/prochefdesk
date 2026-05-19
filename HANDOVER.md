@@ -9,7 +9,7 @@
 
 **Ürün:** ProChefDesk — profesyonel chef'ler için web tabanlı mutfak yönetim sistemi.
 **Operatör:** Ahmet Kaya, Perth Western Australia, profesyonel şef. Solo non-commercial proje.
-**Mevcut sürüm:** **v2.9.28** (push'a hazır local; production v2.9.27). **REVERT** v2.9.24 CSP + hCaptcha onload + Discover photo sanitize — hepsi v2.9.23 working state'e döndü. recipe_likes RLS sıkılaştırma korundu.
+**Mevcut sürüm:** **v2.9.29** (push'a hazır local; production v2.9.28). **hCaptcha checkbox fix** (onload callback pattern) — v2.6.82'den beri silent broken olan widget interaction kanıt-tabanlı düzeltildi.
 **Blog:** 13 yazı yayında (Faz A SEO upgrade + Faz B 5-round, MENA niş + uluslararası coverage).
 **Domain:** prochefdesk.com (Cloudflare Pages, SSL Full, GitHub push'ta auto build + deploy).
 
@@ -31,7 +31,8 @@ Yeni Claude'un bilmesi gereken: **bu hâlâ tek kullanıcılı bir ürün** — 
 ### 2.1 Son session özeti (2026-05-19, NAKED→RICH sweep + büyük audit/sertleştirme)
 
 **Geride bırakılan sürümler (kronolojik tersine):**
-- **v2.9.28 LOCAL ONLY** (henüz push edilmedi) — **REVERT v2.9.24 CSP + hCaptcha onload + photo sanitize.** v2.9.24-27 deneme katmanları operatör akışını bozdu (hCaptcha widget tıklama yok, Discover photo yüklenmiyor). Tam revert: CSP meta + SRI + photo url() quote wrap + hCaptcha onload pattern hepsi geri çekildi. Korunan: recipe_likes RLS sıkı policy + RPC, orphan i18n silme, window.print fix, missing i18n key'ler, doc accuracy.
+- **v2.9.29 LOCAL ONLY** (henüz push edilmedi) — **hCaptcha checkbox fix.** Operatör DevTools kanıtı ile root cause bulundu: hCaptcha resmi error mesajı `"render=explicit should be used in combination with onload"` Console'da görünüyordu (CLAUDE.md'de yanlışlıkla "cosmetic" diye not edilmişti). v2.6.82'den beri `script.onload` pattern silent broken — widget çiziliyor ama event handler attach olmuyor. Fix: `account.js` `?onload=__pcdHcaptchaOnLoad&render=explicit` URL param + `window.__pcdHcaptchaOnLoad` callback. v2.9.26'da denenmişti ama o sırada CSP de eklenmişti, izole değildi. Şimdi CSP yok, temiz fix.
+- **v2.9.28** (production) — **REVERT v2.9.24 CSP + hCaptcha onload + photo sanitize.** v2.9.24-27 deneme katmanları operatör akışını bozdu (hCaptcha widget tıklama yok, Discover photo yüklenmiyor). Tam revert: CSP meta + SRI + photo url() quote wrap + hCaptcha onload pattern hepsi geri çekildi. Korunan: recipe_likes RLS sıkı policy + RPC, orphan i18n silme, window.print fix, missing i18n key'ler, doc accuracy.
 - **v2.9.27** (production) — hCaptcha CSP `'unsafe-eval'` ekleme denemesi + Discover photo debug log (yetmedi, v2.9.28'de revert).
 - **v2.9.26** (production) — hCaptcha `?onload=` URL param pattern (yetmedi, v2.9.28'de revert).
 - **v2.9.25 production** — CSP follow-up fix: `static.cloudflareinsights.com` script-src'ye, photo URL regex relax (`()` ve `'` allow, sadece quote/backslash/newline/angle reject), hCaptcha için `worker-src 'self' blob:` + `child-src`.
@@ -41,8 +42,9 @@ Yeni Claude'un bilmesi gereken: **bu hâlâ tek kullanıcılı bir ürün** — 
 
 ### 2.2 Bekleyen / bilinen test gerekleri
 
-- **v2.9.28 push edildi** (operatör GitHub Desktop ile push etti). Push'a dahil dosyalar: `app/index.html` (CSP + SRI kaldırıldı), `app/js/tools/discover.js` (photo direct URL'ye geri), `app/js/tools/account.js` (hCaptcha v2.6.83 script.onload pattern), `app/js/core/config.js` (APP_VERSION=2.9.28), 3 doc (CLAUDE/HANDOVER/CHANGELOG).
-- **🔴 hCaptcha "I am human" HÂLÂ ÇALIŞMIYOR** — v2.9.28 revert (v2.6.83 orijinal pattern) sonrası dahi checkbox tıklamaya cevap vermiyor. Yani sorun v2.9.24-27 değişikliklerinden değil; muhtemelen daha eski bir regresyon, dış faktör veya hCaptcha tarafı bir değişiklik. **Yeni Claude bu konuyu SIFIRDAN ele almalı:** (1) `git log -- app/js/tools/account.js` ile son aylardaki tüm hCaptcha-related commit'leri tara, (2) v2.6.83 production'da gerçekten çalışıyor muydu doğrula (CHANGELOG'da hCaptcha entry'lerini oku), (3) DevTools Network → hCaptcha script + iframe request'leri başarılı mı? Console error/warning var mı (cosmetic warning hariç)? (4) hCaptcha sitekey `2a3e9f54-70aa-4078-a5b6-fec0e2266ac4` hCaptcha dashboard'da hâlâ aktif mi + domain whitelist `prochefdesk.com` var mı? (5) Operatör başka tarayıcıda (Edge/Firefox) + incognito mode test etti mi? (6) Cloudflare proxy'si hCaptcha iframe'i bozuyor olabilir mi (Bot Fight Mode, Browser Integrity Check vb.)? Tahmin yürütme — kanıt topla, sonra düzelt.
+- **v2.9.29 push'a hazır** (operatör GitHub Desktop ile push edecek). Push'a dahil dosyalar: `app/js/tools/account.js` (`ensureHcaptchaLoaded` onload callback pattern), `app/js/core/config.js` (APP_VERSION=2.9.29), 3 doc (CLAUDE/HANDOVER/CHANGELOG). `app/index.html` DOKUNULMADI, photo path DOKUNULMADI.
+- **🟡 hCaptcha "I am human" — fix uygulandı, operatör test bekliyor.** v2.9.29 push + Cloudflare deploy sonrası Account → Report an issue → "I am human" → checkbox tıklanabilir olmalı. Doğrulanırsa CLAUDE.md gotcha'sı 🔴 → ✅ güncellenecek. Çalışmazsa ikinci adım: Cloudflare Dashboard → Security → Bot Fight Mode / Browser Integrity Check kontrolü.
+- **v2.9.28 push edildi** (operatör daha önce push etti). Push'a dahil dosyalar: `app/index.html` (CSP + SRI kaldırıldı), `app/js/tools/discover.js` (photo direct URL'ye geri), `app/js/tools/account.js` (hCaptcha v2.6.83 script.onload pattern — v2.9.29'da güncellendi), `app/js/core/config.js` (APP_VERSION=2.9.28), 3 doc (CLAUDE/HANDOVER/CHANGELOG).
 - **Discover photo testi** — chef'in paylaştığı recipe'lerde photo'lar (Lamb Shank vb.) Discover feed'de tekrar görünmeli. Hâlâ boş görünen recipe'ler varsa root cause sync race değil (CSP kalktı), `d.photo` cloud'da boş kalmış olabilir → recipe'i editör'de aç → Save → 5sn bekle → Discover Refresh.
 - **Migration `v2.9.24-recipe-likes-rls-tighten.sql` ZATEN ÇALIŞTIRILDI** (operatör onayladı, policy `auth.uid() = user_id`). RPC `pcd_get_recipe_like_count(text)` aktif. Bu DB tarafı korundu, revert SADECE frontend.
 - **Edge Function `backup-to-r2` v4 zaten deploy edildi** (v2.9.24'te recipe_likes BACKUP_TABLES'a eklenmişti). Yeni deploy gerekmez.
@@ -255,7 +257,7 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH. 13 araç paketleri
 |---|---|
 | Repo path (operatör Windows) | `C:\Users\ahmet\Desktop\prochefdesk` |
 | GitHub repo | `ahmetkayas1926/prochefdesk` |
-| Production sürümü | **v2.9.28** (push'a hazır local; production v2.9.27) |
+| Production sürümü | **v2.9.29** (push'a hazır local; production v2.9.28) |
 | Supabase project ref | `muuwhrcogikpqylsfvgg` (Tokyo, Postgres 17, Free tier) |
 | Cloudflare R2 bucket | `prochefdesk-backups` |
 | CLEANUP_SECRET | `ec79a445-7e92-499b-9322-5c2c949788d4d2886e66-d556-4498-ba9e-17fda6c11ac1` |

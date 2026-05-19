@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.9.28 · 2026-05-19
+**Mevcut sürüm:** v2.9.29 · 2026-05-19
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -16,6 +16,17 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH (kapatılabilir inl
 - **Round 3 (v2.9.7-9):** discover + account + team ✅
 - **Round 4 (v2.9.10-12):** sales + whatif + menu_matrix ✅
 - **Round 5 (v2.9.13):** haccp hub ✅ — **NAKED→RICH sweep tamamlandı**
+
+### v2.9.29 — hCaptcha checkbox fix (onload callback pattern) · 2026-05-19
+**Root cause bulundu.** v2.9.28 sonrası operatör DevTools kanıtı verdi: modal açılışında Console'da hCaptcha'nın kendi resmi hata mesajı görünüyordu — `[hCaptcha] should not render before js api is fully loaded. 'render=explicit' should be used in combination with 'onload'`. CLAUDE.md'de bu mesaj "cosmetic warning" olarak işaretlenmişti ama gerçek bir bug imzasıymış: widget görsel olarak çiziliyor ama event handler'lar attach olmadığı için checkbox tıklamasına cevap vermiyor. Network başarılı, sitekey + domain config geçerli (`checksiteconfig` 200), challenge image'ları arka planda 200 dönüyor — ama interactive UI hiç ateşlenmiyor.
+
+**Geçmişle ilişkisi:** v2.6.82'de hCaptcha eklendiğinde `script.onload + hcaptcha.render()` pattern'i kullanıldı. hCaptcha'nın API'si zamanla katılaştı (browser sürümleri / hCaptcha tarafı versioning), bu pattern silent broken hale geldi. v2.9.26'da önceki Claude `?onload=callback` URL param'ını denedi → çalışmadı zannedildi, geri çekildi. Şimdi anlaşıldı: v2.9.26 PATTERN'ı doğruydu ama aynı anda CSP eklenmişti, CSP iframe içinde Web Worker spawn'ı blokluyordu. Pattern + CSP combo bozdu, izole pattern çalışmamış görünmedi.
+
+**Bu sürümde:**
+- `account.js` `ensureHcaptchaLoaded` — script URL `?onload=__pcdHcaptchaOnLoad&render=explicit` pattern'ine çevrildi. `window.__pcdHcaptchaOnLoad` callback hCaptcha API fully initialize olunca çağrılır (önce script.onload event'inden farklı — internal hazırlık tamamlandı kuralı). Modal pending render handler'ı `window.__pcdHcaptchaPending`'e stash'lenir, callback fire ederken çağrılır.
+- `config.js` APP_VERSION 2.9.28 → 2.9.29.
+
+**Test akışı:** Push sonrası Cloudflare deploy tamamlanınca Account → Report an issue → "I am human" → checkbox tıklanabilir olmalı. Network'te aynı `2a3e9f54-...` XHR'ler çalışacak; UI tarafı artık reactive.
 
 ### v2.9.28 — REVERT v2.9.24 CSP + hCaptcha + photo sanitize · 2026-05-19
 v2.9.24'te eklenen "standart SaaS hijyen" katmanları operatör akışını bozdu — hCaptcha widget'ı (Report an issue) tıklamaya cevap vermiyor, Discover'da photo'lar yüklenmiyor (CSP veya url() quote pattern). v2.9.25/26/27 fix denemeleri yetmedi. Operatör solo kullanıcı, agresif güvenlik gereksiz — tam revert.

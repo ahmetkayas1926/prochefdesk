@@ -1184,35 +1184,35 @@
     }
 
     function ensureHcaptchaLoaded() {
-      // v2.9.28 — Reverted to v2.6.83 original script.onload pattern.
-      // v2.9.26 onload=callback URL param fix didn't help; checkbox
-      // still inactive after CSP changes. Full revert to known-working.
+      // v2.9.29 — hCaptcha's own console error demands this pattern:
+      // "render=explicit should be used in combination with onload".
+      // script.onload fires before hCaptcha's internal init completes,
+      // so render succeeds visually but the checkbox is dead. Using
+      // ?onload=callback URL param hands the timing decision to hCaptcha.
       if (window.hcaptcha) {
         captchaScriptStatus = 'ready';
         renderHcaptchaWidget();
         return;
       }
+      window.__pcdHcaptchaPending = renderHcaptchaWidget;
+      if (!window.__pcdHcaptchaOnLoad) {
+        window.__pcdHcaptchaOnLoad = function () {
+          captchaScriptStatus = 'ready';
+          const pending = window.__pcdHcaptchaPending;
+          window.__pcdHcaptchaPending = null;
+          if (pending) pending();
+        };
+      }
       const existing = document.querySelector('script[data-hcaptcha-loader="1"]');
       if (existing) {
-        existing.addEventListener('load', function () {
-          captchaScriptStatus = 'ready';
-          renderHcaptchaWidget();
-        });
-        existing.addEventListener('error', function () {
-          captchaScriptStatus = 'error';
-          setCaptchaStatus(t('report_issue_captcha_error'), true);
-        });
+        if (window.hcaptcha) window.__pcdHcaptchaOnLoad();
         return;
       }
       const s = document.createElement('script');
-      s.src = 'https://js.hcaptcha.com/1/api.js?render=explicit';
+      s.src = 'https://js.hcaptcha.com/1/api.js?onload=__pcdHcaptchaOnLoad&render=explicit';
       s.async = true;
       s.defer = true;
       s.setAttribute('data-hcaptcha-loader', '1');
-      s.onload = function () {
-        captchaScriptStatus = 'ready';
-        renderHcaptchaWidget();
-      };
       s.onerror = function () {
         captchaScriptStatus = 'error';
         setCaptchaStatus(t('report_issue_captcha_error'), true);
