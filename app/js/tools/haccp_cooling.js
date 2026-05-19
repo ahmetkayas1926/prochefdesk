@@ -477,11 +477,11 @@
         'table.h-grid th{background:#f3f4f6;font-weight:700;font-size:9px;text-align:center;text-transform:uppercase;letter-spacing:0.03em;}' +
         'table.h-grid tr{height:19px;page-break-inside:avoid;}' +
         'table.h-grid td.day{text-align:center;width:3%;font-weight:700;color:#444;}' +
-        'table.h-grid td.food{width:25%;font-weight:600;}' +
-        'table.h-grid td.qty{width:8%;text-align:center;}' +
-        'table.h-grid td.t{width:6%;text-align:center;font-weight:600;}' +
-        'table.h-grid td.h{width:7%;text-align:center;color:#666;font-size:10px;}' +
-        'table.h-grid td.note{width:16%;font-size:10px;}' +
+        'table.h-grid td.food{width:32%;font-weight:600;}' +
+        'table.h-grid td.qty{width:6%;text-align:center;}' +
+        'table.h-grid td.t{width:5%;text-align:center;font-weight:600;}' +
+        'table.h-grid td.h{width:5%;text-align:center;color:#666;font-size:10px;}' +
+        'table.h-grid td.note{width:20%;font-size:10px;}' +
         'table.h-grid td.chef{width:9%;text-align:center;}' +
         'table.h-grid td.fail{background:#fee2e2;color:#991b1b;font-weight:700;}' +
         '.h-foot{margin-top:4px;display:flex;justify-content:space-between;font-size:9px;flex:0 0 auto;}' +

@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.9.32 · 2026-05-19
+**Mevcut sürüm:** v2.9.33 · 2026-05-19
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -16,6 +16,20 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH (kapatılabilir inl
 - **Round 3 (v2.9.7-9):** discover + account + team ✅
 - **Round 4 (v2.9.10-12):** sales + whatif + menu_matrix ✅
 - **Round 5 (v2.9.13):** haccp hub ✅ — **NAKED→RICH sweep tamamlandı**
+
+### v2.9.33 — HACCP Cook & Cool print: column widths rebalanced (PILOT polish) · 2026-05-19
+v2.9.32 tek-sayfa fix sonrası operatör raporu: yemek adı sütunu hâlâ dar, °C/TIME sütunları gereksiz geniş. Sütun yüzdeleri dengelendi.
+
+**Değişiklik (haccp_cooling.js):**
+- FOOD/BATCH: 25% → 32% (yemek adı için çok daha rahat)
+- QUANTITY: 8% → 6% (sayı + birim kompakt)
+- COOK END/+2H/FINAL °C: 6% → 5% her biri (3 hane max)
+- COOK END/+2H/FINAL TIME: 7% → 5% her biri (HH:MM)
+- NOTE (düzeltici eylem): 16% → 20%
+- DAY/CHEF: değişmedi
+- Toplam: 100% ✓
+
+**Test:** Operatör tekrar yazdırıp sütun dengesini doğrulayacak. Onay sonrası diğer 3 HACCP form'a aynı pattern (v2.9.32 + v2.9.33 birleşik) uygulanacak.
 
 ### v2.9.32 — HACCP Cook & Cool print: single-page guarantee (PILOT fix) · 2026-05-19
 v2.9.31 pilot test sonucu: row büyütme iyiydi ama print 3 sayfaya bölündü (header alone p1, tablo p2, ProChefDesk footer p3). Kök sebep: tablo `page-break-inside: avoid` + toplam yükseklik A4 landscape'i ~10mm aştı + PCD.print otomatik footer'ı standart margin'li enjekte ediyordu.
