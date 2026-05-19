@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.9.35 · 2026-05-19
+**Mevcut sürüm:** v2.9.36 · 2026-05-19
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -16,6 +16,25 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH (kapatılabilir inl
 - **Round 3 (v2.9.7-9):** discover + account + team ✅
 - **Round 4 (v2.9.10-12):** sales + whatif + menu_matrix ✅
 - **Round 5 (v2.9.13):** haccp hub ✅ — **NAKED→RICH sweep tamamlandı**
+
+### v2.9.36 — HACCP region selector PERSIST + UI sync fix (v2.9.35 silent failure) · 2026-05-19
+v2.9.35 push edildi, dropdown göründü, "Saved" toast çıktı, AMA sayfa yenilenince eski hale dönüyordu + Cook & Cool form'larında etki görünmüyordu. 3 problem teşhis edildi ve düzeltildi:
+
+**Problem 1 — Persist gecikme:**
+`PCD.store.set('prefs.haccpRegion', value)` 400ms debounced persist tetikliyor. Kullanıcı seçim sonrası hemen sayfa yenilerse LS/IDB'ye yazılmadan kayboluyor. Currency/theme'de fark edilmiyordu çünkü onlarda anlık etki var (cost re-format, theme attr), kullanıcı yenileme yapmıyordu. HACCP region'da etki HACCP formuna gidince görüldüğü için kullanıcı doğal olarak yeniler.
+
+**Problem 2 — Cloud overwrite:**
+Login kullanıcı için boot'ta cloud'dan prefs restore ediliyor. Yeni `haccpRegion` field'i cloud'a immediate yazılmadığında: ilk değişiklik → LS'ye persist (debounce) → sayfa yenile → cloud pull → state.prefs cloud'dan overwrite → yeni field cloud'da yok → eski state. Yani sayfa yenilenince cloud silindi sanıyor.
+
+**Problem 3 — Subtitle hardcoded:**
+Cook & Cool page subtitle'ı `"HACCP cooling: 60°C → 21°C in 2h → 5°C in 6h"` sabit kodluydu (i18n fallback metni). Kullanıcı UK FSA seçince başlık hâlâ 60°C diyordu → "etki yok" hissi.
+
+**Bu sürümde:**
+- `account.js` change handler: `PCD.store.flushSync()` immediate persist + `PCD.cloudPerTable.queueUpsert('user_prefs', ...)` immediate cloud yazma + `render(view)` UI senkron. setActiveWorkspaceId pattern'i (store.js:716) izlendi.
+- `haccp_cooling.js` page-subtitle dinamik: `targetForUI(coolingStartC())`, `targetForUI(cooling2hC())`, `targetForUI(cooling6hC())` yerel olarak değişir. Suffix kısmı i18n key'e taşındı (`hcc_subtitle_monthly_suffix`).
+- `en.js` + `tr.js` — yeni i18n key `hcc_subtitle_monthly_suffix` (Monthly · 31 rows / Aylık · 31 satır).
+
+**Test:** (1) Account → Preferences → HACCP region değiştir → sayfa hard refresh → seçim kalmalı. (2) Cook & Cool sayfasına gir → subtitle satırı seçilen bölgenin eşiklerini göstermeli (örn. UK seçili → "HACCP cooling: 63°C → 21°C in 2h → 5°C in 6h"). (3) Boş yazdır → PDF'te tablo başlıkları + footer aynı bölge eşiklerini göstermeli.
 
 ### v2.9.35 — HACCP region selector (international SaaS) + Cook & Cool dinamik (PILOT) · 2026-05-19
 Operatör direktifi: ProChefDesk uluslararası kullanıcılara (US, UK, EU, Türkiye, Avustralya vb.) açıldıkça tek-ülke sabit HACCP eşikleri (60°C / 5°C / -18°C) yanlış. Her ülkenin yetkili merci ve eşikleri farklı: FSANZ AU 60°C hot vs FDA US 57°C vs UK FSA 63°C. Form'lardaki sayılar kullanıcının yargı bölgesini takip etmeli.

@@ -424,6 +424,7 @@ window.PCD.i18n.register('en', {
   language: "Language",
   theme: "Theme",
   haptic_feedback: "Haptic feedback",
+  hcc_subtitle_monthly_suffix: "Monthly · 31 rows",
   haccp_region: "HACCP region",
   haccp_region_desc: "Sets food safety thresholds (hot/cold/cooling) on HACCP forms per your jurisdiction.",
   haccp_region_international: "International (strictest)",

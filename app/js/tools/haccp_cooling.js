@@ -132,7 +132,7 @@
       '<div class="page-header">' +
         '<div class="page-header-text">' +
           '<div class="page-title">🌡 ' + (t('hcc_title') || 'Cook & Cool Log') + '</div>' +
-          '<div class="page-subtitle">' + (t('hcc_subtitle_monthly') || 'HACCP cooling: 60°C → 21°C in 2h → 5°C in 6h · Aylık 31 satır') + '</div>' +
+          '<div class="page-subtitle">HACCP cooling: ' + targetForUI(coolingStartC()) + ' → ' + targetForUI(cooling2hC()) + ' in 2h → ' + targetForUI(cooling6hC()) + ' in 6h · ' + (t('hcc_subtitle_monthly_suffix') || 'Aylık 31 satır') + '</div>' +
         '</div>' +
         '<div class="page-header-actions">' +
           '<button class="btn btn-outline btn-sm" id="hccPrintBlankBtn" title="' + PCD.escapeHtml(t('hcc_print_month_tip') || '31 satırlık aylık boş form yazdır') + '">' + PCD.icon('print', 14) + ' <span>' + PCD.escapeHtml(t('hcc_print_blank') || 'Boş yazdır') + '</span></button>' +

@@ -430,8 +430,28 @@
     const haccpRegionEl = PCD.$('#prefHaccpRegion', view);
     if (haccpRegionEl) {
       haccpRegionEl.addEventListener('change', function () {
+        // v2.9.36 — Persist immediately (default debounce loses value on
+        // page-refresh-too-soon) + immediate cloud user_prefs upsert (so
+        // boot-time cloud restore doesn't overwrite with stale data).
         PCD.store.set('prefs.haccpRegion', this.value);
+        if (PCD.store.flushSync) {
+          try { PCD.store.flushSync(); } catch (e) { /* non-fatal */ }
+        }
+        if (PCD.cloudPerTable && PCD.cloudPerTable.queueUpsert && PCD.store._read) {
+          try {
+            PCD.cloudPerTable.queueUpsert('user_prefs', 'user_prefs', null, {
+              active_workspace_id: PCD.store._read('activeWorkspaceId'),
+              data: {
+                prefs: PCD.store._read('prefs') || {},
+                plan: PCD.store._read('plan') || 'free',
+                onboarding: PCD.store._read('onboarding') || {},
+                costHistory: PCD.store._read('costHistory') || [],
+              },
+            });
+          } catch (e) { /* non-fatal, debounced sync will eventually catch up */ }
+        }
         PCD.toast.success(t('saved'));
+        render(view);
       });
     }
 

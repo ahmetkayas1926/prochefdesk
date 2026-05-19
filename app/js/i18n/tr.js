@@ -424,6 +424,7 @@ window.PCD.i18n.register('tr', {
   language: "Dil",
   theme: "Tema",
   haptic_feedback: "Dokunsal geri bildirim",
+  hcc_subtitle_monthly_suffix: "Aylık · 31 satır",
   haccp_region: "HACCP bölgesi",
   haccp_region_desc: "HACCP formlarındaki sıcak/soğuk/soğutma eşik değerlerini ülkenizin gıda güvenliği standardına göre ayarlar.",
   haccp_region_international: "Uluslararası (en sıkı)",
