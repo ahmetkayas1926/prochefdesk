@@ -57,6 +57,20 @@
     }
     _wbDrag = null;
   });
+
+  // v2.10.4 — Module-level click-outside handler. Önceki render-içi listener
+  // `{ once: true }` ile attach ediliyordu → ilk dış tıklamada kendini siliyor,
+  // sonraki sağ-tık'larda palette açılıp dışa tıklasan kapanmıyordu (operatör
+  // raporu). Bir kez file load'da attach + her zaman aktif: palette display'i
+  // none ise erken return, görünür ise wb-cell ve wb-palette dışı tıklamada kapat.
+  document.addEventListener('mousedown', function (e) {
+    const palette = document.getElementById('wbPalette');
+    if (!palette || palette.style.display === 'none') return;
+    if (palette.contains(e.target)) return;
+    if (e.target.closest('.wb-cell')) return;
+    palette.style.display = 'none';
+  });
+
   // v2.9.40 — Çoklu kanvas için yeni LS şeması. Eski `pcd_whiteboard_v1`
   // (single canvas) varsa otomatik canvases[0] olarak migrate edilir.
   const LS_KEY_OLD = 'pcd_whiteboard_v1';
@@ -157,280 +171,155 @@
   // v2.9.40 — Starter templates (operator-requested examples to show the
   // tool's capacity). Each template overrides title, grid size, and cells.
   // V2: more templates + template editor.
+  // v2.10.4 — 11 ilkel template silindi, 5 yaratıcı template eklendi.
+  // Tasarım kuralları: merged hero header (rowSpan/colSpan), bigNumber type ile
+  // göz alıcı rakamlar, header type ile bold uppercase section title'lar,
+  // renk paleti farklılaşan duygu (steak red = urgency, forest = premium,
+  // katmer amber = warmth, mint/blue = service info). Her template'de en
+  // az 2 merged hücre var. Şef bir bakışta okuyabilsin.
   const TEMPLATES = [
     {
-      id: 'cook_times',
-      labelKey: 'whiteboard_tpl_cook_times',
-      label: 'Cooking Times & Core Temps',
-      title: 'COOKING · CORE TEMP',
+      id: 'tonight_service',
+      labelKey: 'whiteboard_tpl_tonight',
+      label: "Tonight's Service Board",
+      title: "TONIGHT'S SERVICE",
       paper: 'A4', orient: 'landscape', rows: 4, cols: 6,
       cells: [
-        { r:0, c:0, text:'PROTEIN',    color:'dark' },
-        { r:0, c:1, text:'BEEF',       color:'dark' },
-        { r:0, c:2, text:'CHICKEN',    color:'dark' },
-        { r:0, c:3, text:'FISH',       color:'dark' },
-        { r:0, c:4, text:'LAMB',       color:'dark' },
-        { r:0, c:5, text:'NOTES',      color:'dark' },
-        { r:1, c:0, text:'TIME',       color:'amber' },
-        { r:1, c:1, text:'8 min',      color:'white' },
-        { r:1, c:2, text:'8 min',      color:'white' },
-        { r:1, c:3, text:'8 min',      color:'white' },
-        { r:1, c:4, text:'12 min',     color:'white' },
-        { r:1, c:5, text:'Rest 2 min', color:'cream' },
-        { r:2, c:0, text:'CORE TEMP',  color:'amber' },
-        { r:2, c:1, text:'63°C',       color:'green' },
-        { r:2, c:2, text:'75°C',       color:'green' },
-        { r:2, c:3, text:'63°C',       color:'green' },
-        { r:2, c:4, text:'65°C',       color:'green' },
-        { r:2, c:5, text:'Internal',   color:'cream' },
-        { r:3, c:0, text:'SEASONING',  color:'amber' },
-        { r:3, c:1, text:'Salt after', color:'red' },
-        { r:3, c:2, text:'No salt',    color:'red' },
-        { r:3, c:3, text:'Spice mix',  color:'red' },
-        { r:3, c:4, text:'Salt before',color:'white' },
-        { r:3, c:5, text:'Check label',color:'cream' },
+        // Hero header — full width, dark, xl
+        { r:0, c:0, text:"TONIGHT'S SERVICE", color:'forest', type:'header', fontSize:'xl', colSpan:6 },
+        // KPI strip — 4 big number cells
+        { r:1, c:0, text:'COVERS',   color:'cream', type:'header' },
+        { r:1, c:1, text:'0',        color:'white', type:'bigNumber', fontSize:'xl' },
+        { r:1, c:2, text:'VEGAN',    color:'cream', type:'header' },
+        { r:1, c:3, text:'0',        color:'mint',  type:'bigNumber', fontSize:'lg' },
+        { r:1, c:4, text:'GF / DF',  color:'cream', type:'header' },
+        { r:1, c:5, text:'0',        color:'amber', type:'bigNumber', fontSize:'lg' },
+        // 86 list strip — merged red banner
+        { r:2, c:0, text:'86 LIST',  color:'steak', type:'header' },
+        { r:2, c:1, text:'',         color:'white', colSpan:5 },
+        // Specials strip — merged katmer banner
+        { r:3, c:0, text:'SPECIALS', color:'katmer', type:'header' },
+        { r:3, c:1, text:'',         color:'white', colSpan:5 },
       ],
     },
     {
-      id: 'plating',
-      labelKey: 'whiteboard_tpl_plating',
-      label: 'Plating Weights',
-      title: 'PORTIONS · PLATING WEIGHTS',
-      paper: 'A4', orient: 'portrait', rows: 7, cols: 2,
-      cells: [
-        { r:0, c:0, text:'DISH', color:'dark' },
-        { r:0, c:1, text:'WEIGHT', color:'dark' },
-        { r:1, c:0, text:'Hummus', color:'white' },        { r:1, c:1, text:'150 g', color:'green' },
-        { r:2, c:0, text:'Muhammara', color:'white' },     { r:2, c:1, text:'150 g', color:'green' },
-        { r:3, c:0, text:'Beef Skewer', color:'white' },   { r:3, c:1, text:'250 g', color:'green' },
-        { r:4, c:0, text:'Chicken', color:'white' },       { r:4, c:1, text:'250 g', color:'green' },
-        { r:5, c:0, text:'Lamb Shank', color:'white' },    { r:5, c:1, text:'300 g', color:'green' },
-        { r:6, c:0, text:'Cauliflower', color:'white' },   { r:6, c:1, text:'250 g', color:'green' },
-      ],
-    },
-    {
-      id: 'reheating',
-      labelKey: 'whiteboard_tpl_reheating',
-      label: 'Reheating Guide',
-      title: 'REHEATING',
-      paper: 'A4', orient: 'landscape', rows: 3, cols: 4,
-      cells: [
-        { r:0, c:0, text:'ITEM',     color:'dark' },
-        { r:0, c:1, text:'TIME',     color:'dark' },
-        { r:0, c:2, text:'TEMP',     color:'dark' },
-        { r:0, c:3, text:'NOTES',    color:'dark' },
-        { r:1, c:0, text:'Rice',     color:'white' },
-        { r:1, c:1, text:'2 min',    color:'amber' },
-        { r:1, c:2, text:'75°C',     color:'green' },
-        { r:1, c:3, text:'Cover with foil', color:'cream' },
-        { r:2, c:0, text:'Sauce',    color:'white' },
-        { r:2, c:1, text:'2 min',    color:'amber' },
-        { r:2, c:2, text:'75°C',     color:'green' },
-        { r:2, c:3, text:'Stir frequently', color:'cream' },
-      ],
-    },
-    {
-      id: 'allergens',
-      labelKey: 'whiteboard_tpl_allergens',
-      label: 'Allergen Quick Reference',
-      title: 'ALLERGEN REMINDERS',
-      paper: 'A4', orient: 'portrait', rows: 5, cols: 3,
-      cells: [
-        { r:0, c:0, text:'DISH', color:'dark' },
-        { r:0, c:1, text:'CONTAINS', color:'dark' },
-        { r:0, c:2, text:'NOTES', color:'dark' },
-        { r:1, c:0, text:'Muhammara', color:'white' },
-        { r:1, c:1, text:'Walnuts · Sesame', color:'red' },
-        { r:1, c:2, text:'Tree-nut allergy alert', color:'cream' },
-        { r:2, c:0, text:'Hummus', color:'white' },
-        { r:2, c:1, text:'Sesame (tahini)', color:'red' },
-        { r:2, c:2, text:'Verify with chef', color:'cream' },
-        { r:3, c:0, text:'Kibbeh', color:'white' },
-        { r:3, c:1, text:'Wheat · Pine nuts', color:'red' },
-        { r:3, c:2, text:'Gluten in bulgur', color:'cream' },
-        { r:4, c:0, text:'Katmer', color:'white' },
-        { r:4, c:1, text:'Dairy · Wheat · Pistachio', color:'red' },
-        { r:4, c:2, text:'No substitutions', color:'cream' },
-      ],
-    },
-    {
-      id: 'cleaning',
-      labelKey: 'whiteboard_tpl_cleaning',
-      label: 'Cleaning Schedule',
-      title: 'CLEANING SCHEDULE',
-      paper: 'A4', orient: 'landscape', rows: 4, cols: 5,
-      cells: [
-        { r:0, c:0, text:'AREA', color:'dark' },
-        { r:0, c:1, text:'DAILY', color:'dark' },
-        { r:0, c:2, text:'WEEKLY', color:'dark' },
-        { r:0, c:3, text:'MONTHLY', color:'dark' },
-        { r:0, c:4, text:'CHECK', color:'dark' },
-        { r:1, c:0, text:'Stoves', color:'white' },
-        { r:1, c:1, text:'After service', color:'green' },
-        { r:1, c:2, text:'Deep clean', color:'amber' },
-        { r:1, c:3, text:'Calibrate', color:'red' },
-        { r:1, c:4, text:'☐', color:'white' },
-        { r:2, c:0, text:'Fridges', color:'white' },
-        { r:2, c:1, text:'Wipe surfaces', color:'green' },
-        { r:2, c:2, text:'Empty + scrub', color:'amber' },
-        { r:2, c:3, text:'Coil clean', color:'red' },
-        { r:2, c:4, text:'☐', color:'white' },
-        { r:3, c:0, text:'Floors', color:'white' },
-        { r:3, c:1, text:'Mop end of day', color:'green' },
-        { r:3, c:2, text:'Degrease', color:'amber' },
-        { r:3, c:3, text:'Drain check', color:'red' },
-        { r:3, c:4, text:'☐', color:'white' },
-      ],
-    },
-    {
-      id: 'service_briefing',
-      labelKey: 'whiteboard_tpl_service_briefing',
-      label: 'Service Briefing',
-      title: 'SERVICE BRIEFING',
-      paper: 'A4', orient: 'portrait', rows: 6, cols: 2,
-      cells: [
-        { r:0, c:0, text:'TOPIC', color:'dark' },
-        { r:0, c:1, text:'NOTES', color:'dark' },
-        { r:1, c:0, text:"Today's specials", color:'amber' },
-        { r:1, c:1, text:'', color:'white' },
-        { r:2, c:0, text:'86 list (out of stock)', color:'red' },
-        { r:2, c:1, text:'', color:'white' },
-        { r:3, c:0, text:'VIP / dietary tables', color:'blue' },
-        { r:3, c:1, text:'', color:'white' },
-        { r:4, c:0, text:'New menu items', color:'mint' },
-        { r:4, c:1, text:'', color:'white' },
-        { r:5, c:0, text:'Reminders', color:'cream' },
-        { r:5, c:1, text:'', color:'white' },
-      ],
-    },
-    // v2.10.1 — 5 yeni şablon (operatör isteği "daha çok hazır şablon")
-    {
-      id: 'hot_line_stations',
-      labelKey: 'whiteboard_tpl_hot_line',
-      label: 'Hot Line Stations',
+      id: 'hot_line_pro',
+      labelKey: 'whiteboard_tpl_hot_line_pro',
+      label: 'Hot Line · Station Map',
       title: 'HOT LINE STATIONS',
-      paper: 'A4', orient: 'landscape', rows: 4, cols: 5,
+      paper: 'A4', orient: 'landscape', rows: 5, cols: 4,
       cells: [
-        { r:0, c:0, text:'STATION',    color:'dark',    type:'header' },
-        { r:0, c:1, text:'CHEF',       color:'dark',    type:'header' },
-        { r:0, c:2, text:'PROTEINS',   color:'dark',    type:'header' },
-        { r:0, c:3, text:'SAUCES',     color:'dark',    type:'header' },
-        { r:0, c:4, text:'GARNISH',    color:'dark',    type:'header' },
-        { r:1, c:0, text:'SAUTÉ',      color:'steak',   type:'header' },
-        { r:1, c:1, text:'',           color:'white' },
-        { r:1, c:2, text:'Lamb · Beef · Chicken', color:'cream' },
-        { r:1, c:3, text:'Jus · Demi · Beurre',  color:'cream' },
-        { r:1, c:4, text:'Microgreens · Herbs',  color:'cream' },
-        { r:2, c:0, text:'GRILL',      color:'katmer',  type:'header' },
-        { r:2, c:1, text:'',           color:'white' },
-        { r:2, c:2, text:'Steaks · Skewers',     color:'cream' },
-        { r:2, c:3, text:'Chimichurri · Compound butter', color:'cream' },
-        { r:2, c:4, text:'Lemon · Coal salt',    color:'cream' },
-        { r:3, c:0, text:'PASS',       color:'forest',  type:'header' },
-        { r:3, c:1, text:'Head Chef',  color:'white' },
-        { r:3, c:2, text:'—',          color:'white' },
-        { r:3, c:3, text:'Final dressings',      color:'cream' },
-        { r:3, c:4, text:'Plating tools',        color:'cream' },
+        // Hero header
+        { r:0, c:0, text:'HOT LINE — STATION MAP', color:'dark', type:'header', fontSize:'lg', colSpan:4 },
+        // Column headers
+        { r:1, c:0, text:'STATION',  color:'cream', type:'header' },
+        { r:1, c:1, text:'PROTEINS', color:'cream', type:'header' },
+        { r:1, c:2, text:'SAUCES',   color:'cream', type:'header' },
+        { r:1, c:3, text:'GARNISH',  color:'cream', type:'header' },
+        // SAUTÉ row — steak red header
+        { r:2, c:0, text:'SAUTÉ',  color:'steak', type:'header', fontSize:'lg' },
+        { r:2, c:1, text:'Lamb · Beef · Chicken', color:'white' },
+        { r:2, c:2, text:'Jus · Demi · Beurre',   color:'white' },
+        { r:2, c:3, text:'Microgreens · Herbs',   color:'white' },
+        // GRILL row — katmer header
+        { r:3, c:0, text:'GRILL',  color:'katmer', type:'header', fontSize:'lg' },
+        { r:3, c:1, text:'Steak · Skewers',         color:'white' },
+        { r:3, c:2, text:'Chimichurri · Cmpd btr', color:'white' },
+        { r:3, c:3, text:'Lemon · Coal salt',       color:'white' },
+        // PASS row — forest premium
+        { r:4, c:0, text:'PASS',   color:'forest', type:'header', fontSize:'lg' },
+        { r:4, c:1, text:'—',                        color:'cream' },
+        { r:4, c:2, text:'Final dressings',          color:'cream' },
+        { r:4, c:3, text:'Plating tools',            color:'cream' },
       ],
     },
     {
-      id: 'knife_cuts',
-      labelKey: 'whiteboard_tpl_knife_cuts',
-      label: 'Knife Cuts',
-      title: 'KNIFE CUTS REFERENCE',
-      paper: 'A4', orient: 'portrait', rows: 6, cols: 3,
+      id: 'cook_temps_pro',
+      labelKey: 'whiteboard_tpl_cook_temps_pro',
+      label: 'Cook Times · Core Temps',
+      title: 'COOK TIMES & CORE TEMPS',
+      paper: 'A4', orient: 'landscape', rows: 5, cols: 5,
       cells: [
-        { r:0, c:0, text:'CUT',     color:'dark', type:'header' },
-        { r:0, c:1, text:'SIZE',    color:'dark', type:'header' },
-        { r:0, c:2, text:'USE',     color:'dark', type:'header' },
-        { r:1, c:0, text:'Brunoise',   color:'white', type:'bigNumber', fontSize:'md' },
-        { r:1, c:1, text:'3 mm cube',  color:'amber' },
-        { r:1, c:2, text:'Garnish, consommé', color:'cream' },
-        { r:2, c:0, text:'Julienne',   color:'white', type:'bigNumber', fontSize:'md' },
-        { r:2, c:1, text:'3×3×40 mm',  color:'amber' },
-        { r:2, c:2, text:'Stir-fry, salad', color:'cream' },
-        { r:3, c:0, text:'Mirepoix',   color:'white', type:'bigNumber', fontSize:'md' },
-        { r:3, c:1, text:'10 mm rough',color:'amber' },
-        { r:3, c:2, text:'Stocks, braises', color:'cream' },
-        { r:4, c:0, text:'Chiffonade', color:'white', type:'bigNumber', fontSize:'md' },
-        { r:4, c:1, text:'Thin strips',color:'amber' },
-        { r:4, c:2, text:'Leafy herbs', color:'cream' },
-        { r:5, c:0, text:'Concassé',   color:'white', type:'bigNumber', fontSize:'md' },
-        { r:5, c:1, text:'Diced peeled', color:'amber' },
-        { r:5, c:2, text:'Tomato sauce', color:'cream' },
+        // Hero header
+        { r:0, c:0, text:'COOK TIMES & CORE TEMPS', color:'forest', type:'header', fontSize:'xl', colSpan:5 },
+        // Column headers
+        { r:1, c:0, text:'PROTEIN', color:'cream', type:'header' },
+        { r:1, c:1, text:'BEEF',    color:'steak', type:'header' },
+        { r:1, c:2, text:'LAMB',    color:'steak', type:'header' },
+        { r:1, c:3, text:'CHICKEN', color:'amber', type:'header' },
+        { r:1, c:4, text:'FISH',    color:'blue',  type:'header' },
+        // TIME row — bigNumber values
+        { r:2, c:0, text:'TIME',    color:'cream', type:'header' },
+        { r:2, c:1, text:'8 min',   color:'white', type:'bigNumber', fontSize:'lg' },
+        { r:2, c:2, text:'12 min',  color:'white', type:'bigNumber', fontSize:'lg' },
+        { r:2, c:3, text:'8 min',   color:'white', type:'bigNumber', fontSize:'lg' },
+        { r:2, c:4, text:'6 min',   color:'white', type:'bigNumber', fontSize:'lg' },
+        // CORE TEMP row — bigNumber green
+        { r:3, c:0, text:'CORE °C', color:'cream', type:'header' },
+        { r:3, c:1, text:'63°C',    color:'green', type:'bigNumber', fontSize:'lg' },
+        { r:3, c:2, text:'65°C',    color:'green', type:'bigNumber', fontSize:'lg' },
+        { r:3, c:3, text:'75°C',    color:'green', type:'bigNumber', fontSize:'lg' },
+        { r:3, c:4, text:'63°C',    color:'green', type:'bigNumber', fontSize:'lg' },
+        // Notes — merged
+        { r:4, c:0, text:'NOTES',   color:'cream', type:'header' },
+        { r:4, c:1, text:'Rest 2 min · Always probe before serving · Calibrate weekly', color:'white', colSpan:4 },
       ],
     },
     {
-      id: 'daily_prep',
-      labelKey: 'whiteboard_tpl_daily_prep',
-      label: 'Daily Prep Checklist',
-      title: 'DAILY PREP CHECKLIST',
-      paper: 'A4', orient: 'portrait', rows: 6, cols: 3,
+      id: 'allergen_alert',
+      labelKey: 'whiteboard_tpl_allergen_alert',
+      label: 'Allergen Alert Board',
+      title: 'ALLERGEN ALERTS',
+      paper: 'A4', orient: 'landscape', rows: 5, cols: 4,
       cells: [
-        { r:0, c:0, text:'TASK',  color:'dark', type:'header' },
-        { r:0, c:1, text:'BY',    color:'dark', type:'header' },
-        { r:0, c:2, text:'✓',     color:'dark', type:'header' },
-        { r:1, c:0, text:'Stocks & broths', color:'white' },
-        { r:1, c:1, text:'09:00',  color:'amber' },
-        { r:1, c:2, text:'☐',      color:'white' },
-        { r:2, c:0, text:'Sauces & dressings', color:'white' },
-        { r:2, c:1, text:'10:00',  color:'amber' },
-        { r:2, c:2, text:'☐',      color:'white' },
-        { r:3, c:0, text:'Protein portion', color:'white' },
-        { r:3, c:1, text:'11:00',  color:'amber' },
-        { r:3, c:2, text:'☐',      color:'white' },
-        { r:4, c:0, text:'Garnish & herbs', color:'white' },
-        { r:4, c:1, text:'12:00',  color:'amber' },
-        { r:4, c:2, text:'☐',      color:'white' },
-        { r:5, c:0, text:'Service setup', color:'white' },
-        { r:5, c:1, text:'17:30',  color:'amber' },
-        { r:5, c:2, text:'☐',      color:'white' },
+        // Hero header — steak red urgency
+        { r:0, c:0, text:'⚠ ALLERGEN ALERTS — TODAY', color:'steak', type:'header', fontSize:'xl', colSpan:4 },
+        // Section heading — table allergies
+        { r:1, c:0, text:'TABLE',   color:'cream', type:'header' },
+        { r:1, c:1, text:'ALLERGEN', color:'cream', type:'header' },
+        { r:1, c:2, text:'DISH AFFECTED', color:'cream', type:'header' },
+        { r:1, c:3, text:'ACTION', color:'cream', type:'header' },
+        { r:2, c:0, text:'',  color:'white', type:'bigNumber', fontSize:'lg' },
+        { r:2, c:1, text:'',  color:'red' },
+        { r:2, c:2, text:'',  color:'white' },
+        { r:2, c:3, text:'',  color:'amber' },
+        { r:3, c:0, text:'',  color:'white', type:'bigNumber', fontSize:'lg' },
+        { r:3, c:1, text:'',  color:'red' },
+        { r:3, c:2, text:'',  color:'white' },
+        { r:3, c:3, text:'',  color:'amber' },
+        // Bottom banner — cross-contact reminder
+        { r:4, c:0, text:'CROSS-CONTACT: Clean board · Fresh oil · New gloves', color:'katmer', type:'header', colSpan:4 },
       ],
     },
     {
-      id: 'service_recap',
-      labelKey: 'whiteboard_tpl_service_recap',
-      label: 'Service Recap',
-      title: 'SERVICE RECAP',
-      paper: 'A4', orient: 'portrait', rows: 6, cols: 2,
+      id: 'prep_schedule_pro',
+      labelKey: 'whiteboard_tpl_prep_pro',
+      label: 'Prep Schedule · Today',
+      title: 'PREP SCHEDULE',
+      paper: 'A4', orient: 'portrait', rows: 7, cols: 4,
       cells: [
-        { r:0, c:0, text:'METRIC',    color:'dark', type:'header' },
-        { r:0, c:1, text:'VALUE',     color:'dark', type:'header' },
-        { r:1, c:0, text:'Covers',    color:'cream' },
-        { r:1, c:1, text:'0',         color:'white', type:'bigNumber', fontSize:'xl' },
-        { r:2, c:0, text:'No-shows',  color:'cream' },
-        { r:2, c:1, text:'0',         color:'red', type:'bigNumber', fontSize:'lg' },
-        { r:3, c:0, text:'Top dish',  color:'cream' },
-        { r:3, c:1, text:'—',         color:'white' },
-        { r:4, c:0, text:'86 items',  color:'cream' },
-        { r:4, c:1, text:'—',         color:'red' },
-        { r:5, c:0, text:'Notes',     color:'cream' },
-        { r:5, c:1, text:'',          color:'white' },
-      ],
-    },
-    {
-      id: 'eu_allergens',
-      labelKey: 'whiteboard_tpl_eu_allergens',
-      label: 'EU 14 Major Allergens',
-      title: 'EU 14 MAJOR ALLERGENS',
-      paper: 'A4', orient: 'landscape', rows: 4, cols: 4,
-      cells: [
-        { r:0, c:0, text:'Cereals (gluten)',  color:'amber', type:'list' },
-        { r:0, c:1, text:'Crustaceans',       color:'red' },
-        { r:0, c:2, text:'Eggs',              color:'cream' },
-        { r:0, c:3, text:'Fish',              color:'blue' },
-        { r:1, c:0, text:'Peanuts',           color:'amber' },
-        { r:1, c:1, text:'Soybeans',          color:'mint' },
-        { r:1, c:2, text:'Milk (lactose)',    color:'cream' },
-        { r:1, c:3, text:'Tree nuts',         color:'katmer' },
-        { r:2, c:0, text:'Celery',            color:'mint' },
-        { r:2, c:1, text:'Mustard',           color:'amber' },
-        { r:2, c:2, text:'Sesame seeds',      color:'katmer' },
-        { r:2, c:3, text:'Sulphites (>10ppm)',color:'red' },
-        { r:3, c:0, text:'Lupin',             color:'amber' },
-        { r:3, c:1, text:'Molluscs',          color:'blue' },
-        { r:3, c:2, text:'Always declare',    color:'steak', type:'header' },
-        { r:3, c:3, text:'Cross-contact!',    color:'steak', type:'header' },
+        // Hero header
+        { r:0, c:0, text:'PREP SCHEDULE — TODAY', color:'forest', type:'header', fontSize:'lg', colSpan:4 },
+        // Column headers
+        { r:1, c:0, text:'TIME', color:'cream', type:'header' },
+        { r:1, c:1, text:'TASK', color:'cream', type:'header', colSpan:2 },
+        { r:1, c:3, text:'✓',    color:'cream', type:'header' },
+        // Task rows — bigNumber time, merged task description
+        { r:2, c:0, text:'09:00', color:'amber', type:'bigNumber', fontSize:'lg' },
+        { r:2, c:1, text:'Stocks & broths',   color:'white', colSpan:2 },
+        { r:2, c:3, text:'☐', color:'white' },
+        { r:3, c:0, text:'10:00', color:'amber', type:'bigNumber', fontSize:'lg' },
+        { r:3, c:1, text:'Sauces & dressings', color:'white', colSpan:2 },
+        { r:3, c:3, text:'☐', color:'white' },
+        { r:4, c:0, text:'11:00', color:'amber', type:'bigNumber', fontSize:'lg' },
+        { r:4, c:1, text:'Protein portioning', color:'white', colSpan:2 },
+        { r:4, c:3, text:'☐', color:'white' },
+        { r:5, c:0, text:'12:00', color:'amber', type:'bigNumber', fontSize:'lg' },
+        { r:5, c:1, text:'Garnish & herbs',    color:'white', colSpan:2 },
+        { r:5, c:3, text:'☐', color:'white' },
+        { r:6, c:0, text:'17:30', color:'steak', type:'bigNumber', fontSize:'lg' },
+        { r:6, c:1, text:'SERVICE SETUP — final check', color:'cream', colSpan:2 },
+        { r:6, c:3, text:'☐', color:'white' },
       ],
     },
   ];
@@ -629,8 +518,13 @@
           '<div class="page-subtitle">' + PCD.escapeHtml(t('whiteboard_subtitle') || 'Customizable A4/A3 reference sheet — edit cells, pick colors, print') + '</div>' +
         '</div>' +
         '<div class="page-header-actions">' +
+          // v2.10.4 — Auto-save indicator: chef sürekli düşünmeden değişikliklerin
+          // korunduğunu görmeli (Save butonu gibi davranmıyor ama güvence verir).
+          '<span style="display:inline-flex;align-items:center;gap:5px;padding:6px 10px;background:var(--brand-50);border:1px solid var(--brand-200,#bbf7d0);border-radius:6px;font-size:11px;font-weight:700;color:var(--brand-700);letter-spacing:0.03em;text-transform:uppercase;">' + PCD.icon('check', 12) + '<span>' + PCD.escapeHtml(t('whiteboard_autosaved') || 'Auto-saved') + '</span></span>' +
           '<button class="btn btn-outline btn-sm" id="wbTemplateBtn">' + PCD.icon('book-open', 14) + ' <span>' + PCD.escapeHtml(t('whiteboard_templates') || 'Templates') + '</span></button>' +
-          '<button class="btn btn-outline btn-sm" id="wbClearBtn">' + PCD.icon('rotate-ccw', 14) + ' <span>' + PCD.escapeHtml(t('whiteboard_reset') || 'Reset') + '</span></button>' +
+          // v2.10.4 — Icon registry'de "rotate-ccw" yok → silent info fallback bug fix:
+          // "refresh" var olan isim. Bu Reset buton'u "(i)" yerine doğru ikon gösterir.
+          '<button class="btn btn-outline btn-sm" id="wbClearBtn">' + PCD.icon('refresh', 14) + ' <span>' + PCD.escapeHtml(t('whiteboard_reset') || 'Reset') + '</span></button>' +
           '<button class="btn btn-primary btn-sm" id="wbPrintBtn">' + PCD.icon('print', 14) + ' <span>' + PCD.escapeHtml(t('print') || 'Print') + '</span></button>' +
         '</div>' +
       '</div>' +
@@ -645,7 +539,9 @@
           }).join('') +
         '</select>' +
         '<button class="btn btn-outline btn-sm" id="wbNewCanvasBtn">' + PCD.icon('plus', 14) + ' <span>' + PCD.escapeHtml(t('whiteboard_new_canvas') || 'New') + '</span></button>' +
-        (canvasCount > 1 ? '<button class="btn btn-outline btn-sm" id="wbDeleteCanvasBtn" style="color:var(--danger);">' + PCD.icon('trash-2', 14) + '</button>' : '') +
+        // v2.10.4 — "trash-2" registry'de yok → silent fallback "(i)" görünüyordu.
+        // "trash" doğru registry ismi (operatör raporu: "delete butonu (i) şeklinde").
+        (canvasCount > 1 ? '<button class="btn btn-outline btn-sm" id="wbDeleteCanvasBtn" style="color:var(--danger);" title="' + PCD.escapeHtml(t('whiteboard_delete_canvas') || 'Delete this canvas') + '">' + PCD.icon('trash', 14) + '</button>' : '') +
       '</div>' +
       '<div class="card mb-3" style="padding:14px;">' +
         '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;align-items:end;">' +
@@ -1029,16 +925,11 @@
       });
     }
 
-    // Close palette on outside click
-    document.addEventListener('click', function (e) {
-      const palette = view.querySelector('#wbPalette');
-      if (!palette || palette.style.display === 'none') return;
-      if (!palette.contains(e.target) && !e.target.closest('.wb-cell')) {
-        palette.style.display = 'none';
-      }
-    }, { once: true });
+    // v2.10.4 — Outside-click handler module-level'a taşındı (file top).
+    // Önceki { once: true } pattern ilk dış tıklamada listener'ı siliyordu →
+    // sonraki sağ-tık'larda palette dışına tıklasan kapanmıyordu.
 
-    // Reset — sadece aktif canvas'ın hücrelerini temizle (grid + title korunur)
+// Reset — sadece aktif canvas'ın hücrelerini temizle (grid + title korunur)
     PCD.$('#wbClearBtn', view).addEventListener('click', function () {
       PCD.modal.confirm({
         icon: '↺',

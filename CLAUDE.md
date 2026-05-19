@@ -10,7 +10,7 @@ ProChefDesk — profesyonel şef'ler için web tabanlı mutfak yönetim sistemi.
 
 **Stack:** Vanilla JavaScript (no bundling, no service worker), IndexedDB ana storage, Supabase (Postgres 17 + Auth + Storage + Realtime + Edge Functions), Cloudflare Pages (auto-deploy on GitHub push), Cloudflare R2 (backups).
 
-**Mevcut sürüm:** v2.10.3 (push'a hazır local; production v2.10.0). Diet sistemi komple kaldırma (operatör: işe yaramıyor, allergens zaten auto-detect yapıyor). 5 yer + 17 i18n key × 2 dil temizlendi. menus.js safe-print filter allergen-only oldu. Kitchen Cards dark mode fix (recipe row text inherit + preview wrapper bg). + v2.10.1 + v2.10.2 paketi (HACCP fixes + Whiteboard drag-resize + 11 şablon + user templates + Kitchen Cards Border/Bold + listener bleed fix + segmented toggle active state) birlikte gider. Detay: `CHANGELOG.md`.
+**Mevcut sürüm:** v2.10.4 (push'a hazır local; production v2.10.0). Whiteboard UX paketi: icon registry fallback fix (`trash-2` → `trash`, `rotate-ccw` → `refresh` — CLAUDE.md gotcha'nın canlı kanıtı), auto-save indicator chip, click-outside-to-close palette bug fix (once:true → module-level handler), 5 yaratıcı template (merged hero + bigNumber + header type). + v2.10.1 + v2.10.2 + v2.10.3 paketi birlikte gider. Detay: `CHANGELOG.md`.
 
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı). SEO standardı aşağıda `## Blog SEO standardı` bölümünde.
 

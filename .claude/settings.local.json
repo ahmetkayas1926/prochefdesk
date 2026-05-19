@@ -114,7 +114,10 @@
       "Bash(git -C \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\" show --stat f29aad7)",
       "Bash(git -C \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\" show 1abc2a9 --stat)",
       "Bash(node -c \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\tools\\\\whiteboard.js\")",
-      "Bash(git -C \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\" diff --stat)"
+      "Bash(git -C \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\" diff --stat)",
+      "Bash(xargs wc -l)",
+      "Bash(grep -E \"\\\\.css$\")",
+      "Bash(git -C \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\" diff --stat HEAD)"
     ]
   }
 }

@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.10.3 · 2026-05-20
+**Mevcut sürüm:** v2.10.4 · 2026-05-20
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -18,6 +18,44 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH (kapatılabilir inl
 - **Round 5 (v2.9.13):** haccp hub ✅ — **NAKED→RICH sweep tamamlandı**
 
 ## v2.10.x — Whiteboard pro upgrade
+
+### v2.10.4 — Whiteboard UX paketi · 2026-05-20
+
+**Operatör raporu 4 başlık:**
+
+**1) Header ikon fallback bug (CLAUDE.md gotcha kanıtı):**
+`whiteboard.js` Reset ve Delete butonlarında `PCD.icon('rotate-ccw')` ve `PCD.icon('trash-2')` Lucide-style isimleri vardı — registry'de bu isimler yok, silent fallback ile **kırmızı yuvarlak içinde "(i)" info ikonuna** dönüşüyordu (CLAUDE.md "PCD.icon registry silent fallback" gotcha kanıtı). Fix: `rotate-ccw` → `refresh`, `trash-2` → `trash` (registry'de var olan isimler). Reset + Delete artık doğru ikon gösterir. **whiteboard.js:633, 648.**
+
+**2) Auto-save indicator (operatör "kaydet butonu olmalı" talebi):**
+Whiteboard auto-save'liydi ama UI'da güvence görsel yoktu — operatör Save butonu beklemişti. Header'a brand-tinted pasif chip eklendi: `✓ Auto-saved`. İşlevsel değil — sadece kullanıcının "verim kayboluyor mu?" endişesini gideren visual confirmation. **whiteboard.js:631** + 2 yeni i18n key.
+
+**3) Click-outside-to-close palette bug (sağ-tık panel kapanmıyor):**
+Operatör: "Sağ tıkladım, panel açıldı, boş bir yere tıkladığımda kapanmıyor". Root cause: render-içi `document.addEventListener('click', ..., { once: true })` pattern — **ilk dış tıklamada listener kendini siliyor**, sonraki sağ-tık'larda artık aktif değil. Fix: handler module-level'a taşındı (file top, `{ once: true }` olmadan), her zaman aktif: palette display:none ise erken return, görünür + dış tıklama varsa kapat. Render-içi listener silindi. **whiteboard.js:61-71 module-level + line ~1040 render-içi sil.**
+
+**4) Templates tasarım yenileme (operatör "ilkel ve aptalca, yaratıcı ol"):**
+11 eski şablon (her hücre 1×1, merge yok, bold yok) silindi. **5 yeni profesyonel şablon** eklendi — tasarım kuralları:
+- **Merged hero header** her şablonda (full-width colSpan=N başlık, xl/lg font, dark/forest/steak renk)
+- **bigNumber type** ile vurgulanmış rakamlar (covers, time, temp, KPI)
+- **header type** ile bold uppercase section title'lar
+- **Renk paleti farklılaşması:** forest (premium), steak (urgency/alert), katmer (warmth), mint/blue (info), amber (timing)
+
+5 şablon:
+1. **Tonight's Service Board** (A4 landscape, 4×6) — Hero "TONIGHT'S SERVICE" merged 6-cell + KPI strip (Covers/Vegan/GF-DF bigNumber) + 86 List merged red banner + Specials merged katmer banner
+2. **Hot Line · Station Map** (A4 landscape, 5×4) — Hero header merged + 3 station row (SAUTÉ steak / GRILL katmer / PASS forest), her station header type+lg font, sağa proteins/sauces/garnish
+3. **Cook Times · Core Temps** (A4 landscape, 5×5) — Hero forest xl + protein header satırı (BEEF/LAMB/CHICKEN/FISH steak+amber+blue) + TIME row bigNumber lg + CORE °C row green bigNumber + NOTES merged 4-cell
+4. **Allergen Alert Board** (A4 landscape, 5×4) — Hero "⚠ ALLERGEN ALERTS — TODAY" steak red xl merged + 2 alert row (TABLE bigNumber / ALLERGEN red / DISH / ACTION amber) + cross-contact reminder katmer merged banner
+5. **Prep Schedule · Today** (A4 portrait, 7×4) — Hero forest lg merged + TIME/TASK/✓ column headers + 5 prep row (09:00→17:30 bigNumber amber zaman, task merged 2-cell, son satır SERVICE SETUP steak)
+
+Etki: Templates picker'da 11 → 5 şablon görünür. Her template'i tıklayıp yeni canvas olarak ekleyince operatörün "şık olsun, kalın olsun, merge'li olsun" kriteri karşılanır. User template'leri (LS-saved) ve drag-resize merge feature'ı korundu — sadece built-in TEMPLATES array yenilendi.
+
+**i18n:** 11 eski label key silindi (whiteboard_tpl_cook_times, _plating, _reheating, _allergens, _cleaning, _service_briefing, _hot_line, _knife_cuts, _daily_prep, _service_recap, _eu_allergens), 7 yeni key eklendi (whiteboard_autosaved, whiteboard_delete_canvas, whiteboard_tpl_tonight, _hot_line_pro, _cook_temps_pro, _allergen_alert, _prep_pro) × 2 dil.
+
+**Test:**
+1. Whiteboard → Header → Reset butonu refresh ikon, Delete butonu (canvas>1) trash ikon (artık "(i)" YOK)
+2. Header sağında "✓ Auto-saved" brand chip görünür
+3. Hücreye sağ-tık → palette açılır → sayfanın boş yerine tıkla → **palette kapanır**; tekrar sağ-tık → palette açılır → tekrar boş yere tıkla → **kapanır** (sınırsız döngü, önceki sürümde once:true ile sadece 1 kez çalışıyordu)
+4. Templates → 5 yeni şablon (eskiler yok) → her template uygula → merged hero header + bigNumber + bold section title'lar görünür
+5. v2.10.0-2 drag-resize cell merge + user templates korundu
 
 ### v2.10.3 — Diet sistemi komple kaldırma + Kitchen Cards dark mode fix · 2026-05-20
 
