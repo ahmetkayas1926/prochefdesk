@@ -36,7 +36,7 @@ v2.9.24'te eklenen "standart SaaS hijyen" katmanları operatör akışını bozd
 - 25 missing i18n key eklendi
 - Tüm doc stale numbers güncellendi (18 migration, 4 edge function, 29 RLS tablo, 24 realtime, 21 ws-bound, 18 lazy tool)
 
-**Sonuç:** hCaptcha + Discover photos → v2.9.23 davranışına döndü. Güvenlik tarafı: recipe_likes RLS leak + dead code temizliği + doc accuracy korundu.
+**Sonuç:** Discover photos → v2.9.23 davranışına döndü ✅. **hCaptcha "I am human" HÂLÂ ÇALIŞMIYOR** 🔴 — yani sorun v2.9.24-27 değişikliklerinden değil, daha eski bir regresyon veya dış faktör (hCaptcha dashboard, Cloudflare Bot Fight Mode, domain whitelist vb.). Yeni session sıfırdan standart teşhis akışı çalıştıracak (detay: HANDOVER.md §2.2). Güvenlik tarafı: recipe_likes RLS leak + dead code temizliği + doc accuracy korundu.
 
 ### v2.9.27 — hCaptcha CSP 'unsafe-eval' + photo debug log · 2026-05-19 (yetmedi, v2.9.28'de revert)
 - **Try:** hCaptcha "I am human" tıklamasında widget cevap vermiyor (v2.9.26 render pattern fix sonrası bile). En olası sebep: hCaptcha widget'ı internal'da eval/new Function kullanıyor, CSP `'unsafe-eval'` yok diye sessiz fail. script-src'ye `'unsafe-eval'` eklendi (yalnızca script-src — diğer direktifler etkilenmedi). frame-src'ye explicit `https://newassets.hcaptcha.com` eklendi (wildcard zaten kapsamalı ama bazı browser CSP parser'ları için açık entry).
