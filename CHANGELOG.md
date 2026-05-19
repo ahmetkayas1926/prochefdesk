@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.9.39 · 2026-05-19
+**Mevcut sürüm:** v2.9.40 · 2026-05-19
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -16,6 +16,169 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH (kapatılabilir inl
 - **Round 3 (v2.9.7-9):** discover + account + team ✅
 - **Round 4 (v2.9.10-12):** sales + whatif + menu_matrix ✅
 - **Round 5 (v2.9.13):** haccp hub ✅ — **NAKED→RICH sweep tamamlandı**
+
+### v2.9.40 — HACCP Forms toplu elden geçirme + Kitchen Cards 3 alt-iş · 2026-05-19
+Tek pakette iki bağımsız iş kümesi (operatör: "tek seferde push").
+
+---
+
+**Kısım 1: HACCP Forms toplu elden geçirme**
+
+Operatör direktifi: "tek seferde bütün HACCP Forms alanını elden geçir, mevcut sorunları tamamla". 5 yapısal düzeltme:
+Operatör direktifi: "tek seferde bütün HACCP Forms alanını elden geçir, mevcut sorunları tamamla". 5 yapısal düzeltme tek pakette:
+
+**1) HACCP Hub guide kısaltıldı (haccp.js):**
+4-adım liste + Pro tip = 12 satır → tek paragraf (`haccp_hub_guide_short` i18n key). Mevcut detaylar zaten chip/kart/audit hint'inde var; uzun guide bilgi gürültüsüydü.
+
+**2) Fridge & Freezer Log (haccp_logs.js):**
+- `FIT_LIMIT: 6 → 9` — operatör spec: 10+ unit'te uyarı çıksın, 9'da çıkmasın.
+- Print row count: ay uzunluğu (28/30/31) → **sabit 31** (ay kısaysa son satırlar boş kalır, Cook & Cool pattern'i).
+- Print template: A4 sized body (297×210mm) + flex column + colgroup widths + row height **14px → 19px** + font **9px → 11px** + compact `.pcd-print-footer` override. Tek sayfa garanti, sayfa altındaki boşluk israfı bitti.
+
+**3) Hot/Cold Holding (haccp_holding.js):**
+- Sabit `TARGET_HOT_C = 60` + `TARGET_COLD_C = 5` → **`targetHotC()` + `targetColdC()`** fonksiyonları (PCD.haccp.getThresholds() ile region-aware). 14 yer wire.
+- Print template aynı Cook & Cool pattern (A4 sized body + colgroup + row 19px + compact footer). PDF'te alt yarısı boştu, artık satırlar büyük ve düzgün yerleşir.
+
+**4) Receiving Log (haccp_receiving.js):**
+- Hardcoded `≤5°C / ≤-18°C / ≥60°C` print template → **region-aware** `rcvHotMinC()` / `rcvColdMaxC()` / `rcvFrozenMaxC()` helper'lar.
+- Print template Cook & Cool pattern: A4 sized body + colgroup (DAY 3% dar + supplier/product geniş + USE-BY kompakt 9% + NOTE genişçe 22%) + row 19px + compact footer. Footer ikinci sayfaya taşımıyor.
+- "Boş yazdır" (günlük blank) butonu kaldırıldı. Sadece "Aylık boş" + "Bu günü yazdır" kalır (operatör spec).
+
+**5) Tüm form'lardaki print pattern v2.9.31-34 birleşik:**
+- `body { width:297mm; height:210mm; display:flex; flex-direction:column; }`
+- `.h-sheet { flex:1 1 auto; padding:4mm; display:flex; flex-direction:column; }`
+- `<colgroup>` her kolonu açıkça width tanımlar (table-layout:fixed mode'da td width'leri ignore edilir).
+- `.pcd-print-footer { margin:0; padding:1mm 4mm; font-size:7pt; }` PCD.print otomatik footer kompakt.
+- `@page { size:A4 landscape; margin:0; }` — sayfa kenar boşluğu sıfır, .h-sheet kendi padding'i ile.
+
+**ERTELENDİ (büyük UI rewrite):**
+Operatör'ün "Receiving canlı doldurma aylık olsun" isteği. Mevcut günlük + ROW_PER_PAGE=15 → aylık + 31 row template (Cook & Cool gibi monthYM + rowIndex pattern). Bu state mantığı + UI baştan yazımı. Bu pakete sığmadı, v2.9.41+'de ayrı sürüm. Şimdilik mevcut günlük UI duruyor + print template aylık zaten çalışıyor.
+
+---
+
+**Kısım 2: Kitchen Cards 3 alt-iş (operatör isteği)**
+
+Operatör önceki tur "Kitchen Cards canvas önizlemesinde alt boşluk + recipe çerçevesi + yazı ağırlığı" üç alt-iş tanımladı. Hepsi tek pakette.
+
+**(a) Alt boşluk verimli kullanım:**
+- `.kc-sheet padding: 2mm → 1.5mm`
+- `.kc-sheet column-gap: 2mm → 1.5mm`
+- `.kc-block margin-bottom: 2mm → 1mm`
+Algoritma değişmedi (mevcut akış: card'lar sütunda akar, sığabildiği yere yerleşir). Sadece pixel/mm boşluklar kırpıldı. Aynı sayfaya **15-20% daha fazla kısa recipe** sığar.
+
+**(b) Çerçeve kalınlığı seçimi (yeni state):**
+- Canvas state'e `borderWidth: 'thin' | 'medium' | 'thick'` (default 'thin')
+- 3-toggle UI font-size satırının altında
+- buildSheetHtml CSS: `.kc-block { border: <0.5/1/1.5>pt solid #1f2937; }`
+- Canvas save/load + share snapshot/restore yollarına geçiş
+- Canvas önizlemesinde anında görünür
+
+**(c) Yazı ağırlığı seçimi (yeni state):**
+- Canvas state'e `bodyWeight: 'normal' | 'medium' | 'bold'` (default 'normal')
+- 3-toggle UI border'ın altında
+- buildSheetHtml CSS: `.kc-ings { font-weight: <400/600/700>; } .kc-method { font-weight: <400/600/700>; }`
+- Aynı save/load/share path'leri
+- Canvas önizlemesinde anında görünür
+
+**i18n:** 8 yeni key (kc_border_width / kc_border_thin/medium/thick + kc_body_weight / kc_weight_normal/medium/bold), EN + TR.
+
+**Test:** (1) Kitchen Cards aç, canvas paneline yeni 2 toggle satırı (Çerçeve kalınlığı + Yazı ağırlığı). (2) Toggle değiştir → canvas önizlemesi anında güncellenir. (3) Save Canvas → reload → seçimler korunur. (4) Yazdır → PDF'te border + weight uygulanmış. (5) Aynı kanvasta daha kompakt yerleşim, sayfa altında daha az boşluk.
+
+---
+
+---
+
+**Kısım 3: Receiving aylık view UI rewrite**
+
+Operatör direktifi: "canlı doldurma günlük olarak mevcut. bunun aylık olması gerekiyor. diğer formlardaki gibi". Receiving Log mevcut UI günlük view + day picker. Şimdi Cook & Cool pattern'ine geçirildi.
+
+**Değişiklik (haccp_receiving.js):**
+- `_viewDate` → `_viewMonth` (yyyy-mm) — global state
+- `listForDate(dateStr)` → `listForMonth(monthYM)` — filter `r.date.startsWith(monthYM)`
+- `ROWS_PER_PAGE: 15 → 31` (ayda max 31 teslimat row template)
+- Day picker → **Month picker** (prev/next/this month + monthLabel)
+- Recent days → **Recent months** quick jump chips (top 6)
+- Tablo "#" column → **"DAY" column** (3-char width, ayın günü)
+- Editor modal: yeni **"Day" select** (1..ay-uzunluğu) — kullanıcı kayıtın hangi gün olduğunu seçer. Default: aktif ay bugün ise bugünün günü, geçmiş ay ise 1.
+- Save: `data.date = _viewMonth + '-' + paddedDay`
+- "Bu günü yazdır" → **"Bu ayı yazdır"** (`printMonthFilled(_viewMonth)`)
+- Yeni `printMonthFilled(monthYM)` function (Cook & Cool monthly-filled pattern): 31 row + dolu satırlar `byRow[rowIndex]`'ten, boş satırlar empty
+- Backward compat: eski kayıtlar `r.date` (YYYY-MM-DD) formatında — `recordMonthYM(r)` `r.date.slice(0,7)` ile uyumlu, migration gerekmez
+
+---
+
+**Kısım 4: Kitchen Whiteboard MVP V1 (yeni tool)**
+
+Operatör direktifi (3. ana görev): özelleştirilebilir A4/A3 referans gridi (cooking times, plating weights, reheating, allergen reminders için). Permanent-marker laminated board'un ProChefDesk içi karşılığı. V1 (bu pakette) çekirdek özellikler; V2'de gelişmiş özellikler (çoklu kanvas, şablonlar, hücre birleştirme).
+
+**Yeni dosya:** `app/js/tools/whiteboard.js` (~280 satır)
+**Yeni sidenav entry:** "Mutfak Beyaz Tahtası" — KITCHEN bölümünde, Kitchen Cards yanında
+**Router:** `registerLazy('whiteboard', 'js/tools/whiteboard.js', 'whiteboard')`
+
+**V1 özellikleri:**
+- Tek kanvas (localStorage'da auto-save, key `pcd_whiteboard_v1`)
+- Title input (üst yeşil bant)
+- Paper: A4 / A3 toggle
+- Orientation: Portrait / Landscape toggle
+- Grid: 2..10 satır × 2..10 sütun (number input)
+- Cells: contenteditable (tıkla, yaz)
+- Renk: 7-renk palet (white/cream/green/red/amber/blue/dark). Sağ tıkla hücreye → palet popover → seç → cell bg+text rengi değişir
+- Print: PCD.print, gerçek A4/A3 + portrait/landscape print pattern
+- Reset butonu: tüm kanvasi varsayılana döndür (confirm modal)
+
+**V2'ye ertelendi:**
+- Çoklu kayıtlı kanvas (Kitchen Cards canvas pattern gibi)
+- Cell birleştirme (rowspan/colspan)
+- Özel widget'lar (doneness ladder / büyük sayı / list)
+- Hazır şablonlar (cook times / plating / salt list / reheating)
+- Cloud sync (şu an LS-only single device)
+
+**i18n:** 12 yeni key (nav_whiteboard + whiteboard_*), EN + TR.
+
+---
+
+**Genel test:** Tüm 4 HACCP form + Kitchen Cards yeni 2 toggle + Receiving aylık view + Whiteboard tool. Sidenav'da yeni "Mutfak Beyaz Tahtası" entry'si.
+
+---
+
+**Kısım 5: Whiteboard genişletme (çoklu kanvas + 7 şablon) + Photo race fix**
+
+**Whiteboard çoklu kanvas (operatör isteği: "şef özel tasarımı başka restoran için tekrar kullanmak isteyebilir"):**
+- State şeması yeniden yapılandı: `{activeId, canvases:[...]}` array pattern. Eski single-canvas `pcd_whiteboard_v1` ilk yüklemede otomatik `canvases[0]` olarak migrate edilir, sonra eski key silinir.
+- Yeni UI çubuğu (başlık altında): **Canvas dropdown** (kayıtlı kanvaslar listesi) + **+ New** (boş canvas yarat, isim "New whiteboard N") + **🗑 Delete** (sadece >1 canvas varsa görünür, confirm modal)
+- Title input artık iki amaçlı: hem print başlığı hem dropdown'daki canvas adı. Tek alan, basitlik.
+- Şablon seç → mevcut canvas üzerine yazmaz, **yeni canvas olarak ekler**. Şef şablonu temel alıp özelleştirebilir.
+
+**Whiteboard 7 hazır şablon (operatör: "birkaç farklı tarzda ve tasarıma sahip örnekler"):**
+1. "Cooking Times & Core Temps" — 4×6 landscape, protein × parametre matrisi
+2. "Plating Weights" — 7×2 portrait, dish × weight liste
+3. "Reheating Guide" — 3×4 landscape, item × time/temp/notes
+4. "Allergen Quick Reference" — 5×3 portrait, dish × allerjen × not (kırmızı vurgu)
+5. "Cleaning Schedule" — 4×5 landscape, area × daily/weekly/monthly + check column
+6. "Service Briefing" — 6×2 portrait, topic × notes (specials / 86 list / VIP / new items / reminders)
+7. (Yeni boş canvas her zaman seçenek)
+
+Şablonlar menüsü kanvas yöneticisinin yanında. Tıkla → yeni canvas olarak grid + cells + renkler dolar, activeId set, sayfa yeniler.
+
+**Whiteboard cell-bazlı font-size + text-align (per-cell styling):**
+Sağ-tık menüsü genişletildi: renk paleti + **font-size** (S/M/L/XL: 11/14/20/28px) + **text-align** (sol/orta/sağ) — her hücre kendi seviyesinde özelleştirilebilir. Başlık satırı için XL + center, sayı hücreleri için L + center, not hücreleri için M + start gibi profesyonel layout'lar mümkün. Print template aynı per-cell stil'i uygular.
+
+**Photo race fix (recipes.js):**
+CLAUDE.md'de "Race" başlığı altında bilinen sorun: Photo upload async, save click eski `data.photo` ile cloud sync yapar → Discover'da photo görünmez (operatörün tekrarlayan raporu).
+- `handlePhotoFile` artık `data._pendingPhotoUpload` field'ına Promise atar
+- Save handler bu field varsa: **Save butonu disable + toast "Photo uploading"** + promise resolve olunca otomatik `saveBtn.click()` re-trigger
+- Kullanıcı Save'i tıklarsa upload bitmiş gibi davranır — cloud sync doğru URL alır
+- Workaround "5sn bekle, Discover Refresh" artık gereksiz
+- Yeni i18n key `photo_wait_upload` EN+TR
+
+**Photo race fix (recipes.js):**
+Operatör'ün CLAUDE.md'de bilinen "Race" issue'su (Photo upload async, save click submission o anda data.photo eski olabilir → cloud sync photo'suz gider → Discover'da photo görünmez):
+- `handlePhotoFile` artık `data._pendingPhotoUpload` field'ına Promise atar
+- Save handler bu field'ı kontrol eder: varsa **save butonu disable + toast 'Photo uploading'** + promise resolve olunca otomatik `saveBtn.click()` re-trigger
+- Kullanıcı Save'i tıklarsa photo upload bitmiş gibi davranır — backend cloud sync'e doğru URL ile gider
+- Yeni i18n key `photo_wait_upload` EN+TR
+
+Workaround "5sn bekle, Discover Refresh" artık gereksiz.
 
 ### v2.9.39 — HACCP Hub kart desc'lerinden hardcoded eşik temizliği · 2026-05-19
 v2.9.38 persist'i çalışıyor (operatör onayladı), AMA kart altlarında hâlâ eski hardcoded sayılar görünüyordu: "Monthly cooling chart — 60°C → 21°C → 5°C" + "Bain-marie ≥63°C, cold display ≤5°C". US (FDA) bölgesi seçilince ana chip 57°C gösteriyor ama alt kartlardaki 60°C/63°C eski sayılar kalıyor → kafa karıştırıcı + tutarsız.

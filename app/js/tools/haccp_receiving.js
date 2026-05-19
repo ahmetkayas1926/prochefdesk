@@ -28,7 +28,8 @@
   'use strict';
   const PCD = window.PCD;
   const TABLE = 'haccpReceiving';
-  const ROWS_PER_PAGE = 15;
+  // v2.9.40 — Operator spec: monthly view (Cook & Cool pattern). Was 15 per day.
+  const ROWS_PER_PAGE = 31;
 
   function locale() { return (PCD.i18n && PCD.i18n.currentLocale) || 'en'; }
   function getTempUnit() {
@@ -75,59 +76,98 @@
     return Object.keys(dates).sort().reverse();
   }
 
+  // v2.9.40 — Monthly view helpers (Cook & Cool pattern)
+  function todayYM() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  }
+  function monthLabel(monthYM) {
+    if (!monthYM) return '';
+    const parts = monthYM.split('-');
+    const y = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10);
+    const d = new Date(y, m - 1, 1);
+    return d.toLocaleDateString(locale(), { year: 'numeric', month: 'long' });
+  }
+  function shiftMonth(monthYM, delta) {
+    const parts = monthYM.split('-');
+    const y = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10);
+    const d = new Date(y, m - 1 + delta, 1);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  }
+  function recordMonthYM(r) {
+    if (r.date && typeof r.date === 'string' && r.date.length >= 7) return r.date.slice(0, 7);
+    return null;
+  }
+  function listForMonth(monthYM) {
+    return (PCD.store.listTable(TABLE) || []).filter(function (r) {
+      return recordMonthYM(r) === monthYM;
+    }).slice().sort(function (a, b) {
+      return (a.rowIndex || 0) - (b.rowIndex || 0);
+    });
+  }
+  function listMonthsWithRecords() {
+    const months = {};
+    (PCD.store.listTable(TABLE) || []).forEach(function (r) {
+      const m = recordMonthYM(r);
+      if (m) months[m] = true;
+    });
+    return Object.keys(months).sort().reverse();
+  }
+
   function condBadge(condOK) {
     if (condOK === true)  return { mark: '✓', color: 'var(--success)', bg: 'transparent' };
     if (condOK === false) return { mark: '✗', color: '#991b1b',        bg: '#fee2e2' };
     return { mark: '—', color: 'var(--text-3)', bg: 'transparent' };
   }
 
-  let _viewDate = todayYmd();
+  // v2.9.40 — Monthly view (was daily _viewDate). Cook & Cool pattern.
+  let _viewMonth = todayYM();
 
   // ============ MAIN VIEW ============
   function render(view) {
     const t = PCD.i18n.t;
     const u = getTempUnit();
-    const records = listForDate(_viewDate);
-    const dates = listDatesWithRecords();
+    const records = listForMonth(_viewMonth);
+    const months = listMonthsWithRecords();
 
     view.innerHTML =
       '<div class="page-header">' +
         '<div class="page-header-text">' +
           '<div class="page-title">📦 ' + (t('hcr_title') || 'Receiving Log') + '</div>' +
-          '<div class="page-subtitle">' + (t('hcr_subtitle') || 'Goods-in checks · supplier, temp, expiry, condition') + '</div>' +
+          '<div class="page-subtitle">' + (t('hcr_subtitle') || 'Goods-in checks · supplier, temp, expiry, condition') + ' · ' + (t('hcc_subtitle_monthly_suffix') || 'Aylık 31 satır') + '</div>' +
         '</div>' +
         '<div class="page-header-actions">' +
           '<button class="btn btn-outline btn-sm" id="hcrPrintMonthBtn" title="' + PCD.escapeHtml(t('hcr_print_month_tip') || '31 satırlık aylık form, ay başında bir kez yazdır') + '">' + PCD.icon('calendar', 14) + ' <span>' + PCD.escapeHtml(t('hcr_print_month') || 'Aylık boş') + '</span></button>' +
-          '<button class="btn btn-outline btn-sm" id="hcrPrintBlankBtn" title="' + PCD.escapeHtml(t('hcr_print_blank_tip') || 'Boş formu yazdır, elle doldur') + '">' + PCD.icon('print', 14) + ' <span>' + PCD.escapeHtml(t('hcr_print_blank') || 'Boş yazdır') + '</span></button>' +
-          '<button class="btn btn-primary btn-sm" id="hcrPrintDayBtn">' + PCD.icon('print', 14) + ' <span>' + PCD.escapeHtml(t('hcr_print_day') || 'Bu günü yazdır') + '</span></button>' +
+          '<button class="btn btn-primary btn-sm" id="hcrPrintFilledBtn">' + PCD.icon('print', 14) + ' <span>' + PCD.escapeHtml(t('hcr_print_filled_month') || 'Bu ayı yazdır') + '</span></button>' +
         '</div>' +
       '</div>';
 
-    const isToday = _viewDate === todayYmd();
-    const dateNav = PCD.el('div', { class: 'card', style: { padding: '10px 14px', marginTop: '12px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '12px' } });
-    dateNav.innerHTML =
-      '<button class="btn btn-outline btn-sm" id="hcrPrevDay" aria-label="' + PCD.escapeHtml(t('prev_day') || 'Önceki gün') + '">' + PCD.icon('chevronLeft', 16) + '</button>' +
+    const isThisMonth = _viewMonth === todayYM();
+    const monthNav = PCD.el('div', { class: 'card', style: { padding: '10px 14px', marginTop: '12px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '12px' } });
+    monthNav.innerHTML =
+      '<button class="btn btn-outline btn-sm" id="hcrPrevMonth" aria-label="' + PCD.escapeHtml(t('prev_month') || 'Önceki ay') + '">' + PCD.icon('chevronLeft', 16) + '</button>' +
       '<div style="flex:1;text-align:center;">' +
-        '<div style="font-weight:700;font-size:15px;">' + PCD.escapeHtml(dateLabel(_viewDate)) + (isToday ? ' · <span style="color:var(--brand-700);font-size:11px;">' + PCD.escapeHtml(t('today') || 'Bugün') + '</span>' : '') + '</div>' +
+        '<div style="font-weight:700;font-size:15px;">' + PCD.escapeHtml(monthLabel(_viewMonth)) + (isThisMonth ? ' · <span style="color:var(--brand-700);font-size:11px;">' + PCD.escapeHtml(t('this_month') || 'Bu ay') + '</span>' : '') + '</div>' +
         '<div class="text-muted" style="font-size:11px;">' + records.length + ' / ' + ROWS_PER_PAGE + ' ' + PCD.escapeHtml(t('hcr_filled') || 'dolu') + '</div>' +
       '</div>' +
-      '<button class="btn btn-outline btn-sm" id="hcrTodayBtn" ' + (isToday ? 'disabled' : '') + '>' + PCD.escapeHtml(t('today') || 'Bugün') + '</button>' +
-      '<button class="btn btn-outline btn-sm" id="hcrNextDay" aria-label="' + PCD.escapeHtml(t('next_day') || 'Sonraki gün') + '">' + PCD.icon('chevronRight', 16) + '</button>';
-    view.appendChild(dateNav);
+      '<button class="btn btn-outline btn-sm" id="hcrThisMonthBtn" ' + (isThisMonth ? 'disabled' : '') + '>' + PCD.escapeHtml(t('this_month') || 'Bu ay') + '</button>' +
+      '<button class="btn btn-outline btn-sm" id="hcrNextMonth" aria-label="' + PCD.escapeHtml(t('next_month') || 'Sonraki ay') + '">' + PCD.icon('chevronRight', 16) + '</button>';
+    view.appendChild(monthNav);
 
-    if (dates.length > 0) {
+    if (months.length > 0) {
       const quickJump = PCD.el('div', { style: { display: 'flex', gap: '6px', marginBottom: '10px', flexWrap: 'wrap', alignItems: 'center' } });
-      const label = PCD.el('span', { style: { fontSize: '11px', color: 'var(--text-3)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }, text: (t('hcr_recent_days') || 'Son kayıtlı günler') + ':' });
+      const label = PCD.el('span', { style: { fontSize: '11px', color: 'var(--text-3)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }, text: (t('hcr_recent_months') || 'Son kayıtlı aylar') + ':' });
       quickJump.appendChild(label);
-      dates.slice(0, 5).forEach(function (d) {
-        const isActive = d === _viewDate;
+      months.slice(0, 6).forEach(function (m) {
+        const isActive = m === _viewMonth;
         const btn = PCD.el('button', {
           class: 'btn btn-' + (isActive ? 'primary' : 'outline') + ' btn-sm',
           style: { fontSize: '12px', padding: '4px 10px' },
-          'data-jump': d,
+          'data-jump-month': m,
         });
-        const dDate = new Date(d + 'T00:00:00');
-        btn.textContent = dDate.toLocaleDateString(locale(), { month: 'short', day: 'numeric' });
+        btn.textContent = monthLabel(m);
         quickJump.appendChild(btn);
       });
       view.appendChild(quickJump);
@@ -140,14 +180,14 @@
       '<table style="width:100%;min-width:1100px;border-collapse:collapse;font-size:12px;table-layout:fixed;">' +
         '<thead style="background:var(--surface-2);">' +
           '<tr>' +
-            '<th style="width:32px;padding:8px 4px;text-align:center;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);">#</th>' +
-            '<th style="padding:8px 8px;text-align:start;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);border-left:1px solid var(--border);width:16%;">' + PCD.escapeHtml(t('hcr_col_supplier') || 'Tedarikçi') + '</th>' +
+            '<th style="width:36px;padding:8px 4px;text-align:center;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);">' + PCD.escapeHtml(t('hcc_col_day') || 'Gün') + '</th>' +
+            '<th style="padding:8px 8px;text-align:start;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);border-left:1px solid var(--border);width:14%;">' + PCD.escapeHtml(t('hcr_col_supplier') || 'Tedarikçi') + '</th>' +
             '<th style="padding:8px 8px;text-align:start;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);border-left:1px solid var(--border);width:20%;">' + PCD.escapeHtml(t('hcr_col_product') || 'Ürün') + '</th>' +
-            '<th style="padding:8px 6px;text-align:center;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);border-left:1px solid var(--border);width:10%;">' + PCD.escapeHtml(t('hcr_col_qty') || 'Miktar') + '</th>' +
-            '<th style="padding:8px 6px;text-align:center;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);border-left:1px solid var(--border);width:9%;">' + PCD.escapeHtml(t('hcr_col_temp') || 'Teslim') + ' °' + u + '</th>' +
-            '<th style="padding:8px 6px;text-align:center;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);border-left:1px solid var(--border);width:10%;">' + PCD.escapeHtml(t('hcr_col_expiry') || 'SKT') + '</th>' +
-            '<th style="padding:8px 6px;text-align:center;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);border-left:1px solid var(--border);width:7%;">' + PCD.escapeHtml(t('hcr_col_condition') || 'Koşul') + '</th>' +
-            '<th style="padding:8px 6px;text-align:start;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);border-left:1px solid var(--border);width:13%;">' + PCD.escapeHtml(t('hcr_col_note') || 'Not') + '</th>' +
+            '<th style="padding:8px 6px;text-align:center;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);border-left:1px solid var(--border);width:9%;">' + PCD.escapeHtml(t('hcr_col_qty') || 'Miktar') + '</th>' +
+            '<th style="padding:8px 6px;text-align:center;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);border-left:1px solid var(--border);width:8%;">' + PCD.escapeHtml(t('hcr_col_temp') || 'Teslim') + ' °' + u + '</th>' +
+            '<th style="padding:8px 6px;text-align:center;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);border-left:1px solid var(--border);width:9%;">' + PCD.escapeHtml(t('hcr_col_expiry') || 'SKT') + '</th>' +
+            '<th style="padding:8px 6px;text-align:center;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);border-left:1px solid var(--border);width:6%;">' + PCD.escapeHtml(t('hcr_col_condition') || 'Koşul') + '</th>' +
+            '<th style="padding:8px 6px;text-align:start;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);border-left:1px solid var(--border);width:14%;">' + PCD.escapeHtml(t('hcr_col_note') || 'Not') + '</th>' +
             '<th style="padding:8px 6px;text-align:center;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);border-left:1px solid var(--border);width:10%;">' + PCD.escapeHtml(t('hcr_col_chef') || 'Teslim alan') + '</th>' +
           '</tr>' +
         '</thead><tbody>';
@@ -160,7 +200,10 @@
       const filled = !!r;
       const rowBg = i % 2 === 0 ? 'var(--surface)' : 'var(--surface-1)';
       table += '<tr data-row="' + i + '" style="background:' + rowBg + ';cursor:pointer;height:32px;" class="hcr-row">';
-      table += '<td style="padding:4px;text-align:center;font-size:11px;color:var(--text-3);border-bottom:1px solid var(--border);font-weight:600;">' + (i + 1) + '</td>';
+      // v2.9.40 — DAY column: filled rows show actual day from r.date,
+      // empty rows show row index (just for reference, not committed).
+      const dayLabel = filled && r.date && r.date.length >= 10 ? parseInt(r.date.slice(8, 10), 10) : (i + 1);
+      table += '<td style="padding:4px;text-align:center;font-size:11px;color:' + (filled ? 'var(--text-1)' : 'var(--text-3)') + ';border-bottom:1px solid var(--border);font-weight:600;">' + dayLabel + '</td>';
       if (filled) {
         const cond = condBadge(r.conditionOK);
         const expiry = r.expiryDate ? new Date(r.expiryDate + 'T00:00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }) : '—';
@@ -185,25 +228,25 @@
     wrap.innerHTML = table;
     view.appendChild(wrap);
 
-    PCD.$('#hcrPrevDay', view).addEventListener('click', function () {
-      _viewDate = shiftDate(_viewDate, -1);
+    // v2.9.40 — Aylık view event handler'ları (Cook & Cool pattern)
+    PCD.$('#hcrPrevMonth', view).addEventListener('click', function () {
+      _viewMonth = shiftMonth(_viewMonth, -1);
       render(view);
     });
-    PCD.$('#hcrNextDay', view).addEventListener('click', function () {
-      _viewDate = shiftDate(_viewDate, 1);
+    PCD.$('#hcrNextMonth', view).addEventListener('click', function () {
+      _viewMonth = shiftMonth(_viewMonth, 1);
       render(view);
     });
-    const todayBtn = PCD.$('#hcrTodayBtn', view);
-    if (todayBtn) todayBtn.addEventListener('click', function () {
-      _viewDate = todayYmd();
+    const thisMonthBtn = PCD.$('#hcrThisMonthBtn', view);
+    if (thisMonthBtn) thisMonthBtn.addEventListener('click', function () {
+      _viewMonth = todayYM();
       render(view);
     });
-    PCD.$('#hcrPrintBlankBtn', view).addEventListener('click', function () { printDay(_viewDate, true); });
-    PCD.$('#hcrPrintDayBtn', view).addEventListener('click', function () { printDay(_viewDate, false); });
+    PCD.$('#hcrPrintFilledBtn', view).addEventListener('click', function () { printMonthFilled(_viewMonth); });
     PCD.$('#hcrPrintMonthBtn', view).addEventListener('click', function () { openMonthPickerModal(); });
 
-    PCD.on(view, 'click', '[data-jump]', function () {
-      _viewDate = this.getAttribute('data-jump');
+    PCD.on(view, 'click', '[data-jump-month]', function () {
+      _viewMonth = this.getAttribute('data-jump-month');
       render(view);
     });
     PCD.on(view, 'click', '[data-row]', function () {
@@ -218,8 +261,18 @@
     const t = PCD.i18n.t;
     const u = getTempUnit();
 
+    // v2.9.40 — Aylık view'da default tarih = ay içindeki bugün (eğer aktif ay),
+    // değilse ayın 1'i. Editor'da kullanıcı day select ile değiştirebilir.
+    let defaultDate;
+    if (existing) {
+      defaultDate = existing.date;
+    } else if (_viewMonth === todayYM()) {
+      defaultDate = todayYmd();
+    } else {
+      defaultDate = _viewMonth + '-01';
+    }
     const data = existing ? Object.assign({}, existing) : {
-      date: _viewDate, rowIndex: rowIndex,
+      date: defaultDate, rowIndex: rowIndex,
       supplier: '', productName: '',
       quantity: '', quantityUnit: '',
       deliveryTemp: null, expiryDate: null,
@@ -227,12 +280,30 @@
       note: '', chef: '',
     };
 
+    // v2.9.40 — Day select options (1..daysInMonth)
+    const dim = (function () {
+      const parts = (_viewMonth || '').split('-');
+      if (parts.length !== 2) return 31;
+      const y = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10);
+      return new Date(y, m, 0).getDate();
+    })();
+    const currentDay = data.date && data.date.length >= 10 ? parseInt(data.date.slice(8, 10), 10) : 1;
+    let dayOptions = '';
+    for (let d = 1; d <= dim; d++) {
+      dayOptions += '<option value="' + d + '"' + (d === currentDay ? ' selected' : '') + '>' + d + '</option>';
+    }
+
     const body = PCD.el('div');
     body.innerHTML =
       '<div style="background:var(--surface-2);padding:8px 12px;border-radius:8px;margin-bottom:14px;font-size:12px;color:var(--text-2);">' +
         '📦 ' + PCD.escapeHtml(t('hcr_row_intro') || 'Mal kabul kaydını doldur. Boş bıraktığın alanlar tabloda — olarak görünür.') +
       '</div>' +
       '<div style="display:flex;gap:8px;margin-bottom:10px;">' +
+        '<div style="width:110px;">' +
+          '<label style="display:block;font-weight:600;font-size:12px;margin-bottom:4px;">' + PCD.escapeHtml(t('hcc_col_day') || 'Gün') + ' <span style="font-weight:400;color:var(--text-3);">(' + PCD.escapeHtml(monthLabel(_viewMonth)) + ')</span></label>' +
+          '<select id="rfDay" style="width:100%;padding:8px 8px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-1);font-size:13px;box-sizing:border-box;">' + dayOptions + '</select>' +
+        '</div>' +
         '<div style="flex:1;">' +
           '<label style="display:block;font-weight:600;font-size:13px;margin-bottom:4px;">' + PCD.escapeHtml(t('hcr_col_supplier') || 'Tedarikçi') + '</label>' +
           '<input id="rfSupplier" type="text" maxlength="40" value="' + PCD.escapeHtml(data.supplier || '') + '" placeholder="' + PCD.escapeHtml(t('hcr_supplier_placeholder') || 'örn. ABC Gıda') + '" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-1);font-size:14px;box-sizing:border-box;">' +
@@ -329,6 +400,12 @@
       });
     });
     saveBtn.addEventListener('click', function () {
+      // v2.9.40 — Day select'ten ay+gün → YYYY-MM-DD birleştir
+      const daySel = body.querySelector('#rfDay');
+      if (daySel) {
+        const day = parseInt(daySel.value, 10) || 1;
+        data.date = _viewMonth + '-' + String(day).padStart(2, '0');
+      }
       data.supplier = body.querySelector('#rfSupplier').value.trim();
       data.productName = body.querySelector('#rfProduct').value.trim();
       data.quantity = body.querySelector('#rfQty').value.trim();
@@ -365,7 +442,21 @@
     const headerDate = dateStr && !blank ? new Date(dateStr + 'T00:00:00').toLocaleDateString(locale(), { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '________________________';
 
     let html = printStylesAndHeader(wsName, headerDate, u, t) +
-      '<table class="h-grid"><thead>' +
+      '<table class="h-grid">' +
+      // v2.9.40 — colgroup zorunlu (table-layout:fixed). DAY=idx dar (3%),
+      // FOOD/PRODUCT geniş, QTY/°C kompakt, NOTE genişçe.
+      '<colgroup>' +
+        '<col style="width:3%">' +    // idx
+        '<col style="width:13%">' +   // supplier
+        '<col style="width:20%">' +   // product
+        '<col style="width:9%">' +    // qty
+        '<col style="width:6%">' +    // temp
+        '<col style="width:9%">' +    // exp (use-by)
+        '<col style="width:5%">' +    // cond (ok/x)
+        '<col style="width:22%">' +   // note
+        '<col style="width:13%">' +   // chef
+      '</colgroup>' +
+      '<thead>' +
         '<tr>' +
           '<th>#</th>' +
           '<th>' + PCD.escapeHtml(t('hcr_col_supplier') || 'Tedarikçi') + '</th>' +
@@ -398,7 +489,7 @@
       '</tr>';
     }
 
-    html += '</tbody></table>' + printFooter(t);
+    html += '</tbody></table>' + printFooter(t, u);
 
     PCD.print(html, 'HACCP Receiving · ' + (dateStr || 'Blank'));
   }
@@ -450,7 +541,19 @@
     const monthLabel = new Date(year, month - 1, 1).toLocaleDateString(locale(), { month: 'long', year: 'numeric' });
 
     let html = printStylesAndHeader(wsName, monthLabel, u, t) +
-      '<table class="h-grid"><thead>' +
+      '<table class="h-grid">' +
+      '<colgroup>' +
+        '<col style="width:3%">' +
+        '<col style="width:13%">' +
+        '<col style="width:20%">' +
+        '<col style="width:9%">' +
+        '<col style="width:6%">' +
+        '<col style="width:9%">' +
+        '<col style="width:5%">' +
+        '<col style="width:22%">' +
+        '<col style="width:13%">' +
+      '</colgroup>' +
+      '<thead>' +
         '<tr>' +
           '<th>' + PCD.escapeHtml(t('hcr_col_day') || 'Gün') + '</th>' +
           '<th>' + PCD.escapeHtml(t('hcr_col_supplier') || 'Tedarikçi') + '</th>' +
@@ -478,59 +581,141 @@
       '</tr>';
     }
 
-    html += '</tbody></table>' + printFooter(t);
+    html += '</tbody></table>' + printFooter(t, u);
 
     PCD.print(html, 'HACCP Receiving · ' + monthLabel);
   }
 
+  // v2.9.40 — Aylık dolu yazdırma: aydaki tüm kayıtları 31 satırlık template'e
+  // yerleştirir (Cook & Cool printMonth pattern). Boş satırlar empty kalır.
+  function printMonthFilled(monthYM) {
+    const t = PCD.i18n.t;
+    const u = getTempUnit();
+    const ws = PCD.store.getActiveWorkspace ? PCD.store.getActiveWorkspace() : null;
+    const wsName = (ws && ws.name) || 'Kitchen';
+    const monthLbl = monthLabel(monthYM);
+
+    const records = listForMonth(monthYM);
+    const byRow = {};
+    records.forEach(function (r) { if (typeof r.rowIndex === 'number') byRow[r.rowIndex] = r; });
+
+    let html = printStylesAndHeader(wsName, monthLbl, u, t) +
+      '<table class="h-grid">' +
+      '<colgroup>' +
+        '<col style="width:3%">' +
+        '<col style="width:13%">' +
+        '<col style="width:20%">' +
+        '<col style="width:9%">' +
+        '<col style="width:6%">' +
+        '<col style="width:9%">' +
+        '<col style="width:5%">' +
+        '<col style="width:22%">' +
+        '<col style="width:13%">' +
+      '</colgroup>' +
+      '<thead>' +
+        '<tr>' +
+          '<th>' + PCD.escapeHtml(t('hcr_col_day') || 'Gün') + '</th>' +
+          '<th>' + PCD.escapeHtml(t('hcr_col_supplier') || 'Tedarikçi') + '</th>' +
+          '<th>' + PCD.escapeHtml(t('hcr_col_product') || 'Ürün') + '</th>' +
+          '<th>' + PCD.escapeHtml(t('hcr_col_qty') || 'Miktar') + '</th>' +
+          '<th>' + PCD.escapeHtml(t('hcr_col_temp') || 'Teslim') + ' °' + u + '</th>' +
+          '<th>' + PCD.escapeHtml(t('hcr_col_expiry') || 'SKT') + '</th>' +
+          '<th>' + PCD.escapeHtml(t('hcr_col_condition') || 'Koşul') + '</th>' +
+          '<th>' + PCD.escapeHtml(t('hcr_col_note') || 'Not') + '</th>' +
+          '<th>' + PCD.escapeHtml(t('hcr_col_chef') || 'Teslim alan') + '</th>' +
+        '</tr>' +
+      '</thead><tbody>';
+
+    for (let i = 0; i < ROWS_PER_PAGE; i++) {
+      const r = byRow[i];
+      const dayLabel = r && r.date && r.date.length >= 10 ? parseInt(r.date.slice(8, 10), 10) : (i + 1);
+      const tempVal = r && r.deliveryTemp != null ? (u === 'F' ? (Math.round((r.deliveryTemp * 9 / 5 + 32) * 10) / 10) : r.deliveryTemp) + '°' : '';
+      const expiry = r && r.expiryDate ? new Date(r.expiryDate + 'T00:00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }) : '';
+      const cond = r ? (r.conditionOK === true ? '✓' : (r.conditionOK === false ? '✗' : '')) : '';
+      const condFail = r && r.conditionOK === false;
+      html += '<tr>' +
+        '<td class="idx">' + dayLabel + '</td>' +
+        '<td class="sup">' + (r ? PCD.escapeHtml(r.supplier || '') : '') + '</td>' +
+        '<td class="prod">' + (r ? PCD.escapeHtml(r.productName || '') : '') + '</td>' +
+        '<td class="qty">' + (r && r.quantity ? PCD.escapeHtml(r.quantity) + (r.quantityUnit ? ' ' + PCD.escapeHtml(r.quantityUnit) : '') : '') + '</td>' +
+        '<td class="t">' + tempVal + '</td>' +
+        '<td class="exp">' + expiry + '</td>' +
+        '<td class="cond' + (condFail ? ' fail' : '') + '">' + cond + '</td>' +
+        '<td class="note">' + (r ? PCD.escapeHtml(r.note || '') : '') + '</td>' +
+        '<td class="chef">' + (r ? PCD.escapeHtml(r.chef || '') : '') + '</td>' +
+      '</tr>';
+    }
+
+    html += '</tbody></table>' + printFooter(t, u);
+    PCD.print(html, 'HACCP Receiving · ' + monthLbl);
+  }
+
+  // v2.9.40 — region-aware target helpers
+  function rcvHotMinC() { return (PCD.haccp && PCD.haccp.getThresholds() && PCD.haccp.getThresholds().hotMinC) || 60; }
+  function rcvColdMaxC() { return (PCD.haccp && PCD.haccp.getThresholds() && PCD.haccp.getThresholds().coldMaxC) || 5; }
+  function rcvFrozenMaxC() { return (PCD.haccp && PCD.haccp.getThresholds() && PCD.haccp.getThresholds().frozenMaxC) || -18; }
+
   function printStylesAndHeader(wsName, dateOrMonthLabel, u, t) {
+    const tCold = u === 'F' ? (Math.round((rcvColdMaxC() * 9 / 5 + 32) * 10) / 10) + '°F' : rcvColdMaxC() + '°C';
+    const tFrozen = u === 'F' ? (Math.round((rcvFrozenMaxC() * 9 / 5 + 32) * 10) / 10) + '°F' : rcvFrozenMaxC() + '°C';
+    const tHot = u === 'F' ? (Math.round((rcvHotMinC() * 9 / 5 + 32) * 10) / 10) + '°F' : rcvHotMinC() + '°C';
     return '<style>' +
-      'body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#000;margin:0;padding:0;}' +
-      '.h-head{margin-bottom:6px;border-bottom:2px solid #16a34a;padding-bottom:4px;display:flex;justify-content:space-between;align-items:flex-end;}' +
+      // v2.9.40 — Cook & Cool single-page pattern: A4 sized body + flex column
+      // + colgroup widths (added inline in printGrid) + compact footer + row 19px.
+      'body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#000;margin:0;padding:0;' +
+        'width:297mm;height:210mm;display:flex;flex-direction:column;}' +
+      '.h-sheet{flex:1 1 auto;min-height:0;padding:4mm;display:flex;flex-direction:column;}' +
+      '.h-head{margin-bottom:4px;border-bottom:1.5px solid #16a34a;padding-bottom:3px;display:flex;justify-content:space-between;align-items:flex-end;flex:0 0 auto;}' +
       '.h-head h1{margin:0;font-size:14px;}' +
-      '.h-head .sub{font-size:10px;color:#555;margin-top:1px;}' +
+      '.h-head .sub{font-size:10px;color:#555;margin-top:2px;}' +
       '.h-head .right{font-size:10px;color:#555;text-align:end;}' +
-      'table.h-grid{width:100%;border-collapse:collapse;font-size:9px;table-layout:fixed;}' +
-      'table.h-grid th, table.h-grid td{border:1px solid #999;padding:3px 4px;vertical-align:middle;}' +
-      'table.h-grid th{background:#f3f4f6;font-weight:700;font-size:8px;text-align:center;text-transform:uppercase;letter-spacing:0.04em;}' +
-      'table.h-grid td.idx{text-align:center;width:4%;font-weight:700;color:#444;}' +
-      'table.h-grid td.sup{width:15%;font-weight:600;}' +
-      'table.h-grid td.prod{width:18%;font-weight:600;}' +
-      'table.h-grid td.qty{width:10%;text-align:center;}' +
-      'table.h-grid td.t{width:8%;text-align:center;font-weight:600;}' +
-      'table.h-grid td.exp{width:9%;text-align:center;color:#666;}' +
-      'table.h-grid td.cond{width:6%;text-align:center;font-weight:700;}' +
-      'table.h-grid td.note{width:14%;font-size:8px;}' +
-      'table.h-grid td.chef{width:9%;text-align:center;}' +
+      'table.h-grid{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed;flex:0 0 auto;}' +
+      'table.h-grid th, table.h-grid td{border:1px solid #999;padding:2px 4px;vertical-align:middle;line-height:1.25;}' +
+      'table.h-grid th{background:#f3f4f6;font-weight:700;font-size:9px;text-align:center;text-transform:uppercase;letter-spacing:0.03em;}' +
+      'table.h-grid tr{height:19px;page-break-inside:avoid;}' +
+      'table.h-grid td.idx{text-align:center;font-weight:700;color:#444;}' +
+      'table.h-grid td.sup{font-weight:600;}' +
+      'table.h-grid td.prod{font-weight:600;}' +
+      'table.h-grid td.qty{text-align:center;}' +
+      'table.h-grid td.t{text-align:center;font-weight:600;}' +
+      'table.h-grid td.exp{text-align:center;color:#666;font-size:10px;}' +
+      'table.h-grid td.cond{text-align:center;font-weight:700;}' +
+      'table.h-grid td.note{font-size:10px;}' +
+      'table.h-grid td.chef{text-align:center;}' +
       'table.h-grid td.fail{background:#fee2e2;color:#991b1b;}' +
-      '.h-foot{margin-top:6px;display:flex;justify-content:space-between;font-size:9px;}' +
+      '.h-foot{margin-top:4px;display:flex;justify-content:space-between;font-size:9px;flex:0 0 auto;}' +
       '.h-foot .legend{color:#666;}' +
-      // v2.8.54 — Standart footer'a geçildi (utils.js PCD.print otomatik)
-      '@page{size:A4 landscape;margin:6mm;}' +
+      '.pcd-print-footer{margin:0 !important;padding:1mm 4mm !important;border-top:none !important;flex:0 0 auto;font-size:7pt !important;line-height:1.2 !important;}' +
+      '@page{size:A4 landscape;margin:0;}' +
     '</style>' +
+    '<div class="h-sheet">' +
     '<div class="h-head">' +
       '<div>' +
         '<h1>HACCP · ' + PCD.escapeHtml(t('hcr_title') || 'Receiving Log') + '</h1>' +
         '<div class="sub">' + PCD.escapeHtml(wsName) + ' · ' + PCD.escapeHtml(dateOrMonthLabel) + ' · °' + u + '</div>' +
       '</div>' +
       '<div class="right">' +
-        '<div><strong>' + PCD.escapeHtml(t('hcr_target_cold') || 'Soğuk') + ':</strong> ≤' + (u === 'F' ? '41°F' : '5°C') + '</div>' +
-        '<div><strong>' + PCD.escapeHtml(t('hcr_target_frozen') || 'Donmuş') + ':</strong> ≤' + (u === 'F' ? '0°F' : '-18°C') + '</div>' +
+        '<div><strong>' + PCD.escapeHtml(t('hcr_target_cold') || 'Soğuk') + ':</strong> ≤' + tCold + '</div>' +
+        '<div><strong>' + PCD.escapeHtml(t('hcr_target_frozen') || 'Donmuş') + ':</strong> ≤' + tFrozen + '</div>' +
+        '<div><strong>' + PCD.escapeHtml(t('hcr_target_hot') || 'Sıcak') + ':</strong> ≥' + tHot + '</div>' +
       '</div>' +
     '</div>';
   }
 
-  function printFooter(t) {
+  function printFooter(t, u) {
+    const tCold = u === 'F' ? (Math.round((rcvColdMaxC() * 9 / 5 + 32) * 10) / 10) + '°F' : rcvColdMaxC() + '°C';
+    const tFrozen = u === 'F' ? (Math.round((rcvFrozenMaxC() * 9 / 5 + 32) * 10) / 10) + '°F' : rcvFrozenMaxC() + '°C';
+    const tHot = u === 'F' ? (Math.round((rcvHotMinC() * 9 / 5 + 32) * 10) / 10) + '°F' : rcvHotMinC() + '°C';
     return '<div class="h-foot">' +
         '<div class="legend">' +
           '<strong>' + PCD.escapeHtml(t('hcr_legend') || 'HACCP gates') + ':</strong> ' +
-          PCD.escapeHtml(t('hcr_target_cold') || 'Soğuk') + ' ≤5°C · ' +
-          PCD.escapeHtml(t('hcr_target_frozen') || 'Donmuş') + ' ≤-18°C · ' +
-          PCD.escapeHtml(t('hcr_target_hot') || 'Sıcak') + ' ≥60°C' +
+          PCD.escapeHtml(t('hcr_target_cold') || 'Soğuk') + ' ≤' + tCold + ' · ' +
+          PCD.escapeHtml(t('hcr_target_frozen') || 'Donmuş') + ' ≤' + tFrozen + ' · ' +
+          PCD.escapeHtml(t('hcr_target_hot') || 'Sıcak') + ' ≥' + tHot +
         '</div>' +
         '<div><strong>' + PCD.escapeHtml(t('reviewed_by') || 'Kontrol eden') + ':</strong> ____________________</div>' +
       '</div>' +
-      '';  // v2.8.54: footer artık PCD.print() tarafından otomatik enjekte edilir
+      '</div>';  // /.h-sheet (v2.9.40)
   }
 
   // ============ EXPORT ============

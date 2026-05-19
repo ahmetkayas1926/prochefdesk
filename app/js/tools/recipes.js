@@ -2914,9 +2914,19 @@
             // the helper falls back to the dataURL — same as before.
             const t = PCD.i18n.t;
             PCD.toast.info(t('photo_uploading'));
-            PCD.photoStorage.upload(cropped).then(function (urlOrDataUrl) {
+            // v2.9.40 — Photo race fix: track pending upload so the Save
+            // handler can wait. Without this, clicking Save before the
+            // async Storage upload resolves saves data.photo=null → cloud
+            // sync queues the recipe without the photo → Discover shows
+            // empty image (operator's recurring "photo missing" report).
+            const uploadPromise = PCD.photoStorage.upload(cropped).then(function (urlOrDataUrl) {
               data.photo = urlOrDataUrl;
               renderPhotoZoneDOM();
+              return urlOrDataUrl;
+            });
+            data._pendingPhotoUpload = uploadPromise;
+            uploadPromise.finally(function () {
+              if (data._pendingPhotoUpload === uploadPromise) delete data._pendingPhotoUpload;
             });
           });
         };
@@ -3290,6 +3300,19 @@
       });
     });
     saveBtn.addEventListener('click', function () {
+      // v2.9.40 — Photo race fix: if a photo upload is still in flight,
+      // wait for it before saving so cloud sync gets the URL, not null.
+      if (data._pendingPhotoUpload) {
+        PCD.toast.info(PCD.i18n.t('photo_wait_upload') || 'Photo uploading… save will continue once finished');
+        saveBtn.disabled = true;
+        const pending = data._pendingPhotoUpload;
+        pending.finally(function () {
+          saveBtn.disabled = false;
+          // Re-trigger save now that data.photo is set
+          saveBtn.click();
+        });
+        return;
+      }
       // Collect latest values from form
       data.name = PCD.$('#recipeName', body).value.trim();
       data.category = PCD.$('#recipeCategory', body).value;

@@ -70,6 +70,7 @@
       PCD.router.registerLazy('ingredients',     'js/tools/ingredients.js',    'ingredients');
       PCD.router.registerLazy('menus',           'js/tools/menus.js',          'menus');
       PCD.router.registerLazy('kitchen_cards',   'js/tools/kitchen_cards.js',  'kitchen_cards');
+      PCD.router.registerLazy('whiteboard',      'js/tools/whiteboard.js',     'whiteboard');
       PCD.router.registerLazy('shopping',        'js/tools/shopping.js',       'shopping');
       PCD.router.registerLazy('portion',         'js/tools/portion.js',        'portion');
       // Inventory eager-kept: dashboard kullanır (computeStatus low-stock alert için)
@@ -323,6 +324,8 @@
       ]},
       { title: t('section_kitchen'), items: [
         { key: 'kitchen_cards', icon: 'id-card', route: 'kitchen_cards' },
+        // v2.9.40 — Kitchen Whiteboard (customizable A4/A3 reference grid)
+        { key: 'whiteboard',    icon: 'grid', route: 'whiteboard' },
         { key: 'portion',       icon: 'scale', route: 'portion' },
         // v2.8.74 — Mise en Place Planner (sabah prep planlama)
         { key: 'mise',          icon: 'list', route: 'mise' },

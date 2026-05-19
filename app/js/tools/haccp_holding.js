@@ -27,9 +27,10 @@
   const TABLE = 'haccpHolding';
   const ROWS_PER_PAGE = 15;
 
-  // HACCP targets
-  const TARGET_HOT_C = 60;
-  const TARGET_COLD_C = 5;
+  // v2.9.40 — HACCP targets sourced from PCD.haccp helper (region-aware).
+  // Resolved per call so Account → HACCP region change takes effect without reload.
+  function targetHotC() { return (PCD.haccp && PCD.haccp.getThresholds() && PCD.haccp.getThresholds().hotMinC) || 60; }
+  function targetColdC() { return (PCD.haccp && PCD.haccp.getThresholds() && PCD.haccp.getThresholds().coldMaxC) || 5; }
 
   function locale() { return (PCD.i18n && PCD.i18n.currentLocale) || 'en'; }
   function getTempUnit() {
@@ -48,7 +49,7 @@
   }
   function isPass(holdType, tempC) {
     if (tempC === null || tempC === undefined || tempC === '') return null;
-    return holdType === 'cold' ? tempC <= TARGET_COLD_C : tempC >= TARGET_HOT_C;
+    return holdType === 'cold' ? tempC <= targetColdC() : tempC >= targetHotC();
   }
 
   function ymd(date) {
@@ -91,8 +92,8 @@
     const u = getTempUnit();
     const records = listForDate(_viewDate);
     const dates = listDatesWithRecords();
-    const targetHot = targetForUI(TARGET_HOT_C);
-    const targetCold = targetForUI(TARGET_COLD_C);
+    const targetHot = targetForUI(targetHotC());
+    const targetCold = targetForUI(targetColdC());
 
     view.innerHTML =
       '<div class="page-header">' +
@@ -244,8 +245,8 @@
   function openRowEditor(rowIndex, existing, onClose) {
     const t = PCD.i18n.t;
     const u = getTempUnit();
-    const targetHot = targetForUI(TARGET_HOT_C);
-    const targetCold = targetForUI(TARGET_COLD_C);
+    const targetHot = targetForUI(targetHotC());
+    const targetCold = targetForUI(targetColdC());
 
     const data = existing ? Object.assign({}, existing) : {
       date: _viewDate, rowIndex: rowIndex,
@@ -452,7 +453,23 @@
   }
 
   function buildPrintTable(t, u, isMonthly, byRow) {
-    let html = '<table class="h-grid"><thead>' +
+    let html = '<table class="h-grid">' +
+      // v2.9.40 — colgroup zorunlu (table-layout:fixed modunda td width'leri ignore edilir).
+      '<colgroup>' +
+        '<col style="width:3.5%">' +   // idx
+        '<col style="width:4%">' +     // type
+        '<col style="width:20%">' +    // food
+        '<col style="width:13%">' +    // loc
+        '<col style="width:5%">' +     // c1 °C
+        '<col style="width:6%">' +     // c1 time
+        '<col style="width:5%">' +     // c2 °C
+        '<col style="width:6%">' +     // c2 time
+        '<col style="width:5%">' +     // c3 °C
+        '<col style="width:6%">' +     // c3 time
+        '<col style="width:18%">' +    // corrective
+        '<col style="width:8.5%">' +   // chef
+      '</colgroup>' +
+      '<thead>' +
       '<tr>' +
         '<th rowspan="2">' + (isMonthly ? PCD.escapeHtml(t('hhd_col_day') || 'Gün') : '#') + '</th>' +
         '<th rowspan="2">' + PCD.escapeHtml(t('hhd_col_type') || 'Tip') + '</th>' +
@@ -507,35 +524,36 @@
   }
 
   function printStylesAndHeader(wsName, dateOrMonthLabel, u, t) {
-    const targetHot = targetForUI(TARGET_HOT_C);
-    const targetCold = targetForUI(TARGET_COLD_C);
+    const targetHot = targetForUI(targetHotC());
+    const targetCold = targetForUI(targetColdC());
     return '<style>' +
-      // v2.8.53 — Tek-sayfa optimize (Cook & Cool ile aynı yaklaşım):
-      // 31 satır A4 landscape'e sığsın. Margin 6→4mm, row height 22→14px,
-      // td font 9→8px, th 8→7px, paddings + line-height küçültüldü.
-      'body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#000;margin:0;padding:0;}' +
-      '.h-head{margin-bottom:4px;border-bottom:1.5px solid #16a34a;padding-bottom:3px;display:flex;justify-content:space-between;align-items:flex-end;}' +
-      '.h-head h1{margin:0;font-size:12px;}' +
-      '.h-head .sub{font-size:9px;color:#555;margin-top:1px;}' +
-      '.h-head .right{font-size:9px;color:#555;text-align:end;}' +
-      'table.h-grid{width:100%;border-collapse:collapse;font-size:8px;table-layout:fixed;page-break-inside:avoid;}' +
-      'table.h-grid th, table.h-grid td{border:1px solid #999;padding:1px 3px;vertical-align:middle;line-height:1.2;}' +
-      'table.h-grid th{background:#f3f4f6;font-weight:700;font-size:7px;text-align:center;text-transform:uppercase;letter-spacing:0.03em;}' +
-      'table.h-grid tr{height:14px;page-break-inside:avoid;}' +
-      'table.h-grid td.idx{text-align:center;width:3.5%;font-weight:700;color:#444;}' +
-      'table.h-grid td.type{text-align:center;width:4%;font-size:10px;}' +
-      'table.h-grid td.food{width:18%;font-weight:600;}' +
-      'table.h-grid td.loc{width:12%;}' +
-      'table.h-grid td.t{width:6.5%;text-align:center;font-weight:600;}' +
-      'table.h-grid td.h{width:6.5%;text-align:center;color:#666;font-size:7px;}' +
-      'table.h-grid td.corr{width:14%;font-size:7px;}' +
-      'table.h-grid td.chef{width:8%;text-align:center;}' +
+      // v2.9.40 — Cook & Cool single-page pattern: A4 sized body + flex column
+      // + colgroup widths + compact footer + row height tuned for handwriting.
+      'body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#000;margin:0;padding:0;' +
+        'width:297mm;height:210mm;display:flex;flex-direction:column;}' +
+      '.h-sheet{flex:1 1 auto;min-height:0;padding:4mm;display:flex;flex-direction:column;}' +
+      '.h-head{margin-bottom:4px;border-bottom:1.5px solid #16a34a;padding-bottom:3px;display:flex;justify-content:space-between;align-items:flex-end;flex:0 0 auto;}' +
+      '.h-head h1{margin:0;font-size:14px;}' +
+      '.h-head .sub{font-size:10px;color:#555;margin-top:2px;}' +
+      '.h-head .right{font-size:10px;color:#555;text-align:end;}' +
+      'table.h-grid{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed;flex:0 0 auto;}' +
+      'table.h-grid th, table.h-grid td{border:1px solid #999;padding:2px 4px;vertical-align:middle;line-height:1.25;}' +
+      'table.h-grid th{background:#f3f4f6;font-weight:700;font-size:9px;text-align:center;text-transform:uppercase;letter-spacing:0.03em;}' +
+      'table.h-grid tr{height:19px;page-break-inside:avoid;}' +
+      'table.h-grid td.idx{text-align:center;font-weight:700;color:#444;}' +
+      'table.h-grid td.type{text-align:center;font-size:11px;}' +
+      'table.h-grid td.food{font-weight:600;}' +
+      'table.h-grid td.t{text-align:center;font-weight:600;}' +
+      'table.h-grid td.h{text-align:center;color:#666;font-size:10px;}' +
+      'table.h-grid td.corr{font-size:10px;}' +
+      'table.h-grid td.chef{text-align:center;}' +
       'table.h-grid td.fail{background:#fee2e2;color:#991b1b;font-weight:700;}' +
-      '.h-foot{margin-top:4px;display:flex;justify-content:space-between;font-size:8px;}' +
+      '.h-foot{margin-top:4px;display:flex;justify-content:space-between;font-size:9px;flex:0 0 auto;}' +
       '.h-foot .legend{color:#666;}' +
-      // v2.8.54 — Standart footer'a geçildi (utils.js PCD.print otomatik)
-      '@page{size:A4 landscape;margin:4mm;}' +
+      '.pcd-print-footer{margin:0 !important;padding:1mm 4mm !important;border-top:none !important;flex:0 0 auto;font-size:7pt !important;line-height:1.2 !important;}' +
+      '@page{size:A4 landscape;margin:0;}' +
     '</style>' +
+    '<div class="h-sheet">' +
     '<div class="h-head">' +
       '<div>' +
         '<h1>HACCP · ' + PCD.escapeHtml(t('hhd_title') || 'Hot/Cold Holding') + '</h1>' +
@@ -549,8 +567,8 @@
   }
 
   function printFooter(t, u) {
-    const targetHot = targetForUI(TARGET_HOT_C);
-    const targetCold = targetForUI(TARGET_COLD_C);
+    const targetHot = targetForUI(targetHotC());
+    const targetCold = targetForUI(targetColdC());
     return '<div class="h-foot">' +
         '<div class="legend">' +
           '<strong>' + PCD.escapeHtml(t('hhd_legend') || 'HACCP eşikleri') + ':</strong> ' +
@@ -559,7 +577,7 @@
         '</div>' +
         '<div><strong>' + PCD.escapeHtml(t('reviewed_by') || 'Kontrol eden') + ':</strong> ____________________</div>' +
       '</div>' +
-      '';  // v2.8.54: footer artık PCD.print() tarafından otomatik enjekte edilir
+      '</div>';  // /.h-sheet (v2.9.40)
   }
 
   // ============ EXPORT ============

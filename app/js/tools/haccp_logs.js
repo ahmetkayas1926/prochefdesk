@@ -308,7 +308,8 @@
     // Day column: ~70px, each unit×shift cell: ~50px each (so 100px per unit).
     // ~6 units fit comfortably on a 1200px desktop / 8 fits on 1440px.
     // For mobile we wrap in a scroll container.
-    const FIT_LIMIT = 6; // beyond this, the grid gets too tight on a single page
+    // v2.9.40 — Operator spec: max 9 units fit comfortably; warn at 10+.
+    const FIT_LIMIT = 9;
     const showFitWarning = units.length > FIT_LIMIT;
     if (showFitWarning) {
       const banner = PCD.el('div', {
@@ -718,45 +719,62 @@
   function printMonth(year, monthIdx0) {
     const t = PCD.i18n.t;
     const units = listUnits();
-    const days = daysInMonth(year, monthIdx0);
+    const days = daysInMonth(year, monthIdx0); // actual month length for date labels
+    const ROWS = 31; // v2.9.40 — operator spec: always 31 rows (months <31 days leave blank rows)
     const tempUnit = getDefaultTempUnit();
     const ws = PCD.store.getActiveWorkspace ? PCD.store.getActiveWorkspace() : null;
     const wsName = (ws && ws.name) || 'Kitchen';
     const currentLog = getCurrentLog();
     const logName = (currentLog && currentLog.name) || '';
 
+    // v2.9.40 — Cook & Cool pattern: A4 sized body + flex column + colgroup
+    // widths + compact footer override + row height tuned for handwriting.
+    // DAY column fixed narrow (4%), unit columns split remaining width.
+    const dayColPct = 4;
+    const remainPct = 100 - dayColPct;
+    const unitColPct = remainPct / Math.max(1, units.length * 2); // 2 cols per unit (AM + PM)
+
+    let colgroupHtml = '<colgroup>' +
+      '<col style="width:' + dayColPct + '%">';
+    for (let i = 0; i < units.length * 2; i++) {
+      colgroupHtml += '<col style="width:' + unitColPct.toFixed(3) + '%">';
+    }
+    colgroupHtml += '</colgroup>';
+
     let html =
       '<style>' +
-        'body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#000;margin:0;padding:0;}' +
-        '.h-head{margin-bottom:6px;border-bottom:2px solid #16a34a;padding-bottom:4px;}' +
+        'body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#000;margin:0;padding:0;' +
+          'width:297mm;height:210mm;display:flex;flex-direction:column;}' +
+        '.h-sheet{flex:1 1 auto;min-height:0;padding:4mm;display:flex;flex-direction:column;}' +
+        '.h-head{margin-bottom:4px;border-bottom:1.5px solid #16a34a;padding-bottom:3px;flex:0 0 auto;}' +
         '.h-head h1{margin:0;font-size:14px;}' +
-        '.h-head .sub{font-size:9px;color:#555;margin-top:1px;}' +
-        'table.h-grid{width:100%;border-collapse:collapse;font-size:9px;table-layout:fixed;}' +
-        'table.h-grid th, table.h-grid td{border:1px solid #999;padding:1px 3px;text-align:center;}' +
-        'table.h-grid th{background:#f3f4f6;font-weight:700;font-size:8px;}' +
-        'table.h-grid td.day{text-align:left;font-weight:600;background:#fafafa;font-size:9px;}' +
+        '.h-head .sub{font-size:10px;color:#555;margin-top:1px;}' +
+        (showFitWarning ? '.h-warn{padding:3px 6px;background:#fef3c7;color:#92400e;font-size:9px;border-radius:3px;margin-bottom:4px;flex:0 0 auto;}' : '') +
+        'table.h-grid{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed;flex:0 0 auto;}' +
+        'table.h-grid th, table.h-grid td{border:1px solid #999;padding:2px 3px;text-align:center;vertical-align:middle;line-height:1.25;}' +
+        'table.h-grid th{background:#f3f4f6;font-weight:700;font-size:9px;text-transform:uppercase;letter-spacing:0.02em;}' +
+        'table.h-grid tr{height:19px;page-break-inside:avoid;}' +
+        'table.h-grid td.day{text-align:center;font-weight:700;background:#fafafa;font-size:10px;color:#444;}' +
         'table.h-grid td.oor{background:#fee2e2;color:#991b1b;font-weight:700;}' +
         'table.h-grid td.has-note::after{content:" *";color:#16a34a;}' +
-        '.h-notes{margin-top:6px;font-size:8px;}' +
-        '.h-notes .nh{font-weight:700;margin-bottom:3px;font-size:9px;}' +
+        '.h-notes{margin-top:4px;font-size:9px;flex:0 0 auto;}' +
+        '.h-notes .nh{font-weight:700;margin-bottom:2px;font-size:10px;}' +
         '.h-notes .ni{padding:1px 0;border-bottom:1px solid #eee;}' +
-        '.h-sign{margin-top:6px;padding-top:4px;border-top:1px solid #ccc;font-size:9px;display:flex;justify-content:space-between;}' +
-        // v2.8.54 — Eski .h-foot custom footer + .pcd-print-footer{display:none}
-        // kaldırıldı. Standart kompakt footer (utils.js v2.8.54, margin-top
-        // 6px) artık tek sayfa bozmuyor. Tıklanabilir + tutarlı.
-        '@page{size:A4 landscape;margin:5mm;}' +
-        (units.length > 6 ? '.h-warn{padding:3px 6px;background:#fef3c7;color:#92400e;font-size:8px;border-radius:3px;margin-bottom:4px;}' : '') +
+        '.h-sign{margin-top:4px;padding-top:3px;border-top:1px solid #ccc;font-size:9px;display:flex;justify-content:space-between;flex:0 0 auto;}' +
+        '.pcd-print-footer{margin:0 !important;padding:1mm 4mm !important;border-top:none !important;flex:0 0 auto;font-size:7pt !important;line-height:1.2 !important;}' +
+        '@page{size:A4 landscape;margin:0;}' +
       '</style>' +
+      '<div class="h-sheet">' +
       '<div class="h-head">' +
         '<h1>' + PCD.escapeHtml(t('haccp_print_title') || 'HACCP · Fridge & Freezer Temperature Log') + '</h1>' +
         '<div class="sub">' + PCD.escapeHtml(wsName) + (logName ? ' · ' + PCD.escapeHtml(logName) : '') + ' · ' + PCD.escapeHtml(monthLabel(year, monthIdx0)) + ' · °' + tempUnit + '</div>' +
       '</div>' +
-      (units.length > 6 ? '<div class="h-warn">⚠ ' + units.length + ' units on one page — text is tight. Consider splitting into two groups.</div>' : '') +
-      '<table class="h-grid"><thead>' +
-        '<tr><th rowspan="2" style="width:7%;">' + PCD.escapeHtml(t('haccp_col_day') || 'Day') + '</th>';
+      (showFitWarning ? '<div class="h-warn">⚠ ' + units.length + ' units on one page — consider splitting into two groups for clearer print.</div>' : '') +
+      '<table class="h-grid">' + colgroupHtml + '<thead>' +
+        '<tr><th rowspan="2">' + PCD.escapeHtml(t('haccp_col_day') || 'Day') + '</th>';
     units.forEach(function (u) {
       const range = (u.min !== undefined && u.max !== undefined) ? '(' + u.min + '–' + u.max + ')' : '';
-      html += '<th colspan="2">' + PCD.escapeHtml(u.name) + '<br><span style="font-weight:400;color:#666;font-size:7px;">' + range + '</span></th>';
+      html += '<th colspan="2">' + PCD.escapeHtml(u.name) + '<br><span style="font-weight:400;color:#666;font-size:8px;">' + range + '</span></th>';
     });
     html += '</tr><tr>';
     units.forEach(function () { html += '<th>' + PCD.escapeHtml(t('haccp_am')) + '</th><th>' + PCD.escapeHtml(t('haccp_pm')) + '</th>'; });
@@ -766,7 +784,14 @@
     listReadings().forEach(function (r) { readingsByKey[r.unitId + '|' + r.date] = r; });
 
     const notesAccum = []; // { dateStr, unit, shift, value, note }
-    for (let d = 1; d <= days; d++) {
+    for (let d = 1; d <= ROWS; d++) {
+      // v2.9.40 — 31 row sabit. d > days ise gerçek tarih yok, satır boş.
+      if (d > days) {
+        html += '<tr><td class="day">' + d + '</td>';
+        for (let i = 0; i < units.length * 2; i++) html += '<td></td>';
+        html += '</tr>';
+        continue;
+      }
       const date = new Date(year, monthIdx0, d);
       const dateStr = ymd(date);
       const dow = date.toLocaleDateString(locale(), { weekday: 'short' });
@@ -784,7 +809,7 @@
               notesAccum.push({ dateStr: dateStr, unit: u.name, shift: shift, value: r.value, note: r.note, chef: r.chef });
             }
           } else {
-            html += '<td>—</td>';
+            html += '<td></td>';
           }
         });
       });
@@ -800,9 +825,8 @@
       html += '</div>';
     }
 
-    const user = PCD.store.get('user') || {};
-    html += '<div class="h-sign"><div>' + PCD.escapeHtml(t('reviewed_by') || 'Reviewed by') + ': ____________________________</div><div>' + PCD.escapeHtml(t('haccp_print_date') || 'Date') + ': ' + new Date().toLocaleDateString(locale()) + '</div></div>';
-    // v2.8.54: footer artık PCD.print() tarafından otomatik enjekte edilir
+    html += '<div class="h-sign"><div>' + PCD.escapeHtml(t('reviewed_by') || 'Reviewed by') + ': ____________________________</div><div>' + PCD.escapeHtml(t('haccp_print_date') || 'Date') + ': ' + new Date().toLocaleDateString(locale()) + '</div></div>' +
+      '</div>';  // /.h-sheet
     PCD.print(html, 'HACCP Fridge Log — ' + monthLabel(year, monthIdx0));
   }
 

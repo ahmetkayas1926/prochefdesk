@@ -160,24 +160,11 @@
       </div>
 
       ${!guideHidden ? `
-        <details class="card" open style="padding:0;margin-bottom:14px;background:linear-gradient(135deg,var(--brand-50),var(--surface));border:1px solid var(--brand-300);">
-          <summary style="cursor:pointer;padding:12px 14px;font-weight:700;font-size:13px;color:var(--brand-700);display:flex;align-items:center;gap:8px;list-style:none;">
-            <span style="font-size:16px;">💡</span>
-            <span style="flex:1;">${PCD.escapeHtml(t('haccp_hub_guide_title') || 'How to use the HACCP Hub')}</span>
-            <button type="button" id="haccpGuideDismiss" style="background:transparent;border:0;color:var(--text-3);cursor:pointer;font-size:11px;padding:2px 6px;" title="${PCD.escapeHtml(t('haccp_hub_guide_dismiss') || 'Hide')}">✕</button>
-          </summary>
-          <div style="padding:0 14px 14px;font-size:13px;color:var(--text-2);line-height:1.65;">
-            <ol style="margin:0;padding-inline-start:20px;">
-              <li><strong>${PCD.escapeHtml(t('haccp_hub_guide_step1_title') || 'Open daily, check the status')}</strong> — ${PCD.escapeHtml(t('haccp_hub_guide_step1_body') || 'The hero card shows today’s completion (X / 4 forms logged). Green = all done, amber = partial, red = nothing yet. Aim for full green every service day.')}</li>
-              <li><strong>${PCD.escapeHtml(t('haccp_hub_guide_step2_title') || 'Four forms cover the basics')}</strong> — ${PCD.escapeHtml(t('haccp_hub_guide_step2_body') || 'Daily Temp (fridges/freezers AM+PM), Cook & Cool (60→21→5°C verification), Receiving (delivery temps + supplier), Hot/Cold Holding (bain-marie + display). Each card jumps straight to its form.')}</li>
-              <li><strong>${PCD.escapeHtml(t('haccp_hub_guide_step3_title') || 'Log within minutes of the action')}</strong> — ${PCD.escapeHtml(t('haccp_hub_guide_step3_body') || 'Auditors expect timestamps. Don’t batch-log Sunday’s readings on Monday — each form has a date input but real-time entries are stronger evidence.')}</li>
-              <li><strong>${PCD.escapeHtml(t('haccp_hub_guide_step4_title') || 'Print monthly for the binder')}</strong> — ${PCD.escapeHtml(t('haccp_hub_guide_step4_body') || 'Every form has a print button. Generate monthly A4 PDFs, file in a binder by form type. EU/UK/US auditors all expect the same format.')}</li>
-            </ol>
-            <div style="margin-top:10px;padding:8px 10px;background:var(--surface-2);border-radius:6px;font-size:12px;color:var(--text-3);">
-              <strong>💎 ${PCD.escapeHtml(t('haccp_hub_guide_tip_title') || 'Pro tip')}:</strong> ${PCD.escapeHtml(t('haccp_hub_guide_tip_body') || 'Make the morning chef responsible for Daily Temp + Receiving as part of the opening routine. Hot Holding is whoever sets up service. Cook & Cool is whoever batch cooks — assign roles so nobody assumes it’s someone else’s job.')}
-            </div>
-          </div>
-        </details>
+        <div class="card" style="padding:10px 14px;margin-bottom:12px;background:linear-gradient(135deg,var(--brand-50),var(--surface));border:1px solid var(--brand-300);display:flex;align-items:center;gap:10px;">
+          <span style="font-size:16px;">💡</span>
+          <div style="flex:1;font-size:13px;color:var(--text-2);line-height:1.5;">${PCD.escapeHtml(t('haccp_hub_guide_short') || 'Daily HACCP record-keeping. Log entries in real time, print monthly A4 PDFs for the audit binder. Region thresholds below apply to all four forms.')}</div>
+          <button type="button" id="haccpGuideDismiss" style="background:transparent;border:0;color:var(--text-3);cursor:pointer;font-size:11px;padding:2px 6px;" title="${PCD.escapeHtml(t('haccp_hub_guide_dismiss') || 'Hide')}">✕</button>
+        </div>
       ` : ''}
 
       <div class="stat mb-3" style="background:linear-gradient(135deg,${heroColor}18,var(--surface));border-color:${heroColor};padding:18px;">

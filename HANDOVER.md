@@ -9,7 +9,7 @@
 
 **Ürün:** ProChefDesk — profesyonel chef'ler için web tabanlı mutfak yönetim sistemi.
 **Operatör:** Ahmet Kaya, Perth Western Australia, profesyonel şef. Solo non-commercial proje.
-**Mevcut sürüm:** **v2.9.39** (push'a hazır local; production v2.9.38). HACCP Hub kart desc'lerinden hardcoded eşik (60°C / 63°C) temizliği — eşikler artık sadece üst chip'te, alt kartlar iş tanımı yapar.
+**Mevcut sürüm:** **v2.9.40** (push'a hazır local; production v2.9.39). **HACCP Forms toplu + KC 3 alt + Receiving aylık + Whiteboard tam (çoklu kanvas + 7 şablon) + Photo race fix** (mega paket, 13 dosya). HACCP: Hub guide kısaltıldı, Fridge Log 31 row + max 9 unit, Holding/Receiving region-aware + Cook & Cool single-page pattern. Kitchen Cards: alt boşluk -1.5mm, çerçeve kalınlığı 3 toggle, yazı ağırlığı 3 toggle. Receiving: Cook & Cool monthly pattern. Whiteboard: yeni tool, çoklu kanvas (LS only, cloud V2'de), 7-renk palet, 7 hazır şablon. Photo race fix: save handler upload promise bekler.
 **Blog:** 13 yazı yayında (Faz A SEO upgrade + Faz B 5-round, MENA niş + uluslararası coverage).
 **Domain:** prochefdesk.com (Cloudflare Pages, SSL Full, GitHub push'ta auto build + deploy).
 
@@ -257,7 +257,7 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH. 13 araç paketleri
 |---|---|
 | Repo path (operatör Windows) | `C:\Users\ahmet\Desktop\prochefdesk` |
 | GitHub repo | `ahmetkayas1926/prochefdesk` |
-| Production sürümü | **v2.9.39** (push'a hazır local; production v2.9.38) |
+| Production sürümü | **v2.9.40** (push'a hazır local; production v2.9.39) |
 | Supabase project ref | `muuwhrcogikpqylsfvgg` (Tokyo, Postgres 17, Free tier) |
 | Cloudflare R2 bucket | `prochefdesk-backups` |
 | CLEANUP_SECRET | `ec79a445-7e92-499b-9322-5c2c949788d4d2886e66-d556-4498-ba9e-17fda6c11ac1` |

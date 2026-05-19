@@ -59,6 +59,12 @@
     let fontSize = (lastCanvas && lastCanvas.fontSize) || 'medium';  // xs | small | medium | large
     let showMethod = lastCanvas ? !!lastCanvas.showMethod : true;
     let showAmounts = lastCanvas ? !!lastCanvas.showAmounts : true;
+    // v2.9.40 — Operator-requested per-canvas styling toggles.
+    // borderWidth: card frame thickness (thin/medium/thick — visible on
+    // print AND live preview so chef sees what they'll get).
+    // bodyWeight: ingredient/method text weight (normal/medium/bold).
+    let borderWidth = (lastCanvas && lastCanvas.borderWidth) || 'thin';   // thin | medium | thick
+    let bodyWeight = (lastCanvas && lastCanvas.bodyWeight) || 'normal';   // normal | medium | bold
     // v2.9.22 — "Hide recipes used in other canvases" toggle state persisted
     // across renderBody calls (operator bug: checkbox state lost after add)
     let hideUsedElsewhere = false;
@@ -88,6 +94,23 @@
         { id: 'large', label: 'L' },
       ].map(function (f) {
         return '<button type="button" class="btn btn-secondary btn-sm' + (fontSize===f.id?' active':'') + '" data-fs="' + f.id + '" style="flex:1;">' + f.label + '</button>';
+      }).join('');
+
+      // v2.9.40 — Border thickness + body text weight toggles
+      const borderButtons = [
+        { id: 'thin', labelKey: 'kc_border_thin', label: 'Thin' },
+        { id: 'medium', labelKey: 'kc_border_medium', label: 'Medium' },
+        { id: 'thick', labelKey: 'kc_border_thick', label: 'Thick' },
+      ].map(function (b) {
+        return '<button type="button" class="btn btn-secondary btn-sm' + (borderWidth===b.id?' active':'') + '" data-bw="' + b.id + '" style="flex:1;">' + (t(b.labelKey) || b.label) + '</button>';
+      }).join('');
+
+      const weightButtons = [
+        { id: 'normal', labelKey: 'kc_weight_normal', label: 'Normal' },
+        { id: 'medium', labelKey: 'kc_weight_medium', label: 'Medium' },
+        { id: 'bold', labelKey: 'kc_weight_bold', label: 'Bold' },
+      ].map(function (w) {
+        return '<button type="button" class="btn btn-secondary btn-sm' + (bodyWeight===w.id?' active':'') + '" data-bdy="' + w.id + '" style="flex:1;">' + (t(w.labelKey) || w.label) + '</button>';
       }).join('');
 
       bodyEl.innerHTML = `
@@ -128,6 +151,16 @@
               <div class="mb-2">
                 <div class="text-muted text-sm mb-1">${t('kc_font_size')}</div>
                 <div class="flex gap-1">${fontButtons}</div>
+              </div>
+
+              <div class="mb-2">
+                <div class="text-muted text-sm mb-1">${t('kc_border_width') || 'Border thickness'}</div>
+                <div class="flex gap-1">${borderButtons}</div>
+              </div>
+
+              <div class="mb-2">
+                <div class="text-muted text-sm mb-1">${t('kc_body_weight') || 'Text weight'}</div>
+                <div class="flex gap-1">${weightButtons}</div>
               </div>
 
               <div class="flex items-center gap-3 mb-2" style="flex-wrap:wrap;">
@@ -378,6 +411,15 @@
         fontSize = this.getAttribute('data-fs');
         renderBody();
       });
+      // v2.9.40 — Border thickness + body text weight toggle handlers
+      PCD.on(bodyEl, 'click', '[data-bw]', function () {
+        borderWidth = this.getAttribute('data-bw');
+        renderBody();
+      });
+      PCD.on(bodyEl, 'click', '[data-bdy]', function () {
+        bodyWeight = this.getAttribute('data-bdy');
+        renderBody();
+      });
 
       const nameInp = PCD.$('#canvasName', bodyEl);
       if (nameInp) nameInp.addEventListener('input', function () { canvasName = this.value; });
@@ -559,6 +601,7 @@
         const payload = {
           name: finalName,
           columns: columns, orientation: orientation, fontSize: fontSize,
+          borderWidth: borderWidth, bodyWeight: bodyWeight,
           showMethod: showMethod, showAmounts: showAmounts,
           layout: layout.slice(),
         };
@@ -668,6 +711,8 @@
           columns = cvs.columns || 3;
           orientation = cvs.orientation || 'landscape';
           fontSize = cvs.fontSize || 'medium';
+          borderWidth = cvs.borderWidth || 'thin';
+          bodyWeight = cvs.bodyWeight || 'normal';
           showMethod = !!cvs.showMethod;
           showAmounts = !!cvs.showAmounts;
           if (Array.isArray(cvs.layout)) {
@@ -698,6 +743,7 @@
         printSheet({
           layout: layout.slice(),
           columns: columns, orientation: orientation, fontSize: fontSize,
+          borderWidth: borderWidth, bodyWeight: bodyWeight,
           showMethod: showMethod, showAmounts: showAmounts,
           title: canvasName,
           recipes: recipes,
@@ -733,6 +779,7 @@
       const html = buildSheetHtml({
         layoutRecipes: layoutRecipes,
         columns: columns, orientation: orientation, fontSize: fontSize,
+        borderWidth: borderWidth, bodyWeight: bodyWeight,
         showMethod: showMethod, showAmounts: showAmounts,
         title: canvasName,
         interactive: true,  // adds drag/resize handles
@@ -943,6 +990,11 @@
       medium: { name: 10,   ing: 8,   method: 7.5 },
       large:  { name: 11.5, ing: 9.5, method: 9   },
     };
+    // v2.9.40 — Border thickness (pt) and body text weight maps.
+    const borderWidths = { thin: 0.5, medium: 1, thick: 1.5 };
+    const bodyWeights = { normal: 400, medium: 600, bold: 700 };
+    const bw = borderWidths[opts.borderWidth] || borderWidths.thin;
+    const bdy = bodyWeights[opts.bodyWeight] || bodyWeights.normal;
     let fs = Object.assign({}, fontSizes[opts.fontSize] || fontSizes.medium);
     // Auto-shrink if narrow columns and big font
     if (opts.columns >= 7 && opts.fontSize === 'large') fs = fontSizes.medium;
@@ -1089,19 +1141,13 @@
 
         '.kc-sheet {' +
           'box-sizing: border-box;' +
-          // v2.8.18 — 4mm → 2mm for tighter use of the canvas surface
-          // (operator: "kenar boşluklarını olabildiğince azaltalım").
-          // 2mm is conservative against typical home/office printer
-          // unprintable margins; safe for laminate-quality print.
-          'padding: 2mm;' +
-          // v2.8.15 — CSS multi-column instead of grid: short cards no
-          // longer leave wasted row space; recipes flow down each column
-          // and wrap to the next.
-          // v2.8.17 — column-fill: auto so the order array maps directly
-          // to visual placement (col 1 fills first, then col 2, etc.).
-          // Operator wanted predictable drag-to-position behavior.
+          // v2.9.40 — Page padding 2mm → 1.5mm, column gap 2mm → 1.5mm.
+          // Combined with card margin-bottom 2mm → 1mm above, gives more
+          // usable canvas area so additional short cards fit on the same
+          // page (operator: "alt boşluk verimli kullanılsın").
+          'padding: 1.5mm;' +
           'column-count: ' + opts.columns + ';' +
-          'column-gap: 2mm;' +
+          'column-gap: 1.5mm;' +
           'column-fill: auto;' +
         '}' +
 
@@ -1131,7 +1177,8 @@
           'min-width: 0; min-height: 0;' +
           'display: flex; flex-direction: column;' +
           'overflow: hidden;' +
-          'margin-bottom: 2mm;' +       // v2.8.15 — vertical spacing between stacked cards in a column
+          'margin-bottom: 1mm;' +       // v2.9.40 — 2mm → 1mm (operator: less wasted bottom space, more cards fit)
+          'border: ' + bw + 'pt solid #1f2937;' +  // v2.9.40 — toggleable border thickness
         '}' +
         '.kc-name {' +
           'font-size: ' + fs.name + 'pt;' +
@@ -1156,6 +1203,7 @@
           'font-size: ' + fs.ing + 'pt;' +
           'line-height: 1.25;' +
           'padding: 4px 6px 2px;' +
+          'font-weight: ' + bdy + ';' +  // v2.9.40 — toggleable body text weight
           'flex: 1 1 auto;' +
         '}' +
         '.kc-ing {' +
@@ -1186,6 +1234,7 @@
           'font-size: ' + fs.method + 'pt;' +
           'line-height: 1.35;' +
           'color: #444;' +
+          'font-weight: ' + bdy + ';' +  // v2.9.40 — same weight as ingredients
         '}' +
         // v2.8.10 — Each step is its own block so numbered steps stack
         // vertically (1. … 2. … 3. …) instead of flowing inline. The
@@ -1240,6 +1289,7 @@
     const html = buildSheetHtml({
       layoutRecipes: layoutRecipes,
       columns: opts.columns, orientation: opts.orientation, fontSize: opts.fontSize,
+      borderWidth: opts.borderWidth, bodyWeight: opts.bodyWeight,
       showMethod: opts.showMethod, showAmounts: opts.showAmounts,
       title: opts.title,
       interactive: false,
@@ -1404,6 +1454,8 @@
       columns: cvs.columns,
       orientation: cvs.orientation,
       fontSize: cvs.fontSize,
+      borderWidth: cvs.borderWidth || 'thin',
+      bodyWeight: cvs.bodyWeight || 'normal',
       showMethod: cvs.showMethod,
       showAmounts: cvs.showAmounts,
       layoutResolved: layoutResolved,
@@ -1430,6 +1482,8 @@
       columns: payload.columns,
       orientation: payload.orientation,
       fontSize: payload.fontSize,
+      borderWidth: payload.borderWidth || 'thin',
+      bodyWeight: payload.bodyWeight || 'normal',
       showMethod: payload.showMethod,
       showAmounts: payload.showAmounts,
       title: payload.name,

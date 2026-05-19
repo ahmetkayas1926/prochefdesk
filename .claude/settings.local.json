@@ -106,7 +106,8 @@
       "Bash(node -c \"C:/Users/ahmet/Desktop/prochefdesk/app/js/tools/discover.js\")",
       "Bash(node -c \"C:/Users/ahmet/Desktop/prochefdesk/app/js/tools/account.js\")",
       "Bash(grep -oE \"[a-z_]+:\\\\s*\" /c/Users/ahmet/Desktop/prochefdesk/app/js/i18n/en.js | sed \"s/:\\\\s*$//\" | sort -u > /tmp/defined_keys.txt && wc -l /tmp/defined_keys.txt)",
-      "Bash(node -c app/js/tools/haccp.js)"
+      "Bash(node -c app/js/tools/haccp.js)",
+      "Bash(node -c app/js/tools/whiteboard.js)"
     ]
   }
 }
