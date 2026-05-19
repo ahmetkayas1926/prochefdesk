@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.9.29 · 2026-05-19
+**Mevcut sürüm:** v2.9.30 · 2026-05-19
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -16,6 +16,17 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH (kapatılabilir inl
 - **Round 3 (v2.9.7-9):** discover + account + team ✅
 - **Round 4 (v2.9.10-12):** sales + whatif + menu_matrix ✅
 - **Round 5 (v2.9.13):** haccp hub ✅ — **NAKED→RICH sweep tamamlandı**
+
+### v2.9.30 — hCaptcha challenge popup viewport fix (modal scroll lock pattern) · 2026-05-19
+**v2.9.29 sonrası ikinci kanıt-tabanlı bug bulundu.** Operatör doğruladı ki "I am human" tıklaması artık çalışıyor (v2.9.29 fix başarılı), AMA açılan challenge popup ekranın üst kenarına yapışıyor → resim soruları viewport dışında kalıyor, Skip butonu görünmüyor / tepkisiz. Root cause: `app/js/ui/modal.js:177-186` scroll lock pattern'i body'i `position: fixed; top: -scrollY` ile sabitliyordu (sayfa scroll pozisyonunu korumak için standart iOS-friendly pattern). hCaptcha challenge popup `document.body.appendChild` ile body'e ekleniyor ve body-relative koordinatlarla yerleşiyor — body `-scrollY` ofsetli olduğu için popup viewport dışına kayıyor.
+
+**Bu sürümde:**
+- `app/js/ui/modal.js` scroll lock pattern değişti: `position: fixed + top: -scrollY` → `html.style.overflow = 'hidden'; body.style.overflow = 'hidden'`. Body koordinat sistemi değişmiyor → hCaptcha popup viewport ortasında doğru yerleşir. Tüm modal'lar için pattern aynı.
+- `app/js/core/config.js` APP_VERSION 2.9.29 → 2.9.30.
+
+**Risk değerlendirmesi:** Tüm modal pattern'lerini etkiler (single point change). Desktop Chrome + Android Chrome'da `overflow: hidden` standart, sorunsuz. iOS Safari'de eski sürümlerde background scroll engelleme tam çalışmayabilir — ama iOS Safari zaten HANDOVER §2'de "test edilmemiş" işaretli, operatör cihaz testi yapmadığı için bu round'da regresyon riski yok. Gelecekte iOS testte sorun çıkarsa `touch-action: none` veya `overscroll-behavior: contain` fallback'i eklenebilir.
+
+**Test akışı:** Push sonrası Cloudflare deploy + hard refresh → Account → Report an issue → "I am human" → challenge popup ekran ortasında açılmalı, resim soruları görünmeli, Skip butonu çalışmalı.
 
 ### v2.9.29 — hCaptcha checkbox fix (onload callback pattern) · 2026-05-19
 **Root cause bulundu.** v2.9.28 sonrası operatör DevTools kanıtı verdi: modal açılışında Console'da hCaptcha'nın kendi resmi hata mesajı görünüyordu — `[hCaptcha] should not render before js api is fully loaded. 'render=explicit' should be used in combination with 'onload'`. CLAUDE.md'de bu mesaj "cosmetic warning" olarak işaretlenmişti ama gerçek bir bug imzasıymış: widget görsel olarak çiziliyor ama event handler'lar attach olmadığı için checkbox tıklamasına cevap vermiyor. Network başarılı, sitekey + domain config geçerli (`checksiteconfig` 200), challenge image'ları arka planda 200 dönüyor — ama interactive UI hiç ateşlenmiyor.

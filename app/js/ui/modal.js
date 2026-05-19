@@ -174,15 +174,15 @@
         // Force reflow then add .open class to trigger transition
         root.offsetHeight;
         stack.push(modal);
-        // Lock scroll — preserve position so we don't jump to top
+        // v2.9.30 — Lock scroll via overflow:hidden on html/body (not the
+        // older position:fixed + top:-scrollY pattern). The fixed-body
+        // pattern shifts body's coordinate system, which breaks 3rd-party
+        // widgets (hCaptcha challenge popup) that append to body and use
+        // body-relative positioning — they end up pinned to the top edge
+        // outside the viewport.
         if (stack.length === 1) {
-          const scrollY = window.scrollY || window.pageYOffset || 0;
-          document.body.dataset.scrollLock = String(scrollY);
-          document.body.style.position = 'fixed';
-          document.body.style.top = '-' + scrollY + 'px';
-          document.body.style.left = '0';
-          document.body.style.right = '0';
-          document.body.style.width = '100%';
+          document.documentElement.style.overflow = 'hidden';
+          document.body.style.overflow = 'hidden';
         }
         requestAnimationFrame(function () { root.classList.add('open'); });
         modal._isOpen = true;
@@ -211,16 +211,12 @@
         root.classList.remove('open');
         const idx = stack.indexOf(modal);
         if (idx >= 0) stack.splice(idx, 1);
-        // Unlock scroll if no modals left — restore scroll position
+        // v2.9.30 — Unlock scroll by clearing overflow:hidden.
+        // Old pattern restored scrollY via window.scrollTo; not needed
+        // anymore since overflow:hidden never moved the page in the first place.
         if (stack.length === 0) {
-          const scrollY = parseInt(document.body.dataset.scrollLock || '0', 10);
-          document.body.style.position = '';
-          document.body.style.top = '';
-          document.body.style.left = '';
-          document.body.style.right = '';
-          document.body.style.width = '';
-          delete document.body.dataset.scrollLock;
-          if (scrollY > 0) window.scrollTo(0, scrollY);
+          document.documentElement.style.overflow = '';
+          document.body.style.overflow = '';
         }
         // Fire onClose SYNCHRONOUSLY
         if (typeof modal._onClose === 'function') {

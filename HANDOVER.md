@@ -9,7 +9,7 @@
 
 **Ürün:** ProChefDesk — profesyonel chef'ler için web tabanlı mutfak yönetim sistemi.
 **Operatör:** Ahmet Kaya, Perth Western Australia, profesyonel şef. Solo non-commercial proje.
-**Mevcut sürüm:** **v2.9.29** (push'a hazır local; production v2.9.28). **hCaptcha checkbox fix** (onload callback pattern) — v2.6.82'den beri silent broken olan widget interaction kanıt-tabanlı düzeltildi.
+**Mevcut sürüm:** **v2.9.30** (push'a hazır local; production v2.9.29). **hCaptcha challenge popup viewport fix** (modal scroll lock pattern değişti) — popup'ın üst kenara yapışması/Skip butonu tepkisizlik sorunu çözüldü.
 **Blog:** 13 yazı yayında (Faz A SEO upgrade + Faz B 5-round, MENA niş + uluslararası coverage).
 **Domain:** prochefdesk.com (Cloudflare Pages, SSL Full, GitHub push'ta auto build + deploy).
 
@@ -31,6 +31,7 @@ Yeni Claude'un bilmesi gereken: **bu hâlâ tek kullanıcılı bir ürün** — 
 ### 2.1 Son session özeti (2026-05-19, NAKED→RICH sweep + büyük audit/sertleştirme)
 
 **Geride bırakılan sürümler (kronolojik tersine):**
+- **v2.9.30 LOCAL ONLY** (henüz push edilmedi) — **hCaptcha challenge popup viewport fix.** v2.9.29 fix sonrası operatör test etti: checkbox tıklamasına UI cevap veriyor, AMA challenge popup ekranın üst kenarına yapışıyor → resim soruları viewport dışında. Root cause: `modal.js` scroll lock pattern body'i `position: fixed; top: -scrollY` ile sabitliyordu → hCaptcha popup body-relative koordinatla yerleşince ofsetli kaydı. Fix: scroll lock `html/body { overflow: hidden }` pattern'ine geçti. Tüm modal'ları etkiler ama desktop + Android Chrome'da sorunsuz; iOS Safari (zaten test edilmemiş) gelecekte cihaz testinde değerlendirilir.
 - **v2.9.29 LOCAL ONLY** (henüz push edilmedi) — **hCaptcha checkbox fix.** Operatör DevTools kanıtı ile root cause bulundu: hCaptcha resmi error mesajı `"render=explicit should be used in combination with onload"` Console'da görünüyordu (CLAUDE.md'de yanlışlıkla "cosmetic" diye not edilmişti). v2.6.82'den beri `script.onload` pattern silent broken — widget çiziliyor ama event handler attach olmuyor. Fix: `account.js` `?onload=__pcdHcaptchaOnLoad&render=explicit` URL param + `window.__pcdHcaptchaOnLoad` callback. v2.9.26'da denenmişti ama o sırada CSP de eklenmişti, izole değildi. Şimdi CSP yok, temiz fix.
 - **v2.9.28** (production) — **REVERT v2.9.24 CSP + hCaptcha onload + photo sanitize.** v2.9.24-27 deneme katmanları operatör akışını bozdu (hCaptcha widget tıklama yok, Discover photo yüklenmiyor). Tam revert: CSP meta + SRI + photo url() quote wrap + hCaptcha onload pattern hepsi geri çekildi. Korunan: recipe_likes RLS sıkı policy + RPC, orphan i18n silme, window.print fix, missing i18n key'ler, doc accuracy.
 - **v2.9.27** (production) — hCaptcha CSP `'unsafe-eval'` ekleme denemesi + Discover photo debug log (yetmedi, v2.9.28'de revert).
@@ -42,8 +43,9 @@ Yeni Claude'un bilmesi gereken: **bu hâlâ tek kullanıcılı bir ürün** — 
 
 ### 2.2 Bekleyen / bilinen test gerekleri
 
-- **v2.9.29 push'a hazır** (operatör GitHub Desktop ile push edecek). Push'a dahil dosyalar: `app/js/tools/account.js` (`ensureHcaptchaLoaded` onload callback pattern), `app/js/core/config.js` (APP_VERSION=2.9.29), 3 doc (CLAUDE/HANDOVER/CHANGELOG). `app/index.html` DOKUNULMADI, photo path DOKUNULMADI.
-- **🟡 hCaptcha "I am human" — fix uygulandı, operatör test bekliyor.** v2.9.29 push + Cloudflare deploy sonrası Account → Report an issue → "I am human" → checkbox tıklanabilir olmalı. Doğrulanırsa CLAUDE.md gotcha'sı 🔴 → ✅ güncellenecek. Çalışmazsa ikinci adım: Cloudflare Dashboard → Security → Bot Fight Mode / Browser Integrity Check kontrolü.
+- **v2.9.30 push'a hazır** (operatör GitHub Desktop ile push edecek). Push'a dahil dosyalar: `app/js/ui/modal.js` (scroll lock pattern overflow:hidden'a geçti), `app/js/core/config.js` (APP_VERSION=2.9.30), 3 doc (CLAUDE/HANDOVER/CHANGELOG).
+- **🟡 hCaptcha challenge popup viewport fix — operatör test bekliyor.** v2.9.30 push + Cloudflare deploy sonrası challenge popup ekran ortasında doğru yerleşmeli + Skip butonu tepkili olmalı. Doğrulanırsa CLAUDE.md gotcha'sı 🟡 → ✅ güncellenecek.
+- **✅ hCaptcha "I am human" checkbox tıklaması ÇALIŞIYOR (v2.9.29 push edildi + operatör doğruladı 2026-05-19).** Widget event handler attach sorunu çözüldü.
 - **v2.9.28 push edildi** (operatör daha önce push etti). Push'a dahil dosyalar: `app/index.html` (CSP + SRI kaldırıldı), `app/js/tools/discover.js` (photo direct URL'ye geri), `app/js/tools/account.js` (hCaptcha v2.6.83 script.onload pattern — v2.9.29'da güncellendi), `app/js/core/config.js` (APP_VERSION=2.9.28), 3 doc (CLAUDE/HANDOVER/CHANGELOG).
 - **Discover photo testi** — chef'in paylaştığı recipe'lerde photo'lar (Lamb Shank vb.) Discover feed'de tekrar görünmeli. Hâlâ boş görünen recipe'ler varsa root cause sync race değil (CSP kalktı), `d.photo` cloud'da boş kalmış olabilir → recipe'i editör'de aç → Save → 5sn bekle → Discover Refresh.
 - **Migration `v2.9.24-recipe-likes-rls-tighten.sql` ZATEN ÇALIŞTIRILDI** (operatör onayladı, policy `auth.uid() = user_id`). RPC `pcd_get_recipe_like_count(text)` aktif. Bu DB tarafı korundu, revert SADECE frontend.
@@ -257,7 +259,7 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH. 13 araç paketleri
 |---|---|
 | Repo path (operatör Windows) | `C:\Users\ahmet\Desktop\prochefdesk` |
 | GitHub repo | `ahmetkayas1926/prochefdesk` |
-| Production sürümü | **v2.9.29** (push'a hazır local; production v2.9.28) |
+| Production sürümü | **v2.9.30** (push'a hazır local; production v2.9.29) |
 | Supabase project ref | `muuwhrcogikpqylsfvgg` (Tokyo, Postgres 17, Free tier) |
 | Cloudflare R2 bucket | `prochefdesk-backups` |
 | CLEANUP_SECRET | `ec79a445-7e92-499b-9322-5c2c949788d4d2886e66-d556-4498-ba9e-17fda6c11ac1` |

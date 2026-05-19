@@ -10,7 +10,7 @@ ProChefDesk — profesyonel şef'ler için web tabanlı mutfak yönetim sistemi.
 
 **Stack:** Vanilla JavaScript (no bundling, no service worker), IndexedDB ana storage, Supabase (Postgres 17 + Auth + Storage + Realtime + Edge Functions), Cloudflare Pages (auto-deploy on GitHub push), Cloudflare R2 (backups).
 
-**Mevcut sürüm:** v2.9.29 (push'a hazır local; production v2.9.28). **hCaptcha checkbox fix** — onload callback pattern, v2.6.82'den beri silent broken olan widget interaction kanıt-tabanlı düzeltildi. Detay: `CHANGELOG.md`.
+**Mevcut sürüm:** v2.9.30 (push'a hazır local; production v2.9.29). **hCaptcha challenge popup viewport fix** — modal scroll lock pattern body koordinat sistemini bozuyordu, `position:fixed + top:-scrollY` yerine `overflow:hidden` kullanıldı. v2.9.29 onload callback fix'in üstüne ikinci adım. Detay: `CHANGELOG.md`.
 
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı). SEO standardı aşağıda `## Blog SEO standardı` bölümünde.
 
@@ -116,8 +116,9 @@ CREATE POLICY <table>_owner_all ON <table>
 
 **recipe_likes RLS sıkı (v2.9.24, KORUNDU).** Anon scrape vector kapatıldı — `recipe_likes` SELECT artık sadece kendi like'larını okutur (`auth.uid() = user_id`). Public like count gerekirse `pcd_get_recipe_like_count(text)` RPC kullan (SECURITY DEFINER, aggregate-only, anon+authenticated EXECUTE). Recipes.like_count denormalized kolon zaten public, çoğu UI'da o kullanılıyor.
 
-**🟡 hCaptcha "I am human" — v2.9.29 fix uygulandı, operatör test bekliyor.** Operatör DevTools kanıtı (2026-05-19) gösterdi ki Console'daki `[hCaptcha] should not render before js api is fully loaded. 'render=explicit' should be used in combination with 'onload'` mesajı **cosmetic değil, gerçek bir error imzasıymış**. CLAUDE.md/HANDOVER.md yanlış not etmişti. v2.6.82'den beri `script.onload` pattern silent broken — widget çiziliyor (`checksiteconfig` 200, image'lar 200 download oluyor) ama event handler attach olmadığı için checkbox dead. v2.9.29 fix: `account.js` `?onload=__pcdHcaptchaOnLoad&render=explicit` URL param + `window.__pcdHcaptchaOnLoad` callback. v2.9.26'da aynı pattern denenmişti ama o sırada CSP de eklendiği için izole değildi; CSP yokken temiz fix.
-**Push sonrası HÂLÂ çalışmazsa:** Cloudflare Dashboard → Security → Bot Fight Mode / Browser Integrity Check kontrolü (bunlar hCaptcha iframe'ini bozabilir). hCaptcha dashboard sitekey aktif olduğu zaten kanıtlandı (`checksiteconfig` 200). **CSP eklemeye girişme** — operatör kararı, agresif güvenlik gereksiz.
+**✅ hCaptcha "I am human" widget interaction ÇALIŞIYOR (v2.9.29).** Console'daki `[hCaptcha] should not render before js api is fully loaded. 'render=explicit' should be used in combination with 'onload'` mesajı önceki Claude'lar tarafından "cosmetic" olarak yanlış not edilmişti — aslında gerçek bir error imzasıymış. v2.6.82'den beri `script.onload` pattern silent broken — widget çiziliyor ama event handler attach olmuyor. v2.9.29 fix: `account.js` `?onload=__pcdHcaptchaOnLoad&render=explicit` URL param + `window.__pcdHcaptchaOnLoad` callback. **Yeni Claude bu pattern'i bozma** — hCaptcha'nın resmi tavsiyesi, kanıt-tabanlı çözüm.
+
+**🟡 hCaptcha challenge popup viewport (v2.9.30, test bekliyor).** v2.9.29 sonrası challenge popup ekranın üst kenarına yapışıyordu (resim soruları viewport dışında, Skip tepkisiz). Root cause: `modal.js` scroll lock body'i `position:fixed; top:-scrollY` ile sabitliyordu → hCaptcha popup body-relative pozisyonla yerleşince ofsetli kaydı. v2.9.30 fix: scroll lock pattern `html/body { overflow: hidden }`'a geçti. **Yeni modal scroll davranışı kuralı:** body koordinat sistemini transform/position ile değiştirme — 3rd-party widget'lar bozulur. Sadece overflow:hidden ile durdur.
 
 **Discover view count rate limit (v2.9.18).** `recipes.view_count` artık doğrudan RPC ile incremenetlenmez. `rate-limited-view` Edge Function üzerinden gider — header'dan IP çıkarır, `pcd_rate_limited_view_bump(ip, recipe_id, 60min)` SECURITY DEFINER RPC çağırır, atomic insert-or-check ile 60dk window per (IP, recipe). `discover_view_logs` tablosu + saatlik `pcd-cleanup-view-logs` cron eski log'ları siler. Spam protection.
 
