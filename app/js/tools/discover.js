@@ -472,6 +472,11 @@
         'data-mine': isMine ? '1' : '0',
       });
       // v2.9.24 — XSS-safe: validate URL pattern, reject if suspect
+      // v2.9.27 — Temporary debug log to identify photo sync issue
+      if (window.PCD && PCD.warn) {
+        PCD.warn('discover card photo for "' + (d.name || '?') + '":',
+          d.photo ? ('LENGTH=' + d.photo.length + ' START=' + String(d.photo).slice(0, 80)) : 'EMPTY/NULL');
+      }
       const safePhoto = safePhotoUrl(d.photo);
       const photoStyle = safePhoto
         ? 'background:url("' + safePhoto + '") center/cover;'
