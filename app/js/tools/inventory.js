@@ -810,7 +810,7 @@
       // Apply directly (no approval or currently approving)
       applyCountsToInventory(countedValues);
       const n = Object.keys(countedValues).length;
-      PCD.toast.success('✓ Stock count saved · ' + n + ' item' + (n === 1 ? '' : 's') + ' updated', 4000);
+      PCD.toast.success((PCD.i18n.t('toast_stock_count_saved', { n: n }) || ('✓ Stock count saved · ' + n + ' item' + (n === 1 ? '' : 's') + ' updated')), 4000);
       m.close();
       // Clear pending if we just approved
       if (options.isApproving) setPendingForCurrentWs(null);

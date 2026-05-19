@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.9.23 · 2026-05-19
+**Mevcut sürüm:** v2.9.24 · 2026-05-19
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -16,6 +16,37 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH (kapatılabilir inl
 - **Round 3 (v2.9.7-9):** discover + account + team ✅
 - **Round 4 (v2.9.10-12):** sales + whatif + menu_matrix ✅
 - **Round 5 (v2.9.13):** haccp hub ✅ — **NAKED→RICH sweep tamamlandı**
+
+### v2.9.24 — Standard SaaS hygiene pass (security + cleanup) · 2026-05-19
+Comprehensive audit (3 paralel agent) sonrası tespit edilen gerçek bug + sıkılama. Bank-grade değil, standart SaaS seviyesi.
+
+**Güvenlik:**
+- **Fixed (XSS):** `discover.js` chef photo URL'leri direkt CSS `background:url(...)` enjekte ediyordu. Malicious URL CSS injection vector'üydü. `safePhotoUrl()` helper eklendi — `http(s)://` veya `data:image/*` allowlist + CSS-breaking char reject (quote/paren/backslash/newline/angle brackets). 2 yerde kullanılıyor (card thumbnail + detail modal).
+- **Fixed (privacy leak):** `recipe_likes` tablosu eski `SELECT USING (true)` policy ile anon kullanıcının `(user_id, recipe_id)` çiftlerini scrape'lemesine izin veriyordu (kim hangi tarifi like'lamış). Migration `v2.9.24-recipe-likes-rls-tighten.sql` policy'i `auth.uid() = user_id` ile sıkılaştırdı (kendi like'larını oku). Public like count için yeni RPC `pcd_get_recipe_like_count(text)` SECURITY DEFINER ile aggregate-only.
+- **Added (CSP):** `index.html` head'e Content-Security-Policy meta — `default-src 'self'`, script/img/connect allowlist (Supabase + jsdelivr + hCaptcha), `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`. `'unsafe-inline'` script/style için açık (inline event handler + heavy CSS — gelecek round'da nonce'a geçebilir). X-Content-Type-Options nosniff + Referrer-Policy strict-origin-when-cross-origin.
+- **Added (SRI):** Supabase CDN script integrity `sha384-NNePyabYRaJyedI6...` (preload + script tag). jsdelivr compromise vector kapatıldı.
+
+**Kod kalitesi:**
+- **Deleted:** 5 orphan i18n dosyası (`phase2.js, phase3.js, phase4.js, phase4-1.js, v17.js`) — 1938 satır dead code, `index.html` hiç yüklemiyordu (eski organizasyon kalıntısı).
+- **Fixed:** 2 yerde `window.print()` fallback → `PCD.print()` (single print path kuralı). `allergens.js:321` + `shopping.js:491`.
+- **Fixed:** 4 hardcoded EN toast/error string i18n'lendi (`buffet.js`, `recipes.js`×2, `inventory.js`).
+- **Added:** ~25 missing i18n key (audit ile tespit — `backup_restore_*`, `quota_*`, `recipes_prep_time/cook_time`, `sale_price`, `next_month/prev_month`, vb). Önceden ekranda literal key gözüküyor olabilirdi. EN + TR mirror.
+- **Added:** `recipe_likes` tablosu `backup-to-r2` BACKUP_TABLES'a eklendi (nightly R2 archive'da eksikti).
+
+**Doküman temizliği (stale numbers + yanlış iddialar):**
+- HANDOVER §3 — "14 migration / 3 Edge Function / 24 araç / supabase-functions duplicate var" → "18 / 4 / 30 dosya / 13 ana tool / klasör v2.9.18'de silindi"
+- HANDOVER §4 — cascade trigger 18 → 21 tablo
+- HANDOVER §4 — realtime 21 → 24 tablo
+- HANDOVER §11.5 — "RLS tüm 25 tablo" → "29"
+- HANDOVER §11.13 + §11.15 — lazy tool 16 → 18
+- HANDOVER §11.17 — Buffet + Mise + Team artık cloud-synced (v2.8.73/74 IDB-only iddiası v2.9.17'den beri yanlış); Team workspace-scoped migration notu eklendi
+- HANDOVER §7 + CLAUDE Önerme — supabase-functions silme notları kaldırıldı (silindi)
+
+**Audit notları:**
+- `t(key) || 'fallback'` antipattern — i18n.t() missing key'de truthy literal döner, fallback hiç ateşlemez. NAKED→RICH sweep'te yazılan fallback'ler sessiz dead code (key'ler en.js'de var, fonksiyonel etki yok). Major refactor gerekmez.
+- 656 unused i18n key (eski feature kalıntısı) — risk yok, bundle bloat. Ayrı temizlik round'unda silinebilir.
+- Account.js'te 62 yerde `t(key, 'fallback string')` (vars arg yanlış kullanım) — keyler mevcut, görünür bug yok. Düşük öncelik.
+- Frontend RICH-guide pattern 14/30 tool'da var (claim 13/13). Tools-hub, ingredients, menus, shopping, suppliers, events, checklist, kitchen_cards, portion, 4 HACCP alt-form'da inline guide yok. Bunlar dashboard-driven veya küçük form'lar — operatör tercihi.
 
 ### v2.9.23 — KC scroll teleport TRUE fix + bulk select · 2026-05-19
 - **Fixed (gerçek):** v2.9.21'de scroll fix yanlış element'i hedefliyordu — `#recipeList` scrollable değildi, parent div (`max-height:280px;overflow-y:auto`) scroll container'ıdır. scrollTop hep 0 alınıyordu, restore no-op. Operatör testte hala teleport gördü. Şimdi `recipeListEl.parentElement.scrollTop` ile gerçek scroll container hedefleniyor.

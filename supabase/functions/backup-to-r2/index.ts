@@ -86,6 +86,10 @@ const BACKUP_TABLES = [
   'buffets',
   'mise_plans',
   'team',
+  // v2.9.24 — recipe_likes was missing from backup (audit finding).
+  // Discover Phase 2 like data; not catastrophic if lost but should be
+  // in nightly archive for completeness.
+  'recipe_likes',
 ]
 
 Deno.serve(async (req) => {

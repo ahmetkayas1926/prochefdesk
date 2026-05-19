@@ -84,7 +84,25 @@
       "Bash(node -c C:/Users/ahmet/Desktop/prochefdesk/app/js/core/cloud.js)",
       "Bash(node -c C:/Users/ahmet/Desktop/prochefdesk/app/js/core/cloud-realtime.js)",
       "Bash(node -c C:/Users/ahmet/Desktop/prochefdesk/app/js/tools/buffet.js)",
-      "Bash(node -c C:/Users/ahmet/Desktop/prochefdesk/app/js/tools/ingredients.js)"
+      "Bash(node -c C:/Users/ahmet/Desktop/prochefdesk/app/js/tools/ingredients.js)",
+      "Bash(awk '{print $1}')",
+      "Bash(grep -hroE \"i18n\\\\.t\\\\\\(['\\\\\"]\\([a-z_][a-zA-Z0-9_]+\\)['\\\\\"]\" \"C:/Users/ahmet/Desktop/prochefdesk/app/js/\" | grep -oE \"['\\\\\"]\\([a-z_][a-zA-Z0-9_]+\\)['\\\\\"]\" | tr -d '\"'\\\\' | sort -u > /tmp/used_keys.txt && grep -hroE \"data-i18n=['\\\\\"]\\([a-z_][a-zA-Z0-9_]+\\)['\\\\\"]\" \"C:/Users/ahmet/Desktop/prochefdesk/app/\" | grep -oE \"['\\\\\"]\\([a-z_][a-zA-Z0-9_]+\\)['\\\\\"]\" | tr -d '\"'\\\\' | sort -u >> /tmp/used_keys.txt && sort -u /tmp/used_keys.txt -o /tmp/used_keys.txt && echo \"Used keys: $\\(wc -l < /tmp/used_keys.txt\\)\" && echo \"--- Used but missing from en.js \\(top 15\\) ---\" && comm -23 /tmp/used_keys.txt /tmp/en_keys.txt | head -15 && echo \"--- In en.js but unused \\(top 15\\) ---\" && comm -13 /tmp/used_keys.txt /tmp/en_keys.txt | head -15 && echo \"Total unused: $\\(comm -13 /tmp/used_keys.txt /tmp/en_keys.txt | wc -l\\)\")",
+      "Bash(sed -i 's/:$//' /tmp/en_keys.txt)",
+      "Bash(sed -i 's/:$//' /tmp/tr_keys.txt)",
+      "Bash(sort -u /tmp/used_keys_v2.txt -o /tmp/used_keys_v2.txt)",
+      "Bash(grep -nE \">[A-Z][a-zA-Z ]{4,40}<\" \"C:/Users/ahmet/Desktop/prochefdesk/app/js/tools/yield.js\")",
+      "Bash(grep -nE \">[A-Z][a-zA-Z ]{4,40}<\" \"C:/Users/ahmet/Desktop/prochefdesk/app/js/tools/sales.js\")",
+      "Bash(grep -nE \">[A-Z][a-zA-Z ]{4,40}<\" \"C:/Users/ahmet/Desktop/prochefdesk/app/js/tools/menu_matrix.js\")",
+      "Bash(grep -nE \">[A-Z][a-zA-Z ]{4,40}<\" \"C:/Users/ahmet/Desktop/prochefdesk/app/js/tools/whatif.js\")",
+      "Bash(grep -nE \">[A-Z][a-zA-Z ]{4,40}<\" \"C:/Users/ahmet/Desktop/prochefdesk/app/js/tools/nutrition.js\")",
+      "Bash(node -c \"C:/Users/ahmet/Desktop/prochefdesk/app/js/i18n/en.js\")",
+      "Bash(node -c \"C:/Users/ahmet/Desktop/prochefdesk/app/js/i18n/tr.js\")",
+      "Bash(node -c \"C:/Users/ahmet/Desktop/prochefdesk/app/js/tools/buffet.js\")",
+      "Bash(node -c \"C:/Users/ahmet/Desktop/prochefdesk/app/js/tools/recipes.js\")",
+      "Bash(node -c \"C:/Users/ahmet/Desktop/prochefdesk/app/js/tools/inventory.js\")",
+      "Bash(curl -s \"https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.0/dist/umd/supabase.min.js\")",
+      "Bash(openssl dgst *)",
+      "Bash(openssl base64 *)"
     ]
   }
 }

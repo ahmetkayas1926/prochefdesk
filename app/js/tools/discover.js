@@ -40,6 +40,23 @@
   // v2.9.16 — Selected "free-from" allergen filter (single, resets on refresh)
   let _freeFromAllergen = null;
 
+  // v2.9.24 — Safe photo URL for CSS background-image (XSS defense).
+  // Chef's photo URLs come from Supabase Storage (always https://) but
+  // Discover renders OTHER chefs' photos via the public feed; a malicious
+  // value of d.photo could break out of url(...) and inject CSS rules.
+  // Defense: (1) parse as URL, (2) accept only http(s) / data:image/*,
+  // (3) escape CSS-sensitive chars (quote, paren, backslash, newline).
+  function safePhotoUrl(raw) {
+    if (!raw || typeof raw !== 'string') return null;
+    const s = raw.trim();
+    if (!s) return null;
+    // Quick allowlist: must start with http(s):// or data:image/
+    if (!/^(https?:\/\/|data:image\/)/i.test(s)) return null;
+    // Hard reject any CSS-breaking chars (defense in depth)
+    if (/["'()\\\r\n<>]/.test(s)) return null;
+    return s;
+  }
+
   // v2.9.7 — Sharer status (chef's contribution level signal)
   function sharerStatus(count) {
     if (count >= 10) return 'expert';
@@ -443,8 +460,10 @@
         'data-recipe': r.id,
         'data-mine': isMine ? '1' : '0',
       });
-      const photoStyle = d.photo
-        ? 'background:url(' + d.photo + ') center/cover;'
+      // v2.9.24 — XSS-safe: validate URL pattern, reject if suspect
+      const safePhoto = safePhotoUrl(d.photo);
+      const photoStyle = safePhoto
+        ? 'background:url("' + safePhoto + '") center/cover;'
         : 'background:linear-gradient(135deg,var(--brand-50),var(--surface-2));';
       const heartIcon = liked ? '❤' : '♡';
       const heartColor = liked ? 'var(--danger)' : 'var(--text-3)';
@@ -566,8 +585,10 @@
       ? '<div style="white-space:pre-wrap;line-height:1.7;font-size:14px;">' + PCD.escapeHtml(d.steps) + '</div>'
       : '<div class="text-muted text-sm">' + PCD.escapeHtml(t('discover_no_steps') || 'Hazırlanış yazılmamış.') + '</div>';
 
+    // v2.9.24 — XSS-safe photo URL for detail modal
+    const safeDetailPhoto = safePhotoUrl(d.photo);
     body.innerHTML =
-      (d.photo ? '<div style="aspect-ratio:1/1;width:100%;max-width:360px;background:url(' + d.photo + ') center/cover;border-radius:var(--r-md);margin:0 auto 12px;"></div>' : '') +
+      (safeDetailPhoto ? '<div style="aspect-ratio:1/1;width:100%;max-width:360px;background:url(\"' + safeDetailPhoto + '\") center/cover;border-radius:var(--r-md);margin:0 auto 12px;"></div>' : '') +
       // v2.8.81 — Author satırı (detail modal). v2.8.85: liveAuthor fallback
       // ile kendi recipe'lerinde anında doğru ad görünür.
       (liveAuthor

@@ -12,6 +12,23 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="description" content="ProChefDesk — Kitchen OS for professional chefs. Recipe costing, menu engineering, inventory, and more.">
+
+<!-- v2.9.24 — Content Security Policy (standard SaaS hygiene).
+     Blocks cross-origin script injection, third-party form posts, plugins.
+     'unsafe-inline' kept for script + style because the app uses inline
+     event handlers and heavy inline CSS (vanilla JS, no bundler). Future
+     hardening: replace inline JS with addEventListener (PCD.on pattern),
+     adopt nonces. For now CSP blocks the highest-risk vectors:
+       - Script load from non-allowlisted domains
+       - Plugin / object injection (object-src 'none')
+       - Base tag injection (base-uri 'self')
+       - Form post to attacker origin (form-action 'self')
+     Allowlist: Supabase REST + WebSocket, jsdelivr CDN, Google Fonts,
+     hCaptcha (Report issue form), data:/blob: for inline images. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://*.hcaptcha.com https://hcaptcha.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.hcaptcha.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.hcaptcha.com https://hcaptcha.com; frame-src https://*.hcaptcha.com https://hcaptcha.com; object-src 'none'; base-uri 'self'; form-action 'self';">
+<meta http-equiv="X-Content-Type-Options" content="nosniff">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+
 <title>ProChefDesk — Kitchen OS for Professional Chefs</title>
 
 <!-- Favicon (inline SVG, no external dependency) -->
@@ -37,7 +54,8 @@
      tag below, this cuts mobile FCP from ~5.6s to ~3.0-3.5s on 4G. -->
 <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<link rel="preload" as="script" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.0/dist/umd/supabase.min.js" crossorigin>
+<!-- v2.9.24 — SRI hash added for CDN script integrity (defense vs CDN compromise) -->
+<link rel="preload" as="script" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.0/dist/umd/supabase.min.js" integrity="sha384-NNePyabYRaJyedI6EQAY7SV5Z8/0sQkuQ5WVfhKm0H+j0KSugkI2ZMNzw/QtzAWz" crossorigin="anonymous">
 <!-- v2.8.78 — xlsx-js-style preload kaldırıldı. Artık on-demand
      yükleniyor (PCD.loadXLSX helper, sadece export/import tıklandığında). -->
 
@@ -174,7 +192,7 @@
 </div>
 
 <!-- ===== Supabase JS (loaded from CDN, small and cached) ===== -->
-<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.0/dist/umd/supabase.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.0/dist/umd/supabase.min.js" integrity="sha384-NNePyabYRaJyedI6EQAY7SV5Z8/0sQkuQ5WVfhKm0H+j0KSugkI2ZMNzw/QtzAWz" crossorigin="anonymous"></script>
 <!-- v2.8.78 — xlsx-js-style on-demand. PCD.loadXLSX() helper'ı ile
      export/import zamanı yüklenir; boot'tan kaldırıldı (~500KB tasarruf,
      LCP -1s tahmini etki). -->

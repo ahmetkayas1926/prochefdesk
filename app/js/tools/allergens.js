@@ -318,7 +318,12 @@
       body: body, footer: footer, size: 'xl', closable: true,
     });
     closeBtn.addEventListener('click', function () { m.close(); });
-    printBtn.addEventListener('click', function () { const wrap = body.querySelector('.print-wrap'); if (wrap) PCD.print(wrap.innerHTML); else window.print(); });
+    printBtn.addEventListener('click', function () {
+      // v2.9.24 — standardize on PCD.print (footer auto-inject, window 1200px).
+      // Previously fell back to window.print() which violated single-print-path rule.
+      const wrap = body.querySelector('.print-wrap');
+      PCD.print(wrap ? wrap.innerHTML : body.innerHTML, t('allerg_report'));
+    });
   }
 
   function render_list(view) { render(view); }

@@ -9,7 +9,7 @@
 
 **Ürün:** ProChefDesk — profesyonel chef'ler için web tabanlı mutfak yönetim sistemi.
 **Operatör:** Ahmet Kaya, Perth Western Australia, profesyonel şef. Solo non-commercial proje.
-**Mevcut sürüm:** **v2.9.23** (push'a hazır local; production v2.9.22). KC scroll teleport gerçek fix + bulk select.
+**Mevcut sürüm:** **v2.9.24** (push'a hazır local; production v2.9.22). Standart SaaS hijyen pass (XSS sanitize + recipe_likes RLS sıkı + CSP/SRI + 25 missing i18n + 5 orphan dosya sil + docs stale fix). Önceki: v2.9.23 KC scroll teleport gerçek fix + bulk select.
 **Blog:** 13 yazı yayında (Faz A SEO upgrade + Faz B 5-round, MENA niş + uluslararası coverage).
 **Domain:** prochefdesk.com (Cloudflare Pages, SSL Full, GitHub push'ta auto build + deploy).
 
@@ -45,9 +45,8 @@ Yeni Claude'un bilmesi gereken: **bu hâlâ tek kullanıcılı bir ürün** — 
 - `build.js` — Cache-busting injection
 - `app/` — uygulama
 - `blog/` — 13 SEO yazı + index.html
-- `migrations/` — 14 SQL migration
-- `supabase/functions/` — 3 Edge Function (deployed)
-- `supabase-functions/` — **duplicate klasör** (eski organizasyon kalıntısı), `supabase/functions/delete-account/` ile identical. Operatör 2026-05-18'de deploy doğrulaması yaptı; klasör artık güvenle silinebilir (backlog'da).
+- `migrations/` — 18 SQL migration (en yenisi v2.9.18-discover-view-rate-limit)
+- `supabase/functions/` — 4 Edge Function (delete-account, backup-to-r2, cleanup-photos, rate-limited-view)
 - `docs/DISASTER_RECOVERY.md` — restore prosedürü (prod'da test edildi)
 - `sitemap.xml`, `robots.txt` — SEO altyapı
 - `CLAUDE.md`, `HANDOVER.md`, `CHANGELOG.md`
@@ -55,10 +54,10 @@ Yeni Claude'un bilmesi gereken: **bu hâlâ tek kullanıcılı bir ürün** — 
 **`app/js/core/` (16 modül):**
 allergens-db.js, app.js, auth.js, cloud-pertable.js, cloud-realtime.js, cloud.js, config.js, i18n.js, idb-wrapper.js, photo-storage.js, qr.js, router.js, share.js, store.js, utils.js, variance.js
 
-**`app/js/tools/` (24 araç):**
-account.js, allergens.js, buffet.js, checklist.js, dashboard.js, discover.js, events.js, haccp_cooling.js, haccp_holding.js, haccp_logs.js, haccp_receiving.js, haccp.js, ingredients.js, inventory.js, kitchen_cards.js, menu_matrix.js, menus.js, mise.js, nutrition.js, portion.js, recipes.js, sales.js, shopping.js, suppliers.js, team.js, tools-hub.js, variance.js, waste.js, whatif.js, yield.js
+**`app/js/tools/` (30 dosya, 13 kullanıcıya görünen ana tool):**
+account, allergens, buffet, checklist, dashboard, discover, events, haccp + 4 alt-form (cooling/holding/logs/receiving), ingredients, inventory, kitchen_cards, menu_matrix, menus, mise, nutrition, portion, recipes, sales, shopping, suppliers, team, tools-hub, variance, waste, whatif, yield.
 
-**Kullanıcıya görünen 10 ana tool:** Recipes (live food cost), Ingredients, Menu Builder, Kitchen Cards (A4 print), Portion Calculator, Shopping List, Inventory, Suppliers, Events & Catering, Checklists & HACCP. Ek tools: Buffet Planner, Mise en Place, Discover, Allergens, vb.
+**Kullanıcıya görünen 13 ana tool (v2.8.78 lazy-loaded):** Recipes, Ingredients, Menu Builder, Kitchen Cards (A4 print), Portion Calculator, Shopping List, Inventory, Suppliers, Events & Catering, Checklists, HACCP Hub, Buffet Planner, Mise en Place. Discover, Allergens ek.
 
 ## 4. Cloud / Backend (Supabase)
 
@@ -81,8 +80,8 @@ account.js, allergens.js, buffet.js, checklist.js, dashboard.js, discover.js, ev
 
 | Trigger | Olay | İş |
 |---|---|---|
-| `trg_cascade_workspace_tombstone` | INSERT on workspace_tombstones | `cascade_soft_delete_workspace_data()` → 18 tablo + workspaces deleted_at SET |
-| `trg_reverse_cascade_workspace_tombstone` | DELETE on workspace_tombstones | `cascade_restore_workspace_data()` → 18 tablo + workspaces deleted_at NULL |
+| `trg_cascade_workspace_tombstone` | INSERT on workspace_tombstones | `cascade_soft_delete_workspace_data()` → 21 tablo + workspaces deleted_at SET |
+| `trg_reverse_cascade_workspace_tombstone` | DELETE on workspace_tombstones | `cascade_restore_workspace_data()` → 21 tablo + workspaces deleted_at NULL |
 
 ### DB Function'ları
 
@@ -189,7 +188,6 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH. 13 araç paketleri
 | Demo seed değişikliği | Mevcut hali iyi |
 | Türkçe landing page | Operatör erteledi |
 | Screenshot ekleme | Operatör kendisi çekecek |
-| `supabase-functions/` duplicate silme | Operatör doğrulama yaptı, ayrı round'da silinecek |
 | `PCD.log` çağrılarını temizleme | `PCD_CONFIG.DEBUG = false` iken silent no-op, gereksiz |
 
 ## 8. Operatör Çalışma Kuralları
@@ -234,7 +232,7 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH. 13 araç paketleri
 |---|---|
 | Repo path (operatör Windows) | `C:\Users\ahmet\Desktop\prochefdesk` |
 | GitHub repo | `ahmetkayas1926/prochefdesk` |
-| Production sürümü | **v2.9.23** (push'a hazır local; production v2.9.22) |
+| Production sürümü | **v2.9.24** (push'a hazır local; production v2.9.22) |
 | Supabase project ref | `muuwhrcogikpqylsfvgg` (Tokyo, Postgres 17, Free tier) |
 | Cloudflare R2 bucket | `prochefdesk-backups` |
 | CLEANUP_SECRET | `ec79a445-7e92-499b-9322-5c2c949788d4d2886e66-d556-4498-ba9e-17fda6c11ac1` |
@@ -279,7 +277,7 @@ UI eylemi state değiştirip ardından `location.reload()` çağırıyorsa, arad
 |---|---|
 | **Push** (local→cloud) | `cloud-pertable.js` UI yazımlarını dinler, 1.5sn debounce ile Supabase'e UPSERT/DELETE. v2.8.33: auto-retry (1s/2s backoff, 3 deneme transient hatalar için). |
 | **Pull** (cloud→local) | `cloud.js` boot'ta workspace-scoped + user-scoped tablolardan kullanıcı satırlarını çeker. **v2.8.33: drift detection** — local'de olup remote'ta olmayan kayıt otomatik queueUpsert'lenir (self-healing). v2.8.44'te haccp_receiving + haccp_holding pull'a eklendi. |
-| **Realtime** (cloud→local canlı) | `cloud-realtime.js` 21 tabloya WebSocket subscribe. v2.8.43'te JWT setAuth + TOKEN_REFRESHED dinleyici ile CHANNEL_ERROR çözüldü. |
+| **Realtime** (cloud→local canlı) | `cloud-realtime.js` 24 tabloya WebSocket subscribe (v2.9.17 sonrası). v2.8.43'te JWT setAuth + TOKEN_REFRESHED dinleyici ile CHANNEL_ERROR çözüldü. |
 | **Queue persistence** (v2.6.95+) | `cloud-pertable.queue` her mutation'da IDB'ye yansır. Boot'ta restore. |
 
 Sync bug'ında ÖNCE hangi yön sor — push mu, pull mu, realtime mı, queue mu? Tahmin yürütme.
@@ -291,7 +289,7 @@ Sync bug'ında ÖNCE hangi yön sor — push mu, pull mu, realtime mı, queue mu
 2. **Auto-retry** (cloud-pertable.js) — transient hatalar için 1s + 2s backoff ile 3 deneme.
 3. **Ambient sync indicator** (app.js) — sağ alt köşede 10px floating dot (Syncing mavi pulse / synced yeşil / offline gri / error kırmızı).
 
-### 11.5 RLS aktif (tüm 25 tablo)
+### 11.5 RLS aktif (tüm 29 tablo)
 Frontend `anon` key kullanıyor. Yeni tablo eklersen RLS policy şart:
 ```sql
 ALTER TABLE <table> ENABLE ROW LEVEL SECURITY;
@@ -385,7 +383,7 @@ Tüm prep/menu ayrımı bu helper'dan geçer. Yield bilgisi (yieldAmount, yieldU
 
 **L1 (v2.8.76):** Tüm `<script>` tag'lerine `defer` + 2 CDN'e `<link rel="preload">` + `preconnect` + `dns-prefetch`. PageSpeed 65→72.
 
-**L2 (v2.8.78):** (a) viewport zoom unblock (WCAG a11y +5), (b) xlsx-js-style lazy (~500KB), (c) i18n lazy (sadece `en.js` eager + dinamik `loadLocaleBundle(locale)`, ~150KB), (d) 16 tool lazy router (~450KB; dashboard + account + inventory eager kalır). Toplam boot bundle ~1.1MB azalış. Beklenen PageSpeed 72→85, LCP 7.0→3.0-3.5 sn.
+**L2 (v2.8.78):** (a) viewport zoom unblock (WCAG a11y +5), (b) xlsx-js-style lazy (~500KB), (c) i18n lazy (sadece `en.js` eager + dinamik `loadLocaleBundle(locale)`, ~150KB), (d) 18 tool lazy router (~450KB; dashboard + account + inventory eager kalır). Toplam boot bundle ~1.1MB azalış. Beklenen PageSpeed 72→85, LCP 7.0→3.0-3.5 sn.
 
 **L3 — yüksek risk, önerilmedi:** Cloud sync'i ilk paint sonrasına erteleme. Multi-device "veri kayıp" hissi riski.
 
@@ -410,14 +408,14 @@ Yeni "tarif → ingredient listesi" ihtiyacında: bu helper'ı kullan.
 
 ### 11.15 Lazy tool loading + router (v2.8.78)
 
-Router'da `registerLazy(name, scriptPath, toolName)` + `loadLazyTool()` helper. 16 tool dinamik script tag ile lazy.
+Router'da `registerLazy(name, scriptPath, toolName)` + `loadLazyTool()` helper. 18 tool dinamik script tag ile lazy.
 
 **Eager tool'lar (3):**
 - `dashboard` — default home, ilk açılış view'ı
 - `account` — auth flow (logout, oauth callback)
 - `inventory` — dashboard low-stock alert sync `computeStatus` kullanır
 
-**Lazy tool'lar (16):** recipes, ingredients, menus, kitchen_cards, shopping, portion, waste, suppliers, events, checklist, haccp_logs, haccp_cooling, haccp_receiving, haccp_holding, haccp, buffet, mise, discover.
+**Lazy tool'lar (18):** recipes, ingredients, menus, kitchen_cards, shopping, portion, waste, suppliers, events, checklist, haccp_logs, haccp_cooling, haccp_receiving, haccp_holding, haccp, buffet, mise, discover.
 
 **Yeni tool ekleme:**
 1. Eager mi lazy mi karar ver (default lazy)
@@ -439,11 +437,13 @@ Tool ilk açılışta 100-300ms network gecikme, sonrası browser cache instant.
 
 **HACCP Hub (v2.8.70):** 4 form (`haccp_logs`, `haccp_cooling`, `haccp_receiving`, `haccp_holding`) tek `haccp` hub route altında yaşar. Mevcut 4 route DOKUNULMADI — bookmark + direct link korunur. Sidenav 18→15 item.
 
-**Buffet Planner (v2.8.73, v2.8.77 inline guide, v2.8.79 overhaul, v2.8.88 modernize, v2.8.89 + v2.8.93 preset chooser):** Hotel/catering grade tool. Industry standards (`INDUSTRY_RATIOS` + `INDUSTRY_REFILL` + `INDUSTRY_TARGETS`). 7 preset + Start blank. **`buffets` IDB tablosu — cloud sync YOK.**
+**Buffet Planner (v2.8.73 onwards):** Hotel/catering grade tool. Industry standards (`INDUSTRY_RATIOS` + `INDUSTRY_REFILL` + `INDUSTRY_TARGETS`). 7 preset + Start blank. **Cloud sync AKTİF (v2.9.17): `buffets` tablosu workspace-scoped array pattern (waste/team gibi), soft-delete tombstone.**
 
 **Buffet item 3 tipte (v2.8.79):** item.recipeId / item.ingredientId / item.customName ayrımı. `computeItemCost` 3 path: (a) recipe → sub-recipe cost cascade, (b) ingredient → `pricePerUnit × (1/yield)`, (c) custom label → 0. Print/Excel paths üçünü de handle eder.
 
-**Mise en Place Planner (v2.8.74):** Sabah prep listesi. Events + Buffets'ten otomatik prep aggregation, 5 faz grouping (Stocks & Bases / Sauces & Dressings / Protein & Marinade / Garnish & Veg / Final Setup). Sub-recipe expansion `flattenIngredients` ile. **`misePlans` IDB tablosu — cloud sync YOK.**
+**Mise en Place Planner (v2.8.74):** Sabah prep listesi. Events + Buffets'ten otomatik prep aggregation, 5 faz grouping (Stocks & Bases / Sauces & Dressings / Protein & Marinade / Garnish & Veg / Final Setup). Sub-recipe expansion `flattenIngredients` ile. **Cloud sync AKTİF (v2.9.17): `mise_plans` tablosu (snake_case DB, camelCase state), soft-delete tombstone (rebuild dahil).**
+
+**Team (workspace-scoped, v2.9.17):** Pre-v2.9.17 state global array idi; cloud sync ile workspace-scoped (her workspace kendi team'i). `readTeamAll` legacy array tespit edip current ws'e aktarır (data loss yok).
 
 ### 11.18 Recipe ingredient separator (v2.8.52)
 

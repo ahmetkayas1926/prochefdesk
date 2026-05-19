@@ -2029,7 +2029,7 @@
         linkOut.select();
         if (navigator.clipboard) {
           navigator.clipboard.writeText(url).then(function () {
-            PCD.toast.success('✓ Link copied · ' + url.length + ' chars');
+            PCD.toast.success((PCD.i18n.t('toast_link_copied') || '✓ Link copied') + ' · ' + url.length + ' ' + (PCD.i18n.t('toast_chars') || 'chars'));
           });
         }
         // Subsequent clicks just copy
@@ -3210,7 +3210,7 @@
               const v = (window.PCD_CONFIG && window.PCD_CONFIG.APP_VERSION) || '';
               s.src = 'js/tools/ingredients.js' + (v ? '?v=' + v : '');
               s.onload = function () { _openFullEditor(); };
-              s.onerror = function () { PCD.toast.error('Could not load ingredient editor'); };
+              s.onerror = function () { PCD.toast.error(PCD.i18n.t('toast_ing_editor_load_failed') || 'Could not load ingredient editor'); };
               document.head.appendChild(s);
             } else {
               _openFullEditor();

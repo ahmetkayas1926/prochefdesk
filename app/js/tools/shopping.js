@@ -488,7 +488,11 @@
 
     closeBtn.addEventListener('click', function () { m.close(); });
     printBtn.innerHTML = PCD.icon('print',16) + ' <span>' + t('print') + '</span>';
-    printBtn.addEventListener('click', function () { const wrap = body.querySelector('.print-wrap'); if (wrap) PCD.print(wrap.innerHTML); else window.print(); });
+    printBtn.addEventListener('click', function () {
+      // v2.9.24 — standardize on PCD.print (single print path rule)
+      const wrap = body.querySelector('.print-wrap');
+      PCD.print(wrap ? wrap.innerHTML : body.innerHTML, (list.name || t('untitled')));
+    });
   }
 
   PCD.tools = PCD.tools || {};

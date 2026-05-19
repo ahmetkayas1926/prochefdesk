@@ -1296,7 +1296,7 @@
             const v = (window.PCD_CONFIG && window.PCD_CONFIG.APP_VERSION) || '';
             s.src = 'js/tools/ingredients.js' + (v ? '?v=' + v : '');
             s.onload = function () { _openNewIngredientFlow(); };
-            s.onerror = function () { PCD.toast.error('Could not load ingredient editor'); };
+            s.onerror = function () { PCD.toast.error(t('toast_ing_editor_load_failed') || 'Could not load ingredient editor'); };
             document.head.appendChild(s);
           } else {
             _openNewIngredientFlow();
