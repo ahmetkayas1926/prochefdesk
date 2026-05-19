@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.9.38 · 2026-05-19
+**Mevcut sürüm:** v2.9.39 · 2026-05-19
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -16,6 +16,18 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH (kapatılabilir inl
 - **Round 3 (v2.9.7-9):** discover + account + team ✅
 - **Round 4 (v2.9.10-12):** sales + whatif + menu_matrix ✅
 - **Round 5 (v2.9.13):** haccp hub ✅ — **NAKED→RICH sweep tamamlandı**
+
+### v2.9.39 — HACCP Hub kart desc'lerinden hardcoded eşik temizliği · 2026-05-19
+v2.9.38 persist'i çalışıyor (operatör onayladı), AMA kart altlarında hâlâ eski hardcoded sayılar görünüyordu: "Monthly cooling chart — 60°C → 21°C → 5°C" + "Bain-marie ≥63°C, cold display ≤5°C". US (FDA) bölgesi seçilince ana chip 57°C gösteriyor ama alt kartlardaki 60°C/63°C eski sayılar kalıyor → kafa karıştırıcı + tutarsız.
+
+Operatör direktifi: "ya bunlardan derece bilgisini kaldır, sadece ne işe yaradığını açıklayan HACCP standart açıklamasını yaz".
+
+**Değişiklik (haccp.js + en.js + tr.js):**
+- `haccp_hub_card_cooling_desc`: "Monthly cooling chart — 60°C → 21°C → 5°C" → **"Cooked food cooling — 2-stage verification"** / "Pişmiş yemek soğutma — 2 aşamalı doğrulama"
+- `haccp_hub_card_holding_desc`: "Bain-marie ≥63°C, cold display ≤5°C" → **"Bain-marie hot holding · cold display"** / "Sıcak tutma (bain-marie) · soğuk teşhir"
+- Logs + Receiving desc'lerinde zaten sayı yoktu, dokunulmadı.
+
+**Sonuç:** Tek bakışta eşik değerleri **sadece üst chip'te** ("🔥 ≥57°C · ❄ ≤5°C · 🧊 ≤-18°C · ⏱ 57°→21°/2h→5°/6h"). Alt kartlar **iş tanımı** yapar, sayı tekrarlamaz. Bölge değişince tutarsızlık olasılığı sıfır.
 
 ### v2.9.38 — HACCP region: localStorage fallback (kalıcı persist garantisi) · 2026-05-19
 v2.9.37 push edildi, UI ve eşik chip'i doğru göründü, print önizlemelerinde değer doğru, **AMA sayfa yenilenince hâlâ eski hale dönüyordu**. v2.9.37'de yapılan cloud-pertable.js merge fix yetmedi — cloud sync hâlâ async race condition yaratıyor (cloud upsert tamamlanmadan F5, sonraki boot cloud overwrite). 4 sürümdür aynı sorun.

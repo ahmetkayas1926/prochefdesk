@@ -546,11 +546,11 @@ window.PCD.i18n.register('tr', {
   haccp_hub_card_logs_title: "Günlük Sıcaklık Kaydı",
   haccp_hub_card_logs_desc: "Soğutucu & dondurucu — günde iki kez ölçüm",
   haccp_hub_card_cooling_title: "Cook & Cool Kaydı",
-  haccp_hub_card_cooling_desc: "Aylık soğutma çizelgesi — 60°C → 21°C → 5°C",
+  haccp_hub_card_cooling_desc: "Pişmiş yemek soğutma — 2 aşamalı doğrulama",
   haccp_hub_card_receiving_title: "Mal Kabul Denetimi",
   haccp_hub_card_receiving_desc: "Teslimat sıcaklığı, tedarikçi, ambalaj",
   haccp_hub_card_holding_title: "Sıcak / Soğuk Saklama",
-  haccp_hub_card_holding_desc: "Bain-marie ≥63°C, soğuk vitrin ≤5°C",
+  haccp_hub_card_holding_desc: "Sıcak tutma (bain-marie) · soğuk teşhir",
   // v2.9.13 — HACCP Hub NAKED→RICH (inline rehber + tamamlanma stats hero)
   haccp_hub_guide_title: "HACCP Hub nasıl kullanılır",
   haccp_hub_guide_dismiss: "Gizle",

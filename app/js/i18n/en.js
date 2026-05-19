@@ -546,11 +546,11 @@ window.PCD.i18n.register('en', {
   haccp_hub_card_logs_title: "Daily Temperature Log",
   haccp_hub_card_logs_desc: "Fridge & freezer readings — twice daily",
   haccp_hub_card_cooling_title: "Cook & Cool Log",
-  haccp_hub_card_cooling_desc: "Monthly cooling chart — 60°C → 21°C → 5°C",
+  haccp_hub_card_cooling_desc: "Cooked food cooling — 2-stage verification",
   haccp_hub_card_receiving_title: "Receiving Inspection",
   haccp_hub_card_receiving_desc: "Delivery temperatures, supplier, packaging",
   haccp_hub_card_holding_title: "Hot / Cold Holding",
-  haccp_hub_card_holding_desc: "Bain-marie ≥63°C, cold display ≤5°C",
+  haccp_hub_card_holding_desc: "Bain-marie hot holding · cold display",
   // v2.9.13 — HACCP Hub NAKED→RICH (inline guide + completion stats hero)
   haccp_hub_guide_title: "How to use the HACCP Hub",
   haccp_hub_guide_dismiss: "Hide",
