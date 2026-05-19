@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.9.42 · 2026-05-19
+**Mevcut sürüm:** v2.10.0 · 2026-05-20
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -16,6 +16,52 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH (kapatılabilir inl
 - **Round 3 (v2.9.7-9):** discover + account + team ✅
 - **Round 4 (v2.9.10-12):** sales + whatif + menu_matrix ✅
 - **Round 5 (v2.9.13):** haccp hub ✅ — **NAKED→RICH sweep tamamlandı**
+
+## v2.10.x — Whiteboard pro upgrade
+
+### v2.10.0 — Whiteboard professional visual upgrade · 2026-05-20
+Operatör direktifi: "verdiğim örnek index dosyası harika görünüyordu... mevcut çok ilkel". Whiteboard'ı operatörün kitchen guide A3 HTML örneğine yakın profesyonel görünüme yükseltiyor: tipografi + zengin renk paleti + cell type widget sistemi.
+
+**1) Tipografi (Oswald + Barlow Google Fonts):**
+- Whiteboard sayfası için Oswald (başlık) + Barlow (gövde) Google Fonts @import (sadece whiteboard view scope'unda, diğer sayfalar etkilenmez).
+- Live preview + Print template ikisinde de aktif.
+- Default cell font Barlow; header type cell'leri Oswald (operatörün örneğinde "COOKING / REHEATING / KATMER" başlıkları gibi).
+
+**2) Renk paleti zenginleştirildi (7 → 14 renk):**
+- Neutrals: White / Cream / Paper / Ink / Dark
+- Brand: Forest (deep editorial) / Brand Green / Mint
+- Warm: Steak Red / Soft Red / Soft Amber / Katmer
+- Cool: Reheat Teal / Cool Blue
+
+Operatörün örneğindeki mutfak-grafiği tonları: steak red `#a23b2d`, reheat teal `#1f6f6b`, katmer amber `#9a6a16`, deep forest `#2d4a3e`, paper cream `#fbf7ef`. Sağ-tık popover'ında 14 renk butonu — chip palette.
+
+**3) Cell type sistemi (yeni 5 widget):**
+Cell.type field ile her hücre farklı görsel rolde çalışır. Sağ-tık menüsüne yeni "Cell type" picker (Text / Header / Number / List / Label).
+- `text` (default) — mevcut serbest metin
+- `header` — Oswald + 800 weight + uppercase + letter-spaced + center. Operatör örneğinde "COOKING", "REHEATING" tarzı section başlıkları
+- `bigNumber` — 900 weight + tabular-nums + center. Operatör örneğinde "75°C" panel başlığı, "8 min" pişirme süresi
+- `list` — bullet liste (padding-left + text-indent ile satır içi madde işareti). Operatör "Add Salt To" listesi tarzı
+- `twoLine` — CSS `::first-line` ile ilk satır small uppercase label (0.55em + 700 weight + letter-spaced), sonraki satırlar normal değer. Operatör "TIME / 8 min" tarzı label-value pairs
+
+Type değişimi `data-set-type` event → full re-render (typeStyleFor inline style + CSS class).
+
+**4) Live preview ↔ Print birebir:**
+Hem live editor hem PDF print Oswald/Barlow tipografisini, 14 renk paletini, 5 cell type'ı aynı şekilde uygular. Şefin ekranda gördüğü her şey aynı PDF olarak çıkar (WYSIWYG).
+
+**i18n:** 6 yeni key (whiteboard_cell_type + wb_type_text/header/bignum/list/twoline), EN + TR.
+
+**Test:**
+1. Whiteboard → boş canvas yarat → 6×4 grid yap
+2. Sol üst hücreye sağ tık → "Cell type" → "Header" → uppercase Oswald bold görünür
+3. Hücre rengi → "Steak Red" → kırmızı bg + beyaz text
+4. Sağ taraftaki bir hücreye → "Cell type" → "Number" → büyük font, tabular-numbers
+5. Alttaki bir hücreye → "Label" → ilk satır small uppercase, ikinci satır normal değer
+6. Print → A4/A3 PDF → aynı tipografi + renk + tip görünür
+
+**Sıradaki (v2.10.x devamı):**
+- Whiteboard drag-to-resize cell merge (mouse drag ile span ayarı)
+- Pre-built widget palette (doneness ladder / equipment bar / spec sheet sections)
+- Kullanıcı kendi şablonunu kaydetme
 
 ### v2.9.42 — Kitchen Whiteboard cloud sync (workspace-scoped) · 2026-05-19
 v2.9.40+'da LS-only başlayan Whiteboard tool şimdi cloud sync: çoklu cihaz + workspace-scoped (her restoran kendi kanvas listesi). Operatör isteği: "şef özel tasarımı başka restoran için tekrar kullanabilir, sadece içindeki yemek bilgilerini değiştirerek".

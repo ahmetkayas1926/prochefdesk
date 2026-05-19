@@ -33,16 +33,68 @@
   function uid() { return 'wb_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
   function nowIso() { return new Date().toISOString(); }
 
-  // Color palette for cell background — neutral + 5 accent
+  // v2.10.0 — Renk paleti zenginleştirildi. Operatör örneğindeki
+  // profesyonel mutfak grafiği palette'i: neutral'lar + accent'ler +
+  // sıcak ton (steak red), serin ton (reheat teal), katmer amber
+  // (pâtisserie), brand green, deep forest editorial.
   const PALETTE = [
-    { id: 'white',   label: 'White',   bg: '#ffffff', text: '#111827' },
-    { id: 'cream',   label: 'Cream',   bg: '#fef7ec', text: '#111827' },
-    { id: 'green',   label: 'Green',   bg: '#dcfce7', text: '#14532d' },
-    { id: 'red',     label: 'Red',     bg: '#fee2e2', text: '#7f1d1d' },
-    { id: 'amber',   label: 'Amber',   bg: '#fef3c7', text: '#78350f' },
-    { id: 'blue',    label: 'Blue',    bg: '#dbeafe', text: '#1e3a8a' },
-    { id: 'dark',    label: 'Dark',    bg: '#1f2937', text: '#f9fafb' },
+    // Neutrals (8)
+    { id: 'white',     label: 'White',       bg: '#ffffff', text: '#111827' },
+    { id: 'cream',     label: 'Cream',       bg: '#faf7f2', text: '#1c1a17' },
+    { id: 'paper',     label: 'Paper',       bg: '#fbf7ef', text: '#1c1a17' },
+    { id: 'ink',       label: 'Ink',         bg: '#1c1a17', text: '#fbf7ef' },
+    { id: 'dark',      label: 'Dark',        bg: '#1f2937', text: '#f9fafb' },
+    // Brand
+    { id: 'forest',    label: 'Forest',      bg: '#2d4a3e', text: '#fbf7ef' },
+    { id: 'brand',     label: 'Brand Green', bg: '#16a34a', text: '#ffffff' },
+    { id: 'mint',      label: 'Mint',        bg: '#dcfce7', text: '#14532d' },
+    // Warm
+    { id: 'steak',     label: 'Steak Red',   bg: '#a23b2d', text: '#ffffff' },
+    { id: 'red',       label: 'Soft Red',    bg: '#fee2e2', text: '#7f1d1d' },
+    { id: 'amber',     label: 'Soft Amber',  bg: '#fef3c7', text: '#78350f' },
+    { id: 'katmer',    label: 'Katmer',      bg: '#9a6a16', text: '#ffffff' },
+    // Cool
+    { id: 'reheat',    label: 'Reheat Teal', bg: '#1f6f6b', text: '#ffffff' },
+    { id: 'blue',      label: 'Cool Blue',   bg: '#dbeafe', text: '#1e3a8a' },
   ];
+
+  // v2.10.0 — Cell types: profesyonel widget yapıları.
+  //   text      — default contenteditable (mevcut davranış)
+  //   header    — uppercase + extra bold + letter-spaced + centered
+  //               (operatör örneğinde "COOKING", "REHEATING" başlıkları)
+  //   bigNumber — center + extra bold + tabular-nums + larger
+  //               (örn. "75°C" panel başlığı, "8 min" pişirme süresi)
+  //   list      — her satır bullet (operatör "Add Salt To" listesi)
+  //   twoLine   — ilk satır küçük uppercase label, sonra normal değer
+  //               (örn. "TIME / 8 min")
+  // Edit metni `\n` ile böler, render type'a göre uygular.
+  const CELL_TYPES = [
+    { id: 'text',      labelKey: 'wb_type_text',    label: 'Text' },
+    { id: 'header',    labelKey: 'wb_type_header',  label: 'Header' },
+    { id: 'bigNumber', labelKey: 'wb_type_bignum',  label: 'Number' },
+    { id: 'list',      labelKey: 'wb_type_list',    label: 'List' },
+    { id: 'twoLine',   labelKey: 'wb_type_twoline', label: 'Label' },
+  ];
+
+  // v2.10.0 — Cell type'a göre ek inline style. text/header/bigNumber/list/twoLine
+  // tüm tipler contenteditable kalır; cell.text plain text saklanır.
+  // Style farkları: font-weight, text-transform, alignment, letter-spacing.
+  // twoLine için CSS `::first-line` pseudo-class ile ilk satır small uppercase
+  // label görünür (whiteboard <style>'ında tanımlı).
+  function typeStyleFor(type) {
+    switch (type) {
+      case 'header':
+        return 'font-weight:800;text-transform:uppercase;letter-spacing:0.08em;text-align:center;justify-content:center;align-items:center;font-family:"Oswald",-apple-system,system-ui,sans-serif;';
+      case 'bigNumber':
+        return 'font-weight:900;font-variant-numeric:tabular-nums;text-align:center;justify-content:center;align-items:center;letter-spacing:0.02em;';
+      case 'list':
+        return 'font-weight:500;padding-left:16px;text-indent:-10px;white-space:pre-wrap;';
+      case 'twoLine':
+        return 'font-weight:600;line-height:1.15;';
+      default:
+        return '';
+    }
+  }
 
   // v2.9.40 — Per-cell font size + text alignment maps
   const FONT_SIZES = {
@@ -472,21 +524,23 @@
         const align = ALIGNS.indexOf(cell.align) >= 0 ? cell.align : 'start';
         const rs = Math.max(1, parseInt(cell.rowSpan, 10) || 1);
         const cs = Math.max(1, parseInt(cell.colSpan, 10) || 1);
-        // Clamp span to grid bounds
         const rsClamped = Math.min(rs, s.rows - r);
         const csClamped = Math.min(cs, s.cols - c);
         const spanStyle = (rsClamped > 1 ? 'grid-row:' + (r + 1) + ' / span ' + rsClamped + ';' : '') +
                           (csClamped > 1 ? 'grid-column:' + (c + 1) + ' / span ' + csClamped + ';' : '');
+        // v2.10.0 — Cell type styling
+        const cellType = cell.type || 'text';
+        const typeStyle = typeStyleFor(cellType);
         gridHtml +=
-          '<div class="wb-cell" data-r="' + r + '" data-c="' + c + '" contenteditable="true" style="' +
+          '<div class="wb-cell wb-cell-' + cellType + '" data-r="' + r + '" data-c="' + c + '" contenteditable="true" style="' +
             'background:' + palette.bg + ';color:' + palette.text + ';' +
             'padding:6px 8px;font-size:' + fz.px + 'px;line-height:1.3;overflow:hidden;' +
             'outline:none;cursor:text;border-radius:3px;min-height:40px;' +
             'word-break:break-word;overflow-wrap:break-word;' +
             'text-align:' + align + ';' +
             'display:flex;flex-direction:column;justify-content:center;' +
-            spanStyle +
-          '" data-color="' + palette.id + '" data-font="' + (cell.fontSize || 'md') + '" data-align="' + align + '" data-rs="' + rsClamped + '" data-cs="' + csClamped + '">' + PCD.escapeHtml(cell.text || '') + '</div>';
+            spanStyle + typeStyle +
+          '" data-color="' + palette.id + '" data-font="' + (cell.fontSize || 'md') + '" data-align="' + align + '" data-rs="' + rsClamped + '" data-cs="' + csClamped + '" data-type="' + cellType + '">' + PCD.escapeHtml(cell.text || '') + '</div>';
       }
     }
     gridHtml += '</div></div></div>';
@@ -515,6 +569,13 @@
       paletteHtml += '<button type="button" data-set-align="' + a + '" style="flex:1;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface-1);color:var(--text-1);font-size:14px;cursor:pointer;">' + ALIGN_LABELS[a] + '</button>';
     });
     paletteHtml += '</div>';
+    // v2.10.0 — Cell type picker
+    paletteHtml += '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;margin-bottom:6px;">' + PCD.escapeHtml(t('whiteboard_cell_type') || 'Cell type') + '</div>';
+    paletteHtml += '<div style="display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap;">';
+    CELL_TYPES.forEach(function (ct) {
+      paletteHtml += '<button type="button" data-set-type="' + ct.id + '" style="flex:1;min-width:55px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface-1);color:var(--text-1);font-size:11px;font-weight:600;cursor:pointer;">' + PCD.escapeHtml(t(ct.labelKey) || ct.label) + '</button>';
+    });
+    paletteHtml += '</div>';
     // v2.9.41 — Cell merge: row span / col span number inputs
     paletteHtml += '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;margin-bottom:6px;">' + PCD.escapeHtml(t('whiteboard_cell_merge') || 'Merge (span)') + '</div>';
     paletteHtml += '<div style="display:flex;gap:6px;align-items:center;">';
@@ -525,7 +586,18 @@
     paletteHtml += '<button type="button" id="wbResetSpan" style="padding:4px 8px;border:1px solid var(--border);border-radius:4px;background:var(--surface-1);color:var(--text-1);font-size:11px;cursor:pointer;">' + PCD.escapeHtml(t('whiteboard_cell_unmerge') || 'Reset') + '</button>';
     paletteHtml += '</div></div>';
 
-    view.innerHTML = buildHtml + gridHtml + paletteHtml;
+    // v2.10.0 — Whiteboard-scoped CSS: Oswald (başlık) + Barlow (gövde)
+    // Google Fonts + cell type ek stilleri (::first-line twoLine için).
+    // Diğer sayfalar etkilenmez; @import sadece view innerHTML scope'unda.
+    const wbStyles =
+      '<style>' +
+        '@import url("https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700;800&family=Barlow:wght@400;500;600;700;800&display=swap");' +
+        '.wb-cell { font-family: "Barlow", -apple-system, system-ui, sans-serif; }' +
+        '.wb-cell-header { font-family: "Oswald", -apple-system, system-ui, sans-serif; }' +
+        '.wb-cell-twoLine::first-line { font-size: 0.55em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.65; }' +
+        '#wbSheet .wb-title { font-family: "Oswald", -apple-system, system-ui, sans-serif; }' +
+      '</style>';
+    view.innerHTML = wbStyles + buildHtml + gridHtml + paletteHtml;
 
     // ---------- Wire controls ----------
     function persist() {
@@ -701,6 +773,25 @@
     PCD.on(view, 'click', '[data-set-align]', function () {
       applyCellProp('align', this.getAttribute('data-set-align'));
     });
+    // v2.10.0 — Cell type setter (re-render full grid for visual updates)
+    PCD.on(view, 'click', '[data-set-type]', function () {
+      const palette = view.querySelector('#wbPalette');
+      if (!palette) return;
+      const r = parseInt(palette.dataset.targetR, 10);
+      const c = parseInt(palette.dataset.targetC, 10);
+      const newType = this.getAttribute('data-set-type');
+      const target = view.querySelector('.wb-cell[data-r="' + r + '"][data-c="' + c + '"]');
+      const idx = (s.cells || []).findIndex(function (x) { return x.r === r && x.c === c; });
+      if (idx >= 0) {
+        s.cells[idx].type = newType;
+      } else {
+        s.cells = s.cells || [];
+        s.cells.push({ r: r, c: c, text: (target ? target.innerText : ''), type: newType });
+      }
+      persist();
+      palette.style.display = 'none';
+      render(view);  // full re-render so type style + first-line CSS apply correctly
+    });
 
     // v2.9.41 — Span apply (row + col together so user can set both, then re-render)
     function applySpan(rowSpan, colSpan) {
@@ -866,8 +957,11 @@
         const cs = Math.max(1, Math.min(parseInt(cell.colSpan, 10) || 1, s.cols - c));
         const spanStyle = (rs > 1 ? 'grid-row:' + (r + 1) + ' / span ' + rs + ';' : '') +
                           (cs > 1 ? 'grid-column:' + (c + 1) + ' / span ' + cs + ';' : '');
+        // v2.10.0 — cell type apply: class + extra inline style
+        const cellType = cell.type || 'text';
+        const typeStyle = typeStyleFor(cellType);
         gridHtml +=
-          '<div style="background:' + palette.bg + ';color:' + palette.text + ';padding:6px 8px;font-size:' + fz.px + 'px;line-height:1.3;overflow:hidden;border-radius:3px;word-break:break-word;overflow-wrap:break-word;text-align:' + align + ';display:flex;flex-direction:column;justify-content:center;' + spanStyle + '">' +
+          '<div class="wb-cell wb-cell-' + cellType + '" style="background:' + palette.bg + ';color:' + palette.text + ';padding:6px 8px;font-size:' + fz.px + 'px;line-height:1.3;overflow:hidden;border-radius:3px;word-break:break-word;overflow-wrap:break-word;text-align:' + align + ';display:flex;flex-direction:column;justify-content:center;' + spanStyle + typeStyle + '">' +
             PCD.escapeHtml(cell.text || '') +
           '</div>';
       }
@@ -875,11 +969,17 @@
 
     const html =
       '<style>' +
-        'body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#111827;margin:0;padding:0;' +
+        // v2.10.0 — Oswald (başlık) + Barlow (gövde) Google Fonts. Print
+        // path için PCD.print yeni window'a yapıştırır, fonts oradan yüklenir.
+        '@import url("https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700;800&family=Barlow:wght@400;500;600;700;800&display=swap");' +
+        'body{font-family:"Barlow",-apple-system,Segoe UI,Roboto,sans-serif;color:#111827;margin:0;padding:0;' +
           'width:' + dims.w + 'mm;height:' + dims.h + 'mm;display:flex;flex-direction:column;}' +
         '.wb-sheet{flex:1 1 auto;min-height:0;padding:5mm;display:flex;flex-direction:column;}' +
-        '.wb-title{padding:6px 12px;border-bottom:2.5px solid #16a34a;font-weight:800;font-size:22px;letter-spacing:0.04em;text-transform:uppercase;flex:0 0 auto;}' +
+        '.wb-title{font-family:"Oswald",-apple-system,sans-serif;padding:6px 12px;border-bottom:2.5px solid #16a34a;font-weight:800;font-size:22px;letter-spacing:0.06em;text-transform:uppercase;flex:0 0 auto;}' +
         '.wb-grid{flex:1 1 auto;display:grid;grid-template-rows:repeat(' + s.rows + ',1fr);grid-template-columns:repeat(' + s.cols + ',1fr);gap:2px;padding:4px;background:#cbd5e1;}' +
+        '.wb-cell{font-family:"Barlow",-apple-system,sans-serif;}' +
+        '.wb-cell-header{font-family:"Oswald",-apple-system,sans-serif;}' +
+        '.wb-cell-twoLine::first-line{font-size:0.55em;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;opacity:0.65;}' +
         '.pcd-print-footer{margin:0 !important;padding:1mm 4mm !important;border-top:none !important;flex:0 0 auto;font-size:7pt !important;line-height:1.2 !important;}' +
         '@page{size:' + paper + ' ' + orient + ';margin:0;}' +
       '</style>' +

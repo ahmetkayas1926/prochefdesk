@@ -9,7 +9,7 @@
 
 **Ürün:** ProChefDesk — profesyonel chef'ler için web tabanlı mutfak yönetim sistemi.
 **Operatör:** Ahmet Kaya, Perth Western Australia, profesyonel şef. Solo non-commercial proje.
-**Mevcut sürüm:** **v2.9.42** (push'a hazır local; production v2.9.41). **Whiteboard cloud sync** (workspace-scoped, buffets/mise/team pattern). Yeni `whiteboards` tablosu + cascade trigger update + realtime + R2 backup. Operatör migration ve edge function re-deploy çalıştıracak.
+**Mevcut sürüm:** **v2.10.0** (push'a hazır local; production v2.9.42). **Whiteboard pro upgrade** — Oswald+Barlow Google Fonts tipografisi, 14 renk paleti (steak red, reheat teal, katmer amber, deep forest, cream paper vb.), 5 cell type widget (text / header / bigNumber / list / twoLine). Live preview ↔ Print birebir WYSIWYG.
 **Blog:** 13 yazı yayında (Faz A SEO upgrade + Faz B 5-round, MENA niş + uluslararası coverage).
 **Domain:** prochefdesk.com (Cloudflare Pages, SSL Full, GitHub push'ta auto build + deploy).
 
@@ -257,7 +257,7 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH. 13 araç paketleri
 |---|---|
 | Repo path (operatör Windows) | `C:\Users\ahmet\Desktop\prochefdesk` |
 | GitHub repo | `ahmetkayas1926/prochefdesk` |
-| Production sürümü | **v2.9.42** (push'a hazır local; production v2.9.41) |
+| Production sürümü | **v2.10.0** (push'a hazır local; production v2.9.42) |
 | Supabase project ref | `muuwhrcogikpqylsfvgg` (Tokyo, Postgres 17, Free tier) |
 | Cloudflare R2 bucket | `prochefdesk-backups` |
 | CLEANUP_SECRET | `ec79a445-7e92-499b-9322-5c2c949788d4d2886e66-d556-4498-ba9e-17fda6c11ac1` |
