@@ -505,7 +505,25 @@
           '<div><strong>' + PCD.escapeHtml(t('hcc_target_6h') || '6h hedef') + ':</strong> ≤' + target6h + '</div>' +
         '</div>' +
       '</div>' +
-      '<table class="h-grid"><thead>' +
+      '<table class="h-grid">' +
+        // v2.9.34 — colgroup zorunlu: table-layout:fixed modunda sütun width'leri
+        // sadece colgroup veya ilk satırdaki th width'inden alınır, td width'ler
+        // dikkate alınmaz. v2.9.33 sadece td'leri değiştirdi → değişiklik PDF'e
+        // yansımadı. Şimdi colgroup ile gerçek width tanımı yapılıyor.
+        '<colgroup>' +
+          '<col style="width:3%">' +
+          '<col style="width:32%">' +
+          '<col style="width:6%">' +
+          '<col style="width:5%">' +
+          '<col style="width:5%">' +
+          '<col style="width:5%">' +
+          '<col style="width:5%">' +
+          '<col style="width:5%">' +
+          '<col style="width:5%">' +
+          '<col style="width:20%">' +
+          '<col style="width:9%">' +
+        '</colgroup>' +
+        '<thead>' +
         '<tr>' +
           '<th rowspan="2">' + PCD.escapeHtml(t('hcc_col_day') || 'Gün') + '</th>' +
           '<th rowspan="2">' + PCD.escapeHtml(t('hcc_col_food') || 'Yemek / Parti') + '</th>' +

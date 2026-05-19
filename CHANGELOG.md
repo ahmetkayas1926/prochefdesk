@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.9.33 · 2026-05-19
+**Mevcut sürüm:** v2.9.34 · 2026-05-19
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -16,6 +16,16 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH (kapatılabilir inl
 - **Round 3 (v2.9.7-9):** discover + account + team ✅
 - **Round 4 (v2.9.10-12):** sales + whatif + menu_matrix ✅
 - **Round 5 (v2.9.13):** haccp hub ✅ — **NAKED→RICH sweep tamamlandı**
+
+### v2.9.34 — HACCP Cook & Cool print: colgroup fix (v2.9.33 silent failure) · 2026-05-19
+v2.9.33 push edildi, deploy oldu, ama operatör test ettiğinde PDF'te hiçbir sütun değişikliği görünmedi. Root cause: tablo `table-layout: fixed` kullanıyordu — bu modda CSS sütun genişlikleri **sadece `<colgroup>` veya ilk satırdaki `<th>` width'inden** okunur. v2.9.33 td'lere width verdi ama fixed-layout td widths'i göz ardı ediyor. Sessiz fail.
+
+**Bu sürümde:**
+- `<colgroup>` bloğu eklendi `<table>` ile `<thead>` arasına. 11 `<col>` element'i, her birinde `style="width:X%"` ile gerçek sütun yüzdeleri tanımlandı.
+- td width'leri korundu (yedek niyetiyle, table-layout: auto fallback'i için), ama colgroup zorunlu davranışı belirler.
+- Yüzdeler v2.9.33 ile aynı: DAY 3% / FOOD 32% / QTY 6% / °C×3 5% / TIME×3 5% / NOTE 20% / CHEF 9%.
+
+**Test:** Operatör tekrar yazdırıp FOOD/BATCH ve NOTE sütunlarının belirgin geniş, °C/TIME sütunlarının belirgin dar olduğunu doğrulayacak.
 
 ### v2.9.33 — HACCP Cook & Cool print: column widths rebalanced (PILOT polish) · 2026-05-19
 v2.9.32 tek-sayfa fix sonrası operatör raporu: yemek adı sütunu hâlâ dar, °C/TIME sütunları gereksiz geniş. Sütun yüzdeleri dengelendi.
