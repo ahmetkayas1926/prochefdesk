@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.9.24 · 2026-05-19
+**Mevcut sürüm:** v2.9.25 · 2026-05-19
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -16,6 +16,12 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH (kapatılabilir inl
 - **Round 3 (v2.9.7-9):** discover + account + team ✅
 - **Round 4 (v2.9.10-12):** sales + whatif + menu_matrix ✅
 - **Round 5 (v2.9.13):** haccp hub ✅ — **NAKED→RICH sweep tamamlandı**
+
+### v2.9.25 — CSP follow-up fix (Cloudflare Insights + hCaptcha + photo URL relax) · 2026-05-19
+v2.9.24 CSP'i 3 yan etki üretti, hepsi düzeltildi:
+- **Fixed:** Cloudflare Pages otomatik enjekte ettiği `static.cloudflareinsights.com` beacon script CSP tarafından bloklanıyordu. `script-src` ve `connect-src`'ye eklendi.
+- **Fixed:** Discover'da chef photo URL'leri görünmüyordu — XSS sanitize regex'i çok katıydı (`()` ve `'` reddediyordu). `url("...")` çift-tırnak wrap'i içinde bu char'lar zaten güvenli. Regex relax: sadece `"`, `\`, `\r`, `\n`, `<`, `>` rejected. Reject sebebiyle düşen URL'ler için `PCD.warn` log eklendi (debug).
+- **Added:** CSP'ye `worker-src 'self' blob:` + `child-src https://*.hcaptcha.com` — hCaptcha widget iframe içinden Web Worker spawn edebilmesi için (CSP3 fallback chain'i kapatıyordu).
 
 ### v2.9.24 — Standard SaaS hygiene pass (security + cleanup) · 2026-05-19
 Comprehensive audit (3 paralel agent) sonrası tespit edilen gerçek bug + sıkılama. Bank-grade değil, standart SaaS seviyesi.

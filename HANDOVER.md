@@ -9,7 +9,7 @@
 
 **Ürün:** ProChefDesk — profesyonel chef'ler için web tabanlı mutfak yönetim sistemi.
 **Operatör:** Ahmet Kaya, Perth Western Australia, profesyonel şef. Solo non-commercial proje.
-**Mevcut sürüm:** **v2.9.24** (push'a hazır local; production v2.9.22). Standart SaaS hijyen pass (XSS sanitize + recipe_likes RLS sıkı + CSP/SRI + 25 missing i18n + 5 orphan dosya sil + docs stale fix). Önceki: v2.9.23 KC scroll teleport gerçek fix + bulk select.
+**Mevcut sürüm:** **v2.9.25** (push'a hazır local; production v2.9.24). CSP follow-up fix — Cloudflare Insights eklendi, photo URL regex relaxed, hCaptcha worker-src eklendi.
 **Blog:** 13 yazı yayında (Faz A SEO upgrade + Faz B 5-round, MENA niş + uluslararası coverage).
 **Domain:** prochefdesk.com (Cloudflare Pages, SSL Full, GitHub push'ta auto build + deploy).
 
@@ -232,7 +232,7 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH. 13 araç paketleri
 |---|---|
 | Repo path (operatör Windows) | `C:\Users\ahmet\Desktop\prochefdesk` |
 | GitHub repo | `ahmetkayas1926/prochefdesk` |
-| Production sürümü | **v2.9.24** (push'a hazır local; production v2.9.22) |
+| Production sürümü | **v2.9.25** (push'a hazır local; production v2.9.24) |
 | Supabase project ref | `muuwhrcogikpqylsfvgg` (Tokyo, Postgres 17, Free tier) |
 | Cloudflare R2 bucket | `prochefdesk-backups` |
 | CLEANUP_SECRET | `ec79a445-7e92-499b-9322-5c2c949788d4d2886e66-d556-4498-ba9e-17fda6c11ac1` |

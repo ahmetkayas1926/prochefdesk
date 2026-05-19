@@ -10,7 +10,7 @@ ProChefDesk — profesyonel şef'ler için web tabanlı mutfak yönetim sistemi.
 
 **Stack:** Vanilla JavaScript (no bundling, no service worker), IndexedDB ana storage, Supabase (Postgres 17 + Auth + Storage + Realtime + Edge Functions), Cloudflare Pages (auto-deploy on GitHub push), Cloudflare R2 (backups).
 
-**Mevcut sürüm:** v2.9.24 (push'a hazır local; production v2.9.22). Standart SaaS hijyen pass — XSS sanitize + RLS sıkı + CSP/SRI + 25 missing i18n + orphan dosya sil + docs stale fix. Detay: `CHANGELOG.md`.
+**Mevcut sürüm:** v2.9.25 (push'a hazır local; production v2.9.24). CSP follow-up fix (CF Insights + photo URL relax + hCaptcha worker-src). Detay: `CHANGELOG.md`.
 
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı). SEO standardı aşağıda `## Blog SEO standardı` bölümünde.
 

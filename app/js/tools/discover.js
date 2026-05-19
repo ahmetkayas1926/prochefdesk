@@ -41,19 +41,26 @@
   let _freeFromAllergen = null;
 
   // v2.9.24 — Safe photo URL for CSS background-image (XSS defense).
-  // Chef's photo URLs come from Supabase Storage (always https://) but
-  // Discover renders OTHER chefs' photos via the public feed; a malicious
-  // value of d.photo could break out of url(...) and inject CSS rules.
-  // Defense: (1) parse as URL, (2) accept only http(s) / data:image/*,
-  // (3) escape CSS-sensitive chars (quote, paren, backslash, newline).
+  // Chef's photo URLs come from Supabase Storage (https://) or legacy
+  // base64 data URLs. A malicious value could break out of url(...) and
+  // inject CSS rules. URL is wrapped in double quotes in the caller, so
+  // we only need to reject chars that close the quoted url("...") string.
+  // v2.9.25 relax: parens `()` and single quote `'` are SAFE inside
+  // `url("...")` double-quoted form — old regex rejected real photo URLs
+  // with parens in filenames. Only `"`, `\`, newlines, angle brackets
+  // can actually escape.
   function safePhotoUrl(raw) {
     if (!raw || typeof raw !== 'string') return null;
     const s = raw.trim();
     if (!s) return null;
-    // Quick allowlist: must start with http(s):// or data:image/
-    if (!/^(https?:\/\/|data:image\/)/i.test(s)) return null;
-    // Hard reject any CSS-breaking chars (defense in depth)
-    if (/["'()\\\r\n<>]/.test(s)) return null;
+    if (!/^(https?:\/\/|data:image\/)/i.test(s)) {
+      if (window.PCD && PCD.warn) PCD.warn('discover safePhotoUrl rejected (scheme):', s.slice(0, 100));
+      return null;
+    }
+    if (/["\\\r\n<>]/.test(s)) {
+      if (window.PCD && PCD.warn) PCD.warn('discover safePhotoUrl rejected (unsafe chars)');
+      return null;
+    }
     return s;
   }
 
