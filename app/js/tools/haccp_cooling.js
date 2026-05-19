@@ -34,9 +34,12 @@
   const TABLE = 'haccpCookCool';
   const ROWS_PER_PAGE = 31;  // v2.8.47: 15 → 31
 
-  // HACCP cooling targets
-  const TARGET_2H_C = 21;
-  const TARGET_6H_C = 5;
+  // HACCP cooling targets — region-aware (v2.9.35). Source: PCD.haccp.getThresholds()
+  // reads user's HACCP region from prefs (Account → Preferences). Resolved on
+  // each call so region change in Account takes effect without page reload.
+  function cooling2hC() { return (PCD.haccp && PCD.haccp.getThresholds() && PCD.haccp.getThresholds().cooling2hC) || 21; }
+  function cooling6hC() { return (PCD.haccp && PCD.haccp.getThresholds() && PCD.haccp.getThresholds().cooling6hC) || 5; }
+  function coolingStartC() { return (PCD.haccp && PCD.haccp.getThresholds() && PCD.haccp.getThresholds().coolingStartC) || 60; }
 
   function locale() { return (PCD.i18n && PCD.i18n.currentLocale) || 'en'; }
   function getTempUnit() {
@@ -168,8 +171,8 @@
 
     // Build the table
     const wrap = PCD.el('div', { class: 'card', style: { padding: '0', overflowX: 'auto' } });
-    const target2h = targetForUI(TARGET_2H_C);
-    const target6h = targetForUI(TARGET_6H_C);
+    const target2h = targetForUI(cooling2hC());
+    const target6h = targetForUI(cooling6hC());
 
     let table =
       '<table style="width:100%;min-width:1100px;border-collapse:collapse;font-size:12px;table-layout:fixed;">' +
@@ -217,8 +220,8 @@
         const cookTime = r.cookEndAt ? new Date(r.cookEndAt).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' }) : '';
         const cp2hTime = r.cp2hAt ? new Date(r.cp2hAt).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' }) : '';
         const finalTime = r.endedAt ? new Date(r.endedAt).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' }) : '';
-        const cp2hFail = r.cp2hTemp != null && r.cp2hTemp > TARGET_2H_C;
-        const endFail = r.endedTemp != null && r.endedTemp > TARGET_6H_C;
+        const cp2hFail = r.cp2hTemp != null && r.cp2hTemp > cooling2hC();
+        const endFail = r.endedTemp != null && r.endedTemp > cooling6hC();
 
         table +=
           '<td style="padding:4px 8px;font-size:12px;font-weight:600;border-bottom:1px solid var(--border);border-left:1px solid var(--border);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + PCD.escapeHtml(r.foodName || '') + '</td>' +
@@ -274,8 +277,8 @@
   function openRowEditor(rowIndex, existing, onClose) {
     const t = PCD.i18n.t;
     const u = getTempUnit();
-    const target2h = targetForUI(TARGET_2H_C);
-    const target6h = targetForUI(TARGET_6H_C);
+    const target2h = targetForUI(cooling2hC());
+    const target6h = targetForUI(cooling6hC());
     const dim = daysInMonth(_viewMonth);
 
     const data = existing ? Object.assign({}, existing) : {
@@ -447,8 +450,8 @@
   function printMonth(monthYM, blank) {
     const t = PCD.i18n.t;
     const u = getTempUnit();
-    const target2h = targetForUI(TARGET_2H_C);
-    const target6h = targetForUI(TARGET_6H_C);
+    const target2h = targetForUI(cooling2hC());
+    const target6h = targetForUI(cooling6hC());
     const ws = PCD.store.getActiveWorkspace ? PCD.store.getActiveWorkspace() : null;
     const wsName = (ws && ws.name) || 'Kitchen';
     const label = monthLabel(monthYM);
@@ -550,8 +553,8 @@
       const cp2hH = r && r.cp2hAt ? new Date(r.cp2hAt).toTimeString().slice(0, 5) : '';
       const endT = r && r.endedTemp != null ? (u === 'F' ? ctoF(r.endedTemp) : r.endedTemp) + '°' : '';
       const endH = r && r.endedAt ? new Date(r.endedAt).toTimeString().slice(0, 5) : '';
-      const cp2hFail = r && r.cp2hTemp != null && r.cp2hTemp > TARGET_2H_C;
-      const endFail = r && r.endedTemp != null && r.endedTemp > TARGET_6H_C;
+      const cp2hFail = r && r.cp2hTemp != null && r.cp2hTemp > cooling2hC();
+      const endFail = r && r.endedTemp != null && r.endedTemp > cooling6hC();
 
       html += '<tr>' +
         '<td class="day">' + dayLabel + '</td>' +
@@ -572,7 +575,7 @@
       '<div class="h-foot">' +
         '<div class="legend">' +
           '<strong>' + PCD.escapeHtml(t('hcc_legend') || 'HACCP gates') + ':</strong> ' +
-          PCD.escapeHtml(t('hcc_col_cook_end') || 'Pişirme sonu') + ' ≥' + targetForUI(60) + ' · ' +
+          PCD.escapeHtml(t('hcc_col_cook_end') || 'Pişirme sonu') + ' ≥' + targetForUI(coolingStartC()) + ' · ' +
           '+2h ≤' + target2h + ' · ' +
           PCD.escapeHtml(t('hcc_col_final') || 'Son') + ' ≤' + target6h +
         '</div>' +

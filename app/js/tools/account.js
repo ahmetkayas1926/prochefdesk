@@ -18,6 +18,7 @@
     const loc = prefs.locale || 'en';
     const theme = prefs.theme || 'light';
     const haptic = prefs.haptic !== false;
+    const haccpRegion = prefs.haccpRegion || (window.PCD_CONFIG && window.PCD_CONFIG.HACCP_REGION_DEFAULT) || 'international';
 
     // v2.9.8 — Closeable inline guide
     const guideHidden = (function () {
@@ -187,6 +188,22 @@
                 <input type="checkbox" id="prefHaptic" ${haptic ? 'checked' : ''}>
                 <span class="switch-slider"></span>
               </label>
+            </div>
+            <!-- HACCP region (v2.9.35) — choose food safety jurisdiction
+                 so HACCP forms use correct thresholds (FSANZ AU 60°C vs
+                 UK FSA 63°C vs FDA US 57°C etc.). Default International
+                 = strictest, safe for any jurisdiction until user picks. -->
+            <div class="flex items-center justify-between" style="padding:14px 16px;">
+              <div style="flex:1;">
+                <div style="font-weight:600;">${t('haccp_region')}</div>
+                <div class="text-muted text-sm">${t('haccp_region_desc')}</div>
+              </div>
+              <select class="select" id="prefHaccpRegion" style="width:auto;min-height:36px;padding:6px 28px 6px 12px;">
+                ${Object.keys((window.PCD_CONFIG && window.PCD_CONFIG.HACCP_REGIONS) || {}).map(function (key) {
+                  const reg = window.PCD_CONFIG.HACCP_REGIONS[key];
+                  return '<option value="' + key + '"' + (haccpRegion === key ? ' selected' : '') + '>' + PCD.escapeHtml(t(reg.labelKey)) + '</option>';
+                }).join('')}
+              </select>
             </div>
           </div>
         </div>
@@ -410,6 +427,13 @@
     PCD.$('#prefHaptic', view).addEventListener('change', function () {
       PCD.store.set('prefs.haptic', this.checked);
     });
+    const haccpRegionEl = PCD.$('#prefHaccpRegion', view);
+    if (haccpRegionEl) {
+      haccpRegionEl.addEventListener('change', function () {
+        PCD.store.set('prefs.haccpRegion', this.value);
+        PCD.toast.success(t('saved'));
+      });
+    }
 
     const saveChefBtn = PCD.$('#saveChefProfileBtn', view);
     if (saveChefBtn) saveChefBtn.addEventListener('click', function () {

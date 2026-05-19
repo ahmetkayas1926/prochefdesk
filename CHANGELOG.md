@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.9.34 · 2026-05-19
+**Mevcut sürüm:** v2.9.35 · 2026-05-19
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -16,6 +16,20 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH (kapatılabilir inl
 - **Round 3 (v2.9.7-9):** discover + account + team ✅
 - **Round 4 (v2.9.10-12):** sales + whatif + menu_matrix ✅
 - **Round 5 (v2.9.13):** haccp hub ✅ — **NAKED→RICH sweep tamamlandı**
+
+### v2.9.35 — HACCP region selector (international SaaS) + Cook & Cool dinamik (PILOT) · 2026-05-19
+Operatör direktifi: ProChefDesk uluslararası kullanıcılara (US, UK, EU, Türkiye, Avustralya vb.) açıldıkça tek-ülke sabit HACCP eşikleri (60°C / 5°C / -18°C) yanlış. Her ülkenin yetkili merci ve eşikleri farklı: FSANZ AU 60°C hot vs FDA US 57°C vs UK FSA 63°C. Form'lardaki sayılar kullanıcının yargı bölgesini takip etmeli.
+
+**Bu sürümde (foundation + Cook & Cool pilot):**
+- `app/js/core/config.js` — `HACCP_REGIONS` object eklendi. 6 bölge: international (strictest), australia (FSANZ), usa (FDA Food Code 2022), uk (FSA), eu (EFSA/Codex), turkey (TGK). Her bölge için hotMinC, coldMaxC, frozenMaxC, coolingStartC, cooling2hC, cooling6hC field'leri resmi kaynaktan. Default: `international` (en sıkı, müfettişin sorun çıkaramayacağı sınır).
+- `app/js/core/utils.js` — `PCD.haccp.getRegion()` + `PCD.haccp.getThresholds()` helper'ları. User prefs'ten okur, her çağrıda yeniden değerlendirir → bölge değişikliği page-reload gerektirmez.
+- `app/js/tools/account.js` — Preferences section'ına yeni dropdown: **HACCP region** (currency/locale/theme/haptic'in yanına). 6 bölge seçimi. `prefs.haccpRegion` user_prefs altında store edilir, cloud sync'le diğer cihazlara da gider.
+- `app/js/tools/haccp_cooling.js` — Sabit `TARGET_2H_C`/`TARGET_6H_C` const'lar **fonksiyona** dönüştü (`cooling2hC()`/`cooling6hC()`); helper'dan okur. Sabit `targetForUI(60)` (cook end) → `targetForUI(coolingStartC())`. 8 yer wire.
+- `app/js/i18n/en.js` + `tr.js` — 8 yeni key: `haccp_region`, `haccp_region_desc`, + 6 bölge label'i.
+
+**Test:** Operatör (1) Account → Preferences → HACCP region dropdown görmeli, default "International (strictest)". (2) Bölge değiştirip Cook & Cool'a girince başlık satırlarındaki "2h target" / "6h target" sayıları + "HACCP gates" satırı seçilen bölgenin eşikleriyle güncellenmeli (örn. UK seç → 63°C görünmeli, AU seç → 60°C).
+
+**Sıradaki (v2.9.36):** Diğer 3 HACCP form (Daily Temp / Receiving / Holding) helper'a wire edilecek + Cook & Cool'a uygulanmış print layout pattern (v2.9.31-34 birleşik) o 3 form'a yayılacak.
 
 ### v2.9.34 — HACCP Cook & Cool print: colgroup fix (v2.9.33 silent failure) · 2026-05-19
 v2.9.33 push edildi, deploy oldu, ama operatör test ettiğinde PDF'te hiçbir sütun değişikliği görünmedi. Root cause: tablo `table-layout: fixed` kullanıyordu — bu modda CSS sütun genişlikleri **sadece `<colgroup>` veya ilk satırdaki `<th>` width'inden** okunur. v2.9.33 td'lere width verdi ama fixed-layout td widths'i göz ardı ediyor. Sessiz fail.

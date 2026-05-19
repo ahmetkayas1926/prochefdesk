@@ -667,4 +667,25 @@
     });
   };
 
+  // ============================================================
+  // v2.9.35 — HACCP regional threshold helper.
+  // Reads the user's selected HACCP region from prefs, falls back
+  // to PCD_CONFIG.HACCP_REGION_DEFAULT, returns the canonical
+  // threshold object so every HACCP form pulls from one source.
+  // ============================================================
+  PCD.haccp = PCD.haccp || {};
+  PCD.haccp.getRegion = function () {
+    const prefs = (PCD.store && PCD.store.get && PCD.store.get('prefs')) || {};
+    const cfg = window.PCD_CONFIG || {};
+    const id = prefs.haccpRegion || cfg.HACCP_REGION_DEFAULT || 'international';
+    return (cfg.HACCP_REGIONS && cfg.HACCP_REGIONS[id]) ? id : (cfg.HACCP_REGION_DEFAULT || 'international');
+  };
+  PCD.haccp.getThresholds = function () {
+    const cfg = window.PCD_CONFIG || {};
+    const id = PCD.haccp.getRegion();
+    const t = (cfg.HACCP_REGIONS && cfg.HACCP_REGIONS[id]) || null;
+    // Defensive fallback: International strictest in case config missing.
+    return t || { labelKey: 'haccp_region_international', hotMinC: 63, coldMaxC: 5, frozenMaxC: -18, coolingStartC: 63, cooling2hC: 21, cooling6hC: 5 };
+  };
+
 })();
