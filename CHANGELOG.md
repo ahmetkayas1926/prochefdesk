@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.11.13 · 2026-05-20
+**Mevcut sürüm:** v2.11.14 · 2026-05-20
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -18,6 +18,57 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH (kapatılabilir inl
 - **Round 5 (v2.9.13):** haccp hub ✅ — **NAKED→RICH sweep tamamlandı**
 
 ## v2.11.x — Whiteboard Block Composer
+
+### v2.11.14 — Whiteboard 4 yeni mutfak block tipi + Layout 6 kademe + Size 6 kademe · 2026-05-20
+
+**Operatör isteği:** 4 önerdiğim block tipini onayladı (Step List + Allergen Strip + Doneness Ladder + Time Range) + Layout'a 1/5 ve 1/6 ekle + Size'a S (XS) ve XXL ekle.
+
+**1) Layout 4 → 6 kademe:**
+- `LAYOUTS = ['full', 'half', 'third', 'quarter', 'fifth', 'sixth']`
+- `LAYOUT_COLS = { full:1, half:2, third:3, quarter:4, fifth:5, sixth:6 }`
+- Inspector layout segment artık 6 buton (1/1 · 1/2 · 1/3 · 1/4 · 1/5 · 1/6)
+- Auto-pair logic: N ardışık aynı layout'lu block → N-col grid satır (1/5: 5 yan yana, 1/6: 6 yan yana)
+- Allergen strip + bigNumber × 6 strip pattern için faydalı
+
+**2) Size 4 → 6 kademe:**
+- `FONT_SIZES = { xs, sm, md, lg, xl, xxl }` — eski 4 + XS (9/11 px) + XXL (32/52 px)
+- Print sizeMap: `{ xs:7, sm:10, md:12, lg:14, xl:18, xxl:26 }` (pt)
+- Inspector size segment: 6 buton (XS · SM · MD · LG · XL · XXL)
+- XS caption/footnote için, XXL hero number/temp için dramatik
+
+**3) 4 yeni block tipi:**
+
+| Block | Içerik | Render |
+|---|---|---|
+| **Step List** | items: [{text}] (numbered) | Her item solunda büyük yeşil/gri daire numara + adım metni. Recipe step / prep procedure / opening checklist için. |
+| **Allergen Strip** | active: ['dairy', 'nuts'] | 14 EU allergen yatay strip (allergens-db.list auto-pull). Active olanlar kırmızı vurgu + bold, inactive soluk. Menü-bazlı allergen özet. Inspector'da 14 toggle button (2-col grid). |
+| **Doneness Ladder** | levels: 5 fixed [{label, temp}] | Yatay 5-segment gradient (red→brown) + her cell altında label + temp range. Steak ekibi referansı. |
+| **Time Range** | start, end, label | Yatay band: [`08:00`] ━━━━━ [`17:30`] + altta label. Servis saatleri, prep window, shift saatleri. |
+
+**Block registry:** 8 → 12 tip. Sol palette + mobile add bar otomatik yeni tipleri gösterir (BLOCK_TYPES array iteration).
+
+**Edit handlers eklendi:**
+- `[data-ct-step-text]` (text input) + `[data-ct-step-add]` (add) + `[data-ct-step-del]` (delete)
+- `[data-ct-allerg-toggle]` (14 allergen toggle button)
+- `[data-ct-done-label]` + `[data-ct-done-temp]` (5 level text inputs)
+- Time Range için `data-ct-field="start" / "end" / "label"` (mevcut generic field handler kullanır)
+
+**i18n:** 18 yeni key × 2 dil:
+- Layout: `wb_layout_fifth`, `wb_layout_sixth`
+- Block tipleri: `wb_block_step_list`, `wb_block_allergen_strip`, `wb_block_doneness`, `wb_block_time_range`
+- Editor: `wb_step_item_ph`, `wb_step_add`, `wb_allerg_hint`, `wb_doneness_level`, `wb_doneness_label_ph`, `wb_doneness_temp_ph`, `wb_doneness_hint`, `wb_time_start_ph`, `wb_time_end_ph`, `wb_time_label_ph`
+
+**Test:**
+1. Whiteboard → sol palette → 12 block tipi görünür (yeni 4 dahil)
+2. Step List ekle → 3 default step → Inspector + Add step / × Delete
+3. Allergen Strip ekle → Inspector 14 toggle button (2-col grid) → "dairy" + "nuts" toggle → canvas'ta kırmızı vurgu
+4. Doneness Ladder ekle → 5 fixed level → label/temp düzenle
+5. Time Range ekle → 08:00 → 17:30 + label "SERVICE HOURS"
+6. Inspector → Layout 6 buton (1/1 · 1/2 · 1/3 · 1/4 · 1/5 · 1/6)
+7. 6 ardışık 1/6 block → tek satırda 6 yan yana grid
+8. Inspector → Size 6 buton (XS · SM · MD · LG · XL · XXL)
+9. XXL test: big_number'a XXL ver → 52px dramatik hero
+10. Print → tüm yeni block tipleri pt-based scale ile basılır
 
 ### v2.11.13 — Whiteboard Key·Value block inspector taşma fix · 2026-05-20
 

@@ -53,22 +53,32 @@
   // v2.11.0 — Block tipleri için emoji glyph kullanılır (icon registry'de
   // heading/hash/columns/align-left/plus-square/layout/sliders YOK, silent
   // info fallback bug riski. Emoji unicode tüm cihazlarda renderlanır.)
+  // v2.11.14 — 4 yeni mutfak-spesifik block tipi: step_list / allergen_strip
+  // / doneness / time_range (operatör isteği).
   const BLOCK_TYPES = [
     { id: 'section_header', labelKey: 'wb_block_section_header', glyph: '🏷',  label: 'Section Header' },
     { id: 'big_number',     labelKey: 'wb_block_big_number',     glyph: '🔢',  label: 'Big Number' },
     { id: 'checklist',      labelKey: 'wb_block_checklist',      glyph: '☑️',  label: 'Checklist' },
+    { id: 'step_list',      labelKey: 'wb_block_step_list',      glyph: '🔢',  label: 'Step List' },
     { id: 'kv',             labelKey: 'wb_block_kv',             glyph: '🔑',  label: 'Key · Value' },
     { id: 'table',          labelKey: 'wb_block_table',          glyph: '📊',  label: 'Table' },
     { id: 'alert',          labelKey: 'wb_block_alert',          glyph: '⚠️',  label: 'Alert Banner' },
+    { id: 'allergen_strip', labelKey: 'wb_block_allergen_strip', glyph: '🥜',  label: 'Allergen Strip' },
+    { id: 'doneness',       labelKey: 'wb_block_doneness',       glyph: '🥩',  label: 'Doneness Ladder' },
+    { id: 'time_range',     labelKey: 'wb_block_time_range',     glyph: '🕒',  label: 'Time Range' },
     { id: 'text',           labelKey: 'wb_block_text',           glyph: '📝',  label: 'Free Text' },
     { id: 'divider',        labelKey: 'wb_block_divider',        glyph: '➖',  label: 'Divider' },
   ];
 
+  // v2.11.14 — Size 6 kademe (operatör isteği "S ve XXL ekle"). XS dramatik
+  // küçük (caption/footnote), XXL dramatik büyük (hero number/temp).
   const FONT_SIZES = {
-    sm: { px: 11, headPx: 13 },
-    md: { px: 13, headPx: 16 },
-    lg: { px: 16, headPx: 22 },
-    xl: { px: 22, headPx: 36 },
+    xs:  { px: 9,  headPx: 11 },
+    sm:  { px: 11, headPx: 13 },
+    md:  { px: 13, headPx: 16 },
+    lg:  { px: 16, headPx: 22 },
+    xl:  { px: 22, headPx: 36 },
+    xxl: { px: 32, headPx: 52 },
   };
 
   // v2.11.1 — Font weight 3 kademe (operatör isteği "ince/orta/bold"). Body
@@ -81,8 +91,10 @@
   // v2.11.1 — Layout: 4 kademe (operatör isteği "4 hücreye kadar yan yana").
   // half=2, third=3, quarter=4 → ardışık aynı layout'lu blocks N-col grid'e
   // auto-pair olur. full → tek satır tam genişlik.
-  const LAYOUTS = ['full', 'half', 'third', 'quarter'];
-  const LAYOUT_COLS = { full: 1, half: 2, third: 3, quarter: 4 };
+  // v2.11.14 — fifth=5, sixth=6 eklendi (operatör isteği). 6 sütun A4
+  // landscape'te dar olsa da bigNumber/allergen icon strip için yararlı.
+  const LAYOUTS = ['full', 'half', 'third', 'quarter', 'fifth', 'sixth'];
+  const LAYOUT_COLS = { full: 1, half: 2, third: 3, quarter: 4, fifth: 5, sixth: 6 };
 
   // ============ HELPERS ============
   function uid(prefix) { return (prefix || 'b') + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
@@ -147,6 +159,33 @@
         return Object.assign(base, {
           content: { label: '' },
           style: { color: 'white', size: 'sm', align: 'center' },
+        });
+      // v2.11.14 — 4 yeni mutfak-spesifik block tipi
+      case 'step_list':
+        return Object.assign(base, {
+          content: { items: [{ text: 'Step 1' }, { text: 'Step 2' }, { text: 'Step 3' }] },
+          style: { color: 'white', size: 'md', align: 'left' },
+        });
+      case 'allergen_strip':
+        return Object.assign(base, {
+          content: { active: [] },  // active=[] → tümü görünür, hiçbiri vurgulu değil; active=['dairy','nuts'] → bu ikisi kırmızı vurgulu
+          style: { color: 'cream', size: 'md', align: 'left' },
+        });
+      case 'doneness':
+        return Object.assign(base, {
+          content: { levels: [
+            { label: 'RARE',     temp: '46-49°C' },
+            { label: 'MED-RARE', temp: '52-54°C' },
+            { label: 'MEDIUM',   temp: '57-60°C' },
+            { label: 'MED-WELL', temp: '63-66°C' },
+            { label: 'WELL',     temp: '70°C+'   },
+          ] },
+          style: { color: 'white', size: 'md', align: 'center' },
+        });
+      case 'time_range':
+        return Object.assign(base, {
+          content: { start: '08:00', end: '17:30', label: 'SERVICE HOURS' },
+          style: { color: 'forest', size: 'md', align: 'center' },
         });
     }
     return base;
@@ -512,6 +551,59 @@
         }
         break;
       }
+      // v2.11.14 — 4 yeni mutfak-spesifik block tipi
+      case 'step_list': {
+        const items = (block.content.items || []).map(function (it, n) {
+          return '<div style="display:flex;align-items:flex-start;gap:10px;padding:4px 0;font-size:' + fs.px + 'px;line-height:1.4;">' +
+            '<span style="flex:0 0 auto;width:' + (fs.px * 1.8) + 'px;height:' + (fs.px * 1.8) + 'px;border-radius:50%;background:rgba(127,127,127,0.18);color:currentColor;display:inline-flex;align-items:center;justify-content:center;font-weight:900;font-size:' + (fs.px * 0.9) + 'px;font-variant-numeric:tabular-nums;">' + (n + 1) + '</span>' +
+            '<span style="flex:1 1 auto;text-align:' + align + ';">' + PCD.escapeHtml(it.text || '') + '</span>' +
+          '</div>';
+        }).join('');
+        inner = '<div>' + items + '</div>';
+        break;
+      }
+      case 'allergen_strip': {
+        const all = (PCD.allergensDB && PCD.allergensDB.list) || [];
+        const active = (block.content.active || []).map(function (s) { return (s || '').toLowerCase(); });
+        const cells = all.map(function (a) {
+          const isActive = active.indexOf(a.key) >= 0;
+          return '<div style="flex:1;min-width:0;text-align:center;padding:4px 2px;' +
+              (isActive ? 'background:rgba(220,38,38,0.18);color:#a23b2d;border-radius:4px;font-weight:800;' : 'opacity:0.5;') +
+            '">' +
+            '<div style="font-size:' + (fs.headPx * 0.9) + 'px;line-height:1;">' + PCD.escapeHtml(a.icon || '?') + '</div>' +
+            '<div style="font-size:' + (fs.px * 0.65) + 'px;text-transform:uppercase;letter-spacing:0.04em;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + PCD.escapeHtml(a.key) + '</div>' +
+          '</div>';
+        }).join('');
+        inner = '<div style="display:flex;align-items:center;gap:2px;padding:4px 0;">' + cells + '</div>';
+        break;
+      }
+      case 'doneness': {
+        // Gradient red→brown 5-segment + label + temp under each
+        const colors = ['#c92a2a', '#b8543b', '#a36b3a', '#7d5a2c', '#3b2a1e'];
+        const cells = (block.content.levels || []).map(function (lv, i) {
+          const bg = colors[i] || colors[colors.length - 1];
+          return '<div style="flex:1;min-width:0;background:' + bg + ';color:white;padding:8px 6px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;border-right:1px solid rgba(255,255,255,0.15);">' +
+            '<div style="font-size:' + (fs.headPx * 0.7) + 'px;font-weight:900;letter-spacing:0.04em;text-transform:uppercase;line-height:1.1;">' + PCD.escapeHtml(lv.label || '') + '</div>' +
+            '<div style="font-size:' + (fs.px * 0.9) + 'px;font-weight:700;font-variant-numeric:tabular-nums;opacity:0.95;margin-top:3px;">' + PCD.escapeHtml(lv.temp || '') + '</div>' +
+          '</div>';
+        }).join('');
+        inner = '<div style="display:flex;border-radius:4px;overflow:hidden;">' + cells + '</div>';
+        break;
+      }
+      case 'time_range': {
+        // Yatay band: [start] ━━━━━━━━━━ [end] · altta label
+        inner =
+          '<div style="display:flex;align-items:center;gap:10px;padding:4px 0;font-variant-numeric:tabular-nums;">' +
+            '<div style="font-size:' + (fs.headPx * 0.85) + 'px;font-weight:900;letter-spacing:-0.01em;flex:0 0 auto;">' + PCD.escapeHtml(block.content.start || '00:00') + '</div>' +
+            '<div style="flex:1 1 auto;position:relative;height:6px;background:currentColor;opacity:0.18;border-radius:3px;">' +
+              '<div style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:8px;height:8px;border-radius:50%;background:currentColor;opacity:1;"></div>' +
+              '<div style="position:absolute;right:0;top:50%;transform:translateY(-50%);width:8px;height:8px;border-radius:50%;background:currentColor;opacity:1;"></div>' +
+            '</div>' +
+            '<div style="font-size:' + (fs.headPx * 0.85) + 'px;font-weight:900;letter-spacing:-0.01em;flex:0 0 auto;">' + PCD.escapeHtml(block.content.end || '00:00') + '</div>' +
+          '</div>' +
+          (block.content.label ? '<div style="text-align:center;font-size:' + fs.px + 'px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;opacity:0.85;margin-top:6px;">' + PCD.escapeHtml(block.content.label) + '</div>' : '');
+        break;
+      }
       default:
         inner = '<div style="font-style:italic;opacity:0.5;">Unknown block type: ' + PCD.escapeHtml(block.type) + '</div>';
     }
@@ -874,7 +966,7 @@
       '<div class="wb-inspector-label">' + PCD.escapeHtml(t('wb_inspector_content', 'Content')) + '</div>' +
       buildContentEditor(block, idx) +
     '</div>';
-    // 2) Layout — 4 kademe (full / half / 1-of-3 / 1-of-4)
+    // 2) Layout — 6 kademe (full / half / 1-of-3 / 1-of-4 / 1-of-5 / 1-of-6)
     html += '<div class="wb-inspector-section">' +
       '<div class="wb-inspector-label">' + PCD.escapeHtml(t('wb_inspector_layout', 'Layout')) + '</div>' +
       '<div class="wb-seg" style="width:100%;display:flex;">' +
@@ -882,6 +974,8 @@
         '<button type="button" data-set-layout="half" class="' + (block.layout === 'half' ? 'active' : '') + '" style="flex:1;" title="' + PCD.escapeHtml(t('wb_layout_half', 'Half width')) + '">1/2</button>' +
         '<button type="button" data-set-layout="third" class="' + (block.layout === 'third' ? 'active' : '') + '" style="flex:1;" title="' + PCD.escapeHtml(t('wb_layout_third', 'One third')) + '">1/3</button>' +
         '<button type="button" data-set-layout="quarter" class="' + (block.layout === 'quarter' ? 'active' : '') + '" style="flex:1;" title="' + PCD.escapeHtml(t('wb_layout_quarter', 'One quarter')) + '">1/4</button>' +
+        '<button type="button" data-set-layout="fifth" class="' + (block.layout === 'fifth' ? 'active' : '') + '" style="flex:1;" title="' + PCD.escapeHtml(t('wb_layout_fifth', 'One fifth')) + '">1/5</button>' +
+        '<button type="button" data-set-layout="sixth" class="' + (block.layout === 'sixth' ? 'active' : '') + '" style="flex:1;" title="' + PCD.escapeHtml(t('wb_layout_sixth', 'One sixth')) + '">1/6</button>' +
       '</div>' +
     '</div>';
     // 3) Color
@@ -893,12 +987,12 @@
         }).join('') +
       '</div>' +
     '</div>';
-    // 4) Size
+    // 4) Size — 6 kademe (XS / SM / MD / LG / XL / XXL)
     html += '<div class="wb-inspector-section">' +
       '<div class="wb-inspector-label">' + PCD.escapeHtml(t('wb_inspector_size', 'Size')) + '</div>' +
       '<div class="wb-seg" style="width:100%;display:flex;">' +
-        ['sm','md','lg','xl'].map(function (s) {
-          return '<button type="button" data-set-size="' + s + '" class="' + (block.style && block.style.size === s ? 'active' : '') + '" style="flex:1;text-transform:uppercase;">' + s + '</button>';
+        ['xs','sm','md','lg','xl','xxl'].map(function (s) {
+          return '<button type="button" data-set-size="' + s + '" class="' + (block.style && block.style.size === s ? 'active' : '') + '" style="flex:1;text-transform:uppercase;font-size:11px;">' + s + '</button>';
         }).join('') +
       '</div>' +
     '</div>';
@@ -1024,6 +1118,52 @@
       }
       case 'divider':
         return '<input data-ct-field="label" type="text" maxlength="40" placeholder="' + PCD.escapeHtml(t('wb_divider_label_ph', 'Optional label')) + '" value="' + PCD.escapeHtml(c.label || '') + '" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:5px;background:var(--surface-1);color:var(--text);font-size:13px;">';
+      // v2.11.14 — 4 yeni block tipi content editor
+      case 'step_list': {
+        const items = (c.items || []).map(function (it, i) {
+          return '<div class="wb-list-item">' +
+            '<span style="flex:0 0 24px;font-size:11px;font-weight:800;color:var(--text-3);text-align:center;">' + (i + 1) + '.</span>' +
+            '<input type="text" data-ct-step-text="' + i + '" value="' + PCD.escapeHtml(it.text || '') + '" placeholder="' + PCD.escapeHtml(t('wb_step_item_ph', 'Step...')) + '">' +
+            '<button class="wb-icon-btn danger" data-ct-step-del="' + i + '">×</button>' +
+          '</div>';
+        }).join('');
+        return items +
+          '<button class="btn btn-outline btn-sm" data-ct-step-add style="width:100%;margin-top:6px;">' + PCD.icon('plus', 13) + ' ' + PCD.escapeHtml(t('wb_step_add', 'Add step')) + '</button>';
+      }
+      case 'allergen_strip': {
+        const all = (PCD.allergensDB && PCD.allergensDB.list) || [];
+        const active = (c.active || []).map(function (s) { return (s || '').toLowerCase(); });
+        const cells = all.map(function (a) {
+          const isActive = active.indexOf(a.key) >= 0;
+          return '<button type="button" data-ct-allerg-toggle="' + PCD.escapeHtml(a.key) + '" style="display:flex;align-items:center;gap:6px;padding:5px 8px;border:1px solid ' + (isActive ? '#a23b2d' : 'var(--border)') + ';background:' + (isActive ? 'rgba(220,38,38,0.15)' : 'var(--surface-1)') + ';color:' + (isActive ? '#a23b2d' : 'var(--text-2)') + ';border-radius:5px;cursor:pointer;font-size:11px;font-weight:' + (isActive ? '800' : '500') + ';text-align:left;text-transform:uppercase;letter-spacing:0.04em;">' +
+            '<span style="font-size:14px;line-height:1;">' + PCD.escapeHtml(a.icon || '?') + '</span>' +
+            '<span style="flex:1;">' + PCD.escapeHtml(a.key) + '</span>' +
+            (isActive ? '<span style="color:#a23b2d;font-weight:900;">✓</span>' : '') +
+          '</button>';
+        }).join('');
+        return '<div style="font-size:10px;color:var(--text-3);margin-bottom:6px;">' + PCD.escapeHtml(t('wb_allerg_hint', 'Tap to mark "contains" — red vurgu')) + '</div>' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">' + cells + '</div>';
+      }
+      case 'doneness': {
+        const levels = (c.levels || []).map(function (lv, i) {
+          return '<div style="border-top:1px dashed var(--border);padding:6px 0 4px;margin-top:' + (i === 0 ? '0' : '4px') + ';">' +
+            '<div style="font-size:10px;font-weight:800;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:3px;">' + PCD.escapeHtml(t('wb_doneness_level', 'Level')) + ' ' + (i + 1) + '</div>' +
+            '<div style="display:flex;gap:6px;align-items:center;">' +
+              '<input type="text" data-ct-done-label="' + i + '" value="' + PCD.escapeHtml(lv.label || '') + '" placeholder="' + PCD.escapeHtml(t('wb_doneness_label_ph', 'Label')) + '" style="flex:1;min-width:0;padding:5px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface-1);color:var(--text);font-size:12px;font-weight:700;text-transform:uppercase;">' +
+              '<input type="text" data-ct-done-temp="' + i + '" value="' + PCD.escapeHtml(lv.temp || '') + '" placeholder="' + PCD.escapeHtml(t('wb_doneness_temp_ph', '°C')) + '" style="flex:1;min-width:0;padding:5px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface-1);color:var(--text);font-size:12px;">' +
+            '</div>' +
+          '</div>';
+        }).join('');
+        return levels + '<div style="font-size:9px;color:var(--text-3);margin-top:8px;font-style:italic;">' + PCD.escapeHtml(t('wb_doneness_hint', 'Levels are fixed at 5 (rare → well-done gradient). Edit label/temp.')) + '</div>';
+      }
+      case 'time_range': {
+        return '<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">' +
+            '<input type="text" data-ct-field="start" value="' + PCD.escapeHtml(c.start || '') + '" placeholder="' + PCD.escapeHtml(t('wb_time_start_ph', 'Start (08:00)')) + '" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:5px;background:var(--surface-1);color:var(--text);font-size:14px;font-weight:800;text-align:center;font-variant-numeric:tabular-nums;">' +
+            '<span style="color:var(--text-3);font-size:14px;">→</span>' +
+            '<input type="text" data-ct-field="end" value="' + PCD.escapeHtml(c.end || '') + '" placeholder="' + PCD.escapeHtml(t('wb_time_end_ph', 'End (17:30)')) + '" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:5px;background:var(--surface-1);color:var(--text);font-size:14px;font-weight:800;text-align:center;font-variant-numeric:tabular-nums;">' +
+          '</div>' +
+          '<input type="text" data-ct-field="label" maxlength="40" value="' + PCD.escapeHtml(c.label || '') + '" placeholder="' + PCD.escapeHtml(t('wb_time_label_ph', 'Label (e.g. SERVICE HOURS)')) + '" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:5px;background:var(--surface-1);color:var(--text);font-size:12px;text-transform:uppercase;letter-spacing:0.04em;">';
+      }
     }
     return '<div style="color:var(--text-3);font-size:12px;">' + PCD.escapeHtml(t('wb_no_content_fields', 'No content fields for this block.')) + '</div>';
   }
@@ -1395,6 +1535,32 @@
         block.content.items[i].text = target.value;
         commitLight(); return;
       }
+      // v2.11.14 — Step List text input
+      const stepText = target.getAttribute('data-ct-step-text');
+      if (stepText !== null) {
+        const i = parseInt(stepText, 10);
+        block.content = block.content || { items: [] };
+        block.content.items[i] = block.content.items[i] || { text: '' };
+        block.content.items[i].text = target.value;
+        commitLight(); return;
+      }
+      // v2.11.14 — Doneness label/temp inputs
+      const doneLabel = target.getAttribute('data-ct-done-label');
+      if (doneLabel !== null) {
+        const i = parseInt(doneLabel, 10);
+        block.content = block.content || { levels: [] };
+        block.content.levels[i] = block.content.levels[i] || { label: '', temp: '' };
+        block.content.levels[i].label = target.value;
+        commitLight(); return;
+      }
+      const doneTemp = target.getAttribute('data-ct-done-temp');
+      if (doneTemp !== null) {
+        const i = parseInt(doneTemp, 10);
+        block.content = block.content || { levels: [] };
+        block.content.levels[i] = block.content.levels[i] || { label: '', temp: '' };
+        block.content.levels[i].temp = target.value;
+        commitLight(); return;
+      }
       // KV
       const kvKey = target.getAttribute('data-ct-kv-key');
       if (kvKey !== null) {
@@ -1464,6 +1630,30 @@
       const block = getActiveBlock(); if (!block) return;
       const i = parseInt(this.getAttribute('data-ct-checklist-del'), 10);
       block.content.items.splice(i, 1);
+      commit();
+    });
+    // v2.11.14 — Step List add/del
+    PCD.on(root, 'click', '[data-ct-step-add]', function () {
+      const block = getActiveBlock(); if (!block) return;
+      block.content = block.content || { items: [] };
+      block.content.items.push({ text: '' });
+      commit();
+    });
+    PCD.on(root, 'click', '[data-ct-step-del]', function () {
+      const block = getActiveBlock(); if (!block) return;
+      const i = parseInt(this.getAttribute('data-ct-step-del'), 10);
+      if (block.content && Array.isArray(block.content.items)) block.content.items.splice(i, 1);
+      commit();
+    });
+    // v2.11.14 — Allergen Strip toggle
+    PCD.on(root, 'click', '[data-ct-allerg-toggle]', function () {
+      const block = getActiveBlock(); if (!block) return;
+      const key = this.getAttribute('data-ct-allerg-toggle');
+      block.content = block.content || { active: [] };
+      const arr = block.content.active = (block.content.active || []).slice();
+      const idx = arr.indexOf(key);
+      if (idx >= 0) arr.splice(idx, 1);
+      else arr.push(key);
       commit();
     });
     // KV add/del
@@ -1840,7 +2030,7 @@
   // Print-mode block renderer (separate from interactive — no buttons, no handles)
   function renderPrintBlock(block) {
     const palette = paletteFor(block.style && block.style.color);
-    const sizeMap = { sm: 10, md: 12, lg: 14, xl: 18 };
+    const sizeMap = { xs: 7, sm: 10, md: 12, lg: 14, xl: 18, xxl: 26 };
     const fs = sizeMap[(block.style && block.style.size) || 'md'];
     const align = (block.style && block.style.align) || 'left';
     const weight = WEIGHTS[(block.style && block.style.weight) || 'medium'];
@@ -1916,6 +2106,54 @@
         }
         // Divider'a background uygulamayalım — şeffaf kalsın
         return '<div class="wb-print-block wb-print-block-' + block.type + '" style="background:transparent;padding:0;">' + inner + '</div>';
+      }
+      // v2.11.14 — 4 yeni block tipi print render
+      case 'step_list': {
+        const items = (block.content.items || []).map(function (it, n) {
+          return '<div style="display:flex;align-items:flex-start;gap:6pt;padding:2pt 0;">' +
+            '<span style="flex:0 0 auto;width:' + (fs + 4) + 'pt;height:' + (fs + 4) + 'pt;border-radius:50%;background:rgba(127,127,127,0.22);color:currentColor;display:inline-flex;align-items:center;justify-content:center;font-weight:900;font-size:' + (fs - 1) + 'pt;font-variant-numeric:tabular-nums;">' + (n + 1) + '</span>' +
+            '<span style="flex:1 1 auto;">' + PCD.escapeHtml(it.text || '') + '</span>' +
+          '</div>';
+        }).join('');
+        inner = items;
+        break;
+      }
+      case 'allergen_strip': {
+        const all = (PCD.allergensDB && PCD.allergensDB.list) || [];
+        const active = (block.content.active || []).map(function (s) { return (s || '').toLowerCase(); });
+        const cells = all.map(function (a) {
+          const isActive = active.indexOf(a.key) >= 0;
+          return '<div style="flex:1;min-width:0;text-align:center;padding:3pt 2pt;' +
+              (isActive ? 'background:rgba(220,38,38,0.22);color:#a23b2d;font-weight:800;' : 'opacity:0.5;') +
+            '">' +
+            '<div style="font-size:' + (fs + 4) + 'pt;line-height:1;">' + PCD.escapeHtml(a.icon || '?') + '</div>' +
+            '<div style="font-size:' + Math.max(6, fs - 4) + 'pt;text-transform:uppercase;letter-spacing:0.04em;margin-top:1pt;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + PCD.escapeHtml(a.key) + '</div>' +
+          '</div>';
+        }).join('');
+        inner = '<div style="display:flex;align-items:center;gap:1pt;">' + cells + '</div>';
+        break;
+      }
+      case 'doneness': {
+        const colors = ['#c92a2a', '#b8543b', '#a36b3a', '#7d5a2c', '#3b2a1e'];
+        const cells = (block.content.levels || []).map(function (lv, i) {
+          const bg = colors[i] || colors[colors.length - 1];
+          return '<div style="flex:1;min-width:0;background:' + bg + ';color:white;padding:5pt 3pt;display:flex;flex-direction:column;align-items:center;text-align:center;border-right:0.5pt solid rgba(255,255,255,0.15);">' +
+            '<div style="font-size:' + (fs - 1) + 'pt;font-weight:900;letter-spacing:0.04em;text-transform:uppercase;line-height:1.1;">' + PCD.escapeHtml(lv.label || '') + '</div>' +
+            '<div style="font-size:' + (fs - 1) + 'pt;font-weight:700;font-variant-numeric:tabular-nums;margin-top:2pt;">' + PCD.escapeHtml(lv.temp || '') + '</div>' +
+          '</div>';
+        }).join('');
+        // Doneness'e block bg uygulamayalım — gradient cell'ler kendi renklerini kullanır
+        return '<div class="wb-print-block wb-print-block-' + block.type + '" style="background:transparent;padding:0;border-radius:3pt;overflow:hidden;"><div style="display:flex;">' + cells + '</div></div>';
+      }
+      case 'time_range': {
+        inner =
+          '<div style="display:flex;align-items:center;gap:8pt;padding:3pt 0;font-variant-numeric:tabular-nums;">' +
+            '<div style="font-size:' + (fs + 4) + 'pt;font-weight:900;letter-spacing:-0.01em;flex:0 0 auto;">' + PCD.escapeHtml(block.content.start || '00:00') + '</div>' +
+            '<div style="flex:1 1 auto;position:relative;height:3pt;background:currentColor;opacity:0.25;border-radius:1.5pt;"></div>' +
+            '<div style="font-size:' + (fs + 4) + 'pt;font-weight:900;letter-spacing:-0.01em;flex:0 0 auto;">' + PCD.escapeHtml(block.content.end || '00:00') + '</div>' +
+          '</div>' +
+          (block.content.label ? '<div style="text-align:center;font-size:' + fs + 'pt;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;opacity:0.85;margin-top:3pt;">' + PCD.escapeHtml(block.content.label) + '</div>' : '');
+        break;
       }
     }
 
