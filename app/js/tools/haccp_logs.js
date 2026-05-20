@@ -748,17 +748,26 @@
 
     let html =
       '<style>' +
+        // v2.11.5 — Popup window'da PCD.print toolbar (.no-print) body flex
+        // item olarak ~60px alır → h-sheet remaining küçülür → tablo taşar
+        // → footer table'ın üstüne biner. Fix: screen'de height auto, print'te
+        // 210mm fixed (haccp_cooling pattern).
         'body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#000;margin:0;padding:0;' +
           'width:297mm;height:210mm;display:flex;flex-direction:column;}' +
+        '@media screen { body { height: auto !important; } }' +
         '.h-sheet{flex:1 1 auto;min-height:0;padding:4mm;display:flex;flex-direction:column;}' +
         '.h-head{margin-bottom:4px;border-bottom:1.5px solid #16a34a;padding-bottom:3px;flex:0 0 auto;}' +
         '.h-head h1{margin:0;font-size:14px;}' +
         '.h-head .sub{font-size:10px;color:#555;margin-top:1px;}' +
         (showFitWarning ? '.h-warn{padding:3px 6px;background:#fef3c7;color:#92400e;font-size:9px;border-radius:3px;margin-bottom:4px;flex:0 0 auto;}' : '') +
         'table.h-grid{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed;flex:0 0 auto;}' +
-        'table.h-grid th, table.h-grid td{border:1px solid #999;padding:2px 3px;text-align:center;vertical-align:middle;line-height:1.25;}' +
-        'table.h-grid th{background:#f3f4f6;font-weight:700;font-size:9px;text-transform:uppercase;letter-spacing:0.02em;}' +
-        'table.h-grid tr{height:19px;page-break-inside:avoid;}' +
+        // v2.11.6 — Cook & Cool kanon typography uniformity: padding 2px3px→3px4px,
+        // line-height 1.25→1.3, row 19px→20px. Hücre yüksekliği + ferah okuma.
+        // Yükseklik bütçesi: 31 row × 20 + thead 50 + h-head/h-foot/padding ≈ 750px
+        // < 210mm (794px) → tek sayfa garantili.
+        'table.h-grid th, table.h-grid td{border:1px solid #999;padding:3px 4px;text-align:center;vertical-align:middle;line-height:1.3;}' +
+        'table.h-grid th{background:#f3f4f6;font-weight:700;font-size:9px;text-transform:uppercase;letter-spacing:0.03em;}' +
+        'table.h-grid tr{height:20px;page-break-inside:avoid;}' +
         'table.h-grid td.day{text-align:center;font-weight:700;background:#fafafa;font-size:10px;color:#444;}' +
         'table.h-grid td.oor{background:#fee2e2;color:#991b1b;font-weight:700;}' +
         'table.h-grid td.has-note::after{content:" *";color:#16a34a;}' +

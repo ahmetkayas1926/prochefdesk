@@ -1144,6 +1144,10 @@
               'height: ' + (opts.orientation === 'landscape' ? 210 : 297) + 'mm; ' +
               'display: flex; flex-direction: column; ' +
             '}' +
+            // v2.11.5 — On-screen popup'ta PCD.print toolbar flex item olarak
+            // yer kaplar → body fixed height bozulur → footer table overlay.
+            // Fix: screen'de height auto, print'te orient'a göre 210/297mm fix.
+            '@media screen { body { height: auto !important; } }' +
             // v2.11.4 — Print path .kc-sheet height: auto → height: 100%.
             // Operatör raporu: popup window preview'unda recipe'ler üst yarıda
             // sıkışıyor, alt yarı boş. Sebep: height:auto ile sheet content-sized

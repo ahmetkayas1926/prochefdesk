@@ -10,7 +10,7 @@ ProChefDesk — profesyonel şef'ler için web tabanlı mutfak yönetim sistemi.
 
 **Stack:** Vanilla JavaScript (no bundling, no service worker), IndexedDB ana storage, Supabase (Postgres 17 + Auth + Storage + Realtime + Edge Functions), Cloudflare Pages (auto-deploy on GitHub push), Cloudflare R2 (backups).
 
-**Mevcut sürüm:** v2.11.4 (push'a hazır local; production v2.10.4). Whiteboard Block Composer (v2.11.0-2) + Discover search (v2.11.3) + **Kitchen Cards print/preview WYSIWYG fix** (v2.11.4 — print path `.kc-sheet height:auto` → `height:100%`, `column-fill:auto` → `balance`; live preview + popup window + PDF dialog artık üçü de aynı görünür). Detay: `CHANGELOG.md`.
+**Mevcut sürüm:** v2.11.6 (push'a hazır local; production v2.10.4). Whiteboard Block Composer (v2.11.0-2) + Discover search (v2.11.3) + KC WYSIWYG (v2.11.4) + Popup footer overlay fix (v2.11.5) + **HACCP form typography uniformity** (v2.11.6 — Cook & Cool kanon: padding 3px4px / line-height 1.3 / row 20px / letter-spacing 0.03em → Logs ve Receiving'e uygulandı, Holding zaten kanondu, Cooling referans). 31 row × 20px + thead + h-head/h-foot/padding ≈ 746px → A4 landscape 794px'e sığar, 48px tolerans. Detay: `CHANGELOG.md`.
 
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı). SEO standardı aşağıda `## Blog SEO standardı` bölümünde.
 

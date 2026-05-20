@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.11.4 · 2026-05-20
+**Mevcut sürüm:** v2.11.6 · 2026-05-20
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -18,6 +18,96 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH (kapatılabilir inl
 - **Round 5 (v2.9.13):** haccp hub ✅ — **NAKED→RICH sweep tamamlandı**
 
 ## v2.11.x — Whiteboard Block Composer
+
+### v2.11.6 — HACCP form typography uniformity (Cook & Cool kanon) · 2026-05-20
+
+**Operatör:** "HACCP Cook & Cool'un print PDF sayfa düzenini çok beğendim. Başlık + form + footer tek sayfada, hücre yükseklikleri mükemmel, form ile footer arası neredeyse hiç boşluk yok, sayfa çok verimli kullanılmış. Bu düzeni bütün HACCP formlarına uygula."
+
+**Kanon (haccp_cooling.js):**
+- `body width:297mm height:210mm` (A4 landscape) + `@media screen height:auto` (popup overlay fix, v2.11.5)
+- `.h-sheet flex:1 1 auto padding:4mm display:flex flex-direction:column`
+- `table.h-grid th, td { padding:3px 4px; line-height:1.3 }`
+- `table.h-grid th { letter-spacing:0.03em; font-size:9px; text-transform:uppercase }`
+- `table.h-grid tr { height:20px; page-break-inside:avoid }`
+- `.pcd-print-footer override { margin:0 padding:1mm 4mm border-top:none flex:0 0 auto font-size:7pt line-height:1.2 }`
+
+**Karşılaştırma matrisi (audit):**
+
+| Özellik | Cooling (kanon) | Logs | Holding | Receiving |
+|---|---|---|---|---|
+| body/h-sheet/@page | ✅ | ✅ | ✅ | ✅ |
+| td padding | 3px 4px | **2px 3px** ❌ | ✅ | **2px 4px** ❌ |
+| line-height | 1.3 | **1.25** ❌ | ✅ | **1.25** ❌ |
+| tr height | 20px | **19px** ❌ | ✅ | **19px** ❌ |
+| th letter-spacing | 0.03em | **0.02em** ❌ | ✅ | ✅ |
+| colgroup widths | ✅ | ✅ | ✅ | ✅ (3 farklı tablo için 3 colgroup) |
+
+**Fix (haccp_logs.js + haccp_receiving.js):**
+- `padding:2px 3px` / `2px 4px` → `padding:3px 4px`
+- `line-height:1.25` → `line-height:1.3`
+- `tr height:19px` → `tr height:20px`
+- (logs) `letter-spacing:0.02em` → `0.03em`
+
+**haccp_holding.js dokunulmadı** — zaten kanon değerleriyle uyumluydu (v2.10.1'de Cook & Cool ile birlikte 20px'e çekilmişti).
+
+**Yükseklik bütçesi doğrulaması (A4 landscape = 794px):**
+- 31 row × 20px = 620px
+- thead (2 row × ~25px) = 50px
+- h-head = ~30px
+- h-foot = ~20px
+- h-sheet padding 4mm = ~16px
+- pcd-print-footer = ~10px
+- **Toplam ≈ 746px** → 794px'e tam sığar, 48px tolerans
+- Tek sayfa garantili, form-footer arası minimal boşluk (Cook & Cool ile aynı verimlilik)
+
+**Etkilenmeyen** (intentional, form-spesifik farklar korundu):
+- haccp_logs.js: `h-notes` + `h-sign` blokları (Fridge Log için günlük not + chef signature, Cook & Cool'da yok)
+- haccp_logs.js: td genelinde `text-align:center` (numerik temp/time grid için makul — sınıf-bazlı yerine genel)
+- haccp_receiving.js: 3 farklı table layout (printDay/printMonthBlank/printMonthFilled) — her biri kendi colgroup'una sahip
+- Form-spesifik td sınıfları (.day/.food/.t/.h/.note/.chef vs .idx/.type/.corr vs .sup/.prod/.qty/.exp/.cond) — değişmedi
+
+**Test:**
+1. HACCP Cook & Cool "Print this month" → 1 sayfa, kanon (mevcut, regression yok)
+2. HACCP Fridge & Freezer Log "Print month" → 1 sayfa, Cook & Cool typography aynısı
+3. HACCP Hot/Cold Holding "Print month" → 1 sayfa (zaten kanondu, no-op confirmation)
+4. HACCP Receiving "Print month" (printMonthBlank + printMonthFilled) → 1 sayfa, kanon
+5. 4 form arası görsel tutarlılık: row height, padding, font-size, letter-spacing aynı
+
+### v2.11.5 — Print popup window'da footer overlay bug fix (5 tool) · 2026-05-20
+
+**Operatör raporu:** HACCP Cook & Cool print popup window önizlemesinde "Made with ProChefDesk · prochefdesk.com" footer'ı tablonun 29-30 satırları arasında görünüyor. Save-as-PDF dialog'da doğru yerde (tablo altı). Sadece popup preview'da yanlış.
+
+**Root cause:**
+
+Bu sorun **PCD.print'in inject ettiği toolbar (`.no-print`) ile sabit body height kombinasyonundan kaynaklanıyor**:
+
+1. Print path body CSS: `width:297mm; height:210mm; display:flex; flex-direction:column;` (A4 landscape fixed)
+2. PCD.print body içine `<div class="no-print">[Print/Close butonlar]</div>` inject ediyor (flex item olarak)
+3. Toolbar yaklaşık 50-60px alıyor → h-sheet flex:1 remaining 730-740px
+4. HACCP Cook & Cool tablosu: 31 satır × 20px + 2 header × 25 + h-head + legend + padding = ~750px
+5. Tablo h-sheet'i ~10-20px taşıyor → overflow visible → tablonun son satırları footer'ın bulunduğu alana giriyor
+6. PCD.print footer (`.pcd-print-footer`) body sonunda flex item → table son satırı footer ile **üst üste**
+
+**Print dialog'da görünmüyor çünkü:** Toolbar `@media print` ile `display:none`. Print'te body 210mm tam tablo+footer'a yetiyor.
+
+**Fix (5 dosya):**
+
+`@media screen { body { height: auto !important; } }` her print path'in body CSS'inden hemen sonra eklendi:
+- `haccp_cooling.js` (Cook & Cool — operatör raporladığı bug)
+- `haccp_holding.js` (Hot/Cold Holding)
+- `haccp_logs.js` (Fridge & Freezer Log)
+- `haccp_receiving.js` (Receiving Log)
+- `kitchen_cards.js` (Kitchen Cards print path)
+
+Davranış:
+- **On-screen (popup window):** Body height: auto → content'e göre uzar → toolbar 60px + h-sheet 750px + footer 10px = ~820px (window 850px → sığar). Tablo taşmıyor, footer doğru yerde.
+- **Print (@page A4):** Body 210mm fixed (mevcut). Toolbar `@media print display:none` ile gizli. Tüm 210mm tablo+footer için kullanılır. Mevcut single-page guarantee korunur.
+
+**Test:**
+1. HACCP Cook & Cool → "Print this month" (boş veya dolu) → popup window: footer artık tablonun ALTINDA, son satır (31) ile footer arası az ama düzgün boşluk
+2. "Print / Save as PDF" tıkla → Chrome dialog: aynı görünüm
+3. PDF kaydet → 1 sayfa A4 landscape, tablo + footer doğru yerde
+4. Aynı test: Fridge & Freezer Log, Receiving, Hot/Cold Holding, Kitchen Cards print
 
 ### v2.11.4 — Kitchen Cards print/preview tutarsızlığı fix · 2026-05-20
 

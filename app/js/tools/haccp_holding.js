@@ -529,8 +529,12 @@
     return '<style>' +
       // v2.9.40 — Cook & Cool single-page pattern: A4 sized body + flex column
       // + colgroup widths + compact footer + row height tuned for handwriting.
+      // v2.11.5 — On-screen popup'ta body height fixed olunca PCD.print toolbar
+      // flex item olarak yer kaplar + tablo taşar → footer overlay bug.
+      // Fix: screen'de height:auto, print'te 210mm fixed (haccp_cooling pattern).
       'body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#000;margin:0;padding:0;' +
         'width:297mm;height:210mm;display:flex;flex-direction:column;}' +
+      '@media screen { body { height: auto !important; } }' +
       '.h-sheet{flex:1 1 auto;min-height:0;padding:4mm;display:flex;flex-direction:column;}' +
       '.h-head{margin-bottom:4px;border-bottom:1.5px solid #16a34a;padding-bottom:3px;display:flex;justify-content:space-between;align-items:flex-end;flex:0 0 auto;}' +
       '.h-head h1{margin:0;font-size:14px;}' +

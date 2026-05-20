@@ -468,8 +468,15 @@
         // a flex sibling and stays on the same page instead of overflowing.
         // Row height tuned to 19px (~5mm) — comfortable for handwriting but
         // total table height stays within A4 landscape usable area.
+        // v2.11.5 — On-screen popup window'da body height fixed 210mm olunca
+        // PCD.print toolbar (.no-print) flex item olarak ~60px alır → h-sheet
+        // remaining 730px → 31 satır × 20px tablo taşar → footer table son
+        // satırlarına bindirilir (operatör bug raporu). Fix: @media screen
+        // body height auto, @media print body 210mm fixed. Print PDF zaten
+        // doğruydu, sadece popup preview tutarsızdı.
         'body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#000;margin:0;padding:0;' +
           'width:297mm;height:210mm;display:flex;flex-direction:column;}' +
+        '@media screen { body { height: auto !important; } }' +
         '.h-sheet{flex:1 1 auto;min-height:0;padding:4mm;display:flex;flex-direction:column;}' +
         '.h-head{margin-bottom:4px;border-bottom:1.5px solid #16a34a;padding-bottom:3px;display:flex;justify-content:space-between;align-items:flex-end;flex:0 0 auto;}' +
         '.h-head h1{margin:0;font-size:14px;}' +
