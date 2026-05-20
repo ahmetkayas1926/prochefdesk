@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.11.12 · 2026-05-20
+**Mevcut sürüm:** v2.11.13 · 2026-05-20
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -18,6 +18,22 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH (kapatılabilir inl
 - **Round 5 (v2.9.13):** haccp hub ✅ — **NAKED→RICH sweep tamamlandı**
 
 ## v2.11.x — Whiteboard Block Composer
+
+### v2.11.13 — Whiteboard Key·Value block inspector taşma fix · 2026-05-20
+
+**Operatör:** "Key·Value block content girme alanı da taşıyor." (Table fix'iyle aynı sınıf bug, KV'de küçük versiyon)
+
+**Root cause:** Inspector'da KV her pair yatay flex (`[KEY input] [VALUE input] [×]`), inspector ~280px → 2 input + delete sığamıyor → sağa taşıyor.
+
+**Fix** (Table v2.11.9 pattern'ı): KV editor dikey layout:
+- Her pair "PAIR N" başlığı + delete butonu
+- Altında **KEY** label + key input (tek satır)
+- Altında **VALUE** label + value input (tek satır)
+- Pair'ler arası dashed ayraç
+
+**i18n:** 4 yeni key × 2 dil (wb_kv_pair_label, wb_kv_key_label, wb_kv_value_label, wb_kv_del_pair).
+
+**Diğer block tipleri (Table v2.11.9 hariç):** Dokunulmadı. Checklist, Section Header, Big Number, Alert, Text, Divider zaten kompakt ya da dikey yapıda — inspector taşma sorunu yok.
 
 ### v2.11.12 — HACCP alt form Back tuşu → Hub güvenilir · 2026-05-20
 

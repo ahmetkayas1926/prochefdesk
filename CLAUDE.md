@@ -10,7 +10,7 @@ ProChefDesk — profesyonel şef'ler için web tabanlı mutfak yönetim sistemi.
 
 **Stack:** Vanilla JavaScript (no bundling, no service worker), IndexedDB ana storage, Supabase (Postgres 17 + Auth + Storage + Realtime + Edge Functions), Cloudflare Pages (auto-deploy on GitHub push), Cloudflare R2 (backups).
 
-**Mevcut sürüm:** v2.11.12 (push'a hazır local; production v2.11.11). **HACCP alt form Back tuşu Hub'a güvenilir iner** (operatör intermittent bug: sidenav'dan direkt alt forma girince Hub adımı history'de yoktu → Back Dashboard'a iniyordu). Router'a `ROUTE_PARENTS` map (haccp_logs/cooling/receiving/holding → haccp parent) + `pushHistoryWithParent` helper. Alt route push'tan önce parent check, history mevcut state parent değilse ara adım push eder (idempotent). Diğer route'lar etkilenmedi. Detay: `CHANGELOG.md`.
+**Mevcut sürüm:** v2.11.13 (push'a hazır local; production v2.11.12). **Whiteboard Key·Value block inspector dikey layout fix** (Table v2.11.9 pattern'ı uygulandı — yatay flex 2-input dar inspector'ı taşıyordu, dikey "PAIR N" + KEY label / VALUE label stack). 4 yeni i18n key × 2 dil. Diğer block tipleri kompakt yapıda → dokunulmadı. Detay: `CHANGELOG.md`.
 
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı). SEO standardı aşağıda `## Blog SEO standardı` bölümünde.
 

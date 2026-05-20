@@ -959,15 +959,28 @@
           '<button class="btn btn-outline btn-sm" data-ct-checklist-add style="width:100%;margin-top:6px;">' + PCD.icon('plus', 13) + ' ' + PCD.escapeHtml(t('wb_checklist_add', 'Add item')) + '</button>';
       }
       case 'kv': {
+        // v2.11.13 — KV content editor dikey layout (table pattern'ı, v2.11.9).
+        // Yatay flex (key + value + delete) inspector ~280px'i taşıyordu →
+        // operatör bug. Dikey: her pair "PAIR N" başlığı + altında key satırı +
+        // value satırı. Inspector dar olsa bile sığar.
         const pairs = (c.pairs || []).map(function (p, i) {
-          return '<div class="wb-list-item" style="gap:4px;">' +
-            '<input type="text" data-ct-kv-key="' + i + '" value="' + PCD.escapeHtml(p.key || '') + '" placeholder="' + PCD.escapeHtml(t('wb_kv_key_ph', 'KEY')) + '" style="flex:1;text-transform:uppercase;font-weight:700;">' +
-            '<input type="text" data-ct-kv-value="' + i + '" value="' + PCD.escapeHtml(p.value || '') + '" placeholder="' + PCD.escapeHtml(t('wb_kv_value_ph', 'Value')) + '" style="flex:1.5;">' +
-            '<button class="wb-icon-btn danger" data-ct-kv-del="' + i + '">×</button>' +
+          return '<div style="border-top:1px dashed var(--border);padding:6px 0 4px;margin-top:' + (i === 0 ? '0' : '6px') + ';">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">' +
+              '<span style="font-size:10px;font-weight:800;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em;">' + PCD.escapeHtml(t('wb_kv_pair_label', 'Pair')) + ' ' + (i + 1) + '</span>' +
+              '<button class="wb-icon-btn danger" data-ct-kv-del="' + i + '" title="' + PCD.escapeHtml(t('wb_kv_del_pair', 'Delete pair')) + '">×</button>' +
+            '</div>' +
+            '<div style="display:flex;gap:6px;align-items:center;padding:2px 0;">' +
+              '<span style="flex:0 0 42px;font-size:9px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;font-weight:700;">' + PCD.escapeHtml(t('wb_kv_key_label', 'Key')) + '</span>' +
+              '<input type="text" data-ct-kv-key="' + i + '" value="' + PCD.escapeHtml(p.key || '') + '" placeholder="' + PCD.escapeHtml(t('wb_kv_key_ph', 'KEY')) + '" style="flex:1;min-width:0;padding:5px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface-1);color:var(--text);font-size:12px;text-transform:uppercase;font-weight:700;">' +
+            '</div>' +
+            '<div style="display:flex;gap:6px;align-items:center;padding:2px 0;">' +
+              '<span style="flex:0 0 42px;font-size:9px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;font-weight:700;">' + PCD.escapeHtml(t('wb_kv_value_label', 'Value')) + '</span>' +
+              '<input type="text" data-ct-kv-value="' + i + '" value="' + PCD.escapeHtml(p.value || '') + '" placeholder="' + PCD.escapeHtml(t('wb_kv_value_ph', 'Value')) + '" style="flex:1;min-width:0;padding:5px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface-1);color:var(--text);font-size:12px;">' +
+            '</div>' +
           '</div>';
         }).join('');
         return pairs +
-          '<button class="btn btn-outline btn-sm" data-ct-kv-add style="width:100%;margin-top:6px;">' + PCD.icon('plus', 13) + ' ' + PCD.escapeHtml(t('wb_kv_add', 'Add row')) + '</button>';
+          '<button class="btn btn-outline btn-sm" data-ct-kv-add style="width:100%;margin-top:10px;">' + PCD.icon('plus', 13) + ' ' + PCD.escapeHtml(t('wb_kv_add', 'Add row')) + '</button>';
       }
       case 'table': {
         // v2.11.9 — Table content editor dikey layout. Eski yatay flex 4-col
