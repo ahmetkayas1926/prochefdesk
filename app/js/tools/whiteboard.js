@@ -970,20 +970,41 @@
           '<button class="btn btn-outline btn-sm" data-ct-kv-add style="width:100%;margin-top:6px;">' + PCD.icon('plus', 13) + ' ' + PCD.escapeHtml(t('wb_kv_add', 'Add row')) + '</button>';
       }
       case 'table': {
+        // v2.11.9 — Table content editor dikey layout. Eski yatay flex 4-col
+        // header'lar dar inspector'da (~280px) sığamayıp sağ tarafa taşıyordu
+        // (operatör bug). Yeni layout: her sütun başlığı tek satır (label C1/C2 +
+        // input + col-delete butonu), sonra her row için "ROW N" başlığı +
+        // altında her cell column-adı label'lı bir satır. Inspector scrollable
+        // zaten — büyük tablo dikey akar, taşmaz.
+        const headerCount = (c.headers || []).length;
         const headers = (c.headers || []).map(function (h, i) {
-          return '<input type="text" data-ct-table-header="' + i + '" value="' + PCD.escapeHtml(h || '') + '" placeholder="Header ' + (i + 1) + '" style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface-1);font-size:12px;font-weight:700;">';
+          return '<div style="display:flex;gap:6px;align-items:center;padding:3px 0;">' +
+            '<span style="flex:0 0 28px;font-size:10px;font-weight:800;color:var(--text-3);letter-spacing:0.06em;">C' + (i + 1) + '</span>' +
+            '<input type="text" data-ct-table-header="' + i + '" value="' + PCD.escapeHtml(h || '') + '" placeholder="' + PCD.escapeHtml(t('wb_table_header_ph', 'Header')) + ' ' + (i + 1) + '" style="flex:1;min-width:0;padding:5px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface-1);color:var(--text);font-size:12px;font-weight:700;">' +
+            (headerCount > 1 ? '<button class="wb-icon-btn danger" data-ct-table-coldel="' + i + '" style="flex:0 0 auto;" title="' + PCD.escapeHtml(t('wb_table_del_col', 'Delete column')) + '">×</button>' : '<span style="flex:0 0 24px;"></span>') +
+          '</div>';
         }).join('');
         const rows = (c.rows || []).map(function (row, ri) {
           const cells = (row || []).map(function (cell, ci) {
-            return '<input type="text" data-ct-table-cell="' + ri + ',' + ci + '" value="' + PCD.escapeHtml(cell || '') + '" placeholder="—" style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface-1);font-size:12px;">';
+            const colLabel = ((c.headers || [])[ci] || ('C' + (ci + 1))).toString();
+            return '<div style="display:flex;gap:6px;align-items:center;padding:2px 0 2px 12px;">' +
+              '<span style="flex:0 0 60px;font-size:9px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + PCD.escapeHtml(colLabel) + '">' + PCD.escapeHtml(colLabel) + '</span>' +
+              '<input type="text" data-ct-table-cell="' + ri + ',' + ci + '" value="' + PCD.escapeHtml(cell || '') + '" placeholder="—" style="flex:1;min-width:0;padding:4px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface-1);color:var(--text);font-size:12px;">' +
+            '</div>';
           }).join('');
-          return '<div style="display:flex;gap:4px;align-items:center;">' + cells +
-            '<button class="wb-icon-btn danger" data-ct-table-rowdel="' + ri + '" style="flex:0 0 auto;">×</button>' +
+          return '<div style="border-top:1px dashed var(--border);padding:6px 0 4px;margin-top:6px;">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">' +
+              '<span style="font-size:10px;font-weight:800;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em;">' + PCD.escapeHtml(t('wb_table_row_label', 'Row')) + ' ' + (ri + 1) + '</span>' +
+              '<button class="wb-icon-btn danger" data-ct-table-rowdel="' + ri + '" title="' + PCD.escapeHtml(t('wb_table_del_row', 'Delete row')) + '">×</button>' +
+            '</div>' +
+            cells +
           '</div>';
         }).join('');
-        return '<div style="display:flex;gap:4px;margin-bottom:8px;">' + headers + '<span style="width:24px;flex:0 0 auto;"></span></div>' +
-          '<div style="display:flex;flex-direction:column;gap:4px;">' + rows + '</div>' +
-          '<div style="display:flex;gap:4px;margin-top:8px;">' +
+        return '<div style="font-size:10px;font-weight:800;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px;">' + PCD.escapeHtml(t('wb_table_columns_label', 'Columns')) + '</div>' +
+          headers +
+          '<div style="font-size:10px;font-weight:800;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em;margin-top:10px;margin-bottom:0;">' + PCD.escapeHtml(t('wb_table_rows_label', 'Rows')) + '</div>' +
+          rows +
+          '<div style="display:flex;gap:4px;margin-top:10px;">' +
             '<button class="btn btn-outline btn-sm" data-ct-table-addrow style="flex:1;">' + PCD.icon('plus', 13) + ' ' + PCD.escapeHtml(t('wb_table_add_row', 'Add row')) + '</button>' +
             '<button class="btn btn-outline btn-sm" data-ct-table-addcol style="flex:1;">' + PCD.icon('plus', 13) + ' ' + PCD.escapeHtml(t('wb_table_add_col', 'Add column')) + '</button>' +
           '</div>';
@@ -1464,6 +1485,17 @@
       const block = getActiveBlock(); if (!block) return;
       const i = parseInt(this.getAttribute('data-ct-table-rowdel'), 10);
       block.content.rows.splice(i, 1);
+      commit();
+    });
+    // v2.11.9 — Column delete (operatör asimetri fix: Add column var, delete yoktu).
+    // Min 1 column şart (UI'da son column'un X butonu zaten gizli).
+    PCD.on(root, 'click', '[data-ct-table-coldel]', function () {
+      const block = getActiveBlock(); if (!block) return;
+      block.content = block.content || { headers: [], rows: [] };
+      if ((block.content.headers || []).length <= 1) return;
+      const i = parseInt(this.getAttribute('data-ct-table-coldel'), 10);
+      block.content.headers.splice(i, 1);
+      block.content.rows.forEach(function (r) { if (Array.isArray(r)) r.splice(i, 1); });
       commit();
     });
   }

@@ -9,7 +9,7 @@
 
 **Ürün:** ProChefDesk — profesyonel chef'ler için web tabanlı mutfak yönetim sistemi.
 **Operatör:** Ahmet Kaya, Perth Western Australia, profesyonel şef. Solo non-commercial proje.
-**Mevcut sürüm:** **v2.11.8** (push'a hazır local; production v2.11.7). **HACCP Fridge Log 2 bug fix**: (1) day sütununda gün adı (Fri/Sat/Sun) kaldırıldı, sadece rakam (operatör: boş template indirildiğinde gün-tarih tutarsızlığı), (2) Print "NAZZAR seçili ama Default basıyor" — selector DOM'unun anlık value'si okunur, store race bypass + printMonth(year, month, activeLogOverride) closure ile.
+**Mevcut sürüm:** **v2.11.9** (push'a hazır local; production v2.11.8). **Whiteboard Table block inspector dikey layout** (operatör bug: 4 column input + cell'ler yatay flex'le sağa taşıyordu) + col-delete butonu (Add column ile asimetri fix). 6 yeni i18n key × 2 dil.
 **Blog:** 13 yazı yayında (Faz A SEO upgrade + Faz B 5-round, MENA niş + uluslararası coverage).
 **Domain:** prochefdesk.com (Cloudflare Pages, SSL Full, GitHub push'ta auto build + deploy).
 
@@ -257,7 +257,7 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH. 13 araç paketleri
 |---|---|
 | Repo path (operatör Windows) | `C:\Users\ahmet\Desktop\prochefdesk` |
 | GitHub repo | `ahmetkayas1926/prochefdesk` |
-| Production sürümü | **v2.11.8** (push'a hazır local; production v2.11.7) |
+| Production sürümü | **v2.11.9** (push'a hazır local; production v2.11.8) |
 | Supabase project ref | `muuwhrcogikpqylsfvgg` (Tokyo, Postgres 17, Free tier) |
 | Cloudflare R2 bucket | `prochefdesk-backups` |
 | CLEANUP_SECRET | `ec79a445-7e92-499b-9322-5c2c949788d4d2886e66-d556-4498-ba9e-17fda6c11ac1` |

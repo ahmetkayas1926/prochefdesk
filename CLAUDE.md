@@ -10,7 +10,7 @@ ProChefDesk — profesyonel şef'ler için web tabanlı mutfak yönetim sistemi.
 
 **Stack:** Vanilla JavaScript (no bundling, no service worker), IndexedDB ana storage, Supabase (Postgres 17 + Auth + Storage + Realtime + Edge Functions), Cloudflare Pages (auto-deploy on GitHub push), Cloudflare R2 (backups).
 
-**Mevcut sürüm:** v2.11.8 (push'a hazır local; production v2.11.7). **HACCP Fridge Log 2 bug fix**: (1) day column gün adı kaldırıldı (sadece rakam, diğer HACCP formlarıyla uniform), (2) selector "NAZZAR" ama print "Default" → printBtn click handler selector DOM'un anlık value'sini okur, store race bypass + printMonth(year, month, activeLogOverride) closure pattern. Diğer dosyalar dokunulmadı. Detay: `CHANGELOG.md`.
+**Mevcut sürüm:** v2.11.9 (push'a hazır local; production v2.11.8). **Whiteboard Table block inspector dikey layout fix** (operatör bug: yatay flex 4-col + cell input'lar 280px inspector'ı taşıyordu → dikey stack: Columns C1/C2/... + Rows "ROW N" başlık + cell'ler column-adı label'lı). + col-delete butonu (Add ile asimetri fix). 6 yeni i18n key × 2 dil. Diğer block tipleri ve dosyalar dokunulmadı. Detay: `CHANGELOG.md`.
 
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı). SEO standardı aşağıda `## Blog SEO standardı` bölümünde.
 

@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.11.8 · 2026-05-20
+**Mevcut sürüm:** v2.11.9 · 2026-05-20
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -18,6 +18,38 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH (kapatılabilir inl
 - **Round 5 (v2.9.13):** haccp hub ✅ — **NAKED→RICH sweep tamamlandı**
 
 ## v2.11.x — Whiteboard Block Composer
+
+### v2.11.9 — Whiteboard Table block inspector taşma fix · 2026-05-20
+
+**Operatör raporu:** "Table block test ettim. İçerik yazacağım kısım aracın dışına taşıyor. Sağ panel'e bak."
+
+**Root cause** (`whiteboard.js` `buildContentEditor` table case):
+- Eski: Inspector'da headers yatay flex (`<input type="text" style="flex:1;">` × N column) tek satırda
+- Inspector pane ~280px geniş; 4 column × min-width input → ~320-400px → taşma
+- Row'lar yatay flex (`<input>` × N + delete butonu) — aynı sorun
+
+**Fix:** Inspector table content editor **dikey layout**:
+- **Columns** section: her sütun ayrı satır → `[C1] [input header_1] [×]` formatında
+  - Min 1 column şart — son sütunda delete butonu gizli
+- **Rows** section: her row "ROW N" başlığı + `[×]` row-delete + altında cells dikey
+  - Her cell satırı: `[COL_LABEL] [input cell_value]` (column adından otomatik label, küçük metin overflow ellipsis)
+- + Add row / + Add column butonları altta korundu
+- + Delete column butonu (asimetri fix — Add column var, Delete yoktu)
+
+**Etki:** Inspector dar olsa bile (280px) tüm table editör sığar. Büyük tablo (10+ row, 6+ col) için scrollable inspector zaten var.
+
+**i18n:** 6 yeni key × 2 dil (wb_table_header_ph, wb_table_del_col, wb_table_del_row, wb_table_columns_label, wb_table_rows_label, wb_table_row_label).
+
+**Diğer block tipleri** etkilenmedi — sadece table case değişti.
+
+**Test:**
+1. Whiteboard → Add Block → Table → seç → Inspector açılır
+2. **Columns** section: 3 sütun başlığı dikey, her biri full-width input
+3. Headers + delete butonu inspector'a sığar, sağa taşma yok
+4. **Rows** section: ROW 1 / ROW 2 / ROW 3 dikey, her cell column-adı label'lı
+5. + Add column → yeni sütun eklenir, tüm row'lara cell eklenir
+6. Column × buton → o sütun silinir (1 sütun kalırsa × gizli)
+7. + Add row / × Row delete → çalışmaya devam eder
 
 ### v2.11.8 — HACCP Fridge Log: day-name kaldır + selector log mismatch fix · 2026-05-20
 
