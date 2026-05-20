@@ -411,7 +411,25 @@
       openUnitEditor(null, function () { render(view); });
     });
     const printBtn = PCD.$('#haccpPrintBtn', view);
-    if (printBtn) printBtn.addEventListener('click', function () { printMonth(_viewYear, _viewMonth); });
+    if (printBtn) printBtn.addEventListener('click', function () {
+      // v2.11.8 — Operatör bug: selector "NAZZAR" seçili ama print "Default"
+      // basıyor. Root cause iki olası senaryo: (a) selector change event
+      // tetiklenmeden value değişti (race), (b) cloud user_prefs pull/push
+      // sırasında stored value stale. Fix: Print click'te selector DOM'unun
+      // ANLIK value'sini oku, store'a güvenme. value varsa state'i de sync et.
+      const sel = view.querySelector('#haccpLogSelect');
+      const liveLogId = sel && sel.value;
+      let activeLog = currentLog;
+      if (liveLogId) {
+        const live = PCD.store.getFromTable(TABLE_LOGS, liveLogId);
+        if (live) {
+          activeLog = live;
+          // State'i selector ile sync et (sonraki çağrılarda da doğru log)
+          if (!currentLog || currentLog.id !== liveLogId) setCurrentLogId(liveLogId);
+        }
+      }
+      printMonth(_viewYear, _viewMonth, activeLog);
+    });
     PCD.$('#haccpPrevMonth', view).addEventListener('click', function () {
       _viewMonth--;
       if (_viewMonth < 0) { _viewMonth = 11; _viewYear--; }
@@ -716,15 +734,27 @@
   }
 
   // ============ PRINT MONTH ============
-  function printMonth(year, monthIdx0) {
+  function printMonth(year, monthIdx0, currentLogOverride) {
     const t = PCD.i18n.t;
-    const units = listUnits();
+    // v2.11.8 — currentLogOverride: render scope'undaki güncel log explicitly
+    // pass edilir → store race veya stale state bypass. listUnits da bu logId'ye
+    // göre filtrelenir (eskiden listUnits getCurrentLogId() store'dan çekiyordu →
+    // operatör bug: "NAZZAR" seçili ama Default basıyor).
+    const currentLog = currentLogOverride || getCurrentLog();
+    const activeLogId = currentLog && currentLog.id;
+    const units = activeLogId
+      ? (PCD.store.listTable(TABLE_UNITS) || []).filter(function (u) { return u.logId === activeLogId; }).slice().sort(function (a, b) {
+          const ai = (typeof a.sortIndex === 'number') ? a.sortIndex : 999999;
+          const bi = (typeof b.sortIndex === 'number') ? b.sortIndex : 999999;
+          if (ai !== bi) return ai - bi;
+          return (a.createdAt || '').localeCompare(b.createdAt || '');
+        })
+      : listUnits();
     const days = daysInMonth(year, monthIdx0); // actual month length for date labels
     const ROWS = 31; // v2.9.40 — operator spec: always 31 rows (months <31 days leave blank rows)
     const tempUnit = getDefaultTempUnit();
     const ws = PCD.store.getActiveWorkspace ? PCD.store.getActiveWorkspace() : null;
     const wsName = (ws && ws.name) || 'Kitchen';
-    const currentLog = getCurrentLog();
     const logName = (currentLog && currentLog.name) || '';
     // v2.10.1 — Operator-reported bug: showFitWarning was referenced from
     // printMonth but only defined in render()'s inner scope → ReferenceError
@@ -810,8 +840,11 @@
       }
       const date = new Date(year, monthIdx0, d);
       const dateStr = ymd(date);
-      const dow = date.toLocaleDateString(locale(), { weekday: 'short' });
-      html += '<tr><td class="day">' + d + ' ' + dow + '</td>';
+      // v2.11.8 — Day column gün ismi (Fri/Sat/Sun) kaldırıldı, sadece rakam.
+      // Operatör: "boş template indirildiğinde günlerin mevcut tarihle tutarsız
+      // görünmesi karışıklık yarattığı için". Diğer HACCP formları zaten saf
+      // rakam kullanıyor (cooling/holding/receiving) — Logs uniform yapıldı.
+      html += '<tr><td class="day">' + d + '</td>';
       units.forEach(function (u) {
         ['morning', 'evening'].forEach(function (shift) {
           const reading = readingsByKey[u.id + '|' + dateStr];

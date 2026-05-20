@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.11.7 · 2026-05-20
+**Mevcut sürüm:** v2.11.8 · 2026-05-20
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -18,6 +18,40 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH (kapatılabilir inl
 - **Round 5 (v2.9.13):** haccp hub ✅ — **NAKED→RICH sweep tamamlandı**
 
 ## v2.11.x — Whiteboard Block Composer
+
+### v2.11.8 — HACCP Fridge Log: day-name kaldır + selector log mismatch fix · 2026-05-20
+
+**Operatör 2 bug raporu (haccp_logs.js):**
+
+**Bug 1 — Day sütununda gün isimleri:**
+- Diğer HACCP formlarında (cooling/holding/receiving) gün sütunu sadece rakam (`1 / 2 / 3...`)
+- Logs'ta gün rakamı + kısa gün adı ("1 Fri / 2 Sat / 3 Sun") — bilgisayar local takvimi ile sync
+- Operatör: "Boş template indirildiğinde günler mevcut gün ile tutarsız görünüyor, karışıklık yaratıyor"
+
+Fix (`haccp_logs.js:813-814`): `'<td class="day">' + d + ' ' + dow + '</td>'` → `'<td class="day">' + d + '</td>'`. `dow = date.toLocaleDateString(..., {weekday:'short'})` çağrısı zaten gereksizdi (date hesabı kalır ama gün adı kullanılmaz). Logs artık diğer HACCP formlarıyla uniform.
+
+**Bug 2 — Selector "NAZZAR" seçili ama print "Default" basıyor:**
+
+Operatör resim 1'de LOG selector'da "NAZZAR" görünüyordu, print preview subtitle'ında "NAZZAR · Default · May 2026" → wsName=NAZZAR, logName=Default. Yani yanlış log print edildi.
+
+**İki olası root cause:**
+- (a) Selector change event tetiklenmeden value değişti (browser race veya programatik selection)
+- (b) Cloud user_prefs pull/push sırasında `prefs.haccpCurrentLogId` stale değer döndü
+
+**Fix** (`haccp_logs.js` print click handler + printMonth):
+1. Print click → selector DOM'unun **anlık `.value`'sini oku**, store'a güvenme
+2. Live logId varsa `PCD.store.getFromTable(TABLE_LOGS, liveLogId)` ile log objesini al
+3. State stale ise `setCurrentLogId(liveLogId)` ile sync et (sonraki render'lar doğru)
+4. `printMonth(year, month, activeLogOverride)` — log objesi closure ile pass edilir
+5. printMonth içinde `listUnits()` yerine `activeLogId` ile inline filtre — units da doğru log'tan çekilir
+
+**Diğer formlara etkisi:** YOK. haccp_logs.js dışında dosya değişmedi. Cook & Cool, Holding, Receiving multi-log feature'ı yok (tek tablo). v2.11.7 (Logs + Receiving typography revert) korunur.
+
+**Test:**
+1. HACCP Fridge & Freezer Log → 2 log oluştur (Default + NAZZAR)
+2. Log selector NAZZAR seç → "Print month" → subtitle'da "NAZZAR" görünmeli (Default değil)
+3. Selector Default seç → "Print month" → "Default" görünmeli
+4. Print PDF içinde gün sütunu: sadece rakamlar (1, 2, 3, ..., 31), gün adı yok
 
 ### v2.11.7 — v2.11.6 Logs + Receiving typography REVERT (taşma fix) · 2026-05-20
 
