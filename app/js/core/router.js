@@ -22,6 +22,35 @@
   const lazyRoutes = {};   // { 'recipes': { script: 'js/tools/recipes.js', tool: 'recipes' } }
   const lazyLoading = {};  // { 'recipes': Promise }
 
+  // v2.11.12 — Route parent map: alt route'lara gidilirken parent route'u
+  // otomatik history'ye ara adım olarak push eder. Operatör bug: HACCP alt
+  // form'undan ← Back basınca bazen HACCP Hub'a iner, bazen direkt Dashboard'a
+  // iner (intermittent). Root cause: kullanıcı bazen Hub'tan, bazen sidenav'dan
+  // direkt alt form'a gidiyor → history'de Hub adımı yok → back Dashboard'a iner.
+  // Fix: alt form'a gidiş sırasında, history mevcut state Hub değilse, Hub'u
+  // ara adım push et. Böylece back her zaman Hub'a düşer (her giriş yolundan).
+  const ROUTE_PARENTS = {
+    haccp_logs:      'haccp',
+    haccp_cooling:   'haccp',
+    haccp_receiving: 'haccp',
+    haccp_holding:   'haccp',
+  };
+
+  // v2.11.12 — Helper: push current route to history; if route has a parent
+  // (e.g. haccp_logs → haccp), ensure parent is the previous step in history
+  // (Back tuşu garanti hub'a iner). Mevcut state zaten parent ise ara adım
+  // eklenmez (idempotent — operatör Hub'tan girerse duplicate parent yok).
+  function pushHistoryWithParent(name, params) {
+    const parent = ROUTE_PARENTS[name];
+    if (parent) {
+      const cur = history.state;
+      if (!cur || cur.type !== 'view' || cur.name !== parent) {
+        history.pushState({ type: 'view', name: parent, params: null }, '', window.location.pathname + '#' + parent);
+      }
+    }
+    history.pushState({ type: 'view', name: name, params: params || null }, '', window.location.pathname + '#' + name);
+  }
+
   function loadLazyTool(name) {
     if (lazyLoading[name]) return lazyLoading[name];
     const spec = lazyRoutes[name];
@@ -129,7 +158,7 @@
           router._renderView(name, params, opts);
           writeHash(name);
           if (!opts.skipHistory) {
-            history.pushState({ type: 'view', name: name, params: params || null }, '', window.location.pathname + '#' + name);
+            pushHistoryWithParent(name, params);
           }
         }).catch(function (err) {
           PCD.error && PCD.error('Lazy load failed for', name, err);
@@ -142,7 +171,7 @@
       router._renderView(name, params, opts);
       writeHash(name);
       if (!opts.skipHistory) {
-        history.pushState({ type: 'view', name: name, params: params || null }, '', window.location.pathname + '#' + name);
+        pushHistoryWithParent(name, params);
       }
     },
 

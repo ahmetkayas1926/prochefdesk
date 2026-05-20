@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.11.11 · 2026-05-20
+**Mevcut sürüm:** v2.11.12 · 2026-05-20
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -18,6 +18,42 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH (kapatılabilir inl
 - **Round 5 (v2.9.13):** haccp hub ✅ — **NAKED→RICH sweep tamamlandı**
 
 ## v2.11.x — Whiteboard Block Composer
+
+### v2.11.12 — HACCP alt form Back tuşu → Hub güvenilir · 2026-05-20
+
+**Operatör:** "HACCP Forms (hub)'ta bir form'a tıklıyorum, giriş yapıyorum, ← Back basıyorum. Bazen Hub'a dönüyor, bazen direkt Dashboard'a atıyor. Bu davranış intermittent. Her zaman Hub'a inmeli."
+
+**Root cause:**
+
+Browser history stack 2 farklı giriş yolundan farklı oluşuyordu:
+- **Path A** (hub'tan): Dashboard → HACCP Forms → Fridge Log → history: `[dashboard, haccp, haccp_logs]` → Back ✅ haccp
+- **Path B** (sidenav'dan direkt): Dashboard → sidenav "Daily Temperature Log" → history: `[dashboard, haccp_logs]` → Back ❌ dashboard (Hub atlandı)
+
+Operatör hatırlamadan iki yolu da kullandığı için bug intermittent görünüyordu.
+
+**Fix** (`router.js`):
+
+`ROUTE_PARENTS` map + `pushHistoryWithParent()` helper eklendi:
+- `haccp_logs / cooling / receiving / holding` → parent: `haccp`
+- Alt route'a `router.go` çağrısı sırasında, history mevcut state parent değilse, parent **ara adım olarak otomatik push** edilir
+- Sonra alt route push edilir
+- Idempotent: Eğer operatör zaten Hub'taysa, duplicate parent push edilmez (history.state.name === parent check)
+
+**Sonuç:**
+- Path A: `[dashboard, haccp]` → Hub'ta Fridge Log tıkla → `[dashboard, haccp, haccp_logs]` → Back ✅ haccp
+- Path B: `[dashboard]` → sidenav Fridge Log → helper haccp'ı ara adım push eder + haccp_logs push → `[dashboard, haccp, haccp_logs]` → Back ✅ **haccp** (Hub)
+- F5 refresh: hash `#haccp_logs` → initialRoute haccp_logs → state replaceState → ekstra adım yok ama back işlevi tarayıcı history'sine bağlı (bu durum operatör senaryosu DEĞİL)
+
+**Etkilenmeyen:**
+- Diğer route'lar (recipes / menus / inventory vs) — ROUTE_PARENTS'ta yok, eski davranış korunur
+- popstate handler — değişmedi
+- Modal/tutorial back handling — değişmedi
+
+**Test:**
+1. Dashboard → sidenav "Daily Temperature Log" → veri gir → ← Back → **HACCP Forms (hub)** açılmalı
+2. Hub'tan Cook & Cool Log → veri gir → ← Back → Hub açılmalı (regression yok)
+3. Tekrar Back → Dashboard (her iki path için aynı son adım)
+4. 4 alt form için de aynı davranış test et
 
 ### v2.11.11 — Discover search debounce 200ms → 400ms · 2026-05-20
 
