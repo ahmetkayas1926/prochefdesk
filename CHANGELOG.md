@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.11.10 · 2026-05-20
+**Mevcut sürüm:** v2.11.11 · 2026-05-20
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -18,6 +18,18 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH (kapatılabilir inl
 - **Round 5 (v2.9.13):** haccp hub ✅ — **NAKED→RICH sweep tamamlandı**
 
 ## v2.11.x — Whiteboard Block Composer
+
+### v2.11.11 — Discover search debounce 200ms → 400ms · 2026-05-20
+
+**Operatör:** "Discover'daki search alanı çalışıyor ama tepki süresi çok hızlı. 1 kelime yazamadan hemen aramayı yapıyor."
+
+**Fix** (`discover.js` search input event handler):
+- Debounce 200ms → 400ms
+- 200ms her tuş darbesi sonrası grid re-render → yazma akışı bozulurdu (operatör raporu)
+- 400ms Google-search benzeri pattern: kullanıcı sözcüğü bitirmek için yer bulur, sonra filter çalışır
+- Focus preserve + caret position restore (v2.11.3'te eklenen) korundu — re-render olunca input focus kaybolmaz
+
+**Tek satır değişiklik** — diğer Discover özellikleri (tag filter, allergen filter, free-from chip'ler, search query name/description/author/tags üzerinde substring) etkilenmedi.
 
 ### v2.11.10 — Recipe Tags "+ Add new" CTA (mouse-only friendly) · 2026-05-20
 

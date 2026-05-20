@@ -388,10 +388,15 @@
       searchInput.addEventListener('input', function () {
         const v = this.value;
         if (debounce) clearTimeout(debounce);
+        // v2.11.11 — Debounce 200ms → 400ms (operatör: "1 kelime yazamadan hemen
+        // atıyor"). 200ms her tuş darbesi sonrası rerender → yazma akışı bozulur.
+        // 400ms Google-search benzeri pattern: kullanıcı sözcüğü bitirmek için
+        // yer bulur, sonra filter çalışır. Focus preserve (aşağıda) caret pos
+        // restore ediyor, ama 200ms'de bile rerender mid-typing oluşuyordu.
         debounce = setTimeout(function () {
           _searchQuery = v;
           renderGrid(container, feed, myLikes);
-        }, 200);
+        }, 400);
       });
       // Preserve focus + caret position across re-renders triggered by typing
       // (rerender happens after 200ms debounce so focus already lost — refocus)

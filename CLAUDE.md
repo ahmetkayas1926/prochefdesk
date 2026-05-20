@@ -10,7 +10,7 @@ ProChefDesk — profesyonel şef'ler için web tabanlı mutfak yönetim sistemi.
 
 **Stack:** Vanilla JavaScript (no bundling, no service worker), IndexedDB ana storage, Supabase (Postgres 17 + Auth + Storage + Realtime + Edge Functions), Cloudflare Pages (auto-deploy on GitHub push), Cloudflare R2 (backups).
 
-**Mevcut sürüm:** v2.11.10 (push'a hazır local; production v2.11.9). **Recipe Tags "+ Add 'X'" CTA chip** (operatör isteği: mouse-only kullanıcı için Enter şart değil — input'a yazılan query mevcut tag ile tam eşleşmiyorsa, suggestion en üstte yeşil vurgulu CTA `+ Add "crazy"` görünür, tıkla → tag eklenir). Mevcut autocomplete + Enter kısa-yolu korundu. 1 yeni i18n key × 2 dil. Detay: `CHANGELOG.md`.
+**Mevcut sürüm:** v2.11.11 (push'a hazır local; production v2.11.10). **Discover search debounce 200ms → 400ms** (operatör: yazma akışı bozuluyordu). Tek satır fix. Detay: `CHANGELOG.md`.
 
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı). SEO standardı aşağıda `## Blog SEO standardı` bölümünde.
 
