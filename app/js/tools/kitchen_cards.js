@@ -1144,9 +1144,14 @@
               'height: ' + (opts.orientation === 'landscape' ? 210 : 297) + 'mm; ' +
               'display: flex; flex-direction: column; ' +
             '}' +
-            '.kc-sheet { flex: 1 1 auto; min-height: 0; height: auto; }' +
-            // Override PCD.print's injected footer: compact, no top margin,
-            // sits as a flex item at the bottom of the A4 body.
+            // v2.11.4 — Print path .kc-sheet height: auto → height: 100%.
+            // Operatör raporu: popup window preview'unda recipe'ler üst yarıda
+            // sıkışıyor, alt yarı boş. Sebep: height:auto ile sheet content-sized
+            // büyür, column-fill: auto col'ları content height'e göre doldurur,
+            // body remaining space'in alt yarısı boş kalır. Fix: sheet body flex
+            // remaining'i kaplar (height:100%), column-fill: balance ile col'lar
+            // eşit dağılır. Live preview ile print + PDF dialog tutarlı görünür.
+            '.kc-sheet { flex: 1 1 0; min-height: 0; height: 100%; }' +
             '.pcd-print-footer { ' +
               'margin: 0 !important; padding: 1.5mm 4mm !important; ' +
               'border-top: none !important; flex: 0 0 auto; ' +
@@ -1160,10 +1165,14 @@
           // Combined with card margin-bottom 2mm → 1mm above, gives more
           // usable canvas area so additional short cards fit on the same
           // page (operator: "alt boşluk verimli kullanılsın").
+          // v2.11.4 — column-fill: auto → balance. Auto: kolonları sırayla
+          // doldur, son kolon yarım kalır → alt boşluk. Balance: kolonları
+          // eşit dağıt → recipe'ler sayfaya yayılır, boşluk minimize.
+          // Live preview + popup window print + PDF dialog tutarlı olur.
           'padding: 1.5mm;' +
           'column-count: ' + opts.columns + ';' +
           'column-gap: 1.5mm;' +
-          'column-fill: auto;' +
+          'column-fill: balance;' +
         '}' +
 
         '.kc-header {' +

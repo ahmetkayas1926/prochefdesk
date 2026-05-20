@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.11.0 · 2026-05-20
+**Mevcut sürüm:** v2.11.4 · 2026-05-20
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -18,6 +18,124 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH (kapatılabilir inl
 - **Round 5 (v2.9.13):** haccp hub ✅ — **NAKED→RICH sweep tamamlandı**
 
 ## v2.11.x — Whiteboard Block Composer
+
+### v2.11.4 — Kitchen Cards print/preview tutarsızlığı fix · 2026-05-20
+
+**Operatör raporu:** "Border kalınlık + Text weight özelliklerinden sonra Kitchen Cards live preview ile popup window print preview arasında tutarsızlık çıktı. Popup'ta recipe'ler üst yarıda sıkışıyor, alt yarı boş. Save-as-PDF dialog görünümü iyi (sayfa dolu). Üçü aynı görünmeli."
+
+**Root cause analizi** (`kitchen_cards.js`):
+
+Print path CSS'inde **iki birleşik bug** vardı:
+
+1. **`.kc-sheet { height: auto }`** (print branch, line 1147 öncesi)
+   - Live preview branch `height: 100%` kullanıyor (doğru)
+   - Print branch `height: auto` → sheet content kadar büyür
+   - Body fixed 210mm (A4 landscape) ama sheet kısa → body remaining height alt yarıda boşluk
+   - Footer flex:0 alta yapışır, sheet ile arası boş
+
+2. **`column-fill: auto`** (`.kc-sheet` ortak rule)
+   - Kolonları sırayla doldurur — col 1 dolu, col 2 dolu, ..., son col yarım
+   - 14 recipe × 6 col → ilk 5 col tam, son col yarım → recipe area altı boş
+   - Bug #1 ile birleşince popup window'da sheet altı + footer arası 2×boşluk
+
+**Fix:**
+- `.kc-sheet { height: auto }` → `.kc-sheet { flex: 1 1 0; min-height: 0; height: 100% }` (sheet body remaining'i kapla)
+- `column-fill: auto` → `column-fill: balance` (kolonları eşit dağıt, recipe'ler sayfaya yayıl)
+- Live preview interactive branch `height: 100%` zaten doğru — aynı pattern artık print için de geçerli
+- Share branch `.kc-page` A4-sized wrapper ile çalışır — şimdilik dokunulmadı (operatör şikayet etmiyor)
+
+**Sonuç:**
+- Live preview = popup window print preview = save-as-PDF dialog → üçü WYSIWYG
+- Recipe'ler sayfanın tüm alanına dengeli dağılır (column-fill balance)
+- Footer kompakt alt kenarda (mevcut davranış, korundu)
+
+**Test:**
+1. Kitchen Cards → 14 recipe yükle (Save canvas ya da yeni canvas)
+2. Live preview: 6 col landscape, recipe'ler eşit dağılmış, alt boşluk yok
+3. Print butonu → popup window: aynı görünüm, recipe'ler sayfaya yayılmış
+4. Popup içinde "Print / Save as PDF" → Chrome print dialog: yine aynı görünüm
+5. PDF kaydet → açtığında 1 sayfa, tüm 14 recipe sayfaya dengeli dağılmış
+
+### v2.11.3 — Discover search (operatör isteği) · 2026-05-20
+
+**Operatör:** "Şu an çok recipe yok ama 1000 recipe olduğunda search faydalı olur."
+
+**Fix:**
+- Discover feed'in en üstüne (tag filter chip bar'ının da üstüne) **search input** eklendi
+- Module-level state: `_searchQuery`
+- Search alanı: case-insensitive substring match — recipe `name` + `description`/`plating` + `authorName` + `tags` array
+- Debounce 200ms (her tuş vuruşunda re-filter etmez)
+- Focus + caret position preserve edilir (re-render'da kaybolmaz)
+- Aktif sorgu varsa input sağında "Clear" butonu
+- Empty state: search active ise spesifik mesaj `"No recipes match \"X\"."`, sadece tag/allergen filter ise eski mesaj
+- Search + tag + allergen filtreleri kombinasyon (hepsi aynı anda uygulanır)
+
+**i18n:** 3 yeni key × 2 dil (`discover_search_placeholder`, `discover_search_clear`, `discover_search_empty`).
+
+**Test:**
+1. Discover'a gir → en üstte search input (büyük 14px, search ikon prefix)
+2. "lamb" yaz → 200ms sonra filter aktif, sadece "lamb" geçen recipe'ler kalır
+3. Aynı anda tag filter "starter" tıkla → search + tag kombi
+4. Search'i temizle (Clear butonu veya elle sil) → tüm recipe'ler geri
+5. Bulunmayan bir kelime yaz → "No recipes match \"X\"."
+
+### v2.11.2 — Live preview A4/A3 page boundary frame + overflow uyarısı · 2026-05-20
+
+**Operatör testi:** "İstediğim kadar block ekleyebiliyorum. Yazdırma esnasında sadece bir kısmı görünüyor. Yatay/dikey çerçeve sınırlarının canvas önizlemede olması iyi olur — kullanıcı sayfanın dolup dolmadığını görebilsin."
+
+**Fix:**
+- Canvas pane içindeki `.wb-canvas` artık **A4/A3 oranlı kağıt frame** olarak render edilir
+  - CSS `aspect-ratio` paper + orient kombinasyonuna göre: `A4_landscape (297/210)`, `A4_portrait (210/297)`, `A3_landscape (420/297)`, `A3_portrait (297/420)`
+  - Background beyaz (gerçek kağıt), kenar gölgesi (3D sheet illusion)
+  - Sağ üst rozet: `A4 · landscape` (canvas adı)
+  - 4 köşede minimal corner markers (sayfa sınırı görsel cue)
+- **Overflow detection:** her block ekleme/değişimde `requestAnimationFrame` ile `scrollHeight > clientHeight` check
+  - Sığıyorsa: sol alt köşede yeşil `✓ Fits one page` rozet
+  - Sığmıyorsa: alttan kırmızı gradient + `⚠ Will not fit on one printed page — remove blocks or use larger paper (A3)`
+- Block list ayrı inner wrapper'a (`#wbCanvasBlocks`) yerleştirildi. Light commit'lerde sadece bu wrapper innerHTML refresh edilir, frame yapısı (corners + label + warn) korunur.
+
+**Etkilenen kod:**
+- `whiteboard.js` — `buildCanvasPane` (frame yapısı), `checkOverflow` helper, commit/commitLight/onContentInput'ta `#wbCanvasBlocks` selector + `checkOverflow()` çağrısı.
+- CSS — `.wb-canvas` aspect-ratio + overflow:hidden + corner markers + page label + overflow warn gradient + fit tag
+
+**i18n:** 2 yeni key × 2 dil (`wb_fits_one_page`, `wb_overflow_warn`).
+
+**Mevcut print engine davranışı** (değişmedi, sadece netleştirildi):
+- A4 portrait → tek kolon
+- A4 landscape → 2-col masonry
+- A3 portrait → 2-col masonry
+- A3 landscape → 3-col masonry
+- `column-fill: auto` + `break-inside: avoid` → block'lar parçalanmaz, kolonlara sırayla akar
+- Body `height: <paper>mm` fixed → taşan içerik clip olur (operatör live preview'da görür)
+
+**Sınırlama (bilinen):** Multi-page print desteği YOK (bilinçli — kitchen reference tek sayfa olmalı, çok sayfa şef için kullanışsız). Operatör 30+ block koyarsa overflow warn görür ve manuel temizler.
+
+### v2.11.1 — Layout 4 kademe + Weight 3 kademe (operatör isteği) · 2026-05-20
+
+**1) Layout: 2 → 4 kademe** (operatör: "4 hücreye kadar yan yana olabilir mi"):
+- Eski: `full` (1) / `half` (2)
+- Yeni: `full` (1/1) / `half` (1/2) / `third` (1/3) / `quarter` (1/4)
+- Inspector'da Layout segment'i 4 buton ("1/1 · 1/2 · 1/3 · 1/4")
+- Auto-pair logic: N ardışık aynı layout'lu block → N-col grid satır (half=2 / third=3 / quarter=4)
+- 3 ardışık half → 2 yan yana + 1 yalnız half (eksik kalan tek başına); 3 ardışık third → tek satırda 3
+- Print engine `.wb-print-multi-pair` → `grid-template-columns: repeat(N, 1fr)` (eski `half-pair` 1fr 1fr fixed silindi)
+
+**2) Weight 3 kademe** (operatör: "yazılara ince/orta/bold seçeneği"):
+- Yeni `block.style.weight` field: `light` (400) / `medium` (600) / `bold` (800)
+- Inspector'da Weight segment'i Size'dan sonra, Align'dan önce
+- Body text (text/checklist/kv values/table cells) container'dan inherit eder
+- Section header (800) + big_number value (900) + alert text (800) hardcoded title weight'larını korur (zaten dramatic)
+- Default: medium (mevcut block'lar otomatik medium görünür)
+- Print engine `font-weight:${weight}` inline style
+
+**i18n:** 8 yeni key × 2 dil (wb_layout_third, wb_layout_quarter, wb_inspector_weight, wb_weight_light, wb_weight_medium, wb_weight_bold).
+
+**Test:**
+1. Whiteboard → bir block ekle → Inspector Layout'ta 4 buton (1/1, 1/2, 1/3, 1/4)
+2. 3 ardışık third block ekle → tek satırda 3 yan yana
+3. 4 ardışık quarter block ekle → tek satırda 4 yan yana
+4. Inspector Weight Light/Medium/Bold tıkla → block görsel olarak ince/orta/kalın değişir
+5. Print → 3-col third row + 4-col quarter row düzgün basılır; weight print preview'da görünür
 
 ### v2.11.0 — Whiteboard full rewrite (block-based composer) · 2026-05-20
 

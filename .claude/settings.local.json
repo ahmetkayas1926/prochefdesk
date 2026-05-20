@@ -120,7 +120,8 @@
       "Bash(git -C \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\" diff --stat HEAD)",
       "Bash(grep -n \"^\\\\s*},\\\\s*$\\\\|^\\\\s*}\\);\\\\s*$\\\\|onOpen\" \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\tools\\\\whiteboard.js\")",
       "Bash(grep -n \"data-del-user-tpl\\\\|openTemplatesPicker\\(document\\\\|}\\);\\\\s*$\" \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\tools\\\\whiteboard.js\")",
-      "Bash(grep -n \"z-index\\\\|modal\\\\s*{\\\\|modal,\" \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\css\\\\components.css\")"
+      "Bash(grep -n \"z-index\\\\|modal\\\\s*{\\\\|modal,\" \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\css\\\\components.css\")",
+      "Bash(grep -n \"cv.innerHTML = renderSheet\\\\|wireBlockReorder\\(root, canvas\\);\\\\s*$\\\\|bindCanvasPaneClicks\\(root, canvas\\);\\\\s*$\" \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\tools\\\\whiteboard.js\")"
     ]
   }
 }

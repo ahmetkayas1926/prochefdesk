@@ -9,7 +9,7 @@
 
 **Ürün:** ProChefDesk — profesyonel chef'ler için web tabanlı mutfak yönetim sistemi.
 **Operatör:** Ahmet Kaya, Perth Western Australia, profesyonel şef. Solo non-commercial proje.
-**Mevcut sürüm:** **v2.11.0** (push'a hazır local; production v2.10.4). **Whiteboard full rewrite** — eski cells × grid mimarisinden block-based composer'a (Notion paradigması) geçiş. 8 block tipi (section_header / big_number / checklist / kv / table / alert / text / divider) + 3-kolon masaüstü UI (palette / canvas / inspector) + mobile bottom sheet editor + touch-native drag-reorder + 6 yeni template + A4/A3 column-fill print engine. Operatör onayladı (veri yok, fresh start). Diğer 24 araca dokunulmadı.
+**Mevcut sürüm:** **v2.11.4** (push'a hazır local; production v2.10.4). Whiteboard Block Composer (v2.11.0-2) + Discover search (v2.11.3) + **Kitchen Cards print/preview tutarsızlık fix** (`.kc-sheet { height: auto }` → `height: 100%` + `column-fill: auto` → `balance`; live preview + popup print + PDF dialog WYSIWYG).
 **Blog:** 13 yazı yayında (Faz A SEO upgrade + Faz B 5-round, MENA niş + uluslararası coverage).
 **Domain:** prochefdesk.com (Cloudflare Pages, SSL Full, GitHub push'ta auto build + deploy).
 
@@ -257,7 +257,7 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH. 13 araç paketleri
 |---|---|
 | Repo path (operatör Windows) | `C:\Users\ahmet\Desktop\prochefdesk` |
 | GitHub repo | `ahmetkayas1926/prochefdesk` |
-| Production sürümü | **v2.11.0** (push'a hazır local; production v2.10.4) |
+| Production sürümü | **v2.11.4** (push'a hazır local; production v2.10.4) |
 | Supabase project ref | `muuwhrcogikpqylsfvgg` (Tokyo, Postgres 17, Free tier) |
 | Cloudflare R2 bucket | `prochefdesk-backups` |
 | CLEANUP_SECRET | `ec79a445-7e92-499b-9322-5c2c949788d4d2886e66-d556-4498-ba9e-17fda6c11ac1` |

@@ -39,6 +39,9 @@
   let _selectedTag = null;
   // v2.9.16 — Selected "free-from" allergen filter (single, resets on refresh)
   let _freeFromAllergen = null;
+  // v2.11.3 — Search query (case-insensitive substring on name + description
+  // + author + tags). Operatör isteği: ileride 1000+ recipe olunca arama gerek.
+  let _searchQuery = '';
 
   // v2.9.24 — Safe photo URL for CSS background-image (XSS defense).
   // Chef's photo URLs come from Supabase Storage (https://) or legacy
@@ -367,6 +370,43 @@
       return;
     }
 
+    // v2.11.3 — Search input (case-insensitive substring across name +
+    // description + author + tags). Operatör use case: ileride 1000+ recipe
+    // olunca filter-only yetmez. Live debounce 200ms.
+    const searchBar = PCD.el('div', { style: { marginBottom: '12px', position: 'relative' } });
+    searchBar.innerHTML =
+      '<input type="search" id="discoverSearch" autocomplete="off" placeholder="' + PCD.escapeHtml(t('discover_search_placeholder') || 'Search recipes by name, author, or tag…') + '" ' +
+        'value="' + PCD.escapeHtml(_searchQuery || '') + '" ' +
+        'style="width:100%;padding:10px 14px 10px 38px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-1);font-size:14px;box-sizing:border-box;">' +
+      '<span style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--text-3);pointer-events:none;">' + PCD.icon('search', 16) + '</span>' +
+      (_searchQuery ? '<button type="button" id="discoverSearchClear" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:var(--surface-2);border:0;color:var(--text-2);font-size:12px;font-weight:700;padding:4px 10px;border-radius:6px;cursor:pointer;">' + PCD.escapeHtml(t('discover_search_clear') || 'Clear') + '</button>' : '');
+    container.appendChild(searchBar);
+
+    const searchInput = searchBar.querySelector('#discoverSearch');
+    if (searchInput) {
+      let debounce = null;
+      searchInput.addEventListener('input', function () {
+        const v = this.value;
+        if (debounce) clearTimeout(debounce);
+        debounce = setTimeout(function () {
+          _searchQuery = v;
+          renderGrid(container, feed, myLikes);
+        }, 200);
+      });
+      // Preserve focus + caret position across re-renders triggered by typing
+      // (rerender happens after 200ms debounce so focus already lost — refocus)
+      if (document.activeElement && document.activeElement.id === 'discoverSearch') {
+        // We're inside a re-render from typing — refocus + restore caret
+        const caret = searchInput.value.length;
+        setTimeout(function () { try { searchInput.focus(); searchInput.setSelectionRange(caret, caret); } catch (e) {} }, 0);
+      }
+    }
+    const clearBtn = searchBar.querySelector('#discoverSearchClear');
+    if (clearBtn) clearBtn.addEventListener('click', function () {
+      _searchQuery = '';
+      renderGrid(container, feed, myLikes);
+    });
+
     // v2.9.15 — Tag filter chip row (backlog #3)
     // Aggregate unique tags across feed (case-insensitive normalized to lower).
     const tagCounts = {};
@@ -438,7 +478,25 @@
     }
 
     // v2.9.15 — Apply tag filter + v2.9.16 — Apply free-from allergen filter to feed
+    // v2.11.3 — Apply search query filter (name + description + author + tags)
     let filteredFeed = feed;
+    const sq = (_searchQuery || '').trim().toLowerCase();
+    if (sq) {
+      filteredFeed = filteredFeed.filter(function (r) {
+        const d = r.data || {};
+        const name = (d.name || '').toLowerCase();
+        if (name.indexOf(sq) >= 0) return true;
+        const desc = (d.description || d.plating || '').toLowerCase();
+        if (desc.indexOf(sq) >= 0) return true;
+        const author = (d.authorName || d.author || '').toLowerCase();
+        if (author.indexOf(sq) >= 0) return true;
+        const tags = Array.isArray(d.tags) ? d.tags : [];
+        for (let i = 0; i < tags.length; i++) {
+          if ((tags[i] || '').toLowerCase().indexOf(sq) >= 0) return true;
+        }
+        return false;
+      });
+    }
     if (_selectedTag) {
       filteredFeed = filteredFeed.filter(function (r) {
         const tags = (r.data && Array.isArray(r.data.tags)) ? r.data.tags : [];
@@ -454,7 +512,15 @@
 
     if (filteredFeed.length === 0) {
       const empty = PCD.el('div', { class: 'card', style: { padding: '24px 20px', textAlign: 'center', marginTop: '8px' } });
-      empty.innerHTML = '<div style="color:var(--text-3);font-size:13px;">' + PCD.escapeHtml(t('discover_filter_empty') || 'No recipes match this tag.') + '</div>';
+      // v2.11.3 — Search active ise spesifik mesaj ("No results for X")
+      let msg;
+      if (sq) {
+        msg = t('discover_search_empty') || 'No recipes match your search.';
+        msg = msg.replace('{q}', '"' + sq + '"');
+      } else {
+        msg = t('discover_filter_empty') || 'No recipes match this filter.';
+      }
+      empty.innerHTML = '<div style="color:var(--text-3);font-size:13px;">' + PCD.escapeHtml(msg) + '</div>';
       container.appendChild(empty);
       return;
     }

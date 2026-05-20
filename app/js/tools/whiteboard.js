@@ -71,8 +71,18 @@
     xl: { px: 22, headPx: 36 },
   };
 
-  // Layout options
-  const LAYOUTS = ['full', 'half'];
+  // v2.11.1 — Font weight 3 kademe (operatör isteği "ince/orta/bold"). Body
+  // text (text, kv values, checklist items, table cells, alert subtitle)
+  // bu weight'i inherit eder. Section header + big_number value + alert
+  // text kendi başlık ağırlıklarını korur (hardcoded 800-900) çünkü onlarda
+  // weight slider'ı görsel olarak fark üretmez.
+  const WEIGHTS = { light: 400, medium: 600, bold: 800 };
+
+  // v2.11.1 — Layout: 4 kademe (operatör isteği "4 hücreye kadar yan yana").
+  // half=2, third=3, quarter=4 → ardışık aynı layout'lu blocks N-col grid'e
+  // auto-pair olur. full → tek satır tam genişlik.
+  const LAYOUTS = ['full', 'half', 'third', 'quarter'];
+  const LAYOUT_COLS = { full: 1, half: 2, third: 3, quarter: 4 };
 
   // ============ HELPERS ============
   function uid(prefix) { return (prefix || 'b') + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
@@ -95,7 +105,7 @@
   // Default content per block type. Stil + layout default'ları da burada set.
   function makeBlock(type) {
     const id = uid('blk');
-    const base = { id: id, type: type, layout: 'full', style: { color: 'white', size: 'md', align: 'left' } };
+    const base = { id: id, type: type, layout: 'full', style: { color: 'white', size: 'md', align: 'left', weight: 'medium' } };
     switch (type) {
       case 'section_header':
         return Object.assign(base, {
@@ -415,6 +425,7 @@
     const palette = paletteFor(block.style && block.style.color);
     const fs = FONT_SIZES[(block.style && block.style.size) || 'md'];
     const align = (block.style && block.style.align) || 'left';
+    const weight = WEIGHTS[(block.style && block.style.weight) || 'medium'];
     const layout = block.layout || 'full';
     const isSelected = idx === selectedIdx;
     const meta = blockTypeMeta(block.type);
@@ -509,7 +520,7 @@
     const accentBorder = isSelected ? '2px solid #16a34a' : '1px solid rgba(127,127,127,0.18)';
     return '' +
       '<div class="wb-block wb-block-' + block.type + (isSelected ? ' wb-block-selected' : '') + '" data-blk-idx="' + idx + '" data-blk-id="' + PCD.escapeHtml(block.id) + '" data-layout="' + layout + '" style="' +
-        'position:relative;background:' + palette.bg + ';color:' + palette.text + ';' +
+        'position:relative;background:' + palette.bg + ';color:' + palette.text + ';font-weight:' + weight + ';' +
         'border:' + accentBorder + ';border-radius:6px;padding:10px 12px;margin:0;cursor:pointer;' +
         'transition:border-color 0.12s ease, transform 0.12s ease;' +
       '">' +
@@ -526,13 +537,20 @@
     let i = 0;
     while (i < blocks.length) {
       const b = blocks[i];
-      // 2 ardışık 'half' → yan yana grid satırı
-      if (b.layout === 'half' && i + 1 < blocks.length && blocks[i + 1].layout === 'half') {
-        html += '<div class="wb-row wb-row-half" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
-          renderBlockHtml(b, i, selectedIdx) +
-          renderBlockHtml(blocks[i + 1], i + 1, selectedIdx) +
+      const lay = b.layout || 'full';
+      const cols = LAYOUT_COLS[lay] || 1;
+      if (cols > 1) {
+        // Ardışık aynı layout'lu N block'a kadar (max=cols) topla, N-col grid'e dök
+        const group = [];
+        let k = i;
+        while (group.length < cols && k < blocks.length && (blocks[k].layout || 'full') === lay) {
+          group.push({ b: blocks[k], idx: k });
+          k++;
+        }
+        html += '<div class="wb-row wb-row-' + lay + '" style="display:grid;grid-template-columns:repeat(' + cols + ',1fr);gap:10px;">' +
+          group.map(function (g) { return renderBlockHtml(g.b, g.idx, selectedIdx); }).join('') +
         '</div>';
-        i += 2;
+        i = k;
       } else {
         html += '<div class="wb-row wb-row-full">' +
           renderBlockHtml(b, i, selectedIdx) +
@@ -594,6 +612,36 @@
     wireCanvasPane(wbRoot, canvas, view);
     wireInspector(wbRoot, canvas, view);
     wireBottomSheet(wbRoot, canvas, view);
+
+    // v2.11.2 — Overflow detection: block list page boundary'i aşıyor mu?
+    checkOverflow(wbRoot);
+  }
+
+  // v2.11.2 — Canvas içeriği aspect-ratio frame'i aşıyorsa "wb-canvas-overflowing"
+  // class eklenir (CSS warn gradient + fit tag gizler). Aşmıyorsa "✓ Fits one page".
+  // Sheet inner padding (14px) + block gap (10px) frame içinde sayılır.
+  // requestAnimationFrame ile DOM layout sonrası ölçüm.
+  function checkOverflow(root) {
+    if (!root) root = document.getElementById('wbRoot');
+    if (!root) return;
+    const canvasEl = root.querySelector('#wbCanvas');
+    if (!canvasEl) return;
+    requestAnimationFrame(function () {
+      // scrollHeight = içerik + padding; clientHeight = visible area
+      const fits = canvasEl.scrollHeight <= canvasEl.clientHeight + 2;  // 2px tolerance
+      if (fits) {
+        canvasEl.classList.remove('wb-canvas-overflowing');
+        const fitTag = canvasEl.querySelector('#wbFitTag');
+        if (fitTag) fitTag.style.display = (canvas_blockCount(canvasEl) > 0 ? 'block' : 'none');
+      } else {
+        canvasEl.classList.add('wb-canvas-overflowing');
+        const fitTag = canvasEl.querySelector('#wbFitTag');
+        if (fitTag) fitTag.style.display = 'none';
+      }
+    });
+  }
+  function canvas_blockCount(canvasEl) {
+    return canvasEl.querySelectorAll('.wb-block').length;
   }
 
   // ============ STYLES (inline, scoped to #wbRoot) ============
@@ -603,7 +651,25 @@
       '#wbRoot { font-family: "Barlow", -apple-system, system-ui, sans-serif; }' +
       '#wbRoot .wb-pane { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px; min-height: 200px; }' +
       '#wbRoot .wb-pane-title { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-3); margin-bottom: 10px; display:flex; align-items:center; gap:6px; }' +
-      '#wbRoot .wb-canvas { display: flex; flex-direction: column; gap: 10px; padding: 16px; background: var(--surface-2); border-radius: 10px; min-height: 320px; }' +
+      // v2.11.2 — Live preview canvas A4/A3 page boundary olarak render edilir.
+      // aspect-ratio paper+orient'e göre değişir, overflow:hidden ile sayfa
+      // sınırı net görünür. Block list sığamazsa overflow detect + kırmızı
+      // gradient uyarı (alttan slide up). Operatör 100+ block koyarsa sığmadığını
+      // anında görür.
+      '#wbRoot .wb-canvas { display: flex; flex-direction: column; gap: 10px; padding: 14px; background: #ffffff; color: #111827; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.06); position: relative; overflow: hidden; width: 100%; box-sizing: border-box; }' +
+      '#wbRoot .wb-canvas[data-aspect="A4_landscape"] { aspect-ratio: 297 / 210; }' +
+      '#wbRoot .wb-canvas[data-aspect="A4_portrait"]  { aspect-ratio: 210 / 297; }' +
+      '#wbRoot .wb-canvas[data-aspect="A3_landscape"] { aspect-ratio: 420 / 297; }' +
+      '#wbRoot .wb-canvas[data-aspect="A3_portrait"]  { aspect-ratio: 297 / 420; }' +
+      '#wbRoot .wb-canvas-page-label { position: absolute; top: 6px; right: 10px; font-size: 9px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(0,0,0,0.32); pointer-events: none; font-family: "Oswald", sans-serif; z-index: 4; }' +
+      '#wbRoot .wb-canvas-corner { position: absolute; width: 14px; height: 14px; pointer-events: none; z-index: 3; }' +
+      '#wbRoot .wb-canvas-corner.tl { top: 4px; left: 4px; border-top: 2px solid rgba(0,0,0,0.18); border-left: 2px solid rgba(0,0,0,0.18); }' +
+      '#wbRoot .wb-canvas-corner.tr { top: 4px; right: 4px; border-top: 2px solid rgba(0,0,0,0.18); border-right: 2px solid rgba(0,0,0,0.18); }' +
+      '#wbRoot .wb-canvas-corner.bl { bottom: 4px; left: 4px; border-bottom: 2px solid rgba(0,0,0,0.18); border-left: 2px solid rgba(0,0,0,0.18); }' +
+      '#wbRoot .wb-canvas-corner.br { bottom: 4px; right: 4px; border-bottom: 2px solid rgba(0,0,0,0.18); border-right: 2px solid rgba(0,0,0,0.18); }' +
+      '#wbRoot .wb-canvas-overflow-warn { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(220,38,38,0.95) 0%, rgba(220,38,38,0.75) 60%, transparent 100%); color: white; padding: 36px 14px 12px; text-align: center; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; pointer-events: none; z-index: 5; display: none; }' +
+      '#wbRoot .wb-canvas.wb-canvas-overflowing .wb-canvas-overflow-warn { display: block; }' +
+      '#wbRoot .wb-canvas-fit-tag { position: absolute; bottom: 8px; left: 10px; font-size: 9px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(0,0,0,0.4); background: rgba(255,255,255,0.85); padding: 2px 6px; border-radius: 3px; z-index: 4; pointer-events: none; }' +
       '#wbRoot .wb-row { width: 100%; }' +
       '#wbRoot .wb-block { box-shadow: 0 1px 2px rgba(0,0,0,0.05); user-select: none; }' +
       '#wbRoot .wb-block:hover { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,0.10); }' +
@@ -748,6 +814,11 @@
           '</button>';
         }).join('') +
       '</div>';
+    // v2.11.2 — Canvas A4/A3 page boundary frame: aspect-ratio paper+orient'e
+    // göre. Corner markers + page label rozet + overflow uyarısı (block list
+    // sayfaya sığmıyorsa alttan kırmızı gradient).
+    const aspectKey = (canvas.paper || 'A4') + '_' + (canvas.orient || 'landscape');
+    const pageLabel = (canvas.paper || 'A4') + ' · ' + (canvas.orient || 'landscape');
     return '' +
       '<div class="wb-pane wb-canvas-pane">' +
         '<div class="wb-pane-title" style="justify-content:space-between;">' +
@@ -755,7 +826,19 @@
           '<span style="font-weight:600;color:var(--text-3);">' + (canvas.blocks || []).length + ' ' + PCD.escapeHtml(t('wb_blocks_count', 'blocks')) + '</span>' +
         '</div>' +
         mobileAddBar +
-        '<div class="wb-canvas" id="wbCanvas">' + sheetHtml + '</div>' +
+        '<div class="wb-canvas" id="wbCanvas" data-aspect="' + aspectKey + '">' +
+          '<div class="wb-canvas-corner tl"></div>' +
+          '<div class="wb-canvas-corner tr"></div>' +
+          '<div class="wb-canvas-corner bl"></div>' +
+          '<div class="wb-canvas-corner br"></div>' +
+          '<div class="wb-canvas-page-label">' + PCD.escapeHtml(pageLabel) + '</div>' +
+          // v2.11.2 — Block list ayrı inner wrapper'a yerleştirilir. Bu sayede
+          // light commit'lerde sadece block list innerHTML değişir, corner/label/
+          // warn frame yapısı korunur.
+          '<div class="wb-canvas-blocks" id="wbCanvasBlocks" style="display:flex;flex-direction:column;gap:10px;flex:1 1 auto;min-height:0;">' + sheetHtml + '</div>' +
+          '<div class="wb-canvas-fit-tag" id="wbFitTag" style="display:none;">' + PCD.escapeHtml(t('wb_fits_one_page', '✓ Fits one page')) + '</div>' +
+          '<div class="wb-canvas-overflow-warn">⚠ ' + PCD.escapeHtml(t('wb_overflow_warn', 'Will not fit on one printed page — remove blocks or use larger paper (A3)')) + '</div>' +
+        '</div>' +
       '</div>';
   }
 
@@ -791,12 +874,14 @@
       '<div class="wb-inspector-label">' + PCD.escapeHtml(t('wb_inspector_content', 'Content')) + '</div>' +
       buildContentEditor(block, idx) +
     '</div>';
-    // 2) Layout
+    // 2) Layout — 4 kademe (full / half / 1-of-3 / 1-of-4)
     html += '<div class="wb-inspector-section">' +
       '<div class="wb-inspector-label">' + PCD.escapeHtml(t('wb_inspector_layout', 'Layout')) + '</div>' +
       '<div class="wb-seg" style="width:100%;display:flex;">' +
-        '<button type="button" data-set-layout="full" class="' + (block.layout === 'full' ? 'active' : '') + '" style="flex:1;">' + PCD.escapeHtml(t('wb_layout_full', 'Full width')) + '</button>' +
-        '<button type="button" data-set-layout="half" class="' + (block.layout === 'half' ? 'active' : '') + '" style="flex:1;">' + PCD.escapeHtml(t('wb_layout_half', 'Half width')) + '</button>' +
+        '<button type="button" data-set-layout="full" class="' + (block.layout === 'full' ? 'active' : '') + '" style="flex:1;" title="' + PCD.escapeHtml(t('wb_layout_full', 'Full width')) + '">1/1</button>' +
+        '<button type="button" data-set-layout="half" class="' + (block.layout === 'half' ? 'active' : '') + '" style="flex:1;" title="' + PCD.escapeHtml(t('wb_layout_half', 'Half width')) + '">1/2</button>' +
+        '<button type="button" data-set-layout="third" class="' + (block.layout === 'third' ? 'active' : '') + '" style="flex:1;" title="' + PCD.escapeHtml(t('wb_layout_third', 'One third')) + '">1/3</button>' +
+        '<button type="button" data-set-layout="quarter" class="' + (block.layout === 'quarter' ? 'active' : '') + '" style="flex:1;" title="' + PCD.escapeHtml(t('wb_layout_quarter', 'One quarter')) + '">1/4</button>' +
       '</div>' +
     '</div>';
     // 3) Color
@@ -814,6 +899,19 @@
       '<div class="wb-seg" style="width:100%;display:flex;">' +
         ['sm','md','lg','xl'].map(function (s) {
           return '<button type="button" data-set-size="' + s + '" class="' + (block.style && block.style.size === s ? 'active' : '') + '" style="flex:1;text-transform:uppercase;">' + s + '</button>';
+        }).join('') +
+      '</div>' +
+    '</div>';
+    // 4b) Weight — 3 kademe (ince/orta/bold)
+    html += '<div class="wb-inspector-section">' +
+      '<div class="wb-inspector-label">' + PCD.escapeHtml(t('wb_inspector_weight', 'Weight')) + '</div>' +
+      '<div class="wb-seg" style="width:100%;display:flex;">' +
+        [['light',   t('wb_weight_light',  'Light')],
+         ['medium',  t('wb_weight_medium', 'Medium')],
+         ['bold',    t('wb_weight_bold',   'Bold')]].map(function (w) {
+          const wt = WEIGHTS[w[0]];
+          const isActive = (block.style && block.style.weight === w[0]) || (!block.style.weight && w[0] === 'medium');
+          return '<button type="button" data-set-weight="' + w[0] + '" class="' + (isActive ? 'active' : '') + '" style="flex:1;font-weight:' + wt + ';">' + PCD.escapeHtml(w[1]) + '</button>';
         }).join('') +
       '</div>' +
     '</div>';
@@ -1144,9 +1242,9 @@
     }
     function commit() {
       persistCanvas(canvas);
-      // Re-render canvas + inspector (don't re-render full page to keep focus)
-      const cv = root.querySelector('#wbCanvas');
-      if (cv) cv.innerHTML = renderSheet(canvas, _ui.selectedBlockIdx);
+      // Re-render canvas blocks (inner wrapper, frame yapısı korunur)
+      const cvBlocks = root.querySelector('#wbCanvasBlocks');
+      if (cvBlocks) cvBlocks.innerHTML = renderSheet(canvas, _ui.selectedBlockIdx);
       // Also refresh inspector to reflect any normalization
       if (inspector) {
         const block = getActiveBlock();
@@ -1166,6 +1264,8 @@
       wireBlockReorder(root, canvas);
       // Re-bind canvas pane click
       bindCanvasPaneClicks(root, canvas);
+      // v2.11.2 — Re-check page overflow after content/style change
+      checkOverflow(root);
     }
 
     // Style setters
@@ -1179,6 +1279,12 @@
       const block = getActiveBlock(); if (!block) return;
       block.style = block.style || {};
       block.style.size = this.getAttribute('data-set-size');
+      commit();
+    });
+    PCD.on(root, 'click', '[data-set-weight]', function () {
+      const block = getActiveBlock(); if (!block) return;
+      block.style = block.style || {};
+      block.style.weight = this.getAttribute('data-set-weight');
       commit();
     });
     PCD.on(root, 'click', '[data-set-align]', function () {
@@ -1237,13 +1343,13 @@
       if (field) {
         block.content = block.content || {};
         block.content[field] = target.value;
-        // Debounce-light commit (no full re-render — only canvas refresh)
+        // Debounce-light commit (no full re-render — only canvas blocks refresh)
         persistCanvas(canvas);
-        const cv = root.querySelector('#wbCanvas');
-        if (cv) cv.innerHTML = renderSheet(canvas, _ui.selectedBlockIdx);
-        // Re-bind canvas pane clicks because innerHTML wiped children
+        const cvBlocks = root.querySelector('#wbCanvasBlocks');
+        if (cvBlocks) cvBlocks.innerHTML = renderSheet(canvas, _ui.selectedBlockIdx);
         wireBlockReorder(root, canvas);
         bindCanvasPaneClicks(root, canvas);
+        checkOverflow(root);
         return;
       }
       // Checklist
@@ -1303,10 +1409,11 @@
     }
     function commitLight() {
       persistCanvas(canvas);
-      const cv = root.querySelector('#wbCanvas');
-      if (cv) cv.innerHTML = renderSheet(canvas, _ui.selectedBlockIdx);
+      const cvBlocks = root.querySelector('#wbCanvasBlocks');
+      if (cvBlocks) cvBlocks.innerHTML = renderSheet(canvas, _ui.selectedBlockIdx);
       wireBlockReorder(root, canvas);
       bindCanvasPaneClicks(root, canvas);
+      checkOverflow(root);
     }
 
     root.addEventListener('input', onContentInput);
@@ -1622,20 +1729,28 @@
     if (canvas.paper === 'A3') cols = isLand ? 3 : 2;
     else cols = isLand ? 2 : 1;
 
-    // Render blocks as a vertical stream; CSS column-fill auto for multi-col layout
+    // Render blocks as a vertical stream; CSS column-fill auto for multi-col layout.
+    // v2.11.1 — half (2) + third (3) + quarter (4) layout'ları için ardışık aynı
+    // layout'lu block'lar N-col grid'e auto-pair olur.
     let blocksHtml = '';
     let i = 0;
     const blocks = canvas.blocks || [];
     while (i < blocks.length) {
       const b = blocks[i];
-      if (b.layout === 'half' && i + 1 < blocks.length && blocks[i + 1].layout === 'half') {
-        // Pair half blocks in a 2-col mini grid
+      const lay = b.layout || 'full';
+      const layCols = LAYOUT_COLS[lay] || 1;
+      if (layCols > 1) {
+        const group = [];
+        let k = i;
+        while (group.length < layCols && k < blocks.length && (blocks[k].layout || 'full') === lay) {
+          group.push(blocks[k]);
+          k++;
+        }
         blocksHtml +=
-          '<div class="wb-print-half-pair">' +
-            renderPrintBlock(b) +
-            renderPrintBlock(blocks[i + 1]) +
+          '<div class="wb-print-multi-pair" style="grid-template-columns:repeat(' + layCols + ',1fr);">' +
+            group.map(renderPrintBlock).join('') +
           '</div>';
-        i += 2;
+        i = k;
       } else {
         blocksHtml += renderPrintBlock(b);
         i += 1;
@@ -1651,8 +1766,8 @@
         '.wb-print-title { font-family: "Oswald", sans-serif; font-size: 18pt; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; padding-bottom: 4mm; border-bottom: 2pt solid #16a34a; flex: 0 0 auto; }' +
         '.wb-print-body { flex: 1 1 auto; column-count: ' + cols + '; column-gap: 6mm; column-fill: auto; min-height: 0; }' +
         '.wb-print-block { break-inside: avoid; page-break-inside: avoid; -webkit-column-break-inside: avoid; border-radius: 4pt; padding: 4mm 5mm; margin-bottom: 4mm; }' +
-        '.wb-print-half-pair { break-inside: avoid; page-break-inside: avoid; display: grid; grid-template-columns: 1fr 1fr; gap: 3mm; margin-bottom: 4mm; }' +
-        '.wb-print-half-pair > .wb-print-block { margin-bottom: 0; }' +
+        '.wb-print-multi-pair { break-inside: avoid; page-break-inside: avoid; display: grid; gap: 3mm; margin-bottom: 4mm; }' +
+        '.wb-print-multi-pair > .wb-print-block { margin-bottom: 0; }' +
         '.wb-print-section-header { font-family: "Oswald", sans-serif; }' +
         '.wb-print-kv-row { display: flex; align-items: baseline; gap: 10pt; padding: 2pt 0; border-bottom: 1pt dashed rgba(127,127,127,0.3); }' +
         '.wb-print-kv-key { font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; min-width: 60pt; opacity: 0.85; }' +
@@ -1683,7 +1798,8 @@
     const sizeMap = { sm: 10, md: 12, lg: 14, xl: 18 };
     const fs = sizeMap[(block.style && block.style.size) || 'md'];
     const align = (block.style && block.style.align) || 'left';
-    const style = 'background:' + palette.bg + ';color:' + palette.text + ';font-size:' + fs + 'pt;text-align:' + align + ';';
+    const weight = WEIGHTS[(block.style && block.style.weight) || 'medium'];
+    const style = 'background:' + palette.bg + ';color:' + palette.text + ';font-size:' + fs + 'pt;text-align:' + align + ';font-weight:' + weight + ';';
 
     let inner = '';
     switch (block.type) {
