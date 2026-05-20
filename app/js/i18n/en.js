@@ -1419,6 +1419,7 @@ window.PCD.i18n.register('en', {
   recipe_tags_label: "Tags",
   recipe_tags_hint: "e.g. italian, summer, gluten-free, brunch. Used for filtering recipes.",
   recipe_tag_add_ph: "Type tag + Enter",
+  recipe_tag_add_new: "Add",
   recipe_tags_none: "No tags yet",
   nav_mise: "Mise en Place",
   mise_title: "Mise en Place",

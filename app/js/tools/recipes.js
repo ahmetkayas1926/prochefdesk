@@ -2393,13 +2393,22 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
           const sg = PCD.$('#recipeTagSuggest', body);
           if (!sg) return;
           if (!q) { sg.style.display = 'none'; sg.innerHTML = ''; return; }
+          // v2.11.10 — Mevcut tag autocomplete önerilerinin başına "+ Add X" CTA
+          // ekle. Operatör: "crazy yazınca altında bunu tags'a ekle işareti çıksın".
+          // Klavye Enter gerekmez, tıkla → ekle. Mouse-only kullanıcı için keşif kolay.
           const matches = allKnownTags().filter(function (tg) {
             return tg.indexOf(q) >= 0 && (data.tags || []).indexOf(tg) < 0;
           }).slice(0, 8);
-          if (!matches.length) { sg.style.display = 'none'; sg.innerHTML = ''; return; }
-          sg.innerHTML = matches.map(function (tg) {
+          const exactExists = (data.tags || []).indexOf(q) >= 0 || matches.indexOf(q) >= 0;
+          let html = '';
+          // Yeni tag oluşturma CTA — eğer query tam eşleşen mevcut bir tag DEĞİLSE
+          if (!exactExists) {
+            html += '<button type="button" class="tag-suggest-item" data-tag-pick="' + PCD.escapeHtml(q) + '" style="display:block;width:100%;text-align:start;padding:8px 12px;background:var(--brand-50);border:0;font-size:14px;cursor:pointer;border-bottom:1px solid var(--border);color:var(--brand-700);font-weight:700;">+ ' + PCD.escapeHtml((PCD.i18n.t && PCD.i18n.t('recipe_tag_add_new') || 'Add')) + ' &ldquo;' + PCD.escapeHtml(q) + '&rdquo;</button>';
+          }
+          html += matches.map(function (tg) {
             return '<button type="button" class="tag-suggest-item" data-tag-pick="' + PCD.escapeHtml(tg) + '" style="display:block;width:100%;text-align:start;padding:8px 12px;background:transparent;border:0;font-size:14px;cursor:pointer;border-bottom:1px solid var(--border);">' + PCD.escapeHtml(tg) + '</button>';
           }).join('');
+          sg.innerHTML = html;
           sg.style.display = 'block';
         });
         tagInp.addEventListener('blur', function () {

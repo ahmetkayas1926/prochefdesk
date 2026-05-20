@@ -1416,6 +1416,7 @@ window.PCD.i18n.register('tr', {
   recipe_tags_label: "Etiketler",
   recipe_tags_hint: "örn. italyan, yaz, glutensiz, brunch. Tarifleri filtrelemek için kullanılır.",
   recipe_tag_add_ph: "Etiket yaz + Enter",
+  recipe_tag_add_new: "Ekle",
   recipe_tags_none: "Henüz etiket yok",
   nav_mise: "Mise en Place",
   mise_title: "Mise en Place",

@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.11.9 · 2026-05-20
+**Mevcut sürüm:** v2.11.10 · 2026-05-20
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -18,6 +18,27 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH (kapatılabilir inl
 - **Round 5 (v2.9.13):** haccp hub ✅ — **NAKED→RICH sweep tamamlandı**
 
 ## v2.11.x — Whiteboard Block Composer
+
+### v2.11.10 — Recipe Tags "+ Add new" CTA (mouse-only friendly) · 2026-05-20
+
+**Operatör:** "Tags eklemek için daha iyi bir yol var mı? 'crazy' yazdım, altında bunu tags'a ekle işareti çıkacak."
+
+**Mevcut davranış:** Tag input'a yazıyorsun → sadece **mevcut tag'lerden** autocomplete önerisi çıkıyor (substring match). Yeni tag (kütüphanede olmayan) eklemek için **Enter veya virgül** tuşu şart. Mouse-only kullanıcı keşfetmemiş.
+
+**Fix** (`recipes.js:2391-2412`):
+- Input event'inde, query trim'i mevcut bir tag ile **tam eşleşmiyorsa**, suggestion listesinin EN ÜSTÜNE yeşil vurgulu `+ Add "crazy"` CTA chip eklenir
+- Tıklanınca mevcut `data-tag-pick` handler (line 2421) çalışır → `addTag(q)` çağrılır
+- Tıklanınca input temizlenir, focus korunur, suggestion gizlenir
+- Enter/virgül kısa-yolu **korundu** (geriye uyumlu)
+- Mevcut autocomplete (existing tag matches) altta listelenmeye devam eder
+
+**i18n:** 1 yeni key × 2 dil (`recipe_tag_add_new` — EN "Add" / TR "Ekle").
+
+**Test:**
+1. Recipe editor → Tags input'a "italian" yaz (mevcut tag) → suggestion'da sadece "italian" görünür (CTA yok çünkü tam eşleşme)
+2. Recipe editor → Tags input'a "crazy" yaz (yeni tag) → suggestion en üstte yeşil CTA `+ Add "crazy"` + altında "crazy" substring içeren mevcut tag varsa onlar
+3. CTA tıkla → "crazy" tag eklenir, input temizlenir, chip görünür
+4. Enter tuşu hala çalışır (eski davranış korundu)
 
 ### v2.11.9 — Whiteboard Table block inspector taşma fix · 2026-05-20
 
