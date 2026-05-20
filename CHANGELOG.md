@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.11.6 · 2026-05-20
+**Mevcut sürüm:** v2.11.7 · 2026-05-20
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -18,6 +18,44 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH (kapatılabilir inl
 - **Round 5 (v2.9.13):** haccp hub ✅ — **NAKED→RICH sweep tamamlandı**
 
 ## v2.11.x — Whiteboard Block Composer
+
+### v2.11.7 — v2.11.6 Logs + Receiving typography REVERT (taşma fix) · 2026-05-20
+
+**Operatör raporu:** "Yaptığın düzenlemeden sonra tek sayfaya sığan formlar ikinci sayfaya taşıyor."
+
+**Hatamın root cause:**
+
+v2.11.6'da Logs ve Receiving'in typography'sini Cook & Cool kanonuna (padding 3px 4px / line-height 1.3 / row 20px) çektim. Hesap yaparken padding + line-height'in **gerçek satır yüksekliği** üzerindeki kümülatif etkisini görmezden geldim:
+
+- Eski (Logs/Receiving): padding 2px + line-height 1.25 + content 11px font = gerçek ~18px/row
+- v2.11.6 sonrası: padding 3px + line-height 1.3 + content 11px = gerçek ~25px/row
+- Fark: 7px/row × 31 satır = **+217px** tablo yüksekliği
+
+**Neden Cook & Cool sığıyor ama Logs/Receiving sığmıyor:**
+
+- **Cook & Cool:** sadece `h-foot` (legend + reviewed_by) ~20px ekstra → 31×21 + 42 thead + 40 h-head + 20 h-foot = ~753px (A4 content area 754px) → 1px tolerans, **zar zor sığıyor**
+- **Logs:** `h-notes` (~40px) + `h-sign` (~25px) extra → +65px ekstra → 753 + 65 = 818px → **TAŞAR**
+- **Receiving:** 3 farklı tablo (printDay/printMonthBlank/printMonthFilled), bazıları thead 2-row, bazıları 1-row → marginal taşma
+
+**Fix (sadece Logs + Receiving):**
+
+v2.11.6 typography değişikliği geri alındı:
+- `padding:3px 4px` → eski değerler (Logs: `2px 3px`, Receiving: `2px 4px`)
+- `line-height:1.3` → `1.25`
+- `tr height:20px` → `19px`
+- (Logs) `letter-spacing:0.03em` → `0.02em`
+
+**Dokunulmadı:**
+- **haccp_cooling.js**: Kanon, sığıyor (operatör onayladı)
+- **haccp_holding.js**: v2.10.1'den beri 20px/3px 4px/1.3 — operatör daha önce şikayet etmedi, regression riski almıyorum. Gerekirse ayrı revize.
+
+**Ders alındı:** Print layout değişiklerinde sadece `tr height` değeri değil, padding+line-height kümülatif gerçek satır yüksekliği hesaplanmalı; her formun ekstra blokları (notes/sign vs h-foot only) bütçeye dahil edilmeli. Math kontrol yerine browser'da görsel test gerek.
+
+**Test:**
+1. HACCP Fridge & Freezer Log "Print month" → 1 sayfa (h-notes + h-sign dahil)
+2. HACCP Receiving "Print month" (printMonthBlank veya printMonthFilled) → 1 sayfa
+3. HACCP Cook & Cool — değişmedi, regression yok
+4. HACCP Hot/Cold Holding — değişmedi, regression yok
 
 ### v2.11.6 — HACCP form typography uniformity (Cook & Cool kanon) · 2026-05-20
 

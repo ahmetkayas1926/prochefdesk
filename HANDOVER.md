@@ -9,7 +9,7 @@
 
 **Ürün:** ProChefDesk — profesyonel chef'ler için web tabanlı mutfak yönetim sistemi.
 **Operatör:** Ahmet Kaya, Perth Western Australia, profesyonel şef. Solo non-commercial proje.
-**Mevcut sürüm:** **v2.11.6** (push'a hazır local; production v2.10.4). Whiteboard Block Composer (v2.11.0-2) + Discover search (v2.11.3) + Kitchen Cards WYSIWYG (v2.11.4) + Popup footer overlay fix (v2.11.5) + **HACCP form typography uniformity** (v2.11.6 — Logs ve Receiving Cook & Cool kanonuna çekildi: padding 3px4px / line-height 1.3 / row 20px / letter-spacing 0.03em; Holding zaten kanondaydı).
+**Mevcut sürüm:** **v2.11.7** (push'a hazır local; production v2.10.4). Whiteboard Block Composer (v2.11.0-2) + Discover search (v2.11.3) + KC WYSIWYG (v2.11.4) + Popup footer overlay fix (v2.11.5) + **v2.11.6 Logs/Receiving typography uniformity REVERT** (v2.11.7 — operatör raporu: 2. sayfaya taşıyor. Root cause: padding+line-height kümülatif gerçek row +7px × 31 = +217px, Logs'taki h-notes/h-sign ekstra blokları sığmıyor. Cook & Cool ve Holding kanon korundu).
 **Blog:** 13 yazı yayında (Faz A SEO upgrade + Faz B 5-round, MENA niş + uluslararası coverage).
 **Domain:** prochefdesk.com (Cloudflare Pages, SSL Full, GitHub push'ta auto build + deploy).
 
@@ -257,7 +257,7 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH. 13 araç paketleri
 |---|---|
 | Repo path (operatör Windows) | `C:\Users\ahmet\Desktop\prochefdesk` |
 | GitHub repo | `ahmetkayas1926/prochefdesk` |
-| Production sürümü | **v2.11.6** (push'a hazır local; production v2.10.4) |
+| Production sürümü | **v2.11.7** (push'a hazır local; production v2.10.4) |
 | Supabase project ref | `muuwhrcogikpqylsfvgg` (Tokyo, Postgres 17, Free tier) |
 | Cloudflare R2 bucket | `prochefdesk-backups` |
 | CLEANUP_SECRET | `ec79a445-7e92-499b-9322-5c2c949788d4d2886e66-d556-4498-ba9e-17fda6c11ac1` |

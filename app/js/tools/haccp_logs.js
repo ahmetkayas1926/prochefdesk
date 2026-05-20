@@ -761,13 +761,15 @@
         '.h-head .sub{font-size:10px;color:#555;margin-top:1px;}' +
         (showFitWarning ? '.h-warn{padding:3px 6px;background:#fef3c7;color:#92400e;font-size:9px;border-radius:3px;margin-bottom:4px;flex:0 0 auto;}' : '') +
         'table.h-grid{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed;flex:0 0 auto;}' +
-        // v2.11.6 — Cook & Cool kanon typography uniformity: padding 2px3px→3px4px,
-        // line-height 1.25→1.3, row 19px→20px. Hücre yüksekliği + ferah okuma.
-        // Yükseklik bütçesi: 31 row × 20 + thead 50 + h-head/h-foot/padding ≈ 750px
-        // < 210mm (794px) → tek sayfa garantili.
-        'table.h-grid th, table.h-grid td{border:1px solid #999;padding:3px 4px;text-align:center;vertical-align:middle;line-height:1.3;}' +
-        'table.h-grid th{background:#f3f4f6;font-weight:700;font-size:9px;text-transform:uppercase;letter-spacing:0.03em;}' +
-        'table.h-grid tr{height:20px;page-break-inside:avoid;}' +
+        // v2.11.7 — v2.11.6 typography uniformity REVERT (Logs için).
+        // Logs'ta .h-notes (~40px) + .h-sign (~25px) extra ~65px blok var (Cooling'de
+        // yok). 20px row + 1.3 line + 3px padding → gerçek ~25px/row × 31 = 775px.
+        // Cooling'de 31×20 + h-foot 20 = 671px → sığar. Logs'ta 775+65 = 840px →
+        // taşar (operatör raporu: 2. sayfa). Önceki kompakt typography (19px/2px/1.25)
+        // Logs'un extra blokları için tek sayfa garantili.
+        'table.h-grid th, table.h-grid td{border:1px solid #999;padding:2px 3px;text-align:center;vertical-align:middle;line-height:1.25;}' +
+        'table.h-grid th{background:#f3f4f6;font-weight:700;font-size:9px;text-transform:uppercase;letter-spacing:0.02em;}' +
+        'table.h-grid tr{height:19px;page-break-inside:avoid;}' +
         'table.h-grid td.day{text-align:center;font-weight:700;background:#fafafa;font-size:10px;color:#444;}' +
         'table.h-grid td.oor{background:#fee2e2;color:#991b1b;font-weight:700;}' +
         'table.h-grid td.has-note::after{content:" *";color:#16a34a;}' +

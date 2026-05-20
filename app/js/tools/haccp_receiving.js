@@ -673,12 +673,14 @@
       '.h-head .sub{font-size:10px;color:#555;margin-top:2px;}' +
       '.h-head .right{font-size:10px;color:#555;text-align:end;}' +
       'table.h-grid{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed;flex:0 0 auto;}' +
-      // v2.11.6 — Cook & Cool kanon typography uniformity: padding 2px4px→3px4px,
-      // line-height 1.25→1.3, row 19px→20px. Yükseklik bütçesi: 31 row × 20 +
-      // thead + h-head/h-foot/padding ≈ 750px < 210mm (794px) → tek sayfa garantili.
-      'table.h-grid th, table.h-grid td{border:1px solid #999;padding:3px 4px;vertical-align:middle;line-height:1.3;}' +
+      // v2.11.7 — v2.11.6 typography uniformity REVERT (Receiving için).
+      // Receiving'de printDay/printMonthBlank/printMonthFilled üç farklı tablo
+      // var; en uzunu 31 day row. padding 3px + line 1.3 ile gerçek row ~25px →
+      // 31×25 = 775px → A4 landscape content area'sını taşar (operatör raporu:
+      // 2. sayfaya çıkıyor). Kompakt typography (19px/2px/1.25) geri yüklendi.
+      'table.h-grid th, table.h-grid td{border:1px solid #999;padding:2px 4px;vertical-align:middle;line-height:1.25;}' +
       'table.h-grid th{background:#f3f4f6;font-weight:700;font-size:9px;text-align:center;text-transform:uppercase;letter-spacing:0.03em;}' +
-      'table.h-grid tr{height:20px;page-break-inside:avoid;}' +
+      'table.h-grid tr{height:19px;page-break-inside:avoid;}' +
       'table.h-grid td.idx{text-align:center;font-weight:700;color:#444;}' +
       'table.h-grid td.sup{font-weight:600;}' +
       'table.h-grid td.prod{font-weight:600;}' +
