@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.11.14 · 2026-05-20
+**Mevcut sürüm:** v2.11.15 · 2026-05-20
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -18,6 +18,27 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH (kapatılabilir inl
 - **Round 5 (v2.9.13):** haccp hub ✅ — **NAKED→RICH sweep tamamlandı**
 
 ## v2.11.x — Whiteboard Block Composer
+
+### v2.11.15 — FAQ 3 cevap düzeltildi (faktüel doğruluk) · 2026-05-20
+
+**Operatör:** "FAQ alanını uzun zamandır güncellemedim. Tarafsız incele."
+
+**Audit bulguları (repo kodu vs. FAQ metinleri):**
+
+| FAQ | Önce | Sonra | Sebep |
+|---|---|---|---|
+| **a1** | "stored on localStorage, then **encrypted** and synced" | "stored on **IndexedDB**, synced **securely over HTTPS**" | (1) v2.6.92'den beri IndexedDB ana storage (localStorage migration kaldırıldı) — terim yanlış. (2) "encrypted" kullanıcıya E2E çağrıştırır, gerçek HTTPS + Supabase default at-rest. |
+| **a2** | "currently free **in beta**" | "free **for now**" | "beta" 6+ aydır kullanılıyor, terimsel doğruluk için kaldırıldı |
+| **a3** | "Yes. **After first load it works without internet**" | "**Partially.** App açıkken offline edit OK, ilk yükleme + tab kapatma internet şart" | **Service worker YOK** (grep service-worker = 0 match). "Works without internet" iddiası kullanıcıyı yanıltıyor — havaalanında uçağa binip sekme kapatınca açamaz. |
+
+**Değişmeyen** (kanıt ile doğru):
+- a4 Trash 30 days ✅ (migrations/v2.6.97-cleanup-cron.sql:54 `INTERVAL '30 days'`)
+- a5 Download backup ✅ (account.js:220-227 + restore butonu)
+- a6 PWA Add to Home Screen ✅ (index.html:33 manifest.webmanifest + :11 apple-mobile-web-app-capable)
+- a7 Forgot password ✅ (Supabase auth)
+- a8 hello@prochefdesk.com ✅
+
+**Etki:** Sadece 3 i18n string EN+TR (6 değişiklik). Kod değişikliği YOK.
 
 ### v2.11.14 — Whiteboard 4 yeni mutfak block tipi + Layout 6 kademe + Size 6 kademe · 2026-05-20
 

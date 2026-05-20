@@ -10,7 +10,7 @@ ProChefDesk — profesyonel şef'ler için web tabanlı mutfak yönetim sistemi.
 
 **Stack:** Vanilla JavaScript (no bundling, no service worker), IndexedDB ana storage, Supabase (Postgres 17 + Auth + Storage + Realtime + Edge Functions), Cloudflare Pages (auto-deploy on GitHub push), Cloudflare R2 (backups).
 
-**Mevcut sürüm:** v2.11.14 (push'a hazır local; production v2.11.13). **Whiteboard genişleme:** 4 yeni mutfak-spesifik block tipi (Step List numbered / Allergen Strip 14 EU allergen toggle / Doneness Ladder 5-segment gradient / Time Range yatay band) + Layout 6 kademe (1/1 → 1/6) + Size 6 kademe (XS → XXL). Block registry 8 → 12 tip. 18 yeni i18n key × 2 dil. Allergen strip allergens-db.list auto-pull. Doneness 5 fixed level (rare→well-done gradient red→brown), sadece label/temp düzenlenebilir. Detay: `CHANGELOG.md`.
+**Mevcut sürüm:** v2.11.15 (push'a hazır local; production v2.11.14). **FAQ 3 cevap faktüel düzeltme:** faq_a1 (localStorage→IndexedDB, "encrypted" abartısı → HTTPS + Supabase hash), faq_a2 ("beta" terimi kaldırıldı), faq_a3 (service worker yok kanıtı ile "fully offline" iddiası → "Partially: app açıkken edit OK, ilk yükleme/tab re-open internet şart"). Sadece 3 i18n string EN+TR, kod değişikliği yok. Detay: `CHANGELOG.md`.
 
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı). SEO standardı aşağıda `## Blog SEO standardı` bölümünde.
 

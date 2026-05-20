@@ -9,7 +9,7 @@
 
 **Ürün:** ProChefDesk — profesyonel chef'ler için web tabanlı mutfak yönetim sistemi.
 **Operatör:** Ahmet Kaya, Perth Western Australia, profesyonel şef. Solo non-commercial proje.
-**Mevcut sürüm:** **v2.11.14** (push'a hazır local; production v2.11.13). **Whiteboard büyük genişleme:** 4 yeni mutfak block tipi (Step List / Allergen Strip / Doneness Ladder / Time Range) + Layout 4 → 6 kademe (1/5 + 1/6 eklendi) + Size 4 → 6 kademe (XS + XXL eklendi). Block registry 8 → 12 tip. 18 yeni i18n key × 2 dil.
+**Mevcut sürüm:** **v2.11.15** (push'a hazır local; production v2.11.14). **FAQ 3 cevap düzeltildi** (faktüel audit sonrası): faq_a1 (localStorage→IndexedDB, encrypted→HTTPS), faq_a2 (beta→free for now), faq_a3 ("works without internet" yanlış iddiası → "Partially: app açıkken offline edit OK, ilk yükleme internet şart" çünkü service worker yok). 3 string EN+TR.
 **Blog:** 13 yazı yayında (Faz A SEO upgrade + Faz B 5-round, MENA niş + uluslararası coverage).
 **Domain:** prochefdesk.com (Cloudflare Pages, SSL Full, GitHub push'ta auto build + deploy).
 
@@ -257,7 +257,7 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH. 13 araç paketleri
 |---|---|
 | Repo path (operatör Windows) | `C:\Users\ahmet\Desktop\prochefdesk` |
 | GitHub repo | `ahmetkayas1926/prochefdesk` |
-| Production sürümü | **v2.11.14** (push'a hazır local; production v2.11.13) |
+| Production sürümü | **v2.11.15** (push'a hazır local; production v2.11.14) |
 | Supabase project ref | `muuwhrcogikpqylsfvgg` (Tokyo, Postgres 17, Free tier) |
 | Cloudflare R2 bucket | `prochefdesk-backups` |
 | CLEANUP_SECRET | `ec79a445-7e92-499b-9322-5c2c949788d4d2886e66-d556-4498-ba9e-17fda6c11ac1` |
