@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.10.4 · 2026-05-20
+**Mevcut sürüm:** v2.11.0 · 2026-05-20
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -17,7 +17,85 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH (kapatılabilir inl
 - **Round 4 (v2.9.10-12):** sales + whatif + menu_matrix ✅
 - **Round 5 (v2.9.13):** haccp hub ✅ — **NAKED→RICH sweep tamamlandı**
 
-## v2.10.x — Whiteboard pro upgrade
+## v2.11.x — Whiteboard Block Composer
+
+### v2.11.0 — Whiteboard full rewrite (block-based composer) · 2026-05-20
+
+**Operatör direktifi:** "Mobil whiteboard pek kullanışlı değil. Mevcut sistemden daha modern, gelişmiş, kullanışlı, özelleştirilebilir bir sistem var mı?" → Notion/Coda paradigmasına yakın block-based composer mimarisiyle full rewrite.
+
+**Mimari değişim:**
+
+Eski v2.9.40-v2.10.4 — sabit `rows × cols` cells grid:
+- Her hücre aynı boyut (drag-resize ile merge'lenebilir)
+- Cell properties: text + color + fontSize + align + type + rowSpan + colSpan
+- Mobile dar viewport'ta hücreler ufak ve dokunmak zor
+- Right-click palette (mobile imkansız)
+- v2.10.1'de drag-resize touch event eksikti
+
+Yeni v2.11.0 — block-based composer:
+- Sayfa = dikey block dizisi (`blocks: [...]`)
+- 8 block tipi: `section_header`, `big_number`, `checklist`, `kv` (key-value), `table`, `alert`, `text`, `divider`
+- Her block: `{id, type, content, style: {color, size, align}, layout: 'full' | 'half'}`
+- 2 ardışık `half` block → 2-col grid satır (auto-pair)
+- Touch-native drag-reorder (handle ikonu + mouse+touch unified pointer)
+- Desktop 3-kolon: sol palette (block tipleri) / orta canvas / sağ inspector (style + content edit)
+- Mobile responsive: tek kolon canvas + bottom sheet inspector (tap hücreye → alttan slide-up panel)
+- Print engine: A4 portrait tek kolon, A4 landscape 2-col masonry, A3 landscape 3-col masonry (CSS column-fill)
+
+**Veri formatı:**
+- Yeni: `{id, name, title, paper, orient, format: 'v2', blocks: [...], updatedAt}`
+- Eski v1 cells canvases varsa silinir (operatör onayladı: veri yok)
+- Cloud sync `whiteboards` tablosu şeması aynı (jsonb data), sadece içerik formatı değişir
+- LS key `pcd_whiteboard_canvases_v2` korunur
+
+**6 yeni profesyonel template** (block format):
+- **Tonight's Service Board** (A4 landscape) — Hero merged + 4 KPI big_number + 86 alert banner + Specials section
+- **Hot Line · Station Map** (A4 landscape) — 3 station section (SAUTÉ steak / GRILL katmer / PASS forest) + per-station kv (proteins/sauces/garnish)
+- **Cook Times · Core Temps** (A4 landscape) — table block 4-protein × 4-column matrix + alert calibration reminder
+- **Allergen Alert Board** (A4 landscape) — steak red urgency hero + empty allergen table + cross-contact reminder
+- **Prep Schedule · Today** (A4 portrait) — checklist 5-task with time prefix + kv lead/sous
+- **Service Recap · KPIs** (A4 landscape) — 4 big_number KPI grid + notes section
+
+**Edit deneyimi:**
+- **Desktop:** Sol palette'den block tipine tıkla → canvas'a eklenir → seç → sağ inspector'da content + style edit
+- **Mobile:** Üstte horizontal scroll add-block bar → tap eklenir → tap block → bottom sheet açılır → content + style edit
+- **Drag-reorder:** Her block sol-üst köşesinde ⋮⋮ handle (mobile her zaman görünür, desktop hover'da). Hem mouse hem touch unified pointer event.
+- **Inspector aksiyonları:** Duplicate / Move up / Move down / Delete
+
+**Render farklılaşması:**
+- Live preview: interactive (click handler, drag handle, type tag) + canvas frame (surface-2 bg)
+- Print: clean (no buttons/handles) + A4/A3 page size + Oswald/Barlow web fonts + column-fill flow + half-pair grid wrap
+
+**Kaldırılan v2.10.x özellikleri:**
+- Cells grid (rows × cols)
+- Drag-resize merge (cell rowSpan/colSpan input + handle)
+- Right-click palette (artık inspector veya bottom sheet)
+- User template "save current" — KORUNDU
+- Cell type system (text/header/bigNumber/list/twoLine) — block types ile değişti
+- 14-color palette — KORUNDU (her block kendi color style'ı)
+
+**i18n:** 47 yeni key × 2 dil (EN+TR). Eski `whiteboard_cell_*` + `wb_type_*` + `whiteboard_tpl_*` legacy key'ler korundu (backward compat, kullanılmıyor ama silinmesi zorunlu değil).
+
+**Cloud sync uyumluluğu:**
+- `whiteboards` Supabase tablosu şeması DEĞİŞMEDİ (jsonb data kolonu)
+- v2.10.x cells veri formatı varsa `loadStore()` silent sıfırlar (operatör onayladı, veri yok)
+- Yeni cihazda login olunca v2 blocks formatı pull edilir, render eder
+- v2.10.x cihazda v2 format kayıt görürse `cells` undefined olur → empty grid render eder (sadece eski sürümde, operatör tek cihaz kullanıyor → sorun yok)
+
+**Diğer 24 araca dokunulmadı.** Sadece `whiteboard.js` + `i18n/en.js` + `i18n/tr.js` + `config.js` (version) + 3 doc dosyası değişti.
+
+**Test:**
+1. Whiteboard aç → 3-kolon desktop layout (sol palette / orta canvas / sağ inspector)
+2. Sol paletten "Section Header" tıkla → canvas'a eklenir → otomatik seçili
+3. Sağ inspector'da content (textarea), layout (full/half), color (14 swatch), size (sm/md/lg/xl), align (left/center/right) düzenleme
+4. Inspector'dan "Duplicate" → block ikileşir
+5. "Move up/down" ile sırala veya block sol-üstteki ⋮⋮ handle ile drag-reorder
+6. "Big Number" + "Big Number" yan yana → 2-col grid satır oluşturur (half/half auto-pair)
+7. Templates butonu → 6 builtin + user templates → Apply ile yeni canvas
+8. Save current as template → modal input → kayıt → templates listesinde görünür
+9. Print → A4/A3 sized print HTML (column-fill block flow)
+10. **Mobile (≤900px):** sol palette gizli, üstte horizontal add-block bar; bloka tap → bottom sheet açılır (style + content); drag handle her zaman görünür
+11. Mobile → sayfanın boş yerine tap → bottom sheet kapanır
 
 ### v2.10.4 — Whiteboard UX paketi · 2026-05-20
 

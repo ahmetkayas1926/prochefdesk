@@ -1,83 +1,274 @@
 /* ================================================================
-   ProChefDesk — whiteboard.js (v2.9.40 MVP V1)
-   Kitchen Whiteboard — customizable A4/A3 reference sheet for the
-   pass: cooking times, core temps, plating weights, reheating
-   tables, allergen reminders, etc. Replaces the laminated
-   permanent-marker board with a printable, editable grid.
+   ProChefDesk — whiteboard.js (v2.11.0 — Block Composer)
+   Kitchen Whiteboard — block-based composer for kitchen reference
+   sheets (mise en place, cook times, allergen alerts, prep schedules,
+   station maps). Replaces the v2.9.40 cells-grid architecture with
+   a Notion-style block composition pattern: each canvas is a list
+   of typed blocks (section_header / big_number / checklist / kv /
+   table / alert / text / divider), each block stylable + layoutable
+   (full / half width). Print engine flows blocks into A4/A3 columns.
 
-   V1 (this version):
-   - Single canvas, auto-saved to localStorage
-   - A4 / A3 + Portrait / Landscape
-   - Configurable rows × cols (2..10)
-   - Cell contents are free text (contenteditable)
-   - Per-cell background color (small palette)
-   - Print to PDF (browser native, A4/A3 sized)
-   - Pre-filled starter template (operator can clear with one button)
+   Major shift vs v2.10.x:
+   - Fixed rows × cols grid → free-flowing block list
+   - Cell merge (drag-resize) → block layout (full / half)
+   - Right-click palette → desktop inspector panel + mobile bottom
+     sheet editor (touch-native, no right-click required)
+   - Cells `r,c,text,color` data → blocks `id,type,content,style,layout`
 
-   V2 (deferred):
-   - Multiple saved canvases
-   - Cell merging
-   - Specialized widgets (doneness ladder, list, big number)
-   - Template gallery (cook times, plating, salt list, reheating)
-   - Cloud sync (for now LS-only — single device template)
+   Backward compat: any canvas without `format:'v2'` is treated as
+   legacy (operator pre-confirmed: no real data; render with reset
+   CTA). New canvases always use v2 format.
    ================================================================ */
 
 (function () {
   'use strict';
   const PCD = window.PCD;
 
-  // v2.10.1 — Module-level drag state (closure) so document mousemove/mouseup
-  // listenerleri bir kez attach edilir, render() her çağrıldığında duplicate
-  // olmaz. mousedown handler (render içinde) _wbDrag'i set eder, callbacks
-  // _wbDrag.commitFn ile state'i günceller.
-  let _wbDrag = null;
-  document.addEventListener('mousemove', function (e) {
-    if (!_wbDrag) return;
-    const d = _wbDrag;
-    const distX = e.clientX - d.anchorLeft;
-    const distY = e.clientY - d.anchorTop;
-    const newCS = Math.max(1, Math.min(d.colsTotal - d.c, Math.round(distX / d.baseW)));
-    const newRS = Math.max(1, Math.min(d.rowsTotal - d.r, Math.round(distY / d.baseH)));
-    if (newCS !== d.newCS || newRS !== d.newRS) {
-      d.newCS = newCS;
-      d.newRS = newRS;
-      d.cellEl.style.gridColumn = (d.c + 1) + ' / span ' + newCS;
-      d.cellEl.style.gridRow = (d.r + 1) + ' / span ' + newRS;
-    }
-  });
-  document.addEventListener('mouseup', function () {
-    if (!_wbDrag) return;
-    const d = _wbDrag;
-    d.cellEl.classList.remove('wb-resizing');
-    d.cellEl.contentEditable = 'true';
-    document.body.style.cursor = '';
-    document.body.style.userSelect = '';
-    if (d.newRS !== d.startRS || d.newCS !== d.startCS) {
-      d.commitFn(d.r, d.c, d.newRS, d.newCS);
-    }
-    _wbDrag = null;
-  });
-
-  // v2.10.4 — Module-level click-outside handler. Önceki render-içi listener
-  // `{ once: true }` ile attach ediliyordu → ilk dış tıklamada kendini siliyor,
-  // sonraki sağ-tık'larda palette açılıp dışa tıklasan kapanmıyordu (operatör
-  // raporu). Bir kez file load'da attach + her zaman aktif: palette display'i
-  // none ise erken return, görünür ise wb-cell ve wb-palette dışı tıklamada kapat.
-  document.addEventListener('mousedown', function (e) {
-    const palette = document.getElementById('wbPalette');
-    if (!palette || palette.style.display === 'none') return;
-    if (palette.contains(e.target)) return;
-    if (e.target.closest('.wb-cell')) return;
-    palette.style.display = 'none';
-  });
-
-  // v2.9.40 — Çoklu kanvas için yeni LS şeması. Eski `pcd_whiteboard_v1`
-  // (single canvas) varsa otomatik canvases[0] olarak migrate edilir.
-  const LS_KEY_OLD = 'pcd_whiteboard_v1';
+  // ============ CONSTANTS ============
   const LS_KEY = 'pcd_whiteboard_canvases_v2';
-  // v2.10.1 — Kullanıcının kendi şablonları (LS only, V2'de cloud)
   const LS_KEY_USER_TEMPLATES = 'pcd_whiteboard_user_templates_v1';
+  const LS_KEY_OLD = 'pcd_whiteboard_v1';
+  const FORMAT_VERSION = 'v2';
 
+  // v2.10.0 — Renk paleti korunur, v2.11'de blok arka planı + accent renk olarak kullanılır.
+  const PALETTE = [
+    { id: 'white',     label: 'White',       bg: '#ffffff', text: '#111827', accent: '#16a34a' },
+    { id: 'cream',     label: 'Cream',       bg: '#faf7f2', text: '#1c1a17', accent: '#9a6a16' },
+    { id: 'paper',     label: 'Paper',       bg: '#fbf7ef', text: '#1c1a17', accent: '#2d4a3e' },
+    { id: 'ink',       label: 'Ink',         bg: '#1c1a17', text: '#fbf7ef', accent: '#fcd34d' },
+    { id: 'dark',      label: 'Dark',        bg: '#1f2937', text: '#f9fafb', accent: '#16a34a' },
+    { id: 'forest',    label: 'Forest',      bg: '#2d4a3e', text: '#fbf7ef', accent: '#fcd34d' },
+    { id: 'brand',     label: 'Brand Green', bg: '#16a34a', text: '#ffffff', accent: '#fbf7ef' },
+    { id: 'mint',      label: 'Mint',        bg: '#dcfce7', text: '#14532d', accent: '#16a34a' },
+    { id: 'steak',     label: 'Steak Red',   bg: '#a23b2d', text: '#ffffff', accent: '#fcd34d' },
+    { id: 'red',       label: 'Soft Red',    bg: '#fee2e2', text: '#7f1d1d', accent: '#dc2626' },
+    { id: 'amber',     label: 'Soft Amber',  bg: '#fef3c7', text: '#78350f', accent: '#d97706' },
+    { id: 'katmer',    label: 'Katmer',      bg: '#9a6a16', text: '#ffffff', accent: '#fcd34d' },
+    { id: 'reheat',    label: 'Reheat Teal', bg: '#1f6f6b', text: '#ffffff', accent: '#fcd34d' },
+    { id: 'blue',      label: 'Cool Blue',   bg: '#dbeafe', text: '#1e3a8a', accent: '#2563eb' },
+  ];
+
+  // v2.11.0 — Block tipleri ve metadata. Her tip için: render fonksiyonu (renderBlock'ta switch'le),
+  // default content (makeBlock factory), inspector field set (renderInspector'da switch).
+  // v2.11.0 — Block tipleri için emoji glyph kullanılır (icon registry'de
+  // heading/hash/columns/align-left/plus-square/layout/sliders YOK, silent
+  // info fallback bug riski. Emoji unicode tüm cihazlarda renderlanır.)
+  const BLOCK_TYPES = [
+    { id: 'section_header', labelKey: 'wb_block_section_header', glyph: '🏷',  label: 'Section Header' },
+    { id: 'big_number',     labelKey: 'wb_block_big_number',     glyph: '🔢',  label: 'Big Number' },
+    { id: 'checklist',      labelKey: 'wb_block_checklist',      glyph: '☑️',  label: 'Checklist' },
+    { id: 'kv',             labelKey: 'wb_block_kv',             glyph: '🔑',  label: 'Key · Value' },
+    { id: 'table',          labelKey: 'wb_block_table',          glyph: '📊',  label: 'Table' },
+    { id: 'alert',          labelKey: 'wb_block_alert',          glyph: '⚠️',  label: 'Alert Banner' },
+    { id: 'text',           labelKey: 'wb_block_text',           glyph: '📝',  label: 'Free Text' },
+    { id: 'divider',        labelKey: 'wb_block_divider',        glyph: '➖',  label: 'Divider' },
+  ];
+
+  const FONT_SIZES = {
+    sm: { px: 11, headPx: 13 },
+    md: { px: 13, headPx: 16 },
+    lg: { px: 16, headPx: 22 },
+    xl: { px: 22, headPx: 36 },
+  };
+
+  // Layout options
+  const LAYOUTS = ['full', 'half'];
+
+  // ============ HELPERS ============
+  function uid(prefix) { return (prefix || 'b') + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+  function nowIso() { return new Date().toISOString(); }
+  function t(key, fallback) {
+    const fn = PCD && PCD.i18n && PCD.i18n.t;
+    if (!fn) return fallback || key;
+    const v = fn(key);
+    return v && v !== key ? v : (fallback || key);
+  }
+  function paletteFor(id) {
+    return PALETTE.find(function (p) { return p.id === id; }) || PALETTE[0];
+  }
+  function blockTypeMeta(id) {
+    return BLOCK_TYPES.find(function (b) { return b.id === id; }) || BLOCK_TYPES[0];
+  }
+  function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
+
+  // ============ BLOCK FACTORIES ============
+  // Default content per block type. Stil + layout default'ları da burada set.
+  function makeBlock(type) {
+    const id = uid('blk');
+    const base = { id: id, type: type, layout: 'full', style: { color: 'white', size: 'md', align: 'left' } };
+    switch (type) {
+      case 'section_header':
+        return Object.assign(base, {
+          content: { text: 'SECTION TITLE' },
+          style: { color: 'forest', size: 'lg', align: 'left' },
+        });
+      case 'big_number':
+        return Object.assign(base, {
+          content: { value: '0', label: 'LABEL', sub: '' },
+          style: { color: 'white', size: 'xl', align: 'center' },
+          layout: 'half',
+        });
+      case 'checklist':
+        return Object.assign(base, {
+          content: { items: [{ text: 'Task 1', done: false }, { text: 'Task 2', done: false }, { text: 'Task 3', done: false }] },
+          style: { color: 'white', size: 'md', align: 'left' },
+        });
+      case 'kv':
+        return Object.assign(base, {
+          content: { pairs: [{ key: 'TEMP', value: '75°C' }, { key: 'TIME', value: '8 min' }] },
+          style: { color: 'cream', size: 'md', align: 'left' },
+        });
+      case 'table':
+        return Object.assign(base, {
+          content: { headers: ['Item', 'Value', 'Note'], rows: [['', '', ''], ['', '', ''], ['', '', '']] },
+          style: { color: 'white', size: 'md', align: 'left' },
+        });
+      case 'alert':
+        return Object.assign(base, {
+          content: { text: '⚠ IMPORTANT NOTICE', icon: '⚠' },
+          style: { color: 'steak', size: 'md', align: 'center' },
+        });
+      case 'text':
+        return Object.assign(base, {
+          content: { text: '' },
+          style: { color: 'white', size: 'md', align: 'left' },
+        });
+      case 'divider':
+        return Object.assign(base, {
+          content: { label: '' },
+          style: { color: 'white', size: 'sm', align: 'center' },
+        });
+    }
+    return base;
+  }
+
+  // ============ BUILT-IN TEMPLATES (block format) ============
+  // v2.11.0 — 6 profesyonel template, hepsi block diziği. Live preview + print
+  // aynı block list'i render eder (WYSIWYG).
+  const TEMPLATES = [
+    {
+      id: 'tonight_service',
+      labelKey: 'wb_tpl_tonight',
+      label: "Tonight's Service Board",
+      paper: 'A4', orient: 'landscape',
+      title: "TONIGHT'S SERVICE",
+      blocks: [
+        { type: 'section_header', layout: 'full',  style: { color: 'forest', size: 'xl', align: 'center' }, content: { text: "TONIGHT'S SERVICE" } },
+        { type: 'big_number',     layout: 'half',  style: { color: 'white',  size: 'xl', align: 'center' }, content: { value: '0', label: 'COVERS', sub: '' } },
+        { type: 'big_number',     layout: 'half',  style: { color: 'amber',  size: 'xl', align: 'center' }, content: { value: '0', label: 'WALK-INS', sub: '' } },
+        { type: 'big_number',     layout: 'half',  style: { color: 'mint',   size: 'lg', align: 'center' }, content: { value: '0', label: 'VEGAN', sub: '' } },
+        { type: 'big_number',     layout: 'half',  style: { color: 'blue',   size: 'lg', align: 'center' }, content: { value: '0', label: 'GF / DF', sub: '' } },
+        { type: 'alert',          layout: 'full',  style: { color: 'steak',  size: 'md', align: 'center' }, content: { text: '86 LIST — UPDATE HERE', icon: '⚠' } },
+        { type: 'section_header', layout: 'full',  style: { color: 'katmer', size: 'md', align: 'left' },   content: { text: 'SPECIALS' } },
+        { type: 'text',           layout: 'full',  style: { color: 'cream',  size: 'md', align: 'left' },   content: { text: '—' } },
+      ],
+    },
+    {
+      id: 'hot_line_pro',
+      labelKey: 'wb_tpl_hot_line',
+      label: 'Hot Line · Station Map',
+      paper: 'A4', orient: 'landscape',
+      title: 'HOT LINE STATIONS',
+      blocks: [
+        { type: 'section_header', layout: 'full', style: { color: 'dark',   size: 'lg', align: 'center' }, content: { text: 'HOT LINE — STATION MAP' } },
+        { type: 'section_header', layout: 'full', style: { color: 'steak',  size: 'md', align: 'left' },   content: { text: 'SAUTÉ' } },
+        { type: 'kv',             layout: 'full', style: { color: 'white',  size: 'md', align: 'left' },   content: { pairs: [
+          { key: 'Proteins', value: 'Lamb · Beef · Chicken' },
+          { key: 'Sauces',   value: 'Jus · Demi · Beurre' },
+          { key: 'Garnish',  value: 'Microgreens · Herbs' },
+        ] } },
+        { type: 'section_header', layout: 'full', style: { color: 'katmer', size: 'md', align: 'left' },   content: { text: 'GRILL' } },
+        { type: 'kv',             layout: 'full', style: { color: 'white',  size: 'md', align: 'left' },   content: { pairs: [
+          { key: 'Proteins', value: 'Steak · Skewers' },
+          { key: 'Sauces',   value: 'Chimichurri · Compound butter' },
+          { key: 'Garnish',  value: 'Lemon · Coal salt' },
+        ] } },
+        { type: 'section_header', layout: 'full', style: { color: 'forest', size: 'md', align: 'left' },   content: { text: 'PASS' } },
+        { type: 'kv',             layout: 'full', style: { color: 'cream',  size: 'md', align: 'left' },   content: { pairs: [
+          { key: 'Lead',           value: 'Head Chef' },
+          { key: 'Final touches',  value: 'Dressings · Plating tools' },
+        ] } },
+      ],
+    },
+    {
+      id: 'cook_temps',
+      labelKey: 'wb_tpl_cook_temps',
+      label: 'Cook Times · Core Temps',
+      paper: 'A4', orient: 'landscape',
+      title: 'COOK TIMES & CORE TEMPS',
+      blocks: [
+        { type: 'section_header', layout: 'full', style: { color: 'forest', size: 'xl', align: 'center' }, content: { text: 'COOK TIMES & CORE TEMPS' } },
+        { type: 'table',          layout: 'full', style: { color: 'white',  size: 'md', align: 'left' },   content: {
+          headers: ['Protein', 'Time', 'Core °C', 'Notes'],
+          rows: [
+            ['Beef',    '8 min',  '63°C', 'Rest 2 min'],
+            ['Lamb',    '12 min', '65°C', 'Rest 3 min'],
+            ['Chicken', '8 min',  '75°C', 'Probe before serve'],
+            ['Fish',    '6 min',  '63°C', 'Internal only'],
+          ],
+        } },
+        { type: 'alert',          layout: 'full', style: { color: 'amber',  size: 'md', align: 'center' }, content: { text: 'Calibrate probes weekly · Always test before service', icon: '⚠' } },
+      ],
+    },
+    {
+      id: 'allergen_alert',
+      labelKey: 'wb_tpl_allergen',
+      label: 'Allergen Alert Board',
+      paper: 'A4', orient: 'landscape',
+      title: 'ALLERGEN ALERTS',
+      blocks: [
+        { type: 'alert',          layout: 'full', style: { color: 'steak',  size: 'xl', align: 'center' }, content: { text: '⚠ ALLERGEN ALERTS — TONIGHT', icon: '⚠' } },
+        { type: 'table',          layout: 'full', style: { color: 'white',  size: 'md', align: 'left' },   content: {
+          headers: ['Table', 'Allergen', 'Dish affected', 'Action'],
+          rows: [
+            ['', '', '', ''],
+            ['', '', '', ''],
+            ['', '', '', ''],
+          ],
+        } },
+        { type: 'alert',          layout: 'full', style: { color: 'katmer', size: 'md', align: 'center' }, content: { text: 'CROSS-CONTACT: Clean board · Fresh oil · New gloves', icon: '⚠' } },
+      ],
+    },
+    {
+      id: 'prep_schedule',
+      labelKey: 'wb_tpl_prep',
+      label: 'Prep Schedule · Today',
+      paper: 'A4', orient: 'portrait',
+      title: 'PREP SCHEDULE',
+      blocks: [
+        { type: 'section_header', layout: 'full', style: { color: 'forest', size: 'lg', align: 'center' }, content: { text: 'PREP SCHEDULE — TODAY' } },
+        { type: 'checklist',      layout: 'full', style: { color: 'white',  size: 'md', align: 'left' },   content: { items: [
+          { text: '09:00 — Stocks & broths',       done: false },
+          { text: '10:00 — Sauces & dressings',    done: false },
+          { text: '11:00 — Protein portioning',    done: false },
+          { text: '12:00 — Garnish & herbs',       done: false },
+          { text: '17:30 — Service setup',         done: false },
+        ] } },
+        { type: 'kv',             layout: 'full', style: { color: 'cream',  size: 'md', align: 'left' },   content: { pairs: [
+          { key: 'Lead chef',  value: '—' },
+          { key: 'Sous',       value: '—' },
+        ] } },
+      ],
+    },
+    {
+      id: 'service_recap',
+      labelKey: 'wb_tpl_recap',
+      label: 'Service Recap · KPIs',
+      paper: 'A4', orient: 'landscape',
+      title: 'SERVICE RECAP',
+      blocks: [
+        { type: 'section_header', layout: 'full', style: { color: 'dark',   size: 'lg', align: 'center' }, content: { text: 'SERVICE RECAP — TONIGHT' } },
+        { type: 'big_number',     layout: 'half', style: { color: 'white',  size: 'xl', align: 'center' }, content: { value: '0', label: 'COVERS', sub: '' } },
+        { type: 'big_number',     layout: 'half', style: { color: 'mint',   size: 'xl', align: 'center' }, content: { value: '0', label: 'REVENUE', sub: '$' } },
+        { type: 'big_number',     layout: 'half', style: { color: 'amber',  size: 'lg', align: 'center' }, content: { value: '0', label: 'AVG CHECK', sub: '$' } },
+        { type: 'big_number',     layout: 'half', style: { color: 'steak',  size: 'lg', align: 'center' }, content: { value: '0', label: 'NO-SHOWS', sub: '' } },
+        { type: 'section_header', layout: 'full', style: { color: 'katmer', size: 'md', align: 'left' },   content: { text: 'NOTES' } },
+        { type: 'text',           layout: 'full', style: { color: 'cream',  size: 'md', align: 'left' },   content: { text: '' } },
+      ],
+    },
+  ];
+
+  // ============ USER TEMPLATES (LS) ============
   function loadUserTemplates() {
     try {
       const raw = localStorage.getItem(LS_KEY_USER_TEMPLATES);
@@ -92,271 +283,19 @@
     try { localStorage.setItem(LS_KEY_USER_TEMPLATES, JSON.stringify(arr)); } catch (e) {}
   }
 
-  function uid() { return 'wb_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
-  function nowIso() { return new Date().toISOString(); }
-
-  // v2.10.0 — Renk paleti zenginleştirildi. Operatör örneğindeki
-  // profesyonel mutfak grafiği palette'i: neutral'lar + accent'ler +
-  // sıcak ton (steak red), serin ton (reheat teal), katmer amber
-  // (pâtisserie), brand green, deep forest editorial.
-  const PALETTE = [
-    // Neutrals (8)
-    { id: 'white',     label: 'White',       bg: '#ffffff', text: '#111827' },
-    { id: 'cream',     label: 'Cream',       bg: '#faf7f2', text: '#1c1a17' },
-    { id: 'paper',     label: 'Paper',       bg: '#fbf7ef', text: '#1c1a17' },
-    { id: 'ink',       label: 'Ink',         bg: '#1c1a17', text: '#fbf7ef' },
-    { id: 'dark',      label: 'Dark',        bg: '#1f2937', text: '#f9fafb' },
-    // Brand
-    { id: 'forest',    label: 'Forest',      bg: '#2d4a3e', text: '#fbf7ef' },
-    { id: 'brand',     label: 'Brand Green', bg: '#16a34a', text: '#ffffff' },
-    { id: 'mint',      label: 'Mint',        bg: '#dcfce7', text: '#14532d' },
-    // Warm
-    { id: 'steak',     label: 'Steak Red',   bg: '#a23b2d', text: '#ffffff' },
-    { id: 'red',       label: 'Soft Red',    bg: '#fee2e2', text: '#7f1d1d' },
-    { id: 'amber',     label: 'Soft Amber',  bg: '#fef3c7', text: '#78350f' },
-    { id: 'katmer',    label: 'Katmer',      bg: '#9a6a16', text: '#ffffff' },
-    // Cool
-    { id: 'reheat',    label: 'Reheat Teal', bg: '#1f6f6b', text: '#ffffff' },
-    { id: 'blue',      label: 'Cool Blue',   bg: '#dbeafe', text: '#1e3a8a' },
-  ];
-
-  // v2.10.0 — Cell types: profesyonel widget yapıları.
-  //   text      — default contenteditable (mevcut davranış)
-  //   header    — uppercase + extra bold + letter-spaced + centered
-  //               (operatör örneğinde "COOKING", "REHEATING" başlıkları)
-  //   bigNumber — center + extra bold + tabular-nums + larger
-  //               (örn. "75°C" panel başlığı, "8 min" pişirme süresi)
-  //   list      — her satır bullet (operatör "Add Salt To" listesi)
-  //   twoLine   — ilk satır küçük uppercase label, sonra normal değer
-  //               (örn. "TIME / 8 min")
-  // Edit metni `\n` ile böler, render type'a göre uygular.
-  const CELL_TYPES = [
-    { id: 'text',      labelKey: 'wb_type_text',    label: 'Text' },
-    { id: 'header',    labelKey: 'wb_type_header',  label: 'Header' },
-    { id: 'bigNumber', labelKey: 'wb_type_bignum',  label: 'Number' },
-    { id: 'list',      labelKey: 'wb_type_list',    label: 'List' },
-    { id: 'twoLine',   labelKey: 'wb_type_twoline', label: 'Label' },
-  ];
-
-  // v2.10.0 — Cell type'a göre ek inline style. text/header/bigNumber/list/twoLine
-  // tüm tipler contenteditable kalır; cell.text plain text saklanır.
-  // Style farkları: font-weight, text-transform, alignment, letter-spacing.
-  // twoLine için CSS `::first-line` pseudo-class ile ilk satır small uppercase
-  // label görünür (whiteboard <style>'ında tanımlı).
-  function typeStyleFor(type) {
-    switch (type) {
-      case 'header':
-        return 'font-weight:800;text-transform:uppercase;letter-spacing:0.08em;text-align:center;justify-content:center;align-items:center;font-family:"Oswald",-apple-system,system-ui,sans-serif;';
-      case 'bigNumber':
-        return 'font-weight:900;font-variant-numeric:tabular-nums;text-align:center;justify-content:center;align-items:center;letter-spacing:0.02em;';
-      case 'list':
-        return 'font-weight:500;padding-left:16px;text-indent:-10px;white-space:pre-wrap;';
-      case 'twoLine':
-        return 'font-weight:600;line-height:1.15;';
-      default:
-        return '';
-    }
-  }
-
-  // v2.9.40 — Per-cell font size + text alignment maps
-  const FONT_SIZES = {
-    sm: { px: 11, label: 'S' },
-    md: { px: 14, label: 'M' },
-    lg: { px: 20, label: 'L' },
-    xl: { px: 28, label: 'XL' },
-  };
-  const ALIGNS = ['start', 'center', 'end'];
-  const ALIGN_LABELS = { start: '⬅', center: '↔', end: '➡' };
-
-  // v2.9.40 — Starter templates (operator-requested examples to show the
-  // tool's capacity). Each template overrides title, grid size, and cells.
-  // V2: more templates + template editor.
-  // v2.10.4 — 11 ilkel template silindi, 5 yaratıcı template eklendi.
-  // Tasarım kuralları: merged hero header (rowSpan/colSpan), bigNumber type ile
-  // göz alıcı rakamlar, header type ile bold uppercase section title'lar,
-  // renk paleti farklılaşan duygu (steak red = urgency, forest = premium,
-  // katmer amber = warmth, mint/blue = service info). Her template'de en
-  // az 2 merged hücre var. Şef bir bakışta okuyabilsin.
-  const TEMPLATES = [
-    {
-      id: 'tonight_service',
-      labelKey: 'whiteboard_tpl_tonight',
-      label: "Tonight's Service Board",
-      title: "TONIGHT'S SERVICE",
-      paper: 'A4', orient: 'landscape', rows: 4, cols: 6,
-      cells: [
-        // Hero header — full width, dark, xl
-        { r:0, c:0, text:"TONIGHT'S SERVICE", color:'forest', type:'header', fontSize:'xl', colSpan:6 },
-        // KPI strip — 4 big number cells
-        { r:1, c:0, text:'COVERS',   color:'cream', type:'header' },
-        { r:1, c:1, text:'0',        color:'white', type:'bigNumber', fontSize:'xl' },
-        { r:1, c:2, text:'VEGAN',    color:'cream', type:'header' },
-        { r:1, c:3, text:'0',        color:'mint',  type:'bigNumber', fontSize:'lg' },
-        { r:1, c:4, text:'GF / DF',  color:'cream', type:'header' },
-        { r:1, c:5, text:'0',        color:'amber', type:'bigNumber', fontSize:'lg' },
-        // 86 list strip — merged red banner
-        { r:2, c:0, text:'86 LIST',  color:'steak', type:'header' },
-        { r:2, c:1, text:'',         color:'white', colSpan:5 },
-        // Specials strip — merged katmer banner
-        { r:3, c:0, text:'SPECIALS', color:'katmer', type:'header' },
-        { r:3, c:1, text:'',         color:'white', colSpan:5 },
-      ],
-    },
-    {
-      id: 'hot_line_pro',
-      labelKey: 'whiteboard_tpl_hot_line_pro',
-      label: 'Hot Line · Station Map',
-      title: 'HOT LINE STATIONS',
-      paper: 'A4', orient: 'landscape', rows: 5, cols: 4,
-      cells: [
-        // Hero header
-        { r:0, c:0, text:'HOT LINE — STATION MAP', color:'dark', type:'header', fontSize:'lg', colSpan:4 },
-        // Column headers
-        { r:1, c:0, text:'STATION',  color:'cream', type:'header' },
-        { r:1, c:1, text:'PROTEINS', color:'cream', type:'header' },
-        { r:1, c:2, text:'SAUCES',   color:'cream', type:'header' },
-        { r:1, c:3, text:'GARNISH',  color:'cream', type:'header' },
-        // SAUTÉ row — steak red header
-        { r:2, c:0, text:'SAUTÉ',  color:'steak', type:'header', fontSize:'lg' },
-        { r:2, c:1, text:'Lamb · Beef · Chicken', color:'white' },
-        { r:2, c:2, text:'Jus · Demi · Beurre',   color:'white' },
-        { r:2, c:3, text:'Microgreens · Herbs',   color:'white' },
-        // GRILL row — katmer header
-        { r:3, c:0, text:'GRILL',  color:'katmer', type:'header', fontSize:'lg' },
-        { r:3, c:1, text:'Steak · Skewers',         color:'white' },
-        { r:3, c:2, text:'Chimichurri · Cmpd btr', color:'white' },
-        { r:3, c:3, text:'Lemon · Coal salt',       color:'white' },
-        // PASS row — forest premium
-        { r:4, c:0, text:'PASS',   color:'forest', type:'header', fontSize:'lg' },
-        { r:4, c:1, text:'—',                        color:'cream' },
-        { r:4, c:2, text:'Final dressings',          color:'cream' },
-        { r:4, c:3, text:'Plating tools',            color:'cream' },
-      ],
-    },
-    {
-      id: 'cook_temps_pro',
-      labelKey: 'whiteboard_tpl_cook_temps_pro',
-      label: 'Cook Times · Core Temps',
-      title: 'COOK TIMES & CORE TEMPS',
-      paper: 'A4', orient: 'landscape', rows: 5, cols: 5,
-      cells: [
-        // Hero header
-        { r:0, c:0, text:'COOK TIMES & CORE TEMPS', color:'forest', type:'header', fontSize:'xl', colSpan:5 },
-        // Column headers
-        { r:1, c:0, text:'PROTEIN', color:'cream', type:'header' },
-        { r:1, c:1, text:'BEEF',    color:'steak', type:'header' },
-        { r:1, c:2, text:'LAMB',    color:'steak', type:'header' },
-        { r:1, c:3, text:'CHICKEN', color:'amber', type:'header' },
-        { r:1, c:4, text:'FISH',    color:'blue',  type:'header' },
-        // TIME row — bigNumber values
-        { r:2, c:0, text:'TIME',    color:'cream', type:'header' },
-        { r:2, c:1, text:'8 min',   color:'white', type:'bigNumber', fontSize:'lg' },
-        { r:2, c:2, text:'12 min',  color:'white', type:'bigNumber', fontSize:'lg' },
-        { r:2, c:3, text:'8 min',   color:'white', type:'bigNumber', fontSize:'lg' },
-        { r:2, c:4, text:'6 min',   color:'white', type:'bigNumber', fontSize:'lg' },
-        // CORE TEMP row — bigNumber green
-        { r:3, c:0, text:'CORE °C', color:'cream', type:'header' },
-        { r:3, c:1, text:'63°C',    color:'green', type:'bigNumber', fontSize:'lg' },
-        { r:3, c:2, text:'65°C',    color:'green', type:'bigNumber', fontSize:'lg' },
-        { r:3, c:3, text:'75°C',    color:'green', type:'bigNumber', fontSize:'lg' },
-        { r:3, c:4, text:'63°C',    color:'green', type:'bigNumber', fontSize:'lg' },
-        // Notes — merged
-        { r:4, c:0, text:'NOTES',   color:'cream', type:'header' },
-        { r:4, c:1, text:'Rest 2 min · Always probe before serving · Calibrate weekly', color:'white', colSpan:4 },
-      ],
-    },
-    {
-      id: 'allergen_alert',
-      labelKey: 'whiteboard_tpl_allergen_alert',
-      label: 'Allergen Alert Board',
-      title: 'ALLERGEN ALERTS',
-      paper: 'A4', orient: 'landscape', rows: 5, cols: 4,
-      cells: [
-        // Hero header — steak red urgency
-        { r:0, c:0, text:'⚠ ALLERGEN ALERTS — TODAY', color:'steak', type:'header', fontSize:'xl', colSpan:4 },
-        // Section heading — table allergies
-        { r:1, c:0, text:'TABLE',   color:'cream', type:'header' },
-        { r:1, c:1, text:'ALLERGEN', color:'cream', type:'header' },
-        { r:1, c:2, text:'DISH AFFECTED', color:'cream', type:'header' },
-        { r:1, c:3, text:'ACTION', color:'cream', type:'header' },
-        { r:2, c:0, text:'',  color:'white', type:'bigNumber', fontSize:'lg' },
-        { r:2, c:1, text:'',  color:'red' },
-        { r:2, c:2, text:'',  color:'white' },
-        { r:2, c:3, text:'',  color:'amber' },
-        { r:3, c:0, text:'',  color:'white', type:'bigNumber', fontSize:'lg' },
-        { r:3, c:1, text:'',  color:'red' },
-        { r:3, c:2, text:'',  color:'white' },
-        { r:3, c:3, text:'',  color:'amber' },
-        // Bottom banner — cross-contact reminder
-        { r:4, c:0, text:'CROSS-CONTACT: Clean board · Fresh oil · New gloves', color:'katmer', type:'header', colSpan:4 },
-      ],
-    },
-    {
-      id: 'prep_schedule_pro',
-      labelKey: 'whiteboard_tpl_prep_pro',
-      label: 'Prep Schedule · Today',
-      title: 'PREP SCHEDULE',
-      paper: 'A4', orient: 'portrait', rows: 7, cols: 4,
-      cells: [
-        // Hero header
-        { r:0, c:0, text:'PREP SCHEDULE — TODAY', color:'forest', type:'header', fontSize:'lg', colSpan:4 },
-        // Column headers
-        { r:1, c:0, text:'TIME', color:'cream', type:'header' },
-        { r:1, c:1, text:'TASK', color:'cream', type:'header', colSpan:2 },
-        { r:1, c:3, text:'✓',    color:'cream', type:'header' },
-        // Task rows — bigNumber time, merged task description
-        { r:2, c:0, text:'09:00', color:'amber', type:'bigNumber', fontSize:'lg' },
-        { r:2, c:1, text:'Stocks & broths',   color:'white', colSpan:2 },
-        { r:2, c:3, text:'☐', color:'white' },
-        { r:3, c:0, text:'10:00', color:'amber', type:'bigNumber', fontSize:'lg' },
-        { r:3, c:1, text:'Sauces & dressings', color:'white', colSpan:2 },
-        { r:3, c:3, text:'☐', color:'white' },
-        { r:4, c:0, text:'11:00', color:'amber', type:'bigNumber', fontSize:'lg' },
-        { r:4, c:1, text:'Protein portioning', color:'white', colSpan:2 },
-        { r:4, c:3, text:'☐', color:'white' },
-        { r:5, c:0, text:'12:00', color:'amber', type:'bigNumber', fontSize:'lg' },
-        { r:5, c:1, text:'Garnish & herbs',    color:'white', colSpan:2 },
-        { r:5, c:3, text:'☐', color:'white' },
-        { r:6, c:0, text:'17:30', color:'steak', type:'bigNumber', fontSize:'lg' },
-        { r:6, c:1, text:'SERVICE SETUP — final check', color:'cream', colSpan:2 },
-        { r:6, c:3, text:'☐', color:'white' },
-      ],
-    },
-  ];
-
-  function defaultCanvas(name) {
-    return {
-      id: uid(),
-      name: name || 'Untitled',
-      title: name || 'KITCHEN WHITEBOARD',
-      paper: 'A4',
-      orient: 'landscape',
-      rows: 4,
-      cols: 4,
-      cells: [],
-      updatedAt: nowIso(),
-    };
-  }
-
-  // v2.9.42 — Cloud sync: state.whiteboards = { wsId: [canvas, ...] }
-  // (buffets/mise/team pattern, soft-delete tombstone). Eski LS v1/v2
-  // verisi ilk boot'ta workspace'e migrate edilir.
+  // ============ STORE LAYER (cloud-synced) ============
   function activeWsId() {
     return (PCD.store && PCD.store.getActiveWorkspaceId && PCD.store.getActiveWorkspaceId()) || 'default';
   }
-
   function readAllRaw() {
-    // Tombstone'lar dahil tüm canvas array (soft-delete diff için)
     const wsId = activeWsId();
     const root = (PCD.store && PCD.store._read && PCD.store._read('whiteboards')) || {};
     if (Array.isArray(root)) return root;
     return root[wsId] || [];
   }
-
   function readAllVisible() {
     return readAllRaw().filter(function (c) { return !c._deletedAt; });
   }
-
   function writeAll(arr) {
     const wsId = activeWsId();
     const root = (PCD.store && PCD.store._read && PCD.store._read('whiteboards')) || {};
@@ -364,12 +303,10 @@
     const oldArr = Array.isArray(root) ? root : (root[wsId] || []);
     next[wsId] = arr;
     if (PCD.store && PCD.store.set) PCD.store.set('whiteboards', next);
-    // Cloud sync (waste/buffets pattern)
     if (PCD.cloudPerTable && PCD.cloudPerTable.queueArraySync) {
       try { PCD.cloudPerTable.queueArraySync('whiteboards', wsId, oldArr, arr); } catch (e) {}
     }
   }
-
   function getActiveId() {
     return (PCD.store && PCD.store.get && PCD.store.get('prefs.whiteboardActiveId')) || null;
   }
@@ -377,46 +314,41 @@
     if (PCD.store && PCD.store.set) PCD.store.set('prefs.whiteboardActiveId', id);
   }
 
-  function loadStore() {
-    // Migration: eski LS keys → cloud-backed state
-    migrateLegacyLS();
-
-    let canvases = readAllVisible();
-    if (canvases.length === 0) {
-      // Hiç canvas yok — varsayılan oluştur
-      const initial = defaultCanvas('My Whiteboard');
-      writeAll([initial]);
-      setActiveId(initial.id);
-      canvases = [initial];
-    }
-    let activeId = getActiveId();
-    // Active id mevcut canvas listesinde değilse ilkini seç
-    if (!canvases.some(function (c) { return c.id === activeId; })) {
-      activeId = canvases[0].id;
-      setActiveId(activeId);
-    }
-    return { activeId: activeId, canvases: canvases };
+  function defaultCanvas(name) {
+    return {
+      id: uid('wb'),
+      name: name || 'Untitled',
+      title: (name || 'MY WHITEBOARD').toUpperCase(),
+      paper: 'A4',
+      orient: 'landscape',
+      format: FORMAT_VERSION,
+      blocks: [],
+      updatedAt: nowIso(),
+    };
   }
 
-  function saveStore(store) {
-    // store yapısı {activeId, canvases:[]}: aktif id'yi pref'e, kanvasları cloud'a yaz.
-    setActiveId(store.activeId);
-    // Soft-delete tombstone'larını koru: rawArray'deki silinmiş kayıtlar
-    // varsa yeni write'da onları geri ekle.
-    const raw = readAllRaw();
-    const tombstones = raw.filter(function (c) { return c._deletedAt && !store.canvases.some(function (x) { return x.id === c.id; }); });
-    const merged = (store.canvases || []).concat(tombstones);
-    writeAll(merged);
+  function canvasFromTemplate(tpl, customName) {
+    const blocks = (tpl.blocks || []).map(function (b) {
+      return Object.assign({ id: uid('blk') }, JSON.parse(JSON.stringify(b)));
+    });
+    return {
+      id: uid('wb'),
+      name: customName || tpl.label || 'Untitled',
+      title: tpl.title || (customName || tpl.label || 'WHITEBOARD').toUpperCase(),
+      paper: tpl.paper || 'A4',
+      orient: tpl.orient || 'landscape',
+      format: FORMAT_VERSION,
+      blocks: blocks,
+      updatedAt: nowIso(),
+    };
   }
 
   function migrateLegacyLS() {
-    // İlk boot'ta eski LS_KEY veya LS_KEY_OLD varsa cloud'a aktar.
     try {
       const raw = localStorage.getItem(LS_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
         if (parsed && Array.isArray(parsed.canvases) && parsed.canvases.length) {
-          // Mevcut active workspace'in canvas listesi boşsa ekle.
           const existing = readAllVisible();
           if (existing.length === 0) {
             writeAll(parsed.canvases);
@@ -426,789 +358,1423 @@
           return;
         }
       }
-    } catch (e) { /* fall through */ }
-    try {
-      const old = localStorage.getItem(LS_KEY_OLD);
-      if (old) {
-        const oldState = JSON.parse(old);
-        if (oldState && typeof oldState === 'object') {
-          const existing = readAllVisible();
-          if (existing.length === 0) {
-            const migrated = Object.assign(defaultCanvas('My Whiteboard'), oldState);
-            migrated.id = uid();
-            migrated.name = oldState.title || 'My Whiteboard';
-            migrated.updatedAt = nowIso();
-            writeAll([migrated]);
-            setActiveId(migrated.id);
-          }
-          localStorage.removeItem(LS_KEY_OLD);
-        }
-      }
-    } catch (e) { /* migration failed, ignore */ }
+    } catch (e) {}
+    try { localStorage.removeItem(LS_KEY_OLD); } catch (e) {}
+  }
+
+  function loadStore() {
+    migrateLegacyLS();
+    let canvases = readAllVisible();
+    // v2.11.0 — Legacy v1 (cells-based) canvases'i sıfırla. Operatör onay verdi
+    // (eski veri yok). Eski format görürse sessizce sil + temiz v2 başlat.
+    const v1Detected = canvases.some(function (c) { return c && c.format !== FORMAT_VERSION; });
+    if (v1Detected) {
+      canvases = canvases.filter(function (c) { return c && c.format === FORMAT_VERSION; });
+      writeAll(canvases);
+    }
+    if (canvases.length === 0) {
+      const initial = defaultCanvas('My Whiteboard');
+      writeAll([initial]);
+      setActiveId(initial.id);
+      canvases = [initial];
+    }
+    let activeId = getActiveId();
+    if (!canvases.some(function (c) { return c.id === activeId; })) {
+      activeId = canvases[0].id;
+      setActiveId(activeId);
+    }
+    return { activeId: activeId, canvases: canvases };
+  }
+
+  function saveStore(store) {
+    setActiveId(store.activeId);
+    const raw = readAllRaw();
+    const tombstones = raw.filter(function (c) {
+      return c._deletedAt && !store.canvases.some(function (x) { return x.id === c.id; });
+    });
+    const merged = (store.canvases || []).concat(tombstones);
+    writeAll(merged);
   }
 
   function getActive(store) {
     return store.canvases.find(function (c) { return c.id === store.activeId; }) || store.canvases[0];
   }
 
-  // Compatibility shim: kalan kod loadState/saveState'i kullanıyor; bunlar
-  // store içindeki active canvas üzerinden işliyor.
-  function loadState() {
+  function persistCanvas(canvas) {
     const store = loadStore();
-    return getActive(store);
-  }
-  function saveState(s) {
-    const store = loadStore();
-    const idx = store.canvases.findIndex(function (c) { return c.id === store.activeId; });
-    if (idx >= 0) {
-      // Active canvas'ı update et
-      store.canvases[idx] = Object.assign({}, store.canvases[idx], s, { updatedAt: nowIso() });
-    } else {
-      // No active → append new
-      const fresh = Object.assign(defaultCanvas('Untitled'), s);
-      store.canvases.push(fresh);
-      store.activeId = fresh.id;
-    }
+    const idx = store.canvases.findIndex(function (c) { return c.id === canvas.id; });
+    canvas.updatedAt = nowIso();
+    if (idx >= 0) store.canvases[idx] = canvas;
+    else store.canvases.push(canvas);
     saveStore(store);
   }
 
-  // ============ MAIN VIEW ============
+  // ============ BLOCK RENDERER (interactive HTML) ============
+  // Her block tipi için interactive HTML üret. Selected ise vurgu.
+  function renderBlockHtml(block, idx, selectedIdx) {
+    const palette = paletteFor(block.style && block.style.color);
+    const fs = FONT_SIZES[(block.style && block.style.size) || 'md'];
+    const align = (block.style && block.style.align) || 'left';
+    const layout = block.layout || 'full';
+    const isSelected = idx === selectedIdx;
+    const meta = blockTypeMeta(block.type);
+
+    let inner = '';
+    switch (block.type) {
+      case 'section_header': {
+        inner =
+          '<div class="wb-blk-section-header" style="font-family:\'Oswald\',-apple-system,sans-serif;font-weight:800;font-size:' + fs.headPx + 'px;letter-spacing:0.06em;text-transform:uppercase;text-align:' + align + ';line-height:1.2;padding:6px 0;">' +
+            PCD.escapeHtml(block.content.text || '') +
+          '</div>';
+        break;
+      }
+      case 'big_number': {
+        inner =
+          '<div style="display:flex;flex-direction:column;align-items:' + (align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start') + ';gap:2px;padding:4px 0;">' +
+            '<div style="font-size:' + (fs.headPx * 1.6) + 'px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-0.02em;">' +
+              PCD.escapeHtml(block.content.value || '0') +
+              (block.content.sub ? '<span style="font-size:0.5em;margin-left:4px;opacity:0.7;">' + PCD.escapeHtml(block.content.sub) + '</span>' : '') +
+            '</div>' +
+            '<div style="font-size:' + fs.px + 'px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;opacity:0.75;">' +
+              PCD.escapeHtml(block.content.label || '') +
+            '</div>' +
+          '</div>';
+        break;
+      }
+      case 'checklist': {
+        const items = (block.content.items || []).map(function (it) {
+          return '<div style="display:flex;align-items:flex-start;gap:8px;font-size:' + fs.px + 'px;line-height:1.45;padding:3px 0;">' +
+            '<span style="flex:0 0 auto;width:14px;height:14px;border:1.5px solid currentColor;border-radius:2px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;margin-top:2px;">' + (it.done ? '✓' : '') + '</span>' +
+            '<span style="flex:1 1 auto;' + (it.done ? 'opacity:0.55;text-decoration:line-through;' : '') + 'text-align:' + align + ';">' + PCD.escapeHtml(it.text || '') + '</span>' +
+          '</div>';
+        }).join('');
+        inner = '<div style="padding:2px 0;">' + items + '</div>';
+        break;
+      }
+      case 'kv': {
+        const pairs = (block.content.pairs || []).map(function (p) {
+          return '<div style="display:flex;align-items:baseline;gap:10px;padding:4px 0;border-bottom:1px dashed rgba(127,127,127,0.25);font-size:' + fs.px + 'px;line-height:1.4;">' +
+            '<span style="flex:0 0 auto;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;opacity:0.8;min-width:80px;">' + PCD.escapeHtml(p.key || '') + '</span>' +
+            '<span style="flex:1 1 auto;text-align:right;font-variant-numeric:tabular-nums;">' + PCD.escapeHtml(p.value || '') + '</span>' +
+          '</div>';
+        }).join('');
+        inner = '<div>' + pairs + '</div>';
+        break;
+      }
+      case 'table': {
+        const headers = (block.content.headers || []).map(function (h) {
+          return '<th style="padding:5px 8px;text-align:left;font-size:' + (fs.px - 1) + 'px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;border-bottom:2px solid currentColor;background:rgba(127,127,127,0.08);">' + PCD.escapeHtml(h || '') + '</th>';
+        }).join('');
+        const rows = (block.content.rows || []).map(function (row) {
+          const cells = (row || []).map(function (c) {
+            return '<td style="padding:5px 8px;font-size:' + fs.px + 'px;border-bottom:1px solid rgba(127,127,127,0.18);vertical-align:top;">' + PCD.escapeHtml(c || '') + '</td>';
+          }).join('');
+          return '<tr>' + cells + '</tr>';
+        }).join('');
+        inner = '<table style="width:100%;border-collapse:collapse;"><thead><tr>' + headers + '</tr></thead><tbody>' + rows + '</tbody></table>';
+        break;
+      }
+      case 'alert': {
+        inner =
+          '<div style="display:flex;align-items:center;justify-content:' + (align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start') + ';gap:10px;font-size:' + fs.headPx + 'px;font-weight:800;letter-spacing:0.04em;text-transform:uppercase;line-height:1.25;padding:8px 0;">' +
+            (block.content.icon ? '<span style="font-size:1.1em;">' + PCD.escapeHtml(block.content.icon) + '</span>' : '') +
+            '<span>' + PCD.escapeHtml(block.content.text || '') + '</span>' +
+          '</div>';
+        break;
+      }
+      case 'text': {
+        const txt = block.content.text || '';
+        inner = '<div style="font-size:' + fs.px + 'px;line-height:1.5;white-space:pre-wrap;text-align:' + align + ';padding:4px 0;">' + (txt ? PCD.escapeHtml(txt) : '<span style="opacity:0.35;font-style:italic;">' + PCD.escapeHtml(t('wb_empty_text', 'Empty text block — tap to edit')) + '</span>') + '</div>';
+        break;
+      }
+      case 'divider': {
+        const lbl = block.content && block.content.label;
+        if (lbl) {
+          inner =
+            '<div style="display:flex;align-items:center;gap:12px;padding:6px 0;">' +
+              '<div style="flex:1;height:1px;background:currentColor;opacity:0.3;"></div>' +
+              '<div style="font-size:' + fs.px + 'px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;opacity:0.7;">' + PCD.escapeHtml(lbl) + '</div>' +
+              '<div style="flex:1;height:1px;background:currentColor;opacity:0.3;"></div>' +
+            '</div>';
+        } else {
+          inner = '<div style="height:1px;background:currentColor;opacity:0.25;margin:8px 0;"></div>';
+        }
+        break;
+      }
+      default:
+        inner = '<div style="font-style:italic;opacity:0.5;">Unknown block type: ' + PCD.escapeHtml(block.type) + '</div>';
+    }
+
+    // Block wrapper (interactive)
+    const accentBorder = isSelected ? '2px solid #16a34a' : '1px solid rgba(127,127,127,0.18)';
+    return '' +
+      '<div class="wb-block wb-block-' + block.type + (isSelected ? ' wb-block-selected' : '') + '" data-blk-idx="' + idx + '" data-blk-id="' + PCD.escapeHtml(block.id) + '" data-layout="' + layout + '" style="' +
+        'position:relative;background:' + palette.bg + ';color:' + palette.text + ';' +
+        'border:' + accentBorder + ';border-radius:6px;padding:10px 12px;margin:0;cursor:pointer;' +
+        'transition:border-color 0.12s ease, transform 0.12s ease;' +
+      '">' +
+        '<div class="wb-block-handle" style="position:absolute;top:6px;left:6px;width:18px;height:18px;display:none;align-items:center;justify-content:center;cursor:grab;opacity:0.5;font-size:14px;">⋮⋮</div>' +
+        inner +
+        '<div class="wb-block-tag" style="position:absolute;top:4px;right:6px;font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;opacity:0.4;pointer-events:none;">' + PCD.escapeHtml(t(meta.labelKey, meta.label)) + '</div>' +
+      '</div>';
+  }
+
+  // ============ SHEET RENDERER (interactive canvas preview) ============
+  function renderSheet(canvas, selectedIdx) {
+    const blocks = canvas.blocks || [];
+    let html = '';
+    let i = 0;
+    while (i < blocks.length) {
+      const b = blocks[i];
+      // 2 ardışık 'half' → yan yana grid satırı
+      if (b.layout === 'half' && i + 1 < blocks.length && blocks[i + 1].layout === 'half') {
+        html += '<div class="wb-row wb-row-half" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
+          renderBlockHtml(b, i, selectedIdx) +
+          renderBlockHtml(blocks[i + 1], i + 1, selectedIdx) +
+        '</div>';
+        i += 2;
+      } else {
+        html += '<div class="wb-row wb-row-full">' +
+          renderBlockHtml(b, i, selectedIdx) +
+        '</div>';
+        i += 1;
+      }
+    }
+
+    if (blocks.length === 0) {
+      html =
+        '<div class="wb-empty-state" style="padding:48px 24px;text-align:center;color:rgba(127,127,127,0.7);border:2px dashed rgba(127,127,127,0.25);border-radius:12px;">' +
+          '<div style="font-size:42px;margin-bottom:8px;">📋</div>' +
+          '<div style="font-size:15px;font-weight:700;margin-bottom:4px;">' + PCD.escapeHtml(t('wb_empty_title', 'Empty canvas')) + '</div>' +
+          '<div style="font-size:13px;">' + PCD.escapeHtml(t('wb_empty_subtitle', 'Add blocks from the palette or load a template.')) + '</div>' +
+        '</div>';
+    }
+
+    return html;
+  }
+
+  // ============ MAIN RENDER ============
+  // UI state — module-level so render() çağrıları arasında korunur (re-render
+  // sonrası seçili block kaybolmasın).
+  let _ui = {
+    selectedBlockIdx: -1,
+    bottomSheetOpen: false,
+  };
+
   function render(view) {
-    const t = PCD.i18n.t;
     const store = loadStore();
-    const s = getActive(store);
+    const canvas = getActive(store);
     const canvasCount = store.canvases.length;
 
-    // Cell lookup map for quick access
-    const cellMap = {};
-    (s.cells || []).forEach(function (c) { cellMap[c.r + ':' + c.c] = c; });
+    // Selected idx clamp
+    if (_ui.selectedBlockIdx >= (canvas.blocks || []).length) _ui.selectedBlockIdx = -1;
 
-    // v2.9.41 — Cell merge support: pre-compute occupied positions covered
-    // by merged cells. Spanning cells claim grid coordinates beyond their
-    // anchor (r,c); we skip rendering an empty <div> at those positions
-    // because the spanning cell visually covers them.
-    const occupied = {};
-    (s.cells || []).forEach(function (cell) {
-      const rs = Math.max(1, parseInt(cell.rowSpan, 10) || 1);
-      const cs = Math.max(1, parseInt(cell.colSpan, 10) || 1);
-      if (rs === 1 && cs === 1) return;
-      for (let dr = 0; dr < rs; dr++) {
-        for (let dc = 0; dc < cs; dc++) {
-          if (dr === 0 && dc === 0) continue;  // anchor itself, not occupied
-          occupied[(cell.r + dr) + ':' + (cell.c + dc)] = true;
-        }
-      }
-    });
+    const html =
+      buildStyles() +
+      '<div id="wbRoot">' +
+        buildHeader(t) +
+        buildCanvasSelector(store, canvasCount) +
+        buildCanvasMeta(canvas) +
+        '<div class="wb-workspace" style="display:grid;grid-template-columns:220px 1fr 280px;gap:16px;margin-top:16px;">' +
+          buildPalettePane() +
+          buildCanvasPane(canvas) +
+          buildInspectorPane(canvas) +
+        '</div>' +
+        buildBottomSheet() +
+      '</div>';
 
-    const paperButtons = ['A4', 'A3'].map(function (p) {
-      return '<button type="button" class="btn btn-secondary btn-sm' + (s.paper === p ? ' active' : '') + '" data-paper="' + p + '" style="flex:1;">' + p + '</button>';
-    }).join('');
+    view.innerHTML = html;
+    const wbRoot = view.querySelector('#wbRoot');
 
-    const orientButtons = [
-      { id: 'portrait',  label: t('kc_portrait') || 'Portrait' },
-      { id: 'landscape', label: t('kc_landscape') || 'Landscape' },
-    ].map(function (o) {
-      return '<button type="button" class="btn btn-secondary btn-sm' + (s.orient === o.id ? ' active' : '') + '" data-orient="' + o.id + '" style="flex:1;">' + PCD.escapeHtml(o.label) + '</button>';
-    }).join('');
+    // ============ WIRE EVENTS ============
+    wireHeader(wbRoot, canvas);
+    wireCanvasSelector(wbRoot, store);
+    wireCanvasMeta(wbRoot, canvas);
+    wirePalette(wbRoot, canvas, view);
+    wireCanvasPane(wbRoot, canvas, view);
+    wireInspector(wbRoot, canvas, view);
+    wireBottomSheet(wbRoot, canvas, view);
+  }
 
-    let buildHtml =
+  // ============ STYLES (inline, scoped to #wbRoot) ============
+  function buildStyles() {
+    return '<style>' +
+      '@import url("https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700;800&family=Barlow:wght@400;500;600;700;800;900&display=swap");' +
+      '#wbRoot { font-family: "Barlow", -apple-system, system-ui, sans-serif; }' +
+      '#wbRoot .wb-pane { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px; min-height: 200px; }' +
+      '#wbRoot .wb-pane-title { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-3); margin-bottom: 10px; display:flex; align-items:center; gap:6px; }' +
+      '#wbRoot .wb-canvas { display: flex; flex-direction: column; gap: 10px; padding: 16px; background: var(--surface-2); border-radius: 10px; min-height: 320px; }' +
+      '#wbRoot .wb-row { width: 100%; }' +
+      '#wbRoot .wb-block { box-shadow: 0 1px 2px rgba(0,0,0,0.05); user-select: none; }' +
+      '#wbRoot .wb-block:hover { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,0.10); }' +
+      '#wbRoot .wb-block-selected { box-shadow: 0 0 0 2px #16a34a, 0 4px 12px rgba(22,163,74,0.18) !important; transform: translateY(-1px); }' +
+      '#wbRoot .wb-block:hover .wb-block-handle { display: inline-flex !important; }' +
+      '#wbRoot .wb-block.dragging { opacity: 0.4; }' +
+      '#wbRoot .wb-block.drag-over-top { box-shadow: 0 -3px 0 0 #16a34a !important; }' +
+      '#wbRoot .wb-block.drag-over-bottom { box-shadow: 0 3px 0 0 #16a34a !important; }' +
+      '#wbRoot .wb-palette-item { display:flex; align-items:center; gap:8px; padding:8px 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; transition: background 0.12s ease, border-color 0.12s ease; user-select: none; }' +
+      '#wbRoot .wb-palette-item:hover { background: var(--brand-50); border-color: var(--brand-600); color: var(--brand-700); }' +
+      '#wbRoot .wb-palette-item-icon { flex: 0 0 auto; width: 22px; height: 22px; display:inline-flex; align-items:center; justify-content:center; color: var(--brand-600); }' +
+      '#wbRoot .wb-inspector-section { padding: 10px 0; border-bottom: 1px solid var(--border); }' +
+      '#wbRoot .wb-inspector-section:last-child { border-bottom: 0; }' +
+      '#wbRoot .wb-inspector-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); margin-bottom: 6px; }' +
+      '#wbRoot .wb-swatch-row { display:flex; flex-wrap: wrap; gap: 5px; }' +
+      '#wbRoot .wb-swatch { width: 22px; height: 22px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.15); cursor: pointer; flex: 0 0 auto; transition: transform 0.12s ease; }' +
+      '#wbRoot .wb-swatch:hover { transform: scale(1.15); }' +
+      '#wbRoot .wb-swatch.active { box-shadow: 0 0 0 2px #16a34a; }' +
+      '#wbRoot .wb-seg { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }' +
+      '#wbRoot .wb-seg button { background: var(--surface-2); border: 0; padding: 6px 10px; font-size: 12px; font-weight: 600; color: var(--text-2); cursor: pointer; }' +
+      '#wbRoot .wb-seg button.active { background: var(--brand-50); color: var(--brand-700); font-weight: 800; box-shadow: inset 0 0 0 1px var(--brand-600); }' +
+      '#wbRoot .wb-list-item { display:flex; gap:6px; align-items:center; padding:4px 0; }' +
+      '#wbRoot .wb-list-item input[type="text"] { flex:1; padding:5px 8px; border:1px solid var(--border); border-radius:5px; background: var(--surface-1); color: var(--text); font-size: 12px; }' +
+      '#wbRoot .wb-list-item .wb-icon-btn { flex:0 0 auto; }' +
+      '#wbRoot .wb-icon-btn { background: transparent; border: 0; cursor: pointer; padding: 4px 6px; color: var(--text-3); border-radius: 4px; font-size: 14px; line-height: 1; }' +
+      '#wbRoot .wb-icon-btn:hover { background: var(--surface-2); color: var(--text); }' +
+      '#wbRoot .wb-icon-btn.danger:hover { background: rgba(220,38,38,0.1); color: #dc2626; }' +
+      '#wbRoot .wb-bottom-sheet-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 9998; display: none; opacity: 0; transition: opacity 0.18s ease; }' +
+      '#wbRoot .wb-bottom-sheet-backdrop.open { display: block; opacity: 1; }' +
+      '#wbRoot .wb-bottom-sheet { position: fixed; left: 0; right: 0; bottom: 0; max-height: 85vh; overflow-y: auto; background: var(--surface); border-top: 1px solid var(--border); border-radius: 16px 16px 0 0; box-shadow: 0 -8px 32px rgba(0,0,0,0.25); z-index: 9999; padding: 14px 16px env(safe-area-inset-bottom) 16px; transform: translateY(100%); transition: transform 0.22s cubic-bezier(0.32,0.72,0,1); }' +
+      '#wbRoot .wb-bottom-sheet.open { transform: translateY(0); }' +
+      '#wbRoot .wb-bottom-sheet-grab { width: 36px; height: 4px; background: var(--border-strong); border-radius: 2px; margin: 4px auto 12px; }' +
+      '#wbRoot .wb-bottom-sheet-title { font-size: 14px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 10px; display:flex; align-items:center; justify-content:space-between; gap:8px; }' +
+      // RESPONSIVE — mobile breakpoint
+      '@media (max-width: 900px) {' +
+        '#wbRoot .wb-workspace { grid-template-columns: 1fr !important; }' +
+        '#wbRoot .wb-palette-pane-desktop, #wbRoot .wb-inspector-pane-desktop { display: none !important; }' +
+        '#wbRoot .wb-mobile-add-bar { display: flex !important; }' +
+        '#wbRoot .wb-block-tag { display: none; }' +
+      '}' +
+      '@media (min-width: 901px) {' +
+        '#wbRoot .wb-mobile-add-bar { display: none !important; }' +
+      '}' +
+      '@media (hover: none) and (pointer: coarse) {' +
+        '#wbRoot .wb-block-handle { display: inline-flex !important; opacity: 0.7; }' +
+      '}' +
+    '</style>';
+  }
+
+  // ============ HEADER ============
+  function buildHeader() {
+    return '' +
       '<div class="page-header">' +
         '<div class="page-header-text">' +
-          '<div class="page-title">📝 ' + PCD.escapeHtml(t('whiteboard_title') || 'Kitchen Whiteboard') + '</div>' +
-          '<div class="page-subtitle">' + PCD.escapeHtml(t('whiteboard_subtitle') || 'Customizable A4/A3 reference sheet — edit cells, pick colors, print') + '</div>' +
+          '<div class="page-title">📝 ' + PCD.escapeHtml(t('whiteboard_title', 'Kitchen Whiteboard')) + '</div>' +
+          '<div class="page-subtitle">' + PCD.escapeHtml(t('whiteboard_subtitle_v2', 'Block-based composer for kitchen reference sheets — mise en place, cook times, allergen alerts')) + '</div>' +
         '</div>' +
-        '<div class="page-header-actions">' +
-          // v2.10.4 — Auto-save indicator: chef sürekli düşünmeden değişikliklerin
-          // korunduğunu görmeli (Save butonu gibi davranmıyor ama güvence verir).
-          '<span style="display:inline-flex;align-items:center;gap:5px;padding:6px 10px;background:var(--brand-50);border:1px solid var(--brand-200,#bbf7d0);border-radius:6px;font-size:11px;font-weight:700;color:var(--brand-700);letter-spacing:0.03em;text-transform:uppercase;">' + PCD.icon('check', 12) + '<span>' + PCD.escapeHtml(t('whiteboard_autosaved') || 'Auto-saved') + '</span></span>' +
-          '<button class="btn btn-outline btn-sm" id="wbTemplateBtn">' + PCD.icon('book-open', 14) + ' <span>' + PCD.escapeHtml(t('whiteboard_templates') || 'Templates') + '</span></button>' +
-          // v2.10.4 — Icon registry'de "rotate-ccw" yok → silent info fallback bug fix:
-          // "refresh" var olan isim. Bu Reset buton'u "(i)" yerine doğru ikon gösterir.
-          '<button class="btn btn-outline btn-sm" id="wbClearBtn">' + PCD.icon('refresh', 14) + ' <span>' + PCD.escapeHtml(t('whiteboard_reset') || 'Reset') + '</span></button>' +
-          '<button class="btn btn-primary btn-sm" id="wbPrintBtn">' + PCD.icon('print', 14) + ' <span>' + PCD.escapeHtml(t('print') || 'Print') + '</span></button>' +
+        '<div class="page-header-actions" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">' +
+          '<span style="display:inline-flex;align-items:center;gap:5px;padding:6px 10px;background:var(--brand-50);border:1px solid var(--brand-200,#bbf7d0);border-radius:6px;font-size:11px;font-weight:700;color:var(--brand-700);letter-spacing:0.03em;text-transform:uppercase;">' + PCD.icon('check', 12) + '<span>' + PCD.escapeHtml(t('whiteboard_autosaved', 'Auto-saved')) + '</span></span>' +
+          '<button class="btn btn-outline btn-sm" id="wbTemplateBtn">' + PCD.icon('book-open', 14) + ' <span>' + PCD.escapeHtml(t('whiteboard_templates', 'Templates')) + '</span></button>' +
+          '<button class="btn btn-outline btn-sm" id="wbClearBtn">' + PCD.icon('refresh', 14) + ' <span>' + PCD.escapeHtml(t('whiteboard_reset', 'Reset')) + '</span></button>' +
+          '<button class="btn btn-primary btn-sm" id="wbPrintBtn">' + PCD.icon('print', 14) + ' <span>' + PCD.escapeHtml(t('print', 'Print')) + '</span></button>' +
         '</div>' +
-      '</div>' +
-      // v2.9.40 — Canvas selector bar (multi-canvas support).
+      '</div>';
+  }
+
+  // ============ CANVAS SELECTOR ============
+  function buildCanvasSelector(store, canvasCount) {
+    return '' +
       '<div class="card mb-3" style="padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">' +
         '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;flex-shrink:0;">' +
-          PCD.escapeHtml(t('whiteboard_canvas') || 'Canvas') + ':' +
+          PCD.escapeHtml(t('whiteboard_canvas', 'Canvas')) + ':' +
         '</div>' +
         '<select id="wbCanvasSelect" style="flex:1;min-width:160px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--surface-1);color:var(--text-1);font-size:14px;font-weight:600;">' +
           store.canvases.map(function (c) {
-            return '<option value="' + c.id + '"' + (c.id === store.activeId ? ' selected' : '') + '>' + PCD.escapeHtml(c.name || c.title || 'Untitled') + '</option>';
+            return '<option value="' + PCD.escapeHtml(c.id) + '"' + (c.id === store.activeId ? ' selected' : '') + '>' + PCD.escapeHtml(c.name || c.title || 'Untitled') + '</option>';
           }).join('') +
         '</select>' +
-        '<button class="btn btn-outline btn-sm" id="wbNewCanvasBtn">' + PCD.icon('plus', 14) + ' <span>' + PCD.escapeHtml(t('whiteboard_new_canvas') || 'New') + '</span></button>' +
-        // v2.10.4 — "trash-2" registry'de yok → silent fallback "(i)" görünüyordu.
-        // "trash" doğru registry ismi (operatör raporu: "delete butonu (i) şeklinde").
-        (canvasCount > 1 ? '<button class="btn btn-outline btn-sm" id="wbDeleteCanvasBtn" style="color:var(--danger);" title="' + PCD.escapeHtml(t('whiteboard_delete_canvas') || 'Delete this canvas') + '">' + PCD.icon('trash', 14) + '</button>' : '') +
-      '</div>' +
+        '<button class="btn btn-outline btn-sm" id="wbNewCanvasBtn">' + PCD.icon('plus', 14) + ' <span>' + PCD.escapeHtml(t('whiteboard_new_canvas', 'New')) + '</span></button>' +
+        (canvasCount > 1 ? '<button class="btn btn-outline btn-sm" id="wbDeleteCanvasBtn" style="color:var(--danger);" title="' + PCD.escapeHtml(t('whiteboard_delete_canvas', 'Delete this canvas')) + '">' + PCD.icon('trash', 14) + '</button>' : '') +
+      '</div>';
+  }
+
+  // ============ CANVAS META (title / paper / orientation) ============
+  function buildCanvasMeta(canvas) {
+    const paperBtns = ['A4', 'A3'].map(function (p) {
+      return '<button type="button" class="btn btn-secondary btn-sm' + (canvas.paper === p ? ' active' : '') + '" data-wb-paper="' + p + '" style="flex:1;">' + p + '</button>';
+    }).join('');
+    const orientBtns = [
+      { id: 'portrait',  label: t('kc_portrait', 'Portrait') },
+      { id: 'landscape', label: t('kc_landscape', 'Landscape') },
+    ].map(function (o) {
+      return '<button type="button" class="btn btn-secondary btn-sm' + (canvas.orient === o.id ? ' active' : '') + '" data-wb-orient="' + o.id + '" style="flex:1;">' + PCD.escapeHtml(o.label) + '</button>';
+    }).join('');
+
+    return '' +
       '<div class="card mb-3" style="padding:14px;">' +
-        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;align-items:end;">' +
+        '<div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px;align-items:end;">' +
           '<div>' +
-            '<div class="text-muted text-sm mb-1">' + PCD.escapeHtml(t('whiteboard_title_label') || 'Title') + '</div>' +
-            '<input id="wbTitle" type="text" class="input" maxlength="80" value="' + PCD.escapeHtml(s.title || '') + '" style="width:100%;">' +
+            '<div class="text-muted text-sm mb-1">' + PCD.escapeHtml(t('whiteboard_title_label', 'Title')) + '</div>' +
+            '<input id="wbTitle" type="text" class="input" maxlength="80" value="' + PCD.escapeHtml(canvas.title || '') + '" style="width:100%;">' +
           '</div>' +
           '<div>' +
-            '<div class="text-muted text-sm mb-1">' + PCD.escapeHtml(t('whiteboard_paper') || 'Paper') + '</div>' +
-            '<div class="flex gap-1">' + paperButtons + '</div>' +
+            '<div class="text-muted text-sm mb-1">' + PCD.escapeHtml(t('whiteboard_paper', 'Paper')) + '</div>' +
+            '<div class="flex gap-1">' + paperBtns + '</div>' +
           '</div>' +
           '<div>' +
-            '<div class="text-muted text-sm mb-1">' + PCD.escapeHtml(t('kc_orientation') || 'Orientation') + '</div>' +
-            '<div class="flex gap-1">' + orientButtons + '</div>' +
-          '</div>' +
-          '<div>' +
-            '<div class="text-muted text-sm mb-1">' + PCD.escapeHtml(t('whiteboard_grid') || 'Grid') + ' (' + s.rows + ' × ' + s.cols + ')</div>' +
-            '<div style="display:flex;gap:6px;">' +
-              '<input id="wbRows" type="number" min="2" max="10" value="' + s.rows + '" style="width:60px;padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--surface-1);color:var(--text-1);font-size:13px;text-align:center;">' +
-              '<span style="display:flex;align-items:center;color:var(--text-3);">×</span>' +
-              '<input id="wbCols" type="number" min="2" max="10" value="' + s.cols + '" style="width:60px;padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--surface-1);color:var(--text-1);font-size:13px;text-align:center;">' +
-            '</div>' +
+            '<div class="text-muted text-sm mb-1">' + PCD.escapeHtml(t('kc_orientation', 'Orientation')) + '</div>' +
+            '<div class="flex gap-1">' + orientBtns + '</div>' +
           '</div>' +
         '</div>' +
         '<div class="text-muted" style="margin-top:10px;font-size:12px;line-height:1.5;">' +
-          '💡 ' + PCD.escapeHtml(t('whiteboard_tip') || 'Click any cell to edit text. Right-click cell to change color. Auto-saved to this browser.') +
+          '💡 ' + PCD.escapeHtml(t('whiteboard_tip_v2', 'Add blocks from the left palette (desktop) or the + button (mobile). Click a block to edit its style on the right or in the bottom sheet.')) +
         '</div>' +
       '</div>';
+  }
 
-    // Build grid preview (scaled to fit screen)
-    const paperDims = (function () {
-      const isLand = s.orient === 'landscape';
-      if (s.paper === 'A3') return isLand ? { w: 420, h: 297 } : { w: 297, h: 420 };
-      return isLand ? { w: 297, h: 210 } : { w: 210, h: 297 };
-    })();
-    // Live preview at ~50% scale so it fits the screen
-    const previewScale = 2.4;
-    const pxW = Math.round(paperDims.w * previewScale);
-    const pxH = Math.round(paperDims.h * previewScale);
+  // ============ PALETTE PANE (desktop left) ============
+  function buildPalettePane() {
+    const items = BLOCK_TYPES.map(function (b) {
+      return '<div class="wb-palette-item" data-add-block="' + b.id + '" title="' + PCD.escapeHtml(t(b.labelKey, b.label)) + '">' +
+        '<span class="wb-palette-item-icon" style="font-size:16px;line-height:1;">' + b.glyph + '</span>' +
+        '<span>' + PCD.escapeHtml(t(b.labelKey, b.label)) + '</span>' +
+      '</div>';
+    }).join('');
+    return '' +
+      '<div class="wb-pane wb-palette-pane-desktop">' +
+        '<div class="wb-pane-title">' + PCD.icon('plus', 13) + ' ' + PCD.escapeHtml(t('wb_palette_title', 'Add block')) + '</div>' +
+        '<div style="display:flex;flex-direction:column;gap:6px;">' + items + '</div>' +
+      '</div>';
+  }
 
-    let gridHtml =
-      '<div class="card" style="padding:12px;overflow:auto;">' +
-        '<div id="wbSheet" style="width:' + pxW + 'px;height:' + pxH + 'px;background:#fff;color:#111827;margin:0 auto;display:flex;flex-direction:column;box-shadow:0 1px 4px rgba(0,0,0,0.1);border:1px solid #d1d5db;">' +
-          '<div class="wb-title" style="padding:8px 14px;border-bottom:2px solid #16a34a;font-weight:800;font-size:18px;letter-spacing:0.04em;text-transform:uppercase;flex:0 0 auto;">' + PCD.escapeHtml(s.title || '') + '</div>' +
-          '<div class="wb-grid" style="flex:1 1 auto;display:grid;grid-template-rows:repeat(' + s.rows + ',1fr);grid-template-columns:repeat(' + s.cols + ',1fr);gap:2px;padding:4px;background:#cbd5e1;">';
+  // ============ CANVAS PANE (center) ============
+  function buildCanvasPane(canvas) {
+    const sheetHtml = renderSheet(canvas, _ui.selectedBlockIdx);
+    // Mobile add-block bar (operatör mobil ekranında bottom add bar görür)
+    const mobileAddBar =
+      '<div class="wb-mobile-add-bar" style="display:none;gap:6px;flex-wrap:wrap;margin-bottom:10px;">' +
+        BLOCK_TYPES.map(function (b) {
+          return '<button type="button" class="btn btn-secondary btn-sm" data-add-block="' + b.id + '" style="flex:1;min-width:90px;font-size:11px;padding:6px 8px;display:inline-flex;align-items:center;gap:4px;">' +
+            '<span style="font-size:13px;">' + b.glyph + '</span> <span>' + PCD.escapeHtml(t(b.labelKey, b.label)) + '</span>' +
+          '</button>';
+        }).join('') +
+      '</div>';
+    return '' +
+      '<div class="wb-pane wb-canvas-pane">' +
+        '<div class="wb-pane-title" style="justify-content:space-between;">' +
+          '<span>' + PCD.icon('grid', 13) + ' ' + PCD.escapeHtml(t('wb_canvas_title', 'Canvas')) + '</span>' +
+          '<span style="font-weight:600;color:var(--text-3);">' + (canvas.blocks || []).length + ' ' + PCD.escapeHtml(t('wb_blocks_count', 'blocks')) + '</span>' +
+        '</div>' +
+        mobileAddBar +
+        '<div class="wb-canvas" id="wbCanvas">' + sheetHtml + '</div>' +
+      '</div>';
+  }
 
-    for (let r = 0; r < s.rows; r++) {
-      for (let c = 0; c < s.cols; c++) {
-        // v2.9.41 — Skip cells covered by a merged neighbor
-        if (occupied[r + ':' + c]) continue;
-        const cell = cellMap[r + ':' + c] || {};
-        const palette = PALETTE.find(function (p) { return p.id === cell.color; }) || PALETTE[0];
-        const fz = FONT_SIZES[cell.fontSize] || FONT_SIZES.md;
-        const align = ALIGNS.indexOf(cell.align) >= 0 ? cell.align : 'start';
-        const rs = Math.max(1, parseInt(cell.rowSpan, 10) || 1);
-        const cs = Math.max(1, parseInt(cell.colSpan, 10) || 1);
-        const rsClamped = Math.min(rs, s.rows - r);
-        const csClamped = Math.min(cs, s.cols - c);
-        const spanStyle = (rsClamped > 1 ? 'grid-row:' + (r + 1) + ' / span ' + rsClamped + ';' : '') +
-                          (csClamped > 1 ? 'grid-column:' + (c + 1) + ' / span ' + csClamped + ';' : '');
-        // v2.10.0 — Cell type styling
-        const cellType = cell.type || 'text';
-        const typeStyle = typeStyleFor(cellType);
-        gridHtml +=
-          '<div class="wb-cell wb-cell-' + cellType + '" data-r="' + r + '" data-c="' + c + '" contenteditable="true" style="' +
-            'background:' + palette.bg + ';color:' + palette.text + ';' +
-            'padding:6px 8px;font-size:' + fz.px + 'px;line-height:1.3;overflow:hidden;' +
-            'outline:none;cursor:text;border-radius:3px;min-height:40px;' +
-            'word-break:break-word;overflow-wrap:break-word;' +
-            'text-align:' + align + ';' +
-            'display:flex;flex-direction:column;justify-content:center;' +
-            spanStyle + typeStyle +
-          '" data-color="' + palette.id + '" data-font="' + (cell.fontSize || 'md') + '" data-align="' + align + '" data-rs="' + rsClamped + '" data-cs="' + csClamped + '" data-type="' + cellType + '">' +
-            PCD.escapeHtml(cell.text || '') +
-            '<span class="wb-resize-handle" contenteditable="false" title="Drag to resize"></span>' +
+  // ============ INSPECTOR PANE (desktop right) ============
+  function buildInspectorPane(canvas) {
+    const idx = _ui.selectedBlockIdx;
+    const block = (canvas.blocks || [])[idx];
+    if (!block) {
+      return '' +
+        '<div class="wb-pane wb-inspector-pane-desktop">' +
+          '<div class="wb-pane-title">' + PCD.icon('settings', 13) + ' ' + PCD.escapeHtml(t('wb_inspector_title', 'Block style')) + '</div>' +
+          '<div style="font-size:12px;color:var(--text-3);text-align:center;padding:24px 8px;line-height:1.5;">' +
+            '<div style="font-size:32px;margin-bottom:8px;opacity:0.4;">👆</div>' +
+            PCD.escapeHtml(t('wb_inspector_empty', 'Click a block on the canvas to edit its content and style.')) +
+          '</div>' +
+        '</div>';
+    }
+    return '' +
+      '<div class="wb-pane wb-inspector-pane-desktop">' +
+        '<div class="wb-pane-title" style="justify-content:space-between;">' +
+          '<span>' + PCD.icon('settings', 13) + ' ' + PCD.escapeHtml(t('wb_inspector_title', 'Block style')) + '</span>' +
+          '<span style="font-weight:600;color:var(--brand-700);font-size:10px;">' + PCD.escapeHtml(t(blockTypeMeta(block.type).labelKey, blockTypeMeta(block.type).label)) + '</span>' +
+        '</div>' +
+        buildInspectorContent(block, idx) +
+      '</div>';
+  }
+
+  // ============ INSPECTOR CONTENT (per block type) ============
+  function buildInspectorContent(block, idx) {
+    let html = '';
+    // 1) Content fields
+    html += '<div class="wb-inspector-section">' +
+      '<div class="wb-inspector-label">' + PCD.escapeHtml(t('wb_inspector_content', 'Content')) + '</div>' +
+      buildContentEditor(block, idx) +
+    '</div>';
+    // 2) Layout
+    html += '<div class="wb-inspector-section">' +
+      '<div class="wb-inspector-label">' + PCD.escapeHtml(t('wb_inspector_layout', 'Layout')) + '</div>' +
+      '<div class="wb-seg" style="width:100%;display:flex;">' +
+        '<button type="button" data-set-layout="full" class="' + (block.layout === 'full' ? 'active' : '') + '" style="flex:1;">' + PCD.escapeHtml(t('wb_layout_full', 'Full width')) + '</button>' +
+        '<button type="button" data-set-layout="half" class="' + (block.layout === 'half' ? 'active' : '') + '" style="flex:1;">' + PCD.escapeHtml(t('wb_layout_half', 'Half width')) + '</button>' +
+      '</div>' +
+    '</div>';
+    // 3) Color
+    html += '<div class="wb-inspector-section">' +
+      '<div class="wb-inspector-label">' + PCD.escapeHtml(t('wb_inspector_color', 'Color')) + '</div>' +
+      '<div class="wb-swatch-row">' +
+        PALETTE.map(function (p) {
+          return '<div class="wb-swatch' + (block.style && block.style.color === p.id ? ' active' : '') + '" data-set-color="' + p.id + '" title="' + PCD.escapeHtml(p.label) + '" style="background:' + p.bg + ';"></div>';
+        }).join('') +
+      '</div>' +
+    '</div>';
+    // 4) Size
+    html += '<div class="wb-inspector-section">' +
+      '<div class="wb-inspector-label">' + PCD.escapeHtml(t('wb_inspector_size', 'Size')) + '</div>' +
+      '<div class="wb-seg" style="width:100%;display:flex;">' +
+        ['sm','md','lg','xl'].map(function (s) {
+          return '<button type="button" data-set-size="' + s + '" class="' + (block.style && block.style.size === s ? 'active' : '') + '" style="flex:1;text-transform:uppercase;">' + s + '</button>';
+        }).join('') +
+      '</div>' +
+    '</div>';
+    // 5) Align
+    html += '<div class="wb-inspector-section">' +
+      '<div class="wb-inspector-label">' + PCD.escapeHtml(t('wb_inspector_align', 'Align')) + '</div>' +
+      '<div class="wb-seg" style="width:100%;display:flex;">' +
+        [['left','←'],['center','↔'],['right','→']].map(function (a) {
+          return '<button type="button" data-set-align="' + a[0] + '" class="' + (block.style && block.style.align === a[0] ? 'active' : '') + '" style="flex:1;">' + a[1] + '</button>';
+        }).join('') +
+      '</div>' +
+    '</div>';
+    // 6) Actions
+    html += '<div class="wb-inspector-section" style="display:flex;gap:6px;">' +
+      '<button class="btn btn-outline btn-sm" data-blk-action="duplicate" style="flex:1;">' + PCD.icon('copy', 13) + ' ' + PCD.escapeHtml(t('wb_action_duplicate', 'Duplicate')) + '</button>' +
+      '<button class="btn btn-outline btn-sm" data-blk-action="move-up" style="flex:0 0 auto;" title="' + PCD.escapeHtml(t('wb_action_move_up', 'Move up')) + '">' + PCD.icon('chevron-up', 13) + '</button>' +
+      '<button class="btn btn-outline btn-sm" data-blk-action="move-down" style="flex:0 0 auto;" title="' + PCD.escapeHtml(t('wb_action_move_down', 'Move down')) + '">' + PCD.icon('chevron-down', 13) + '</button>' +
+      '<button class="btn btn-outline btn-sm" data-blk-action="delete" style="flex:0 0 auto;color:var(--danger);border-color:var(--danger);" title="' + PCD.escapeHtml(t('wb_action_delete', 'Delete block')) + '">' + PCD.icon('trash', 13) + '</button>' +
+    '</div>';
+    return html;
+  }
+
+  // ============ CONTENT EDITOR (per block type) ============
+  function buildContentEditor(block, idx) {
+    const c = block.content || {};
+    switch (block.type) {
+      case 'section_header':
+      case 'alert':
+      case 'text':
+        return '<textarea data-ct-field="text" rows="' + (block.type === 'text' ? '4' : '2') + '" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--surface-1);color:var(--text);font-size:13px;font-family:inherit;resize:vertical;">' + PCD.escapeHtml(c.text || '') + '</textarea>' +
+          (block.type === 'alert' ? '<input data-ct-field="icon" type="text" maxlength="4" placeholder="⚠" value="' + PCD.escapeHtml(c.icon || '') + '" style="margin-top:6px;width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface-1);font-size:13px;">' : '');
+      case 'big_number':
+        return '<input data-ct-field="value" type="text" maxlength="20" placeholder="0" value="' + PCD.escapeHtml(c.value || '') + '" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:5px;background:var(--surface-1);color:var(--text);font-size:18px;font-weight:900;text-align:center;">' +
+          '<input data-ct-field="label" type="text" maxlength="40" placeholder="LABEL" value="' + PCD.escapeHtml(c.label || '') + '" style="margin-top:6px;width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface-1);font-size:12px;text-transform:uppercase;letter-spacing:0.06em;">' +
+          '<input data-ct-field="sub" type="text" maxlength="8" placeholder="' + PCD.escapeHtml(t('wb_bignum_sub_ph', 'Unit (°C, $, min)')) + '" value="' + PCD.escapeHtml(c.sub || '') + '" style="margin-top:6px;width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface-1);font-size:12px;">';
+      case 'checklist': {
+        const items = (c.items || []).map(function (it, i) {
+          return '<div class="wb-list-item">' +
+            '<input type="checkbox" data-ct-checklist-done="' + i + '"' + (it.done ? ' checked' : '') + '>' +
+            '<input type="text" data-ct-checklist-text="' + i + '" value="' + PCD.escapeHtml(it.text || '') + '" placeholder="' + PCD.escapeHtml(t('wb_checklist_item_ph', 'Task...')) + '">' +
+            '<button class="wb-icon-btn danger" data-ct-checklist-del="' + i + '" title="' + PCD.escapeHtml(t('delete', 'Delete')) + '">×</button>' +
+          '</div>';
+        }).join('');
+        return items +
+          '<button class="btn btn-outline btn-sm" data-ct-checklist-add style="width:100%;margin-top:6px;">' + PCD.icon('plus', 13) + ' ' + PCD.escapeHtml(t('wb_checklist_add', 'Add item')) + '</button>';
+      }
+      case 'kv': {
+        const pairs = (c.pairs || []).map(function (p, i) {
+          return '<div class="wb-list-item" style="gap:4px;">' +
+            '<input type="text" data-ct-kv-key="' + i + '" value="' + PCD.escapeHtml(p.key || '') + '" placeholder="' + PCD.escapeHtml(t('wb_kv_key_ph', 'KEY')) + '" style="flex:1;text-transform:uppercase;font-weight:700;">' +
+            '<input type="text" data-ct-kv-value="' + i + '" value="' + PCD.escapeHtml(p.value || '') + '" placeholder="' + PCD.escapeHtml(t('wb_kv_value_ph', 'Value')) + '" style="flex:1.5;">' +
+            '<button class="wb-icon-btn danger" data-ct-kv-del="' + i + '">×</button>' +
+          '</div>';
+        }).join('');
+        return pairs +
+          '<button class="btn btn-outline btn-sm" data-ct-kv-add style="width:100%;margin-top:6px;">' + PCD.icon('plus', 13) + ' ' + PCD.escapeHtml(t('wb_kv_add', 'Add row')) + '</button>';
+      }
+      case 'table': {
+        const headers = (c.headers || []).map(function (h, i) {
+          return '<input type="text" data-ct-table-header="' + i + '" value="' + PCD.escapeHtml(h || '') + '" placeholder="Header ' + (i + 1) + '" style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface-1);font-size:12px;font-weight:700;">';
+        }).join('');
+        const rows = (c.rows || []).map(function (row, ri) {
+          const cells = (row || []).map(function (cell, ci) {
+            return '<input type="text" data-ct-table-cell="' + ri + ',' + ci + '" value="' + PCD.escapeHtml(cell || '') + '" placeholder="—" style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface-1);font-size:12px;">';
+          }).join('');
+          return '<div style="display:flex;gap:4px;align-items:center;">' + cells +
+            '<button class="wb-icon-btn danger" data-ct-table-rowdel="' + ri + '" style="flex:0 0 auto;">×</button>' +
+          '</div>';
+        }).join('');
+        return '<div style="display:flex;gap:4px;margin-bottom:8px;">' + headers + '<span style="width:24px;flex:0 0 auto;"></span></div>' +
+          '<div style="display:flex;flex-direction:column;gap:4px;">' + rows + '</div>' +
+          '<div style="display:flex;gap:4px;margin-top:8px;">' +
+            '<button class="btn btn-outline btn-sm" data-ct-table-addrow style="flex:1;">' + PCD.icon('plus', 13) + ' ' + PCD.escapeHtml(t('wb_table_add_row', 'Add row')) + '</button>' +
+            '<button class="btn btn-outline btn-sm" data-ct-table-addcol style="flex:1;">' + PCD.icon('plus', 13) + ' ' + PCD.escapeHtml(t('wb_table_add_col', 'Add column')) + '</button>' +
           '</div>';
       }
+      case 'divider':
+        return '<input data-ct-field="label" type="text" maxlength="40" placeholder="' + PCD.escapeHtml(t('wb_divider_label_ph', 'Optional label')) + '" value="' + PCD.escapeHtml(c.label || '') + '" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:5px;background:var(--surface-1);color:var(--text);font-size:13px;">';
     }
-    gridHtml += '</div></div></div>';
+    return '<div style="color:var(--text-3);font-size:12px;">' + PCD.escapeHtml(t('wb_no_content_fields', 'No content fields for this block.')) + '</div>';
+  }
 
-    // Color palette popover (hidden by default, shown on right-click).
-    // v2.9.40 — Also exposes font-size + text-align per cell.
-    let paletteHtml = '<div id="wbPalette" style="display:none;position:fixed;z-index:9999;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px;box-shadow:0 4px 16px rgba(0,0,0,0.15);">';
-    paletteHtml += '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;margin-bottom:6px;">' + PCD.escapeHtml(t('whiteboard_cell_color') || 'Cell color') + '</div>';
-    paletteHtml += '<div style="display:flex;gap:4px;margin-bottom:10px;">';
-    PALETTE.forEach(function (p) {
-      paletteHtml += '<button type="button" data-set-color="' + p.id + '" title="' + PCD.escapeHtml(p.label) + '" style="width:28px;height:28px;border:1px solid #d1d5db;border-radius:4px;background:' + p.bg + ';cursor:pointer;"></button>';
-    });
-    paletteHtml += '</div>';
-    // Font size selector
-    paletteHtml += '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;margin-bottom:6px;">' + PCD.escapeHtml(t('whiteboard_cell_font_size') || 'Font size') + '</div>';
-    paletteHtml += '<div style="display:flex;gap:4px;margin-bottom:10px;">';
-    Object.keys(FONT_SIZES).forEach(function (k) {
-      const fz = FONT_SIZES[k];
-      paletteHtml += '<button type="button" data-set-font="' + k + '" style="flex:1;min-width:36px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface-1);color:var(--text-1);font-size:' + Math.min(16, fz.px) + 'px;font-weight:700;cursor:pointer;">' + fz.label + '</button>';
-    });
-    paletteHtml += '</div>';
-    // Text align selector
-    paletteHtml += '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;margin-bottom:6px;">' + PCD.escapeHtml(t('whiteboard_cell_align') || 'Text align') + '</div>';
-    paletteHtml += '<div style="display:flex;gap:4px;margin-bottom:10px;">';
-    ALIGNS.forEach(function (a) {
-      paletteHtml += '<button type="button" data-set-align="' + a + '" style="flex:1;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface-1);color:var(--text-1);font-size:14px;cursor:pointer;">' + ALIGN_LABELS[a] + '</button>';
-    });
-    paletteHtml += '</div>';
-    // v2.10.0 — Cell type picker
-    paletteHtml += '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;margin-bottom:6px;">' + PCD.escapeHtml(t('whiteboard_cell_type') || 'Cell type') + '</div>';
-    paletteHtml += '<div style="display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap;">';
-    CELL_TYPES.forEach(function (ct) {
-      paletteHtml += '<button type="button" data-set-type="' + ct.id + '" style="flex:1;min-width:55px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface-1);color:var(--text-1);font-size:11px;font-weight:600;cursor:pointer;">' + PCD.escapeHtml(t(ct.labelKey) || ct.label) + '</button>';
-    });
-    paletteHtml += '</div>';
-    // v2.9.41 — Cell merge: row span / col span number inputs
-    paletteHtml += '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;margin-bottom:6px;">' + PCD.escapeHtml(t('whiteboard_cell_merge') || 'Merge (span)') + '</div>';
-    paletteHtml += '<div style="display:flex;gap:6px;align-items:center;">';
-    paletteHtml += '<label style="font-size:11px;color:var(--text-3);">↓</label>';
-    paletteHtml += '<input id="wbRowSpan" type="number" min="1" max="10" value="1" style="width:50px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface-1);color:var(--text-1);font-size:13px;text-align:center;">';
-    paletteHtml += '<label style="font-size:11px;color:var(--text-3);margin-left:6px;">→</label>';
-    paletteHtml += '<input id="wbColSpan" type="number" min="1" max="10" value="1" style="width:50px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface-1);color:var(--text-1);font-size:13px;text-align:center;">';
-    paletteHtml += '<button type="button" id="wbResetSpan" style="padding:4px 8px;border:1px solid var(--border);border-radius:4px;background:var(--surface-1);color:var(--text-1);font-size:11px;cursor:pointer;">' + PCD.escapeHtml(t('whiteboard_cell_unmerge') || 'Reset') + '</button>';
-    paletteHtml += '</div></div>';
+  // ============ BOTTOM SHEET (mobile) ============
+  function buildBottomSheet() {
+    return '' +
+      '<div class="wb-bottom-sheet-backdrop" id="wbSheetBackdrop"></div>' +
+      '<div class="wb-bottom-sheet" id="wbBottomSheet">' +
+        '<div class="wb-bottom-sheet-grab"></div>' +
+        '<div class="wb-bottom-sheet-title">' +
+          '<span id="wbBSTitle">' + PCD.escapeHtml(t('wb_inspector_title', 'Block style')) + '</span>' +
+          '<button class="wb-icon-btn" id="wbBSClose" style="font-size:20px;">×</button>' +
+        '</div>' +
+        '<div id="wbBSBody"></div>' +
+      '</div>';
+  }
 
-    // v2.10.0 — Whiteboard-scoped CSS: Oswald (başlık) + Barlow (gövde)
-    // Google Fonts + cell type ek stilleri (::first-line twoLine için).
-    // v2.10.1 — Drag-to-resize handle (sağ-alt köşe, hover'da görünür).
-    const wbStyles =
-      '<style>' +
-        '@import url("https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700;800&family=Barlow:wght@400;500;600;700;800&display=swap");' +
-        '.wb-cell { font-family: "Barlow", -apple-system, system-ui, sans-serif; position: relative; }' +
-        '.wb-cell-header { font-family: "Oswald", -apple-system, system-ui, sans-serif; }' +
-        '.wb-cell-twoLine::first-line { font-size: 0.55em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.65; }' +
-        '#wbSheet .wb-title { font-family: "Oswald", -apple-system, system-ui, sans-serif; }' +
-        '.wb-resize-handle { position:absolute; right:0; bottom:0; width:12px; height:12px; cursor:nwse-resize; ' +
-          'background:linear-gradient(135deg, transparent 50%, rgba(0,0,0,0.35) 50%); opacity:0; transition:opacity 0.15s; ' +
-          'z-index:5; }' +
-        '.wb-cell:hover .wb-resize-handle { opacity:1; }' +
-        '.wb-cell.wb-resizing { outline:2px dashed #16a34a; outline-offset:-2px; z-index:6; }' +
-      '</style>';
-    // v2.10.2 — Root container fix for delegated event bleed:
-    // Previously `PCD.on(view, ...)` attached listeners to the shared #view
-    // DOM node, which is REUSED across tool switches (router.js _renderView
-    // only calls view.innerHTML = ''). PCD.on tracks listeners via the node's
-    // __pcdDelegated property → stale Whiteboard handlers stayed alive after
-    // user navigated to Kitchen Cards. Both tools use `[data-orient]` for
-    // Landscape/Portrait → KC's orientation click bubbled up to view, hit
-    // Whiteboard's stale listener, and `render(view)` blew KC away. Same risk
-    // for [data-paper] etc. Fix: wrap Whiteboard content in #wbRoot and bind
-    // all delegated listeners to that node. New DOM each render → no stale
-    // registry. Other tools unaffected.
-    view.innerHTML = '<div id="wbRoot">' + wbStyles + buildHtml + gridHtml + paletteHtml + '</div>';
-    const wbRoot = view.querySelector('#wbRoot');
+  // ============ EVENT WIRING ============
+  function wireHeader(root, canvas) {
+    const tpl = root.querySelector('#wbTemplateBtn');
+    if (tpl) tpl.addEventListener('click', function () { openTemplatesPicker(root); });
+    const clr = root.querySelector('#wbClearBtn');
+    if (clr) clr.addEventListener('click', function () { resetCanvas(root); });
+    const prn = root.querySelector('#wbPrintBtn');
+    if (prn) prn.addEventListener('click', function () { printCanvas(canvas); });
+  }
 
-    // ---------- Wire controls ----------
-    function persist() {
-      saveState(s);
-    }
-
-    PCD.$('#wbTitle', view).addEventListener('input', function () {
-      s.title = this.value;
-      s.name = this.value;  // canvas adı title ile senkron — basitlik
-      const tEl = view.querySelector('.wb-title');
-      if (tEl) tEl.textContent = s.title;
-      // Dropdown'daki seçili option'un text'ini de güncelle
-      const opt = view.querySelector('#wbCanvasSelect option[value="' + s.id + '"]');
-      if (opt) opt.textContent = s.title || 'Untitled';
-      persist();
+  function wireCanvasSelector(root, store) {
+    const sel = root.querySelector('#wbCanvasSelect');
+    if (sel) sel.addEventListener('change', function () {
+      const id = this.value;
+      setActiveId(id);
+      _ui.selectedBlockIdx = -1;
+      rerender();
     });
-
-    // v2.9.40 — Canvas selector handlers
-    PCD.$('#wbCanvasSelect', view).addEventListener('change', function () {
-      const newActive = this.value;
-      const fresh = loadStore();
-      fresh.activeId = newActive;
-      saveStore(fresh);
-      render(view);
+    const nw = root.querySelector('#wbNewCanvasBtn');
+    if (nw) nw.addEventListener('click', function () {
+      const fresh = defaultCanvas('New whiteboard ' + (store.canvases.length + 1));
+      const arr = store.canvases.slice();
+      arr.push(fresh);
+      saveStore({ activeId: fresh.id, canvases: arr });
+      _ui.selectedBlockIdx = -1;
+      rerender();
+      PCD.toast.success(t('whiteboard_new_canvas_created', 'New canvas created'));
     });
-    PCD.$('#wbNewCanvasBtn', view).addEventListener('click', function () {
-      const fresh = loadStore();
-      const nc = defaultCanvas('New whiteboard ' + (fresh.canvases.length + 1));
-      fresh.canvases.push(nc);
-      fresh.activeId = nc.id;
-      saveStore(fresh);
-      render(view);
-      PCD.toast.success(t('whiteboard_new_canvas_created') || 'New canvas created');
-    });
-    const delBtn = PCD.$('#wbDeleteCanvasBtn', view);
-    if (delBtn) {
-      delBtn.addEventListener('click', function () {
-        PCD.modal.confirm({
-          icon: '🗑',
-          iconKind: 'danger',
-          danger: true,
-          title: t('whiteboard_delete_canvas_confirm_title') || 'Delete this canvas?',
-          text: t('whiteboard_delete_canvas_confirm_text') || 'This canvas will be permanently deleted from this browser. Other saved canvases remain.',
-          okText: t('delete') || 'Delete',
-          cancelText: t('cancel') || 'Cancel',
-        }).then(function (ok) {
-          if (!ok) return;
-          // v2.9.42 — Soft-delete (tombstone). Raw array içinde _deletedAt
-          // bırakılır → queueArraySync diff DELETE değil UPDATE upsert üretir,
-          // realtime ile diğer cihazlara cascade. Sonra visible listede yok.
-          const all = readAllRaw().slice();
-          const fresh = loadStore();
-          const idx = all.findIndex(function (c) { return c.id === fresh.activeId; });
-          if (idx >= 0) {
-            all[idx] = Object.assign({}, all[idx], { _deletedAt: nowIso() });
-          }
-          writeAll(all);
-          const remaining = readAllVisible();
-          if (remaining.length === 0) {
-            const nc = defaultCanvas('My Whiteboard');
-            writeAll(all.concat([nc]));
-            setActiveId(nc.id);
-          } else {
-            setActiveId(remaining[0].id);
-          }
-          render(view);
-        });
-      });
-    }
-
-    PCD.on(wbRoot, 'click', '[data-paper]', function () {
-      s.paper = this.getAttribute('data-paper');
-      persist();
-      render(view);
-    });
-    PCD.on(wbRoot, 'click', '[data-orient]', function () {
-      s.orient = this.getAttribute('data-orient');
-      persist();
-      render(view);
-    });
-
-    PCD.$('#wbRows', view).addEventListener('change', function () {
-      const v = Math.max(2, Math.min(10, parseInt(this.value, 10) || 4));
-      s.rows = v;
-      persist();
-      render(view);
-    });
-    PCD.$('#wbCols', view).addEventListener('change', function () {
-      const v = Math.max(2, Math.min(10, parseInt(this.value, 10) || 4));
-      s.cols = v;
-      persist();
-      render(view);
-    });
-
-    // Cell editing — capture blur to commit text
-    PCD.$$('.wb-cell', view).forEach(function (cellEl) {
-      cellEl.addEventListener('input', function () {
-        const r = parseInt(this.getAttribute('data-r'), 10);
-        const c = parseInt(this.getAttribute('data-c'), 10);
-        const text = this.innerText || '';
-        const color = this.getAttribute('data-color') || 'white';
-        // Upsert into cells array
-        const idx = (s.cells || []).findIndex(function (x) { return x.r === r && x.c === c; });
-        if (idx >= 0) {
-          s.cells[idx].text = text;
-        } else if (text) {
-          s.cells = s.cells || [];
-          s.cells.push({ r: r, c: c, text: text, color: color });
-        }
-        persist();
-      });
-      // Right-click → open color palette
-      cellEl.addEventListener('contextmenu', function (e) {
-        e.preventDefault();
-        const palette = view.querySelector('#wbPalette');
-        if (!palette) return;
-        palette.style.display = 'block';
-        palette.style.left = e.clientX + 'px';
-        palette.style.top = e.clientY + 'px';
-        palette.dataset.targetR = this.getAttribute('data-r');
-        palette.dataset.targetC = this.getAttribute('data-c');
-        // v2.9.41 — Sync span inputs with current cell
-        const rsEl = palette.querySelector('#wbRowSpan');
-        const csEl = palette.querySelector('#wbColSpan');
-        if (rsEl) rsEl.value = this.getAttribute('data-rs') || '1';
-        if (csEl) csEl.value = this.getAttribute('data-cs') || '1';
-      });
-    });
-
-    // v2.9.40 — Cell property setter: color, fontSize, align — single helper
-    function applyCellProp(prop, value) {
-      const palette = view.querySelector('#wbPalette');
-      if (!palette) return;
-      const r = parseInt(palette.dataset.targetR, 10);
-      const c = parseInt(palette.dataset.targetC, 10);
-      const target = view.querySelector('.wb-cell[data-r="' + r + '"][data-c="' + c + '"]');
-      const idx = (s.cells || []).findIndex(function (x) { return x.r === r && x.c === c; });
-      if (idx >= 0) {
-        s.cells[idx][prop] = value;
-      } else {
-        s.cells = s.cells || [];
-        const newCell = { r: r, c: c, text: (target ? target.innerText : '') };
-        newCell[prop] = value;
-        s.cells.push(newCell);
-      }
-      // Live UI update
-      if (target) {
-        if (prop === 'color') {
-          const palObj = PALETTE.find(function (p) { return p.id === value; }) || PALETTE[0];
-          target.style.background = palObj.bg;
-          target.style.color = palObj.text;
-          target.setAttribute('data-color', value);
-        } else if (prop === 'fontSize') {
-          const fz = FONT_SIZES[value] || FONT_SIZES.md;
-          target.style.fontSize = fz.px + 'px';
-          target.setAttribute('data-font', value);
-        } else if (prop === 'align') {
-          target.style.textAlign = value;
-          target.setAttribute('data-align', value);
-        }
-      }
-      persist();
-    }
-
-    PCD.on(wbRoot, 'click', '[data-set-color]', function () {
-      applyCellProp('color', this.getAttribute('data-set-color'));
-      const palette = view.querySelector('#wbPalette');
-      if (palette) palette.style.display = 'none';
-    });
-    PCD.on(wbRoot, 'click', '[data-set-font]', function () {
-      applyCellProp('fontSize', this.getAttribute('data-set-font'));
-    });
-    PCD.on(wbRoot, 'click', '[data-set-align]', function () {
-      applyCellProp('align', this.getAttribute('data-set-align'));
-    });
-    // v2.10.0 — Cell type setter (re-render full grid for visual updates)
-    PCD.on(wbRoot, 'click', '[data-set-type]', function () {
-      const palette = view.querySelector('#wbPalette');
-      if (!palette) return;
-      const r = parseInt(palette.dataset.targetR, 10);
-      const c = parseInt(palette.dataset.targetC, 10);
-      const newType = this.getAttribute('data-set-type');
-      const target = view.querySelector('.wb-cell[data-r="' + r + '"][data-c="' + c + '"]');
-      const idx = (s.cells || []).findIndex(function (x) { return x.r === r && x.c === c; });
-      if (idx >= 0) {
-        s.cells[idx].type = newType;
-      } else {
-        s.cells = s.cells || [];
-        s.cells.push({ r: r, c: c, text: (target ? target.innerText : ''), type: newType });
-      }
-      persist();
-      palette.style.display = 'none';
-      render(view);  // full re-render so type style + first-line CSS apply correctly
-    });
-
-    // v2.9.41 — Span apply (row + col together so user can set both, then re-render)
-    function applySpan(rowSpan, colSpan) {
-      const palette = view.querySelector('#wbPalette');
-      if (!palette) return;
-      const r = parseInt(palette.dataset.targetR, 10);
-      const c = parseInt(palette.dataset.targetC, 10);
-      const target = view.querySelector('.wb-cell[data-r="' + r + '"][data-c="' + c + '"]');
-      const idx = (s.cells || []).findIndex(function (x) { return x.r === r && x.c === c; });
-      if (idx >= 0) {
-        s.cells[idx].rowSpan = rowSpan;
-        s.cells[idx].colSpan = colSpan;
-      } else {
-        s.cells = s.cells || [];
-        s.cells.push({ r: r, c: c, text: (target ? target.innerText : ''), rowSpan: rowSpan, colSpan: colSpan });
-      }
-      persist();
-      // Full re-render so other cells (occupied or not) reflow correctly
-      palette.style.display = 'none';
-      render(view);
-    }
-    const rsInput = view.querySelector('#wbRowSpan');
-    const csInput = view.querySelector('#wbColSpan');
-    if (rsInput && csInput) {
-      const onSpanChange = function () {
-        const rs = Math.max(1, Math.min(10, parseInt(rsInput.value, 10) || 1));
-        const cs = Math.max(1, Math.min(10, parseInt(csInput.value, 10) || 1));
-        applySpan(rs, cs);
-      };
-      rsInput.addEventListener('change', onSpanChange);
-      csInput.addEventListener('change', onSpanChange);
-    }
-    const resetBtn = view.querySelector('#wbResetSpan');
-    if (resetBtn) {
-      resetBtn.addEventListener('click', function () {
-        applySpan(1, 1);
-      });
-    }
-
-    // v2.10.4 — Outside-click handler module-level'a taşındı (file top).
-    // Önceki { once: true } pattern ilk dış tıklamada listener'ı siliyordu →
-    // sonraki sağ-tık'larda palette dışına tıklasan kapanmıyordu.
-
-// Reset — sadece aktif canvas'ın hücrelerini temizle (grid + title korunur)
-    PCD.$('#wbClearBtn', view).addEventListener('click', function () {
+    const del = root.querySelector('#wbDeleteCanvasBtn');
+    if (del) del.addEventListener('click', function () {
       PCD.modal.confirm({
-        icon: '↺',
-        title: t('whiteboard_reset_confirm_title') || 'Reset whiteboard?',
-        text: t('whiteboard_reset_confirm_text') || 'All cells will be cleared (grid + title kept).',
-        okText: t('whiteboard_reset') || 'Reset',
-        cancelText: t('cancel') || 'Cancel',
+        icon: '🗑',
+        iconKind: 'danger',
+        danger: true,
+        title: t('whiteboard_delete_canvas_confirm_title', 'Delete this canvas?'),
+        text: t('whiteboard_delete_canvas_confirm_text', 'This canvas will be permanently deleted from this browser. Other saved canvases remain.'),
+        okText: t('delete', 'Delete'),
+        cancelText: t('cancel', 'Cancel'),
       }).then(function (ok) {
         if (!ok) return;
-        s.cells = [];
-        persist();
-        render(view);
+        const all = readAllRaw().slice();
+        const active = getActiveId();
+        const idx = all.findIndex(function (c) { return c.id === active; });
+        if (idx >= 0) all[idx] = Object.assign({}, all[idx], { _deletedAt: nowIso() });
+        writeAll(all);
+        const remaining = readAllVisible();
+        if (remaining.length === 0) {
+          const fresh = defaultCanvas('My Whiteboard');
+          writeAll(all.concat([fresh]));
+          setActiveId(fresh.id);
+        } else {
+          setActiveId(remaining[0].id);
+        }
+        _ui.selectedBlockIdx = -1;
+        rerender();
       });
-    });
-
-    // Print
-    PCD.$('#wbPrintBtn', view).addEventListener('click', function () {
-      printSheet(s);
-    });
-
-    // v2.10.1 — Drag-to-resize cell merge. Sağ-alt handle'a mousedown +
-    // document mousemove ile real-time grid-row/grid-column update.
-    // Document level mousemove/mouseup MODULE-LEVEL wire (file bottom) — render
-    // her çağrıldığında listener duplicate olmasın diye. Bu render handle'ların
-    // mousedown'una bağlanır, _wbDrag state'ine commitFn callback geçer.
-    PCD.$$('.wb-resize-handle', view).forEach(function (handleEl) {
-      handleEl.addEventListener('mousedown', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        const cellEl = handleEl.parentElement;
-        if (!cellEl) return;
-        const r = parseInt(cellEl.getAttribute('data-r'), 10);
-        const c = parseInt(cellEl.getAttribute('data-c'), 10);
-        const startRS = parseInt(cellEl.getAttribute('data-rs'), 10) || 1;
-        const startCS = parseInt(cellEl.getAttribute('data-cs'), 10) || 1;
-        const cellRect = cellEl.getBoundingClientRect();
-        const baseW = cellRect.width / startCS;
-        const baseH = cellRect.height / startRS;
-        _wbDrag = {
-          cellEl: cellEl,
-          r: r, c: c,
-          startRS: startRS, startCS: startCS,
-          baseW: baseW, baseH: baseH,
-          anchorLeft: cellRect.left,
-          anchorTop: cellRect.top,
-          newRS: startRS, newCS: startCS,
-          colsTotal: s.cols, rowsTotal: s.rows,
-          commitFn: function (r, c, rs, cs) {
-            const idx = (s.cells || []).findIndex(function (x) { return x.r === r && x.c === c; });
-            if (idx >= 0) {
-              s.cells[idx].rowSpan = rs;
-              s.cells[idx].colSpan = cs;
-            } else {
-              s.cells = s.cells || [];
-              s.cells.push({ r: r, c: c, text: cellEl.innerText || '', rowSpan: rs, colSpan: cs });
-            }
-            persist();
-            render(view);
-          },
-        };
-        cellEl.classList.add('wb-resizing');
-        cellEl.contentEditable = 'false';
-        document.body.style.cursor = 'nwse-resize';
-        document.body.style.userSelect = 'none';
-      });
-    });
-
-    // v2.9.40 — Template picker
-    PCD.$('#wbTemplateBtn', view).addEventListener('click', function () {
-      openTemplatePicker(view);
     });
   }
 
-  // ============ TEMPLATE PICKER ============
-  function openTemplatePicker(view) {
-    const t = PCD.i18n.t;
-    const userTpls = loadUserTemplates();
-    const body = PCD.el('div');
-
-    function buildHtml() {
-      const tpls = loadUserTemplates();
-      let html = '<div style="font-size:13px;color:var(--text-2);margin-bottom:12px;line-height:1.5;">' +
-        PCD.escapeHtml(t('whiteboard_template_intro') || 'Pick a starter template. Adds a new canvas; your current canvas is kept.') +
-      '</div>';
-
-      // v2.10.1 — Save current as template button
-      html += '<button type="button" id="wbSaveAsTpl" style="width:100%;text-align:center;padding:10px;background:var(--brand-50);border:1px dashed var(--brand-300);border-radius:8px;cursor:pointer;color:var(--brand-700);font-weight:700;font-size:13px;margin-bottom:14px;">' +
-        '💾 ' + PCD.escapeHtml(t('whiteboard_save_as_template') || 'Save current canvas as template') +
-      '</button>';
-
-      // User templates section
-      if (tpls.length > 0) {
-        html += '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">' + PCD.escapeHtml(t('whiteboard_your_templates') || 'Your templates') + '</div>';
-        html += '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;">';
-        tpls.forEach(function (tpl) {
-          html += '<div style="display:flex;align-items:center;gap:8px;background:var(--surface-1);border:1px solid var(--border);border-radius:8px;padding:10px 12px;">' +
-            '<button type="button" data-user-tpl="' + tpl.id + '" style="flex:1;text-align:start;background:transparent;border:0;cursor:pointer;padding:0;">' +
-              '<div style="font-weight:700;font-size:13px;color:var(--text-1);">' + PCD.escapeHtml(tpl.name || 'Untitled') + '</div>' +
-              '<div style="font-size:11px;color:var(--text-3);">' + tpl.paper + ' ' + tpl.orient + ' · ' + tpl.rows + ' × ' + tpl.cols + ' · ' + (tpl.cells || []).length + ' ' + PCD.escapeHtml(t('whiteboard_cells') || 'cells') + '</div>' +
-            '</button>' +
-            '<button type="button" data-del-user-tpl="' + tpl.id + '" style="background:transparent;border:0;color:var(--danger);cursor:pointer;padding:4px 8px;font-size:12px;" title="' + PCD.escapeHtml(t('delete') || 'Delete') + '">🗑</button>' +
-          '</div>';
-        });
-        html += '</div>';
-      }
-
-      // Built-in templates section
-      html += '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">' + PCD.escapeHtml(t('whiteboard_builtin_templates') || 'Built-in templates') + '</div>';
-      html += '<div style="display:flex;flex-direction:column;gap:6px;">';
-      TEMPLATES.forEach(function (tpl) {
-        html += '<button type="button" data-tpl="' + tpl.id + '" style="text-align:start;padding:10px 12px;background:var(--surface-1);border:1px solid var(--border);border-radius:8px;cursor:pointer;">' +
-          '<div style="font-weight:700;font-size:13px;color:var(--text-1);">' + PCD.escapeHtml(t(tpl.labelKey) || tpl.label) + '</div>' +
-          '<div style="font-size:11px;color:var(--text-3);">' + tpl.paper + ' ' + tpl.orient + ' · ' + tpl.rows + ' × ' + tpl.cols + ' · ' + tpl.cells.length + ' ' + PCD.escapeHtml(t('whiteboard_cells') || 'cells') + '</div>' +
-        '</button>';
-      });
-      html += '</div>';
-      body.innerHTML = html;
-      wireButtons();
-    }
-
-    function applyTemplateAsNewCanvas(tpl) {
-      const fresh = loadStore();
-      const nc = Object.assign(defaultCanvas(tpl.title), {
-        name: tpl.title || tpl.name,
-        title: tpl.title || tpl.name,
-        paper: tpl.paper,
-        orient: tpl.orient,
-        rows: tpl.rows,
-        cols: tpl.cols,
-        cells: (tpl.cells || []).slice(),
-      });
-      fresh.canvases.push(nc);
-      fresh.activeId = nc.id;
-      saveStore(fresh);
-    }
-
-    function wireButtons() {
-      body.querySelectorAll('[data-tpl]').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-          const id = this.getAttribute('data-tpl');
-          const tpl = TEMPLATES.find(function (x) { return x.id === id; });
-          if (!tpl) return;
-          applyTemplateAsNewCanvas(tpl);
-          m.close();
-          render(view);
-        });
-      });
-      body.querySelectorAll('[data-user-tpl]').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-          const id = this.getAttribute('data-user-tpl');
-          const tpl = loadUserTemplates().find(function (x) { return x.id === id; });
-          if (!tpl) return;
-          applyTemplateAsNewCanvas(tpl);
-          m.close();
-          render(view);
-        });
-      });
-      body.querySelectorAll('[data-del-user-tpl]').forEach(function (btn) {
-        btn.addEventListener('click', function (e) {
-          e.stopPropagation();
-          const id = this.getAttribute('data-del-user-tpl');
-          const arr = loadUserTemplates().filter(function (x) { return x.id !== id; });
-          saveUserTemplates(arr);
-          buildHtml();  // refresh list
-        });
-      });
-      const saveBtn = body.querySelector('#wbSaveAsTpl');
-      if (saveBtn) {
-        saveBtn.addEventListener('click', function () {
-          const current = getActive(loadStore());
-          if (!current) return;
-          const defaultName = current.title || 'My template';
-          const name = window.prompt(t('whiteboard_template_name_prompt') || 'Template name:', defaultName);
-          if (!name) return;
-          const arr = loadUserTemplates();
-          arr.push({
-            id: uid(),
-            name: name.trim() || defaultName,
-            title: current.title,
-            paper: current.paper,
-            orient: current.orient,
-            rows: current.rows,
-            cols: current.cols,
-            cells: (current.cells || []).slice(),
-            savedAt: nowIso(),
-          });
-          saveUserTemplates(arr);
-          PCD.toast.success(t('whiteboard_template_saved') || 'Template saved');
-          buildHtml();
-        });
-      }
-    }
-
-    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('close') || 'Close', style: { width: '100%' } });
-    const footer = PCD.el('div', { style: { width: '100%' } });
-    footer.appendChild(cancelBtn);
-
-    const m = PCD.modal.open({
-      title: '📚 ' + (t('whiteboard_templates') || 'Templates'),
-      body: body, footer: footer, size: 'md', closable: true,
+  function wireCanvasMeta(root, canvas) {
+    const titleEl = root.querySelector('#wbTitle');
+    if (titleEl) titleEl.addEventListener('input', function () {
+      canvas.title = this.value;
+      canvas.name = this.value || 'Untitled';
+      persistCanvas(canvas);
+      // Update dropdown option live
+      const opt = root.querySelector('#wbCanvasSelect option[value="' + CSS.escape(canvas.id) + '"]');
+      if (opt) opt.textContent = canvas.name;
+      // Update sheet title preview if visible
+      const sheetTitle = root.querySelector('.wb-canvas .wb-canvas-title-preview');
+      if (sheetTitle) sheetTitle.textContent = canvas.title || '';
     });
-    cancelBtn.addEventListener('click', function () { m.close(); });
+    PCD.on(root, 'click', '[data-wb-paper]', function () {
+      canvas.paper = this.getAttribute('data-wb-paper');
+      persistCanvas(canvas);
+      rerender();
+    });
+    PCD.on(root, 'click', '[data-wb-orient]', function () {
+      canvas.orient = this.getAttribute('data-wb-orient');
+      persistCanvas(canvas);
+      rerender();
+    });
+  }
 
-    buildHtml();
+  function wirePalette(root, canvas, view) {
+    PCD.on(root, 'click', '[data-add-block]', function () {
+      const type = this.getAttribute('data-add-block');
+      const block = makeBlock(type);
+      canvas.blocks = canvas.blocks || [];
+      canvas.blocks.push(block);
+      persistCanvas(canvas);
+      _ui.selectedBlockIdx = canvas.blocks.length - 1;
+      rerender();
+      // Auto-open inspector on mobile (bottom sheet)
+      if (window.matchMedia && window.matchMedia('(max-width: 900px)').matches) {
+        openBottomSheet(root, canvas);
+      }
+    });
+  }
+
+  function wireCanvasPane(root, canvas, view) {
+    // Block click → select + open inspector
+    PCD.on(root, 'click', '.wb-block', function (e) {
+      // Skip clicks on handle (drag) or action buttons
+      if (e.target.closest('.wb-block-handle')) return;
+      const idx = parseInt(this.getAttribute('data-blk-idx'), 10);
+      if (isNaN(idx)) return;
+      _ui.selectedBlockIdx = idx;
+      // Mobile: open bottom sheet
+      if (window.matchMedia && window.matchMedia('(max-width: 900px)').matches) {
+        rerender();
+        openBottomSheet(root, canvas);
+      } else {
+        rerender();
+      }
+    });
+
+    // Drag-reorder: HTML5 + touch fallback via unified handlers
+    wireBlockReorder(root, canvas);
+  }
+
+  // Drag-reorder: unified mouse + touch. Each block is draggable;
+  // drop position determined by midpoint.
+  // v2.11.0 — Module-level cleanup ref: render her çağrıldığında eski document
+  // listener'ları sil, yenilerini attach. Aksi takdirde her render 4 leaked
+  // listener bırakır (long-running session memory bloat).
+  let _wbDragCleanup = null;
+  function wireBlockReorder(root, canvas) {
+    if (_wbDragCleanup) { try { _wbDragCleanup(); } catch (e) {} _wbDragCleanup = null; }
+    const canvasEl = root.querySelector('#wbCanvas');
+    if (!canvasEl) return;
+
+    let dragState = null;  // { idx, ghostY, blocks: NodeListOf<.wb-block> }
+
+    function onStart(e, blockEl) {
+      const idx = parseInt(blockEl.getAttribute('data-blk-idx'), 10);
+      if (isNaN(idx)) return;
+      const pt = pointFromEvent(e);
+      dragState = {
+        idx: idx,
+        startX: pt.x,
+        startY: pt.y,
+        moved: false,
+        blockEl: blockEl,
+      };
+      blockEl.classList.add('dragging');
+      document.body.style.cursor = 'grabbing';
+      document.body.style.userSelect = 'none';
+    }
+    function onMove(e) {
+      if (!dragState) return;
+      const pt = pointFromEvent(e);
+      const dx = pt.x - dragState.startX;
+      const dy = pt.y - dragState.startY;
+      if (!dragState.moved && Math.hypot(dx, dy) < 6) return;
+      dragState.moved = true;
+      if (e.cancelable) e.preventDefault();
+
+      // Find block under pointer
+      const blockEls = canvasEl.querySelectorAll('.wb-block');
+      blockEls.forEach(function (b) { b.classList.remove('drag-over-top'); b.classList.remove('drag-over-bottom'); });
+      for (let i = 0; i < blockEls.length; i++) {
+        const b = blockEls[i];
+        if (b === dragState.blockEl) continue;
+        const rect = b.getBoundingClientRect();
+        if (pt.y >= rect.top && pt.y <= rect.bottom) {
+          const mid = rect.top + rect.height / 2;
+          if (pt.y < mid) b.classList.add('drag-over-top');
+          else b.classList.add('drag-over-bottom');
+          dragState.dropTarget = b;
+          dragState.dropPosition = pt.y < mid ? 'top' : 'bottom';
+          break;
+        }
+      }
+    }
+    function onEnd() {
+      if (!dragState) return;
+      const blockEls = canvasEl.querySelectorAll('.wb-block');
+      blockEls.forEach(function (b) { b.classList.remove('drag-over-top'); b.classList.remove('drag-over-bottom'); b.classList.remove('dragging'); });
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+
+      if (dragState.moved && dragState.dropTarget) {
+        const fromIdx = dragState.idx;
+        const targetIdx = parseInt(dragState.dropTarget.getAttribute('data-blk-idx'), 10);
+        if (!isNaN(targetIdx) && fromIdx !== targetIdx) {
+          let toIdx = dragState.dropPosition === 'bottom' ? targetIdx + 1 : targetIdx;
+          if (fromIdx < toIdx) toIdx -= 1;
+          const blocks = canvas.blocks || [];
+          const [moved] = blocks.splice(fromIdx, 1);
+          blocks.splice(toIdx, 0, moved);
+          canvas.blocks = blocks;
+          persistCanvas(canvas);
+          _ui.selectedBlockIdx = toIdx;
+          rerender();
+        }
+      }
+      dragState = null;
+    }
+    function pointFromEvent(e) {
+      if (e.touches && e.touches.length) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      if (e.changedTouches && e.changedTouches.length) return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+      return { x: e.clientX, y: e.clientY };
+    }
+
+    // Attach to each block's handle (or block itself for touch)
+    canvasEl.querySelectorAll('.wb-block').forEach(function (blockEl) {
+      const handle = blockEl.querySelector('.wb-block-handle');
+      if (handle) {
+        handle.addEventListener('mousedown', function (e) { e.stopPropagation(); onStart(e, blockEl); });
+        handle.addEventListener('touchstart', function (e) { e.stopPropagation(); onStart(e, blockEl); }, { passive: false });
+      }
+    });
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('mouseup', onEnd);
+    document.addEventListener('touchend', onEnd);
+    // Module-level cleanup (file load -> render N -> cleanup before render N+1)
+    _wbDragCleanup = function () {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('mouseup', onEnd);
+      document.removeEventListener('touchend', onEnd);
+    };
+  }
+
+  function wireInspector(root, canvas, view) {
+    const inspector = root.querySelector('.wb-inspector-pane-desktop');
+    const bsBody = root.querySelector('#wbBSBody');
+    function getActiveBlock() {
+      return (canvas.blocks || [])[_ui.selectedBlockIdx];
+    }
+    function commit() {
+      persistCanvas(canvas);
+      // Re-render canvas + inspector (don't re-render full page to keep focus)
+      const cv = root.querySelector('#wbCanvas');
+      if (cv) cv.innerHTML = renderSheet(canvas, _ui.selectedBlockIdx);
+      // Also refresh inspector to reflect any normalization
+      if (inspector) {
+        const block = getActiveBlock();
+        inspector.innerHTML = '' +
+          '<div class="wb-pane-title" style="justify-content:space-between;">' +
+            '<span>' + PCD.icon('settings', 13) + ' ' + PCD.escapeHtml(t('wb_inspector_title', 'Block style')) + '</span>' +
+            (block ? '<span style="font-weight:600;color:var(--brand-700);font-size:10px;">' + PCD.escapeHtml(t(blockTypeMeta(block.type).labelKey, blockTypeMeta(block.type).label)) + '</span>' : '') +
+          '</div>' +
+          (block ? buildInspectorContent(block, _ui.selectedBlockIdx) : '<div style="font-size:12px;color:var(--text-3);text-align:center;padding:24px 8px;">' + PCD.escapeHtml(t('wb_inspector_empty', 'Click a block.')) + '</div>');
+      }
+      // Bottom sheet body refresh
+      if (bsBody && _ui.bottomSheetOpen) {
+        const block = getActiveBlock();
+        if (block) bsBody.innerHTML = buildInspectorContent(block, _ui.selectedBlockIdx);
+      }
+      // Re-attach reorder listeners after re-render
+      wireBlockReorder(root, canvas);
+      // Re-bind canvas pane click
+      bindCanvasPaneClicks(root, canvas);
+    }
+
+    // Style setters
+    PCD.on(root, 'click', '[data-set-color]', function () {
+      const block = getActiveBlock(); if (!block) return;
+      block.style = block.style || {};
+      block.style.color = this.getAttribute('data-set-color');
+      commit();
+    });
+    PCD.on(root, 'click', '[data-set-size]', function () {
+      const block = getActiveBlock(); if (!block) return;
+      block.style = block.style || {};
+      block.style.size = this.getAttribute('data-set-size');
+      commit();
+    });
+    PCD.on(root, 'click', '[data-set-align]', function () {
+      const block = getActiveBlock(); if (!block) return;
+      block.style = block.style || {};
+      block.style.align = this.getAttribute('data-set-align');
+      commit();
+    });
+    PCD.on(root, 'click', '[data-set-layout]', function () {
+      const block = getActiveBlock(); if (!block) return;
+      block.layout = this.getAttribute('data-set-layout');
+      commit();
+    });
+
+    // Block actions
+    PCD.on(root, 'click', '[data-blk-action]', function () {
+      const block = getActiveBlock(); if (!block) return;
+      const action = this.getAttribute('data-blk-action');
+      const blocks = canvas.blocks || [];
+      const idx = _ui.selectedBlockIdx;
+      if (action === 'duplicate') {
+        const copy = JSON.parse(JSON.stringify(block));
+        copy.id = uid('blk');
+        blocks.splice(idx + 1, 0, copy);
+        _ui.selectedBlockIdx = idx + 1;
+        persistCanvas(canvas);
+        rerender();
+      } else if (action === 'delete') {
+        blocks.splice(idx, 1);
+        _ui.selectedBlockIdx = -1;
+        persistCanvas(canvas);
+        rerender();
+        closeBottomSheet(root);
+      } else if (action === 'move-up' && idx > 0) {
+        const tmp = blocks[idx - 1];
+        blocks[idx - 1] = blocks[idx];
+        blocks[idx] = tmp;
+        _ui.selectedBlockIdx = idx - 1;
+        persistCanvas(canvas);
+        rerender();
+      } else if (action === 'move-down' && idx < blocks.length - 1) {
+        const tmp = blocks[idx + 1];
+        blocks[idx + 1] = blocks[idx];
+        blocks[idx] = tmp;
+        _ui.selectedBlockIdx = idx + 1;
+        persistCanvas(canvas);
+        rerender();
+      }
+    });
+
+    // Content field editors (delegated)
+    function onContentInput(e) {
+      const block = getActiveBlock(); if (!block) return;
+      const target = e.target;
+      const field = target.getAttribute('data-ct-field');
+      if (field) {
+        block.content = block.content || {};
+        block.content[field] = target.value;
+        // Debounce-light commit (no full re-render — only canvas refresh)
+        persistCanvas(canvas);
+        const cv = root.querySelector('#wbCanvas');
+        if (cv) cv.innerHTML = renderSheet(canvas, _ui.selectedBlockIdx);
+        // Re-bind canvas pane clicks because innerHTML wiped children
+        wireBlockReorder(root, canvas);
+        bindCanvasPaneClicks(root, canvas);
+        return;
+      }
+      // Checklist
+      const chkText = target.getAttribute('data-ct-checklist-text');
+      if (chkText !== null) {
+        const i = parseInt(chkText, 10);
+        block.content = block.content || { items: [] };
+        block.content.items[i] = block.content.items[i] || { text: '', done: false };
+        block.content.items[i].text = target.value;
+        commitLight(); return;
+      }
+      // KV
+      const kvKey = target.getAttribute('data-ct-kv-key');
+      if (kvKey !== null) {
+        const i = parseInt(kvKey, 10);
+        block.content = block.content || { pairs: [] };
+        block.content.pairs[i] = block.content.pairs[i] || { key: '', value: '' };
+        block.content.pairs[i].key = target.value;
+        commitLight(); return;
+      }
+      const kvVal = target.getAttribute('data-ct-kv-value');
+      if (kvVal !== null) {
+        const i = parseInt(kvVal, 10);
+        block.content = block.content || { pairs: [] };
+        block.content.pairs[i] = block.content.pairs[i] || { key: '', value: '' };
+        block.content.pairs[i].value = target.value;
+        commitLight(); return;
+      }
+      // Table
+      const thIdx = target.getAttribute('data-ct-table-header');
+      if (thIdx !== null) {
+        const i = parseInt(thIdx, 10);
+        block.content = block.content || { headers: [], rows: [] };
+        block.content.headers[i] = target.value;
+        commitLight(); return;
+      }
+      const tdRC = target.getAttribute('data-ct-table-cell');
+      if (tdRC !== null) {
+        const parts = tdRC.split(',').map(function (n) { return parseInt(n, 10); });
+        block.content = block.content || { headers: [], rows: [] };
+        block.content.rows[parts[0]] = block.content.rows[parts[0]] || [];
+        block.content.rows[parts[0]][parts[1]] = target.value;
+        commitLight(); return;
+      }
+    }
+    function onContentChange(e) {
+      const block = getActiveBlock(); if (!block) return;
+      const target = e.target;
+      const chkDone = target.getAttribute('data-ct-checklist-done');
+      if (chkDone !== null) {
+        const i = parseInt(chkDone, 10);
+        block.content = block.content || { items: [] };
+        block.content.items[i] = block.content.items[i] || { text: '', done: false };
+        block.content.items[i].done = target.checked;
+        commitLight();
+      }
+    }
+    function commitLight() {
+      persistCanvas(canvas);
+      const cv = root.querySelector('#wbCanvas');
+      if (cv) cv.innerHTML = renderSheet(canvas, _ui.selectedBlockIdx);
+      wireBlockReorder(root, canvas);
+      bindCanvasPaneClicks(root, canvas);
+    }
+
+    root.addEventListener('input', onContentInput);
+    root.addEventListener('change', onContentChange);
+
+    // Checklist add/del
+    PCD.on(root, 'click', '[data-ct-checklist-add]', function () {
+      const block = getActiveBlock(); if (!block) return;
+      block.content = block.content || { items: [] };
+      block.content.items.push({ text: '', done: false });
+      commit();
+    });
+    PCD.on(root, 'click', '[data-ct-checklist-del]', function () {
+      const block = getActiveBlock(); if (!block) return;
+      const i = parseInt(this.getAttribute('data-ct-checklist-del'), 10);
+      block.content.items.splice(i, 1);
+      commit();
+    });
+    // KV add/del
+    PCD.on(root, 'click', '[data-ct-kv-add]', function () {
+      const block = getActiveBlock(); if (!block) return;
+      block.content = block.content || { pairs: [] };
+      block.content.pairs.push({ key: '', value: '' });
+      commit();
+    });
+    PCD.on(root, 'click', '[data-ct-kv-del]', function () {
+      const block = getActiveBlock(); if (!block) return;
+      const i = parseInt(this.getAttribute('data-ct-kv-del'), 10);
+      block.content.pairs.splice(i, 1);
+      commit();
+    });
+    // Table add row/col, delete row
+    PCD.on(root, 'click', '[data-ct-table-addrow]', function () {
+      const block = getActiveBlock(); if (!block) return;
+      block.content = block.content || { headers: [], rows: [] };
+      const colCount = block.content.headers.length || 3;
+      block.content.rows.push(new Array(colCount).fill(''));
+      commit();
+    });
+    PCD.on(root, 'click', '[data-ct-table-addcol]', function () {
+      const block = getActiveBlock(); if (!block) return;
+      block.content = block.content || { headers: [], rows: [] };
+      block.content.headers.push('');
+      block.content.rows.forEach(function (r) { r.push(''); });
+      commit();
+    });
+    PCD.on(root, 'click', '[data-ct-table-rowdel]', function () {
+      const block = getActiveBlock(); if (!block) return;
+      const i = parseInt(this.getAttribute('data-ct-table-rowdel'), 10);
+      block.content.rows.splice(i, 1);
+      commit();
+    });
+  }
+
+  // Re-bind canvas pane clicks (called after canvas innerHTML refreshed)
+  function bindCanvasPaneClicks(root, canvas) {
+    const canvasEl = root.querySelector('#wbCanvas');
+    if (!canvasEl) return;
+    canvasEl.querySelectorAll('.wb-block').forEach(function (blockEl) {
+      blockEl.addEventListener('click', function (e) {
+        if (e.target.closest('.wb-block-handle')) return;
+        const idx = parseInt(this.getAttribute('data-blk-idx'), 10);
+        if (isNaN(idx)) return;
+        _ui.selectedBlockIdx = idx;
+        // Update visual selection (don't full rerender)
+        canvasEl.querySelectorAll('.wb-block').forEach(function (b) { b.classList.remove('wb-block-selected'); });
+        this.classList.add('wb-block-selected');
+        // Refresh inspector + maybe open bottom sheet
+        const root2 = document.getElementById('wbRoot');
+        if (!root2) return;
+        const inspector = root2.querySelector('.wb-inspector-pane-desktop');
+        if (inspector) {
+          const block = (canvas.blocks || [])[idx];
+          inspector.innerHTML = '' +
+            '<div class="wb-pane-title" style="justify-content:space-between;">' +
+              '<span>' + PCD.icon('settings', 13) + ' ' + PCD.escapeHtml(t('wb_inspector_title', 'Block style')) + '</span>' +
+              (block ? '<span style="font-weight:600;color:var(--brand-700);font-size:10px;">' + PCD.escapeHtml(t(blockTypeMeta(block.type).labelKey, blockTypeMeta(block.type).label)) + '</span>' : '') +
+            '</div>' +
+            (block ? buildInspectorContent(block, idx) : '');
+        }
+        if (window.matchMedia && window.matchMedia('(max-width: 900px)').matches) {
+          openBottomSheet(root2, canvas);
+        }
+      });
+    });
+  }
+
+  function wireBottomSheet(root, canvas) {
+    const backdrop = root.querySelector('#wbSheetBackdrop');
+    const sheet = root.querySelector('#wbBottomSheet');
+    const close = root.querySelector('#wbBSClose');
+    function doClose() { closeBottomSheet(root); }
+    if (close) close.addEventListener('click', doClose);
+    if (backdrop) backdrop.addEventListener('click', doClose);
+  }
+
+  function openBottomSheet(root, canvas) {
+    if (!root) root = document.getElementById('wbRoot');
+    if (!root) return;
+    const backdrop = root.querySelector('#wbSheetBackdrop');
+    const sheet = root.querySelector('#wbBottomSheet');
+    const body = root.querySelector('#wbBSBody');
+    const title = root.querySelector('#wbBSTitle');
+    if (!backdrop || !sheet || !body) return;
+    const block = (canvas.blocks || [])[_ui.selectedBlockIdx];
+    if (!block) return;
+    body.innerHTML = buildInspectorContent(block, _ui.selectedBlockIdx);
+    if (title) title.textContent = t(blockTypeMeta(block.type).labelKey, blockTypeMeta(block.type).label);
+    backdrop.classList.add('open');
+    requestAnimationFrame(function () {
+      sheet.classList.add('open');
+    });
+    _ui.bottomSheetOpen = true;
+  }
+  function closeBottomSheet(root) {
+    if (!root) root = document.getElementById('wbRoot');
+    if (!root) return;
+    const backdrop = root.querySelector('#wbSheetBackdrop');
+    const sheet = root.querySelector('#wbBottomSheet');
+    if (sheet) sheet.classList.remove('open');
+    if (backdrop) {
+      setTimeout(function () { backdrop.classList.remove('open'); }, 200);
+    }
+    _ui.bottomSheetOpen = false;
+  }
+
+  // ============ RESET ============
+  function resetCanvas(root) {
+    const store = loadStore();
+    const canvas = getActive(store);
+    PCD.modal.confirm({
+      icon: '↺',
+      title: t('whiteboard_reset_confirm_title', 'Reset whiteboard?'),
+      text: t('whiteboard_reset_confirm_text_v2', 'All blocks will be removed. Title, paper, and orientation are kept.'),
+      okText: t('whiteboard_reset', 'Reset'),
+      cancelText: t('cancel', 'Cancel'),
+    }).then(function (ok) {
+      if (!ok) return;
+      canvas.blocks = [];
+      _ui.selectedBlockIdx = -1;
+      persistCanvas(canvas);
+      rerender();
+    });
+  }
+
+  // ============ TEMPLATES PICKER ============
+  function openTemplatesPicker(root) {
+    const userTpls = loadUserTemplates();
+
+    let html = '<div style="display:flex;flex-direction:column;gap:14px;max-height:70vh;overflow-y:auto;padding-right:4px;">';
+
+    // Save current as template
+    html += '<button type="button" id="wbSaveAsTpl" style="width:100%;text-align:center;padding:10px;background:var(--brand-50);border:1px dashed var(--brand-300);border-radius:8px;cursor:pointer;color:var(--brand-700);font-weight:700;font-size:13px;">' +
+      '+ ' + PCD.escapeHtml(t('whiteboard_save_as_template', 'Save current canvas as template')) +
+    '</button>';
+
+    // User templates
+    if (userTpls.length > 0) {
+      html += '<div>' +
+        '<div style="font-size:11px;font-weight:800;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">' +
+          PCD.escapeHtml(t('whiteboard_user_templates', 'Your templates')) + ' (' + userTpls.length + ')' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
+      userTpls.forEach(function (tpl) {
+        html += '<div style="border:1px solid var(--border);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:6px;">' +
+          '<div style="font-weight:700;font-size:13px;">' + PCD.escapeHtml(tpl.name || 'Untitled') + '</div>' +
+          '<div style="font-size:11px;color:var(--text-3);">' + (tpl.blocks || []).length + ' ' + PCD.escapeHtml(t('wb_blocks_count', 'blocks')) + ' · ' + PCD.escapeHtml(tpl.paper || 'A4') + ' ' + PCD.escapeHtml(tpl.orient || 'landscape') + '</div>' +
+          '<div style="display:flex;gap:4px;margin-top:4px;">' +
+            '<button class="btn btn-primary btn-sm" data-apply-user-tpl="' + PCD.escapeHtml(tpl.id) + '" style="flex:1;font-size:11px;">' + PCD.escapeHtml(t('wb_template_apply', 'Apply')) + '</button>' +
+            '<button class="btn btn-outline btn-sm" data-del-user-tpl="' + PCD.escapeHtml(tpl.id) + '" style="flex:0 0 auto;color:var(--danger);" title="' + PCD.escapeHtml(t('delete', 'Delete')) + '">×</button>' +
+          '</div>' +
+        '</div>';
+      });
+      html += '</div></div>';
+    }
+
+    // Built-in templates
+    html += '<div>' +
+      '<div style="font-size:11px;font-weight:800;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">' +
+        PCD.escapeHtml(t('whiteboard_builtin_templates', 'Built-in templates')) + ' (' + TEMPLATES.length + ')' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
+    TEMPLATES.forEach(function (tpl) {
+      html += '<div style="border:1px solid var(--border);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:6px;background:var(--surface-2);">' +
+        '<div style="font-weight:700;font-size:13px;">' + PCD.escapeHtml(t(tpl.labelKey, tpl.label)) + '</div>' +
+        '<div style="font-size:11px;color:var(--text-3);">' + (tpl.blocks || []).length + ' ' + PCD.escapeHtml(t('wb_blocks_count', 'blocks')) + ' · ' + PCD.escapeHtml(tpl.paper) + ' ' + PCD.escapeHtml(tpl.orient) + '</div>' +
+        '<button class="btn btn-primary btn-sm" data-apply-tpl="' + PCD.escapeHtml(tpl.id) + '" style="font-size:11px;margin-top:4px;">' + PCD.escapeHtml(t('wb_template_apply', 'Apply')) + '</button>' +
+      '</div>';
+    });
+    html += '</div></div></div>';
+
+    const closeFooterBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', text: t('close', 'Close') });
+    closeFooterBtn.style.width = '100%';
+    const m = PCD.modal.open({
+      title: t('whiteboard_templates', 'Templates'),
+      body: html,
+      footer: closeFooterBtn,
+      size: 'lg',
+      closable: true,
+    });
+    closeFooterBtn.addEventListener('click', function () { m.close(); });
+    (function () {
+      const modalEl = m.panel;
+      if (modalEl) {
+        // Save as template
+        const saveBtn = modalEl.querySelector('#wbSaveAsTpl');
+        if (saveBtn) saveBtn.addEventListener('click', function () {
+          const store = loadStore();
+          const canvas = getActive(store);
+          if ((canvas.blocks || []).length === 0) {
+            PCD.toast.warning(t('wb_template_empty_warn', 'Canvas is empty — add blocks first.'));
+            return;
+          }
+          // PCD.modal.prompt yok → modal.open + input ile custom prompt.
+          const promptBody = PCD.el('div', { style: { display: 'flex', flexDirection: 'column', gap: '10px' } });
+          const lbl = PCD.el('div', { style: { fontSize: '13px', fontWeight: '600', color: 'var(--text-2)' }, text: t('whiteboard_template_name_label', 'Template name') });
+          const inp = PCD.el('input', { type: 'text', class: 'input', placeholder: t('whiteboard_template_name_ph', 'My custom template') });
+          inp.style.width = '100%';
+          promptBody.appendChild(lbl);
+          promptBody.appendChild(inp);
+          const cancelBtn = PCD.el('button', { type: 'button', class: 'btn btn-secondary', text: t('cancel', 'Cancel') });
+          const okBtn = PCD.el('button', { type: 'button', class: 'btn btn-primary', text: t('save', 'Save') });
+          cancelBtn.style.flex = '1'; okBtn.style.flex = '1';
+          const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
+          footer.appendChild(cancelBtn);
+          footer.appendChild(okBtn);
+          const m2 = PCD.modal.open({
+            title: t('whiteboard_save_as_template', 'Save as template'),
+            body: promptBody,
+            footer: footer,
+            size: 'sm',
+            closable: true,
+          });
+          setTimeout(function () { try { inp.focus(); } catch (e) {} }, 100);
+          function commitPrompt() {
+            const name = (inp.value || '').trim();
+            if (!name) { try { inp.focus(); } catch (e) {} return; }
+            const tpls = loadUserTemplates();
+            tpls.push({
+              id: uid('utpl'),
+              name: name,
+              paper: canvas.paper,
+              orient: canvas.orient,
+              blocks: JSON.parse(JSON.stringify(canvas.blocks)),
+              savedAt: nowIso(),
+            });
+            saveUserTemplates(tpls);
+            PCD.toast.success(t('whiteboard_template_saved', 'Template saved'));
+            PCD.modal.closeAll();
+            openTemplatesPicker(document.getElementById('wbRoot'));
+          }
+          okBtn.addEventListener('click', commitPrompt);
+          inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') commitPrompt(); });
+          cancelBtn.addEventListener('click', function () { m2.close(); });
+        });
+        // Apply built-in
+        modalEl.querySelectorAll('[data-apply-tpl]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            const id = this.getAttribute('data-apply-tpl');
+            const tpl = TEMPLATES.find(function (x) { return x.id === id; });
+            if (!tpl) return;
+            const fresh = canvasFromTemplate(tpl);
+            const store = loadStore();
+            const arr = store.canvases.slice();
+            arr.push(fresh);
+            saveStore({ activeId: fresh.id, canvases: arr });
+            PCD.modal.closeAll();
+            _ui.selectedBlockIdx = -1;
+            rerender();
+            PCD.toast.success(t('whiteboard_template_applied', 'Template applied as new canvas'));
+          });
+        });
+        // Apply user template
+        modalEl.querySelectorAll('[data-apply-user-tpl]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            const id = this.getAttribute('data-apply-user-tpl');
+            const tpl = loadUserTemplates().find(function (x) { return x.id === id; });
+            if (!tpl) return;
+            const fresh = canvasFromTemplate(tpl, tpl.name);
+            const store = loadStore();
+            const arr = store.canvases.slice();
+            arr.push(fresh);
+            saveStore({ activeId: fresh.id, canvases: arr });
+            PCD.modal.closeAll();
+            _ui.selectedBlockIdx = -1;
+            rerender();
+            PCD.toast.success(t('whiteboard_template_applied', 'Template applied as new canvas'));
+          });
+        });
+        // Delete user template
+        modalEl.querySelectorAll('[data-del-user-tpl]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            const id = this.getAttribute('data-del-user-tpl');
+            const arr = loadUserTemplates().filter(function (x) { return x.id !== id; });
+            saveUserTemplates(arr);
+            PCD.modal.closeAll();
+            openTemplatesPicker(document.getElementById('wbRoot'));
+          });
+        });
+      }
+    })();
   }
 
   // ============ PRINT ============
-  function printSheet(s) {
-    const paper = s.paper || 'A4';
-    const orient = s.orient || 'landscape';
-    const isLand = orient === 'landscape';
-    const dims = (paper === 'A3')
-      ? (isLand ? { w: 420, h: 297 } : { w: 297, h: 420 })
-      : (isLand ? { w: 297, h: 210 } : { w: 210, h: 297 });
+  function printCanvas(canvas) {
+    const isLand = canvas.orient === 'landscape';
+    let pageW, pageH;
+    if (canvas.paper === 'A3') { pageW = isLand ? 420 : 297; pageH = isLand ? 297 : 420; }
+    else                       { pageW = isLand ? 297 : 210; pageH = isLand ? 210 : 297; }
 
-    const cellMap = {};
-    (s.cells || []).forEach(function (c) { cellMap[c.r + ':' + c.c] = c; });
+    // Determine column count based on paper + orient
+    let cols = 1;
+    if (canvas.paper === 'A3') cols = isLand ? 3 : 2;
+    else cols = isLand ? 2 : 1;
 
-    // v2.9.41 — Cell merge: print path mirrors live preview occupied skip + span.
-    const occupiedPrint = {};
-    (s.cells || []).forEach(function (cell) {
-      const rs = Math.max(1, parseInt(cell.rowSpan, 10) || 1);
-      const cs = Math.max(1, parseInt(cell.colSpan, 10) || 1);
-      if (rs === 1 && cs === 1) return;
-      for (let dr = 0; dr < rs; dr++) {
-        for (let dc = 0; dc < cs; dc++) {
-          if (dr === 0 && dc === 0) continue;
-          occupiedPrint[(cell.r + dr) + ':' + (cell.c + dc)] = true;
-        }
-      }
-    });
-
-    let gridHtml = '';
-    for (let r = 0; r < s.rows; r++) {
-      for (let c = 0; c < s.cols; c++) {
-        if (occupiedPrint[r + ':' + c]) continue;
-        const cell = cellMap[r + ':' + c] || {};
-        const palette = PALETTE.find(function (p) { return p.id === cell.color; }) || PALETTE[0];
-        const fz = FONT_SIZES[cell.fontSize] || FONT_SIZES.md;
-        const align = ALIGNS.indexOf(cell.align) >= 0 ? cell.align : 'start';
-        const rs = Math.max(1, Math.min(parseInt(cell.rowSpan, 10) || 1, s.rows - r));
-        const cs = Math.max(1, Math.min(parseInt(cell.colSpan, 10) || 1, s.cols - c));
-        const spanStyle = (rs > 1 ? 'grid-row:' + (r + 1) + ' / span ' + rs + ';' : '') +
-                          (cs > 1 ? 'grid-column:' + (c + 1) + ' / span ' + cs + ';' : '');
-        // v2.10.0 — cell type apply: class + extra inline style
-        const cellType = cell.type || 'text';
-        const typeStyle = typeStyleFor(cellType);
-        gridHtml +=
-          '<div class="wb-cell wb-cell-' + cellType + '" style="background:' + palette.bg + ';color:' + palette.text + ';padding:6px 8px;font-size:' + fz.px + 'px;line-height:1.3;overflow:hidden;border-radius:3px;word-break:break-word;overflow-wrap:break-word;text-align:' + align + ';display:flex;flex-direction:column;justify-content:center;' + spanStyle + typeStyle + '">' +
-            PCD.escapeHtml(cell.text || '') +
+    // Render blocks as a vertical stream; CSS column-fill auto for multi-col layout
+    let blocksHtml = '';
+    let i = 0;
+    const blocks = canvas.blocks || [];
+    while (i < blocks.length) {
+      const b = blocks[i];
+      if (b.layout === 'half' && i + 1 < blocks.length && blocks[i + 1].layout === 'half') {
+        // Pair half blocks in a 2-col mini grid
+        blocksHtml +=
+          '<div class="wb-print-half-pair">' +
+            renderPrintBlock(b) +
+            renderPrintBlock(blocks[i + 1]) +
           '</div>';
+        i += 2;
+      } else {
+        blocksHtml += renderPrintBlock(b);
+        i += 1;
       }
     }
 
     const html =
       '<style>' +
-        // v2.10.0 — Oswald (başlık) + Barlow (gövde) Google Fonts. Print
-        // path için PCD.print yeni window'a yapıştırır, fonts oradan yüklenir.
-        '@import url("https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700;800&family=Barlow:wght@400;500;600;700;800&display=swap");' +
-        'body{font-family:"Barlow",-apple-system,Segoe UI,Roboto,sans-serif;color:#111827;margin:0;padding:0;' +
-          'width:' + dims.w + 'mm;height:' + dims.h + 'mm;display:flex;flex-direction:column;}' +
-        '.wb-sheet{flex:1 1 auto;min-height:0;padding:5mm;display:flex;flex-direction:column;}' +
-        '.wb-title{font-family:"Oswald",-apple-system,sans-serif;padding:6px 12px;border-bottom:2.5px solid #16a34a;font-weight:800;font-size:22px;letter-spacing:0.06em;text-transform:uppercase;flex:0 0 auto;}' +
-        '.wb-grid{flex:1 1 auto;display:grid;grid-template-rows:repeat(' + s.rows + ',1fr);grid-template-columns:repeat(' + s.cols + ',1fr);gap:2px;padding:4px;background:#cbd5e1;}' +
-        '.wb-cell{font-family:"Barlow",-apple-system,sans-serif;}' +
-        '.wb-cell-header{font-family:"Oswald",-apple-system,sans-serif;}' +
-        '.wb-cell-twoLine::first-line{font-size:0.55em;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;opacity:0.65;}' +
-        '.pcd-print-footer{margin:0 !important;padding:1mm 4mm !important;border-top:none !important;flex:0 0 auto;font-size:7pt !important;line-height:1.2 !important;}' +
-        '@page{size:' + paper + ' ' + orient + ';margin:0;}' +
+        '@page { size: ' + canvas.paper + ' ' + canvas.orient + '; margin: 0; }' +
+        '@import url("https://fonts.googleapis.com/css2?family=Oswald:wght@600;700;800&family=Barlow:wght@400;500;600;700;800;900&display=swap");' +
+        'body { margin: 0; padding: 0; font-family: "Barlow", -apple-system, system-ui, sans-serif; color: #111827; background: #fff; width: ' + pageW + 'mm; height: ' + pageH + 'mm; display: flex; flex-direction: column; }' +
+        '.wb-print-sheet { flex: 1 1 auto; padding: 10mm 10mm 6mm; box-sizing: border-box; display: flex; flex-direction: column; gap: 4mm; overflow: hidden; }' +
+        '.wb-print-title { font-family: "Oswald", sans-serif; font-size: 18pt; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; padding-bottom: 4mm; border-bottom: 2pt solid #16a34a; flex: 0 0 auto; }' +
+        '.wb-print-body { flex: 1 1 auto; column-count: ' + cols + '; column-gap: 6mm; column-fill: auto; min-height: 0; }' +
+        '.wb-print-block { break-inside: avoid; page-break-inside: avoid; -webkit-column-break-inside: avoid; border-radius: 4pt; padding: 4mm 5mm; margin-bottom: 4mm; }' +
+        '.wb-print-half-pair { break-inside: avoid; page-break-inside: avoid; display: grid; grid-template-columns: 1fr 1fr; gap: 3mm; margin-bottom: 4mm; }' +
+        '.wb-print-half-pair > .wb-print-block { margin-bottom: 0; }' +
+        '.wb-print-section-header { font-family: "Oswald", sans-serif; }' +
+        '.wb-print-kv-row { display: flex; align-items: baseline; gap: 10pt; padding: 2pt 0; border-bottom: 1pt dashed rgba(127,127,127,0.3); }' +
+        '.wb-print-kv-key { font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; min-width: 60pt; opacity: 0.85; }' +
+        '.wb-print-kv-val { flex: 1 1 auto; text-align: right; font-variant-numeric: tabular-nums; }' +
+        '.wb-print-table { width: 100%; border-collapse: collapse; }' +
+        '.wb-print-table th { padding: 4pt 6pt; text-align: left; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 2pt solid currentColor; }' +
+        '.wb-print-table td { padding: 4pt 6pt; border-bottom: 1pt solid rgba(127,127,127,0.2); vertical-align: top; }' +
+        '.wb-print-checklist { display: flex; flex-direction: column; gap: 2pt; }' +
+        '.wb-print-checklist-item { display: flex; align-items: flex-start; gap: 6pt; }' +
+        '.wb-print-checklist-box { width: 10pt; height: 10pt; border: 1pt solid currentColor; border-radius: 1pt; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; font-size: 8pt; font-weight: 900; margin-top: 2pt; }' +
+        '.wb-print-bignum { display: flex; flex-direction: column; gap: 1pt; }' +
+        '.wb-print-bignum-value { font-weight: 900; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }' +
+        '.wb-print-bignum-label { font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.75; }' +
+        '.wb-print-divider { border: 0; border-top: 1pt solid rgba(127,127,127,0.4); margin: 6pt 0; }' +
+        '@media print { * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }' +
       '</style>' +
-      '<div class="wb-sheet">' +
-        '<div class="wb-title">' + PCD.escapeHtml(s.title || '') + '</div>' +
-        '<div class="wb-grid">' + gridHtml + '</div>' +
+      '<div class="wb-print-sheet">' +
+        (canvas.title ? '<div class="wb-print-title">' + PCD.escapeHtml(canvas.title) + '</div>' : '') +
+        '<div class="wb-print-body">' + blocksHtml + '</div>' +
       '</div>';
 
-    PCD.print(html, 'Whiteboard · ' + (s.title || ''));
+    PCD.print(html, canvas.title || (t('whiteboard_title', 'Kitchen Whiteboard')));
+  }
+
+  // Print-mode block renderer (separate from interactive — no buttons, no handles)
+  function renderPrintBlock(block) {
+    const palette = paletteFor(block.style && block.style.color);
+    const sizeMap = { sm: 10, md: 12, lg: 14, xl: 18 };
+    const fs = sizeMap[(block.style && block.style.size) || 'md'];
+    const align = (block.style && block.style.align) || 'left';
+    const style = 'background:' + palette.bg + ';color:' + palette.text + ';font-size:' + fs + 'pt;text-align:' + align + ';';
+
+    let inner = '';
+    switch (block.type) {
+      case 'section_header':
+        inner = '<div class="wb-print-section-header" style="font-size:' + (fs + 4) + 'pt;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;">' + PCD.escapeHtml(block.content.text || '') + '</div>';
+        break;
+      case 'big_number': {
+        const valSize = fs + 14;
+        inner = '<div class="wb-print-bignum" style="align-items:' + (align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start') + ';">' +
+          '<div class="wb-print-bignum-value" style="font-size:' + valSize + 'pt;">' +
+            PCD.escapeHtml(block.content.value || '0') +
+            (block.content.sub ? '<span style="font-size:0.5em;margin-left:3pt;opacity:0.7;">' + PCD.escapeHtml(block.content.sub) + '</span>' : '') +
+          '</div>' +
+          '<div class="wb-print-bignum-label">' + PCD.escapeHtml(block.content.label || '') + '</div>' +
+        '</div>';
+        break;
+      }
+      case 'checklist': {
+        const items = (block.content.items || []).map(function (it) {
+          return '<div class="wb-print-checklist-item">' +
+            '<span class="wb-print-checklist-box">' + (it.done ? '✓' : '') + '</span>' +
+            '<span style="' + (it.done ? 'opacity:0.55;text-decoration:line-through;' : '') + '">' + PCD.escapeHtml(it.text || '') + '</span>' +
+          '</div>';
+        }).join('');
+        inner = '<div class="wb-print-checklist">' + items + '</div>';
+        break;
+      }
+      case 'kv': {
+        const pairs = (block.content.pairs || []).map(function (p) {
+          return '<div class="wb-print-kv-row"><span class="wb-print-kv-key">' + PCD.escapeHtml(p.key || '') + '</span><span class="wb-print-kv-val">' + PCD.escapeHtml(p.value || '') + '</span></div>';
+        }).join('');
+        inner = pairs;
+        break;
+      }
+      case 'table': {
+        const heads = (block.content.headers || []).map(function (h) {
+          return '<th>' + PCD.escapeHtml(h || '') + '</th>';
+        }).join('');
+        const rows = (block.content.rows || []).map(function (r) {
+          const cells = (r || []).map(function (c) {
+            return '<td>' + PCD.escapeHtml(c || '') + '</td>';
+          }).join('');
+          return '<tr>' + cells + '</tr>';
+        }).join('');
+        inner = '<table class="wb-print-table"><thead><tr>' + heads + '</tr></thead><tbody>' + rows + '</tbody></table>';
+        break;
+      }
+      case 'alert': {
+        inner = '<div style="display:flex;align-items:center;justify-content:' + (align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start') + ';gap:8pt;font-size:' + (fs + 2) + 'pt;font-weight:800;letter-spacing:0.04em;text-transform:uppercase;line-height:1.25;">' +
+          (block.content.icon ? '<span style="font-size:1.2em;">' + PCD.escapeHtml(block.content.icon) + '</span>' : '') +
+          '<span>' + PCD.escapeHtml(block.content.text || '') + '</span>' +
+        '</div>';
+        break;
+      }
+      case 'text': {
+        inner = '<div style="line-height:1.45;white-space:pre-wrap;">' + PCD.escapeHtml(block.content.text || '') + '</div>';
+        break;
+      }
+      case 'divider': {
+        const lbl = block.content && block.content.label;
+        if (lbl) {
+          inner = '<div style="display:flex;align-items:center;gap:8pt;">' +
+            '<div style="flex:1;height:0.5pt;background:currentColor;opacity:0.3;"></div>' +
+            '<div style="font-weight:700;text-transform:uppercase;letter-spacing:0.08em;opacity:0.7;font-size:' + (fs - 1) + 'pt;">' + PCD.escapeHtml(lbl) + '</div>' +
+            '<div style="flex:1;height:0.5pt;background:currentColor;opacity:0.3;"></div>' +
+          '</div>';
+        } else {
+          inner = '<hr class="wb-print-divider">';
+        }
+        // Divider'a background uygulamayalım — şeffaf kalsın
+        return '<div class="wb-print-block wb-print-block-' + block.type + '" style="background:transparent;padding:0;">' + inner + '</div>';
+      }
+    }
+
+    return '<div class="wb-print-block wb-print-block-' + block.type + '" style="' + style + '">' + inner + '</div>';
+  }
+
+  // ============ RE-RENDER HELPER ============
+  let _currentView = null;
+  function rerender() {
+    if (!_currentView) _currentView = document.getElementById('view');
+    if (_currentView) render(_currentView);
   }
 
   // ============ EXPORT ============
   PCD.tools = PCD.tools || {};
-  PCD.tools.whiteboard = { render: render };
+  PCD.tools.whiteboard = {
+    render: function (view) {
+      _currentView = view;
+      _ui = { selectedBlockIdx: -1, bottomSheetOpen: false };
+      render(view);
+    },
+  };
 })();

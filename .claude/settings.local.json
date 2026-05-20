@@ -117,7 +117,10 @@
       "Bash(git -C \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\" diff --stat)",
       "Bash(xargs wc -l)",
       "Bash(grep -E \"\\\\.css$\")",
-      "Bash(git -C \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\" diff --stat HEAD)"
+      "Bash(git -C \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\" diff --stat HEAD)",
+      "Bash(grep -n \"^\\\\s*},\\\\s*$\\\\|^\\\\s*}\\);\\\\s*$\\\\|onOpen\" \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\tools\\\\whiteboard.js\")",
+      "Bash(grep -n \"data-del-user-tpl\\\\|openTemplatesPicker\\(document\\\\|}\\);\\\\s*$\" \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\tools\\\\whiteboard.js\")",
+      "Bash(grep -n \"z-index\\\\|modal\\\\s*{\\\\|modal,\" \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\css\\\\components.css\")"
     ]
   }
 }
