@@ -25,18 +25,21 @@ Operatör Türkçe konuşur, Türkçe cevap ver. "BUNU SEN SÖYLE" veya "öneri 
 ## Master roadmap
 
 **Tamamlanmış (yüksek seviye):**
-- **v2.6.x — v2.8.79:** Altyapı (per-table sync + RLS + cascade triggers + cache-busting), büyük araçlar (Buffet Planner, Mise en Place, HACCP Hub, Allergen Guardrail, Cost Health, Sub-recipe flatten helper), perf L1+L2.
+- **v2.6.x — v2.8.79:** Altyapı (per-table sync + RLS + cascade triggers + cache-busting), büyük araçlar (Buffet Planner, HACCP Hub, Allergen Guardrail, Cost Health, Sub-recipe flatten helper), perf L1+L2.
 - **v2.8.80 — v2.8.93:** UX hijyen (modal focus root cause, recipe editor birleştirme, welcome tour modernize, Profile↔Discover bağlantı), Excel bug fix, Buffet UX modernize + Quick Start (7 preset), Portion Calculator semantik refactor, Dashboard + Tools-hub upgrade.
 - **v2.8.94 — v2.8.99:** Blog SEO — Faz A (3 yazı JSON-LD + authority + cross-link upgrade) + Faz B 5-round (10 yeni yazı, total 13 yayında).
-- **v2.9.0 — v2.9.13:** NAKED→RICH sweep TAMAMLANDI. 5 round'da 13 araç buffet seviyesinde RICH: kapatılabilir inline guide + stats hero + per-field hint + empty state CTA + dark mode kapsamlı kontrast fix. Tüm araçlarda artık tutarlı UX paterni.
+- **v2.9.0 — v2.9.13:** NAKED→RICH sweep TAMAMLANDI. 5 round'da 13 araç buffet seviyesinde RICH: kapatılabilir inline guide + stats hero + per-field hint + empty state CTA + dark mode kapsamlı kontrast fix.
+- **v2.9.14 — v2.9.42:** Cloud sync 3 yeni tablo (buffets, mise_plans, team) + Discover rate limit + hCaptcha v2.9.29-30 fix + Whiteboard MVP V1 (cells grid).
+- **v2.10.0 — v2.10.4:** Whiteboard pro upgrade (typography + palette + cell types + drag-resize + 5+6 template + user templates) + Kitchen Cards border/weight ince ayar + listener bleed fix + segmented toggle active state + diet sistemi komple kaldırıldı.
+- **v2.11.0 — v2.11.13:** Whiteboard full rewrite (Notion-style block composer + 8 block tipi + 3-col desktop UI + mobile bottom sheet + drag-reorder + A4/A3 print engine + page boundary overflow uyarısı) + Discover search (debounce 400ms) + Kitchen Cards print WYSIWYG fix + popup footer overlay fix (5 tool) + HACCP form typography uniformity + KV/Table inspector dikey layout + HACCP Fridge Log day-name + log selector mismatch + HACCP alt form Back → Hub güvenilir (ROUTE_PARENTS pattern) + Tags "+ Add" CTA.
+- **v2.11.14 — v2.11.16:** Whiteboard 4 yeni mutfak block tipi (Step List / Allergen Strip / Doneness Ladder / Time Range) + Layout 6 kademe (1/5 + 1/6) + Size 6 kademe (XS + XXL) + FAQ 3 cevap faktüel düzeltme + **Mise en Place tool kaldırıldı** (UI sil, cloud schema koru — Diet flags pattern).
 
-**Sıradaki (v2.10.x — yeni faz):**
-- Backlog #1: iOS/Safari cross-browser test (operatör manuel)
-- Backlog #2: Buffet + Mise cloud sync (Supabase tablo + RLS + per-table sync wire)
-- Backlog #3: Discover'a Tag + Allergen filter
-- Diğer backlog için: HANDOVER.md §6
+**Sıradaki:**
+- iOS/Safari cross-browser test (operatör manuel)
+- R2 foto bytes yedekleme (operatör deferred)
+- Açık öneri: Whiteboard ek block tipleri (Recipe Card / Photo / QR / Pull Quote / Bar Chart / Date Header / Cost Snapshot / Two-Col Compare / Stamp Badge) — operatör isterse v2.12
 
-Her tur baseline: kapatılabilir inline guide + per-field hint + örnek placeholder + empty state onboarding (v2.8.77 buffet pattern). Dark mode kontrast otomatik (themes.css v2.9.4 universal rules).
+Her yeni tool/araç baseline: kapatılabilir inline guide + per-field hint + örnek placeholder + empty state onboarding (v2.8.77 buffet pattern). Dark mode kontrast otomatik (themes.css v2.9.4 universal rules).
 
 ## Backlog
 
