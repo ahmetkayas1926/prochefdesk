@@ -10,7 +10,7 @@ ProChefDesk — profesyonel şef'ler için web tabanlı mutfak yönetim sistemi.
 
 **Stack:** Vanilla JavaScript (no bundling, no service worker), IndexedDB ana storage, Supabase (Postgres 17 + Auth + Storage + Realtime + Edge Functions), Cloudflare Pages (auto-deploy on GitHub push), Cloudflare R2 (backups).
 
-**Mevcut sürüm:** v2.11.15 (push'a hazır local; production v2.11.14). **FAQ 3 cevap faktüel düzeltme:** faq_a1 (localStorage→IndexedDB, "encrypted" abartısı → HTTPS + Supabase hash), faq_a2 ("beta" terimi kaldırıldı), faq_a3 (service worker yok kanıtı ile "fully offline" iddiası → "Partially: app açıkken edit OK, ilk yükleme/tab re-open internet şart"). Sadece 3 i18n string EN+TR, kod değişikliği yok. Detay: `CHANGELOG.md`.
+**Mevcut sürüm:** v2.11.16 (push'a hazır local; production v2.11.15). **Mise en Place Planner kaldırıldı** (operatör kararı, kod audit sonrası): tek başına çalışamaz (manuel task add UI yok), tamamen Events/Buffet dependency, kod yorumu flattenIngredients vaadi yalan söylüyordu. mise.js (497 satır) + app.js registerLazy + sidenav item + 76 i18n key silindi. **Cloud sync schema KORUNDU** (cloud-pertable.js / cloud-realtime.js / cloud.js / backup-to-r2'de `mise_plans` bağlantıları durur) — Diet flags v2.10.3 pattern'ı, Supabase'deki veri kaybolmaz. Sidebar Kitchen section 6 → 5 item. Detay: `CHANGELOG.md`.
 
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı). SEO standardı aşağıda `## Blog SEO standardı` bölümünde.
 

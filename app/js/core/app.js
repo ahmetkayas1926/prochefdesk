@@ -84,8 +84,10 @@
       PCD.router.registerLazy('haccp_holding',   'js/tools/haccp_holding.js',  'haccp_holding');
       PCD.router.registerLazy('haccp',           'js/tools/haccp.js',          'haccp');
       PCD.router.registerLazy('buffet',          'js/tools/buffet.js',         'buffet');
-      // v2.8.74 — Mise en Place Planner (auto prep list from events + buffets)
-      PCD.router.registerLazy('mise',     'js/tools/mise.js',     'mise');
+      // v2.11.16 — Mise en Place Planner kaldırıldı (operatör kararı: Events/Buffet
+      // dependency, manual task add UI yok, kod yorumu yalan söylüyordu — bkz.
+      // CHANGELOG v2.11.16). Cloud sync schema (mise_plans tablosu) korundu,
+      // eski veri Supabase'de durur (ileride tekrar tool eklenirse veri kalır).
       PCD.router.registerLazy('discover', 'js/tools/discover.js', 'discover');
 
       // 7) Start router + render initial view
@@ -327,8 +329,7 @@
         // v2.9.40 — Kitchen Whiteboard (customizable A4/A3 reference grid)
         { key: 'whiteboard',    icon: 'grid', route: 'whiteboard' },
         { key: 'portion',       icon: 'scale', route: 'portion' },
-        // v2.8.74 — Mise en Place Planner (sabah prep planlama)
-        { key: 'mise',          icon: 'list', route: 'mise' },
+        // v2.11.16 — 'mise' sidenav item kaldırıldı (Mise en Place Planner tool kaldırıldı).
         { key: 'checklist',     icon: 'check-square', route: 'checklist' },
         { key: 'waste',         icon: 'recycle', route: 'waste' },
       ]},

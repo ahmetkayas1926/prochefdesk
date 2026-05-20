@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.11.15 · 2026-05-20
+**Mevcut sürüm:** v2.11.16 · 2026-05-20
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -18,6 +18,47 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH (kapatılabilir inl
 - **Round 5 (v2.9.13):** haccp hub ✅ — **NAKED→RICH sweep tamamlandı**
 
 ## v2.11.x — Whiteboard Block Composer
+
+### v2.11.16 — Mise en Place Planner kaldırıldı (operatör kararı) · 2026-05-20
+
+**Operatör:** "Mise en Place aracını kaldır ve kalıntılarını da güvenli bir şekilde temizle."
+
+**Kaldırma gerekçesi (kod-tabanlı audit):**
+- **Tek başına çalışamaz:** computeAutoPrep (line 125-228) sadece Events + Buffets'tan beslenir. Manuel "+ Add task" UI'sı YOK.
+- **Kod yorumu yalan söylüyordu:** Header (line 14-16) "flattenIngredients ile sub-recipe → ingredient seviyesine açar" diyor ama kod recipe seviyesinde kalıyordu (line 186-214). Tool'un USP'si gerçekleşmemiş.
+- **Diet flags pattern'ı:** v2.10.3'te aynı mantıkla Diet flags kaldırıldı — "çalışıyor ama pratik değer yok". Mise aynı durumda.
+
+**Silinen / değiştirilen:**
+
+| Dosya | İşlem |
+|---|---|
+| `app/js/tools/mise.js` | **Silindi** (497 satır) |
+| `app/js/core/app.js` | `registerLazy('mise',...)` + sidenav item `{ key:'mise', ... }` kaldırıldı (2 satır net silinti) |
+| `app/js/i18n/en.js` | 38 mise/nav_mise key silindi |
+| `app/js/i18n/tr.js` | 38 mise/nav_mise key silindi |
+
+**KORUNDU (veri kaybı sıfır):**
+
+| Konum | Sebep |
+|---|---|
+| `cloud-pertable.js` `mise_plans` WORKSPACE_TABLES entry | Cloud sync şeması, Supabase tablosu durur, eski veri kaybolmaz |
+| `cloud-realtime.js` `applyChange` case + WS_BOUND_TABLES + TABLES `mise_plans` | Realtime subscription korundu (kullanan kod yok ama tablo bağlantısı duruyor) |
+| `cloud.js` wsTables pullAll `misePlans` | Pull listesi korundu |
+| `supabase/functions/backup-to-r2/index.ts` BACKUP_TABLES `mise_plans` | Nightly R2 backup korundu — operatör ileride tool isterse veri orada |
+| `migrations/v2.9.17-buffets-mise-team-sync.sql` | Migration history, dokunulmaz |
+| Supabase `mise_plans` tablo + RLS policy + cascade trigger | DB tarafı dokunulmadı, veri kaybı sıfır |
+
+**Diet flags v2.10.3 pattern'ı uygulandı:** UI'dan kaldır, schema koru. Operatör ileride fikrini değiştirirse Supabase'deki veri kullanılabilir + tool tekrar eklenebilir.
+
+**Diğer toollarda kalıntı:** YOK. Dashboard / Events / Buffet / Discover / Whiteboard / Kitchen Cards — mise referansı sıfır (grep ile doğrulandı).
+
+**Sidebar UI etkisi:** Kitchen section'da 6 → 5 item (Kitchen Cards / Whiteboard / Portion / Checklist / Waste). Daha sade.
+
+**Test:**
+1. Whiteboard / Kitchen Cards / Buffet / Events sidebar açılır → mise item yok
+2. F5 → URL hash `#mise` ise → router fallback dashboard'a yönlendirir
+3. Cloud sync log → `mise_plans` table pull/push yine çalışır (kullanan kod yok ama hata vermez)
+4. Diğer 24 tool dokunulmadı, regression yok
 
 ### v2.11.15 — FAQ 3 cevap düzeltildi (faktüel doğruluk) · 2026-05-20
 

@@ -9,7 +9,7 @@
 
 **Ürün:** ProChefDesk — profesyonel chef'ler için web tabanlı mutfak yönetim sistemi.
 **Operatör:** Ahmet Kaya, Perth Western Australia, profesyonel şef. Solo non-commercial proje.
-**Mevcut sürüm:** **v2.11.15** (push'a hazır local; production v2.11.14). **FAQ 3 cevap düzeltildi** (faktüel audit sonrası): faq_a1 (localStorage→IndexedDB, encrypted→HTTPS), faq_a2 (beta→free for now), faq_a3 ("works without internet" yanlış iddiası → "Partially: app açıkken offline edit OK, ilk yükleme internet şart" çünkü service worker yok). 3 string EN+TR.
+**Mevcut sürüm:** **v2.11.16** (push'a hazır local; production v2.11.15). **Mise en Place Planner kaldırıldı** (operatör kararı — kod-tabanlı audit: tek başına çalışamaz, Events/Buffet dependency, manuel task add UI yok, kod yorumu yalan). mise.js silindi (497 satır), app.js'den registerLazy + sidenav item çıkarıldı, 76 i18n key silindi (38 EN + 38 TR). Cloud sync schema (mise_plans tablosu) korundu (veri kaybı sıfır, Diet flags v2.10.3 pattern'ı).
 **Blog:** 13 yazı yayında (Faz A SEO upgrade + Faz B 5-round, MENA niş + uluslararası coverage).
 **Domain:** prochefdesk.com (Cloudflare Pages, SSL Full, GitHub push'ta auto build + deploy).
 
@@ -80,9 +80,9 @@ Yeni Claude'un bilmesi gereken: **bu hâlâ tek kullanıcılı bir ürün** — 
 allergens-db.js, app.js, auth.js, cloud-pertable.js, cloud-realtime.js, cloud.js, config.js, i18n.js, idb-wrapper.js, photo-storage.js, qr.js, router.js, share.js, store.js, utils.js, variance.js
 
 **`app/js/tools/` (30 dosya, 13 kullanıcıya görünen ana tool):**
-account, allergens, buffet, checklist, dashboard, discover, events, haccp + 4 alt-form (cooling/holding/logs/receiving), ingredients, inventory, kitchen_cards, menu_matrix, menus, mise, nutrition, portion, recipes, sales, shopping, suppliers, team, tools-hub, variance, waste, whatif, yield.
+account, allergens, buffet, checklist, dashboard, discover, events, haccp + 4 alt-form (cooling/holding/logs/receiving), ingredients, inventory, kitchen_cards, menu_matrix, menus, nutrition, portion, recipes, sales, shopping, suppliers, team, tools-hub, variance, waste, whatif, yield, whiteboard.
 
-**Kullanıcıya görünen 13 ana tool (v2.8.78 lazy-loaded):** Recipes, Ingredients, Menu Builder, Kitchen Cards (A4 print), Portion Calculator, Shopping List, Inventory, Suppliers, Events & Catering, Checklists, HACCP Hub, Buffet Planner, Mise en Place. Discover, Allergens ek.
+**Kullanıcıya görünen ana tool'lar (v2.8.78 lazy-loaded):** Recipes, Ingredients, Menu Builder, Kitchen Cards (A4 print), Whiteboard (block composer), Portion Calculator, Shopping List, Inventory, Suppliers, Events & Catering, Checklists, HACCP Hub, Buffet Planner. Discover, Allergens ek. (v2.11.16: Mise en Place kaldırıldı.)
 
 ## 4. Cloud / Backend (Supabase)
 
@@ -257,7 +257,7 @@ Operatör vizyonu: her araç Buffet Planner seviyesinde RICH. 13 araç paketleri
 |---|---|
 | Repo path (operatör Windows) | `C:\Users\ahmet\Desktop\prochefdesk` |
 | GitHub repo | `ahmetkayas1926/prochefdesk` |
-| Production sürümü | **v2.11.15** (push'a hazır local; production v2.11.14) |
+| Production sürümü | **v2.11.16** (push'a hazır local; production v2.11.15) |
 | Supabase project ref | `muuwhrcogikpqylsfvgg` (Tokyo, Postgres 17, Free tier) |
 | Cloudflare R2 bucket | `prochefdesk-backups` |
 | CLEANUP_SECRET | `ec79a445-7e92-499b-9322-5c2c949788d4d2886e66-d556-4498-ba9e-17fda6c11ac1` |
@@ -440,7 +440,7 @@ Router'da `registerLazy(name, scriptPath, toolName)` + `loadLazyTool()` helper. 
 - `account` — auth flow (logout, oauth callback)
 - `inventory` — dashboard low-stock alert sync `computeStatus` kullanır
 
-**Lazy tool'lar (18):** recipes, ingredients, menus, kitchen_cards, shopping, portion, waste, suppliers, events, checklist, haccp_logs, haccp_cooling, haccp_receiving, haccp_holding, haccp, buffet, mise, discover.
+**Lazy tool'lar (17):** recipes, ingredients, menus, kitchen_cards, whiteboard, shopping, portion, waste, suppliers, events, checklist, haccp_logs, haccp_cooling, haccp_receiving, haccp_holding, haccp, buffet, discover. (v2.11.16: mise kaldırıldı.)
 
 **Yeni tool ekleme:**
 1. Eager mi lazy mi karar ver (default lazy)
