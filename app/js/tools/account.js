@@ -422,6 +422,10 @@
       u.workplace = (PCD.$('#chefWorkplace', view).value || '').trim();
       u.bio = (PCD.$('#chefBio', view).value || '').trim();
       PCD.store.set('user', u);
+      // v2.13.4 — Debounced persist (400ms) yerine ANINDA IDB'ye yaz. Rapor:
+      // kaydet sonrası sekme kapanınca/yenileyince/arka plana atınca (özellikle
+      // mobil) 400ms timer ateşlemeden profil kayboluyordu. flush() bunu garantiler.
+      if (PCD.store.flush) PCD.store.flush();
 
       // v2.8.85 — Her save'de tüm public recipe'leri re-enrich et (oldName
       // check kaldırıldı). Operatör senaryosu: hiçbir şey değiştirmeden Save
@@ -477,6 +481,7 @@
       u.workplace = (PCD.$('#chefWorkplace', view).value || '').trim();
       u.bio = (PCD.$('#chefBio', view).value || '').trim();
       PCD.store.set('user', u);
+      if (PCD.store.flush) PCD.store.flush();
       openPublicProfilePreview(u);
     });
 
