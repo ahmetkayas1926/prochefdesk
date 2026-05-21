@@ -1148,6 +1148,10 @@
   }
 
   window.addEventListener('error', function (e) {
+    // v2.13.6 — "ResizeObserver loop" hataları benign tarayıcı gürültüsü (RO kullanan
+    // her şey üretir, özellikle Ctrl+wheel zoom'da). Toast/cloud raporu YOK — yoksa
+    // zoom yapınca "Something went wrong" spam'i oluşuyor.
+    if (e && e.message && e.message.indexOf('ResizeObserver') !== -1) return;
     const now = Date.now();
     if (now - _lastErrorAt < 1000) {
       _errorCount++;

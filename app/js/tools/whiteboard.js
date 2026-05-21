@@ -705,6 +705,10 @@
     wireBottomSheet(wbRoot, canvas, view);
 
     // v2.13.0 — Gerçek A4-px canvas'ı viewport'a sığacak şekilde ölçekle.
+    // v2.13.6 — applyCanvasScale, pane henüz layout almadıysa (clientWidth=0) kendini
+    // sonraki frame'de tekrar çağırır (bounded retry) → ilk yükleme garanti ölçeklenir.
+    // RO yalnızca sonraki resize/zoom için (ilk callback'i bazı tarayıcılarda güvenilmez).
+    _scaleRetries = 0;
     applyCanvasScale();
 
     // v2.11.2 — Overflow detection: block list page boundary'i aşıyor mu?
@@ -731,6 +735,7 @@
   let _canvasRO = null;
   let _resizeBound = false;
   let _resizeRaf = null;
+  let _scaleRetries = 0;
 
   // v2.11.2 — Canvas içeriği aspect-ratio frame'i aşıyorsa "wb-canvas-overflowing"
   // class eklenir (CSS warn gradient + fit tag gizler). Aşmıyorsa "✓ Fits one page".
@@ -987,9 +992,14 @@
     const pageHpx = parseFloat(cv.style.height) || cv.offsetHeight;
     if (!pageWpx || !pageHpx) return;
     const avail = vp.clientWidth;
-    // v2.13.0 — Pane henüz layout almadıysa (lazy load / gizli sekme) clientWidth=0.
-    // scale(0) ile canvas kaybolmasın: çık; ResizeObserver width gelince tekrar çağırır.
-    if (!avail) return;
+    // v2.13.6 — Pane henüz layout almadıysa (lazy load / boot) clientWidth=0.
+    // scale(0) ile canvas kaybolmasın: bir sonraki frame'de tekrar dene (bounded;
+    // canvas DOM'dan kalkarsa yukarıdaki !vp guard döngüyü durdurur).
+    if (!avail) {
+      if (_scaleRetries < 60) { _scaleRetries++; requestAnimationFrame(applyCanvasScale); }
+      return;
+    }
+    _scaleRetries = 0;
     let scale = avail / pageWpx;
     if (scale > 1) scale = 1; // büyütme yok — gerçek boyutu aşma
     cv.style.transform = 'scale(' + scale + ')';

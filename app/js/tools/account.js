@@ -205,7 +205,6 @@
                   <div style="font-weight:600;">${t('cloud_sync')}</div>
                   <div class="text-muted text-sm">${t('last_synced')}: ${meta.lastSyncAt ? PCD.fmtRelTime(meta.lastSyncAt) : '—'}</div>
                 </div>
-                <button class="btn btn-outline btn-sm" id="syncNowBtn">${t('sync_now')}</button>
               </div>
             ` : ''}
             <button class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;border-bottom:1px solid var(--border);" id="trashBtn">
@@ -485,19 +484,6 @@
       openPublicProfilePreview(u);
     });
 
-    const syncBtn = PCD.$('#syncNowBtn', view);
-    if (syncBtn) syncBtn.addEventListener('click', function () {
-      syncBtn.innerHTML = '<span class="spinner"></span>';
-      syncBtn.disabled = true;
-      PCD.cloud._doSync();
-      setTimeout(function () {
-        syncBtn.disabled = false;
-        syncBtn.innerHTML = t('sync_now');
-        PCD.toast.success(t('saved'));
-        render(view);
-      }, 800);
-    });
-
     PCD.$('#exportDataBtn', view).addEventListener('click', function () {
       const state = PCD.store.get();
       const payload = {
@@ -770,7 +756,7 @@
         PCD.modal.confirm({
           icon: '🔄', iconKind: 'info',
           title: t('force_resync_confirm_title', 'Push all local data to cloud?'),
-          text: t('force_resync_confirm_text', 'This will upload everything in this device ({r} recipe(s), {i} ingredient(s), plus all workspaces, menus and other data) to your cloud account. Use this if other devices show stale or missing data.', { r: recipeCount, i: ingCount }),
+          text: t('force_resync_confirm_text', { r: recipeCount, i: ingCount }),
           okText: t('force_resync_ok', 'Push to cloud'),
           cancelText: t('cancel')
         }).then(async function (ok) {
@@ -788,19 +774,16 @@
                 return e.table + ': ' + e.error;
               }).join('; ');
               PCD.toast.error(
-                t('force_resync_partial_failed',
-                  '{n} push operation(s) failed. {summary}. Check internet connection and try again.',
-                  { n: (result.errors || []).length, summary: errSummary })
+                t('force_resync_partial_failed', { n: (result.errors || []).length, summary: errSummary })
               );
             } else {
               PCD.toast.success(
-                t('force_resync_success', '✓ Pushed {n} item(s) to cloud.',
-                  { n: (result && result.pushed) || 0 })
+                t('force_resync_success', { n: (result && result.pushed) || 0 })
               );
             }
           } catch (e) {
             PCD.err && PCD.err('force-resync failed', e);
-            PCD.toast.error(t('force_resync_failed', 'Force re-sync failed: {msg}', { msg: (e && e.message) || String(e) }));
+            PCD.toast.error(t('force_resync_failed', { msg: (e && e.message) || String(e) }));
           } finally {
             if (titleEl && origTitle) titleEl.textContent = origTitle;
             btn.style.pointerEvents = '';
