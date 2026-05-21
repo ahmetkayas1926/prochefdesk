@@ -104,12 +104,22 @@
     },
 
     _setUser: function (supaUser) {
-      const user = {
+      // v2.12.1 — Merge, don't overwrite. Previously this rebuilt the user
+      // object from auth metadata only (id/email/name/avatar), wiping every
+      // chef-profile field (role/country/workplace/bio) on each session
+      // restore — so they "vanished" after reload. Carry the saved fields
+      // forward, but ONLY when it's the same account, so a different login
+      // never inherits the previous user's profile.
+      const prev = PCD.store.get('user') || {};
+      const sameUser = !!(prev && (prev.id === supaUser.id || (prev.email && prev.email === supaUser.email)));
+      const base = sameUser ? prev : {};
+      const metaName = (supaUser.user_metadata && (supaUser.user_metadata.full_name || supaUser.user_metadata.name)) || '';
+      const user = Object.assign({}, base, {
         id: supaUser.id,
         email: supaUser.email,
-        name: (supaUser.user_metadata && (supaUser.user_metadata.full_name || supaUser.user_metadata.name)) || supaUser.email,
-        avatar: supaUser.user_metadata && supaUser.user_metadata.avatar_url || null,
-      };
+        name: (sameUser && base.name) || metaName || supaUser.email,
+        avatar: (supaUser.user_metadata && supaUser.user_metadata.avatar_url) || base.avatar || null,
+      });
       PCD.store.set('user', user);
     },
 

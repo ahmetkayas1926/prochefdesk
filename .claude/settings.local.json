@@ -130,7 +130,9 @@
       "Bash(powershell -NoProfile -Command \"\\(Get-Item 'app/js/tools/whiteboard.js'\\).LastWriteTime.ToString\\('o'\\)\")",
       "Bash(powershell -Command \"\\(Get-Content 'C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\tools\\\\checklist.js' | Measure-Object -Line\\).Lines\")",
       "Bash(py --version)",
-      "mcp__Claude_Preview__preview_start"
+      "mcp__Claude_Preview__preview_start",
+      "Bash(node -c \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\core\\\\auth.js\")",
+      "Bash(node -c \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\tools\\\\account.js\")"
     ]
   }
 }

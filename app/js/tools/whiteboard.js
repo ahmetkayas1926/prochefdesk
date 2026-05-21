@@ -565,7 +565,12 @@
       case 'allergen_strip': {
         const all = (PCD.allergensDB && PCD.allergensDB.list) || [];
         const active = (block.content.active || []).map(function (s) { return (s || '').toLowerCase(); });
-        const cells = all.map(function (a) {
+        // v2.12.2 — Show only the allergens marked "contains". With all 14 the
+        // labels don't fit (clipped to icons, worst in print). A dish has 2–4
+        // allergens, so showing only the active ones keeps labels legible and
+        // makes canvas + print match. If none are marked, show the full faded set.
+        const shown = active.length ? all.filter(function (a) { return active.indexOf(a.key) >= 0; }) : all;
+        const cells = shown.map(function (a) {
           const isActive = active.indexOf(a.key) >= 0;
           return '<div style="flex:1;min-width:0;text-align:center;padding:4px 2px;' +
               (isActive ? 'background:rgba(220,38,38,0.18);color:#a23b2d;border-radius:4px;font-weight:800;' : 'opacity:0.5;') +
@@ -1157,12 +1162,14 @@
         return levels + '<div style="font-size:9px;color:var(--text-3);margin-top:8px;font-style:italic;">' + PCD.escapeHtml(t('wb_doneness_hint', 'Levels are fixed at 5 (rare → well-done gradient). Edit label/temp.')) + '</div>';
       }
       case 'time_range': {
+        // v2.12.2 — min-width:0 + box-sizing so the flex inputs don't overflow
+        // the inspector panel (long placeholders were pushing them to the right).
         return '<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">' +
-            '<input type="text" data-ct-field="start" value="' + PCD.escapeHtml(c.start || '') + '" placeholder="' + PCD.escapeHtml(t('wb_time_start_ph', 'Start (08:00)')) + '" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:5px;background:var(--surface-1);color:var(--text);font-size:14px;font-weight:800;text-align:center;font-variant-numeric:tabular-nums;">' +
-            '<span style="color:var(--text-3);font-size:14px;">→</span>' +
-            '<input type="text" data-ct-field="end" value="' + PCD.escapeHtml(c.end || '') + '" placeholder="' + PCD.escapeHtml(t('wb_time_end_ph', 'End (17:30)')) + '" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:5px;background:var(--surface-1);color:var(--text);font-size:14px;font-weight:800;text-align:center;font-variant-numeric:tabular-nums;">' +
+            '<input type="text" data-ct-field="start" value="' + PCD.escapeHtml(c.start || '') + '" placeholder="' + PCD.escapeHtml(t('wb_time_start_ph', 'Start (08:00)')) + '" style="flex:1;min-width:0;box-sizing:border-box;padding:8px;border:1px solid var(--border);border-radius:5px;background:var(--surface-1);color:var(--text);font-size:14px;font-weight:800;text-align:center;font-variant-numeric:tabular-nums;">' +
+            '<span style="color:var(--text-3);font-size:14px;flex:0 0 auto;">→</span>' +
+            '<input type="text" data-ct-field="end" value="' + PCD.escapeHtml(c.end || '') + '" placeholder="' + PCD.escapeHtml(t('wb_time_end_ph', 'End (17:30)')) + '" style="flex:1;min-width:0;box-sizing:border-box;padding:8px;border:1px solid var(--border);border-radius:5px;background:var(--surface-1);color:var(--text);font-size:14px;font-weight:800;text-align:center;font-variant-numeric:tabular-nums;">' +
           '</div>' +
-          '<input type="text" data-ct-field="label" maxlength="40" value="' + PCD.escapeHtml(c.label || '') + '" placeholder="' + PCD.escapeHtml(t('wb_time_label_ph', 'Label (e.g. SERVICE HOURS)')) + '" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:5px;background:var(--surface-1);color:var(--text);font-size:12px;text-transform:uppercase;letter-spacing:0.04em;">';
+          '<input type="text" data-ct-field="label" maxlength="40" value="' + PCD.escapeHtml(c.label || '') + '" placeholder="' + PCD.escapeHtml(t('wb_time_label_ph', 'Label (e.g. SERVICE HOURS)')) + '" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--border);border-radius:5px;background:var(--surface-1);color:var(--text);font-size:12px;text-transform:uppercase;letter-spacing:0.04em;">';
       }
     }
     return '<div style="color:var(--text-3);font-size:12px;">' + PCD.escapeHtml(t('wb_no_content_fields', 'No content fields for this block.')) + '</div>';
@@ -2121,7 +2128,9 @@
       case 'allergen_strip': {
         const all = (PCD.allergensDB && PCD.allergensDB.list) || [];
         const active = (block.content.active || []).map(function (s) { return (s || '').toLowerCase(); });
-        const cells = all.map(function (a) {
+        // v2.12.2 — Print: show only allergens marked "contains" (see canvas render).
+        const shown = active.length ? all.filter(function (a) { return active.indexOf(a.key) >= 0; }) : all;
+        const cells = shown.map(function (a) {
           const isActive = active.indexOf(a.key) >= 0;
           return '<div style="flex:1;min-width:0;text-align:center;padding:3pt 2pt;' +
               (isActive ? 'background:rgba(220,38,38,0.22);color:#a23b2d;font-weight:800;' : 'opacity:0.5;') +

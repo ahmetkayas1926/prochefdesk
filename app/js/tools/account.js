@@ -1494,7 +1494,6 @@
   function openPublicProfilePreview(user) {
     const t = PCD.i18n.t;
     const recipes = PCD.store.listRecipes() || [];
-    const workspaces = (PCD.store.listWorkspaces && PCD.store.listWorkspaces(true)) || [];
     const initials = (user.name || user.email || '?').split(' ').map(function (s) { return s[0]; }).slice(0, 2).join('').toUpperCase();
 
     // Discover-live stats — kullanıcının Discover'da paylaştığı public recipe
@@ -1506,16 +1505,15 @@
     const totalLikes = publicRecipes.reduce(function (sum, r) { return sum + (r.like_count || 0); }, 0);
 
     const body = PCD.el('div');
-    const conceptList = workspaces.filter(function (w) { return !w.archived; }).map(function (w) {
-      return '<span style="display:inline-block;padding:4px 10px;background:var(--brand-50);color:var(--brand-700);border-radius:999px;font-size:12px;font-weight:600;margin:2px;">' +
-        PCD.escapeHtml(w.name) + (w.concept ? ' · ' + PCD.escapeHtml(w.concept) : '') +
-      '</span>';
-    }).join('');
 
-    // Workplace chip (eklenen Workplace field için ayrı — Concepts ile çakışmasın)
+    // v2.12.1 — Workspace list removed from the public profile preview: a
+    // workspace (e.g. "NAZZAR", "Portfolio") is private data and must not
+    // appear on a public-facing profile. Only the chef-entered Workplace
+    // field is shown.
+    // Workplace chip
     const workplaceChip = user.workplace
       ? '<span style="display:inline-block;padding:4px 10px;background:var(--surface-2);color:var(--text-2);border-radius:999px;font-size:12px;font-weight:600;border:1px solid var(--border);">' +
-          PCD.icon('briefcase', 12) + ' ' + PCD.escapeHtml(user.workplace) +
+          '🏢 ' + PCD.escapeHtml(user.workplace) +
         '</span>'
       : '';
 
@@ -1548,9 +1546,9 @@
           : '') +
       '</div>' +
 
-      ((workplaceChip || conceptList) ? '<div class="card mb-3" style="padding:16px;">' +
+      (workplaceChip ? '<div class="card mb-3" style="padding:16px;">' +
         '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">' + PCD.escapeHtml(t('chef_workplace_career') || 'Workplace & career') + '</div>' +
-        '<div style="display:flex;flex-wrap:wrap;gap:6px;">' + workplaceChip + conceptList + '</div>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:6px;">' + workplaceChip + '</div>' +
       '</div>' : '');
 
     // Footer: Close + "View on Discover" CTA (sadece public recipe varsa)
