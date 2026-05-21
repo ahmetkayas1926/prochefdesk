@@ -525,18 +525,22 @@
             '<div style="font-weight:700;font-size:15px;">' + esc(tpl.name) + '</div>' +
             '<div class="text-muted text-sm">' + countLabel + '</div>' +
           '</div>' +
-          '<div class="flex flex-col" style="gap:2px;">' +
-            '<button type="button" class="icon-btn" data-move-up="' + tpl.id + '" ' + (isFirst ? 'disabled' : '') + ' title="' + esc(L('move_up', 'Move up')) + '" style="padding:4px;height:24px;width:28px;' + (isFirst ? 'opacity:0.3;' : '') + '">' + PCD.icon('chevron-up', 14) + '</button>' +
-            '<button type="button" class="icon-btn" data-move-down="' + tpl.id + '" ' + (isLast ? 'disabled' : '') + ' title="' + esc(L('move_down', 'Move down')) + '" style="padding:4px;height:24px;width:28px;' + (isLast ? 'opacity:0.3;' : '') + '">' + PCD.icon('chevron-down', 14) + '</button>' +
-          '</div>' +
+          '<button type="button" class="drag-handle icon-btn" title="' + esc(L('reorder', 'Drag to reorder')) + '" style="cursor:grab;touch-action:none;color:var(--text-3);flex-shrink:0;"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg></button>' +
           '<button type="button" class="icon-btn" data-menu="' + tpl.id + '" title="' + esc(L('more_actions', 'More')) + '">' + PCD.icon('more-vertical', 18) + '</button>' +
           '<button type="button" class="btn btn-primary btn-sm" data-preview="' + tpl.id + '">' + esc(L('chk_open', 'Open')) + '</button>' +
         '</div>';
       listEl.appendChild(row);
     });
 
-    PCD.on(listEl, 'click', '[data-move-up]', function (e) { e.stopPropagation(); moveTemplate(this.getAttribute('data-move-up'), -1); render(view); });
-    PCD.on(listEl, 'click', '[data-move-down]', function (e) { e.stopPropagation(); moveTemplate(this.getAttribute('data-move-down'), +1); render(view); });
+    if (PCD.dragdrop && PCD.dragdrop.makeSortable) {
+      PCD.dragdrop.makeSortable(listEl, { handle: '.drag-handle', onEnd: function (o, n) {
+        if (o === n) return;
+        const moved = ofKind.splice(o, 1)[0];
+        ofKind.splice(n, 0, moved);
+        ofKind.forEach(function (t, i) { t.sortIndex = i; PCD.store.upsertInTable('checklistTemplates', t, 'tpl'); });
+        render(view);
+      } });
+    }
     PCD.on(listEl, 'click', '[data-preview]', function (e) { e.stopPropagation(); openPreview(this.getAttribute('data-preview')); });
     PCD.on(listEl, 'click', '[data-menu]', function (e) {
       e.stopPropagation();
