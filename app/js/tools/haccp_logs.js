@@ -874,7 +874,7 @@
       html += '</div>';
     }
 
-    html += '<div class="h-sign"><div>' + PCD.escapeHtml(t('reviewed_by') || 'Reviewed by') + ': ____________________________</div><div>' + PCD.escapeHtml(t('haccp_print_date') || 'Date') + ': ' + new Date().toLocaleDateString(locale()) + '</div></div>' +
+    html += '<div class="h-sign"><div>' + PCD.escapeHtml(t('reviewed_by') || 'Reviewed by') + ': ____________________________</div><div>' + PCD.escapeHtml(t('haccp_print_date') || 'Date') + ': ____________________</div></div>' +
       '</div>';  // /.h-sheet
     PCD.print(html, 'HACCP Fridge Log — ' + monthLabel(year, monthIdx0));
   }

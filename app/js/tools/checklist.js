@@ -1,49 +1,43 @@
 /* ================================================================
-   ProChefDesk — checklist.js (v1.11 - PROFESSIONAL REDESIGN)
+   ProChefDesk — checklist.js (v2.12 — REBUILD)
 
-   Based on industry research (FoodDocs, SafetyCulture, HACCP standards):
-   Real kitchens use multiple checklist TYPES, not just text tasks.
+   TWO list kinds only:
+   - control : tick-and-confirm checklist
+               (closing & safety / opening / cleaning / line check)
+   - prep    : mise en place — DISH -> COMPONENTS -> tick + quick note
+               (e.g. "1x", "2x", "broccoli steam")
 
-   ITEM TYPES SUPPORTED:
-   - task       : Plain checkbox task (default, was the only type before)
-   - temperature: Numeric °C input + min/max range validation
-   - numeric    : Numeric input (e.g., oil TPM, dishwasher temp, weight)
-   - pass-fail  : Pass / Fail / N/A radio (HACCP inspections)
-   - text       : Free-text input (e.g., supplier name, batch number)
+   HACCP-style templates were removed on purpose: temperature / receiving /
+   cooling logs live in the HACCP Hub. Having them here too was duplicate work.
 
-   PER-ITEM EXTRAS:
-   - Optional comment (every item, every session)
-   - Optional photo evidence (cracked equipment, low stock, etc.)
+   Prep lists can be AUTO-FILLED from the chef's menu/recipes (a dish brings
+   its component rows in) AND edited / extended by hand.
 
-   SESSION CAPABILITIES:
-   - Print as professional PDF (signed-off audit document)
-   - Share via WhatsApp / Email / Copy / native share
-   - Sign-off (who completed it)
-
-   DEFAULT TEMPLATES (research-driven):
-   - Opening Prep (existing, refreshed)
-   - Closing & Shutdown (existing, refreshed)
-   - Weekly Deep Clean (existing)
-   - Banquet Setup (existing)
-   - NEW: Daily Temperature Log (HACCP)
-   - NEW: Receiving Inspection
-   - NEW: Walk-in Cooler Daily Check
-   - NEW: HACCP Daily Inspection
+   Cloud sync schema is preserved untouched:
+   - checklistTemplates  -> checklist_templates  (normal per-table upsert)
+   - checklistSessions   -> checklist_sessions   (array table, queueArraySync)
+   Soft-delete tombstone pattern kept (waste.js / recipes pattern).
    ================================================================ */
 
 (function () {
   'use strict';
   const PCD = window.PCD;
 
-  // Workspace-scoped session storage: state.checklistSessions = { wsId: [sessions] }
-  // v2.6.80 — Soft-delete pattern (waste.js v2.6.79 ile aynı):
-  //   readSessionsAll() → raw, _deletedAt'lı tombstone'lar dahil (delete/save/update handler için)
-  //   readSessions()    → görünür, _deletedAt'sız (UI render ve hesaplamalar için)
+  // i18n helper: returns fallback when a key is missing (t() returns the key
+  // or empty for unknown keys depending on bundle). New strings ship with an
+  // English fallback so the tool works before TR/keys are wired.
+  function L(key, fallback) {
+    const v = PCD.i18n.t(key);
+    return (!v || v === key) ? fallback : v;
+  }
+  const esc = function (s) { return PCD.escapeHtml(s == null ? '' : String(s)); };
+  const uid = function (p) { return PCD.uid(p); };
+
+  // ---------- SESSION STORAGE (array table, soft-delete, cloud-synced) ----------
   function readSessionsAll() {
     const wsId = PCD.store.getActiveWorkspaceId();
     const all = PCD.store._read('checklistSessions') || {};
-    // Backward-compat: if it was a flat array (old data), treat as no-ws
-    if (Array.isArray(all)) return all;
+    if (Array.isArray(all)) return all;            // legacy flat array
     return all[wsId] || [];
   }
   function readSessions() {
@@ -52,883 +46,157 @@
   function writeSessions(arr) {
     const wsId = PCD.store.getActiveWorkspaceId();
     const root = PCD.store._read('checklistSessions') || {};
-    // If legacy array, migrate it under current ws
-    let next = Array.isArray(root) ? {} : Object.assign({}, root);
+    const next = Array.isArray(root) ? {} : Object.assign({}, root);
     const oldArr = Array.isArray(root) ? root : (root[wsId] || []);
     next[wsId] = arr;
     PCD.store.set('checklistSessions', next);
-    // v2.6.72 — Faz 4 Adım 2: çift yazma (checklist_sessions array tablosu)
-    // v2.6.80 — Soft-delete pattern: tombstone'lar array'de kaldığı için
-    // queueArraySync artık DELETE atmaz, sadece UPSERT (deleted_at kolonu set olur).
     if (PCD.cloudPerTable) {
+      // Tombstones stay in the array so queueArraySync emits an UPSERT
+      // (deleted_at set) rather than a hard DELETE.
       PCD.cloudPerTable.queueArraySync('checklist_sessions', wsId, oldArr, arr);
     }
   }
 
-  // Categories + priorities (carry over from v1.5)
+  // ---------- CATEGORIES (optional colour accent for control items) ----------
   const CATS = [
-    { id: 'prep',     labelKey: 'chk_categories_prep',     color: '#f59e0b' },
-    { id: 'cooking',  labelKey: 'chk_categories_cooking',  color: '#ef4444' },
-    { id: 'service',  labelKey: 'chk_categories_service',  color: '#3b82f6' },
-    { id: 'cleaning', labelKey: 'chk_categories_cleaning', color: '#8b5cf6' },
-    { id: 'admin',    labelKey: 'chk_categories_admin',    color: '#64748b' },
+    { id: 'safety',   labelKey: 'chk_cat_safety',   color: '#16a34a' },
+    { id: 'cooking',  labelKey: 'chk_cat_cooking',  color: '#ef4444' },
+    { id: 'prep',     labelKey: 'chk_cat_prep',     color: '#f59e0b' },
+    { id: 'service',  labelKey: 'chk_cat_service',  color: '#3b82f6' },
+    { id: 'cleaning', labelKey: 'chk_cat_cleaning', color: '#8b5cf6' },
   ];
-  const PRIOS = [
-    { id: 'high', labelKey: 'chk_prio_high', color: '#ef4444' },
-    { id: 'med',  labelKey: 'chk_prio_med',  color: '#f59e0b' },
-    { id: 'low',  labelKey: 'chk_prio_low',  color: '#94a3b8' },
-  ];
-  const ITEM_TYPES = [
-    { id: 'task',        labelKey: 'chk_item_type_task',        desc: 'Simple checkbox' },
-    { id: 'temperature', labelKey: 'chk_item_type_temperature', desc: '°C input + range' },
-    { id: 'numeric',     labelKey: 'chk_item_type_numeric',     desc: 'Number input' },
-    { id: 'pass-fail',   labelKey: 'chk_item_type_passfail',    desc: 'Inspection result' },
-    { id: 'text',        labelKey: 'chk_item_type_text',        desc: 'Free-text input' },
-  ];
-  function catLabel(c) { return c ? PCD.i18n.t(c.labelKey) : ''; }
-  function prioLabel(p) { return p ? PCD.i18n.t(p.labelKey) : ''; }
+  const CAT_FALLBACK = { safety: 'Safety', cooking: 'Cooking', prep: 'Prep', service: 'Service', cleaning: 'Cleaning' };
+  function catOf(id) { return CATS.find(function (c) { return c.id === id; }) || null; }
+  function catLabel(c) { return c ? L(c.labelKey, CAT_FALLBACK[c.id] || c.id) : ''; }
 
-  // Default templates seeded for new accounts.
-  // Built at call time so the chef's current language is used.
-  // Mevcut hesaplarda zaten template'ler kayıtlı; bu yalnızca tablo boşken,
-  // hiç template oluşmamış yeni kullanıcılar için seed olarak çalışır.
-  function getDefaultTemplates() {
+  // ---------- DEFAULT TEMPLATES (seeded once for empty workspaces) ----------
+  // Built at call time so the chef's current language is used. Realistic,
+  // minimal: 4 control lists + 1 prep starter mirroring a MENA kitchen.
+  function getDefaults() {
     const lang = (PCD.i18n && PCD.i18n.currentLocale) || 'en';
     if (lang === 'tr') {
       return [
-        {
-          name: 'Açılış Hazırlığı',
-          icon: 'clock',
-          items: [
-            { text: 'Buzdolabı ve dondurucu sıcaklıklarını kontrol et (2–4°C / -18°C)', cat: 'admin', prio: 'high', type: 'task' },
-            { text: 'Sabah teslimatlarını al ve kontrol et — ağırlık ve tarihleri doğrula', cat: 'admin', prio: 'high', type: 'task' },
-            { text: 'Bugünkü rezervasyonları ve covers sayısını gözden geçir', cat: 'admin', prio: 'high', type: 'task' },
-            { text: 'Mutfak ekibini brifle — özel menü, biten ürünler, alerjen uyarıları', cat: 'admin', prio: 'high', type: 'task' },
-            { text: 'Tüm istasyonları kur — mise en place kontrolü', cat: 'prep', prio: 'high', type: 'task' },
-            { text: 'Stok, sos ve baz hazırlıklarını yap', cat: 'cooking', prio: 'med', type: 'task' },
-            { text: 'Servisi için protein porsiyonla', cat: 'prep', prio: 'high', type: 'task' },
-            { text: 'Sebze garnitür ve yan ürünlerini hazırla', cat: 'prep', prio: 'med', type: 'task' },
-            { text: 'Tüm hazırlık kaplarını etiketle ve tarih at', cat: 'prep', prio: 'med', type: 'task' },
-            { text: 'Önceki vardiyadan kalan temizlik programlarını kontrol et', cat: 'cleaning', prio: 'med', type: 'task' },
-            { text: 'Tüm çorba, sos ve özel yemeklerin tat kontrolünü yap', cat: 'cooking', prio: 'high', type: 'task' },
-            { text: 'Sanitizer kovalarını doldur (200ppm)', cat: 'cleaning', prio: 'high', type: 'task' },
-          ]
-        },
-        {
-          name: 'Kapanış ve Servis Sonu',
-          icon: 'check-square',
-          items: [
-            { text: 'Tüm sıcak yemekleri 90 dk içinde 8°C altına soğut', cat: 'cooking', prio: 'high', type: 'task' },
-            { text: 'Tüm soğukta saklanacak artıkları etiketle, sar ve tarih at', cat: 'prep', prio: 'high', type: 'task' },
-            { text: 'Son kullanma tarihi geçen her şeyi at', cat: 'admin', prio: 'high', type: 'task' },
-            { text: 'Tüm pişirme yüzeylerini ve ekipmanı derin temizle', cat: 'cleaning', prio: 'high', type: 'task' },
-            { text: 'Tüm hazırlık tahtalarını ve bıçakları temizle ve sanitize et', cat: 'cleaning', prio: 'high', type: 'task' },
-            { text: 'Fritözleri ve ızgaraları yağdan arındır ve temizle', cat: 'cleaning', prio: 'high', type: 'task' },
-            { text: 'Mutfak zeminini paspasla', cat: 'cleaning', prio: 'med', type: 'task' },
-            { text: 'Çöp kovalarını boşalt ve poşetleri değiştir', cat: 'cleaning', prio: 'med', type: 'task' },
-            { text: 'Sabah servisi için buzdolaplarını kontrol et ve doldur', cat: 'prep', prio: 'med', type: 'task' },
-            { text: 'Günlük atık kaydını güncelle', cat: 'admin', prio: 'med', type: 'task' },
-            { text: 'Sonraki vardiya için notlar yaz — eksiklikler, sorunlar', cat: 'admin', prio: 'med', type: 'task' },
-            { text: 'Kapıyı kilitle ve alarmları kur', cat: 'admin', prio: 'high', type: 'task' },
-          ]
-        },
-        {
-          name: 'Günlük Sıcaklık Kaydı',
-          icon: 'thermometer',
-          items: [
-            { text: 'Walk-in cooler', cat: 'admin', prio: 'high', type: 'temperature', min: 1, max: 4, unit: '°C' },
-            { text: 'Walk-in dondurucu', cat: 'admin', prio: 'high', type: 'temperature', min: -22, max: -18, unit: '°C' },
-            { text: 'Reach-in soğutucu 1', cat: 'admin', prio: 'high', type: 'temperature', min: 1, max: 4, unit: '°C' },
-            { text: 'Reach-in soğutucu 2', cat: 'admin', prio: 'high', type: 'temperature', min: 1, max: 4, unit: '°C' },
-            { text: 'Vitrin buzdolabı', cat: 'admin', prio: 'high', type: 'temperature', min: 1, max: 4, unit: '°C' },
-            { text: 'Sıcak tutma (bain-marie)', cat: 'cooking', prio: 'high', type: 'temperature', min: 63, max: 90, unit: '°C' },
-            { text: 'Bulaşık makinesi durulama', cat: 'cleaning', prio: 'med', type: 'temperature', min: 82, max: 95, unit: '°C' },
-            { text: 'Denetçi imzası', cat: 'admin', prio: 'high', type: 'text' },
-          ]
-        },
-        {
-          name: 'Mal Kabul Kontrolü',
-          icon: 'truck',
-          items: [
-            { text: 'Tedarikçi adı', cat: 'admin', prio: 'high', type: 'text' },
-            { text: 'Fatura / irsaliye numarası', cat: 'admin', prio: 'high', type: 'text' },
-            { text: 'Araç temiz ve iyi durumda', cat: 'admin', prio: 'high', type: 'pass-fail' },
-            { text: 'Şoför temiz üniformada', cat: 'admin', prio: 'low', type: 'pass-fail' },
-            { text: 'Soğuk ürünler sıcaklığı (≤5°C)', cat: 'admin', prio: 'high', type: 'temperature', min: 0, max: 5, unit: '°C' },
-            { text: 'Donmuş ürünler sıcaklığı (≤-15°C)', cat: 'admin', prio: 'high', type: 'temperature', min: -25, max: -15, unit: '°C' },
-            { text: 'Ambalaj sağlam (hasarsız, sızıntısız)', cat: 'admin', prio: 'high', type: 'pass-fail' },
-            { text: 'Son kullanma / tavsiye edilen tüketim tarihleri uygun', cat: 'admin', prio: 'high', type: 'pass-fail' },
-            { text: 'Miktarlar fatura ile eşleşiyor', cat: 'admin', prio: 'high', type: 'pass-fail' },
-            { text: 'Kalite / görünüm uygun', cat: 'admin', prio: 'high', type: 'pass-fail' },
-            { text: 'Mallar 30 dk içinde depolandı', cat: 'admin', prio: 'high', type: 'task' },
-          ]
-        },
-        {
-          name: 'Walk-in Cooler Günlük Kontrol',
-          icon: 'snowflake',
-          items: [
-            { text: 'Hava sıcaklığı (hedef ≤4°C)', cat: 'admin', prio: 'high', type: 'temperature', min: 0, max: 4, unit: '°C' },
-            { text: 'Kapı contaları sağlam (boşluk yok)', cat: 'admin', prio: 'high', type: 'pass-fail' },
-            { text: 'Zemin temiz ve kuru', cat: 'cleaning', prio: 'high', type: 'pass-fail' },
-            { text: 'Raflar düzenli (çiğ altta, RTE üstte)', cat: 'admin', prio: 'high', type: 'pass-fail' },
-            { text: 'Tüm yiyecekler tarih etiketli', cat: 'admin', prio: 'high', type: 'pass-fail' },
-            { text: 'FIFO rotasyonu uygulandı', cat: 'admin', prio: 'high', type: 'pass-fail' },
-            { text: 'Süresi geçmiş ürün yok', cat: 'admin', prio: 'high', type: 'pass-fail' },
-            { text: 'Aydınlatma çalışıyor', cat: 'admin', prio: 'low', type: 'pass-fail' },
-            { text: 'Birikmiş su / sızıntı yok', cat: 'admin', prio: 'high', type: 'pass-fail' },
-            { text: 'Haşere izi (görülmedi)', cat: 'admin', prio: 'high', type: 'pass-fail' },
-          ]
-        },
-        {
-          name: 'HACCP Günlük Denetim',
-          icon: 'check-square',
-          items: [
-            { text: 'Tüm personel temiz üniforma / önlük giyiyor', cat: 'admin', prio: 'high', type: 'pass-fail' },
-            { text: 'El yıkama istasyonları dolu (sabun, havlu, su)', cat: 'admin', prio: 'high', type: 'pass-fail' },
-            { text: 'Renk kodlu kesme tahtaları doğru kullanılıyor', cat: 'prep', prio: 'high', type: 'pass-fail' },
-            { text: 'Çiğ ve hazır yenebilir ürünler ayrılmış', cat: 'prep', prio: 'high', type: 'pass-fail' },
-            { text: 'Pişirme sıcaklıkları doğrulandı (prob ile)', cat: 'cooking', prio: 'high', type: 'pass-fail' },
-            { text: 'Sıcak yemek 63°C üzerinde tutuluyor', cat: 'cooking', prio: 'high', type: 'pass-fail' },
-            { text: 'Soğuk yemek 5°C altında tutuluyor', cat: 'admin', prio: 'high', type: 'pass-fail' },
-            { text: 'Sanitizer konsantrasyonu ≥200ppm', cat: 'cleaning', prio: 'high', type: 'numeric', min: 200, max: 400, unit: 'ppm' },
-            { text: 'Alerjen prosedürlerine uyuldu (çapraz bulaşma yok)', cat: 'admin', prio: 'high', type: 'pass-fail' },
-            { text: 'Personel hastalığı bildirilmedi', cat: 'admin', prio: 'high', type: 'pass-fail' },
-          ]
-        },
-        {
-          name: 'Haftalık Derin Temizlik',
-          icon: 'recycle',
-          items: [
-            { text: 'Davlumbaz filtrelerini yağdan arındır — sıcak su solüsyonunda beklet', cat: 'cleaning', prio: 'high', type: 'task' },
-            { text: 'Fırın içlerini temizle — rafları çıkart, yağı al', cat: 'cleaning', prio: 'high', type: 'task' },
-            { text: 'Buharlı pişiriciler ve combi fırınlardan kireç temizle', cat: 'cleaning', prio: 'high', type: 'task' },
-            { text: 'Walk-in soğutucuyu temizle — raflar, duvarlar, kapı contaları', cat: 'cleaning', prio: 'high', type: 'task' },
-            { text: 'Sandık dondurucuların buzunu çöz ve temizle', cat: 'cleaning', prio: 'med', type: 'task' },
-            { text: 'Tüm ekipmanın arkasını ve altını temizle', cat: 'cleaning', prio: 'med', type: 'task' },
-            { text: 'Tüm saklama kapları ve kapakları sanitize et', cat: 'cleaning', prio: 'med', type: 'task' },
-            { text: 'Zemin tahliyelerini kontrol et ve temizle', cat: 'cleaning', prio: 'med', type: 'task' },
-            { text: 'İlk yardım kitini kontrol et ve doldur', cat: 'admin', prio: 'high', type: 'task' },
-            { text: 'Yangın söndürme sistemini test et', cat: 'admin', prio: 'high', type: 'task' },
-          ]
-        },
-        {
-          name: 'Banket / Etkinlik Hazırlığı',
-          icon: 'calendar',
-          items: [
-            { text: 'F&B müdürü ile son misafir sayısını teyit et', cat: 'admin', prio: 'high', type: 'numeric', unit: 'misafir' },
-            { text: 'Tüm misafirler için alerjen listesini doğrula — mutfağa ilet', cat: 'admin', prio: 'high', type: 'task' },
-            { text: 'Tüm tarifleri etkinlik sayısına ölçeklendir ve yazdır', cat: 'prep', prio: 'high', type: 'task' },
-            { text: 'Servis başlamadan 2 saat önce mise en place tamamla', cat: 'prep', prio: 'high', type: 'task' },
-            { text: 'Mezeleri ve soğuk başlangıçları önceden porsiyonla', cat: 'prep', prio: 'high', type: 'task' },
-            { text: 'Servis istasyonlarını kur — tabaklar, garnitürler, sos şişeleri', cat: 'service', prio: 'high', type: 'task' },
-            { text: 'Tüm mutfak ekibini sıralama ve zamanlama hakkında brifle', cat: 'admin', prio: 'high', type: 'task' },
-            { text: 'Sıcak tutma sıcaklıklarını teyit et', cat: 'cooking', prio: 'high', type: 'temperature', min: 63, max: 90, unit: '°C' },
-            { text: 'Pass alanını kur — sıcak lambalar, expo istasyonu', cat: 'service', prio: 'med', type: 'task' },
-            { text: 'Alerjen tabaklarını ayır — ayrı garnitür alanı', cat: 'service', prio: 'high', type: 'task' },
-          ]
-        },
-      ];
-    }
-    // Default: English (also fallback for ES/FR/DE/AR)
-    return DEFAULT_TEMPLATES_EN;
-  }
-
-  const DEFAULT_TEMPLATES_EN = [
-    {
-      name: 'Opening Prep',
-      icon: 'clock',
-      items: [
-        { text: 'Check fridge & freezer temperatures (2–4°C / -18°C)', cat: 'admin', prio: 'high', type: 'task' },
-        { text: 'Receive and check morning deliveries — verify weights & dates', cat: 'admin', prio: 'high', type: 'task' },
-        { text: 'Review today\'s reservations and covers', cat: 'admin', prio: 'high', type: 'task' },
-        { text: 'Brief kitchen team — specials, 86\'d items, allergen alerts', cat: 'admin', prio: 'high', type: 'task' },
-        { text: 'Set up all stations — mise en place check', cat: 'prep', prio: 'high', type: 'task' },
-        { text: 'Prepare stocks, sauces and bases', cat: 'cooking', prio: 'med', type: 'task' },
-        { text: 'Portion proteins for service', cat: 'prep', prio: 'high', type: 'task' },
-        { text: 'Prep vegetable garnishes and sides', cat: 'prep', prio: 'med', type: 'task' },
-        { text: 'Label and date all prep containers', cat: 'prep', prio: 'med', type: 'task' },
-        { text: 'Check cleaning schedules from previous shift', cat: 'cleaning', prio: 'med', type: 'task' },
-        { text: 'Taste test all soups, sauces, specials', cat: 'cooking', prio: 'high', type: 'task' },
-        { text: 'Fill sanitizer buckets (200ppm)', cat: 'cleaning', prio: 'high', type: 'task' },
-      ]
-    },
-    {
-      name: 'Closing & Shutdown',
-      icon: 'check-square',
-      items: [
-        { text: 'Cool all hot food to below 8°C within 90 minutes', cat: 'cooking', prio: 'high', type: 'task' },
-        { text: 'Label, wrap and date all refrigerated leftovers', cat: 'prep', prio: 'high', type: 'task' },
-        { text: 'Discard anything past use-by date', cat: 'admin', prio: 'high', type: 'task' },
-        { text: 'Deep clean all cooking surfaces and equipment', cat: 'cleaning', prio: 'high', type: 'task' },
-        { text: 'Clean and sanitize all prep boards and knives', cat: 'cleaning', prio: 'high', type: 'task' },
-        { text: 'Degrease and clean fryers / grills', cat: 'cleaning', prio: 'high', type: 'task' },
-        { text: 'Mop kitchen floor', cat: 'cleaning', prio: 'med', type: 'task' },
-        { text: 'Empty bins and replace liners', cat: 'cleaning', prio: 'med', type: 'task' },
-        { text: 'Check and restock fridges for morning service', cat: 'prep', prio: 'med', type: 'task' },
-        { text: 'Update daily waste log', cat: 'admin', prio: 'med', type: 'task' },
-        { text: 'Write notes for next shift — any issues, shortages', cat: 'admin', prio: 'med', type: 'task' },
-        { text: 'Lock up and set alarms', cat: 'admin', prio: 'high', type: 'task' },
-      ]
-    },
-    {
-      name: 'Daily Temperature Log',
-      icon: 'thermometer',
-      items: [
-        { text: 'Walk-in cooler', cat: 'admin', prio: 'high', type: 'temperature', min: 1, max: 4, unit: '°C' },
-        { text: 'Walk-in freezer', cat: 'admin', prio: 'high', type: 'temperature', min: -22, max: -18, unit: '°C' },
-        { text: 'Reach-in cooler 1', cat: 'admin', prio: 'high', type: 'temperature', min: 1, max: 4, unit: '°C' },
-        { text: 'Reach-in cooler 2', cat: 'admin', prio: 'high', type: 'temperature', min: 1, max: 4, unit: '°C' },
-        { text: 'Display fridge', cat: 'admin', prio: 'high', type: 'temperature', min: 1, max: 4, unit: '°C' },
-        { text: 'Hot holding (bain-marie)', cat: 'cooking', prio: 'high', type: 'temperature', min: 63, max: 90, unit: '°C' },
-        { text: 'Dishwasher rinse', cat: 'cleaning', prio: 'med', type: 'temperature', min: 82, max: 95, unit: '°C' },
-        { text: 'Inspector signature', cat: 'admin', prio: 'high', type: 'text' },
-      ]
-    },
-    {
-      name: 'Receiving Inspection',
-      icon: 'truck',
-      items: [
-        { text: 'Supplier name', cat: 'admin', prio: 'high', type: 'text' },
-        { text: 'Invoice / docket number', cat: 'admin', prio: 'high', type: 'text' },
-        { text: 'Vehicle clean and in good condition', cat: 'admin', prio: 'high', type: 'pass-fail' },
-        { text: 'Driver in clean uniform', cat: 'admin', prio: 'low', type: 'pass-fail' },
-        { text: 'Chilled goods temperature (≤5°C)', cat: 'admin', prio: 'high', type: 'temperature', min: 0, max: 5, unit: '°C' },
-        { text: 'Frozen goods temperature (≤-15°C)', cat: 'admin', prio: 'high', type: 'temperature', min: -25, max: -15, unit: '°C' },
-        { text: 'Packaging intact (no damage, no leaks)', cat: 'admin', prio: 'high', type: 'pass-fail' },
-        { text: 'Use-by / best-before dates acceptable', cat: 'admin', prio: 'high', type: 'pass-fail' },
-        { text: 'Quantities match invoice', cat: 'admin', prio: 'high', type: 'pass-fail' },
-        { text: 'Quality / appearance acceptable', cat: 'admin', prio: 'high', type: 'pass-fail' },
-        { text: 'Goods stored within 30 minutes of receipt', cat: 'admin', prio: 'high', type: 'task' },
-      ]
-    },
-    {
-      name: 'Walk-in Cooler Daily Check',
-      icon: 'snowflake',
-      items: [
-        { text: 'Air temperature (target ≤4°C)', cat: 'admin', prio: 'high', type: 'temperature', min: 0, max: 4, unit: '°C' },
-        { text: 'Door seals intact (no gaps)', cat: 'admin', prio: 'high', type: 'pass-fail' },
-        { text: 'Floor clean and dry', cat: 'cleaning', prio: 'high', type: 'pass-fail' },
-        { text: 'Shelves organized (raw bottom, RTE top)', cat: 'admin', prio: 'high', type: 'pass-fail' },
-        { text: 'All food labeled with date', cat: 'admin', prio: 'high', type: 'pass-fail' },
-        { text: 'FIFO rotation followed', cat: 'admin', prio: 'high', type: 'pass-fail' },
-        { text: 'No expired items present', cat: 'admin', prio: 'high', type: 'pass-fail' },
-        { text: 'Light bulb working', cat: 'admin', prio: 'low', type: 'pass-fail' },
-        { text: 'No standing water / leaks', cat: 'admin', prio: 'high', type: 'pass-fail' },
-        { text: 'Pest activity (none seen)', cat: 'admin', prio: 'high', type: 'pass-fail' },
-      ]
-    },
-    {
-      name: 'HACCP Daily Inspection',
-      icon: 'check-square',
-      items: [
-        { text: 'All staff wearing clean uniforms / aprons', cat: 'admin', prio: 'high', type: 'pass-fail' },
-        { text: 'Hand-wash stations stocked (soap, towels, water)', cat: 'admin', prio: 'high', type: 'pass-fail' },
-        { text: 'Color-coded cutting boards used correctly', cat: 'prep', prio: 'high', type: 'pass-fail' },
-        { text: 'Raw and ready-to-eat foods separated', cat: 'prep', prio: 'high', type: 'pass-fail' },
-        { text: 'Cooking temperatures verified (probe used)', cat: 'cooking', prio: 'high', type: 'pass-fail' },
-        { text: 'Hot food held above 63°C', cat: 'cooking', prio: 'high', type: 'pass-fail' },
-        { text: 'Cold food held below 5°C', cat: 'admin', prio: 'high', type: 'pass-fail' },
-        { text: 'Sanitizer concentration ≥200ppm', cat: 'cleaning', prio: 'high', type: 'numeric', min: 200, max: 400, unit: 'ppm' },
-        { text: 'Allergen procedures followed (no cross-contact)', cat: 'admin', prio: 'high', type: 'pass-fail' },
-        { text: 'No staff illness reported', cat: 'admin', prio: 'high', type: 'pass-fail' },
-      ]
-    },
-    {
-      name: 'Weekly Deep Clean',
-      icon: 'recycle',
-      items: [
-        { text: 'Degrease canopy filters — soak in hot water solution', cat: 'cleaning', prio: 'high', type: 'task' },
-        { text: 'Clean inside ovens — remove racks, degrease', cat: 'cleaning', prio: 'high', type: 'task' },
-        { text: 'Descale steamers and combi ovens', cat: 'cleaning', prio: 'high', type: 'task' },
-        { text: 'Clean walk-in fridge — shelves, walls, door seals', cat: 'cleaning', prio: 'high', type: 'task' },
-        { text: 'Defrost and clean chest freezers', cat: 'cleaning', prio: 'med', type: 'task' },
-        { text: 'Clean behind and under all equipment', cat: 'cleaning', prio: 'med', type: 'task' },
-        { text: 'Sanitize all storage containers and lids', cat: 'cleaning', prio: 'med', type: 'task' },
-        { text: 'Check and clean floor drains', cat: 'cleaning', prio: 'med', type: 'task' },
-        { text: 'Inspect and restock first aid kit', cat: 'admin', prio: 'high', type: 'task' },
-        { text: 'Test fire suppression system', cat: 'admin', prio: 'high', type: 'task' },
-      ]
-    },
-    {
-      name: 'Banquet / Event Setup',
-      icon: 'calendar',
-      items: [
-        { text: 'Confirm final guest count with F&B manager', cat: 'admin', prio: 'high', type: 'numeric', unit: 'guests' },
-        { text: 'Verify allergen list for all guests — update kitchen', cat: 'admin', prio: 'high', type: 'task' },
-        { text: 'Scale all recipes to event count and print', cat: 'prep', prio: 'high', type: 'task' },
-        { text: 'Complete all mise en place 2 hours before service', cat: 'prep', prio: 'high', type: 'task' },
-        { text: 'Pre-portion appetizers and cold starters', cat: 'prep', prio: 'high', type: 'task' },
-        { text: 'Set up service stations — plates, garnishes, sauce bottles', cat: 'service', prio: 'high', type: 'task' },
-        { text: 'Brief all kitchen staff on sequence and timing', cat: 'admin', prio: 'high', type: 'task' },
-        { text: 'Confirm hot holding temperatures', cat: 'cooking', prio: 'high', type: 'temperature', min: 63, max: 90, unit: '°C' },
-        { text: 'Set up pass — hot lamps, expo station', cat: 'service', prio: 'med', type: 'task' },
-        { text: 'Designate allergen plates — separate garnishing area', cat: 'service', prio: 'high', type: 'task' },
-      ]
-    },
-  ];
-
-  // v2.8.65 — Template Library presets.
-  // İlk açılışta tek seferlik seed haricinde, "Library" butonu ile şef
-  // istediği zaman ekstra hazır template'leri ekleyebilir. Defaults
-  // (getDefaultTemplates) zaten 8 temel kart kuruyor; library bunlara
-  // ek 5 preset daha sunar (Pre-Service Brief, Allergen Cross-Contact,
-  // Staff Hygiene, Pest Control, Stock Take, Oil Quality) ve hepsini
-  // 4 kategoride gruplar.
-  function getLibraryExtras() {
-    const lang = (PCD.i18n && PCD.i18n.currentLocale) || 'en';
-    if (lang === 'tr') {
-      return [
-        {
-          presetKey: 'pre_service',
-          category: 'daily',
-          name: 'Servis Öncesi Brifing',
-          desc: 'Servisten 10 dk önce 5 dakikalık ekip brifingi',
-          icon: 'users',
-          items: [
-            { text: 'Bugünün özel menüsü ve 86\'lı ürünler okundu', cat: 'service', prio: 'high', type: 'task' },
-            { text: 'Aktif rezervasyonlar ve VIP misafirler', cat: 'service', prio: 'high', type: 'text' },
-            { text: 'Bilinen alerjen / diyet talepleri', cat: 'service', prio: 'high', type: 'text' },
-            { text: 'Tüm mise en place hazır', cat: 'prep', prio: 'high', type: 'pass-fail' },
-            { text: 'Sıcak tutma sıcaklığı (≥63°C)', cat: 'cooking', prio: 'high', type: 'temperature', min: 63, max: 90, unit: '°C' },
-            { text: 'Pass / expo alanı kuruldu', cat: 'service', prio: 'high', type: 'pass-fail' },
-            { text: 'İstasyon sorumluları görevlerini onayladı', cat: 'admin', prio: 'high', type: 'task' },
-          ]
-        },
-        {
-          presetKey: 'allergen_audit',
-          category: 'haccp',
-          name: 'Alerjen Çapraz Bulaşma Denetimi',
-          desc: 'Alerjen prosedürleri ve çapraz bulaşma kontrolü',
-          icon: 'alert-triangle',
-          items: [
-            { text: 'Alerjen tabakları ayrı renkli tahtalarda hazırlandı', cat: 'prep', prio: 'high', type: 'pass-fail' },
-            { text: 'Alerjen kaplar ve aletler ayrı tutuluyor', cat: 'prep', prio: 'high', type: 'pass-fail' },
-            { text: 'Alerjen porsiyonlar son adımda hazırlanıyor', cat: 'prep', prio: 'high', type: 'pass-fail' },
-            { text: 'Garnitür alanı çapraz bulaşmadan ayrı', cat: 'service', prio: 'high', type: 'pass-fail' },
-            { text: 'Personel alerjen prosedürünü hatırlıyor', cat: 'admin', prio: 'high', type: 'pass-fail' },
-            { text: 'Etiketleme tam (alerjen içerik yazılı)', cat: 'admin', prio: 'high', type: 'pass-fail' },
-            { text: 'Şef imzası', cat: 'admin', prio: 'high', type: 'text' },
-          ]
-        },
-        {
-          presetKey: 'staff_hygiene',
-          category: 'haccp',
-          name: 'Personel Hijyen Denetimi',
-          desc: 'Vardiya başında ekip hijyen kontrolü',
-          icon: 'user',
-          items: [
-            { text: 'Tüm personel temiz üniforma giyiyor', cat: 'admin', prio: 'high', type: 'pass-fail' },
-            { text: 'Saçlar bone / şapka altında', cat: 'admin', prio: 'high', type: 'pass-fail' },
-            { text: 'Tırnaklar kısa ve temiz', cat: 'admin', prio: 'high', type: 'pass-fail' },
-            { text: 'Takı / saat yok (alyans dışında)', cat: 'admin', prio: 'med', type: 'pass-fail' },
-            { text: 'Açık yara / kesik kapalı (mavi yara bandı)', cat: 'admin', prio: 'high', type: 'pass-fail' },
-            { text: 'Hastalık bildirimi yok', cat: 'admin', prio: 'high', type: 'pass-fail' },
-            { text: 'El yıkama uygun şekilde yapıldı', cat: 'admin', prio: 'high', type: 'pass-fail' },
-            { text: 'Eldiven değişim sıklığı doğru', cat: 'admin', prio: 'med', type: 'pass-fail' },
-          ]
-        },
-        {
-          presetKey: 'pest_check',
-          category: 'weekly',
-          name: 'Haşere Kontrol Denetimi',
-          desc: 'Haftalık haşere izi ve önleyici kontrol',
-          icon: 'search',
-          items: [
-            { text: 'Yiyecek depolama alanları temiz, dökülme yok', cat: 'admin', prio: 'high', type: 'pass-fail' },
-            { text: 'Çöp alanları kapalı ve temiz', cat: 'cleaning', prio: 'high', type: 'pass-fail' },
-            { text: 'Dış kapı ve pencereler sızdırmaz', cat: 'admin', prio: 'high', type: 'pass-fail' },
-            { text: 'Fare / kemirgen izi (dışkı, ısırık) yok', cat: 'admin', prio: 'high', type: 'pass-fail' },
-            { text: 'Hamamböceği izi yok', cat: 'admin', prio: 'high', type: 'pass-fail' },
-            { text: 'Sinek tuzakları kontrol edildi', cat: 'admin', prio: 'med', type: 'pass-fail' },
-            { text: 'Drenajlar kapaklı ve temiz', cat: 'cleaning', prio: 'med', type: 'pass-fail' },
-            { text: 'Profesyonel ilaçlama tarihi (varsa)', cat: 'admin', prio: 'low', type: 'text' },
-          ]
-        },
-        {
-          presetKey: 'stock_take',
-          category: 'weekly',
-          name: 'Stok Sayımı — Yüksek Değerli',
-          desc: 'Haftalık protein ve premium ürün sayımı',
-          icon: 'package',
-          items: [
-            { text: 'Dana eti (kg)', cat: 'admin', prio: 'high', type: 'numeric', unit: 'kg' },
-            { text: 'Kuzu eti (kg)', cat: 'admin', prio: 'high', type: 'numeric', unit: 'kg' },
-            { text: 'Tavuk (kg)', cat: 'admin', prio: 'high', type: 'numeric', unit: 'kg' },
-            { text: 'Deniz ürünleri (kg)', cat: 'admin', prio: 'high', type: 'numeric', unit: 'kg' },
-            { text: 'Tereyağı (kg)', cat: 'admin', prio: 'med', type: 'numeric', unit: 'kg' },
-            { text: 'Peynir (kg)', cat: 'admin', prio: 'med', type: 'numeric', unit: 'kg' },
-            { text: 'Trüf / safran / vanilya (g)', cat: 'admin', prio: 'high', type: 'numeric', unit: 'g' },
-            { text: 'Premium içecek (şişe)', cat: 'admin', prio: 'med', type: 'numeric', unit: 'şişe' },
-            { text: 'Sayan kişi', cat: 'admin', prio: 'high', type: 'text' },
-          ]
-        },
-        {
-          presetKey: 'oil_quality',
-          category: 'weekly',
-          name: 'Fritöz Yağ Kalite Kontrolü',
-          desc: 'TPM ölçümü ve yağ değişim takibi',
-          icon: 'activity',
-          items: [
-            { text: 'Fritöz 1 — TPM (%)', cat: 'cooking', prio: 'high', type: 'numeric', min: 0, max: 24, unit: '%' },
-            { text: 'Fritöz 2 — TPM (%)', cat: 'cooking', prio: 'high', type: 'numeric', min: 0, max: 24, unit: '%' },
-            { text: 'Yağ rengi koyu / yanık değil', cat: 'cooking', prio: 'high', type: 'pass-fail' },
-            { text: 'Köpürme / kötü koku yok', cat: 'cooking', prio: 'high', type: 'pass-fail' },
-            { text: 'Yağ seviyesi yeterli (min işaret üstünde)', cat: 'cooking', prio: 'med', type: 'pass-fail' },
-            { text: 'Fritöz iç yüzeyi temiz', cat: 'cleaning', prio: 'med', type: 'pass-fail' },
-            { text: 'Yağ değiştirildi mi (E/H)', cat: 'cooking', prio: 'high', type: 'text' },
-          ]
-        },
+        { kind: 'control', name: 'Kapanış ve Güvenlik', icon: 'check-square', items: [
+          { text: 'Fritözler kapalı ve soğumaya alındı', cat: 'safety' },
+          { text: 'Izgara / chargrill kapalı', cat: 'safety' },
+          { text: 'Fırınlar ve salamander kapalı', cat: 'safety' },
+          { text: 'Ocak / indüksiyon kapalı', cat: 'safety' },
+          { text: 'Bain-marie boşaltıldı ve kapatıldı', cat: 'safety' },
+          { text: 'Ana gaz vanası kapalı', cat: 'safety' },
+          { text: 'Sıcak yemekler soğutulup kaldırıldı', cat: 'cooking' },
+          { text: 'Buzdolapları / dondurucular düzgün kapandı', cat: 'cleaning' },
+          { text: 'Çöpler boşaltıldı', cat: 'cleaning' },
+          { text: 'Zemin paspaslandı', cat: 'cleaning' },
+          { text: 'Arka kapı kilitli, alarm kuruldu', cat: 'safety' },
+        ]},
+        { kind: 'control', name: 'Açılış', icon: 'clock', items: [
+          { text: 'Buzdolapları / dondurucular çalışıyor (sıcaklık görsel ok)', cat: 'safety' },
+          { text: 'Fırın / ekipman açıldı', cat: 'cooking' },
+          { text: 'İstasyonlarda mise en place hazır', cat: 'prep' },
+          { text: 'Sanitizer kovaları dolduruldu', cat: 'cleaning' },
+          { text: 'Özel menü ve 86 listesi okundu', cat: 'service' },
+          { text: 'Teslimatlar kontrol edildi ve kaldırıldı', cat: 'prep' },
+        ]},
+        { kind: 'control', name: 'Vardiya Sonu Temizlik', icon: 'recycle', items: [
+          { text: 'Tezgahlar boşaltıldı ve sanitize edildi', cat: 'cleaning' },
+          { text: 'Tahtalar ve bıçaklar yıkandı', cat: 'cleaning' },
+          { text: 'Ekipman silindi', cat: 'cleaning' },
+          { text: 'Zemin süpürüldü ve paspaslandı', cat: 'cleaning' },
+          { text: 'Çöpler boşaltıldı ve poşetlendi', cat: 'cleaning' },
+          { text: 'Bezler çamaşıra gönderildi', cat: 'cleaning' },
+        ]},
+        { kind: 'control', name: 'Servis Öncesi Line Check', icon: 'check-square', items: [
+          { text: 'Tüm istasyonlar kuruldu', cat: 'prep' },
+          { text: 'Soslar ve dressing\'ler dolduruldu', cat: 'prep' },
+          { text: 'Garnitürler hazırlandı', cat: 'prep' },
+          { text: 'Proteinler porsiyonlandı', cat: 'prep' },
+          { text: 'Prob termometre çalışıyor', cat: 'safety' },
+          { text: 'Pass / sıcak lambalar açık', cat: 'service' },
+        ]},
+        { kind: 'prep', name: 'Günlük Prep', icon: 'chef-hat', dishes: [
+          { text: 'Hummus', comps: ['Hummus', 'Kızarmış Nohut', 'Zeytinyağı'] },
+          { text: 'Izgara Tavuk', comps: ['Tavuk Marinasyonu', 'Otlu Labneh', 'İnci Kuskus'] },
+        ]},
       ];
     }
     // EN (default for non-TR locales)
     return [
-      {
-        presetKey: 'pre_service',
-        category: 'daily',
-        name: 'Pre-Service Brief',
-        desc: '5-min team brief 10 min before service',
-        icon: 'megaphone',
-        items: [
-          { text: 'Today\'s specials and 86\'d items read out', cat: 'service', prio: 'high', type: 'task' },
-          { text: 'Active reservations and VIP guests', cat: 'service', prio: 'high', type: 'text' },
-          { text: 'Known allergen / dietary requests', cat: 'service', prio: 'high', type: 'text' },
-          { text: 'All mise en place ready', cat: 'prep', prio: 'high', type: 'pass-fail' },
-          { text: 'Hot holding temperature (≥63°C)', cat: 'cooking', prio: 'high', type: 'temperature', min: 63, max: 90, unit: '°C' },
-          { text: 'Pass / expo station set up', cat: 'service', prio: 'high', type: 'pass-fail' },
-          { text: 'Station leads confirmed assignments', cat: 'admin', prio: 'high', type: 'task' },
-        ]
-      },
-      {
-        presetKey: 'allergen_audit',
-        category: 'haccp',
-        name: 'Allergen Cross-Contact Audit',
-        desc: 'Allergen procedure and cross-contact check',
-        icon: 'shield',
-        items: [
-          { text: 'Allergen plates prepared on separate colour boards', cat: 'prep', prio: 'high', type: 'pass-fail' },
-          { text: 'Allergen containers and utensils kept separate', cat: 'prep', prio: 'high', type: 'pass-fail' },
-          { text: 'Allergen portions prepared as last step', cat: 'prep', prio: 'high', type: 'pass-fail' },
-          { text: 'Garnish station free of cross-contact', cat: 'service', prio: 'high', type: 'pass-fail' },
-          { text: 'Staff recall allergen procedure', cat: 'admin', prio: 'high', type: 'pass-fail' },
-          { text: 'Labels complete (allergen contents listed)', cat: 'admin', prio: 'high', type: 'pass-fail' },
-          { text: 'Chef signature', cat: 'admin', prio: 'high', type: 'text' },
-        ]
-      },
-      {
-        presetKey: 'staff_hygiene',
-        category: 'haccp',
-        name: 'Staff Hygiene Audit',
-        desc: 'Pre-shift team hygiene check',
-        icon: 'user-check',
-        items: [
-          { text: 'All staff in clean uniforms', cat: 'admin', prio: 'high', type: 'pass-fail' },
-          { text: 'Hair restrained (hat / hairnet)', cat: 'admin', prio: 'high', type: 'pass-fail' },
-          { text: 'Nails short and clean', cat: 'admin', prio: 'high', type: 'pass-fail' },
-          { text: 'No jewellery / watches (plain band only)', cat: 'admin', prio: 'med', type: 'pass-fail' },
-          { text: 'Open cuts covered (blue waterproof plaster)', cat: 'admin', prio: 'high', type: 'pass-fail' },
-          { text: 'No illness reported', cat: 'admin', prio: 'high', type: 'pass-fail' },
-          { text: 'Hand-washing performed properly', cat: 'admin', prio: 'high', type: 'pass-fail' },
-          { text: 'Glove change frequency adequate', cat: 'admin', prio: 'med', type: 'pass-fail' },
-        ]
-      },
-      {
-        presetKey: 'pest_check',
-        category: 'weekly',
-        name: 'Pest Control Inspection',
-        desc: 'Weekly pest activity and prevention check',
-        icon: 'search',
-        items: [
-          { text: 'Food storage areas clean, no spills', cat: 'admin', prio: 'high', type: 'pass-fail' },
-          { text: 'Bin areas closed and clean', cat: 'cleaning', prio: 'high', type: 'pass-fail' },
-          { text: 'External doors and windows sealed', cat: 'admin', prio: 'high', type: 'pass-fail' },
-          { text: 'No rodent activity (droppings, gnaw marks)', cat: 'admin', prio: 'high', type: 'pass-fail' },
-          { text: 'No cockroach activity', cat: 'admin', prio: 'high', type: 'pass-fail' },
-          { text: 'Fly traps inspected', cat: 'admin', prio: 'med', type: 'pass-fail' },
-          { text: 'Drains covered and clean', cat: 'cleaning', prio: 'med', type: 'pass-fail' },
-          { text: 'Professional pest control date (if applicable)', cat: 'admin', prio: 'low', type: 'text' },
-        ]
-      },
-      {
-        presetKey: 'stock_take',
-        category: 'weekly',
-        name: 'Stock Take — High Value',
-        desc: 'Weekly protein and premium item count',
-        icon: 'package',
-        items: [
-          { text: 'Beef (kg)', cat: 'admin', prio: 'high', type: 'numeric', unit: 'kg' },
-          { text: 'Lamb (kg)', cat: 'admin', prio: 'high', type: 'numeric', unit: 'kg' },
-          { text: 'Chicken (kg)', cat: 'admin', prio: 'high', type: 'numeric', unit: 'kg' },
-          { text: 'Seafood (kg)', cat: 'admin', prio: 'high', type: 'numeric', unit: 'kg' },
-          { text: 'Butter (kg)', cat: 'admin', prio: 'med', type: 'numeric', unit: 'kg' },
-          { text: 'Cheese (kg)', cat: 'admin', prio: 'med', type: 'numeric', unit: 'kg' },
-          { text: 'Truffle / saffron / vanilla (g)', cat: 'admin', prio: 'high', type: 'numeric', unit: 'g' },
-          { text: 'Premium beverages (bottles)', cat: 'admin', prio: 'med', type: 'numeric', unit: 'btl' },
-          { text: 'Counted by', cat: 'admin', prio: 'high', type: 'text' },
-        ]
-      },
-      {
-        presetKey: 'oil_quality',
-        category: 'weekly',
-        name: 'Fryer Oil Quality Check',
-        desc: 'TPM reading and oil change tracking',
-        icon: 'droplet',
-        items: [
-          { text: 'Fryer 1 — TPM (%)', cat: 'cooking', prio: 'high', type: 'numeric', min: 0, max: 24, unit: '%' },
-          { text: 'Fryer 2 — TPM (%)', cat: 'cooking', prio: 'high', type: 'numeric', min: 0, max: 24, unit: '%' },
-          { text: 'Oil colour not dark / burnt', cat: 'cooking', prio: 'high', type: 'pass-fail' },
-          { text: 'No foaming / off-smell', cat: 'cooking', prio: 'high', type: 'pass-fail' },
-          { text: 'Oil level adequate (above min mark)', cat: 'cooking', prio: 'med', type: 'pass-fail' },
-          { text: 'Fryer interior clean', cat: 'cleaning', prio: 'med', type: 'pass-fail' },
-          { text: 'Oil changed? (Y/N)', cat: 'cooking', prio: 'high', type: 'text' },
-        ]
-      },
+      { kind: 'control', name: 'Closing & Safety', icon: 'check-square', items: [
+        { text: 'Fryers turned off & cooling', cat: 'safety' },
+        { text: 'Grill / chargrill off', cat: 'safety' },
+        { text: 'Ovens & salamander off', cat: 'safety' },
+        { text: 'Hot plates / induction off', cat: 'safety' },
+        { text: 'Bain-marie emptied & off', cat: 'safety' },
+        { text: 'Gas main valve closed', cat: 'safety' },
+        { text: 'Hot food cooled & stored', cat: 'cooking' },
+        { text: 'Fridges / freezers closed properly', cat: 'cleaning' },
+        { text: 'Bins emptied', cat: 'cleaning' },
+        { text: 'Floors mopped', cat: 'cleaning' },
+        { text: 'Back door locked & alarm set', cat: 'safety' },
+      ]},
+      { kind: 'control', name: 'Opening', icon: 'clock', items: [
+        { text: 'Fridges & freezers running (temp visually ok)', cat: 'safety' },
+        { text: 'Ovens / equipment switched on', cat: 'cooking' },
+        { text: 'Mise en place ready at stations', cat: 'prep' },
+        { text: 'Sanitiser buckets filled', cat: 'cleaning' },
+        { text: 'Specials & 86 list read', cat: 'service' },
+        { text: 'Deliveries checked & stored', cat: 'prep' },
+      ]},
+      { kind: 'control', name: 'End of Shift Cleaning', icon: 'recycle', items: [
+        { text: 'Benches cleared & sanitised', cat: 'cleaning' },
+        { text: 'Boards & knives washed', cat: 'cleaning' },
+        { text: 'Equipment wiped down', cat: 'cleaning' },
+        { text: 'Floor swept & mopped', cat: 'cleaning' },
+        { text: 'Bins emptied & relined', cat: 'cleaning' },
+        { text: 'Cloths to laundry', cat: 'cleaning' },
+      ]},
+      { kind: 'control', name: 'Pre-Service Line Check', icon: 'check-square', items: [
+        { text: 'All stations set up', cat: 'prep' },
+        { text: 'Sauces & dressings topped up', cat: 'prep' },
+        { text: 'Garnishes prepped & ready', cat: 'prep' },
+        { text: 'Proteins portioned', cat: 'prep' },
+        { text: 'Probe thermometer working', cat: 'safety' },
+        { text: 'Pass / hot lamps on', cat: 'service' },
+      ]},
+      { kind: 'prep', name: 'Daily Prep', icon: 'chef-hat', dishes: [
+        { text: 'Hummus', comps: ['Hummus', 'Fried Chickpea', 'Olive oil'] },
+        { text: 'Grilled Chicken', comps: ['Chicken Marination', 'Herbed Labneh', 'Pearl Cous Cous'] },
+      ]},
     ];
   }
 
-  // v2.8.65 — Library categories. Defaults (8 templates from
-  // getDefaultTemplates) + extras (6 from getLibraryExtras) bir araya
-  // gelip 4 kategoride gruplanır. Library modal bu yapıyı render eder.
-  const LIBRARY_CATEGORIES = [
-    { id: 'daily',  labelKey: 'chk_lib_cat_daily',  icon: 'clock',       color: '#f59e0b' },
-    { id: 'haccp',  labelKey: 'chk_lib_cat_haccp',  icon: 'thermometer', color: '#ef4444' },
-    { id: 'weekly', labelKey: 'chk_lib_cat_weekly', icon: 'recycle',     color: '#8b5cf6' },
-    { id: 'events', labelKey: 'chk_lib_cat_events', icon: 'calendar',    color: '#3b82f6' },
-  ];
-
-  // Default 8 template'lere kategori atar — Library modal'da
-  // grup başlıkları altında doğru yerde gözüksünler.
-  function categorizeDefaultTemplate(name) {
-    if (/opening|kapan|açılış|closing/i.test(name)) return 'daily';
-    if (/temp|haccp|cooler|receiving|kabul|sıcaklık/i.test(name)) return 'haccp';
-    if (/weekly|haftalık|deep clean/i.test(name)) return 'weekly';
-    if (/banquet|event|banket|etkinlik/i.test(name)) return 'events';
-    return 'daily';
-  }
-
-  // Library presets'in tümünü kategori bazlı dön. Defaults + extras.
-  function getLibraryPresets() {
-    const all = [];
-    getDefaultTemplates().forEach(function (def) {
-      all.push({
-        presetKey: 'default_' + (def.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '_').slice(0, 30),
-        category: categorizeDefaultTemplate(def.name),
-        name: def.name,
-        desc: '', // defaults için kısa açıklama yok; isim yeterli
-        icon: def.icon,
-        items: def.items,
-      });
-    });
-    getLibraryExtras().forEach(function (extra) { all.push(extra); });
-    return all;
-  }
-
-  // Library modal — kategorilere bölünmüş preset kartları.
-  // Her karttan "Import" → workspace'e kopyalanır, isDefault=false,
-  // sortIndex listenin sonuna eklenir, ardından template editör açılır.
-  function openTemplateLibrary(view) {
-    const t = PCD.i18n.t;
-    const presets = getLibraryPresets();
-
-    // Kategorilere göre grupla
-    const byCat = {};
-    LIBRARY_CATEGORIES.forEach(function (c) { byCat[c.id] = []; });
-    presets.forEach(function (p) {
-      if (!byCat[p.category]) byCat[p.category] = [];
-      byCat[p.category].push(p);
-    });
-
-    const body = PCD.el('div');
-    let html = '<div style="margin-bottom:14px;padding:12px 14px;background:linear-gradient(135deg,var(--brand-50),var(--surface));border-radius:var(--r-md);">' +
-      '<div style="font-size:11px;font-weight:700;color:var(--brand-700);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">' +
-        PCD.escapeHtml(t('chk_lib_title') || 'Template Library') +
-      '</div>' +
-      '<div class="text-muted text-sm">' +
-        PCD.escapeHtml(t('chk_lib_subtitle') || 'Pick a ready-made checklist. You can edit it after importing.') +
-      '</div>' +
-    '</div>';
-
-    LIBRARY_CATEGORIES.forEach(function (cat) {
-      const list = byCat[cat.id] || [];
-      if (!list.length) return;
-      html += '<div style="margin-bottom:18px;">' +
-        '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1.5px solid ' + cat.color + '33;margin-bottom:10px;">' +
-          '<span style="color:' + cat.color + ';">' + PCD.icon(cat.icon, 16) + '</span>' +
-          '<span style="font-size:11px;font-weight:700;color:' + cat.color + ';text-transform:uppercase;letter-spacing:0.06em;">' +
-            PCD.escapeHtml(t(cat.labelKey) || cat.id) +
-          '</span>' +
-        '</div>';
-      list.forEach(function (p, idx) {
-        const typeCount = (function () {
-          const types = new Set((p.items || []).map(function (i) { return i.type || 'task'; }));
-          return Array.from(types).filter(function (x) { return x !== 'task'; });
-        })();
-        const badges = typeCount.map(function (tp) {
-          return '<span style="font-size:9px;padding:1px 6px;border-radius:999px;background:var(--brand-50);color:var(--brand-700);font-weight:700;letter-spacing:0.04em;text-transform:uppercase;margin-inline-end:4px;">' + tp + '</span>';
-        }).join('');
-        const desc = p.desc ? '<div class="text-muted text-sm" style="margin-top:2px;font-size:12px;">' + PCD.escapeHtml(p.desc) + '</div>' : '';
-        html += '<div class="card" style="padding:12px;margin-bottom:8px;display:flex;align-items:center;gap:12px;">' +
-          '<div class="list-item-thumb" style="background:var(--surface-2);color:' + cat.color + ';flex-shrink:0;">' + PCD.icon(p.icon || 'check-square', 20) + '</div>' +
-          '<div style="flex:1;min-width:0;">' +
-            '<div style="font-weight:700;font-size:14px;">' + PCD.escapeHtml(p.name) + '</div>' +
-            desc +
-            '<div class="text-muted text-sm" style="margin-top:4px;">' + (p.items || []).length + ' ' + (t('chk_lib_items') || 'items') + ' ' + badges + '</div>' +
-          '</div>' +
-          '<button type="button" class="btn btn-primary btn-sm" data-import-preset="' + cat.id + ':' + idx + '">' + PCD.icon('plus', 14) + ' ' + PCD.escapeHtml(t('chk_lib_import') || 'Import') + '</button>' +
-        '</div>';
-      });
-      html += '</div>';
-    });
-
-    body.innerHTML = html;
-
-    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('close') });
-    const footer = PCD.el('div', { style: { display: 'flex', justifyContent: 'flex-end', width: '100%' } });
-    footer.appendChild(closeBtn);
-
-    const m = PCD.modal.open({
-      title: t('chk_lib_title') || 'Template Library',
-      body: body,
-      footer: footer,
-      size: 'md',
-      closable: true,
-    });
-    closeBtn.addEventListener('click', function () { m.close(); });
-
-    PCD.on(body, 'click', '[data-import-preset]', function () {
-      const ref = this.getAttribute('data-import-preset').split(':');
-      const catId = ref[0];
-      const idx = parseInt(ref[1], 10);
-      const preset = (byCat[catId] || [])[idx];
-      if (!preset) return;
-      // Listenin sonuna sortIndex ata
-      const existing = listTemplates();
-      const newTpl = {
-        name: preset.name,
-        icon: preset.icon || 'check-square',
-        sortIndex: existing.length,
-        printColumns: 1,
-        items: (preset.items || []).map(function (it) {
-          const item = {
-            id: PCD.uid('it'),
-            text: it.text, cat: it.cat || 'prep', prio: it.prio || 'med',
-            type: it.type || 'task',
-          };
-          if (it.min !== undefined) item.min = it.min;
-          if (it.max !== undefined) item.max = it.max;
-          if (it.unit) item.unit = it.unit;
-          if (it.hint) item.hint = it.hint;
-          return item;
-        }),
-        isDefault: false,
-      };
-      const saved = PCD.store.upsertInTable('checklistTemplates', newTpl, 'tpl');
-      PCD.toast.success(t('chk_lib_imported') || 'Template imported');
-      m.close();
-      setTimeout(function () {
-        if (view && PCD.router.currentView() === 'checklist') render(view);
-        setTimeout(function () { openTemplateEditor(saved.id); }, 200);
-      }, 150);
-    });
-  }
-
-  // ============ MAIN VIEW ============
-  function render(view) {
-    const t = PCD.i18n.t;
-    const templates = listTemplates();
-    const activeSessions = listActiveSessions();
-
-    view.innerHTML = `
-      <div class="page-header">
-        <div class="page-header-text">
-          <div class="page-title">${t('checklist_title') || 'Shift Checklists'}</div>
-          <div class="page-subtitle">${t('checklist_subtitle') || 'Standardize opening, prep, closing, and HACCP routines'}</div>
-        </div>
-        <div class="page-header-actions">
-          <button class="btn btn-outline btn-sm" id="libraryBtn">${PCD.icon('package',16)} ${t('chk_lib_btn') || 'Library'}</button>
-          <button class="btn btn-outline btn-sm" id="newTplBtn">${PCD.icon('plus',16)} ${t('checklist_new_template') || 'Template'}</button>
-        </div>
-      </div>
-
-      ${activeSessions.length > 0 ? `
-        <div class="section mb-4">
-          <div class="section-title" style="font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">${t('checklist_in_progress') || 'In Progress'}</div>
-          <div id="activeSessionsList" class="flex flex-col gap-2"></div>
-        </div>
-      ` : ''}
-
-      <div class="section">
-        <div class="section-title" style="font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">${t('checklist_templates') || 'Templates'}</div>
-        <div id="templatesList" class="flex flex-col gap-2"></div>
-      </div>
-    `;
-
-    // Active sessions
-    const asEl = PCD.$('#activeSessionsList', view);
-    if (asEl) {
-      activeSessions.forEach(function (s) {
-        const tpl = templates.find(function (t) { return t.id === s.templateId; });
-        const total = (s.items || []).length;
-        const done = (s.items || []).filter(function (it) { return it.done; }).length;
-        const pct = total ? Math.round((done / total) * 100) : 0;
-        const row = PCD.el('div', { class: 'card card-hover', 'data-sid': s.id, style: { padding: '12px' } });
-        row.innerHTML = `
-          <div class="flex items-center gap-3">
-            <div class="list-item-thumb" style="background:var(--brand-50);color:var(--brand-700);">${PCD.icon('clock',20)}</div>
-            <div style="flex:1;min-width:0;">
-              <div style="font-weight:600;font-size:15px;">${PCD.escapeHtml((tpl && tpl.name) || 'Session')}</div>
-              <div class="text-muted text-sm">${done}/${total} · ${PCD.fmtRelTime(s.startedAt)}</div>
-              <div class="progress mt-1" style="height:4px;">
-                <div class="progress-bar" style="width:${pct}%;background:var(--brand-600);"></div>
-              </div>
-            </div>
-            <div style="font-weight:700;color:var(--brand-700);">${pct}%</div>
-          </div>
-        `;
-        asEl.appendChild(row);
-      });
+  // ---------- TEMPLATE DATA HELPERS ----------
+  function normalizeTemplate(tpl) {
+    // Defensive: ensure the shape matches the kind so render never crashes
+    // on legacy / partial rows.
+    if (!tpl) return tpl;
+    if (tpl.kind !== 'prep') {
+      tpl.kind = 'control';
+      if (!Array.isArray(tpl.items)) tpl.items = [];
+    } else {
+      if (!Array.isArray(tpl.dishes)) tpl.dishes = [];
+      tpl.dishes.forEach(function (d) { if (!Array.isArray(d.comps)) d.comps = []; });
     }
-
-    // Templates
-    const tplEl = PCD.$('#templatesList', view);
-    templates.forEach(function (tpl, idx) {
-      const isFirst = idx === 0;
-      const isLast = idx === templates.length - 1;
-      const row = PCD.el('div', { class: 'card card-hover', 'data-tid': tpl.id, style: { padding: '12px' } });
-      const itemTypes = [...new Set((tpl.items || []).map(function (i) { return i.type || 'task'; }))];
-      const typeBadges = itemTypes.length > 1 || (itemTypes[0] && itemTypes[0] !== 'task')
-        ? itemTypes.filter(function (t) { return t !== 'task'; }).map(function (t) {
-            return '<span style="font-size:9px;padding:2px 6px;border-radius:999px;background:var(--brand-50);color:var(--brand-700);font-weight:700;letter-spacing:0.04em;text-transform:uppercase;margin-inline-start:4px;">' + t + '</span>';
-          }).join('')
-        : '';
-      // v2.5.12: up/down arrows for chef-controlled ordering, 3-dot menu
-      // for edit / copy-to-workspace / delete (replaces the inline edit btn).
-      row.innerHTML = `
-        <div class="flex items-center gap-3">
-          <div class="list-item-thumb" style="background:var(--brand-50);color:var(--brand-700);">${PCD.icon(tpl.icon || 'check-square',20)}</div>
-          <div style="flex:1;min-width:0;">
-            <div style="font-weight:700;font-size:15px;">${PCD.escapeHtml(tpl.name)}${typeBadges}</div>
-            <div class="text-muted text-sm">${(tpl.items || []).length} items</div>
-          </div>
-          <div class="flex flex-col" style="gap:2px;">
-            <button type="button" class="icon-btn" data-move-up="${tpl.id}" ${isFirst ? 'disabled' : ''} title="${t('move_up') || 'Move up'}" style="padding:4px;height:24px;width:28px;${isFirst ? 'opacity:0.3;cursor:not-allowed;' : ''}">${PCD.icon('chevron-up', 14)}</button>
-            <button type="button" class="icon-btn" data-move-down="${tpl.id}" ${isLast ? 'disabled' : ''} title="${t('move_down') || 'Move down'}" style="padding:4px;height:24px;width:28px;${isLast ? 'opacity:0.3;cursor:not-allowed;' : ''}">${PCD.icon('chevron-down', 14)}</button>
-          </div>
-          <button type="button" class="icon-btn" data-tpl-menu="${tpl.id}" title="${t('more_actions') || 'More actions'}">${PCD.icon('more-vertical', 18)}</button>
-          <button type="button" class="btn btn-primary btn-sm" data-startrun="${tpl.id}">${t('checklist_start') || 'Start'}</button>
-        </div>
-      `;
-      tplEl.appendChild(row);
-    });
-
-    // Up/down — reorder by swapping sortIndex.
-    PCD.on(view, 'click', '[data-move-up]', function (e) {
-      e.stopPropagation();
-      const tid = this.getAttribute('data-move-up');
-      moveTemplate(tid, -1);
-      render(view);
-    });
-    PCD.on(view, 'click', '[data-move-down]', function (e) {
-      e.stopPropagation();
-      const tid = this.getAttribute('data-move-down');
-      moveTemplate(tid, +1);
-      render(view);
-    });
-
-    // 3-dot menu — Edit / Copy to workspace / Delete.
-    PCD.on(view, 'click', '[data-tpl-menu]', function (e) {
-      e.stopPropagation();
-      const tid = this.getAttribute('data-tpl-menu');
-      const tpl = PCD.store.getFromTable('checklistTemplates', tid);
-      if (!tpl) return;
-      PCD.actionSheet({
-        title: tpl.name,
-        actions: [
-          { icon: 'edit', label: t('act_edit') || 'Edit', onClick: function () { openTemplateEditor(tid); } },
-          { icon: 'copy', label: t('act_duplicate') || 'Duplicate', onClick: function () {
-            const copy = PCD.clone(tpl);
-            delete copy.id; delete copy.createdAt; delete copy.updatedAt;
-            copy.name = copy.name + ' (Copy)';
-            copy.isDefault = false;
-            // New copies go to the end of the list.
-            copy.sortIndex = templates.length;
-            PCD.store.upsertInTable('checklistTemplates', copy, 'tpl');
-            PCD.toast.success(t('act_duplicate') + ' ✓');
-            render(view);
-          }},
-          { icon: 'truck', label: t('act_copy_workspace') || 'Copy to workspace...', onClick: function () {
-            PCD.openCopyToWorkspace('checklistTemplates', tid, tpl.name);
-          }},
-          { icon: 'trash', label: t('act_delete') || 'Delete', danger: true, onClick: function () {
-            PCD.modal.confirm({
-              icon: '🗑', iconKind: 'danger', danger: true,
-              title: t('checklist_delete_confirm_title') || 'Delete this template?',
-              text: t('checklist_delete_confirm_msg') || 'This will permanently remove the template. Any in-progress sessions will keep working.',
-              okText: t('act_delete') || 'Delete',
-            }).then(function (ok) {
-              if (!ok) return;
-              PCD.store.deleteFromTable('checklistTemplates', tid);
-              PCD.toast.success(t('checklist_deleted') || 'Template deleted');
-              render(view);
-            });
-          }},
-        ]
-      });
-    });
-
-    PCD.$('#newTplBtn', view).addEventListener('click', function () { openTemplateEditor(); });
-    const libBtn = PCD.$('#libraryBtn', view);
-    if (libBtn) libBtn.addEventListener('click', function () { openTemplateLibrary(view); });
-    // Click on the card body (not on inner buttons) → preview
-    PCD.on(view, 'click', '[data-tid]', function (e) {
-      if (e.target.closest('[data-startrun]')) return;
-      if (e.target.closest('[data-edit-tid]')) return;
-      if (e.target.closest('[data-move-up]')) return;
-      if (e.target.closest('[data-move-down]')) return;
-      if (e.target.closest('[data-tpl-menu]')) return;
-      openTemplatePreview(this.getAttribute('data-tid'));
-    });
-    // Edit button: stopPropagation in handler (not inline)
-    PCD.on(view, 'click', '[data-edit-tid]', function (e) {
-      e.stopPropagation();
-      e.preventDefault();
-      openTemplateEditor(this.getAttribute('data-edit-tid'));
-    });
-    // Start button: stopPropagation in handler (not inline)
-    PCD.on(view, 'click', '[data-startrun]', function (e) {
-      e.stopPropagation();
-      e.preventDefault();
-      const tid = this.getAttribute('data-startrun');
-      startSession(tid);
-    });
-    PCD.on(view, 'click', '[data-sid]', function () {
-      openSession(this.getAttribute('data-sid'));
-    });
+    return tpl;
   }
 
-  // ============ DATA HELPERS ============
   function listTemplates() {
     let tpls = PCD.store.listTable('checklistTemplates');
-    if (tpls.length === 0) {
-      getDefaultTemplates().forEach(function (def, idx) {
-        PCD.store.upsertInTable('checklistTemplates', {
-          name: def.name,
-          icon: def.icon,
-          sortIndex: idx,
-          items: def.items.map(function (it) {
-            const item = { id: PCD.uid('it'), text: it.text, cat: it.cat || 'prep', prio: it.prio || 'med', type: it.type || 'task' };
-            if (it.min !== undefined) item.min = it.min;
-            if (it.max !== undefined) item.max = it.max;
-            if (it.unit) item.unit = it.unit;
-            return item;
-          }),
-          isDefault: true,
-        }, 'tpl');
+    if (!tpls || tpls.length === 0) {
+      getDefaults().forEach(function (def, idx) {
+        const tpl = { name: def.name, icon: def.icon, kind: def.kind, sortIndex: idx, isDefault: true };
+        if (def.kind === 'prep') {
+          tpl.dishes = (def.dishes || []).map(function (d) {
+            return { id: uid('dish'), text: d.text, comps: (d.comps || []).map(function (c) { return { id: uid('comp'), text: c }; }) };
+          });
+        } else {
+          tpl.items = (def.items || []).map(function (it) { return { id: uid('it'), text: it.text, cat: it.cat || '' }; });
+        }
+        PCD.store.upsertInTable('checklistTemplates', tpl, 'tpl');
       });
       tpls = PCD.store.listTable('checklistTemplates');
     }
-    // Sort by sortIndex (chef-controlled order). Templates without
-    // a sortIndex go to the end, in createdAt order. This handles
-    // existing data from before v2.5.12 gracefully.
+    tpls.forEach(normalizeTemplate);
     return tpls.slice().sort(function (a, b) {
       const ai = (typeof a.sortIndex === 'number') ? a.sortIndex : 999999;
       const bi = (typeof b.sortIndex === 'number') ? b.sortIndex : 999999;
@@ -937,1323 +205,952 @@
     });
   }
 
-  // Move a template up or down in the user's preferred order.
-  // direction: -1 (up) or +1 (down). No-op at the boundaries.
-  function moveTemplate(tid, direction) {
+  function moveTemplate(tid, dir) {
     const ordered = listTemplates();
     const i = ordered.findIndex(function (t) { return t.id === tid; });
     if (i < 0) return;
-    const j = i + direction;
+    const j = i + dir;
     if (j < 0 || j >= ordered.length) return;
-    // Swap sortIndex values, but normalise the whole list first so
-    // every template has a stable integer index. This is cheap and
-    // makes future moves simple.
     ordered.forEach(function (t, idx) { t.sortIndex = idx; });
     const tmp = ordered[i].sortIndex;
     ordered[i].sortIndex = ordered[j].sortIndex;
     ordered[j].sortIndex = tmp;
-    // Persist both rows.
-    PCD.store.upsertInTable('checklistTemplates', ordered[i], 'tpl');
-    PCD.store.upsertInTable('checklistTemplates', ordered[j], 'tpl');
-    // Also persist any other rows whose sortIndex we just normalised
-    // for the first time.
-    ordered.forEach(function (t, idx) {
-      if (idx !== i && idx !== j) PCD.store.upsertInTable('checklistTemplates', t, 'tpl');
-    });
+    ordered.forEach(function (t) { PCD.store.upsertInTable('checklistTemplates', t, 'tpl'); });
   }
 
+  function templateCount(tpl) {
+    if (tpl.kind === 'prep') return (tpl.dishes || []).length;
+    return (tpl.items || []).length;
+  }
+
+  // ---------- RECIPE / MENU SOURCES (for prep auto-fill) ----------
+  function buildMaps() {
+    const recs = PCD.store.listTable('recipes') || [];
+    const ings = PCD.store.listTable('ingredients') || [];
+    const recipeMap = {}; recs.forEach(function (r) { recipeMap[r.id] = r; });
+    const ingMap = {}; ings.forEach(function (i) { ingMap[i.id] = i; });
+    return { recipeMap: recipeMap, ingMap: ingMap, recipes: recs };
+  }
+
+  // One level deep: a dish's ingredient rows resolved to display names.
+  // Mirrors the photo (Barramundi -> Carrot Puree, Dukkah, Freekeh, ...).
+  function componentsOfRecipe(recipe, maps) {
+    const out = [];
+    (recipe.ingredients || []).forEach(function (ri) {
+      if (!ri || ri.separator) return;
+      const r = PCD.recipes.resolveRow(ri, maps.ingMap, maps.recipeMap);
+      if (!r || !r.name) return;
+      out.push({ id: uid('comp'), text: r.name, recipeId: ri.recipeId || undefined, ingredientId: ri.ingredientId || undefined });
+    });
+    return out;
+  }
+
+  function dishGroupFromRecipe(recipe, maps) {
+    return { id: uid('dish'), text: recipe.name || '', recipeId: recipe.id, comps: componentsOfRecipe(recipe, maps) };
+  }
+
+  // Menu dishes = recipes that are NOT preps.
+  function listDishRecipes(maps) {
+    return (maps.recipes || []).filter(function (r) { return r && !PCD.recipes.isPrep(r); })
+      .sort(function (a, b) { return (a.name || '').localeCompare(b.name || ''); });
+  }
+  function listMenus() { return PCD.store.listTable('menus') || []; }
+  function menuDishRecipes(menu, maps) {
+    const out = [];
+    const seen = {};
+    (menu.sections || []).forEach(function (s) {
+      (s.items || []).forEach(function (it) {
+        if (it && it.recipeId && maps.recipeMap[it.recipeId] && !seen[it.recipeId]) {
+          seen[it.recipeId] = 1;
+          out.push(maps.recipeMap[it.recipeId]);
+        }
+      });
+    });
+    return out;
+  }
+
+  // ---------- SESSION HELPERS ----------
   function listActiveSessions() {
-    const all = readSessions();
-    return all.filter(function (s) { return !s.completedAt; }).slice().sort(function (a, b) {
-      return (b.startedAt || '').localeCompare(a.startedAt || '');
-    });
+    return readSessions().filter(function (s) { return !s.completedAt; })
+      .slice().sort(function (a, b) { return (b.startedAt || '').localeCompare(a.startedAt || ''); });
   }
-
-  // List completed sessions for a given template, newest first.
-  // If templateId is omitted, returns ALL completed sessions in the workspace.
   function listCompletedSessions(templateId) {
-    const all = readSessions();
-    return all.filter(function (s) {
+    return readSessions().filter(function (s) {
       if (!s.completedAt) return false;
       if (templateId && s.templateId !== templateId) return false;
       return true;
-    }).slice().sort(function (a, b) {
-      return (b.completedAt || '').localeCompare(a.completedAt || '');
-    });
+    }).slice().sort(function (a, b) { return (b.completedAt || '').localeCompare(a.completedAt || ''); });
   }
-
-  function deleteSessionById(sid) {
-    // v2.6.80 — Soft-delete: tombstone bırak, array'den çıkarma. Çift yazma
-    // fazında pull merge'de _deletedAt'lı kayıt newest-wins ile kazanır ve
-    // item geri gelmez (waste.js / recipes pattern'i).
-    const cur = readSessionsAll().slice();
-    const idx = cur.findIndex(function (s) { return s && s.id === sid; });
-    if (idx === -1) return;
-    cur[idx] = Object.assign({}, cur[idx], { _deletedAt: new Date().toISOString() });
-    writeSessions(cur);
-  }
-
-  // ============ TEMPLATE PREVIEW ============
-  // Click on a template → preview (not editor). Buttons: Start / Print / Edit / Share / Duplicate.
-  function openTemplatePreview(tid) {
-    const t = PCD.i18n.t;
-    const tpl = PCD.store.getFromTable('checklistTemplates', tid);
-    if (!tpl) return;
-
-    const items = tpl.items || [];
-
-    // Group items by category for preview
-    const groups = {};
-    items.forEach(function (it) {
-      const c = CATS.find(function (x) { return x.id === it.cat; }) || CATS[0];
-      const key = c.id;
-      if (!groups[key]) groups[key] = { cat: c, items: [] };
-      groups[key].items.push(it);
-    });
-
-    let groupedHtml = '';
-    Object.keys(groups).forEach(function (k) {
-      const g = groups[k];
-      groupedHtml += '<div style="margin-bottom:18px;">';
-      groupedHtml += '<div style="font-size:11px;font-weight:700;color:' + g.cat.color + ';text-transform:uppercase;letter-spacing:0.06em;padding:4px 0;border-bottom:1.5px solid ' + g.cat.color + '33;margin-bottom:8px;">' + catLabel(g.cat) + ' · ' + g.items.length + ' items</div>';
-      g.items.forEach(function (it, idx) {
-        const prio = PRIOS.find(function (p) { return p.id === it.prio; });
-        const prioDot = prio ? '<span style="width:7px;height:7px;border-radius:50%;background:' + prio.color + ';flex-shrink:0;display:inline-block;"></span>' : '';
-        let typeBadge = '';
-        if (it.type === 'temperature') typeBadge = '<span style="font-size:10px;padding:1px 6px;border-radius:999px;background:#dbeafe;color:#1e40af;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;">TEMP ' + (it.min !== undefined ? it.min : '?') + '–' + (it.max !== undefined ? it.max : '?') + (it.unit || '') + '</span>';
-        else if (it.type === 'numeric') typeBadge = '<span style="font-size:10px;padding:1px 6px;border-radius:999px;background:#fef3c7;color:#92400e;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;">NUMBER ' + (it.unit || '') + '</span>';
-        else if (it.type === 'pass-fail') typeBadge = '<span style="font-size:10px;padding:1px 6px;border-radius:999px;background:#dcfce7;color:#166534;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;">PASS/FAIL</span>';
-        else if (it.type === 'text') typeBadge = '<span style="font-size:10px;padding:1px 6px;border-radius:999px;background:#f1f5f9;color:#475569;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;">TEXT</span>';
-        groupedHtml += '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;margin-bottom:4px;background:var(--surface);">' +
-          '<div style="width:18px;height:18px;border:2px solid var(--border-strong);border-radius:3px;flex-shrink:0;"></div>' +
-          prioDot +
-          '<div style="flex:1;min-width:0;font-size:14px;font-weight:500;">' + PCD.escapeHtml(it.text || '') + '</div>' +
-          typeBadge +
-        '</div>';
-      });
-      groupedHtml += '</div>';
-    });
-
-    const body = PCD.el('div');
-    body.innerHTML =
-      '<div style="margin-bottom:16px;padding:14px 16px;background:linear-gradient(135deg,var(--brand-50),var(--surface));border-radius:var(--r-md);">' +
-        '<div style="font-size:11px;font-weight:700;color:var(--brand-700);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">Template preview</div>' +
-        '<div style="font-weight:800;font-size:20px;letter-spacing:-0.01em;">' + PCD.escapeHtml(tpl.name) + '</div>' +
-        '<div class="text-muted text-sm mt-1">' + items.length + ' items across ' + Object.keys(groups).length + ' categor' + (Object.keys(groups).length === 1 ? 'y' : 'ies') + '</div>' +
-      '</div>' +
-      groupedHtml;
-
-    const startBtn = PCD.el('button', { class: 'btn btn-primary', style: { flex: '1' } });
-    startBtn.innerHTML = PCD.icon('clock', 16) + ' <span>' + PCD.i18n.t('btn_start_session') + '</span>';
-    const editBtn = PCD.el('button', { class: 'btn btn-outline', title: t('chk_btn_edit_template') });
-    editBtn.innerHTML = PCD.icon('edit', 16);
-    const dupBtn = PCD.el('button', { class: 'btn btn-outline', title: t('chk_btn_duplicate') });
-    dupBtn.innerHTML = PCD.icon('copy', 16);
-    const printBtn = PCD.el('button', { class: 'btn btn-outline', title: t('chk_btn_print_blank') });
-    printBtn.innerHTML = PCD.icon('print', 16);
-    const shareBtn = PCD.el('button', { class: 'btn btn-outline', title: t('btn_share') });
-    shareBtn.innerHTML = PCD.icon('share', 16);
-    // History button — shows past completed sessions for this template.
-    const completedCount = listCompletedSessions(tid).length;
-    const historyBtn = PCD.el('button', {
-      class: 'btn btn-outline',
-      title: t('checklist_history') || 'History',
-    });
-    historyBtn.innerHTML = PCD.icon('clock', 16) +
-      (completedCount > 0
-        ? ' <span style="font-weight:700;font-size:11px;background:var(--brand-600);color:#fff;padding:1px 6px;border-radius:999px;margin-inline-start:4px;">' + completedCount + '</span>'
-        : '');
-    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('close') });
-    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
-    footer.appendChild(closeBtn);
-    footer.appendChild(historyBtn);
-    footer.appendChild(printBtn);
-    footer.appendChild(shareBtn);
-    footer.appendChild(dupBtn);
-    footer.appendChild(editBtn);
-    footer.appendChild(startBtn);
-
-    const m = PCD.modal.open({ title: tpl.name, body: body, footer: footer, size: 'md', closable: true });
-
-    closeBtn.addEventListener('click', function () { m.close(); });
-    startBtn.addEventListener('click', function () {
-      m.close();
-      setTimeout(function () { startSession(tid); }, 200);
-    });
-    editBtn.addEventListener('click', function () {
-      m.close();
-      setTimeout(function () { openTemplateEditor(tid); }, 200);
-    });
-    historyBtn.addEventListener('click', function () {
-      m.close();
-      setTimeout(function () { openSessionHistory(tid); }, 200);
-    });
-    dupBtn.addEventListener('click', function () {
-      const copy = PCD.clone(tpl);
-      delete copy.id; delete copy.createdAt; delete copy.updatedAt;
-      copy.name = copy.name + ' (Copy)';
-      copy.isDefault = false;
-      copy.items = (copy.items || []).map(function (it) { return Object.assign({}, it, { id: PCD.uid('it') }); });
-      const saved = PCD.store.upsertInTable('checklistTemplates', copy, 'tpl');
-      PCD.toast.success(PCD.i18n.t('toast_template_duplicated'));
-      m.close();
-      setTimeout(function () {
-        const v = PCD.$('#view');
-        if (PCD.router.currentView() === 'checklist') render(v);
-        setTimeout(function () { openTemplateEditor(saved.id); }, 200);
-      }, 150);
-    });
-    printBtn.addEventListener('click', function () {
-      printBlankTemplate(tpl);
-    });
-    shareBtn.addEventListener('click', function () {
-      shareBlankTemplate(tpl);
-    });
-  }
-
-  // v2.8.59 — Print kompaktlaştırma.
-  // v2.8.61 — Multi-column toggle: tpl.printColumns (1|2). 1 col = tek tablo;
-  // 2 col = items ortadan ikiye bölünüp iki tablo CSS grid'de yan yana →
-  // 24 item rahatlıkla tek sayfa.
-  function _chkBuildRowHtml(it, idx) {
-    const cat = CATS.find(function (c) { return c.id === it.cat; });
-    const type = it.type || 'task';
-    let valueCol;
-    if (type === 'task') valueCol = '<span style="display:inline-block;width:14px;height:14px;border:1.5px solid #999;border-radius:2px;"></span>';
-    else if (type === 'temperature' || type === 'numeric') valueCol = '<span style="display:inline-block;border-bottom:1px solid #999;min-width:60px;height:14px;"></span> ' + (it.unit || '') +
-      ((it.min !== undefined || it.max !== undefined) ? '<span style="font-size:7pt;color:#999;margin-inline-start:6px;">Target ' + (it.min !== undefined ? it.min : '?') + '–' + (it.max !== undefined ? it.max : '?') + '</span>' : '');
-    else if (type === 'pass-fail') valueCol = '<span style="font-size:8pt;">P <span style="display:inline-block;width:11px;height:11px;border:1px solid #999;border-radius:2px;vertical-align:middle;"></span> F <span style="display:inline-block;width:11px;height:11px;border:1px solid #999;border-radius:2px;vertical-align:middle;"></span> N/A <span style="display:inline-block;width:11px;height:11px;border:1px solid #999;border-radius:2px;vertical-align:middle;"></span></span>';
-    else valueCol = '<span style="display:inline-block;border-bottom:1px solid #999;min-width:160px;height:14px;"></span>';
-    // v2.8.62 — Kategori renkli stripe: ilk td'nin sol kenarında 4px renk
-    // şeridi. Şef tarama sırasında "cleaning" / "cooking" / "prep" gibi
-    // grupları görsel olarak ayırt eder.
-    const stripeColor = cat ? cat.color : 'transparent';
-    return '<tr>' +
-        '<td style="padding:3px 6px 3px 8px;border-bottom:1px solid #e5e5e5;border-left:4px solid ' + stripeColor + ';width:22px;font-weight:700;color:#999;font-size:8pt;">' + (idx + 1) + '</td>' +
-        '<td style="padding:3px 6px;border-bottom:1px solid #e5e5e5;">' +
-          '<span style="font-weight:600;font-size:9.5pt;">' + PCD.escapeHtml(it.text) + '</span>' +
-          (cat ? ' <span style="font-size:7pt;color:' + cat.color + ';font-weight:700;text-transform:uppercase;letter-spacing:0.03em;margin-inline-start:4px;">' + catLabel(cat) + '</span>' : '') +
-          (it.hint ? '<div style="font-size:7.5pt;color:#888;font-style:italic;margin-top:1px;">' + PCD.escapeHtml(it.hint) + '</div>' : '') +
-        '</td>' +
-        '<td style="padding:3px 6px;border-bottom:1px solid #e5e5e5;text-align:center;width:155px;font-size:8.5pt;">' + valueCol + '</td>' +
-        '<td style="padding:3px 6px;border-bottom:1px solid #e5e5e5;width:50px;font-size:8pt;color:#999;text-align:center;">__:__</td>' +
-      '</tr>';
-  }
-  function _chkBlankTableHtml(itemsSubset, startIdx) {
-    let rows = '';
-    itemsSubset.forEach(function (it, i) { rows += _chkBuildRowHtml(it, startIdx + i); });
-    return '<table>' +
-      '<thead><tr><th style="width:22px;">#</th><th>Item</th><th style="text-align:center;width:155px;">Result / Value</th><th style="width:50px;text-align:center;">Time</th></tr></thead>' +
-      '<tbody>' + rows + '</tbody>' +
-    '</table>';
-  }
-
-  function printBlankTemplate(tpl) {
-    const items = tpl.items || [];
-    const cols = (tpl.printColumns === 2) ? 2 : 1;
-    let mainContent;
-    if (cols === 1) {
-      mainContent = _chkBlankTableHtml(items, 0);
-    } else {
-      const half = Math.ceil(items.length / 2);
-      mainContent = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:5mm;">' +
-        _chkBlankTableHtml(items.slice(0, half), 0) +
-        _chkBlankTableHtml(items.slice(half), half) +
-      '</div>';
-    }
-
-    const html =
-      '<style>' +
-        '@page { size: A4; margin: 8mm; }' +
-        'body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; color: #1a1a1a; margin: 0; }' +
-        '.h-row { border-bottom: 2px solid #16a34a; padding-bottom: 4px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: flex-end; }' +
-        '.h-row h1 { margin: 0; font-size: 14pt; color: #16a34a; }' +
-        '.h-row .sub { color: #666; font-size: 9pt; }' +
-        '.h-meta { display: flex; gap: 14px; margin: 6px 0 8px; padding: 6px 10px; background: #f7f7f7; border-radius: 4px; align-items: center; }' +
-        '.h-meta-item { display: flex; align-items: baseline; gap: 6px; flex: 1; }' +
-        '.h-meta-item .lbl { color: #888; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; font-size: 7pt; flex-shrink: 0; }' +
-        '.h-meta-item .val { font-size: 9pt; font-weight: 600; border-bottom: 1px solid #ccc; flex: 1; padding-bottom: 1px; min-height: 12px; }' +
-        'table { width: 100%; border-collapse: collapse; font-size: 9pt; page-break-inside: auto; }' +
-        'thead th { background: #f1f1f1; padding: 4px 6px; text-align: left; font-size: 7pt; text-transform: uppercase; letter-spacing: 0.03em; color: #555; }' +
-        'tr { page-break-inside: avoid; }' +
-        '.h-signoff { margin-top: 8px; padding-top: 6px; border-top: 1px solid #ddd; display: flex; justify-content: space-between; gap: 20px; font-size: 8pt; color: #666; }' +
-        '.h-signoff .sig-block { flex: 1; display: flex; align-items: baseline; gap: 6px; }' +
-        '.h-signoff .sig-label { text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; flex-shrink: 0; }' +
-        '.h-signoff .sig-line { flex: 1; border-bottom: 1px solid #888; min-height: 14px; }' +
-      '</style>' +
-      '<div class="h-row">' +
-        '<div>' +
-          '<h1>' + PCD.escapeHtml(tpl.name) + '</h1>' +
-          '<div class="sub">Blank checklist · ' + items.length + ' items' + (cols === 2 ? ' · 2-col' : '') + '</div>' +
-        '</div>' +
-      '</div>' +
-      '<div class="h-meta">' +
-        '<div class="h-meta-item"><span class="lbl">Date</span><span class="val">&nbsp;</span></div>' +
-        '<div class="h-meta-item"><span class="lbl">Shift</span><span class="val">&nbsp;</span></div>' +
-        '<div class="h-meta-item"><span class="lbl">By</span><span class="val">&nbsp;</span></div>' +
-      '</div>' +
-      mainContent +
-      '<div class="h-signoff">' +
-        '<div class="sig-block"><span class="sig-label">Performed by</span><span class="sig-line">&nbsp;</span></div>' +
-        '<div class="sig-block"><span class="sig-label">Verified by</span><span class="sig-line">&nbsp;</span></div>' +
-      '</div>';
-
-    PCD.print(html, tpl.name + ' — blank');
-  }
-
-  function shareBlankTemplate(tpl) {
-    const items = tpl.items || [];
-    const lines = [tpl.name + ' — checklist template', items.length + ' items', ''];
-    items.forEach(function (it) {
-      const cat = CATS.find(function (c) { return c.id === it.cat; });
-      const catTag = cat ? '[' + catLabel(cat).toUpperCase() + '] ' : '';
-      let typeTag = '';
-      if (it.type === 'temperature') typeTag = ' (temp ' + (it.min !== undefined ? it.min : '?') + '–' + (it.max !== undefined ? it.max : '?') + (it.unit || '') + ')';
-      else if (it.type === 'numeric') typeTag = ' (' + (it.unit || 'value') + ')';
-      else if (it.type === 'pass-fail') typeTag = ' (pass/fail)';
-      else if (it.type === 'text') typeTag = ' (text)';
-      lines.push('☐ ' + catTag + it.text + typeTag);
-    });
-    const text = lines.join('\n');
-
-    const body = PCD.el('div');
-    body.innerHTML =
-      '<div style="padding:14px;background:var(--brand-50);border-radius:var(--r-md);margin-bottom:14px;">' +
-        '<div style="font-weight:700;color:var(--brand-700);margin-bottom:6px;">📄 Recommended: PDF</div>' +
-        '<div class="text-muted text-sm" style="margin-bottom:10px;">Print as a fillable PDF form, then share the file via WhatsApp / Email / Drive from your device.</div>' +
-        '<button class="btn btn-primary" id="tplShPdf" style="width:100%;">' + PCD.icon('print', 16) + ' <span>Save as PDF</span></button>' +
-      '</div>' +
-      '<div style="font-weight:600;font-size:12px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Or share as plain text</div>' +
-      '<div class="field"><label class="field-label">Message preview</label>' +
-      '<textarea class="textarea" id="tplShareText" rows="8" style="font-family:var(--font-mono);font-size:13px;">' + PCD.escapeHtml(text) + '</textarea></div>' +
-      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-top:10px;">' +
-        '<button class="btn btn-outline btn-sm" id="tplShWa" style="flex-direction:column;height:auto;padding:10px 4px;gap:4px;">' +
-          '<div style="color:#25D366;">' + PCD.icon('message-circle', 18) + '</div><div style="font-weight:600;font-size:11px;">WhatsApp</div></button>' +
-        '<button class="btn btn-outline btn-sm" id="tplShEmail" style="flex-direction:column;height:auto;padding:10px 4px;gap:4px;">' +
-          '<div style="color:#EA4335;">' + PCD.icon('mail', 18) + '</div><div style="font-weight:600;font-size:11px;">Email</div></button>' +
-        '<button class="btn btn-outline btn-sm" id="tplShCopy" style="flex-direction:column;height:auto;padding:10px 4px;gap:4px;">' +
-          '<div style="color:var(--brand-600);">' + PCD.icon('copy', 18) + '</div><div style="font-weight:600;font-size:11px;">Copy</div></button>' +
-        '<button class="btn btn-outline btn-sm" id="tplShMore" style="flex-direction:column;height:auto;padding:10px 4px;gap:4px;">' +
-          '<div style="color:var(--text-2);">' + PCD.icon('share', 18) + '</div><div style="font-weight:600;font-size:11px;">More...</div></button>' +
-      '</div>';
-
-    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('btn_close') });
-    const footer = PCD.el('div', { style: { display: 'flex', width: '100%' } });
-    footer.appendChild(closeBtn);
-    const m = PCD.modal.open({ title: PCD.i18n.t('modal_share_template_title'), body: body, footer: footer, size: 'md', closable: true });
-
-    PCD.$('#tplShPdf', body).addEventListener('click', function () {
-      m.close();
-      setTimeout(function () { printBlankTemplate(tpl); }, 250);
-    });
-
-    function getText() { return PCD.$('#tplShareText', body).value; }
-    closeBtn.addEventListener('click', function () { m.close(); });
-    PCD.$('#tplShWa', body).addEventListener('click', function () { window.open('https://wa.me/?text=' + encodeURIComponent(getText()), '_blank'); m.close(); });
-    PCD.$('#tplShEmail', body).addEventListener('click', function () { window.location.href = 'mailto:?subject=' + encodeURIComponent(tpl.name) + '&body=' + encodeURIComponent(getText()); m.close(); });
-    PCD.$('#tplShCopy', body).addEventListener('click', function () { if (navigator.clipboard) navigator.clipboard.writeText(getText()).then(function () { PCD.toast.success(PCD.i18n.t('toast_copied')); m.close(); }); });
-    PCD.$('#tplShMore', body).addEventListener('click', function () {
-      if (navigator.share) navigator.share({ title: tpl.name, text: getText() }).then(function () { m.close(); }).catch(function () {});
-      else if (navigator.clipboard) navigator.clipboard.writeText(getText()).then(function () { PCD.toast.success(PCD.i18n.t('toast_copied')); m.close(); });
-    });
-  }
-
-  function startSession(templateId) {
-    const tpl = PCD.store.getFromTable('checklistTemplates', templateId);
-    if (!tpl) return;
-    // v2.8.64 — completedBy o anki kullanıcı adıyla pre-fill (oturum
-    // başlangıcında). Kullanıcı isterse session sırasında değiştirebilir.
-    // Yerine "Unknown" çıkması engellendi; print'te user.name fallback'i
-    // zaten vardı ama session içinde alan boş kalıyordu.
-    const _user = PCD.store.get('user') || {};
-    const session = {
-      id: PCD.uid('s'),
-      templateId: templateId,
-      templateName: tpl.name,
-      startedAt: new Date().toISOString(),
-      completedAt: null,
-      completedBy: _user.name || _user.email || null,
-      items: (tpl.items || []).map(function (it) {
-        return {
-          id: it.id,
-          text: it.text,
-          cat: it.cat,
-          prio: it.prio,
-          type: it.type || 'task',
-          hint: it.hint || '',  // v2.8.63
-          min: it.min,
-          max: it.max,
-          unit: it.unit,
-          // Session-recorded values
-          done: false,
-          doneAt: null,
-          value: null,        // numeric / temperature / text
-          result: null,       // pass-fail: 'pass' | 'fail' | 'na'
-          comment: '',
-          photo: null,
-        };
-      }),
-    };
-    // v2.6.80 — Soft-delete pattern: raw okuma. Tombstone'ları kaybedersek
-    // queueArraySync onları "silinmiş" sanar ve hard-delete atar; A bug'ı
-    // geri döner. readSessionsAll() tombstone'ları korur.
-    const all = readSessionsAll();
-    all.push(session);
-    writeSessions(all);
-    openSession(session.id);
-  }
-
-  function getSession(sid) {
-    const all = readSessions();
-    return all.find(function (s) { return s.id === sid; });
-  }
-
+  function getSession(sid) { return readSessions().find(function (s) { return s.id === sid; }); }
   function updateSession(sid, mutator) {
-    // v2.6.80 — Soft-delete pattern: raw okuma. Tombstone'ları korur, sadece
-    // _deletedAt'sız (görünür) kayıtlar mutate edilir.
     const all = readSessionsAll();
     const idx = all.findIndex(function (s) { return s && s.id === sid && !s._deletedAt; });
     if (idx < 0) return;
     mutator(all[idx]);
     writeSessions(all);
   }
-
-  // Compute "done" flag based on item type
-  function isItemComplete(it) {
-    const type = it.type || 'task';
-    if (type === 'task') return !!it.done;
-    if (type === 'temperature' || type === 'numeric') return it.value !== null && it.value !== '' && !isNaN(parseFloat(it.value));
-    if (type === 'pass-fail') return it.result === 'pass' || it.result === 'fail' || it.result === 'na';
-    if (type === 'text') return it.value && String(it.value).trim().length > 0;
-    return !!it.done;
+  function deleteSessionById(sid) {
+    const all = readSessionsAll().slice();
+    const idx = all.findIndex(function (s) { return s && s.id === sid; });
+    if (idx === -1) return;
+    all[idx] = Object.assign({}, all[idx], { _deletedAt: new Date().toISOString() });
+    writeSessions(all);
+  }
+  function activeSessionForTemplate(tid) {
+    return listActiveSessions().find(function (s) { return s.templateId === tid; });
   }
 
-  // Whether a temperature/numeric value is out of range
-  function isValueOutOfRange(it) {
-    if ((it.type !== 'temperature' && it.type !== 'numeric') || it.value === null || it.value === '') return false;
-    const v = parseFloat(it.value);
-    if (isNaN(v)) return false;
-    if (it.min !== undefined && v < it.min) return true;
-    if (it.max !== undefined && v > it.max) return true;
-    return false;
-  }
-
-  // ============ SESSION VIEW ============
-  function openSession(sid) {
-    const t = PCD.i18n.t;
-    const session = getSession(sid);
-    if (!session) return;
-    const tpl = PCD.store.getFromTable('checklistTemplates', session.templateId);
-
-    const body = PCD.el('div');
-
-    function renderBody() {
-      const s = getSession(sid);
-      if (!s) return;
-      const total = s.items.length;
-      const done = s.items.filter(isItemComplete).length;
-      const pct = total ? Math.round((done / total) * 100) : 0;
-      const outOfRange = s.items.filter(isValueOutOfRange).length;
-      const failed = s.items.filter(function (i) { return i.result === 'fail'; }).length;
-
-      body.innerHTML =
-        '<div class="mb-3" style="padding:12px;background:var(--brand-50);border-radius:var(--r-md);">' +
-          '<div class="flex items-center justify-between mb-2">' +
-            '<div style="font-weight:700;">' + PCD.i18n.t('chk_complete_count', { done: done, total: total }) + '</div>' +
-            '<div style="font-weight:700;color:var(--brand-700);font-size:18px;">' + pct + '%</div>' +
-          '</div>' +
-          '<div class="progress" style="height:6px;">' +
-            '<div class="progress-bar" style="width:' + pct + '%;background:var(--brand-600);transition:width 0.3s;"></div>' +
-          '</div>' +
-          (outOfRange > 0 || failed > 0 ?
-            '<div class="text-sm mt-2" style="color:var(--danger);font-weight:600;">⚠️ ' +
-              (outOfRange > 0 ? outOfRange + ' value' + (outOfRange === 1 ? '' : 's') + ' out of range' : '') +
-              (outOfRange > 0 && failed > 0 ? ' · ' : '') +
-              (failed > 0 ? failed + ' failed inspection' + (failed === 1 ? '' : 's') : '') +
-            '</div>'
-          : '') +
-        '</div>' +
-        '<div class="flex flex-col gap-2" id="chkItems"></div>';
-
-      const itemsEl = PCD.$('#chkItems', body);
-      s.items.forEach(function (it, idx) {
-        itemsEl.appendChild(buildItemRow(sid, idx, it));
+  function sessionProgress(s) {
+    if (s.kind === 'prep') {
+      let total = 0, done = 0;
+      (s.dishes || []).forEach(function (d) {
+        (d.comps || []).forEach(function (c) { total++; if (c.done) done++; });
       });
-
-      wireItemHandlers(sid);
+      return { total: total, done: done, pct: total ? Math.round(done / total * 100) : 0 };
     }
+    const total = (s.items || []).length;
+    const done = (s.items || []).filter(function (i) { return i.done; }).length;
+    return { total: total, done: done, pct: total ? Math.round(done / total * 100) : 0 };
+  }
 
-    function buildItemRow(sid, idx, it) {
-      const cat = CATS.find(function (c) { return c.id === it.cat; });
-      const prio = PRIOS.find(function (p) { return p.id === it.prio; });
-      const type = it.type || 'task';
-      const complete = isItemComplete(it);
-      const outOfRange = isValueOutOfRange(it);
-
-      // v2.8.62 — Kategori renkli stripe (session run row, ekran tarafı):
-      // sol kenarda 4px renk şeridi → şef tarama sırasında "Cleaning",
-      // "Cooking" gibi grupları hızlıca ayırt eder.
-      const stripeColor = cat ? cat.color : 'transparent';
-      const wrap = PCD.el('div', {
-        style: {
-          padding: '12px',
-          paddingLeft: '14px',
-          border: '1px solid ' + (outOfRange || it.result === 'fail' ? 'var(--danger)' : (complete ? 'var(--brand-300)' : 'var(--border)')),
-          borderLeft: '4px solid ' + stripeColor,
-          borderRadius: 'var(--r-sm)',
-          background: outOfRange || it.result === 'fail' ? '#fef2f2' : (complete ? 'var(--brand-50)' : 'var(--surface)'),
-          transition: 'all 0.2s',
-        }
+  function startOrResumeSession(tid) {
+    const existing = activeSessionForTemplate(tid);
+    if (existing) { openSession(existing.id); return; }
+    const tpl = PCD.store.getFromTable('checklistTemplates', tid);
+    if (!tpl) return;
+    normalizeTemplate(tpl);
+    const user = PCD.store.get('user') || {};
+    const s = {
+      id: uid('s'),
+      templateId: tpl.id,
+      templateName: tpl.name,
+      kind: tpl.kind,
+      icon: tpl.icon || (tpl.kind === 'prep' ? 'chef-hat' : 'check-square'),
+      startedAt: new Date().toISOString(),
+      completedAt: null,
+      completedBy: user.name || user.email || null,
+    };
+    if (tpl.kind === 'prep') {
+      s.dishes = (tpl.dishes || []).map(function (d) {
+        return { id: d.id || uid('dish'), text: d.text, comps: (d.comps || []).map(function (c) {
+          return { id: c.id || uid('comp'), text: c.text, done: false, doneAt: null, note: '' };
+        }) };
       });
+    } else {
+      s.items = (tpl.items || []).map(function (it) {
+        return { id: it.id || uid('it'), text: it.text, cat: it.cat || '', done: false, doneAt: null, comment: '' };
+      });
+    }
+    const all = readSessionsAll();
+    all.push(s);
+    writeSessions(all);
+    openSession(s.id);
+  }
 
-      // Header row: priority dot + text + category chip
-      const catChip = cat ? '<span style="font-size:10px;padding:2px 7px;border-radius:999px;background:' + cat.color + '22;color:' + cat.color + ';font-weight:700;text-transform:uppercase;letter-spacing:0.04em;white-space:nowrap;flex-shrink:0;">' + catLabel(cat) + '</span>' : '';
-      const prioDot = prio ? '<span style="width:8px;height:8px;border-radius:50%;background:' + prio.color + ';flex-shrink:0;display:inline-block;" title="' + prioLabel(prio) + '"></span>' : '';
+  // ---------- INLINE GUIDE (dismissible) ----------
+  function guideDismissed() { try { return localStorage.getItem('pcd_chk_guide') === '1'; } catch (e) { return false; } }
+  function dismissGuide() { try { localStorage.setItem('pcd_chk_guide', '1'); } catch (e) {} }
 
-      // v2.8.63 — Hint görünür: item adı altında küçük gri italik.
-      const hintHtml = it.hint ? '<div style="font-size:12px;color:var(--text-3);font-style:italic;margin:2px 0 ' + (type === 'task' ? '0' : '8px') + ' 16px;">' + PCD.escapeHtml(it.hint) + '</div>' : '';
-      let headerHtml =
-        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:' + (type === 'task' ? (it.hint ? '4px' : '0') : (it.hint ? '4px' : '10px')) + ';">' +
-          prioDot +
-          '<div style="flex:1;min-width:0;font-weight:500;font-size:14px;' + (complete && type === 'task' ? 'text-decoration:line-through;color:var(--text-3);' : '') + '">' + PCD.escapeHtml(it.text) + '</div>' +
-          catChip +
+  // ============ MAIN VIEW ============
+  let currentKind = 'control';
+
+  function render(view) {
+    const templates = listTemplates();
+    const active = listActiveSessions();
+    const showGuide = !guideDismissed();
+
+    view.innerHTML =
+      '<div class="page-header">' +
+        '<div class="page-header-text">' +
+          '<div class="page-title">' + esc(L('checklist_title', 'Checklists')) + '</div>' +
+          '<div class="page-subtitle">' + esc(L('checklist_subtitle', 'Control lists to tick & confirm, and prep lists from your menu')) + '</div>' +
         '</div>' +
-        hintHtml;
+        '<div class="page-header-actions">' +
+          '<button class="btn btn-primary btn-sm" id="chkNewBtn">' + PCD.icon('plus', 16) + ' ' + esc(L('chk_new', 'New list')) + '</button>' +
+        '</div>' +
+      '</div>' +
 
-      // Type-specific input
-      let inputHtml = '';
-      if (type === 'task') {
-        // For task type, replace header with checkbox + label combined
-        wrap.innerHTML =
-          '<div data-toggle-task="' + idx + '" style="display:flex;align-items:center;gap:10px;cursor:pointer;">' +
-            '<div style="width:22px;height:22px;border:2px solid ' + (it.done ? 'var(--brand-600)' : 'var(--border-strong)') + ';border-radius:4px;display:flex;align-items:center;justify-content:center;background:' + (it.done ? 'var(--brand-600)' : 'transparent') + ';color:white;flex-shrink:0;">' +
-              (it.done ? PCD.icon('check', 14) : '') +
+      (showGuide ?
+        '<div class="card" id="chkGuide" style="padding:12px 14px;margin-bottom:14px;background:linear-gradient(135deg,var(--brand-50),var(--surface));border:1px solid var(--brand-200);">' +
+          '<div style="display:flex;gap:10px;align-items:flex-start;">' +
+            '<div style="color:var(--brand-700);flex-shrink:0;margin-top:1px;">' + PCD.icon('book-open', 18) + '</div>' +
+            '<div style="flex:1;min-width:0;font-size:13px;line-height:1.6;color:var(--text-2);">' +
+              '<strong style="color:var(--text-1);">' + esc(L('chk_guide_title', 'Two kinds of list')) + '</strong><br>' +
+              '<strong>' + esc(L('chk_kind_control', 'Control')) + '</strong> — ' + esc(L('chk_guide_control', 'tick-and-confirm: closing & safety, opening, cleaning, line check.')) + '<br>' +
+              '<strong>' + esc(L('chk_kind_prep', 'Prep')) + '</strong> — ' + esc(L('chk_guide_prep', 'dish → components with a quick note (1x, 2x...). Build it from your menu or by hand.')) +
             '</div>' +
-            prioDot +
-            '<div style="flex:1;min-width:0;font-weight:500;font-size:14px;' + (it.done ? 'text-decoration:line-through;color:var(--text-3);' : '') + '">' + PCD.escapeHtml(it.text) + '</div>' +
-            catChip +
-            (it.doneAt ? '<div class="text-muted" style="white-space:nowrap;font-size:11px;">' + PCD.fmtRelTime(it.doneAt) + '</div>' : '') +
-          '</div>';
-      } else if (type === 'temperature' || type === 'numeric') {
-        const rangeStr = (it.min !== undefined || it.max !== undefined)
-          ? 'Target: ' + (it.min !== undefined ? it.min : '?') + '–' + (it.max !== undefined ? it.max : '?') + ' ' + (it.unit || '')
-          : '';
-        inputHtml =
-          '<div style="display:flex;gap:8px;align-items:center;">' +
-            '<input type="number" class="input" data-numinput="' + idx + '" value="' + (it.value !== null && it.value !== undefined ? it.value : '') + '" step="0.1" placeholder="' + PCD.escapeHtml(t('chk_placeholder_value')) + '" style="flex:1;font-weight:600;font-family:var(--font-mono);' + (outOfRange ? 'border-color:var(--danger);color:var(--danger);' : '') + '">' +
-            (it.unit ? '<span style="font-weight:600;color:var(--text-2);min-width:40px;">' + PCD.escapeHtml(it.unit) + '</span>' : '') +
+            '<button class="icon-btn" id="chkGuideX" title="' + esc(L('dismiss', 'Dismiss')) + '" style="flex-shrink:0;">' + PCD.icon('x', 16) + '</button>' +
           '</div>' +
-          (rangeStr ? '<div class="text-muted text-sm mt-1" style="font-size:11px;">' + rangeStr + (outOfRange ? ' · <strong style="color:var(--danger);">OUT OF RANGE</strong>' : '') + '</div>' : '');
-        wrap.innerHTML = headerHtml + inputHtml;
-      } else if (type === 'pass-fail') {
-        inputHtml =
-          '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">' +
-            '<button class="btn btn-secondary btn-sm" data-pf="' + idx + ':pass" style="' + (it.result === 'pass' ? 'background:#16a34a;color:#fff;border-color:#16a34a;' : '') + 'flex-direction:row;gap:4px;">' + PCD.icon('check', 14) + ' <span>PASS</span></button>' +
-            '<button class="btn btn-secondary btn-sm" data-pf="' + idx + ':fail" style="' + (it.result === 'fail' ? 'background:#ef4444;color:#fff;border-color:#ef4444;' : '') + 'flex-direction:row;gap:4px;">' + PCD.icon('x', 14) + ' <span>FAIL</span></button>' +
-            '<button class="btn btn-secondary btn-sm" data-pf="' + idx + ':na" style="' + (it.result === 'na' ? 'background:#94a3b8;color:#fff;border-color:#94a3b8;' : '') + '">N/A</button>' +
+        '</div>' : '') +
+
+      '<div class="segment" id="chkSeg" style="display:inline-flex;gap:4px;background:var(--surface-2);border-radius:var(--r-md);padding:4px;margin-bottom:14px;">' +
+        '<button class="btn btn-sm ' + (currentKind === 'control' ? 'btn-primary' : 'btn-ghost') + '" data-kind="control">' + PCD.icon('check-square', 15) + ' ' + esc(L('chk_kind_control', 'Control')) + '</button>' +
+        '<button class="btn btn-sm ' + (currentKind === 'prep' ? 'btn-primary' : 'btn-ghost') + '" data-kind="prep">' + PCD.icon('chef-hat', 15) + ' ' + esc(L('chk_kind_prep', 'Prep')) + '</button>' +
+      '</div>' +
+
+      (active.length ?
+        '<div class="section mb-4">' +
+          '<div class="section-title" style="font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">' + esc(L('checklist_in_progress', 'In progress')) + '</div>' +
+          '<div id="chkActive" class="flex flex-col gap-2"></div>' +
+        '</div>' : '') +
+
+      '<div class="section">' +
+        '<div id="chkList" class="flex flex-col gap-2"></div>' +
+      '</div>';
+
+    // Guide
+    const gx = PCD.$('#chkGuideX', view);
+    if (gx) gx.addEventListener('click', function () { dismissGuide(); render(view); });
+
+    // Segment
+    PCD.on(view, 'click', '[data-kind]', function () {
+      currentKind = this.getAttribute('data-kind');
+      render(view);
+    });
+
+    // New
+    PCD.$('#chkNewBtn', view).addEventListener('click', function () { openEditor(null, currentKind); });
+
+    // Active sessions (both kinds)
+    const actEl = PCD.$('#chkActive', view);
+    if (actEl) {
+      active.forEach(function (s) {
+        const p = sessionProgress(s);
+        const row = PCD.el('div', { class: 'card card-hover', 'data-open-sid': s.id, style: { padding: '12px', cursor: 'pointer' } });
+        row.innerHTML =
+          '<div class="flex items-center gap-3">' +
+            '<div class="list-item-thumb" style="background:var(--brand-50);color:var(--brand-700);">' + PCD.icon(s.icon || (s.kind === 'prep' ? 'chef-hat' : 'check-square'), 20) + '</div>' +
+            '<div style="flex:1;min-width:0;">' +
+              '<div style="font-weight:600;font-size:15px;">' + esc(s.templateName || 'List') + '</div>' +
+              '<div class="text-muted text-sm">' + p.done + '/' + p.total + ' · ' + esc(PCD.fmtRelTime(s.startedAt)) + '</div>' +
+              '<div class="progress mt-1" style="height:4px;"><div class="progress-bar" style="width:' + p.pct + '%;background:var(--brand-600);"></div></div>' +
+            '</div>' +
+            '<div style="font-weight:700;color:var(--brand-700);">' + p.pct + '%</div>' +
           '</div>';
-        wrap.innerHTML = headerHtml + inputHtml;
-      } else if (type === 'text') {
-        inputHtml =
-          '<input type="text" class="input" data-textinput="' + idx + '" value="' + PCD.escapeHtml(it.value || '') + '" placeholder="' + PCD.escapeHtml(t('chk_placeholder_text')) + '">';
-        wrap.innerHTML = headerHtml + inputHtml;
-      }
+        actEl.appendChild(row);
+      });
+      PCD.on(actEl, 'click', '[data-open-sid]', function () { openSession(this.getAttribute('data-open-sid')); });
+    }
 
-      // Footer: comment + completion time
-      const footerInfo = [];
-      if (complete && (it.doneAt || (type !== 'task' && type !== 'pass-fail'))) {
-        // Already shown for task type
-      }
+    // Templates of the active kind
+    const listEl = PCD.$('#chkList', view);
+    const ofKind = templates.filter(function (t) { return (t.kind || 'control') === currentKind; });
 
-      // Comment toggle
-      const commentRow = PCD.el('div', { style: { marginTop: complete || type !== 'task' ? '8px' : '0' } });
-      const hasComment = it.comment && it.comment.length > 0;
-      commentRow.innerHTML =
-        '<button data-cmtoggle="' + idx + '" class="btn btn-ghost btn-sm" style="font-size:11px;padding:2px 6px;color:var(--text-3);">' +
-          (hasComment ? '✏️ Comment' : '+ Add comment') +
-        '</button>' +
-        '<div data-cmwrap="' + idx + '" style="display:' + (hasComment ? 'block' : 'none') + ';margin-top:4px;">' +
-          '<input type="text" class="input" data-cminput="' + idx + '" value="' + PCD.escapeHtml(it.comment || '') + '" placeholder="' + PCD.escapeHtml(t('chk_placeholder_notes')) + '" style="font-size:13px;padding:6px 10px;min-height:32px;">' +
+    if (!ofKind.length) {
+      listEl.innerHTML =
+        '<div class="text-muted" style="padding:42px 20px;text-align:center;line-height:1.6;border:1.5px dashed var(--border);border-radius:var(--r-md);">' +
+          '<div style="color:var(--text-3);margin-bottom:10px;">' + PCD.icon(currentKind === 'prep' ? 'chef-hat' : 'check-square', 34) + '</div>' +
+          '<div style="font-weight:600;color:var(--text-1);margin-bottom:4px;">' + esc(currentKind === 'prep' ? L('chk_empty_prep_t', 'No prep lists yet') : L('chk_empty_control_t', 'No control lists yet')) + '</div>' +
+          '<div style="font-size:13px;margin-bottom:14px;">' + esc(currentKind === 'prep' ? L('chk_empty_prep_m', 'Create a prep list and pull dishes straight from your menu.') : L('chk_empty_control_m', 'Create a closing, opening or cleaning checklist.')) + '</div>' +
+          '<button class="btn btn-primary btn-sm" id="chkEmptyNew">' + PCD.icon('plus', 15) + ' ' + esc(L('chk_new', 'New list')) + '</button>' +
         '</div>';
-      wrap.appendChild(commentRow);
-
-      return wrap;
-    }
-
-    function wireItemHandlers(sid) {
-      // Task toggle
-      PCD.on(body, 'click', '[data-toggle-task]', function () {
-        const idx = parseInt(this.getAttribute('data-toggle-task'), 10);
-        updateSession(sid, function (s) {
-          s.items[idx].done = !s.items[idx].done;
-          s.items[idx].doneAt = s.items[idx].done ? new Date().toISOString() : null;
-        });
-        PCD.haptic && PCD.haptic('light');
-        renderBody();
-      });
-
-      // Numeric / temperature input
-      PCD.on(body, 'input', '[data-numinput]', function () {
-        const idx = parseInt(this.getAttribute('data-numinput'), 10);
-        const val = this.value;
-        updateSession(sid, function (s) {
-          s.items[idx].value = val;
-          s.items[idx].doneAt = val !== '' ? new Date().toISOString() : null;
-        });
-        // Soft re-render only the item row's class for color change — full render is heavy
-        const s = getSession(sid);
-        if (s && s.items[idx]) {
-          const oor = isValueOutOfRange(s.items[idx]);
-          this.style.borderColor = oor ? 'var(--danger)' : '';
-          this.style.color = oor ? 'var(--danger)' : '';
-          // Update parent wrap colors
-          const wrap = this.closest('div').parentElement; // wrap
-          if (wrap) {
-            const filled = s.items[idx].value !== '' && s.items[idx].value !== null;
-            wrap.style.background = oor ? '#fef2f2' : (filled ? 'var(--brand-50)' : 'var(--surface)');
-            wrap.style.borderColor = oor ? 'var(--danger)' : (filled ? 'var(--brand-300)' : 'var(--border)');
-          }
-        }
-        // Update top progress
-        updateProgressBar();
-      });
-
-      // Pass-fail buttons
-      PCD.on(body, 'click', '[data-pf]', function () {
-        const parts = this.getAttribute('data-pf').split(':');
-        const idx = parseInt(parts[0], 10);
-        const choice = parts[1];
-        updateSession(sid, function (s) {
-          s.items[idx].result = choice;
-          s.items[idx].doneAt = new Date().toISOString();
-        });
-        PCD.haptic && PCD.haptic('light');
-        renderBody();
-      });
-
-      // Text input
-      PCD.on(body, 'input', '[data-textinput]', function () {
-        const idx = parseInt(this.getAttribute('data-textinput'), 10);
-        const val = this.value;
-        updateSession(sid, function (s) {
-          s.items[idx].value = val;
-          s.items[idx].doneAt = val ? new Date().toISOString() : null;
-        });
-        updateProgressBar();
-      });
-
-      // Comment toggle
-      PCD.on(body, 'click', '[data-cmtoggle]', function () {
-        const idx = this.getAttribute('data-cmtoggle');
-        const wrap = body.querySelector('[data-cmwrap="' + idx + '"]');
-        if (wrap) {
-          wrap.style.display = wrap.style.display === 'none' ? 'block' : 'none';
-          if (wrap.style.display === 'block') {
-            const inp = wrap.querySelector('input');
-            if (inp) inp.focus();
-          }
-        }
-      });
-
-      // Comment input
-      PCD.on(body, 'input', '[data-cminput]', function () {
-        const idx = parseInt(this.getAttribute('data-cminput'), 10);
-        const val = this.value;
-        updateSession(sid, function (s) {
-          s.items[idx].comment = val;
-        });
-      });
-    }
-
-    function updateProgressBar() {
-      const s = getSession(sid);
-      if (!s) return;
-      const total = s.items.length;
-      const done = s.items.filter(isItemComplete).length;
-      const pct = total ? Math.round((done / total) * 100) : 0;
-      const head = body.querySelector('.mb-3');
-      if (head) {
-        const dEl = head.querySelector('[style*="font-weight:700"]:first-child');
-        if (dEl) dEl.textContent = PCD.i18n.t('chk_complete_count', { done: done, total: total });
-        const pEl = head.querySelector('[style*="font-size:18px"]');
-        if (pEl) pEl.textContent = pct + '%';
-        const bar = head.querySelector('.progress-bar');
-        if (bar) bar.style.width = pct + '%';
-      }
-    }
-
-    renderBody();
-
-    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('close') });
-    const printBtn = PCD.el('button', { class: 'btn btn-outline', title: t('print_pdf') });
-    printBtn.innerHTML = PCD.icon('print', 16);
-    const shareBtn = PCD.el('button', { class: 'btn btn-outline', title: t('btn_share') });
-    shareBtn.innerHTML = PCD.icon('share', 16);
-    const completeBtn = PCD.el('button', { class: 'btn btn-primary', text: t('checklist_complete') || 'Complete', style: { flex: '1' } });
-    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
-    footer.appendChild(closeBtn);
-    footer.appendChild(printBtn);
-    footer.appendChild(shareBtn);
-    footer.appendChild(completeBtn);
-
-    const m = PCD.modal.open({
-      title: (tpl ? tpl.name : 'Checklist') + ' · ' + PCD.fmtDate(session.startedAt, { month: 'short', day: 'numeric' }),
-      body: body, footer: footer, size: 'md', closable: true
-    });
-
-    closeBtn.addEventListener('click', function () { m.close(); });
-
-    printBtn.addEventListener('click', function () {
-      const s = getSession(sid);
-      printChecklistSession(s, tpl);
-    });
-    shareBtn.addEventListener('click', function () {
-      const s = getSession(sid);
-      openShareSheet(s, tpl);
-    });
-
-    completeBtn.addEventListener('click', function () {
-      const s = getSession(sid);
-      const total = s.items.length;
-      const incomplete = total - s.items.filter(isItemComplete).length;
-      if (incomplete > 0) {
-        PCD.modal.confirm({
-          title: PCD.i18n.t('modal_complete_with_n_unfinished', { n: incomplete }),
-          text: PCD.i18n.t('modal_complete_unfinished_text'),
-          okText: PCD.i18n.t('btn_complete'),
-        }).then(function (ok) {
-          if (!ok) return;
-          finalizeSession();
-        });
-      } else {
-        finalizeSession();
-      }
-      function finalizeSession() {
-        const user = PCD.store.get('user') || {};
-        updateSession(sid, function (s) {
-          s.completedAt = new Date().toISOString();
-          s.completedBy = user.name || user.email || '';
-        });
-        PCD.toast.success(PCD.i18n.t('toast_checklist_completed'));
-        m.close();
-        setTimeout(function () {
-          const v = PCD.$('#view');
-          if (PCD.router.currentView() === 'checklist') render(v);
-        }, 150);
-      }
-    });
-  }
-
-  // ============ SESSION HISTORY (v2.6.0) ============
-  // Show past completed sessions for a template. By default shows last
-  // 90 days; user can expand to "all" with one tap. HACCP requires up
-  // to 2 years of records — we never auto-delete, just paginate the UI.
-  function openSessionHistory(templateId) {
-    const t = PCD.i18n.t;
-    const tpl = PCD.store.getFromTable('checklistTemplates', templateId);
-    if (!tpl) {
-      PCD.toast.error(PCD.i18n.t('toast_template_not_found'));
+      const en = PCD.$('#chkEmptyNew', listEl);
+      if (en) en.addEventListener('click', function () { openEditor(null, currentKind); });
       return;
     }
 
+    ofKind.forEach(function (tpl, idx) {
+      const isFirst = idx === 0;
+      const isLast = idx === ofKind.length - 1;
+      const countLabel = tpl.kind === 'prep'
+        ? templateCount(tpl) + ' ' + esc(L('chk_dishes', 'dishes'))
+        : templateCount(tpl) + ' ' + esc(L('chk_items', 'items'));
+      const row = PCD.el('div', { class: 'card card-hover', 'data-tid': tpl.id, style: { padding: '12px' } });
+      row.innerHTML =
+        '<div class="flex items-center gap-3">' +
+          '<div class="list-item-thumb" style="background:var(--brand-50);color:var(--brand-700);">' + PCD.icon(tpl.icon || (tpl.kind === 'prep' ? 'chef-hat' : 'check-square'), 20) + '</div>' +
+          '<div style="flex:1;min-width:0;cursor:pointer;" data-start="' + tpl.id + '">' +
+            '<div style="font-weight:700;font-size:15px;">' + esc(tpl.name) + '</div>' +
+            '<div class="text-muted text-sm">' + countLabel + '</div>' +
+          '</div>' +
+          '<div class="flex flex-col" style="gap:2px;">' +
+            '<button type="button" class="icon-btn" data-move-up="' + tpl.id + '" ' + (isFirst ? 'disabled' : '') + ' title="' + esc(L('move_up', 'Move up')) + '" style="padding:4px;height:24px;width:28px;' + (isFirst ? 'opacity:0.3;' : '') + '">' + PCD.icon('chevron-up', 14) + '</button>' +
+            '<button type="button" class="icon-btn" data-move-down="' + tpl.id + '" ' + (isLast ? 'disabled' : '') + ' title="' + esc(L('move_down', 'Move down')) + '" style="padding:4px;height:24px;width:28px;' + (isLast ? 'opacity:0.3;' : '') + '">' + PCD.icon('chevron-down', 14) + '</button>' +
+          '</div>' +
+          '<button type="button" class="icon-btn" data-menu="' + tpl.id + '" title="' + esc(L('more_actions', 'More')) + '">' + PCD.icon('more-vertical', 18) + '</button>' +
+          '<button type="button" class="btn btn-primary btn-sm" data-start="' + tpl.id + '">' + esc(L('chk_open', 'Open')) + '</button>' +
+        '</div>';
+      listEl.appendChild(row);
+    });
+
+    PCD.on(listEl, 'click', '[data-move-up]', function (e) { e.stopPropagation(); moveTemplate(this.getAttribute('data-move-up'), -1); render(view); });
+    PCD.on(listEl, 'click', '[data-move-down]', function (e) { e.stopPropagation(); moveTemplate(this.getAttribute('data-move-down'), +1); render(view); });
+    PCD.on(listEl, 'click', '[data-start]', function (e) { e.stopPropagation(); startOrResumeSession(this.getAttribute('data-start')); });
+    PCD.on(listEl, 'click', '[data-menu]', function (e) {
+      e.stopPropagation();
+      const tid = this.getAttribute('data-menu');
+      const tpl = PCD.store.getFromTable('checklistTemplates', tid);
+      if (!tpl) return;
+      normalizeTemplate(tpl);
+      const completed = listCompletedSessions(tid).length;
+      PCD.actionSheet({
+        title: tpl.name,
+        actions: [
+          { icon: 'edit', label: L('act_edit', 'Edit'), onClick: function () { openEditor(tid); } },
+          { icon: 'print', label: L('chk_print_blank', 'Print blank'), onClick: function () { printChecklist(tpl, null); } },
+          { icon: 'clock', label: L('checklist_history', 'History') + (completed ? ' (' + completed + ')' : ''), onClick: function () { openHistory(tid); } },
+          { icon: 'copy', label: L('act_duplicate', 'Duplicate'), onClick: function () {
+            const copy = PCD.clone(tpl);
+            delete copy.id; delete copy.createdAt; delete copy.updatedAt;
+            copy.name = copy.name + ' (' + L('copy', 'Copy') + ')';
+            copy.isDefault = false;
+            copy.sortIndex = listTemplates().length;
+            PCD.store.upsertInTable('checklistTemplates', copy, 'tpl');
+            PCD.toast.success(L('act_duplicate', 'Duplicate') + ' ✓');
+            render(view);
+          }},
+          { icon: 'trash', label: L('act_delete', 'Delete'), danger: true, onClick: function () {
+            PCD.modal.confirm({
+              icon: '🗑', iconKind: 'danger', danger: true,
+              title: L('checklist_delete_confirm_title', 'Delete this list?'),
+              text: L('checklist_delete_confirm_msg', 'This removes the template. In-progress sessions keep working.'),
+              okText: L('act_delete', 'Delete'),
+            }).then(function (ok) {
+              if (!ok) return;
+              PCD.store.deleteFromTable('checklistTemplates', tid);
+              PCD.toast.success(L('checklist_deleted', 'List deleted'));
+              render(view);
+            });
+          }},
+        ]
+      });
+    });
+  }
+
+  function refreshMain() {
+    const v = PCD.$('#view');
+    if (v && PCD.router.currentView() === 'checklist') render(v);
+  }
+
+  // ============ SESSION RUN VIEW ============
+  function openSession(sid) {
+    const first = getSession(sid);
+    if (!first) return;
+    const body = PCD.el('div');
+
+    // Delegated handlers wired ONCE (body element persists across re-renders).
+    PCD.on(body, 'click', '[data-toggle]', function () {
+      const id = this.getAttribute('data-toggle');
+      updateSession(sid, function (s) {
+        eachItem(s, function (it) {
+          if (it.id === id) { it.done = !it.done; it.doneAt = it.done ? new Date().toISOString() : null; }
+        });
+      });
+      PCD.haptic && PCD.haptic('light');
+      paint();
+    });
+    PCD.on(body, 'input', '[data-note]', function () {
+      const id = this.getAttribute('data-note');
+      const val = this.value;
+      updateSession(sid, function (s) { eachItem(s, function (it) { if (it.id === id) it.note = val; }); });
+    });
+    PCD.on(body, 'input', '[data-comment]', function () {
+      const id = this.getAttribute('data-comment');
+      const val = this.value;
+      updateSession(sid, function (s) { eachItem(s, function (it) { if (it.id === id) it.comment = val; }); });
+    });
+    PCD.on(body, 'click', '[data-cmtoggle]', function () {
+      const id = this.getAttribute('data-cmtoggle');
+      const w = body.querySelector('[data-cmwrap="' + id + '"]');
+      if (w) { w.style.display = w.style.display === 'none' ? 'block' : 'none'; if (w.style.display === 'block') { const i = w.querySelector('input'); if (i) i.focus(); } }
+    });
+
+    function eachItem(s, fn) {
+      if (s.kind === 'prep') (s.dishes || []).forEach(function (d) { (d.comps || []).forEach(fn); });
+      else (s.items || []).forEach(fn);
+    }
+
+    function paint() {
+      const s = getSession(sid);
+      if (!s) return;
+      const p = sessionProgress(s);
+      let html =
+        '<div class="mb-3" style="padding:12px;background:var(--brand-50);border-radius:var(--r-md);">' +
+          '<div class="flex items-center justify-between mb-2">' +
+            '<div style="font-weight:700;">' + p.done + ' / ' + p.total + '</div>' +
+            '<div style="font-weight:700;color:var(--brand-700);font-size:18px;">' + p.pct + '%</div>' +
+          '</div>' +
+          '<div class="progress" style="height:6px;"><div class="progress-bar" style="width:' + p.pct + '%;background:var(--brand-600);transition:width 0.3s;"></div></div>' +
+        '</div>';
+
+      if (s.kind === 'prep') {
+        (s.dishes || []).forEach(function (d) {
+          const dq = (d.comps || []).filter(function (c) { return c.done; }).length;
+          html += '<div style="margin-bottom:14px;">' +
+            '<div style="display:flex;align-items:center;gap:8px;padding:6px 2px;border-bottom:1.5px solid var(--border);margin-bottom:6px;">' +
+              '<span style="color:var(--brand-700);">' + PCD.icon('chef-hat', 16) + '</span>' +
+              '<span style="font-weight:700;font-size:14px;flex:1;min-width:0;">' + esc(d.text || L('chk_untitled_dish', 'Untitled dish')) + '</span>' +
+              '<span class="text-muted text-sm">' + dq + '/' + (d.comps || []).length + '</span>' +
+            '</div>';
+          (d.comps || []).forEach(function (c) { html += compRowHtml(c); });
+          html += '</div>';
+        });
+      } else {
+        html += '<div class="flex flex-col gap-2">';
+        (s.items || []).forEach(function (it) { html += controlRowHtml(it); });
+        html += '</div>';
+      }
+      body.innerHTML = html;
+    }
+
+    function compRowHtml(c) {
+      const done = !!c.done;
+      return '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid ' + (done ? 'var(--brand-300)' : 'var(--border)') + ';border-radius:var(--r-sm);background:' + (done ? 'var(--brand-50)' : 'var(--surface)') + ';margin-bottom:6px;">' +
+          '<div data-toggle="' + c.id + '" style="width:22px;height:22px;border:2px solid ' + (done ? 'var(--brand-600)' : 'var(--border-strong)') + ';border-radius:5px;display:flex;align-items:center;justify-content:center;background:' + (done ? 'var(--brand-600)' : 'transparent') + ';color:#fff;flex-shrink:0;cursor:pointer;">' + (done ? PCD.icon('check', 14) : '') + '</div>' +
+          '<div style="flex:1;min-width:0;font-size:14px;font-weight:500;' + (done ? 'color:var(--text-3);' : '') + '">' + esc(c.text) + '</div>' +
+          '<input type="text" class="input" data-note="' + c.id + '" value="' + esc(c.note || '') + '" placeholder="' + esc(L('chk_note_ph', '1x, 2x, steam...')) + '" style="width:120px;flex-shrink:0;font-size:13px;padding:6px 8px;text-align:center;">' +
+        '</div>';
+    }
+
+    function controlRowHtml(it) {
+      const done = !!it.done;
+      const cat = catOf(it.cat);
+      const stripe = cat ? cat.color : 'transparent';
+      const hasC = it.comment && it.comment.length;
+      return '<div style="border:1px solid ' + (done ? 'var(--brand-300)' : 'var(--border)') + ';border-left:4px solid ' + stripe + ';border-radius:var(--r-sm);background:' + (done ? 'var(--brand-50)' : 'var(--surface)') + ';padding:10px 12px;">' +
+          '<div data-toggle="' + it.id + '" style="display:flex;align-items:center;gap:10px;cursor:pointer;">' +
+            '<div style="width:22px;height:22px;border:2px solid ' + (done ? 'var(--brand-600)' : 'var(--border-strong)') + ';border-radius:5px;display:flex;align-items:center;justify-content:center;background:' + (done ? 'var(--brand-600)' : 'transparent') + ';color:#fff;flex-shrink:0;">' + (done ? PCD.icon('check', 14) : '') + '</div>' +
+            '<div style="flex:1;min-width:0;font-weight:500;font-size:14px;' + (done ? 'text-decoration:line-through;color:var(--text-3);' : '') + '">' + esc(it.text) + '</div>' +
+            (cat ? '<span style="font-size:10px;padding:2px 7px;border-radius:999px;background:' + cat.color + '22;color:' + cat.color + ';font-weight:700;text-transform:uppercase;letter-spacing:0.04em;white-space:nowrap;flex-shrink:0;">' + esc(catLabel(cat)) + '</span>' : '') +
+          '</div>' +
+          '<button data-cmtoggle="' + it.id + '" class="btn btn-ghost btn-sm" style="font-size:11px;padding:2px 6px;margin-top:4px;color:var(--text-3);">' + (hasC ? '✏️ ' + esc(L('chk_comment', 'Note')) : '+ ' + esc(L('chk_add_comment', 'Add note'))) + '</button>' +
+          '<div data-cmwrap="' + it.id + '" style="display:' + (hasC ? 'block' : 'none') + ';margin-top:4px;">' +
+            '<input type="text" class="input" data-comment="' + it.id + '" value="' + esc(it.comment || '') + '" placeholder="' + esc(L('chk_notes_ph', 'Notes...')) + '" style="font-size:13px;padding:6px 10px;">' +
+          '</div>' +
+        '</div>';
+    }
+
+    paint();
+
+    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: L('close', 'Close') });
+    const printBtn = PCD.el('button', { class: 'btn btn-outline', title: L('print_pdf', 'Print / PDF') });
+    printBtn.innerHTML = PCD.icon('print', 16);
+    const shareBtn = PCD.el('button', { class: 'btn btn-outline', title: L('btn_share', 'Share') });
+    shareBtn.innerHTML = PCD.icon('share', 16);
+    const doneBtn = PCD.el('button', { class: 'btn btn-primary', text: L('checklist_complete', 'Complete'), style: { flex: '1' } });
+    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
+    footer.appendChild(closeBtn); footer.appendChild(printBtn); footer.appendChild(shareBtn); footer.appendChild(doneBtn);
+
+    const tpl = PCD.store.getFromTable('checklistTemplates', first.templateId);
+    const m = PCD.modal.open({
+      title: (first.templateName || 'List') + ' · ' + PCD.fmtDate(first.startedAt, { month: 'short', day: 'numeric' }),
+      body: body, footer: footer, size: 'md', closable: true
+    });
+    closeBtn.addEventListener('click', function () { m.close(); refreshMain(); });
+    printBtn.addEventListener('click', function () { printChecklist(tpl, getSession(sid)); });
+    shareBtn.addEventListener('click', function () { shareSession(getSession(sid)); });
+    doneBtn.addEventListener('click', function () {
+      const s = getSession(sid);
+      const p = sessionProgress(s);
+      const remaining = p.total - p.done;
+      function finalize() {
+        const user = PCD.store.get('user') || {};
+        updateSession(sid, function (x) { x.completedAt = new Date().toISOString(); x.completedBy = x.completedBy || user.name || user.email || ''; });
+        PCD.toast.success(L('toast_checklist_completed', 'List completed'));
+        m.close(); refreshMain();
+      }
+      if (remaining > 0) {
+        PCD.modal.confirm({
+          title: L('chk_complete_unfinished_t', 'Complete with ' + remaining + ' unfinished?'),
+          text: L('chk_complete_unfinished_m', 'You can still complete and keep a record.'),
+          okText: L('checklist_complete', 'Complete'),
+        }).then(function (ok) { if (ok) finalize(); });
+      } else finalize();
+    });
+  }
+
+  // ============ HISTORY ============
+  function openHistory(templateId) {
+    const tpl = PCD.store.getFromTable('checklistTemplates', templateId);
+    if (!tpl) { PCD.toast.error(L('toast_template_not_found', 'Template not found')); return; }
     let showAll = false;
     const body = PCD.el('div');
 
     function paint() {
       const all = listCompletedSessions(templateId);
-      const cutoff = Date.now() - (90 * 24 * 60 * 60 * 1000);
-      const visible = showAll ? all : all.filter(function (s) {
-        return new Date(s.completedAt).getTime() >= cutoff;
-      });
-      const hiddenCount = all.length - visible.length;
+      const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
+      const visible = showAll ? all : all.filter(function (s) { return new Date(s.completedAt).getTime() >= cutoff; });
+      const hidden = all.length - visible.length;
 
-      if (all.length === 0) {
+      if (!all.length) {
         body.innerHTML =
-          '<div class="text-muted" style="padding:48px 20px;text-align:center;line-height:1.6;">' +
-            '<div style="font-size:40px;margin-bottom:10px;">📜</div>' +
-            '<div style="font-weight:600;color:var(--text-1);margin-bottom:6px;">' + PCD.escapeHtml(t('checklist_history_empty_title') || 'No completed sessions yet') + '</div>' +
-            '<div style="font-size:13px;">' + PCD.escapeHtml(t('checklist_history_empty_msg') || 'Once you complete a session, it will appear here for your records.') + '</div>' +
+          '<div class="text-muted" style="padding:42px 20px;text-align:center;line-height:1.6;">' +
+            '<div style="font-size:34px;margin-bottom:8px;">📜</div>' +
+            '<div style="font-weight:600;color:var(--text-1);margin-bottom:4px;">' + esc(L('checklist_history_empty_title', 'No completed sessions yet')) + '</div>' +
+            '<div style="font-size:13px;">' + esc(L('checklist_history_empty_msg', 'Completed lists appear here for your records.')) + '</div>' +
           '</div>';
         return;
       }
-
-      let html = '<div class="text-muted text-sm" style="margin-bottom:12px;">' +
-        PCD.escapeHtml(t('checklist_history_intro') || 'Past completed sessions. Tap any row to view details or save as PDF.') +
-      '</div>';
-
+      let html = '';
       visible.forEach(function (s) {
-        const total = (s.items || []).length;
-        const done = (s.items || []).filter(isItemComplete).length;
-        const failed = (s.items || []).filter(function (i) { return i.result === 'fail'; }).length;
-        const oor = (s.items || []).filter(isValueOutOfRange).length;
-        const pct = total ? Math.round((done / total) * 100) : 0;
-        const issues = failed + oor;
-        const statusColor = issues > 0 ? '#dc2626' : '#16a34a';
-        const statusIcon = issues > 0 ? '⚠' : '✓';
-        const completedDate = new Date(s.completedAt);
-        const dateStr = completedDate.toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || "en", { year: 'numeric', month: 'short', day: 'numeric' });
-        const timeStr = completedDate.toLocaleTimeString((PCD.i18n && PCD.i18n.currentLocale) || "en", { hour: '2-digit', minute: '2-digit' });
-
-        html += '<div class="card card-hover" data-history-sid="' + s.id + '" style="padding:12px 14px;margin-bottom:8px;cursor:pointer;">' +
+        const p = sessionProgress(s);
+        const d = new Date(s.completedAt);
+        const dateStr = d.toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || 'en', { year: 'numeric', month: 'short', day: 'numeric' });
+        const timeStr = d.toLocaleTimeString((PCD.i18n && PCD.i18n.currentLocale) || 'en', { hour: '2-digit', minute: '2-digit' });
+        html += '<div class="card card-hover" data-hsid="' + s.id + '" style="padding:12px 14px;margin-bottom:8px;cursor:pointer;">' +
           '<div style="display:flex;align-items:center;gap:10px;">' +
-            '<div style="width:36px;height:36px;border-radius:8px;background:' + statusColor + '15;color:' + statusColor + ';display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;flex-shrink:0;">' + statusIcon + '</div>' +
+            '<div style="width:34px;height:34px;border-radius:8px;background:#16a34a15;color:#16a34a;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">✓</div>' +
             '<div style="flex:1;min-width:0;">' +
-              '<div style="font-weight:600;font-size:14px;">' + PCD.escapeHtml(dateStr) + ' · ' + PCD.escapeHtml(timeStr) + '</div>' +
-              '<div class="text-muted" style="font-size:12px;margin-top:2px;">' +
-                PCD.escapeHtml(s.completedBy || t('checklist_history_unknown_chef') || 'Unknown') +
-                ' · ' + done + '/' + total + ' (' + pct + '%)' +
-                (issues > 0 ? ' · <span style="color:' + statusColor + ';font-weight:600;">' + issues + ' ' + (t('checklist_history_issues') || 'issues') + '</span>' : '') +
-              '</div>' +
+              '<div style="font-weight:600;font-size:14px;">' + esc(dateStr) + ' · ' + esc(timeStr) + '</div>' +
+              '<div class="text-muted" style="font-size:12px;margin-top:2px;">' + esc(s.completedBy || L('checklist_history_unknown_chef', 'Unknown')) + ' · ' + p.done + '/' + p.total + ' (' + p.pct + '%)</div>' +
             '</div>' +
             '<div style="color:var(--text-3);">›</div>' +
           '</div>' +
         '</div>';
       });
-
-      if (!showAll && hiddenCount > 0) {
-        html += '<button id="historyShowAllBtn" class="btn btn-secondary" style="width:100%;margin-top:8px;">' +
-          PCD.escapeHtml((t('checklist_history_show_older') || 'Show {n} older sessions').replace('{n}', hiddenCount)) +
-        '</button>';
-      } else if (showAll && all.length > 0) {
-        html += '<div class="text-muted" style="text-align:center;font-size:11px;margin-top:10px;">' +
-          PCD.escapeHtml((t('checklist_history_total') || 'Showing all {n} sessions').replace('{n}', all.length)) +
-        '</div>';
-      }
-
+      if (!showAll && hidden > 0) html += '<button id="histAll" class="btn btn-secondary" style="width:100%;margin-top:8px;">' + esc(L('checklist_history_show_older', 'Show older') + ' (' + hidden + ')') + '</button>';
       body.innerHTML = html;
-
-      // Wire up clicks
-      body.querySelectorAll('[data-history-sid]').forEach(function (el) {
-        el.addEventListener('click', function () {
-          const sid = this.getAttribute('data-history-sid');
-          const session = getSession(sid);
-          if (session) openHistoryDetail(session, tpl);
-        });
+      body.querySelectorAll('[data-hsid]').forEach(function (el) {
+        el.addEventListener('click', function () { const s = getSession(this.getAttribute('data-hsid')); if (s) openHistoryDetail(s, tpl); });
       });
-      const showAllBtn = body.querySelector('#historyShowAllBtn');
-      if (showAllBtn) {
-        showAllBtn.addEventListener('click', function () {
-          showAll = true;
-          paint();
-        });
-      }
+      const ha = PCD.$('#histAll', body);
+      if (ha) ha.addEventListener('click', function () { showAll = true; paint(); });
     }
     paint();
 
-    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('close'), style: { width: '100%' } });
+    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: L('close', 'Close'), style: { width: '100%' } });
     const footer = PCD.el('div', { style: { width: '100%' } });
     footer.appendChild(closeBtn);
-
-    const m = PCD.modal.open({
-      title: '📜 ' + (t('checklist_history') || 'History') + ' · ' + tpl.name,
-      body: body,
-      footer: footer,
-      size: 'md',
-      closable: true,
-    });
+    const m = PCD.modal.open({ title: '📜 ' + L('checklist_history', 'History') + ' · ' + tpl.name, body: body, footer: footer, size: 'md', closable: true });
     closeBtn.addEventListener('click', function () { m.close(); });
   }
 
-  // Show a single past session — read-only view + Print/Delete actions.
   function openHistoryDetail(session, tpl) {
-    const t = PCD.i18n.t;
-    const total = (session.items || []).length;
-    const done = (session.items || []).filter(isItemComplete).length;
-    const failed = (session.items || []).filter(function (i) { return i.result === 'fail'; }).length;
-    const oor = (session.items || []).filter(isValueOutOfRange).length;
-    const issues = failed + oor;
-    const completedDate = new Date(session.completedAt);
-    const startedDate = new Date(session.startedAt);
-    const durationMin = Math.max(1, Math.round((completedDate - startedDate) / 60000));
-
+    const p = sessionProgress(session);
     const body = PCD.el('div');
     let itemsHtml = '';
-    (session.items || []).forEach(function (it) {
-      const cat = CATS.find(function (c) { return c.id === it.cat; });
-      const tplItem = (tpl.items || []).find(function (x) { return x.id === it.id; }) || {};
-      const text = tplItem.text || '(item)';
-      const oorThis = isValueOutOfRange(it);
-      let valueStr = '';
-      if (it.result === 'pass') valueStr = '<span style="color:#16a34a;font-weight:700;">✓ PASS</span>';
-      else if (it.result === 'fail') valueStr = '<span style="color:#dc2626;font-weight:700;">✗ FAIL</span>';
-      else if (it.value !== undefined && it.value !== null && it.value !== '') {
-        valueStr = '<span style="' + (oorThis ? 'color:#dc2626;font-weight:700;' : 'color:var(--text-1);') + '">' + PCD.escapeHtml(String(it.value)) + (tplItem.unit ? ' ' + tplItem.unit : '') + '</span>';
-      } else if (isItemComplete(it)) {
-        valueStr = '<span style="color:#16a34a;">✓</span>';
-      } else {
-        valueStr = '<span style="color:var(--text-3);">—</span>';
-      }
-      itemsHtml += '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid var(--border);">' +
-        '<div style="flex:1;min-width:0;font-size:13px;">' + PCD.escapeHtml(text) + '</div>' +
-        '<div style="font-size:13px;flex-shrink:0;">' + valueStr + '</div>' +
-      '</div>';
-    });
-
+    if (session.kind === 'prep') {
+      (session.dishes || []).forEach(function (d) {
+        itemsHtml += '<div style="font-weight:700;font-size:13px;padding:8px 10px 4px;">' + esc(d.text) + '</div>';
+        (d.comps || []).forEach(function (c) {
+          itemsHtml += '<div style="display:flex;gap:10px;padding:6px 10px;border-bottom:1px solid var(--border);font-size:13px;">' +
+            '<div style="flex:1;min-width:0;">' + (c.done ? '<span style="color:#16a34a;">✓</span> ' : '<span style="color:var(--text-3);">○</span> ') + esc(c.text) + '</div>' +
+            '<div style="flex-shrink:0;color:var(--text-2);">' + esc(c.note || '') + '</div>' +
+          '</div>';
+        });
+      });
+    } else {
+      (session.items || []).forEach(function (it) {
+        itemsHtml += '<div style="display:flex;gap:10px;padding:8px 10px;border-bottom:1px solid var(--border);font-size:13px;">' +
+          '<div style="flex:1;min-width:0;">' + (it.done ? '<span style="color:#16a34a;">✓</span> ' : '<span style="color:var(--text-3);">○</span> ') + esc(it.text) + (it.comment ? ' <span class="text-muted" style="font-style:italic;">— ' + esc(it.comment) + '</span>' : '') + '</div>' +
+        '</div>';
+      });
+    }
+    const completed = new Date(session.completedAt);
     body.innerHTML =
       '<div style="background:var(--surface-2);padding:12px 14px;border-radius:8px;margin-bottom:14px;font-size:13px;line-height:1.7;">' +
-        '<div><strong>' + (t('checklist_history_completed_at') || 'Completed') + ':</strong> ' + completedDate.toLocaleString() + '</div>' +
-        '<div><strong>' + (t('checklist_history_started_at') || 'Started') + ':</strong> ' + startedDate.toLocaleString() + ' (' + durationMin + ' ' + (t('checklist_history_minutes') || 'min') + ')</div>' +
-        '<div><strong>' + (t('checklist_history_by') || 'By') + ':</strong> ' + PCD.escapeHtml(session.completedBy || (t('checklist_history_unknown_chef') || 'Unknown')) + '</div>' +
-        '<div><strong>' + (t('checklist_history_result') || 'Result') + ':</strong> ' + done + '/' + total +
-          (issues > 0 ? ' · <span style="color:#dc2626;font-weight:700;">' + issues + ' ' + (t('checklist_history_issues') || 'issues') + '</span>' : ' · <span style="color:#16a34a;font-weight:700;">' + (t('checklist_history_all_pass') || 'all pass') + '</span>') +
-        '</div>' +
+        '<div><strong>' + esc(L('checklist_history_completed_at', 'Completed')) + ':</strong> ' + esc(completed.toLocaleString()) + '</div>' +
+        '<div><strong>' + esc(L('checklist_history_by', 'By')) + ':</strong> ' + esc(session.completedBy || L('checklist_history_unknown_chef', 'Unknown')) + '</div>' +
+        '<div><strong>' + esc(L('checklist_history_result', 'Result')) + ':</strong> ' + p.done + '/' + p.total + ' (' + p.pct + '%)</div>' +
       '</div>' +
       '<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;">' + itemsHtml + '</div>';
 
     const printBtn = PCD.el('button', { class: 'btn btn-primary', style: { flex: '1' } });
-    printBtn.innerHTML = PCD.icon('print', 16) + ' <span>' + (t('print') || 'Print / PDF') + '</span>';
-    const deleteBtn = PCD.el('button', { class: 'btn btn-outline', title: t('act_delete') || 'Delete' });
-    deleteBtn.innerHTML = PCD.icon('trash', 16);
-    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('close') });
+    printBtn.innerHTML = PCD.icon('print', 16) + ' <span>' + esc(L('print', 'Print / PDF')) + '</span>';
+    const delBtn = PCD.el('button', { class: 'btn btn-outline', title: L('act_delete', 'Delete') });
+    delBtn.innerHTML = PCD.icon('trash', 16);
+    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: L('close', 'Close') });
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
-    footer.appendChild(closeBtn);
-    footer.appendChild(deleteBtn);
-    footer.appendChild(printBtn);
-
-    const m = PCD.modal.open({
-      title: tpl.name + ' — ' + completedDate.toLocaleDateString(),
-      body: body,
-      footer: footer,
-      size: 'md',
-      closable: true,
-    });
+    footer.appendChild(closeBtn); footer.appendChild(delBtn); footer.appendChild(printBtn);
+    const m = PCD.modal.open({ title: tpl.name + ' — ' + completed.toLocaleDateString(), body: body, footer: footer, size: 'md', closable: true });
     closeBtn.addEventListener('click', function () { m.close(); });
-    printBtn.addEventListener('click', function () { printChecklistSession(session, tpl); });
-    deleteBtn.addEventListener('click', function () {
-      PCD.modal.confirm({
-        icon: '🗑', iconKind: 'danger', danger: true,
-        title: t('checklist_history_delete_title') || 'Delete this record?',
-        text: t('checklist_history_delete_msg') || 'This permanently removes the session from history. HACCP records cannot be recovered.',
-        okText: t('act_delete') || 'Delete',
-      }).then(function (ok) {
-        if (!ok) return;
-        deleteSessionById(session.id);
-        PCD.toast.success(t('checklist_history_deleted') || 'Record deleted');
-        m.close();
-        // Reopen history list to refresh count
-        setTimeout(function () { openSessionHistory(tpl.id); }, 200);
-      });
+    printBtn.addEventListener('click', function () { printChecklist(tpl, session); });
+    delBtn.addEventListener('click', function () {
+      PCD.modal.confirm({ icon: '🗑', iconKind: 'danger', danger: true, title: L('checklist_history_delete_title', 'Delete this record?'), text: L('checklist_history_delete_msg', 'This permanently removes the session record.'), okText: L('act_delete', 'Delete') })
+        .then(function (ok) { if (!ok) return; deleteSessionById(session.id); PCD.toast.success(L('checklist_history_deleted', 'Record deleted')); m.close(); setTimeout(function () { openHistory(tpl.id); }, 150); });
     });
   }
 
-  // ============ PRINT SESSION ============
-  function printChecklistSession(s, tpl) {
-    const user = PCD.store.get('user') || {};
-    const total = s.items.length;
-    const done = s.items.filter(isItemComplete).length;
-    const failed = s.items.filter(function (i) { return i.result === 'fail'; }).length;
-    const oor = s.items.filter(isValueOutOfRange).length;
+  // ============ PRINT (control + prep, blank or filled) ============
+  // Blank prints leave Date BLANK — the chef writes it by hand (operator rule).
+  function printChecklist(tpl, session) {
+    const isPrep = (session ? session.kind : tpl.kind) === 'prep';
+    const name = (tpl && tpl.name) || (session && session.templateName) || L('chk_print_default', 'Checklist');
+    const filled = !!session;
 
-    let rowsHtml = '';
-    s.items.forEach(function (it, idx) {
-      const cat = CATS.find(function (c) { return c.id === it.cat; });
-      const type = it.type || 'task';
-      const complete = isItemComplete(it);
-      const isOOR = isValueOutOfRange(it);
+    const styleCommon =
+      '@page { size: A4; margin: 9mm; }' +
+      'body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; color: #1a1a1a; margin: 0; }' +
+      '.h-row { border-bottom: 2px solid #16a34a; padding-bottom: 4px; margin-bottom: 6px; }' +
+      '.h-row h1 { margin: 0; font-size: 15pt; color: #16a34a; }' +
+      '.h-row .sub { color: #666; font-size: 9pt; }' +
+      '.h-meta { display: flex; gap: 14px; margin: 6px 0 10px; padding: 6px 10px; background: #f7f7f7; border-radius: 4px; }' +
+      '.h-meta-item { display: flex; align-items: baseline; gap: 6px; flex: 1; }' +
+      '.h-meta-item .lbl { color: #888; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; font-size: 7pt; flex-shrink: 0; }' +
+      '.h-meta-item .val { font-size: 9.5pt; font-weight: 600; border-bottom: 1px solid #ccc; flex: 1; padding-bottom: 1px; min-height: 12px; }' +
+      '.h-signoff { margin-top: 10px; padding-top: 6px; border-top: 1px solid #ddd; display: flex; justify-content: space-between; gap: 20px; font-size: 8pt; color: #555; }' +
+      '.h-signoff .sig { flex: 1; display: flex; align-items: baseline; gap: 6px; }' +
+      '.h-signoff .sig-l { text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; flex-shrink: 0; }' +
+      '.h-signoff .sig-line { flex: 1; border-bottom: 1px solid #888; min-height: 14px; padding-bottom: 1px; font-size: 9pt; }';
 
-      const tT = PCD.i18n.t;
-      let valueCell = '';
-      if (type === 'task') {
-        valueCell = it.done ? '<span style="color:#16a34a;font-weight:700;">✓ ' + PCD.escapeHtml(tT('chk_print_done_label') || 'Done') + '</span>' : '<span style="color:#999;">—</span>';
-      } else if (type === 'temperature' || type === 'numeric') {
-        if (it.value !== null && it.value !== '') {
-          const range = (it.min !== undefined || it.max !== undefined) ? ' (' + (it.min !== undefined ? it.min : '?') + '–' + (it.max !== undefined ? it.max : '?') + ' ' + (it.unit || '') + ')' : '';
-          valueCell = '<span style="' + (isOOR ? 'color:#dc2626;font-weight:700;' : 'color:#16a34a;font-weight:600;') + '">' + it.value + ' ' + (it.unit || '') + '</span>' +
-            (isOOR ? ' <strong style="color:#dc2626;">' + PCD.escapeHtml(tT('chk_print_oor') || 'OOR') + '</strong>' : '') +
-            '<div style="font-size:9px;color:#999;">' + range + '</div>';
-        } else {
-          valueCell = '<span style="color:#999;">—</span>';
-        }
-      } else if (type === 'pass-fail') {
-        if (it.result === 'pass') valueCell = '<span style="color:#16a34a;font-weight:700;">✓ ' + PCD.escapeHtml(tT('chk_print_pass') || 'PASS') + '</span>';
-        else if (it.result === 'fail') valueCell = '<span style="color:#dc2626;font-weight:700;">✗ ' + PCD.escapeHtml(tT('chk_print_fail') || 'FAIL') + '</span>';
-        else if (it.result === 'na') valueCell = '<span style="color:#94a3b8;">' + PCD.escapeHtml(tT('chk_print_na') || 'N/A') + '</span>';
-        else valueCell = '<span style="color:#999;">—</span>';
-      } else if (type === 'text') {
-        valueCell = it.value ? PCD.escapeHtml(it.value) : '<span style="color:#999;">—</span>';
-      }
+    const dateVal = filled ? esc(new Date(session.completedAt || session.startedAt).toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || 'en', { year: 'numeric', month: 'long', day: 'numeric' })) : '&nbsp;';
+    const byVal = filled ? esc(session.completedBy || '') : '&nbsp;';
 
-      const time = it.doneAt ? new Date(it.doneAt).toLocaleTimeString((PCD.i18n && PCD.i18n.currentLocale) || "en", { hour: '2-digit', minute: '2-digit' }) : '';
-      const comment = it.comment ? '<div style="font-size:9pt;color:#666;font-style:italic;margin-top:3px;">📝 ' + PCD.escapeHtml(it.comment) + '</div>' : '';
+    let html = '<style>' + styleCommon;
 
-      // v2.8.62 — Kategori renkli stripe (session print, aynı pattern).
-      const stripeColor = cat ? cat.color : 'transparent';
-      rowsHtml +=
-        '<tr style="' + (isOOR || it.result === 'fail' ? 'background:#fef2f2;' : '') + '">' +
-          '<td style="padding:3px 6px 3px 8px;border-bottom:1px solid #e5e5e5;border-left:4px solid ' + stripeColor + ';width:22px;font-weight:700;color:#999;font-size:8pt;">' + (idx + 1) + '</td>' +
-          '<td style="padding:3px 6px;border-bottom:1px solid #e5e5e5;">' +
-            '<span style="font-weight:500;font-size:9.5pt;">' + PCD.escapeHtml(it.text) + '</span>' +
-            (cat ? ' <span style="font-size:7pt;color:' + cat.color + ';font-weight:700;text-transform:uppercase;letter-spacing:0.03em;margin-inline-start:4px;">' + catLabel(cat) + '</span>' : '') +
-            (it.hint ? '<div style="font-size:7.5pt;color:#888;font-style:italic;margin-top:1px;">' + PCD.escapeHtml(it.hint) + '</div>' : '') +
-            comment +
-          '</td>' +
-          '<td style="padding:3px 6px;border-bottom:1px solid #e5e5e5;text-align:center;font-size:9pt;">' + valueCell + '</td>' +
-          '<td style="padding:3px 6px;border-bottom:1px solid #e5e5e5;font-size:8pt;color:#666;text-align:center;width:50px;">' + time + '</td>' +
-        '</tr>';
-    });
-
-    // v2.8.60 — Session print kompakt: blank ile aynı CSS pattern (v2.8.59).
-    // 12+ item tek sayfa, 24+ doğal multi-page. Meta 4-col stat'lar inline
-    // chip'ler olarak, h1 sıkıştırıldı, sign-off single-line.
-    const html =
-      '<style>' +
-        '@page { size: A4; margin: 8mm; }' +
-        'body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; color: #1a1a1a; margin: 0; }' +
-        '.h-row { border-bottom: 2px solid #16a34a; padding-bottom: 4px; margin-bottom: 6px; }' +
-        '.h-row h1 { margin: 0; font-size: 14pt; color: #16a34a; }' +
-        '.h-row .sub { color: #666; font-size: 9pt; }' +
-        '.h-meta { display: flex; gap: 12px; margin: 6px 0 8px; padding: 6px 10px; background: #f7f7f7; border-radius: 4px; flex-wrap: wrap; }' +
-        '.h-meta-item { display: flex; align-items: baseline; gap: 6px; font-size: 9pt; }' +
-        '.h-meta-item .lbl { color: #888; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; font-size: 7pt; }' +
-        '.h-meta-item .val { font-size: 11pt; font-weight: 700; color: #111; }' +
-        '.h-meta-item.fail .val { color: #dc2626; }' +
-        '.h-meta-item.ok .val { color: #16a34a; }' +
-        'table { width: 100%; border-collapse: collapse; font-size: 9pt; page-break-inside: auto; }' +
-        'thead th { background: #f1f1f1; padding: 4px 6px; text-align: left; font-size: 7pt; text-transform: uppercase; letter-spacing: 0.03em; color: #555; }' +
+    if (!isPrep) {
+      html += 'table { width:100%; border-collapse: collapse; font-size: 9.5pt; }' +
+        'thead th { background:#f1f1f1; padding:4px 6px; text-align:left; font-size:7pt; text-transform:uppercase; letter-spacing:0.03em; color:#555; }' +
         'tr { page-break-inside: avoid; }' +
-        '.h-signoff { margin-top: 8px; padding-top: 6px; border-top: 1px solid #ddd; display: flex; justify-content: space-between; gap: 20px; font-size: 8pt; color: #666; }' +
-        '.h-signoff .sig-block { flex: 1; display: flex; align-items: baseline; gap: 6px; }' +
-        '.h-signoff .sig-label { text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; flex-shrink: 0; }' +
-        '.h-signoff .sig-line { flex: 1; border-bottom: 1px solid #888; min-height: 14px; padding-bottom: 1px; color: #111; font-size: 9pt; font-weight: 500; }' +
-      '</style>' +
-      '<div class="h-row">' +
-        '<h1>' + PCD.escapeHtml((tpl && tpl.name) || s.templateName || (PCD.i18n.t('chk_print_default_title') || 'Checklist')) + '</h1>' +
-        '<div class="sub">' +
-          new Date(s.startedAt).toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || "en", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) +
-          (s.completedAt ? ' · ' + PCD.escapeHtml(PCD.i18n.t('chk_print_completed_at') || 'Completed') + ' ' + new Date(s.completedAt).toLocaleTimeString((PCD.i18n && PCD.i18n.currentLocale) || "en", {hour:'2-digit', minute:'2-digit'}) : '') +
-        '</div>' +
-      '</div>' +
-      '<div class="h-meta">' +
-        '<div class="h-meta-item"><span class="lbl">' + PCD.escapeHtml(PCD.i18n.t('chk_print_items') || 'Items') + '</span><span class="val">' + total + '</span></div>' +
-        '<div class="h-meta-item ' + (done === total ? 'ok' : '') + '"><span class="lbl">' + PCD.escapeHtml(PCD.i18n.t('chk_print_done_stat') || 'Done') + '</span><span class="val">' + done + '/' + total + '</span></div>' +
-        '<div class="h-meta-item ' + (failed > 0 ? 'fail' : '') + '"><span class="lbl">' + PCD.escapeHtml(PCD.i18n.t('chk_print_failed') || 'Failed') + '</span><span class="val">' + failed + '</span></div>' +
-        '<div class="h-meta-item ' + (oor > 0 ? 'fail' : '') + '"><span class="lbl">' + PCD.escapeHtml(PCD.i18n.t('chk_print_oor_stat') || 'Out of range') + '</span><span class="val">' + oor + '</span></div>' +
-      '</div>' +
-      '<table>' +
-        '<thead><tr>' +
-          '<th style="width:22px;">#</th>' +
-          '<th>' + PCD.escapeHtml(PCD.i18n.t('chk_print_item_col') || 'Item') + '</th>' +
-          '<th style="text-align:center;width:140px;">' + PCD.escapeHtml(PCD.i18n.t('chk_print_result_col') || 'Result / Value') + '</th>' +
-          '<th style="width:50px;text-align:center;">' + PCD.escapeHtml(PCD.i18n.t('chk_print_time_col') || 'Time') + '</th>' +
-        '</tr></thead>' +
-        '<tbody>' + rowsHtml + '</tbody>' +
-      '</table>' +
-      '<div class="h-signoff">' +
-        '<div class="sig-block"><span class="sig-label">' + PCD.escapeHtml(PCD.i18n.t('chk_print_completed_by') || 'Completed by') + '</span><span class="sig-line">' + PCD.escapeHtml(s.completedBy || user.name || '') + '</span></div>' +
-        '<div class="sig-block"><span class="sig-label">' + PCD.escapeHtml(PCD.i18n.t('chk_print_verified_by') || 'Verified by') + '</span><span class="sig-line">&nbsp;</span></div>' +
-      '</div>';
+        '</style>';
+      let rows = '';
+      const items = filled ? (session.items || []) : (tpl.items || []);
+      items.forEach(function (it, i) {
+        const cat = catOf(it.cat);
+        const stripe = cat ? cat.color : 'transparent';
+        let val;
+        if (filled) val = it.done ? '<span style="color:#16a34a;font-weight:700;">✓</span>' : '<span style="color:#999;">—</span>';
+        else val = '<span style="display:inline-block;width:14px;height:14px;border:1.5px solid #999;border-radius:2px;"></span>';
+        const comment = (filled && it.comment) ? '<div style="font-size:8pt;color:#666;font-style:italic;margin-top:2px;">📝 ' + esc(it.comment) + '</div>' : '';
+        rows += '<tr>' +
+          '<td style="padding:4px 6px 4px 8px;border-bottom:1px solid #e5e5e5;border-left:4px solid ' + stripe + ';width:22px;font-weight:700;color:#999;font-size:8pt;">' + (i + 1) + '</td>' +
+          '<td style="padding:4px 6px;border-bottom:1px solid #e5e5e5;"><span style="font-weight:600;font-size:9.5pt;">' + esc(it.text) + '</span>' + (cat ? ' <span style="font-size:7pt;color:' + cat.color + ';font-weight:700;text-transform:uppercase;margin-inline-start:4px;">' + esc(catLabel(cat)) + '</span>' : '') + comment + '</td>' +
+          '<td style="padding:4px 6px;border-bottom:1px solid #e5e5e5;text-align:center;width:90px;">' + val + '</td>' +
+          '<td style="padding:4px 6px;border-bottom:1px solid #e5e5e5;width:55px;text-align:center;font-size:8pt;color:#999;">' + (filled && it.doneAt ? new Date(it.doneAt).toLocaleTimeString((PCD.i18n && PCD.i18n.currentLocale) || 'en', { hour: '2-digit', minute: '2-digit' }) : '__:__') + '</td>' +
+        '</tr>';
+      });
+      html += '<div class="h-row"><h1>' + esc(name) + '</h1><div class="sub">' + esc(L('chk_kind_control', 'Control')) + ' · ' + items.length + ' ' + esc(L('chk_items', 'items')) + '</div></div>' +
+        metaHtml() +
+        '<table><thead><tr><th style="width:22px;">#</th><th>' + esc(L('chk_print_item', 'Item')) + '</th><th style="text-align:center;width:90px;">' + esc(L('chk_print_done', 'Done')) + '</th><th style="width:55px;text-align:center;">' + esc(L('chk_print_time', 'Time')) + '</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+        signoffHtml();
+    } else {
+      // PREP — DISH / COMPONENT / PREP, multi-column cards (matches the photo intent)
+      html += '.legend { font-size:7.5pt; color:#888; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px; font-weight:700; }' +
+        '.cols { column-count: 3; column-gap: 6mm; }' +
+        '.dish { break-inside: avoid; border:1px solid #d8d8d8; border-radius:4px; margin-bottom:6px; overflow:hidden; }' +
+        '.dish-h { background:#eaf5ee; color:#15633e; font-weight:700; font-size:9pt; padding:4px 7px; border-bottom:1px solid #d8d8d8; }' +
+        '.dish table { width:100%; border-collapse:collapse; }' +
+        '.dish td { padding:3px 7px; border-bottom:1px solid #eee; font-size:8.5pt; vertical-align:middle; }' +
+        '.dish td.comp { color:#222; }' +
+        '.dish td.prep { width:62px; text-align:center; }' +
+        '.box { display:inline-block;width:13px;height:13px;border:1.5px solid #999;border-radius:2px; }' +
+        '@media print { .cols { column-count: 3; } }' +
+        '</style>';
+      const dishes = filled ? (session.dishes || []) : (tpl.dishes || []);
+      let blocks = '';
+      dishes.forEach(function (d) {
+        let r = '';
+        (d.comps || []).forEach(function (c) {
+          let prep;
+          if (filled) prep = (c.done ? '<span style="color:#16a34a;font-weight:700;">✓</span> ' : '') + esc(c.note || '');
+          else prep = '<span class="box"></span>';
+          r += '<tr><td class="comp">' + esc(c.text) + '</td><td class="prep">' + (prep || '&nbsp;') + '</td></tr>';
+        });
+        if (!r) r = '<tr><td class="comp" style="color:#bbb;">—</td><td class="prep">&nbsp;</td></tr>';
+        blocks += '<div class="dish"><div class="dish-h">' + esc(d.text || '') + '</div><table>' + r + '</table></div>';
+      });
+      html += '<div class="h-row"><h1>' + esc(name) + '</h1><div class="sub">' + esc(L('chk_kind_prep', 'Prep')) + ' · ' + dishes.length + ' ' + esc(L('chk_dishes', 'dishes')) + '</div></div>' +
+        metaHtml() +
+        '<div class="legend">' + esc(L('chk_col_dish', 'Dish')) + ' · ' + esc(L('chk_col_component', 'Component')) + ' · ' + esc(L('chk_col_prep', 'Prep')) + '</div>' +
+        '<div class="cols">' + blocks + '</div>' +
+        signoffHtml();
+    }
 
-    PCD.print(html, ((tpl && tpl.name) || (PCD.i18n.t('chk_print_default_title') || 'Checklist')) + ' — ' + PCD.fmtDate(s.startedAt, { month: 'short', day: 'numeric' }));
+    function metaHtml() {
+      return '<div class="h-meta">' +
+        '<div class="h-meta-item"><span class="lbl">' + esc(L('chk_print_date', 'Date')) + '</span><span class="val">' + dateVal + '</span></div>' +
+        '<div class="h-meta-item"><span class="lbl">' + esc(L('chk_print_shift', 'Shift')) + '</span><span class="val">&nbsp;</span></div>' +
+        '<div class="h-meta-item"><span class="lbl">' + esc(L('chk_print_by', 'By')) + '</span><span class="val">' + byVal + '</span></div>' +
+      '</div>';
+    }
+    function signoffHtml() {
+      return '<div class="h-signoff">' +
+        '<div class="sig"><span class="sig-l">' + esc(L('chk_print_performed', 'Performed by')) + '</span><span class="sig-line">' + (filled ? esc(session.completedBy || '') : '&nbsp;') + '</span></div>' +
+        '<div class="sig"><span class="sig-l">' + esc(L('chk_print_verified', 'Verified by')) + '</span><span class="sig-line">&nbsp;</span></div>' +
+      '</div>';
+    }
+
+    PCD.print(html, name + (filled ? ' — ' + PCD.fmtDate(session.completedAt || session.startedAt, { month: 'short', day: 'numeric' }) : ' — ' + L('chk_blank', 'blank')));
   }
 
-  // Build human-friendly text version for sharing
-  function buildShareText(s, tpl) {
-    const total = s.items.length;
-    const done = s.items.filter(isItemComplete).length;
-    const lines = [
-      ((tpl && tpl.name) || s.templateName || 'Checklist'),
-      new Date(s.startedAt).toLocaleDateString() + ' · ' + done + '/' + total + ' complete',
-      ''
-    ];
-    s.items.forEach(function (it) {
-      const type = it.type || 'task';
-      let valStr = '';
-      if (type === 'task') valStr = it.done ? '☑' : '☐';
-      else if (type === 'temperature' || type === 'numeric') valStr = it.value !== null && it.value !== '' ? '→ ' + it.value + ' ' + (it.unit || '') + (isValueOutOfRange(it) ? ' ⚠️ OUT OF RANGE' : '') : '☐';
-      else if (type === 'pass-fail') valStr = it.result === 'pass' ? '✓ PASS' : (it.result === 'fail' ? '✗ FAIL' : (it.result === 'na' ? 'N/A' : '☐'));
-      else if (type === 'text') valStr = it.value ? '→ ' + it.value : '☐';
-      lines.push(valStr + ' ' + it.text + (it.comment ? '  📝 ' + it.comment : ''));
-    });
+  // ============ SHARE (light: PDF + text) ============
+  function buildShareText(s) {
+    const lines = [s.templateName || 'Checklist', new Date(s.startedAt).toLocaleDateString(), ''];
+    if (s.kind === 'prep') {
+      (s.dishes || []).forEach(function (d) {
+        lines.push('— ' + (d.text || ''));
+        (d.comps || []).forEach(function (c) { lines.push('  ' + (c.done ? '☑' : '☐') + ' ' + c.text + (c.note ? '  → ' + c.note : '')); });
+      });
+    } else {
+      (s.items || []).forEach(function (it) { lines.push((it.done ? '☑' : '☐') + ' ' + it.text + (it.comment ? '  📝 ' + it.comment : '')); });
+    }
     return lines.join('\n');
   }
-
-  function openShareSheet(s, tpl) {
-    const title = ((tpl && tpl.name) || s.templateName || 'Checklist');
-    const text = buildShareText(s, tpl);
+  function shareSession(s) {
+    if (!s) return;
+    const tpl = PCD.store.getFromTable('checklistTemplates', s.templateId);
+    const title = s.templateName || 'Checklist';
+    const text = buildShareText(s);
     const body = PCD.el('div');
     body.innerHTML =
       '<div style="padding:14px;background:var(--brand-50);border-radius:var(--r-md);margin-bottom:14px;">' +
-        '<div style="font-weight:700;color:var(--brand-700);margin-bottom:6px;">📄 Recommended: PDF</div>' +
-        '<div class="text-muted text-sm" style="margin-bottom:10px;">Checklists are audit documents. Download as PDF for proper records, then share the file via WhatsApp / Email / Drive from your device.</div>' +
-        '<button class="btn btn-primary" id="shPdf" style="width:100%;">' + PCD.icon('print', 16) + ' <span>Save as PDF</span></button>' +
+        '<div style="font-weight:700;color:var(--brand-700);margin-bottom:6px;">📄 ' + esc(L('chk_share_pdf_title', 'Recommended: PDF')) + '</div>' +
+        '<div class="text-muted text-sm" style="margin-bottom:10px;">' + esc(L('chk_share_pdf_msg', 'Save as PDF for proper records, then share the file.')) + '</div>' +
+        '<button class="btn btn-primary" id="shPdf" style="width:100%;">' + PCD.icon('print', 16) + ' <span>' + esc(L('chk_share_save_pdf', 'Save as PDF')) + '</span></button>' +
       '</div>' +
-
-      '<div style="font-weight:600;font-size:12px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Or share as plain text</div>' +
-      '<div class="field"><label class="field-label">Message preview (editable)</label>' +
-      '<textarea class="textarea" id="shareText" rows="6" style="font-family:var(--font-mono);font-size:13px;">' + PCD.escapeHtml(text) + '</textarea></div>' +
-      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-top:10px;">' +
-        '<button class="btn btn-outline btn-sm" id="shWa" style="flex-direction:column;height:auto;padding:10px 4px;gap:4px;">' +
-          '<div style="color:#25D366;">' + PCD.icon('message-circle', 18) + '</div>' +
-          '<div style="font-weight:600;font-size:11px;">WhatsApp</div></button>' +
-        '<button class="btn btn-outline btn-sm" id="shEmail" style="flex-direction:column;height:auto;padding:10px 4px;gap:4px;">' +
-          '<div style="color:#EA4335;">' + PCD.icon('mail', 18) + '</div>' +
-          '<div style="font-weight:600;font-size:11px;">Email</div></button>' +
-        '<button class="btn btn-outline btn-sm" id="shCopy" style="flex-direction:column;height:auto;padding:10px 4px;gap:4px;">' +
-          '<div style="color:var(--brand-600);">' + PCD.icon('copy', 18) + '</div>' +
-          '<div style="font-weight:600;font-size:11px;">Copy</div></button>' +
-        '<button class="btn btn-outline btn-sm" id="shMore" style="flex-direction:column;height:auto;padding:10px 4px;gap:4px;">' +
-          '<div style="color:var(--text-2);">' + PCD.icon('share', 18) + '</div>' +
-          '<div style="font-weight:600;font-size:11px;">More...</div></button>' +
+      '<div class="field"><label class="field-label">' + esc(L('chk_share_text', 'Or share as text')) + '</label>' +
+      '<textarea class="textarea" id="shTxt" rows="6" style="font-family:var(--font-mono);font-size:13px;">' + esc(text) + '</textarea></div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px;">' +
+        '<button class="btn btn-outline btn-sm" id="shWa" style="flex-direction:column;height:auto;padding:10px 4px;gap:4px;"><div style="color:#25D366;">' + PCD.icon('message-circle', 18) + '</div><div style="font-weight:600;font-size:11px;">WhatsApp</div></button>' +
+        '<button class="btn btn-outline btn-sm" id="shMail" style="flex-direction:column;height:auto;padding:10px 4px;gap:4px;"><div style="color:#EA4335;">' + PCD.icon('mail', 18) + '</div><div style="font-weight:600;font-size:11px;">Email</div></button>' +
+        '<button class="btn btn-outline btn-sm" id="shCopy" style="flex-direction:column;height:auto;padding:10px 4px;gap:4px;"><div style="color:var(--brand-600);">' + PCD.icon('copy', 18) + '</div><div style="font-weight:600;font-size:11px;">' + esc(L('copy', 'Copy')) + '</div></button>' +
       '</div>';
-
-    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('btn_close') });
+    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: L('close', 'Close') });
     const footer = PCD.el('div', { style: { display: 'flex', width: '100%' } });
     footer.appendChild(closeBtn);
-
-    const m = PCD.modal.open({ title: t('share_modal_title', { name: title }), body: body, footer: footer, size: 'md', closable: true });
-
-    PCD.$('#shPdf', body).addEventListener('click', function () {
-      m.close();
-      setTimeout(function () { printChecklistSession(s, tpl); }, 250);
-    });
-
-    function getText() { return PCD.$('#shareText', body).value; }
+    const m = PCD.modal.open({ title: L('btn_share', 'Share') + ' · ' + title, body: body, footer: footer, size: 'md', closable: true });
+    function getText() { return PCD.$('#shTxt', body).value; }
     closeBtn.addEventListener('click', function () { m.close(); });
-    PCD.$('#shWa', body).addEventListener('click', function () {
-      window.open('https://wa.me/?text=' + encodeURIComponent(getText()), '_blank');
-      m.close();
-    });
-    PCD.$('#shEmail', body).addEventListener('click', function () {
-      window.location.href = 'mailto:?subject=' + encodeURIComponent(title) + '&body=' + encodeURIComponent(getText());
-      m.close();
-    });
-    PCD.$('#shCopy', body).addEventListener('click', function () {
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(getText()).then(function () {
-          PCD.toast.success(PCD.i18n.t('toast_copied'));
-          m.close();
-        });
-      }
-    });
-    PCD.$('#shMore', body).addEventListener('click', function () {
-      if (navigator.share) {
-        navigator.share({ title: title, text: getText() }).then(function () { m.close(); }).catch(function () {});
-      } else {
-        if (navigator.clipboard) {
-          navigator.clipboard.writeText(getText()).then(function () { PCD.toast.success(PCD.i18n.t('toast_copied')); m.close(); });
-        }
-      }
-    });
+    PCD.$('#shPdf', body).addEventListener('click', function () { m.close(); setTimeout(function () { printChecklist(tpl, s); }, 250); });
+    PCD.$('#shWa', body).addEventListener('click', function () { window.open('https://wa.me/?text=' + encodeURIComponent(getText()), '_blank'); m.close(); });
+    PCD.$('#shMail', body).addEventListener('click', function () { window.location.href = 'mailto:?subject=' + encodeURIComponent(title) + '&body=' + encodeURIComponent(getText()); m.close(); });
+    PCD.$('#shCopy', body).addEventListener('click', function () { if (navigator.clipboard) navigator.clipboard.writeText(getText()).then(function () { PCD.toast.success(L('toast_copied', 'Copied')); m.close(); }); });
   }
 
   // ============ TEMPLATE EDITOR ============
-  function openTemplateEditor(tid) {
-    const t = PCD.i18n.t;
+  function openEditor(tid, kindHint) {
     const existing = tid ? PCD.store.getFromTable('checklistTemplates', tid) : null;
+    if (existing) normalizeTemplate(existing);
     const data = existing ? PCD.clone(existing) : {
-      name: '', icon: 'check-square',
-      printColumns: 1,  // v2.8.61: 1 | 2 — print layout
-      items: [{ id: PCD.uid('it'), text: '', cat: 'prep', prio: 'med', type: 'task' }],
+      name: '', kind: (kindHint === 'prep' ? 'prep' : 'control'),
+      icon: (kindHint === 'prep' ? 'chef-hat' : 'check-square'),
+      items: [], dishes: [],
     };
-    // v2.8.61 — Defansif: eski template'lerde printColumns yok
-    if (typeof data.printColumns !== 'number') data.printColumns = 1;
+    if (data.kind !== 'prep') { if (!Array.isArray(data.items)) data.items = []; if (!data.items.length) data.items.push({ id: uid('it'), text: '', cat: '' }); }
+    else { if (!Array.isArray(data.dishes)) data.dishes = []; }
 
     const body = PCD.el('div');
 
-    function renderEditor() {
-      body.innerHTML = `
-        <div class="field">
-          <label class="field-label">${PCD.i18n.t('chk_tpl_name')} *</label>
-          <input type="text" class="input" id="tplName" value="${PCD.escapeHtml(data.name || '')}" placeholder="${PCD.escapeHtml(PCD.i18n.t('chk_tpl_name_placeholder'))}">
-        </div>
+    function render2() {
+      let html =
+        '<div class="field"><label class="field-label">' + esc(L('chk_name', 'List name')) + ' *</label>' +
+        '<input type="text" class="input" id="tplName" value="' + esc(data.name || '') + '" placeholder="' + esc(data.kind === 'prep' ? L('chk_name_ph_prep', 'e.g. Daily Prep') : L('chk_name_ph_control', 'e.g. Closing & Safety')) + '"></div>';
 
-        <div class="field">
-          <label class="field-label">${PCD.i18n.t('chk_print_layout_label')}</label>
-          <div class="text-muted text-sm mb-2" style="font-size:12px;">${PCD.i18n.t('chk_print_layout_hint')}</div>
-          <div style="display:flex;gap:6px;">
-            <button type="button" class="btn btn-sm ${data.printColumns === 1 ? 'btn-primary' : 'btn-outline'}" data-printcols="1" style="flex:1;">${PCD.i18n.t('chk_print_layout_1col')}</button>
-            <button type="button" class="btn btn-sm ${data.printColumns === 2 ? 'btn-primary' : 'btn-outline'}" data-printcols="2" style="flex:1;">${PCD.i18n.t('chk_print_layout_2col')}</button>
-          </div>
-        </div>
+      // Kind toggle (only when creating, or when no content yet)
+      const lockKind = !!existing;
+      html += '<div class="field"><label class="field-label">' + esc(L('chk_kind', 'Kind')) + '</label>' +
+        '<div style="display:flex;gap:6px;">' +
+          '<button type="button" class="btn btn-sm ' + (data.kind === 'control' ? 'btn-primary' : 'btn-outline') + '" data-setkind="control" ' + (lockKind ? 'disabled style="flex:1;opacity:' + (data.kind === 'control' ? '1' : '0.4') + ';"' : 'style="flex:1;"') + '>' + PCD.icon('check-square', 14) + ' ' + esc(L('chk_kind_control', 'Control')) + '</button>' +
+          '<button type="button" class="btn btn-sm ' + (data.kind === 'prep' ? 'btn-primary' : 'btn-outline') + '" data-setkind="prep" ' + (lockKind ? 'disabled style="flex:1;opacity:' + (data.kind === 'prep' ? '1' : '0.4') + ';"' : 'style="flex:1;"') + '>' + PCD.icon('chef-hat', 14) + ' ' + esc(L('chk_kind_prep', 'Prep')) + '</button>' +
+        '</div>' +
+        (lockKind ? '' : '<div class="text-muted text-sm mt-1" style="font-size:12px;">' + esc(L('chk_kind_hint', 'Control = tick-and-confirm. Prep = dishes with components.')) + '</div>') +
+      '</div>';
 
-        <div class="field">
-          <label class="field-label">${PCD.i18n.t('chk_items_label')}</label>
-          <div id="itemsList" class="flex flex-col gap-2"></div>
-          <button class="btn btn-ghost btn-sm mt-2" id="addItemBtn">${PCD.icon('plus',14)} ${PCD.i18n.t('chk_add_item')}</button>
-        </div>
-      `;
+      if (data.kind === 'prep') {
+        html += '<div class="field"><label class="field-label">' + esc(L('chk_dishes', 'dishes')) + '</label>' +
+          '<div id="dishList" class="flex flex-col gap-2"></div>' +
+          '<div style="display:flex;gap:6px;margin-top:8px;">' +
+            '<button class="btn btn-outline btn-sm" id="addFromMenu" style="flex:1;">' + PCD.icon('book-open', 14) + ' ' + esc(L('chk_add_from_menu', 'Add from menu')) + '</button>' +
+            '<button class="btn btn-ghost btn-sm" id="addDish" style="flex:1;">' + PCD.icon('plus', 14) + ' ' + esc(L('chk_add_dish', 'Add dish')) + '</button>' +
+          '</div>' +
+        '</div>';
+      } else {
+        html += '<div class="field"><label class="field-label">' + esc(L('chk_items', 'items')) + '</label>' +
+          '<div id="itemList" class="flex flex-col gap-2"></div>' +
+          '<button class="btn btn-ghost btn-sm mt-2" id="addItem">' + PCD.icon('plus', 14) + ' ' + esc(L('chk_add_item', 'Add item')) + '</button>' +
+        '</div>';
+      }
+      body.innerHTML = html;
 
-      const itemsListEl = PCD.$('#itemsList', body);
-      data.items.forEach(function (it, idx) {
-        const row = PCD.el('div', {
-          style: { padding: '10px', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', background: 'var(--surface-2)' }
-        });
-        const type = it.type || 'task';
-        // v2.8.59 — Drag handle eklendi. Checklist item editor'de eskiden
-        // sıralama imkânı yoktu (up/down buton bile yok, sadece sil).
-        // Şimdi her row başında 6-nokta grip handle ile sürükle-bırak.
-        row.innerHTML = `
-          <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
-            <button type="button" class="drag-handle" aria-label="${PCD.escapeHtml(PCD.i18n.t('ing_drag_handle'))}" title="${PCD.escapeHtml(PCD.i18n.t('ing_drag_handle'))}" style="cursor:grab;background:transparent;border:0;padding:4px 2px;color:var(--text-3);touch-action:none;flex-shrink:0;"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg></button>
-            <div style="color:var(--text-3);font-size:12px;width:24px;text-align:right;font-weight:700;">${idx + 1}.</div>
-            <input type="text" class="input" data-itemtext="${idx}" value="${PCD.escapeHtml(it.text || '')}" placeholder="${PCD.escapeHtml(PCD.i18n.t('chk_item_description'))}" style="flex:1;font-weight:500;">
-            <button class="icon-btn" data-itemdel="${idx}">${PCD.icon('x',16)}</button>
-          </div>
-          <!-- v2.8.63 — Hint/açıklama: şefin item'ı nasıl yapacağını
-               hatırlatan kısa not. Print'te italik gri olarak görünür,
-               session run'da item adı altında küçük gri yazı. -->
-          <input type="text" class="input" data-itemhint="${idx}" value="${PCD.escapeHtml(it.hint || '')}" placeholder="${PCD.escapeHtml(PCD.i18n.t('chk_item_hint_placeholder'))}" style="margin-bottom:6px;font-size:12px;font-style:italic;color:var(--text-2);">
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
-            <select class="select" data-itemtype="${idx}" style="font-size:12px;">
-              ${ITEM_TYPES.map(function (it) { return '<option value="' + it.id + '"' + (type === it.id ? ' selected' : '') + '>' + PCD.i18n.t(it.labelKey) + '</option>'; }).join('')}
-            </select>
-            <select class="select" data-itemcat="${idx}" style="font-size:12px;">
-              ${CATS.map(function (c) { return '<option value="' + c.id + '"' + ((it.cat || 'prep') === c.id ? ' selected' : '') + '>' + catLabel(c) + '</option>'; }).join('')}
-            </select>
-            <select class="select" data-itemprio="${idx}" style="font-size:12px;">
-              ${PRIOS.map(function (p) { return '<option value="' + p.id + '"' + ((it.prio || 'med') === p.id ? ' selected' : '') + '>' + prioLabel(p) + '</option>'; }).join('')}
-            </select>
-          </div>
-          ${(type === 'temperature' || type === 'numeric') ? `
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:6px;">
-              <input type="number" class="input" data-itemmin="${idx}" value="${it.min !== undefined ? it.min : ''}" step="0.1" placeholder="${PCD.escapeHtml(PCD.i18n.t('chk_min'))}" style="font-size:12px;">
-              <input type="number" class="input" data-itemmax="${idx}" value="${it.max !== undefined ? it.max : ''}" step="0.1" placeholder="${PCD.escapeHtml(PCD.i18n.t('chk_max'))}" style="font-size:12px;">
-              <input type="text" class="input" data-itemunit="${idx}" value="${PCD.escapeHtml(it.unit || '')}" placeholder="${type === 'temperature' ? '°C' : PCD.escapeHtml(PCD.i18n.t('chk_unit_placeholder'))}" style="font-size:12px;">
-            </div>
-          ` : ''}
-        `;
-        itemsListEl.appendChild(row);
-      });
-
-      // v2.8.59 — Drag-drop ile item sıralama. Her renderEditor sonrası
-      // destroy + recreate (DOM rebuild ediliyor).
-      if (PCD.dragdrop && PCD.dragdrop.makeSortable) {
-        if (renderEditor._sortable && renderEditor._sortable.destroy) {
-          renderEditor._sortable.destroy();
-        }
-        renderEditor._sortable = PCD.dragdrop.makeSortable(itemsListEl, {
-          handle: '.drag-handle',
-          onEnd: function (oldIndex, newIndex) {
-            if (oldIndex === newIndex) return;
-            const moved = data.items[oldIndex];
-            data.items.splice(oldIndex, 1);
-            data.items.splice(newIndex, 0, moved);
-            renderEditor();
-          }
+      // kind toggle
+      if (!lockKind) {
+        body.querySelectorAll('[data-setkind]').forEach(function (b) {
+          b.addEventListener('click', function () {
+            const k = this.getAttribute('data-setkind');
+            if (k === data.kind) return;
+            data.kind = k;
+            data.icon = (k === 'prep') ? 'chef-hat' : 'check-square';
+            if (k === 'control' && !data.items.length) data.items.push({ id: uid('it'), text: '', cat: '' });
+            render2();
+          });
         });
       }
 
       PCD.$('#tplName', body).addEventListener('input', function () { data.name = this.value; });
-      // v2.8.61 — Print columns toggle (1 col / 2 col)
-      PCD.on(body, 'click', '[data-printcols]', function () {
-        const c = parseInt(this.getAttribute('data-printcols'), 10);
-        data.printColumns = (c === 2) ? 2 : 1;
-        renderEditor();
-      });
-      PCD.$('#addItemBtn', body).addEventListener('click', function () {
-        data.items.push({ id: PCD.uid('it'), text: '', cat: 'prep', prio: 'med', type: 'task' });
-        renderEditor();
-        setTimeout(function () {
-          const inputs = body.querySelectorAll('[data-itemtext]');
-          if (inputs.length) inputs[inputs.length - 1].focus();
-        }, 30);
-      });
-      PCD.on(body, 'input', '[data-itemtext]', function () {
-        const idx = parseInt(this.getAttribute('data-itemtext'), 10);
-        if (data.items[idx]) data.items[idx].text = this.value;
-      });
-      // v2.8.63 — Hint field event handler
-      PCD.on(body, 'input', '[data-itemhint]', function () {
-        const idx = parseInt(this.getAttribute('data-itemhint'), 10);
-        if (data.items[idx]) data.items[idx].hint = this.value;
-      });
-      PCD.on(body, 'change', '[data-itemcat]', function () {
-        const idx = parseInt(this.getAttribute('data-itemcat'), 10);
-        if (data.items[idx]) data.items[idx].cat = this.value;
-      });
-      PCD.on(body, 'change', '[data-itemprio]', function () {
-        const idx = parseInt(this.getAttribute('data-itemprio'), 10);
-        if (data.items[idx]) data.items[idx].prio = this.value;
-      });
-      PCD.on(body, 'change', '[data-itemtype]', function () {
-        const idx = parseInt(this.getAttribute('data-itemtype'), 10);
-        if (data.items[idx]) {
-          data.items[idx].type = this.value;
-          // For temperature, suggest defaults
-          if (this.value === 'temperature' && data.items[idx].unit === undefined) {
-            data.items[idx].unit = '°C';
-            data.items[idx].min = 1;
-            data.items[idx].max = 4;
-          }
-          renderEditor();
-        }
-      });
-      PCD.on(body, 'input', '[data-itemmin]', function () {
-        const idx = parseInt(this.getAttribute('data-itemmin'), 10);
-        if (data.items[idx]) data.items[idx].min = this.value === '' ? undefined : parseFloat(this.value);
-      });
-      PCD.on(body, 'input', '[data-itemmax]', function () {
-        const idx = parseInt(this.getAttribute('data-itemmax'), 10);
-        if (data.items[idx]) data.items[idx].max = this.value === '' ? undefined : parseFloat(this.value);
-      });
-      PCD.on(body, 'input', '[data-itemunit]', function () {
-        const idx = parseInt(this.getAttribute('data-itemunit'), 10);
-        if (data.items[idx]) data.items[idx].unit = this.value;
-      });
-      PCD.on(body, 'click', '[data-itemdel]', function () {
-        const idx = parseInt(this.getAttribute('data-itemdel'), 10);
-        data.items.splice(idx, 1);
-        if (data.items.length === 0) data.items.push({ id: PCD.uid('it'), text: '', cat: 'prep', prio: 'med', type: 'task' });
-        renderEditor();
-      });
+
+      if (data.kind === 'prep') renderDishes();
+      else renderItems();
     }
 
-    renderEditor();
+    function renderItems() {
+      const wrap = PCD.$('#itemList', body);
+      wrap.innerHTML = '';
+      data.items.forEach(function (it, idx) {
+        const r = PCD.el('div', { style: { padding: '8px 10px', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', background: 'var(--surface-2)' } });
+        r.innerHTML =
+          '<div style="display:flex;gap:6px;align-items:center;">' +
+            '<button type="button" class="drag-handle" title="' + esc(L('reorder', 'Reorder')) + '" style="cursor:grab;background:transparent;border:0;padding:4px 2px;color:var(--text-3);touch-action:none;flex-shrink:0;"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg></button>' +
+            '<span style="color:var(--text-3);font-size:12px;width:22px;text-align:right;font-weight:700;">' + (idx + 1) + '</span>' +
+            '<input type="text" class="input" data-it="' + it.id + '" value="' + esc(it.text || '') + '" placeholder="' + esc(L('chk_item_ph', 'Task description')) + '" style="flex:1;">' +
+            '<select class="select" data-ic="' + it.id + '" style="width:120px;font-size:12px;flex-shrink:0;"><option value="">' + esc(L('chk_no_cat', '—')) + '</option>' +
+              CATS.map(function (c) { return '<option value="' + c.id + '"' + (it.cat === c.id ? ' selected' : '') + '>' + esc(catLabel(c)) + '</option>'; }).join('') +
+            '</select>' +
+            '<button class="icon-btn" data-idel="' + it.id + '">' + PCD.icon('x', 16) + '</button>' +
+          '</div>';
+        wrap.appendChild(r);
+      });
+      wrap.querySelectorAll('[data-it]').forEach(function (inp) { inp.addEventListener('input', function () { const it = data.items.find(function (x) { return x.id === inp.getAttribute('data-it'); }); if (it) it.text = inp.value; }); });
+      wrap.querySelectorAll('[data-ic]').forEach(function (sel) { sel.addEventListener('change', function () { const it = data.items.find(function (x) { return x.id === sel.getAttribute('data-ic'); }); if (it) it.cat = sel.value; }); });
+      wrap.querySelectorAll('[data-idel]').forEach(function (b) { b.addEventListener('click', function () { data.items = data.items.filter(function (x) { return x.id !== b.getAttribute('data-idel'); }); renderItems(); }); });
+      if (PCD.dragdrop && PCD.dragdrop.makeSortable) {
+        if (renderItems._s && renderItems._s.destroy) renderItems._s.destroy();
+        renderItems._s = PCD.dragdrop.makeSortable(wrap, { handle: '.drag-handle', onEnd: function (o, n) { if (o === n) return; const m = data.items.splice(o, 1)[0]; data.items.splice(n, 0, m); renderItems(); } });
+      }
+      const add = PCD.$('#addItem', body);
+      if (add) add.onclick = function () { data.items.push({ id: uid('it'), text: '', cat: '' }); renderItems(); setTimeout(function () { const all = wrap.querySelectorAll('[data-it]'); if (all.length) all[all.length - 1].focus(); }, 20); };
+    }
 
-    const saveBtn = PCD.el('button', { class: 'btn btn-primary', text: t('save'), style: { flex: '1' } });
-    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') });
-    let deleteBtn = null;
-    if (existing) deleteBtn = PCD.el('button', { class: 'btn btn-ghost', text: t('delete'), style: { color: 'var(--danger)' } });
+    function renderDishes() {
+      const wrap = PCD.$('#dishList', body);
+      wrap.innerHTML = '';
+      if (!data.dishes.length) {
+        wrap.innerHTML = '<div class="text-muted text-sm" style="padding:18px;text-align:center;border:1.5px dashed var(--border);border-radius:var(--r-sm);">' + esc(L('chk_prep_empty', 'No dishes yet — add from your menu or by hand.')) + '</div>';
+      }
+      data.dishes.forEach(function (d) {
+        const card = PCD.el('div', { style: { border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', background: 'var(--surface-2)', padding: '10px' } });
+        let comps = '';
+        (d.comps || []).forEach(function (c) {
+          comps += '<div style="display:flex;gap:6px;align-items:center;margin-top:5px;">' +
+            '<span style="color:var(--text-3);">•</span>' +
+            '<input type="text" class="input" data-cc="' + c.id + '" value="' + esc(c.text || '') + '" placeholder="' + esc(L('chk_component_ph', 'Component')) + '" style="flex:1;font-size:13px;">' +
+            '<button class="icon-btn" data-cdel="' + c.id + '">' + PCD.icon('x', 14) + '</button>' +
+          '</div>';
+        });
+        card.innerHTML =
+          '<div style="display:flex;gap:6px;align-items:center;">' +
+            '<button type="button" class="drag-handle" title="' + esc(L('reorder', 'Reorder')) + '" style="cursor:grab;background:transparent;border:0;padding:4px 2px;color:var(--text-3);touch-action:none;flex-shrink:0;"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg></button>' +
+            '<span style="color:var(--brand-700);flex-shrink:0;">' + PCD.icon('chef-hat', 15) + '</span>' +
+            '<input type="text" class="input" data-dd="' + d.id + '" value="' + esc(d.text || '') + '" placeholder="' + esc(L('chk_dish_ph', 'Dish name')) + '" style="flex:1;font-weight:600;">' +
+            '<button class="icon-btn" data-ddel="' + d.id + '" title="' + esc(L('act_delete', 'Delete')) + '">' + PCD.icon('trash', 15) + '</button>' +
+          '</div>' +
+          '<div style="padding-left:24px;">' + comps + '</div>' +
+          '<button class="btn btn-ghost btn-sm" data-caddto="' + d.id + '" style="margin-top:6px;margin-left:24px;font-size:12px;">' + PCD.icon('plus', 13) + ' ' + esc(L('chk_add_component', 'Add component')) + '</button>';
+        wrap.appendChild(card);
+      });
+      wrap.querySelectorAll('[data-dd]').forEach(function (inp) { inp.addEventListener('input', function () { const d = data.dishes.find(function (x) { return x.id === inp.getAttribute('data-dd'); }); if (d) d.text = inp.value; }); });
+      wrap.querySelectorAll('[data-cc]').forEach(function (inp) { inp.addEventListener('input', function () { const c = findComp(inp.getAttribute('data-cc')); if (c) c.text = inp.value; }); });
+      wrap.querySelectorAll('[data-ddel]').forEach(function (b) { b.addEventListener('click', function () { data.dishes = data.dishes.filter(function (x) { return x.id !== b.getAttribute('data-ddel'); }); renderDishes(); }); });
+      wrap.querySelectorAll('[data-cdel]').forEach(function (b) { b.addEventListener('click', function () { const id = b.getAttribute('data-cdel'); data.dishes.forEach(function (d) { d.comps = (d.comps || []).filter(function (c) { return c.id !== id; }); }); renderDishes(); }); });
+      wrap.querySelectorAll('[data-caddto]').forEach(function (b) { b.addEventListener('click', function () { const d = data.dishes.find(function (x) { return x.id === b.getAttribute('data-caddto'); }); if (d) { d.comps = d.comps || []; d.comps.push({ id: uid('comp'), text: '' }); renderDishes(); } }); });
+      if (PCD.dragdrop && PCD.dragdrop.makeSortable) {
+        if (renderDishes._s && renderDishes._s.destroy) renderDishes._s.destroy();
+        renderDishes._s = PCD.dragdrop.makeSortable(wrap, { handle: '.drag-handle', onEnd: function (o, n) { if (o === n) return; const m = data.dishes.splice(o, 1)[0]; data.dishes.splice(n, 0, m); renderDishes(); } });
+      }
+      const addM = PCD.$('#addFromMenu', body);
+      if (addM) addM.onclick = function () { openMenuPicker(function (recipes) {
+        const maps = buildMaps();
+        recipes.forEach(function (r) { data.dishes.push(dishGroupFromRecipe(r, maps)); });
+        renderDishes();
+      }); };
+      const addD = PCD.$('#addDish', body);
+      if (addD) addD.onclick = function () { data.dishes.push({ id: uid('dish'), text: '', comps: [{ id: uid('comp'), text: '' }] }); renderDishes(); };
+    }
+    function findComp(id) { let f = null; data.dishes.forEach(function (d) { (d.comps || []).forEach(function (c) { if (c.id === id) f = c; }); }); return f; }
+
+    render2();
+
+    const saveBtn = PCD.el('button', { class: 'btn btn-primary', text: L('save', 'Save'), style: { flex: '1' } });
+    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: L('cancel', 'Cancel') });
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
-    if (deleteBtn) footer.appendChild(deleteBtn);
-    footer.appendChild(cancelBtn);
-    footer.appendChild(saveBtn);
-
-    const m = PCD.modal.open({
-      title: existing ? (existing.name || 'Template') : (t('checklist_new_template') || 'New Template'),
-      body: body, footer: footer, size: 'md', closable: true
-    });
-
+    footer.appendChild(cancelBtn); footer.appendChild(saveBtn);
+    const m = PCD.modal.open({ title: existing ? (existing.name || L('chk_edit', 'Edit list')) : L('chk_new', 'New list'), body: body, footer: footer, size: 'md', closable: true });
     cancelBtn.addEventListener('click', function () { m.close(); });
-    if (deleteBtn) deleteBtn.addEventListener('click', function () {
-      PCD.modal.confirm({
-        icon: '🗑', iconKind: 'danger', danger: true,
-        title: t('confirm_delete'), text: t('confirm_delete_desc'), okText: t('delete')
-      }).then(function (ok) {
-        if (!ok) return;
-        PCD.store.deleteFromTable('checklistTemplates', existing.id);
-        PCD.toast.success(t('item_deleted'));
-        m.close();
-        setTimeout(function () {
-          const v = PCD.$('#view');
-          if (PCD.router.currentView() === 'checklist') render(v);
-        }, 150);
-      });
-    });
     saveBtn.addEventListener('click', function () {
-      // Read fresh from DOM
-      const nameInp = PCD.$('#tplName', body);
-      if (nameInp) data.name = nameInp.value;
-      body.querySelectorAll('[data-itemtext]').forEach(function (inp) {
-        const idx = parseInt(inp.getAttribute('data-itemtext'), 10);
-        if (data.items[idx]) data.items[idx].text = inp.value;
-      });
-
+      const ni = PCD.$('#tplName', body); if (ni) data.name = ni.value;
       data.name = (data.name || '').trim();
-      if (!data.name) { PCD.toast.error(PCD.i18n.t('toast_name_required')); return; }
-      data.items = data.items.filter(function (it) { return it.text && it.text.trim(); });
-      if (data.items.length === 0) { PCD.toast.error(PCD.i18n.t('toast_add_at_least_one_item')); return; }
+      if (!data.name) { PCD.toast.error(L('toast_name_required', 'Name is required')); return; }
+      if (data.kind === 'prep') {
+        data.dishes = (data.dishes || []).map(function (d) { d.text = (d.text || '').trim(); d.comps = (d.comps || []).filter(function (c) { return c.text && c.text.trim(); }); return d; }).filter(function (d) { return d.text || (d.comps && d.comps.length); });
+        if (!data.dishes.length) { PCD.toast.error(L('chk_need_dish', 'Add at least one dish')); return; }
+        delete data.items;
+      } else {
+        data.items = (data.items || []).filter(function (it) { return it.text && it.text.trim(); });
+        if (!data.items.length) { PCD.toast.error(L('toast_add_at_least_one_item', 'Add at least one item')); return; }
+        delete data.dishes;
+      }
       if (existing) data.id = existing.id;
+      else data.sortIndex = listTemplates().length;
       PCD.store.upsertInTable('checklistTemplates', data, 'tpl');
-      PCD.toast.success(t('saved'));
-      m.close();
-      setTimeout(function () {
-        const v = PCD.$('#view');
-        if (PCD.router.currentView() === 'checklist') render(v);
-      }, 150);
+      PCD.toast.success(L('saved', 'Saved'));
+      m.close(); refreshMain();
     });
   }
 
+  // ============ MENU PICKER (prep auto-fill) ============
+  function openMenuPicker(onPick) {
+    const maps = buildMaps();
+    const menus = listMenus();
+    const dishes = listDishRecipes(maps);
+    const selected = {};
+    const body = PCD.el('div');
+
+    if (!dishes.length && !menus.length) {
+      body.innerHTML = '<div class="text-muted" style="padding:30px 16px;text-align:center;line-height:1.6;">' +
+        '<div style="font-size:30px;margin-bottom:8px;">🍽️</div>' +
+        '<div style="font-weight:600;color:var(--text-1);margin-bottom:4px;">' + esc(L('chk_picker_empty_t', 'No recipes yet')) + '</div>' +
+        '<div style="font-size:13px;">' + esc(L('chk_picker_empty_m', 'Add recipes or a menu first, then pull dishes in here.')) + '</div></div>';
+      const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: L('close', 'Close'), style: { width: '100%' } });
+      const footer = PCD.el('div', { style: { width: '100%' } }); footer.appendChild(closeBtn);
+      const m0 = PCD.modal.open({ title: L('chk_add_from_menu', 'Add from menu'), body: body, footer: footer, size: 'md', closable: true });
+      closeBtn.addEventListener('click', function () { m0.close(); });
+      return;
+    }
+
+    function paint(filter) {
+      const q = (filter || '').toLowerCase();
+      let html = '';
+      if (menus.length) {
+        html += '<div class="text-muted text-sm" style="margin-bottom:6px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;font-size:11px;">' + esc(L('chk_picker_whole_menu', 'Import a whole menu')) + '</div>' +
+          '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;">';
+        menus.forEach(function (mn) {
+          const n = menuDishRecipes(mn, maps).length;
+          html += '<button class="btn btn-outline btn-sm" data-menu="' + mn.id + '">' + PCD.icon('book-open', 13) + ' ' + esc(mn.name || L('menu', 'Menu')) + ' <span class="text-muted">(' + n + ')</span></button>';
+        });
+        html += '</div>';
+      }
+      html += '<div class="field" style="margin-bottom:8px;"><input type="text" class="input" id="dishSearch" value="' + esc(filter || '') + '" placeholder="' + esc(L('chk_picker_search', 'Search dishes...')) + '"></div>';
+      const list = dishes.filter(function (r) { return !q || (r.name || '').toLowerCase().indexOf(q) >= 0; });
+      html += '<div style="max-height:46vh;overflow:auto;">';
+      if (!list.length) html += '<div class="text-muted text-sm" style="padding:18px;text-align:center;">' + esc(L('chk_picker_none', 'No matching dishes')) + '</div>';
+      list.forEach(function (r) {
+        const on = !!selected[r.id];
+        const nc = componentsOfRecipe(r, maps).length;
+        html += '<label style="display:flex;align-items:center;gap:10px;padding:8px 6px;border-bottom:1px solid var(--border);cursor:pointer;">' +
+          '<input type="checkbox" data-pick="' + r.id + '"' + (on ? ' checked' : '') + ' style="width:18px;height:18px;flex-shrink:0;">' +
+          '<span style="flex:1;min-width:0;font-size:14px;font-weight:500;">' + esc(r.name || '') + '</span>' +
+          '<span class="text-muted text-sm">' + nc + ' ' + esc(L('chk_components', 'components')) + '</span>' +
+        '</label>';
+      });
+      html += '</div>';
+      body.innerHTML = html;
+
+      const ds = PCD.$('#dishSearch', body);
+      if (ds) ds.addEventListener('input', function () { paint(this.value); setTimeout(function () { const e = PCD.$('#dishSearch', body); if (e) { e.focus(); e.setSelectionRange(e.value.length, e.value.length); } }, 0); });
+      body.querySelectorAll('[data-pick]').forEach(function (cb) { cb.addEventListener('change', function () { selected[this.getAttribute('data-pick')] = this.checked; updateCount(); }); });
+      body.querySelectorAll('[data-menu]').forEach(function (b) { b.addEventListener('click', function () {
+        const mn = menus.find(function (x) { return x.id === b.getAttribute('data-menu'); });
+        if (!mn) return;
+        const recs = menuDishRecipes(mn, maps);
+        if (!recs.length) { PCD.toast.info(L('chk_menu_no_dishes', 'This menu has no recipe dishes')); return; }
+        onPick(recs); mAll.close();
+      }); });
+    }
+
+    function selectedRecipes() { return dishes.filter(function (r) { return selected[r.id]; }); }
+    function updateCount() { const n = selectedRecipes().length; importBtn.textContent = n ? (L('chk_import_n', 'Import') + ' (' + n + ')') : L('import', 'Import'); importBtn.disabled = !n; }
+
+    paint('');
+    const importBtn = PCD.el('button', { class: 'btn btn-primary', text: L('import', 'Import'), style: { flex: '1' } });
+    importBtn.disabled = true;
+    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: L('close', 'Close') });
+    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
+    footer.appendChild(closeBtn); footer.appendChild(importBtn);
+    const mAll = PCD.modal.open({ title: L('chk_add_from_menu', 'Add from menu'), body: body, footer: footer, size: 'md', closable: true });
+    closeBtn.addEventListener('click', function () { mAll.close(); });
+    importBtn.addEventListener('click', function () { const recs = selectedRecipes(); if (!recs.length) return; onPick(recs); mAll.close(); });
+  }
+
+  // ============ EXPORT ============
   PCD.tools = PCD.tools || {};
-  PCD.tools.checklist = { render: render, openEditor: openTemplateEditor };
+  PCD.tools.checklist = { render: render, openEditor: openEditor };
 })();

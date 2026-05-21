@@ -127,7 +127,10 @@
       "Bash(node -c \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\tools\\\\haccp_logs.js\")",
       "Bash(node -c \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\tools\\\\haccp_receiving.js\")",
       "Bash(stat -c '%y' app/js/tools/whiteboard.js)",
-      "Bash(powershell -NoProfile -Command \"\\(Get-Item 'app/js/tools/whiteboard.js'\\).LastWriteTime.ToString\\('o'\\)\")"
+      "Bash(powershell -NoProfile -Command \"\\(Get-Item 'app/js/tools/whiteboard.js'\\).LastWriteTime.ToString\\('o'\\)\")",
+      "Bash(powershell -Command \"\\(Get-Content 'C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\tools\\\\checklist.js' | Measure-Object -Line\\).Lines\")",
+      "Bash(py --version)",
+      "mcp__Claude_Preview__preview_start"
     ]
   }
 }
