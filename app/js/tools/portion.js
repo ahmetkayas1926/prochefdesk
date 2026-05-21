@@ -44,6 +44,9 @@
     // kafa karıştırıyor." Yeni model: kullanıcı doğrudan her tarif için porsiyon
     // sayısı yazar. Internal default (ilk seçim başlangıç değeri) 50 portion.
     let guestCount = 50;
+    // v2.13.2 — Görünüm modu: 'recipe' (tarif-tarif, varsayılan) | 'category' | 'supplier'
+    // (birleştirilmiş malzeme listesi). Eski Shopping List'in konsolide görünümü buraya taşındı.
+    let viewMode = 'recipe';
 
     view.innerHTML = `
       <div class="page-header">
@@ -135,47 +138,78 @@
       const recipeMap = PCD.recipes.buildRecipeMap();
       const selectedRecipes = recipes.filter(function (r) { return selected.has(r.id); });
 
-      let blocksHtml = '';
-      selectedRecipes.forEach(function (r) {
-        const targetPortions = portionsPerRecipe[r.id] != null ? portionsPerRecipe[r.id] : guestCount;
-        const baseServings = r.servings || 1;
-        const factor = targetPortions / baseServings;
+      // ---- BODY: viewMode'a göre ya tarif-tarif bloklar ya birleştirilmiş liste ----
+      let bodyHtml = '';
+      if (viewMode === 'recipe') {
+        selectedRecipes.forEach(function (r) {
+          const targetPortions = portionsPerRecipe[r.id] != null ? portionsPerRecipe[r.id] : guestCount;
+          const baseServings = r.servings || 1;
+          const factor = targetPortions / baseServings;
 
-        // v2.8.69 — Recipe içindeki sub-recipe'leri ingredient seviyesine düşür.
-        // Tag'lenmiş viaSubRecipe alanı ile satır altında "via Labneh" ipucu gösterilir.
-        const flat = PCD.recipes.flattenIngredients(r, ingMap, recipeMap);
-        let ingsHtml = '';
-        flat.forEach(function (item, idx) {
-          const name = item.ingredient && item.ingredient.name || '?';
-          const baseAmt = Number(item.amount) || 0;
-          const scaledAmt = baseAmt * factor;
-          const viaHint = item.viaSubRecipe
-            ? '<div style="font-size:11px;color:var(--text-3);font-style:italic;margin-top:2px;">via ' + PCD.escapeHtml(item.viaSubRecipe) + '</div>'
-            : '';
-          ingsHtml +=
-            '<tr>' +
-              '<td style="padding:6px 10px;border-bottom:1px solid var(--border);">' + PCD.escapeHtml(name) + viaHint + '</td>' +
-              '<td style="padding:6px 10px;border-bottom:1px solid var(--border);text-align:end;font-weight:700;font-family:var(--font-mono);color:var(--brand-700);white-space:nowrap;" data-amt-cell="' + r.id + ':' + idx + '" data-base-amt="' + baseAmt + '" data-unit="' + PCD.escapeHtml(item.unit || '') + '">' +
-                PCD.fmtNumber(scaledAmt) + ' ' + PCD.escapeHtml(item.unit || '') +
-              '</td>' +
-            '</tr>';
-        });
+          // v2.8.69 — Recipe içindeki sub-recipe'leri ingredient seviyesine düşür.
+          const flat = PCD.recipes.flattenIngredients(r, ingMap, recipeMap);
+          let ingsHtml = '';
+          flat.forEach(function (item, idx) {
+            const name = item.ingredient && item.ingredient.name || '?';
+            const baseAmt = Number(item.amount) || 0;
+            const scaledAmt = baseAmt * factor;
+            const viaHint = item.viaSubRecipe
+              ? '<div style="font-size:11px;color:var(--text-3);font-style:italic;margin-top:2px;">via ' + PCD.escapeHtml(item.viaSubRecipe) + '</div>'
+              : '';
+            ingsHtml +=
+              '<tr>' +
+                '<td style="padding:6px 10px;border-bottom:1px solid var(--border);">' + PCD.escapeHtml(name) + viaHint + '</td>' +
+                '<td style="padding:6px 10px;border-bottom:1px solid var(--border);text-align:end;font-weight:700;font-family:var(--font-mono);color:var(--brand-700);white-space:nowrap;" data-amt-cell="' + r.id + ':' + idx + '" data-base-amt="' + baseAmt + '" data-unit="' + PCD.escapeHtml(item.unit || '') + '">' +
+                  PCD.fmtNumber(scaledAmt) + ' ' + PCD.escapeHtml(item.unit || '') +
+                '</td>' +
+              '</tr>';
+          });
 
-        blocksHtml +=
-          '<div class="card mb-3" data-recipe-block="' + r.id + '" style="padding:14px;">' +
-            '<div class="flex items-center justify-between mb-2" style="flex-wrap:wrap;gap:8px;">' +
-              '<div style="font-weight:700;font-size:16px;">' + PCD.escapeHtml(r.name) + '</div>' +
-              '<div class="flex items-center gap-2">' +
-                '<input type="number" class="input" data-rscale="' + r.id + '" value="' + targetPortions + '" min="1" step="1" style="width:80px;text-align:center;font-weight:700;">' +
-                '<span class="text-muted text-sm">' + t('pc_portions') + '</span>' +
-                '<span class="text-muted text-sm">·</span>' +
-                '<span style="font-weight:700;color:var(--brand-700);" data-recipe-cost="' + r.id + '">$0</span>' +
+          bodyHtml +=
+            '<div class="card mb-3" data-recipe-block="' + r.id + '" style="padding:14px;">' +
+              '<div class="flex items-center justify-between mb-2" style="flex-wrap:wrap;gap:8px;">' +
+                '<div style="font-weight:700;font-size:16px;">' + PCD.escapeHtml(r.name) + '</div>' +
+                '<div class="flex items-center gap-2">' +
+                  '<input type="number" class="input" data-rscale="' + r.id + '" value="' + targetPortions + '" min="1" step="1" style="width:80px;text-align:center;font-weight:700;">' +
+                  '<span class="text-muted text-sm">' + t('pc_portions') + '</span>' +
+                  '<span class="text-muted text-sm">·</span>' +
+                  '<span style="font-weight:700;color:var(--brand-700);" data-recipe-cost="' + r.id + '">$0</span>' +
+                '</div>' +
               '</div>' +
-            '</div>' +
-            '<div class="text-muted text-sm mb-2" data-recipe-factor="' + r.id + '">' + t('pc_factor_from_base', { factor: factor.toFixed(2), n: baseServings }) + '</div>' +
-            '<table style="width:100%;border-collapse:collapse;font-size:14px;">' + ingsHtml + '</table>' +
+              '<div class="text-muted text-sm mb-2" data-recipe-factor="' + r.id + '">' + t('pc_factor_from_base', { factor: factor.toFixed(2), n: baseServings }) + '</div>' +
+              '<table style="width:100%;border-collapse:collapse;font-size:14px;">' + ingsHtml + '</table>' +
+            '</div>';
+        });
+      } else {
+        // v2.13.2 — Birleştirilmiş görünüm: kompakt porsiyon inputları + gruplu malzeme listesi
+        const inputsHtml =
+          '<div class="card mb-3" style="padding:14px;">' +
+            '<div style="font-weight:700;font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">' + t('pc_step2') + '</div>' +
+            selectedRecipes.map(function (r) {
+              const target = portionsPerRecipe[r.id] != null ? portionsPerRecipe[r.id] : guestCount;
+              return '<div class="flex items-center" style="justify-content:space-between;padding:6px 0;gap:10px;">' +
+                '<div style="flex:1;min-width:0;font-weight:600;font-size:14px;">' + PCD.escapeHtml(r.name) + '</div>' +
+                '<input type="number" class="input" data-rscale="' + r.id + '" value="' + target + '" min="1" step="1" style="width:80px;text-align:center;font-weight:700;">' +
+                '<span class="text-muted text-sm">' + t('pc_portions') + '</span>' +
+              '</div>';
+            }).join('') +
           '</div>';
-      });
+        const init = consolidateRows(selectedRecipes, portionsPerRecipe, guestCount, ingMap, recipeMap);
+        bodyHtml = inputsHtml +
+          '<div class="card" style="padding:14px;">' +
+            '<div style="font-weight:700;font-size:14px;margin-bottom:10px;">' + PCD.escapeHtml(t('pc_consolidated', 'Consolidated ingredients')) + '</div>' +
+            '<div id="pcConsList">' + renderGroupsHtml(groupRows(init.rows, viewMode, t), viewMode) + '</div>' +
+          '</div>';
+      }
+
+      // ---- Görünüm geçiş düğmeleri (segmented) ----
+      const views = [['recipe', 'pc_view_recipe', 'By recipe'], ['category', 'pc_view_category', 'By category'], ['supplier', 'pc_view_supplier', 'By supplier']];
+      const toggleHtml =
+        '<div class="flex gap-1 mt-3" style="flex-wrap:wrap;">' +
+          views.map(function (v) {
+            return '<button class="btn btn-sm ' + (viewMode === v[0] ? 'btn-primary' : 'btn-outline') + '" data-pcview="' + v[0] + '">' + PCD.escapeHtml(t(v[1], v[2])) + '</button>';
+          }).join('') +
+        '</div>';
 
       resultEl.innerHTML =
         '<div class="card mb-3" style="padding:16px;background:linear-gradient(135deg,var(--brand-50),var(--surface));">' +
@@ -186,14 +220,23 @@
             '<div><div class="text-muted text-sm">' + t('pc_stat_total_cost') + '</div><div style="font-weight:700;font-size:20px;color:var(--brand-700);" data-stat-total-cost>$0</div></div>' +
             '<div><div class="text-muted text-sm">' + (t('pc_stat_avg_per_portion') || t('pc_stat_cost_per_guest') || 'Avg / portion') + '</div><div style="font-weight:700;font-size:20px;" data-stat-cost-per-guest>$0</div></div>' +
           '</div>' +
+          toggleHtml +
           '<div class="flex gap-2 mt-3" style="flex-wrap:wrap;">' +
             '<button class="btn btn-primary" id="pcPrint">' + PCD.icon('print', 16) + ' <span>' + t('pc_print') + '</span></button>' +
             '<button class="btn btn-outline" id="pcShare">' + PCD.icon('share', 16) + ' <span>' + t('pc_share') + '</span></button>' +
           '</div>' +
         '</div>' +
-        blocksHtml;
+        '<div id="pcBody">' + bodyHtml + '</div>';
 
-      // Wire per-recipe scale inputs - DEBOUNCED so user can type multi-digit
+      // Görünüm geçişi → tam yeniden çiz
+      PCD.on(resultEl, 'click', '[data-pcview]', function () {
+        const v = this.getAttribute('data-pcview');
+        if (v === viewMode) return;
+        viewMode = v;
+        refreshResult();
+      });
+
+      // Per-recipe scale inputs — recipe modunda surgical, consolidated modunda liste yeniden çizilir
       PCD.on(resultEl, 'input', '[data-rscale]', function () {
         const rid = this.getAttribute('data-rscale');
         const raw = this.value;
@@ -202,8 +245,8 @@
         const val = parseInt(raw, 10);
         if (isNaN(val) || val < 1) return;
         portionsPerRecipe[rid] = val;
-        // Surgical update — DO NOT rebuild DOM, do not steal focus
-        updateResult();
+        // Surgical update — input focus korunur (DOM yeniden kurulmaz)
+        if (viewMode === 'recipe') updateResult(); else updateConsolidated();
       });
 
       // v2.8.92 — Print/share/shop çağrılarına `guestCount` yerine totalPortions
@@ -215,14 +258,18 @@
         }, 0);
       }
       PCD.$('#pcPrint', resultEl).addEventListener('click', function () {
-        printScaled(selectedRecipes, _totalPortionsNow(), portionsPerRecipe, ingMap);
+        if (viewMode === 'recipe') {
+          printScaled(selectedRecipes, _totalPortionsNow(), portionsPerRecipe, ingMap);
+        } else {
+          printConsolidated(selectedRecipes, portionsPerRecipe, guestCount, ingMap, recipeMap, viewMode);
+        }
       });
       PCD.$('#pcShare', resultEl).addEventListener('click', function () {
         shareScaled(selectedRecipes, _totalPortionsNow(), portionsPerRecipe, ingMap);
       });
 
       // Initial value computation
-      updateResult();
+      if (viewMode === 'recipe') updateResult(); else updateConsolidated();
     }
 
     function updateResult() {
@@ -278,6 +325,26 @@
       // porsiyon sayıları olabilir.
       const statCpg = resultEl.querySelector('[data-stat-cost-per-guest]');
       if (statCpg) statCpg.textContent = PCD.fmtMoney(totalPortions > 0 ? totalCost / totalPortions : 0);
+    }
+
+    // v2.13.2 — Consolidated görünüm güncellemesi: porsiyon değişince listeyi + stat'ları
+    // yeniden hesapla. Sadece #pcConsList innerHTML değişir (inputlar dokunulmaz → focus korunur).
+    function updateConsolidated() {
+      const resultEl = PCD.$('#pcResult', view);
+      if (!resultEl || selected.size === 0) return;
+      const ingMap = {};
+      PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
+      const recipeMap = PCD.recipes.buildRecipeMap();
+      const selectedRecipes = recipes.filter(function (r) { return selected.has(r.id); });
+      const res = consolidateRows(selectedRecipes, portionsPerRecipe, guestCount, ingMap, recipeMap);
+      const listEl = resultEl.querySelector('#pcConsList');
+      if (listEl) listEl.innerHTML = renderGroupsHtml(groupRows(res.rows, viewMode, t), viewMode);
+      let totalPortions = 0;
+      selectedRecipes.forEach(function (r) { totalPortions += (portionsPerRecipe[r.id] != null ? portionsPerRecipe[r.id] : guestCount); });
+      const sr = resultEl.querySelector('[data-stat-recipes]'); if (sr) sr.textContent = selectedRecipes.length;
+      const stp = resultEl.querySelector('[data-stat-total-portions]'); if (stp) stp.textContent = totalPortions;
+      const stc = resultEl.querySelector('[data-stat-total-cost]'); if (stc) stc.textContent = PCD.fmtMoney(res.total);
+      const sa = resultEl.querySelector('[data-stat-cost-per-guest]'); if (sa) sa.textContent = PCD.fmtMoney(totalPortions > 0 ? res.total / totalPortions : 0);
     }
 
     // Public refresh: rebuilds full DOM (used when selection changes)
@@ -462,7 +529,7 @@
       window.open('https://wa.me/?text=' + encodeURIComponent(getText()), '_blank'); m.close();
     });
     PCD.$('#shEmail', body).addEventListener('click', function () {
-      window.location.href = 'mailto:?subject=' + encodeURIComponent('Scaled recipes — ' + guestCount + ' guests') + '&body=' + encodeURIComponent(getText());
+      window.location.href = 'mailto:?subject=' + encodeURIComponent('Scaled recipes — ' + totalPortions + ' portions') + '&body=' + encodeURIComponent(getText());
       m.close();
     });
     PCD.$('#shCopy', body).addEventListener('click', function () {
@@ -475,6 +542,104 @@
         navigator.clipboard.writeText(getText()).then(function () { PCD.toast.success(PCD.i18n.t('toast_copied')); m.close(); });
       }
     });
+  }
+
+  // ============ CONSOLIDATED INGREDIENTS (v2.13.2 — Shopping'den taşındı) ============
+  // Seçili tariflerin tüm malzemelerini (alt-tarifler flatten edilir) tek listede
+  // birleştirir. key: ingredientId|unit → toplam miktar + toplam maliyet.
+  // Maliyet: amt × pricePerUnit (birim farklıysa convertUnit). Eski shopping.js formülü.
+  function consolidateRows(selectedRecipes, portionsMap, defaultPortions, ingMap, recipeMap) {
+    const merged = {};
+    selectedRecipes.forEach(function (r) {
+      const target = portionsMap[r.id] != null ? portionsMap[r.id] : defaultPortions;
+      const factor = target / (r.servings || 1);
+      const flat = PCD.recipes.flattenIngredients(r, ingMap, recipeMap, { scale: factor });
+      flat.forEach(function (item) {
+        const ing = item.ingredient;
+        if (!ing) return;
+        const unit = item.unit || ing.unit || '';
+        const key = item.ingredientId + '|' + unit;
+        if (!merged[key]) merged[key] = { ingredient: ing, unit: unit, totalAmount: 0, totalCost: 0 };
+        const amt = Number(item.amount) || 0;
+        merged[key].totalAmount += amt;
+        let cost = amt * (ing.pricePerUnit || 0);
+        if (item.unit && ing.unit && item.unit !== ing.unit) {
+          try { cost = PCD.convertUnit(amt, item.unit, ing.unit) * (ing.pricePerUnit || 0); } catch (e) {}
+        }
+        merged[key].totalCost += cost;
+      });
+    });
+    const rows = Object.keys(merged).map(function (k) { return merged[k]; });
+    const total = rows.reduce(function (a, c) { return a + c.totalCost; }, 0);
+    return { rows: rows, total: total };
+  }
+
+  function groupRows(rows, groupBy, t) {
+    const groups = {};
+    rows.forEach(function (c) {
+      let key;
+      if (groupBy === 'supplier') key = c.ingredient.supplier || t('pc_no_supplier', '(no supplier)');
+      else key = t(c.ingredient.category || 'cat_other') || 'Other';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(c);
+    });
+    return groups;
+  }
+
+  function renderGroupsHtml(groups, groupBy) {
+    return Object.keys(groups).sort().map(function (g) {
+      const rowsHtml = groups[g].map(function (c) {
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:4px;background:var(--surface);font-size:14px;">' +
+          '<div style="flex:1;min-width:0;">' +
+            '<div style="font-weight:600;">' + PCD.escapeHtml(c.ingredient.name) + '</div>' +
+            ((c.ingredient.supplier && groupBy !== 'supplier') ? '<div style="font-size:11px;color:var(--text-3);">' + PCD.escapeHtml(c.ingredient.supplier) + '</div>' : '') +
+          '</div>' +
+          '<div style="font-family:var(--font-mono);font-weight:600;text-align:end;white-space:nowrap;">' +
+            '<div>' + PCD.fmtNumber(c.totalAmount) + ' ' + PCD.escapeHtml(c.unit) + '</div>' +
+            '<div style="font-size:11px;color:var(--text-3);font-weight:500;">' + PCD.fmtMoney(c.totalCost) + '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+      return '<div style="margin-bottom:14px;">' +
+        '<div style="font-size:12px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">' + PCD.escapeHtml(g) + '</div>' +
+        rowsHtml +
+      '</div>';
+    }).join('');
+  }
+
+  // Print: birleştirilmiş listenin A4 çıktısı (gruplu + toplam).
+  function printConsolidated(selectedRecipes, portionsMap, defaultPortions, ingMap, recipeMap, groupBy) {
+    const t = PCD.i18n.t;
+    const res = consolidateRows(selectedRecipes, portionsMap, defaultPortions, ingMap, recipeMap);
+    const groups = groupRows(res.rows, groupBy, t);
+    const totalPortions = selectedRecipes.reduce(function (s, r) { return s + (portionsMap[r.id] != null ? portionsMap[r.id] : defaultPortions); }, 0);
+    const groupsHtml = Object.keys(groups).sort().map(function (g) {
+      const rows = groups[g].map(function (c) {
+        return '<tr><td>' + PCD.escapeHtml(c.ingredient.name) + '</td><td class="a">' + PCD.fmtNumber(c.totalAmount) + ' ' + PCD.escapeHtml(c.unit) + '</td><td class="a">' + PCD.fmtMoney(c.totalCost) + '</td></tr>';
+      }).join('');
+      return '<div class="grp"><div class="grp-h">' + PCD.escapeHtml(g) + '</div><table class="t"><tbody>' + rows + '</tbody></table></div>';
+    }).join('');
+    const title = t('pc_consolidated', 'Consolidated ingredients');
+    const html =
+      '<style>' +
+        '@page { size: A4; margin: 12mm; }' +
+        'body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; color: #1a1a1a; }' +
+        '.h { border-bottom: 3px solid #16a34a; padding-bottom: 10px; margin-bottom: 16px; display:flex; justify-content:space-between; align-items:baseline; }' +
+        '.h h1 { margin:0; font-size: 22pt; color:#16a34a; }' +
+        '.h .m { font-size: 11pt; color:#666; }' +
+        '.grp { break-inside: avoid; page-break-inside: avoid; margin-bottom: 12px; }' +
+        '.grp-h { font-size: 11pt; font-weight: 800; color:#16a34a; text-transform:uppercase; letter-spacing:0.04em; border-bottom:1px solid #16a34a; padding-bottom:3px; margin-bottom:4px; }' +
+        '.t { width:100%; border-collapse:collapse; font-size:10pt; }' +
+        '.t td { padding:3px 0; border-bottom:1px solid #eee; }' +
+        '.t .a { text-align:right; font-family:monospace; font-weight:700; white-space:nowrap; padding-left:10px; }' +
+        '.tot { margin-top:14px; padding:10px 14px; background:#f0fdf4; border-radius:8px; display:flex; justify-content:space-between; font-size:11pt; font-weight:700; }' +
+      '</style>' +
+      '<div class="h"><h1>' + PCD.escapeHtml(title) + '</h1>' +
+        '<div class="m">' + totalPortions + ' ' + PCD.escapeHtml(t('portion_total_portions_label') || 'total portions') + ' · ' + selectedRecipes.length + ' ' + PCD.escapeHtml(t('portion_recipes_label') || 'recipes') + ' · ' + new Date().toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || 'en') + '</div>' +
+      '</div>' +
+      groupsHtml +
+      '<div class="tot"><span>' + PCD.escapeHtml(t('label_total_food_cost') || 'Total food cost') + '</span><span style="color:#16a34a;">' + PCD.fmtMoney(res.total) + '</span></div>';
+    PCD.print(html, title);
   }
 
   PCD.tools = PCD.tools || {};

@@ -194,125 +194,102 @@
   // ============ BUILT-IN TEMPLATES (block format) ============
   // v2.11.0 — 6 profesyonel template, hepsi block diziği. Live preview + print
   // aynı block list'i render eder (WYSIWYG).
+  // v2.13.3 — 6 yeniden tasarlanmış template. Yeni mutfak block tiplerini
+  // (doneness ladder, allergen strip, time range, step list) öne çıkarır;
+  // renkler + boyut + layout dengeli, tek A4'e sığar, pratik servis panoları.
   const TEMPLATES = [
+    // 1) Tonight's Service — kapak sayısı + diyet sayaçları + 86 list + spesyaller
     {
-      id: 'tonight_service',
-      labelKey: 'wb_tpl_tonight',
-      label: "Tonight's Service Board",
-      paper: 'A4', orient: 'landscape',
-      title: "TONIGHT'S SERVICE",
+      id: 'tonight_service', labelKey: 'wb_tpl_tonight', label: "Tonight's Service",
+      paper: 'A4', orient: 'landscape', title: "TONIGHT'S SERVICE",
       blocks: [
-        { type: 'section_header', layout: 'full',  style: { color: 'forest', size: 'xl', align: 'center' }, content: { text: "TONIGHT'S SERVICE" } },
-        { type: 'big_number',     layout: 'half',  style: { color: 'white',  size: 'xl', align: 'center' }, content: { value: '0', label: 'COVERS', sub: '' } },
-        { type: 'big_number',     layout: 'half',  style: { color: 'amber',  size: 'xl', align: 'center' }, content: { value: '0', label: 'WALK-INS', sub: '' } },
-        { type: 'big_number',     layout: 'half',  style: { color: 'mint',   size: 'lg', align: 'center' }, content: { value: '0', label: 'VEGAN', sub: '' } },
-        { type: 'big_number',     layout: 'half',  style: { color: 'blue',   size: 'lg', align: 'center' }, content: { value: '0', label: 'GF / DF', sub: '' } },
-        { type: 'alert',          layout: 'full',  style: { color: 'steak',  size: 'md', align: 'center' }, content: { text: '86 LIST — UPDATE HERE', icon: '⚠' } },
-        { type: 'section_header', layout: 'full',  style: { color: 'katmer', size: 'md', align: 'left' },   content: { text: 'SPECIALS' } },
-        { type: 'text',           layout: 'full',  style: { color: 'cream',  size: 'md', align: 'left' },   content: { text: '—' } },
+        { type: 'section_header', layout: 'full',  style: { color: 'forest', size: 'xl',  align: 'center' }, content: { text: "TONIGHT'S SERVICE" } },
+        { type: 'big_number',     layout: 'half',  style: { color: 'brand',  size: 'xxl', align: 'center' }, content: { value: '0', label: 'COVERS BOOKED', sub: '' } },
+        { type: 'big_number',     layout: 'half',  style: { color: 'amber',  size: 'xxl', align: 'center' }, content: { value: '0', label: 'WALK-IN ROOM', sub: '' } },
+        { type: 'big_number',     layout: 'third', style: { color: 'mint',   size: 'lg',  align: 'center' }, content: { value: '0', label: 'VEGAN' } },
+        { type: 'big_number',     layout: 'third', style: { color: 'blue',   size: 'lg',  align: 'center' }, content: { value: '0', label: 'GF / DF' } },
+        { type: 'big_number',     layout: 'third', style: { color: 'red',    size: 'lg',  align: 'center' }, content: { value: '0', label: 'ALLERGY' } },
+        { type: 'divider',        layout: 'full',  style: { color: 'steak',  size: 'sm',  align: 'center' }, content: { label: '86 · OUT OF STOCK' } },
+        { type: 'checklist',      layout: 'full',  style: { color: 'white',  size: 'md',  align: 'left' },   content: { items: [ { text: '', done: false }, { text: '', done: false }, { text: '', done: false } ] } },
+        { type: 'divider',        layout: 'full',  style: { color: 'forest', size: 'sm',  align: 'center' }, content: { label: "TONIGHT'S SPECIALS" } },
+        { type: 'text',           layout: 'full',  style: { color: 'cream',  size: 'md',  align: 'left' },   content: { text: '' } },
       ],
     },
+    // 2) Steak Doneness Guide — gradient doneness ladder (grill istasyonu)
     {
-      id: 'hot_line_pro',
-      labelKey: 'wb_tpl_hot_line',
-      label: 'Hot Line · Station Map',
-      paper: 'A4', orient: 'landscape',
-      title: 'HOT LINE STATIONS',
+      id: 'doneness_guide', labelKey: 'wb_tpl_doneness', label: 'Steak Doneness Guide',
+      paper: 'A4', orient: 'landscape', title: 'STEAK — DONENESS GUIDE',
       blocks: [
-        { type: 'section_header', layout: 'full', style: { color: 'dark',   size: 'lg', align: 'center' }, content: { text: 'HOT LINE — STATION MAP' } },
-        { type: 'section_header', layout: 'full', style: { color: 'steak',  size: 'md', align: 'left' },   content: { text: 'SAUTÉ' } },
-        { type: 'kv',             layout: 'full', style: { color: 'white',  size: 'md', align: 'left' },   content: { pairs: [
-          { key: 'Proteins', value: 'Lamb · Beef · Chicken' },
-          { key: 'Sauces',   value: 'Jus · Demi · Beurre' },
-          { key: 'Garnish',  value: 'Microgreens · Herbs' },
+        { type: 'section_header', layout: 'full', style: { color: 'steak', size: 'xl', align: 'center' }, content: { text: 'STEAK — DONENESS GUIDE' } },
+        { type: 'doneness',       layout: 'full', style: { color: 'white', size: 'lg', align: 'center' }, content: { levels: [
+          { label: 'RARE', temp: '46-49°C' }, { label: 'MED-RARE', temp: '52-54°C' }, { label: 'MEDIUM', temp: '57-60°C' }, { label: 'MED-WELL', temp: '63-66°C' }, { label: 'WELL', temp: '70°C+' },
         ] } },
-        { type: 'section_header', layout: 'full', style: { color: 'katmer', size: 'md', align: 'left' },   content: { text: 'GRILL' } },
-        { type: 'kv',             layout: 'full', style: { color: 'white',  size: 'md', align: 'left' },   content: { pairs: [
-          { key: 'Proteins', value: 'Steak · Skewers' },
-          { key: 'Sauces',   value: 'Chimichurri · Compound butter' },
-          { key: 'Garnish',  value: 'Lemon · Coal salt' },
+        { type: 'kv',             layout: 'full', style: { color: 'cream', size: 'md', align: 'left' }, content: { pairs: [
+          { key: 'Rest time',  value: '⅓ of cook time · min 3 min' },
+          { key: 'Carryover',  value: '+2-3°C after pull' },
+          { key: 'Probe spot', value: 'Thickest centre · avoid bone' },
         ] } },
-        { type: 'section_header', layout: 'full', style: { color: 'forest', size: 'md', align: 'left' },   content: { text: 'PASS' } },
-        { type: 'kv',             layout: 'full', style: { color: 'cream',  size: 'md', align: 'left' },   content: { pairs: [
-          { key: 'Lead',           value: 'Head Chef' },
-          { key: 'Final touches',  value: 'Dressings · Plating tools' },
-        ] } },
+        { type: 'alert',          layout: 'full', style: { color: 'amber', size: 'md', align: 'center' }, content: { text: 'Probe every steak · Calibrate weekly', icon: '🌡️' } },
       ],
     },
+    // 3) Allergen Awareness — allergen icon strip + tonight's flag table
     {
-      id: 'cook_temps',
-      labelKey: 'wb_tpl_cook_temps',
-      label: 'Cook Times · Core Temps',
-      paper: 'A4', orient: 'landscape',
-      title: 'COOK TIMES & CORE TEMPS',
+      id: 'allergen_board', labelKey: 'wb_tpl_allergen', label: 'Allergen Board',
+      paper: 'A4', orient: 'landscape', title: 'ALLERGEN AWARENESS',
+      blocks: [
+        { type: 'alert',          layout: 'full', style: { color: 'steak', size: 'xl', align: 'center' }, content: { text: 'ALLERGEN AWARENESS', icon: '⚠' } },
+        { type: 'allergen_strip', layout: 'full', style: { color: 'cream', size: 'md', align: 'center' }, content: { active: [] } },
+        { type: 'table',          layout: 'full', style: { color: 'white', size: 'md', align: 'left' }, content: {
+          headers: ['Table', 'Allergen', 'Dish affected', 'Action'],
+          rows: [ ['', '', '', ''], ['', '', '', ''], ['', '', '', ''] ],
+        } },
+        { type: 'alert',          layout: 'full', style: { color: 'katmer', size: 'md', align: 'center' }, content: { text: 'CROSS-CONTACT: clean board · fresh oil · new gloves', icon: '🧤' } },
+      ],
+    },
+    // 4) Prep Timeline — time range bantları + step list (AM/PM akış)
+    {
+      id: 'prep_timeline', labelKey: 'wb_tpl_prep_timeline', label: 'Prep Timeline',
+      paper: 'A4', orient: 'portrait', title: 'PREP TIMELINE',
+      blocks: [
+        { type: 'section_header', layout: 'full', style: { color: 'forest', size: 'lg', align: 'center' }, content: { text: 'PREP TIMELINE — TODAY' } },
+        { type: 'time_range',     layout: 'full', style: { color: 'forest', size: 'md', align: 'center' }, content: { start: '06:00', end: '12:00', label: 'AM PREP' } },
+        { type: 'step_list',      layout: 'full', style: { color: 'white',  size: 'md', align: 'left' }, content: { items: [ { text: 'Stocks & broths on' }, { text: 'Sauces & dressings' }, { text: 'Protein portioning' }, { text: 'Garnish & herbs' } ] } },
+        { type: 'divider',        layout: 'full', style: { color: 'reheat', size: 'sm', align: 'center' }, content: { label: 'SERVICE SET-UP' } },
+        { type: 'time_range',     layout: 'full', style: { color: 'reheat', size: 'md', align: 'center' }, content: { start: '16:00', end: '17:30', label: 'PM SET-UP' } },
+        { type: 'step_list',      layout: 'full', style: { color: 'white',  size: 'md', align: 'left' }, content: { items: [ { text: 'Restock the line' }, { text: 'Polish plates & cutlery' }, { text: 'Pre-service brief' } ] } },
+      ],
+    },
+    // 5) Station Mise en Place — istasyon istasyon kontrol listeleri
+    {
+      id: 'mise_stations', labelKey: 'wb_tpl_mise', label: 'Station Mise en Place',
+      paper: 'A4', orient: 'portrait', title: 'MISE EN PLACE',
+      blocks: [
+        { type: 'section_header', layout: 'full', style: { color: 'dark',   size: 'lg', align: 'center' }, content: { text: 'MISE EN PLACE — CHECK' } },
+        { type: 'divider',        layout: 'full', style: { color: 'forest', size: 'sm', align: 'center' }, content: { label: 'COLD · GARDE MANGER' } },
+        { type: 'checklist',      layout: 'full', style: { color: 'white',  size: 'md', align: 'left' }, content: { items: [ { text: 'Salads washed & spun', done: false }, { text: 'Dressings labelled & dated', done: false }, { text: 'Cold proteins portioned', done: false } ] } },
+        { type: 'divider',        layout: 'full', style: { color: 'steak',  size: 'sm', align: 'center' }, content: { label: 'HOT · SAUTÉ / GRILL' } },
+        { type: 'checklist',      layout: 'full', style: { color: 'white',  size: 'md', align: 'left' }, content: { items: [ { text: 'Sauces hot & seasoned', done: false }, { text: 'Pans & oil ready', done: false }, { text: 'Proteins tempered', done: false } ] } },
+        { type: 'divider',        layout: 'full', style: { color: 'katmer', size: 'sm', align: 'center' }, content: { label: 'PASS' } },
+        { type: 'checklist',      layout: 'full', style: { color: 'white',  size: 'md', align: 'left' }, content: { items: [ { text: 'Plates warm & wiped', done: false }, { text: 'Garnish station full', done: false }, { text: 'Dockets / printer ready', done: false } ] } },
+      ],
+    },
+    // 6) Cook Times & Core Temps — referans tablo + alert
+    {
+      id: 'cook_temps', labelKey: 'wb_tpl_cook_temps', label: 'Cook Times & Core Temps',
+      paper: 'A4', orient: 'landscape', title: 'COOK TIMES & CORE TEMPS',
       blocks: [
         { type: 'section_header', layout: 'full', style: { color: 'forest', size: 'xl', align: 'center' }, content: { text: 'COOK TIMES & CORE TEMPS' } },
-        { type: 'table',          layout: 'full', style: { color: 'white',  size: 'md', align: 'left' },   content: {
-          headers: ['Protein', 'Time', 'Core °C', 'Notes'],
+        { type: 'table',          layout: 'full', style: { color: 'white',  size: 'md', align: 'left' }, content: {
+          headers: ['Protein', 'Method', 'Core °C', 'Notes'],
           rows: [
-            ['Beef',    '8 min',  '63°C', 'Rest 2 min'],
-            ['Lamb',    '12 min', '65°C', 'Rest 3 min'],
-            ['Chicken', '8 min',  '75°C', 'Probe before serve'],
-            ['Fish',    '6 min',  '63°C', 'Internal only'],
+            ['Beef',    'Sear + rest',   '63°C', 'Medium · rest 3 min'],
+            ['Lamb',    'Roast',         '65°C', 'Rest 4 min'],
+            ['Chicken', 'Grill / roast', '75°C', 'Probe every piece'],
+            ['Pork',    'Roast',         '71°C', 'Rest 3 min'],
+            ['Fish',    'Pan / steam',   '63°C', 'Just-set centre'],
           ],
         } },
-        { type: 'alert',          layout: 'full', style: { color: 'amber',  size: 'md', align: 'center' }, content: { text: 'Calibrate probes weekly · Always test before service', icon: '⚠' } },
-      ],
-    },
-    {
-      id: 'allergen_alert',
-      labelKey: 'wb_tpl_allergen',
-      label: 'Allergen Alert Board',
-      paper: 'A4', orient: 'landscape',
-      title: 'ALLERGEN ALERTS',
-      blocks: [
-        { type: 'alert',          layout: 'full', style: { color: 'steak',  size: 'xl', align: 'center' }, content: { text: '⚠ ALLERGEN ALERTS — TONIGHT', icon: '⚠' } },
-        { type: 'table',          layout: 'full', style: { color: 'white',  size: 'md', align: 'left' },   content: {
-          headers: ['Table', 'Allergen', 'Dish affected', 'Action'],
-          rows: [
-            ['', '', '', ''],
-            ['', '', '', ''],
-            ['', '', '', ''],
-          ],
-        } },
-        { type: 'alert',          layout: 'full', style: { color: 'katmer', size: 'md', align: 'center' }, content: { text: 'CROSS-CONTACT: Clean board · Fresh oil · New gloves', icon: '⚠' } },
-      ],
-    },
-    {
-      id: 'prep_schedule',
-      labelKey: 'wb_tpl_prep',
-      label: 'Prep Schedule · Today',
-      paper: 'A4', orient: 'portrait',
-      title: 'PREP SCHEDULE',
-      blocks: [
-        { type: 'section_header', layout: 'full', style: { color: 'forest', size: 'lg', align: 'center' }, content: { text: 'PREP SCHEDULE — TODAY' } },
-        { type: 'checklist',      layout: 'full', style: { color: 'white',  size: 'md', align: 'left' },   content: { items: [
-          { text: '09:00 — Stocks & broths',       done: false },
-          { text: '10:00 — Sauces & dressings',    done: false },
-          { text: '11:00 — Protein portioning',    done: false },
-          { text: '12:00 — Garnish & herbs',       done: false },
-          { text: '17:30 — Service setup',         done: false },
-        ] } },
-        { type: 'kv',             layout: 'full', style: { color: 'cream',  size: 'md', align: 'left' },   content: { pairs: [
-          { key: 'Lead chef',  value: '—' },
-          { key: 'Sous',       value: '—' },
-        ] } },
-      ],
-    },
-    {
-      id: 'service_recap',
-      labelKey: 'wb_tpl_recap',
-      label: 'Service Recap · KPIs',
-      paper: 'A4', orient: 'landscape',
-      title: 'SERVICE RECAP',
-      blocks: [
-        { type: 'section_header', layout: 'full', style: { color: 'dark',   size: 'lg', align: 'center' }, content: { text: 'SERVICE RECAP — TONIGHT' } },
-        { type: 'big_number',     layout: 'half', style: { color: 'white',  size: 'xl', align: 'center' }, content: { value: '0', label: 'COVERS', sub: '' } },
-        { type: 'big_number',     layout: 'half', style: { color: 'mint',   size: 'xl', align: 'center' }, content: { value: '0', label: 'REVENUE', sub: '$' } },
-        { type: 'big_number',     layout: 'half', style: { color: 'amber',  size: 'lg', align: 'center' }, content: { value: '0', label: 'AVG CHECK', sub: '$' } },
-        { type: 'big_number',     layout: 'half', style: { color: 'steak',  size: 'lg', align: 'center' }, content: { value: '0', label: 'NO-SHOWS', sub: '' } },
-        { type: 'section_header', layout: 'full', style: { color: 'katmer', size: 'md', align: 'left' },   content: { text: 'NOTES' } },
-        { type: 'text',           layout: 'full', style: { color: 'cream',  size: 'md', align: 'left' },   content: { text: '' } },
+        { type: 'alert',          layout: 'full', style: { color: 'amber', size: 'md', align: 'center' }, content: { text: 'Hot-hold ≥ 63°C · Calibrate probes weekly', icon: '🌡️' } },
       ],
     },
   ];
@@ -2086,8 +2063,11 @@
         // v2.13.0 — Base tipografi canvas (#wbRoot, app body) ile aynı: 15px / 1.5.
         // Inline font-size'ı olmayan içerik (table cell vb.) böylece print'te de
         // canvas ile aynı satır yüksekliğinde çıkar → birebir WYSIWYG.
-        'body { margin: 0; padding: 0; font-family: "Barlow", -apple-system, system-ui, sans-serif; font-size: 15px; line-height: 1.5; color: #111827; background: #fff; width: ' + pageW + 'mm; height: ' + pageH + 'mm; }' +
-        '.wb-print-sheet { width: ' + pageW + 'mm; height: ' + pageH + 'mm; padding: 14px; display: flex; flex-direction: column; overflow: hidden; }' +
+        // v2.13.3 — body flex-column + sheet flex:1 ŞART. PCD.print footer'ı sheet'ten
+        // SONRA body'ye ekliyor; sheet sabit pageH mm olursa footer 2. sayfaya taşıyor.
+        // flex ile: sheet kalan alanı doldurur, footer altta aynı sayfada sığar. margin 0.
+        'body { margin: 0; padding: 0; font-family: "Barlow", -apple-system, system-ui, sans-serif; font-size: 15px; line-height: 1.5; color: #111827; background: #fff; width: ' + pageW + 'mm; height: ' + pageH + 'mm; display: flex; flex-direction: column; overflow: hidden; }' +
+        '.wb-print-sheet { width: ' + pageW + 'mm; flex: 1 1 auto; min-height: 0; padding: 14px; display: flex; flex-direction: column; overflow: hidden; }' +
         '.wb-print-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 14px; }' +
         '.wb-print-block { break-inside: avoid; page-break-inside: avoid; -webkit-column-break-inside: avoid; }' +
         '.wb-print-multi-pair { break-inside: avoid; page-break-inside: avoid; display: grid; gap: 10px; }' +

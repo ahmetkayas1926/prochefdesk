@@ -136,7 +136,8 @@
       "Bash(node -c app/js/i18n/de.js)",
       "Bash(node -c app/js/i18n/es.js)",
       "Bash(node -c app/js/i18n/fr.js)",
-      "Bash(node -c app/js/i18n/ar.js)"
+      "Bash(node -c app/js/i18n/ar.js)",
+      "Bash(cygpath -w /tmp/old_shopping.js)"
     ]
   }
 }
