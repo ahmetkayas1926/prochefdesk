@@ -1022,10 +1022,11 @@
     _lastTouchEnd = now;
   }, { passive: false });
 
-  // Prevent wheel+ctrl zoom on desktop
-  document.addEventListener('wheel', function (e) {
-    if (e.ctrlKey) e.preventDefault();
-  }, { passive: false });
+  // v2.12.6 — Desktop Ctrl+wheel page zoom is now ALLOWED (chefs zoom the
+  // page in/out like any site). The previous handler that called
+  // preventDefault on ctrl+wheel was removed. This is desktop-only by nature
+  // (touch devices have no Ctrl key, so this never affected mobile); pinch-zoom
+  // is a touch gesture handled separately and is untouched.
 
   // ============ KEYBOARD SHORTCUTS (desktop) ============
   document.addEventListener('keydown', function (e) {
