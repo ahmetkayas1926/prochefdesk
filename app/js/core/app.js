@@ -71,10 +71,8 @@
       PCD.router.registerLazy('menus',           'js/tools/menus.js',          'menus');
       PCD.router.registerLazy('kitchen_cards',   'js/tools/kitchen_cards.js',  'kitchen_cards');
       PCD.router.registerLazy('whiteboard',      'js/tools/whiteboard.js',     'whiteboard');
-      PCD.router.registerLazy('shopping',        'js/tools/shopping.js',       'shopping');
       PCD.router.registerLazy('portion',         'js/tools/portion.js',        'portion');
       // Inventory eager-kept: dashboard kullanır (computeStatus low-stock alert için)
-      PCD.router.registerLazy('waste',           'js/tools/waste.js',          'waste');
       PCD.router.registerLazy('suppliers',       'js/tools/suppliers.js',      'suppliers');
       PCD.router.registerLazy('events',          'js/tools/events.js',         'events');
       PCD.router.registerLazy('checklist',       'js/tools/checklist.js',      'checklist');
@@ -331,12 +329,10 @@
         { key: 'portion',       icon: 'scale', route: 'portion' },
         // v2.11.16 — 'mise' sidenav item kaldırıldı (Mise en Place Planner tool kaldırıldı).
         { key: 'checklist',     icon: 'check-square', route: 'checklist' },
-        { key: 'waste',         icon: 'recycle', route: 'waste' },
       ]},
       { title: t('section_sourcing'), items: [
         { key: 'inventory', icon: 'package', route: 'inventory' },
         { key: 'suppliers', icon: 'truck', route: 'suppliers' },
-        { key: 'shopping',  icon: 'shopping-cart', route: 'shopping' },
       ]},
       { title: t('section_catering'), items: [
         { key: 'events',  icon: 'calendar', route: 'events' },

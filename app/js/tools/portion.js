@@ -187,8 +187,7 @@
             '<div><div class="text-muted text-sm">' + (t('pc_stat_avg_per_portion') || t('pc_stat_cost_per_guest') || 'Avg / portion') + '</div><div style="font-weight:700;font-size:20px;" data-stat-cost-per-guest>$0</div></div>' +
           '</div>' +
           '<div class="flex gap-2 mt-3" style="flex-wrap:wrap;">' +
-            '<button class="btn btn-primary" id="pcShop">' + PCD.icon('shopping-cart', 16) + ' <span>' + t('pc_send_to_shopping') + '</span></button>' +
-            '<button class="btn btn-outline" id="pcPrint">' + PCD.icon('print', 16) + ' <span>' + t('pc_print') + '</span></button>' +
+            '<button class="btn btn-primary" id="pcPrint">' + PCD.icon('print', 16) + ' <span>' + t('pc_print') + '</span></button>' +
             '<button class="btn btn-outline" id="pcShare">' + PCD.icon('share', 16) + ' <span>' + t('pc_share') + '</span></button>' +
           '</div>' +
         '</div>' +
@@ -215,9 +214,6 @@
           return s + (portionsPerRecipe[r.id] != null ? portionsPerRecipe[r.id] : guestCount);
         }, 0);
       }
-      PCD.$('#pcShop', resultEl).addEventListener('click', function () {
-        sendToShoppingList(selectedRecipes, _totalPortionsNow(), portionsPerRecipe, ingMap);
-      });
       PCD.$('#pcPrint', resultEl).addEventListener('click', function () {
         printScaled(selectedRecipes, _totalPortionsNow(), portionsPerRecipe, ingMap);
       });
@@ -326,56 +322,6 @@
 
     paintRecipeList();
     updateSelStat();
-  }
-
-  // ============ SHOPPING LIST ============
-  // v2.8.92 — Parametre `guestCount` → `totalPortions` semantik (Step 1 kaldırıldı).
-  function sendToShoppingList(recipes, totalPortions, portionsMap, ingMap) {
-    const t = PCD.i18n.t;
-    const defaultName = totalPortions + ' ' + (t('portion_total_portions_label') || 'portions') + ' · ' + new Date().toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || 'en');
-    const body = PCD.el('div');
-    body.innerHTML =
-      '<div class="text-muted text-sm mb-3">' + PCD.escapeHtml(t('pc_shopping_intro') || 'Combine all ingredients into a single shopping list, grouped by category and recipe.') + '</div>' +
-      '<div class="field"><label class="field-label">' + PCD.escapeHtml(t('pc_shopping_name_label') || 'Name this shopping list') + '</label>' +
-      '<input type="text" class="input" id="slName" value="' + PCD.escapeHtml(defaultName) + '" placeholder="' + PCD.escapeHtml(t('pc_shopping_name_ph') || 'e.g. Wedding · 23 May') + '"></div>';
-
-    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('cancel') });
-    const okBtn = PCD.el('button', { class: 'btn btn-primary', style: { flex: '1' } });
-    okBtn.innerHTML = PCD.icon('check', 16) + ' <span>' + PCD.i18n.t('btn_create_list') + '</span>';
-    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
-    footer.appendChild(cancelBtn);
-    footer.appendChild(okBtn);
-
-    const m = PCD.modal.open({ title: PCD.i18n.t('modal_new_shopping_list_title'), body: body, footer: footer, size: 'sm', closable: true });
-
-    cancelBtn.addEventListener('click', function () { m.close(); });
-    okBtn.addEventListener('click', function () {
-      const name = (PCD.$('#slName', body).value || '').trim() || defaultName;
-
-      // Shopping list editor consolidates ingredients itself from recipes + portions.
-      // Send recipes with their target portion count.
-      const itemsForShopping = recipes.map(function (r) {
-        return {
-          recipeId: r.id,
-          portions: portionsMap[r.id] != null ? portionsMap[r.id] : 50
-        };
-      });
-
-      const list = {
-        name: name,
-        items: itemsForShopping,
-        guestCount: totalPortions,  // legacy field name kept for shopping.js compat
-        groupBy: 'category',
-        createdAt: new Date().toISOString(),
-      };
-      const saved = PCD.store.upsertInTable('shoppingLists', list, 'sl');
-      PCD.toast.success(PCD.i18n.t('toast_shopping_created_n', { n: recipes.length }));
-      m.close();
-      // Navigate to shopping list view if available
-      setTimeout(function () {
-        if (PCD.router && PCD.router.go) PCD.router.go('shopping');
-      }, 250);
-    });
   }
 
   // ============ PRINT ============

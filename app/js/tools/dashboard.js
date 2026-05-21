@@ -158,7 +158,7 @@
   // Tek mimari fix: bir tarifin tüm sub-recipe satırlarını recursive olarak
   // gerçek ingredient seviyesine düşürür. Operatör örnek: "Beef Skewer
   // Marination" recipe'sinin altında "Labneh" sub-recipe → portion calculator,
-  // shopping list, nutrition, variance, allergen, diet hesaplarında labneh
+  // nutrition, variance, allergen, diet hesaplarında labneh
   // satırı atlanıyordu ("?" görünüyor veya tamamen kayboluyor). Şimdi
   // flatten ile labneh içindeki yogurt+salt gerçek ingredient olarak çıkar.
   //
@@ -171,8 +171,7 @@
   // viaSubRecipe: null (direkt ingredient) | "Sub-recipe name" (en sığ kaynak)
   //
   // KULLANIM YERLERİ (v2.8.69'da bağlandı):
-  //   - portion.js (canvas + printScaled + shareScaled + sendToShoppingList)
-  //   - shopping.js (render + print consolidation)
+  //   - portion.js (canvas + printScaled + shareScaled)
   //   - nutrition.js (kalori/protein cascade)
   //   - variance.js (sub-recipe ingredient stoktan düşürme)
   //   - allergens-db.js recipeAllergens (sub-recipe allergen cascade)
@@ -344,13 +343,7 @@
       return (now60 - ts) > SIXTY_DAYS_MS;
     });
 
-    // 5) Today's waste cost
-    const allWaste = PCD.store._read('waste') || {};
-    const wasteWsId = PCD.store.getActiveWorkspaceId();
-    const waste = Array.isArray(allWaste) ? allWaste : (allWaste[wasteWsId] || []);
     const todayIso = new Date().toISOString().slice(0, 10);
-    const todayWaste = waste.filter(function (w) { return (w.at || '').slice(0, 10) === todayIso; });
-    const todayWasteCost = todayWaste.reduce(function (sum, w) { return sum + (w.cost || 0); }, 0);
 
     // 6) Stats summary (always shown small at top)
     const stats = {
@@ -499,22 +492,6 @@
               '<div class="dash-card-desc">' + desc + '</div>' +
             '</div>' +
             '<div class="dash-card-cta">' + (t('dash_review_cta') || 'Review') + ' →</div>' +
-          '</div>'
-      });
-    }
-
-    // CARD: Today's waste cost (if any)
-    if (todayWasteCost > 0) {
-      cards.push({
-        priority: 3,
-        html:
-          '<div class="dash-card" data-action="view-waste" style="cursor:pointer;">' +
-            '<div class="dash-card-icon" style="background:#fee2e2;color:#991b1b;">' + PCD.icon('recycle', 22) + '</div>' +
-            '<div class="dash-card-body">' +
-              '<div class="dash-card-title">' + t('dash_today_waste', { amount: PCD.fmtMoney(todayWasteCost) }) + '</div>' +
-              '<div class="dash-card-desc">' + t('dash_today_waste_desc', { n: todayWaste.length, y: todayWaste.length === 1 ? 'y' : 'ies' }) + '</div>' +
-            '</div>' +
-            '<div class="dash-card-cta">' + t('dash_log_waste') + ' →</div>' +
           '</div>'
       });
     }
@@ -723,9 +700,6 @@
       const eid = this.getAttribute('data-eid');
       PCD.router.go('events');
       _afterToolLoad('events', function (t) { t.openEditor(eid); });
-    });
-    PCD.on(view, 'click', '[data-action="view-waste"]', function () {
-      PCD.router.go('waste');
     });
     // v2.6.55 — Self-heal: show broken recipes modal with "Fix all" action
     PCD.on(view, 'click', '[data-action="fix-broken-recipes"]', function () {

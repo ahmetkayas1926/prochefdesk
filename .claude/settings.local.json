@@ -132,7 +132,11 @@
       "Bash(py --version)",
       "mcp__Claude_Preview__preview_start",
       "Bash(node -c \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\core\\\\auth.js\")",
-      "Bash(node -c \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\tools\\\\account.js\")"
+      "Bash(node -c \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\tools\\\\account.js\")",
+      "Bash(node -c app/js/i18n/de.js)",
+      "Bash(node -c app/js/i18n/es.js)",
+      "Bash(node -c app/js/i18n/fr.js)",
+      "Bash(node -c app/js/i18n/ar.js)"
     ]
   }
 }

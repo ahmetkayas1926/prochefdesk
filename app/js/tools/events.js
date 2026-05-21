@@ -220,10 +220,6 @@
           <label class="field-label">${t('event_notes')}</label>
           <textarea class="textarea" id="eNotes" rows="2">${PCD.escapeHtml(data.notes || '')}</textarea>
         </div>
-
-        <div class="flex gap-2 mt-3">
-          <button class="btn btn-outline btn-block" id="genShop">🛒 ${t('event_gen_shopping')}</button>
-        </div>
       `;
 
       // Menu list
@@ -323,27 +319,6 @@
         render();
       });
 
-      PCD.$('#genShop', body).addEventListener('click', function () {
-        if (!data.guestCount || !data.menu || data.menu.length === 0) {
-          PCD.toast.warning(PCD.i18n.t('toast_set_guest_count_first'));
-          return;
-        }
-        // Build shopping list items from menu (convert per-guest to total portions)
-        const items = (data.menu || []).map(function (m) {
-          const r = PCD.store.getRecipe(m.recipeId);
-          if (!r) return null;
-          const totalPortions = Math.ceil((data.guestCount || 0) * (m.portionsPerGuest || 1));
-          return { recipeId: m.recipeId, portions: totalPortions };
-        }).filter(Boolean);
-        const list = {
-          name: (data.name || t('new_event')) + ' (' + data.guestCount + ' guests)',
-          items: items,
-          groupBy: 'category',
-        };
-        const saved = PCD.store.upsertInTable('shoppingLists', list, 's');
-        PCD.toast.success(t('shop_saved'));
-        setTimeout(function () { PCD.router.go('shopping'); }, 400);
-      });
     }
 
     render();
