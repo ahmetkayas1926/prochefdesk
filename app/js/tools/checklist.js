@@ -348,6 +348,48 @@
     openSession(s.id);
   }
 
+  // ---------- TEMPLATE PREVIEW (read-only) ----------
+  // Tapping a template opens a preview, NOT a session. The chef can look,
+  // then explicitly hit "Start session". Prevents accidental sessions.
+  function openPreview(tid) {
+    const tpl = PCD.store.getFromTable('checklistTemplates', tid);
+    if (!tpl) return;
+    normalizeTemplate(tpl);
+    const body = PCD.el('div');
+    let html = '<div style="margin-bottom:14px;padding:12px 14px;background:linear-gradient(135deg,var(--brand-50),var(--surface));border-radius:var(--r-md);">' +
+      '<div style="font-size:11px;font-weight:700;color:var(--brand-700);text-transform:uppercase;letter-spacing:0.06em;">' + esc(tpl.kind === 'prep' ? L('chk_kind_prep', 'Prep') : L('chk_kind_control', 'Control')) + '</div>' +
+      '<div style="font-weight:800;font-size:19px;letter-spacing:-0.01em;">' + esc(tpl.name) + '</div>' +
+      '<div class="text-muted text-sm mt-1">' + templateCount(tpl) + ' ' + esc(tpl.kind === 'prep' ? L('chk_dishes', 'dishes') : L('chk_items', 'items')) + '</div>' +
+    '</div>';
+    if (tpl.kind === 'prep') {
+      (tpl.dishes || []).forEach(function (d) {
+        html += '<div style="margin-bottom:10px;">' +
+          '<div style="display:flex;align-items:center;gap:8px;padding:5px 2px;border-bottom:1.5px solid var(--border);margin-bottom:4px;"><span style="color:var(--brand-700);">' + PCD.icon('chef-hat', 15) + '</span><span style="font-weight:700;font-size:14px;">' + esc(d.text || L('chk_untitled_dish', 'Untitled dish')) + '</span></div>';
+        (d.comps || []).forEach(function (c) { html += '<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;font-size:13px;"><span style="width:14px;height:14px;border:1.5px solid var(--border-strong);border-radius:3px;flex-shrink:0;"></span><span style="min-width:0;">' + esc(c.text) + '</span></div>'; });
+        html += '</div>';
+      });
+    } else {
+      (tpl.items || []).forEach(function (it) {
+        const cat = catOf(it.cat);
+        const chip = cat ? '<span style="font-size:10px;padding:1px 7px;border-radius:999px;background:' + cat.color + '22;color:' + cat.color + ';font-weight:700;text-transform:uppercase;flex-shrink:0;">' + esc(catLabel(cat)) + '</span>' : '';
+        html += '<div style="display:flex;align-items:center;gap:10px;padding:7px 8px;border-bottom:1px solid var(--border);font-size:14px;"><span style="width:16px;height:16px;border:1.5px solid var(--border-strong);border-radius:3px;flex-shrink:0;"></span><span style="flex:1;min-width:0;">' + esc(it.text) + '</span>' + chip + '</div>';
+      });
+    }
+    body.innerHTML = html;
+    const startBtn = PCD.el('button', { class: 'btn btn-primary', style: { flex: '1' } });
+    startBtn.innerHTML = PCD.icon('check', 16) + ' <span>' + esc(L('chk_start_session', 'Start session')) + '</span>';
+    const editBtn = PCD.el('button', { class: 'btn btn-outline', title: L('act_edit', 'Edit') }); editBtn.innerHTML = PCD.icon('edit', 16);
+    const printBtn = PCD.el('button', { class: 'btn btn-outline', title: L('chk_print_blank', 'Print blank') }); printBtn.innerHTML = PCD.icon('print', 16);
+    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: L('close', 'Close') });
+    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
+    footer.appendChild(closeBtn); footer.appendChild(printBtn); footer.appendChild(editBtn); footer.appendChild(startBtn);
+    const m = PCD.modal.open({ title: tpl.name, body: body, footer: footer, size: 'md', closable: true });
+    closeBtn.addEventListener('click', function () { m.close(); });
+    printBtn.addEventListener('click', function () { printChecklist(tpl, null); });
+    editBtn.addEventListener('click', function () { m.close(); setTimeout(function () { openEditor(tid); }, 200); });
+    startBtn.addEventListener('click', function () { m.close(); setTimeout(function () { startOrResumeSession(tid); }, 200); });
+  }
+
   // ---------- INLINE GUIDE (dismissible) ----------
   function guideDismissed() { try { return localStorage.getItem('pcd_chk_guide') === '1'; } catch (e) { return false; } }
   function dismissGuide() { try { localStorage.setItem('pcd_chk_guide', '1'); } catch (e) {} }
@@ -417,20 +459,39 @@
     if (actEl) {
       active.forEach(function (s) {
         const p = sessionProgress(s);
-        const row = PCD.el('div', { class: 'card card-hover', 'data-open-sid': s.id, style: { padding: '12px', cursor: 'pointer' } });
+        const row = PCD.el('div', { class: 'card', style: { padding: '12px' } });
         row.innerHTML =
           '<div class="flex items-center gap-3">' +
-            '<div class="list-item-thumb" style="background:var(--brand-50);color:var(--brand-700);">' + PCD.icon(s.icon || (s.kind === 'prep' ? 'chef-hat' : 'check-square'), 20) + '</div>' +
-            '<div style="flex:1;min-width:0;">' +
+            '<div class="list-item-thumb" style="background:var(--brand-50);color:var(--brand-700);flex-shrink:0;">' + PCD.icon(s.icon || (s.kind === 'prep' ? 'chef-hat' : 'check-square'), 20) + '</div>' +
+            '<div style="flex:1;min-width:0;cursor:pointer;" data-resume-sid="' + s.id + '">' +
               '<div style="font-weight:600;font-size:15px;">' + esc(s.templateName || 'List') + '</div>' +
               '<div class="text-muted text-sm">' + p.done + '/' + p.total + ' · ' + esc(PCD.fmtRelTime(s.startedAt)) + '</div>' +
               '<div class="progress mt-1" style="height:4px;"><div class="progress-bar" style="width:' + p.pct + '%;background:var(--brand-600);"></div></div>' +
             '</div>' +
-            '<div style="font-weight:700;color:var(--brand-700);">' + p.pct + '%</div>' +
+            '<div style="font-weight:700;color:var(--brand-700);flex-shrink:0;">' + p.pct + '%</div>' +
+            '<button type="button" class="btn btn-primary btn-sm" data-complete-sid="' + s.id + '" title="' + esc(L('checklist_complete', 'Complete')) + '" style="flex-shrink:0;">' + PCD.icon('check', 14) + '</button>' +
+            '<button type="button" class="icon-btn" data-discard-sid="' + s.id + '" title="' + esc(L('chk_discard', 'Discard')) + '" style="flex-shrink:0;">' + PCD.icon('x', 16) + '</button>' +
           '</div>';
         actEl.appendChild(row);
       });
-      PCD.on(actEl, 'click', '[data-open-sid]', function () { openSession(this.getAttribute('data-open-sid')); });
+      PCD.on(actEl, 'click', '[data-resume-sid]', function () { openSession(this.getAttribute('data-resume-sid')); });
+      PCD.on(actEl, 'click', '[data-complete-sid]', function (e) {
+        e.stopPropagation();
+        const sid = this.getAttribute('data-complete-sid');
+        const user = PCD.store.get('user') || {};
+        updateSession(sid, function (x) { x.completedAt = new Date().toISOString(); x.completedBy = x.completedBy || user.name || user.email || ''; });
+        PCD.toast.success(L('toast_checklist_completed', 'List completed'));
+        render(view);
+      });
+      PCD.on(actEl, 'click', '[data-discard-sid]', function (e) {
+        e.stopPropagation();
+        const sid = this.getAttribute('data-discard-sid');
+        const s2 = getSession(sid);
+        const p2 = s2 ? sessionProgress(s2) : { done: 0 };
+        function go() { deleteSessionById(sid); render(view); }
+        if (p2.done === 0) { go(); return; }
+        PCD.modal.confirm({ icon: '🗑', iconKind: 'danger', danger: true, title: L('chk_discard_confirm_t', 'Discard this session?'), text: L('chk_discard_confirm_m', 'Progress on this session will be lost. The template stays.'), okText: L('chk_discard', 'Discard') }).then(function (ok) { if (ok) go(); });
+      });
     }
 
     // Templates of the active kind
@@ -460,7 +521,7 @@
       row.innerHTML =
         '<div class="flex items-center gap-3">' +
           '<div class="list-item-thumb" style="background:var(--brand-50);color:var(--brand-700);">' + PCD.icon(tpl.icon || (tpl.kind === 'prep' ? 'chef-hat' : 'check-square'), 20) + '</div>' +
-          '<div style="flex:1;min-width:0;cursor:pointer;" data-start="' + tpl.id + '">' +
+          '<div style="flex:1;min-width:0;cursor:pointer;" data-preview="' + tpl.id + '">' +
             '<div style="font-weight:700;font-size:15px;">' + esc(tpl.name) + '</div>' +
             '<div class="text-muted text-sm">' + countLabel + '</div>' +
           '</div>' +
@@ -469,14 +530,14 @@
             '<button type="button" class="icon-btn" data-move-down="' + tpl.id + '" ' + (isLast ? 'disabled' : '') + ' title="' + esc(L('move_down', 'Move down')) + '" style="padding:4px;height:24px;width:28px;' + (isLast ? 'opacity:0.3;' : '') + '">' + PCD.icon('chevron-down', 14) + '</button>' +
           '</div>' +
           '<button type="button" class="icon-btn" data-menu="' + tpl.id + '" title="' + esc(L('more_actions', 'More')) + '">' + PCD.icon('more-vertical', 18) + '</button>' +
-          '<button type="button" class="btn btn-primary btn-sm" data-start="' + tpl.id + '">' + esc(L('chk_open', 'Open')) + '</button>' +
+          '<button type="button" class="btn btn-primary btn-sm" data-preview="' + tpl.id + '">' + esc(L('chk_open', 'Open')) + '</button>' +
         '</div>';
       listEl.appendChild(row);
     });
 
     PCD.on(listEl, 'click', '[data-move-up]', function (e) { e.stopPropagation(); moveTemplate(this.getAttribute('data-move-up'), -1); render(view); });
     PCD.on(listEl, 'click', '[data-move-down]', function (e) { e.stopPropagation(); moveTemplate(this.getAttribute('data-move-down'), +1); render(view); });
-    PCD.on(listEl, 'click', '[data-start]', function (e) { e.stopPropagation(); startOrResumeSession(this.getAttribute('data-start')); });
+    PCD.on(listEl, 'click', '[data-preview]', function (e) { e.stopPropagation(); openPreview(this.getAttribute('data-preview')); });
     PCD.on(listEl, 'click', '[data-menu]', function (e) {
       e.stopPropagation();
       const tid = this.getAttribute('data-menu');
@@ -1173,6 +1234,15 @@
     cancelBtn.addEventListener('click', function () { m.close(); });
     saveBtn.addEventListener('click', function () {
       const ni = PCD.$('#tplName', body); if (ni) data.name = ni.value;
+      // v2.12.4 — Read every field straight from the DOM at save time. Relying
+      // only on 'input' events left the data model stale in some cases
+      // (autofill / IME / paste / quick edits) → "add at least one item" even
+      // though rows were clearly filled on screen. This re-sync makes save
+      // match exactly what the chef sees.
+      body.querySelectorAll('[data-it]').forEach(function (inp) { const it = (data.items || []).find(function (x) { return x.id === inp.getAttribute('data-it'); }); if (it) it.text = inp.value; });
+      body.querySelectorAll('[data-ic]').forEach(function (sel) { const it = (data.items || []).find(function (x) { return x.id === sel.getAttribute('data-ic'); }); if (it) it.cat = sel.value; });
+      body.querySelectorAll('[data-dd]').forEach(function (inp) { const d = (data.dishes || []).find(function (x) { return x.id === inp.getAttribute('data-dd'); }); if (d) d.text = inp.value; });
+      body.querySelectorAll('[data-cc]').forEach(function (inp) { const id = inp.getAttribute('data-cc'); (data.dishes || []).forEach(function (d) { (d.comps || []).forEach(function (c) { if (c.id === id) c.text = inp.value; }); }); });
       data.name = (data.name || '').trim();
       if (!data.name) { PCD.toast.error(L('toast_name_required', 'Name is required')); return; }
       if (data.kind === 'prep') {
