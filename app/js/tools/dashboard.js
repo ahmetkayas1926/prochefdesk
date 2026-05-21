@@ -280,7 +280,9 @@
     const allSessions = PCD.store._read('checklistSessions') || {};
     const wsId = PCD.store.getActiveWorkspaceId();
     const sessions = Array.isArray(allSessions) ? allSessions : (allSessions[wsId] || []);
-    const activeSessions = sessions.filter(function (s) { return !s.completedAt; });
+    // v2.12.8 — also exclude soft-deleted (_deletedAt) sessions so a discarded
+    // checklist no longer shows as "in progress" on the dashboard.
+    const activeSessions = sessions.filter(function (s) { return s && !s.completedAt && !s._deletedAt; });
 
     // 4) Low stock count + critical items
     const allInv = PCD.store._read('inventory') || {};
