@@ -329,6 +329,7 @@
       startedAt: new Date().toISOString(),
       completedAt: null,
       completedBy: user.name || user.email || null,
+      printOpts: tpl.printOpts ? PCD.clone(tpl.printOpts) : null,
     };
     if (tpl.kind === 'prep') {
       s.dishes = (tpl.dishes || []).map(function (d) {
@@ -761,27 +762,61 @@
     });
   }
 
+  // ============ PRINT OPTIONS ============
+  // Per-template print customisation (v2.12.3): orientation, columns, font
+  // scale, weight, density. Lets a chef squeeze 18-20 dishes onto one A4, or
+  // blow up a short list for easy reading across the line.
+  function normalizePrintOpts(o, isPrep) {
+    o = o || {};
+    const cols = parseInt(o.columns, 10);
+    return {
+      orientation: o.orientation === 'landscape' ? 'landscape' : 'portrait',
+      columns: (cols >= 1 && cols <= 3) ? cols : (isPrep ? 2 : 1),
+      fontScale: (typeof o.fontScale === 'number' && o.fontScale >= 0.8 && o.fontScale <= 1.4) ? o.fontScale : 1,
+      bold: !!o.bold,
+      density: (o.density === 'compact' || o.density === 'relaxed') ? o.density : 'normal',
+    };
+  }
+  function densFactor(d) { return d === 'compact' ? 0.7 : d === 'relaxed' ? 1.4 : 1; }
+  // Rough estimate of how many items (control) / component rows (prep) fit on
+  // one page with the given options — drives the live capacity hint in the editor.
+  function printCapacity(kind, opts) {
+    const o = normalizePrintOpts(opts, kind === 'prep');
+    const availPt = (o.orientation === 'landscape' ? 500 : 752) - 100; // minus header/meta/signoff
+    const dens = densFactor(o.density);
+    const baseRow = kind === 'prep' ? 8.5 : 9.5;
+    const rowH = baseRow * o.fontScale * 1.5 + 7 * dens;
+    return Math.max(1, Math.floor(availPt / rowH) * o.columns);
+  }
+
   // ============ PRINT (control + prep, blank or filled) ============
   // Blank prints leave Date BLANK — the chef writes it by hand (operator rule).
   function printChecklist(tpl, session) {
     const isPrep = (session ? session.kind : tpl.kind) === 'prep';
     const name = (tpl && tpl.name) || (session && session.templateName) || L('chk_print_default', 'Checklist');
     const filled = !!session;
+    const o = normalizePrintOpts((tpl && tpl.printOpts) || (session && session.printOpts) || {}, isPrep);
+    const fs = o.fontScale;
+    const dens = densFactor(o.density);
+    const wt = o.bold ? 800 : 600;
+    const margin = o.orientation === 'landscape' ? '8mm' : '10mm';
+    function pt(v) { return (v * fs).toFixed(1) + 'pt'; }
+    function pad(v) { return (v * dens).toFixed(1) + 'px'; }
 
     const styleCommon =
-      '@page { size: A4; margin: 9mm; }' +
+      '@page { size: A4 ' + o.orientation + '; margin: ' + margin + '; }' +
       'body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; color: #1a1a1a; margin: 0; }' +
       '.h-row { border-bottom: 2px solid #16a34a; padding-bottom: 4px; margin-bottom: 6px; }' +
-      '.h-row h1 { margin: 0; font-size: 15pt; color: #16a34a; }' +
-      '.h-row .sub { color: #666; font-size: 9pt; }' +
+      '.h-row h1 { margin: 0; font-size: ' + pt(15) + '; color: #16a34a; }' +
+      '.h-row .sub { color: #666; font-size: ' + pt(9) + '; }' +
       '.h-meta { display: flex; gap: 14px; margin: 6px 0 10px; padding: 6px 10px; background: #f7f7f7; border-radius: 4px; }' +
       '.h-meta-item { display: flex; align-items: baseline; gap: 6px; flex: 1; }' +
-      '.h-meta-item .lbl { color: #888; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; font-size: 7pt; flex-shrink: 0; }' +
-      '.h-meta-item .val { font-size: 9.5pt; font-weight: 600; border-bottom: 1px solid #ccc; flex: 1; padding-bottom: 1px; min-height: 12px; }' +
-      '.h-signoff { margin-top: 10px; padding-top: 6px; border-top: 1px solid #ddd; display: flex; justify-content: space-between; gap: 20px; font-size: 8pt; color: #555; }' +
+      '.h-meta-item .lbl { color: #888; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; font-size: ' + pt(7) + '; flex-shrink: 0; }' +
+      '.h-meta-item .val { font-size: ' + pt(9.5) + '; font-weight: 600; border-bottom: 1px solid #ccc; flex: 1; padding-bottom: 1px; min-height: 12px; }' +
+      '.h-signoff { margin-top: 10px; padding-top: 6px; border-top: 1px solid #ddd; display: flex; justify-content: space-between; gap: 20px; font-size: ' + pt(8) + '; color: #555; }' +
       '.h-signoff .sig { flex: 1; display: flex; align-items: baseline; gap: 6px; }' +
       '.h-signoff .sig-l { text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; flex-shrink: 0; }' +
-      '.h-signoff .sig-line { flex: 1; border-bottom: 1px solid #888; min-height: 14px; padding-bottom: 1px; font-size: 9pt; }';
+      '.h-signoff .sig-line { flex: 1; border-bottom: 1px solid #888; min-height: 14px; padding-bottom: 1px; font-size: ' + pt(9) + '; }';
 
     const dateVal = filled ? esc(new Date(session.completedAt || session.startedAt).toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || 'en', { year: 'numeric', month: 'long', day: 'numeric' })) : '&nbsp;';
     const byVal = filled ? esc(session.completedBy || '') : '&nbsp;';
@@ -789,42 +824,57 @@
     let html = '<style>' + styleCommon;
 
     if (!isPrep) {
-      html += 'table { width:100%; border-collapse: collapse; font-size: 9.5pt; }' +
-        'thead th { background:#f1f1f1; padding:4px 6px; text-align:left; font-size:7pt; text-transform:uppercase; letter-spacing:0.03em; color:#555; }' +
+      html += 'table { width:100%; border-collapse: collapse; font-size: ' + pt(9.5) + '; }' +
+        'thead th { background:#f1f1f1; padding:' + pad(4) + ' ' + pad(6) + '; text-align:left; font-size:' + pt(7) + '; text-transform:uppercase; letter-spacing:0.03em; color:#555; }' +
+        'td { padding:' + pad(4) + ' ' + pad(6) + '; border-bottom:1px solid #e5e5e5; vertical-align:top; }' +
         'tr { page-break-inside: avoid; }' +
+        '.ctrl-cols { display:grid; grid-template-columns: repeat(' + o.columns + ', 1fr); gap: 5mm; align-items:start; }' +
         '</style>';
-      let rows = '';
       const items = filled ? (session.items || []) : (tpl.items || []);
-      items.forEach(function (it, i) {
+      function rowHtml(it, i) {
         const cat = catOf(it.cat);
         const stripe = cat ? cat.color : 'transparent';
         let val;
         if (filled) val = it.done ? '<span style="color:#16a34a;font-weight:700;">✓</span>' : '<span style="color:#999;">—</span>';
-        else val = '<span style="display:inline-block;width:14px;height:14px;border:1.5px solid #999;border-radius:2px;"></span>';
-        const comment = (filled && it.comment) ? '<div style="font-size:8pt;color:#666;font-style:italic;margin-top:2px;">📝 ' + esc(it.comment) + '</div>' : '';
-        rows += '<tr>' +
-          '<td style="padding:4px 6px 4px 8px;border-bottom:1px solid #e5e5e5;border-left:4px solid ' + stripe + ';width:22px;font-weight:700;color:#999;font-size:8pt;">' + (i + 1) + '</td>' +
-          '<td style="padding:4px 6px;border-bottom:1px solid #e5e5e5;"><span style="font-weight:600;font-size:9.5pt;">' + esc(it.text) + '</span>' + (cat ? ' <span style="font-size:7pt;color:' + cat.color + ';font-weight:700;text-transform:uppercase;margin-inline-start:4px;">' + esc(catLabel(cat)) + '</span>' : '') + comment + '</td>' +
-          '<td style="padding:4px 6px;border-bottom:1px solid #e5e5e5;text-align:center;width:90px;">' + val + '</td>' +
-          '<td style="padding:4px 6px;border-bottom:1px solid #e5e5e5;width:55px;text-align:center;font-size:8pt;color:#999;">' + (filled && it.doneAt ? new Date(it.doneAt).toLocaleTimeString((PCD.i18n && PCD.i18n.currentLocale) || 'en', { hour: '2-digit', minute: '2-digit' }) : '__:__') + '</td>' +
+        else val = '<span style="display:inline-block;width:13px;height:13px;border:1.5px solid #999;border-radius:2px;"></span>';
+        const comment = (filled && it.comment) ? '<div style="font-size:' + pt(8) + ';color:#666;font-style:italic;margin-top:2px;">📝 ' + esc(it.comment) + '</div>' : '';
+        return '<tr>' +
+          '<td style="border-left:4px solid ' + stripe + ';width:16px;font-weight:700;color:#999;font-size:' + pt(8) + ';">' + (i + 1) + '</td>' +
+          '<td><span style="font-weight:' + wt + ';font-size:' + pt(9.5) + ';">' + esc(it.text) + '</span>' + (cat ? ' <span style="font-size:' + pt(7) + ';color:' + cat.color + ';font-weight:700;text-transform:uppercase;margin-inline-start:4px;">' + esc(catLabel(cat)) + '</span>' : '') + comment + '</td>' +
+          '<td style="text-align:center;width:30px;">' + val + '</td>' +
+          '<td style="width:38px;text-align:center;font-size:' + pt(8) + ';color:#999;">' + (filled ? (it.doneAt ? new Date(it.doneAt).toLocaleTimeString((PCD.i18n && PCD.i18n.currentLocale) || 'en', { hour: '2-digit', minute: '2-digit' }) : '') : '__:__') + '</td>' +
         '</tr>';
-      });
+      }
+      let main;
+      if (o.columns > 1) {
+        const per = Math.ceil(items.length / o.columns);
+        let parts = '';
+        for (let c = 0; c < o.columns; c++) {
+          const sub = items.slice(c * per, (c + 1) * per);
+          if (!sub.length) continue;
+          let rows = '';
+          sub.forEach(function (it, k) { rows += rowHtml(it, c * per + k); });
+          parts += '<table><tbody>' + rows + '</tbody></table>';
+        }
+        main = '<div class="ctrl-cols">' + parts + '</div>';
+      } else {
+        let rows = '';
+        items.forEach(function (it, i) { rows += rowHtml(it, i); });
+        main = '<table><thead><tr><th style="width:16px;">#</th><th>' + esc(L('chk_print_item', 'Item')) + '</th><th style="text-align:center;width:30px;">' + esc(L('chk_print_done', 'Done')) + '</th><th style="width:38px;text-align:center;">' + esc(L('chk_print_time', 'Time')) + '</th></tr></thead><tbody>' + rows + '</tbody></table>';
+      }
       html += '<div class="h-row"><h1>' + esc(name) + '</h1><div class="sub">' + esc(L('chk_kind_control', 'Control')) + ' · ' + items.length + ' ' + esc(L('chk_items', 'items')) + '</div></div>' +
-        metaHtml() +
-        '<table><thead><tr><th style="width:22px;">#</th><th>' + esc(L('chk_print_item', 'Item')) + '</th><th style="text-align:center;width:90px;">' + esc(L('chk_print_done', 'Done')) + '</th><th style="width:55px;text-align:center;">' + esc(L('chk_print_time', 'Time')) + '</th></tr></thead><tbody>' + rows + '</tbody></table>' +
-        signoffHtml();
+        metaHtml() + main + signoffHtml();
     } else {
       // PREP — DISH / COMPONENT / PREP, multi-column cards (matches the photo intent)
-      html += '.legend { font-size:7.5pt; color:#888; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px; font-weight:700; }' +
-        '.cols { column-count: 3; column-gap: 6mm; }' +
+      html += '.legend { font-size:' + pt(7.5) + '; color:#888; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px; font-weight:700; }' +
+        '.cols { column-count: ' + o.columns + '; column-gap: 6mm; }' +
         '.dish { break-inside: avoid; border:1px solid #d8d8d8; border-radius:4px; margin-bottom:6px; overflow:hidden; }' +
-        '.dish-h { background:#eaf5ee; color:#15633e; font-weight:700; font-size:9pt; padding:4px 7px; border-bottom:1px solid #d8d8d8; }' +
+        '.dish-h { background:#eaf5ee; color:#15633e; font-weight:800; font-size:' + pt(9) + '; padding:' + pad(4) + ' ' + pad(7) + '; border-bottom:1px solid #d8d8d8; }' +
         '.dish table { width:100%; border-collapse:collapse; }' +
-        '.dish td { padding:3px 7px; border-bottom:1px solid #eee; font-size:8.5pt; vertical-align:middle; }' +
-        '.dish td.comp { color:#222; }' +
-        '.dish td.prep { width:62px; text-align:center; }' +
-        '.box { display:inline-block;width:13px;height:13px;border:1.5px solid #999;border-radius:2px; }' +
-        '@media print { .cols { column-count: 3; } }' +
+        '.dish td { padding:' + pad(3) + ' ' + pad(7) + '; border-bottom:1px solid #eee; font-size:' + pt(8.5) + '; vertical-align:middle; }' +
+        '.dish td.comp { color:#222; font-weight:' + (o.bold ? 700 : 400) + '; }' +
+        '.dish td.prep { width:60px; text-align:center; }' +
+        '.box { display:inline-block;width:12px;height:12px;border:1.5px solid #999;border-radius:2px; }' +
         '</style>';
       const dishes = filled ? (session.dishes || []) : (tpl.dishes || []);
       let blocks = '';
@@ -918,6 +968,7 @@
     };
     if (data.kind !== 'prep') { if (!Array.isArray(data.items)) data.items = []; if (!data.items.length) data.items.push({ id: uid('it'), text: '', cat: '' }); }
     else { if (!Array.isArray(data.dishes)) data.dishes = []; }
+    if (!data.printOpts || typeof data.printOpts !== 'object') data.printOpts = {};
 
     const body = PCD.el('div');
 
@@ -950,6 +1001,9 @@
           '<button class="btn btn-ghost btn-sm mt-2" id="addItem">' + PCD.icon('plus', 14) + ' ' + esc(L('chk_add_item', 'Add item')) + '</button>' +
         '</div>';
       }
+
+      html += printLayoutHtml();
+
       body.innerHTML = html;
 
       // kind toggle
@@ -970,6 +1024,68 @@
 
       if (data.kind === 'prep') renderDishes();
       else renderItems();
+      wirePrintLayout();
+    }
+
+    // ---- Print layout panel (orientation / columns / font / density / bold) ----
+    function printLayoutHtml() {
+      const o = normalizePrintOpts(data.printOpts, data.kind === 'prep');
+      function seg(name, val, cur, label) {
+        return '<button type="button" class="btn btn-sm ' + (String(cur) === String(val) ? 'btn-primary' : 'btn-outline') + '" data-pl="' + name + ':' + val + '" style="flex:1;padding:6px 4px;">' + esc(label) + '</button>';
+      }
+      function lbl(s) { return '<div class="text-muted" style="font-size:11px;margin:6px 0 3px;">' + esc(s) + '</div>'; }
+      return '<div class="field" style="border-top:1px solid var(--border);padding-top:12px;margin-top:8px;">' +
+        '<label class="field-label">' + PCD.icon('print', 14) + ' ' + esc(L('chk_print_layout', 'Print layout')) + '</label>' +
+        lbl(L('chk_pl_orient', 'Orientation')) +
+        '<div style="display:flex;gap:6px;">' + seg('orientation', 'portrait', o.orientation, L('chk_pl_portrait', 'Portrait')) + seg('orientation', 'landscape', o.orientation, L('chk_pl_landscape', 'Landscape')) + '</div>' +
+        lbl(L('chk_pl_columns', 'Columns')) +
+        '<div style="display:flex;gap:6px;">' + seg('columns', '1', o.columns, '1') + seg('columns', '2', o.columns, '2') + seg('columns', '3', o.columns, '3') + '</div>' +
+        lbl(L('chk_pl_font', 'Text size')) +
+        '<div style="display:flex;gap:6px;">' + seg('fontScale', '0.85', o.fontScale, 'S') + seg('fontScale', '1', o.fontScale, 'M') + seg('fontScale', '1.15', o.fontScale, 'L') + seg('fontScale', '1.3', o.fontScale, 'XL') + '</div>' +
+        lbl(L('chk_pl_density', 'Spacing')) +
+        '<div style="display:flex;gap:6px;">' + seg('density', 'compact', o.density, L('chk_pl_compact', 'Compact')) + seg('density', 'normal', o.density, L('chk_pl_normal', 'Normal')) + seg('density', 'relaxed', o.density, L('chk_pl_relaxed', 'Relaxed')) + '</div>' +
+        '<div style="margin-top:8px;"><button type="button" class="btn btn-sm ' + (o.bold ? 'btn-primary' : 'btn-outline') + '" data-pl="bold:toggle" style="width:100%;">' + esc(L('chk_pl_bold', 'Bold text')) + (o.bold ? ' ✓' : '') + '</button></div>' +
+        '<div id="plCapacity" style="font-size:12px;padding:8px 10px;border-radius:6px;margin-top:10px;line-height:1.4;"></div>' +
+        '<button type="button" class="btn btn-outline btn-sm" id="plPreview" style="width:100%;margin-top:6px;">' + PCD.icon('print', 14) + ' ' + esc(L('chk_print_blank', 'Print blank')) + '</button>' +
+      '</div>';
+    }
+    function wirePrintLayout() {
+      body.querySelectorAll('[data-pl]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          const parts = this.getAttribute('data-pl').split(':');
+          const key = parts[0], val = parts[1];
+          data.printOpts = data.printOpts || {};
+          if (key === 'bold') data.printOpts.bold = !data.printOpts.bold;
+          else if (key === 'columns') data.printOpts.columns = parseInt(val, 10);
+          else if (key === 'fontScale') data.printOpts.fontScale = parseFloat(val);
+          else data.printOpts[key] = val;
+          render2();
+        });
+      });
+      const pv = PCD.$('#plPreview', body);
+      if (pv) pv.addEventListener('click', function () {
+        const ni = PCD.$('#tplName', body); if (ni) data.name = ni.value;
+        if (!data.name.trim()) data.name = L('chk_print_default', 'Checklist');
+        printChecklist(data, null);
+      });
+      updateCapacity();
+    }
+    function updateCapacity() {
+      const el = PCD.$('#plCapacity', body);
+      if (!el) return;
+      const cap = printCapacity(data.kind, data.printOpts);
+      let count;
+      if (data.kind === 'prep') { count = 0; (data.dishes || []).forEach(function (d) { count += (d.comps || []).filter(function (c) { return c.text && c.text.trim(); }).length; }); }
+      else count = (data.items || []).filter(function (it) { return it.text && it.text.trim(); }).length;
+      const unit = data.kind === 'prep' ? L('chk_components', 'components') : L('chk_items', 'items');
+      const pages = Math.max(1, Math.ceil(count / cap));
+      if (pages <= 1) {
+        el.style.background = 'var(--brand-50)'; el.style.color = 'var(--brand-700)';
+        el.innerHTML = '✓ ' + esc(L('chk_fits_one', 'Fits one page')) + ' · ' + esc(L('chk_approx', '≈')) + cap + ' ' + esc(unit) + '/' + esc(L('chk_page', 'page'));
+      } else {
+        el.style.background = '#fef3c7'; el.style.color = '#92400e';
+        el.innerHTML = '⚠ ' + esc(L('chk_spills', '≈{n} pages').replace('{n}', pages)) + ' · ' + count + ' ' + esc(unit) + ' / ≈' + cap + ' ' + esc(L('chk_per_page', 'per page'));
+      }
     }
 
     function renderItems() {
