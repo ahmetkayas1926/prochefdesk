@@ -1966,10 +1966,11 @@
     if (canvas.paper === 'A3') { pageW = isLand ? 420 : 297; pageH = isLand ? 297 : 420; }
     else                       { pageW = isLand ? 297 : 210; pageH = isLand ? 210 : 297; }
 
-    // Determine column count based on paper + orient
-    let cols = 1;
-    if (canvas.paper === 'A3') cols = isLand ? 3 : 2;
-    else cols = isLand ? 2 : 1;
+    // v2.12.9 — Single column so blocks use the FULL page width (esp. landscape).
+    // Side-by-side placement is done per-block via layout (1/2, 1/3...) and the
+    // multi-pair grid below — not an auto column-count, which left landscape
+    // content cramped in the left half with the right side blank.
+    const cols = 1;
 
     // Render blocks as a vertical stream; CSS column-fill auto for multi-col layout.
     // v2.11.1 — half (2) + third (3) + quarter (4) layout'ları için ardışık aynı
@@ -2004,7 +2005,7 @@
         '@page { size: ' + canvas.paper + ' ' + canvas.orient + '; margin: 0; }' +
         '@import url("https://fonts.googleapis.com/css2?family=Oswald:wght@600;700;800&family=Barlow:wght@400;500;600;700;800;900&display=swap");' +
         'body { margin: 0; padding: 0; font-family: "Barlow", -apple-system, system-ui, sans-serif; color: #111827; background: #fff; width: ' + pageW + 'mm; height: ' + pageH + 'mm; display: flex; flex-direction: column; }' +
-        '.wb-print-sheet { flex: 1 1 auto; padding: 10mm 10mm 6mm; box-sizing: border-box; display: flex; flex-direction: column; gap: 4mm; overflow: hidden; }' +
+        '.wb-print-sheet { flex: 1 1 auto; padding: 4mm; box-sizing: border-box; display: flex; flex-direction: column; gap: 4mm; overflow: hidden; }' +
         '.wb-print-title { font-family: "Oswald", sans-serif; font-size: 18pt; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; padding-bottom: 4mm; border-bottom: 2pt solid #16a34a; flex: 0 0 auto; }' +
         '.wb-print-body { flex: 1 1 auto; column-count: ' + cols + '; column-gap: 6mm; column-fill: auto; min-height: 0; }' +
         '.wb-print-block { break-inside: avoid; page-break-inside: avoid; -webkit-column-break-inside: avoid; border-radius: 4pt; padding: 4mm 5mm; margin-bottom: 4mm; }' +
@@ -2027,7 +2028,6 @@
         '@media print { * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }' +
       '</style>' +
       '<div class="wb-print-sheet">' +
-        (canvas.title ? '<div class="wb-print-title">' + PCD.escapeHtml(canvas.title) + '</div>' : '') +
         '<div class="wb-print-body">' + blocksHtml + '</div>' +
       '</div>';
 
