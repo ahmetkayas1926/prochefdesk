@@ -458,16 +458,13 @@
     saveStore(store);
   }
 
-  // ============ BLOCK RENDERER (interactive HTML) ============
-  // Her block tipi için interactive HTML üret. Selected ise vurgu.
-  function renderBlockHtml(block, idx, selectedIdx) {
-    const palette = paletteFor(block.style && block.style.color);
+  // ============ BLOCK CONTENT RENDERER (shared canvas + print) ============
+  // v2.13.0 — WYSIWYG: tek inner-content üreteci. Hem interactive canvas hem
+  // print AYNI HTML'i, AYNI px ölçülerini kullanır → önizleme = çıktı.
+  // Wrapper (chrome) ayrı: canvas interactive (handle/tag/select), print sade.
+  function renderBlockContent(block) {
     const fs = FONT_SIZES[(block.style && block.style.size) || 'md'];
     const align = (block.style && block.style.align) || 'left';
-    const weight = WEIGHTS[(block.style && block.style.weight) || 'medium'];
-    const layout = block.layout || 'full';
-    const isSelected = idx === selectedIdx;
-    const meta = blockTypeMeta(block.type);
 
     let inner = '';
     switch (block.type) {
@@ -513,11 +510,11 @@
       }
       case 'table': {
         const headers = (block.content.headers || []).map(function (h) {
-          return '<th style="padding:5px 8px;text-align:left;font-size:' + (fs.px - 1) + 'px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;border-bottom:2px solid currentColor;background:rgba(127,127,127,0.08);">' + PCD.escapeHtml(h || '') + '</th>';
+          return '<th style="padding:5px 8px;line-height:1.5;text-align:left;font-size:' + (fs.px - 1) + 'px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;border-bottom:2px solid currentColor;background:rgba(127,127,127,0.08);">' + PCD.escapeHtml(h || '') + '</th>';
         }).join('');
         const rows = (block.content.rows || []).map(function (row) {
           const cells = (row || []).map(function (c) {
-            return '<td style="padding:5px 8px;font-size:' + fs.px + 'px;border-bottom:1px solid rgba(127,127,127,0.18);vertical-align:top;">' + PCD.escapeHtml(c || '') + '</td>';
+            return '<td style="padding:5px 8px;line-height:1.5;font-size:' + fs.px + 'px;border-bottom:1px solid rgba(127,127,127,0.18);vertical-align:top;">' + PCD.escapeHtml(c || '') + '</td>';
           }).join('');
           return '<tr>' + cells + '</tr>';
         }).join('');
@@ -613,16 +610,36 @@
         inner = '<div style="font-style:italic;opacity:0.5;">Unknown block type: ' + PCD.escapeHtml(block.type) + '</div>';
     }
 
-    // Block wrapper (interactive)
-    const accentBorder = isSelected ? '2px solid #16a34a' : '1px solid rgba(127,127,127,0.18)';
+    return inner;
+  }
+
+  // v2.13.0 — Block kutu stili (bg/renk/weight/padding) — canvas + print ORTAK.
+  // divider & doneness şeffaf + padding yok (kendi iç görselleri var).
+  function blockBoxStyle(block) {
+    const palette = paletteFor(block.style && block.style.color);
+    const weight = WEIGHTS[(block.style && block.style.weight) || 'medium'];
+    if (block.type === 'divider' || block.type === 'doneness') {
+      return 'background:transparent;color:' + palette.text + ';font-weight:' + weight + ';padding:0;';
+    }
+    return 'background:' + palette.bg + ';color:' + palette.text + ';font-weight:' + weight + ';padding:10px 12px;';
+  }
+
+  // ============ BLOCK RENDERER (interactive canvas wrapper) ============
+  // Selected ise vurgu. Inner content renderBlockContent'ten (print ile ortak).
+  function renderBlockHtml(block, idx, selectedIdx) {
+    const layout = block.layout || 'full';
+    const isSelected = idx === selectedIdx;
+    const meta = blockTypeMeta(block.type);
+    // v2.13.0 — Seçim/ayraç çerçevesi box-shadow ring ile (layout'a etki etmez) →
+    // canvas block yüksekliği = print block yüksekliği (WYSIWYG). border KULLANMA.
     return '' +
       '<div class="wb-block wb-block-' + block.type + (isSelected ? ' wb-block-selected' : '') + '" data-blk-idx="' + idx + '" data-blk-id="' + PCD.escapeHtml(block.id) + '" data-layout="' + layout + '" style="' +
-        'position:relative;background:' + palette.bg + ';color:' + palette.text + ';font-weight:' + weight + ';' +
-        'border:' + accentBorder + ';border-radius:6px;padding:10px 12px;margin:0;cursor:pointer;' +
-        'transition:border-color 0.12s ease, transform 0.12s ease;' +
+        'position:relative;' + blockBoxStyle(block) +
+        'border-radius:6px;margin:0;cursor:pointer;' +
+        'transition:box-shadow 0.12s ease, transform 0.12s ease;' +
       '">' +
         '<div class="wb-block-handle" style="position:absolute;top:6px;left:6px;width:18px;height:18px;display:none;align-items:center;justify-content:center;cursor:grab;opacity:0.5;font-size:14px;">⋮⋮</div>' +
-        inner +
+        renderBlockContent(block) +
         '<div class="wb-block-tag" style="position:absolute;top:4px;right:6px;font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;opacity:0.4;pointer-events:none;">' + PCD.escapeHtml(t(meta.labelKey, meta.label)) + '</div>' +
       '</div>';
   }
@@ -690,7 +707,7 @@
         buildHeader(t) +
         buildCanvasSelector(store, canvasCount) +
         buildCanvasMeta(canvas) +
-        '<div class="wb-workspace" style="display:grid;grid-template-columns:220px 1fr 280px;gap:16px;margin-top:16px;">' +
+        '<div class="wb-workspace" style="display:grid;grid-template-columns:220px minmax(0, 1fr) 280px;gap:16px;margin-top:16px;">' +
           buildPalettePane() +
           buildCanvasPane(canvas) +
           buildInspectorPane(canvas) +
@@ -710,9 +727,33 @@
     wireInspector(wbRoot, canvas, view);
     wireBottomSheet(wbRoot, canvas, view);
 
+    // v2.13.0 — Gerçek A4-px canvas'ı viewport'a sığacak şekilde ölçekle.
+    applyCanvasScale();
+
     // v2.11.2 — Overflow detection: block list page boundary'i aşıyor mu?
     checkOverflow(wbRoot);
+
+    // v2.13.0 — ResizeObserver: pane ilk layout'u aldığında (lazy load) VE her
+    // genişlik değişiminde (pencere resize / responsive) scale'i güncelle. rAF
+    // polling'e göre daha sağlam: 0-width lazy-load durumunu kendiliğinden iyileştirir,
+    // scale(0) ile canvas kaybolması imkânsız. Re-render'da eski observer kapatılır.
+    const vpEl = wbRoot.querySelector('#wbCanvasViewport');
+    if (window.ResizeObserver && vpEl) {
+      if (_canvasRO) { try { _canvasRO.disconnect(); } catch (e) {} }
+      _canvasRO = new ResizeObserver(function () { applyCanvasScale(); });
+      _canvasRO.observe(vpEl);
+    } else if (!_resizeBound) {
+      // Fallback (ResizeObserver yoksa): pencere resize.
+      _resizeBound = true;
+      window.addEventListener('resize', function () {
+        if (_resizeRaf) cancelAnimationFrame(_resizeRaf);
+        _resizeRaf = requestAnimationFrame(function () { applyCanvasScale(); });
+      });
+    }
   }
+  let _canvasRO = null;
+  let _resizeBound = false;
+  let _resizeRaf = null;
 
   // v2.11.2 — Canvas içeriği aspect-ratio frame'i aşıyorsa "wb-canvas-overflowing"
   // class eklenir (CSS warn gradient + fit tag gizler). Aşmıyorsa "✓ Fits one page".
@@ -753,11 +794,16 @@
       // sınırı net görünür. Block list sığamazsa overflow detect + kırmızı
       // gradient uyarı (alttan slide up). Operatör 100+ block koyarsa sığmadığını
       // anında görür.
-      '#wbRoot .wb-canvas { display: flex; flex-direction: column; gap: 10px; padding: 14px; background: #ffffff; color: #111827; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.06); position: relative; overflow: hidden; width: 100%; box-sizing: border-box; }' +
-      '#wbRoot .wb-canvas[data-aspect="A4_landscape"] { aspect-ratio: 297 / 210; }' +
-      '#wbRoot .wb-canvas[data-aspect="A4_portrait"]  { aspect-ratio: 210 / 297; }' +
-      '#wbRoot .wb-canvas[data-aspect="A3_landscape"] { aspect-ratio: 420 / 297; }' +
-      '#wbRoot .wb-canvas[data-aspect="A3_portrait"]  { aspect-ratio: 297 / 420; }' +
+      // v2.13.0 WYSIWYG — Canvas artık GERÇEK A4/A3 px boyutunda (genişlik/yükseklik
+      // inline, mm×3.7795). transform:scale ile viewport'a sığdırılır → ekrandaki
+      // önizleme print'in birebir küçültülmüş hali. checkOverflow gerçek sayfa
+      // yüksekliğini ölçer (transform scrollHeight/clientHeight'i bozmaz).
+      // min-width:0 ŞART — yoksa viewport gerçek-A4 canvas'ın (794px+) min-content
+      // genişliğinin altına inemez, grid track 794'te kilitlenir, sayfa yatay taşar
+      // (mobilde 794px canvas 375px ekrana sığmaz). 0 ile küçülür, transform:scale sığdırır.
+      '#wbRoot .wb-canvas-pane { min-width: 0; }' +
+      '#wbRoot .wb-canvas-viewport { width: 100%; overflow: hidden; min-width: 0; }' +
+      '#wbRoot .wb-canvas { display: flex; flex-direction: column; gap: 14px; padding: 14px; background: #ffffff; color: #111827; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.06); position: relative; overflow: hidden; box-sizing: border-box; transform-origin: top left; }' +
       '#wbRoot .wb-canvas-page-label { position: absolute; top: 6px; right: 10px; font-size: 9px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(0,0,0,0.32); pointer-events: none; font-family: "Oswald", sans-serif; z-index: 4; }' +
       '#wbRoot .wb-canvas-corner { position: absolute; width: 14px; height: 14px; pointer-events: none; z-index: 3; }' +
       '#wbRoot .wb-canvas-corner.tl { top: 4px; left: 4px; border-top: 2px solid rgba(0,0,0,0.18); border-left: 2px solid rgba(0,0,0,0.18); }' +
@@ -768,8 +814,8 @@
       '#wbRoot .wb-canvas.wb-canvas-overflowing .wb-canvas-overflow-warn { display: block; }' +
       '#wbRoot .wb-canvas-fit-tag { position: absolute; bottom: 8px; left: 10px; font-size: 9px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(0,0,0,0.4); background: rgba(255,255,255,0.85); padding: 2px 6px; border-radius: 3px; z-index: 4; pointer-events: none; }' +
       '#wbRoot .wb-row { width: 100%; }' +
-      '#wbRoot .wb-block { box-shadow: 0 1px 2px rgba(0,0,0,0.05); user-select: none; }' +
-      '#wbRoot .wb-block:hover { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,0.10); }' +
+      '#wbRoot .wb-block { box-shadow: 0 0 0 1px rgba(127,127,127,0.18), 0 1px 2px rgba(0,0,0,0.05); user-select: none; }' +
+      '#wbRoot .wb-block:hover { transform: translateY(-1px); box-shadow: 0 0 0 1px rgba(127,127,127,0.25), 0 3px 8px rgba(0,0,0,0.10); }' +
       '#wbRoot .wb-block-selected { box-shadow: 0 0 0 2px #16a34a, 0 4px 12px rgba(22,163,74,0.18) !important; transform: translateY(-1px); }' +
       '#wbRoot .wb-block:hover .wb-block-handle { display: inline-flex !important; }' +
       '#wbRoot .wb-block.dragging { opacity: 0.4; }' +
@@ -911,11 +957,12 @@
           '</button>';
         }).join('') +
       '</div>';
-    // v2.11.2 — Canvas A4/A3 page boundary frame: aspect-ratio paper+orient'e
-    // göre. Corner markers + page label rozet + overflow uyarısı (block list
-    // sayfaya sığmıyorsa alttan kırmızı gradient).
+    // v2.13.0 — Canvas GERÇEK A4/A3 px boyutunda (mm × 96/25.4). transform:scale
+    // (applyCanvasScale) viewport'a sığdırır. Corner markers + page label rozet +
+    // overflow uyarısı (block list sayfaya sığmıyorsa alttan kırmızı gradient).
     const aspectKey = (canvas.paper || 'A4') + '_' + (canvas.orient || 'landscape');
     const pageLabel = (canvas.paper || 'A4') + ' · ' + (canvas.orient || 'landscape');
+    const px = pagePx(canvas);
     return '' +
       '<div class="wb-pane wb-canvas-pane">' +
         '<div class="wb-pane-title" style="justify-content:space-between;">' +
@@ -923,20 +970,53 @@
           '<span style="font-weight:600;color:var(--text-3);">' + (canvas.blocks || []).length + ' ' + PCD.escapeHtml(t('wb_blocks_count', 'blocks')) + '</span>' +
         '</div>' +
         mobileAddBar +
-        '<div class="wb-canvas" id="wbCanvas" data-aspect="' + aspectKey + '">' +
-          '<div class="wb-canvas-corner tl"></div>' +
-          '<div class="wb-canvas-corner tr"></div>' +
-          '<div class="wb-canvas-corner bl"></div>' +
-          '<div class="wb-canvas-corner br"></div>' +
-          '<div class="wb-canvas-page-label">' + PCD.escapeHtml(pageLabel) + '</div>' +
-          // v2.11.2 — Block list ayrı inner wrapper'a yerleştirilir. Bu sayede
-          // light commit'lerde sadece block list innerHTML değişir, corner/label/
-          // warn frame yapısı korunur.
-          '<div class="wb-canvas-blocks" id="wbCanvasBlocks" style="display:flex;flex-direction:column;gap:10px;flex:1 1 auto;min-height:0;">' + sheetHtml + '</div>' +
-          '<div class="wb-canvas-fit-tag" id="wbFitTag" style="display:none;">' + PCD.escapeHtml(t('wb_fits_one_page', '✓ Fits one page')) + '</div>' +
-          '<div class="wb-canvas-overflow-warn">⚠ ' + PCD.escapeHtml(t('wb_overflow_warn', 'Will not fit on one printed page — remove blocks or use larger paper (A3)')) + '</div>' +
+        '<div class="wb-canvas-viewport" id="wbCanvasViewport">' +
+          '<div class="wb-canvas" id="wbCanvas" data-aspect="' + aspectKey + '" style="width:' + px.w + 'px;height:' + px.h + 'px;">' +
+            '<div class="wb-canvas-corner tl"></div>' +
+            '<div class="wb-canvas-corner tr"></div>' +
+            '<div class="wb-canvas-corner bl"></div>' +
+            '<div class="wb-canvas-corner br"></div>' +
+            '<div class="wb-canvas-page-label">' + PCD.escapeHtml(pageLabel) + '</div>' +
+            // v2.11.2 — Block list ayrı inner wrapper'a yerleştirilir. Bu sayede
+            // light commit'lerde sadece block list innerHTML değişir, corner/label/
+            // warn frame yapısı korunur.
+            '<div class="wb-canvas-blocks" id="wbCanvasBlocks" style="display:flex;flex-direction:column;gap:14px;flex:1 1 auto;min-height:0;">' + sheetHtml + '</div>' +
+            '<div class="wb-canvas-fit-tag" id="wbFitTag" style="display:none;">' + PCD.escapeHtml(t('wb_fits_one_page', '✓ Fits one page')) + '</div>' +
+            '<div class="wb-canvas-overflow-warn">⚠ ' + PCD.escapeHtml(t('wb_overflow_warn', 'Will not fit on one printed page — remove blocks or use larger paper (A3)')) + '</div>' +
+          '</div>' +
         '</div>' +
       '</div>';
+  }
+
+  // v2.13.0 — Sayfa boyutunu px olarak döndür (96dpi: 1mm = 96/25.4 px).
+  // Canvas bu boyutta render edilir; print @page aynı mm boyutunu kullanır.
+  function pagePx(canvas) {
+    const MM = 96 / 25.4; // 3.77953
+    const isLand = (canvas.orient || 'landscape') === 'landscape';
+    let wMM, hMM;
+    if ((canvas.paper || 'A4') === 'A3') { wMM = isLand ? 420 : 297; hMM = isLand ? 297 : 420; }
+    else                                 { wMM = isLand ? 297 : 210; hMM = isLand ? 210 : 297; }
+    return { w: Math.round(wMM * MM), h: Math.round(hMM * MM) };
+  }
+
+  // v2.13.0 — Canvas'ı viewport genişliğine göre ölçekle. Gerçek A4-px container
+  // transform:scale ile küçültülür; viewport yüksekliği ölçekli yüksekliğe set
+  // edilir (scale layout box'ı değiştirmez, bu yüzden manuel ayar gerekir).
+  function applyCanvasScale() {
+    const vp = document.getElementById('wbCanvasViewport');
+    const cv = document.getElementById('wbCanvas');
+    if (!vp || !cv) return;
+    const pageWpx = parseFloat(cv.style.width) || cv.offsetWidth;
+    const pageHpx = parseFloat(cv.style.height) || cv.offsetHeight;
+    if (!pageWpx || !pageHpx) return;
+    const avail = vp.clientWidth;
+    // v2.13.0 — Pane henüz layout almadıysa (lazy load / gizli sekme) clientWidth=0.
+    // scale(0) ile canvas kaybolmasın: çık; ResizeObserver width gelince tekrar çağırır.
+    if (!avail) return;
+    let scale = avail / pageWpx;
+    if (scale > 1) scale = 1; // büyütme yok — gerçek boyutu aşma
+    cv.style.transform = 'scale(' + scale + ')';
+    vp.style.height = Math.ceil(pageHpx * scale) + 'px';
   }
 
   // ============ INSPECTOR PANE (desktop right) ============
@@ -1966,15 +2046,9 @@
     if (canvas.paper === 'A3') { pageW = isLand ? 420 : 297; pageH = isLand ? 297 : 420; }
     else                       { pageW = isLand ? 297 : 210; pageH = isLand ? 210 : 297; }
 
-    // v2.12.9 — Single column so blocks use the FULL page width (esp. landscape).
-    // Side-by-side placement is done per-block via layout (1/2, 1/3...) and the
-    // multi-pair grid below — not an auto column-count, which left landscape
-    // content cramped in the left half with the right side blank.
-    const cols = 1;
-
-    // Render blocks as a vertical stream; CSS column-fill auto for multi-col layout.
-    // v2.11.1 — half (2) + third (3) + quarter (4) layout'ları için ardışık aynı
-    // layout'lu block'lar N-col grid'e auto-pair olur.
+    // v2.13.0 — Tek dikey akış (canvas renderSheet ile aynı). Yan yana yerleşim
+    // per-block layout (1/2, 1/3...) ile multi-pair grid'e auto-pair olur.
+    // v2.11.1 — half (2) + third (3) + quarter (4) ardışık aynı-layout block'lar.
     let blocksHtml = '';
     let i = 0;
     const blocks = canvas.blocks || [];
@@ -2000,31 +2074,23 @@
       }
     }
 
+    // v2.13.0 WYSIWYG — sheet/body px layout (padding 14px + gap 14px) canvas
+    // .wb-canvas ile BİREBİR aynı. Block içerikleri renderBlockContent'ten gelir,
+    // box stili blockBoxStyle'dan → tipografi + kutu da aynı. @page mm; içerik px
+    // (96dpi: 1px=1/96in) doğru fiziksel boyutta basar. Tek sayfa: overflow:hidden.
     const html =
       '<style>' +
         '@page { size: ' + canvas.paper + ' ' + canvas.orient + '; margin: 0; }' +
         '@import url("https://fonts.googleapis.com/css2?family=Oswald:wght@600;700;800&family=Barlow:wght@400;500;600;700;800;900&display=swap");' +
-        'body { margin: 0; padding: 0; font-family: "Barlow", -apple-system, system-ui, sans-serif; color: #111827; background: #fff; width: ' + pageW + 'mm; height: ' + pageH + 'mm; display: flex; flex-direction: column; }' +
-        '.wb-print-sheet { flex: 1 1 auto; padding: 4mm; box-sizing: border-box; display: flex; flex-direction: column; gap: 4mm; overflow: hidden; }' +
-        '.wb-print-title { font-family: "Oswald", sans-serif; font-size: 18pt; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; padding-bottom: 4mm; border-bottom: 2pt solid #16a34a; flex: 0 0 auto; }' +
-        '.wb-print-body { flex: 1 1 auto; column-count: ' + cols + '; column-gap: 6mm; column-fill: auto; min-height: 0; }' +
-        '.wb-print-block { break-inside: avoid; page-break-inside: avoid; -webkit-column-break-inside: avoid; border-radius: 4pt; padding: 4mm 5mm; margin-bottom: 4mm; }' +
-        '.wb-print-multi-pair { break-inside: avoid; page-break-inside: avoid; display: grid; gap: 3mm; margin-bottom: 4mm; }' +
-        '.wb-print-multi-pair > .wb-print-block { margin-bottom: 0; }' +
-        '.wb-print-section-header { font-family: "Oswald", sans-serif; }' +
-        '.wb-print-kv-row { display: flex; align-items: baseline; gap: 10pt; padding: 2pt 0; border-bottom: 1pt dashed rgba(127,127,127,0.3); }' +
-        '.wb-print-kv-key { font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; min-width: 60pt; opacity: 0.85; }' +
-        '.wb-print-kv-val { flex: 1 1 auto; text-align: right; font-variant-numeric: tabular-nums; }' +
-        '.wb-print-table { width: 100%; border-collapse: collapse; }' +
-        '.wb-print-table th { padding: 4pt 6pt; text-align: left; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 2pt solid currentColor; }' +
-        '.wb-print-table td { padding: 4pt 6pt; border-bottom: 1pt solid rgba(127,127,127,0.2); vertical-align: top; }' +
-        '.wb-print-checklist { display: flex; flex-direction: column; gap: 2pt; }' +
-        '.wb-print-checklist-item { display: flex; align-items: flex-start; gap: 6pt; }' +
-        '.wb-print-checklist-box { width: 10pt; height: 10pt; border: 1pt solid currentColor; border-radius: 1pt; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; font-size: 8pt; font-weight: 900; margin-top: 2pt; }' +
-        '.wb-print-bignum { display: flex; flex-direction: column; gap: 1pt; }' +
-        '.wb-print-bignum-value { font-weight: 900; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }' +
-        '.wb-print-bignum-label { font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.75; }' +
-        '.wb-print-divider { border: 0; border-top: 1pt solid rgba(127,127,127,0.4); margin: 6pt 0; }' +
+        '* { box-sizing: border-box; }' +
+        // v2.13.0 — Base tipografi canvas (#wbRoot, app body) ile aynı: 15px / 1.5.
+        // Inline font-size'ı olmayan içerik (table cell vb.) böylece print'te de
+        // canvas ile aynı satır yüksekliğinde çıkar → birebir WYSIWYG.
+        'body { margin: 0; padding: 0; font-family: "Barlow", -apple-system, system-ui, sans-serif; font-size: 15px; line-height: 1.5; color: #111827; background: #fff; width: ' + pageW + 'mm; height: ' + pageH + 'mm; }' +
+        '.wb-print-sheet { width: ' + pageW + 'mm; height: ' + pageH + 'mm; padding: 14px; display: flex; flex-direction: column; overflow: hidden; }' +
+        '.wb-print-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 14px; }' +
+        '.wb-print-block { break-inside: avoid; page-break-inside: avoid; -webkit-column-break-inside: avoid; }' +
+        '.wb-print-multi-pair { break-inside: avoid; page-break-inside: avoid; display: grid; gap: 10px; }' +
         '@media print { * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }' +
       '</style>' +
       '<div class="wb-print-sheet">' +
@@ -2034,139 +2100,11 @@
     PCD.print(html, canvas.title || (t('whiteboard_title', 'Kitchen Whiteboard')));
   }
 
-  // Print-mode block renderer (separate from interactive — no buttons, no handles)
+  // Print-mode block renderer — v2.13.0 WYSIWYG: canvas ile AYNI inner content
+  // (renderBlockContent) + AYNI kutu stili (blockBoxStyle). Tek fark: interactive
+  // chrome (handle/tag/select border) yok. Böylece print = canvas önizlemesi.
   function renderPrintBlock(block) {
-    const palette = paletteFor(block.style && block.style.color);
-    const sizeMap = { xs: 7, sm: 10, md: 12, lg: 14, xl: 18, xxl: 26 };
-    const fs = sizeMap[(block.style && block.style.size) || 'md'];
-    const align = (block.style && block.style.align) || 'left';
-    const weight = WEIGHTS[(block.style && block.style.weight) || 'medium'];
-    const style = 'background:' + palette.bg + ';color:' + palette.text + ';font-size:' + fs + 'pt;text-align:' + align + ';font-weight:' + weight + ';';
-
-    let inner = '';
-    switch (block.type) {
-      case 'section_header':
-        inner = '<div class="wb-print-section-header" style="font-size:' + (fs + 4) + 'pt;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;">' + PCD.escapeHtml(block.content.text || '') + '</div>';
-        break;
-      case 'big_number': {
-        const valSize = fs + 14;
-        inner = '<div class="wb-print-bignum" style="align-items:' + (align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start') + ';">' +
-          '<div class="wb-print-bignum-value" style="font-size:' + valSize + 'pt;">' +
-            PCD.escapeHtml(block.content.value || '0') +
-            (block.content.sub ? '<span style="font-size:0.5em;margin-left:3pt;opacity:0.7;">' + PCD.escapeHtml(block.content.sub) + '</span>' : '') +
-          '</div>' +
-          '<div class="wb-print-bignum-label">' + PCD.escapeHtml(block.content.label || '') + '</div>' +
-        '</div>';
-        break;
-      }
-      case 'checklist': {
-        const items = (block.content.items || []).map(function (it) {
-          return '<div class="wb-print-checklist-item">' +
-            '<span class="wb-print-checklist-box">' + (it.done ? '✓' : '') + '</span>' +
-            '<span style="' + (it.done ? 'opacity:0.55;text-decoration:line-through;' : '') + '">' + PCD.escapeHtml(it.text || '') + '</span>' +
-          '</div>';
-        }).join('');
-        inner = '<div class="wb-print-checklist">' + items + '</div>';
-        break;
-      }
-      case 'kv': {
-        const pairs = (block.content.pairs || []).map(function (p) {
-          return '<div class="wb-print-kv-row"><span class="wb-print-kv-key">' + PCD.escapeHtml(p.key || '') + '</span><span class="wb-print-kv-val">' + PCD.escapeHtml(p.value || '') + '</span></div>';
-        }).join('');
-        inner = pairs;
-        break;
-      }
-      case 'table': {
-        const heads = (block.content.headers || []).map(function (h) {
-          return '<th>' + PCD.escapeHtml(h || '') + '</th>';
-        }).join('');
-        const rows = (block.content.rows || []).map(function (r) {
-          const cells = (r || []).map(function (c) {
-            return '<td>' + PCD.escapeHtml(c || '') + '</td>';
-          }).join('');
-          return '<tr>' + cells + '</tr>';
-        }).join('');
-        inner = '<table class="wb-print-table"><thead><tr>' + heads + '</tr></thead><tbody>' + rows + '</tbody></table>';
-        break;
-      }
-      case 'alert': {
-        inner = '<div style="display:flex;align-items:center;justify-content:' + (align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start') + ';gap:8pt;font-size:' + (fs + 2) + 'pt;font-weight:800;letter-spacing:0.04em;text-transform:uppercase;line-height:1.25;">' +
-          (block.content.icon ? '<span style="font-size:1.2em;">' + PCD.escapeHtml(block.content.icon) + '</span>' : '') +
-          '<span>' + PCD.escapeHtml(block.content.text || '') + '</span>' +
-        '</div>';
-        break;
-      }
-      case 'text': {
-        inner = '<div style="line-height:1.45;white-space:pre-wrap;">' + PCD.escapeHtml(block.content.text || '') + '</div>';
-        break;
-      }
-      case 'divider': {
-        const lbl = block.content && block.content.label;
-        if (lbl) {
-          inner = '<div style="display:flex;align-items:center;gap:8pt;">' +
-            '<div style="flex:1;height:0.5pt;background:currentColor;opacity:0.3;"></div>' +
-            '<div style="font-weight:700;text-transform:uppercase;letter-spacing:0.08em;opacity:0.7;font-size:' + (fs - 1) + 'pt;">' + PCD.escapeHtml(lbl) + '</div>' +
-            '<div style="flex:1;height:0.5pt;background:currentColor;opacity:0.3;"></div>' +
-          '</div>';
-        } else {
-          inner = '<hr class="wb-print-divider">';
-        }
-        // Divider'a background uygulamayalım — şeffaf kalsın
-        return '<div class="wb-print-block wb-print-block-' + block.type + '" style="background:transparent;padding:0;">' + inner + '</div>';
-      }
-      // v2.11.14 — 4 yeni block tipi print render
-      case 'step_list': {
-        const items = (block.content.items || []).map(function (it, n) {
-          return '<div style="display:flex;align-items:flex-start;gap:6pt;padding:2pt 0;">' +
-            '<span style="flex:0 0 auto;width:' + (fs + 4) + 'pt;height:' + (fs + 4) + 'pt;border-radius:50%;background:rgba(127,127,127,0.22);color:currentColor;display:inline-flex;align-items:center;justify-content:center;font-weight:900;font-size:' + (fs - 1) + 'pt;font-variant-numeric:tabular-nums;">' + (n + 1) + '</span>' +
-            '<span style="flex:1 1 auto;">' + PCD.escapeHtml(it.text || '') + '</span>' +
-          '</div>';
-        }).join('');
-        inner = items;
-        break;
-      }
-      case 'allergen_strip': {
-        const all = (PCD.allergensDB && PCD.allergensDB.list) || [];
-        const active = (block.content.active || []).map(function (s) { return (s || '').toLowerCase(); });
-        // v2.12.2 — Print: show only allergens marked "contains" (see canvas render).
-        const shown = active.length ? all.filter(function (a) { return active.indexOf(a.key) >= 0; }) : all;
-        const cells = shown.map(function (a) {
-          const isActive = active.indexOf(a.key) >= 0;
-          return '<div style="flex:1;min-width:0;text-align:center;padding:3pt 2pt;' +
-              (isActive ? 'background:rgba(220,38,38,0.22);color:#a23b2d;font-weight:800;' : 'opacity:0.5;') +
-            '">' +
-            '<div style="font-size:' + (fs + 4) + 'pt;line-height:1;">' + PCD.escapeHtml(a.icon || '?') + '</div>' +
-            '<div style="font-size:' + Math.max(6, fs - 4) + 'pt;text-transform:uppercase;letter-spacing:0.04em;margin-top:1pt;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + PCD.escapeHtml(a.key) + '</div>' +
-          '</div>';
-        }).join('');
-        inner = '<div style="display:flex;align-items:center;gap:1pt;">' + cells + '</div>';
-        break;
-      }
-      case 'doneness': {
-        const colors = ['#c92a2a', '#b8543b', '#a36b3a', '#7d5a2c', '#3b2a1e'];
-        const cells = (block.content.levels || []).map(function (lv, i) {
-          const bg = colors[i] || colors[colors.length - 1];
-          return '<div style="flex:1;min-width:0;background:' + bg + ';color:white;padding:5pt 3pt;display:flex;flex-direction:column;align-items:center;text-align:center;border-right:0.5pt solid rgba(255,255,255,0.15);">' +
-            '<div style="font-size:' + (fs - 1) + 'pt;font-weight:900;letter-spacing:0.04em;text-transform:uppercase;line-height:1.1;">' + PCD.escapeHtml(lv.label || '') + '</div>' +
-            '<div style="font-size:' + (fs - 1) + 'pt;font-weight:700;font-variant-numeric:tabular-nums;margin-top:2pt;">' + PCD.escapeHtml(lv.temp || '') + '</div>' +
-          '</div>';
-        }).join('');
-        // Doneness'e block bg uygulamayalım — gradient cell'ler kendi renklerini kullanır
-        return '<div class="wb-print-block wb-print-block-' + block.type + '" style="background:transparent;padding:0;border-radius:3pt;overflow:hidden;"><div style="display:flex;">' + cells + '</div></div>';
-      }
-      case 'time_range': {
-        inner =
-          '<div style="display:flex;align-items:center;gap:8pt;padding:3pt 0;font-variant-numeric:tabular-nums;">' +
-            '<div style="font-size:' + (fs + 4) + 'pt;font-weight:900;letter-spacing:-0.01em;flex:0 0 auto;">' + PCD.escapeHtml(block.content.start || '00:00') + '</div>' +
-            '<div style="flex:1 1 auto;position:relative;height:3pt;background:currentColor;opacity:0.25;border-radius:1.5pt;"></div>' +
-            '<div style="font-size:' + (fs + 4) + 'pt;font-weight:900;letter-spacing:-0.01em;flex:0 0 auto;">' + PCD.escapeHtml(block.content.end || '00:00') + '</div>' +
-          '</div>' +
-          (block.content.label ? '<div style="text-align:center;font-size:' + fs + 'pt;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;opacity:0.85;margin-top:3pt;">' + PCD.escapeHtml(block.content.label) + '</div>' : '');
-        break;
-      }
-    }
-
-    return '<div class="wb-print-block wb-print-block-' + block.type + '" style="' + style + '">' + inner + '</div>';
+    return '<div class="wb-print-block wb-print-block-' + block.type + '" style="' + blockBoxStyle(block) + 'border-radius:6px;">' + renderBlockContent(block) + '</div>';
   }
 
   // ============ RE-RENDER HELPER ============
