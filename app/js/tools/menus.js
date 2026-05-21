@@ -399,9 +399,12 @@
           <input type="checkbox" id="menuHidePrice" ${data.hidePrices ? 'checked' : ''}>
           <span>${t('menu_hide_price')}</span>
         </div>
-        <div class="checkbox">
-          <input type="checkbox" id="menuHideAllergens" ${data.hideAllergens ? 'checked' : ''}>
-          <span>${PCD.escapeHtml(t('menu_hide_allergens') || 'Hide allergen icons')}</span>
+        <div class="field" style="margin-top:10px;">
+          <label class="field-label">${PCD.escapeHtml(t('menu_allergen_display') || 'Allergen display')}</label>
+          <select class="select" id="menuAllergenStyle">
+            <option value="codes"${((data.allergenStyle || (data.hideAllergens ? 'off' : 'codes')) === 'codes') ? ' selected' : ''}>${PCD.escapeHtml(t('menu_allergen_codes') || 'Numbered codes + legend (professional)')}</option>
+            <option value="off"${((data.allergenStyle || (data.hideAllergens ? 'off' : 'codes')) === 'off') ? ' selected' : ''}>${PCD.escapeHtml(t('menu_allergen_off') || 'Off')}</option>
+          </select>
         </div>
 
         <!-- v2.8.71 — Allergen-safe print filter. Real-world: special menu
@@ -537,8 +540,12 @@
       PCD.$('#menuSubtitle', body).addEventListener('input', function () { data.subtitle = this.value; });
       PCD.$('#menuFooter', body).addEventListener('input', function () { data.footer = this.value; });
       PCD.$('#menuHidePrice', body).addEventListener('change', function () { data.hidePrices = this.checked; render(); });
-      const hideAllergEl = PCD.$('#menuHideAllergens', body);
-      if (hideAllergEl) hideAllergEl.addEventListener('change', function () { data.hideAllergens = this.checked; render(); });
+      const allergStyleEl = PCD.$('#menuAllergenStyle', body);
+      if (allergStyleEl) allergStyleEl.addEventListener('change', function () {
+        data.allergenStyle = this.value;
+        data.hideAllergens = (this.value === 'off'); // back-compat: eski bayrak senkron
+        render();
+      });
 
       // v2.8.68 — Theme picker
       PCD.on(body, 'click', '[data-theme]', function () {
@@ -882,6 +889,17 @@
       return true;
     }
 
+    // v2.13.7 — Profesyonel alerjen gösterimi: emoji ikonları yerine EU FIC
+    // 1169/2011 numaralı kodlar (allergensDB.list sırası = EU Annex II 1-14) +
+    // menü altında otomatik legend. allergenStyle: 'codes' (varsayılan) | 'off'.
+    // Back-compat: eski hideAllergens=true → 'off'.
+    const allergenStyle = menu.allergenStyle || (menu.hideAllergens ? 'off' : 'codes');
+    const showAllergens = allergenStyle === 'codes';
+    const ALLERGEN_NAMES = { gluten: 'Gluten', crustaceans: 'Crustaceans', eggs: 'Eggs', fish: 'Fish', peanuts: 'Peanuts', soybeans: 'Soybeans', dairy: 'Milk', nuts: 'Tree nuts', celery: 'Celery', mustard: 'Mustard', sesame: 'Sesame', sulphites: 'Sulphites', lupin: 'Lupin', molluscs: 'Molluscs' };
+    const allergenList = (PCD.allergensDB && PCD.allergensDB.list) || [];
+    function allergenNum(key) { for (let i = 0; i < allergenList.length; i++) { if (allergenList[i].key === key) return i + 1; } return 0; }
+    const usedAllergens = {}; // num → key (menüde geçenler; legend için)
+
     // Build sections HTML using a simple, professional layout
     let sectionsBody = '';
     (menu.sections || []).forEach(function (sec) {
@@ -900,23 +918,24 @@
         const price = (it.price !== undefined && it.price !== null && it.price !== '') ? Number(it.price) : (r && r.salePrice ? r.salePrice : 0);
         const desc = it.description || (r && r.plating) || '';
 
-        // EU FIC 1169/2011 — allergen icons next to dish name (legal requirement)
-        let allergenIcons = '';
-        if (r && PCD.allergensDB && PCD.allergensDB.recipeAllergens && !menu.hideAllergens) {
-          const tags = PCD.allergensDB.recipeAllergens(r, ingMap);
-          if (tags && tags.length > 0) {
-            const allList = PCD.allergensDB.list || [];
-            allergenIcons = ' <span class="m-allerg" title="Allergens: ' + tags.join(', ') + '">' +
-              tags.slice(0, 6).map(function (key) {
-                const a = allList.find(function (x) { return x.key === key; });
-                return a ? a.icon : '';
-              }).filter(Boolean).join(' ') +
-              '</span>';
+        // v2.13.7 — EU FIC 1169/2011 numaralı alerjen kodları (emoji yerine).
+        // Yemek adının yanında üst-simge "1,7"; menü altında legend açıklar.
+        let allergenCodes = '';
+        if (showAllergens && r && PCD.allergensDB && PCD.allergensDB.recipeAllergens) {
+          const tags = PCD.allergensDB.recipeAllergens(r, ingMap) || [];
+          const nums = [];
+          tags.forEach(function (key) {
+            const n = allergenNum(key);
+            if (n && nums.indexOf(n) < 0) { nums.push(n); usedAllergens[n] = key; }
+          });
+          nums.sort(function (a, b) { return a - b; });
+          if (nums.length) {
+            allergenCodes = '<sup class="m-allerg" title="' + PCD.escapeHtml(nums.map(function (n) { return ALLERGEN_NAMES[usedAllergens[n]] || usedAllergens[n]; }).join(', ')) + '">' + nums.join(',') + '</sup>';
           }
         }
 
         sectionsBody += '<div class="m-item">';
-        sectionsBody += '<div class="m-item-row"><div class="m-item-name">' + PCD.escapeHtml(itemName) + itemBadge(it) + allergenIcons + '</div>';
+        sectionsBody += '<div class="m-item-row"><div class="m-item-name">' + PCD.escapeHtml(itemName) + itemBadge(it) + allergenCodes + '</div>';
         sectionsBody += '<div class="m-item-leader"></div>';
         if (!menu.hidePrices && price > 0) {
           sectionsBody += '<div class="m-item-price">' + PCD.fmtMoney(price) + '</div>';
@@ -927,6 +946,18 @@
       });
       sectionsBody += '</div></div>';
     });
+
+    // v2.13.7 — Alerjen legend: menüde geçen numaraları açıklar (numaraya göre sıralı).
+    let allergenLegendHtml = '';
+    if (showAllergens) {
+      const usedNums = Object.keys(usedAllergens).map(Number).sort(function (a, b) { return a - b; });
+      if (usedNums.length) {
+        allergenLegendHtml = '<div class="m-allergen-legend"><span class="m-leg-title">' +
+          PCD.escapeHtml(t('menu_allergen_legend') || 'Allergens') + '</span> ' +
+          usedNums.map(function (n) { return '<span class="m-leg-item"><sup>' + n + '</sup> ' + PCD.escapeHtml(ALLERGEN_NAMES[usedAllergens[n]] || usedAllergens[n]) + '</span>'; }).join(' &nbsp;·&nbsp; ') +
+        '</div>';
+      }
+    }
 
     // Print options — saved on menu so they persist
     const printOpts = {
@@ -1021,12 +1052,23 @@
           'flex-shrink: 0;' +
         '}' +
         '.m-allerg {' +
-          'font-size: 11px;' +
-          'margin-inline-start: 6px;' +
-          'opacity: 0.7;' +
-          'letter-spacing: 0.06em;' +
-          'vertical-align: middle;' +
+          'font-size: 0.6em;' +
+          'font-weight: 600;' +
+          'margin-inline-start: 3px;' +
+          'color: ' + theme.mutedInk + ';' +
+          'letter-spacing: 0.04em;' +
         '}' +
+        '.m-allergen-legend {' +
+          'margin-top: 30px; padding-top: 14px;' +
+          'border-top: 1px solid ' + accent + '33;' +
+          'font-size: 11px; color: ' + theme.mutedInk + ';' +
+          'line-height: 1.9; text-align: center; font-weight: 400;' +
+        '}' +
+        '.m-allergen-legend .m-leg-title {' +
+          'text-transform: uppercase; letter-spacing: 0.14em;' +
+          'font-weight: 600; margin-inline-end: 6px; color: ' + theme.ink + ';' +
+        '}' +
+        '.m-allergen-legend sup { font-weight: 700; color: ' + theme.ink + '; }' +
         '.m-itembadge {' +
           'font-size: 10px;' +
           'font-weight: 700;' +
@@ -1082,6 +1124,7 @@
           '<div class="m-divider"></div>' +
         '</div>' +
         '<div class="m-sections">' + sectionsBody + '</div>' +
+        allergenLegendHtml +
         (menu.footer ? '<div class="m-footer">' + PCD.escapeHtml(menu.footer) + '</div>' : '') +
       '</div>'
       );

@@ -9,7 +9,7 @@
 
 **Ürün:** ProChefDesk — profesyonel chef'ler için web tabanlı mutfak yönetim sistemi.
 **Operatör:** Ahmet Kaya, Perth Western Australia, profesyonel şef. Solo non-commercial proje.
-**Mevcut sürüm:** **v2.11.16** (push'a hazır local; production v2.11.15). **Mise en Place Planner kaldırıldı** (operatör kararı — kod-tabanlı audit: tek başına çalışamaz, Events/Buffet dependency, manuel task add UI yok, kod yorumu yalan). mise.js silindi (497 satır), app.js'den registerLazy + sidenav item çıkarıldı, 76 i18n key silindi (38 EN + 38 TR). Cloud sync schema (mise_plans tablosu) korundu (veri kaybı sıfır, Diet flags v2.10.3 pattern'ı).
+**Mevcut sürüm:** **v2.13.6** (production). **Bu oturumun büyük değişiklikleri:** Checklist baştan yazıldı (2 tür), profil persist fix, Privacy/Terms 6-dil, **Whiteboard WYSIWYG** (canvas = print birebir), **Waste Log + Shopping List araçları KALDIRILDI** (Mise pattern: UI sil, cloud şema koru), Portion'a birleştirilmiş malzeme görünümü, 6 yeni whiteboard template + print footer tek-sayfa fix, profil anında-IDB fix, "Sync now" kaldırıldı, Ctrl+wheel zoom hata spam fix. Detay: CHANGELOG `v2.12.x` / `v2.13.x`. (Önceki: Mise en Place Planner v2.11.16'da kaldırılmıştı — schema korundu, Diet flags v2.10.3 pattern'ı.)
 **Blog:** 13 yazı yayında (Faz A SEO upgrade + Faz B 5-round, MENA niş + uluslararası coverage).
 **Domain:** prochefdesk.com (Cloudflare Pages, SSL Full, GitHub push'ta auto build + deploy).
 
@@ -28,7 +28,26 @@
 
 Yeni Claude'un bilmesi gereken: **bu hâlâ tek kullanıcılı bir ürün** — operatör + birkaç yakın şef arkadaşı. Roadmap'te 50+ aktif kullanıcı + %40 retention hedefine ulaşmadan paid tier / büyük marketing yatırımı yapılmıyor.
 
-### 2.1 Son session özeti (2026-05-19, NAKED→RICH sweep + büyük audit/sertleştirme)
+### 2.1 Son session özeti (2026-05-22 — Checklist → araç sadeleştirme → zoom fix)
+
+Bir önceki Claude'un yaptıkları (kronolojik tersine, hepsi push edildi, en son **v2.13.6**):
+- **v2.13.6** — Whiteboard Ctrl+wheel zoom'da "Something went wrong" toast spam'i: global error handler "ResizeObserver loop" benign hatalarını yok sayıyor + `applyCanvasScale` ilk yüklemede self-retry (canvas garanti ölçeklenir).
+- **v2.13.5** — "Sync now" butonu kaldırıldı (no-op'tu). "Re-sync my data" `{r}/{i}` interpolation fix (`t()` 2-param alır, kod 3 veriyordu).
+- **v2.13.4** — Profil kaydı `PCD.store.flush()` ile anında IDB'ye (400ms debounce'un close/reload/background race'i veri kaybediyordu — özellikle mobil).
+- **v2.13.3** — Whiteboard 6 template yeniden tasarlandı (yeni mutfak blokları) + print footer tek sayfa (flex layout).
+- **v2.13.2** — Portion Calculator'a birleştirilmiş malzeme görünümü (By recipe/category/supplier) — eski Shopping consolidation mantığı taşındı.
+- **v2.13.1** — **Waste Log + Shopping List araçları KALDIRILDI.** UI/buton/i18n sil, cloud şema koru (Mise pattern). Gerekçe: Waste düşük kullanım/çıktısız; Shopping = Supplier + Portion ile gereksiz.
+- **v2.13.0** — **Whiteboard WYSIWYG.** Canvas + print TEK render motoru, canvas gerçek A4-px + transform:scale. Blok delta 0 (doğrulandı).
+- **v2.12.x** — Checklist baştan (2 tür: Control + Prep) + profil persist fix (auth merge) + Privacy/Terms 6-dil + HACCP boş-template tarih damgası kaldırıldı + masaüstü Ctrl+wheel zoom + dashboard ghost checklist fix.
+
+**Bu oturumun mimari notları (yeni Claude MUTLAKA bilsin):**
+- **Waste/Shopping kaldırma = Mise pattern.** `waste` + `shopping_lists` Supabase tablo + RLS + cloud sync + R2 backup DOKUNULMADI. UI yok ama veri durur; tool geri eklenirse veri orada. `trash_section_shopping` i18n korundu.
+- **Whiteboard tek render motoru.** `renderBlockContent(block)` + `blockBoxStyle(block)` HEM canvas HEM print kullanır. Canvas gerçek A4/A3 px (mm×3.7795) + `transform:scale`. Print body flex-column + sheet `flex:1` (footer tek sayfada). Bu yapıyı ayırma/bozma — yoksa önizleme≠çıktı geri gelir.
+- **Whiteboard ResizeObserver yalnızca resize/zoom için.** İlk ölçek `applyCanvasScale` self-retry (rAF, bounded 60) ile garanti edilir. "ResizeObserver loop" hataları global error handler'da filtreli (toast yok) — bu filtreyi kaldırma.
+- **Profil/user kaydı flush.** `store.set('user',...)` sonrası `PCD.store.flush()` şart (debounce race; v2.13.4).
+- **i18n `t()` 2 parametre alır:** `t(key, vars)`. `t(key, 'fallback', {params})` ÇALIŞMAZ (3. arg yok sayılır, fallback `vars` sanılır). Interpolasyon için params 2. arg olmalı.
+
+### 2.1-eski Son session özeti (2026-05-19, NAKED→RICH sweep + büyük audit/sertleştirme)
 
 **Geride bırakılan sürümler (kronolojik tersine):**
 - **v2.9.30 LOCAL ONLY** (henüz push edilmedi) — **hCaptcha challenge popup viewport fix.** v2.9.29 fix sonrası operatör test etti: checkbox tıklamasına UI cevap veriyor, AMA challenge popup ekranın üst kenarına yapışıyor → resim soruları viewport dışında. Root cause: `modal.js` scroll lock pattern body'i `position: fixed; top: -scrollY` ile sabitliyordu → hCaptcha popup body-relative koordinatla yerleşince ofsetli kaydı. Fix: scroll lock `html/body { overflow: hidden }` pattern'ine geçti. Tüm modal'ları etkiler ama desktop + Android Chrome'da sorunsuz; iOS Safari (zaten test edilmemiş) gelecekte cihaz testinde değerlendirilir.

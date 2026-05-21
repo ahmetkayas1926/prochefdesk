@@ -780,6 +780,13 @@
               PCD.toast.success(
                 t('force_resync_success', { n: (result && result.pushed) || 0 })
               );
+              // v2.13.8 — Re-sync sonrası Supabase realtime ECHO'su (kendi push'umuz
+              // geri geliyor) açık workspace listesini geçici bozuyordu: boş/unnamed
+              // ws + yanlış aktif ws ("My Kitchen"). F5/pencere-refocus (= pull) düzeltiyordu.
+              // Push tamamlandı (flushNow await'lendi, veri bulutta) → sayfayı yenile:
+              // boot temiz pull ile garanti doğru state. Echo eski sayfaya düşer, zararsız.
+              // Backup-restore akışıyla AYNI desen (sync iç mantığına dokunulmadı = güvenli).
+              setTimeout(function () { try { location.reload(); } catch (e) {} }, 1100);
             }
           } catch (e) {
             PCD.err && PCD.err('force-resync failed', e);

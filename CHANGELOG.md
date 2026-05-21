@@ -1,10 +1,62 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.11.16 · 2026-05-20
+**Mevcut sürüm:** v2.13.6 · 2026-05-22
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
 Format: kronolojik tersine (en son sürüm üstte). Her sürüm kısa başlık + ana değişiklik özetleri. Tam teknik detay için ilgili commit message ve kod yorumlarına bakın.
+
+---
+
+## v2.13.x — Whiteboard WYSIWYG + araç sadeleştirme · 2026-05-21/22
+
+### v2.13.6 — Ctrl+wheel zoom hata spam'i + canvas ölçek güvenilirliği · 2026-05-22
+
+- **Bug:** Whiteboard'da Ctrl+tekerlek zoom → "Something went wrong" toast spam'i. Sebep: zoom viewport'u sürekli resize ediyor → ResizeObserver "loop limit exceeded" (benign tarayıcı gürültüsü) fırlatıyor → global error handler bunu toast'a çeviriyordu.
+- **Fix A (app.js):** Global `error` handler artık mesajında "ResizeObserver" geçen hataları yok sayıyor (toast + cloud rapor yok). Gerçek hatalar etkilenmez (doğrulandı).
+- **Fix B (whiteboard.js):** `applyCanvasScale`, pane henüz layout almadıysa (clientWidth=0) bir sonraki frame'de kendini tekrar çağırır (bounded 60 frame; canvas DOM'dan kalkınca durur) → ilk açılışta canvas garanti ölçeklenir. RO'nun ilk callback'i bazı tarayıcılarda güvenilmez olduğu için RO yalnızca sonraki resize/zoom için tutuldu.
+
+### v2.13.5 — "Sync now" kaldırıldı + force re-sync {r}/{i} fix · 2026-05-21
+
+- **"Sync now" butonu kaldırıldı** (Cloud sync kartı). `PCD.cloud._doSync()` v2.6.87'den beri no-op → buton hiçbir şey yapmıyor, sahte "saved" gösteriyordu. "Last synced" bilgi satırı kaldı. Sync zaten otomatik (per-table push + realtime).
+- **"Re-sync my data" {r}/{i} fix:** `t()` imzası `t(key, vars)` (2 param). Kod yanlışlıkla `t(key, 'fallback', {params})` çağırıyordu → 3. arg yok sayılıyor, `{r}/{i}` literal görünüyordu. 4 force_resync çağrısı düzeltildi (params 2. arg, fallback string atıldı — anahtarlar en.js'de mevcut).
+
+### v2.13.4 — Profil kaydı anında IDB'ye yazılıyor · 2026-05-21
+
+- **Bug:** Profil (Title/Location/Workplace/Bio) kaydet → sekme kapat/yenile/arka plana at → veri kayboluyor (özellikle mobil). Sebep: `store.set('user')` 400ms debounce'lu persist; o süre dolmadan kapanınca IDB'ye yazılmıyordu. v2.12.1 auth merge fix in-app navigation'ı düzeltmişti ama close/reload/background race'ini değil.
+- **Fix:** Profil kaydından sonra `PCD.store.flush()` ile ANINDA IDB'ye yaz (account.js, save + preview handler'ları). Doğrulandı: kaydet sonrası IDB'de 4 alan hemen var.
+
+### v2.13.3 — Whiteboard 6 yeni template + print footer tek sayfa · 2026-05-21
+
+- **Template'ler yeniden tasarlandı (6):** Tonight's Service · Steak Doneness Guide · Allergen Board · Prep Timeline · Station Mise en Place · Cook Times & Core Temps. Yeni mutfak blokları öne çıkar (doneness ladder, allergen strip, time range, step list). EN+TR isimler; eski 3 orphan key temizlendi.
+- **Print footer fix:** Yatay+dikey yazdırmada ProChefDesk footer 2. sayfaya taşıyordu (body tam-sayfa yükseklikti, footer sheet'ten SONRA ekleniyor). Fix: print body flex-column + sheet flex:1 → footer altta aynı sayfada. Margin ~0 korundu.
+
+### v2.13.2 — Portion Calculator: birleştirilmiş malzeme görünümü · 2026-05-21
+
+- Eski Shopping List'in konsolide hesabı Portion'a taşındı: **By recipe / By category / By supplier** toggle. Seçili tariflerin tüm malzemeleri (alt-tarifler flatten) tek listede birleşir → miktar + maliyet, gruplu + A4 print. Canlı porsiyon değişimi (input focus korunur). Eski shopping consolidation mantığı (`consolidateRows`/`groupRows`/`renderGroupsHtml`/`printConsolidated`) git'ten alınıp adapte edildi.
+- Latent bug fix: `shareScaled` e-posta subject'inde scope-dışı `guestCount` → `totalPortions`.
+
+### v2.13.1 — Waste Log + Shopping List araçları kaldırıldı · 2026-05-21
+
+- **Operatör kararı** (kod-tabanlı audit): Waste = en zayıf halka (çıktı yok, envantere bağlı değil, düşük gerçek kullanım). Shopping = Supplier aracıyla büyük ölçüde gereksiz; "menü → malzeme + maliyet" hesabı zaten Portion Calculator'da.
+- **Silindi:** `waste.js`, `shopping.js` + app.js registerLazy & sidenav + tools-hub kartları + dashboard "bugünün fire" kartı + events "alışveriş listesi oluştur" butonu + portion "send to shopping" butonu + 6 dilde tüm `waste_*` / `shopping_*` i18n.
+- **KORUNDU (Mise pattern, veri kaybı sıfır):** `waste` + `shopping_lists` cloud şeması (store.js, cloud-pertable, cloud-realtime, cloud.js, R2 backup, account trash + EXPECTED listesi, Supabase tabloları + RLS). `trash_section_shopping` i18n korundu (trash UI kullanıyor).
+
+### v2.13.0 — Whiteboard WYSIWYG: canvas = print birebir · 2026-05-21
+
+- **Kök sorun:** Canvas (px + aspect-ratio) ve print (pt/mm) iki AYRI render motoruydu → önizleme ≠ çıktı; her düzeltme birinde diğerinden kayıyordu (operatör çok sinirlenmişti).
+- **Fix:** Tek `renderBlockContent` + `blockBoxStyle` (canvas + print ORTAK). Canvas artık gerçek A4/A3 px boyutunda + `transform:scale` ile pane'e sığar (görsel küçük, ölçü gerçek); print aynı px içeriği mm sayfada basar (96dpi → 1px=1/96in). Print base tipografi 15px/1.5 (canvas #wbRoot ile aynı), table cell line-height 1.5. **Doğrulandı: blok blok delta 0** (dikey + yatay).
+- Yan fix: `.wb-canvas-viewport min-width:0` + workspace grid `minmax(0,1fr)` (yoksa 794px gerçek-A4 canvas mobilde yatay taşardı), ResizeObserver ile responsive ölçek (v2.13.6'da self-retry ile sağlamlaştırıldı).
+
+## v2.12.x — Checklist yeniden + profil + Privacy/Terms · 2026-05-20/21
+
+- **Checklist aracı baştan yazıldı (v2.12.0):** 2 tür — **Control** (tik-onay) + **Prep** (yemek→bileşen, menüden auto-fill + manuel). Gereksiz HACCP template'leri temizlendi (zaten HACCP Hub var). Modern UX: listeye dokun → preview aç ("Sessiona başla" içeride), session başlat/tamamla/kapat (X), drag-drop sıralama, print özelleştirme (yön/sütun/punto/kalınlık/satır yüksekliği + kapasite göstergesi). Cloud: `checklist_templates` (per-table) + `checklist_sessions` (array, soft-delete). Kaydet bug'ı (DOM re-read) düzeltildi.
+- **Profil persist fix (v2.12.1):** auth `_setUser` artık MERGE ediyor — aynı hesapta role/country/workplace/bio her session restore'da korunur (önceden auth metadata'dan sıfırdan kuruyor, alanları siliyordu).
+- **Privacy/Terms (6 dil):** Discover + alt-işleyiciler (hCaptcha / Google / R2) + foto + uluslararası haklar (EEA · UK ICO · AU OAIC · TR KVKK · California CCPA) + UGC/lisans/moderasyon. Tek tip, tutarlı, tarih güncel.
+- **HACCP Fridge & Freezer Log:** boş template'te sağ alt tarih damgası kaldırıldı (şef elle yazar).
+- **Masaüstü Ctrl+wheel zoom** etkin (mobil pinch/touch + viewport'a dokunulmadı).
+- **Dashboard:** silinmiş checklist'in "devam ediyor" görünme bug'ı düzeltildi.
+- **Whiteboard (v2.12.2-2.12.9):** allergen strip print etiket fix + time range inspector taşma fix + landscape print tek-sütun + margin/title düzeltmeleri.
 
 ---
 
