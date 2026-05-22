@@ -1840,6 +1840,7 @@ window.PCD.i18n.register('tr', {
   roster_no_group: "Diğer",
   roster_shift_time: "Vardiya saati",
   roster_status_or: "Veya izin / tatil olarak işaretle",
+  roster_legend: "Açıklama",
   roster_st_off: "İzin günü",
   roster_st_al: "Yıllık izin",
   roster_st_ph: "Resmi tatil",

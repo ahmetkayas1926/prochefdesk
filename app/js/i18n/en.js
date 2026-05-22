@@ -1843,6 +1843,7 @@ window.PCD.i18n.register('en', {
   roster_no_group: "Other",
   roster_shift_time: "Shift time",
   roster_status_or: "Or mark as leave / day off",
+  roster_legend: "Key",
   roster_st_off: "Day off",
   roster_st_al: "Annual leave",
   roster_st_ph: "Public holiday",

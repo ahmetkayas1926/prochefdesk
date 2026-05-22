@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.15.4 · 2026-05-22
+**Mevcut sürüm:** v2.15.5 · 2026-05-22
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -9,6 +9,10 @@ Format: kronolojik tersine (en son sürüm üstte). Her sürüm kısa başlık +
 ---
 
 ## v2.15.x — Roster aracı + bulut sync + menü filtre uyarısı · 2026-05-22
+
+### v2.15.5 — Roster Excel = PDF ile aynı renkli görünüm · 2026-05-22
+
+- **Renkli roster Excel:** Excel çıktısı düz kalıyordu (ortak `PCD.xlsx` motoru hücre rengi desteklemez). Roster artık kendi worksheet'ini xlsx-js-style ile inline kurar (recipes/buffet gibi): yeşil mutfak/departman başlık bandı (`venue`), koyu yeşil başlık satırı, mavi departman bantları, renkli izin/durum hücreleri (OFF mavi / AL turuncu / PH yeşil / SL kırmızı…), toplam satırı, renkli kod lejantı. Print PDF ile birebir. Tek kaynak `rosterMatrix`. Canlı doğrulandı (workbook hücre stilleri: A1 band 16A34A, durum hücreleri DBEAFE/FDE9D3/DCFCE7/FEE2E2, departman bandı CFE0EE). `rosterRows` (eski düz Excel yardımcısı) kaldırıldı.
 
 ### v2.15.4 — Menü alerjen = bilgi (filtre kaldırıldı, tariften otomatik) + Roster büyük güncelleme · 2026-05-22
 

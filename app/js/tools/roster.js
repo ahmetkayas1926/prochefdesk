@@ -486,31 +486,6 @@
   }
 
   // ============ OUTPUTS ============
-  // v2.15.4 — Excel için düz satırlar: departman ayraç satırları + durum kodları.
-  // (Ortak PCD.xlsx motoru hücre rengini desteklemez → kodlar metin; print renkli.)
-  function rosterRows(data, showCost) {
-    const mx = rosterMatrix(data);
-    const headers = [t('roster_staff') || 'Staff', t('roster_staff_role') || 'Role'];
-    mx.days.forEach(function (d) { headers.push(d); });
-    const hoursIdx = headers.length; headers.push(t('roster_hours') || 'Hours');
-    if (showCost) headers.push(t('roster_labour_cost') || 'Cost');
-    const ncol = headers.length;
-    const rows = [];
-    mx.groups.forEach(function (g) {
-      if (g.name) { const gr = []; for (let i = 0; i < ncol; i++) gr.push(''); gr[0] = g.name; rows.push(gr); }
-      g.rows.forEach(function (row) {
-        const r = [row.staff.name, row.staff.role || ''];
-        row.cells.forEach(function (cell) { r.push(cell.text || '—'); });
-        r.push(PCD.fmtNumber(row.hours));
-        if (showCost) r.push(row.cost > 0 ? PCD.fmtMoney(row.cost) : '—');
-        rows.push(r);
-      });
-    });
-    const align = headers.map(function (_, i) { return i <= 1 ? 'left' : 'center'; });
-    align[hoursIdx] = 'right'; if (showCost) align[hoursIdx + 1] = 'right';
-    return { headers: headers, rows: rows, align: align };
-  }
-
   // v2.15.4 — Renkli profesyonel print: üstte mutfak/departman başlık bandı,
   // koyu başlık satırı, departman grupları, renkli durum hücreleri, lejant.
   // print-color-adjust:exact → "Background graphics" kapalıyken bile renkler basar.
@@ -575,15 +550,96 @@
     PCD.print(css + body, (data.venue || t('roster_title') || 'Roster') + ' ' + data.weekStart);
   }
 
+  // v2.15.5 — Renkli Excel = PDF print ile aynı görünüm. Ortak PCD.xlsx motoru
+  // hücre rengini desteklemediği için roster kendi worksheet'ini xlsx-js-style
+  // ile inline kurar (recipes/buffet gibi). Başlık bandı + departman bantları +
+  // renkli izin/durum hücreleri + lejant. rosterMatrix tek kaynak.
   function excelRoster(data, showCost) {
     const go = function (XLSX) {
-      if (!XLSX || !XLSX.utils || !PCD.xlsx) { PCD.toast.error(t('toast_excel_parser_unavailable') || 'Excel unavailable'); return; }
-      const tbl = rosterRows(data, showCost);
-      PCD.xlsx.save(XLSX, [{
-        name: 'Roster',
-        title: (data.venue || data.name || (t('roster_title') || 'Roster')) + ' — ' + weekRange(data),
-        headers: tbl.headers, rows: tbl.rows, align: tbl.align,
-      }], (t('roster_title') || 'Roster').replace(/\s+/g, '-').toLowerCase() + '-' + data.weekStart + '.xlsx');
+      if (!XLSX || !XLSX.utils) { PCD.toast.error(t('toast_excel_parser_unavailable') || 'Excel unavailable'); return; }
+      const hex = function (h) { return (h || '').replace('#', '').toUpperCase(); };
+      const mx = rosterMatrix(data);
+      const ndays = mx.days.length;
+      const ncol = 2 + ndays + 1 + (showCost ? 1 : 0);
+      const lastC = ncol - 1;
+      const ws = {};
+      const merges = [];
+      const thin = { style: 'thin', color: { rgb: 'C7C7C7' } };
+      const allB = { top: thin, bottom: thin, left: thin, right: thin };
+      let r = 0;
+      function put(rr, cc, v, s) {
+        const cell = { v: (v == null ? '' : v), t: (typeof v === 'number' ? 'n' : 's') };
+        if (s) cell.s = s;
+        ws[XLSX.utils.encode_cell({ r: rr, c: cc })] = cell;
+      }
+      function fillRow(rr, fillRgb) { for (let c = 0; c < ncol; c++) put(rr, c, '', { fill: { fgColor: { rgb: fillRgb } } }); }
+
+      // 1. Başlık bandı (venue) — yeşil
+      fillRow(r, '16A34A');
+      put(r, 0, data.venue || data.name || (t('roster_title') || 'Roster'), { font: { name: 'Calibri', sz: 16, bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '16A34A' } }, alignment: { vertical: 'center', horizontal: 'left' } });
+      merges.push({ s: { r: r, c: 0 }, e: { r: r, c: lastC } }); r++;
+      // 2. Alt başlık (hafta + ad)
+      put(r, 0, weekRange(data) + (data.venue && data.name ? '  ·  ' + data.name : ''), { font: { name: 'Calibri', sz: 10, color: { rgb: '666666' } }, alignment: { vertical: 'center' } });
+      merges.push({ s: { r: r, c: 0 }, e: { r: r, c: lastC } }); r++;
+      r++; // boş satır
+
+      // 3. Başlık satırı
+      const headers = [t('roster_staff') || 'Staff', t('roster_staff_role') || 'Role'].concat(mx.days);
+      headers.push(t('roster_hours') || 'H'); if (showCost) headers.push(t('roster_labour_cost') || 'Cost');
+      headers.forEach(function (h, c) { put(r, c, h, { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '1F3B30' } }, alignment: { vertical: 'center', horizontal: c <= 1 ? 'left' : 'center' }, border: allB }); });
+      r++;
+
+      // 4. Departman grupları + personel satırları
+      mx.groups.forEach(function (g) {
+        if (g.name) {
+          fillRow(r, 'CFE0EE');
+          put(r, 0, g.name, { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '1F3B30' } }, fill: { fgColor: { rgb: 'CFE0EE' } }, alignment: { vertical: 'center', horizontal: 'left' }, border: allB });
+          for (let c = 1; c < ncol; c++) put(r, c, '', { fill: { fgColor: { rgb: 'CFE0EE' } }, border: allB });
+          merges.push({ s: { r: r, c: 0 }, e: { r: r, c: lastC } }); r++;
+        }
+        g.rows.forEach(function (row) {
+          put(r, 0, row.staff.name || '', { font: { name: 'Calibri', sz: 10, bold: true }, alignment: { vertical: 'center', horizontal: 'left' }, border: allB });
+          put(r, 1, row.staff.role || '', { font: { name: 'Calibri', sz: 9, color: { rgb: '555555' } }, alignment: { vertical: 'center', horizontal: 'left' }, border: allB });
+          row.cells.forEach(function (cell, d) {
+            let st;
+            if (cell.status) { const sd = statusDef(cell.status); st = { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: sd ? hex(sd.color) : '333333' } }, fill: { fgColor: { rgb: sd ? hex(sd.fill) : 'EEEEEE' } }, alignment: { vertical: 'center', horizontal: 'center' }, border: allB }; }
+            else st = { font: { name: 'Calibri', sz: 10 }, alignment: { vertical: 'center', horizontal: 'center' }, border: allB };
+            put(r, 2 + d, cell.text || '', st);
+          });
+          put(r, 2 + ndays, row.hours, { font: { name: 'Calibri', sz: 10, bold: true }, alignment: { vertical: 'center', horizontal: 'right' }, border: allB });
+          if (showCost) put(r, 2 + ndays + 1, row.cost > 0 ? PCD.fmtMoney(row.cost) : '—', { font: { name: 'Calibri', sz: 10 }, alignment: { vertical: 'center', horizontal: 'right' }, border: allB });
+          r++;
+        });
+      });
+
+      // 5. Toplam
+      const tot = rosterTotals(data);
+      r++;
+      put(r, 0, (t('roster_total_hours') || 'Total hours') + ': ' + PCD.fmtNumber(tot.hours) + (showCost && tot.cost > 0 ? '   ·   ' + (t('roster_labour_cost') || 'Labour cost') + ': ' + PCD.fmtMoney(tot.cost) : ''), { font: { name: 'Calibri', sz: 11, bold: true } });
+      merges.push({ s: { r: r, c: 0 }, e: { r: r, c: lastC } }); r++;
+
+      // 6. Lejant (kullanılan durum kodları, renkli çip)
+      const usedStatus = {};
+      mx.groups.forEach(function (g) { g.rows.forEach(function (row) { row.cells.forEach(function (c) { if (c.status) usedStatus[c.status] = true; }); }); });
+      const legendItems = ROSTER_STATUS.filter(function (s) { return usedStatus[s.id]; });
+      if (legendItems.length) {
+        r++;
+        put(r, 0, t('roster_legend') || 'Key', { font: { name: 'Calibri', sz: 9, bold: true, color: { rgb: '888888' } } }); r++;
+        legendItems.forEach(function (s) {
+          put(r, 0, s.id, { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: hex(s.color) } }, fill: { fgColor: { rgb: hex(s.fill) } }, alignment: { horizontal: 'center' }, border: allB });
+          put(r, 1, t(s.labelKey) || s.id, { font: { name: 'Calibri', sz: 10 }, alignment: { horizontal: 'left' } });
+          if (ncol > 2) merges.push({ s: { r: r, c: 1 }, e: { r: r, c: lastC } });
+          r++;
+        });
+      }
+
+      ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(r, 1), c: lastC } });
+      ws['!merges'] = merges;
+      ws['!cols'] = [{ wch: 22 }, { wch: 16 }].concat(mx.days.map(function () { return { wch: 12 }; })).concat([{ wch: 8 }]).concat(showCost ? [{ wch: 11 }] : []);
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Roster');
+      XLSX.writeFile(wb, (t('roster_title') || 'Roster').replace(/\s+/g, '-').toLowerCase() + '-' + data.weekStart + '.xlsx');
     };
     if (window.XLSX && window.XLSX.utils) go(window.XLSX);
     else if (PCD.loadXLSX) PCD.loadXLSX().then(go).catch(function () { PCD.toast.error(t('toast_excel_parser_unavailable') || 'Excel unavailable'); });
