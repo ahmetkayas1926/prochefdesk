@@ -138,7 +138,8 @@
       "Bash(node -c app/js/i18n/fr.js)",
       "Bash(node -c app/js/i18n/ar.js)",
       "Bash(cygpath -w /tmp/old_shopping.js)",
-      "Bash(node -c app/js/seed/demo-recipes.js)"
+      "Bash(node -c app/js/seed/demo-recipes.js)",
+      "Bash(node -c app/js/tools/roster.js)"
     ]
   }
 }

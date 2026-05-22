@@ -75,6 +75,7 @@
       // Inventory eager-kept: dashboard kullanır (computeStatus low-stock alert için)
       PCD.router.registerLazy('suppliers',       'js/tools/suppliers.js',      'suppliers');
       PCD.router.registerLazy('events',          'js/tools/events.js',         'events');
+      PCD.router.registerLazy('roster',          'js/tools/roster.js',         'roster');
       PCD.router.registerLazy('checklist',       'js/tools/checklist.js',      'checklist');
       PCD.router.registerLazy('haccp_logs',      'js/tools/haccp_logs.js',     'haccp_logs');
       PCD.router.registerLazy('haccp_cooling',   'js/tools/haccp_cooling.js',  'haccp_cooling');
@@ -329,6 +330,7 @@
         { key: 'portion',       icon: 'scale', route: 'portion' },
         // v2.11.16 — 'mise' sidenav item kaldırıldı (Mise en Place Planner tool kaldırıldı).
         { key: 'checklist',     icon: 'check-square', route: 'checklist' },
+        { key: 'roster',        icon: 'clock', route: 'roster' },
       ]},
       { title: t('section_sourcing'), items: [
         { key: 'inventory', icon: 'package', route: 'inventory' },
