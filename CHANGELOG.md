@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.15.6 · 2026-05-22
+**Mevcut sürüm:** v2.15.7 · 2026-05-22
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -9,6 +9,11 @@ Format: kronolojik tersine (en son sürüm üstte). Her sürüm kısa başlık +
 ---
 
 ## v2.15.x — Roster aracı + bulut sync + menü filtre uyarısı · 2026-05-22
+
+### v2.15.7 — Roster JPEG hücre ortalama + Excel sütun genişliği · 2026-05-22
+
+- **JPEG hücre ortalama:** html2canvas JPEG'inde hücre yazıları ortalı görünmüyordu (önizleme doğruydu). `buildRosterTable` hücrelerine `align`/`valign` HTML attribute'leri + `vertical-align:middle` eklendi (html2canvas CSS text-align'ı bazen yok sayıyor; attribute güvenilir). Önizleme + print + JPEG artık birebir ortalı. Canlı doğrulandı.
+- **Excel sütun genişliği fix:** v2.15.6'da sütunlar fazla daraltılmıştı → "Mon, May 18" / "08:00-18:00" hücreye sığmıyor (kırpılıyordu). Sütunlar içeriğe göre genişletildi (gün/vardiya 12 wch); tek sayfaya sığma zaten JSZip `fitToWidth` ölçeklemesiyle sağlanıyor. Canlı doğrulandı (col 12.8 wch + landscape + fitToWidth + fitToPage).
 
 ### v2.15.6 — Roster: önizleme + JPEG gönder + geri tuşu + Excel yatay + yazı boyutu · 2026-05-22
 

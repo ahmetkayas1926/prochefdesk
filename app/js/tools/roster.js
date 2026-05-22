@@ -587,30 +587,31 @@
     const sub = (data.venue && data.name ? data.name + '  ·  ' : '') + weekRange(data);
     const fp = fontPx(data);
     const wt = data.bold ? '700' : '400';
-    const cb = 'border:1px solid #c7c7c7;padding:4px 6px;font-size:' + fp + 'px;text-align:center;';
-    const hd = 'border:1px solid #c7c7c7;padding:4px 6px;font-size:' + (fp - 1) + 'px;text-align:center;background:#1f3b30;color:#fff;font-weight:700;text-transform:uppercase;';
+    // v2.15.7 — align/valign attribute'leri html2canvas (JPEG) için güvenilir ortalama.
+    const cb = 'border:1px solid #c7c7c7;padding:5px 6px;font-size:' + fp + 'px;text-align:center;vertical-align:middle;';
+    const hd = 'border:1px solid #c7c7c7;padding:5px 6px;font-size:' + (fp - 1) + 'px;text-align:center;vertical-align:middle;background:#1f3b30;color:#fff;font-weight:700;text-transform:uppercase;';
     let h = '';
     h += '<div style="background:#16a34a;color:#fff;padding:11px 15px;border-radius:6px;margin-bottom:11px;">'
       + '<div style="font-size:' + (fp + 8) + 'px;font-weight:800;">' + esc(title) + '</div>'
       + '<div style="font-size:' + fp + 'px;opacity:0.93;margin-top:2px;">' + esc(sub) + '</div></div>';
     h += '<table style="width:100%;border-collapse:collapse;table-layout:fixed;">';
-    h += '<tr><th style="' + hd + 'text-align:left;width:15%;">' + esc(t('roster_staff') || 'Staff') + '</th>'
-      + '<th style="' + hd + 'text-align:left;width:12%;">' + esc(t('roster_staff_role') || 'Role') + '</th>';
-    mx.days.forEach(function (d) { h += '<th style="' + hd + '">' + esc(d) + '</th>'; });
-    h += '<th style="' + hd + 'width:5%;">' + esc(t('roster_hours') || 'H') + '</th>';
-    if (showCost) h += '<th style="' + hd + 'width:8%;">' + esc(t('roster_labour_cost') || 'Cost') + '</th>';
+    h += '<tr><th align="left" valign="middle" style="' + hd + 'text-align:left;width:15%;">' + esc(t('roster_staff') || 'Staff') + '</th>'
+      + '<th align="left" valign="middle" style="' + hd + 'text-align:left;width:12%;">' + esc(t('roster_staff_role') || 'Role') + '</th>';
+    mx.days.forEach(function (d) { h += '<th align="center" valign="middle" style="' + hd + '">' + esc(d) + '</th>'; });
+    h += '<th align="center" valign="middle" style="' + hd + 'width:5%;">' + esc(t('roster_hours') || 'H') + '</th>';
+    if (showCost) h += '<th align="center" valign="middle" style="' + hd + 'width:8%;">' + esc(t('roster_labour_cost') || 'Cost') + '</th>';
     h += '</tr>';
     mx.groups.forEach(function (g) {
-      if (g.name) h += '<tr><td colspan="' + ncol + '" style="' + cb + 'background:#cfe0ee;color:#1f3b30;font-weight:800;text-align:left;text-transform:uppercase;">' + esc(g.name) + '</td></tr>';
+      if (g.name) h += '<tr><td colspan="' + ncol + '" align="left" valign="middle" style="' + cb + 'background:#cfe0ee;color:#1f3b30;font-weight:800;text-align:left;text-transform:uppercase;">' + esc(g.name) + '</td></tr>';
       g.rows.forEach(function (row) {
-        h += '<tr><td style="' + cb + 'text-align:left;font-weight:700;word-break:break-word;">' + esc(row.staff.name || '') + '</td>'
-          + '<td style="' + cb + 'text-align:left;color:#555;font-size:' + (fp - 1) + 'px;word-break:break-word;">' + esc(row.staff.role || '') + '</td>';
+        h += '<tr><td align="left" valign="middle" style="' + cb + 'text-align:left;font-weight:700;word-break:break-word;">' + esc(row.staff.name || '') + '</td>'
+          + '<td align="left" valign="middle" style="' + cb + 'text-align:left;color:#555;font-size:' + (fp - 1) + 'px;word-break:break-word;">' + esc(row.staff.role || '') + '</td>';
         row.cells.forEach(function (cell) {
-          if (cell.status) { const sd = statusDef(cell.status); h += '<td style="' + cb + 'font-weight:800;background:' + (sd ? sd.fill : '#eee') + ';color:' + (sd ? sd.color : '#333') + ';">' + esc(cell.status) + '</td>'; }
-          else h += '<td style="' + cb + 'font-weight:' + wt + ';">' + esc(cell.text || '') + '</td>';
+          if (cell.status) { const sd = statusDef(cell.status); h += '<td align="center" valign="middle" style="' + cb + 'font-weight:800;background:' + (sd ? sd.fill : '#eee') + ';color:' + (sd ? sd.color : '#333') + ';">' + esc(cell.status) + '</td>'; }
+          else h += '<td align="center" valign="middle" style="' + cb + 'font-weight:' + wt + ';">' + esc(cell.text || '') + '</td>';
         });
-        h += '<td style="' + cb + 'font-weight:700;">' + PCD.fmtNumber(row.hours) + '</td>';
-        if (showCost) h += '<td style="' + cb + '">' + (row.cost > 0 ? PCD.fmtMoney(row.cost) : '—') + '</td>';
+        h += '<td align="center" valign="middle" style="' + cb + 'font-weight:700;">' + PCD.fmtNumber(row.hours) + '</td>';
+        if (showCost) h += '<td align="center" valign="middle" style="' + cb + '">' + (row.cost > 0 ? PCD.fmtMoney(row.cost) : '—') + '</td>';
         h += '</tr>';
       });
     });
@@ -743,8 +744,10 @@
 
       ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(r, 1), c: lastC } });
       ws['!merges'] = merges;
-      // v2.15.6 — Dar sütunlar (yatay A4'e sığsın) + OTOMATİK YATAY + tek sayfa enine.
-      ws['!cols'] = [{ wch: 18 }, { wch: 13 }].concat(mx.days.map(function () { return { wch: 9 }; })).concat([{ wch: 6 }]).concat(showCost ? [{ wch: 9 }] : []);
+      // v2.15.7 — Sütunlar içeriğe sığacak kadar GENİŞ ("Mon, May 18" / "08:00-18:00"
+      // = 11 karakter → 12 wch). Tek sayfaya sığma JSZip fitToWidth ile ölçekleyerek
+      // sağlanır (dar sütun → metin kırpılıyordu; düzeltildi).
+      ws['!cols'] = [{ wch: 18 }, { wch: 14 }].concat(mx.days.map(function () { return { wch: 12 }; })).concat([{ wch: 6 }]).concat(showCost ? [{ wch: 11 }] : []);
       ws['!margins'] = { left: 0.3, right: 0.3, top: 0.4, bottom: 0.4, header: 0.2, footer: 0.2 };
       ws['!pageSetup'] = { orientation: 'landscape', fitToWidth: 1, fitToHeight: 0, scale: 100 };
       ws['!sheetPr'] = { pageSetUpPr: { fitToPage: true } };
