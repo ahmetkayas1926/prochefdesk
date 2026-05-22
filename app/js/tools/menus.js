@@ -858,8 +858,14 @@
     function itemBadge(it) {
       if (!it.badge) return '';
       const b = ITEM_BADGES.find(function (x) { return x.id === it.badge; });
-      if (!b || !b.icon) return '';
-      return ' <span class="m-itembadge" style="background:' + b.color + '20;color:' + b.color + ';border:1px solid ' + b.color + '60;">' + b.icon + '</span>';
+      if (!b) return '';
+      // v2.13.9 — Spicy: emoji (🌶) yerine küçük büyük-harf metin etiketi (profesyonel,
+      // müşteri okuyabilir). Diğer rozetler tipografik glyph olarak kalır (★ ✦ ◆).
+      const isText = (b.id === 'spicy');
+      const content = isText ? (PCD.i18n.t('menu_badge_spicy') || 'Spicy').toUpperCase() : b.icon;
+      if (!content) return '';
+      const extra = isText ? 'font-size:9px;letter-spacing:0.1em;font-weight:700;' : '';
+      return ' <span class="m-itembadge" style="background:' + b.color + '20;color:' + b.color + ';border:1px solid ' + b.color + '60;' + extra + '">' + PCD.escapeHtml(content) + '</span>';
     }
 
     // v2.8.71 — Safe-print filter: drop any item that fails any active "free from"
