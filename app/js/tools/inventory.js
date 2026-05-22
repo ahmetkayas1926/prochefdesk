@@ -558,10 +558,13 @@
     body.innerHTML = html;
 
     const closeBtn = PCD.el('button', { type: 'button', class: 'btn btn-secondary', text: PCD.i18n.t('btn_close') });
+    const xlsxBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', style: { flex: '1' } });
+    xlsxBtn.innerHTML = PCD.icon('download', 14) + ' <span>' + (PCD.i18n.t('inv_export_xlsx') || 'Export Excel') + '</span>';
     const printBtn = PCD.el('button', { type: 'button', class: 'btn btn-primary', style: { flex: '1' } });
     printBtn.innerHTML = PCD.icon('print', 14) + ' <span>' + PCD.i18n.t('print') + '</span>';
-    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
+    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
     footer.appendChild(closeBtn);
+    footer.appendChild(xlsxBtn);
     footer.appendChild(printBtn);
 
     const m = PCD.modal.open({
@@ -569,6 +572,7 @@
       body: body, footer: footer, size: 'md', closable: true
     });
     closeBtn.addEventListener('click', function () { m.close(); });
+    xlsxBtn.addEventListener('click', function () { exportSnapshotXlsx(snap); });
     printBtn.addEventListener('click', function () { printSnapshot(snap); });
   }
 
@@ -611,6 +615,43 @@
       body;
 
     PCD.print(html, (PCD.i18n.t('inv_print_title') || 'Stock Count') + ' ' + date.toISOString().slice(0, 10));
+  }
+
+  // v2.14.2 — Stok sayım snapshot'ını ortak styled-Excel motoruyla indir.
+  // Kategoriye göre sıralı tablo: Ingredient · Category · Counted · Unit.
+  function exportSnapshotXlsx(snap) {
+    const t = PCD.i18n.t;
+    const date = new Date(snap.countedAt);
+    const dateStr = date.toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || 'en', { day: 'numeric', month: 'long', year: 'numeric' });
+    const go = function (XLSX) {
+      if (!XLSX || !XLSX.utils || !PCD.xlsx) { PCD.toast.error(t('toast_excel_parser_unavailable')); return; }
+      const list = [];
+      Object.keys(snap.counts || {}).forEach(function (iid) {
+        const c = snap.counts[iid] || {};
+        list.push({
+          name: c.name || '',
+          catLabel: t(c.category || 'cat_other') || (c.category || 'cat_other'),
+          amount: (typeof c.amount === 'number') ? c.amount : (Number(c.amount) || 0),
+          unit: c.unit || '',
+        });
+      });
+      list.sort(function (a, b) {
+        return a.catLabel.localeCompare(b.catLabel) || a.name.localeCompare(b.name);
+      });
+      const rows = list.map(function (c) { return [c.name, c.catLabel, c.amount, c.unit]; });
+      PCD.xlsx.save(XLSX, [{
+        name: 'Stock Count',
+        title: (t('inv_print_title') || 'Stock Count') + ' — ' + dateStr,
+        subtitle: snap.itemCount + ' items' + (snap.countedBy ? ' · by ' + snap.countedBy : ''),
+        headers: ['Ingredient', 'Category', 'Counted', 'Unit'],
+        rows: rows,
+        align: ['left', 'left', 'right', 'left'],
+        widths: [30, 20, 12, 10],
+      }], (t('inv_print_title') || 'Stock Count').replace(/\s+/g, '-').toLowerCase() + '-' + date.toISOString().slice(0, 10) + '.xlsx');
+    };
+    if (window.XLSX && window.XLSX.utils) go(window.XLSX);
+    else if (PCD.loadXLSX) PCD.loadXLSX().then(go).catch(function () { PCD.toast.error(t('toast_excel_parser_unavailable')); });
+    else PCD.toast.error(t('toast_excel_parser_unavailable'));
   }
 
   function openBulkCount(options) {

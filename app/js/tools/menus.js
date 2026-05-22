@@ -111,6 +111,32 @@
     { id: 'spicy',      labelKey: 'menu_badge_spicy',     icon: '🌶', color: '#c2410c' },
   ];
 
+  // v2.14.1 — Manuel diyet + alerjen harf kodları. Şef her yemeğe elle seçer
+  // (otomatik tahmin yok → tarifsiz öğelerde de çalışır, yanlış "gluten free"
+  // iddia riski yok). Kural: küçük harf = diyet/uygunluk, BÜYÜK harf = "içerir"
+  // alerjen uyarısı. Yemek adı yanında "(gf) (gfo) (N)"; altta legend açıklar.
+  // `id` = saklanan benzersiz anahtar, `code` = menüde görünen metin.
+  const MENU_CODES = [
+    // Diyet / uygunluk (küçük harf)
+    { id: 'v',   code: 'v',   group: 'diet',     labelKey: 'menu_code_v' },
+    { id: 'vg',  code: 'vg',  group: 'diet',     labelKey: 'menu_code_vg' },
+    { id: 'gf',  code: 'gf',  group: 'diet',     labelKey: 'menu_code_gf' },
+    { id: 'gfo', code: 'gfo', group: 'diet',     labelKey: 'menu_code_gfo' },
+    { id: 'df',  code: 'df',  group: 'diet',     labelKey: 'menu_code_df' },
+    { id: 'dfo', code: 'dfo', group: 'diet',     labelKey: 'menu_code_dfo' },
+    { id: 'nf',  code: 'nf',  group: 'diet',     labelKey: 'menu_code_nf' },
+    { id: 'h',   code: 'h',   group: 'diet',     labelKey: 'menu_code_h' },
+    // Alerjen "içerir" (BÜYÜK harf)
+    { id: 'a_n',  code: 'N',  group: 'allergen', labelKey: 'menu_code_a_n' },
+    { id: 'a_g',  code: 'G',  group: 'allergen', labelKey: 'menu_code_a_g' },
+    { id: 'a_d',  code: 'D',  group: 'allergen', labelKey: 'menu_code_a_d' },
+    { id: 'a_e',  code: 'E',  group: 'allergen', labelKey: 'menu_code_a_e' },
+    { id: 'a_f',  code: 'F',  group: 'allergen', labelKey: 'menu_code_a_f' },
+    { id: 'a_sf', code: 'SF', group: 'allergen', labelKey: 'menu_code_a_sf' },
+    { id: 'a_s',  code: 'S',  group: 'allergen', labelKey: 'menu_code_a_s' },
+    { id: 'a_se', code: 'SE', group: 'allergen', labelKey: 'menu_code_a_se' },
+  ];
+
   // v2.8.69 — Sayfa boyutu seçenekleri.
   const PAGE_SIZES = [
     { id: 'a4',        labelKey: 'menu_page_a4',        cssSize: 'A4',           orientation: 'portrait'  },
@@ -276,6 +302,7 @@
       (s.items || []).forEach(function (it) {
         if (!it.id) it.id = PCD.uid('mi');
         if (typeof it.badge !== 'string') it.badge = '';
+        if (!Array.isArray(it.codes)) it.codes = [];
       });
     });
 
@@ -400,9 +427,9 @@
           <span>${t('menu_hide_price')}</span>
         </div>
         <div class="field" style="margin-top:10px;">
-          <label class="field-label">${PCD.escapeHtml(t('menu_allergen_display') || 'Allergen display')}</label>
+          <label class="field-label">${PCD.escapeHtml(t('menu_allergen_display') || 'Diet & allergen codes')}</label>
           <select class="select" id="menuAllergenStyle">
-            <option value="codes"${((data.allergenStyle || (data.hideAllergens ? 'off' : 'codes')) === 'codes') ? ' selected' : ''}>${PCD.escapeHtml(t('menu_allergen_codes') || 'Numbered codes + legend (professional)')}</option>
+            <option value="codes"${((data.allergenStyle || (data.hideAllergens ? 'off' : 'codes')) === 'codes') ? ' selected' : ''}>${PCD.escapeHtml(t('menu_allergen_codes') || 'Letter codes (gf, N…) + legend')}</option>
             <option value="off"${((data.allergenStyle || (data.hideAllergens ? 'off' : 'codes')) === 'off') ? ' selected' : ''}>${PCD.escapeHtml(t('menu_allergen_off') || 'Off')}</option>
           </select>
         </div>
@@ -472,6 +499,13 @@
             const lbl = (b.icon ? b.icon + ' ' : '') + (PCD.i18n.t(b.labelKey) || b.id || '—');
             return '<option value="' + b.id + '"' + sel + '>' + lbl + '</option>';
           }).join('');
+          // v2.14.1 — Per-item diyet/alerjen kod seçici. PCD.picker ile multi-select;
+          // seçilenler butonda "gf · gfo · N" olarak özetlenir, boşsa "+ Codes".
+          const selCodes = Array.isArray(it.codes) ? it.codes : [];
+          const codesText = selCodes.length
+            ? MENU_CODES.filter(function (c) { return selCodes.indexOf(c.id) >= 0; }).map(function (c) { return c.code; }).join(' · ')
+            : ('+ ' + (PCD.i18n.t('menu_codes_btn') || 'Codes'));
+          const codesBtnHtml = '<button type="button" class="btn btn-outline btn-sm" data-itemcodes="' + sIdx + ':' + iIdx + '" style="padding:2px 8px;min-height:24px;font-size:11px;margin-top:4px;margin-left:6px;vertical-align:top;">' + PCD.escapeHtml(codesText) + '</button>';
           // Manual items: editable name field. Recipe items: static name.
           // v2.8.56 — Drag handle eklendi; aynı section içinde sıralama.
           if (isManual) {
@@ -480,7 +514,7 @@
               <div style="flex:1;min-width:0;">
                 <input type="text" class="input" data-itemname="${sIdx}:${iIdx}" value="${PCD.escapeHtml(name)}" placeholder="${PCD.i18n.t('menu_item_name_ph') || 'Dish name'}" style="padding:4px 8px;min-height:26px;font-size:14px;font-weight:600;">
                 <input type="text" class="input" data-itemdesc="${sIdx}:${iIdx}" value="${PCD.escapeHtml(it.description || '')}" placeholder="${PCD.i18n.t('menu_item_desc_ph')}" style="padding:4px 8px;min-height:26px;font-size:12px;margin-top:4px;">
-                <select class="select" data-itembadge="${sIdx}:${iIdx}" style="padding:2px 6px;min-height:24px;font-size:11px;margin-top:4px;max-width:160px;">${badgeOpts}</select>
+                <select class="select" data-itembadge="${sIdx}:${iIdx}" style="padding:2px 6px;min-height:24px;font-size:11px;margin-top:4px;max-width:160px;">${badgeOpts}</select>${codesBtnHtml}
               </div>
               <input type="number" class="input" data-itemprice="${sIdx}:${iIdx}" value="${it.price || ''}" placeholder="0" step="0.01" min="0" style="width:70px;padding:4px 8px;min-height:26px;font-size:13px;">
               <button class="icon-btn" data-itemdel="${sIdx}:${iIdx}">${PCD.icon('x',14)}</button>
@@ -491,7 +525,7 @@
               <div style="flex:1;min-width:0;">
                 <div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${PCD.escapeHtml(name)}</div>
                 <input type="text" class="input" data-itemdesc="${sIdx}:${iIdx}" value="${PCD.escapeHtml(it.description || '')}" placeholder="${PCD.i18n.t('menu_item_desc_ph')}" style="padding:4px 8px;min-height:26px;font-size:12px;margin-top:4px;">
-                <select class="select" data-itembadge="${sIdx}:${iIdx}" style="padding:2px 6px;min-height:24px;font-size:11px;margin-top:4px;max-width:160px;">${badgeOpts}</select>
+                <select class="select" data-itembadge="${sIdx}:${iIdx}" style="padding:2px 6px;min-height:24px;font-size:11px;margin-top:4px;max-width:160px;">${badgeOpts}</select>${codesBtnHtml}
               </div>
               <input type="number" class="input" data-itemprice="${sIdx}:${iIdx}" value="${it.price || defaultPrice}" placeholder="${defaultPrice}" step="0.01" min="0" style="width:70px;padding:4px 8px;min-height:26px;font-size:13px;">
               <button class="icon-btn" data-itemdel="${sIdx}:${iIdx}">${PCD.icon('x',14)}</button>
@@ -640,6 +674,33 @@
         if (data.sections[sIdx] && data.sections[sIdx].items[iIdx]) {
           data.sections[sIdx].items[iIdx].badge = this.value;
         }
+      });
+
+      // v2.14.1 — Per-item diyet/alerjen kod seçici (PCD.picker multi-select)
+      PCD.on(body, 'click', '[data-itemcodes]', function () {
+        const parts = this.getAttribute('data-itemcodes').split(':').map(Number);
+        const sIdx = parts[0], iIdx = parts[1];
+        const sec = data.sections[sIdx];
+        const it = sec && sec.items[iIdx];
+        if (!it) return;
+        const pickerItems = MENU_CODES.map(function (c) {
+          return {
+            id: c.id,
+            name: '(' + c.code + ')  ' + (PCD.i18n.t(c.labelKey) || c.id),
+            meta: c.group === 'diet'
+              ? (PCD.i18n.t('menu_codes_group_diet') || 'Dietary / suitability')
+              : (PCD.i18n.t('menu_codes_group_allergen') || 'Allergen — contains'),
+          };
+        });
+        PCD.picker.open({
+          title: PCD.i18n.t('menu_codes_picker_title') || 'Diet & allergen codes',
+          items: pickerItems, multi: true,
+          selected: Array.isArray(it.codes) ? it.codes : [],
+        }).then(function (sel) {
+          if (!sel) return;
+          it.codes = MENU_CODES.filter(function (c) { return sel.indexOf(c.id) >= 0; }).map(function (c) { return c.id; });
+          render();
+        });
       });
 
       // Section name
@@ -895,16 +956,12 @@
       return true;
     }
 
-    // v2.13.7 — Profesyonel alerjen gösterimi: emoji ikonları yerine EU FIC
-    // 1169/2011 numaralı kodlar (allergensDB.list sırası = EU Annex II 1-14) +
-    // menü altında otomatik legend. allergenStyle: 'codes' (varsayılan) | 'off'.
-    // Back-compat: eski hideAllergens=true → 'off'.
+    // v2.14.1 — Manuel diyet+alerjen harf kodları (her öğenin it.codes dizisi).
+    // Otomatik tahmin yok. Küçük harf = diyet/uygunluk, BÜYÜK = "içerir" alerjen.
+    // allergenStyle: 'codes' (göster) | 'off' (gizle). Back-compat: hideAllergens=true → 'off'.
     const allergenStyle = menu.allergenStyle || (menu.hideAllergens ? 'off' : 'codes');
     const showAllergens = allergenStyle === 'codes';
-    const ALLERGEN_NAMES = { gluten: 'Gluten', crustaceans: 'Crustaceans', eggs: 'Eggs', fish: 'Fish', peanuts: 'Peanuts', soybeans: 'Soybeans', dairy: 'Milk', nuts: 'Tree nuts', celery: 'Celery', mustard: 'Mustard', sesame: 'Sesame', sulphites: 'Sulphites', lupin: 'Lupin', molluscs: 'Molluscs' };
-    const allergenList = (PCD.allergensDB && PCD.allergensDB.list) || [];
-    function allergenNum(key) { for (let i = 0; i < allergenList.length; i++) { if (allergenList[i].key === key) return i + 1; } return 0; }
-    const usedAllergens = {}; // num → key (menüde geçenler; legend için)
+    const usedCodes = {}; // id → true (menüde geçen kodlar; legend için)
 
     // Build sections HTML using a simple, professional layout
     let sectionsBody = '';
@@ -924,19 +981,15 @@
         const price = (it.price !== undefined && it.price !== null && it.price !== '') ? Number(it.price) : (r && r.salePrice ? r.salePrice : 0);
         const desc = it.description || (r && r.plating) || '';
 
-        // v2.13.7 — EU FIC 1169/2011 numaralı alerjen kodları (emoji yerine).
-        // Yemek adının yanında üst-simge "1,7"; menü altında legend açıklar.
+        // v2.14.1 — Manuel harf kodları (it.codes). Yemek adı yanında "(gf) (gfo) (N)".
         let allergenCodes = '';
-        if (showAllergens && r && PCD.allergensDB && PCD.allergensDB.recipeAllergens) {
-          const tags = PCD.allergensDB.recipeAllergens(r, ingMap) || [];
-          const nums = [];
-          tags.forEach(function (key) {
-            const n = allergenNum(key);
-            if (n && nums.indexOf(n) < 0) { nums.push(n); usedAllergens[n] = key; }
+        if (showAllergens && Array.isArray(it.codes) && it.codes.length) {
+          const parts = [];
+          MENU_CODES.forEach(function (c) {
+            if (it.codes.indexOf(c.id) >= 0) { parts.push('(' + c.code + ')'); usedCodes[c.id] = true; }
           });
-          nums.sort(function (a, b) { return a - b; });
-          if (nums.length) {
-            allergenCodes = '<sup class="m-allerg" title="' + PCD.escapeHtml(nums.map(function (n) { return ALLERGEN_NAMES[usedAllergens[n]] || usedAllergens[n]; }).join(', ')) + '">' + nums.join(',') + '</sup>';
+          if (parts.length) {
+            allergenCodes = '<span class="m-codes">' + parts.join(' ') + '</span>';
           }
         }
 
@@ -953,14 +1006,14 @@
       sectionsBody += '</div></div>';
     });
 
-    // v2.13.7 — Alerjen legend: menüde geçen numaraları açıklar (numaraya göre sıralı).
+    // v2.14.1 — Kod lejantı: menüde geçen kodları açıklar (registry sırası: diyet → alerjen).
     let allergenLegendHtml = '';
     if (showAllergens) {
-      const usedNums = Object.keys(usedAllergens).map(Number).sort(function (a, b) { return a - b; });
-      if (usedNums.length) {
+      const usedList = MENU_CODES.filter(function (c) { return usedCodes[c.id]; });
+      if (usedList.length) {
         allergenLegendHtml = '<div class="m-allergen-legend"><span class="m-leg-title">' +
-          PCD.escapeHtml(t('menu_allergen_legend') || 'Allergens') + '</span> ' +
-          usedNums.map(function (n) { return '<span class="m-leg-item"><sup>' + n + '</sup> ' + PCD.escapeHtml(ALLERGEN_NAMES[usedAllergens[n]] || usedAllergens[n]) + '</span>'; }).join(' &nbsp;·&nbsp; ') +
+          PCD.escapeHtml(t('menu_allergen_legend') || 'Key') + '</span> ' +
+          usedList.map(function (c) { return '<span class="m-leg-item"><b>' + PCD.escapeHtml(c.code) + '</b> ' + PCD.escapeHtml(t(c.labelKey) || c.id) + '</span>'; }).join(' &nbsp;·&nbsp; ') +
         '</div>';
       }
     }
@@ -1064,6 +1117,16 @@
           'color: ' + theme.mutedInk + ';' +
           'letter-spacing: 0.04em;' +
         '}' +
+        '.m-codes {' +
+          'font-family: ' + theme.bodyFont + ';' +
+          'font-size: 0.56em;' +
+          'font-weight: 600;' +
+          'margin-inline-start: 6px;' +
+          'color: ' + theme.mutedInk + ';' +
+          'letter-spacing: 0.02em;' +
+          'white-space: nowrap;' +
+          'vertical-align: middle;' +
+        '}' +
         '.m-allergen-legend {' +
           'margin-top: 30px; padding-top: 14px;' +
           'border-top: 1px solid ' + accent + '33;' +
@@ -1074,7 +1137,7 @@
           'text-transform: uppercase; letter-spacing: 0.14em;' +
           'font-weight: 600; margin-inline-end: 6px; color: ' + theme.ink + ';' +
         '}' +
-        '.m-allergen-legend sup { font-weight: 700; color: ' + theme.ink + '; }' +
+        '.m-allergen-legend b { font-weight: 700; color: ' + theme.ink + '; }' +
         '.m-itembadge {' +
           'font-size: 10px;' +
           'font-weight: 700;' +

@@ -513,15 +513,62 @@ ${existing && existing.priceHistory && existing.priceHistory.length > 0 ? `
     }, 100);
   }
   function downloadXlsxFromRows(rows, filename) {
-    if (!window.XLSX || !window.XLSX.utils) {
+    if (!window.XLSX || !window.XLSX.utils || !PCD.xlsx) {
       PCD.toast.error(PCD.i18n.t('toast_excel_parser_unavailable'));
       return;
     }
-    const ws = window.XLSX.utils.aoa_to_sheet(rows);
-    ws['!cols'] = [{ wch: 28 }, { wch: 10 }, { wch: 8 }, { wch: 16 }, { wch: 20 }, { wch: 8 }];
-    const wb = window.XLSX.utils.book_new();
-    window.XLSX.utils.book_append_sheet(wb, ws, 'Ingredients');
-    window.XLSX.writeFile(wb, filename);
+    // v2.14.2 — Ortak styled-Excel motoru: kalın yeşil başlık + çerçeve + alt-satır gölgesi.
+    const data = rows.slice(1); // rows[0] = header
+    PCD.xlsx.save(window.XLSX, [{
+      name: 'Ingredients',
+      title: 'ProChefDesk — Ingredient List',
+      subtitle: data.length + ' items · ' + todayIsoForFilename(),
+      headers: rows[0],
+      rows: data,
+      align: ['left', 'right', 'left', 'left', 'left', 'right'], // Name,Price,Unit,Category,Supplier,Yield%
+      widths: [30, 12, 10, 18, 22, 10],
+    }], filename);
+  }
+  // v2.14.2 — Profesyonel Excel template: düzgün sütunlar + örnek satırlar +
+  // 2. sayfada "Lists" (geçerli Unit + Category değerleri). Şef hücre hücre
+  // doldurur, virgül yok. CSV template'in modern karşılığı.
+  function downloadXlsxTemplate() {
+    const t = PCD.i18n.t;
+    const go = function (XLSX) {
+      if (!XLSX || !XLSX.utils || !PCD.xlsx) { PCD.toast.error(t('toast_excel_parser_unavailable')); return; }
+      const UNITS = ['g', 'kg', 'ml', 'l', 'tsp', 'tbsp', 'cup', 'oz', 'lb', 'pcs', 'unit'];
+      const CATS = ['cat_meat', 'cat_poultry', 'cat_seafood', 'cat_dairy', 'cat_produce', 'cat_dry_goods', 'cat_spices', 'cat_oils', 'cat_beverages', 'cat_baking', 'cat_other'];
+      const listRows = [];
+      const maxLen = Math.max(UNITS.length, CATS.length);
+      for (let i = 0; i < maxLen; i++) listRows.push([UNITS[i] || '', CATS[i] || '']);
+      PCD.xlsx.save(XLSX, [
+        {
+          name: 'Ingredients',
+          title: 'ProChefDesk — Ingredient Template',
+          subtitle: t('import_xlsx_tpl_subtitle') || 'Fill one row per ingredient. Price = cost of ONE unit. See the "Lists" tab for valid Unit & Category values. Delete the example rows before importing.',
+          headers: ['Name', 'Price', 'Unit', 'Category', 'Supplier', 'Yield%'],
+          rows: [
+            ['Olive Oil', 18, 'l', 'cat_oils', 'Perth Fresh', ''],
+            ['Chicken Breast', 18, 'kg', 'cat_poultry', 'Meat Co', 88],
+            ['Tomato', 5, 'kg', 'cat_produce', '', 90],
+          ],
+          align: ['left', 'right', 'left', 'left', 'left', 'right'],
+          widths: [30, 12, 10, 18, 22, 10],
+        },
+        {
+          name: 'Lists',
+          title: 'Valid values',
+          subtitle: t('import_xlsx_tpl_lists') || 'Copy these exactly into the Unit and Category columns.',
+          headers: ['Unit', 'Category'],
+          rows: listRows,
+          align: ['left', 'left'],
+          widths: [14, 18],
+        },
+      ], 'prochefdesk-ingredients-template.xlsx');
+    };
+    if (window.XLSX && window.XLSX.utils) go(window.XLSX);
+    else if (PCD.loadXLSX) PCD.loadXLSX().then(go).catch(function () { PCD.toast.error(t('toast_excel_parser_unavailable')); });
+    else PCD.toast.error(t('toast_excel_parser_unavailable'));
   }
   function todayIsoForFilename() {
     const d = new Date();
@@ -628,9 +675,11 @@ Pasta,3,kg,cat_dry_goods,,</code></pre>
           <span style="display:inline-block;margin-top:6px;">${PCD.escapeHtml(t('import_help_units') || 'Supported units')}: <code>g, kg, ml, l, tsp, tbsp, cup, oz, lb, pcs, unit</code></span><br>
           <span style="display:inline-block;margin-top:2px;">${PCD.escapeHtml(t('import_help_cats') || 'Supported categories')}: <code>cat_meat, cat_poultry, cat_seafood, cat_dairy, cat_produce, cat_dry_goods, cat_spices, cat_oils, cat_beverages, cat_baking, cat_other</code></span>
         </div>
-        <div style="margin-top:10px;">
-          <button type="button" class="btn btn-outline btn-sm" id="dlTemplateBtn">${PCD.icon('download', 14)} ${PCD.escapeHtml(t('import_download_template') || 'Download blank template (.csv)')}</button>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button type="button" class="btn btn-primary btn-sm" id="dlTemplateXlsxBtn">${PCD.icon('download', 14)} ${PCD.escapeHtml(t('import_download_template_xlsx') || 'Download Excel template (.xlsx)')}</button>
+          <button type="button" class="btn btn-outline btn-sm" id="dlTemplateBtn">${PCD.icon('download', 14)} ${PCD.escapeHtml(t('import_download_template') || 'Blank .csv template')}</button>
         </div>
+        <div class="text-muted" style="font-size:11px;margin-top:6px;line-height:1.5;">${PCD.escapeHtml(t('import_template_hint') || 'Easiest: download the Excel template and fill one row per ingredient — no commas needed. The "Lists" tab shows valid Unit & Category values.')}</div>
       </div>
 
       <div class="field">
@@ -652,6 +701,10 @@ Pasta,3,kg,cat_dry_goods,,</code></pre>
 
       <div id="importPreview"></div>
     `;
+
+    // v2.14.2 — Excel template (önerilen) indir
+    const dlXlsxBtn = PCD.$('#dlTemplateXlsxBtn', body);
+    if (dlXlsxBtn) dlXlsxBtn.addEventListener('click', downloadXlsxTemplate);
 
     // v2.9.19 — Template download button
     const dlBtn = PCD.$('#dlTemplateBtn', body);

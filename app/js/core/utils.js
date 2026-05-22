@@ -382,6 +382,111 @@
     return _xlsxPromise;
   };
 
+  // v2.14.2 — Ortak styled-Excel motoru. Uygulamanın TEK profesyonel export
+  // stili: kalın beyaz başlık + marka-yeşil zemin, tüm hücrelerde ince çerçeve,
+  // alternatif satır gölgesi, otomatik sütun genişliği. recipes.js cost report'taki
+  // kanıtlanmış stil objeleri (xlsx-js-style@1.2.0 ile uyumlu) baz alındı.
+  // Kullanım:  PCD.loadXLSX().then(function (XLSX) {
+  //   PCD.xlsx.save(XLSX, [{ name:'Ingredients', title:'...', headers:[...], rows:[[...]],
+  //     align:['left','right',...], numFmt:{1:'#,##0.00'} }], 'file.xlsx');
+  // });
+  PCD.xlsx = (function () {
+    const BRAND = '16A34A', HEADER_BG = '16A34A', ROW_ALT = 'FAFAFA', BORDER_COLOR = 'D4D4D4';
+    const thin = { style: 'thin', color: { rgb: BORDER_COLOR } };
+    const allBorder = { top: thin, bottom: thin, left: thin, right: thin };
+
+    function colLetter(n) { // 0-based index → A, B, ... Z, AA
+      let s = ''; n = n + 1;
+      while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); }
+      return s;
+    }
+    function headerStyle(align) {
+      return {
+        font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: 'FFFFFF' } },
+        fill: { fgColor: { rgb: HEADER_BG } },
+        alignment: { vertical: 'center', horizontal: align || 'left' },
+        border: allBorder,
+      };
+    }
+    function dataStyle(align, alt, numFmt) {
+      const s = {
+        font: { name: 'Calibri', sz: 10 },
+        alignment: { vertical: 'center', horizontal: align || 'left' },
+        border: allBorder,
+      };
+      if (alt) s.fill = { fgColor: { rgb: ROW_ALT } };
+      if (numFmt) s.numFmt = numFmt;
+      return s;
+    }
+    function setCell(ws, addr, v, style) {
+      const c = { v: (v == null ? '' : v) };
+      c.t = (typeof v === 'number') ? 'n' : 's';
+      if (style) c.s = style;
+      ws[addr] = c;
+    }
+
+    // Build one styled worksheet from a simple table spec.
+    function sheet(XLSX, spec) {
+      const ws = {};
+      const headers = spec.headers || [];
+      const rows = spec.rows || [];
+      const align = spec.align || [];
+      const numFmt = spec.numFmt || {};
+      const ncol = Math.max(1, headers.length);
+      const lastColL = colLetter(ncol - 1);
+      let r = 1;
+      if (spec.title) {
+        setCell(ws, 'A' + r, spec.title, { font: { name: 'Calibri', sz: 16, bold: true, color: { rgb: BRAND } }, alignment: { vertical: 'center', horizontal: 'left' } });
+        r++;
+      }
+      if (spec.subtitle) {
+        setCell(ws, 'A' + r, spec.subtitle, { font: { name: 'Calibri', sz: 10, color: { rgb: '666666' } }, alignment: { vertical: 'center' } });
+        r++;
+      }
+      if (spec.title || spec.subtitle) r++; // blank spacer row
+      const headerRow = r;
+      headers.forEach(function (h, c) { setCell(ws, colLetter(c) + headerRow, h, headerStyle(align[c])); });
+      r++;
+      rows.forEach(function (row, ri) {
+        const alt = ri % 2 === 1;
+        for (let c = 0; c < ncol; c++) {
+          setCell(ws, colLetter(c) + r, (row[c] == null ? '' : row[c]), dataStyle(align[c], alt, numFmt[c]));
+        }
+        r++;
+      });
+      const lastRow = Math.max(headerRow, r - 1);
+      ws['!ref'] = 'A1:' + lastColL + lastRow;
+      // Title/subtitle merges across all columns
+      const merges = [];
+      if (spec.title) merges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: ncol - 1 } });
+      if (spec.subtitle) { const sr = spec.title ? 1 : 0; merges.push({ s: { r: sr, c: 0 }, e: { r: sr, c: ncol - 1 } }); }
+      if (merges.length) ws['!merges'] = merges;
+      // Column widths: fixed if given, else auto-fit from content (clamp 8..40)
+      if (spec.widths) {
+        ws['!cols'] = spec.widths.map(function (w) { return { wch: w }; });
+      } else {
+        const w = [];
+        headers.forEach(function (h, c) { w[c] = String(h == null ? '' : h).length; });
+        rows.forEach(function (row) { for (let c = 0; c < ncol; c++) { const sv = String(row[c] == null ? '' : row[c]); if (!w[c] || sv.length > w[c]) w[c] = sv.length; } });
+        ws['!cols'] = w.map(function (x) { return { wch: Math.min(40, Math.max(8, (x || 8) + 2)) }; });
+      }
+      return ws;
+    }
+
+    // Build a workbook from one or more sheet specs and trigger download.
+    function save(XLSX, sheets, filename) {
+      const wb = XLSX.utils.book_new();
+      (sheets || []).forEach(function (sp, i) {
+        const ws = sheet(XLSX, sp);
+        const nm = (sp.name || ('Sheet' + (i + 1))).slice(0, 31).replace(/[\\\/\?\*\[\]:]/g, '_');
+        XLSX.utils.book_append_sheet(wb, ws, nm);
+      });
+      XLSX.writeFile(wb, filename);
+    }
+
+    return { sheet: sheet, save: save };
+  })();
+
   // Print helper — popup window on desktop, iframe modal on mobile.
   // Takes a full HTML string or just the body content (wraps if needed).
   PCD.print = function (htmlOrContent, title) {

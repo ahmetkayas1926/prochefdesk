@@ -47,6 +47,18 @@
     { name: 'Mustard Dijon',          unit: 'g',  pricePerUnit: 0.010, category: 'cat_spices' },
     { name: 'Ketchup',                unit: 'g',  pricePerUnit: 0.004, category: 'cat_spices' },
     { name: 'Olive oil',              unit: 'ml', pricePerUnit: 0.012, category: 'cat_oils' },
+    // Mediterranean / salad (v2.14.3 demo expansion) — supplier + yield% showcase
+    { name: 'Cucumber',               unit: 'g',  pricePerUnit: 0.004, category: 'cat_produce', supplier: 'Fresh Farm Co.', yieldPercent: 95 },
+    { name: 'Feta cheese',            unit: 'g',  pricePerUnit: 0.018, category: 'cat_dairy',   supplier: 'Dairy Direct' },
+    { name: 'Kalamata olives',        unit: 'g',  pricePerUnit: 0.016, category: 'cat_produce', supplier: 'Fresh Farm Co.' },
+    { name: 'Dried oregano',          unit: 'g',  pricePerUnit: 0.045, category: 'cat_spices',  supplier: 'Spice Importers' },
+    // Pizza
+    { name: 'Pizza flour 00',         unit: 'g',  pricePerUnit: 0.003, category: 'cat_baking',  supplier: 'Bakery Wholesale' },
+    { name: 'Mozzarella',             unit: 'g',  pricePerUnit: 0.014, category: 'cat_dairy',   supplier: 'Dairy Direct' },
+    { name: 'Fresh basil',            unit: 'g',  pricePerUnit: 0.060, category: 'cat_produce', supplier: 'Fresh Farm Co.' },
+    // Seafood
+    { name: 'Salmon fillet',          unit: 'g',  pricePerUnit: 0.032, category: 'cat_seafood', yieldPercent: 90 },
+    { name: 'Lemon',                  unit: 'g',  pricePerUnit: 0.005, category: 'cat_produce', supplier: 'Fresh Farm Co.', yieldPercent: 45 },
   ];
 
   // Helper to find ingredient ID by name (after seeding)
@@ -60,14 +72,16 @@
 
     // 1) Upsert ingredients and keep their IDs
     const upserted = demoIngredients.map(function (ing) {
-      return PCD.store.upsertIngredient({
+      const obj = {
         name: ing.name,
         unit: ing.unit,
         pricePerUnit: ing.pricePerUnit,
         category: ing.category,
-        supplier: '',
+        supplier: ing.supplier || '',
         _demo: true,
-      });
+      };
+      if (ing.yieldPercent != null) obj.yieldPercent = ing.yieldPercent;
+      return PCD.store.upsertIngredient(obj);
     });
 
     // 2) Seed recipes
@@ -183,15 +197,110 @@
       _demo: true,
     };
 
+    // v2.14.3 — 3 ek demo recipe: Akdeniz/İtalyan/deniz ürünü çeşitliliği +
+    // vejetaryen/glutensiz diyet kodu sergisi (menüde gösterilir). Foto yok
+    // (operatör editörden ekleyebilir / çalışan Unsplash linki verirse bağlarım).
+    const greek = {
+      name: 'Greek Salad',
+      category: 'cat_salad',
+      cuisine: 'Greek',
+      servings: 4,
+      prepTime: 15,
+      cookTime: 0,
+      salePrice: 12,
+      ingredients: [
+        { ingredientId: findId(upserted, 'Tomato'),          amount: 400, unit: 'g' },
+        { ingredientId: findId(upserted, 'Cucumber'),        amount: 300, unit: 'g' },
+        { ingredientId: findId(upserted, 'Red onion'),       amount: 80,  unit: 'g' },
+        { ingredientId: findId(upserted, 'Feta cheese'),     amount: 200, unit: 'g' },
+        { ingredientId: findId(upserted, 'Kalamata olives'), amount: 80,  unit: 'g' },
+        { ingredientId: findId(upserted, 'Olive oil'),       amount: 40,  unit: 'ml' },
+        { ingredientId: findId(upserted, 'Dried oregano'),   amount: 3,   unit: 'g' },
+        { ingredientId: findId(upserted, 'Sea salt'),        amount: 4,   unit: 'g' },
+        { ingredientId: findId(upserted, 'Black pepper'),    amount: 2,   unit: 'g' },
+      ],
+      steps: [
+        'Cut tomatoes into wedges and cucumber into thick half-moons.',
+        'Slice red onion thinly. Combine vegetables in a bowl with the olives.',
+        'Dress with olive oil, dried oregano, salt and pepper. Toss gently.',
+        'Top with a slab (not crumbled) of feta. Finish with a little more oregano and oil.'
+      ].join('\n\n'),
+      plating: 'Pile high in a shallow bowl, feta slab on top, drizzle of oil. Rustic, generous.',
+      allergens: ['dairy'],
+      _demo: true,
+    };
+
+    const pizza = {
+      name: 'Margherita Pizza',
+      category: 'cat_main',
+      cuisine: 'Italian',
+      servings: 2,
+      prepTime: 90,
+      cookTime: 8,
+      salePrice: 14,
+      ingredients: [
+        { ingredientId: findId(upserted, 'Pizza flour 00'), amount: 320, unit: 'g' },
+        { ingredientId: findId(upserted, 'Tomato puree'),   amount: 150, unit: 'ml' },
+        { ingredientId: findId(upserted, 'Mozzarella'),     amount: 200, unit: 'g' },
+        { ingredientId: findId(upserted, 'Fresh basil'),    amount: 10,  unit: 'g' },
+        { ingredientId: findId(upserted, 'Olive oil'),      amount: 20,  unit: 'ml' },
+        { ingredientId: findId(upserted, 'Sea salt'),       amount: 6,   unit: 'g' },
+      ],
+      steps: [
+        'Make a dough with flour, water, salt and a pinch of yeast. Knead, then prove 1-2 hours.',
+        'Stretch into two bases. Heat the oven as hot as it goes with a stone or steel.',
+        'Spread a thin layer of seasoned tomato puree, leaving a border for the crust.',
+        'Tear over mozzarella. Bake until the crust is blistered and the cheese bubbles.',
+        'Finish with fresh basil and a drizzle of olive oil.'
+      ].join('\n\n'),
+      plating: 'Whole, uncut, basil centered. Slice at the table for the aroma.',
+      allergens: ['gluten', 'dairy'],
+      _demo: true,
+    };
+
+    const salmon = {
+      name: 'Pan-Seared Salmon',
+      category: 'cat_main',
+      cuisine: 'Modern',
+      servings: 2,
+      prepTime: 10,
+      cookTime: 12,
+      salePrice: 24,
+      ingredients: [
+        { ingredientId: findId(upserted, 'Salmon fillet'),  amount: 360, unit: 'g' },
+        { ingredientId: findId(upserted, 'Lemon'),          amount: 60,  unit: 'g' },
+        { ingredientId: findId(upserted, 'Butter'),         amount: 30,  unit: 'g' },
+        { ingredientId: findId(upserted, 'Garlic cloves'),  amount: 10,  unit: 'g' },
+        { ingredientId: findId(upserted, 'Olive oil'),      amount: 15,  unit: 'ml' },
+        { ingredientId: findId(upserted, 'Sea salt'),       amount: 4,   unit: 'g' },
+        { ingredientId: findId(upserted, 'Black pepper'),   amount: 2,   unit: 'g' },
+      ],
+      steps: [
+        'Pat the salmon dry and season skin-side with salt.',
+        'Sear skin-side down in hot oil, pressing flat, until the skin is crisp (about 6 minutes).',
+        'Flip, add butter and crushed garlic, and baste for 2-3 minutes to medium.',
+        'Squeeze over lemon off the heat and rest 1 minute before plating.'
+      ].join('\n\n'),
+      plating: 'Skin up to stay crisp, lemon cheek alongside, spoon the garlic butter over.',
+      allergens: ['fish', 'dairy'],
+      _demo: true,
+    };
+
     PCD.store.upsertRecipe(carbonara);
     PCD.store.upsertRecipe(tikka);
     PCD.store.upsertRecipe(burger);
+    PCD.store.upsertRecipe(greek);
+    PCD.store.upsertRecipe(pizza);
+    PCD.store.upsertRecipe(salmon);
 
     // Re-fetch with their assigned ids
     const all = PCD.store.listRecipes();
     const carbonaraR = all.find(function (r) { return r.name === 'Spaghetti alla Carbonara'; });
     const tikkaR = all.find(function (r) { return r.name === 'Chicken Tikka Masala'; });
     const burgerR = all.find(function (r) { return r.name === 'Classic Cheeseburger'; });
+    const greekR = all.find(function (r) { return r.name === 'Greek Salad'; });
+    const pizzaR = all.find(function (r) { return r.name === 'Margherita Pizza'; });
+    const salmonR = all.find(function (r) { return r.name === 'Pan-Seared Salmon'; });
 
     // v2.8.24 — Removed the older "DEMO MENU" seed block here. A second
     // identical "DEMO MENU (added v2.6.30)" block further down was the
@@ -199,30 +308,46 @@
     // "Lunch Menu" entry in the demo workspace.
 
     // === DEMO SUPPLIERS ===
+    // v2.14.3 — Kategori değerleri suppliers.js CATS görünen adlarına düzeltildi
+    // (önceki cat_* kodları hepsini "Other" altına düşürüyordu). Ürünler gerçek
+    // demo malzeme adlarıyla eşleşir. Seafood tedarikçisi eklendi (yeni salmon).
     const supplierData = [
-      { name: 'Fresh Farm Co.', category: 'cat_produce', phone: '+1 555 0101', email: 'orders@freshfarm.example', products: [
+      { name: 'Fresh Farm Co.', category: 'Produce', phone: '+1 555 0101', email: 'orders@freshfarm.example', products: [
         { name: 'Tomato', unit: 'kg' },
+        { name: 'Cucumber', unit: 'kg' },
         { name: 'Onion', unit: 'kg' },
-        { name: 'Garlic', unit: 'kg' },
+        { name: 'Red onion', unit: 'kg' },
+        { name: 'Garlic cloves', unit: 'kg' },
+        { name: 'Fresh basil', unit: 'bunch' },
+        { name: 'Lemon', unit: 'kg' },
       ]},
-      { name: 'Premium Meats', category: 'cat_meat', phone: '+1 555 0202', email: 'orders@premiummeats.example', products: [
+      { name: 'Premium Meats', category: 'Meat & Poultry', phone: '+1 555 0202', email: 'orders@premiummeats.example', products: [
         { name: 'Beef mince (80/20)', unit: 'kg' },
         { name: 'Chicken thigh boneless', unit: 'kg' },
         { name: 'Pancetta', unit: 'kg' },
       ]},
-      { name: 'Dairy Direct', category: 'cat_dairy', phone: '+1 555 0303', email: 'orders@dairydirect.example', products: [
-        { name: 'Heavy cream', unit: 'L' },
+      { name: 'Ocean Catch', category: 'Seafood', phone: '+1 555 0606', email: 'orders@oceancatch.example', products: [
+        { name: 'Salmon fillet', unit: 'kg' },
+      ]},
+      { name: 'Dairy Direct', category: 'Dairy', phone: '+1 555 0303', email: 'orders@dairydirect.example', products: [
+        { name: 'Heavy cream', unit: 'l' },
         { name: 'Plain yogurt', unit: 'kg' },
+        { name: 'Butter', unit: 'kg' },
+        { name: 'Feta cheese', unit: 'kg' },
+        { name: 'Mozzarella', unit: 'kg' },
         { name: 'Pecorino Romano', unit: 'kg' },
         { name: 'Parmigiano Reggiano', unit: 'kg' },
       ]},
-      { name: 'Bakery Wholesale', category: 'cat_baking', phone: '+1 555 0404', email: 'orders@bakery.example', products: [
+      { name: 'Bakery Wholesale', category: 'Dry Goods', phone: '+1 555 0404', email: 'orders@bakery.example', products: [
         { name: 'Burger buns brioche', unit: 'pcs' },
+        { name: 'Pizza flour 00', unit: 'kg' },
       ]},
-      { name: 'Spice Importers', category: 'cat_spices', phone: '+1 555 0505', email: 'orders@spices.example', products: [
+      { name: 'Spice Importers', category: 'Dry Goods', phone: '+1 555 0505', email: 'orders@spices.example', products: [
         { name: 'Garam masala', unit: 'kg' },
         { name: 'Ground cumin', unit: 'kg' },
         { name: 'Paprika (smoked)', unit: 'kg' },
+        { name: 'Turmeric', unit: 'kg' },
+        { name: 'Dried oregano', unit: 'kg' },
       ]},
     ];
     supplierData.forEach(function (s) {
@@ -245,10 +370,10 @@
       'Tomato puree':           { stock: 2000,  parLevel: 1000, minLevel: 300 },   // OK
     };
     Object.keys(invMap).forEach(function (name) {
-      const ing = upserted[name];
-      if (!ing) return;
+      const ingId = findId(upserted, name); // v2.14.3 fix: upserted is an array → index-by-name was always undefined (demo inventory never seeded)
+      if (!ingId) return;
       const cfg = invMap[name];
-      inv[wsId][ing.id] = {
+      inv[wsId][ingId] = {
         stock: cfg.stock,
         parLevel: cfg.parLevel,
         minLevel: cfg.minLevel,
@@ -258,20 +383,30 @@
     });
     PCD.store.set('inventory', inv);
 
-    // === DEMO MENU (added v2.6.30) ===
+    // === DEMO MENU (added v2.6.30; v2.14.3 — diyet/alerjen harf kodları sergilenir) ===
     if (carbonaraR && tikkaR && burgerR) {
       PCD.store.upsertInTable('menus', {
         name: 'Lunch Menu',
         subtitle: 'Sample · customize me',
+        allergenStyle: 'codes',
         sections: [
+          {
+            id: PCD.uid('sec'),
+            name: 'Starters',
+            items: [
+              greekR ? { id: PCD.uid('mi'), recipeId: greekR.id, codes: ['v', 'gf', 'a_d'] } : null,
+            ].filter(Boolean),
+          },
           {
             id: PCD.uid('sec'),
             name: 'Mains',
             items: [
-              { id: PCD.uid('mi'), recipeId: carbonaraR.id },
-              { id: PCD.uid('mi'), recipeId: tikkaR.id },
-              { id: PCD.uid('mi'), recipeId: burgerR.id },
-            ],
+              { id: PCD.uid('mi'), recipeId: carbonaraR.id, codes: ['a_g', 'a_e', 'a_d'] },
+              { id: PCD.uid('mi'), recipeId: tikkaR.id, codes: ['gf', 'a_d'] },
+              pizzaR ? { id: PCD.uid('mi'), recipeId: pizzaR.id, codes: ['v', 'a_g', 'a_d'] } : null,
+              salmonR ? { id: PCD.uid('mi'), recipeId: salmonR.id, codes: ['gf', 'a_f', 'a_d'] } : null,
+              { id: PCD.uid('mi'), recipeId: burgerR.id, codes: ['a_g', 'a_e', 'a_d'] },
+            ].filter(Boolean),
           },
         ],
         hidePrices: false,
@@ -316,6 +451,54 @@
         ],
         _demo: true,
       }, 'cvs');
+    }
+
+    // === DEMO BUFFET (v2.14.3) ===
+    // Büfe ayrı kayıt yolu kullanır: workspace-keyed dizi (buffet.js readBuffetsAll/
+    // writeBuffets ile uyumlu). Misafir = bulut kapalı, queueArraySync gerekmez.
+    if (carbonaraR && tikkaR) {
+      const nowIso = new Date().toISOString();
+      const demoBuffet = {
+        id: PCD.uid('bf'),
+        createdAt: nowIso,
+        updatedAt: nowIso,
+        _demo: true,
+        name: 'Sunday Brunch Buffet',
+        type: 'lunch',
+        coverCount: 80,
+        ticketPrice: 45,
+        durationHours: 3,
+        refillMultiplier: null,
+        notes: 'Sample buffet · customize or delete',
+        stations: [
+          { name: 'Cold', type: 'cold', items: [
+            (greekR
+              ? { recipeId: greekR.id, amountPerGuest: 90, unit: 'g', pickupRatio: 0.55, refillX: null }
+              : { customName: 'Greek salad', amountPerGuest: 90, unit: 'g', pickupRatio: 0.55, refillX: null }),
+            { customName: 'Smoked salmon platter', amountPerGuest: 50, unit: 'g', pickupRatio: 0.45, refillX: null },
+            { customName: 'Seasonal fruit', amountPerGuest: 100, unit: 'g', pickupRatio: 0.55, refillX: null },
+          ]},
+          { name: 'Hot', type: 'hot', items: [
+            { recipeId: tikkaR.id, amountPerGuest: 180, unit: 'g', pickupRatio: 0.80, refillX: null },
+            { recipeId: carbonaraR.id, amountPerGuest: 150, unit: 'g', pickupRatio: 0.70, refillX: null },
+            { customName: 'Roast vegetables', amountPerGuest: 90, unit: 'g', pickupRatio: 0.60, refillX: null },
+          ]},
+          { name: 'Bakery', type: 'bakery', items: [
+            { customName: 'Croissants', amountPerGuest: 1, unit: 'pcs', pickupRatio: 0.70, refillX: null },
+            { customName: 'Sourdough slices', amountPerGuest: 2, unit: 'slice', pickupRatio: 0.50, refillX: null },
+          ]},
+          { name: 'Beverage', type: 'beverage', items: [
+            { customName: 'Filter coffee', amountPerGuest: 200, unit: 'ml', pickupRatio: 0.90, refillX: null },
+            { customName: 'Fresh orange juice', amountPerGuest: 150, unit: 'ml', pickupRatio: 0.80, refillX: null },
+          ]},
+        ],
+      };
+      const bufRoot = PCD.store._read('buffets') || {};
+      const bufNext = Array.isArray(bufRoot) ? {} : Object.assign({}, bufRoot);
+      const bufArr = (Array.isArray(bufRoot) ? [] : (bufRoot[wsId] || [])).slice();
+      bufArr.push(demoBuffet);
+      bufNext[wsId] = bufArr;
+      PCD.store.set('buffets', bufNext);
     }
 
     PCD.store.update('onboarding', { demoSeeded: true });
