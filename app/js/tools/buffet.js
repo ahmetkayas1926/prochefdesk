@@ -1661,7 +1661,8 @@
       border: thinBorder,
     };
     const labelStyle = { font: { bold: true }, alignment: { vertical: 'center' }, border: thinBorder };
-    const moneyStyle = { numFmt: '$#,##0.00', alignment: { horizontal: 'right' }, border: thinBorder };
+    const curSym = (PCD.currencySymbol && PCD.currencySymbol()) || '$'; // v2.14.7 — aktif para simgesi (eskiden "$" sabitti)
+    const moneyStyle = { numFmt: '"' + curSym + '"#,##0.00', alignment: { horizontal: 'right' }, border: thinBorder };
     const numStyle   = { numFmt: '#,##0.00',  alignment: { horizontal: 'right' }, border: thinBorder };
     const pctStyle   = { numFmt: '0%',         alignment: { horizontal: 'right' }, border: thinBorder };
 

@@ -1451,7 +1451,7 @@ window.PCD.i18n.register('tr', {
   menu_duplicated: "Menü çoğaltıldı",
   menu_footer_placeholder: "Özel alt yazı metni (opsiyonel)",
   menu_safe_print_title: "Alerjen-güvenli yazdırma",
-  menu_safe_print_hint: "Sadece seçilen kategorilerden uzak olan yemekleri yazdır/önizle. Boş = tümünü göster.",
+  menu_safe_print_hint: "Sadece seçilen TÜM kodları taşıyan yemekleri yazdır/önizle (diyet + alerjen). Boş = tümünü göster.",
   recipes_filter_clear: "Temizle",
   recipes_filter_tags: "Etiketler",
   recipe_tags_label: "Etiketler",

@@ -10,6 +10,13 @@
    ================================================================ */
 
 window.PCD.i18n.register('de', {
+  // v2.14.6 — Whiteboard-Vorlagennamen (zuvor englischer Fallback)
+  wb_tpl_tonight: "Heutiger Service",
+  wb_tpl_doneness: "Steak-Garstufen-Leitfaden",
+  wb_tpl_allergen: "Allergen-Tafel",
+  wb_tpl_prep_timeline: "Vorbereitungs-Zeitplan",
+  wb_tpl_mise: "Stations-Mise-en-Place",
+  wb_tpl_cook_temps: "Garzeiten & Kerntemperaturen",
   // v2.14.5 — Menü Diät-/Allergencodes + Excel I/O + Preisstil
   menu_allergen_display: "Diät- & Allergencodes",
   menu_allergen_codes: "Buchstabencodes (gf, N…) + Legende",

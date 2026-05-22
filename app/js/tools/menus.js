@@ -426,7 +426,7 @@
         <div class="field" style="margin-top:10px;">
           <label class="field-label">${PCD.escapeHtml(t('menu_price_display') || 'Price display')}</label>
           <select class="select" id="menuPriceStyle">
-            <option value="symbol"${(data.priceStyle === 'symbol') ? ' selected' : ''}>${PCD.escapeHtml(t('menu_price_symbol') || 'With currency symbol ($24)')}</option>
+            <option value="symbol"${(data.priceStyle === 'symbol') ? ' selected' : ''}>${PCD.escapeHtml((t('menu_price_symbol') || 'With currency symbol ($24)').replace('$', (PCD.currencySymbol && PCD.currencySymbol()) || '$'))}</option>
             <option value="plain"${(data.priceStyle === 'plain') ? ' selected' : ''}>${PCD.escapeHtml(t('menu_price_plain') || 'Number only — no symbol (24)')}</option>
             <option value="hidden"${(data.priceStyle === 'hidden') ? ' selected' : ''}>${PCD.escapeHtml(t('menu_price_hidden') || 'Hidden')}</option>
           </select>
@@ -449,15 +449,26 @@
         <details class="field" style="border:1px solid var(--border);border-radius:var(--r-md);padding:10px 12px;background:var(--surface-2);">
           <summary style="cursor:pointer;font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-2);">🛡 ${PCD.escapeHtml(t('menu_safe_print_title') || 'Allergen-safe print')}</summary>
           <div style="margin-top:10px;">
-            <div class="text-muted text-sm mb-2" style="font-size:12px;">${PCD.escapeHtml(t('menu_safe_print_hint') || 'Print/preview only items free from the selected categories. Empty = show all.')}</div>
-            <div style="display:flex;gap:6px;flex-wrap:wrap;">
-              ${['gluten','dairy','nuts','fish'].map(function (k) {
-                const arr = Array.isArray(data.safePrintFilter) ? data.safePrintFilter : [];
-                const active = arr.indexOf(k) >= 0;
-                const labels = { gluten: '🌾 GF', dairy: '🥛 DF', nuts: '🥜 Nut-free', fish: '🐟 Fish-free' };
-                return '<button type="button" class="chip" data-safeprint="' + k + '" style="cursor:pointer;background:' + (active ? 'var(--brand-50)' : 'var(--surface)') + ';border:1px solid ' + (active ? 'var(--brand-600)' : 'var(--border-strong)') + ';color:' + (active ? 'var(--brand-700)' : 'var(--text-2)') + ';font-weight:' + (active ? '700' : '500') + ';">' + labels[k] + '</button>';
-              }).join('')}
-            </div>
+            <div class="text-muted text-sm mb-2" style="font-size:12px;">${PCD.escapeHtml(t('menu_safe_print_hint') || 'Print/preview only items that have ALL the selected codes (diet + allergen). Empty = show all.')}</div>
+            ${(function () {
+              // v2.14.8 — Filtre artık manuel kodlara (it.codes) göre: seçili TÜM
+              // kodları taşıyan öğeler basılır. Diyet (v/vg/gf/gfo/df/dfo/nf/h) +
+              // "içerir" alerjen (N/G/D/E/F/SF/S/SE). Tarifsiz öğelerde de çalışır.
+              const arr = Array.isArray(data.safePrintFilter) ? data.safePrintFilter : [];
+              function chip(c) {
+                const active = arr.indexOf(c.id) >= 0;
+                const lbl = PCD.escapeHtml((c.code ? c.code + ' · ' : '') + (t(c.labelKey) || c.id));
+                return '<button type="button" class="chip" data-safeprint="' + c.id + '" style="cursor:pointer;background:' + (active ? 'var(--brand-50)' : 'var(--surface)') + ';border:1px solid ' + (active ? 'var(--brand-600)' : 'var(--border-strong)') + ';color:' + (active ? 'var(--brand-700)' : 'var(--text-2)') + ';font-weight:' + (active ? '700' : '500') + ';">' + lbl + '</button>';
+              }
+              const grpStyle = 'font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-3);margin:2px 0 5px;';
+              const rowStyle = 'display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px;';
+              const diet = MENU_CODES.filter(function (c) { return c.group === 'diet'; });
+              const allerg = MENU_CODES.filter(function (c) { return c.group === 'allergen'; });
+              return '<div style="' + grpStyle + '">' + PCD.escapeHtml(t('menu_codes_group_diet') || 'Dietary / suitability') + '</div>' +
+                '<div style="' + rowStyle + '">' + diet.map(chip).join('') + '</div>' +
+                '<div style="' + grpStyle + '">' + PCD.escapeHtml(t('menu_codes_group_allergen') || 'Allergen — contains') + '</div>' +
+                '<div style="display:flex;gap:6px;flex-wrap:wrap;">' + allerg.map(chip).join('') + '</div>';
+            })()}
           </div>
         </details>
       `;
@@ -948,21 +959,15 @@
     const safeFilters = Array.isArray(menu.safePrintFilter) ? menu.safePrintFilter : [];
     function itemPassesSafeFilter(it) {
       if (!safeFilters.length) return true;
-      if (!it.recipeId) return false; // manual item — can't verify
-      const r = recipeMap[it.recipeId];
-      if (!r) return false;
-      const tags = (PCD.allergensDB && PCD.allergensDB.recipeAllergens) ? (PCD.allergensDB.recipeAllergens(r, ingMap) || []) : [];
+      // v2.14.8 — Manuel kodlara göre filtre: öğe, seçili TÜM kodları it.codes'ında
+      // taşımalı. Diyet kodu seçilirse (gf/vg…) o uygunluktaki öğeler; "içerir"
+      // alerjen kodu seçilirse (N/G…) o alerjeni taşıyan öğeler basılır. Tarifsiz
+      // öğeler de it.codes ile çalışır (eski auto-detect onları eliyordu).
+      const codes = Array.isArray(it.codes) ? it.codes : [];
       for (let i = 0; i < safeFilters.length; i++) {
         const k = safeFilters[i];
-        if (k === 'gluten') {
-          if (tags.indexOf('gluten') >= 0) return false;
-        } else if (k === 'dairy') {
-          if (tags.indexOf('dairy') >= 0) return false;
-        } else if (k === 'nuts') {
-          if (tags.indexOf('nuts') >= 0 || tags.indexOf('peanuts') >= 0) return false;
-        } else if (k === 'fish') {
-          if (tags.indexOf('fish') >= 0 || tags.indexOf('shellfish') >= 0 || tags.indexOf('molluscs') >= 0) return false;
-        }
+        if (!MENU_CODES.find(function (c) { return c.id === k; })) continue; // eski/bilinmeyen filtre değerini yok say
+        if (codes.indexOf(k) < 0) return false;
       }
       return true;
     }

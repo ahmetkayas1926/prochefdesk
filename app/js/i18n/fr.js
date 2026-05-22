@@ -10,6 +10,13 @@
    ================================================================ */
 
 window.PCD.i18n.register('fr', {
+  // v2.14.6 — noms des modèles du whiteboard (auparavant en anglais par défaut)
+  wb_tpl_tonight: "Service de ce soir",
+  wb_tpl_doneness: "Guide de cuisson de la viande",
+  wb_tpl_allergen: "Tableau des allergènes",
+  wb_tpl_prep_timeline: "Planning de préparation",
+  wb_tpl_mise: "Mise en place par poste",
+  wb_tpl_cook_temps: "Temps de cuisson et températures à cœur",
   // v2.14.5 — codes régime/allergènes du menu + Excel I/O + style de prix
   menu_allergen_display: "Codes régime et allergènes",
   menu_allergen_codes: "Codes lettres (gf, N…) + légende",

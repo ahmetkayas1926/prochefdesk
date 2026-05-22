@@ -1454,7 +1454,7 @@ window.PCD.i18n.register('en', {
   menu_duplicated: "Menu duplicated",
   menu_footer_placeholder: "Custom footer text (optional)",
   menu_safe_print_title: "Allergen-safe print",
-  menu_safe_print_hint: "Print/preview only items free from the selected categories. Empty = show all.",
+  menu_safe_print_hint: "Print/preview only items that have ALL the selected codes (diet + allergen). Empty = show all.",
   recipes_filter_clear: "Clear",
   recipes_filter_tags: "Tags",
   recipe_tags_label: "Tags",

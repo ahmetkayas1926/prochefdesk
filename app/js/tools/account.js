@@ -393,6 +393,20 @@
 
     PCD.$('#prefCurrency', view).addEventListener('change', function () {
       PCD.store.set('prefs.currency', this.value);
+      if (PCD.store.flush) PCD.store.flush(); // v2.14.7 — anında IDB (debounce race)
+      // v2.14.7 — prefs'i buluta HEMEN it. Boot pull (cloud-pertable) + realtime
+      // "cloud wins" merge yapıyor; push edilmezse cloud'daki stale USD geri
+      // yazıyordu ("kaydet kalıcı değil"). setActiveWorkspaceId ile aynı user_prefs push.
+      if (PCD.cloudPerTable && PCD.cloudPerTable.queueUpsert) {
+        PCD.cloudPerTable.queueUpsert('user_prefs', null, null, {
+          activeWorkspaceId: PCD.store.getActiveWorkspaceId(),
+          prefs: PCD.store.get('prefs'),
+          plan: PCD.store.get('plan'),
+          onboarding: PCD.store.get('onboarding'),
+          costHistory: PCD.store.get('costHistory') || [],
+        });
+        if (PCD.cloudPerTable.flushNow) PCD.cloudPerTable.flushNow();
+      }
       PCD.toast.success(t('saved'));
       render(view);
     });

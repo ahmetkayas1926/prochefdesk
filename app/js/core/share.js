@@ -444,7 +444,7 @@
           html += '<div class="menu-item">';
           html += '<div class="menu-item-name">' +
             '<span>' + escapeHtml(it.name) + '</span>' +
-            (!p.hidePrices && it.price ? '<span style="color:#c5a572;">$' + Number(it.price).toFixed(2) + '</span>' : '') +
+            (!p.hidePrices && it.price ? '<span style="color:#c5a572;">' + ((PCD.currencySymbol && PCD.currencySymbol()) || '$') + Number(it.price).toFixed(2) + '</span>' : '') +
             '</div>';
           if (it.description) html += '<div class="menu-item-desc">' + escapeHtml(it.description) + '</div>';
           html += '</div>';

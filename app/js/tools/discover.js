@@ -307,8 +307,19 @@
     }
 
     // v2.9.7 — Stats hero (logged-in) or welcome banner (guest)
-    const myRecipes = (PCD.store.listRecipes && PCD.store.listRecipes()) || [];
-    const myPublics = myRecipes.filter(function (r) { return r && r.isPublic === true; });
+    // v2.14.6 — "My public recipes" sayısı HESAP bazlı: aktif workspace değil,
+    // TÜM workspace'lerdeki public tarifler sayılır (operatör 5 workspace'te de
+    // aynı profil skorunu görsün). Görüntülenme/like zaten feed'den user_id ile
+    // toplanıyordu; bu sayaç da artık profile bağlı.
+    let myPublicCount = 0;
+    const _allRecipesByWs = (PCD.store._read && PCD.store._read('recipes')) || {};
+    Object.keys(_allRecipesByWs).forEach(function (wid) {
+      const wsRecs = _allRecipesByWs[wid] || {};
+      Object.keys(wsRecs).forEach(function (rid) {
+        const r = wsRecs[rid];
+        if (r && !r._deletedAt && r.isPublic === true) myPublicCount++;
+      });
+    });
     const myUid = currentUserId();
     // v2.8.85 — Live fallback için current user'ın adı (kendi recipe'lerinde
     // authorName henüz enrich edilmediyse). Email değil, manuel set edilen ad
@@ -328,7 +339,7 @@
           }
         });
       }
-      const shStatus = sharerStatus(myPublics.length);
+      const shStatus = sharerStatus(myPublicCount);
       const shColor = sharerColor(shStatus);
 
       const hero = PCD.el('div', { class: 'stat', style: { marginBottom: '14px', background: 'linear-gradient(135deg,' + shColor + '18,var(--surface))', borderColor: shColor, padding: '18px' } });
@@ -336,7 +347,7 @@
         '<div style="display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:14px;">' +
           '<div style="flex-shrink:0;">' +
             '<div class="stat-label" style="font-size:11px;">' + PCD.escapeHtml(t('discover_my_public') || 'My public recipes') + '</div>' +
-            '<div style="font-size:42px;font-weight:900;color:' + shColor + ';line-height:1;letter-spacing:-0.02em;">' + myPublics.length + '</div>' +
+            '<div style="font-size:42px;font-weight:900;color:' + shColor + ';line-height:1;letter-spacing:-0.02em;">' + myPublicCount + '</div>' +
           '</div>' +
           '<div style="flex:1;min-width:180px;">' +
             '<span style="display:inline-block;padding:4px 10px;background:' + shColor + '25;color:' + shColor + ';font-weight:700;font-size:11px;text-transform:uppercase;border-radius:6px;letter-spacing:0.06em;">' + PCD.escapeHtml(sharerLabel(shStatus)) + '</span>' +

@@ -141,6 +141,15 @@
     return sym + str;
   };
 
+  // v2.14.7 — Aktif para birimi SİMGESİNİ döndürür (fmtMoney değer döndürür;
+  // bu yalnızca simge — Excel numFmt mask'ı, etiketler vb. için). prefs.currency
+  // → CURRENCIES symbol; bulunamazsa kodun kendisi (fmtMoney ile aynı fallback).
+  PCD.currencySymbol = function (currency) {
+    currency = currency || (PCD.store && PCD.store.get('prefs.currency')) || 'USD';
+    const cfg = window.PCD_CONFIG.CURRENCIES.find(function (c) { return c.code === currency; });
+    return cfg ? cfg.symbol : currency;
+  };
+
   PCD.fmtNumber = function (n, decimals) {
     if (n === null || n === undefined || isNaN(n)) return '—';
     decimals = decimals === undefined ? 2 : decimals;

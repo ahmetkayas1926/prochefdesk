@@ -991,6 +991,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
     // v2.8.16 — recipeMap for sub-recipe rows (same fix pattern)
     const recipeMap = PCD.recipes.buildRecipeMap();
     const wb = XLSX.utils.book_new();
+    const curSym = (PCD.currencySymbol && PCD.currencySymbol()) || '$'; // v2.14.7 — aktif para simgesi (numFmt mask için; eskiden "$" sabitti)
 
     // ============ STYLE PRESETS ============
     const BRAND = '16A34A';        // green
@@ -1048,7 +1049,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
       font: { name: 'Calibri', sz: 10 },
       alignment: { vertical: 'center', horizontal: 'right' },
       border: thinBorder,
-      numFmt: '"$"#,##0.00',
+      numFmt: '"' + curSym + '"#,##0.00',
     };
     const cellQtyStyle = {
       font: { name: 'Calibri', sz: 10 },
@@ -1064,7 +1065,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
       fill: { fgColor: { rgb: BRAND_LIGHT } },
       alignment: { vertical: 'center', horizontal: 'right' },
       border: { top: { style: 'medium', color: { rgb: BRAND } }, bottom: thinBorder.bottom, left: thinBorder.left, right: thinBorder.right },
-      numFmt: '"$"#,##0.00',
+      numFmt: '"' + curSym + '"#,##0.00',
     };
     const totalLabelStyle = {
       font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: BRAND } },
@@ -1087,14 +1088,14 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
       font: { name: 'Calibri', sz: 11, bold: true },
       alignment: { vertical: 'center', horizontal: 'right' },
       border: thinBorder,
-      numFmt: '"$"#,##0.00',
+      numFmt: '"' + curSym + '"#,##0.00',
     };
     const editableStyle = {
       font: { name: 'Calibri', sz: 12, bold: true, color: { rgb: '92400E' } },
       fill: { fgColor: { rgb: TEST_BG } },
       alignment: { vertical: 'center', horizontal: 'right' },
       border: thickBorder,
-      numFmt: '"$"#,##0.00',
+      numFmt: '"' + curSym + '"#,##0.00',
     };
     const editableLabelStyle = {
       font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: '92400E' } },

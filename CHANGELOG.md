@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.13.6 · 2026-05-22
+**Mevcut sürüm:** v2.14.6 · 2026-05-22
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -8,7 +8,60 @@ Format: kronolojik tersine (en son sürüm üstte). Her sürüm kısa başlık +
 
 ---
 
+## v2.14.x — Veri I/O standardı + menü kodları + demo seed · 2026-05-22
+
+### v2.14.6 — Discover hesap-bazlı sayaç + whiteboard template çevirileri · 2026-05-22
+
+- **Discover "My public recipes" hesaba bağlandı:** Eskiden aktif workspace'in public tariflerini sayıyordu → farklı/boş workspace'e geçince 0 görünüyordu (görüntülenme/like zaten feed'den `user_id` ile hesap-bazlıydı, tutarsızlık). Fix (discover.js): `_read('recipes')` ile TÜM workspace'lerdeki `isPublic` tarifler sayılır. Sync motoruna dokunulmadı. Doğrulandı (farklı ws'te eski 0 → yeni 1).
+- **Whiteboard template adları es/fr/de/ar'a çevrildi** (6 `wb_tpl_*` anahtarı; eskiden EN fallback).
+
+### v2.14.5 — Menü fiyat stili + es/fr/de/ar çeviriler · 2026-05-22
+
+- **Menü fiyat gösterim stili:** "Hide prices" kutusu yerine seçici — Para simgesiyle ($24) / Sadece sayı (24, Cornell: simgesiz → daha çok harcama) / Gizli. `menu.priceStyle`; eski `hidePrices` → 'hidden' back-compat. Plain'de noktalı bağlantı çizgisi de gizlenir.
+- **es/fr/de/ar çeviri:** Yeni menü harf kodları, kod seçici, alerjen lejant, Excel import/export/template butonları + fiyat stili (~35 anahtar × 4 dil). Artık EN fallback değil (baseline, native değil).
+
+### v2.14.4 — Demo büfe food-cost + demo event menü fix · 2026-05-22
+
+- **Demo büfe food cost %4052 → %21.2:** Büfede tarife bağlı kalemde `amountPerGuest` PORSİYON/kişi olarak hesaplanır (gram DEĞİL; maliyet = porsiyon maliyeti × kişi × porsiyon × refill). Seed gram (180/150) yazıyordu → ~100× şişme. Tarif kalemleri porsiyon/kişi'ye çevrildi (0.7-0.9). (Preset'ler hep customName olduğu için bu yol hiç test edilmemişti.)
+- **Demo event menüsü düzeldi:** events.js `event.menu` alanını okur ama seed `recipes:` yazıyordu → "Event menu (0)" + $0. `menu:` olarak düzeltildi (Tikka + Carbonara, food cost ~$441).
+
+### v2.14.3 — Demo seed genişletme + uyum + bug fix · 2026-05-22
+
+- **Eklendi:** 3 demo recipe (Greek Salad / Margherita Pizza / Pan-Seared Salmon, fotosuz) + 9 malzeme (supplier + yield% sergisi) + 1 demo büfe (Sunday Brunch) + 6. tedarikçi (Ocean Catch/Seafood). Demo menü yeni harf kodlarını sergiler.
+- **Bug fix:** (a) Demo envanter hiç yüklenmiyordu — `upserted[name]` array'i isimle indeksliyordu (hep undefined) → `findId`'ye çevrildi; 8 stok kalemi artık geliyor. (b) Demo tedarikçiler hep "Other" altındaydı — kategori `cat_*` yerine suppliers.js görünen adları (Produce / Meat & Poultry / Dairy / Dry Goods / Seafood).
+- **Not:** Demo seed tek seferlik (sürüm değişince yeniden yüklenmez) — yeni seed'i görmek için incognito.
+
+### v2.14.2 — Tek profesyonel Excel standardı (export/template/sayım) · 2026-05-22
+
+- **Ortak styled-Excel motoru (utils.js `PCD.xlsx`):** Kalın beyaz başlık + marka-yeşil zemin, ince çerçeveli hücreler, alt-satır gölgesi, otomatik genişlik, başlık/altbaşlık birleştirme. recipes.js cost report'taki kanıtlanmış stil baz alındı (xlsx-js-style@1.2.0). Geçerli .xlsx üretip geri okunduğu doğrulandı. `PCD.xlsx.sheet()` / `PCD.xlsx.save()`.
+- **Malzeme Excel export → styled** (eski sadece-genişlik düz hâl düzeldi).
+- **Excel template (YENİ):** Import penceresinde "Download Excel template (.xlsx)" (önerilen) — düzgün sütun + 2 örnek satır + 2. sayfada "Lists" (geçerli Unit + Category). Virgül karışıklığı yok. CSV template ikincil kaldı.
+- **Stok sayım geçmişi → Excel export (YENİ):** Snapshot detayında "Export Excel" (Ingredient · Category · Counted · Unit). Mevcut PDF korundu.
+- Tam yedek JSON kalır (restore formatı); recipes/buffet cost report'ları zaten styled'dı (dokunulmadı).
+
+### v2.14.1 — Menü manuel harf kodları (diyet + alerjen) · 2026-05-22
+
+- **Sayı alerjen kodları → manuel harf kodları:** Şef her menü öğesine elle seçer (`PCD.picker` multi-select). Küçük = diyet/uygunluk (v, vg, gf, gfo, df, dfo, nf, h), BÜYÜK = "içerir" alerjen (N, G, D, E, F, SF, S, SE). Yemek adı yanında "(gf) (gfo) (N)"; altta sadece kullanılan kodları açıklayan lejant. Otomatik tahmin YOK → tarifsiz öğelerde de çalışır, yanlış "gluten free" iddiası riski yok. `it.codes` dizisi + `menu.allergenStyle` ('codes'|'off'). `MENU_CODES` registry (menus.js).
+
+### v2.14.0 — Whiteboard mobil blok düzenleme fix · 2026-05-22
+
+- **Bug:** Mobilde canvas'taki bloğa dokununca düzenleme alt-paneli (bottom sheet) açılmıyordu. Sebep: tap → `rerender()` `#wbRoot`'u baştan kurar → çağıran closure'daki `root` kopuk (detached) node olur → `.open` görünmez ağaca eklenirdi. Fix: `openBottomSheet`/`closeBottomSheet` paneli HER ZAMAN canlı `#wbRoot`'a bağlar. Hem "bloğa dokun → düzenle" hem "blok ekle → otomatik açıl" düzeldi. Doğrulandı (ekran görüntüsü).
+
+---
+
 ## v2.13.x — Whiteboard WYSIWYG + araç sadeleştirme · 2026-05-21/22
+
+### v2.13.9 — Menü spicy emoji → metin · 2026-05-22
+
+- Menü item rozetinde 🌶 emoji → "SPICY" metin etiketi (profesyonel, müşteri okuyabilir). ★ chef's pick / ✦ signature / ◆ new tipografik glyph'leri korundu. Menü artık %100 emojisiz.
+
+### v2.13.8 — "Re-sync my data" reload fix · 2026-05-22
+
+- Re-sync sonrası workspace'ler karışıyordu (realtime echo full-push'u bozuyor, force_resync re-pull/re-render yapmıyordu). Fix: push sonrası `location.reload()` (restore akışıyla aynı; sync iç mantığına dokunulmadı).
+
+### v2.13.7 — Menü alerjen gösterimi: emoji → numaralı kodlar (Faz 1) · 2026-05-22
+
+- Alerjen emoji ikonları → AB FIC 1169/2011 numaralı kodlar + lejant. (v2.14.1'de manuel harf koduna evrildi.)
 
 ### v2.13.6 — Ctrl+wheel zoom hata spam'i + canvas ölçek güvenilirliği · 2026-05-22
 
