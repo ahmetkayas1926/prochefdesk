@@ -448,8 +448,8 @@
              includes dishes that pass. The full menu data is not modified.
              v2.10.3 — Diet (vegan/vegetarian) seçenekleri kaldırıldı, sadece
              allergens-db auto-detect kullanılır (gluten/dairy/nuts/fish). -->
-        <details class="field" style="border:1px solid var(--border);border-radius:var(--r-md);padding:10px 12px;background:var(--surface-2);">
-          <summary style="cursor:pointer;font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-2);">🛡 ${PCD.escapeHtml(t('menu_safe_print_title') || 'Allergen-safe print')}</summary>
+        <details class="field" style="border:1px solid ${(data.safePrintFilter && data.safePrintFilter.length) ? 'var(--danger)' : 'var(--border)'};border-radius:var(--r-md);padding:10px 12px;background:var(--surface-2);"${(data.safePrintFilter && data.safePrintFilter.length) ? ' open' : ''}>
+          <summary style="cursor:pointer;font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:0.04em;color:${(data.safePrintFilter && data.safePrintFilter.length) ? 'var(--danger)' : 'var(--text-2)'};">🛡 ${PCD.escapeHtml(t('menu_safe_print_title') || 'Allergen-safe print')}${(data.safePrintFilter && data.safePrintFilter.length) ? ' · ' + data.safePrintFilter.length + ' ' + PCD.escapeHtml(t('menu_filter_active') || 'active (hides non-matching dishes)') : ''}</summary>
           <div style="margin-top:10px;">
             <div class="text-muted text-sm mb-2" style="font-size:12px;">${PCD.escapeHtml(t('menu_safe_print_hint') || 'Print/preview only items that have ALL the selected codes (diet + allergen). Empty = show all.')}</div>
             ${(function () {
@@ -471,6 +471,7 @@
                 '<div style="' + grpStyle + '">' + PCD.escapeHtml(t('menu_codes_group_allergen') || 'Allergen — contains') + '</div>' +
                 '<div style="display:flex;gap:6px;flex-wrap:wrap;">' + allerg.map(chip).join('') + '</div>';
             })()}
+            ${(data.safePrintFilter && data.safePrintFilter.length) ? '<button type="button" class="btn btn-outline btn-sm" id="clearSafeFilter" style="margin-top:10px;color:var(--danger);border-color:var(--danger);">' + PCD.icon('x', 14) + ' ' + PCD.escapeHtml(t('menu_filter_clear') || 'Clear filter — show all dishes') + '</button>' : ''}
           </div>
         </details>
       `;
@@ -690,6 +691,9 @@
         else data.safePrintFilter.push(k);
         render();
       });
+      // v2.14.8 fix — Filtreyi tek tıkla temizle (sessiz "yemek kayboldu" sorununu önler)
+      const _clearFilterBtn = PCD.$('#clearSafeFilter', body);
+      if (_clearFilterBtn) _clearFilterBtn.addEventListener('click', function () { data.safePrintFilter = []; render(); });
 
       // v2.8.68 — Item badge dropdown
       PCD.on(body, 'change', '[data-itembadge]', function () {
@@ -1027,6 +1031,13 @@
       sectionsBody += '</div></div>';
     });
 
+    // v2.14.8 fix — Filtre TÜM öğeleri gizliyorsa önizleme/print sessizce boş
+    // kalmasın: net uyarı göster (operatör "yemeğim kayboldu" sanmasın).
+    const _totalItems = (menu.sections || []).reduce(function (a, s) { return a + ((s.items || []).length); }, 0);
+    const filterNotice = (sectionsBody.trim() === '' && _totalItems > 0 && safeFilters.length)
+      ? '<div style="text-align:center;padding:26px 16px;margin:10px 0;color:#b91c1c;font-size:13px;border:1px dashed #fca5a5;border-radius:8px;background:#fef2f2;">' + PCD.escapeHtml(t('menu_filter_hides_all') || 'All dishes are hidden by the active diet/allergen filter (Allergen-safe print). Clear the filter to show your dishes.') + '</div>'
+      : '';
+
     // v2.14.1 — Kod lejantı: menüde geçen kodları açıklar (registry sırası: diyet → alerjen).
     let allergenLegendHtml = '';
     if (showAllergens) {
@@ -1214,6 +1225,7 @@
           '<div class="m-divider"></div>' +
         '</div>' +
         '<div class="m-sections">' + sectionsBody + '</div>' +
+        filterNotice +
         allergenLegendHtml +
         (menu.footer ? '<div class="m-footer">' + PCD.escapeHtml(menu.footer) + '</div>' : '') +
       '</div>'
