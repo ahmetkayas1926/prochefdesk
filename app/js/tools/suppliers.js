@@ -88,6 +88,10 @@
       e.stopPropagation();
       sendOrderFlow(this.getAttribute('data-send-sup'));
     });
+    PCD.on(listEl, 'click', '[data-history-sup]', function (e) {
+      e.stopPropagation();
+      openOrderHistory(this.getAttribute('data-history-sup'));
+    });
     PCD.on(listEl, 'input', '[data-pqty]', function () {
       const sid = this.getAttribute('data-sid');
       const pid = this.getAttribute('data-pqty');
@@ -130,6 +134,7 @@
           (filled > 0 ? ' · <span style="color:var(--brand-700);font-weight:700;">' + filled + ' to order</span>' : '') +
         '</div>' +
       '</div>' +
+      '<button class="icon-btn" data-history-sup="' + s.id + '" title="' + PCD.escapeHtml(t('supplier_history_title') || 'Order history') + '" style="flex-shrink:0;">' + PCD.icon('clock', 18) + '</button>' +
       '<button class="icon-btn" data-edit-sup="' + s.id + '" title="Edit" style="flex-shrink:0;">' + PCD.icon('edit', 18) + '</button>' +
       (products.length > 0 ? '<button class="btn btn-primary btn-sm" data-send-sup="' + s.id + '" style="flex-shrink:0;">' + PCD.icon('send', 14) + ' Send' + (filled > 0 ? ' (' + filled + ')' : '') + '</button>' : '');
     card.appendChild(header);
@@ -349,6 +354,7 @@
         ? 'https://wa.me/' + waNumber + '?text=' + encodeURIComponent(getMsg())
         : 'https://wa.me/?text=' + encodeURIComponent(getMsg());
       window.open(url, '_blank');
+      recordOrder(supplier.id, 'whatsapp', waNumber, getMsg(), items.length, deliveryDate);
       onSentSuccess(supplier);
       m.close();
     });
@@ -357,6 +363,7 @@
         ? 'sms:' + supplier.phone + '?&body=' + encodeURIComponent(getMsg())
         : 'sms:?&body=' + encodeURIComponent(getMsg());
       window.location.href = url;
+      recordOrder(supplier.id, 'sms', (supplier.phone || ''), getMsg(), items.length, deliveryDate);
       onSentSuccess(supplier);
       m.close();
     });
@@ -366,6 +373,7 @@
         ? 'mailto:' + email + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(getMsg())
         : 'mailto:?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(getMsg());
       window.location.href = url;
+      recordOrder(supplier.id, 'email', email, getMsg(), items.length, deliveryDate);
       onSentSuccess(supplier);
       m.close();
     });
@@ -377,6 +385,7 @@
           title: PCD.i18n.t('supplier_order_title', { name: supplier.name }),
           text: txt
         }).then(function () {
+          recordOrder(supplier.id, 'share', '', txt, items.length, deliveryDate);
           onSentSuccess(supplier);
           m.close();
         }).catch(function () {
@@ -384,6 +393,7 @@
         });
       } else if (navigator.clipboard) {
         navigator.clipboard.writeText(txt).then(function () {
+          recordOrder(supplier.id, 'copy', '', txt, items.length, deliveryDate);
           PCD.toast.success(PCD.i18n.t('toast_copied_to_clipboard'));
         });
       }
@@ -399,6 +409,62 @@
       const v = PCD.$('#view');
       if (v && PCD.router.currentView() === 'suppliers') render(v);
     }, 600);
+  }
+
+  // ============ ORDER HISTORY (v2.15.0) ============
+  // Gönderilen siparişi tedarikçi nesnesine göm (suppliers tablosu zaten cloud-sync'li
+  // → yeni tablo/RLS gerekmez). Her kayıt: tarih-saat + kanal + alıcı + mesaj + kalem.
+  function recordOrder(supplierId, channel, to, message, itemCount, deliveryDate) {
+    const sup = PCD.store.getFromTable('suppliers', supplierId);
+    if (!sup) return;
+    const hist = Array.isArray(sup.orderHistory) ? sup.orderHistory.slice() : [];
+    hist.unshift({
+      id: PCD.uid('so'),
+      sentAt: new Date().toISOString(),
+      channel: channel,
+      to: to || '',
+      message: message || '',
+      itemCount: itemCount || 0,
+      deliveryDate: deliveryDate || '',
+    });
+    sup.orderHistory = hist.slice(0, 50); // son 50 sipariş
+    PCD.store.upsertInTable('suppliers', sup, 'sup');
+  }
+
+  function openOrderHistory(sid) {
+    const t = PCD.i18n.t;
+    const sup = PCD.store.getFromTable('suppliers', sid);
+    if (!sup) return;
+    const hist = Array.isArray(sup.orderHistory) ? sup.orderHistory : [];
+    const chLabel = { whatsapp: 'WhatsApp', sms: 'SMS', email: 'Email', share: (t('supplier_ch_share') || 'Share'), copy: (t('supplier_ch_copy') || 'Copy') };
+    const body = PCD.el('div');
+    if (!hist.length) {
+      body.innerHTML = '<div class="empty" style="padding:24px 8px;">' +
+        '<div class="empty-icon" style="color:var(--brand-600);">' + PCD.icon('clock', 40) + '</div>' +
+        '<div class="empty-title">' + PCD.escapeHtml(t('supplier_history_empty') || 'No orders sent yet') + '</div>' +
+        '<div class="empty-desc">' + PCD.escapeHtml(t('supplier_history_empty_desc') || 'Sent orders are saved here with date, channel and message.') + '</div></div>';
+    } else {
+      let html = '';
+      hist.forEach(function (o) {
+        const d = new Date(o.sentAt);
+        const dateStr = d.toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || 'en', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) +
+          ' · ' + d.toLocaleTimeString((PCD.i18n && PCD.i18n.currentLocale) || 'en', { hour: '2-digit', minute: '2-digit' });
+        html += '<div style="border:1px solid var(--border);border-radius:var(--r-md);padding:10px 12px;margin-bottom:8px;">' +
+          '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px;">' +
+            '<span style="font-weight:700;font-size:13px;">' + PCD.escapeHtml(dateStr) + '</span>' +
+            '<span style="font-size:11px;font-weight:700;color:var(--brand-700);background:var(--brand-50);border-radius:6px;padding:2px 8px;">' + PCD.escapeHtml(chLabel[o.channel] || o.channel || '') + (o.to ? ' · ' + PCD.escapeHtml(o.to) : '') + '</span>' +
+          '</div>' +
+          '<div class="text-muted" style="font-size:11px;margin-bottom:6px;">' + (o.itemCount || 0) + ' ' + PCD.escapeHtml(t('supplier_order_items') || 'items') + '</div>' +
+          '<pre style="white-space:pre-wrap;font-family:var(--font-mono);font-size:11px;background:var(--surface-2);border-radius:var(--r-sm);padding:8px 10px;margin:0;max-height:170px;overflow:auto;">' + PCD.escapeHtml(o.message || '') + '</pre>' +
+        '</div>';
+      });
+      body.innerHTML = html;
+    }
+    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('btn_close') });
+    const footer = PCD.el('div', { style: { display: 'flex', width: '100%' } });
+    footer.appendChild(closeBtn);
+    const m = PCD.modal.open({ title: (t('supplier_history_title') || 'Order history') + ' · ' + (sup.name || ''), body: body, footer: footer, size: 'md', closable: true });
+    closeBtn.addEventListener('click', function () { m.close(); });
   }
 
   // ============ EDITOR ============

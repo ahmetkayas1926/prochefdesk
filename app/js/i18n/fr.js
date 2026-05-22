@@ -28,6 +28,8 @@ window.PCD.i18n.register('fr', {
   menu_codes_group_allergen: "Allergène — contient",
   menu_code_v: "Végétarien",
   menu_code_vg: "Végan",
+  menu_code_vo: "Option végétarienne",
+  menu_code_vgo: "Option végane",
   menu_code_gf: "Sans gluten",
   menu_code_gfo: "Option sans gluten",
   menu_code_df: "Sans lactose",

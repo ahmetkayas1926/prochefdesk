@@ -119,7 +119,9 @@
   const MENU_CODES = [
     // Diyet / uygunluk (küçük harf)
     { id: 'v',   code: 'v',   group: 'diet',     labelKey: 'menu_code_v' },
+    { id: 'vo',  code: 'vo',  group: 'diet',     labelKey: 'menu_code_vo' },
     { id: 'vg',  code: 'vg',  group: 'diet',     labelKey: 'menu_code_vg' },
+    { id: 'vgo', code: 'vgo', group: 'diet',     labelKey: 'menu_code_vgo' },
     { id: 'gf',  code: 'gf',  group: 'diet',     labelKey: 'menu_code_gf' },
     { id: 'gfo', code: 'gfo', group: 'diet',     labelKey: 'menu_code_gfo' },
     { id: 'df',  code: 'df',  group: 'diet',     labelKey: 'menu_code_df' },

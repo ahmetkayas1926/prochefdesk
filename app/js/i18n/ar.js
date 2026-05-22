@@ -28,6 +28,8 @@ window.PCD.i18n.register('ar', {
   menu_codes_group_allergen: "مسبب حساسية — يحتوي على",
   menu_code_v: "نباتي",
   menu_code_vg: "نباتي صرف",
+  menu_code_vo: "خيار نباتي",
+  menu_code_vgo: "خيار نباتي صرف",
   menu_code_gf: "خالٍ من الغلوتين",
   menu_code_gfo: "خيار خالٍ من الغلوتين",
   menu_code_df: "خالٍ من الألبان",
