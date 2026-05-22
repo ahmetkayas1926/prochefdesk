@@ -23,9 +23,76 @@
   const t = function (k, v) { return PCD.i18n.t(k, v); };
 
   let _editingId = null;        // null = list view; id = editor
+  let _previewId = null;        // v2.15.6 — id = read-only preview view
   let _showCost = false;        // include labour cost in print/excel/share
+  let _h2cPromise = null;       // v2.15.6 — html2canvas lazy-load cache
 
   const DAY_OPTIONS = [5, 6, 7];
+
+  // v2.15.6 — Çıktı yazı boyutu (S/M/L) + kalınlık. data.fontSize / data.bold.
+  const FONT_SIZES = { s: 11, m: 13, l: 15 };
+  function fontPx(data) { return FONT_SIZES[(data && data.fontSize) || 'm'] || 13; }
+
+  let _jszipPromise = null;     // v2.15.6 — JSZip lazy-load cache (Excel landscape)
+
+  // v2.15.6 — html2canvas (JPEG export) lazy CDN load — xlsx pattern.
+  function loadHtml2Canvas() {
+    if (window.html2canvas) return Promise.resolve(window.html2canvas);
+    if (_h2cPromise) return _h2cPromise;
+    _h2cPromise = new Promise(function (resolve, reject) {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+      s.onload = function () { window.html2canvas ? resolve(window.html2canvas) : reject(new Error('html2canvas missing')); };
+      s.onerror = function () { _h2cPromise = null; reject(new Error('html2canvas load failed')); };
+      document.head.appendChild(s);
+    });
+    return _h2cPromise;
+  }
+
+  // v2.15.6 — JSZip lazy CDN load. Gerek: SheetJS (xlsx-js-style) yazımda
+  // <pageSetup>/<sheetPr> üretmiyor → Excel portre + çok sayfa açılıyor.
+  // JSZip ile yazılan .xlsx'in sheet XML'ine print ayarları enjekte edilir.
+  function loadJSZip() {
+    if (window.JSZip) return Promise.resolve(window.JSZip);
+    if (_jszipPromise) return _jszipPromise;
+    _jszipPromise = new Promise(function (resolve, reject) {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+      s.onload = function () { window.JSZip ? resolve(window.JSZip) : reject(new Error('JSZip missing')); };
+      s.onerror = function () { _jszipPromise = null; reject(new Error('JSZip load failed')); };
+      document.head.appendChild(s);
+    });
+    return _jszipPromise;
+  }
+
+  // v2.15.6 — Excel'i OTOMATİK YATAY + tek sayfaya sığacak şekilde kaydet.
+  // SheetJS yazıp, JSZip ile sheet1.xml'e <sheetPr fitToPage> + <pageSetup
+  // landscape fitToWidth> enjekte eder. Başarısız olursa düz writeFile'a düşer.
+  function saveXlsxLandscape(XLSX, wb, filename) {
+    function plain() { try { XLSX.writeFile(wb, filename); } catch (e) {} }
+    loadJSZip().then(function (JSZip) {
+      const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      return JSZip.loadAsync(buf).then(function (zip) {
+        const path = 'xl/worksheets/sheet1.xml';
+        const f = zip.file(path);
+        if (!f) { plain(); return null; }
+        return f.async('string').then(function (xml) {
+          if (xml.indexOf('<sheetPr') < 0) xml = xml.replace(/(<worksheet[^>]*>)/, '$1<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>');
+          if (xml.indexOf('<pageSetup') < 0) {
+            const ps = '<pageSetup orientation="landscape" fitToWidth="1" fitToHeight="0"/>';
+            if (/<pageMargins[^>]*\/>/.test(xml)) xml = xml.replace(/(<pageMargins[^>]*\/>)/, '$1' + ps);
+            else xml = xml.replace('</worksheet>', ps + '</worksheet>');
+          }
+          zip.file(path, xml);
+          return zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        }).then(function (blob) {
+          if (!blob) return;
+          const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+          setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
+        });
+      });
+    }).catch(function () { plain(); });
+  }
 
   // v2.15.4 — Vardiya saati YERİNE atanabilen durum/izin kodları.
   // Renkler print + grid'de kullanılır (otel rosterleri: OFF mavi, AL turuncu,
@@ -154,11 +221,24 @@
   }
 
   // ============ MAIN RENDER (branch) ============
-  function render(view) {
+  // v2.15.6 — Mod route param'dan gelir (router.go('roster',{editId|previewId}));
+  // böylece Chrome geri tuşu editör/önizlemeden listeye düşer (dashboard'a değil).
+  // params VERİLİRSE (router navigasyonu, arguments.length>=2) mod sıfırlanır;
+  // params YOKSA (içeriden render(view) refresh) mevcut mod korunur.
+  function render(view, params) {
+    if (arguments.length >= 2) {
+      _editingId = (params && params.editId) || null;
+      _previewId = (params && params.previewId) || null;
+    }
     if (_editingId) {
       const r = PCD.store.getFromTable('rosters', _editingId);
       if (r) { renderEditor(view, r); return; }
       _editingId = null;
+    }
+    if (_previewId) {
+      const r = PCD.store.getFromTable('rosters', _previewId);
+      if (r) { renderPreview(view, r); return; }
+      _previewId = null;
     }
     renderList(view);
   }
@@ -194,26 +274,32 @@
             '<div class="list-item-meta"><span>' + PCD.escapeHtml(weekRange(r)) + '</span><span>·</span>' +
             '<span>' + (r.staff || []).length + ' ' + PCD.escapeHtml(t('roster_staff') || 'staff') + '</span><span>·</span>' +
             '<span>' + PCD.fmtNumber(tot.hours) + ' ' + PCD.escapeHtml(t('roster_hours') || 'h') + '</span></div></div>' +
+          '<button class="icon-btn" data-edit="' + r.id + '" title="' + PCD.escapeHtml(t('edit') || 'Edit') + '">' + PCD.icon('edit', 18) + '</button>' +
           '<button class="icon-btn" data-dup="' + r.id + '" title="' + PCD.escapeHtml(t('roster_duplicate') || 'Duplicate') + '">' + PCD.icon('copy', 18) + '</button>';
         cont.appendChild(row);
       });
       listEl.appendChild(cont);
     }
 
-    function openNew() { const saved = PCD.store.upsertInTable('rosters', newRoster(), 'rost'); _editingId = saved.id; render(view); }
+    // v2.15.6 — Yeni/duplicate → editör; satır tıkla → önizleme; Edit → editör.
+    function openNew() { const saved = PCD.store.upsertInTable('rosters', newRoster(), 'rost'); PCD.router.go('roster', { editId: saved.id }); }
     const nb = PCD.$('#newRosterBtn', view); if (nb) nb.addEventListener('click', openNew);
     const en = PCD.$('#emptyNewRoster', view); if (en) en.addEventListener('click', openNew);
     wireGuide(view);
     PCD.on(listEl, 'click', '[data-open]', function (e) {
-      if (e.target.closest('[data-dup]')) return;
-      _editingId = this.getAttribute('data-open'); render(view);
+      if (e.target.closest('[data-dup]') || e.target.closest('[data-edit]')) return;
+      PCD.router.go('roster', { previewId: this.getAttribute('data-open') });
+    });
+    PCD.on(listEl, 'click', '[data-edit]', function (e) {
+      e.stopPropagation();
+      PCD.router.go('roster', { editId: this.getAttribute('data-edit') });
     });
     PCD.on(listEl, 'click', '[data-dup]', function (e) {
       e.stopPropagation();
       const src = PCD.store.getFromTable('rosters', this.getAttribute('data-dup'));
       if (!src) return;
       const saved = PCD.store.upsertInTable('rosters', newRoster(src), 'rost');
-      _editingId = saved.id; render(view);
+      PCD.router.go('roster', { editId: saved.id });
     });
   }
 
@@ -275,7 +361,9 @@
         '<div><div class="stat-label" style="font-size:11px;">' + PCD.escapeHtml(t('roster_total_hours') || 'Total hours') + '</div><div style="font-size:20px;font-weight:800;">' + PCD.fmtNumber(tot.hours) + '</div></div>' +
         '<div><div class="stat-label" style="font-size:11px;">' + PCD.escapeHtml(t('roster_labour_cost') || 'Labour cost') + '</div><div style="font-size:20px;font-weight:800;color:var(--brand-700);">' + (tot.cost > 0 ? PCD.fmtMoney(tot.cost) : '—') + '</div></div>' +
         '<label class="checkbox" style="margin-inline-start:auto;"><input type="checkbox" id="rShowCost"' + (_showCost ? ' checked' : '') + '><span>' + PCD.escapeHtml(t('roster_show_cost') || 'Show labour cost in print / share / Excel') + '</span></label>' +
-      '</div></div>';
+      '</div>' +
+      '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">' + fontControlsHtml(data) + '</div>' +
+      '</div>';
 
     html += '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
       '<button class="btn btn-secondary" id="rPrint">' + PCD.icon('print', 14) + ' ' + PCD.escapeHtml(t('print') || 'Print') + '</button>' +
@@ -359,12 +447,13 @@
   function persist(data) { PCD.store.upsertInTable('rosters', data, 'rost'); }
 
   function wireEditor(view, data) {
-    PCD.$('#rosterBack', view).addEventListener('click', function () { _editingId = null; render(view); });
+    PCD.$('#rosterBack', view).addEventListener('click', function () { history.back(); });
     const _venueEl = PCD.$('#rVenue', view); if (_venueEl) _venueEl.addEventListener('input', function () { data.venue = this.value; persist(data); });
     PCD.$('#rName', view).addEventListener('input', function () { data.name = this.value; persist(data); });
     PCD.$('#rStart', view).addEventListener('change', function () { data.weekStart = this.value || data.weekStart; persist(data); render(view); });
     PCD.$('#rDays', view).addEventListener('change', function () { data.dayCount = parseInt(this.value, 10) || 7; persist(data); render(view); });
     PCD.$('#rShowCost', view).addEventListener('change', function () { _showCost = this.checked; });
+    wireFontControls(view, data);
 
     // Templates
     PCD.$('#addTpl', view).addEventListener('click', function () {
@@ -384,13 +473,13 @@
       const parts = this.getAttribute('data-cell').split(':'); openCellEditor(view, data, parts[0], parseInt(parts[1], 10));
     });
 
-    // Outputs
+    // Outputs (v2.15.6 — Share/Send artık görsel JPEG; vasat metin kaldırıldı)
     PCD.$('#rPrint', view).addEventListener('click', function () { printRoster(data, _showCost); });
     PCD.$('#rExcel', view).addEventListener('click', function () { excelRoster(data, _showCost); });
-    PCD.$('#rShare', view).addEventListener('click', function () { shareRoster(data, _showCost); });
+    PCD.$('#rShare', view).addEventListener('click', function () { sendRosterImage(data, _showCost); });
     PCD.$('#rDelete', view).addEventListener('click', function () {
       PCD.modal.confirm({ icon: '🗑', iconKind: 'danger', danger: true, title: t('confirm_delete') || 'Delete?', text: (data.name || weekRange(data)), okText: t('delete') || 'Delete' }).then(function (ok) {
-        if (!ok) return; PCD.store.deleteFromTable('rosters', data.id); _editingId = null; render(view);
+        if (!ok) return; PCD.store.deleteFromTable('rosters', data.id); PCD.router.go('roster');
       });
     });
   }
@@ -486,78 +575,103 @@
   }
 
   // ============ OUTPUTS ============
-  // v2.15.4 — Renkli profesyonel print: üstte mutfak/departman başlık bandı,
-  // koyu başlık satırı, departman grupları, renkli durum hücreleri, lejant.
-  // print-color-adjust:exact → "Background graphics" kapalıyken bile renkler basar.
-  function printRoster(data, showCost) {
+  // v2.15.6 — Tek kaynak renkli tablo (inline stiller → print + JPEG + önizleme
+  // aynı). Yazı boyutu data.fontSize (s/m/l) + data.bold uygulanır. table-layout
+  // fixed + % genişlik → A4 yatay tek sayfaya sığar (font değişse de).
+  function buildRosterTable(data, showCost) {
     const esc = PCD.escapeHtml;
     const mx = rosterMatrix(data);
-    const tot = rosterTotals(data);
     const ndays = mx.days.length;
     const ncol = 2 + ndays + 1 + (showCost ? 1 : 0);
     const title = data.venue || data.name || (t('roster_title') || 'Roster');
-    const subParts = [];
-    if (data.venue && data.name) subParts.push(data.name);
-    subParts.push(weekRange(data));
-
-    let thead = '<tr><th class="nm">' + esc(t('roster_staff') || 'Staff') + '</th><th class="nm">' + esc(t('roster_staff_role') || 'Role') + '</th>';
-    mx.days.forEach(function (d) { thead += '<th>' + esc(d) + '</th>'; });
-    thead += '<th>' + esc(t('roster_hours') || 'H') + '</th>';
-    if (showCost) thead += '<th>' + esc(t('roster_labour_cost') || 'Cost') + '</th>';
-    thead += '</tr>';
-
-    let tbody = '';
+    const sub = (data.venue && data.name ? data.name + '  ·  ' : '') + weekRange(data);
+    const fp = fontPx(data);
+    const wt = data.bold ? '700' : '400';
+    const cb = 'border:1px solid #c7c7c7;padding:4px 6px;font-size:' + fp + 'px;text-align:center;';
+    const hd = 'border:1px solid #c7c7c7;padding:4px 6px;font-size:' + (fp - 1) + 'px;text-align:center;background:#1f3b30;color:#fff;font-weight:700;text-transform:uppercase;';
+    let h = '';
+    h += '<div style="background:#16a34a;color:#fff;padding:11px 15px;border-radius:6px;margin-bottom:11px;">'
+      + '<div style="font-size:' + (fp + 8) + 'px;font-weight:800;">' + esc(title) + '</div>'
+      + '<div style="font-size:' + fp + 'px;opacity:0.93;margin-top:2px;">' + esc(sub) + '</div></div>';
+    h += '<table style="width:100%;border-collapse:collapse;table-layout:fixed;">';
+    h += '<tr><th style="' + hd + 'text-align:left;width:15%;">' + esc(t('roster_staff') || 'Staff') + '</th>'
+      + '<th style="' + hd + 'text-align:left;width:12%;">' + esc(t('roster_staff_role') || 'Role') + '</th>';
+    mx.days.forEach(function (d) { h += '<th style="' + hd + '">' + esc(d) + '</th>'; });
+    h += '<th style="' + hd + 'width:5%;">' + esc(t('roster_hours') || 'H') + '</th>';
+    if (showCost) h += '<th style="' + hd + 'width:8%;">' + esc(t('roster_labour_cost') || 'Cost') + '</th>';
+    h += '</tr>';
     mx.groups.forEach(function (g) {
-      if (g.name) tbody += '<tr class="grp"><td colspan="' + ncol + '">' + esc(g.name) + '</td></tr>';
+      if (g.name) h += '<tr><td colspan="' + ncol + '" style="' + cb + 'background:#cfe0ee;color:#1f3b30;font-weight:800;text-align:left;text-transform:uppercase;">' + esc(g.name) + '</td></tr>';
       g.rows.forEach(function (row) {
-        tbody += '<tr><td class="nm">' + esc(row.staff.name) + '</td><td class="rl">' + esc(row.staff.role || '') + '</td>';
+        h += '<tr><td style="' + cb + 'text-align:left;font-weight:700;word-break:break-word;">' + esc(row.staff.name || '') + '</td>'
+          + '<td style="' + cb + 'text-align:left;color:#555;font-size:' + (fp - 1) + 'px;word-break:break-word;">' + esc(row.staff.role || '') + '</td>';
         row.cells.forEach(function (cell) {
-          if (cell.status) { const sd = statusDef(cell.status); tbody += '<td class="st" style="background:' + (sd ? sd.fill : '#eee') + ';color:' + (sd ? sd.color : '#333') + ';">' + esc(cell.status) + '</td>'; }
-          else tbody += '<td>' + esc(cell.text || '') + '</td>';
+          if (cell.status) { const sd = statusDef(cell.status); h += '<td style="' + cb + 'font-weight:800;background:' + (sd ? sd.fill : '#eee') + ';color:' + (sd ? sd.color : '#333') + ';">' + esc(cell.status) + '</td>'; }
+          else h += '<td style="' + cb + 'font-weight:' + wt + ';">' + esc(cell.text || '') + '</td>';
         });
-        tbody += '<td class="num">' + PCD.fmtNumber(row.hours) + '</td>';
-        if (showCost) tbody += '<td class="num">' + (row.cost > 0 ? PCD.fmtMoney(row.cost) : '—') + '</td>';
-        tbody += '</tr>';
+        h += '<td style="' + cb + 'font-weight:700;">' + PCD.fmtNumber(row.hours) + '</td>';
+        if (showCost) h += '<td style="' + cb + '">' + (row.cost > 0 ? PCD.fmtMoney(row.cost) : '—') + '</td>';
+        h += '</tr>';
       });
     });
-
+    h += '</table>';
     const usedStatus = {};
     mx.groups.forEach(function (g) { g.rows.forEach(function (row) { row.cells.forEach(function (c) { if (c.status) usedStatus[c.status] = true; }); }); });
     const legendItems = ROSTER_STATUS.filter(function (s) { return usedStatus[s.id]; });
-    const legend = legendItems.length ? '<div class="legend">' + legendItems.map(function (s) { return '<span class="lg"><b style="background:' + s.fill + ';color:' + s.color + ';border:1px solid ' + s.color + ';">' + esc(s.id) + '</b> ' + esc(t(s.labelKey) || s.id) + '</span>'; }).join('') + '</div>' : '';
-    const totLine = '<div class="tot">' + esc(t('roster_total_hours') || 'Total hours') + ': <b>' + PCD.fmtNumber(tot.hours) + '</b>' + (showCost && tot.cost > 0 ? ' &nbsp;·&nbsp; ' + esc(t('roster_labour_cost') || 'Labour cost') + ': <b>' + PCD.fmtMoney(tot.cost) + '</b>' : '') + '</div>';
-    const band = '<div class="band"><div class="bt">' + esc(title) + '</div><div class="bs">' + esc(subParts.join('  ·  ')) + '</div></div>';
-    const body = band + '<table><thead>' + thead + '</thead><tbody>' + tbody + '</tbody></table>' + legend + totLine;
-    const css = '<style>'
-      + '@page{size:A4 landscape;margin:10mm;}'
-      + 'body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#1a1a1a;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
-      + '.band{background:#16a34a;color:#fff;padding:10px 14px;border-radius:6px;margin-bottom:10px;}'
-      + '.band .bt{font-size:19pt;font-weight:800;}'
-      + '.band .bs{font-size:10.5pt;opacity:0.93;margin-top:2px;}'
-      + 'table{width:100%;border-collapse:collapse;font-size:8.5pt;}'
-      + 'th,td{border:1px solid #c7c7c7;padding:4px 5px;text-align:center;}'
-      + 'th{background:#1f3b30;color:#fff;font-size:8pt;text-transform:uppercase;letter-spacing:0.02em;}'
-      + 'th.nm{text-align:left;}'
-      + 'td.nm{text-align:left;font-weight:700;}'
-      + 'td.rl{text-align:left;color:#555;}'
-      + 'td.num{font-weight:700;}'
-      + 'td.st{font-weight:800;}'
-      + 'tr.grp td{background:#cfe0ee;color:#1f3b30;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;text-align:left;}'
-      + '.legend{margin-top:10px;font-size:9pt;display:flex;gap:14px;flex-wrap:wrap;}'
-      + '.legend .lg b{display:inline-block;min-width:24px;text-align:center;padding:1px 5px;border-radius:4px;margin-right:4px;font-size:8pt;}'
-      + '.tot{margin-top:10px;font-size:11pt;}'
-      + '</style>';
-    PCD.print(css + body, (data.venue || t('roster_title') || 'Roster') + ' ' + data.weekStart);
+    if (legendItems.length) {
+      h += '<div style="margin-top:11px;font-size:' + (fp - 1) + 'px;">' + legendItems.map(function (s) { return '<span style="display:inline-block;margin-right:14px;white-space:nowrap;"><b style="display:inline-block;min-width:26px;text-align:center;padding:1px 6px;border-radius:4px;background:' + s.fill + ';color:' + s.color + ';border:1px solid ' + s.color + ';">' + esc(s.id) + '</b> ' + esc(t(s.labelKey) || s.id) + '</span>'; }).join('') + '</div>';
+    }
+    const tot = rosterTotals(data);
+    h += '<div style="margin-top:9px;font-size:' + (fp + 1) + 'px;font-weight:700;">' + esc(t('roster_total_hours') || 'Total hours') + ': ' + PCD.fmtNumber(tot.hours) + (showCost && tot.cost > 0 ? '  ·  ' + esc(t('roster_labour_cost') || 'Labour cost') + ': ' + PCD.fmtMoney(tot.cost) : '') + '</div>';
+    return h;
   }
 
-  // v2.15.5 — Renkli Excel = PDF print ile aynı görünüm. Ortak PCD.xlsx motoru
-  // hücre rengini desteklemediği için roster kendi worksheet'ini xlsx-js-style
-  // ile inline kurar (recipes/buffet gibi). Başlık bandı + departman bantları +
-  // renkli izin/durum hücreleri + lejant. rosterMatrix tek kaynak.
+  // v2.15.6 — Print = renkli tablo + A4 yatay. print-color-adjust:exact →
+  // "Background graphics" kapalıyken bile renkler basar. table-layout fixed → tek sayfa.
+  function printRoster(data, showCost) {
+    const css = '<style>@page{size:A4 landscape;margin:10mm;}body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#1a1a1a;-webkit-print-color-adjust:exact;print-color-adjust:exact;}</style>';
+    PCD.print(css + buildRosterTable(data, showCost), (data.venue || t('roster_title') || 'Roster') + ' ' + data.weekStart);
+  }
+
+  // v2.15.6 — JPEG gönder/indir: tabloyu html2canvas ile görsele çevir, mobilde
+  // navigator.share(files) ile native paylaş (WhatsApp vb.), masaüstünde indir.
+  function sendRosterImage(data, showCost) {
+    const run = function (h2c) {
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'position:fixed;left:-99999px;top:0;width:1180px;background:#fff;padding:22px;font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#1a1a1a;';
+      wrap.innerHTML = buildRosterTable(data, showCost);
+      document.body.appendChild(wrap);
+      h2c(wrap, { scale: 2, backgroundColor: '#ffffff', logging: false }).then(function (canvas) {
+        wrap.remove();
+        canvas.toBlob(function (blob) {
+          if (!blob) { PCD.toast.error(t('roster_img_fail') || 'Could not create image'); return; }
+          const fname = (data.venue || t('roster_title') || 'Roster').replace(/\s+/g, '-').toLowerCase() + '-' + data.weekStart + '.jpg';
+          let file = null;
+          try { file = new File([blob], fname, { type: 'image/jpeg' }); } catch (e) { file = null; }
+          if (file && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+            navigator.share({ files: [file], title: data.venue || data.name || 'Roster', text: (data.venue || data.name || 'Roster') + ' — ' + weekRange(data) }).catch(function () {});
+          } else {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = fname; document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(function () { URL.revokeObjectURL(url); }, 5000);
+            PCD.toast.success(t('roster_img_saved') || 'Image saved');
+          }
+        }, 'image/jpeg', 0.95);
+      }).catch(function () { wrap.remove(); PCD.toast.error(t('roster_img_fail') || 'Could not create image'); });
+    };
+    if (window.html2canvas) run(window.html2canvas);
+    else loadHtml2Canvas().then(run).catch(function () { PCD.toast.error(t('roster_img_fail') || 'Could not create image'); });
+  }
+
+  // v2.15.5/6 — Renkli Excel = PDF ile aynı görünüm + OTOMATİK YATAY + tek sayfaya
+  // sığma (pageSetup landscape/fitToWidth). Ortak PCD.xlsx hücre rengi desteklemez →
+  // roster kendi worksheet'ini xlsx-js-style ile inline kurar. Font data.fontSize'a bağlı.
   function excelRoster(data, showCost) {
     const go = function (XLSX) {
       if (!XLSX || !XLSX.utils) { PCD.toast.error(t('toast_excel_parser_unavailable') || 'Excel unavailable'); return; }
       const hex = function (h) { return (h || '').replace('#', '').toUpperCase(); };
+      const esz = ({ s: 9, m: 10, l: 12 })[(data.fontSize) || 'm'] || 10;
+      const ebold = !!data.bold;
       const mx = rosterMatrix(data);
       const ndays = mx.days.length;
       const ncol = 2 + ndays + 1 + (showCost ? 1 : 0);
@@ -574,60 +688,54 @@
       }
       function fillRow(rr, fillRgb) { for (let c = 0; c < ncol; c++) put(rr, c, '', { fill: { fgColor: { rgb: fillRgb } } }); }
 
-      // 1. Başlık bandı (venue) — yeşil
       fillRow(r, '16A34A');
       put(r, 0, data.venue || data.name || (t('roster_title') || 'Roster'), { font: { name: 'Calibri', sz: 16, bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '16A34A' } }, alignment: { vertical: 'center', horizontal: 'left' } });
       merges.push({ s: { r: r, c: 0 }, e: { r: r, c: lastC } }); r++;
-      // 2. Alt başlık (hafta + ad)
       put(r, 0, weekRange(data) + (data.venue && data.name ? '  ·  ' + data.name : ''), { font: { name: 'Calibri', sz: 10, color: { rgb: '666666' } }, alignment: { vertical: 'center' } });
       merges.push({ s: { r: r, c: 0 }, e: { r: r, c: lastC } }); r++;
-      r++; // boş satır
-
-      // 3. Başlık satırı
-      const headers = [t('roster_staff') || 'Staff', t('roster_staff_role') || 'Role'].concat(mx.days);
-      headers.push(t('roster_hours') || 'H'); if (showCost) headers.push(t('roster_labour_cost') || 'Cost');
-      headers.forEach(function (h, c) { put(r, c, h, { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '1F3B30' } }, alignment: { vertical: 'center', horizontal: c <= 1 ? 'left' : 'center' }, border: allB }); });
       r++;
 
-      // 4. Departman grupları + personel satırları
+      const headers = [t('roster_staff') || 'Staff', t('roster_staff_role') || 'Role'].concat(mx.days);
+      headers.push(t('roster_hours') || 'H'); if (showCost) headers.push(t('roster_labour_cost') || 'Cost');
+      headers.forEach(function (h, c) { put(r, c, h, { font: { name: 'Calibri', sz: esz, bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '1F3B30' } }, alignment: { vertical: 'center', horizontal: c <= 1 ? 'left' : 'center' }, border: allB }); });
+      r++;
+
       mx.groups.forEach(function (g) {
         if (g.name) {
           fillRow(r, 'CFE0EE');
-          put(r, 0, g.name, { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '1F3B30' } }, fill: { fgColor: { rgb: 'CFE0EE' } }, alignment: { vertical: 'center', horizontal: 'left' }, border: allB });
+          put(r, 0, g.name, { font: { name: 'Calibri', sz: esz, bold: true, color: { rgb: '1F3B30' } }, fill: { fgColor: { rgb: 'CFE0EE' } }, alignment: { vertical: 'center', horizontal: 'left' }, border: allB });
           for (let c = 1; c < ncol; c++) put(r, c, '', { fill: { fgColor: { rgb: 'CFE0EE' } }, border: allB });
           merges.push({ s: { r: r, c: 0 }, e: { r: r, c: lastC } }); r++;
         }
         g.rows.forEach(function (row) {
-          put(r, 0, row.staff.name || '', { font: { name: 'Calibri', sz: 10, bold: true }, alignment: { vertical: 'center', horizontal: 'left' }, border: allB });
-          put(r, 1, row.staff.role || '', { font: { name: 'Calibri', sz: 9, color: { rgb: '555555' } }, alignment: { vertical: 'center', horizontal: 'left' }, border: allB });
+          put(r, 0, row.staff.name || '', { font: { name: 'Calibri', sz: esz, bold: true }, alignment: { vertical: 'center', horizontal: 'left' }, border: allB });
+          put(r, 1, row.staff.role || '', { font: { name: 'Calibri', sz: Math.max(8, esz - 1), color: { rgb: '555555' } }, alignment: { vertical: 'center', horizontal: 'left' }, border: allB });
           row.cells.forEach(function (cell, d) {
             let st;
-            if (cell.status) { const sd = statusDef(cell.status); st = { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: sd ? hex(sd.color) : '333333' } }, fill: { fgColor: { rgb: sd ? hex(sd.fill) : 'EEEEEE' } }, alignment: { vertical: 'center', horizontal: 'center' }, border: allB }; }
-            else st = { font: { name: 'Calibri', sz: 10 }, alignment: { vertical: 'center', horizontal: 'center' }, border: allB };
+            if (cell.status) { const sd = statusDef(cell.status); st = { font: { name: 'Calibri', sz: esz, bold: true, color: { rgb: sd ? hex(sd.color) : '333333' } }, fill: { fgColor: { rgb: sd ? hex(sd.fill) : 'EEEEEE' } }, alignment: { vertical: 'center', horizontal: 'center' }, border: allB }; }
+            else st = { font: { name: 'Calibri', sz: esz, bold: ebold }, alignment: { vertical: 'center', horizontal: 'center' }, border: allB };
             put(r, 2 + d, cell.text || '', st);
           });
-          put(r, 2 + ndays, row.hours, { font: { name: 'Calibri', sz: 10, bold: true }, alignment: { vertical: 'center', horizontal: 'right' }, border: allB });
-          if (showCost) put(r, 2 + ndays + 1, row.cost > 0 ? PCD.fmtMoney(row.cost) : '—', { font: { name: 'Calibri', sz: 10 }, alignment: { vertical: 'center', horizontal: 'right' }, border: allB });
+          put(r, 2 + ndays, row.hours, { font: { name: 'Calibri', sz: esz, bold: true }, alignment: { vertical: 'center', horizontal: 'right' }, border: allB });
+          if (showCost) put(r, 2 + ndays + 1, row.cost > 0 ? PCD.fmtMoney(row.cost) : '—', { font: { name: 'Calibri', sz: esz }, alignment: { vertical: 'center', horizontal: 'right' }, border: allB });
           r++;
         });
       });
 
-      // 5. Toplam
       const tot = rosterTotals(data);
       r++;
-      put(r, 0, (t('roster_total_hours') || 'Total hours') + ': ' + PCD.fmtNumber(tot.hours) + (showCost && tot.cost > 0 ? '   ·   ' + (t('roster_labour_cost') || 'Labour cost') + ': ' + PCD.fmtMoney(tot.cost) : ''), { font: { name: 'Calibri', sz: 11, bold: true } });
+      put(r, 0, (t('roster_total_hours') || 'Total hours') + ': ' + PCD.fmtNumber(tot.hours) + (showCost && tot.cost > 0 ? '   ·   ' + (t('roster_labour_cost') || 'Labour cost') + ': ' + PCD.fmtMoney(tot.cost) : ''), { font: { name: 'Calibri', sz: esz + 1, bold: true } });
       merges.push({ s: { r: r, c: 0 }, e: { r: r, c: lastC } }); r++;
 
-      // 6. Lejant (kullanılan durum kodları, renkli çip)
       const usedStatus = {};
       mx.groups.forEach(function (g) { g.rows.forEach(function (row) { row.cells.forEach(function (c) { if (c.status) usedStatus[c.status] = true; }); }); });
       const legendItems = ROSTER_STATUS.filter(function (s) { return usedStatus[s.id]; });
       if (legendItems.length) {
         r++;
-        put(r, 0, t('roster_legend') || 'Key', { font: { name: 'Calibri', sz: 9, bold: true, color: { rgb: '888888' } } }); r++;
+        put(r, 0, t('roster_legend') || 'Key', { font: { name: 'Calibri', sz: Math.max(8, esz - 1), bold: true, color: { rgb: '888888' } } }); r++;
         legendItems.forEach(function (s) {
-          put(r, 0, s.id, { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: hex(s.color) } }, fill: { fgColor: { rgb: hex(s.fill) } }, alignment: { horizontal: 'center' }, border: allB });
-          put(r, 1, t(s.labelKey) || s.id, { font: { name: 'Calibri', sz: 10 }, alignment: { horizontal: 'left' } });
+          put(r, 0, s.id, { font: { name: 'Calibri', sz: esz, bold: true, color: { rgb: hex(s.color) } }, fill: { fgColor: { rgb: hex(s.fill) } }, alignment: { horizontal: 'center' }, border: allB });
+          put(r, 1, t(s.labelKey) || s.id, { font: { name: 'Calibri', sz: esz }, alignment: { horizontal: 'left' } });
           if (ncol > 2) merges.push({ s: { r: r, c: 1 }, e: { r: r, c: lastC } });
           r++;
         });
@@ -635,67 +743,70 @@
 
       ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(r, 1), c: lastC } });
       ws['!merges'] = merges;
-      ws['!cols'] = [{ wch: 22 }, { wch: 16 }].concat(mx.days.map(function () { return { wch: 12 }; })).concat([{ wch: 8 }]).concat(showCost ? [{ wch: 11 }] : []);
+      // v2.15.6 — Dar sütunlar (yatay A4'e sığsın) + OTOMATİK YATAY + tek sayfa enine.
+      ws['!cols'] = [{ wch: 18 }, { wch: 13 }].concat(mx.days.map(function () { return { wch: 9 }; })).concat([{ wch: 6 }]).concat(showCost ? [{ wch: 9 }] : []);
+      ws['!margins'] = { left: 0.3, right: 0.3, top: 0.4, bottom: 0.4, header: 0.2, footer: 0.2 };
+      ws['!pageSetup'] = { orientation: 'landscape', fitToWidth: 1, fitToHeight: 0, scale: 100 };
+      ws['!sheetPr'] = { pageSetUpPr: { fitToPage: true } };
 
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Roster');
-      XLSX.writeFile(wb, (t('roster_title') || 'Roster').replace(/\s+/g, '-').toLowerCase() + '-' + data.weekStart + '.xlsx');
+      const fname = (t('roster_title') || 'Roster').replace(/\s+/g, '-').toLowerCase() + '-' + data.weekStart + '.xlsx';
+      // v2.15.6 — JSZip ile yatay + tek sayfa enjekte ederek kaydet
+      saveXlsxLandscape(XLSX, wb, fname);
     };
     if (window.XLSX && window.XLSX.utils) go(window.XLSX);
     else if (PCD.loadXLSX) PCD.loadXLSX().then(go).catch(function () { PCD.toast.error(t('toast_excel_parser_unavailable') || 'Excel unavailable'); });
     else PCD.toast.error(t('toast_excel_parser_unavailable') || 'Excel unavailable');
   }
 
-  function buildShareText(data, showCost) {
-    const loc = (PCD.i18n && PCD.i18n.currentLocale) || 'en';
-    const mx = rosterMatrix(data);
-    const lines = [];
-    lines.push(data.venue || data.name || (t('roster_title') || 'Roster'));
-    lines.push(weekRange(data) + (data.venue && data.name ? '  ·  ' + data.name : ''));
-    mx.groups.forEach(function (g) {
-      lines.push('');
-      if (g.name) lines.push('— ' + g.name + ' —');
-      g.rows.forEach(function (row) {
-        const parts = [];
-        row.cells.forEach(function (cell, d) {
-          const wd = addDays(data.weekStart, d).toLocaleDateString(loc, { weekday: 'short' });
-          if (cell.status) { if (cell.status !== 'OFF') parts.push(wd + ' ' + cell.status); }
-          else if (cell.text) parts.push(wd + ' ' + cell.text);
-        });
-        let line = row.staff.name + ': ' + (parts.length ? parts.join(', ') : (t('roster_off') || 'off'));
-        if (showCost && row.cost > 0) line += '  (' + PCD.fmtNumber(row.hours) + 'h · ' + PCD.fmtMoney(row.cost) + ')';
-        lines.push(line);
-      });
-    });
-    const tot = rosterTotals(data);
-    lines.push('');
-    lines.push((t('roster_total_hours') || 'Total hours') + ': ' + PCD.fmtNumber(tot.hours) + (showCost && tot.cost > 0 ? ' · ' + PCD.fmtMoney(tot.cost) : ''));
-    return lines.join('\n');
+  // v2.15.6 — Yazı boyutu (S/M/L) + kalınlık kontrolleri (editör + önizleme).
+  function fontControlsHtml(data) {
+    const cur = (data.fontSize || 'm');
+    const seg = ['s', 'm', 'l'].map(function (sz) {
+      const on = cur === sz;
+      return '<button type="button" class="btn btn-sm" data-font="' + sz + '" style="min-width:34px;' + (on ? 'background:var(--brand-600);color:#fff;border-color:var(--brand-600);' : '') + '">' + sz.toUpperCase() + '</button>';
+    }).join('');
+    return '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
+      + '<span style="font-size:12px;color:var(--text-3);font-weight:600;">' + PCD.escapeHtml(t('roster_font_size') || 'Text size') + '</span>'
+      + '<div style="display:flex;gap:4px;">' + seg + '</div>'
+      + '<label class="checkbox" style="margin-left:6px;"><input type="checkbox" id="rBold"' + (data.bold ? ' checked' : '') + '><span>' + PCD.escapeHtml(t('roster_bold') || 'Bold') + '</span></label>'
+      + '</div>';
+  }
+  function wireFontControls(view, data) {
+    PCD.on(view, 'click', '[data-font]', function () { data.fontSize = this.getAttribute('data-font'); persist(data); render(view); });
+    const b = PCD.$('#rBold', view); if (b) b.addEventListener('change', function () { data.bold = this.checked; persist(data); render(view); });
   }
 
-  function shareRoster(data, showCost) {
-    const message = buildShareText(data, showCost);
-    const body = PCD.el('div');
-    body.innerHTML =
-      '<div class="field"><label class="field-label">' + PCD.escapeHtml(t('roster_message') || 'Message (editable)') + '</label>' +
-      '<textarea class="textarea" id="rMsg" rows="10" style="font-family:var(--font-mono);font-size:13px;white-space:pre;">' + PCD.escapeHtml(message) + '</textarea></div>' +
-      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-top:12px;">' +
-        '<button class="btn btn-outline" id="rWa" style="flex-direction:column;height:auto;padding:12px 6px;gap:5px;"><span style="color:#25D366;">' + PCD.icon('message-circle', 22) + '</span><span style="font-size:11px;font-weight:600;">WhatsApp</span></button>' +
-        '<button class="btn btn-outline" id="rSms" style="flex-direction:column;height:auto;padding:12px 6px;gap:5px;"><span style="color:var(--brand-600);">' + PCD.icon('phone', 22) + '</span><span style="font-size:11px;font-weight:600;">SMS</span></button>' +
-        '<button class="btn btn-outline" id="rMail" style="flex-direction:column;height:auto;padding:12px 6px;gap:5px;"><span style="color:#EA4335;">' + PCD.icon('mail', 22) + '</span><span style="font-size:11px;font-weight:600;">Email</span></button>' +
-        '<button class="btn btn-outline" id="rCopy" style="flex-direction:column;height:auto;padding:12px 6px;gap:5px;"><span style="color:var(--text-2);">' + PCD.icon('copy', 22) + '</span><span style="font-size:11px;font-weight:600;">' + PCD.escapeHtml(t('supplier_ch_copy') || 'Copy') + '</span></button>' +
+  // ============ PREVIEW VIEW (read-only + export) ============
+  // v2.15.6 — Listede rostere tıklayınca açılır (Edit ayrı). Renkli tablo +
+  // Print/PDF + Excel + JPEG gönder + yazı boyutu + maliyet göster/gizle.
+  function renderPreview(view, data) {
+    const esc = PCD.escapeHtml;
+    let html =
+      '<div class="page-header"><div class="page-header-text">' +
+        '<button class="btn btn-ghost btn-sm" id="rosterBack" style="margin-bottom:6px;">' + PCD.icon('chevronLeft', 16) + ' ' + esc(t('btn_back') || 'Back') + '</button>' +
+        '<div class="page-title" style="font-size:20px;">' + esc(data.venue || data.name || weekRange(data)) + '</div>' +
+      '</div></div>';
+    html += '<div class="card" style="padding:12px;margin-bottom:12px;display:flex;gap:14px;flex-wrap:wrap;align-items:center;">' +
+      fontControlsHtml(data) +
+      '<label class="checkbox" style="margin-inline-start:auto;"><input type="checkbox" id="rShowCost"' + (_showCost ? ' checked' : '') + '><span>' + esc(t('roster_show_cost') || 'Show labour cost in print / share / Excel') + '</span></label>' +
       '</div>';
-    const cancel = PCD.el('button', { class: 'btn btn-secondary', text: t('btn_close') || 'Close' });
-    const footer = PCD.el('div', { style: { display: 'flex', width: '100%' } }); footer.appendChild(cancel);
-    const m = PCD.modal.open({ title: t('roster_share') || 'Share / Send', body: body, footer: footer, size: 'md', closable: true });
-    function msg() { return PCD.$('#rMsg', body).value; }
-    cancel.addEventListener('click', function () { m.close(); });
-    PCD.$('#rWa', body).addEventListener('click', function () { window.open('https://wa.me/?text=' + encodeURIComponent(msg()), '_blank'); m.close(); });
-    PCD.$('#rSms', body).addEventListener('click', function () { window.location.href = 'sms:?&body=' + encodeURIComponent(msg()); m.close(); });
-    PCD.$('#rMail', body).addEventListener('click', function () { window.location.href = 'mailto:?subject=' + encodeURIComponent((data.name || 'Roster') + ' — ' + weekRange(data)) + '&body=' + encodeURIComponent(msg()); m.close(); });
-    PCD.$('#rCopy', body).addEventListener('click', function () {
-      if (navigator.clipboard) navigator.clipboard.writeText(msg()).then(function () { PCD.toast.success(t('toast_copied_to_clipboard') || 'Copied'); });
-    });
+    html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">' +
+      '<button class="btn btn-primary" id="pvEdit">' + PCD.icon('edit', 14) + ' ' + esc(t('edit') || 'Edit') + '</button>' +
+      '<button class="btn btn-secondary" id="pvImg">' + PCD.icon('image', 14) + ' ' + esc(t('roster_send_image') || 'Send image') + '</button>' +
+      '<button class="btn btn-secondary" id="pvPrint">' + PCD.icon('print', 14) + ' ' + esc(t('roster_pdf') || 'Print / PDF') + '</button>' +
+      '<button class="btn btn-secondary" id="pvExcel">' + PCD.icon('download', 14) + ' ' + esc(t('roster_excel') || 'Excel') + '</button>' +
+      '</div>';
+    html += '<div class="card" style="padding:16px;overflow-x:auto;"><div id="pvTable" style="min-width:760px;">' + buildRosterTable(data, _showCost) + '</div></div>';
+    view.innerHTML = html;
+    PCD.$('#rosterBack', view).addEventListener('click', function () { history.back(); });
+    PCD.$('#pvEdit', view).addEventListener('click', function () { PCD.router.go('roster', { editId: data.id }); });
+    PCD.$('#pvImg', view).addEventListener('click', function () { sendRosterImage(data, _showCost); });
+    PCD.$('#pvPrint', view).addEventListener('click', function () { printRoster(data, _showCost); });
+    PCD.$('#pvExcel', view).addEventListener('click', function () { excelRoster(data, _showCost); });
+    PCD.$('#rShowCost', view).addEventListener('change', function () { _showCost = this.checked; render(view); });
+    wireFontControls(view, data);
   }
 
   PCD.tools = PCD.tools || {};

@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.15.5 · 2026-05-22
+**Mevcut sürüm:** v2.15.6 · 2026-05-22
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -9,6 +9,15 @@ Format: kronolojik tersine (en son sürüm üstte). Her sürüm kısa başlık +
 ---
 
 ## v2.15.x — Roster aracı + bulut sync + menü filtre uyarısı · 2026-05-22
+
+### v2.15.6 — Roster: önizleme + JPEG gönder + geri tuşu + Excel yatay + yazı boyutu · 2026-05-22
+
+- **Geri tuşu fix:** Editör/önizlemede Chrome geri tuşu artık roster LİSTESİNE düşer (dashboard'a değil). Editör/önizleme route param'a (`editId`/`previewId`) bağlandı; aç eylemleri `router.go('roster',{...})`, Back `history.back()`. Canlı doğrulandı.
+- **Liste etkileşimi:** Rostere tıklayınca **önizleme** açılır (read-only renkli tablo + butonlar); satırdaki **Edit** editöre götürür. Duplicate (sonraki haftaya kopya) korundu.
+- **Önizleme görünümü (YENİ):** Edit · **Görsel gönder (JPEG)** · Yazdır/PDF · Excel + yazı boyutu + maliyet göster/gizle.
+- **JPEG gönder:** Roster tablosu html2canvas ile görsele çevrilir; mobilde `navigator.share` (WhatsApp vb. — gerçek tablo görseli), masaüstünde JPEG indirir. Eski "vasat" metin paylaşımı kaldırıldı (roster sipariş listesi değil). Canlı doğrulandı (167KB JPEG üretildi).
+- **Excel OTOMATİK YATAY + tek sayfa:** SheetJS print ayarı yazmıyordu (Excel portre + çok sayfa açılıyordu). Çözüm: yazılan .xlsx JSZip ile açılıp sheet XML'ine `<sheetPr fitToPage>` + `<pageSetup orientation=landscape fitToWidth=1>` enjekte edilir + sütunlar daraltıldı. Canlı doğrulandı (indirilen dosya: landscape + fitToPage + fitToWidth, geçerli xlsx).
+- **Yazı boyutu S/M/L + kalın:** Editör + önizlemede; print/JPEG/Excel hepsine uygulanır, yatay tek sayfa korunur. `data.fontSize`/`data.bold` (cloud-synced).
 
 ### v2.15.5 — Roster Excel = PDF ile aynı renkli görünüm · 2026-05-22
 
