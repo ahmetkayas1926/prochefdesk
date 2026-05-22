@@ -1820,7 +1820,10 @@
   }
 
   function openBottomSheet(root, canvas) {
-    if (!root) root = document.getElementById('wbRoot');
+    // v2.14.0 — Mobilde tap → rerender() #wbRoot'u baştan kurar; çağıran closure'daki
+    // `root` artık kopuk (detached) node olur. Paneli HER ZAMAN canlı #wbRoot'a bağla;
+    // yoksa .open kopuk ağaca eklenir, panel görünmez şekilde açılır (mobil edit bug).
+    root = document.getElementById('wbRoot') || root;
     if (!root) return;
     const backdrop = root.querySelector('#wbSheetBackdrop');
     const sheet = root.querySelector('#wbBottomSheet');
@@ -1838,7 +1841,7 @@
     _ui.bottomSheetOpen = true;
   }
   function closeBottomSheet(root) {
-    if (!root) root = document.getElementById('wbRoot');
+    root = document.getElementById('wbRoot') || root;
     if (!root) return;
     const backdrop = root.querySelector('#wbSheetBackdrop');
     const sheet = root.querySelector('#wbBottomSheet');
