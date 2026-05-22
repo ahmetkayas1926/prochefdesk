@@ -92,6 +92,8 @@ const BACKUP_TABLES = [
   'recipe_likes',
   // v2.9.42 — Kitchen Whiteboard cloud sync
   'whiteboards',
+  // v2.15.3 — Roster cloud sync
+  'rosters',
 ]
 
 Deno.serve(async (req) => {

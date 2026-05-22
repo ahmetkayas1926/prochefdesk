@@ -66,6 +66,7 @@
     canvases: {},      // kitchen cards
     shoppingLists: {},
     stockCountHistory: {},  // { wsId: { snapshotId: { countedAt, countedBy, counts, itemCount } } }
+    rosters: {},  // v2.15.3 — { wsId: { rosterId: {...weekly roster} } } cloud-synced (map table)
     pendingStockCount: {}, // { wsId: {...} | null }
 
     // sync meta (not the data itself)
@@ -97,7 +98,7 @@
     // records that already have updatedAt are left alone.
     3: function (state) {
       const TABLES = ['recipes','ingredients','menus','events','suppliers',
-                      'canvases','shoppingLists','checklistTemplates','stockCountHistory'];
+                      'canvases','shoppingLists','checklistTemplates','stockCountHistory','rosters'];
       TABLES.forEach(function (tbl) {
         const t = state[tbl];
         if (!t || typeof t !== 'object') return;
@@ -192,7 +193,7 @@
     // Legacy migration — if any of the workspace-bound tables hold flat data
     // (i.e. ids at top level, not nested by wsId), move it under the new ws.
     // 'ingredients' was added to this list in v2.6.30 (per-workspace pricing).
-    const wsBoundTables = ['recipes','ingredients','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','stockCountHistory','haccpLogs','haccpUnits','haccpReadings','haccpCookCool'];
+    const wsBoundTables = ['recipes','ingredients','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','stockCountHistory','rosters','haccpLogs','haccpUnits','haccpReadings','haccpCookCool'];
     wsBoundTables.forEach(function (tbl) {
       const t = state[tbl];
       if (!t) return;
@@ -567,6 +568,7 @@
       'checklistTemplates': 'checklist_templates',
       // v2.6.72 — yeni eşleştirmeler
       'stockCountHistory': 'stock_count_history',
+      'rosters': 'rosters',
       'haccpLogs': 'haccp_logs',
       'haccpUnits': 'haccp_units',
       'haccpReadings': 'haccp_readings',
@@ -818,7 +820,7 @@
       delete next[wsId];
       state.workspaces = next;
       // Wipe workspace-bound data
-      ['recipes','ingredients','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','pendingStockCount','stockCountHistory','haccpLogs','haccpUnits','haccpReadings','haccpCookCool'].forEach(function (tbl) {
+      ['recipes','ingredients','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','pendingStockCount','stockCountHistory','rosters','haccpLogs','haccpUnits','haccpReadings','haccpCookCool'].forEach(function (tbl) {
         if (state[tbl] && state[tbl][wsId] !== undefined) {
           const t = Object.assign({}, state[tbl]);
           delete t[wsId];
@@ -884,7 +886,7 @@
       }
 
       // 2) Lokal state — ws-bound tabloların satırlarındaki _deletedAt temizle
-      ['recipes','ingredients','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','pendingStockCount','stockCountHistory','haccpLogs','haccpUnits','haccpReadings','haccpCookCool'].forEach(function (tbl) {
+      ['recipes','ingredients','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','pendingStockCount','stockCountHistory','rosters','haccpLogs','haccpUnits','haccpReadings','haccpCookCool'].forEach(function (tbl) {
         const tblData = state[tbl] && state[tbl][wsId];
         if (!tblData) return;
         if (Array.isArray(tblData)) {
@@ -982,7 +984,7 @@
       }
 
       // 2) Lokal state — 17 ws-scoped tablodan workspace entry'sini sil
-      ['recipes','ingredients','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','pendingStockCount','stockCountHistory','haccpLogs','haccpUnits','haccpReadings','haccpCookCool'].forEach(function (tbl) {
+      ['recipes','ingredients','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','pendingStockCount','stockCountHistory','rosters','haccpLogs','haccpUnits','haccpReadings','haccpCookCool'].forEach(function (tbl) {
         if (state[tbl] && state[tbl][wsId] !== undefined) {
           const t = Object.assign({}, state[tbl]);
           delete t[wsId];
@@ -1587,7 +1589,7 @@
         const wsScopedKeys = [
           'recipes', 'ingredients', 'menus', 'events', 'suppliers',
           'canvases', 'shoppingLists', 'checklistTemplates',
-          'stockCountHistory', 'haccpLogs', 'haccpUnits',
+          'stockCountHistory', 'rosters', 'haccpLogs', 'haccpUnits',
           'haccpReadings', 'haccpCookCool',
           'inventory', 'waste', 'checklistSessions',
         ];

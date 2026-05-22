@@ -9,7 +9,7 @@
 
 **Ürün:** ProChefDesk — profesyonel chef'ler için web tabanlı mutfak yönetim sistemi.
 **Operatör:** Ahmet Kaya, Perth Western Australia, profesyonel şef. Solo non-commercial proje.
-**Mevcut sürüm:** **v2.14.6** (production). **Bu oturumun (v2.13.7→v2.14.6) büyük değişiklikleri:** Menü **manuel diyet+alerjen harf kodları** (emoji/sayı yerine; küçük=diyet gf/v/vg…, BÜYÜK=içerir N/G/D…, lejant) + **fiyat gösterim stili** (Cornell simgesiz opsiyonu: $24 / 24 / gizli); **Whiteboard mobil blok düzenleme fix** (bottom sheet daima canlı `#wbRoot`'a bağlanır); **tek profesyonel Excel standardı** (ortak `PCD.xlsx` motoru → malzeme styled export + Excel template(Lists sayfası) + stok sayım Excel export); **demo seed genişletildi** (3 recipe + Sunday Brunch büfe + tedarikçi kategori düzeltme + envanter/event/büfe-cost bug fix); **Discover "My public recipes" sayacı hesap-bazlı** (aktif workspace değil, tüm ws'ler); es/fr/de/ar yeni anahtar çevirileri. Detay: CHANGELOG `v2.14.x` / `v2.13.x`. (Önceki büyük iş v2.12.x-2.13.6: Checklist baştan, Whiteboard WYSIWYG, Waste/Shopping kaldırma — Mise pattern, profil persist.)
+**Mevcut sürüm:** **v2.15.3** (kod hazır; operatör henüz push etmedi — bkz. §2.1). **Bu oturumun (v2.14.7→v2.15.3) büyük değişiklikleri:** **Roster (vardiya planı) aracı YENİ** (haftalık personel ızgarası + şablon/serbest saat + işçilik maliyeti **göster/gizle** + history/print/Excel/paylaş + **bulut sync**); **para birimi kalıcılık fix** (kaydet→yenile USD'ye dönüyordu — flush+cloud push eksikti) + tüm export/rapor/paylaşım currency simgesine bağlandı (`PCD.currencySymbol()`); **menü allergen-safe baskı filtresi** manuel-kod tabanlı genişletildi (18 chip) + **aktif filtre tüm öğeleri gizlerse uyarı** (manuel yemek görünmüyor bug'ı); **tedarikçi sipariş geçmişi** (History butonu — tarih/mesaj/alıcı/kanal). Detay: CHANGELOG `v2.15.x` / `v2.14.x`. (Önceki büyük iş v2.13.7→v2.14.6: menü manuel harf kodları + fiyat stili, whiteboard mobil fix, tek Excel standardı `PCD.xlsx`, demo seed genişletme, Discover hesap-bazlı sayaç.)
 **Blog:** 13 yazı yayında (Faz A SEO upgrade + Faz B 5-round, MENA niş + uluslararası coverage).
 **Domain:** prochefdesk.com (Cloudflare Pages, SSL Full, GitHub push'ta auto build + deploy).
 
@@ -28,9 +28,22 @@
 
 Yeni Claude'un bilmesi gereken: **bu hâlâ tek kullanıcılı bir ürün** — operatör + birkaç yakın şef arkadaşı. Roadmap'te 50+ aktif kullanıcı + %40 retention hedefine ulaşmadan paid tier / büyük marketing yatırımı yapılmıyor.
 
-### 2.1 Son session özeti (2026-05-22 — Checklist → araç sadeleştirme → zoom fix)
+### 2.1 Son session özeti (2026-05-22 — Roster + para birimi + tedarikçi history + cloud sync)
 
-Bir önceki Claude'un yaptıkları (kronolojik tersine, hepsi push edildi, en son **v2.13.6**):
+Bu Claude'un yaptıkları (kronolojik tersine). **v2.15.0–v2.15.2 commit edildi ama operatör HENÜZ PUSH ETMEDİ** ("2.14.6 hala push etmedim" demişti — 2.14.7→2.15.3 büyük tek bundle bekliyor). **v2.15.3 (roster cloud sync) commit de edilmedi — working tree'de.**
+- **v2.15.3** — **Roster bulut senkronizasyonu** (operatör onayladı). `rosters` map-yapılı ws-scoped tablo, stock_count_history pattern'i ile 6 dosyada wire edildi (store.js + cloud-pertable.js + cloud-realtime.js + cloud.js + backup-to-r2 + config.js). cloud.js merge'de `HIGH_EDIT_WS_TABLES` (kayıt-bazlı `updatedAt`, en yeni yazı kazanır). **Operatör `migrations/v2.15.3-rosters-cloud-sync.sql`'i Supabase'de çalıştırmalı + push.** Tüm app cloud-sync kapsam denetimi yapıldı → roster TEK boşluktu.
+- **v2.15.2** — Menüde aktif allergen-safe filtre tüm öğeleri gizlerse: önizlemede kırmızı uyarı + editörde filtre auto-açıl/temizle butonu. (Operatörün "manuel eklenen yemek görünmüyor" acil bug'ı — render değil, filtre sebebi.)
+- **v2.15.1** — **Roster (vardiya planı) aracı YENİ** (`roster.js`, lazy, Kitchen bölümü). Personel×gün ızgara + şablon/serbest saat + işçilik maliyeti **göster/gizle** toggle (personel WhatsApp vs. patron/muhasebe) + history/print/Excel/paylaş. v2.15.1'de local-only, sync v2.15.3'te.
+- **v2.15.0** — Tedarikçi sipariş geçmişi: her kartta History butonu, gönderilen sipariş kaydı (tarih/saat + mesaj + alıcı + kanal), `supplier.orderHistory` son-50.
+- **v2.14.8** — Menü allergen-safe baskı filtresi manuel-kod tabanlı genişletildi (18 chip, diyet+alerjen gruplu, `it.codes` ile ALL-match).
+- **v2.14.7** — **Para birimi kalıcılık fix** (kritik): değiştir→kaydet→yenile USD'ye dönüyordu (account.js flush + cloud push eksikti → "cloud kazanır" eski değeri yazıyordu). Fix: flush + user_prefs queueUpsert + flushNow. Ayrıca tüm export/rapor/paylaşım `PCD.currencySymbol()`'e bağlandı (Excel numFmt + share menü fiyatı).
+
+**Bu oturumun mimari notları (yeni Claude MUTLAKA bilsin):**
+- **Roster = MAP-tablo cloud pattern** (array DEĞİL). `rosters` stock_count_history/haccp ile aynı yolda: store.js `_stateKeyToSqlTable`+ws-table listeleri, cloud-pertable WORKSPACE_TABLES (wsScoped, isArray YOK) + pullAll fetch/destructure/packByWs sırası (fetch dizisi ↔ destructure SIRA UYUMU şart, yoksa pull bozulur), cloud-realtime `applyToWsTable`+TABLES+WS_BOUND_TABLES, cloud.js HIGH_EDIT_WS_TABLES+drift+ghost-ws+cascade. Yeni MAP tablo eklerken bu 5 dosyayı + backup-to-r2'yi + migration'ı birlikte güncelle.
+- **upsertInTable her kayda `updatedAt` damgalar** → user-edited map tablolar cloud.js `HIGH_EDIT_WS_TABLES`'a girer (per-record en-yeni-kazanır), `REMOTE_WINS` değil.
+- **Para birimi kalıcılığı:** account.js currency değişiminde `flush()` + `user_prefs` cloud push ŞART (yoksa boot pull/realtime eski değeri geri yazar). Bunu kaldırma.
+
+#### Önceki session (2026-05-22 — Checklist → araç sadeleştirme → zoom fix), en son **v2.13.6**:
 - **v2.13.6** — Whiteboard Ctrl+wheel zoom'da "Something went wrong" toast spam'i: global error handler "ResizeObserver loop" benign hatalarını yok sayıyor + `applyCanvasScale` ilk yüklemede self-retry (canvas garanti ölçeklenir).
 - **v2.13.5** — "Sync now" butonu kaldırıldı (no-op'tu). "Re-sync my data" `{r}/{i}` interpolation fix (`t()` 2-param alır, kod 3 veriyordu).
 - **v2.13.4** — Profil kaydı `PCD.store.flush()` ile anında IDB'ye (400ms debounce'un close/reload/background race'i veri kaybediyordu — özellikle mobil).
@@ -107,9 +120,9 @@ account, allergens, buffet, checklist, dashboard, discover, events, haccp + 4 al
 
 **Project ref:** `muuwhrcogikpqylsfvgg` (Tokyo, Postgres 17, **Free tier**)
 
-### 29 Aktif tablo (v2.9.18)
+### 31 Aktif tablo (v2.15.3)
 
-**Workspace-scoped (21):** recipes, ingredients, menus, events, suppliers, canvases, shopping_lists, checklist_templates, inventory, waste, checklist_sessions, stock_count_history, haccp_logs, haccp_units, haccp_readings, haccp_cook_cool, haccp_receiving (v2.8.44), haccp_holding (v2.8.44), **buffets** (v2.9.17), **mise_plans** (v2.9.17), **team** (v2.9.17)
+**Workspace-scoped (23):** recipes, ingredients, menus, events, suppliers, canvases, shopping_lists, checklist_templates, inventory, waste, checklist_sessions, stock_count_history, haccp_logs, haccp_units, haccp_readings, haccp_cook_cool, haccp_receiving (v2.8.44), haccp_holding (v2.8.44), **buffets** (v2.9.17), **mise_plans** (v2.9.17), **team** (v2.9.17), **whiteboards** (v2.9.42), **rosters** (v2.15.3)
 > Hepsinde `workspace_id` + `user_id` PK, `data` jsonb, `deleted_at` timestamptz.
 
 **Top-level (8):** workspaces (flat schema), workspace_tombstones, user_prefs, public_shares, client_errors (insert-only), subscriptions, recipe_likes (v2.8.46, Discover Phase 2), **discover_view_logs** (v2.9.18, rate limit).
@@ -145,14 +158,14 @@ account, allergens, buffet, checklist, dashboard, discover, events, haccp + 4 al
 | pcd-cleanup-photos-weekly | Pazar 04:00 | — |
 | pcd-cleanup-view-logs (v2.9.18) | Her saat başı (0 * * * *) | — |
 
-### Realtime: 24 tablo subscribed (v2.9.17)
+### Realtime: 26 tablo subscribed (v2.15.3)
 
-21 tablo + v2.9.17'de `buffets` + `mise_plans` + `team` (3 array tablosu) eklendi. Total 24 ws-bound table'da realtime aktif.
+v2.9.17'de `buffets`+`mise_plans`+`team` (24'e çıktı), v2.9.42'de `whiteboards` (25), v2.15.3'te `rosters` (26). Total 26 tablo realtime'da subscribed (`cloud-realtime.js` TABLES dizisi).
 **CHANNEL_ERROR çözüldü:** v2.8.43 — explicit `realtime.setAuth(token)` + `TOKEN_REFRESHED` dinleyici. Multi-device canlı sync güvenilir.
 
 ### 4 Edge Function (deployed)
 
-- **`backup-to-r2`** v4 (v2.9.17, BACKUP_TABLES'a 3 yeni tablo eklendi: buffets + mise_plans + team; **operatör re-deploy etmeli**). Per-table tabloyu jsonl olarak R2'ye yazar. 30-day retention. **Foto bytes yedeklenmiyor**, sadece manifest.
+- **`backup-to-r2`** (v2.15.3'te BACKUP_TABLES'a `rosters` eklendi; daha önce v2.9.42 whiteboards + v2.9.17 buffets/mise_plans/team; **rosters için operatör re-deploy etmeli**). Per-table tabloyu jsonl olarak R2'ye yazar. 30-day retention. **Foto bytes yedeklenmiyor**, sadece manifest.
 - **`cleanup-photos`** — Storage orphan foto temizliği. `x-cleanup-secret` header zorunlu.
 - **`delete-account`** — v2.8.50 fix (user_data DELETE bloğu kaldırıldı).
 - **`rate-limited-view`** (v2.9.18 YENİ, operatör deploy etmeli) — Discover view counter rate limit. POST recipe_id, IP header'dan çıkarır, `pcd_rate_limited_view_bump` RPC (service_role) çağırır. 60dk window per (IP, recipe).
@@ -321,7 +334,7 @@ UI eylemi state değiştirip ardından `location.reload()` çağırıyorsa, arad
 |---|---|
 | **Push** (local→cloud) | `cloud-pertable.js` UI yazımlarını dinler, 1.5sn debounce ile Supabase'e UPSERT/DELETE. v2.8.33: auto-retry (1s/2s backoff, 3 deneme transient hatalar için). |
 | **Pull** (cloud→local) | `cloud.js` boot'ta workspace-scoped + user-scoped tablolardan kullanıcı satırlarını çeker. **v2.8.33: drift detection** — local'de olup remote'ta olmayan kayıt otomatik queueUpsert'lenir (self-healing). v2.8.44'te haccp_receiving + haccp_holding pull'a eklendi. |
-| **Realtime** (cloud→local canlı) | `cloud-realtime.js` 24 tabloya WebSocket subscribe (v2.9.17 sonrası). v2.8.43'te JWT setAuth + TOKEN_REFRESHED dinleyici ile CHANNEL_ERROR çözüldü. |
+| **Realtime** (cloud→local canlı) | `cloud-realtime.js` 26 tabloya WebSocket subscribe (v2.15.3: +rosters). v2.8.43'te JWT setAuth + TOKEN_REFRESHED dinleyici ile CHANNEL_ERROR çözüldü. |
 | **Queue persistence** (v2.6.95+) | `cloud-pertable.queue` her mutation'da IDB'ye yansır. Boot'ta restore. |
 
 Sync bug'ında ÖNCE hangi yön sor — push mu, pull mu, realtime mı, queue mu? Tahmin yürütme.
@@ -459,7 +472,7 @@ Router'da `registerLazy(name, scriptPath, toolName)` + `loadLazyTool()` helper. 
 - `account` — auth flow (logout, oauth callback)
 - `inventory` — dashboard low-stock alert sync `computeStatus` kullanır
 
-**Lazy tool'lar (17):** recipes, ingredients, menus, kitchen_cards, whiteboard, shopping, portion, waste, suppliers, events, checklist, haccp_logs, haccp_cooling, haccp_receiving, haccp_holding, haccp, buffet, discover. (v2.11.16: mise kaldırıldı.)
+**Lazy tool'lar (17):** recipes, ingredients, menus, kitchen_cards, whiteboard, portion, suppliers, events, checklist, haccp_logs, haccp_cooling, haccp_receiving, haccp_holding, haccp, buffet, discover, **roster** (v2.15.1). (v2.11.16: mise kaldırıldı; v2.13.1: waste + shopping kaldırıldı.)
 
 **Yeni tool ekleme:**
 1. Eager mi lazy mi karar ver (default lazy)

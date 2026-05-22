@@ -47,6 +47,8 @@
     // v2.8.44 — HACCP Receiving + Holding cloud sync (mevcut HACCP pattern)
     haccp_receiving:      { stateKey: 'haccpReceiving',       wsScoped: true },
     haccp_holding:        { stateKey: 'haccpHolding',         wsScoped: true },
+    // v2.15.3 — Roster cloud sync (map-table pattern)
+    rosters:              { stateKey: 'rosters',              wsScoped: true },
     // Array tablolar (ayrı queueArraySync API'si ile yazılır)
     waste:                { stateKey: 'waste',                wsScoped: true, isArray: true },
     checklist_sessions:   { stateKey: 'checklistSessions',    wsScoped: true, isArray: true },
@@ -502,6 +504,8 @@
       // v2.8.44 — HACCP Receiving + Holding cloud sync
       supabase.from('haccp_receiving').select('*').eq('user_id', user.id),
       supabase.from('haccp_holding').select('*').eq('user_id', user.id),
+      // v2.15.3 — roster cloud sync
+      supabase.from('rosters').select('*').eq('user_id', user.id),
       supabase.from('workspace_tombstones').select('*').eq('user_id', user.id),
     ];
 
@@ -516,6 +520,7 @@
              wasteRes, chkSessRes, stockHistRes,
              haccpLogsRes, haccpUnitsRes, haccpReadingsRes, haccpCookCoolRes,
              haccpReceivingRes, haccpHoldingRes,
+             rostersRes,
              tombsRes] = results;
 
       // Build state in the format store.js expects:
@@ -594,6 +599,8 @@
       // v2.8.44 — HACCP Receiving + Holding cloud sync
       state.haccpReceiving = packByWs(haccpReceivingRes.data);
       state.haccpHolding = packByWs(haccpHoldingRes.data);
+      // v2.15.3 — roster cloud sync
+      state.rosters = packByWs(rostersRes.data);
 
       // Inventory: { wsId: { ingredientId: row.data } }
       state.inventory = {};
@@ -666,6 +673,8 @@
       'haccp_logs', 'haccp_units', 'haccp_readings', 'haccp_cook_cool',
       // v2.8.44 — HACCP Receiving + Holding cloud sync
       'haccp_receiving', 'haccp_holding',
+      // v2.15.3 — Roster cloud sync
+      'rosters',
       'workspace_tombstones', 'workspaces', 'user_prefs',
     ];
 
@@ -730,6 +739,8 @@
       // v2.8.44 — HACCP Receiving + Holding cloud sync
       ['haccpReceiving',      'haccp_receiving'],
       ['haccpHolding',        'haccp_holding'],
+      // v2.15.3 — Roster cloud sync
+      ['rosters',             'rosters'],
     ];
     wsKeys.forEach(function (pair) {
       const stateKey = pair[0];

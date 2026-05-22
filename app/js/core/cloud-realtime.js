@@ -88,6 +88,8 @@
         case 'haccp_receiving': return applyToWsTable('haccpReceiving', eventType, newRow, oldRow);
         case 'haccp_holding': return applyToWsTable('haccpHolding', eventType, newRow, oldRow);
         case 'stock_count_history': return applyToWsTable('stockCountHistory', eventType, newRow, oldRow);
+        // v2.15.3 — Roster realtime apply (map table)
+        case 'rosters': return applyToWsTable('rosters', eventType, newRow, oldRow);
         // v2.9.17 — Buffet + Mise + Team array tablo realtime apply
         case 'buffets': return applyToArrayWsTable('buffets', eventType, newRow, oldRow);
         case 'mise_plans': return applyToArrayWsTable('misePlans', eventType, newRow, oldRow);
@@ -190,7 +192,9 @@
     // v2.9.17 — Buffet + Mise + Team workspace cascade wipe
     'buffets','misePlans','team',
     // v2.9.42 — Whiteboard workspace cascade wipe
-    'whiteboards'
+    'whiteboards',
+    // v2.15.3 — Roster workspace cascade wipe
+    'rosters'
   ];
   function applyToTombstones(eventType, newRow, oldRow) {
     const row = newRow || oldRow;
@@ -424,6 +428,8 @@
       'buffets', 'mise_plans', 'team',
       // v2.9.42 — Whiteboard realtime
       'whiteboards',
+      // v2.15.3 — Roster realtime
+      'rosters',
       // v2.6.81 — workspace_tombstones (cross-device cascade wipe trigger)
       'workspace_tombstones',
     ];

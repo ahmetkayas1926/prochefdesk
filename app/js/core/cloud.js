@@ -288,7 +288,7 @@
                 if (ws.name !== 'My Kitchen') return false;
                 if (ws.concept || ws.role || ws.city) return false;
                 if (ws.archived) return false;
-                const wsTables = ['recipes','ingredients','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','stockCountHistory','haccpLogs','haccpUnits','haccpReadings','haccpCookCool','haccpReceiving','haccpHolding','buffets','misePlans','team','whiteboards'];
+                const wsTables = ['recipes','ingredients','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','stockCountHistory','haccpLogs','haccpUnits','haccpReadings','haccpCookCool','haccpReceiving','haccpHolding','buffets','misePlans','team','whiteboards','rosters'];
                 for (let i = 0; i < wsTables.length; i++) {
                   const t = sourceState && sourceState[wsTables[i]];
                   if (t && t[ws.id] && Object.keys(t[ws.id]).length > 0) return false;
@@ -370,7 +370,9 @@
               const HIGH_EDIT_WS_TABLES = [
                 'recipes', 'ingredients', 'menus', 'events', 'suppliers',
                 'canvases', 'shoppingLists', 'checklistTemplates',
-                'stockCountHistory'
+                'stockCountHistory',
+                // v2.15.3 — Roster: user-edited, per-record updatedAt merge
+                'rosters'
               ];
               // Tables that are arrays under wsId (append-only logs):
               const ARRAY_WS_TABLES = ['waste', 'checklistSessions'];
@@ -464,6 +466,8 @@
                   // v2.8.44 — HACCP Receiving + Holding drift detection
                   ['haccpReceiving',     'haccp_receiving'],
                   ['haccpHolding',       'haccp_holding'],
+                  // v2.15.3 — Roster drift detection
+                  ['rosters',            'rosters'],
                 ];
                 let driftedCount = 0;
                 wsTables.forEach(function (pair) {

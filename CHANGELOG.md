@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.14.6 · 2026-05-22
+**Mevcut sürüm:** v2.15.3 · 2026-05-22
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -8,7 +8,38 @@ Format: kronolojik tersine (en son sürüm üstte). Her sürüm kısa başlık +
 
 ---
 
+## v2.15.x — Roster aracı + bulut sync + menü filtre uyarısı · 2026-05-22
+
+### v2.15.3 — Roster bulut senkronizasyonu · 2026-05-22
+
+- **Roster artık buluta senkronize** (v2.15.1'de local-only çıkmıştı). `rosters` tablosu map-yapılı workspace-scoped (stock_count_history pattern). 3 yönlü sync: push (cloud-pertable queueUpsert), pull (boot fetch + drift detection), realtime (WebSocket applyChange). cloud.js merge'de `HIGH_EDIT_WS_TABLES`'a eklendi — kayıt-bazlı `updatedAt` ile en yeni yazı kazanır (çok cihazlı düzenleme güvenli). Workspace silme cascade + R2 nightly backup + tam yedek/restore kapsamına alındı.
+- **Operatör işi:** `migrations/v2.15.3-rosters-cloud-sync.sql` Supabase SQL Editor'de çalıştırılmalı (1 tablo + RLS 4 policy + realtime publication + cascade trigger güncelleme) → sonra push.
+- **Kapsam denetimi:** Tüm app verisinin cloud sync'i kod seviyesinde tarandı — roster TEK boşluktu, kapatıldı. Diğer 24 tablo zaten 3 yolla senkronize.
+
+### v2.15.2 — Menü: aktif filtre tüm öğeleri gizlerse uyarı · 2026-05-22
+
+- **Bug (acil):** Menüde manuel eklenen yemek önizlemede görünmüyordu. Sebep: aktif allergen-safe baskı filtresi (test sırasında tıklanmış kod chip'leri) sessizce tüm öğeleri gizliyordu — render hatası DEĞİL. Fix (menus.js): önizlemede kırmızı uyarı şeridi ("filtre N öğeyi gizliyor") + editörde filtre `<details>` otomatik açılır/kırmızı/"· N aktif" rozeti + "Filtreyi temizle" butonu (doğrudan addEventListener).
+
+### v2.15.1 — Roster (vardiya planı) aracı · 2026-05-22
+
+- **YENİ araç:** Haftalık personel vardiya planlayıcı. Personel listesi (ad/rol/saatlik ücret), vardiya şablonları + serbest saat girişi, personel×gün ızgara, işçilik maliyeti özeti. Roster geçmişi (master-detail), print, Excel indir, paylaş/gönder. **İşçilik maliyeti göster/gizle** çıktılarda — personel için gizli (WhatsApp paylaşımı) vs. patron/muhasebe için maliyetli. Kitchen bölümüne eklendi (lazy load). i18n EN+TR (~45 anahtar). _Not: v2.15.1'de local-only; bulut sync v2.15.3'te eklendi._
+
+### v2.15.0 — Tedarikçi sipariş geçmişi · 2026-05-22
+
+- **Tedarikçi History:** Her tedarikçi kartında "History" butonu (saat ikonu). Gönderilen her sipariş kaydedilir: tarih/saat damgası + gönderilen mesaj içeriği + alıcı (numara/e-posta) + kanal (WhatsApp/SMS/E-posta/Kopyala). `supplier.orderHistory` (son 50 cap). recordOrder tüm gönderim yollarında (shWa/shSms/shEmail/shMore + clipboard) tetiklenir.
+
+---
+
 ## v2.14.x — Veri I/O standardı + menü kodları + demo seed · 2026-05-22
+
+### v2.14.8 — Menü allergen-safe baskı filtresi genişletildi · 2026-05-22
+
+- **Manuel-kod tabanlı filtre:** Önceki kısıtlı filtre yerine 18 chip (diyet + alerjen gruplu, emojisiz): "içerir" (gluten/fındık/yumurta/süt) + free + vegetarian/vegan/option'lar. `it.codes` ile eşleşir; `itemPassesSafeFilter` seçili TÜM kodları eşler. Otomatik tahmin yok → tarifsiz öğelerde de çalışır.
+
+### v2.14.7 — Para birimi kalıcılık + tüm çıktılar currency'e bağlı · 2026-05-22
+
+- **Bug (kritik):** Para birimi değiştir → kaydet → yenile sonrası USD'ye geri dönüyordu. Sebep: account.js currency kaydı flush edilmiyor + cloud'a push edilmiyordu → boot pull/realtime "cloud kazanır" eski değeri geri yazıyordu. Fix: `PCD.store.flush()` + `user_prefs` queueUpsert + flushNow (setActiveWorkspaceId pattern'i).
+- **Tüm export/rapor/paylaşım currency'e bağlandı:** `PCD.currencySymbol()` (utils.js, YENİ). Cost report Excel numFmt sabit `"$"` → currency simgesi (recipes.js + buffet.js). Paylaşılan menü fiyatı (share.js) currency simgesi. PDF zaten fmtMoney kullanıyordu (revert bug'ı $ sebebiydi; currency düzelince düzeldi).
 
 ### v2.14.6 — Discover hesap-bazlı sayaç + whiteboard template çevirileri · 2026-05-22
 
