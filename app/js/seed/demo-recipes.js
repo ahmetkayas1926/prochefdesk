@@ -430,9 +430,9 @@
         budget: 4500,
         status: 'confirmed',
         notes: 'Sample event · Customize or delete',
-        recipes: [
-          { recipeId: carbonaraR.id, portionsPerGuest: 1 },
+        menu: [ // v2.14.4 fix: events.js bu alanı 'menu' olarak okur ('recipes' DEĞİL) → eski seed boş görünüyordu
           { recipeId: tikkaR.id, portionsPerGuest: 1 },
+          { recipeId: carbonaraR.id, portionsPerGuest: 1 },
         ],
         _demo: true,
       }, 'e');
@@ -472,15 +472,18 @@
         notes: 'Sample buffet · customize or delete',
         stations: [
           { name: 'Cold', type: 'cold', items: [
+            // v2.14.4 — ÖNEMLİ: tarife bağlı kalemde amountPerGuest = PORSİYON/kişi (gram DEĞİL).
+            // Maliyet = (tarif maliyeti ÷ servings) × kişi × porsiyon × refill. Gram yazılırsa
+            // ~100× şişer (önceki demo bu yüzden %4052 food cost veriyordu). Custom kalemler gram.
             (greekR
-              ? { recipeId: greekR.id, amountPerGuest: 90, unit: 'g', pickupRatio: 0.55, refillX: null }
+              ? { recipeId: greekR.id, amountPerGuest: 0.7, unit: 'serving', pickupRatio: 0.55, refillX: null }
               : { customName: 'Greek salad', amountPerGuest: 90, unit: 'g', pickupRatio: 0.55, refillX: null }),
             { customName: 'Smoked salmon platter', amountPerGuest: 50, unit: 'g', pickupRatio: 0.45, refillX: null },
             { customName: 'Seasonal fruit', amountPerGuest: 100, unit: 'g', pickupRatio: 0.55, refillX: null },
           ]},
           { name: 'Hot', type: 'hot', items: [
-            { recipeId: tikkaR.id, amountPerGuest: 180, unit: 'g', pickupRatio: 0.80, refillX: null },
-            { recipeId: carbonaraR.id, amountPerGuest: 150, unit: 'g', pickupRatio: 0.70, refillX: null },
+            { recipeId: tikkaR.id, amountPerGuest: 0.9, unit: 'serving', pickupRatio: 0.80, refillX: null },
+            { recipeId: carbonaraR.id, amountPerGuest: 0.7, unit: 'serving', pickupRatio: 0.70, refillX: null },
             { customName: 'Roast vegetables', amountPerGuest: 90, unit: 'g', pickupRatio: 0.60, refillX: null },
           ]},
           { name: 'Bakery', type: 'bakery', items: [

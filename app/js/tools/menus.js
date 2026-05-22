@@ -296,6 +296,7 @@
     if (typeof data.accentColor !== 'string') data.accentColor = '';
     if (typeof data.columns !== 'number') data.columns = 1;
     if (!data.pageSize) data.pageSize = 'a4';
+    if (!data.priceStyle) data.priceStyle = data.hidePrices ? 'hidden' : 'symbol';
     // Ensure existing sections have IDs
     (data.sections || []).forEach(function (s) {
       if (!s.id) s.id = PCD.uid('sec');
@@ -422,9 +423,14 @@
           </div>
         </div>
 
-        <div class="checkbox">
-          <input type="checkbox" id="menuHidePrice" ${data.hidePrices ? 'checked' : ''}>
-          <span>${t('menu_hide_price')}</span>
+        <div class="field" style="margin-top:10px;">
+          <label class="field-label">${PCD.escapeHtml(t('menu_price_display') || 'Price display')}</label>
+          <select class="select" id="menuPriceStyle">
+            <option value="symbol"${(data.priceStyle === 'symbol') ? ' selected' : ''}>${PCD.escapeHtml(t('menu_price_symbol') || 'With currency symbol ($24)')}</option>
+            <option value="plain"${(data.priceStyle === 'plain') ? ' selected' : ''}>${PCD.escapeHtml(t('menu_price_plain') || 'Number only — no symbol (24)')}</option>
+            <option value="hidden"${(data.priceStyle === 'hidden') ? ' selected' : ''}>${PCD.escapeHtml(t('menu_price_hidden') || 'Hidden')}</option>
+          </select>
+          <div class="field-hint">${PCD.escapeHtml(t('menu_price_hint') || 'Menus without a currency symbol nudge guests to spend a little more (Cornell study).')}</div>
         </div>
         <div class="field" style="margin-top:10px;">
           <label class="field-label">${PCD.escapeHtml(t('menu_allergen_display') || 'Diet & allergen codes')}</label>
@@ -573,7 +579,12 @@
       PCD.$('#menuName', body).addEventListener('input', function () { data.name = this.value; });
       PCD.$('#menuSubtitle', body).addEventListener('input', function () { data.subtitle = this.value; });
       PCD.$('#menuFooter', body).addEventListener('input', function () { data.footer = this.value; });
-      PCD.$('#menuHidePrice', body).addEventListener('change', function () { data.hidePrices = this.checked; render(); });
+      const priceStyleEl = PCD.$('#menuPriceStyle', body);
+      if (priceStyleEl) priceStyleEl.addEventListener('change', function () {
+        data.priceStyle = this.value;
+        data.hidePrices = (this.value === 'hidden'); // back-compat: eski bayrak senkron
+        render();
+      });
       const allergStyleEl = PCD.$('#menuAllergenStyle', body);
       if (allergStyleEl) allergStyleEl.addEventListener('change', function () {
         data.allergenStyle = this.value;
@@ -960,6 +971,9 @@
     // Otomatik tahmin yok. Küçük harf = diyet/uygunluk, BÜYÜK = "içerir" alerjen.
     // allergenStyle: 'codes' (göster) | 'off' (gizle). Back-compat: hideAllergens=true → 'off'.
     const allergenStyle = menu.allergenStyle || (menu.hideAllergens ? 'off' : 'codes');
+    // v2.14.5 — Fiyat gösterim stili: symbol ($24) | plain (24, Cornell simgesiz) | hidden
+    const priceStyle = menu.priceStyle || (menu.hidePrices ? 'hidden' : 'symbol');
+    function plainPrice(p) { const n = Number(p); return (n % 1 === 0) ? String(n) : n.toFixed(2); }
     const showAllergens = allergenStyle === 'codes';
     const usedCodes = {}; // id → true (menüde geçen kodlar; legend için)
 
@@ -995,9 +1009,9 @@
 
         sectionsBody += '<div class="m-item">';
         sectionsBody += '<div class="m-item-row"><div class="m-item-name">' + PCD.escapeHtml(itemName) + itemBadge(it) + allergenCodes + '</div>';
-        sectionsBody += '<div class="m-item-leader"></div>';
-        if (!menu.hidePrices && price > 0) {
-          sectionsBody += '<div class="m-item-price">' + PCD.fmtMoney(price) + '</div>';
+        if (priceStyle !== 'hidden' && price > 0) {
+          sectionsBody += '<div class="m-item-leader"></div>';
+          sectionsBody += '<div class="m-item-price">' + (priceStyle === 'plain' ? PCD.escapeHtml(plainPrice(price)) : PCD.fmtMoney(price)) + '</div>';
         }
         sectionsBody += '</div>';
         if (desc) sectionsBody += '<div class="m-item-desc">' + PCD.escapeHtml(desc) + '</div>';
