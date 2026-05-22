@@ -1,6 +1,6 @@
 # ProChefDesk — Sürüm geçmişi
 
-**Mevcut sürüm:** v2.15.3 · 2026-05-22
+**Mevcut sürüm:** v2.15.4 · 2026-05-22
 **Blog:** 13 yazı yayında (Faz A: 3 SEO upgrade + Faz B: 10 yeni yazı)
 **Marketing/SEO altyapısı:** 2026-05-18 (app sürümünden bağımsız)
 
@@ -9,6 +9,16 @@ Format: kronolojik tersine (en son sürüm üstte). Her sürüm kısa başlık +
 ---
 
 ## v2.15.x — Roster aracı + bulut sync + menü filtre uyarısı · 2026-05-22
+
+### v2.15.4 — Menü alerjen = bilgi (filtre kaldırıldı, tariften otomatik) + Roster büyük güncelleme · 2026-05-22
+
+- **Menü alerjen mantığı düzeltildi (kavramsal):** Alerjen/diyet kodları artık SADECE BİLGİ amaçlı — uyarı/yasak/filtre değil. Yemekleri gizleyen "allergen-safe print" filtresi tamamen KALDIRILDI (editör + önizleme + handler'lar). Bu filtre hem kavramsal yanlıştı hem de "manuel eklediğim yemek görünmüyor" bug'ının kaynağıydı. Artık tüm yemekler her zaman basılır.
+- **Tarif menü öğesinde alerjen OTOMATİK:** Bir tarif menüye eklendiğinde içindeki alerjenler (tarifin malzeme alerjen tag'lerinden, `recipeAllergens`) otomatik kod olarak görünür (G/D/E/N/F/SF/S/SE). Üstüne şef manuel diyet/alerjen kodu ekleyebilir (vegan, gf, df…). Manuel kodlar menü öğesinde (`it.codes`) tutulur — **orijinal tarife DOKUNULMAZ** (salt-okuma). Editörde "⟲ tarif: G D" ipucu + picker'da auto kodlar işaretli. Görünüm = manuel ∪ otomatik birleşik; lejant ikisini de açıklar. Canlı test edildi (Carbonara → gf manuel + G D E otomatik).
+- **Roster büyük güncelleme:**
+  - **İzin/durum kodları:** Hücreye vardiya saati yerine renkli durum kodu atanabilir — OFF (izin günü), AL (yıllık izin), PH (resmi tatil), SL (hastalık), RDO (planlı izin), UNP (ücretsiz). Durum = 0 saat; renkli (OFF mavi, AL turuncu, PH yeşil, SL kırmızı…). Hücre editöründe tek tıkla.
+  - **Departman/grup bölümleri:** Personele departman atanır (Cold Kitchen, Banquet, IRD…); aynı sayfada her grup kendi başlık satırıyla (otel duty-roster düzeni). Grid + print + Excel + paylaşım hepsi grupları yansıtır.
+  - **Profesyonel renkli print + üst başlık:** Önceki print soluk/cansızdı. Artık üstte mutfak/departman başlık bandı (yeni `venue` alanı), koyu başlık satırı, departman bantları, renkli durum hücreleri, durum lejantı. `print-color-adjust:exact` → "Background graphics" kapalıyken bile renkler basar.
+  - Çıktı motoru `rosterMatrix` ile tek noktadan (print/Excel/share tutarlı). Excel grup ayraç satırları + kod metni (ortak motor hücre rengini desteklemediği için Excel'de kod metin). i18n EN+TR. Tüm akış canlı önizlemede test edildi (grid grupları, renkli durum, print HTML, paylaşım metni, izin günü 0 saat).
 
 ### v2.15.3 — Roster bulut senkronizasyonu · 2026-05-22
 

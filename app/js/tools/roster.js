@@ -27,6 +27,22 @@
 
   const DAY_OPTIONS = [5, 6, 7];
 
+  // v2.15.4 — Vardiya saati YERİNE atanabilen durum/izin kodları.
+  // Renkler print + grid'de kullanılır (otel rosterleri: OFF mavi, AL turuncu,
+  // PH yeşil…). Durum hücresi = 0 saat (start/end yok). id = kısa kod (print/
+  // excel/share aynı kodu basar). Yeni kod gerekirse buraya + roster_st_* i18n.
+  const ROSTER_STATUS = [
+    { id: 'OFF', labelKey: 'roster_st_off', color: '#1d4ed8', fill: '#dbeafe' },
+    { id: 'AL',  labelKey: 'roster_st_al',  color: '#b45309', fill: '#fde9d3' },
+    { id: 'PH',  labelKey: 'roster_st_ph',  color: '#15803d', fill: '#dcfce7' },
+    { id: 'SL',  labelKey: 'roster_st_sl',  color: '#b91c1c', fill: '#fee2e2' },
+    { id: 'RDO', labelKey: 'roster_st_rdo', color: '#0e7490', fill: '#cffafe' },
+    { id: 'UNP', labelKey: 'roster_st_unp', color: '#525252', fill: '#ededed' },
+  ];
+  function statusDef(id) { return ROSTER_STATUS.find(function (s) { return s.id === id; }); }
+  function cellIsStatus(c) { return !!(c && c.status); }
+  function cellHasShift(c) { return !!(c && c.start && c.end); }
+
   // ---- helpers ----
   function isoToday() { return new Date().toISOString().slice(0, 10); }
   function mondayOf(d) {
@@ -64,6 +80,47 @@
     let hours = 0, cost = 0;
     (r.staff || []).forEach(function (st) { hours += staffHours(r, st.id); cost += staffCost(r, st); });
     return { hours: hours, cost: cost };
+  }
+
+  // v2.15.4 — Personeli departman/gruba göre böl (BANQUET, COLD KITCHEN…).
+  // Hiç grup tanımlı değilse tek grupta toplar (başlıksız) — eski rosterler
+  // aynen çalışır. Grup sırası ilk-görünen sıraya göre.
+  function groupedStaff(r) {
+    const staff = (r.staff || []);
+    const anyGroup = staff.some(function (s) { return (s.group || '').trim(); });
+    if (!anyGroup) return [{ group: '', staff: staff }];
+    const order = [], map = {};
+    staff.forEach(function (s) {
+      const g = (s.group || '').trim() || (t('roster_no_group') || 'Other');
+      if (!map[g]) { map[g] = []; order.push(g); }
+      map[g].push(s);
+    });
+    return order.map(function (g) { return { group: g, staff: map[g] }; });
+  }
+
+  // v2.15.4 — Çıktılar (print/excel/share) için ortak yapısal matris:
+  // { days:[label], groups:[{ name, rows:[{ staff, cells:[{text,status?}], hours, cost }] }] }
+  function rosterMatrix(data) {
+    const dayCount = data.dayCount || 7;
+    const days = [];
+    for (let d = 0; d < dayCount; d++) days.push(dayLabel(data.weekStart, d));
+    const groups = groupedStaff(data).map(function (g) {
+      return {
+        name: g.group,
+        rows: g.staff.map(function (st) {
+          const cells = (data.cells && data.cells[st.id]) || {};
+          const out = [];
+          for (let d = 0; d < dayCount; d++) {
+            const c = cells[d];
+            if (cellIsStatus(c)) out.push({ status: c.status, text: c.status });
+            else if (cellHasShift(c)) out.push({ text: c.start + '-' + c.end + (c.note ? ' ' + c.note : '') });
+            else out.push({ text: '' });
+          }
+          return { staff: st, cells: out, hours: staffHours(data, st.id), cost: staffCost(data, st) };
+        })
+      };
+    });
+    return { days: days, groups: groups };
   }
 
   function defaultTemplates() {
@@ -185,14 +242,16 @@
     let html =
       '<div class="page-header"><div class="page-header-text">' +
         '<button class="btn btn-ghost btn-sm" id="rosterBack" style="margin-bottom:6px;">' + PCD.icon('chevronLeft', 16) + ' ' + PCD.escapeHtml(t('btn_back') || 'Back') + '</button>' +
-        '<div class="page-title" style="font-size:20px;">' + PCD.escapeHtml(data.name || weekRange(data)) + '</div>' +
+        '<div class="page-title" style="font-size:20px;">' + PCD.escapeHtml(data.venue || data.name || weekRange(data)) + '</div>' +
       '</div></div>';
 
     // Meta row
     html +=
       '<div class="card" style="padding:12px;margin-bottom:12px;display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">' +
-        '<div class="field" style="flex:2;min-width:160px;margin:0;"><label class="field-label">' + PCD.escapeHtml(t('roster_name') || 'Name') + '</label>' +
-          '<input type="text" class="input" id="rName" value="' + PCD.escapeHtml(data.name || '') + '" placeholder="' + PCD.escapeHtml(t('roster_name_ph') || 'e.g. Week 21 — Main kitchen') + '"></div>' +
+        '<div class="field" style="flex:2;min-width:170px;margin:0;"><label class="field-label">' + PCD.escapeHtml(t('roster_venue') || 'Kitchen / Department (heading)') + '</label>' +
+          '<input type="text" class="input" id="rVenue" value="' + PCD.escapeHtml(data.venue || '') + '" placeholder="' + PCD.escapeHtml(t('roster_venue_ph') || 'e.g. Main Kitchen — Duty Roster') + '"></div>' +
+        '<div class="field" style="flex:2;min-width:150px;margin:0;"><label class="field-label">' + PCD.escapeHtml(t('roster_name') || 'Name') + '</label>' +
+          '<input type="text" class="input" id="rName" value="' + PCD.escapeHtml(data.name || '') + '" placeholder="' + PCD.escapeHtml(t('roster_name_ph') || 'e.g. Week 21') + '"></div>' +
         '<div class="field" style="flex:1;min-width:120px;margin:0;"><label class="field-label">' + PCD.escapeHtml(t('roster_week_start') || 'Week start') + '</label>' +
           '<input type="date" class="input" id="rStart" value="' + PCD.escapeHtml(data.weekStart) + '"></div>' +
         '<div class="field" style="min-width:90px;margin:0;"><label class="field-label">' + PCD.escapeHtml(t('roster_days') || 'Days') + '</label>' +
@@ -231,6 +290,25 @@
     wireEditor(view, data);
   }
 
+  // v2.15.4 — Tek hücre butonu (vardiya / durum kodu / boş). Renkli durum kodları.
+  function cellButtonHtml(stId, d, c) {
+    const isSt = cellIsStatus(c);
+    const sd = isSt ? statusDef(c.status) : null;
+    const filled = cellHasShift(c);
+    let bg, border, color, label;
+    if (isSt) {
+      bg = sd ? sd.fill : '#ededed'; border = sd ? sd.color : '#999'; color = sd ? sd.color : '#444';
+      label = PCD.escapeHtml(c.status);
+    } else if (filled) {
+      bg = 'var(--brand-50)'; border = 'var(--brand-400)'; color = 'var(--brand-700)';
+      label = PCD.escapeHtml(c.start + '-' + c.end) + (c.note ? '<br><span style="font-weight:400;font-size:10px;">' + PCD.escapeHtml(c.note) + '</span>' : '');
+    } else {
+      bg = 'var(--surface)'; border = 'var(--border-strong)'; color = 'var(--text-3)'; label = '+';
+    }
+    const solid = (isSt || filled) ? 'solid' : 'dashed';
+    return '<button class="roster-cell" data-cell="' + stId + ':' + d + '" style="width:100%;min-height:42px;border:1px ' + solid + ' ' + border + ';border-radius:6px;background:' + bg + ';cursor:pointer;font-size:11px;font-weight:700;color:' + color + ';padding:4px;line-height:1.25;">' + label + '</button>';
+  }
+
   function gridHtml(data) {
     const dayCount = data.dayCount || 7;
     let h = '<thead><tr>' +
@@ -240,23 +318,24 @@
     if (!(data.staff || []).length) {
       h += '<tr><td colspan="' + (dayCount + 1) + '" class="text-muted" style="padding:14px 8px;font-size:13px;font-style:italic;">' + PCD.escapeHtml(t('roster_no_staff') || 'No staff yet — add your team below.') + '</td></tr>';
     }
-    (data.staff || []).forEach(function (st) {
-      const cells = (data.cells && data.cells[st.id]) || {};
-      h += '<tr data-staff-row="' + st.id + '">' +
-        '<td style="padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:top;">' +
-          '<div style="font-weight:600;font-size:13px;">' + PCD.escapeHtml(st.name || '—') + '</div>' +
-          '<div class="text-muted" style="font-size:11px;">' + PCD.escapeHtml(st.role || '') + (Number(st.rate) > 0 ? ' · ' + (PCD.currencySymbol && PCD.currencySymbol() || '$') + PCD.fmtNumber(st.rate) + '/h' : '') + '</div>' +
-          '<button class="btn btn-ghost btn-sm" data-edit-staff="' + st.id + '" style="padding:2px 6px;font-size:11px;margin-top:2px;">' + PCD.escapeHtml(t('edit') || 'Edit') + '</button>' +
-        '</td>';
-      for (let d = 0; d < dayCount; d++) {
-        const c = cells[d];
-        const filled = c && c.start && c.end;
-        h += '<td style="padding:3px;border-bottom:1px solid var(--border);text-align:center;">' +
-          '<button class="roster-cell" data-cell="' + st.id + ':' + d + '" style="width:100%;min-height:42px;border:1px dashed ' + (filled ? 'var(--brand-400)' : 'var(--border-strong)') + ';border-radius:6px;background:' + (filled ? 'var(--brand-50)' : 'var(--surface)') + ';cursor:pointer;font-size:11px;font-weight:600;color:' + (filled ? 'var(--brand-700)' : 'var(--text-3)') + ';padding:4px;line-height:1.25;">' +
-            (filled ? PCD.escapeHtml(c.start + '-' + c.end) + (c.note ? '<br><span style="font-weight:400;font-size:10px;">' + PCD.escapeHtml(c.note) + '</span>' : '') : '+') +
-          '</button></td>';
+    // v2.15.4 — Departman/grup başlıklı satırlar (groupedStaff `.group` döndürür)
+    groupedStaff(data).forEach(function (grp) {
+      if (grp.group) {
+        h += '<tr><td colspan="' + (dayCount + 1) + '" style="padding:7px 8px;background:var(--brand-50);border-top:2px solid var(--brand-200);border-bottom:1px solid var(--brand-200);font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:var(--brand-700);">' + PCD.escapeHtml(grp.group) + '</td></tr>';
       }
-      h += '</tr>';
+      grp.staff.forEach(function (st) {
+        const cells = (data.cells && data.cells[st.id]) || {};
+        h += '<tr data-staff-row="' + st.id + '">' +
+          '<td style="padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:top;">' +
+            '<div style="font-weight:600;font-size:13px;">' + PCD.escapeHtml(st.name || '—') + '</div>' +
+            '<div class="text-muted" style="font-size:11px;">' + PCD.escapeHtml(st.role || '') + (Number(st.rate) > 0 ? ' · ' + (PCD.currencySymbol && PCD.currencySymbol() || '$') + PCD.fmtNumber(st.rate) + '/h' : '') + '</div>' +
+            '<button class="btn btn-ghost btn-sm" data-edit-staff="' + st.id + '" style="padding:2px 6px;font-size:11px;margin-top:2px;">' + PCD.escapeHtml(t('edit') || 'Edit') + '</button>' +
+          '</td>';
+        for (let d = 0; d < dayCount; d++) {
+          h += '<td style="padding:3px;border-bottom:1px solid var(--border);text-align:center;">' + cellButtonHtml(st.id, d, cells[d]) + '</td>';
+        }
+        h += '</tr>';
+      });
     });
     h += '</tbody>';
     return h;
@@ -281,6 +360,7 @@
 
   function wireEditor(view, data) {
     PCD.$('#rosterBack', view).addEventListener('click', function () { _editingId = null; render(view); });
+    const _venueEl = PCD.$('#rVenue', view); if (_venueEl) _venueEl.addEventListener('input', function () { data.venue = this.value; persist(data); });
     PCD.$('#rName', view).addEventListener('input', function () { data.name = this.value; persist(data); });
     PCD.$('#rStart', view).addEventListener('change', function () { data.weekStart = this.value || data.weekStart; persist(data); render(view); });
     PCD.$('#rDays', view).addEventListener('change', function () { data.dayCount = parseInt(this.value, 10) || 7; persist(data); render(view); });
@@ -317,12 +397,17 @@
 
   function openStaffEditor(view, data, sid) {
     const existing = sid ? (data.staff || []).find(function (s) { return s.id === sid; }) : null;
-    const st = existing ? PCD.clone(existing) : { id: PCD.uid('rs'), name: '', role: '', rate: '' };
+    const st = existing ? PCD.clone(existing) : { id: PCD.uid('rs'), name: '', role: '', rate: '', group: '' };
+    // v2.15.4 — Mevcut departman/grup adlarından datalist (hızlı seçim)
+    const groupNames = [];
+    (data.staff || []).forEach(function (s) { const g = (s.group || '').trim(); if (g && groupNames.indexOf(g) < 0) groupNames.push(g); });
+    const groupDatalist = '<datalist id="stGroupList">' + groupNames.map(function (g) { return '<option value="' + PCD.escapeHtml(g) + '">'; }).join('') + '</datalist>';
     const body = PCD.el('div');
     body.innerHTML =
       '<div class="field"><label class="field-label">' + PCD.escapeHtml(t('roster_staff_name') || 'Name') + ' *</label><input type="text" class="input" id="stName" value="' + PCD.escapeHtml(st.name || '') + '" placeholder="' + PCD.escapeHtml(t('roster_staff_name_ph') || 'e.g. Maria') + '"></div>' +
       '<div class="field-row"><div class="field"><label class="field-label">' + PCD.escapeHtml(t('roster_staff_role') || 'Role') + '</label><input type="text" class="input" id="stRole" value="' + PCD.escapeHtml(st.role || '') + '" placeholder="' + PCD.escapeHtml(t('roster_staff_role_ph') || 'e.g. Chef de Partie') + '"></div>' +
-      '<div class="field"><label class="field-label">' + PCD.escapeHtml(t('roster_staff_rate') || 'Hourly rate') + '</label><input type="number" class="input" id="stRate" value="' + PCD.escapeHtml(st.rate != null ? String(st.rate) : '') + '" step="0.01" min="0" placeholder="' + PCD.escapeHtml((PCD.currencySymbol && PCD.currencySymbol() || '$')) + '/h"></div></div>';
+      '<div class="field"><label class="field-label">' + PCD.escapeHtml(t('roster_staff_rate') || 'Hourly rate') + '</label><input type="number" class="input" id="stRate" value="' + PCD.escapeHtml(st.rate != null ? String(st.rate) : '') + '" step="0.01" min="0" placeholder="' + PCD.escapeHtml((PCD.currencySymbol && PCD.currencySymbol() || '$')) + '/h"></div></div>' +
+      '<div class="field"><label class="field-label">' + PCD.escapeHtml(t('roster_staff_group') || 'Department / group') + '</label><input type="text" class="input" id="stGroup" list="stGroupList" value="' + PCD.escapeHtml(st.group || '') + '" placeholder="' + PCD.escapeHtml(t('roster_staff_group_ph') || 'e.g. Cold Kitchen (optional)') + '">' + groupDatalist + '<div class="field-hint">' + PCD.escapeHtml(t('roster_staff_group_hint') || 'Staff with the same department are grouped together with a heading on the roster.') + '</div></div>';
     const save = PCD.el('button', { class: 'btn btn-primary', text: t('save') || 'Save', style: { flex: '1' } });
     const cancel = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') || 'Cancel' });
     let del = null; if (existing) del = PCD.el('button', { class: 'btn btn-ghost', text: t('delete') || 'Delete', style: { color: 'var(--danger)' } });
@@ -339,6 +424,7 @@
       st.name = (PCD.$('#stName', body).value || '').trim();
       if (!st.name) { PCD.toast.error(t('toast_name_required') || 'Name required'); return; }
       st.role = (PCD.$('#stRole', body).value || '').trim();
+      st.group = (PCD.$('#stGroup', body).value || '').trim();
       const rv = PCD.$('#stRate', body).value; st.rate = rv === '' ? '' : (Number(rv) || 0);
       data.staff = data.staff || [];
       if (existing) { const i = data.staff.findIndex(function (s) { return s.id === st.id; }); if (i >= 0) data.staff[i] = st; else data.staff.push(st); }
@@ -356,12 +442,22 @@
     const tplBtns = (data.templates || []).map(function (tp) {
       return '<button type="button" class="btn btn-outline btn-sm" data-pick-tpl="' + tp.id + '">' + PCD.escapeHtml((tp.label || '') + ' ' + (tp.start || '') + '-' + (tp.end || '')) + '</button>';
     }).join('');
+    // v2.15.4 — Durum/izin kodu butonları (tek tıkla OFF/AL/PH/SL…). Renkli.
+    const grpHd = 'font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-3);margin:2px 0 6px;';
+    const statusBtns = ROSTER_STATUS.map(function (s) {
+      const active = cellIsStatus(cur) && cur.status === s.id;
+      return '<button type="button" class="btn btn-sm" data-pick-status="' + s.id + '" style="background:' + s.fill + ';border:1px solid ' + s.color + ';color:' + s.color + ';font-weight:700;' + (active ? 'box-shadow:0 0 0 2px ' + s.color + ';' : '') + '">' + PCD.escapeHtml(s.id + ' · ' + (t(s.labelKey) || s.id)) + '</button>';
+    }).join('');
     body.innerHTML =
       '<div class="text-muted text-sm mb-2">' + PCD.escapeHtml(st.name + ' · ' + dayLabel(data.weekStart, day)) + '</div>' +
-      (tplBtns ? '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">' + tplBtns + '</div>' : '') +
+      '<div style="' + grpHd + '">' + PCD.escapeHtml(t('roster_shift_time') || 'Shift time') + '</div>' +
+      (tplBtns ? '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">' + tplBtns + '</div>' : '') +
       '<div class="field-row"><div class="field"><label class="field-label">' + PCD.escapeHtml(t('roster_start') || 'Start') + '</label><input type="time" class="input" id="cStart" value="' + PCD.escapeHtml(cur.start || '') + '"></div>' +
       '<div class="field"><label class="field-label">' + PCD.escapeHtml(t('roster_end') || 'End') + '</label><input type="time" class="input" id="cEnd" value="' + PCD.escapeHtml(cur.end || '') + '"></div></div>' +
-      '<div class="field"><label class="field-label">' + PCD.escapeHtml(t('roster_note') || 'Note') + '</label><input type="text" class="input" id="cNote" value="' + PCD.escapeHtml(cur.note || '') + '" placeholder="' + PCD.escapeHtml(t('roster_note_ph') || 'optional') + '"></div>';
+      '<div class="field"><label class="field-label">' + PCD.escapeHtml(t('roster_note') || 'Note') + '</label><input type="text" class="input" id="cNote" value="' + PCD.escapeHtml(cur.note || '') + '" placeholder="' + PCD.escapeHtml(t('roster_note_ph') || 'optional') + '"></div>' +
+      '<div style="border-top:1px solid var(--border);margin:12px 0 10px;"></div>' +
+      '<div style="' + grpHd + '">' + PCD.escapeHtml(t('roster_status_or') || 'Or mark as leave / day off') + '</div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;">' + statusBtns + '</div>';
     const save = PCD.el('button', { class: 'btn btn-primary', text: t('save') || 'Save', style: { flex: '1' } });
     const clear = PCD.el('button', { class: 'btn btn-ghost', text: t('roster_clear') || 'Clear', style: { color: 'var(--danger)' } });
     const cancel = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') || 'Cancel' });
@@ -373,47 +469,110 @@
       const tp = (data.templates || []).find(function (x) { return x.id === id; });
       if (tp) { PCD.$('#cStart', body).value = tp.start || ''; PCD.$('#cEnd', body).value = tp.end || ''; }
     });
+    // v2.15.4 — Durum kodu tek tıkla uygula (vardiya saatini temizler)
+    PCD.on(body, 'click', '[data-pick-status]', function () {
+      const id = this.getAttribute('data-pick-status');
+      data.cells[sid][day] = { status: id };
+      persist(data); m.close(); render(view);
+    });
     cancel.addEventListener('click', function () { m.close(); });
     clear.addEventListener('click', function () { delete data.cells[sid][day]; persist(data); m.close(); render(view); });
     save.addEventListener('click', function () {
       const s = PCD.$('#cStart', body).value, e = PCD.$('#cEnd', body).value;
+      // v2.15.4 — Saat girilince durum kodunu temizle (ikisi bir arada olmaz)
       if (!s || !e) { delete data.cells[sid][day]; } else { data.cells[sid][day] = { start: s, end: e, note: (PCD.$('#cNote', body).value || '').trim() }; }
       persist(data); m.close(); render(view);
     });
   }
 
   // ============ OUTPUTS ============
+  // v2.15.4 — Excel için düz satırlar: departman ayraç satırları + durum kodları.
+  // (Ortak PCD.xlsx motoru hücre rengini desteklemez → kodlar metin; print renkli.)
   function rosterRows(data, showCost) {
-    // returns { headers, rows, align } for table/excel
-    const dayCount = data.dayCount || 7;
-    const headers = [t('roster_staff') || 'Staff'];
-    for (let d = 0; d < dayCount; d++) headers.push(dayLabel(data.weekStart, d));
-    headers.push(t('roster_hours') || 'Hours');
+    const mx = rosterMatrix(data);
+    const headers = [t('roster_staff') || 'Staff', t('roster_staff_role') || 'Role'];
+    mx.days.forEach(function (d) { headers.push(d); });
+    const hoursIdx = headers.length; headers.push(t('roster_hours') || 'Hours');
     if (showCost) headers.push(t('roster_labour_cost') || 'Cost');
+    const ncol = headers.length;
     const rows = [];
-    (data.staff || []).forEach(function (st) {
-      const cells = (data.cells && data.cells[st.id]) || {};
-      const row = [st.name + (st.role ? ' (' + st.role + ')' : '')];
-      for (let d = 0; d < dayCount; d++) { const c = cells[d]; row.push(c && c.start && c.end ? (c.start + '-' + c.end + (c.note ? ' ' + c.note : '')) : '—'); }
-      row.push(PCD.fmtNumber(staffHours(data, st.id)));
-      if (showCost) row.push(staffCost(data, st) > 0 ? PCD.fmtMoney(staffCost(data, st)) : '—');
-      rows.push(row);
+    mx.groups.forEach(function (g) {
+      if (g.name) { const gr = []; for (let i = 0; i < ncol; i++) gr.push(''); gr[0] = g.name; rows.push(gr); }
+      g.rows.forEach(function (row) {
+        const r = [row.staff.name, row.staff.role || ''];
+        row.cells.forEach(function (cell) { r.push(cell.text || '—'); });
+        r.push(PCD.fmtNumber(row.hours));
+        if (showCost) r.push(row.cost > 0 ? PCD.fmtMoney(row.cost) : '—');
+        rows.push(r);
+      });
     });
-    const align = headers.map(function (_, i) { return i === 0 ? 'left' : (i >= dayCount + 1 ? 'right' : 'center'); });
+    const align = headers.map(function (_, i) { return i <= 1 ? 'left' : 'center'; });
+    align[hoursIdx] = 'right'; if (showCost) align[hoursIdx + 1] = 'right';
     return { headers: headers, rows: rows, align: align };
   }
 
+  // v2.15.4 — Renkli profesyonel print: üstte mutfak/departman başlık bandı,
+  // koyu başlık satırı, departman grupları, renkli durum hücreleri, lejant.
+  // print-color-adjust:exact → "Background graphics" kapalıyken bile renkler basar.
   function printRoster(data, showCost) {
-    const tbl = rosterRows(data, showCost);
+    const esc = PCD.escapeHtml;
+    const mx = rosterMatrix(data);
     const tot = rosterTotals(data);
-    let body = '<h1>' + PCD.escapeHtml(data.name || (t('roster_title') || 'Roster')) + '</h1>' +
-      '<div class="meta">' + PCD.escapeHtml(weekRange(data)) + '</div><table><thead><tr>' +
-      tbl.headers.map(function (h) { return '<th>' + PCD.escapeHtml(h) + '</th>'; }).join('') + '</tr></thead><tbody>' +
-      tbl.rows.map(function (r) { return '<tr>' + r.map(function (c, i) { return '<td' + (i === 0 ? '' : ' style="text-align:center;"') + '>' + PCD.escapeHtml(c) + '</td>'; }).join('') + '</tr>'; }).join('') +
-      '</tbody></table>' +
-      '<div class="tot">' + PCD.escapeHtml(t('roster_total_hours') || 'Total hours') + ': <b>' + PCD.fmtNumber(tot.hours) + '</b>' + (showCost && tot.cost > 0 ? ' · ' + PCD.escapeHtml(t('roster_labour_cost') || 'Labour cost') + ': <b>' + PCD.fmtMoney(tot.cost) + '</b>' : '') + '</div>';
-    const html = '<style>@page{size:A4 landscape;margin:12mm;}body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#1a1a1a;}h1{font-size:20pt;margin:0;color:#16a34a;}.meta{color:#666;margin:2px 0 12px;font-size:11pt;}table{width:100%;border-collapse:collapse;font-size:9pt;}th,td{border:1px solid #ddd;padding:4px 6px;}th{background:#16a34a;color:#fff;font-size:8.5pt;}.tot{margin-top:12px;font-size:11pt;}</style>' + body;
-    PCD.print(html, (t('roster_title') || 'Roster') + ' ' + data.weekStart);
+    const ndays = mx.days.length;
+    const ncol = 2 + ndays + 1 + (showCost ? 1 : 0);
+    const title = data.venue || data.name || (t('roster_title') || 'Roster');
+    const subParts = [];
+    if (data.venue && data.name) subParts.push(data.name);
+    subParts.push(weekRange(data));
+
+    let thead = '<tr><th class="nm">' + esc(t('roster_staff') || 'Staff') + '</th><th class="nm">' + esc(t('roster_staff_role') || 'Role') + '</th>';
+    mx.days.forEach(function (d) { thead += '<th>' + esc(d) + '</th>'; });
+    thead += '<th>' + esc(t('roster_hours') || 'H') + '</th>';
+    if (showCost) thead += '<th>' + esc(t('roster_labour_cost') || 'Cost') + '</th>';
+    thead += '</tr>';
+
+    let tbody = '';
+    mx.groups.forEach(function (g) {
+      if (g.name) tbody += '<tr class="grp"><td colspan="' + ncol + '">' + esc(g.name) + '</td></tr>';
+      g.rows.forEach(function (row) {
+        tbody += '<tr><td class="nm">' + esc(row.staff.name) + '</td><td class="rl">' + esc(row.staff.role || '') + '</td>';
+        row.cells.forEach(function (cell) {
+          if (cell.status) { const sd = statusDef(cell.status); tbody += '<td class="st" style="background:' + (sd ? sd.fill : '#eee') + ';color:' + (sd ? sd.color : '#333') + ';">' + esc(cell.status) + '</td>'; }
+          else tbody += '<td>' + esc(cell.text || '') + '</td>';
+        });
+        tbody += '<td class="num">' + PCD.fmtNumber(row.hours) + '</td>';
+        if (showCost) tbody += '<td class="num">' + (row.cost > 0 ? PCD.fmtMoney(row.cost) : '—') + '</td>';
+        tbody += '</tr>';
+      });
+    });
+
+    const usedStatus = {};
+    mx.groups.forEach(function (g) { g.rows.forEach(function (row) { row.cells.forEach(function (c) { if (c.status) usedStatus[c.status] = true; }); }); });
+    const legendItems = ROSTER_STATUS.filter(function (s) { return usedStatus[s.id]; });
+    const legend = legendItems.length ? '<div class="legend">' + legendItems.map(function (s) { return '<span class="lg"><b style="background:' + s.fill + ';color:' + s.color + ';border:1px solid ' + s.color + ';">' + esc(s.id) + '</b> ' + esc(t(s.labelKey) || s.id) + '</span>'; }).join('') + '</div>' : '';
+    const totLine = '<div class="tot">' + esc(t('roster_total_hours') || 'Total hours') + ': <b>' + PCD.fmtNumber(tot.hours) + '</b>' + (showCost && tot.cost > 0 ? ' &nbsp;·&nbsp; ' + esc(t('roster_labour_cost') || 'Labour cost') + ': <b>' + PCD.fmtMoney(tot.cost) + '</b>' : '') + '</div>';
+    const band = '<div class="band"><div class="bt">' + esc(title) + '</div><div class="bs">' + esc(subParts.join('  ·  ')) + '</div></div>';
+    const body = band + '<table><thead>' + thead + '</thead><tbody>' + tbody + '</tbody></table>' + legend + totLine;
+    const css = '<style>'
+      + '@page{size:A4 landscape;margin:10mm;}'
+      + 'body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#1a1a1a;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
+      + '.band{background:#16a34a;color:#fff;padding:10px 14px;border-radius:6px;margin-bottom:10px;}'
+      + '.band .bt{font-size:19pt;font-weight:800;}'
+      + '.band .bs{font-size:10.5pt;opacity:0.93;margin-top:2px;}'
+      + 'table{width:100%;border-collapse:collapse;font-size:8.5pt;}'
+      + 'th,td{border:1px solid #c7c7c7;padding:4px 5px;text-align:center;}'
+      + 'th{background:#1f3b30;color:#fff;font-size:8pt;text-transform:uppercase;letter-spacing:0.02em;}'
+      + 'th.nm{text-align:left;}'
+      + 'td.nm{text-align:left;font-weight:700;}'
+      + 'td.rl{text-align:left;color:#555;}'
+      + 'td.num{font-weight:700;}'
+      + 'td.st{font-weight:800;}'
+      + 'tr.grp td{background:#cfe0ee;color:#1f3b30;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;text-align:left;}'
+      + '.legend{margin-top:10px;font-size:9pt;display:flex;gap:14px;flex-wrap:wrap;}'
+      + '.legend .lg b{display:inline-block;min-width:24px;text-align:center;padding:1px 5px;border-radius:4px;margin-right:4px;font-size:8pt;}'
+      + '.tot{margin-top:10px;font-size:11pt;}'
+      + '</style>';
+    PCD.print(css + body, (data.venue || t('roster_title') || 'Roster') + ' ' + data.weekStart);
   }
 
   function excelRoster(data, showCost) {
@@ -422,7 +581,7 @@
       const tbl = rosterRows(data, showCost);
       PCD.xlsx.save(XLSX, [{
         name: 'Roster',
-        title: (data.name || (t('roster_title') || 'Roster')) + ' — ' + weekRange(data),
+        title: (data.venue || data.name || (t('roster_title') || 'Roster')) + ' — ' + weekRange(data),
         headers: tbl.headers, rows: tbl.rows, align: tbl.align,
       }], (t('roster_title') || 'Roster').replace(/\s+/g, '-').toLowerCase() + '-' + data.weekStart + '.xlsx');
     };
@@ -432,17 +591,25 @@
   }
 
   function buildShareText(data, showCost) {
-    const dayCount = data.dayCount || 7;
+    const loc = (PCD.i18n && PCD.i18n.currentLocale) || 'en';
+    const mx = rosterMatrix(data);
     const lines = [];
-    lines.push((data.name || (t('roster_title') || 'Roster')) + ' — ' + weekRange(data));
-    lines.push('');
-    (data.staff || []).forEach(function (st) {
-      const cells = (data.cells && data.cells[st.id]) || {};
-      const parts = [];
-      for (let d = 0; d < dayCount; d++) { const c = cells[d]; if (c && c.start && c.end) parts.push(addDays(data.weekStart, d).toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || 'en', { weekday: 'short' }) + ' ' + c.start + '-' + c.end); }
-      let line = st.name + ': ' + (parts.length ? parts.join(', ') : (t('roster_off') || 'off'));
-      if (showCost && staffCost(data, st) > 0) line += '  (' + PCD.fmtNumber(staffHours(data, st.id)) + 'h · ' + PCD.fmtMoney(staffCost(data, st)) + ')';
-      lines.push(line);
+    lines.push(data.venue || data.name || (t('roster_title') || 'Roster'));
+    lines.push(weekRange(data) + (data.venue && data.name ? '  ·  ' + data.name : ''));
+    mx.groups.forEach(function (g) {
+      lines.push('');
+      if (g.name) lines.push('— ' + g.name + ' —');
+      g.rows.forEach(function (row) {
+        const parts = [];
+        row.cells.forEach(function (cell, d) {
+          const wd = addDays(data.weekStart, d).toLocaleDateString(loc, { weekday: 'short' });
+          if (cell.status) { if (cell.status !== 'OFF') parts.push(wd + ' ' + cell.status); }
+          else if (cell.text) parts.push(wd + ' ' + cell.text);
+        });
+        let line = row.staff.name + ': ' + (parts.length ? parts.join(', ') : (t('roster_off') || 'off'));
+        if (showCost && row.cost > 0) line += '  (' + PCD.fmtNumber(row.hours) + 'h · ' + PCD.fmtMoney(row.cost) + ')';
+        lines.push(line);
+      });
     });
     const tot = rosterTotals(data);
     lines.push('');

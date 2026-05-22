@@ -139,6 +139,38 @@
     { id: 'a_se', code: 'SE', group: 'allergen', labelKey: 'menu_code_a_se' },
   ];
 
+  // v2.15.4 — Tarif menü öğesinde alerjenleri OTOMATİK göster.
+  // allergens-db EU key → menü "içerir" kodu (a_*). recipeAllergens() tarifin
+  // ingredient'larına chef'in elle eklediği allergen tag'lerinden gelir
+  // (isimden tahmin YOK — v2.8.37). Menü öğesi bir recipe ise bu kodlar
+  // otomatik görünür; ORİJİNAL TARİFE DOKUNMAZ (sadece okuma). Diyet kodları
+  // (v/vg/gf/df…) güvenle türetilemez → manuel kalır.
+  const ALLERGEN_KEY_TO_CODE = {
+    gluten: 'a_g', nuts: 'a_n', peanuts: 'a_n', dairy: 'a_d', eggs: 'a_e',
+    fish: 'a_f', crustaceans: 'a_sf', molluscs: 'a_sf', soybeans: 'a_s', sesame: 'a_se',
+  };
+  function autoAllergenCodeIds(it) {
+    if (!it || !it.recipeId || !PCD.allergensDB || !PCD.allergensDB.recipeAllergens) return [];
+    const r = PCD.store && PCD.store.getRecipe ? PCD.store.getRecipe(it.recipeId) : null;
+    if (!r) return [];
+    let ings = [];
+    try { ings = (PCD.store && PCD.store.listIngredients) ? PCD.store.listIngredients() : []; } catch (e) { ings = []; }
+    const keys = PCD.allergensDB.recipeAllergens(r, ings) || [];
+    const out = [];
+    keys.forEach(function (k) {
+      const id = ALLERGEN_KEY_TO_CODE[k];
+      if (id && out.indexOf(id) < 0) out.push(id);
+    });
+    return out;
+  }
+  // Görünüm için birleşik kodlar: manuel (it.codes) ∪ tariften otomatik alerjen.
+  function displayCodeIds(it) {
+    const manual = Array.isArray(it.codes) ? it.codes : [];
+    const merged = manual.slice();
+    autoAllergenCodeIds(it).forEach(function (id) { if (merged.indexOf(id) < 0) merged.push(id); });
+    return merged;
+  }
+
   // v2.8.69 — Sayfa boyutu seçenekleri.
   const PAGE_SIZES = [
     { id: 'a4',        labelKey: 'menu_page_a4',        cssSize: 'A4',           orientation: 'portrait'  },
@@ -440,40 +472,8 @@
             <option value="codes"${((data.allergenStyle || (data.hideAllergens ? 'off' : 'codes')) === 'codes') ? ' selected' : ''}>${PCD.escapeHtml(t('menu_allergen_codes') || 'Letter codes (gf, N…) + legend')}</option>
             <option value="off"${((data.allergenStyle || (data.hideAllergens ? 'off' : 'codes')) === 'off') ? ' selected' : ''}>${PCD.escapeHtml(t('menu_allergen_off') || 'Off')}</option>
           </select>
+          <div class="field-hint">${PCD.escapeHtml(t('menu_allergen_info_hint') || 'Codes are shown next to each dish for guest information only. Recipe items show their allergens automatically; add any extra by tapping Codes.')}</div>
         </div>
-
-        <!-- v2.8.71 — Allergen-safe print filter. Real-world: special menu
-             for a coeliac event or a peanut-free childrens' birthday.
-             Toggle one or more allergen filters; the print/preview only
-             includes dishes that pass. The full menu data is not modified.
-             v2.10.3 — Diet (vegan/vegetarian) seçenekleri kaldırıldı, sadece
-             allergens-db auto-detect kullanılır (gluten/dairy/nuts/fish). -->
-        <details class="field" style="border:1px solid ${(data.safePrintFilter && data.safePrintFilter.length) ? 'var(--danger)' : 'var(--border)'};border-radius:var(--r-md);padding:10px 12px;background:var(--surface-2);"${(data.safePrintFilter && data.safePrintFilter.length) ? ' open' : ''}>
-          <summary style="cursor:pointer;font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:0.04em;color:${(data.safePrintFilter && data.safePrintFilter.length) ? 'var(--danger)' : 'var(--text-2)'};">🛡 ${PCD.escapeHtml(t('menu_safe_print_title') || 'Allergen-safe print')}${(data.safePrintFilter && data.safePrintFilter.length) ? ' · ' + data.safePrintFilter.length + ' ' + PCD.escapeHtml(t('menu_filter_active') || 'active (hides non-matching dishes)') : ''}</summary>
-          <div style="margin-top:10px;">
-            <div class="text-muted text-sm mb-2" style="font-size:12px;">${PCD.escapeHtml(t('menu_safe_print_hint') || 'Print/preview only items that have ALL the selected codes (diet + allergen). Empty = show all.')}</div>
-            ${(function () {
-              // v2.14.8 — Filtre artık manuel kodlara (it.codes) göre: seçili TÜM
-              // kodları taşıyan öğeler basılır. Diyet (v/vg/gf/gfo/df/dfo/nf/h) +
-              // "içerir" alerjen (N/G/D/E/F/SF/S/SE). Tarifsiz öğelerde de çalışır.
-              const arr = Array.isArray(data.safePrintFilter) ? data.safePrintFilter : [];
-              function chip(c) {
-                const active = arr.indexOf(c.id) >= 0;
-                const lbl = PCD.escapeHtml((c.code ? c.code + ' · ' : '') + (t(c.labelKey) || c.id));
-                return '<button type="button" class="chip" data-safeprint="' + c.id + '" style="cursor:pointer;background:' + (active ? 'var(--brand-50)' : 'var(--surface)') + ';border:1px solid ' + (active ? 'var(--brand-600)' : 'var(--border-strong)') + ';color:' + (active ? 'var(--brand-700)' : 'var(--text-2)') + ';font-weight:' + (active ? '700' : '500') + ';">' + lbl + '</button>';
-              }
-              const grpStyle = 'font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-3);margin:2px 0 5px;';
-              const rowStyle = 'display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px;';
-              const diet = MENU_CODES.filter(function (c) { return c.group === 'diet'; });
-              const allerg = MENU_CODES.filter(function (c) { return c.group === 'allergen'; });
-              return '<div style="' + grpStyle + '">' + PCD.escapeHtml(t('menu_codes_group_diet') || 'Dietary / suitability') + '</div>' +
-                '<div style="' + rowStyle + '">' + diet.map(chip).join('') + '</div>' +
-                '<div style="' + grpStyle + '">' + PCD.escapeHtml(t('menu_codes_group_allergen') || 'Allergen — contains') + '</div>' +
-                '<div style="display:flex;gap:6px;flex-wrap:wrap;">' + allerg.map(chip).join('') + '</div>';
-            })()}
-            ${(data.safePrintFilter && data.safePrintFilter.length) ? '<button type="button" class="btn btn-outline btn-sm" id="clearSafeFilter" style="margin-top:10px;color:var(--danger);border-color:var(--danger);">' + PCD.icon('x', 14) + ' ' + PCD.escapeHtml(t('menu_filter_clear') || 'Clear filter — show all dishes') + '</button>' : ''}
-          </div>
-        </details>
       `;
 
       // Render sections
@@ -526,6 +526,12 @@
             ? MENU_CODES.filter(function (c) { return selCodes.indexOf(c.id) >= 0; }).map(function (c) { return c.code; }).join(' · ')
             : ('+ ' + (PCD.i18n.t('menu_codes_btn') || 'Codes'));
           const codesBtnHtml = '<button type="button" class="btn btn-outline btn-sm" data-itemcodes="' + sIdx + ':' + iIdx + '" style="padding:2px 8px;min-height:24px;font-size:11px;margin-top:4px;margin-left:6px;vertical-align:top;">' + PCD.escapeHtml(codesText) + '</button>';
+          // v2.15.4 — Tariften otomatik gelen alerjenler (info; orijinal recipe'e dokunmaz)
+          const autoIds = autoAllergenCodeIds(it);
+          const autoText = autoIds.length ? MENU_CODES.filter(function (c) { return autoIds.indexOf(c.id) >= 0; }).map(function (c) { return c.code; }).join(' ') : '';
+          const autoHintHtml = autoText
+            ? '<span title="' + PCD.escapeHtml(PCD.i18n.t('menu_codes_auto_hint') || 'Allergens from this recipe (automatic)') + '" style="display:inline-block;margin-top:5px;margin-left:6px;font-size:10px;font-weight:700;color:var(--text-3);vertical-align:top;">⟲ ' + PCD.escapeHtml((PCD.i18n.t('menu_codes_auto_prefix') || 'recipe:') + ' ' + autoText) + '</span>'
+            : '';
           // Manual items: editable name field. Recipe items: static name.
           // v2.8.56 — Drag handle eklendi; aynı section içinde sıralama.
           if (isManual) {
@@ -534,7 +540,7 @@
               <div style="flex:1;min-width:0;">
                 <input type="text" class="input" data-itemname="${sIdx}:${iIdx}" value="${PCD.escapeHtml(name)}" placeholder="${PCD.i18n.t('menu_item_name_ph') || 'Dish name'}" style="padding:4px 8px;min-height:26px;font-size:14px;font-weight:600;">
                 <input type="text" class="input" data-itemdesc="${sIdx}:${iIdx}" value="${PCD.escapeHtml(it.description || '')}" placeholder="${PCD.i18n.t('menu_item_desc_ph')}" style="padding:4px 8px;min-height:26px;font-size:12px;margin-top:4px;">
-                <select class="select" data-itembadge="${sIdx}:${iIdx}" style="padding:2px 6px;min-height:24px;font-size:11px;margin-top:4px;max-width:160px;">${badgeOpts}</select>${codesBtnHtml}
+                <select class="select" data-itembadge="${sIdx}:${iIdx}" style="padding:2px 6px;min-height:24px;font-size:11px;margin-top:4px;max-width:160px;">${badgeOpts}</select>${codesBtnHtml}${autoHintHtml}
               </div>
               <input type="number" class="input" data-itemprice="${sIdx}:${iIdx}" value="${it.price || ''}" placeholder="0" step="0.01" min="0" style="width:70px;padding:4px 8px;min-height:26px;font-size:13px;">
               <button class="icon-btn" data-itemdel="${sIdx}:${iIdx}">${PCD.icon('x',14)}</button>
@@ -545,7 +551,7 @@
               <div style="flex:1;min-width:0;">
                 <div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${PCD.escapeHtml(name)}</div>
                 <input type="text" class="input" data-itemdesc="${sIdx}:${iIdx}" value="${PCD.escapeHtml(it.description || '')}" placeholder="${PCD.i18n.t('menu_item_desc_ph')}" style="padding:4px 8px;min-height:26px;font-size:12px;margin-top:4px;">
-                <select class="select" data-itembadge="${sIdx}:${iIdx}" style="padding:2px 6px;min-height:24px;font-size:11px;margin-top:4px;max-width:160px;">${badgeOpts}</select>${codesBtnHtml}
+                <select class="select" data-itembadge="${sIdx}:${iIdx}" style="padding:2px 6px;min-height:24px;font-size:11px;margin-top:4px;max-width:160px;">${badgeOpts}</select>${codesBtnHtml}${autoHintHtml}
               </div>
               <input type="number" class="input" data-itemprice="${sIdx}:${iIdx}" value="${it.price || defaultPrice}" placeholder="${defaultPrice}" step="0.01" min="0" style="width:70px;padding:4px 8px;min-height:26px;font-size:13px;">
               <button class="icon-btn" data-itemdel="${sIdx}:${iIdx}">${PCD.icon('x',14)}</button>
@@ -681,20 +687,6 @@
         const fEl = PCD.$('#menuFooter', body);
         if (fEl) fEl.value = data.footer;
       });
-      // v2.8.71 — Safe-print filter chip toggle (multi-select; print/preview
-       // filters items not satisfying ALL active "free from" categories).
-      PCD.on(body, 'click', '[data-safeprint]', function () {
-        const k = this.getAttribute('data-safeprint');
-        if (!Array.isArray(data.safePrintFilter)) data.safePrintFilter = [];
-        const i = data.safePrintFilter.indexOf(k);
-        if (i >= 0) data.safePrintFilter.splice(i, 1);
-        else data.safePrintFilter.push(k);
-        render();
-      });
-      // v2.14.8 fix — Filtreyi tek tıkla temizle (sessiz "yemek kayboldu" sorununu önler)
-      const _clearFilterBtn = PCD.$('#clearSafeFilter', body);
-      if (_clearFilterBtn) _clearFilterBtn.addEventListener('click', function () { data.safePrintFilter = []; render(); });
-
       // v2.8.68 — Item badge dropdown
       PCD.on(body, 'change', '[data-itembadge]', function () {
         const parts = this.getAttribute('data-itembadge').split(':').map(Number);
@@ -711,17 +703,19 @@
         const sec = data.sections[sIdx];
         const it = sec && sec.items[iIdx];
         if (!it) return;
+        const autoIdsP = autoAllergenCodeIds(it);
         const pickerItems = MENU_CODES.map(function (c) {
+          const isAuto = autoIdsP.indexOf(c.id) >= 0;
           return {
             id: c.id,
-            name: '(' + c.code + ')  ' + (PCD.i18n.t(c.labelKey) || c.id),
-            meta: c.group === 'diet'
+            name: '(' + c.code + ')  ' + (PCD.i18n.t(c.labelKey) || c.id) + (isAuto ? '  ⟲' : ''),
+            meta: (isAuto ? (PCD.i18n.t('menu_codes_auto_meta') || 'Auto from recipe') + ' · ' : '') + (c.group === 'diet'
               ? (PCD.i18n.t('menu_codes_group_diet') || 'Dietary / suitability')
-              : (PCD.i18n.t('menu_codes_group_allergen') || 'Allergen — contains'),
+              : (PCD.i18n.t('menu_codes_group_allergen') || 'Allergen — contains')),
           };
         });
         PCD.picker.open({
-          title: PCD.i18n.t('menu_codes_picker_title') || 'Diet & allergen codes',
+          title: (PCD.i18n.t('menu_codes_picker_title') || 'Diet & allergen codes') + (autoIdsP.length ? '  ·  ⟲ ' + MENU_CODES.filter(function (c) { return autoIdsP.indexOf(c.id) >= 0; }).map(function (c) { return c.code; }).join(' ') : ''),
           items: pickerItems, multi: true,
           selected: Array.isArray(it.codes) ? it.codes : [],
         }).then(function (sel) {
@@ -957,30 +951,11 @@
       return ' <span class="m-itembadge" style="background:' + b.color + '20;color:' + b.color + ';border:1px solid ' + b.color + '60;' + extra + '">' + PCD.escapeHtml(content) + '</span>';
     }
 
-    // v2.8.71 — Safe-print filter: drop any item that fails any active "free from"
-    // category. Manual items (no recipe link) cannot be verified, so they
-    // are excluded when ANY filter is active (chef can't certify them anyway).
-    // v2.10.3 — Diet (vegan/vegetarian) path kaldırıldı, sadece allergens-db
-    // auto-detect kullanılır. gluten/dairy/nuts/fish hepsi allergen tag'leri.
-    const safeFilters = Array.isArray(menu.safePrintFilter) ? menu.safePrintFilter : [];
-    function itemPassesSafeFilter(it) {
-      if (!safeFilters.length) return true;
-      // v2.14.8 — Manuel kodlara göre filtre: öğe, seçili TÜM kodları it.codes'ında
-      // taşımalı. Diyet kodu seçilirse (gf/vg…) o uygunluktaki öğeler; "içerir"
-      // alerjen kodu seçilirse (N/G…) o alerjeni taşıyan öğeler basılır. Tarifsiz
-      // öğeler de it.codes ile çalışır (eski auto-detect onları eliyordu).
-      const codes = Array.isArray(it.codes) ? it.codes : [];
-      for (let i = 0; i < safeFilters.length; i++) {
-        const k = safeFilters[i];
-        if (!MENU_CODES.find(function (c) { return c.id === k; })) continue; // eski/bilinmeyen filtre değerini yok say
-        if (codes.indexOf(k) < 0) return false;
-      }
-      return true;
-    }
-
-    // v2.14.1 — Manuel diyet+alerjen harf kodları (her öğenin it.codes dizisi).
-    // Otomatik tahmin yok. Küçük harf = diyet/uygunluk, BÜYÜK = "içerir" alerjen.
-    // allergenStyle: 'codes' (göster) | 'off' (gizle). Back-compat: hideAllergens=true → 'off'.
+    // v2.15.4 — Alerjen/diyet kodları SADECE BİLGİ amaçlı (uyarı/yasak/filtre DEĞİL).
+    // Eskiden bir "allergen-safe print" filtresi eşleşmeyen yemekleri gizliyordu →
+    // kavramsal yanlış + "yemeğim kayboldu" bug'ı. Kaldırıldı: tüm öğeler her zaman
+    // basılır. Kod görünümü: küçük harf = diyet/uygunluk (manuel), BÜYÜK = "içerir"
+    // alerjen (tariften OTOMATİK + manuel). allergenStyle: 'codes' (göster) | 'off'.
     const allergenStyle = menu.allergenStyle || (menu.hideAllergens ? 'off' : 'codes');
     // v2.14.5 — Fiyat gösterim stili: symbol ($24) | plain (24, Cornell simgesiz) | hidden
     const priceStyle = menu.priceStyle || (menu.hidePrices ? 'hidden' : 'symbol');
@@ -992,29 +967,35 @@
     let sectionsBody = '';
     (menu.sections || []).forEach(function (sec) {
       if (!sec.items || sec.items.length === 0) return;
-      const safeItems = (sec.items || []).filter(itemPassesSafeFilter);
-      if (!safeItems.length) return; // v2.8.71 — skip entire section if no items pass
+      // v2.15.4 — Filtre kaldırıldı: geçerli (adı olan / tarifi duran) tüm öğeler.
+      const visibleItems = (sec.items || []).filter(function (it) {
+        if (it.recipeId) return !!recipeMap[it.recipeId];
+        return !!(it.customName || '').trim();
+      });
+      if (!visibleItems.length) return; // boş bölümü atla
       sectionsBody += '<div class="m-section">';
       sectionsBody += '<div class="m-section-title">' + PCD.escapeHtml(sec.name || '') + '</div>';
       sectionsBody += '<div class="m-items">';
-      safeItems.forEach(function (it) {
+      visibleItems.forEach(function (it) {
         const r = it.recipeId ? recipeMap[it.recipeId] : null;
         const isManual = !it.recipeId;
-        if (!r && !isManual) return;
-        if (isManual && !(it.customName || '').trim()) return;
         const itemName = isManual ? (it.customName || '') : (r ? r.name : '(removed)');
         const price = (it.price !== undefined && it.price !== null && it.price !== '') ? Number(it.price) : (r && r.salePrice ? r.salePrice : 0);
         const desc = it.description || (r && r.plating) || '';
 
-        // v2.14.1 — Manuel harf kodları (it.codes). Yemek adı yanında "(gf) (gfo) (N)".
+        // v2.15.4 — Gösterilen kodlar = manuel (it.codes) ∪ tariften otomatik alerjen.
+        // Yemek adı yanında "(gf) (gfo) (N)". Sadece bilgi.
         let allergenCodes = '';
-        if (showAllergens && Array.isArray(it.codes) && it.codes.length) {
-          const parts = [];
-          MENU_CODES.forEach(function (c) {
-            if (it.codes.indexOf(c.id) >= 0) { parts.push('(' + c.code + ')'); usedCodes[c.id] = true; }
-          });
-          if (parts.length) {
-            allergenCodes = '<span class="m-codes">' + parts.join(' ') + '</span>';
+        if (showAllergens) {
+          const ids = displayCodeIds(it);
+          if (ids.length) {
+            const parts = [];
+            MENU_CODES.forEach(function (c) {
+              if (ids.indexOf(c.id) >= 0) { parts.push('(' + c.code + ')'); usedCodes[c.id] = true; }
+            });
+            if (parts.length) {
+              allergenCodes = '<span class="m-codes">' + parts.join(' ') + '</span>';
+            }
           }
         }
 
@@ -1030,13 +1011,6 @@
       });
       sectionsBody += '</div></div>';
     });
-
-    // v2.14.8 fix — Filtre TÜM öğeleri gizliyorsa önizleme/print sessizce boş
-    // kalmasın: net uyarı göster (operatör "yemeğim kayboldu" sanmasın).
-    const _totalItems = (menu.sections || []).reduce(function (a, s) { return a + ((s.items || []).length); }, 0);
-    const filterNotice = (sectionsBody.trim() === '' && _totalItems > 0 && safeFilters.length)
-      ? '<div style="text-align:center;padding:26px 16px;margin:10px 0;color:#b91c1c;font-size:13px;border:1px dashed #fca5a5;border-radius:8px;background:#fef2f2;">' + PCD.escapeHtml(t('menu_filter_hides_all') || 'All dishes are hidden by the active diet/allergen filter (Allergen-safe print). Clear the filter to show your dishes.') + '</div>'
-      : '';
 
     // v2.14.1 — Kod lejantı: menüde geçen kodları açıklar (registry sırası: diyet → alerjen).
     let allergenLegendHtml = '';
@@ -1225,7 +1199,6 @@
           '<div class="m-divider"></div>' +
         '</div>' +
         '<div class="m-sections">' + sectionsBody + '</div>' +
-        filterNotice +
         allergenLegendHtml +
         (menu.footer ? '<div class="m-footer">' + PCD.escapeHtml(menu.footer) + '</div>' : '') +
       '</div>'

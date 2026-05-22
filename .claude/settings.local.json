@@ -139,7 +139,12 @@
       "Bash(node -c app/js/i18n/ar.js)",
       "Bash(cygpath -w /tmp/old_shopping.js)",
       "Bash(node -c app/js/seed/demo-recipes.js)",
-      "Bash(node -c app/js/tools/roster.js)"
+      "Bash(node -c app/js/tools/roster.js)",
+      "Bash(npx --version)",
+      "Bash(curl -s -o /dev/null -w \"root=%{http_code}\\\\n\" http://localhost:8766/)",
+      "Bash(curl -s -o /dev/null -w \"app=%{http_code}\\\\n\" http://localhost:8766/app/)",
+      "Bash(curl -s -o /dev/null -w \"appindex=%{http_code}\\\\n\" http://localhost:8766/app/index.html)",
+      "Bash(curl -s -o /dev/null -w \"config=%{http_code}\\\\n\" \"http://localhost:8766/app/js/core/config.js?v=__VERSION__\")"
     ]
   }
 }
