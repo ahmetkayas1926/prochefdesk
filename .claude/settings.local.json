@@ -147,7 +147,8 @@
       "Bash(curl -s -o /dev/null -w \"config=%{http_code}\\\\n\" \"http://localhost:8766/app/js/core/config.js?v=__VERSION__\")",
       "Bash(curl -s -o /dev/null -w \"roster=%{http_code}\\\\n\" \"http://localhost:8766/app/js/tools/roster.js\")",
       "Bash(curl -s -o /dev/null -w \"app=%{http_code}\\\\n\" http://localhost:8766/app/index.html)",
-      "Bash(curl -s -o /dev/null -w \"config=%{http_code}\\\\n\" \"http://localhost:8766/app/js/core/config.js\")"
+      "Bash(curl -s -o /dev/null -w \"config=%{http_code}\\\\n\" \"http://localhost:8766/app/js/core/config.js\")",
+      "Bash(grep -iE \"\\\\.\\(env|pem|p12|key|pfx\\)$|credential|secret|service.?account|\\\\.npmrc\")"
     ]
   }
 }
