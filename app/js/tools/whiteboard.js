@@ -96,7 +96,7 @@
   // landscape'te dar olsa da bigNumber/allergen icon strip için yararlı.
   const LAYOUTS = ['full', 'half', 'third', 'quarter', 'fifth', 'sixth'];
   const LAYOUT_COLS = { full: 1, half: 2, third: 3, quarter: 4, fifth: 5, sixth: 6 };
-  // v2.16 — 12-column free grid. Eski layout isimleri backward-compat olarak karşılıklarına map'lenir.
+  // v2.16 — 12-col free grid. Eski isimler backward-compat olarak map'lenir.
   const LAYOUT_SPAN = {
     full: 12, half: 6, third: 4, quarter: 3, fifth: 2, sixth: 2,
     span1: 1, span2: 2, span3: 3, span4: 4, span5: 5, span6: 6,
@@ -656,7 +656,6 @@
     const span = layoutSpan(layout);
     const isSelected = idx === selectedIdx;
     const meta = blockTypeMeta(block.type);
-    // v2.16 — grid-column:span N ile 12-col free grid'e yerleşir.
     return '' +
       '<div class="wb-block wb-block-' + block.type + (isSelected ? ' wb-block-selected' : '') + '" data-blk-idx="' + idx + '" data-blk-id="' + PCD.escapeHtml(block.id) + '" data-layout="' + layout + '" style="' +
         'grid-column:span ' + span + ';' +
@@ -1070,7 +1069,10 @@
           const key = n === 12 ? 'full' : 'span' + n;
           const cur = block.layout || 'full';
           const isActive = layoutSpan(cur) === n;
-          return '<button type="button" data-set-layout="' + key + '" class="' + (isActive ? 'active' : '') + '" style="padding:4px 2px;font-size:11px;font-weight:700;" title="' + n + '/12">' + n + '</button>';
+          const activeStyle = isActive
+            ? 'background:var(--brand-600,#16a34a);color:#fff;border-color:var(--brand-600,#16a34a);'
+            : 'background:var(--surface-2);color:var(--text);border-color:var(--border);';
+          return '<button type="button" data-set-layout="' + key + '" style="padding:5px 2px;font-size:11px;font-weight:700;border:1px solid;border-radius:5px;cursor:pointer;' + activeStyle + '" title="' + n + '/12">' + n + '</button>';
         }).join('') +
       '</div>' +
     '</div>';
@@ -2138,6 +2140,7 @@
     else                       { pageW = isLand ? 297 : 210; pageH = isLand ? 210 : 297; }
 
     // v2.16 — tek 12-col grid; renderPrintBlock grid-column:span N ile yerleşir.
+    const blocks = canvas.blocks || [];
     const blocksHtml = '<div class="wb-print-grid12" style="display:grid;grid-template-columns:repeat(12,1fr);gap:10px;">' +
       blocks.map(renderPrintBlock).join('') +
     '</div>';
