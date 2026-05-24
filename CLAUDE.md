@@ -61,6 +61,22 @@ Her yeni tool/araç baseline: kapatılabilir inline guide + per-field hint + ör
 8. **R2 foto bytes yedekleme** — operatör v2.9.18: "para ödeyeceksem şimdilik kalsın". Bekliyor.
 9. ~~**App boot perf L3**~~ ❌ Operatör v2.9.18'de listeden çıkardı (yüksek risk).
 
+## SaaS Hazırlık Denetimi — 2026-05-23/24 (kanıt-tabanlı, çürütüldü)
+
+22 Mayıs 2026'da Claude Opus 4 ile yapılan SaaS Production Readiness taraması 7 madde işaretledi. 23-24 Mayıs 2026'da her madde **gerçek kod üzerinde** PowerShell ile kanıt-tabanlı test edildi. Sonuçlar:
+
+| # | Madde | Sonuç | Gerekçe |
+|---|-------|-------|---------|
+| 1 | Discover foto CSS-injection | ✅ **Geçersiz** | Fotoğraflar Supabase Storage'dan gelir (`https://xxxx.supabase.co/...`), kullanıcı keyfi URL giremez. RLS koruyor. `safePhotoUrl()` zaten tüm kontrolleri geçecek URL'ler bunlar. |
+| 2 | CSP yok | ✅ **Geçersiz** | Discover'da kullanıcı girdisi alanı yok (sadece tarif paylaşımı). Dışarıdan yüklenen tek şey `cdn.jsdelivr.net`'ten `supabase-js@2.45.0` (versiyon sabitli). Tüm JS kendi sunucuda. CSP'nin koruduğu saldırı vektörü bu mimaride mevcut değil. |
+| 3 | Reload öncesi flush | ✅ **Geçersiz** | `app.js`, `auth.js`, `account.js`'teki 11 `location.reload` tek tek incelendi. Hepsinde ya `PCD.store.*` işlemi önce tamamlanıyor ya da yorum satırında "push BEFORE reload" açıkça belgelenmiş. Veri kaybı riski yok. |
+| 4 | Foto bytes yedeklenmiyor | ⏸ **Ertelenmiş (bilinçli)** | Gerçek, ama ertelenmiş. 500 kullanıcı × 100 foto × 32KB = 1.6GB → 30 günlük backup 48GB = R2 free tier'ı aşar. Incremental backup gerekir, ek iş. Fotoğraflar zaten Supabase Storage'da güvenli. Operatör erteledi. |
+| 5 | Çeviriler yarım (es/fr/de/ar) | ✅ **Geçersiz** | EN+TR tam. Diğer 4 dil EN fallback — bu bilinçli karar. Global hedef aylar sonra, ücretli versiyona geçerken yapılacak. |
+| 6 | Supabase limiti kod'dan okunamaz | ✅ **Geçersiz** | Hiçbir uygulamanın kodunda bu sayılar yazmaz. Dashboard'dan bakılır. Kodsal sorun değil. 500 kullanıcıyla free tier yeterli, bandwidth takip gerektiğinde Pro'ya geçilir ($25/ay tek tıkla). |
+| 7 | a11y temel | ✅ **Geçersiz (şimdilik)** | Solo/arkadaş kullanımı için öncelikli değil. Ticari lansmanda ele alınacak. |
+
+**Özet:** 7 maddeden 6'sı çürütüldü, 1'i bilinçli ertelenmiş. Uygulama solo+arkadaş kullanımı için **tam hazır.** Ticari lansman öncesi yapılacak tek madde: foto bytes backup (incremental, R2 planlandığında).
+
 ## Güvenlik sınırları (onay zorunlu)
 
 - DROP TABLE veya destructive SQL

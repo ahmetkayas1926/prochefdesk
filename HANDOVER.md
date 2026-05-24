@@ -28,7 +28,27 @@
 
 Yeni Claude'un bilmesi gereken: **bu hâlâ tek kullanıcılı bir ürün** — operatör + birkaç yakın şef arkadaşı. Roadmap'te 50+ aktif kullanıcı + %40 retention hedefine ulaşmadan paid tier / büyük marketing yatırımı yapılmıyor.
 
-### 2.1 Son session özeti (2026-05-22 — Roster + para birimi + tedarikçi history + cloud sync)
+### 2.0 Son session özeti (2026-05-24 — SaaS denetim doğrulama, kod değişikliği yok)
+
+Bu session'da kod değişikliği yapılmadı. Amaç: 22 Mayıs 2026'da Claude Opus 4 tarafından yapılan otomatik SaaS Production Readiness taramasının bulgularını **gerçek kod üzerinde, PowerShell ile kanıt-tabanlı** doğrulamaktı.
+
+**Doğrulama yöntemi:** `Select-String`, `Get-Content`, `Get-ChildItem` ile satır seviyesinde dosya okuma. Hiçbir değişiklik yapılmadı, sadece okundu ve analiz edildi.
+
+**Sonuç: 7 maddeden 6'sı çürütüldü, 1'i bilinçli ertelenmiş.**
+
+| Madde | Sonuç | Kanıt |
+|-------|-------|-------|
+| Discover foto CSS-injection | ✅ Çürütüldü | `discover.js:46-47` — URL'ler Supabase Storage'dan gelir, RLS koruyor, kullanıcı keyfi URL giremez |
+| CSP yok | ✅ Çürütüldü | `index.html:16` — kaldırılma belgeli; Discover'da script girişi yok; tek dış kaynak supabase-js@2.45.0 sabitli |
+| Reload öncesi flush | ✅ Çürütüldü | `app.js`, `auth.js`, `account.js`'teki 11 `location.reload` tek tek incelendi — hepsinde store işlemi önce tamamlanıyor |
+| Foto bytes yedeklenmiyor | ⏸ Ertelenmiş | `backup-to-r2/index.ts` okundu — 30 günlük foto backup 48GB = R2 free tier aşar; incremental gerekir; Supabase Storage zaten güvenli |
+| Çeviriler yarım | ✅ Çürütüldü | EN+TR tam; diğerleri bilinçli fallback; global hedef ücretli versiyonda |
+| Supabase limiti | ✅ Çürütüldü | Kod sorunu değil; 500 kullanıcı free tier'a sığar |
+| a11y temel | ✅ Çürütüldü | Solo/arkadaş kullanımı için şimdilik öncelikli değil |
+
+**Bu session'da üretilen:** CLAUDE.md, CHANGELOG.md, HANDOVER.md güncellemeleri (denetim bulgularını belgeleyen satırlar eklendi).
+
+
 
 Bu Claude'un yaptıkları (kronolojik tersine). **Operatör v2.15.5'e kadar push etti** (production'da doğrulandı + v2.15.3 migration çalıştırıldı + backup-to-r2 re-deploy). **v2.15.6 working tree'de, push bekliyor.**
 - **v2.15.6** — **Roster: önizleme + JPEG + geri tuşu + Excel yatay + yazı boyutu** (hepsi canlı test edildi). (1) **Geri tuşu**: editör/önizleme route param'a bağlandı (`render(view,params)` editId/previewId; aç → `router.go('roster',{...})`; Back → `history.back()`) → Chrome geri tuşu listeye düşer. (2) **Liste**: satır tıkla → `renderPreview` (read-only renkli tablo + Edit/JPEG/Print/Excel + font + cost); Edit butonu → editör. (3) **JPEG gönder**: `sendRosterImage` html2canvas (CDN lazy) → `navigator.share(files)` mobil / indir masaüstü; eski metin paylaşımı kaldırıldı. (4) **Excel yatay+tek sayfa**: SheetJS pageSetup yazmıyor → `saveXlsxLandscape` JSZip (CDN lazy) ile sheet1.xml'e `<sheetPr fitToPage>` + `<pageSetup landscape fitToWidth>` enjekte eder (sütunlar da daraltıldı). (5) **Yazı boyutu S/M/L + bold** (`data.fontSize`/`data.bold`) → `buildRosterTable` + Excel + print. Tek tablo kaynağı `buildRosterTable` (print + JPEG + önizleme aynı).

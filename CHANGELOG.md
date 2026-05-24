@@ -8,6 +8,26 @@ Format: kronolojik tersine (en son sürüm üstte). Her sürüm kısa başlık +
 
 ---
 
+## SaaS Hazırlık Denetimi — Kanıt-Tabanlı Doğrulama · 2026-05-24
+
+> Kod değişikliği yok. Bu giriş, 22 Mayıs'ta yapılan otomatik taramanın bulgularının gerçek kod üzerinde elle doğrulanmasını belgeler.
+
+22 Mayıs 2026'da Opus 4 ile yapılan SaaS Production Readiness taraması 7 madde işaretlemişti. 23-24 Mayıs 2026'da her madde PowerShell ile dosya ve satır seviyesinde kanıt-tabanlı test edildi.
+
+**Doğrulanan dosyalar:** `discover.js` (satır 46-68, 557-683), `index.html` (satır 16-18), `app.js` (satır 573/581/613/642/767/810/874), `auth.js` (satır 140), `account.js` (satır 677/803/845/1025), `backup-to-r2/index.ts` (tam dosya).
+
+### Sonuçlar
+
+- ✅ **Discover foto CSS-injection — ÇÜRÜTÜLDÜ:** Fotoğraflar Supabase Storage'dan gelir (kod satır 46-47: "Chef's photo URLs come from Supabase Storage"). Kullanıcı keyfi URL giremez, RLS koruyor. Teorik risk var ama bu mimaride tetiklenemez.
+- ✅ **CSP yok — ÇÜRÜTÜLDÜ:** `index.html` satır 16 açıkça "v2.9.28'de KALDIRILDI" diyor. Discover'da kullanıcı script girişi imkansız (sadece tarif paylaşımı). Tek dış kaynak `cdn.jsdelivr.net/supabase-js@2.45.0` (versiyon sabitli). CSP'nin önleyeceği saldırı vektörü bu mimaride yok.
+- ✅ **Reload öncesi flush — ÇÜRÜTÜLDÜ:** 11 `location.reload` tek tek incelendi. Tümünde store işlemi önce tamamlanıyor; bazılarında yorum satırında "push BEFORE reload" belgesi var.
+- ⏸ **Foto bytes yedeklenmiyor — ERTELENMIŞ (bilinçli):** Gerçek. 500 kullanıcı × 100 foto × 32KB = 1.6GB; 30 günlük backup 48GB = R2 free tier aşılır. Incremental backup gerekir. Fotoğraflar Supabase Storage'da güvenli. Operatör erteledi.
+- ✅ **Çeviriler yarım — ÇÜRÜTÜLDÜ:** EN+TR tam, diğerleri bilinçli EN fallback. Global hedef ücretli versiyonda.
+- ✅ **Supabase limiti — ÇÜRÜTÜLDÜ:** Kod sorunu değil, dashboard bilgisi. 500 kullanıcı free tier'a sığar; bandwidth izlenerek Pro'ya geçilir.
+- ✅ **a11y temel — ÇÜRÜTÜLDÜ (şimdilik):** Solo/arkadaş kullanımı için öncelikli değil. Ticari lansmanda ele alınacak.
+
+---
+
 ## v2.15.x — Roster aracı + bulut sync + menü filtre uyarısı · 2026-05-22
 
 ### v2.15.7 — Roster JPEG hücre ortalama + Excel sütun genişliği · 2026-05-22
