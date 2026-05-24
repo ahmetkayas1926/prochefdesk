@@ -627,6 +627,8 @@
       default:
         inner = '<div style="font-style:italic;opacity:0.5;">Unknown block type: ' + PCD.escapeHtml(block.type) + '</div>';
     }
+
+    return inner;
   }
 
   // v2.13.0 — Block kutu stili (bg/renk/weight/padding) — canvas + print ORTAK.
