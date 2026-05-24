@@ -66,6 +66,7 @@
     { id: 'allergen_strip', labelKey: 'wb_block_allergen_strip', glyph: '🥜',  label: 'Allergen Strip' },
     { id: 'doneness',       labelKey: 'wb_block_doneness',       glyph: '🥩',  label: 'Doneness Ladder' },
     { id: 'time_range',     labelKey: 'wb_block_time_range',     glyph: '🕒',  label: 'Time Range' },
+    { id: 'cook_sheet',     labelKey: 'wb_block_cook_sheet',     glyph: '🍳',  label: 'Cook Sheet' },
     { id: 'text',           labelKey: 'wb_block_text',           glyph: '📝',  label: 'Free Text' },
     { id: 'divider',        labelKey: 'wb_block_divider',        glyph: '➖',  label: 'Divider' },
   ];
@@ -186,6 +187,19 @@
         return Object.assign(base, {
           content: { start: '08:00', end: '17:30', label: 'SERVICE HOURS' },
           style: { color: 'forest', size: 'md', align: 'center' },
+        });
+      // cook_sheet — transposed param table (items as columns, Time/Temp/Note as rows)
+      case 'cook_sheet':
+        return Object.assign(base, {
+          content: {
+            items: ['ITEM 1', 'ITEM 2', 'ITEM 3'],
+            rows: [
+              { label: 'Time', values: ['', '', ''] },
+              { label: 'Temp', values: ['', '', ''] },
+              { label: 'Note', values: ['', '', ''] },
+            ],
+          },
+          style: { color: 'cream', size: 'md', align: 'center' },
         });
     }
     return base;
@@ -583,11 +597,36 @@
           (block.content.label ? '<div style="text-align:center;font-size:' + fs.px + 'px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;opacity:0.85;margin-top:6px;">' + PCD.escapeHtml(block.content.label) + '</div>' : '');
         break;
       }
+      // cook_sheet — transposed parameter table: items as columns, rows as Time/Temp/Note
+      case 'cook_sheet': {
+        const csItems = (block.content.items || []);
+        const csRows  = (block.content.rows  || []);
+        const corner = '<th style="width:28px;padding:4px 6px;border-bottom:2px solid currentColor;border-right:1px solid rgba(127,127,127,0.25);background:rgba(127,127,127,0.08);"></th>';
+        const colHeaders = csItems.map(function (item) {
+          return '<th style="padding:6px 8px;text-align:center;font-size:' + (fs.px - 1) + 'px;font-weight:900;text-transform:uppercase;letter-spacing:0.06em;border-bottom:2px solid currentColor;border-left:1px solid rgba(127,127,127,0.2);background:rgba(127,127,127,0.08);">' +
+            PCD.escapeHtml(item || '') + '</th>';
+        }).join('');
+        const tableRows = csRows.map(function (row, ri) {
+          const isLast = ri === csRows.length - 1;
+          const bb = isLast ? 'none' : '1px solid rgba(127,127,127,0.18)';
+          const rowLabel = '<td style="padding:4px 3px;text-align:center;vertical-align:middle;border-bottom:' + bb + ';border-right:1px solid rgba(127,127,127,0.25);background:rgba(127,127,127,0.05);">' +
+            '<span style="display:inline-block;writing-mode:vertical-rl;transform:rotate(180deg);font-size:' + Math.round(fs.px * 0.72) + 'px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;opacity:0.65;">' +
+            PCD.escapeHtml(row.label || '') + '</span>' +
+          '</td>';
+          const cells = csItems.map(function (_, ci) {
+            const val = (row.values || [])[ci] || '';
+            return '<td style="padding:6px 8px;text-align:center;font-size:' + fs.px + 'px;border-bottom:' + bb + ';border-left:1px solid rgba(127,127,127,0.18);font-variant-numeric:tabular-nums;vertical-align:middle;">' +
+              (val ? PCD.escapeHtml(val) : '<span style="opacity:0.2;">—</span>') +
+            '</td>';
+          }).join('');
+          return '<tr>' + rowLabel + cells + '</tr>';
+        }).join('');
+        inner = '<table style="width:100%;border-collapse:collapse;"><thead><tr>' + corner + colHeaders + '</tr></thead><tbody>' + tableRows + '</tbody></table>';
+        break;
+      }
       default:
         inner = '<div style="font-style:italic;opacity:0.5;">Unknown block type: ' + PCD.escapeHtml(block.type) + '</div>';
     }
-
-    return inner;
   }
 
   // v2.13.0 — Block kutu stili (bg/renk/weight/padding) — canvas + print ORTAK.
@@ -1238,6 +1277,37 @@
           '</div>' +
           '<input type="text" data-ct-field="label" maxlength="40" value="' + PCD.escapeHtml(c.label || '') + '" placeholder="' + PCD.escapeHtml(t('wb_time_label_ph', 'Label (e.g. SERVICE HOURS)')) + '" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--border);border-radius:5px;background:var(--surface-1);color:var(--text);font-size:12px;text-transform:uppercase;letter-spacing:0.04em;">';
       }
+      case 'cook_sheet': {
+        const csItems = (c.items || []);
+        const csRows  = (c.rows  || []);
+        const itemInputs = csItems.map(function (item, i) {
+          return '<div style="display:flex;gap:6px;align-items:center;padding:2px 0;">' +
+            '<span style="flex:0 0 24px;font-size:10px;font-weight:800;color:var(--text-3);">C' + (i + 1) + '</span>' +
+            '<input type="text" data-ct-cs-item="' + i + '" value="' + PCD.escapeHtml(item || '') + '" placeholder="' + PCD.escapeHtml(t('wb_cs_item_ph', 'Item name')) + '" style="flex:1;min-width:0;padding:5px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface-1);color:var(--text);font-size:12px;font-weight:700;text-transform:uppercase;">' +
+            (csItems.length > 1 ? '<button class="wb-icon-btn danger" data-ct-cs-delitem="' + i + '" title="' + PCD.escapeHtml(t('delete', 'Delete')) + '">×</button>' : '<span style="flex:0 0 24px;"></span>') +
+          '</div>';
+        }).join('');
+        const rowEditors = csRows.map(function (row, ri) {
+          const cells = csItems.map(function (item, ci) {
+            return '<div style="display:flex;gap:6px;align-items:center;padding:2px 0 2px 12px;">' +
+              '<span style="flex:0 0 60px;font-size:9px;color:var(--text-3);text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + PCD.escapeHtml(item || ('C' + (ci + 1))) + '">' + PCD.escapeHtml(item || ('C' + (ci + 1))) + '</span>' +
+              '<input type="text" data-ct-cs-cell="' + ri + ',' + ci + '" value="' + PCD.escapeHtml((row.values || [])[ci] || '') + '" placeholder="—" style="flex:1;min-width:0;padding:4px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface-1);color:var(--text);font-size:12px;">' +
+            '</div>';
+          }).join('');
+          return '<div style="border-top:1px dashed var(--border);padding:6px 0 4px;margin-top:6px;">' +
+            '<div style="display:flex;gap:6px;align-items:center;margin-bottom:4px;">' +
+              '<span style="flex:0 0 42px;font-size:9px;color:var(--text-3);text-transform:uppercase;font-weight:700;">' + PCD.escapeHtml(t('wb_cs_row_label', 'Row')) + '</span>' +
+              '<input type="text" data-ct-cs-rowlabel="' + ri + '" value="' + PCD.escapeHtml(row.label || '') + '" placeholder="Time / Temp / Note" style="flex:1;min-width:0;padding:4px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface-1);color:var(--text);font-size:11px;font-weight:800;text-transform:uppercase;">' +
+            '</div>' +
+            cells +
+          '</div>';
+        }).join('');
+        return '<div style="font-size:10px;font-weight:800;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px;">' + PCD.escapeHtml(t('wb_cs_items_label', 'Items (Columns)')) + '</div>' +
+          itemInputs +
+          '<button class="btn btn-outline btn-sm" data-ct-cs-additem style="width:100%;margin-top:6px;">' + PCD.icon('plus', 13) + ' ' + PCD.escapeHtml(t('wb_cs_add_item', 'Add item')) + '</button>' +
+          '<div style="font-size:10px;font-weight:800;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em;margin-top:12px;margin-bottom:0;">' + PCD.escapeHtml(t('wb_cs_rows_label', 'Parameters (Rows)')) + '</div>' +
+          rowEditors;
+      }
     }
     return '<div style="color:var(--text-3);font-size:12px;">' + PCD.escapeHtml(t('wb_no_content_fields', 'No content fields for this block.')) + '</div>';
   }
@@ -1652,6 +1722,30 @@
         block.content.pairs[i].value = target.value;
         commitLight(); return;
       }
+      // Cook Sheet
+      const csItem = target.getAttribute('data-ct-cs-item');
+      if (csItem !== null) {
+        const i = parseInt(csItem, 10);
+        block.content = block.content || { items: [], rows: [] };
+        block.content.items[i] = target.value;
+        commitLight(); return;
+      }
+      const csRowLabel = target.getAttribute('data-ct-cs-rowlabel');
+      if (csRowLabel !== null) {
+        const i = parseInt(csRowLabel, 10);
+        block.content = block.content || { items: [], rows: [] };
+        block.content.rows[i] = block.content.rows[i] || { label: '', values: [] };
+        block.content.rows[i].label = target.value;
+        commitLight(); return;
+      }
+      const csCell = target.getAttribute('data-ct-cs-cell');
+      if (csCell !== null) {
+        const parts = csCell.split(',').map(function (n) { return parseInt(n, 10); });
+        block.content = block.content || { items: [], rows: [] };
+        block.content.rows[parts[0]] = block.content.rows[parts[0]] || { label: '', values: [] };
+        block.content.rows[parts[0]].values[parts[1]] = target.value;
+        commitLight(); return;
+      }
       // Table
       const thIdx = target.getAttribute('data-ct-table-header');
       if (thIdx !== null) {
@@ -1773,6 +1867,28 @@
       const i = parseInt(this.getAttribute('data-ct-table-coldel'), 10);
       block.content.headers.splice(i, 1);
       block.content.rows.forEach(function (r) { if (Array.isArray(r)) r.splice(i, 1); });
+      commit();
+    });
+    // Cook Sheet add/del item (column)
+    PCD.on(root, 'click', '[data-ct-cs-additem]', function () {
+      const block = getActiveBlock(); if (!block) return;
+      block.content = block.content || { items: [], rows: [] };
+      block.content.items.push('');
+      (block.content.rows || []).forEach(function (row) {
+        row.values = (row.values || []);
+        row.values.push('');
+      });
+      commit();
+    });
+    PCD.on(root, 'click', '[data-ct-cs-delitem]', function () {
+      const block = getActiveBlock(); if (!block) return;
+      block.content = block.content || { items: [], rows: [] };
+      if ((block.content.items || []).length <= 1) return;
+      const i = parseInt(this.getAttribute('data-ct-cs-delitem'), 10);
+      block.content.items.splice(i, 1);
+      (block.content.rows || []).forEach(function (row) {
+        if (Array.isArray(row.values)) row.values.splice(i, 1);
+      });
       commit();
     });
   }
