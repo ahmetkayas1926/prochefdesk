@@ -2160,15 +2160,22 @@
       '<script>(function(){' +
         'function fit(){' +
           'if(window.matchMedia("print").matches)return;' +
+          'document.body.style.transform="";' +  // reset before measuring
           'var bw=document.body.scrollWidth||' + Math.round(pageW * 96 / 25.4) + ';' +
-          'var avail=window.innerWidth-32;' +
-          'var scale=avail<bw?avail/bw:1;' +
+          'var bh=document.body.scrollHeight||' + Math.round(pageH * 96 / 25.4) + ';' +
+          'var toolbarH=72;' +  // toolbar + padding
+          'var scaleW=(window.innerWidth-32)/bw;' +
+          'var scaleH=(window.innerHeight-toolbarH)/bh;' +
+          'var scale=Math.min(scaleW,scaleH,1);' +
           'document.body.style.transform="scale("+scale+")";' +
+          'document.body.style.marginBottom=Math.ceil(bh*scale-bh)+"px";' +
         '}' +
         'document.addEventListener("DOMContentLoaded",fit);' +
         'window.addEventListener("resize",fit);' +
         'window.matchMedia("print").addEventListener("change",function(m){' +
-          'document.body.style.transform=m.matches?"":"";fit();' +
+          'document.body.style.transform=m.matches?"":"";' +
+          'document.body.style.marginBottom=m.matches?"":"";' +
+          'if(!m.matches)fit();' +
         '});' +
       '})();<\/script>' +
       '<div class="wb-print-sheet">' +
