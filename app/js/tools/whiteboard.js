@@ -1283,7 +1283,6 @@
             '<div style="display:flex;gap:6px;align-items:center;margin-bottom:4px;">' +
               '<span style="flex:0 0 42px;font-size:9px;color:var(--text-3);text-transform:uppercase;font-weight:700;">' + PCD.escapeHtml(t('wb_cs_row_label', 'Row')) + '</span>' +
               '<input type="text" data-ct-cs-rowlabel="' + ri + '" value="' + PCD.escapeHtml(row.label || '') + '" placeholder="Time / Temp / Note" style="flex:1;min-width:0;padding:4px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface-1);color:var(--text);font-size:11px;font-weight:800;text-transform:uppercase;">' +
-              (csRows.length > 1 ? '<button class="wb-icon-btn danger" data-ct-cs-delrow="' + ri + '" title="' + PCD.escapeHtml(t('delete', 'Delete')) + '">×</button>' : '<span style="flex:0 0 24px;"></span>') +
             '</div>' +
             cells +
           '</div>';
@@ -1292,8 +1291,7 @@
           itemInputs +
           '<button class="btn btn-outline btn-sm" data-ct-cs-additem style="width:100%;margin-top:6px;">' + PCD.icon('plus', 13) + ' ' + PCD.escapeHtml(t('wb_cs_add_item', 'Add item')) + '</button>' +
           '<div style="font-size:10px;font-weight:800;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em;margin-top:12px;margin-bottom:0;">' + PCD.escapeHtml(t('wb_cs_rows_label', 'Parameters (Rows)')) + '</div>' +
-          rowEditors +
-          '<button class="btn btn-outline btn-sm" data-ct-cs-addrow style="width:100%;margin-top:6px;">' + PCD.icon('plus', 13) + ' ' + PCD.escapeHtml(t('wb_cs_add_row', 'Add row')) + '</button>';
+          rowEditors;
       }
     }
     return '<div style="color:var(--text-3);font-size:12px;">' + PCD.escapeHtml(t('wb_no_content_fields', 'No content fields for this block.')) + '</div>';
@@ -1878,22 +1876,6 @@
       });
       commit();
     });
-    PCD.on(root, 'click', '[data-ct-cs-addrow]', function () {
-      const block = getActiveBlock(); if (!block) return;
-      block.content = block.content || { items: [], rows: [] };
-      const itemCount = (block.content.items || []).length;
-      block.content.rows = block.content.rows || [];
-      block.content.rows.push({ label: '', values: new Array(itemCount).fill('') });
-      commit();
-    });
-    PCD.on(root, 'click', '[data-ct-cs-delrow]', function () {
-      const block = getActiveBlock(); if (!block) return;
-      block.content = block.content || { items: [], rows: [] };
-      if ((block.content.rows || []).length <= 1) return;
-      const i = parseInt(this.getAttribute('data-ct-cs-delrow'), 10);
-      block.content.rows.splice(i, 1);
-      commit();
-    });
   }
 
   // Re-bind canvas pane clicks (called after canvas innerHTML refreshed)
@@ -2155,33 +2137,40 @@
     if (canvas.paper === 'A3') { pageW = isLand ? 420 : 297; pageH = isLand ? 297 : 420; }
     else                       { pageW = isLand ? 297 : 210; pageH = isLand ? 210 : 297; }
 
+    // v2.16 — tek 12-col grid
     const blocks = canvas.blocks || [];
     const blocksHtml = '<div class="wb-print-grid12" style="display:grid;grid-template-columns:repeat(12,1fr);gap:10px;">' +
       blocks.map(renderPrintBlock).join('') +
     '</div>';
 
-    // v2.13.0 WYSIWYG — sheet/body px layout (padding 14px + gap 14px) canvas
-    // .wb-canvas ile BİREBİR aynı. Block içerikleri renderBlockContent'ten gelir,
-    // box stili blockBoxStyle'dan → tipografi + kutu da aynı. @page mm; içerik px
-    // (96dpi: 1px=1/96in) doğru fiziksel boyutta basar. Tek sayfa: overflow:hidden.
     const html =
       '<style>' +
         '@page { size: ' + canvas.paper + ' ' + canvas.orient + '; margin: 0; }' +
         '@import url("https://fonts.googleapis.com/css2?family=Oswald:wght@600;700;800&family=Barlow:wght@400;500;600;700;800;900&display=swap");' +
         '* { box-sizing: border-box; }' +
-        // v2.13.0 — Base tipografi canvas (#wbRoot, app body) ile aynı: 15px / 1.5.
-        // Inline font-size'ı olmayan içerik (table cell vb.) böylece print'te de
-        // canvas ile aynı satır yüksekliğinde çıkar → birebir WYSIWYG.
-        // v2.13.3 — body flex-column + sheet flex:1 ŞART. PCD.print footer'ı sheet'ten
-        // SONRA body'ye ekliyor; sheet sabit pageH mm olursa footer 2. sayfaya taşıyor.
-        // flex ile: sheet kalan alanı doldurur, footer altta aynı sayfada sığar. margin 0.
         'body { margin: 0; padding: 0; font-family: "Barlow", -apple-system, system-ui, sans-serif; font-size: 15px; line-height: 1.5; color: #111827; background: #fff; width: ' + pageW + 'mm; height: ' + pageH + 'mm; display: flex; flex-direction: column; overflow: hidden; }' +
         '.wb-print-sheet { width: ' + pageW + 'mm; flex: 1 1 auto; min-height: 0; padding: 14px; display: flex; flex-direction: column; overflow: hidden; }' +
         '.wb-print-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 14px; }' +
         '.wb-print-block { break-inside: avoid; page-break-inside: avoid; -webkit-column-break-inside: avoid; }' +
-        '.wb-print-multi-pair { break-inside: avoid; page-break-inside: avoid; display: grid; gap: 10px; }' +
-        '@media print { * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }' +
+        // v2.16 — ekran önizlemesinde body'yi viewport'a sığdır (canvas ile tutarlı WYSIWYG).
+        // transform sadece screen modunda uygulanır; print modunda kaldırılır.
+        '@media screen { body { transform-origin: top center; margin: 0 auto; box-shadow: 0 2px 16px rgba(0,0,0,0.12); } html { background: #d1d5db; min-height: 100vh; padding-bottom: 24px; } }' +
+        '@media print { body { transform: none !important; box-shadow: none !important; } * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }' +
       '</style>' +
+      '<script>(function(){' +
+        'function fit(){' +
+          'if(window.matchMedia("print").matches)return;' +
+          'var bw=document.body.scrollWidth||' + Math.round(pageW * 96 / 25.4) + ';' +
+          'var avail=window.innerWidth-32;' +
+          'var scale=avail<bw?avail/bw:1;' +
+          'document.body.style.transform="scale("+scale+")";' +
+        '}' +
+        'document.addEventListener("DOMContentLoaded",fit);' +
+        'window.addEventListener("resize",fit);' +
+        'window.matchMedia("print").addEventListener("change",function(m){' +
+          'document.body.style.transform=m.matches?"":"";fit();' +
+        '});' +
+      '})();<\/script>' +
       '<div class="wb-print-sheet">' +
         '<div class="wb-print-body">' + blocksHtml + '</div>' +
       '</div>';
