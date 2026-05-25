@@ -517,6 +517,7 @@ window.PCD.i18n.register('en', {
   wb_cs_items_label: "Items (Columns)",
   wb_cs_rows_label: "Parameters (Rows)",
   wb_cs_add_item: "Add item",
+  wb_cs_add_row: "Add row",
   wb_empty_title: "Empty canvas",
   wb_empty_subtitle: "Add blocks from the palette or load a template.",
   wb_empty_text: "Empty text block — tap to edit",

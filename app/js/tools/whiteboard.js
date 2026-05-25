@@ -96,13 +96,6 @@
   // landscape'te dar olsa da bigNumber/allergen icon strip için yararlı.
   const LAYOUTS = ['full', 'half', 'third', 'quarter', 'fifth', 'sixth'];
   const LAYOUT_COLS = { full: 1, half: 2, third: 3, quarter: 4, fifth: 5, sixth: 6 };
-  // v2.16 — 12-col free grid. Eski isimler backward-compat olarak map'lenir.
-  const LAYOUT_SPAN = {
-    full: 12, half: 6, third: 4, quarter: 3, fifth: 2, sixth: 2,
-    span1: 1, span2: 2, span3: 3, span4: 4, span5: 5, span6: 6,
-    span7: 7, span8: 8, span9: 9, span10: 10, span11: 11, span12: 12,
-  };
-  function layoutSpan(lay) { return LAYOUT_SPAN[lay] || 12; }
 
   // ============ HELPERS ============
   function uid(prefix) { return (prefix || 'b') + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
@@ -653,12 +646,12 @@
   // Selected ise vurgu. Inner content renderBlockContent'ten (print ile ortak).
   function renderBlockHtml(block, idx, selectedIdx) {
     const layout = block.layout || 'full';
-    const span = layoutSpan(layout);
     const isSelected = idx === selectedIdx;
     const meta = blockTypeMeta(block.type);
+    // v2.13.0 — Seçim/ayraç çerçevesi box-shadow ring ile (layout'a etki etmez) →
+    // canvas block yüksekliği = print block yüksekliği (WYSIWYG). border KULLANMA.
     return '' +
       '<div class="wb-block wb-block-' + block.type + (isSelected ? ' wb-block-selected' : '') + '" data-blk-idx="' + idx + '" data-blk-id="' + PCD.escapeHtml(block.id) + '" data-layout="' + layout + '" style="' +
-        'grid-column:span ' + span + ';' +
         'position:relative;' + blockBoxStyle(block) +
         'border-radius:6px;margin:0;cursor:pointer;' +
         'transition:box-shadow 0.12s ease, transform 0.12s ease;' +
@@ -672,17 +665,42 @@
   // ============ SHEET RENDERER (interactive canvas preview) ============
   function renderSheet(canvas, selectedIdx) {
     const blocks = canvas.blocks || [];
+    let html = '';
+    let i = 0;
+    while (i < blocks.length) {
+      const b = blocks[i];
+      const lay = b.layout || 'full';
+      const cols = LAYOUT_COLS[lay] || 1;
+      if (cols > 1) {
+        // Ardışık aynı layout'lu N block'a kadar (max=cols) topla, N-col grid'e dök
+        const group = [];
+        let k = i;
+        while (group.length < cols && k < blocks.length && (blocks[k].layout || 'full') === lay) {
+          group.push({ b: blocks[k], idx: k });
+          k++;
+        }
+        html += '<div class="wb-row wb-row-' + lay + '" style="display:grid;grid-template-columns:repeat(' + cols + ',1fr);gap:10px;">' +
+          group.map(function (g) { return renderBlockHtml(g.b, g.idx, selectedIdx); }).join('') +
+        '</div>';
+        i = k;
+      } else {
+        html += '<div class="wb-row wb-row-full">' +
+          renderBlockHtml(b, i, selectedIdx) +
+        '</div>';
+        i += 1;
+      }
+    }
+
     if (blocks.length === 0) {
-      return '<div class="wb-empty-state" style="padding:48px 24px;text-align:center;color:rgba(127,127,127,0.7);border:2px dashed rgba(127,127,127,0.25);border-radius:12px;">' +
+      html =
+        '<div class="wb-empty-state" style="padding:48px 24px;text-align:center;color:rgba(127,127,127,0.7);border:2px dashed rgba(127,127,127,0.25);border-radius:12px;">' +
           '<div style="font-size:42px;margin-bottom:8px;">📋</div>' +
           '<div style="font-size:15px;font-weight:700;margin-bottom:4px;">' + PCD.escapeHtml(t('wb_empty_title', 'Empty canvas')) + '</div>' +
           '<div style="font-size:13px;">' + PCD.escapeHtml(t('wb_empty_subtitle', 'Add blocks from the palette or load a template.')) + '</div>' +
         '</div>';
     }
-    // v2.16 — tek 12-col grid; her block grid-column:span N ile serbest yerleşir.
-    return '<div class="wb-grid12" style="display:grid;grid-template-columns:repeat(12,1fr);gap:10px;">' +
-      blocks.map(function (b, i) { return renderBlockHtml(b, i, selectedIdx); }).join('') +
-    '</div>';
+
+    return html;
   }
 
   // ============ MAIN RENDER ============
@@ -1064,16 +1082,13 @@
     // 2) Layout — 6 kademe (full / half / 1-of-3 / 1-of-4 / 1-of-5 / 1-of-6)
     html += '<div class="wb-inspector-section">' +
       '<div class="wb-inspector-label">' + PCD.escapeHtml(t('wb_inspector_layout', 'Layout')) + '</div>' +
-      '<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:3px;">' +
-        [1,2,3,4,5,6,7,8,9,10,11,12].map(function (n) {
-          const key = n === 12 ? 'full' : 'span' + n;
-          const cur = block.layout || 'full';
-          const isActive = layoutSpan(cur) === n;
-          const activeStyle = isActive
-            ? 'background:var(--brand-600,#16a34a);color:#fff;border-color:var(--brand-600,#16a34a);'
-            : 'background:var(--surface-2);color:var(--text);border-color:var(--border);';
-          return '<button type="button" data-set-layout="' + key + '" style="padding:5px 2px;font-size:11px;font-weight:700;border:1px solid;border-radius:5px;cursor:pointer;' + activeStyle + '" title="' + n + '/12">' + n + '</button>';
-        }).join('') +
+      '<div class="wb-seg" style="width:100%;display:flex;">' +
+        '<button type="button" data-set-layout="full" class="' + (block.layout === 'full' ? 'active' : '') + '" style="flex:1;" title="' + PCD.escapeHtml(t('wb_layout_full', 'Full width')) + '">1/1</button>' +
+        '<button type="button" data-set-layout="half" class="' + (block.layout === 'half' ? 'active' : '') + '" style="flex:1;" title="' + PCD.escapeHtml(t('wb_layout_half', 'Half width')) + '">1/2</button>' +
+        '<button type="button" data-set-layout="third" class="' + (block.layout === 'third' ? 'active' : '') + '" style="flex:1;" title="' + PCD.escapeHtml(t('wb_layout_third', 'One third')) + '">1/3</button>' +
+        '<button type="button" data-set-layout="quarter" class="' + (block.layout === 'quarter' ? 'active' : '') + '" style="flex:1;" title="' + PCD.escapeHtml(t('wb_layout_quarter', 'One quarter')) + '">1/4</button>' +
+        '<button type="button" data-set-layout="fifth" class="' + (block.layout === 'fifth' ? 'active' : '') + '" style="flex:1;" title="' + PCD.escapeHtml(t('wb_layout_fifth', 'One fifth')) + '">1/5</button>' +
+        '<button type="button" data-set-layout="sixth" class="' + (block.layout === 'sixth' ? 'active' : '') + '" style="flex:1;" title="' + PCD.escapeHtml(t('wb_layout_sixth', 'One sixth')) + '">1/6</button>' +
       '</div>' +
     '</div>';
     // 3) Color
@@ -1285,6 +1300,7 @@
             '<div style="display:flex;gap:6px;align-items:center;margin-bottom:4px;">' +
               '<span style="flex:0 0 42px;font-size:9px;color:var(--text-3);text-transform:uppercase;font-weight:700;">' + PCD.escapeHtml(t('wb_cs_row_label', 'Row')) + '</span>' +
               '<input type="text" data-ct-cs-rowlabel="' + ri + '" value="' + PCD.escapeHtml(row.label || '') + '" placeholder="Time / Temp / Note" style="flex:1;min-width:0;padding:4px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface-1);color:var(--text);font-size:11px;font-weight:800;text-transform:uppercase;">' +
+              (csRows.length > 1 ? '<button class="wb-icon-btn danger" data-ct-cs-delrow="' + ri + '" title="' + PCD.escapeHtml(t('delete', 'Delete')) + '">×</button>' : '<span style="flex:0 0 24px;"></span>') +
             '</div>' +
             cells +
           '</div>';
@@ -1293,7 +1309,8 @@
           itemInputs +
           '<button class="btn btn-outline btn-sm" data-ct-cs-additem style="width:100%;margin-top:6px;">' + PCD.icon('plus', 13) + ' ' + PCD.escapeHtml(t('wb_cs_add_item', 'Add item')) + '</button>' +
           '<div style="font-size:10px;font-weight:800;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em;margin-top:12px;margin-bottom:0;">' + PCD.escapeHtml(t('wb_cs_rows_label', 'Parameters (Rows)')) + '</div>' +
-          rowEditors;
+          rowEditors +
+          '<button class="btn btn-outline btn-sm" data-ct-cs-addrow style="width:100%;margin-top:6px;">' + PCD.icon('plus', 13) + ' ' + PCD.escapeHtml(t('wb_cs_add_row', 'Add row')) + '</button>';
       }
     }
     return '<div style="color:var(--text-3);font-size:12px;">' + PCD.escapeHtml(t('wb_no_content_fields', 'No content fields for this block.')) + '</div>';
@@ -1878,6 +1895,22 @@
       });
       commit();
     });
+    PCD.on(root, 'click', '[data-ct-cs-addrow]', function () {
+      const block = getActiveBlock(); if (!block) return;
+      block.content = block.content || { items: [], rows: [] };
+      const itemCount = (block.content.items || []).length;
+      block.content.rows = block.content.rows || [];
+      block.content.rows.push({ label: '', values: new Array(itemCount).fill('') });
+      commit();
+    });
+    PCD.on(root, 'click', '[data-ct-cs-delrow]', function () {
+      const block = getActiveBlock(); if (!block) return;
+      block.content = block.content || { items: [], rows: [] };
+      if ((block.content.rows || []).length <= 1) return;
+      const i = parseInt(this.getAttribute('data-ct-cs-delrow'), 10);
+      block.content.rows.splice(i, 1);
+      commit();
+    });
   }
 
   // Re-bind canvas pane clicks (called after canvas innerHTML refreshed)
@@ -2139,11 +2172,33 @@
     if (canvas.paper === 'A3') { pageW = isLand ? 420 : 297; pageH = isLand ? 297 : 420; }
     else                       { pageW = isLand ? 297 : 210; pageH = isLand ? 210 : 297; }
 
-    // v2.16 — tek 12-col grid; renderPrintBlock grid-column:span N ile yerleşir.
+    // v2.13.0 — Tek dikey akış (canvas renderSheet ile aynı). Yan yana yerleşim
+    // per-block layout (1/2, 1/3...) ile multi-pair grid'e auto-pair olur.
+    // v2.11.1 — half (2) + third (3) + quarter (4) ardışık aynı-layout block'lar.
+    let blocksHtml = '';
+    let i = 0;
     const blocks = canvas.blocks || [];
-    const blocksHtml = '<div class="wb-print-grid12" style="display:grid;grid-template-columns:repeat(12,1fr);gap:10px;">' +
-      blocks.map(renderPrintBlock).join('') +
-    '</div>';
+    while (i < blocks.length) {
+      const b = blocks[i];
+      const lay = b.layout || 'full';
+      const layCols = LAYOUT_COLS[lay] || 1;
+      if (layCols > 1) {
+        const group = [];
+        let k = i;
+        while (group.length < layCols && k < blocks.length && (blocks[k].layout || 'full') === lay) {
+          group.push(blocks[k]);
+          k++;
+        }
+        blocksHtml +=
+          '<div class="wb-print-multi-pair" style="grid-template-columns:repeat(' + layCols + ',1fr);">' +
+            group.map(renderPrintBlock).join('') +
+          '</div>';
+        i = k;
+      } else {
+        blocksHtml += renderPrintBlock(b);
+        i += 1;
+      }
+    }
 
     // v2.13.0 WYSIWYG — sheet/body px layout (padding 14px + gap 14px) canvas
     // .wb-canvas ile BİREBİR aynı. Block içerikleri renderBlockContent'ten gelir,
@@ -2178,8 +2233,7 @@
   // (renderBlockContent) + AYNI kutu stili (blockBoxStyle). Tek fark: interactive
   // chrome (handle/tag/select border) yok. Böylece print = canvas önizlemesi.
   function renderPrintBlock(block) {
-    const span = layoutSpan(block.layout || 'full');
-    return '<div class="wb-print-block wb-print-block-' + block.type + '" style="grid-column:span ' + span + ';' + blockBoxStyle(block) + 'border-radius:6px;">' + renderBlockContent(block) + '</div>';
+    return '<div class="wb-print-block wb-print-block-' + block.type + '" style="' + blockBoxStyle(block) + 'border-radius:6px;">' + renderBlockContent(block) + '</div>';
   }
 
   // ============ RE-RENDER HELPER ============
