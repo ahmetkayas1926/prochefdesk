@@ -2152,32 +2152,9 @@
         '.wb-print-sheet { width: ' + pageW + 'mm; flex: 1 1 auto; min-height: 0; padding: 14px; display: flex; flex-direction: column; overflow: hidden; }' +
         '.wb-print-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 14px; }' +
         '.wb-print-block { break-inside: avoid; page-break-inside: avoid; -webkit-column-break-inside: avoid; }' +
-        // v2.16 — ekran önizlemesinde body'yi viewport'a sığdır (canvas ile tutarlı WYSIWYG).
-        // transform sadece screen modunda uygulanır; print modunda kaldırılır.
-        '@media screen { body { transform-origin: top center; margin: 0 auto; box-shadow: 0 2px 16px rgba(0,0,0,0.12); } html { background: #d1d5db; min-height: 100vh; padding-bottom: 24px; } }' +
-        '@media print { body { transform: none !important; box-shadow: none !important; } * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }' +
+        '@media screen { body { height: auto !important; overflow: visible !important; } }' +
+        '@media print { * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }' +
       '</style>' +
-      '<script>(function(){' +
-        'function fit(){' +
-          'if(window.matchMedia("print").matches)return;' +
-          'document.body.style.transform="";' +  // reset before measuring
-          'var bw=document.body.scrollWidth||' + Math.round(pageW * 96 / 25.4) + ';' +
-          'var bh=document.body.scrollHeight||' + Math.round(pageH * 96 / 25.4) + ';' +
-          'var toolbarH=72;' +  // toolbar + padding
-          'var scaleW=(window.innerWidth-32)/bw;' +
-          'var scaleH=(window.innerHeight-toolbarH)/bh;' +
-          'var scale=Math.min(scaleW,scaleH,1);' +
-          'document.body.style.transform="scale("+scale+")";' +
-          'document.body.style.marginBottom=Math.ceil(bh*scale-bh)+"px";' +
-        '}' +
-        'document.addEventListener("DOMContentLoaded",fit);' +
-        'window.addEventListener("resize",fit);' +
-        'window.matchMedia("print").addEventListener("change",function(m){' +
-          'document.body.style.transform=m.matches?"":"";' +
-          'document.body.style.marginBottom=m.matches?"":"";' +
-          'if(!m.matches)fit();' +
-        '});' +
-      '})();<\/script>' +
       '<div class="wb-print-sheet">' +
         '<div class="wb-print-body">' + blocksHtml + '</div>' +
       '</div>';
