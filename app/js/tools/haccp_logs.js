@@ -803,10 +803,10 @@
         'table.h-grid td.day{text-align:center;font-weight:700;background:#fafafa;font-size:10px;color:#444;}' +
         'table.h-grid td.oor{background:#fee2e2;color:#991b1b;font-weight:700;}' +
         'table.h-grid td.has-note::after{content:" *";color:#16a34a;}' +
-        '.h-notes{margin-top:auto;font-size:9px;flex:0 0 auto;}' +
+        '.h-notes{margin-top:4px;font-size:9px;flex:0 0 auto;}' +
         '.h-notes .nh{font-weight:700;margin-bottom:2px;font-size:10px;}' +
         '.h-notes .ni{padding:1px 0;border-bottom:1px solid #eee;}' +
-        '.h-sign{margin-top:4px;padding-top:3px;border-top:1px solid #ccc;font-size:9px;display:flex;justify-content:space-between;flex:0 0 auto;}' +
+        '.h-sign{margin-top:auto;padding-top:3px;border-top:1px solid #ccc;font-size:9px;display:flex;justify-content:space-between;flex:0 0 auto;}' +
         '.pcd-print-footer{margin:0 !important;padding:1mm 4mm !important;border-top:none !important;flex:0 0 auto;font-size:7pt !important;line-height:1.2 !important;}' +
         '@page{size:A4 landscape;margin:0;}' +
       '</style>' +

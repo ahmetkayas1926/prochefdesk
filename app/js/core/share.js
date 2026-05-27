@@ -100,13 +100,14 @@
 
     const sections = (m.sections || []).map(function (sec) {
       return {
-        title: sec.title,
+        title: sec.name || sec.title || '',   // v2.16 fix: menus.js uses sec.name, not sec.title
         items: (sec.items || []).map(function (it) {
           const r = it.recipeId ? recipeMap[it.recipeId] : null;
           return {
             name: it.recipeId ? (r ? r.name : '(removed)') : it.customName,
             description: it.description || (r && r.plating) || '',
             price: it.price,
+            codes: it.codes || [],            // v2.16 fix: dietary/allergen codes
           };
         }).filter(function (x) { return x.name; }),
       };
@@ -116,6 +117,7 @@
       name: m.name,
       subtitle: m.subtitle,
       footer: m.footer,
+      logo: m.logo || '',                     // v2.16 fix: include logo
       sections: sections,
       hidePrices: m.hidePrices,
       printDensity: m.printDensity,
@@ -434,12 +436,19 @@
       }
     } else if (p.kind === 'menu') {
       html += '<div style="text-align:center;margin-bottom:30px;">';
-      html += '<h1 style="font-size:36px;margin-bottom:8px;">' + escapeHtml(p.name || t('share_default_menu', 'Menu')) + '</h1>';
+      if (p.logo) html += '<img src="' + escapeHtml(p.logo) + '" alt="" style="width:72px;height:72px;border-radius:50%;object-fit:cover;margin:0 auto 14px;display:block;">';
+      html += '<h1 style="font-size:36px;margin-bottom:8px;font-family:Georgia,serif;">' + escapeHtml(p.name || t('share_default_menu', 'Menu')) + '</h1>';
       if (p.subtitle) html += '<div style="font-size:12px;letter-spacing:0.24em;color:#888;text-transform:uppercase;">' + escapeHtml(p.subtitle) + '</div>';
       html += '</div>';
       (p.sections || []).forEach(function (sec) {
         html += '<div class="menu-section">';
-        if (sec.title) html += '<div class="menu-section-title">' + escapeHtml(sec.title) + '</div>';
+        if (sec.title) {
+          html += '<div class="menu-section-title">' +
+            '<span style="margin-right:10px;color:#ccc;">—</span>' +
+            escapeHtml(sec.title) +
+            '<span style="margin-left:10px;color:#ccc;">—</span>' +
+          '</div>';
+        }
         (sec.items || []).forEach(function (it) {
           html += '<div class="menu-item">';
           html += '<div class="menu-item-name">' +
@@ -447,6 +456,13 @@
             (!p.hidePrices && it.price ? '<span style="color:#c5a572;">' + ((PCD.currencySymbol && PCD.currencySymbol()) || '$') + Number(it.price).toFixed(2) + '</span>' : '') +
             '</div>';
           if (it.description) html += '<div class="menu-item-desc">' + escapeHtml(it.description) + '</div>';
+          if (it.codes && it.codes.length) {
+            html += '<div style="margin-top:4px;">' +
+              it.codes.map(function (c) {
+                return '<span style="display:inline-block;font-size:10px;font-weight:700;color:#888;border:1px solid #ddd;border-radius:3px;padding:1px 5px;margin-right:3px;">' + escapeHtml(c) + '</span>';
+              }).join('') +
+            '</div>';
+          }
           html += '</div>';
         });
         html += '</div>';
