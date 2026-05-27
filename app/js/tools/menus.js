@@ -539,7 +539,7 @@
               ${itemDragHandleHtml}
               <div style="flex:1;min-width:0;">
                 <input type="text" class="input" data-itemname="${sIdx}:${iIdx}" value="${PCD.escapeHtml(name)}" placeholder="${PCD.i18n.t('menu_item_name_ph') || 'Dish name'}" style="padding:4px 8px;min-height:26px;font-size:14px;font-weight:600;">
-                <input type="text" class="input" data-itemdesc="${sIdx}:${iIdx}" value="${PCD.escapeHtml(it.description || '')}" placeholder="${PCD.i18n.t('menu_item_desc_ph')}" style="padding:4px 8px;min-height:26px;font-size:12px;margin-top:4px;">
+                <textarea class="input" data-itemdesc="${sIdx}:${iIdx}" rows="2" placeholder="${PCD.i18n.t('menu_item_desc_ph')}" style="padding:4px 8px;font-size:12px;margin-top:4px;resize:vertical;line-height:1.4;">${PCD.escapeHtml(it.description || '')}</textarea>
                 <select class="select" data-itembadge="${sIdx}:${iIdx}" style="padding:2px 6px;min-height:24px;font-size:11px;margin-top:4px;max-width:160px;">${badgeOpts}</select>${codesBtnHtml}${autoHintHtml}
               </div>
               <input type="number" class="input" data-itemprice="${sIdx}:${iIdx}" value="${it.price || ''}" placeholder="0" step="0.01" min="0" style="width:70px;padding:4px 8px;min-height:26px;font-size:13px;">
@@ -549,7 +549,7 @@
             row.innerHTML = `
               ${itemDragHandleHtml}
               <div style="flex:1;min-width:0;">
-                <div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${PCD.escapeHtml(name)}</div>
+                <div style="font-weight:600;font-size:14px;overflow-wrap:break-word;word-break:break-word;">${PCD.escapeHtml(name)}</div>
                 <input type="text" class="input" data-itemdesc="${sIdx}:${iIdx}" value="${PCD.escapeHtml(it.description || '')}" placeholder="${PCD.i18n.t('menu_item_desc_ph')}" style="padding:4px 8px;min-height:26px;font-size:12px;margin-top:4px;">
                 <select class="select" data-itembadge="${sIdx}:${iIdx}" style="padding:2px 6px;min-height:24px;font-size:11px;margin-top:4px;max-width:160px;">${badgeOpts}</select>${codesBtnHtml}${autoHintHtml}
               </div>
