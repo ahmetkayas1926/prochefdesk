@@ -320,7 +320,8 @@
       columns: 1,                  // v2.8.69 — 1 or 2 print columns
       pageSize: 'a4',              // v2.8.69 — a4 | a5 | us_letter | a4_land
       logo: null,                  // v2.8.69 — base64 (1:1 cropped)
-      coverPhoto: null,            // v2.8.69 — base64 (1:1 cropped)
+      coverPhoto: null,            // v2.8.69 — base64 (cropped)
+      coverRatio: '16/9',          // v2.16 — aspect ratio for cover photo
       sections: getDefaultSections().map(function (s) {
         return { id: PCD.uid('sec'), name: s.name, items: [] };
       }),
@@ -330,6 +331,7 @@
     if (typeof data.accentColor !== 'string') data.accentColor = '';
     if (typeof data.columns !== 'number') data.columns = 1;
     if (!data.pageSize) data.pageSize = 'a4';
+    if (!data.coverRatio) data.coverRatio = '16/9';
     if (!data.priceStyle) data.priceStyle = data.hidePrices ? 'hidden' : 'symbol';
     // Ensure existing sections have IDs
     (data.sections || []).forEach(function (s) {
@@ -392,9 +394,16 @@
         (!data.logo ? '<div class="text-center text-muted" style="font-size:11px;">📷<br>' + PCD.escapeHtml(t('menu_logo') || 'Logo') + '</div>' : '') +
         (data.logo ? '<button type="button" id="menuLogoRemove" class="icon-btn" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.6);color:#fff;width:20px;height:20px;padding:0;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/></svg></button>' : '') +
       '</div>';
-      const coverTile = '<div id="menuCoverZone" style="position:relative;flex:1;height:90px;border-radius:var(--r-md);background:' + (data.coverPhoto ? 'url(' + data.coverPhoto + ') center/cover' : 'var(--surface-2)') + ';border:2px dashed ' + (data.coverPhoto ? 'transparent' : 'var(--border-strong)') + ';cursor:pointer;display:flex;align-items:center;justify-content:center;overflow:hidden;">' +
+      const coverTile = '<div id="menuCoverZone" style="position:relative;flex:1;border-radius:var(--r-md);background:' + (data.coverPhoto ? 'url(' + data.coverPhoto + ') center/cover' : 'var(--surface-2)') + ';border:2px dashed ' + (data.coverPhoto ? 'transparent' : 'var(--border-strong)') + ';cursor:pointer;display:flex;align-items:center;justify-content:center;overflow:hidden;aspect-ratio:' + (data.coverRatio || '16/9') + ';max-height:120px;">' +
         (!data.coverPhoto ? '<div class="text-center text-muted" style="font-size:11px;">🖼<br>' + PCD.escapeHtml(t('menu_cover') || 'Cover photo (optional)') + '</div>' : '') +
         (data.coverPhoto ? '<button type="button" id="menuCoverRemove" class="icon-btn" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.6);color:#fff;width:22px;height:22px;padding:0;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/></svg></button>' : '') +
+      '</div>';
+      const ratios = [['16/9','16:9'],['3/2','3:2'],['4/3','4:3'],['1/1','1:1']];
+      const ratioSelector = '<div style="display:flex;gap:4px;margin-top:6px;">' +
+        ratios.map(function(r) {
+          const active = (data.coverRatio || '16/9') === r[0];
+          return '<button type="button" data-cover-ratio="' + r[0] + '" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid ' + (active ? 'var(--brand)' : 'var(--border)') + ';background:' + (active ? 'var(--brand)' : 'var(--surface-1)') + ';color:' + (active ? '#fff' : 'var(--text-2)') + ';cursor:pointer;font-weight:' + (active ? '700' : '400') + ';">' + r[1] + '</button>';
+        }).join('') +
       '</div>';
 
       body.innerHTML = `
@@ -416,6 +425,7 @@
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">${accentSwatches}</div>
             <div class="field-label" style="font-size:12px;">${PCD.escapeHtml(t('menu_branding') || 'Logo + cover')}</div>
             <div style="display:flex;gap:8px;align-items:stretch;">${logoTile}${coverTile}</div>
+            ${ratioSelector}
           </div>
         </details>
 
@@ -666,7 +676,13 @@
       const coverZone = PCD.$('#menuCoverZone', body);
       if (coverZone) coverZone.addEventListener('click', function (e) {
         if (e.target.closest('#menuCoverRemove')) return;
+        if (e.target.closest('[data-cover-ratio]')) return;
         pickAndCrop(function (url) { data.coverPhoto = url; render(); });
+      });
+      PCD.on(body, 'click', '[data-cover-ratio]', function (e) {
+        e.stopPropagation();
+        data.coverRatio = this.getAttribute('data-cover-ratio');
+        render();
       });
       const coverRemove = PCD.$('#menuCoverRemove', body);
       if (coverRemove) coverRemove.addEventListener('click', function (e) {
@@ -1072,8 +1088,8 @@
           'font-family: ' + theme.bodyFont + ';' +
           'font-weight: ' + theme.bodyWeight + ';' +
         '}' +
-        '.m-cover { width: 100%; aspect-ratio: 1/1; max-width: 360px; margin: 0 auto ' + Math.round(O.pagePadding * 0.4) + 'px; background-size: cover; background-position: center; border-radius: 4px; }' +
-        '.m-logo { display:block; width: 64px; height: 64px; margin: 0 auto 12px; background-size: cover; background-position: center; border-radius: 50%; }' +
+        '.m-cover { width: 100%; aspect-ratio: ' + (menu.coverRatio || '16/9') + '; max-width: 100%; margin: 0 0 ' + Math.round(O.pagePadding * 0.5) + 'px; object-fit: cover; display: block; border-radius: 4px; }' +
+        '.m-logo { display:block; width: 64px; height: 64px; margin: 0 auto 12px; object-fit: cover; border-radius: 50%; }' +
         '.m-header { text-align: center; margin-bottom: ' + Math.round(O.pagePadding * 0.75) + 'px; padding-bottom: 0; }' +
         '.m-title {' +
           'font-family: ' + theme.titleFont + ';' +
@@ -1114,9 +1130,7 @@
           'font-size: ' + O.itemSize + 'px; font-weight: ' + theme.itemWeight + ';' +
           'color: ' + theme.ink + ';' +
           'letter-spacing: 0.02em;' +
-          'flex-shrink: 1;' +
-          'overflow-wrap: break-word;' +
-          'word-break: break-word;' +
+          'flex-shrink: 0;' +
         '}' +
         '.m-allerg {' +
           'font-size: 0.6em;' +
@@ -1189,13 +1203,14 @@
         '}' +
         '@media print {' +
           '@page { size: ' + pageSpec.cssSize + '; margin: 0; }' +
-          '.m-page { padding: 18mm 22mm; max-width: 100%; box-sizing: border-box; width: 100%; }' +
+          '.m-page { padding: ' + (menu.coverPhoto ? '0' : (menu.logo ? '10mm' : '14mm')) + ' 22mm 14mm; max-width: 100%; box-sizing: border-box; width: 100%; }' +
+          '.m-cover { border-radius: 0; max-width: 100%; margin-bottom: 0; }' +
         '}' +
       '</style>' +
       '<div class="m-page">' +
         '<div class="m-header">' +
-          (menu.coverPhoto ? '<div class="m-cover" style="background-image:url(' + menu.coverPhoto + ');"></div>' : '') +
-          (menu.logo ? '<div class="m-logo" style="background-image:url(' + menu.logo + ');"></div>' : '') +
+          (menu.coverPhoto ? '<img class="m-cover" src="' + PCD.escapeHtml(menu.coverPhoto) + '" alt="">' : '') +
+          (menu.logo ? '<img class="m-logo" src="' + PCD.escapeHtml(menu.logo) + '" alt="">' : '') +
           '<h1 class="m-title">' + PCD.escapeHtml(menu.name || t('untitled')) + '</h1>' +
           (menu.subtitle ? '<div class="m-subtitle">' + PCD.escapeHtml(menu.subtitle) + '</div>' : '') +
           '<div class="m-divider"></div>' +
