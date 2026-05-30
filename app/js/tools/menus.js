@@ -663,6 +663,29 @@
         });
         inp.click();
       }
+      function pickAndCropCover(ratio, onDone) {
+        const inp = document.createElement('input');
+        inp.type = 'file';
+        inp.accept = 'image/*';
+        inp.addEventListener('change', function (e) {
+          const f = e.target.files && e.target.files[0];
+          if (!f) return;
+          const reader = new FileReader();
+          reader.onload = function (ev) {
+            if (PCD.cropper && PCD.cropper.open) {
+              const parts = (ratio || '16/9').split('/');
+              const ar = parts.length === 2 ? parseFloat(parts[0]) / parseFloat(parts[1]) : 16 / 9;
+              PCD.cropper.open(ev.target.result, { aspectRatio: ar }).then(function (cropped) {
+                if (cropped) onDone(cropped);
+              });
+            } else {
+              onDone(ev.target.result);
+            }
+          };
+          reader.readAsDataURL(f);
+        });
+        inp.click();
+      }
       const logoZone = PCD.$('#menuLogoZone', body);
       if (logoZone) logoZone.addEventListener('click', function (e) {
         if (e.target.closest('#menuLogoRemove')) return;
@@ -677,7 +700,7 @@
       if (coverZone) coverZone.addEventListener('click', function (e) {
         if (e.target.closest('#menuCoverRemove')) return;
         if (e.target.closest('[data-cover-ratio]')) return;
-        pickAndCrop(function (url) { data.coverPhoto = url; render(); });
+        pickAndCropCover(data.coverRatio || '16/9', function (url) { data.coverPhoto = url; render(); });
       });
       PCD.on(body, 'click', '[data-cover-ratio]', function (e) {
         e.stopPropagation();
@@ -1088,8 +1111,9 @@
           'font-family: ' + theme.bodyFont + ';' +
           'font-weight: ' + theme.bodyWeight + ';' +
         '}' +
-        '.m-cover { width: 100%; aspect-ratio: ' + (menu.coverRatio || '16/9') + '; max-width: 100%; margin: 0 0 ' + Math.round(O.pagePadding * 0.5) + 'px; object-fit: cover; display: block; border-radius: 4px; }' +
+        '.m-cover { width: 100%; max-height: 200px; aspect-ratio: ' + (menu.coverRatio || '16/9') + '; max-width: 100%; margin: 0 0 ' + Math.round(O.pagePadding * 0.5) + 'px; object-fit: cover; display: block; border-radius: 4px; }' +
         '.m-logo { display:block; width: 64px; height: 64px; margin: 0 auto 12px; object-fit: cover; border-radius: 50%; }' +
+        '.m-page { overflow-x: hidden; }' +
         '.m-header { text-align: center; margin-bottom: ' + Math.round(O.pagePadding * 0.75) + 'px; padding-bottom: 0; }' +
         '.m-title {' +
           'font-family: ' + theme.titleFont + ';' +
@@ -1124,13 +1148,16 @@
         decorBefore +
         '.m-items { display: flex; flex-direction: column; gap: ' + O.itemGap + 'px; }' +
         '.m-item { break-inside: avoid; page-break-inside: avoid; }' +
-        '.m-item-row { display: flex; align-items: baseline; gap: 0; }' +
+        '.m-item-row { display: flex; align-items: baseline; gap: 0; overflow: hidden; }' +
         '.m-item-name {' +
           'font-family: ' + theme.titleFont + ';' +
           'font-size: ' + O.itemSize + 'px; font-weight: ' + theme.itemWeight + ';' +
           'color: ' + theme.ink + ';' +
           'letter-spacing: 0.02em;' +
-          'flex-shrink: 0;' +
+          'flex-shrink: 1;' +
+          'min-width: 0;' +
+          'overflow-wrap: break-word;' +
+          'word-break: break-word;' +
         '}' +
         '.m-allerg {' +
           'font-size: 0.6em;' +
@@ -1203,8 +1230,10 @@
         '}' +
         '@media print {' +
           '@page { size: ' + pageSpec.cssSize + '; margin: 0; }' +
-          '.m-page { padding: ' + (menu.coverPhoto ? '0' : (menu.logo ? '10mm' : '14mm')) + ' 22mm 14mm; max-width: 100%; box-sizing: border-box; width: 100%; }' +
-          '.m-cover { border-radius: 0; max-width: 100%; margin-bottom: 0; }' +
+          '.m-page { padding: ' + (menu.coverPhoto ? '0' : (menu.logo ? '10mm' : '14mm')) + ' 22mm 14mm; max-width: 100%; box-sizing: border-box; width: 100%; overflow: hidden; }' +
+          '.m-cover { max-height: 55mm; height: 55mm; aspect-ratio: unset; border-radius: 0; width: 100%; margin-bottom: 8mm; }' +
+          '.m-item-row { overflow: hidden; }' +
+          '.m-item-name { flex-shrink: 1; min-width: 0; overflow-wrap: break-word; word-break: break-word; }' +
         '}' +
       '</style>' +
       '<div class="m-page">' +
