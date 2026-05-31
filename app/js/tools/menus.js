@@ -401,17 +401,12 @@
         (data.coverPhoto ? '<button type="button" id="menuCoverRemove" class="icon-btn" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.6);color:#fff;width:22px;height:22px;padding:0;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/></svg></button>' : '') +
         (data.coverPhoto ? '<div style="position:absolute;bottom:4px;left:6px;font-size:10px;color:rgba(255,255,255,0.85);background:rgba(0,0,0,0.4);padding:1px 6px;border-radius:3px;font-weight:600;">' + (data.coverRatio || '16/9').replace('/', ':') + '</div>' : '') +
       '</div>';
-      // v2.16.1 — Cover height control for print (small=25mm / medium=40mm / large=60mm)
+      // v2.16.2 — Print size only. Ratio selector removed from editor UI;
+      // ratio is now chosen inline during photo upload (see pickAndCropCover).
       const coverHeights = [['25mm','S'],['40mm','M'],['60mm','L']];
       const activeCoverH = data.coverHeight || '40mm';
-      const ratios = [['16/9','16:9'],['3/2','3:2'],['4/3','4:3'],['1/1','1:1']];
-      const ratioSelector = '<div style="display:flex;gap:4px;margin-top:6px;align-items:center;flex-wrap:wrap;">' +
-        '<span style="font-size:10px;color:var(--text-3);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-right:2px;">Ratio</span>' +
-        ratios.map(function(r) {
-          const active = (data.coverRatio || '16/9') === r[0];
-          return '<button type="button" data-cover-ratio="' + r[0] + '" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid ' + (active ? 'var(--brand)' : 'var(--border)') + ';background:' + (active ? 'var(--brand)' : 'var(--surface-1)') + ';color:' + (active ? '#fff' : 'var(--text-2)') + ';cursor:pointer;font-weight:' + (active ? '700' : '400') + ';">' + r[1] + '</button>';
-        }).join('') +
-        '<span style="margin-left:8px;font-size:10px;color:var(--text-3);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-right:2px;">Print size</span>' +
+      const printSizeSelector = '<div style="display:flex;gap:4px;margin-top:6px;align-items:center;flex-wrap:wrap;">' +
+        '<span style="font-size:10px;color:var(--text-3);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-right:2px;">Print size</span>' +
         coverHeights.map(function(h) {
           const active = activeCoverH === h[0];
           return '<button type="button" data-cover-height="' + h[0] + '" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid ' + (active ? 'var(--brand)' : 'var(--border)') + ';background:' + (active ? 'var(--brand)' : 'var(--surface-1)') + ';color:' + (active ? '#fff' : 'var(--text-2)') + ';cursor:pointer;font-weight:' + (active ? '700' : '400') + ';">' + h[1] + '</button>';
@@ -437,7 +432,7 @@
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">${accentSwatches}</div>
             <div class="field-label" style="font-size:12px;">${PCD.escapeHtml(t('menu_branding') || 'Logo + cover')}</div>
             <div style="display:flex;gap:8px;align-items:stretch;">${logoTile}${coverTile}</div>
-            ${ratioSelector}
+            ${printSizeSelector}
           </div>
         </details>
 
@@ -675,28 +670,77 @@
         });
         inp.click();
       }
-      function pickAndCropCover(ratio, onDone) {
-        const inp = document.createElement('input');
-        inp.type = 'file';
-        inp.accept = 'image/*';
-        inp.addEventListener('change', function (e) {
-          const f = e.target.files && e.target.files[0];
-          if (!f) return;
-          const reader = new FileReader();
-          reader.onload = function (ev) {
-            if (PCD.cropper && PCD.cropper.open) {
-              const parts = (ratio || '16/9').split('/');
-              const ar = parts.length === 2 ? parseFloat(parts[0]) / parseFloat(parts[1]) : 16 / 9;
-              PCD.cropper.open(ev.target.result, { aspectRatio: ar }).then(function (cropped) {
-                if (cropped) onDone(cropped);
-              });
-            } else {
-              onDone(ev.target.result);
-            }
-          };
-          reader.readAsDataURL(f);
+      // v2.16.2 — Cover photo flow: first pick ratio via inline modal,
+      // then open file picker, then open cropper with the chosen ratio.
+      // This way the 1:1 lock in PCD.cropper is bypassed by passing
+      // the correct aspectRatio, and the user sees their choice upfront.
+      function pickAndCropCover(onDone) {
+        const RATIOS_COVER = [
+          { label: '16:9', value: '16/9', desc: 'Widescreen — best for landscape photos' },
+          { label: '3:2',  value: '3/2',  desc: 'Classic — versatile, slightly wider' },
+          { label: '4:3',  value: '4/3',  desc: 'Standard — balanced, good for portraits' },
+          { label: '1:1',  value: '1/1',  desc: 'Square — symmetrical, social-media style' },
+        ];
+        // Build ratio picker UI
+        const pickerBody = PCD.el('div');
+        pickerBody.innerHTML =
+          '<p style="font-size:13px;color:var(--text-2);margin:0 0 14px;">Choose the crop ratio for your cover photo before selecting the image.</p>' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' +
+          RATIOS_COVER.map(function(r) {
+            const isDefault = r.value === (data.coverRatio || '16/9');
+            return '<button type="button" data-pick-ratio="' + r.value + '" style="' +
+              'padding:12px 10px;border-radius:var(--r-md);border:2px solid ' + (isDefault ? 'var(--brand)' : 'var(--border)') + ';' +
+              'background:' + (isDefault ? 'var(--brand-50,#f0fdf4)' : 'var(--surface-1)') + ';' +
+              'cursor:pointer;text-align:left;">' +
+              '<div style="font-weight:700;font-size:16px;color:' + (isDefault ? 'var(--brand)' : 'var(--text-1)') + ';margin-bottom:3px;">' + r.label + '</div>' +
+              '<div style="font-size:11px;color:var(--text-3);">' + r.desc + '</div>' +
+            '</button>';
+          }).join('') +
+          '</div>';
+
+        const cancelRatioBtn = PCD.el('button', { class: 'btn btn-secondary', text: (PCD.i18n.t && PCD.i18n.t('cancel')) || 'Cancel' });
+        const ratioFooter = PCD.el('div');
+        ratioFooter.appendChild(cancelRatioBtn);
+
+        const ratioModal = PCD.modal.open({
+          title: (PCD.i18n.t && PCD.i18n.t('menu_cover_pick_ratio')) || 'Cover photo ratio',
+          body: pickerBody,
+          footer: ratioFooter,
+          size: 'sm',
+          closable: true,
+          onClose: function() {}
         });
-        inp.click();
+
+        cancelRatioBtn.addEventListener('click', function() { ratioModal.close(); });
+
+        PCD.on(pickerBody, 'click', '[data-pick-ratio]', function() {
+          const chosenRatio = this.getAttribute('data-pick-ratio');
+          ratioModal.close();
+          // Save ratio immediately so tile badge updates after crop
+          data.coverRatio = chosenRatio;
+          // Now open file picker
+          const inp = document.createElement('input');
+          inp.type = 'file';
+          inp.accept = 'image/*';
+          inp.addEventListener('change', function(e) {
+            const f = e.target.files && e.target.files[0];
+            if (!f) return;
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+              if (PCD.cropper && PCD.cropper.open) {
+                const parts = chosenRatio.split('/');
+                const ar = parts.length === 2 ? parseFloat(parts[0]) / parseFloat(parts[1]) : 16 / 9;
+                PCD.cropper.open(ev.target.result, { aspectRatio: ar }).then(function(cropped) {
+                  if (cropped) onDone(cropped);
+                });
+              } else {
+                onDone(ev.target.result);
+              }
+            };
+            reader.readAsDataURL(f);
+          });
+          inp.click();
+        });
       }
       const logoZone = PCD.$('#menuLogoZone', body);
       if (logoZone) logoZone.addEventListener('click', function (e) {
@@ -711,13 +755,8 @@
       const coverZone = PCD.$('#menuCoverZone', body);
       if (coverZone) coverZone.addEventListener('click', function (e) {
         if (e.target.closest('#menuCoverRemove')) return;
-        if (e.target.closest('[data-cover-ratio]')) return;
-        pickAndCropCover(data.coverRatio || '16/9', function (url) { data.coverPhoto = url; render(); });
-      });
-      PCD.on(body, 'click', '[data-cover-ratio]', function (e) {
-        e.stopPropagation();
-        data.coverRatio = this.getAttribute('data-cover-ratio');
-        render();
+        // v2.16.2: ratio chosen inside pickAndCropCover flow
+        pickAndCropCover(function (url) { data.coverPhoto = url; render(); });
       });
       // v2.16.1 — Cover height for print
       PCD.on(body, 'click', '[data-cover-height]', function (e) {
