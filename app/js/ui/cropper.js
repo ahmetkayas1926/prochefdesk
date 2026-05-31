@@ -23,7 +23,10 @@
     { key: 'cropper_ratio_square', ratio: 1 },
   ];
 
-  function open(imageSrc) {
+  // v2.16.3 — opts.aspectRatio: if passed, overrides the default 1:1 lock.
+  // All existing callers use open(src) with no opts → ratio stays 1:1.
+  // Only menus.js cover photo flow passes { aspectRatio: N }.
+  function open(imageSrc, opts) {
     return new Promise(function (resolve, reject) {
       const t = PCD.i18n.t;
 
@@ -39,7 +42,7 @@
         imgOffsetY: 0,
         rotation: 0,   // 0, 90, 180, 270
         crop: { x: 0, y: 0, w: 0, h: 0 }, // in stage coords
-        ratio: 1, // v2.8.67 — 1:1 locked
+        ratio: (opts && opts.aspectRatio) ? opts.aspectRatio : 1, // v2.16.3: opts.aspectRatio overrides default 1:1
       };
 
       const stage = PCD.el('div', { class: 'cropper-stage' });
@@ -53,10 +56,26 @@
       stage.appendChild(frame);
 
       const toolbar = PCD.el('div', { class: 'cropper-toolbar' });
-      RATIOS.forEach(function (r, i) {
-        const b = PCD.el('button', { class: 'cropper-ratio-btn' + (i === 0 ? ' active' : ''), text: t(r.key), 'data-ridx': i });
-        toolbar.appendChild(b);
-      });
+      // v2.16.3: if a custom ratio was passed via opts, show it as the locked ratio label
+      // instead of the default "1:1" button. User cannot change it here (it was chosen upstream).
+      if (opts && opts.aspectRatio && Math.abs(opts.aspectRatio - 1) > 0.01) {
+        // Display passed ratio as a label, not a chooser
+        var ratioLabel = (function() {
+          var r = opts.aspectRatio;
+          if (Math.abs(r - 16/9) < 0.01) return '16:9';
+          if (Math.abs(r - 3/2)  < 0.01) return '3:2';
+          if (Math.abs(r - 4/3)  < 0.01) return '4:3';
+          return Math.round(r*100)/100 + ':1';
+        })();
+        var lb = PCD.el('button', { class: 'cropper-ratio-btn active', text: ratioLabel });
+        lb.style.pointerEvents = 'none'; // locked — display only
+        toolbar.appendChild(lb);
+      } else {
+        RATIOS.forEach(function (r, i) {
+          var b = PCD.el('button', { class: 'cropper-ratio-btn' + (i === 0 ? ' active' : ''), text: t(r.key), 'data-ridx': i });
+          toolbar.appendChild(b);
+        });
+      }
       const rotateBtn = PCD.el('button', { class: 'cropper-ratio-btn', 'data-rotate': '1' });
       rotateBtn.innerHTML = '⟳ ' + t('cropper_rotate');
       toolbar.appendChild(rotateBtn);

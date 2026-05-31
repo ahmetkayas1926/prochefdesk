@@ -401,17 +401,8 @@
         (data.coverPhoto ? '<button type="button" id="menuCoverRemove" class="icon-btn" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.6);color:#fff;width:22px;height:22px;padding:0;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/></svg></button>' : '') +
         (data.coverPhoto ? '<div style="position:absolute;bottom:4px;left:6px;font-size:10px;color:rgba(255,255,255,0.85);background:rgba(0,0,0,0.4);padding:1px 6px;border-radius:3px;font-weight:600;">' + (data.coverRatio || '16/9').replace('/', ':') + '</div>' : '') +
       '</div>';
-      // v2.16.2 — Print size only. Ratio selector removed from editor UI;
-      // ratio is now chosen inline during photo upload (see pickAndCropCover).
-      const coverHeights = [['25mm','S'],['40mm','M'],['60mm','L']];
-      const activeCoverH = data.coverHeight || '40mm';
-      const printSizeSelector = '<div style="display:flex;gap:4px;margin-top:6px;align-items:center;flex-wrap:wrap;">' +
-        '<span style="font-size:10px;color:var(--text-3);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-right:2px;">Print size</span>' +
-        coverHeights.map(function(h) {
-          const active = activeCoverH === h[0];
-          return '<button type="button" data-cover-height="' + h[0] + '" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid ' + (active ? 'var(--brand)' : 'var(--border)') + ';background:' + (active ? 'var(--brand)' : 'var(--surface-1)') + ';color:' + (active ? '#fff' : 'var(--text-2)') + ';cursor:pointer;font-weight:' + (active ? '700' : '400') + ';">' + h[1] + '</button>';
-        }).join('') +
-      '</div>';
+      // v2.16.3 — Print size selector moved to preview-only (refreshPreview).
+      // Editor shows only logo + cover tile. No size buttons here.
 
       body.innerHTML = `
         <div class="field">
@@ -432,7 +423,6 @@
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">${accentSwatches}</div>
             <div class="field-label" style="font-size:12px;">${PCD.escapeHtml(t('menu_branding') || 'Logo + cover')}</div>
             <div style="display:flex;gap:8px;align-items:stretch;">${logoTile}${coverTile}</div>
-            ${printSizeSelector}
           </div>
         </details>
 
@@ -757,12 +747,6 @@
         if (e.target.closest('#menuCoverRemove')) return;
         // v2.16.2: ratio chosen inside pickAndCropCover flow
         pickAndCropCover(function (url) { data.coverPhoto = url; render(); });
-      });
-      // v2.16.1 — Cover height for print
-      PCD.on(body, 'click', '[data-cover-height]', function (e) {
-        e.stopPropagation();
-        data.coverHeight = this.getAttribute('data-cover-height');
-        render();
       });
       const coverRemove = PCD.$('#menuCoverRemove', body);
       if (coverRemove) coverRemove.addEventListener('click', function (e) {
@@ -1155,8 +1139,13 @@
           'font-family: ' + theme.bodyFont + ';' +
           'font-weight: ' + theme.bodyWeight + ';' +
         '}' +
-        // v2.16.1: screen preview — aspect-ratio correct, height capped
-        '.m-cover { width: 100%; max-height: 240px; aspect-ratio: ' + (menu.coverRatio || '16/9') + '; max-width: 100%; margin: 0 0 ' + Math.round(O.pagePadding * 0.5) + 'px; object-fit: cover; display: block; border-radius: 6px; }' +
+        // v2.16.3: screen preview max-height mirrors coverHeight selection
+        // 25mm≈95px, 40mm≈151px, 60mm≈227px (96dpi). Falls back to 151px (Medium).
+        (function(){
+          var hMap = {'25mm':'95px','40mm':'151px','60mm':'227px'};
+          var screenH = hMap[menu.coverHeight] || '151px';
+          return '.m-cover { width: 100%; max-height: ' + screenH + '; aspect-ratio: ' + (menu.coverRatio || '16/9') + '; max-width: 100%; margin: 0 0 ' + Math.round(O.pagePadding * 0.5) + 'px; object-fit: cover; display: block; border-radius: 6px; }';
+        })() +
         '.m-logo { display:block; width: 64px; height: 64px; margin: 0 auto 12px; object-fit: cover; border-radius: 50%; }' +
         '.m-page { overflow-x: hidden; }' +
         '.m-header { text-align: center; margin-bottom: ' + Math.round(O.pagePadding * 0.75) + 'px; padding-bottom: 0; }' +
