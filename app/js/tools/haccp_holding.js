@@ -481,7 +481,7 @@
         '<th rowspan="2">' + PCD.escapeHtml(t('hhd_col_corrective') || 'Düzeltici') + '</th>' +
         '<th rowspan="2">' + PCD.escapeHtml(t('hhd_col_chef') || 'Şef') + '</th>' +
       '</tr>' +
-      '<tr>' +
+      '<tr style="height:auto;">' +
         '<th>°' + u + '</th><th>' + PCD.escapeHtml(t('hcc_col_time') || 'Saat') + '</th>' +
         '<th>°' + u + '</th><th>' + PCD.escapeHtml(t('hcc_col_time') || 'Saat') + '</th>' +
         '<th>°' + u + '</th><th>' + PCD.escapeHtml(t('hcc_col_time') || 'Saat') + '</th>' +
@@ -536,14 +536,14 @@
         'width:297mm;height:210mm;display:flex;flex-direction:column;}' +
       '@media screen { body { height: auto !important; } }' +
       '.h-sheet{flex:1 1 auto;min-height:0;padding:4mm;display:flex;flex-direction:column;}' +
-      '.h-head{margin-bottom:4px;border-bottom:1.5px solid #16a34a;padding-bottom:3px;display:flex;justify-content:space-between;align-items:flex-end;flex:0 0 auto;}' +
+      '.h-head{margin-bottom:2px;border-bottom:1.5px solid #16a34a;padding-bottom:3px;display:flex;justify-content:space-between;align-items:flex-end;flex:0 0 auto;}' +
       '.h-head h1{margin:0;font-size:14px;}' +
       '.h-head .sub{font-size:10px;color:#555;margin-top:2px;}' +
       '.h-head .right{font-size:10px;color:#555;text-align:end;}' +
       'table.h-grid{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed;flex:0 0 auto;}' +
       'table.h-grid th, table.h-grid td{border:1px solid #999;padding:3px 4px;vertical-align:middle;line-height:1.3;}' +
       'table.h-grid th{background:#f3f4f6;font-weight:700;font-size:9px;text-align:center;text-transform:uppercase;letter-spacing:0.03em;}' +
-      'table.h-grid tr{height:20px;page-break-inside:avoid;}' +
+      'table.h-grid tr{height:22px;page-break-inside:avoid;}' +
       'table.h-grid td.idx{text-align:center;font-weight:700;color:#444;}' +
       'table.h-grid td.type{text-align:center;font-size:11px;}' +
       'table.h-grid td.food{font-weight:600;}' +
@@ -552,7 +552,7 @@
       'table.h-grid td.corr{font-size:10px;}' +
       'table.h-grid td.chef{text-align:center;}' +
       'table.h-grid td.fail{background:#fee2e2;color:#991b1b;font-weight:700;}' +
-      '.h-foot{margin-top:4px;display:flex;justify-content:space-between;font-size:9px;flex:0 0 auto;}' +
+      '.h-foot{margin-top:2px;display:flex;justify-content:space-between;font-size:9px;flex:0 0 auto;}' +
       '.h-foot .legend{color:#666;}' +
       '.pcd-print-footer{margin:0 !important;padding:1mm 4mm !important;border-top:none !important;flex:0 0 auto;font-size:7pt !important;line-height:1.2 !important;}' +
       '@page{size:A4 landscape;margin:0;}' +

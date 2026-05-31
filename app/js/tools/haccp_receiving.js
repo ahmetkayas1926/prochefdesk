@@ -668,19 +668,15 @@
         'width:297mm;height:210mm;display:flex;flex-direction:column;}' +
       '@media screen { body { height: auto !important; } }' +
       '.h-sheet{flex:1 1 auto;min-height:0;padding:4mm;display:flex;flex-direction:column;}' +
-      '.h-head{margin-bottom:4px;border-bottom:1.5px solid #16a34a;padding-bottom:3px;display:flex;justify-content:space-between;align-items:flex-end;flex:0 0 auto;}' +
+      '.h-head{margin-bottom:2px;border-bottom:1.5px solid #16a34a;padding-bottom:3px;display:flex;justify-content:space-between;align-items:flex-end;flex:0 0 auto;}' +
       '.h-head h1{margin:0;font-size:14px;}' +
       '.h-head .sub{font-size:10px;color:#555;margin-top:2px;}' +
       '.h-head .right{font-size:10px;color:#555;text-align:end;}' +
       'table.h-grid{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed;flex:0 0 auto;}' +
-      // v2.11.7 — v2.11.6 typography uniformity REVERT (Receiving için).
-      // Receiving'de printDay/printMonthBlank/printMonthFilled üç farklı tablo
-      // var; en uzunu 31 day row. padding 3px + line 1.3 ile gerçek row ~25px →
-      // 31×25 = 775px → A4 landscape content area'sını taşar (operatör raporu:
-      // 2. sayfaya çıkıyor). Kompakt typography (19px/2px/1.25) geri yüklendi.
+      // v2.11.7 revert preserved + row height increased to 22px for better handwriting space
       'table.h-grid th, table.h-grid td{border:1px solid #999;padding:2px 4px;vertical-align:middle;line-height:1.25;}' +
       'table.h-grid th{background:#f3f4f6;font-weight:700;font-size:9px;text-align:center;text-transform:uppercase;letter-spacing:0.03em;}' +
-      'table.h-grid tr{height:19px;page-break-inside:avoid;}' +
+      'table.h-grid tr{height:22px;page-break-inside:avoid;}' +
       'table.h-grid td.idx{text-align:center;font-weight:700;color:#444;}' +
       'table.h-grid td.sup{font-weight:600;}' +
       'table.h-grid td.prod{font-weight:600;}' +
@@ -691,7 +687,7 @@
       'table.h-grid td.note{font-size:10px;}' +
       'table.h-grid td.chef{text-align:center;}' +
       'table.h-grid td.fail{background:#fee2e2;color:#991b1b;}' +
-      '.h-foot{margin-top:4px;display:flex;justify-content:space-between;font-size:9px;flex:0 0 auto;}' +
+      '.h-foot{margin-top:2px;display:flex;justify-content:space-between;font-size:9px;flex:0 0 auto;}' +
       '.h-foot .legend{color:#666;}' +
       '.pcd-print-footer{margin:0 !important;padding:1mm 4mm !important;border-top:none !important;flex:0 0 auto;font-size:7pt !important;line-height:1.2 !important;}' +
       '@page{size:A4 landscape;margin:0;}' +
@@ -731,13 +727,13 @@
   PCD.tools.haccpReceiving = {
     render: render,
     openEditor: function () {
-      const records = listForDate(_viewDate);
+      const records = listForMonth(_viewMonth);
       const used = {};
       records.forEach(function (r) { if (typeof r.rowIndex === 'number') used[r.rowIndex] = true; });
       let firstEmpty = 0;
       while (used[firstEmpty] && firstEmpty < ROWS_PER_PAGE) firstEmpty++;
       if (firstEmpty >= ROWS_PER_PAGE) {
-        PCD.toast.info((PCD.i18n.t && PCD.i18n.t('hcr_day_full')) || 'Bu gün dolu, sonraki güne geç');
+        PCD.toast.info((PCD.i18n.t && PCD.i18n.t('hcr_month_full')) || 'Bu ay dolu, sonraki aya geç');
         return;
       }
       openRowEditor(firstEmpty, null, function () {
