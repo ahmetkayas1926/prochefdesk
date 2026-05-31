@@ -394,15 +394,27 @@
         (!data.logo ? '<div class="text-center text-muted" style="font-size:11px;">📷<br>' + PCD.escapeHtml(t('menu_logo') || 'Logo') + '</div>' : '') +
         (data.logo ? '<button type="button" id="menuLogoRemove" class="icon-btn" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.6);color:#fff;width:20px;height:20px;padding:0;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/></svg></button>' : '') +
       '</div>';
-      const coverTile = '<div id="menuCoverZone" style="position:relative;flex:1;border-radius:var(--r-md);background:' + (data.coverPhoto ? 'url(' + data.coverPhoto + ') center/cover' : 'var(--surface-2)') + ';border:2px dashed ' + (data.coverPhoto ? 'transparent' : 'var(--border-strong)') + ';cursor:pointer;display:flex;align-items:center;justify-content:center;overflow:hidden;aspect-ratio:' + (data.coverRatio || '16/9') + ';max-height:120px;">' +
+      // v2.16.1 — Cover tile: height fixed at 96px so it never overflows the editor
+      // regardless of aspect ratio. Background-size:cover simulates the ratio visually.
+      const coverTile = '<div id="menuCoverZone" style="position:relative;flex:1;height:96px;border-radius:var(--r-md);background:' + (data.coverPhoto ? 'url(' + data.coverPhoto + ') center/cover no-repeat' : 'var(--surface-2)') + ';border:2px dashed ' + (data.coverPhoto ? 'transparent' : 'var(--border-strong)') + ';cursor:pointer;display:flex;align-items:center;justify-content:center;overflow:hidden;">' +
         (!data.coverPhoto ? '<div class="text-center text-muted" style="font-size:11px;">🖼<br>' + PCD.escapeHtml(t('menu_cover') || 'Cover photo (optional)') + '</div>' : '') +
         (data.coverPhoto ? '<button type="button" id="menuCoverRemove" class="icon-btn" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.6);color:#fff;width:22px;height:22px;padding:0;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/></svg></button>' : '') +
+        (data.coverPhoto ? '<div style="position:absolute;bottom:4px;left:6px;font-size:10px;color:rgba(255,255,255,0.85);background:rgba(0,0,0,0.4);padding:1px 6px;border-radius:3px;font-weight:600;">' + (data.coverRatio || '16/9').replace('/', ':') + '</div>' : '') +
       '</div>';
+      // v2.16.1 — Cover height control for print (small=25mm / medium=40mm / large=60mm)
+      const coverHeights = [['25mm','S'],['40mm','M'],['60mm','L']];
+      const activeCoverH = data.coverHeight || '40mm';
       const ratios = [['16/9','16:9'],['3/2','3:2'],['4/3','4:3'],['1/1','1:1']];
-      const ratioSelector = '<div style="display:flex;gap:4px;margin-top:6px;">' +
+      const ratioSelector = '<div style="display:flex;gap:4px;margin-top:6px;align-items:center;flex-wrap:wrap;">' +
+        '<span style="font-size:10px;color:var(--text-3);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-right:2px;">Ratio</span>' +
         ratios.map(function(r) {
           const active = (data.coverRatio || '16/9') === r[0];
           return '<button type="button" data-cover-ratio="' + r[0] + '" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid ' + (active ? 'var(--brand)' : 'var(--border)') + ';background:' + (active ? 'var(--brand)' : 'var(--surface-1)') + ';color:' + (active ? '#fff' : 'var(--text-2)') + ';cursor:pointer;font-weight:' + (active ? '700' : '400') + ';">' + r[1] + '</button>';
+        }).join('') +
+        '<span style="margin-left:8px;font-size:10px;color:var(--text-3);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-right:2px;">Print size</span>' +
+        coverHeights.map(function(h) {
+          const active = activeCoverH === h[0];
+          return '<button type="button" data-cover-height="' + h[0] + '" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid ' + (active ? 'var(--brand)' : 'var(--border)') + ';background:' + (active ? 'var(--brand)' : 'var(--surface-1)') + ';color:' + (active ? '#fff' : 'var(--text-2)') + ';cursor:pointer;font-weight:' + (active ? '700' : '400') + ';">' + h[1] + '</button>';
         }).join('') +
       '</div>';
 
@@ -707,6 +719,12 @@
         data.coverRatio = this.getAttribute('data-cover-ratio');
         render();
       });
+      // v2.16.1 — Cover height for print
+      PCD.on(body, 'click', '[data-cover-height]', function (e) {
+        e.stopPropagation();
+        data.coverHeight = this.getAttribute('data-cover-height');
+        render();
+      });
       const coverRemove = PCD.$('#menuCoverRemove', body);
       if (coverRemove) coverRemove.addEventListener('click', function (e) {
         e.stopPropagation();
@@ -772,21 +790,8 @@
         if (sec) sec.name = this.value;
       }, 300));
 
-      // Section delete
-      PCD.on(body, 'click', '[data-secup]', function () {
-        const idx = parseInt(this.getAttribute('data-secup'), 10);
-        if (idx <= 0) return;
-        const sections = data.sections;
-        [sections[idx - 1], sections[idx]] = [sections[idx], sections[idx - 1]];
-        render();
-      });
-      PCD.on(body, 'click', '[data-secdown]', function () {
-        const idx = parseInt(this.getAttribute('data-secdown'), 10);
-        if (idx >= data.sections.length - 1) return;
-        const sections = data.sections;
-        [sections[idx], sections[idx + 1]] = [sections[idx + 1], sections[idx]];
-        render();
-      });
+      // NOTE: data-secup / data-secdown handlers removed (v2.16.1).
+      // Section reordering is handled by PCD.dragdrop.makeSortable (sec-drag-handle).
 
       PCD.on(body, 'click', '[data-secdel]', function () {
         const secEl = this.closest('[data-sid]');
@@ -1111,7 +1116,8 @@
           'font-family: ' + theme.bodyFont + ';' +
           'font-weight: ' + theme.bodyWeight + ';' +
         '}' +
-        '.m-cover { width: 100%; max-height: 200px; aspect-ratio: ' + (menu.coverRatio || '16/9') + '; max-width: 100%; margin: 0 0 ' + Math.round(O.pagePadding * 0.5) + 'px; object-fit: cover; display: block; border-radius: 4px; }' +
+        // v2.16.1: screen preview — aspect-ratio correct, height capped
+        '.m-cover { width: 100%; max-height: 240px; aspect-ratio: ' + (menu.coverRatio || '16/9') + '; max-width: 100%; margin: 0 0 ' + Math.round(O.pagePadding * 0.5) + 'px; object-fit: cover; display: block; border-radius: 6px; }' +
         '.m-logo { display:block; width: 64px; height: 64px; margin: 0 auto 12px; object-fit: cover; border-radius: 50%; }' +
         '.m-page { overflow-x: hidden; }' +
         '.m-header { text-align: center; margin-bottom: ' + Math.round(O.pagePadding * 0.75) + 'px; padding-bottom: 0; }' +
@@ -1230,8 +1236,11 @@
         '}' +
         '@media print {' +
           '@page { size: ' + pageSpec.cssSize + '; margin: 0; }' +
+          // v2.16.1: cover gets its own top padding (6mm) so it doesn't flush against page edge
           '.m-page { padding: ' + (menu.coverPhoto ? '0' : (menu.logo ? '10mm' : '14mm')) + ' 22mm 14mm; max-width: 100%; box-sizing: border-box; width: 100%; overflow: hidden; }' +
-          '.m-cover { max-height: 55mm; height: 55mm; aspect-ratio: unset; border-radius: 0; width: 100%; margin-bottom: 8mm; }' +
+          (menu.coverPhoto ? '.m-header { padding-top: 0; }' : '') +
+          // v2.16.1: print cover height driven by user selection (coverHeight saved on menu)
+          '.m-cover { height: ' + (menu.coverHeight || '40mm') + '; max-height: ' + (menu.coverHeight || '40mm') + '; aspect-ratio: unset; border-radius: 0; width: 100%; object-fit: cover; margin-bottom: 8mm; display: block; }' +
           '.m-item-row { overflow: hidden; }' +
           '.m-item-name { flex-shrink: 1; min-width: 0; overflow-wrap: break-word; word-break: break-word; }' +
         '}' +
@@ -1254,10 +1263,11 @@
     const body = PCD.el('div');
 
     function refreshPreview() {
+      const curCoverH = menu.coverHeight || '40mm';
       body.innerHTML =
         '<div style="margin-bottom:14px;padding:12px 14px;background:var(--surface-2);border-radius:var(--r-md);">' +
           '<div style="font-weight:700;font-size:13px;color:var(--text-2);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.04em;">Page density</div>' +
-          '<div class="flex gap-2" style="flex-wrap:wrap;">' +
+          '<div class="flex gap-2" style="flex-wrap:wrap;margin-bottom:' + (menu.coverPhoto ? '8px' : '0') + ';">' +
             '<button class="btn btn-secondary btn-sm" data-dens="tight" ' + (printOpts.density === 'tight' ? 'style="background:var(--brand-600);color:#fff;border-color:var(--brand-600);"' : '') + '>Tight</button>' +
             '<button class="btn btn-secondary btn-sm" data-dens="comfortable" ' + (printOpts.density === 'comfortable' ? 'style="background:var(--brand-600);color:#fff;border-color:var(--brand-600);"' : '') + '>Comfortable</button>' +
             '<button class="btn btn-secondary btn-sm" data-dens="spacious" ' + (printOpts.density === 'spacious' ? 'style="background:var(--brand-600);color:#fff;border-color:var(--brand-600);"' : '') + '>Spacious</button>' +
@@ -1266,12 +1276,20 @@
               'Title ' + printOpts.titleSize + 'px · Item ' + printOpts.itemSize + 'px · Padding ' + printOpts.pagePadding + 'px' +
             '</span>' +
           '</div>' +
+          // v2.16.1 — Cover height row (only shown when a cover photo is set)
+          (menu.coverPhoto
+            ? '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">' +
+                '<span style="font-size:11px;color:var(--text-2);font-weight:600;text-transform:uppercase;letter-spacing:0.04em;">Cover size</span>' +
+                '<button class="btn btn-secondary btn-sm" data-printcoverh="25mm" ' + (curCoverH === '25mm' ? 'style="background:var(--brand-600);color:#fff;border-color:var(--brand-600);"' : '') + '>Small (25mm)</button>' +
+                '<button class="btn btn-secondary btn-sm" data-printcoverh="40mm" ' + (curCoverH === '40mm' ? 'style="background:var(--brand-600);color:#fff;border-color:var(--brand-600);"' : '') + '>Medium (40mm)</button>' +
+                '<button class="btn btn-secondary btn-sm" data-printcoverh="60mm" ' + (curCoverH === '60mm' ? 'style="background:var(--brand-600);color:#fff;border-color:var(--brand-600);"' : '') + '>Large (60mm)</button>' +
+              '</div>'
+            : '') +
         '</div>' +
         buildStyledHtml();
 
       PCD.on(body, 'click', '[data-dens]', function () {
         applyDensity(this.getAttribute('data-dens'));
-        // persist
         const m = PCD.store.getFromTable('menus', mid);
         if (m) {
           m.printDensity = printOpts.density;
@@ -1282,6 +1300,15 @@
           m.printItemGap = printOpts.itemGap;
           PCD.store.upsertInTable('menus', m, 'm');
         }
+        refreshPreview();
+      });
+
+      // v2.16.1 — Cover height handler in print view
+      PCD.on(body, 'click', '[data-printcoverh]', function () {
+        const h = this.getAttribute('data-printcoverh');
+        menu.coverHeight = h;
+        const m = PCD.store.getFromTable('menus', mid);
+        if (m) { m.coverHeight = h; PCD.store.upsertInTable('menus', m, 'm'); }
         refreshPreview();
       });
     }
