@@ -394,11 +394,9 @@
         (!data.logo ? '<div class="text-center text-muted" style="font-size:11px;">📷<br>' + PCD.escapeHtml(t('menu_logo') || 'Logo') + '</div>' : '') +
         (data.logo ? '<button type="button" id="menuLogoRemove" class="icon-btn" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.6);color:#fff;width:20px;height:20px;padding:0;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/></svg></button>' : '') +
       '</div>';
-      // v2.16.1 — Cover tile: height fixed at 96px so it never overflows the editor
-      // regardless of aspect ratio. Background-size:cover simulates the ratio visually.
-      // v2.16.7: cover tile aspect-ratio matches chosen crop ratio, max-height:160px prevents overflow
-      const coverRatioStyle = (data.coverRatio || '16/9').replace('/', '/');
-      const coverTile = '<div id="menuCoverZone" style="position:relative;flex:1;aspect-ratio:' + (data.coverRatio || '16/9') + ';max-height:160px;border-radius:var(--r-md);background:' + (data.coverPhoto ? 'url(' + data.coverPhoto + ') center/cover no-repeat' : 'var(--surface-2)') + ';border:2px dashed ' + (data.coverPhoto ? 'transparent' : 'var(--border-strong)') + ';cursor:pointer;display:flex;align-items:center;justify-content:center;overflow:hidden;">' +
+      // v2.16.8: cover tile — sabit genişlik 240px, yükseklik aspect-ratio'dan otomatik gelir.
+      // flex:1 kaldırıldı çünkü container genişliğini doldurunca max-height'a takılıyordu.
+      const coverTile = '<div id="menuCoverZone" style="position:relative;width:240px;aspect-ratio:' + (data.coverRatio || '16/9') + ';border-radius:var(--r-md);background:' + (data.coverPhoto ? 'url(' + data.coverPhoto + ') center/cover no-repeat' : 'var(--surface-2)') + ';border:2px dashed ' + (data.coverPhoto ? 'transparent' : 'var(--border-strong)') + ';cursor:pointer;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;">' +
         (!data.coverPhoto ? '<div class="text-center text-muted" style="font-size:11px;">🖼<br>' + PCD.escapeHtml(t('menu_cover') || 'Cover photo (optional)') + '</div>' : '') +
         (data.coverPhoto ? '<button type="button" id="menuCoverRemove" class="icon-btn" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.6);color:#fff;width:22px;height:22px;padding:0;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/></svg></button>' : '') +
         (data.coverPhoto ? '<div style="position:absolute;bottom:4px;left:6px;font-size:10px;color:rgba(255,255,255,0.85);background:rgba(0,0,0,0.4);padding:1px 6px;border-radius:3px;font-weight:600;">' + (data.coverRatio || '16/9').replace('/', ':') + '</div>' : '') +
