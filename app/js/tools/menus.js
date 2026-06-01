@@ -1144,7 +1144,7 @@
         (function(){
           var hMap = {'25mm':'95px','40mm':'151px','60mm':'227px'};
           var screenH = hMap[menu.coverHeight] || '151px';
-          return '.m-cover { width: 100%; height: ' + screenH + '; max-height: ' + screenH + '; aspect-ratio: unset; max-width: 100%; margin: 0 0 ' + Math.round(O.pagePadding * 0.5) + 'px; object-fit: contain; display: block; border-radius: 6px; background: transparent; }';
+          return '.m-cover-wrap { display: block; margin: 0 0 ' + Math.round(O.pagePadding * 0.5) + 'px; }' + '.m-cover { width: 100%; height: ' + screenH + '; max-height: ' + screenH + '; aspect-ratio: unset; object-fit: cover; display: block; border-radius: 6px; }';
         })() +
         '.m-logo { display:block; width: 64px; height: 64px; margin: 0 auto 12px; object-fit: cover; border-radius: 50%; }' +
         '.m-page { overflow-x: hidden; }' +
@@ -1264,21 +1264,19 @@
         '}' +
         '@media print {' +
           '@page { size: ' + pageSpec.cssSize + '; margin: 0; }' +
-          // v2.16.1: cover gets its own top padding (6mm) so it doesn't flush against page edge
-          '.m-page { padding: ' + (menu.coverPhoto ? '0' : (menu.logo ? '10mm' : '14mm')) + ' 22mm 14mm; max-width: 100%; box-sizing: border-box; width: 100%; overflow: hidden; }' +
-          (menu.coverPhoto ? '.m-header { padding-top: 0; }' : '') +
-          // v2.16.5: print cover
-          // - object-fit:contain → no cropping, full image visible
-          // - negative horizontal margin so cover bleeds to page edge despite .m-page padding
-          // - height = user selection (25mm / 40mm / 60mm)
-          '.m-cover { height: ' + (menu.coverHeight || '40mm') + '; max-height: ' + (menu.coverHeight || '40mm') + '; width: calc(100% + 44mm); margin-left: -22mm; margin-right: -22mm; margin-bottom: 10mm; aspect-ratio: unset; border-radius: 0; object-fit: cover; display: block; }' +
+          // v2.16.6: .m-page always has full padding. Cover lives OUTSIDE .m-page in .m-cover-wrap.
+          '.m-page { padding: ' + (menu.logo ? '10mm' : '14mm') + ' 22mm 14mm; max-width: 100%; box-sizing: border-box; width: 100%; overflow: hidden; }' +
+          // .m-cover-wrap: full page width, no padding, cover flush to edges
+          '.m-cover-wrap { width: 100%; display: block; margin: 0; padding: 0; }' +
+          '.m-cover { height: ' + (menu.coverHeight || '40mm') + '; max-height: ' + (menu.coverHeight || '40mm') + '; width: 100%; aspect-ratio: unset; border-radius: 0; object-fit: cover; display: block; margin: 0; padding: 0; }' +
           '.m-item-row { overflow: hidden; }' +
           '.m-item-name { flex-shrink: 1; min-width: 0; overflow-wrap: break-word; word-break: break-word; }' +
         '}' +
       '</style>' +
+      // v2.16.6: cover wrap outside .m-page for true full-bleed print
+      (menu.coverPhoto ? '<div class="m-cover-wrap"><img class="m-cover" src="' + PCD.escapeHtml(menu.coverPhoto) + '" alt=""></div>' : '') +
       '<div class="m-page">' +
         '<div class="m-header">' +
-          (menu.coverPhoto ? '<img class="m-cover" src="' + PCD.escapeHtml(menu.coverPhoto) + '" alt="">' : '') +
           (menu.logo ? '<img class="m-logo" src="' + PCD.escapeHtml(menu.logo) + '" alt="">' : '') +
           '<h1 class="m-title">' + PCD.escapeHtml(menu.name || t('untitled')) + '</h1>' +
           (menu.subtitle ? '<div class="m-subtitle">' + PCD.escapeHtml(menu.subtitle) + '</div>' : '') +
