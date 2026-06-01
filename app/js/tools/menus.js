@@ -93,12 +93,20 @@
   // 6 hazır renk — tema accent'ini override eder. Şef boş bırakırsa
   // (data.accentColor undefined) tema default accent'i kullanılır.
   const PALETTES = [
-    { id: 'gold',    label: 'Gold',     color: '#c5a572' },
-    { id: 'burgundy',label: 'Burgundy', color: '#8b1a1a' },
-    { id: 'navy',    label: 'Navy',     color: '#1e3a5f' },
-    { id: 'forest',  label: 'Forest',   color: '#2d5016' },
-    { id: 'black',   label: 'Black',    color: '#111111' },
-    { id: 'choco',   label: 'Chocolate',color: '#5c2c0f' },
+    // Koyu / doygun
+    { id: 'gold',    label: 'Gold',       color: '#c5a572' },
+    { id: 'burgundy',label: 'Burgundy',   color: '#8b1a1a' },
+    { id: 'navy',    label: 'Navy',       color: '#1e3a5f' },
+    { id: 'forest',  label: 'Forest',     color: '#2d5016' },
+    { id: 'black',   label: 'Black',      color: '#111111' },
+    { id: 'choco',   label: 'Chocolate',  color: '#5c2c0f' },
+    // Açık / pastel
+    { id: 'cream',   label: 'Cream',      color: '#c8a96e' },
+    { id: 'sage',    label: 'Sage',       color: '#7a9e7e' },
+    { id: 'blush',   label: 'Blush',      color: '#c47c8a' },
+    { id: 'slate',   label: 'Slate',      color: '#607d8b' },
+    { id: 'dustrose',label: 'Dust Rose',  color: '#b07080' },
+    { id: 'olive',   label: 'Olive',      color: '#8a8a4a' },
   ];
 
   // Per-item special badges. Yok / chef_pick / signature / new / spicy.
@@ -196,6 +204,33 @@
       if (p) return p.color;
     }
     return theme.accent;
+  }
+
+  // v2.17 — Ink (text) rengi: kullanıcı seçimi yoksa tema default'u
+  function resolveInk(menu) {
+    const theme = THEMES[menu.theme] || THEMES.fine_dining;
+    if (menu.inkColor) return menu.inkColor;
+    return theme.ink;
+  }
+
+  // v2.17 — Arka plan rengi: kullanıcı seçimi yoksa tema default'u
+  function resolveBg(menu) {
+    const theme = THEMES[menu.theme] || THEMES.fine_dining;
+    if (menu.bgColor) return menu.bgColor;
+    return theme.bg;
+  }
+
+  // v2.17 — Muted ink: tema mutedInk kullan; ink override varsa rgba ile %60 opacity
+  function resolveMutedInk(menu) {
+    const theme = THEMES[menu.theme] || THEMES.fine_dining;
+    if (menu.inkColor) {
+      // hex → rgba %60
+      var h = menu.inkColor.replace('#','');
+      if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+      var r = parseInt(h.substr(0,2),16), g = parseInt(h.substr(2,2),16), b = parseInt(h.substr(4,2),16);
+      return 'rgba(' + r + ',' + g + ',' + b + ',0.6)';
+    }
+    return theme.mutedInk;
   }
 
   // Localized default section names — built at call time so the chef's
@@ -317,6 +352,8 @@
       hideAllergens: false,
       theme: 'fine_dining',        // v2.8.68 — theme picker default
       accentColor: '',             // v2.8.68 — '' = theme default
+      inkColor: '',                // v2.17 — '' = theme default ink
+      bgColor: '',                 // v2.17 — '' = theme default bg
       columns: 1,                  // v2.8.69 — 1 or 2 print columns
       pageSize: 'a4',              // v2.8.69 — a4 | a5 | us_letter | a4_land
       logo: null,                  // v2.8.69 — base64 (1:1 cropped)
@@ -332,6 +369,8 @@
     if (typeof data.columns !== 'number') data.columns = 1;
     if (!data.pageSize) data.pageSize = 'a4';
     if (!data.coverRatio) data.coverRatio = '16/9';
+    if (typeof data.inkColor !== 'string') data.inkColor = '';
+    if (typeof data.bgColor !== 'string') data.bgColor = '';
     if (!data.priceStyle) data.priceStyle = data.hidePrices ? 'hidden' : 'symbol';
     // Ensure existing sections have IDs
     (data.sections || []).forEach(function (s) {
@@ -383,6 +422,42 @@
           const active = data.accentColor === p.id;
           return '<button type="button" data-accent="' + p.id + '" title="' + PCD.escapeHtml(p.label) + '" style="width:28px;height:28px;border-radius:50%;border:2px solid ' + (active ? 'var(--brand-600)' : 'var(--border)') + ';background:' + p.color + ';cursor:pointer;' + (active ? 'box-shadow:0 0 0 2px var(--brand-200);' : '') + '"></button>';
         }).join('');
+
+      // v2.17 — Yazı rengi seçici (koyu tonlar + tema default)
+      const INK_OPTIONS = [
+        { id: '', label: 'Theme default', color: null },
+        { id: '#111111', label: 'Black',        color: '#111111' },
+        { id: '#1a1a2e', label: 'Dark Navy',    color: '#1a1a2e' },
+        { id: '#3a2e1f', label: 'Dark Brown',   color: '#3a2e1f' },
+        { id: '#2d3436', label: 'Charcoal',     color: '#2d3436' },
+        { id: '#4a4a4a', label: 'Soft Black',   color: '#4a4a4a' },
+        { id: '#ffffff', label: 'White',         color: '#ffffff', border: '#ccc' },
+      ];
+      const inkSwatches = INK_OPTIONS.map(function (o) {
+        const active = (data.inkColor || '') === o.id;
+        const bg = o.color ? o.color : 'linear-gradient(135deg,#fff 50%,#999 50%)';
+        return '<button type="button" data-ink="' + o.id + '" title="' + PCD.escapeHtml(o.label) + '" style="width:28px;height:28px;border-radius:50%;border:2px solid ' + (active ? 'var(--brand-600)' : (o.border || 'var(--border)')) + ';background:' + bg + ';cursor:pointer;' + (active ? 'box-shadow:0 0 0 2px var(--brand-200);' : '') + '"></button>';
+      }).join('');
+
+      // v2.17 — Arka plan rengi seçici (açık/hafif tonlar + tema default)
+      const BG_OPTIONS = [
+        { id: '', label: 'Theme default', color: null },
+        { id: '#ffffff', label: 'White',          color: '#ffffff', border: '#ddd' },
+        { id: '#fffaf5', label: 'Warm White',      color: '#fffaf5', border: '#ddd' },
+        { id: '#fdf6e3', label: 'Cream',           color: '#fdf6e3', border: '#ddd' },
+        { id: '#f5f0eb', label: 'Linen',           color: '#f5f0eb', border: '#ddd' },
+        { id: '#f0f4f0', label: 'Soft Sage',       color: '#f0f4f0', border: '#ddd' },
+        { id: '#fdf0f3', label: 'Blush',           color: '#fdf0f3', border: '#ddd' },
+        { id: '#f0f2f5', label: 'Ice Blue',        color: '#f0f2f5', border: '#ddd' },
+        { id: '#1a1a1a', label: 'Black',            color: '#1a1a1a' },
+        { id: '#1a1a2e', label: 'Dark Navy',        color: '#1a1a2e' },
+        { id: '#2d1b0e', label: 'Dark Espresso',    color: '#2d1b0e' },
+      ];
+      const bgSwatches = BG_OPTIONS.map(function (o) {
+        const active = (data.bgColor || '') === o.id;
+        const bg = o.color ? o.color : 'linear-gradient(135deg,#fff 50%,#999 50%)';
+        return '<button type="button" data-bg="' + o.id + '" title="' + PCD.escapeHtml(o.label) + '" style="width:28px;height:28px;border-radius:50%;border:2px solid ' + (active ? 'var(--brand-600)' : (o.border || 'var(--border)')) + ';background:' + bg + ';cursor:pointer;' + (active ? 'box-shadow:0 0 0 2px var(--brand-200);' : '') + '"></button>';
+      }).join('');
       const colsBtns = '<button type="button" class="btn btn-sm ' + (data.columns === 1 ? 'btn-primary' : 'btn-outline') + '" data-cols="1" style="flex:1;">1 ' + (t('menu_column') || 'column') + '</button>' +
                        '<button type="button" class="btn btn-sm ' + (data.columns === 2 ? 'btn-primary' : 'btn-outline') + '" data-cols="2" style="flex:1;">2 ' + (t('menu_columns') || 'columns') + '</button>';
       const pageBtns = PAGE_SIZES.map(function (ps) {
@@ -421,6 +496,10 @@
             <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">${themeBtns}</div>
             <div class="field-label" style="font-size:12px;">${PCD.escapeHtml(t('menu_accent') || 'Accent colour')}</div>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">${accentSwatches}</div>
+            <div class="field-label" style="font-size:12px;">${PCD.escapeHtml(t('menu_text_color') || 'Text colour')}</div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">${inkSwatches}</div>
+            <div class="field-label" style="font-size:12px;">${PCD.escapeHtml(t('menu_bg_color') || 'Background colour')}</div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">${bgSwatches}</div>
             <div class="field-label" style="font-size:12px;">${PCD.escapeHtml(t('menu_branding') || 'Logo + cover')}</div>
             <div style="display:flex;gap:8px;align-items:stretch;">${logoTile}${coverTile}</div>
           </div>
@@ -627,6 +706,18 @@
       // Accent color swatches
       PCD.on(body, 'click', '[data-accent]', function () {
         data.accentColor = this.getAttribute('data-accent');
+        render();
+      });
+      // v2.17 — Yazı rengi handler
+      PCD.on(body, 'click', '[data-ink]', function (e) {
+        e.stopPropagation();
+        data.inkColor = this.getAttribute('data-ink');
+        render();
+      });
+      // v2.17 — Arka plan rengi handler
+      PCD.on(body, 'click', '[data-bg]', function (e) {
+        e.stopPropagation();
+        data.bgColor = this.getAttribute('data-bg');
         render();
       });
       // v2.8.69 — Columns + page size
@@ -1136,8 +1227,9 @@
       return (
       '<style>' +
         '@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=Caveat:wght@400;600;700&family=Inter:wght@300;400;500;600;700;800&family=Nunito:wght@300;400;500;600;700&display=swap");' +
+        // v2.17: ink ve bg kullanıcı seçimine göre override edilebilir
         '.m-page {' +
-          'background: ' + theme.bg + '; color: ' + theme.ink + ';' +
+          'background: ' + resolveBg(menu) + '; color: ' + resolveInk(menu) + ';' +
           'max-width: ' + pageMaxWidth + 'px; margin: 0 auto; padding: ' + O.pagePadding + 'px ' + (O.pagePadding + 8) + 'px;' +
           'font-family: ' + theme.bodyFont + ';' +
           'font-weight: ' + theme.bodyWeight + ';' +
@@ -1156,11 +1248,11 @@
           'font-family: ' + theme.titleFont + ';' +
           'font-size: ' + O.titleSize + 'px; font-weight: ' + theme.titleWeight + ';' +
           'letter-spacing: ' + theme.titleLetterSpacing + ';' +
-          'margin: 0 0 8px; color: ' + theme.ink + ';' +
+          'margin: 0 0 8px; color: ' + resolveInk(menu) + ';' +
           'line-height: 1.1;' +
         '}' +
         '.m-subtitle {' +
-          'font-size: 11px; color: ' + theme.mutedInk + ';' +
+          'font-size: 11px; color: ' + resolveMutedInk(menu) + ';' +
           'letter-spacing: 0.24em;' +
           'text-transform: uppercase; font-weight: 400;' +
           'margin-bottom: 24px;' +
@@ -1178,7 +1270,7 @@
           'letter-spacing: ' + theme.sectionLetterSpacing + ';' +
           'text-transform: ' + theme.sectionTransform + ';' +
           'text-align: center;' +
-          'color: ' + theme.ink + ';' +
+          'color: ' + resolveInk(menu) + ';' +
           'margin: 0 0 ' + Math.round(O.itemGap * 1.3) + 'px;' +
           'position: relative;' +
         '}' +
@@ -1189,7 +1281,7 @@
         '.m-item-name {' +
           'font-family: ' + theme.titleFont + ';' +
           'font-size: ' + O.itemSize + 'px; font-weight: ' + theme.itemWeight + ';' +
-          'color: ' + theme.ink + ';' +
+          'color: ' + resolveInk(menu) + ';' +
           'letter-spacing: 0.02em;' +
           'flex-shrink: 1;' +
           'min-width: 0;' +
@@ -1200,7 +1292,7 @@
           'font-size: 0.6em;' +
           'font-weight: 600;' +
           'margin-inline-start: 3px;' +
-          'color: ' + theme.mutedInk + ';' +
+          'color: ' + resolveMutedInk(menu) + ';' +
           'letter-spacing: 0.04em;' +
         '}' +
         '.m-codes {' +
@@ -1208,7 +1300,7 @@
           'font-size: 0.56em;' +
           'font-weight: 600;' +
           'margin-inline-start: 6px;' +
-          'color: ' + theme.mutedInk + ';' +
+          'color: ' + resolveMutedInk(menu) + ';' +
           'letter-spacing: 0.02em;' +
           'white-space: nowrap;' +
           'vertical-align: middle;' +
@@ -1216,14 +1308,14 @@
         '.m-allergen-legend {' +
           'margin-top: 30px; padding-top: 14px;' +
           'border-top: 1px solid ' + accent + '33;' +
-          'font-size: 11px; color: ' + theme.mutedInk + ';' +
+          'font-size: 11px; color: ' + resolveMutedInk(menu) + ';' +
           'line-height: 1.9; text-align: center; font-weight: 400;' +
         '}' +
         '.m-allergen-legend .m-leg-title {' +
           'text-transform: uppercase; letter-spacing: 0.14em;' +
-          'font-weight: 600; margin-inline-end: 6px; color: ' + theme.ink + ';' +
+          'font-weight: 600; margin-inline-end: 6px; color: ' + resolveInk(menu) + ';' +
         '}' +
-        '.m-allergen-legend b { font-weight: 700; color: ' + theme.ink + '; }' +
+        '.m-allergen-legend b { font-weight: 700; color: ' + resolveInk(menu) + '; }' +
         '.m-itembadge {' +
           'font-size: 10px;' +
           'font-weight: 700;' +
@@ -1247,7 +1339,7 @@
           'white-space: nowrap;' +
         '}' +
         '.m-item-desc {' +
-          'font-size: ' + Math.max(11, O.itemSize - 6) + 'px; color: ' + theme.mutedInk + ';' +
+          'font-size: ' + Math.max(11, O.itemSize - 6) + 'px; color: ' + resolveMutedInk(menu) + ';' +
           'font-style: italic;' +
           'margin-top: 4px;' +
           'line-height: 1.5;' +
@@ -1256,7 +1348,7 @@
         '}' +
         '.m-footer {' +
           'text-align: center;' +
-          'font-size: 11px; color: ' + theme.mutedInk + ';' +
+          'font-size: 11px; color: ' + resolveMutedInk(menu) + ';' +
           'letter-spacing: 0.12em;' +
           'text-transform: uppercase;' +
           'margin-top: 40px;' +

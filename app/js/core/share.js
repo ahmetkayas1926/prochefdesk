@@ -117,10 +117,30 @@
       name: m.name,
       subtitle: m.subtitle,
       footer: m.footer,
-      logo: m.logo || '',                     // v2.16 fix: include logo
+      // Design
+      theme: m.theme || 'fine_dining',
+      accentColor: m.accentColor || '',
+      inkColor: m.inkColor || '',
+      bgColor: m.bgColor || '',
+      logo: m.logo || '',
+      coverPhoto: m.coverPhoto || '',
+      coverRatio: m.coverRatio || '16/9',
+      coverHeight: m.coverHeight || '40mm',
+      // Layout
+      columns: m.columns || 1,
+      pageSize: m.pageSize || 'a4',
+      // Display options
+      priceStyle: m.priceStyle || (m.hidePrices ? 'hidden' : 'symbol'),
+      allergenStyle: m.allergenStyle || (m.hideAllergens ? 'off' : 'codes'),
+      // Density
+      printDensity: m.printDensity || 'comfortable',
+      printTitleSize: m.printTitleSize || 44,
+      printItemSize: m.printItemSize || 18,
+      printSectionSize: m.printSectionSize || 22,
+      printPagePadding: m.printPagePadding || 48,
+      printItemGap: m.printItemGap || 16,
+      // Data
       sections: sections,
-      hidePrices: m.hidePrices,
-      printDensity: m.printDensity,
       sharedAt: new Date().toISOString(),
     };
   }
@@ -435,39 +455,115 @@
         html += '<div class="share-section"><h2>' + escapeHtml(t('share_plating', 'Plating')) + '</h2><div class="steps">' + escapeHtml(p.plating) + '</div></div>';
       }
     } else if (p.kind === 'menu') {
-      html += '<div style="text-align:center;margin-bottom:30px;">';
-      if (p.logo) html += '<img src="' + escapeHtml(p.logo) + '" alt="" style="width:72px;height:72px;border-radius:50%;object-fit:cover;margin:0 auto 14px;display:block;">';
-      html += '<h1 style="font-size:36px;margin-bottom:8px;font-family:Georgia,serif;">' + escapeHtml(p.name || t('share_default_menu', 'Menu')) + '</h1>';
-      if (p.subtitle) html += '<div style="font-size:12px;letter-spacing:0.24em;color:#888;text-transform:uppercase;">' + escapeHtml(p.subtitle) + '</div>';
-      html += '</div>';
-      (p.sections || []).forEach(function (sec) {
-        html += '<div class="menu-section">';
-        if (sec.title) {
-          html += '<div class="menu-section-title">' +
-            '<span style="margin-right:10px;color:#ccc;">—</span>' +
-            escapeHtml(sec.title) +
-            '<span style="margin-left:10px;color:#ccc;">—</span>' +
-          '</div>';
+      // v2.17 — Share page menu render: tema, font, renk, logo, cover, 2-kolon
+      // buildStyledHtml() ile aynı görünümü üretir.
+      var SHARE_THEMES = {
+        fine_dining: { titleFont: '"Cormorant Garamond",Georgia,serif', bodyFont: '"Inter",-apple-system,sans-serif', bodyWeight: 300, titleWeight: 500, itemWeight: 600, accent: '#c5a572', bg: '#ffffff', ink: '#111111', mutedInk: '#666666', sectionTransform: 'uppercase', sectionLetterSpacing: '0.18em', sectionDecor: 'lines', titleLetterSpacing: '0.02em' },
+        modern_bistro: { titleFont: '"Playfair Display",Georgia,serif', bodyFont: '"Inter",-apple-system,sans-serif', bodyWeight: 400, titleWeight: 700, itemWeight: 700, accent: '#c2410c', bg: '#fffaf5', ink: '#1a1a1a', mutedInk: '#7a6b5d', sectionTransform: 'none', sectionLetterSpacing: '0', sectionDecor: 'underline', titleLetterSpacing: '-0.01em' },
+        cafe: { titleFont: '"Caveat","Brush Script MT",cursive', bodyFont: '"Nunito",-apple-system,sans-serif', bodyWeight: 400, titleWeight: 700, itemWeight: 700, accent: '#b45309', bg: '#fdf6e3', ink: '#3a2e1f', mutedInk: '#8a7355', sectionTransform: 'none', sectionLetterSpacing: '0', sectionDecor: 'wavy', titleLetterSpacing: '0' },
+        minimalist: { titleFont: '"Inter",-apple-system,sans-serif', bodyFont: '"Inter",-apple-system,sans-serif', bodyWeight: 400, titleWeight: 800, itemWeight: 600, accent: '#111111', bg: '#ffffff', ink: '#0a0a0a', mutedInk: '#666666', sectionTransform: 'uppercase', sectionLetterSpacing: '0.16em', sectionDecor: 'none', titleLetterSpacing: '-0.02em' },
+      };
+      var SHARE_PALETTES = { gold:'#c5a572', burgundy:'#8b1a1a', navy:'#1e3a5f', forest:'#2d5016', black:'#111111', choco:'#5c2c0f', cream:'#c8a96e', sage:'#7a9e7e', blush:'#c47c8a', slate:'#607d8b', dustrose:'#b07080', olive:'#8a8a4a' };
+      var th = SHARE_THEMES[p.theme] || SHARE_THEMES.fine_dining;
+      var accent = (p.accentColor && SHARE_PALETTES[p.accentColor]) ? SHARE_PALETTES[p.accentColor] : th.accent;
+      var ink = p.inkColor || th.ink;
+      var mutedInk = (function() {
+        if (p.inkColor) {
+          var h = p.inkColor.replace('#',''); if(h.length===3)h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+          var r=parseInt(h.substr(0,2),16),g=parseInt(h.substr(2,2),16),b=parseInt(h.substr(4,2),16);
+          return 'rgba('+r+','+g+','+b+',0.6)';
         }
-        (sec.items || []).forEach(function (it) {
-          html += '<div class="menu-item">';
-          html += '<div class="menu-item-name">' +
-            '<span>' + escapeHtml(it.name) + '</span>' +
-            (!p.hidePrices && it.price ? '<span style="color:#c5a572;">' + ((PCD.currencySymbol && PCD.currencySymbol()) || '$') + Number(it.price).toFixed(2) + '</span>' : '') +
-            '</div>';
-          if (it.description) html += '<div class="menu-item-desc">' + escapeHtml(it.description) + '</div>';
-          if (it.codes && it.codes.length) {
-            html += '<div style="margin-top:4px;">' +
-              it.codes.map(function (c) {
-                return '<span style="display:inline-block;font-size:10px;font-weight:700;color:#888;border:1px solid #ddd;border-radius:3px;padding:1px 5px;margin-right:3px;">' + escapeHtml(c) + '</span>';
-              }).join('') +
-            '</div>';
+        return th.mutedInk;
+      })();
+      var bg = p.bgColor || th.bg;
+      var titleSize = p.printTitleSize || 44;
+      var itemSize = p.printItemSize || 18;
+      var sectionSize = p.printSectionSize || 22;
+      var pagePadding = p.printPagePadding || 48;
+      var itemGap = p.printItemGap || 16;
+      var density = p.printDensity || 'comfortable';
+      if (density === 'tight')    { titleSize=36; itemSize=16; sectionSize=18; pagePadding=32; itemGap=10; }
+      if (density === 'spacious') { titleSize=52; itemSize=20; sectionSize=26; pagePadding=64; itemGap=22; }
+      var cols = (p.columns === 2) ? 2 : 1;
+      var priceStyle = p.priceStyle || 'symbol';
+      var showAllergens = (p.allergenStyle !== 'off');
+      var currSym = (PCD.currencySymbol && PCD.currencySymbol()) || '$';
+      var sectionDecorCSS = '';
+      if (th.sectionDecor === 'lines') sectionDecorCSS = '.sm-sec-title::before,.sm-sec-title::after{content:"";display:inline-block;width:20px;height:1px;background:'+accent+';vertical-align:middle;margin:0 12px;}';
+      else if (th.sectionDecor === 'underline') sectionDecorCSS = '.sm-sec-title{border-bottom:2px solid '+accent+';padding-bottom:4px;display:inline-block;padding-left:20px;padding-right:20px;}';
+      else if (th.sectionDecor === 'wavy') sectionDecorCSS = '.sm-sec-title::after{content:"~";display:block;color:'+accent+';font-size:1.3em;line-height:0.4;margin-top:4px;}';
+
+      // Tema font import (sadece bu tema için)
+      var fontImport = '@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=Caveat:wght@400;600;700&family=Inter:wght@300;400;500;600;700;800&family=Nunito:wght@300;400;500;600;700&display=swap");';
+
+      // Ortak wrapper — share-page override et
+      html = html.replace('<style>', '<style>' + fontImport);
+      html += '<style>' +
+        '.sm-page{background:'+bg+';color:'+ink+';max-width:620px;margin:0 auto;padding:'+pagePadding+'px '+(pagePadding+8)+'px;font-family:'+th.bodyFont+';font-weight:'+th.bodyWeight+';border-radius:8px;}' +
+        '.sm-cover{width:100%;height:180px;object-fit:cover;border-radius:6px;display:block;margin:0 0 '+(Math.round(pagePadding*0.5))+'px;}' +
+        '.sm-logo{display:block;width:64px;height:64px;margin:0 auto 12px;object-fit:cover;border-radius:50%;}' +
+        '.sm-header{text-align:center;margin-bottom:'+Math.round(pagePadding*0.75)+'px;}' +
+        '.sm-title{font-family:'+th.titleFont+';font-size:'+titleSize+'px;font-weight:'+th.titleWeight+';letter-spacing:'+th.titleLetterSpacing+';margin:0 0 8px;color:'+ink+';line-height:1.1;}' +
+        '.sm-subtitle{font-size:11px;color:'+mutedInk+';letter-spacing:0.24em;text-transform:uppercase;font-weight:400;margin:0;}' +
+        '.sm-title-rule{width:40px;height:2px;background:'+accent+';margin:10px auto 0;border:none;display:block;}' +
+        '.sm-sections{'+(cols===2?'column-count:2;column-gap:'+(pagePadding*0.7)+'px;':'')+'margin-top:0;}' +
+        '.sm-section{break-inside:avoid;margin-bottom:'+Math.round(pagePadding*0.9)+'px;}' +
+        '.sm-sec-title{font-size:'+sectionSize+'px;font-weight:700;text-transform:'+th.sectionTransform+';letter-spacing:'+th.sectionLetterSpacing+';color:'+accent+';text-align:center;margin:0 0 '+Math.round(itemGap*1.2)+'px;}' +
+        sectionDecorCSS +
+        '.sm-items{}' +
+        '.sm-item{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:'+itemGap+'px;break-inside:avoid;}' +
+        '.sm-item-name{font-size:'+itemSize+'px;font-weight:'+th.itemWeight+';color:'+ink+';flex-shrink:1;min-width:0;}' +
+        '.sm-item-desc{font-size:'+(itemSize-3)+'px;color:'+mutedInk+';margin-top:2px;font-style:italic;}' +
+        '.sm-item-codes{font-size:'+(itemSize-6)+'px;color:'+mutedInk+';margin-top:2px;}' +
+        '.sm-item-leader{flex:1;border-bottom:1px dotted #ccc;margin:0 4px 3px;}' +
+        '.sm-item-price{font-size:'+itemSize+'px;font-weight:600;color:'+accent+';white-space:nowrap;flex-shrink:0;}' +
+        '.sm-footer{text-align:center;margin-top:'+Math.round(pagePadding*0.75)+'px;font-size:11px;color:'+mutedInk+';text-transform:uppercase;letter-spacing:0.12em;border-top:1px solid '+(accent+'33')+';padding-top:'+Math.round(pagePadding*0.5)+'px;}' +
+        '.sm-allergen-legend{margin-top:'+Math.round(pagePadding*0.5)+'px;padding-top:'+Math.round(pagePadding*0.3)+'px;border-top:1px solid '+(accent+'33')+';font-size:10px;color:'+mutedInk+';text-align:center;}' +
+      '</style>';
+
+      html += '<div class="sm-page">';
+      if (p.coverPhoto) html += '<img class="sm-cover" src="' + escapeHtml(p.coverPhoto) + '" alt="">';
+      html += '<div class="sm-header">';
+      if (p.logo) html += '<img class="sm-logo" src="' + escapeHtml(p.logo) + '" alt="">';
+      html += '<h1 class="sm-title">' + escapeHtml(p.name || t('share_default_menu','Menu')) + '</h1>';
+      if (p.subtitle) html += '<p class="sm-subtitle">' + escapeHtml(p.subtitle) + '</p>';
+      html += '<hr class="sm-title-rule">';
+      html += '</div>';
+      html += '<div class="sm-sections">';
+      var usedCodes = {};
+      (p.sections || []).forEach(function (sec) {
+        if (!sec.items || !sec.items.length) return;
+        html += '<div class="sm-section">';
+        if (sec.title) html += '<div class="sm-sec-title">' + escapeHtml(sec.title) + '</div>';
+        html += '<div class="sm-items">';
+        sec.items.forEach(function (it) {
+          var price = it.price ? Number(it.price) : 0;
+          var showPrice = (priceStyle !== 'hidden') && price > 0;
+          var priceStr = showPrice ? (priceStyle === 'plain' ? (price % 1 === 0 ? String(price) : price.toFixed(2)) : (currSym + (price % 1 === 0 ? String(price) : price.toFixed(2)))) : '';
+          html += '<div class="sm-item">';
+          html += '<div style="flex:1;min-width:0;">';
+          html += '<div class="sm-item-name">' + escapeHtml(it.name) + '</div>';
+          if (it.description) html += '<div class="sm-item-desc">' + escapeHtml(it.description) + '</div>';
+          if (showAllergens && it.codes && it.codes.length) {
+            it.codes.forEach(function(c){ usedCodes[c] = true; });
+            html += '<div class="sm-item-codes">' + it.codes.map(function(c){ return '('+escapeHtml(c)+')'; }).join(' ') + '</div>';
+          }
+          html += '</div>';
+          if (showPrice) {
+            html += '<div class="sm-item-leader"></div>';
+            html += '<div class="sm-item-price">' + escapeHtml(priceStr) + '</div>';
           }
           html += '</div>';
         });
-        html += '</div>';
+        html += '</div></div>';
       });
-      if (p.footer) html += '<div style="text-align:center;margin-top:30px;color:#888;font-size:11px;text-transform:uppercase;letter-spacing:0.12em;">' + escapeHtml(p.footer) + '</div>';
+      html += '</div>';
+      if (showAllergens && Object.keys(usedCodes).length) {
+        html += '<div class="sm-allergen-legend"><b>' + escapeHtml(t('menu_allergen_legend') || 'Key') + '</b> ' +
+          Object.keys(usedCodes).map(function(c){ return '<b>'+escapeHtml(c)+'</b>'; }).join(' · ') + '</div>';
+      }
+      if (p.footer) html += '<div class="sm-footer">' + escapeHtml(p.footer) + '</div>';
+      html += '</div>';
     }
 
     html += '</div>';
