@@ -63,6 +63,7 @@
         var ratioLabel = (function() {
           var r = opts.aspectRatio;
           if (Math.abs(r - 3/1)  < 0.01) return '3:1';
+          if (Math.abs(r - 21/9) < 0.01) return '21:9';
           if (Math.abs(r - 2/1)  < 0.01) return '2:1';
           if (Math.abs(r - 16/9) < 0.01) return '16:9';
           if (Math.abs(r - 3/2)  < 0.01) return '3:2';

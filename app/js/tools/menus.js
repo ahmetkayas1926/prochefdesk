@@ -668,6 +668,7 @@
         const RATIOS_COVER = [
           { label: '2:1',  value: '2/1',  desc: 'Cinematic — wide panoramic banner' },
           { label: '3:1',  value: '3/1',  desc: 'Ultra-wide — full-width hero strip' },
+          { label: '21:9', value: '21/9', desc: 'Ultrawide cinema — cinematic widescreen' },
           { label: '16:9', value: '16/9', desc: 'Widescreen — best for landscape photos' },
           { label: '3:2',  value: '3/2',  desc: 'Classic — versatile, slightly wider' },
           { label: '4:3',  value: '4/3',  desc: 'Standard — balanced, good for portraits' },
