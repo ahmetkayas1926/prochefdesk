@@ -1271,7 +1271,7 @@
           // - object-fit:contain → no cropping, full image visible
           // - negative horizontal margin so cover bleeds to page edge despite .m-page padding
           // - height = user selection (25mm / 40mm / 60mm)
-          '.m-cover { height: ' + (menu.coverHeight || '40mm') + '; max-height: ' + (menu.coverHeight || '40mm') + '; width: calc(100% + 44mm); margin-left: -22mm; margin-right: -22mm; margin-bottom: 10mm; aspect-ratio: unset; border-radius: 0; object-fit: contain; display: block; background: transparent; }' +
+          '.m-cover { height: ' + (menu.coverHeight || '40mm') + '; max-height: ' + (menu.coverHeight || '40mm') + '; width: calc(100% + 44mm); margin-left: -22mm; margin-right: -22mm; margin-bottom: 10mm; aspect-ratio: unset; border-radius: 0; object-fit: cover; display: block; }' +
           '.m-item-row { overflow: hidden; }' +
           '.m-item-name { flex-shrink: 1; min-width: 0; overflow-wrap: break-word; word-break: break-word; }' +
         '}' +
