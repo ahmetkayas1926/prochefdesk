@@ -795,15 +795,15 @@
         // h-sign margin-top:auto removed — eliminates the ~40mm dead gap between table and signature line.
         'table.h-grid th, table.h-grid td{border:1px solid #999;padding:2px 3px;text-align:center;vertical-align:middle;line-height:1.25;}' +
         'table.h-grid th{background:#f3f4f6;font-weight:700;font-size:9px;text-transform:uppercase;letter-spacing:0.02em;}' +
-        'table.h-grid tr{height:22px;page-break-inside:avoid;}' +
+        'table.h-grid tr{height:21px;page-break-inside:avoid;}' +
         'table.h-grid td.day{text-align:center;font-weight:700;background:#fafafa;font-size:10px;color:#444;}' +
         'table.h-grid td.oor{background:#fee2e2;color:#991b1b;font-weight:700;}' +
         'table.h-grid td.has-note::after{content:" *";color:#16a34a;}' +
         '.h-notes{margin-top:3px;font-size:9px;flex:0 0 auto;}' +
         '.h-notes .nh{font-weight:700;margin-bottom:2px;font-size:10px;}' +
         '.h-notes .ni{padding:1px 0;border-bottom:1px solid #eee;}' +
-        '.h-sign{margin-top:3px;padding-top:3px;border-top:1px solid #ccc;font-size:9px;display:flex;justify-content:space-between;flex:0 0 auto;}' +
-        '.pcd-print-footer{margin:0 !important;padding:1mm 4mm !important;border-top:none !important;flex:0 0 auto;font-size:7pt !important;line-height:1.2 !important;}' +
+        '.h-sign{margin-top:1px;padding-top:2px;border-top:1px solid #ccc;font-size:9px;display:flex;justify-content:space-between;flex:0 0 auto;}' +
+        '.pcd-print-footer{margin:0 !important;padding:0.5mm 4mm !important;border-top:none !important;flex:0 0 auto;font-size:7pt !important;line-height:1.1 !important;}' +
         '@page{size:A4 landscape;margin:0;}' +
       '</style>' +
       '<div class="h-sheet">' +
