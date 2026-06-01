@@ -1267,14 +1267,13 @@
         '}' +
         '@media print {' +
           '@page { size: ' + pageSpec.cssSize + '; margin: 0; }' +
-          // v2.16.1: cover gets its own top padding (6mm) so it doesn't flush against page edge
-          '.m-page { padding: ' + (menu.coverPhoto ? '0' : (menu.logo ? '10mm' : '14mm')) + ' 22mm 14mm; max-width: 100%; box-sizing: border-box; width: 100%; overflow: hidden; }' +
+          // v2.17: print .m-page = ekranla birebir aynı değerler
+          // max-width, padding px cinsinden → satır kırılmaları ekranla eşleşir
+          '.m-page { max-width: ' + pageMaxWidth + 'px; width: 100%; margin: 0 auto; box-sizing: border-box; overflow: hidden;' +
+            'padding: ' + (menu.coverPhoto ? '0' : O.pagePadding) + 'px ' + (O.pagePadding + 8) + 'px ' + O.pagePadding + 'px; }' +
           (menu.coverPhoto ? '.m-header { padding-top: 0; }' : '') +
-          // v2.16.5: print cover
-          // - object-fit:contain → no cropping, full image visible
-          // - negative horizontal margin so cover bleeds to page edge despite .m-page padding
-          // - height = user selection (25mm / 40mm / 60mm)
-          '.m-cover { height: ' + (menu.coverHeight || '40mm') + '; max-height: ' + (menu.coverHeight || '40mm') + '; width: auto; max-width: 100%; margin-left: auto; margin-right: auto; margin-bottom: 10mm; aspect-ratio: unset; border-radius: 0; object-fit: contain; display: block; }' +
+          // cover: tam genişlik, seçilen yükseklik, ortalı
+          '.m-cover { height: ' + (menu.coverHeight || '40mm') + '; max-height: ' + (menu.coverHeight || '40mm') + '; width: auto; max-width: 100%; margin-left: auto; margin-right: auto; margin-bottom: ' + Math.round(O.pagePadding * 0.5) + 'px; aspect-ratio: unset; border-radius: 0; object-fit: contain; display: block; }' +
           '.m-item-row { overflow: hidden; }' +
           '.m-item-name { flex-shrink: 1; min-width: 0; overflow-wrap: break-word; word-break: break-word; }' +
         '}' +
