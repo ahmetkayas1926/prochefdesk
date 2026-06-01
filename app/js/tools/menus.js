@@ -1185,26 +1185,28 @@
       }
     }
 
-    // Print options — saved on menu so they persist
+    // Print options — tüm boyutlar pt cinsinden (ekran + print tutarlı)
+    // 1pt = 1/72 inch = fiziksel nokta. Ekranda 1pt ≈ 1.33px.
     const printOpts = {
-      density: menu.printDensity || 'comfortable', // tight | comfortable | spacious
-      titleSize: menu.printTitleSize || 44,
-      itemSize: menu.printItemSize || 18,
-      sectionSize: menu.printSectionSize || 22,
-      pagePadding: menu.printPagePadding || 48, // px
-      itemGap: menu.printItemGap || 16,
+      density: menu.printDensity || 'comfortable',
+      titleSize: menu.printTitleSize || 28,    // pt
+      itemSize: menu.printItemSize || 12,      // pt
+      sectionSize: menu.printSectionSize || 16, // pt
+      pagePadding: menu.printPagePadding || 30, // pt
+      itemGap: menu.printItemGap || 10,         // pt
     };
 
+    // Tüm değerler pt — A4 üzerinde test edilmiş değerler
     function applyDensity(d) {
       if (d === 'tight') {
-        printOpts.titleSize = 36; printOpts.itemSize = 16; printOpts.sectionSize = 18;
-        printOpts.pagePadding = 32; printOpts.itemGap = 10;
+        printOpts.titleSize = 22; printOpts.itemSize = 10; printOpts.sectionSize = 13;
+        printOpts.pagePadding = 22; printOpts.itemGap = 6;
       } else if (d === 'spacious') {
-        printOpts.titleSize = 52; printOpts.itemSize = 20; printOpts.sectionSize = 26;
-        printOpts.pagePadding = 64; printOpts.itemGap = 22;
-      } else {
-        printOpts.titleSize = 44; printOpts.itemSize = 18; printOpts.sectionSize = 22;
-        printOpts.pagePadding = 48; printOpts.itemGap = 16;
+        printOpts.titleSize = 34; printOpts.itemSize = 14; printOpts.sectionSize = 19;
+        printOpts.pagePadding = 38; printOpts.itemGap = 14;
+      } else { // comfortable
+        printOpts.titleSize = 28; printOpts.itemSize = 12; printOpts.sectionSize = 16;
+        printOpts.pagePadding = 30; printOpts.itemGap = 10;
       }
       printOpts.density = d;
     }
@@ -1213,7 +1215,8 @@
       const O = printOpts;
       // v2.8.69 — Page size + orientation. Default A4 portrait.
       const pageSpec = PAGE_SIZES.find(function (p) { return p.id === (menu.pageSize || 'a4'); }) || PAGE_SIZES[0];
-      const pageMaxWidth = (pageSpec.id === 'a5') ? 420 : (pageSpec.orientation === 'landscape' ? 820 : 580);
+      // A4=595pt, A5=420pt, Letter=612pt, A4 Landscape=842pt (standart nokta genişlikleri)
+      const pageMaxWidth = (pageSpec.id === 'a5') ? 420 : (pageSpec.orientation === 'landscape' ? 842 : (pageSpec.id === 'letter' ? 612 : 595));
       // v2.8.69 — Multi-column layout (1 or 2). Sadece items akışına uygulanır.
       const cols = (menu.columns === 2) ? 2 : 1;
       // Section decoration helpers (theme-specific)
@@ -1230,7 +1233,7 @@
         // v2.17: ink ve bg kullanıcı seçimine göre override edilebilir
         '.m-page {' +
           'background: ' + resolveBg(menu) + '; color: ' + resolveInk(menu) + ';' +
-          'max-width: ' + pageMaxWidth + 'px; margin: 0 auto; padding: ' + O.pagePadding + 'px ' + (O.pagePadding + 8) + 'px;' +
+          'max-width: ' + pageMaxWidth + 'pt; margin: 0 auto; padding: ' + O.pagePadding + 'pt ' + (O.pagePadding + 6) + 'pt;' +
           'font-family: ' + theme.bodyFont + ';' +
           'font-weight: ' + theme.bodyWeight + ';' +
         '}' +
@@ -1243,10 +1246,10 @@
         })() +
         '.m-logo { display:block; width: 64px; height: 64px; margin: 0 auto 12px; object-fit: cover; border-radius: 50%; }' +
         '.m-page { overflow-x: hidden; }' +
-        '.m-header { text-align: center; margin-bottom: ' + Math.round(O.pagePadding * 0.75) + 'px; padding-bottom: 0; }' +
+        '.m-header { text-align: center; margin-bottom: ' + Math.round(O.pagePadding * 0.75) + 'pt; padding-bottom: 0; }' +
         '.m-title {' +
           'font-family: ' + theme.titleFont + ';' +
-          'font-size: ' + O.titleSize + 'px; font-weight: ' + theme.titleWeight + ';' +
+          'font-size: ' + O.titleSize + 'pt; font-weight: ' + theme.titleWeight + ';' +
           'letter-spacing: ' + theme.titleLetterSpacing + ';' +
           'margin: 0 0 8px; color: ' + resolveInk(menu) + ';' +
           'line-height: 1.1;' +
@@ -1262,25 +1265,25 @@
           'background: ' + accent + ';' +
           'margin: 18px auto 0;' +
         '}' +
-        '.m-sections { ' + (cols === 2 ? 'column-count: 2; column-gap: ' + (O.pagePadding * 0.7) + 'px;' : '') + ' }' +
-        '.m-section { margin: ' + Math.round(O.itemGap * 1.8) + 'px 0 ' + Math.round(O.itemGap * 1.4) + 'px; break-inside: avoid; page-break-inside: avoid; }' +
+        '.m-sections { ' + (cols === 2 ? 'column-count: 2; column-gap: ' + (O.pagePadding * 0.7) + 'pt;' : '') + ' }' +
+        '.m-section { margin: ' + Math.round(O.itemGap * 1.8) + 'pt 0 ' + Math.round(O.itemGap * 1.4) + 'pt; break-inside: avoid; page-break-inside: avoid; }' +
         '.m-section-title {' +
           'font-family: ' + theme.titleFont + ';' +
-          'font-size: ' + O.sectionSize + 'px; font-weight: ' + theme.titleWeight + ';' +
+          'font-size: ' + O.sectionSize + 'pt; font-weight: ' + theme.titleWeight + ';' +
           'letter-spacing: ' + theme.sectionLetterSpacing + ';' +
           'text-transform: ' + theme.sectionTransform + ';' +
           'text-align: center;' +
           'color: ' + resolveInk(menu) + ';' +
-          'margin: 0 0 ' + Math.round(O.itemGap * 1.3) + 'px;' +
+          'margin: 0 0 ' + Math.round(O.itemGap * 1.3) + 'pt;' +
           'position: relative;' +
         '}' +
         decorBefore +
-        '.m-items { display: flex; flex-direction: column; gap: ' + O.itemGap + 'px; }' +
+        '.m-items { display: flex; flex-direction: column; gap: ' + O.itemGap + 'pt; }' +
         '.m-item { break-inside: avoid; page-break-inside: avoid; }' +
         '.m-item-row { display: flex; align-items: baseline; gap: 0; overflow: hidden; }' +
         '.m-item-name {' +
           'font-family: ' + theme.titleFont + ';' +
-          'font-size: ' + O.itemSize + 'px; font-weight: ' + theme.itemWeight + ';' +
+          'font-size: ' + O.itemSize + 'pt; font-weight: ' + theme.itemWeight + ';' +
           'color: ' + resolveInk(menu) + ';' +
           'letter-spacing: 0.02em;' +
           'flex-shrink: 1;' +
@@ -1333,13 +1336,13 @@
         '}' +
         '.m-item-price {' +
           'font-family: ' + theme.titleFont + ';' +
-          'font-size: ' + O.itemSize + 'px; font-weight: ' + theme.itemWeight + ';' +
+          'font-size: ' + O.itemSize + 'pt; font-weight: ' + theme.itemWeight + ';' +
           'color: ' + accent + ';' +
           'flex-shrink: 0;' +
           'white-space: nowrap;' +
         '}' +
         '.m-item-desc {' +
-          'font-size: ' + Math.max(11, O.itemSize - 6) + 'px; color: ' + resolveMutedInk(menu) + ';' +
+          'font-size: ' + Math.max(9, O.itemSize - 4) + 'pt; color: ' + resolveMutedInk(menu) + ';' +
           'font-style: italic;' +
           'margin-top: 4px;' +
           'line-height: 1.5;' +
@@ -1361,11 +1364,11 @@
           '@page { size: ' + pageSpec.cssSize + '; margin: 0; }' +
           // v2.17: print .m-page = ekranla birebir aynı değerler
           // max-width, padding px cinsinden → satır kırılmaları ekranla eşleşir
-          '.m-page { max-width: ' + pageMaxWidth + 'px; width: 100%; margin: 0 auto; box-sizing: border-box; overflow: hidden;' +
-            'padding: ' + (menu.coverPhoto ? '0' : O.pagePadding) + 'px ' + (O.pagePadding + 8) + 'px ' + O.pagePadding + 'px; }' +
+          '.m-page { max-width: ' + pageMaxWidth + 'pt; width: 100%; margin: 0 auto; box-sizing: border-box; overflow: hidden;' +
+            'padding: ' + (menu.coverPhoto ? '0' : O.pagePadding) + 'pt ' + (O.pagePadding + 6) + 'pt ' + O.pagePadding + 'pt; }' +
           (menu.coverPhoto ? '.m-header { padding-top: 0; }' : '') +
           // cover: tam genişlik, seçilen yükseklik, ortalı
-          '.m-cover { height: ' + (menu.coverHeight || '40mm') + '; max-height: ' + (menu.coverHeight || '40mm') + '; width: auto; max-width: 100%; margin-left: auto; margin-right: auto; margin-bottom: ' + Math.round(O.pagePadding * 0.5) + 'px; aspect-ratio: unset; border-radius: 0; object-fit: contain; display: block; }' +
+          '.m-cover { height: ' + (menu.coverHeight || '40mm') + '; max-height: ' + (menu.coverHeight || '40mm') + '; width: auto; max-width: 100%; margin-left: auto; margin-right: auto; margin-bottom: ' + Math.round(O.pagePadding * 0.5) + 'pt; aspect-ratio: unset; border-radius: 0; object-fit: contain; display: block; }' +
           '.m-item-row { overflow: hidden; }' +
           '.m-item-name { flex-shrink: 1; min-width: 0; overflow-wrap: break-word; word-break: break-word; }' +
         '}' +
@@ -1389,6 +1392,10 @@
 
     function refreshPreview() {
       const curCoverH = menu.coverHeight || '40mm';
+      // A4 sayfa boyutu seçimine göre wrapper boyutları (px, ekran preview için)
+      const pageSpec = PAGE_SIZES.find(function(p){ return p.id === (menu.pageSize || 'a4'); }) || PAGE_SIZES[0];
+      const previewW = (pageSpec.id === 'a5') ? 420 : (pageSpec.orientation === 'landscape' ? 842 : 595);
+      const previewH = (pageSpec.id === 'a5') ? 595 : (pageSpec.orientation === 'landscape' ? 595 : 842);
       body.innerHTML =
         '<div style="margin-bottom:14px;padding:12px 14px;background:var(--surface-2);border-radius:var(--r-md);">' +
           '<div style="font-weight:700;font-size:13px;color:var(--text-2);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.04em;">Page density</div>' +
@@ -1398,7 +1405,7 @@
             '<button class="btn btn-secondary btn-sm" data-dens="spacious" ' + (printOpts.density === 'spacious' ? 'style="background:var(--brand-600);color:#fff;border-color:var(--brand-600);"' : '') + '>Spacious</button>' +
             '<div style="flex:1;"></div>' +
             '<span class="text-muted text-sm" style="font-size:11px;align-self:center;">' +
-              'Title ' + printOpts.titleSize + 'px · Item ' + printOpts.itemSize + 'px · Padding ' + printOpts.pagePadding + 'px' +
+              'Title ' + printOpts.titleSize + 'pt · Item ' + printOpts.itemSize + 'pt · Padding ' + printOpts.pagePadding + 'pt' +
             '</span>' +
           '</div>' +
           // v2.16.1 — Cover height row (only shown when a cover photo is set)
@@ -1411,7 +1418,12 @@
               '</div>'
             : '') +
         '</div>' +
-        buildStyledHtml();
+        // A4 preview wrapper — gerçek kağıt görünümü
+        '<div style="background:#e8e8e8;padding:20px;display:flex;flex-direction:column;align-items:center;gap:0;">' +
+          '<div style="background:#fff;width:' + previewW + 'px;min-height:' + previewH + 'px;box-shadow:0 2px 12px rgba(0,0,0,0.18);position:relative;overflow:hidden;">' +
+            buildStyledHtml() +
+          '</div>' +
+        '</div>';
 
       PCD.on(body, 'click', '[data-dens]', function () {
         applyDensity(this.getAttribute('data-dens'));
