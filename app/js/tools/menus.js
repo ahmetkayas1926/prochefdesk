@@ -666,6 +666,8 @@
       // the correct aspectRatio, and the user sees their choice upfront.
       function pickAndCropCover(onDone) {
         const RATIOS_COVER = [
+          { label: '2:1',  value: '2/1',  desc: 'Cinematic — wide panoramic banner' },
+          { label: '3:1',  value: '3/1',  desc: 'Ultra-wide — full-width hero strip' },
           { label: '16:9', value: '16/9', desc: 'Widescreen — best for landscape photos' },
           { label: '3:2',  value: '3/2',  desc: 'Classic — versatile, slightly wider' },
           { label: '4:3',  value: '4/3',  desc: 'Standard — balanced, good for portraits' },
@@ -675,7 +677,7 @@
         const pickerBody = PCD.el('div');
         pickerBody.innerHTML =
           '<p style="font-size:13px;color:var(--text-2);margin:0 0 14px;">Choose the crop ratio for your cover photo before selecting the image.</p>' +
-          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">' +
           RATIOS_COVER.map(function(r) {
             const isDefault = r.value === (data.coverRatio || '16/9');
             return '<button type="button" data-pick-ratio="' + r.value + '" style="' +
