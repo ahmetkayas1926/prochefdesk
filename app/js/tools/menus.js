@@ -1139,12 +1139,12 @@
           'font-family: ' + theme.bodyFont + ';' +
           'font-weight: ' + theme.bodyWeight + ';' +
         '}' +
-        // v2.16.3: screen preview max-height mirrors coverHeight selection
-        // 25mm≈95px, 40mm≈151px, 60mm≈227px (96dpi). Falls back to 151px (Medium).
+        // v2.16.4: screen preview — height mirrors coverHeight, aspect-ratio removed.
+        // object-fit:contain → full image always visible, never clipped.
         (function(){
           var hMap = {'25mm':'95px','40mm':'151px','60mm':'227px'};
           var screenH = hMap[menu.coverHeight] || '151px';
-          return '.m-cover { width: 100%; max-height: ' + screenH + '; aspect-ratio: ' + (menu.coverRatio || '16/9') + '; max-width: 100%; margin: 0 0 ' + Math.round(O.pagePadding * 0.5) + 'px; object-fit: cover; display: block; border-radius: 6px; }';
+          return '.m-cover { width: 100%; height: ' + screenH + '; max-height: ' + screenH + '; aspect-ratio: unset; max-width: 100%; margin: 0 0 ' + Math.round(O.pagePadding * 0.5) + 'px; object-fit: contain; display: block; border-radius: 6px; background: transparent; }';
         })() +
         '.m-logo { display:block; width: 64px; height: 64px; margin: 0 auto 12px; object-fit: cover; border-radius: 50%; }' +
         '.m-page { overflow-x: hidden; }' +
