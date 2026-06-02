@@ -179,12 +179,11 @@
     return merged;
   }
 
-  // v2.8.69 — Sayfa boyutu seçenekleri.
+  // v2.18 — Sayfa türü kaldırıldı. Sadece yönlendirme: portrait / landscape.
+  // Chrome print diyaloğunda kullanıcı zaten A4/Letter seçer.
   const PAGE_SIZES = [
-    { id: 'a4',        labelKey: 'menu_page_a4',        cssSize: 'A4',           orientation: 'portrait'  },
-    { id: 'a5',        labelKey: 'menu_page_a5',        cssSize: 'A5',           orientation: 'portrait'  },
-    { id: 'us_letter', labelKey: 'menu_page_us_letter', cssSize: 'letter',       orientation: 'portrait'  },
-    { id: 'a4_land',   labelKey: 'menu_page_a4_land',   cssSize: 'A4 landscape', orientation: 'landscape' },
+    { id: 'portrait',  labelKey: 'menu_page_portrait',  cssSize: 'A4',           orientation: 'portrait',  previewW: 595, previewH: 842 },
+    { id: 'landscape', labelKey: 'menu_page_landscape', cssSize: 'A4 landscape', orientation: 'landscape', previewW: 842, previewH: 595 },
   ];
 
   // Quick-insert legal note templates. Footer'a tek tıkla eklenir.
@@ -355,7 +354,7 @@
       inkColor: '',                // v2.17 — '' = theme default ink
       bgColor: '',                 // v2.17 — '' = theme default bg
       columns: 1,                  // v2.8.69 — 1 or 2 print columns
-      pageSize: 'a4',              // v2.8.69 — a4 | a5 | us_letter | a4_land
+      pageSize: 'portrait',         // v2.18 — portrait | landscape
       logo: null,                  // v2.8.69 — base64 (1:1 cropped)
       coverPhoto: null,            // v2.8.69 — base64 (cropped)
       coverRatio: '16/9',          // v2.16 — aspect ratio for cover photo
@@ -367,11 +366,19 @@
     if (!data.theme) data.theme = 'fine_dining';
     if (typeof data.accentColor !== 'string') data.accentColor = '';
     if (typeof data.columns !== 'number') data.columns = 1;
-    if (!data.pageSize) data.pageSize = 'a4';
+    // v2.18: eski a4/a5/us_letter/a4_land → portrait/landscape
+    if (!data.pageSize || ['a4','a5','us_letter'].indexOf(data.pageSize) >= 0) data.pageSize = 'portrait';
+    if (data.pageSize === 'a4_land') data.pageSize = 'landscape';
     if (!data.coverRatio) data.coverRatio = '16/9';
     if (typeof data.inkColor !== 'string') data.inkColor = '';
     if (typeof data.bgColor !== 'string') data.bgColor = '';
     if (!data.priceStyle) data.priceStyle = data.hidePrices ? 'hidden' : 'symbol';
+    // v2.18 — Yeni print opts (backward compat defaults)
+    if (!data.printFontSize)    data.printFontSize    = 'medium';
+    if (!data.printMargin)      data.printMargin      = 'medium';
+    if (!data.printLineSpacing) data.printLineSpacing = 'normal';
+    if (!data.printSecSpacing)  data.printSecSpacing  = 'normal';
+    if (!data.printLogoSize)    data.printLogoSize    = 'medium';
     // Ensure existing sections have IDs
     (data.sections || []).forEach(function (s) {
       if (!s.id) s.id = PCD.uid('sec');
@@ -460,9 +467,12 @@
       }).join('');
       const colsBtns = '<button type="button" class="btn btn-sm ' + (data.columns === 1 ? 'btn-primary' : 'btn-outline') + '" data-cols="1" style="flex:1;">1 ' + (t('menu_column') || 'column') + '</button>' +
                        '<button type="button" class="btn btn-sm ' + (data.columns === 2 ? 'btn-primary' : 'btn-outline') + '" data-cols="2" style="flex:1;">2 ' + (t('menu_columns') || 'columns') + '</button>';
-      const pageBtns = PAGE_SIZES.map(function (ps) {
-        const active = (data.pageSize || 'a4') === ps.id;
-        return '<button type="button" class="btn btn-sm ' + (active ? 'btn-primary' : 'btn-outline') + '" data-pagesize="' + ps.id + '" style="flex:1;min-width:100px;">' + PCD.escapeHtml(t(ps.labelKey) || ps.id) + '</button>';
+      // v2.18 — Portrait / Landscape butonları
+      const orientBtns = PAGE_SIZES.map(function (ps) {
+        const active = (data.pageSize || 'portrait') === ps.id;
+        const icon = ps.id === 'portrait' ? '▯' : '▭';
+        const label = ps.id === 'portrait' ? (t('menu_page_portrait') || 'Portrait') : (t('menu_page_landscape') || 'Landscape');
+        return '<button type="button" class="btn btn-sm ' + (active ? 'btn-primary' : 'btn-outline') + '" data-pagesize="' + ps.id + '" style="flex:1;">' + icon + ' ' + PCD.escapeHtml(label) + '</button>';
       }).join('');
       // Logo + cover photo preview tiles (1:1, v2.8.67 standard)
       const logoTile = '<div id="menuLogoZone" style="position:relative;width:90px;height:90px;border-radius:var(--r-md);background:' + (data.logo ? 'url(' + data.logo + ') center/cover' : 'var(--surface-2)') + ';border:2px dashed ' + (data.logo ? 'transparent' : 'var(--border-strong)') + ';cursor:pointer;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;">' +
@@ -508,10 +518,10 @@
         <details class="field" style="border:1px solid var(--border);border-radius:var(--r-md);padding:10px 12px;background:var(--surface-2);">
           <summary style="cursor:pointer;font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-2);">📐 ${PCD.escapeHtml(t('menu_layout') || 'Layout & paper')}</summary>
           <div style="margin-top:10px;">
+            <div class="field-label" style="font-size:12px;">${PCD.escapeHtml(t('menu_orientation') || 'Orientation')}</div>
+            <div style="display:flex;gap:6px;margin-bottom:12px;">${orientBtns}</div>
             <div class="field-label" style="font-size:12px;">${PCD.escapeHtml(t('menu_columns_label') || 'Columns')}</div>
-            <div style="display:flex;gap:6px;margin-bottom:12px;">${colsBtns}</div>
-            <div class="field-label" style="font-size:12px;">${PCD.escapeHtml(t('menu_page_size') || 'Page size')}</div>
-            <div style="display:flex;gap:6px;flex-wrap:wrap;">${pageBtns}</div>
+            <div style="display:flex;gap:6px;margin-bottom:0;">${colsBtns}</div>
           </div>
         </details>
 
@@ -1185,39 +1195,40 @@
       }
     }
 
-    // Print options — tüm boyutlar pt cinsinden (ekran + print tutarlı)
-    // 1pt = 1/72 inch = fiziksel nokta. Ekranda 1pt ≈ 1.33px.
-    const printOpts = {
-      density: menu.printDensity || 'comfortable',
-      titleSize: menu.printTitleSize || 28,    // pt
-      itemSize: menu.printItemSize || 12,      // pt
-      sectionSize: menu.printSectionSize || 16, // pt
-      pagePadding: menu.printPagePadding || 30, // pt
-      itemGap: menu.printItemGap || 10,         // pt
-    };
-
-    // Tüm değerler pt — A4 üzerinde test edilmiş değerler
-    function applyDensity(d) {
-      if (d === 'tight') {
-        printOpts.titleSize = 22; printOpts.itemSize = 10; printOpts.sectionSize = 13;
-        printOpts.pagePadding = 22; printOpts.itemGap = 6;
-      } else if (d === 'spacious') {
-        printOpts.titleSize = 34; printOpts.itemSize = 14; printOpts.sectionSize = 19;
-        printOpts.pagePadding = 38; printOpts.itemGap = 14;
-      } else { // comfortable
-        printOpts.titleSize = 28; printOpts.itemSize = 12; printOpts.sectionSize = 16;
-        printOpts.pagePadding = 30; printOpts.itemGap = 10;
-      }
-      printOpts.density = d;
+    // v2.18 — Yeni print opts sistemi: bağımsız 5 kontrol
+    // Font boyutu: xsmall/small/medium/large/xlarge
+    // Kenar boşluğu: very_narrow/narrow/medium/wide
+    // Satır aralığı: tight/normal/spacious
+    // Bölüm aralığı: tight/normal/spacious
+    // Logo boyutu: small/medium/large
+    function resolvePrintOpts(menu) {
+      // Font boyutu → pt
+      const fontMap = { xsmall: 8, small: 10, medium: 12, large: 14, xlarge: 16 };
+      const itemPt   = fontMap[menu.printFontSize] || 12;
+      const titlePt  = Math.round(itemPt * 2.4);   // başlık oranı sabit
+      const secPt    = Math.round(itemPt * 1.4);   // section oranı sabit
+      // Kenar boşluğu → pt
+      const marginMap = { very_narrow: 18, narrow: 26, medium: 36, wide: 50 };
+      const paddingPt = marginMap[menu.printMargin] || 36;
+      // Satır aralığı → pt (item gap)
+      const lineMap = { tight: Math.round(itemPt*0.5), normal: Math.round(itemPt*0.9), spacious: Math.round(itemPt*1.4) };
+      const itemGapPt = lineMap[menu.printLineSpacing] || Math.round(itemPt*0.9);
+      // Bölüm aralığı → multiplier
+      const secMap = { tight: 1.2, normal: 1.8, spacious: 2.8 };
+      const secMult = secMap[menu.printSecSpacing] || 1.8;
+      // Logo boyutu → pt (yaklaşık px)
+      const logoMap = { small: 44, medium: 64, large: 88 };
+      const logoPt = logoMap[menu.printLogoSize] || 64;
+      return { itemPt, titlePt, secPt, paddingPt, itemGapPt, secMult, logoPt };
     }
+    const PO = resolvePrintOpts(menu);
 
     function buildStyledHtml() {
-      const O = printOpts;
-      // v2.8.69 — Page size + orientation. Default A4 portrait.
-      const pageSpec = PAGE_SIZES.find(function (p) { return p.id === (menu.pageSize || 'a4'); }) || PAGE_SIZES[0];
-      // A4=595pt, A5=420pt, Letter=612pt, A4 Landscape=842pt (standart nokta genişlikleri)
-      const pageMaxWidth = (pageSpec.id === 'a5') ? 420 : (pageSpec.orientation === 'landscape' ? 842 : (pageSpec.id === 'letter' ? 612 : 595));
-      // v2.8.69 — Multi-column layout (1 or 2). Sadece items akışına uygulanır.
+      const O = PO; // v2.18: PO = resolvePrintOpts(menu)
+      // v2.18 — Yönlendirme: portrait=595pt, landscape=842pt
+      const pageSpec = PAGE_SIZES.find(function (p) { return p.id === (menu.pageSize || 'portrait'); }) || PAGE_SIZES[0];
+      const pageMaxWidth = pageSpec.previewW || 595; // pt (A4 standard)
+      // Multi-column layout
       const cols = (menu.columns === 2) ? 2 : 1;
       // Section decoration helpers (theme-specific)
       const decorBefore = (theme.sectionDecor === 'lines')
@@ -1233,7 +1244,7 @@
         // v2.17: ink ve bg kullanıcı seçimine göre override edilebilir
         '.m-page {' +
           'background: ' + resolveBg(menu) + '; color: ' + resolveInk(menu) + ';' +
-          'max-width: ' + pageMaxWidth + 'pt; margin: 0 auto; padding: ' + O.pagePadding + 'pt ' + (O.pagePadding + 6) + 'pt;' +
+          'max-width: ' + pageMaxWidth + 'pt; margin: 0 auto; padding: ' + O.paddingPt + 'pt ' + (O.paddingPt + 6) + 'pt;' +
           'font-family: ' + theme.bodyFont + ';' +
           'font-weight: ' + theme.bodyWeight + ';' +
         '}' +
@@ -1242,14 +1253,14 @@
         (function(){
           var hMap = {'25mm':'95px','40mm':'151px','60mm':'227px'};
           var screenH = hMap[menu.coverHeight] || '151px';
-          return '.m-cover { width: 100%; height: ' + screenH + '; max-height: ' + screenH + '; aspect-ratio: unset; max-width: 100%; margin: 0 0 ' + Math.round(O.pagePadding * 0.5) + 'px; object-fit: contain; display: block; border-radius: 6px; background: transparent; }';
+          return '.m-cover { width: 100%; height: ' + screenH + '; max-height: ' + screenH + '; aspect-ratio: unset; max-width: 100%; margin: 0 0 ' + Math.round(O.paddingPt * 0.5) + 'px; object-fit: contain; display: block; border-radius: 6px; background: transparent; }';
         })() +
-        '.m-logo { display:block; width: 64px; height: 64px; margin: 0 auto 12px; object-fit: cover; border-radius: 50%; }' +
+        '.m-logo { display:block; width: ' + O.logoPt + 'pt; height: ' + O.logoPt + 'pt; margin: 0 auto 12px; object-fit: cover; border-radius: 50%; }' +
         '.m-page { overflow-x: hidden; }' +
-        '.m-header { text-align: center; margin-bottom: ' + Math.round(O.pagePadding * 0.75) + 'pt; padding-bottom: 0; }' +
+        '.m-header { text-align: center; margin-bottom: ' + Math.round(O.paddingPt * 0.75) + 'pt; padding-bottom: 0; }' +
         '.m-title {' +
           'font-family: ' + theme.titleFont + ';' +
-          'font-size: ' + O.titleSize + 'pt; font-weight: ' + theme.titleWeight + ';' +
+          'font-size: ' + O.titlePt + 'pt; font-weight: ' + theme.titleWeight + ';' +
           'letter-spacing: ' + theme.titleLetterSpacing + ';' +
           'margin: 0 0 8px; color: ' + resolveInk(menu) + ';' +
           'line-height: 1.1;' +
@@ -1265,25 +1276,25 @@
           'background: ' + accent + ';' +
           'margin: 18px auto 0;' +
         '}' +
-        '.m-sections { ' + (cols === 2 ? 'column-count: 2; column-gap: ' + (O.pagePadding * 0.7) + 'pt;' : '') + ' }' +
-        '.m-section { margin: ' + Math.round(O.itemGap * 1.8) + 'pt 0 ' + Math.round(O.itemGap * 1.4) + 'pt; break-inside: avoid; page-break-inside: avoid; }' +
+        '.m-sections { ' + (cols === 2 ? 'column-count: 2; column-gap: ' + (O.paddingPt * 0.7) + 'pt;' : '') + ' }' +
+        '.m-section { margin: ' + Math.round(O.itemGapPt * O.secMult) + 'pt 0 ' + Math.round(O.itemGapPt * (O.secMult * 0.8)) + 'pt; break-inside: avoid; page-break-inside: avoid; }' +
         '.m-section-title {' +
           'font-family: ' + theme.titleFont + ';' +
-          'font-size: ' + O.sectionSize + 'pt; font-weight: ' + theme.titleWeight + ';' +
+          'font-size: ' + O.secPt + 'pt; font-weight: ' + theme.titleWeight + ';' +
           'letter-spacing: ' + theme.sectionLetterSpacing + ';' +
           'text-transform: ' + theme.sectionTransform + ';' +
           'text-align: center;' +
           'color: ' + resolveInk(menu) + ';' +
-          'margin: 0 0 ' + Math.round(O.itemGap * 1.3) + 'pt;' +
+          'margin: 0 0 ' + Math.round(O.itemGapPt * 1.3) + 'pt;' +
           'position: relative;' +
         '}' +
         decorBefore +
-        '.m-items { display: flex; flex-direction: column; gap: ' + O.itemGap + 'pt; }' +
+        '.m-items { display: flex; flex-direction: column; gap: ' + O.itemGapPt + 'pt; }' +
         '.m-item { break-inside: avoid; page-break-inside: avoid; }' +
         '.m-item-row { display: flex; align-items: baseline; gap: 0; overflow: hidden; }' +
         '.m-item-name {' +
           'font-family: ' + theme.titleFont + ';' +
-          'font-size: ' + O.itemSize + 'pt; font-weight: ' + theme.itemWeight + ';' +
+          'font-size: ' + O.itemPt + 'pt; font-weight: ' + theme.itemWeight + ';' +
           'color: ' + resolveInk(menu) + ';' +
           'letter-spacing: 0.02em;' +
           'flex-shrink: 1;' +
@@ -1336,13 +1347,13 @@
         '}' +
         '.m-item-price {' +
           'font-family: ' + theme.titleFont + ';' +
-          'font-size: ' + O.itemSize + 'pt; font-weight: ' + theme.itemWeight + ';' +
+          'font-size: ' + O.itemPt + 'pt; font-weight: ' + theme.itemWeight + ';' +
           'color: ' + accent + ';' +
           'flex-shrink: 0;' +
           'white-space: nowrap;' +
         '}' +
         '.m-item-desc {' +
-          'font-size: ' + Math.max(9, O.itemSize - 4) + 'pt; color: ' + resolveMutedInk(menu) + ';' +
+          'font-size: ' + Math.max(9, O.itemPt - 4) + 'pt; color: ' + resolveMutedInk(menu) + ';' +
           'font-style: italic;' +
           'margin-top: 4px;' +
           'line-height: 1.5;' +
@@ -1360,17 +1371,18 @@
           'font-weight: 400;' +
           'white-space: pre-wrap;' +
         '}' +
+        // v2.18: @media print — ekranla tamamen aynı CSS (pt birimleri tutarlı)
         '@media print {' +
           '@page { size: ' + pageSpec.cssSize + '; margin: 0; }' +
-          // v2.17: print .m-page = ekranla birebir aynı değerler
-          // max-width, padding px cinsinden → satır kırılmaları ekranla eşleşir
+          'body { margin: 0; padding: 0; }' +
           '.m-page { max-width: ' + pageMaxWidth + 'pt; width: 100%; margin: 0 auto; box-sizing: border-box; overflow: hidden;' +
-            'padding: ' + (menu.coverPhoto ? '0' : O.pagePadding) + 'pt ' + (O.pagePadding + 6) + 'pt ' + O.pagePadding + 'pt; }' +
+            'padding: ' + (menu.coverPhoto ? '0' : O.paddingPt) + 'pt ' + (O.paddingPt + 6) + 'pt ' + O.paddingPt + 'pt; }' +
           (menu.coverPhoto ? '.m-header { padding-top: 0; }' : '') +
-          // cover: tam genişlik, seçilen yükseklik, ortalı
-          '.m-cover { height: ' + (menu.coverHeight || '40mm') + '; max-height: ' + (menu.coverHeight || '40mm') + '; width: auto; max-width: 100%; margin-left: auto; margin-right: auto; margin-bottom: ' + Math.round(O.pagePadding * 0.5) + 'pt; aspect-ratio: unset; border-radius: 0; object-fit: contain; display: block; }' +
+          '.m-cover { height: ' + (menu.coverHeight || '40mm') + '; max-height: ' + (menu.coverHeight || '40mm') + '; width: auto; max-width: 100%; margin-left: auto; margin-right: auto; margin-bottom: ' + Math.round(O.paddingPt * 0.5) + 'pt; aspect-ratio: unset; border-radius: 0; object-fit: contain; display: block; }' +
           '.m-item-row { overflow: hidden; }' +
           '.m-item-name { flex-shrink: 1; min-width: 0; overflow-wrap: break-word; word-break: break-word; }' +
+          '.m-section { break-inside: avoid; page-break-inside: avoid; }' +
+          '.m-item { break-inside: avoid; page-break-inside: avoid; }' +
         '}' +
       '</style>' +
       '<div class="m-page">' +
@@ -1390,63 +1402,68 @@
 
     const body = PCD.el('div');
 
-    function refreshPreview() {
-      const curCoverH = menu.coverHeight || '40mm';
-      // A4 sayfa boyutu seçimine göre wrapper boyutları (px, ekran preview için)
-      const pageSpec = PAGE_SIZES.find(function(p){ return p.id === (menu.pageSize || 'a4'); }) || PAGE_SIZES[0];
-      const previewW = (pageSpec.id === 'a5') ? 420 : (pageSpec.orientation === 'landscape' ? 842 : 595);
-      const previewH = (pageSpec.id === 'a5') ? 595 : (pageSpec.orientation === 'landscape' ? 595 : 842);
-      body.innerHTML =
-        '<div style="margin-bottom:14px;padding:12px 14px;background:var(--surface-2);border-radius:var(--r-md);">' +
-          '<div style="font-weight:700;font-size:13px;color:var(--text-2);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.04em;">Page density</div>' +
-          '<div class="flex gap-2" style="flex-wrap:wrap;margin-bottom:' + (menu.coverPhoto ? '8px' : '0') + ';">' +
-            '<button class="btn btn-secondary btn-sm" data-dens="tight" ' + (printOpts.density === 'tight' ? 'style="background:var(--brand-600);color:#fff;border-color:var(--brand-600);"' : '') + '>Tight</button>' +
-            '<button class="btn btn-secondary btn-sm" data-dens="comfortable" ' + (printOpts.density === 'comfortable' ? 'style="background:var(--brand-600);color:#fff;border-color:var(--brand-600);"' : '') + '>Comfortable</button>' +
-            '<button class="btn btn-secondary btn-sm" data-dens="spacious" ' + (printOpts.density === 'spacious' ? 'style="background:var(--brand-600);color:#fff;border-color:var(--brand-600);"' : '') + '>Spacious</button>' +
-            '<div style="flex:1;"></div>' +
-            '<span class="text-muted text-sm" style="font-size:11px;align-self:center;">' +
-              'Title ' + printOpts.titleSize + 'pt · Item ' + printOpts.itemSize + 'pt · Padding ' + printOpts.pagePadding + 'pt' +
-            '</span>' +
-          '</div>' +
-          // v2.16.1 — Cover height row (only shown when a cover photo is set)
-          (menu.coverPhoto
-            ? '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">' +
-                '<span style="font-size:11px;color:var(--text-2);font-weight:600;text-transform:uppercase;letter-spacing:0.04em;">Cover size</span>' +
-                '<button class="btn btn-secondary btn-sm" data-printcoverh="25mm" ' + (curCoverH === '25mm' ? 'style="background:var(--brand-600);color:#fff;border-color:var(--brand-600);"' : '') + '>Small (25mm)</button>' +
-                '<button class="btn btn-secondary btn-sm" data-printcoverh="40mm" ' + (curCoverH === '40mm' ? 'style="background:var(--brand-600);color:#fff;border-color:var(--brand-600);"' : '') + '>Medium (40mm)</button>' +
-                '<button class="btn btn-secondary btn-sm" data-printcoverh="60mm" ' + (curCoverH === '60mm' ? 'style="background:var(--brand-600);color:#fff;border-color:var(--brand-600);"' : '') + '>Large (60mm)</button>' +
-              '</div>'
-            : '') +
+    // v2.18 — saveOpt: menu alanını güncelle, store'a kaydet, preview'ı yenile
+    function saveOpt(key, val) {
+      menu[key] = val;
+      const m = PCD.store.getFromTable('menus', mid);
+      if (m) { m[key] = val; PCD.store.upsertInTable('menus', m, 'm'); }
+      // PO'yu güncelle
+      const fresh = resolvePrintOpts(menu);
+      Object.assign(PO, fresh);
+      refreshPreview();
+    }
+
+    function makeOptRow(label, key, options) {
+      const cur = menu[key];
+      return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">' +
+        '<span style="font-size:11px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:0.04em;min-width:90px;">' + label + '</span>' +
+        '<div style="display:flex;gap:4px;flex-wrap:wrap;">' +
+          options.map(function(o) {
+            const active = cur ? cur === o.val : !!o.isDefault;
+            return '<button class="btn btn-secondary btn-sm" data-opt-key="' + key + '" data-opt-val="' + o.val + '" style="' + (active ? 'background:var(--brand-600);color:#fff;border-color:var(--brand-600);' : '') + '">' + o.label + '</button>';
+          }).join('') +
         '</div>' +
-        // A4 preview wrapper — gerçek kağıt görünümü
-        '<div style="background:#e8e8e8;padding:20px;display:flex;flex-direction:column;align-items:center;gap:0;">' +
-          '<div style="background:#fff;width:' + previewW + 'px;min-height:' + previewH + 'px;box-shadow:0 2px 12px rgba(0,0,0,0.18);position:relative;overflow:hidden;">' +
+      '</div>';
+    }
+
+    function refreshPreview() {
+      const pageSpec = PAGE_SIZES.find(function(p){ return p.id === (menu.pageSize || 'portrait'); }) || PAGE_SIZES[0];
+      const previewW = pageSpec.previewW || 595;
+      const previewH = pageSpec.previewH || 842;
+
+      const controls =
+        makeOptRow('Font', 'printFontSize', [
+          {val:'xsmall',label:'XS'},{val:'small',label:'S'},{val:'medium',label:'M',isDefault:true},{val:'large',label:'L'},{val:'xlarge',label:'XL'}
+        ]) +
+        makeOptRow('Kenar', 'printMargin', [
+          {val:'very_narrow',label:'Çok Dar'},{val:'narrow',label:'Dar'},{val:'medium',label:'Medium',isDefault:true},{val:'wide',label:'Geniş'}
+        ]) +
+        makeOptRow('Satır', 'printLineSpacing', [
+          {val:'tight',label:'Sıkışık'},{val:'normal',label:'Normal',isDefault:true},{val:'spacious',label:'Geniş'}
+        ]) +
+        makeOptRow('Bölüm', 'printSecSpacing', [
+          {val:'tight',label:'Sıkışık'},{val:'normal',label:'Normal',isDefault:true},{val:'spacious',label:'Geniş'}
+        ]) +
+        makeOptRow('Logo', 'printLogoSize', [
+          {val:'small',label:'Küçük'},{val:'medium',label:'Orta',isDefault:true},{val:'large',label:'Büyük'}
+        ]) +
+        (!menu.coverPhoto ? '' : makeOptRow('Cover', 'coverHeight', [
+          {val:'25mm',label:'S'},{val:'40mm',label:'M',isDefault:true},{val:'60mm',label:'L'}
+        ]));
+
+      body.innerHTML =
+        '<div style="margin-bottom:12px;padding:10px 14px;background:var(--surface-2);border-radius:var(--r-md);">' +
+          controls +
+        '</div>' +
+        '<div style="background:#c8c8c8;padding:16px;display:flex;flex-direction:column;align-items:center;">' +
+          '<div style="font-size:10px;color:#888;margin-bottom:8px;letter-spacing:0.05em;">' + previewW + ' × ' + previewH + 'pt</div>' +
+          '<div style="background:#fff;width:' + previewW + 'px;min-height:' + previewH + 'px;box-shadow:0 4px 20px rgba(0,0,0,0.25);overflow:hidden;">' +
             buildStyledHtml() +
           '</div>' +
         '</div>';
 
-      PCD.on(body, 'click', '[data-dens]', function () {
-        applyDensity(this.getAttribute('data-dens'));
-        const m = PCD.store.getFromTable('menus', mid);
-        if (m) {
-          m.printDensity = printOpts.density;
-          m.printTitleSize = printOpts.titleSize;
-          m.printItemSize = printOpts.itemSize;
-          m.printSectionSize = printOpts.sectionSize;
-          m.printPagePadding = printOpts.pagePadding;
-          m.printItemGap = printOpts.itemGap;
-          PCD.store.upsertInTable('menus', m, 'm');
-        }
-        refreshPreview();
-      });
-
-      // v2.16.1 — Cover height handler in print view
-      PCD.on(body, 'click', '[data-printcoverh]', function () {
-        const h = this.getAttribute('data-printcoverh');
-        menu.coverHeight = h;
-        const m = PCD.store.getFromTable('menus', mid);
-        if (m) { m.coverHeight = h; PCD.store.upsertInTable('menus', m, 'm'); }
-        refreshPreview();
+      PCD.on(body, 'click', '[data-opt-key]', function () {
+        saveOpt(this.getAttribute('data-opt-key'), this.getAttribute('data-opt-val'));
       });
     }
 
