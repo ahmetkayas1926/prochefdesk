@@ -1375,6 +1375,8 @@
         '@media print {' +
           '@page { size: ' + pageSpec.cssSize + '; margin: 0; }' +
           'body { margin: 0; padding: 0; }' +
+          // Arka plan rengi ve görselleri zorla bas (Background graphics kapalı olsa bile)
+          '* { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }' +
           '.m-page { max-width: ' + pageMaxWidth + 'pt; width: 100%; margin: 0 auto; box-sizing: border-box; overflow: hidden;' +
             'padding: ' + (menu.coverPhoto ? '0' : O.paddingPt) + 'pt ' + (O.paddingPt + 6) + 'pt ' + O.paddingPt + 'pt; }' +
           (menu.coverPhoto ? '.m-header { padding-top: 0; }' : '') +
