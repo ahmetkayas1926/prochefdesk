@@ -1430,8 +1430,13 @@
 
     function refreshPreview() {
       const pageSpec = PAGE_SIZES.find(function(p){ return p.id === (menu.pageSize || 'portrait'); }) || PAGE_SIZES[0];
-      const previewW = pageSpec.previewW || 595;
-      const previewH = pageSpec.previewH || 842;
+      // 1pt = 96/72px at screen DPI — render at true print dimensions then scale to fit
+      var PT = 96 / 72;
+      var pageWpx = Math.round(pageSpec.previewW * PT);  // portrait:793, landscape:1123
+      var pageHpx = Math.round(pageSpec.previewH * PT);  // portrait:1123, landscape:793
+      var areaW = 700;
+      var scale = Math.round(areaW / pageWpx * 10000) / 10000;
+      var scaledH = Math.round(pageHpx * scale);
 
       const controls =
         makeOptRow('Font', 'printFontSize', [
@@ -1457,10 +1462,12 @@
         '<div style="margin-bottom:12px;padding:10px 14px;background:var(--surface-2);border-radius:var(--r-md);">' +
           controls +
         '</div>' +
-        '<div style="background:#c8c8c8;padding:16px;overflow-x:auto;display:flex;flex-direction:column;align-items:center;">' +
-          '<div style="font-size:10px;color:#888;margin-bottom:8px;letter-spacing:0.05em;">' + previewW + ' × ' + previewH + 'pt · ' + pageSpec.orientation + '</div>' +
-          '<div style="background:#fff;width:' + previewW + 'px;height:' + previewH + 'px;overflow-y:auto;overflow-x:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.25);flex-shrink:0;">' +
-            buildStyledHtml() +
+        '<div style="background:#c8c8c8;padding:16px;">' +
+          '<div style="font-size:10px;color:#888;margin-bottom:8px;letter-spacing:0.05em;">' + pageSpec.previewW + ' × ' + pageSpec.previewH + 'pt · ' + pageSpec.orientation + '</div>' +
+          '<div style="width:' + areaW + 'px;height:' + scaledH + 'px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.25);margin:0 auto;">' +
+            '<div style="width:' + pageWpx + 'px;height:' + pageHpx + 'px;transform:scale(' + scale + ');transform-origin:top left;overflow:hidden;background:#fff;">' +
+              buildStyledHtml() +
+            '</div>' +
           '</div>' +
         '</div>';
 
