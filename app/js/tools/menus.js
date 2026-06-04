@@ -1459,7 +1459,7 @@
         '</div>' +
         '<div style="background:#c8c8c8;padding:16px;overflow-x:auto;display:flex;flex-direction:column;align-items:center;">' +
           '<div style="font-size:10px;color:#888;margin-bottom:8px;letter-spacing:0.05em;">' + previewW + ' × ' + previewH + 'pt · ' + pageSpec.orientation + '</div>' +
-          '<div style="background:#fff;width:' + previewW + 'px;min-height:' + previewH + 'px;box-shadow:0 4px 20px rgba(0,0,0,0.25);overflow:hidden;flex-shrink:0;">' +
+          '<div style="background:#fff;width:' + previewW + 'px;height:' + previewH + 'px;overflow-y:auto;overflow-x:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.25);flex-shrink:0;">' +
             buildStyledHtml() +
           '</div>' +
         '</div>';
