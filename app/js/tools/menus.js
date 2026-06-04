@@ -20,9 +20,9 @@
   'use strict';
   const PCD = window.PCD;
 
-  // v2.8.68 — 4 hazır tema. Her tema font + accent + section divider
-  // stilini belirler. Şef tema seçtikten sonra accent color'ı override
-  // edebilir (PALETTES). Print/preview build sırasında bu config okunur.
+  // v2.8.68 — 4 themes. Each theme defines font + accent + section divider style.
+  // After selecting a theme, the chef can override the accent colour (PALETTES).
+  // This config is read at print/preview build time.
   const THEMES = {
     fine_dining: {
       labelKey: 'menu_theme_fine_dining',
@@ -90,17 +90,17 @@
     },
   };
 
-  // 6 hazır renk — tema accent'ini override eder. Şef boş bırakırsa
-  // (data.accentColor undefined) tema default accent'i kullanılır.
+  // 6 preset colours — override the theme accent. If left empty
+  // (data.accentColor undefined) the theme default accent is used.
   const PALETTES = [
-    // Koyu / doygun
+    // Dark / saturated
     { id: 'gold',    label: 'Gold',       color: '#c5a572' },
     { id: 'burgundy',label: 'Burgundy',   color: '#8b1a1a' },
     { id: 'navy',    label: 'Navy',       color: '#1e3a5f' },
     { id: 'forest',  label: 'Forest',     color: '#2d5016' },
     { id: 'black',   label: 'Black',      color: '#111111' },
     { id: 'choco',   label: 'Chocolate',  color: '#5c2c0f' },
-    // Açık / pastel
+    // Light / pastel
     { id: 'cream',   label: 'Cream',      color: '#c8a96e' },
     { id: 'sage',    label: 'Sage',       color: '#7a9e7e' },
     { id: 'blush',   label: 'Blush',      color: '#c47c8a' },
@@ -110,7 +110,7 @@
   ];
 
   // Per-item special badges. Yok / chef_pick / signature / new / spicy.
-  // Print'te item adının yanında küçük renkli chip.
+  // Small coloured chip shown next to item name in print.
   const ITEM_BADGES = [
     { id: '',           labelKey: 'menu_badge_none',      icon: '',  color: '' },
     { id: 'chef_pick',  labelKey: 'menu_badge_chef_pick', icon: '★', color: '#c5a572' },
@@ -119,13 +119,13 @@
     { id: 'spicy',      labelKey: 'menu_badge_spicy',     icon: '🌶', color: '#c2410c' },
   ];
 
-  // v2.14.1 — Manuel diyet + alerjen harf kodları. Şef her yemeğe elle seçer
-  // (otomatik tahmin yok → tarifsiz öğelerde de çalışır, yanlış "gluten free"
-  // iddia riski yok). Kural: küçük harf = diyet/uygunluk, BÜYÜK harf = "içerir"
-  // alerjen uyarısı. Yemek adı yanında "(gf) (gfo) (N)"; altta legend açıklar.
-  // `id` = saklanan benzersiz anahtar, `code` = menüde görünen metin.
+  // v2.14.1 — Manual diet + allergen letter codes. Chef selects per item
+  // (no auto-detection → works for items without recipes, avoids false "gluten free"
+  // claims). Rule: lowercase = diet/suitability, UPPERCASE = "contains"
+  // allergen warning. Shown next to dish name as "(gf) (gfo) (N)"; legend below.
+  // `id` = stored unique key, `code` = text shown on menu.
   const MENU_CODES = [
-    // Diyet / uygunluk (küçük harf)
+    // Diet / suitability (lowercase)
     { id: 'v',   code: 'v',   group: 'diet',     labelKey: 'menu_code_v' },
     { id: 'vo',  code: 'vo',  group: 'diet',     labelKey: 'menu_code_vo' },
     { id: 'vg',  code: 'vg',  group: 'diet',     labelKey: 'menu_code_vg' },
@@ -136,7 +136,7 @@
     { id: 'dfo', code: 'dfo', group: 'diet',     labelKey: 'menu_code_dfo' },
     { id: 'nf',  code: 'nf',  group: 'diet',     labelKey: 'menu_code_nf' },
     { id: 'h',   code: 'h',   group: 'diet',     labelKey: 'menu_code_h' },
-    // Alerjen "içerir" (BÜYÜK harf)
+    // Allergen "contains" (UPPERCASE)
     { id: 'a_n',  code: 'N',  group: 'allergen', labelKey: 'menu_code_a_n' },
     { id: 'a_g',  code: 'G',  group: 'allergen', labelKey: 'menu_code_a_g' },
     { id: 'a_d',  code: 'D',  group: 'allergen', labelKey: 'menu_code_a_d' },
@@ -147,12 +147,12 @@
     { id: 'a_se', code: 'SE', group: 'allergen', labelKey: 'menu_code_a_se' },
   ];
 
-  // v2.15.4 — Tarif menü öğesinde alerjenleri OTOMATİK göster.
-  // allergens-db EU key → menü "içerir" kodu (a_*). recipeAllergens() tarifin
-  // ingredient'larına chef'in elle eklediği allergen tag'lerinden gelir
-  // (isimden tahmin YOK — v2.8.37). Menü öğesi bir recipe ise bu kodlar
-  // otomatik görünür; ORİJİNAL TARİFE DOKUNMAZ (sadece okuma). Diyet kodları
-  // (v/vg/gf/df…) güvenle türetilemez → manuel kalır.
+  // v2.15.4 — Auto-show allergens on recipe menu items.
+  // allergens-db EU key → menu "contains" code (a_*). recipeAllergens() comes
+  // from allergen tags manually added to recipe ingredients by the chef
+  // (no name-based detection — v2.8.37). If a menu item is linked to a recipe
+  // these codes appear automatically; ORIGINAL RECIPE IS NOT MODIFIED (read only).
+  // Diet codes (v/vg/gf/df…) cannot be reliably derived → remain manual.
   const ALLERGEN_KEY_TO_CODE = {
     gluten: 'a_g', nuts: 'a_n', peanuts: 'a_n', dairy: 'a_d', eggs: 'a_e',
     fish: 'a_f', crustaceans: 'a_sf', molluscs: 'a_sf', soybeans: 'a_s', sesame: 'a_se',
@@ -171,7 +171,7 @@
     });
     return out;
   }
-  // Görünüm için birleşik kodlar: manuel (it.codes) ∪ tariften otomatik alerjen.
+  // Combined codes for display: manual (it.codes) ∪ auto allergens from recipe.
   function displayCodeIds(it) {
     const manual = Array.isArray(it.codes) ? it.codes : [];
     const merged = manual.slice();
@@ -179,14 +179,14 @@
     return merged;
   }
 
-  // v2.18 — Sayfa türü kaldırıldı. Sadece yönlendirme: portrait / landscape.
-  // Chrome print diyaloğunda kullanıcı zaten A4/Letter seçer.
+  // v2.18 — Page size removed. Orientation only: portrait / landscape.
+  // User selects A4/Letter in Chrome print dialog.
   const PAGE_SIZES = [
     { id: 'portrait',  labelKey: 'menu_page_portrait',  cssSize: 'A4',           orientation: 'portrait',  previewW: 595, previewH: 842 },
     { id: 'landscape', labelKey: 'menu_page_landscape', cssSize: 'A4 landscape', orientation: 'landscape', previewW: 842, previewH: 595 },
   ];
 
-  // Quick-insert legal note templates. Footer'a tek tıkla eklenir.
+  // Quick-insert legal note templates. Added to footer with one click.
   function getLegalTemplates() {
     const t = PCD.i18n.t;
     return [
@@ -205,21 +205,21 @@
     return theme.accent;
   }
 
-  // v2.17 — Ink (text) rengi: kullanıcı seçimi yoksa tema default'u
+  // v2.17 — Ink (text) colour: falls back to theme default if no user selection.
   function resolveInk(menu) {
     const theme = THEMES[menu.theme] || THEMES.fine_dining;
     if (menu.inkColor) return menu.inkColor;
     return theme.ink;
   }
 
-  // v2.17 — Arka plan rengi: kullanıcı seçimi yoksa tema default'u
+  // v2.17 — Background colour: falls back to theme default if no user selection.
   function resolveBg(menu) {
     const theme = THEMES[menu.theme] || THEMES.fine_dining;
     if (menu.bgColor) return menu.bgColor;
     return theme.bg;
   }
 
-  // v2.17 — Muted ink: tema mutedInk kullan; ink override varsa rgba ile %60 opacity
+  // v2.17 — Muted ink: use theme mutedInk; if ink is overridden apply rgba 60% opacity.
   function resolveMutedInk(menu) {
     const theme = THEMES[menu.theme] || THEMES.fine_dining;
     if (menu.inkColor) {
@@ -318,7 +318,7 @@
     });
     // v2.8.68 — Menu duplicate. Recipes/Checklist pattern: clone data,
     // strip id/createdAt, append "(Copy)" to name, regenerate section/item ids,
-    // open editor on the new copy. Sezonluk varyant / Sunday special akışı.
+    // open editor on the new copy. Seasonal variant / Sunday special workflow.
     PCD.on(listEl, 'click', '[data-dup-mid]', function (e) {
       e.stopPropagation();
       const mid = this.getAttribute('data-dup-mid');
@@ -362,18 +362,18 @@
         return { id: PCD.uid('sec'), name: s.name, items: [] };
       }),
     };
-    // v2.8.68 — Defansif: eski menüler için yeni alanların default'u
+    // v2.8.68 — Defensive: set defaults for new fields on legacy menus.
     if (!data.theme) data.theme = 'fine_dining';
     if (typeof data.accentColor !== 'string') data.accentColor = '';
     if (typeof data.columns !== 'number') data.columns = 1;
-    // v2.18: eski a4/a5/us_letter/a4_land → portrait/landscape
+    // v2.18: migrate legacy a4/a5/us_letter/a4_land → portrait/landscape
     if (!data.pageSize || ['a4','a5','us_letter'].indexOf(data.pageSize) >= 0) data.pageSize = 'portrait';
     if (data.pageSize === 'a4_land') data.pageSize = 'landscape';
     if (!data.coverRatio) data.coverRatio = '16/9';
     if (typeof data.inkColor !== 'string') data.inkColor = '';
     if (typeof data.bgColor !== 'string') data.bgColor = '';
     if (!data.priceStyle) data.priceStyle = data.hidePrices ? 'hidden' : 'symbol';
-    // v2.18 — Yeni print opts (backward compat defaults)
+    // v2.18 — New print opts (backward compat defaults)
     if (!data.printFontSize)    data.printFontSize    = 'medium';
     if (!data.printMargin)      data.printMargin      = 'medium';
     if (!data.printLineSpacing) data.printLineSpacing = 'normal';
@@ -430,7 +430,7 @@
           return '<button type="button" data-accent="' + p.id + '" title="' + PCD.escapeHtml(p.label) + '" style="width:28px;height:28px;border-radius:50%;border:2px solid ' + (active ? 'var(--brand-600)' : 'var(--border)') + ';background:' + p.color + ';cursor:pointer;' + (active ? 'box-shadow:0 0 0 2px var(--brand-200);' : '') + '"></button>';
         }).join('');
 
-      // v2.17 — Yazı rengi seçici (koyu tonlar + tema default)
+      // v2.17 — Text colour selector (dark tones + theme default)
       const INK_OPTIONS = [
         { id: '', label: 'Theme default', color: null },
         { id: '#111111', label: 'Black',        color: '#111111' },
@@ -446,7 +446,7 @@
         return '<button type="button" data-ink="' + o.id + '" title="' + PCD.escapeHtml(o.label) + '" style="width:28px;height:28px;border-radius:50%;border:2px solid ' + (active ? 'var(--brand-600)' : (o.border || 'var(--border)')) + ';background:' + bg + ';cursor:pointer;' + (active ? 'box-shadow:0 0 0 2px var(--brand-200);' : '') + '"></button>';
       }).join('');
 
-      // v2.17 — Arka plan rengi seçici (açık/hafif tonlar + tema default)
+      // v2.17 — Background colour selector (light/soft tones + theme default)
       const BG_OPTIONS = [
         { id: '', label: 'Theme default', color: null },
         { id: '#ffffff', label: 'White',          color: '#ffffff', border: '#ddd' },
@@ -467,7 +467,7 @@
       }).join('');
       const colsBtns = '<button type="button" class="btn btn-sm ' + (data.columns === 1 ? 'btn-primary' : 'btn-outline') + '" data-cols="1" style="flex:1;">1 ' + (t('menu_column') || 'column') + '</button>' +
                        '<button type="button" class="btn btn-sm ' + (data.columns === 2 ? 'btn-primary' : 'btn-outline') + '" data-cols="2" style="flex:1;">2 ' + (t('menu_columns') || 'columns') + '</button>';
-      // v2.18 — Portrait / Landscape butonları
+      // v2.18 — Portrait / Landscape buttons
       const orientBtns = PAGE_SIZES.map(function (ps) {
         const active = (data.pageSize || 'portrait') === ps.id;
         const icon = ps.id === 'portrait' ? '▯' : '▭';
@@ -479,15 +479,15 @@
         (!data.logo ? '<div class="text-center text-muted" style="font-size:11px;">📷<br>' + PCD.escapeHtml(t('menu_logo') || 'Logo') + '</div>' : '') +
         (data.logo ? '<button type="button" id="menuLogoRemove" class="icon-btn" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.6);color:#fff;width:20px;height:20px;padding:0;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/></svg></button>' : '') +
       '</div>';
-      // v2.16.8: cover tile — sabit genişlik 240px, yükseklik aspect-ratio'dan otomatik gelir.
-      // flex:1 kaldırıldı çünkü container genişliğini doldurunca max-height'a takılıyordu.
+      // v2.16.8: cover tile — fixed width 240px, height auto from aspect-ratio.
+      // flex:1 removed to prevent overflow when container is wide.
       const coverTile = '<div id="menuCoverZone" style="position:relative;width:240px;aspect-ratio:' + (data.coverRatio || '16/9') + ';border-radius:var(--r-md);background:' + (data.coverPhoto ? 'url(' + data.coverPhoto + ') center/cover no-repeat' : 'var(--surface-2)') + ';border:2px dashed ' + (data.coverPhoto ? 'transparent' : 'var(--border-strong)') + ';cursor:pointer;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;">' +
         (!data.coverPhoto ? '<div class="text-center text-muted" style="font-size:11px;">🖼<br>' + PCD.escapeHtml(t('menu_cover') || 'Cover photo (optional)') + '</div>' : '') +
         (data.coverPhoto ? '<button type="button" id="menuCoverRemove" class="icon-btn" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.6);color:#fff;width:22px;height:22px;padding:0;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/></svg></button>' : '') +
         (data.coverPhoto ? '<div style="position:absolute;bottom:4px;left:6px;font-size:10px;color:rgba(255,255,255,0.85);background:rgba(0,0,0,0.4);padding:1px 6px;border-radius:3px;font-weight:600;">' + (data.coverRatio || '16/9').replace('/', ':') + '</div>' : '') +
       '</div>';
-      // v2.16.3 — Print size selector moved to preview-only (refreshPreview).
-      // Editor shows only logo + cover tile. No size buttons here.
+      // v2.16.3 — Print size controls moved to preview modal (refreshPreview).
+      // Editor shows logo + cover tile only.
 
       body.innerHTML = `
         <div class="field">
@@ -573,11 +573,11 @@
       `;
 
       // Render sections
-      // v2.8.56 — Drag-drop ile section ve item sıralama. Up/down butonları
-      // ('pratik değil' operatör raporu) kaldırıldı; her satır başında
-      // 6-nokta grip handle ile basılı tutup sürükle/bırak.
-      // Section ve item handle'ları farklı CSS class'ları kullanır
-      // (.sec-drag-handle vs .item-drag-handle) — iki sortable çakışmasın.
+      // v2.8.56 — Drag-drop section and item reordering. Up/down buttons removed
+      // ('not practical', operator feedback); 6-dot grip handle at row start.
+      // Section and item handles use different CSS classes
+      // (.sec-drag-handle vs .item-drag-handle) to prevent sortable conflicts.
+
       const secListEl = PCD.$('#sectionsList', body);
       const dragHandleSvg = '<svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>';
       function makeDragHandle(extraCls) {
@@ -609,14 +609,14 @@
             style: { display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 8px', background: 'var(--surface-2)', borderRadius: 'var(--r-sm)' }
           });
           // v2.8.68 — Badge dropdown: chef pick / signature / new / spicy.
-          // Aynı satırda yer almasın diye küçük; print'te item adı yanında chip olur.
+          // Small so it doesn't crowd the row; renders as a chip next to item name in print.
           const badgeOpts = ITEM_BADGES.map(function (b) {
             const sel = (it.badge || '') === b.id ? ' selected' : '';
             const lbl = (b.icon ? b.icon + ' ' : '') + (PCD.i18n.t(b.labelKey) || b.id || '—');
             return '<option value="' + b.id + '"' + sel + '>' + lbl + '</option>';
           }).join('');
-          // v2.14.1 — Per-item diyet/alerjen kod seçici. PCD.picker ile multi-select;
-          // seçilenler butonda "gf · gfo · N" olarak özetlenir, boşsa "+ Codes".
+          // v2.14.1 — Per-item diet/allergen code picker. Multi-select via PCD.picker;
+          // selection summarised as "gf · gfo · N" on button, or "+ Codes" if empty.
           const selCodes = Array.isArray(it.codes) ? it.codes : [];
           const codesText = selCodes.length
             ? MENU_CODES.filter(function (c) { return selCodes.indexOf(c.id) >= 0; }).map(function (c) { return c.code; }).join(' · ')
@@ -629,7 +629,7 @@
             ? '<span title="' + PCD.escapeHtml(PCD.i18n.t('menu_codes_auto_hint') || 'Allergens from this recipe (automatic)') + '" style="display:inline-block;margin-top:5px;margin-left:6px;font-size:10px;font-weight:700;color:var(--text-3);vertical-align:top;">⟲ ' + PCD.escapeHtml((PCD.i18n.t('menu_codes_auto_prefix') || 'recipe:') + ' ' + autoText) + '</span>'
             : '';
           // Manual items: editable name field. Recipe items: static name.
-          // v2.8.56 — Drag handle eklendi; aynı section içinde sıralama.
+          // v2.8.56 — Drag handle added; reorder within same section.
           if (isManual) {
             row.innerHTML = `
               ${itemDragHandleHtml}
@@ -655,7 +655,7 @@
           }
           itemsEl.appendChild(row);
         });
-        // v2.8.56 — Section içi item drag-drop sortable (item handle'a göre)
+        // v2.8.56 — Per-section item drag-drop sortable (by item handle)
         if (PCD.dragdrop && PCD.dragdrop.makeSortable) {
           PCD.dragdrop.makeSortable(itemsEl, {
             handle: '.item-drag-handle',
@@ -665,7 +665,7 @@
               const moved = sec.items[oldIndex];
               sec.items.splice(oldIndex, 1);
               sec.items.splice(newIndex, 0, moved);
-              render();  // section reindex için tam render
+              render();  // full render required for section reindex
             }
           });
         }
@@ -718,7 +718,7 @@
         data.accentColor = this.getAttribute('data-accent');
         render();
       });
-      // v2.17 — Yazı rengi handler
+      // v2.17 — Text colour handler
       PCD.on(body, 'click', '[data-ink]', function (e) {
         e.stopPropagation();
         data.inkColor = this.getAttribute('data-ink');
@@ -761,10 +761,9 @@
         });
         inp.click();
       }
-      // v2.16.2 — Cover photo flow: first pick ratio via inline modal,
+      // v2.16.2 — Cover photo flow: pick ratio via inline modal first,
       // then open file picker, then open cropper with the chosen ratio.
-      // This way the 1:1 lock in PCD.cropper is bypassed by passing
-      // the correct aspectRatio, and the user sees their choice upfront.
+      // Bypasses the 1:1 lock in PCD.cropper by passing aspectRatio option.
       function pickAndCropCover(onDone) {
         const RATIOS_COVER = [
           { label: '2:1',  value: '2/1',  desc: 'Cinematic — wide panoramic banner' },
@@ -880,7 +879,7 @@
         }
       });
 
-      // v2.14.1 — Per-item diyet/alerjen kod seçici (PCD.picker multi-select)
+      // v2.14.1 — Per-item diet/allergen code picker (PCD.picker multi-select)
       PCD.on(body, 'click', '[data-itemcodes]', function () {
         const parts = this.getAttribute('data-itemcodes').split(':').map(Number);
         const sIdx = parts[0], iIdx = parts[1];
@@ -918,7 +917,7 @@
       }, 300));
 
       // NOTE: data-secup / data-secdown handlers removed (v2.16.1).
-      // Section reordering is handled by PCD.dragdrop.makeSortable (sec-drag-handle).
+      // Section reordering handled by PCD.dragdrop.makeSortable (sec-drag-handle).
 
       PCD.on(body, 'click', '[data-secdel]', function () {
         const secEl = this.closest('[data-sid]');
@@ -1113,8 +1112,8 @@
       if (!it.badge) return '';
       const b = ITEM_BADGES.find(function (x) { return x.id === it.badge; });
       if (!b) return '';
-      // v2.13.9 — Spicy: emoji (🌶) yerine küçük büyük-harf metin etiketi (profesyonel,
-      // müşteri okuyabilir). Diğer rozetler tipografik glyph olarak kalır (★ ✦ ◆).
+      // v2.13.9 — Spicy: text label instead of emoji (🌶) — more professional,
+      // readable by guests. Other badges remain typographic glyphs (★ ✦ ◆).
       const isText = (b.id === 'spicy');
       const content = isText ? (PCD.i18n.t('menu_badge_spicy') || 'Spicy').toUpperCase() : b.icon;
       if (!content) return '';
@@ -1122,28 +1121,28 @@
       return ' <span class="m-itembadge" style="background:' + b.color + '20;color:' + b.color + ';border:1px solid ' + b.color + '60;' + extra + '">' + PCD.escapeHtml(content) + '</span>';
     }
 
-    // v2.15.4 — Alerjen/diyet kodları SADECE BİLGİ amaçlı (uyarı/yasak/filtre DEĞİL).
-    // Eskiden bir "allergen-safe print" filtresi eşleşmeyen yemekleri gizliyordu →
-    // kavramsal yanlış + "yemeğim kayboldu" bug'ı. Kaldırıldı: tüm öğeler her zaman
-    // basılır. Kod görünümü: küçük harf = diyet/uygunluk (manuel), BÜYÜK = "içerir"
-    // alerjen (tariften OTOMATİK + manuel). allergenStyle: 'codes' (göster) | 'off'.
+    // v2.15.4 — Allergen/diet codes are INFO ONLY (not warnings/filters/restrictions).
+    // A legacy "allergen-safe print" filter that hid non-matching items was removed →
+    // conceptually wrong + "dish disappeared" bug. All items always print.
+    // Code display: lowercase = diet/suitability (manual), UPPERCASE = "contains"
+    // allergen (auto from recipe + manual). allergenStyle: 'codes' (show) | 'off'.
     const allergenStyle = menu.allergenStyle || (menu.hideAllergens ? 'off' : 'codes');
-    // v2.14.5 — Fiyat gösterim stili: symbol ($24) | plain (24, Cornell simgesiz) | hidden
+    // v2.14.5 — Price display style: symbol ($24) | plain (24, no symbol) | hidden
     const priceStyle = menu.priceStyle || (menu.hidePrices ? 'hidden' : 'symbol');
     function plainPrice(p) { const n = Number(p); return (n % 1 === 0) ? String(n) : n.toFixed(2); }
     const showAllergens = allergenStyle === 'codes';
-    const usedCodes = {}; // id → true (menüde geçen kodlar; legend için)
+    const usedCodes = {}; // id → true (codes used on menu; for legend)
 
     // Build sections HTML using a simple, professional layout
     let sectionsBody = '';
     (menu.sections || []).forEach(function (sec) {
       if (!sec.items || sec.items.length === 0) return;
-      // v2.15.4 — Filtre kaldırıldı: geçerli (adı olan / tarifi duran) tüm öğeler.
+      // v2.15.4 — Filter removed: all valid items (with name / active recipe) always shown.
       const visibleItems = (sec.items || []).filter(function (it) {
         if (it.recipeId) return !!recipeMap[it.recipeId];
         return !!(it.customName || '').trim();
       });
-      if (!visibleItems.length) return; // boş bölümü atla
+      if (!visibleItems.length) return; // skip empty sections
       sectionsBody += '<div class="m-section">';
       sectionsBody += '<div class="m-section-title">' + PCD.escapeHtml(sec.name || '') + '</div>';
       sectionsBody += '<div class="m-items">';
@@ -1154,8 +1153,8 @@
         const price = (it.price !== undefined && it.price !== null && it.price !== '') ? Number(it.price) : (r && r.salePrice ? r.salePrice : 0);
         const desc = it.description || (r && r.plating) || '';
 
-        // v2.15.4 — Gösterilen kodlar = manuel (it.codes) ∪ tariften otomatik alerjen.
-        // Yemek adı yanında "(gf) (gfo) (N)". Sadece bilgi.
+        // v2.15.4 — Displayed codes = manual (it.codes) ∪ auto allergens from recipe.
+        // Shown next to dish name as "(gf) (gfo) (N)". Info only.
         let allergenCodes = '';
         if (showAllergens) {
           const ids = displayCodeIds(it);
@@ -1183,7 +1182,7 @@
       sectionsBody += '</div></div>';
     });
 
-    // v2.14.1 — Kod lejantı: menüde geçen kodları açıklar (registry sırası: diyet → alerjen).
+    // v2.14.1 — Code legend: explains codes used on the menu (registry order: diet → allergen).
     let allergenLegendHtml = '';
     if (showAllergens) {
       const usedList = MENU_CODES.filter(function (c) { return usedCodes[c.id]; });
@@ -1195,28 +1194,28 @@
       }
     }
 
-    // v2.18 — Yeni print opts sistemi: bağımsız 5 kontrol
-    // Font boyutu: xsmall/small/medium/large/xlarge
-    // Kenar boşluğu: very_narrow/narrow/medium/wide
-    // Satır aralığı: tight/normal/spacious
-    // Bölüm aralığı: tight/normal/spacious
-    // Logo boyutu: small/medium/large
+    // v2.18 — New print opts system: 5 independent controls
+    // Font size: xsmall/small/medium/large/xlarge
+    // Margin: very_narrow/narrow/medium/wide
+    // Line spacing: tight/normal/spacious
+    // Section gap: tight/normal/spacious
+    // Logo size: small/medium/large
     function resolvePrintOpts(menu) {
-      // Font boyutu → pt
+      // Font size → pt
       const fontMap = { xsmall: 8, small: 10, medium: 12, large: 14, xlarge: 16 };
       const itemPt   = fontMap[menu.printFontSize] || 12;
-      const titlePt  = Math.round(itemPt * 2.4);   // başlık oranı sabit
-      const secPt    = Math.round(itemPt * 1.4);   // section oranı sabit
-      // Kenar boşluğu → pt
+      const titlePt  = Math.round(itemPt * 2.4);   // title ratio fixed
+      const secPt    = Math.round(itemPt * 1.4);   // section ratio fixed
+      // Margin → pt
       const marginMap = { very_narrow: 18, narrow: 26, medium: 36, wide: 50 };
       const paddingPt = marginMap[menu.printMargin] || 36;
-      // Satır aralığı → pt (item gap)
+      // Line spacing → pt (item gap)
       const lineMap = { tight: Math.round(itemPt*0.5), normal: Math.round(itemPt*0.9), spacious: Math.round(itemPt*1.4) };
       const itemGapPt = lineMap[menu.printLineSpacing] || Math.round(itemPt*0.9);
-      // Bölüm aralığı → multiplier
+      // Section gap → multiplier
       const secMap = { tight: 1.2, normal: 1.8, spacious: 2.8 };
       const secMult = secMap[menu.printSecSpacing] || 1.8;
-      // Logo boyutu → pt (yaklaşık px)
+      // Logo size → pt
       const logoMap = { small: 44, medium: 64, large: 88 };
       const logoPt = logoMap[menu.printLogoSize] || 64;
       return { itemPt, titlePt, secPt, paddingPt, itemGapPt, secMult, logoPt };
@@ -1225,7 +1224,7 @@
 
     function buildStyledHtml() {
       const O = PO; // v2.18: PO = resolvePrintOpts(menu)
-      // v2.18 — Yönlendirme: portrait=595pt, landscape=842pt
+      // v2.18 — Orientation: portrait=595pt, landscape=842pt
       const pageSpec = PAGE_SIZES.find(function (p) { return p.id === (menu.pageSize || 'portrait'); }) || PAGE_SIZES[0];
       const pageMaxWidth = pageSpec.previewW || 595; // pt (A4 standard)
       // Multi-column layout
@@ -1241,7 +1240,7 @@
       return (
       '<style>' +
         '@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=Caveat:wght@400;600;700&family=Inter:wght@300;400;500;600;700;800&family=Nunito:wght@300;400;500;600;700&display=swap");' +
-        // v2.17: ink ve bg kullanıcı seçimine göre override edilebilir
+        // v2.17: ink and bg can be overridden by user selection
         '.m-page {' +
           'background: ' + resolveBg(menu) + '; color: ' + resolveInk(menu) + ';' +
           'max-width: ' + pageMaxWidth + 'pt; margin: 0 auto; padding: ' + O.paddingPt + 'pt ' + (O.paddingPt + 6) + 'pt;' +
@@ -1371,11 +1370,11 @@
           'font-weight: 400;' +
           'white-space: pre-wrap;' +
         '}' +
-        // v2.18: @media print — ekranla tamamen aynı CSS (pt birimleri tutarlı)
+        // v2.18: @media print — identical CSS to screen (pt units consistent)
         '@media print {' +
           '@page { size: ' + pageSpec.cssSize + '; margin: 0; }' +
           'body { margin: 0; padding: 0; }' +
-          // Arka plan rengi ve görselleri zorla bas (Background graphics kapalı olsa bile)
+          // Force background colours and images to print (even with Background Graphics off)
           '* { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }' +
           '.m-page { max-width: ' + pageMaxWidth + 'pt; width: 100%; margin: 0 auto; box-sizing: border-box; overflow: hidden;' +
             'padding: ' + (menu.coverPhoto ? '0' : O.paddingPt) + 'pt ' + (O.paddingPt + 6) + 'pt ' + O.paddingPt + 'pt; }' +
@@ -1404,12 +1403,12 @@
 
     const body = PCD.el('div');
 
-    // v2.18 — saveOpt: menu alanını güncelle, store'a kaydet, preview'ı yenile
+    // v2.18 — saveOpt: update menu field, persist to store, refresh preview
     function saveOpt(key, val) {
       menu[key] = val;
       const m = PCD.store.getFromTable('menus', mid);
       if (m) { m[key] = val; PCD.store.upsertInTable('menus', m, 'm'); }
-      // PO'yu güncelle
+      // Update PO with fresh values
       const fresh = resolvePrintOpts(menu);
       Object.assign(PO, fresh);
       refreshPreview();
@@ -1437,17 +1436,17 @@
         makeOptRow('Font', 'printFontSize', [
           {val:'xsmall',label:'XS'},{val:'small',label:'S'},{val:'medium',label:'M',isDefault:true},{val:'large',label:'L'},{val:'xlarge',label:'XL'}
         ]) +
-        makeOptRow('Kenar', 'printMargin', [
-          {val:'very_narrow',label:'Çok Dar'},{val:'narrow',label:'Dar'},{val:'medium',label:'Medium',isDefault:true},{val:'wide',label:'Geniş'}
+        makeOptRow('Margin', 'printMargin', [
+          {val:'very_narrow',label:'Very Narrow'},{val:'narrow',label:'Narrow'},{val:'medium',label:'Medium',isDefault:true},{val:'wide',label:'Spacious'}
         ]) +
-        makeOptRow('Satır', 'printLineSpacing', [
-          {val:'tight',label:'Sıkışık'},{val:'normal',label:'Normal',isDefault:true},{val:'spacious',label:'Geniş'}
+        makeOptRow('Line Spacing', 'printLineSpacing', [
+          {val:'tight',label:'Tight'},{val:'normal',label:'Normal',isDefault:true},{val:'spacious',label:'Spacious'}
         ]) +
-        makeOptRow('Bölüm', 'printSecSpacing', [
-          {val:'tight',label:'Sıkışık'},{val:'normal',label:'Normal',isDefault:true},{val:'spacious',label:'Geniş'}
+        makeOptRow('Section Gap', 'printSecSpacing', [
+          {val:'tight',label:'Tight'},{val:'normal',label:'Normal',isDefault:true},{val:'spacious',label:'Spacious'}
         ]) +
         makeOptRow('Logo', 'printLogoSize', [
-          {val:'small',label:'Küçük'},{val:'medium',label:'Orta',isDefault:true},{val:'large',label:'Büyük'}
+          {val:'small',label:'Small'},{val:'medium',label:'Medium',isDefault:true},{val:'large',label:'Large'}
         ]) +
         (!menu.coverPhoto ? '' : makeOptRow('Cover', 'coverHeight', [
           {val:'25mm',label:'S'},{val:'40mm',label:'M',isDefault:true},{val:'60mm',label:'L'}
@@ -1511,7 +1510,7 @@
         // Show modal with the link
         const linkBody = PCD.el('div');
         linkBody.innerHTML =
-          '<div class="text-muted text-sm mb-2">Bu menüyü herkese açık olarak paylaşmak için aşağıdaki linki kopyala:</div>' +
+          '<div class="text-muted text-sm mb-2">Copy the link below to share this menu publicly:</div>' +
           '<input type="text" id="menuShareLink" value="' + PCD.escapeHtml(url) + '" readonly style="width:100%;padding:10px;border:1.5px solid var(--brand-600);border-radius:6px;font-family:var(--font-mono);font-size:13px;background:#fff;margin-bottom:10px;">' +
           '<div class="flex gap-2">' +
             '<button type="button" class="btn btn-primary" id="copyMenuLink" style="flex:1;">' + PCD.icon('copy',16) + ' <span>Copy link</span></button>' +

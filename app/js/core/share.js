@@ -35,25 +35,24 @@
     if (!r) return null;
     const ingMap = {};
     PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
-    // v2.8.58 — Sub-recipe lookup. v2.8.41-v2.8.52'de snapshot sadece
-    // ingMap[ri.ingredientId] kontrolü yapıyordu; sub-recipe satırlarında
-    // ri.recipeId var (ingredientId yok) → ing=undefined → name='?'.
-    // Şimdi recipeMap'ten sub-recipe adı resolve ediliyor.
+    // v2.8.58 — Sub-recipe lookup. v2.8.41-v2.8.52 snapshot only checked
+    // ingMap[ri.ingredientId]; sub-recipe rows have ri.recipeId (no ingredientId)
+    // → ing=undefined → name='?'. Now resolved from recipeMap.
     const recipeMap = {};
     if (PCD.store.listRecipes) {
       PCD.store.listRecipes().forEach(function (rr) { recipeMap[rr.id] = rr; });
     }
     // Embed ingredient names + units inline so public viewer doesn't need the user's library.
-    // FİYAT/COST KASTLI OLARAK DAHİL EDİLMİYOR — sadece isim + miktar + birim.
-    // pricePerUnit, supplier, yieldPercent vs. private kalır; Discover'da
-    // viewer sadece tarifin profil görüntüsünü alır.
+    // PRICE/COST intentionally excluded — name + amount + unit only.
+    // pricePerUnit, supplier, yieldPercent etc. remain private;
+    // Discover viewer sees only the recipe profile.
     const ingredients = (r.ingredients || []).map(function (ri) {
-      // v2.8.52 — Separator satırı snapshot'a olduğu gibi geçer (renderer
-      // bunu ince dashed çizgi olarak gösterir).
+      // v2.8.52 — Separator row passed through as-is to snapshot (renderer
+      // displays it as a thin dashed line).
       if (ri && ri.separator) {
         return { separator: true, label: ri.label || '' };
       }
-      // v2.8.58 — Sub-recipe satırı: name'i recipeMap'ten al.
+      // v2.8.58 — Sub-recipe row: resolve name from recipeMap.
       if (ri.recipeId) {
         const sub = recipeMap[ri.recipeId];
         return {
@@ -128,17 +127,16 @@
       coverHeight: m.coverHeight || '40mm',
       // Layout
       columns: m.columns || 1,
-      pageSize: m.pageSize || 'a4',
+      pageSize: m.pageSize || 'portrait',
       // Display options
       priceStyle: m.priceStyle || (m.hidePrices ? 'hidden' : 'symbol'),
       allergenStyle: m.allergenStyle || (m.hideAllergens ? 'off' : 'codes'),
-      // Density
-      printDensity: m.printDensity || 'comfortable',
-      printTitleSize: m.printTitleSize || 44,
-      printItemSize: m.printItemSize || 18,
-      printSectionSize: m.printSectionSize || 22,
-      printPagePadding: m.printPagePadding || 48,
-      printItemGap: m.printItemGap || 16,
+      // Print opts (v2.18 independent controls)
+      printFontSize:    m.printFontSize    || 'medium',
+      printMargin:      m.printMargin      || 'medium',
+      printLineSpacing: m.printLineSpacing || 'normal',
+      printSecSpacing:  m.printSecSpacing  || 'normal',
+      printLogoSize:    m.printLogoSize    || 'medium',
       // Data
       sections: sections,
       sharedAt: new Date().toISOString(),
@@ -388,8 +386,8 @@
       '.share-topbrand a:hover { text-decoration:underline; }' +
       '.share-content h1 { font-size:28px;margin:0 0 8px; }' +
       '.share-meta { color:#666;font-size:14px;margin-bottom:18px; }' +
-      /* v2.8.67 — 1:1 standartı (8 surface tutarlı). max-w 360px masaüstünde,
-         mobilde 100% width sığar ama yine kare. */
+      /* v2.8.67 — 1:1 standard (8 surfaces consistent). max-w 360px on desktop,
+         100% width on mobile but still square. */
       '.share-photo { display:block;width:100%;max-width:360px;aspect-ratio:1/1;object-fit:cover;border-radius:12px;margin:0 auto 18px; }' +
       '.share-section { margin-bottom:22px; }' +
       '.share-section h2 { font-size:16px;color:#16a34a;margin:0 0 10px;text-transform:uppercase;letter-spacing:0.04em; }' +
@@ -407,9 +405,9 @@
     '</style>';
 
     html += '<div class="share-page">';
-    // Subtle top brand line — kibar, üst tarafta küçük bir tanıtım çizgisi.
-    // Eski büyük yeşil banner ve "Try free" CTA'sı çıkartıldı; alttaki footer
-    // zaten "Made with ProChefDesk" yazıyor.
+    // Subtle top brand line — small unobtrusive promo strip at the top.
+    // Old large green banner and "Try free" CTA removed; footer
+    // already says "Made with ProChefDesk".
     html += '<div class="share-topbrand">' +
       '<a href="' + location.origin + location.pathname + '" target="_blank" rel="noopener">ProChefDesk</a>' +
     '</div>';
@@ -438,7 +436,7 @@
       if (p.ingredients && p.ingredients.length > 0) {
         html += '<div class="share-section"><h2>' + escapeHtml(t('share_ingredients', 'Ingredients')) + '</h2>';
         p.ingredients.forEach(function (ri) {
-          // v2.8.52 — Separator satırı: ince ayraç çizgisi + opsiyonel label
+          // v2.8.52 — Separator row: thin divider line + optional label
           if (ri && ri.separator) {
             const label = ri.label ? ('<span style="display:block;font-weight:600;color:#666;font-size:12px;text-transform:uppercase;letter-spacing:0.04em;margin:8px 0 2px;">' + escapeHtml(ri.label) + '</span>') : '';
             html += '<div style="border-top:1px dashed #999;margin:6px 0;"></div>' + label;
@@ -455,8 +453,8 @@
         html += '<div class="share-section"><h2>' + escapeHtml(t('share_plating', 'Plating')) + '</h2><div class="steps">' + escapeHtml(p.plating) + '</div></div>';
       }
     } else if (p.kind === 'menu') {
-      // v2.17 — Share page menu render: tema, font, renk, logo, cover, 2-kolon
-      // buildStyledHtml() ile aynı görünümü üretir.
+      // v2.17/v2.18 — Share page menu render: theme, font, colour, logo, cover, 2-column.
+      // Produces identical output to buildStyledHtml() in menus.js.
       var SHARE_THEMES = {
         fine_dining: { titleFont: '"Cormorant Garamond",Georgia,serif', bodyFont: '"Inter",-apple-system,sans-serif', bodyWeight: 300, titleWeight: 500, itemWeight: 600, accent: '#c5a572', bg: '#ffffff', ink: '#111111', mutedInk: '#666666', sectionTransform: 'uppercase', sectionLetterSpacing: '0.18em', sectionDecor: 'lines', titleLetterSpacing: '0.02em' },
         modern_bistro: { titleFont: '"Playfair Display",Georgia,serif', bodyFont: '"Inter",-apple-system,sans-serif', bodyWeight: 400, titleWeight: 700, itemWeight: 700, accent: '#c2410c', bg: '#fffaf5', ink: '#1a1a1a', mutedInk: '#7a6b5d', sectionTransform: 'none', sectionLetterSpacing: '0', sectionDecor: 'underline', titleLetterSpacing: '-0.01em' },
@@ -476,14 +474,19 @@
         return th.mutedInk;
       })();
       var bg = p.bgColor || th.bg;
-      var titleSize = p.printTitleSize || 44;
-      var itemSize = p.printItemSize || 18;
-      var sectionSize = p.printSectionSize || 22;
-      var pagePadding = p.printPagePadding || 48;
-      var itemGap = p.printItemGap || 16;
-      var density = p.printDensity || 'comfortable';
-      if (density === 'tight')    { titleSize=36; itemSize=16; sectionSize=18; pagePadding=32; itemGap=10; }
-      if (density === 'spacious') { titleSize=52; itemSize=20; sectionSize=26; pagePadding=64; itemGap=22; }
+      // v2.18 — Resolve print opts using same logic as menus.js resolvePrintOpts()
+      var fontMap = { xsmall: 8, small: 10, medium: 12, large: 14, xlarge: 16 };
+      var itemSize = fontMap[p.printFontSize] || 12;
+      var titleSize = Math.round(itemSize * 2.4);
+      var sectionSize = Math.round(itemSize * 1.4);
+      var marginMap = { very_narrow: 18, narrow: 26, medium: 36, wide: 50 };
+      var pagePadding = marginMap[p.printMargin] || 36;
+      var lineMap = { tight: Math.round(itemSize*0.5), normal: Math.round(itemSize*0.9), spacious: Math.round(itemSize*1.4) };
+      var itemGap = lineMap[p.printLineSpacing] || Math.round(itemSize*0.9);
+      var secMap = { tight: 1.2, normal: 1.8, spacious: 2.8 };
+      var secMult = secMap[p.printSecSpacing] || 1.8;
+      var logoMap = { small: 44, medium: 64, large: 88 };
+      var logoSize = logoMap[p.printLogoSize] || 64;
       var cols = (p.columns === 2) ? 2 : 1;
       var priceStyle = p.priceStyle || 'symbol';
       var showAllergens = (p.allergenStyle !== 'off');
@@ -493,21 +496,21 @@
       else if (th.sectionDecor === 'underline') sectionDecorCSS = '.sm-sec-title{border-bottom:2px solid '+accent+';padding-bottom:4px;display:inline-block;padding-left:20px;padding-right:20px;}';
       else if (th.sectionDecor === 'wavy') sectionDecorCSS = '.sm-sec-title::after{content:"~";display:block;color:'+accent+';font-size:1.3em;line-height:0.4;margin-top:4px;}';
 
-      // Tema font import (sadece bu tema için)
+      // Font import (all themes — share page may use any theme)
       var fontImport = '@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=Caveat:wght@400;600;700&family=Inter:wght@300;400;500;600;700;800&family=Nunito:wght@300;400;500;600;700&display=swap");';
 
-      // Ortak wrapper — share-page override et
+      // Inject into shared page HTML
       html = html.replace('<style>', '<style>' + fontImport);
       html += '<style>' +
         '.sm-page{background:'+bg+';color:'+ink+';max-width:620px;margin:0 auto;padding:'+pagePadding+'px '+(pagePadding+8)+'px;font-family:'+th.bodyFont+';font-weight:'+th.bodyWeight+';border-radius:8px;}' +
         '.sm-cover{width:100%;height:180px;object-fit:cover;border-radius:6px;display:block;margin:0 0 '+(Math.round(pagePadding*0.5))+'px;}' +
-        '.sm-logo{display:block;width:64px;height:64px;margin:0 auto 12px;object-fit:cover;border-radius:50%;}' +
+        '.sm-logo{display:block;width:'+logoSize+'px;height:'+logoSize+'px;margin:0 auto 12px;object-fit:cover;border-radius:50%;}' +
         '.sm-header{text-align:center;margin-bottom:'+Math.round(pagePadding*0.75)+'px;}' +
         '.sm-title{font-family:'+th.titleFont+';font-size:'+titleSize+'px;font-weight:'+th.titleWeight+';letter-spacing:'+th.titleLetterSpacing+';margin:0 0 8px;color:'+ink+';line-height:1.1;}' +
         '.sm-subtitle{font-size:11px;color:'+mutedInk+';letter-spacing:0.24em;text-transform:uppercase;font-weight:400;margin:0;}' +
         '.sm-title-rule{width:40px;height:2px;background:'+accent+';margin:10px auto 0;border:none;display:block;}' +
         '.sm-sections{'+(cols===2?'column-count:2;column-gap:'+(pagePadding*0.7)+'px;':'')+'margin-top:0;}' +
-        '.sm-section{break-inside:avoid;margin-bottom:'+Math.round(pagePadding*0.9)+'px;}' +
+        '.sm-section{break-inside:avoid;margin-bottom:'+Math.round(itemGap*secMult)+'px;}' +
         '.sm-sec-title{font-size:'+sectionSize+'px;font-weight:700;text-transform:'+th.sectionTransform+';letter-spacing:'+th.sectionLetterSpacing+';color:'+accent+';text-align:center;margin:0 0 '+Math.round(itemGap*1.2)+'px;}' +
         sectionDecorCSS +
         '.sm-items{}' +
@@ -567,9 +570,9 @@
     }
 
     html += '</div>';
-    // v2.8.54 — STANDART tıklanabilir footer. Hem marka adı hem URL link;
-    // tüm uygulama print + share + QR akışlarında aynı format
-    // (utils.js PCD.print ile aynı, görsel tutarlılık).
+    // v2.8.54 — Standard clickable footer. Brand name + URL link;
+    // Same format across all app print + share + QR flows
+    // (matches PCD.print in utils.js for visual consistency).
     html += '<div class="share-footer">' +
       'Made with <a href="https://prochefdesk.com" target="_blank" rel="noopener"><strong>ProChefDesk</strong></a> · <a href="https://prochefdesk.com" target="_blank" rel="noopener">prochefdesk.com</a>' +
     '</div>';
