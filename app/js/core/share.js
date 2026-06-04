@@ -454,7 +454,9 @@
       }
     } else if (p.kind === 'menu') {
       // v2.17/v2.18 — Share page menu render: theme, font, colour, logo, cover, 2-column.
-      // Produces identical output to buildStyledHtml() in menus.js.
+      // Menu render is completely independent of share-page wrapper styles.
+      // We close the share-content div first, then inject sm-page with its own CSS.
+      html += '</div></div>'; // close share-content + share-page early for menus
       var SHARE_THEMES = {
         fine_dining: { titleFont: '"Cormorant Garamond",Georgia,serif', bodyFont: '"Inter",-apple-system,sans-serif', bodyWeight: 300, titleWeight: 500, itemWeight: 600, accent: '#c5a572', bg: '#ffffff', ink: '#111111', mutedInk: '#666666', sectionTransform: 'uppercase', sectionLetterSpacing: '0.18em', sectionDecor: 'lines', titleLetterSpacing: '0.02em' },
         modern_bistro: { titleFont: '"Playfair Display",Georgia,serif', bodyFont: '"Inter",-apple-system,sans-serif', bodyWeight: 400, titleWeight: 700, itemWeight: 700, accent: '#c2410c', bg: '#fffaf5', ink: '#1a1a1a', mutedInk: '#7a6b5d', sectionTransform: 'none', sectionLetterSpacing: '0', sectionDecor: 'underline', titleLetterSpacing: '-0.01em' },
@@ -569,6 +571,14 @@
       }
       if (p.footer) html += '<div class="sm-footer">' + escapeHtml(p.footer) + '</div>';
       html += '</div>';
+      // Menu render ends here — footer handled separately below
+      html += '<div style="text-align:center;padding:20px;color:#999;font-size:12px;border-top:1px solid #eee;margin-top:24px;">' +
+        'Made with <a href="https://prochefdesk.com" target="_blank" rel="noopener" style="color:#16a34a;font-weight:700;text-decoration:none;">ProChefDesk</a> · <a href="https://prochefdesk.com" target="_blank" rel="noopener" style="color:#999;text-decoration:none;">prochefdesk.com</a>' +
+      '</div>';
+      appEl.innerHTML = html;
+      appEl.classList.remove('hidden');
+      document.title = (p.name || 'ProChefDesk') + ' · ProChefDesk';
+      return; // exit early — skip the generic footer below
     }
 
     html += '</div>';
