@@ -808,6 +808,7 @@
       previewEl.style.width = '100%';
       previewEl.style.aspectRatio = '';   // dynamic height via #kcPvOuter
       previewEl.style.overflow = 'auto';
+      previewEl.style.scrollbarGutter = 'stable';  // scrollbar çıkıp kaybolunca clientWidth sabit kalsın (titreme fix)
       previewEl.style.webkitOverflowScrolling = 'touch';
       previewEl.style.maxHeight = '80vh';
 
@@ -884,7 +885,11 @@
           if (!w || w === _lastPvW) return;
           applyScale();
         });
-        updatePreview._ro.observe(previewEl);
+        // Gözlem hedefi = PARENT (içeriğe değil dış genişliğe bak). previewEl'i
+        // gözlersek applyScale'in outer boyut değişimi RO'yu tekrar tetikler →
+        // feedback loop = titreme. Parent genişliği yalnız window/orientation
+        // ile değişir → loop kırılır.
+        updatePreview._ro.observe(previewEl.parentElement || previewEl);
       }
     }
 
