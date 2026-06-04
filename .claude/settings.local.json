@@ -151,7 +151,9 @@
       "Bash(grep -iE \"\\\\.\\(env|pem|p12|key|pfx\\)$|credential|secret|service.?account|\\\\.npmrc\")",
       "Bash(node -c \"app/js/core/share.js\")",
       "Bash(node -c \"app/js/tools/menus.js\")",
-      "Bash(node -c \"app/js/tools/haccp_logs.js\")"
+      "Bash(node -c \"app/js/tools/haccp_logs.js\")",
+      "Bash(node -c \"app/js/i18n/en.js\")",
+      "Bash(node -c \"app/js/i18n/tr.js\")"
     ]
   }
 }
