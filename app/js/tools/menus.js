@@ -1226,7 +1226,8 @@
       const O = PO; // v2.18: PO = resolvePrintOpts(menu)
       // v2.18 — Orientation: portrait=595pt, landscape=842pt
       const pageSpec = PAGE_SIZES.find(function (p) { return p.id === (menu.pageSize || 'portrait'); }) || PAGE_SIZES[0];
-      const pageMaxWidth = pageSpec.previewW || 595; // pt (A4 standard)
+      // pageMaxWidth: portrait=595pt, landscape=842pt
+      const pageMaxWidth = pageSpec.previewW || 595;
       // Multi-column layout
       const cols = (menu.columns === 2) ? 2 : 1;
       // Section decoration helpers (theme-specific)
@@ -1456,9 +1457,9 @@
         '<div style="margin-bottom:12px;padding:10px 14px;background:var(--surface-2);border-radius:var(--r-md);">' +
           controls +
         '</div>' +
-        '<div style="background:#c8c8c8;padding:16px;display:flex;flex-direction:column;align-items:center;">' +
-          '<div style="font-size:10px;color:#888;margin-bottom:8px;letter-spacing:0.05em;">' + previewW + ' × ' + previewH + 'pt</div>' +
-          '<div style="background:#fff;width:' + previewW + 'px;min-height:' + previewH + 'px;box-shadow:0 4px 20px rgba(0,0,0,0.25);overflow:hidden;">' +
+        '<div style="background:#c8c8c8;padding:16px;overflow-x:auto;display:flex;flex-direction:column;align-items:center;">' +
+          '<div style="font-size:10px;color:#888;margin-bottom:8px;letter-spacing:0.05em;">' + previewW + ' × ' + previewH + 'pt · ' + pageSpec.orientation + '</div>' +
+          '<div style="background:#fff;width:' + previewW + 'px;min-height:' + previewH + 'px;box-shadow:0 4px 20px rgba(0,0,0,0.25);overflow:hidden;flex-shrink:0;">' +
             buildStyledHtml() +
           '</div>' +
         '</div>';
