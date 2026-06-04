@@ -1904,7 +1904,7 @@ window.PCD.i18n.register('en', {
   event_budget: "Budget",
   event_notes: "Notes",
   event_menu: "Event menu",
-  event_add_recipes: "Add recipes",
+  event_add_recipes: "Add dishes",
   event_total_cost: "Total food cost",
   event_total_revenue: "Total revenue",
   event_profit: "Profit",

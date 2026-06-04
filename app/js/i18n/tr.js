@@ -1901,7 +1901,7 @@ window.PCD.i18n.register('tr', {
   event_budget: "Bütçe",
   event_notes: "Notlar",
   event_menu: "Etkinlik menüsü",
-  event_add_recipes: "Tarif ekle",
+  event_add_recipes: "Yemek / Tatlı ekle",
   event_total_cost: "Toplam yemek maliyeti",
   event_total_revenue: "Toplam ciro",
   event_profit: "Kar",
