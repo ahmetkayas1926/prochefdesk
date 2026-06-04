@@ -332,7 +332,7 @@
 
     const wrap = PCD.el('div', { class: 'card', style: { padding: '0', overflowX: 'auto' } });
     // Per-unit width: 100px (50 AM + 50 PM). Day column: 70px.
-    const minW = 70 + units.length * 100;
+    const minW = 70 + units.length * 100 + 160;
     let table =
       '<table style="width:100%;min-width:' + minW + 'px;border-collapse:collapse;font-size:12px;">' +
         '<thead style="position:sticky;top:0;z-index:2;background:var(--surface-2);">' +
@@ -350,6 +350,10 @@
           '<div style="font-size:9px;font-weight:400;color:var(--text-3);text-transform:none;letter-spacing:0;margin-top:1px;">' + range + '</div>' +
         '</th>';
     });
+    table +=
+      '<th colspan="2" style="padding:8px 4px;text-align:center;font-size:11px;font-weight:700;border-bottom:1px solid var(--border);border-left:1px solid var(--border);min-width:160px;">' +
+        '<div style="font-size:12px;font-weight:700;color:var(--text-1);">' + PCD.escapeHtml(t('haccp_col_chef') || 'Chef') + '</div>' +
+      '</th>';
     table += '</tr>' +
           '<tr style="background:var(--surface);">' +
             '<th style="padding:4px 8px;text-align:left;font-size:9px;font-weight:600;color:var(--text-3);border-bottom:1px solid var(--border);position:sticky;left:0;background:var(--surface);z-index:3;width:70px;min-width:70px;"></th>';
@@ -358,6 +362,9 @@
         '<th style="padding:4px 2px;text-align:center;font-size:9px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);border-left:1px solid var(--border);width:50px;">' + PCD.escapeHtml(t('haccp_am')) + '</th>' +
         '<th style="padding:4px 2px;text-align:center;font-size:9px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);width:50px;">' + PCD.escapeHtml(t('haccp_pm')) + '</th>';
     });
+    table +=
+      '<th style="padding:4px 2px;text-align:center;font-size:9px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);border-left:1px solid var(--border);min-width:80px;">' + PCD.escapeHtml(t('haccp_am')) + '</th>' +
+      '<th style="padding:4px 2px;text-align:center;font-size:9px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);min-width:80px;">' + PCD.escapeHtml(t('haccp_pm')) + '</th>';
     table += '</tr></thead><tbody>';
 
     const todayStr = ymd(new Date());
@@ -400,6 +407,15 @@
           table += '<td data-cell="' + u.id + '|' + dateStr + '|' + shift + '" style="' + cellStyle + '">' + cellContent + '</td>';
         });
       });
+      var mChef = '', eChef = '';
+      units.forEach(function (u) {
+        var rd = readingsByKey[u.id + '|' + dateStr];
+        if (!mChef && rd && rd.morning && rd.morning.chef) mChef = rd.morning.chef;
+        if (!eChef && rd && rd.evening && rd.evening.chef) eChef = rd.evening.chef;
+      });
+      table +=
+        '<td style="padding:4px 6px;border-bottom:1px solid var(--border);border-left:1px solid var(--border);text-align:center;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + PCD.escapeHtml(mChef) + '</td>' +
+        '<td style="padding:4px 6px;border-bottom:1px solid var(--border);text-align:center;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + PCD.escapeHtml(eChef) + '</td>';
       table += '</tr>';
     }
     table += '</tbody></table>';
@@ -766,7 +782,8 @@
     // widths + compact footer override + row height tuned for handwriting.
     // DAY column fixed narrow (4%), unit columns split remaining width.
     const dayColPct = 4;
-    const remainPct = 100 - dayColPct;
+    const chefColPct = 7; // her chef alt-sütunu (Sabah + Akşam)
+    const remainPct = 100 - dayColPct - chefColPct * 2;
     const unitColPct = remainPct / Math.max(1, units.length * 2); // 2 cols per unit (AM + PM)
 
     let colgroupHtml = '<colgroup>' +
@@ -774,6 +791,7 @@
     for (let i = 0; i < units.length * 2; i++) {
       colgroupHtml += '<col style="width:' + unitColPct.toFixed(3) + '%">';
     }
+    colgroupHtml += '<col style="width:' + chefColPct + '%"><col style="width:' + chefColPct + '%">';
     colgroupHtml += '</colgroup>';
 
     let html =
@@ -818,8 +836,10 @@
       const range = (u.min !== undefined && u.max !== undefined) ? '(' + u.min + '–' + u.max + ')' : '';
       html += '<th colspan="2">' + PCD.escapeHtml(u.name) + '<br><span style="font-weight:400;color:#666;font-size:8px;">' + range + '</span></th>';
     });
+    html += '<th colspan="2">' + PCD.escapeHtml(t('haccp_col_chef') || 'Chef') + '</th>';
     html += '</tr><tr>';
     units.forEach(function () { html += '<th>' + PCD.escapeHtml(t('haccp_am')) + '</th><th>' + PCD.escapeHtml(t('haccp_pm')) + '</th>'; });
+    html += '<th>' + PCD.escapeHtml(t('haccp_am')) + '</th><th>' + PCD.escapeHtml(t('haccp_pm')) + '</th>';
     html += '</tr></thead><tbody>';
 
     const readingsByKey = {};
@@ -831,7 +851,7 @@
       if (d > days) {
         html += '<tr><td class="day">' + d + '</td>';
         for (let i = 0; i < units.length * 2; i++) html += '<td></td>';
-        html += '</tr>';
+        html += '<td></td><td></td></tr>';
         continue;
       }
       const date = new Date(year, monthIdx0, d);
@@ -841,6 +861,7 @@
       // görünmesi karışıklık yarattığı için". Diğer HACCP formları zaten saf
       // rakam kullanıyor (cooling/holding/receiving) — Logs uniform yapıldı.
       html += '<tr><td class="day">' + d + '</td>';
+      var pMorningChef = '', pEveningChef = '';
       units.forEach(function (u) {
         ['morning', 'evening'].forEach(function (shift) {
           const reading = readingsByKey[u.id + '|' + dateStr];
@@ -853,11 +874,14 @@
             if (hasNote) {
               notesAccum.push({ dateStr: dateStr, unit: u.name, shift: shift, value: r.value, note: r.note, chef: r.chef });
             }
+            if (shift === 'morning' && !pMorningChef && r.chef) pMorningChef = r.chef;
+            if (shift === 'evening' && !pEveningChef && r.chef) pEveningChef = r.chef;
           } else {
             html += '<td></td>';
           }
         });
       });
+      html += '<td>' + PCD.escapeHtml(pMorningChef) + '</td><td>' + PCD.escapeHtml(pEveningChef) + '</td>';
       html += '</tr>';
     }
     html += '</tbody></table>';
