@@ -942,9 +942,16 @@
       // Add recipe to section
       PCD.on(body, 'click', '[data-addrec]', function () {
         const sid = this.getAttribute('data-addrec');
-        const items = PCD.store.listRecipes().map(function (r) {
-          return { id: r.id, name: r.name, meta: t(r.category || 'cat_main') + (r.salePrice ? ' · ' + PCD.fmtMoney(r.salePrice) : ''), thumb: r.photo || '' };
-        });
+        const allRecipes = PCD.store.listRecipes();
+        const menuItems = allRecipes.filter(function (r) { return !r.isSubRecipe; });
+        const subRecipes = allRecipes.filter(function (r) { return r.isSubRecipe; });
+        const groupLabel1 = t('menu_group_dishes') || 'Menu Items';
+        const groupLabel2 = t('menu_group_subrecipes') || 'Sub-recipes & Preparations';
+        const items = menuItems.map(function (r) {
+          return { id: r.id, name: r.name, group: groupLabel1, meta: t(r.category || 'cat_main') + (r.salePrice ? ' · ' + PCD.fmtMoney(r.salePrice) : ''), thumb: r.photo || '' };
+        }).concat(subRecipes.map(function (r) {
+          return { id: r.id, name: r.name, group: groupLabel2, meta: (r.yieldAmount ? r.yieldAmount + ' ' + (r.yieldUnit || '') : ''), thumb: r.photo || '' };
+        }));
         if (items.length === 0) { PCD.toast.warning(t('no_recipes_yet')); return; }
         const sec = data.sections.find(function (s) { return s.id === sid; });
         const selected = (sec.items || []).filter(function (it) { return it.recipeId; }).map(function (it) { return it.recipeId; });

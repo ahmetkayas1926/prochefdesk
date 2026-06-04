@@ -47,7 +47,14 @@
           list.innerHTML = '<div class="empty"><div class="empty-desc">' + t('no_recipes_yet') + '</div></div>';
           return;
         }
+        var _lastGroup = null;
         visible.forEach(function (it) {
+          if (it.group !== undefined && it.group !== _lastGroup) {
+            _lastGroup = it.group;
+            const hdr = PCD.el('div', { style: { padding: '6px 4px 2px', fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)', borderBottom: '1px solid var(--border)', marginBottom: '4px', marginTop: _lastGroup ? '8px' : '0' } });
+            hdr.textContent = it.group;
+            list.appendChild(hdr);
+          }
           const row = PCD.el('div', { class: 'list-item', 'data-id': it.id });
           if (selected.has(it.id)) row.style.borderColor = 'var(--brand-500)';
 
