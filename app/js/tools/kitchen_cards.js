@@ -822,9 +822,11 @@
         '</div>';
 
       // v2.8.11 pattern — clientWidth=0 on initial mount; rAF + ResizeObserver.
+      var _lastPvW = -1;
       function applyScale() {
         const containerW = previewEl.clientWidth;
         if (!containerW) return;
+        _lastPvW = containerW;
         const fitScale = containerW / pageW;
         const scale = fitScale * pvUserZoom;
         const frame = previewEl.querySelector('.kc-preview-frame');
@@ -871,9 +873,17 @@
         }
       });
 
+      // Mobil titreme fix: ResizeObserver SADECE genişlik değişince yeniden
+      // ölçekler. Mobilde sayfa kaydırınca adres çubuğu gizlenip görünür →
+      // viewport YÜKSEKLİĞİ değişir → eski kod her seferinde applyScale çağırıp
+      // canvas'ı titretiyordu. Genişlik-guard bu döngüyü durdurur.
       if (typeof ResizeObserver !== 'undefined') {
         if (updatePreview._ro) updatePreview._ro.disconnect();
-        updatePreview._ro = new ResizeObserver(applyScale);
+        updatePreview._ro = new ResizeObserver(function () {
+          var w = previewEl.clientWidth;
+          if (!w || w === _lastPvW) return;
+          applyScale();
+        });
         updatePreview._ro.observe(previewEl);
       }
     }
