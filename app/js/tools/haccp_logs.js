@@ -351,7 +351,7 @@
         '</th>';
     });
     table +=
-      '<th colspan="2" style="padding:8px 4px;text-align:center;font-size:11px;font-weight:700;border-bottom:1px solid var(--border);border-left:1px solid var(--border);min-width:160px;">' +
+      '<th colspan="2" style="padding:8px 4px;text-align:center;font-size:11px;font-weight:700;border-bottom:1px solid var(--border);border-left:1px solid var(--border);width:160px;">' +
         '<div style="font-size:12px;font-weight:700;color:var(--text-1);">' + PCD.escapeHtml(t('haccp_col_chef') || 'Chef') + '</div>' +
       '</th>';
     table += '</tr>' +
@@ -363,8 +363,8 @@
         '<th style="padding:4px 2px;text-align:center;font-size:9px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);width:50px;">' + PCD.escapeHtml(t('haccp_pm')) + '</th>';
     });
     table +=
-      '<th style="padding:4px 2px;text-align:center;font-size:9px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);border-left:1px solid var(--border);min-width:80px;">' + PCD.escapeHtml(t('haccp_am')) + '</th>' +
-      '<th style="padding:4px 2px;text-align:center;font-size:9px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);min-width:80px;">' + PCD.escapeHtml(t('haccp_pm')) + '</th>';
+      '<th style="padding:4px 2px;text-align:center;font-size:9px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);border-left:1px solid var(--border);width:80px;">' + PCD.escapeHtml(t('haccp_am')) + '</th>' +
+      '<th style="padding:4px 2px;text-align:center;font-size:9px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--border);width:80px;">' + PCD.escapeHtml(t('haccp_pm')) + '</th>';
     table += '</tr></thead><tbody>';
 
     const todayStr = ymd(new Date());
