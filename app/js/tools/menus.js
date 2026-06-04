@@ -1242,6 +1242,7 @@
       '<style>' +
         '@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=Caveat:wght@400;600;700&family=Inter:wght@300;400;500;600;700;800&family=Nunito:wght@300;400;500;600;700&display=swap");' +
         '@page { size: ' + pageSpec.cssSize + '; margin: 0; }' +
+        'html,body { background: ' + resolveBg(menu) + '; margin: 0; padding: 0; }' +
         // v2.17: ink and bg can be overridden by user selection
         '.m-page {' +
           'background: ' + resolveBg(menu) + '; color: ' + resolveInk(menu) + ';' +
@@ -1465,7 +1466,7 @@
         '<div style="background:#c8c8c8;padding:16px;">' +
           '<div style="font-size:10px;color:#888;margin-bottom:8px;letter-spacing:0.05em;">' + pageSpec.previewW + ' × ' + pageSpec.previewH + 'pt · ' + pageSpec.orientation + '</div>' +
           '<div style="width:' + areaW + 'px;height:' + scaledH + 'px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.25);margin:0 auto;">' +
-            '<div style="width:' + pageWpx + 'px;height:' + pageHpx + 'px;transform:scale(' + scale + ');transform-origin:top left;overflow:hidden;background:#fff;">' +
+            '<div style="width:' + pageWpx + 'px;height:' + pageHpx + 'px;transform:scale(' + scale + ');transform-origin:top left;overflow:hidden;background:' + resolveBg(menu) + ';">' +
               buildStyledHtml() +
             '</div>' +
           '</div>' +
