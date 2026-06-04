@@ -524,11 +524,15 @@
     // If input looks like partial content (no <!DOCTYPE>), wrap it
     let fullHtml = htmlOrContent;
     if (!/^<!DOCTYPE|^<html/i.test(htmlOrContent.trim())) {
+      // If content defines its own @page (size + margin), skip the default to avoid cascade conflict.
+      // Chrome's print engine honours the head <style> @page over body <style> @page,
+      // so we only emit a fallback @page when the content has none.
+      const contentHasPageRule = /@page/.test(htmlOrContent);
       fullHtml = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' +
         title + '</title>' +
         '<style>' +
         'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:24px;color:#000;background:#fff;margin:0}' +
-        '@page{margin:15mm;size:A4}' +
+        (contentHasPageRule ? '' : '@page{margin:15mm;size:A4}') +
         'h1,h2,h3{margin:0 0 8px}' +
         'table{width:100%;border-collapse:collapse}' +
         'td,th{padding:6px 10px;text-align:left;border-bottom:1px solid #ddd}' +

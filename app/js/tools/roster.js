@@ -587,31 +587,35 @@
     const sub = (data.venue && data.name ? data.name + '  ·  ' : '') + weekRange(data);
     const fp = fontPx(data);
     const wt = data.bold ? '700' : '400';
-    // v2.15.7 — align/valign attribute'leri html2canvas (JPEG) için güvenilir ortalama.
-    const cb = 'border:1px solid #c7c7c7;padding:5px 6px;font-size:' + fp + 'px;text-align:center;vertical-align:middle;';
-    const hd = 'border:1px solid #c7c7c7;padding:5px 6px;font-size:' + (fp - 1) + 'px;text-align:center;vertical-align:middle;background:#1f3b30;color:#fff;font-weight:700;text-transform:uppercase;';
+    const cb = 'border:1px solid #c7c7c7;padding:0;font-size:' + fp + 'px;text-align:center;vertical-align:middle;';
+    const hd = 'border:1px solid #c7c7c7;padding:0;font-size:' + (fp - 1) + 'px;text-align:center;vertical-align:middle;background:#1f3b30;color:#fff;font-weight:700;text-transform:uppercase;';
+    // html2canvas doesn't support vertical-align:middle on td/th — use flex wrapper inside each cell
+    const mh = (fp + 14) + 'px'; // min-height for flex wrapper
+    function cw(content, justify) {
+      return '<div style="display:flex;align-items:center;justify-content:' + (justify || 'center') + ';min-height:' + mh + ';padding:4px 6px;line-height:1.3;">' + content + '</div>';
+    }
     let h = '';
     h += '<div style="background:#16a34a;color:#fff;padding:11px 15px;border-radius:6px;margin-bottom:11px;">'
       + '<div style="font-size:' + (fp + 8) + 'px;font-weight:800;">' + esc(title) + '</div>'
       + '<div style="font-size:' + fp + 'px;opacity:0.93;margin-top:2px;">' + esc(sub) + '</div></div>';
     h += '<table style="width:100%;border-collapse:collapse;table-layout:fixed;">';
-    h += '<tr><th align="left" valign="middle" style="' + hd + 'text-align:left;width:15%;">' + esc(t('roster_staff') || 'Staff') + '</th>'
-      + '<th align="left" valign="middle" style="' + hd + 'text-align:left;width:12%;">' + esc(t('roster_staff_role') || 'Role') + '</th>';
-    mx.days.forEach(function (d) { h += '<th align="center" valign="middle" style="' + hd + '">' + esc(d) + '</th>'; });
-    h += '<th align="center" valign="middle" style="' + hd + 'width:5%;">' + esc(t('roster_hours') || 'H') + '</th>';
-    if (showCost) h += '<th align="center" valign="middle" style="' + hd + 'width:8%;">' + esc(t('roster_labour_cost') || 'Cost') + '</th>';
+    h += '<tr><th align="left" valign="middle" style="' + hd + 'text-align:left;width:15%;">' + cw(esc(t('roster_staff') || 'Staff'), 'flex-start') + '</th>'
+      + '<th align="left" valign="middle" style="' + hd + 'text-align:left;width:12%;">' + cw(esc(t('roster_staff_role') || 'Role'), 'flex-start') + '</th>';
+    mx.days.forEach(function (d) { h += '<th align="center" valign="middle" style="' + hd + '">' + cw(esc(d)) + '</th>'; });
+    h += '<th align="center" valign="middle" style="' + hd + 'width:5%;">' + cw(esc(t('roster_hours') || 'H')) + '</th>';
+    if (showCost) h += '<th align="center" valign="middle" style="' + hd + 'width:8%;">' + cw(esc(t('roster_labour_cost') || 'Cost')) + '</th>';
     h += '</tr>';
     mx.groups.forEach(function (g) {
-      if (g.name) h += '<tr><td colspan="' + ncol + '" align="left" valign="middle" style="' + cb + 'background:#cfe0ee;color:#1f3b30;font-weight:800;text-align:left;text-transform:uppercase;">' + esc(g.name) + '</td></tr>';
+      if (g.name) h += '<tr><td colspan="' + ncol + '" align="left" valign="middle" style="' + cb + 'background:#cfe0ee;color:#1f3b30;font-weight:800;text-align:left;text-transform:uppercase;">' + cw(esc(g.name), 'flex-start') + '</td></tr>';
       g.rows.forEach(function (row) {
-        h += '<tr><td align="left" valign="middle" style="' + cb + 'text-align:left;font-weight:700;word-break:break-word;">' + esc(row.staff.name || '') + '</td>'
-          + '<td align="left" valign="middle" style="' + cb + 'text-align:left;color:#555;font-size:' + (fp - 1) + 'px;word-break:break-word;">' + esc(row.staff.role || '') + '</td>';
+        h += '<tr><td align="left" valign="middle" style="' + cb + 'text-align:left;">' + cw('<span style="font-weight:700;word-break:break-word;">' + esc(row.staff.name || '') + '</span>', 'flex-start') + '</td>'
+          + '<td align="left" valign="middle" style="' + cb + 'text-align:left;">' + cw('<span style="color:#555;font-size:' + (fp - 1) + 'px;word-break:break-word;">' + esc(row.staff.role || '') + '</span>', 'flex-start') + '</td>';
         row.cells.forEach(function (cell) {
-          if (cell.status) { const sd = statusDef(cell.status); h += '<td align="center" valign="middle" style="' + cb + 'font-weight:800;background:' + (sd ? sd.fill : '#eee') + ';color:' + (sd ? sd.color : '#333') + ';">' + esc(cell.status) + '</td>'; }
-          else h += '<td align="center" valign="middle" style="' + cb + 'font-weight:' + wt + ';">' + esc(cell.text || '') + '</td>';
+          if (cell.status) { const sd = statusDef(cell.status); h += '<td align="center" valign="middle" style="' + cb + 'background:' + (sd ? sd.fill : '#eee') + ';">' + cw('<span style="font-weight:800;color:' + (sd ? sd.color : '#333') + ';">' + esc(cell.status) + '</span>') + '</td>'; }
+          else h += '<td align="center" valign="middle" style="' + cb + '">' + cw('<span style="font-weight:' + wt + ';">' + esc(cell.text || '') + '</span>') + '</td>';
         });
-        h += '<td align="center" valign="middle" style="' + cb + 'font-weight:700;">' + PCD.fmtNumber(row.hours) + '</td>';
-        if (showCost) h += '<td align="center" valign="middle" style="' + cb + '">' + (row.cost > 0 ? PCD.fmtMoney(row.cost) : '—') + '</td>';
+        h += '<td align="center" valign="middle" style="' + cb + '">' + cw('<span style="font-weight:700;">' + PCD.fmtNumber(row.hours) + '</span>') + '</td>';
+        if (showCost) h += '<td align="center" valign="middle" style="' + cb + '">' + cw(row.cost > 0 ? PCD.fmtMoney(row.cost) : '—') + '</td>';
         h += '</tr>';
       });
     });

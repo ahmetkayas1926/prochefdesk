@@ -158,7 +158,8 @@
       "Bash(node -c \"app/js/tools/kitchen_cards.js\")",
       "Bash(node -c \"app/js/core/utils.js\")",
       "Bash(node -c \"app/js/tools/ingredients.js\")",
-      "Bash(node -c \"app/js/tools/events.js\")"
+      "Bash(node -c \"app/js/tools/events.js\")",
+      "Bash(node -c \"app/js/tools/roster.js\")"
     ]
   }
 }

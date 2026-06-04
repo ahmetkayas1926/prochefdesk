@@ -1476,8 +1476,8 @@
               '<button id="menuPvZoomIn" style="' + zBtnStyle + '">+</button>' +
             '</span>' +
           '</div>' +
-          '<div id="menuPvOuter" style="display:inline-block;box-shadow:0 4px 20px rgba(0,0,0,0.25);">' +
-            '<div id="menuPvInner" style="width:' + pageWpx + 'px;height:' + pageHpx + 'px;transform-origin:top left;overflow:hidden;background:' + resolveBg(menu) + ';">' +
+          '<div id="menuPvOuter" style="display:inline-block;position:relative;box-shadow:0 4px 20px rgba(0,0,0,0.25);">' +
+            '<div id="menuPvInner" style="width:' + pageWpx + 'px;transform-origin:top left;background:' + resolveBg(menu) + ';">' +
               buildStyledHtml() +
             '</div>' +
           '</div>' +
@@ -1495,9 +1495,18 @@
         function applyScale(s) {
           curScale = Math.max(0.15, Math.min(4, s));
           inner.style.transform = 'scale(' + curScale + ')';
-          // outer matches visual size so wrap knows scroll extent
+          var contentH = inner.scrollHeight; // natural height, unaffected by transform
           outer.style.width  = Math.round(pageWpx * curScale) + 'px';
-          outer.style.height = Math.round(pageHpx * curScale) + 'px';
+          outer.style.height = Math.round(contentH * curScale) + 'px';
+          // Page-break dividers — grey strip at each A4-page boundary
+          outer.querySelectorAll('.mpv-brk').forEach(function (el) { el.remove(); });
+          var n = Math.floor(contentH / pageHpx);
+          for (var i = 1; i <= n; i++) {
+            var d = document.createElement('div');
+            d.className = 'mpv-brk';
+            d.style.cssText = 'position:absolute;left:0;right:0;height:6px;background:#c8c8c8;z-index:10;pointer-events:none;top:' + Math.round(pageHpx * i * curScale) + 'px;';
+            outer.appendChild(d);
+          }
         }
 
         function fitScale() {
