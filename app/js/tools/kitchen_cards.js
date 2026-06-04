@@ -114,8 +114,8 @@
       }).join('');
 
       bodyEl.innerHTML = `
-        <div style="display:grid;grid-template-columns:minmax(260px,1fr) minmax(380px,2fr);gap:14px;align-items:start;" class="kc-layout">
-          <div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:14px;align-items:start;" class="kc-layout">
+          <div style="min-width:0;">
             <div class="card mb-3" style="padding:14px;">
               <!-- v2.8.23 — Canvas controls modernized. Row 1: name input
                    + always-visible Saved Canvases button with count badge.
@@ -231,7 +231,7 @@
             </div>
           </div>
 
-          <div>
+          <div style="min-width:0;">
             <div class="card" style="padding:8px;background:var(--surface-2);position:sticky;top:80px;">
               <div class="flex items-center justify-between mb-2" style="padding:0 6px;">
                 <div style="font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-3);">${t('kc_live_preview')}</div>
