@@ -1241,6 +1241,7 @@
       return (
       '<style>' +
         '@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=Caveat:wght@400;600;700&family=Inter:wght@300;400;500;600;700;800&family=Nunito:wght@300;400;500;600;700&display=swap");' +
+        '@page { size: ' + pageSpec.cssSize + '; margin: 0; }' +
         // v2.17: ink and bg can be overridden by user selection
         '.m-page {' +
           'background: ' + resolveBg(menu) + '; color: ' + resolveInk(menu) + ';' +
@@ -1373,7 +1374,6 @@
         '}' +
         // v2.18: @media print — identical CSS to screen (pt units consistent)
         '@media print {' +
-          '@page { size: ' + pageSpec.cssSize + '; margin: 0; }' +
           'body { margin: 0; padding: 0; }' +
           // Force background colours and images to print (even with Background Graphics off)
           '* { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }' +

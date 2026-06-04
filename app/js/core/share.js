@@ -105,7 +105,7 @@
           return {
             name: it.recipeId ? (r ? r.name : '(removed)') : it.customName,
             description: it.description || (r && r.plating) || '',
-            price: it.price,
+            price: (it.price !== undefined && it.price !== null && it.price !== '') ? it.price : (r && r.salePrice != null ? r.salePrice : undefined),
             codes: it.codes || [],            // v2.16 fix: dietary/allergen codes
           };
         }).filter(function (x) { return x.name; }),
@@ -502,26 +502,26 @@
       // Inject into shared page HTML
       html = html.replace('<style>', '<style>' + fontImport);
       html += '<style>' +
-        '.sm-page{background:'+bg+';color:'+ink+';max-width:620px;margin:0 auto;padding:'+pagePadding+'px '+(pagePadding+8)+'px;font-family:'+th.bodyFont+';font-weight:'+th.bodyWeight+';border-radius:8px;}' +
-        '.sm-cover{width:100%;height:180px;object-fit:cover;border-radius:6px;display:block;margin:0 0 '+(Math.round(pagePadding*0.5))+'px;}' +
-        '.sm-logo{display:block;width:'+logoSize+'px;height:'+logoSize+'px;margin:0 auto 12px;object-fit:cover;border-radius:50%;}' +
-        '.sm-header{text-align:center;margin-bottom:'+Math.round(pagePadding*0.75)+'px;}' +
-        '.sm-title{font-family:'+th.titleFont+';font-size:'+titleSize+'px;font-weight:'+th.titleWeight+';letter-spacing:'+th.titleLetterSpacing+';margin:0 0 8px;color:'+ink+';line-height:1.1;}' +
-        '.sm-subtitle{font-size:11px;color:'+mutedInk+';letter-spacing:0.24em;text-transform:uppercase;font-weight:400;margin:0;}' +
-        '.sm-title-rule{width:40px;height:2px;background:'+accent+';margin:10px auto 0;border:none;display:block;}' +
-        '.sm-sections{'+(cols===2?'column-count:2;column-gap:'+(pagePadding*0.7)+'px;':'')+'margin-top:0;}' +
-        '.sm-section{break-inside:avoid;margin-bottom:'+Math.round(itemGap*secMult)+'px;}' +
-        '.sm-sec-title{font-size:'+sectionSize+'px;font-weight:700;text-transform:'+th.sectionTransform+';letter-spacing:'+th.sectionLetterSpacing+';color:'+accent+';text-align:center;margin:0 0 '+Math.round(itemGap*1.2)+'px;}' +
+        '.sm-page{background:'+bg+';color:'+ink+';max-width:'+(p.pageSize==='landscape'?842:595)+'pt;margin:0 auto;padding:'+pagePadding+'pt '+(pagePadding+6)+'pt;font-family:'+th.bodyFont+';font-weight:'+th.bodyWeight+';border-radius:8px;}' +
+        '.sm-cover{width:100%;height:180px;object-fit:cover;border-radius:6px;display:block;margin:0 0 '+(Math.round(pagePadding*0.5))+'pt;}' +
+        '.sm-logo{display:block;width:'+logoSize+'pt;height:'+logoSize+'pt;margin:0 auto 12pt;object-fit:cover;border-radius:50%;}' +
+        '.sm-header{text-align:center;margin-bottom:'+Math.round(pagePadding*0.75)+'pt;}' +
+        '.sm-title{font-family:'+th.titleFont+';font-size:'+titleSize+'pt;font-weight:'+th.titleWeight+';letter-spacing:'+th.titleLetterSpacing+';margin:0 0 8pt;color:'+ink+';line-height:1.1;}' +
+        '.sm-subtitle{font-size:11pt;color:'+mutedInk+';letter-spacing:0.24em;text-transform:uppercase;font-weight:400;margin:0;}' +
+        '.sm-title-rule{width:40px;height:2px;background:'+accent+';margin:10pt auto 0;border:none;display:block;}' +
+        '.sm-sections{'+(cols===2?'column-count:2;column-gap:'+(pagePadding*0.7)+'pt;':'')+'margin-top:0;}' +
+        '.sm-section{break-inside:avoid;margin-bottom:'+Math.round(itemGap*secMult)+'pt;}' +
+        '.sm-sec-title{font-family:'+th.titleFont+';font-size:'+sectionSize+'pt;font-weight:700;text-transform:'+th.sectionTransform+';letter-spacing:'+th.sectionLetterSpacing+';color:'+accent+';text-align:center;margin:0 0 '+Math.round(itemGap*1.2)+'pt;}' +
         sectionDecorCSS +
         '.sm-items{}' +
-        '.sm-item{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:'+itemGap+'px;break-inside:avoid;}' +
-        '.sm-item-name{font-size:'+itemSize+'px;font-weight:'+th.itemWeight+';color:'+ink+';flex-shrink:1;min-width:0;}' +
-        '.sm-item-desc{font-size:'+(itemSize-3)+'px;color:'+mutedInk+';margin-top:2px;font-style:italic;}' +
-        '.sm-item-codes{font-size:'+(itemSize-6)+'px;color:'+mutedInk+';margin-top:2px;}' +
-        '.sm-item-leader{flex:1;border-bottom:1px dotted #ccc;margin:0 4px 3px;}' +
-        '.sm-item-price{font-size:'+itemSize+'px;font-weight:600;color:'+accent+';white-space:nowrap;flex-shrink:0;}' +
-        '.sm-footer{text-align:center;margin-top:'+Math.round(pagePadding*0.75)+'px;font-size:11px;color:'+mutedInk+';text-transform:uppercase;letter-spacing:0.12em;border-top:1px solid '+(accent+'33')+';padding-top:'+Math.round(pagePadding*0.5)+'px;}' +
-        '.sm-allergen-legend{margin-top:'+Math.round(pagePadding*0.5)+'px;padding-top:'+Math.round(pagePadding*0.3)+'px;border-top:1px solid '+(accent+'33')+';font-size:10px;color:'+mutedInk+';text-align:center;}' +
+        '.sm-item{display:flex;justify-content:space-between;align-items:baseline;gap:8pt;margin-bottom:'+itemGap+'pt;break-inside:avoid;}' +
+        '.sm-item-name{font-family:'+th.titleFont+';font-size:'+itemSize+'pt;font-weight:'+th.itemWeight+';color:'+ink+';flex-shrink:1;min-width:0;}' +
+        '.sm-item-desc{font-size:'+Math.max(9,itemSize-4)+'pt;color:'+mutedInk+';margin-top:2pt;font-style:italic;}' +
+        '.sm-item-codes{font-size:'+(itemSize-6)+'pt;color:'+mutedInk+';margin-top:2pt;}' +
+        '.sm-item-leader{flex:1;border-bottom:1px dotted #ccc;margin:0 4pt 3pt;}' +
+        '.sm-item-price{font-family:'+th.titleFont+';font-size:'+itemSize+'pt;font-weight:600;color:'+accent+';white-space:nowrap;flex-shrink:0;}' +
+        '.sm-footer{text-align:center;margin-top:'+Math.round(pagePadding*0.75)+'pt;font-size:11pt;color:'+mutedInk+';text-transform:uppercase;letter-spacing:0.12em;border-top:1px solid '+(accent+'33')+';padding-top:'+Math.round(pagePadding*0.5)+'pt;}' +
+        '.sm-allergen-legend{margin-top:'+Math.round(pagePadding*0.5)+'pt;padding-top:'+Math.round(pagePadding*0.3)+'pt;border-top:1px solid '+(accent+'33')+';font-size:10pt;color:'+mutedInk+';text-align:center;}' +
       '</style>';
 
       html += '<div class="sm-page">';
