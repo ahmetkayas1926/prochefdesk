@@ -454,9 +454,7 @@
       }
     } else if (p.kind === 'menu') {
       // v2.17/v2.18 — Share page menu render: theme, font, colour, logo, cover, 2-column.
-      // Menu render is completely independent of share-page wrapper styles.
-      // We close the share-content div first, then inject sm-page with its own CSS.
-      html += '</div></div>'; // close share-content + share-page early for menus
+      // Produces identical output to buildStyledHtml() in menus.js.
       var SHARE_THEMES = {
         fine_dining: { titleFont: '"Cormorant Garamond",Georgia,serif', bodyFont: '"Inter",-apple-system,sans-serif', bodyWeight: 300, titleWeight: 500, itemWeight: 600, accent: '#c5a572', bg: '#ffffff', ink: '#111111', mutedInk: '#666666', sectionTransform: 'uppercase', sectionLetterSpacing: '0.18em', sectionDecor: 'lines', titleLetterSpacing: '0.02em' },
         modern_bistro: { titleFont: '"Playfair Display",Georgia,serif', bodyFont: '"Inter",-apple-system,sans-serif', bodyWeight: 400, titleWeight: 700, itemWeight: 700, accent: '#c2410c', bg: '#fffaf5', ink: '#1a1a1a', mutedInk: '#7a6b5d', sectionTransform: 'none', sectionLetterSpacing: '0', sectionDecor: 'underline', titleLetterSpacing: '-0.01em' },
@@ -492,7 +490,7 @@
       var cols = (p.columns === 2) ? 2 : 1;
       var priceStyle = p.priceStyle || 'symbol';
       var showAllergens = (p.allergenStyle !== 'off');
-      var currSym = (PCD.currencySymbol && PCD.currencySymbol()) || '$';
+      var currSym = (PCD.currencySymbol && PCD.currencySymbol()) || (PCD.settings && PCD.settings.currencySymbol) || '$';
       var sectionDecorCSS = '';
       if (th.sectionDecor === 'lines') sectionDecorCSS = '.sm-sec-title::before,.sm-sec-title::after{content:"";display:inline-block;width:20px;height:1px;background:'+accent+';vertical-align:middle;margin:0 12px;}';
       else if (th.sectionDecor === 'underline') sectionDecorCSS = '.sm-sec-title{border-bottom:2px solid '+accent+';padding-bottom:4px;display:inline-block;padding-left:20px;padding-right:20px;}';
@@ -502,15 +500,13 @@
       var fontImport = '@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=Caveat:wght@400;600;700&family=Inter:wght@300;400;500;600;700;800&family=Nunito:wght@300;400;500;600;700&display=swap");';
 
       // Inject into shared page HTML
-      // Inject font import as separate <link> tag before closing </head> equivalent
-      // More reliable than string replace which may miss nested <style> tags
-      html += '<style>' + fontImport + '</style>';
+      html = html.replace('<style>', '<style>' + fontImport);
       html += '<style>' +
-        '.sm-page{background:'+bg+';color:'+ink+';max-width:620px;margin:0 auto;padding:'+pagePadding+'px '+(pagePadding+8)+'px;font-family:'+th.bodyFont+' !important;font-weight:'+th.bodyWeight+';border-radius:8px;box-sizing:border-box;}' +
+        '.sm-page{background:'+bg+';color:'+ink+';max-width:620px;margin:0 auto;padding:'+pagePadding+'px '+(pagePadding+8)+'px;font-family:'+th.bodyFont+';font-weight:'+th.bodyWeight+';border-radius:8px;}' +
         '.sm-cover{width:100%;height:180px;object-fit:cover;border-radius:6px;display:block;margin:0 0 '+(Math.round(pagePadding*0.5))+'px;}' +
         '.sm-logo{display:block;width:'+logoSize+'px;height:'+logoSize+'px;margin:0 auto 12px;object-fit:cover;border-radius:50%;}' +
         '.sm-header{text-align:center;margin-bottom:'+Math.round(pagePadding*0.75)+'px;}' +
-        '.sm-title{font-family:'+th.titleFont+' !important;font-size:'+titleSize+'px;font-weight:'+th.titleWeight+';letter-spacing:'+th.titleLetterSpacing+';margin:0 0 8px;color:'+ink+';line-height:1.1;}' +
+        '.sm-title{font-family:'+th.titleFont+';font-size:'+titleSize+'px;font-weight:'+th.titleWeight+';letter-spacing:'+th.titleLetterSpacing+';margin:0 0 8px;color:'+ink+';line-height:1.1;}' +
         '.sm-subtitle{font-size:11px;color:'+mutedInk+';letter-spacing:0.24em;text-transform:uppercase;font-weight:400;margin:0;}' +
         '.sm-title-rule{width:40px;height:2px;background:'+accent+';margin:10px auto 0;border:none;display:block;}' +
         '.sm-sections{'+(cols===2?'column-count:2;column-gap:'+(pagePadding*0.7)+'px;':'')+'margin-top:0;}' +
@@ -518,11 +514,11 @@
         '.sm-sec-title{font-size:'+sectionSize+'px;font-weight:700;text-transform:'+th.sectionTransform+';letter-spacing:'+th.sectionLetterSpacing+';color:'+accent+';text-align:center;margin:0 0 '+Math.round(itemGap*1.2)+'px;}' +
         sectionDecorCSS +
         '.sm-items{}' +
-        '.sm-item{display:flex;justify-content:space-between;align-items:flex-start;gap:4px;margin-bottom:'+itemGap+'px;break-inside:avoid;}' +
-        '.sm-item-name{font-size:'+itemSize+'px;font-weight:'+th.itemWeight+';color:'+ink+';flex-shrink:1;min-width:0;font-family:inherit;}' +
+        '.sm-item{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:'+itemGap+'px;break-inside:avoid;}' +
+        '.sm-item-name{font-size:'+itemSize+'px;font-weight:'+th.itemWeight+';color:'+ink+';flex-shrink:1;min-width:0;}' +
         '.sm-item-desc{font-size:'+(itemSize-3)+'px;color:'+mutedInk+';margin-top:2px;font-style:italic;}' +
         '.sm-item-codes{font-size:'+(itemSize-6)+'px;color:'+mutedInk+';margin-top:2px;}' +
-        '.sm-item-leader{flex:1;min-width:10px;border-bottom:1px dotted #ccc;margin:0 4px 3px;align-self:flex-end;}' +
+        '.sm-item-leader{flex:1;border-bottom:1px dotted #ccc;margin:0 4px 3px;}' +
         '.sm-item-price{font-size:'+itemSize+'px;font-weight:600;color:'+accent+';white-space:nowrap;flex-shrink:0;}' +
         '.sm-footer{text-align:center;margin-top:'+Math.round(pagePadding*0.75)+'px;font-size:11px;color:'+mutedInk+';text-transform:uppercase;letter-spacing:0.12em;border-top:1px solid '+(accent+'33')+';padding-top:'+Math.round(pagePadding*0.5)+'px;}' +
         '.sm-allergen-legend{margin-top:'+Math.round(pagePadding*0.5)+'px;padding-top:'+Math.round(pagePadding*0.3)+'px;border-top:1px solid '+(accent+'33')+';font-size:10px;color:'+mutedInk+';text-align:center;}' +
@@ -545,7 +541,7 @@
         html += '<div class="sm-items">';
         sec.items.forEach(function (it) {
           var price = it.price ? Number(it.price) : 0;
-          var showPrice = (priceStyle !== 'hidden') && price > 0;
+          var showPrice = (priceStyle !== 'hidden') && it.price != null && it.price !== '' && price >= 0;
           var priceStr = showPrice ? (priceStyle === 'plain' ? (price % 1 === 0 ? String(price) : price.toFixed(2)) : (currSym + (price % 1 === 0 ? String(price) : price.toFixed(2)))) : '';
           html += '<div class="sm-item">';
           html += '<div style="flex:1;min-width:0;">';
@@ -571,14 +567,6 @@
       }
       if (p.footer) html += '<div class="sm-footer">' + escapeHtml(p.footer) + '</div>';
       html += '</div>';
-      // Menu render ends here — footer handled separately below
-      html += '<div style="text-align:center;padding:20px;color:#999;font-size:12px;border-top:1px solid #eee;margin-top:24px;">' +
-        'Made with <a href="https://prochefdesk.com" target="_blank" rel="noopener" style="color:#16a34a;font-weight:700;text-decoration:none;">ProChefDesk</a> · <a href="https://prochefdesk.com" target="_blank" rel="noopener" style="color:#999;text-decoration:none;">prochefdesk.com</a>' +
-      '</div>';
-      appEl.innerHTML = html;
-      appEl.classList.remove('hidden');
-      document.title = (p.name || 'ProChefDesk') + ' · ProChefDesk';
-      return; // exit early — skip the generic footer below
     }
 
     html += '</div>';
