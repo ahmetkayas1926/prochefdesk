@@ -795,39 +795,82 @@
         interactive: true,  // adds drag/resize handles
       });
 
-      // Render at real A4 size, then scale down
+      // Render at real A4 size, scale dynamically + zoom controls
       const A4_W = orientation === 'landscape' ? 297 : 210;
       const A4_H = orientation === 'landscape' ? 210 : 297;
       const MM_TO_PX = 3.7795;
       const pageW = A4_W * MM_TO_PX;
       const pageH = A4_H * MM_TO_PX;
 
-      previewEl.style.width = '100%';
-      previewEl.style.aspectRatio = (A4_W / A4_H).toFixed(4);
-      previewEl.innerHTML =
-        '<div class="kc-preview-frame" style="width:' + pageW + 'px;height:' + pageH + 'px;padding:8mm;box-sizing:border-box;">' + html + '</div>';
+      var pvUserZoom = 1; // 1 = fit to width; user can increase/decrease
+      var zBtnStyle = 'background:rgba(255,255,255,0.92);border:1px solid #ccc;border-radius:20px;padding:4px 12px;font-size:14px;font-weight:700;cursor:pointer;color:#333;line-height:1;flex-shrink:0;';
 
-      // v2.8.11 — Container width is 0 on initial mount after F5 reload
-      // before the surrounding grid layout settles; the previous code
-      // early-returned on !containerW, leaving the A4 frame unscaled at
-      // ~1123px and the preview visibly oversized until the user clicked
-      // any control (which triggered a re-run of updatePreview when width
-      // was stable). ResizeObserver fires once the element actually has a
-      // size and again on any container resize, so the scale always
-      // applies. The rAF path remains for the common case where width is
-      // already known. Previous observer is disconnected to avoid leaks
-      // across re-renders.
+      previewEl.style.width = '100%';
+      previewEl.style.aspectRatio = '';   // dynamic height via #kcPvOuter
+      previewEl.style.overflow = 'auto';
+      previewEl.style.webkitOverflowScrolling = 'touch';
+      previewEl.style.maxHeight = '80vh';
+
+      previewEl.innerHTML =
+        '<div style="display:flex;gap:6px;padding:6px 6px 4px;justify-content:flex-end;">' +
+          '<button id="kcPvZoomOut" style="' + zBtnStyle + '">−</button>' +
+          '<button id="kcPvFit" style="' + zBtnStyle + 'font-size:11px;font-weight:600;padding:4px 8px;">Fit</button>' +
+          '<button id="kcPvZoomIn" style="' + zBtnStyle + '">+</button>' +
+        '</div>' +
+        '<div id="kcPvOuter" style="position:relative;">' +
+          '<div class="kc-preview-frame" style="width:' + pageW + 'px;height:' + pageH + 'px;padding:8mm;box-sizing:border-box;">' + html + '</div>' +
+        '</div>';
+
+      // v2.8.11 pattern — clientWidth=0 on initial mount; rAF + ResizeObserver.
       function applyScale() {
         const containerW = previewEl.clientWidth;
         if (!containerW) return;
-        const scale = containerW / pageW;
+        const fitScale = containerW / pageW;
+        const scale = fitScale * pvUserZoom;
         const frame = previewEl.querySelector('.kc-preview-frame');
+        const outer = previewEl.querySelector('#kcPvOuter');
         if (frame) frame.style.transform = 'scale(' + scale + ')';
+        // outer sized to scaled dims so previewEl scrolls correctly
+        if (outer) {
+          outer.style.width  = Math.round(pageW * scale) + 'px';
+          outer.style.height = Math.round(pageH * scale) + 'px';
+        }
       }
+
       requestAnimationFrame(function () {
         applyScale();
         wireInteractions(previewEl.querySelector('.kc-preview-frame'));
+
+        // Zoom buttons
+        var zoIn  = previewEl.querySelector('#kcPvZoomIn');
+        var zoOut = previewEl.querySelector('#kcPvZoomOut');
+        var fitBtn = previewEl.querySelector('#kcPvFit');
+        if (zoIn)  zoIn.addEventListener('click',  function () { pvUserZoom = Math.min(pvUserZoom * 1.25, 4); applyScale(); });
+        if (zoOut) zoOut.addEventListener('click',  function () { pvUserZoom = Math.max(pvUserZoom / 1.25, 0.2); applyScale(); });
+        if (fitBtn) fitBtn.addEventListener('click', function () { pvUserZoom = 1; applyScale(); });
+
+        // Pinch-to-zoom
+        var outer = previewEl.querySelector('#kcPvOuter');
+        if (outer) {
+          var ptDist0 = 0, ptZoom0 = 1;
+          outer.addEventListener('touchstart', function (e) {
+            if (e.touches.length === 2) {
+              ptDist0 = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+              ptZoom0 = pvUserZoom;
+              e.preventDefault();
+            }
+          }, { passive: false });
+          outer.addEventListener('touchmove', function (e) {
+            if (e.touches.length === 2) {
+              var d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+              pvUserZoom = Math.max(0.2, Math.min(4, ptZoom0 * (d / ptDist0)));
+              applyScale();
+              e.preventDefault();
+            }
+          }, { passive: false });
+        }
       });
+
       if (typeof ResizeObserver !== 'undefined') {
         if (updatePreview._ro) updatePreview._ro.disconnect();
         updatePreview._ro = new ResizeObserver(applyScale);

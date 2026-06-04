@@ -12,7 +12,7 @@
   'use strict';
   const PCD = window.PCD;
   const ING_CATEGORIES = ['cat_meat', 'cat_poultry', 'cat_seafood', 'cat_dairy', 'cat_produce', 'cat_dry_goods', 'cat_spices', 'cat_oils', 'cat_beverages', 'cat_baking', 'cat_other'];
-  const UNITS = ['g', 'kg', 'ml', 'l', 'tsp', 'tbsp', 'cup', 'fl_oz', 'oz', 'lb', 'pcs', 'each', 'bottle', 'bunch', 'unit'];
+  const UNITS = ['g', 'kg', 'ml', 'l', 'tsp', 'tbsp', 'cup', 'fl_oz', 'oz', 'lb', 'pcs', 'each', 'bottle', 'jar', 'bunch', 'pkt', 'unit'];
 
   let selectMode = false;
   let selectedIds = new Set();
@@ -536,7 +536,7 @@ ${existing && existing.priceHistory && existing.priceHistory.length > 0 ? `
     const t = PCD.i18n.t;
     const go = function (XLSX) {
       if (!XLSX || !XLSX.utils || !PCD.xlsx) { PCD.toast.error(t('toast_excel_parser_unavailable')); return; }
-      const UNITS = ['g', 'kg', 'ml', 'l', 'tsp', 'tbsp', 'cup', 'oz', 'lb', 'pcs', 'unit'];
+      const UNITS = ['g', 'kg', 'ml', 'l', 'tsp', 'tbsp', 'cup', 'fl_oz', 'oz', 'lb', 'pcs', 'each', 'bottle', 'jar', 'bunch', 'pkt', 'unit'];
       const CATS = ['cat_meat', 'cat_poultry', 'cat_seafood', 'cat_dairy', 'cat_produce', 'cat_dry_goods', 'cat_spices', 'cat_oils', 'cat_beverages', 'cat_baking', 'cat_other'];
       const listRows = [];
       const maxLen = Math.max(UNITS.length, CATS.length);

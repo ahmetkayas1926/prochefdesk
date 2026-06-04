@@ -449,7 +449,7 @@
         r++;
       }
       if (spec.subtitle) {
-        setCell(ws, 'A' + r, spec.subtitle, { font: { name: 'Calibri', sz: 10, color: { rgb: '666666' } }, alignment: { vertical: 'center' } });
+        setCell(ws, 'A' + r, spec.subtitle, { font: { name: 'Calibri', sz: 10, color: { rgb: '666666' } }, alignment: { vertical: 'center', wrapText: true } });
         r++;
       }
       if (spec.title || spec.subtitle) r++; // blank spacer row
