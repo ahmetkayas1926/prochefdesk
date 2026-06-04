@@ -1437,13 +1437,10 @@
 
     function refreshPreview() {
       const pageSpec = PAGE_SIZES.find(function(p){ return p.id === (menu.pageSize || 'portrait'); }) || PAGE_SIZES[0];
-      // 1pt = 96/72px at screen DPI — render at true print dimensions then scale to fit
+      // 1pt = 96/72px at screen DPI — render at true print dimensions, scale dynamically
       var PT = 96 / 72;
       var pageWpx = Math.round(pageSpec.previewW * PT);  // portrait:793, landscape:1123
       var pageHpx = Math.round(pageSpec.previewH * PT);  // portrait:1123, landscape:793
-      var areaW = 700;
-      var scale = Math.round(areaW / pageWpx * 10000) / 10000;
-      var scaledH = Math.round(pageHpx * scale);
 
       const controls =
         makeOptRow('Font', 'printFontSize', [
@@ -1465,18 +1462,82 @@
           {val:'25mm',label:'S'},{val:'40mm',label:'M',isDefault:true},{val:'60mm',label:'L'}
         ]));
 
+      var zBtnStyle = 'background:rgba(255,255,255,0.92);border:1px solid #ccc;border-radius:20px;padding:4px 14px;font-size:14px;font-weight:700;cursor:pointer;color:#333;line-height:1;flex-shrink:0;';
       body.innerHTML =
         '<div style="margin-bottom:12px;padding:10px 14px;background:var(--surface-2);border-radius:var(--r-md);">' +
           controls +
         '</div>' +
-        '<div style="background:#c8c8c8;padding:16px;">' +
-          '<div style="font-size:10px;color:#888;margin-bottom:8px;letter-spacing:0.05em;">' + pageSpec.previewW + ' × ' + pageSpec.previewH + 'pt · ' + pageSpec.orientation + '</div>' +
-          '<div style="width:' + areaW + 'px;height:' + scaledH + 'px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.25);margin:0 auto;">' +
-            '<div style="width:' + pageWpx + 'px;height:' + pageHpx + 'px;transform:scale(' + scale + ');transform-origin:top left;overflow:hidden;background:' + resolveBg(menu) + ';">' +
+        '<div id="menuPvWrap" style="background:#c8c8c8;padding:16px;overflow:auto;-webkit-overflow-scrolling:touch;">' +
+          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px;">' +
+            '<span style="font-size:10px;color:#888;letter-spacing:0.05em;white-space:nowrap;">' + pageSpec.previewW + ' × ' + pageSpec.previewH + 'pt · ' + pageSpec.orientation + '</span>' +
+            '<span style="display:flex;gap:6px;">' +
+              '<button id="menuPvZoomOut" style="' + zBtnStyle + '">−</button>' +
+              '<button id="menuPvFit" style="' + zBtnStyle + 'font-size:11px;font-weight:600;padding:4px 10px;">Fit</button>' +
+              '<button id="menuPvZoomIn" style="' + zBtnStyle + '">+</button>' +
+            '</span>' +
+          '</div>' +
+          '<div id="menuPvOuter" style="display:inline-block;box-shadow:0 4px 20px rgba(0,0,0,0.25);">' +
+            '<div id="menuPvInner" style="width:' + pageWpx + 'px;height:' + pageHpx + 'px;transform-origin:top left;overflow:hidden;background:' + resolveBg(menu) + ';">' +
               buildStyledHtml() +
             '</div>' +
           '</div>' +
         '</div>';
+
+      // Runs after modal open — body is in DOM, clientWidth is measurable
+      setTimeout(function () {
+        var wrap  = body.querySelector('#menuPvWrap');
+        var inner = body.querySelector('#menuPvInner');
+        var outer = body.querySelector('#menuPvOuter');
+        if (!wrap || !inner || !outer) return;
+
+        var curScale = 1;
+
+        function applyScale(s) {
+          curScale = Math.max(0.15, Math.min(4, s));
+          inner.style.transform = 'scale(' + curScale + ')';
+          // outer matches visual size so wrap knows scroll extent
+          outer.style.width  = Math.round(pageWpx * curScale) + 'px';
+          outer.style.height = Math.round(pageHpx * curScale) + 'px';
+        }
+
+        function fitScale() {
+          var avail = wrap.clientWidth - 32; // 16px padding × 2
+          if (avail <= 0) avail = Math.min(window.innerWidth - 80, 700);
+          applyScale(avail / pageWpx);
+        }
+
+        fitScale();
+
+        // Re-fit on window resize (mobile orientation change etc.)
+        if (body._pvResizeHandler) window.removeEventListener('resize', body._pvResizeHandler);
+        body._pvResizeHandler = fitScale;
+        window.addEventListener('resize', fitScale);
+
+        // Zoom buttons
+        var zoIn  = body.querySelector('#menuPvZoomIn');
+        var zoOut = body.querySelector('#menuPvZoomOut');
+        var fitBtn = body.querySelector('#menuPvFit');
+        if (zoIn)  zoIn.addEventListener('click',  function () { applyScale(curScale * 1.25); });
+        if (zoOut) zoOut.addEventListener('click',  function () { applyScale(curScale / 1.25); });
+        if (fitBtn) fitBtn.addEventListener('click', fitScale);
+
+        // Pinch-to-zoom (touch devices)
+        var ptDist0 = 0, ptScale0 = 1;
+        outer.addEventListener('touchstart', function (e) {
+          if (e.touches.length === 2) {
+            ptDist0 = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+            ptScale0 = curScale;
+            e.preventDefault();
+          }
+        }, { passive: false });
+        outer.addEventListener('touchmove', function (e) {
+          if (e.touches.length === 2) {
+            var d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+            applyScale(ptScale0 * (d / ptDist0));
+            e.preventDefault();
+          }
+        }, { passive: false });
+      }, 0);
 
       PCD.on(body, 'click', '[data-opt-key]', function () {
         saveOpt(this.getAttribute('data-opt-key'), this.getAttribute('data-opt-val'));
