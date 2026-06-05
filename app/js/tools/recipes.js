@@ -2570,7 +2570,7 @@ function renderAllergenChips() {
         const subBadge = isSubRecipe ? '<span style="display:inline-block;background:var(--brand-50);color:var(--brand-700);font-size:9px;font-weight:700;padding:2px 6px;border-radius:999px;letter-spacing:0.06em;text-transform:uppercase;margin-inline-start:6px;">SUB</span>' : '';
         const unitOptions = isSubRecipe
           ? ['portion','g','kg','ml','l','batch','tray','pcs']
-          : ['g','kg','ml','l','tsp','tbsp','cup','oz','lb','pcs','each','bottle','bunch','unit'];
+          : ['g','kg','ml','l','tsp','tbsp','cup','oz','lb','pcs','each','bottle','jar','bunch','package','unit'];
         // v2.8.56 — Drag handle ile sürükle-bırak sıralama. v2.8.8'in
         // up/down buton sistemi (data-moveup, data-movedown) operatör
         // tarafından "pratik değil" raporlandı; kaldırıldı. Drag handle

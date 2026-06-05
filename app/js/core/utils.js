@@ -195,7 +195,7 @@
     // v2.8.19 — 'bottle' added so chef can record items bought by the
     // bottle (vinegar, sauce, oil). Like 'pcs'/'each'/'unit' it's a count
     // unit with no conversion path (bottles vary in size).
-    count: { unit: 1, pcs: 1, piece: 1, each: 1, bottle: 1, bunch: 1 }
+    count: { unit: 1, pcs: 1, piece: 1, each: 1, bottle: 1, jar: 1, bunch: 1, package: 1 }
   };
 
   PCD.convertUnit = function (value, fromUnit, toUnit) {

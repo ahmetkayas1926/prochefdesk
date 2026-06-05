@@ -94,7 +94,7 @@
   // v2.8.79 — Unit dropdown (recipes.js ile aynı liste). Manuel yazım yerine
   // sabit liste — operatör request: "unitler tıklamalı opsiyonlar şeklinde
   // olmalı. recipe builderdeki gibi".
-  const UNITS = ['g', 'kg', 'ml', 'l', 'tsp', 'tbsp', 'cup', 'oz', 'lb', 'pcs', 'each', 'portion', 'bottle', 'bunch', 'slice'];
+  const UNITS = ['g', 'kg', 'ml', 'l', 'tsp', 'tbsp', 'cup', 'oz', 'lb', 'pcs', 'each', 'portion', 'bottle', 'jar', 'bunch', 'package', 'slice'];
 
   // v2.8.89 — Quick start presets. Yeni şef "+ New Buffet" tıklayınca chooser
   // modal'da bu 3 hazır şablon + "Start blank" görür. Custom items olarak
