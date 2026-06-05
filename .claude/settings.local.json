@@ -168,7 +168,9 @@
       "Bash(node -c \"app/js/core/store.js\")",
       "Bash(node -c \"app/js/core/cloud-pertable.js\")",
       "Bash(node -c \"app/js/core/cloud-realtime.js\")",
-      "Bash(node -c \"app/js/core/cloud.js\")"
+      "Bash(node -c \"app/js/core/cloud.js\")",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\app\\\\js\\\\tools\\\\\" -Filter \"*.js\" | Select-Object -ExpandProperty Name)",
+      "PowerShell($h = \\(Get-Content \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\HANDOVER.md\" | Measure-Object -Line\\).Lines; $c = \\(Get-Content \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\CLAUDE.md\" | Measure-Object -Line\\).Lines; $ch = \\(Get-Content \"C:\\\\Users\\\\ahmet\\\\Desktop\\\\prochefdesk\\\\CHANGELOG.md\" | Measure-Object -Line\\).Lines; \"HANDOVER: $h satır | CLAUDE: $c satır | CHANGELOG: $ch satır \\(eskiden 1732\\)\")"
     ]
   }
 }

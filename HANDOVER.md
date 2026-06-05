@@ -1,571 +1,218 @@
-# ProChefDesk — Operasyon Handover
-
-> **Bu dokümanın amacı:** Yeni Claude session'ında hızlı devralma. Kabul et, varsayma. Önce oku, sonra çalış.
->
-> Claude Code için kısa operasyonel rehber: **`CLAUDE.md`**.
-> Sürüm geçmişi: **`CHANGELOG.md`**.
-
-## 1. Genel
-
-**Ürün:** ProChefDesk — profesyonel chef'ler için web tabanlı mutfak yönetim sistemi.
-**Operatör:** Ahmet Kaya, Perth Western Australia, profesyonel şef. Solo non-commercial proje.
-**Mevcut sürüm:** **v2.15.7** (operatör v2.15.6'ya kadar push etti; v2.15.7 working tree'de — bkz. §2.1). v2.15.7: roster JPEG hücre ortalama (align/valign attr) + Excel sütun genişliği fix (metin sığsın; fitToWidth tek sayfa). **Bu oturumun (v2.14.7→v2.15.4) büyük değişiklikleri:** **Roster (vardiya planı) aracı YENİ + büyük güncelleme** (haftalık personel ızgarası + şablon/serbest saat + **izin/durum kodları** OFF/AL/PH/SL/RDO/UNP renkli + **departman/grup bölümleri** tek sayfada + **profesyonel renkli print + üst başlık** + işçilik maliyeti göster/gizle + history/print/Excel/paylaş + **bulut sync**); **menü alerjen mantığı düzeltildi** (kod = SADECE BİLGİ; gizleyen filtre KALDIRILDI; tarif öğesinde alerjen OTOMATİK + manuel ekleme, recipe'e dokunmadan); **para birimi kalıcılık fix** + tüm export currency simgesine bağlandı; **tedarikçi sipariş geçmişi** (History). Menü + roster akışları canlı önizlemede uçtan uca test edildi. Detay: CHANGELOG `v2.15.x` / `v2.14.x`. (Önceki büyük iş v2.13.7→v2.14.6: menü manuel harf kodları + fiyat stili, whiteboard mobil fix, tek Excel standardı `PCD.xlsx`, demo seed genişletme, Discover hesap-bazlı sayaç.)
-**Blog:** 13 yazı yayında (Faz A SEO upgrade + Faz B 5-round, MENA niş + uluslararası coverage).
-**Domain:** prochefdesk.com (Cloudflare Pages, SSL Full, GitHub push'ta auto build + deploy).
-
-**URL yapısı:**
-- `prochefdesk.com/` → landing page
-- `prochefdesk.com/app/` → app (login + tüm araçlar)
-- `prochefdesk.com/blog/` → 13 SEO yazı + index
-- `prochefdesk.com/privacy.html`, `/terms.html` → 6 dil, app'ten bağımsız stil
-- Eski paylaşım linkleri (`prochefdesk.com/?share=xxx`) → JS sniffer ile `/app/?share=xxx`'e auto redirect
-
-**Repo:** `C:\Users\ahmet\Desktop\prochefdesk` → GitHub: `ahmetkayas1926/prochefdesk` → Cloudflare Pages auto-deploy.
-
-## 2. Mevcut Durum
-
-**Ürün canlı ve aktif kullanımda.** Operatör profesyonel şef olarak kendi restoranının gerçek tariflerini sisteme yüklemiş, gündelik mutfak operasyonunda kullanıyor.
-
-Yeni Claude'un bilmesi gereken: **bu hâlâ tek kullanıcılı bir ürün** — operatör + birkaç yakın şef arkadaşı. Roadmap'te 50+ aktif kullanıcı + %40 retention hedefine ulaşmadan paid tier / büyük marketing yatırımı yapılmıyor.
-
-### 2.0 Son session özeti (2026-05-24 — SaaS denetim doğrulama, kod değişikliği yok)
-
-Bu session'da kod değişikliği yapılmadı. Amaç: 22 Mayıs 2026'da Claude Opus 4 tarafından yapılan otomatik SaaS Production Readiness taramasının bulgularını **gerçek kod üzerinde, PowerShell ile kanıt-tabanlı** doğrulamaktı.
-
-**Doğrulama yöntemi:** `Select-String`, `Get-Content`, `Get-ChildItem` ile satır seviyesinde dosya okuma. Hiçbir değişiklik yapılmadı, sadece okundu ve analiz edildi.
-
-**Sonuç: 7 maddeden 6'sı çürütüldü, 1'i bilinçli ertelenmiş.**
-
-| Madde | Sonuç | Kanıt |
-|-------|-------|-------|
-| Discover foto CSS-injection | ✅ Çürütüldü | `discover.js:46-47` — URL'ler Supabase Storage'dan gelir, RLS koruyor, kullanıcı keyfi URL giremez |
-| CSP yok | ✅ Çürütüldü | `index.html:16` — kaldırılma belgeli; Discover'da script girişi yok; tek dış kaynak supabase-js@2.45.0 sabitli |
-| Reload öncesi flush | ✅ Çürütüldü | `app.js`, `auth.js`, `account.js`'teki 11 `location.reload` tek tek incelendi — hepsinde store işlemi önce tamamlanıyor |
-| Foto bytes yedeklenmiyor | ⏸ Ertelenmiş | `backup-to-r2/index.ts` okundu — 30 günlük foto backup 48GB = R2 free tier aşar; incremental gerekir; Supabase Storage zaten güvenli |
-| Çeviriler yarım | ✅ Çürütüldü | EN+TR tam; diğerleri bilinçli fallback; global hedef ücretli versiyonda |
-| Supabase limiti | ✅ Çürütüldü | Kod sorunu değil; 500 kullanıcı free tier'a sığar |
-| a11y temel | ✅ Çürütüldü | Solo/arkadaş kullanımı için şimdilik öncelikli değil |
-
-**Bu session'da üretilen:** CLAUDE.md, CHANGELOG.md, HANDOVER.md güncellemeleri (denetim bulgularını belgeleyen satırlar eklendi).
-
-
-
-Bu Claude'un yaptıkları (kronolojik tersine). **Operatör v2.15.5'e kadar push etti** (production'da doğrulandı + v2.15.3 migration çalıştırıldı + backup-to-r2 re-deploy). **v2.15.6 working tree'de, push bekliyor.**
-- **v2.15.6** — **Roster: önizleme + JPEG + geri tuşu + Excel yatay + yazı boyutu** (hepsi canlı test edildi). (1) **Geri tuşu**: editör/önizleme route param'a bağlandı (`render(view,params)` editId/previewId; aç → `router.go('roster',{...})`; Back → `history.back()`) → Chrome geri tuşu listeye düşer. (2) **Liste**: satır tıkla → `renderPreview` (read-only renkli tablo + Edit/JPEG/Print/Excel + font + cost); Edit butonu → editör. (3) **JPEG gönder**: `sendRosterImage` html2canvas (CDN lazy) → `navigator.share(files)` mobil / indir masaüstü; eski metin paylaşımı kaldırıldı. (4) **Excel yatay+tek sayfa**: SheetJS pageSetup yazmıyor → `saveXlsxLandscape` JSZip (CDN lazy) ile sheet1.xml'e `<sheetPr fitToPage>` + `<pageSetup landscape fitToWidth>` enjekte eder (sütunlar da daraltıldı). (5) **Yazı boyutu S/M/L + bold** (`data.fontSize`/`data.bold`) → `buildRosterTable` + Excel + print. Tek tablo kaynağı `buildRosterTable` (print + JPEG + önizleme aynı).
-- **v2.15.5** — **Roster Excel = PDF ile aynı renkli görünüm** (canlı test edildi). Excel düz kalıyordu (ortak `PCD.xlsx` hücre rengi desteklemez); roster artık kendi worksheet'ini xlsx-js-style ile inline kurar (recipes/buffet precedent'i): yeşil başlık bandı (`venue`) + koyu yeşil başlık + mavi departman bantları + renkli izin hücreleri (OFF/AL/PH/SL) + toplam + renkli lejant. `rosterMatrix` tek kaynak. Eski `rosterRows` düz-Excel yardımcısı kaldırıldı. Workbook hücre stilleri canlı doğrulandı.
-- **v2.15.4** — **Menü alerjen mantığı düzeltildi + Roster büyük güncelleme** (canlı test edildi). **Menü:** alerjen/diyet kodları SADECE BİLGİ; yemek gizleyen "allergen-safe" filtre KALDIRILDI (kavramsal yanlış + "manuel yemek görünmüyor" bug kaynağı); tarif öğesinde alerjenler `recipeAllergens`'ten OTOMATİK + manuel ekleme (it.codes; orijinal recipe'e DOKUNMAZ); görünüm = manuel ∪ otomatik. **Roster:** izin/durum kodları (OFF/AL/PH/SL/RDO/UNP, renkli, hücre=0 saat) + departman/grup bölümleri (tek sayfada başlıklı) + profesyonel renkli print (üst başlık bandı `venue` + departman bantları + renkli durum hücreleri + `print-color-adjust:exact`) + ortak `rosterMatrix` çıktı motoru (print/Excel/share). _Canlıda yakalanan bug: `groupedStaff` `.group` döndürürken `gridHtml` `.name` okuyordu → grid grup başlığı çıkmıyordu; düzeltildi. (Print/Excel/share rosterMatrix kullandığı için etkilenmemişti.)_
-- **v2.15.3** — **Roster bulut senkronizasyonu** (operatör onayladı). `rosters` map-yapılı ws-scoped tablo, stock_count_history pattern'i ile 6 dosyada wire edildi (store.js + cloud-pertable.js + cloud-realtime.js + cloud.js + backup-to-r2 + config.js). cloud.js merge'de `HIGH_EDIT_WS_TABLES` (kayıt-bazlı `updatedAt`, en yeni yazı kazanır). **Operatör `migrations/v2.15.3-rosters-cloud-sync.sql`'i Supabase'de çalıştırmalı + push.** Tüm app cloud-sync kapsam denetimi yapıldı → roster TEK boşluktu. _Not: v2.15.4 roster alanları (`venue`, `staff.group`, `cell.status`) `data` jsonb içinde — ek migration gerekmez._
-- **v2.15.2** — Menüde aktif allergen-safe filtre tüm öğeleri gizlerse: önizlemede kırmızı uyarı + editörde filtre auto-açıl/temizle butonu. (Operatörün "manuel eklenen yemek görünmüyor" acil bug'ı — render değil, filtre sebebi.)
-- **v2.15.1** — **Roster (vardiya planı) aracı YENİ** (`roster.js`, lazy, Kitchen bölümü). Personel×gün ızgara + şablon/serbest saat + işçilik maliyeti **göster/gizle** toggle (personel WhatsApp vs. patron/muhasebe) + history/print/Excel/paylaş. v2.15.1'de local-only, sync v2.15.3'te.
-- **v2.15.0** — Tedarikçi sipariş geçmişi: her kartta History butonu, gönderilen sipariş kaydı (tarih/saat + mesaj + alıcı + kanal), `supplier.orderHistory` son-50.
-- **v2.14.8** — Menü allergen-safe baskı filtresi manuel-kod tabanlı genişletildi (18 chip, diyet+alerjen gruplu, `it.codes` ile ALL-match).
-- **v2.14.7** — **Para birimi kalıcılık fix** (kritik): değiştir→kaydet→yenile USD'ye dönüyordu (account.js flush + cloud push eksikti → "cloud kazanır" eski değeri yazıyordu). Fix: flush + user_prefs queueUpsert + flushNow. Ayrıca tüm export/rapor/paylaşım `PCD.currencySymbol()`'e bağlandı (Excel numFmt + share menü fiyatı).
+# ProChefDesk — Ürün & Araç Envanteri
 
-**Bu oturumun mimari notları (yeni Claude MUTLAKA bilsin):**
-- **Menü alerjen = SADECE BİLGİ (v2.15.4).** Kod/lejant müşteri bilgisi içindir; uyarı/yasak/FİLTRE DEĞİL. Yemek gizleyen filtre KALICI olarak kaldırıldı — geri ekleme. Recipe menü öğesinde alerjen `autoAllergenCodeIds(it)` (menus.js) ile `PCD.allergensDB.recipeAllergens` üzerinden OTOMATİK gelir (ALLERGEN_KEY_TO_CODE map → a_g/a_n/a_d…). Manuel kodlar `it.codes` (menü öğesi seviyesi) — **orijinal recipe ASLA değişmez** (salt-okuma). Gösterim `displayCodeIds(it)` = manuel ∪ otomatik. Diyet kodları (v/vg/gf/df) manuel kalır (güvenle türetilemez).
-- **Roster çıktı motoru = `rosterMatrix(data)` (v2.15.4).** print/Excel/share TEK yapısal matristen üretilir ({days, groups:[{name, rows:[{staff,cells:[{text,status?}],hours,cost}]}]}). Departman grupları `groupedStaff(data)` (DİKKAT: `.group` döndürür, `.name` DEĞİL — gridHtml'de `.group` oku; rosterMatrix `name:g.group` map'ler). Durum kodları `ROSTER_STATUS` registry (OFF/AL/PH/SL/RDO/UNP + renk). Hücre: `{start,end,note}` (vardiya) VEYA `{status:'OFF'}` (izin, 0 saat). Print renk `print-color-adjust:exact` ile basılır (Background graphics kapalı olsa bile) — bunu kaldırma. `venue` = print üst başlık.
-- **Roster = MAP-tablo cloud pattern** (array DEĞİL). `rosters` stock_count_history/haccp ile aynı yolda: store.js `_stateKeyToSqlTable`+ws-table listeleri, cloud-pertable WORKSPACE_TABLES (wsScoped, isArray YOK) + pullAll fetch/destructure/packByWs sırası (fetch dizisi ↔ destructure SIRA UYUMU şart, yoksa pull bozulur), cloud-realtime `applyToWsTable`+TABLES+WS_BOUND_TABLES, cloud.js HIGH_EDIT_WS_TABLES+drift+ghost-ws+cascade. Yeni MAP tablo eklerken bu 5 dosyayı + backup-to-r2'yi + migration'ı birlikte güncelle. (Roster `data` jsonb yeni alanları otomatik sync — venue/group/status için ek migration yok.)
-- **upsertInTable her kayda `updatedAt` damgalar** → user-edited map tablolar cloud.js `HIGH_EDIT_WS_TABLES`'a girer (per-record en-yeni-kazanır), `REMOTE_WINS` değil.
-- **Para birimi kalıcılığı:** account.js currency değişiminde `flush()` + `user_prefs` cloud push ŞART (yoksa boot pull/realtime eski değeri geri yazar). Bunu kaldırma.
+> Yeni bir Claude session'ında hızlı bağlam kurmak için okuma belgesi.
+> AI çalışma rehberi: **`CLAUDE.md`** · Sürüm geçmişi: **`CHANGELOG.md`**
 
-#### Önceki session (2026-05-22 — Checklist → araç sadeleştirme → zoom fix), en son **v2.13.6**:
-- **v2.13.6** — Whiteboard Ctrl+wheel zoom'da "Something went wrong" toast spam'i: global error handler "ResizeObserver loop" benign hatalarını yok sayıyor + `applyCanvasScale` ilk yüklemede self-retry (canvas garanti ölçeklenir).
-- **v2.13.5** — "Sync now" butonu kaldırıldı (no-op'tu). "Re-sync my data" `{r}/{i}` interpolation fix (`t()` 2-param alır, kod 3 veriyordu).
-- **v2.13.4** — Profil kaydı `PCD.store.flush()` ile anında IDB'ye (400ms debounce'un close/reload/background race'i veri kaybediyordu — özellikle mobil).
-- **v2.13.3** — Whiteboard 6 template yeniden tasarlandı (yeni mutfak blokları) + print footer tek sayfa (flex layout).
-- **v2.13.2** — Portion Calculator'a birleştirilmiş malzeme görünümü (By recipe/category/supplier) — eski Shopping consolidation mantığı taşındı.
-- **v2.13.1** — **Waste Log + Shopping List araçları KALDIRILDI.** UI/buton/i18n sil, cloud şema koru (Mise pattern). Gerekçe: Waste düşük kullanım/çıktısız; Shopping = Supplier + Portion ile gereksiz.
-- **v2.13.0** — **Whiteboard WYSIWYG.** Canvas + print TEK render motoru, canvas gerçek A4-px + transform:scale. Blok delta 0 (doğrulandı).
-- **v2.12.x** — Checklist baştan (2 tür: Control + Prep) + profil persist fix (auth merge) + Privacy/Terms 6-dil + HACCP boş-template tarih damgası kaldırıldı + masaüstü Ctrl+wheel zoom + dashboard ghost checklist fix.
+---
 
-**Bu oturumun mimari notları (yeni Claude MUTLAKA bilsin):**
-- **Waste/Shopping kaldırma = Mise pattern.** `waste` + `shopping_lists` Supabase tablo + RLS + cloud sync + R2 backup DOKUNULMADI. UI yok ama veri durur; tool geri eklenirse veri orada. `trash_section_shopping` i18n korundu.
-- **Whiteboard tek render motoru.** `renderBlockContent(block)` + `blockBoxStyle(block)` HEM canvas HEM print kullanır. Canvas gerçek A4/A3 px (mm×3.7795) + `transform:scale`. Print body flex-column + sheet `flex:1` (footer tek sayfada). Bu yapıyı ayırma/bozma — yoksa önizleme≠çıktı geri gelir.
-- **Whiteboard ResizeObserver yalnızca resize/zoom için.** İlk ölçek `applyCanvasScale` self-retry (rAF, bounded 60) ile garanti edilir. "ResizeObserver loop" hataları global error handler'da filtreli (toast yok) — bu filtreyi kaldırma.
-- **Profil/user kaydı flush.** `store.set('user',...)` sonrası `PCD.store.flush()` şart (debounce race; v2.13.4).
-- **i18n `t()` 2 parametre alır:** `t(key, vars)`. `t(key, 'fallback', {params})` ÇALIŞMAZ (3. arg yok sayılır, fallback `vars` sanılır). Interpolasyon için params 2. arg olmalı.
+## ProChefDesk nedir
 
-### 2.1-eski Son session özeti (2026-05-19, NAKED→RICH sweep + büyük audit/sertleştirme)
+Profesyonel şefler için web tabanlı mutfak yönetim sistemi. Tarif maliyetlendirme, menü tasarımı, vardiya planı, HACCP uyumu ve mutfak operasyonunu tek platformda birleştiren, offline-öncelikli uygulamadır. Perth WA'da aktif şef Ahmet Kaya tarafından inşa edilmekte ve kullanılmaktadır.
 
-**Geride bırakılan sürümler (kronolojik tersine):**
-- **v2.9.30 LOCAL ONLY** (henüz push edilmedi) — **hCaptcha challenge popup viewport fix.** v2.9.29 fix sonrası operatör test etti: checkbox tıklamasına UI cevap veriyor, AMA challenge popup ekranın üst kenarına yapışıyor → resim soruları viewport dışında. Root cause: `modal.js` scroll lock pattern body'i `position: fixed; top: -scrollY` ile sabitliyordu → hCaptcha popup body-relative koordinatla yerleşince ofsetli kaydı. Fix: scroll lock `html/body { overflow: hidden }` pattern'ine geçti. Tüm modal'ları etkiler ama desktop + Android Chrome'da sorunsuz; iOS Safari (zaten test edilmemiş) gelecekte cihaz testinde değerlendirilir.
-- **v2.9.29 LOCAL ONLY** (henüz push edilmedi) — **hCaptcha checkbox fix.** Operatör DevTools kanıtı ile root cause bulundu: hCaptcha resmi error mesajı `"render=explicit should be used in combination with onload"` Console'da görünüyordu (CLAUDE.md'de yanlışlıkla "cosmetic" diye not edilmişti). v2.6.82'den beri `script.onload` pattern silent broken — widget çiziliyor ama event handler attach olmuyor. Fix: `account.js` `?onload=__pcdHcaptchaOnLoad&render=explicit` URL param + `window.__pcdHcaptchaOnLoad` callback. v2.9.26'da denenmişti ama o sırada CSP de eklenmişti, izole değildi. Şimdi CSP yok, temiz fix.
-- **v2.9.28** (production) — **REVERT v2.9.24 CSP + hCaptcha onload + photo sanitize.** v2.9.24-27 deneme katmanları operatör akışını bozdu (hCaptcha widget tıklama yok, Discover photo yüklenmiyor). Tam revert: CSP meta + SRI + photo url() quote wrap + hCaptcha onload pattern hepsi geri çekildi. Korunan: recipe_likes RLS sıkı policy + RPC, orphan i18n silme, window.print fix, missing i18n key'ler, doc accuracy.
-- **v2.9.27** (production) — hCaptcha CSP `'unsafe-eval'` ekleme denemesi + Discover photo debug log (yetmedi, v2.9.28'de revert).
-- **v2.9.26** (production) — hCaptcha `?onload=` URL param pattern (yetmedi, v2.9.28'de revert).
-- **v2.9.25 production** — CSP follow-up fix: `static.cloudflareinsights.com` script-src'ye, photo URL regex relax (`()` ve `'` allow, sadece quote/backslash/newline/angle reject), hCaptcha için `worker-src 'self' blob:` + `child-src`.
-- **v2.9.24 production** — Standart SaaS hijyen pass (3 paralel audit agent sonrası): discover.js XSS sanitize, recipe_likes RLS sıkı (migration `v2.9.24-recipe-likes-rls-tighten.sql` çalıştırıldı + onaylandı), CSP meta + X-Content-Type-Options + Referrer-Policy, Supabase SRI hash (sha384), 5 orphan i18n dosya silindi (phase2/3/4/4-1/v17.js), 2 window.print → PCD.print, 4 hardcoded toast i18n, ~25 missing i18n key eklendi, recipe_likes BACKUP_TABLES'a eklendi, HANDOVER stale numbers düzeltildi (16→18 lazy tool, 18→21 ws-bound, 21→24 realtime, 25→29 RLS, supabase-functions/ silindi notu kaldırıldı).
-- **v2.9.17 + v2.9.18 production** — Cloud sync 3 yeni tablo (buffets, mise_plans, team — backlog #2 kapatıldı) + Discover view spam rate limit Edge Function `rate-limited-view` (backlog #7).
-- **v2.9.0-23 production** — NAKED→RICH sweep TAMAMLANDI (13 araç buffet seviyesinde) + Kitchen Cards 4-fix paketi (sub-recipe ?, scroll teleport gerçek fix, overflow auto-fit, canvas usage indicator + bulk select).
+**Production:** `prochefdesk.com` — uygulama `/app/` altında.
 
-### 2.2 Bekleyen / bilinen test gerekleri
+---
 
-- **✅ v2.9.30 push edildi + operatör doğruladı 2026-05-19.** Report an issue formu ucundan uca çalışıyor: "I am human" tıklanıyor (v2.9.29 fix), challenge popup ekran ortasında açılıyor + Skip butonu çalışıyor (v2.9.30 fix). Bu iki fix BİRLİKTE çalışıyor — gelecek Claude ikisinden birini bozarsa akış tekrar kırılır (CLAUDE.md gotcha'larında "YENİ CLAUDE BU PATTERN'I BOZMA" uyarısı var).
-- **v2.9.28 push edildi** (operatör daha önce push etti). Push'a dahil dosyalar: `app/index.html` (CSP + SRI kaldırıldı), `app/js/tools/discover.js` (photo direct URL'ye geri), `app/js/tools/account.js` (hCaptcha v2.6.83 script.onload pattern — v2.9.29'da güncellendi), `app/js/core/config.js` (APP_VERSION=2.9.28), 3 doc (CLAUDE/HANDOVER/CHANGELOG).
-- **Discover photo testi** — chef'in paylaştığı recipe'lerde photo'lar (Lamb Shank vb.) Discover feed'de tekrar görünmeli. Hâlâ boş görünen recipe'ler varsa root cause sync race değil (CSP kalktı), `d.photo` cloud'da boş kalmış olabilir → recipe'i editör'de aç → Save → 5sn bekle → Discover Refresh.
-- **Migration `v2.9.24-recipe-likes-rls-tighten.sql` ZATEN ÇALIŞTIRILDI** (operatör onayladı, policy `auth.uid() = user_id`). RPC `pcd_get_recipe_like_count(text)` aktif. Bu DB tarafı korundu, revert SADECE frontend.
-- **Edge Function `backup-to-r2` v4 zaten deploy edildi** (v2.9.24'te recipe_likes BACKUP_TABLES'a eklenmişti). Yeni deploy gerekmez.
+## Mimari
 
-### 2.3 Aktif Edge Function'lar (4 deployed)
+| Katman | Teknoloji |
+|--------|-----------|
+| Frontend | Vanilla JavaScript (bundler yok, service worker yok) |
+| Offline storage | IndexedDB — verinin birincil deposu; cloud ikincil |
+| Bulut | Supabase (Postgres 17, Auth, Storage, Realtime, Edge Functions) |
+| Deploy | Cloudflare Pages → GitHub push'ta otomatik; build komutu `node build.js` |
+| Yedek | Cloudflare R2 — gece otomatik JSON yedek |
 
-`backup-to-r2` (v2.9.24'te re-deploy edildi — recipe_likes BACKUP_TABLES'ta), `cleanup-photos`, `delete-account`, `rate-limited-view` (v2.9.18'de yeni deploy).
+**Güncel sürüm:** `app/js/core/config.js` → `APP_VERSION`
 
-## 3. Frontend Stack
+**Sürüm bump kuralı:** Yalnızca `config.js`'deki `APP_VERSION` satırını değiştir. `app/index.html`'e sürüm numarası YAZMA — `__VERSION__` placeholder'ı build zamanı replace edilir, elle yazılırsa build fail eder.
 
-- Vanilla JavaScript, no bundling, no service worker
-- ~24,000+ satır JS + ~7,700 satır i18n
-- IndexedDB ana storage (write-only, v2.6.92'den beri)
-- PWA (Android Chrome'da install ✅, iOS Safari **test edilmedi**)
-- 6 dil i18n (EN/TR/ES/FR/DE/AR), sadece EN ve TR dolu. Diğer 4 dil EN fallback. Yeni i18n key sadece **en.js + tr.js**'e eklenir.
-- **Cache-busting (v2.8.0+):** `app/index.html`'de `?v=__VERSION__` placeholder'ları (49 yerde). Cloudflare build command (`node build.js`) `app/js/core/config.js`'teki `APP_VERSION` ile replace eder. Sürüm bump'ı **sadece config.js**'i değiştirir.
+---
 
-### Repo dosya yapısı
+## Araçlar ve kapasiteleri
 
-**Repo kök:**
-- `index.html` — Landing page (modern SaaS, ~600 satır, Inter/Fraunces font)
-- `privacy.html`, `terms.html` — 6 dil, app'ten bağımsız stil
-- `build.js` — Cache-busting injection
-- `app/` — uygulama
-- `blog/` — 13 SEO yazı + index.html
-- `migrations/` — 18 SQL migration (en yenisi v2.9.18-discover-view-rate-limit)
-- `supabase/functions/` — 4 Edge Function (delete-account, backup-to-r2, cleanup-photos, rate-limited-view)
-- `docs/DISASTER_RECOVERY.md` — restore prosedürü (prod'da test edildi)
-- `sitemap.xml`, `robots.txt` — SEO altyapı
-- `CLAUDE.md`, `HANDOVER.md`, `CHANGELOG.md`
+Sidebar sırası. Parantez içi = sitedeki görünüm adı (JS route adından farklıysa).
 
-**`app/js/core/` (16 modül):**
-allergens-db.js, app.js, auth.js, cloud-pertable.js, cloud-realtime.js, cloud.js, config.js, i18n.js, idb-wrapper.js, photo-storage.js, qr.js, router.js, share.js, store.js, utils.js, variance.js
+---
 
-**`app/js/tools/` (30 dosya, 13 kullanıcıya görünen ana tool):**
-account, allergens, buffet, checklist, dashboard, discover, events, haccp + 4 alt-form (cooling/holding/logs/receiving), ingredients, inventory, kitchen_cards, menu_matrix, menus, nutrition, portion, recipes, sales, shopping, suppliers, team, tools-hub, variance, waste, whatif, yield, whiteboard.
+### Library
 
-**Kullanıcıya görünen ana tool'lar (v2.8.78 lazy-loaded):** Recipes, Ingredients, Menu Builder, Kitchen Cards (A4 print), Whiteboard (block composer), Portion Calculator, Shopping List, Inventory, Suppliers, Events & Catering, Checklists, HACCP Hub, Buffet Planner. Discover, Allergens ek. (v2.11.16: Mise en Place kaldırıldı.)
+#### Recipes
+Tarif oluştur/düzenle: malzeme, alt tarif (sub-recipe), hazırlık adımları, fotoğraf; otomatik maliyet hesaplama. 9 kategori (Appetizer, Soup, Salad, Main, Side, Dessert, Breakfast, Drink, Other). Toplu seçim/silme, "Convert to Prep" işlemi.
+- Print: maliyet raporu (PDF)
+- Excel: maliyet raporu
+- QR + Link paylaşımı: herkese açık tarif URL'si
+- Discover'a yayın
+- Bulut sync ✓
 
-## 4. Cloud / Backend (Supabase)
+#### Ingredients
+Malzeme birim fiyatı, 11 kategori, tedarikçi bağlantısı, verim % (yield). Fiyat geçmişi grafiği.
+- Import: CSV veya Excel yükle (toplu güncelleme)
+- Export: CSV + Excel (mevcut liste)
+- Excel template: Lists sekmeli doldur-geri-yükle şablonu
+- Bulut sync ✓
 
-**Project ref:** `muuwhrcogikpqylsfvgg` (Tokyo, Postgres 17, **Free tier**)
+#### Menus (Menu Builder)
+4 tema (Fine Dining, Modern Bistro, Cafe, Minimalist), 12 renk paleti, logo/kapak fotoğrafı, 2–6 sütun, A4/A3 dikey/yatay. Diyet + alerjen harf kodları (küçük = diyet uygunluğu, BÜYÜK = içerir; sadece bilgi amaçlı). Fiyat stili: simgeli / simgesiz / gizli. Bölüm sürükle-bırak sıralama.
+- Print ✓
+- QR + Link paylaşımı: herkese açık menü URL'si
+- Bulut sync ✓
 
-### 31 Aktif tablo (v2.15.3)
+---
 
-**Workspace-scoped (23):** recipes, ingredients, menus, events, suppliers, canvases, shopping_lists, checklist_templates, inventory, waste, checklist_sessions, stock_count_history, haccp_logs, haccp_units, haccp_readings, haccp_cook_cool, haccp_receiving (v2.8.44), haccp_holding (v2.8.44), **buffets** (v2.9.17), **mise_plans** (v2.9.17), **team** (v2.9.17), **whiteboards** (v2.9.42), **rosters** (v2.15.3)
-> Hepsinde `workspace_id` + `user_id` PK, `data` jsonb, `deleted_at` timestamptz.
+### Kitchen
 
-**Top-level (8):** workspaces (flat schema), workspace_tombstones, user_prefs, public_shares, client_errors (insert-only), subscriptions, recipe_likes (v2.8.46, Discover Phase 2), **discover_view_logs** (v2.9.18, rate limit).
+#### Kitchen Cards (Kitchen Cards)
+Sürükle-bırak grid (1–9 sütun). Yazı boyutu, kenar kalınlığı, gövde ağırlığı seçenekleri. Mobil zoom/fit. Her kart: tarif adı, malzeme listesi, adımlar.
+- Print ✓ (A4 yatay)
+- QR + Link paylaşımı
+- Bulut sync ✓ (`canvases` tablosu)
 
-**Sadece IDB (cloud sync YOK):** Yok — v2.9.17'de buffets + misePlans + team tamamlandı.
+#### Whiteboard (Kitchen Whiteboard)
+Blok tabanlı pano (Notion tarzı). 13 blok tipi: başlık, büyük sayı, checklist, tablo, uyarı, adım listesi, allergen strip, doneness ladder, time range, cook sheet, divider. 6 layout kademe (tam genişlik → 1/6), 6 yazı boyutu (XS–XXL), 14 renk paleti. WYSIWYG — önizleme = çıktı. Kayıtlılar (library).
+- Print ✓ (A4/A3 dikey/yatay)
+- Bulut sync ✓
 
-**DROP edilmiş:** `user_data` (v2.6.87), `cost_history` (v2.6.88). Frontend referansları temizlendi.
+#### Portion (Portion Calculator)
+Çoklu tarif seçme, porsiyon hedefi girme, otomatik ölçekleme, konsolide malzeme listesi + maliyet. 3 görünüm: tarif bazlı / kategori / tedarikçi.
+- Print ✓
+- Metin paylaşımı (navigator.share)
+- Bulut sync ✓
 
-**Discover ek kolonlar (v2.8.46):** `recipes` tablosuna `view_count` + `like_count` integer + 2 partial index. Anon + auth için RLS policy: `data->>'isPublic' = 'true'` herkese SELECT açık.
+#### Checklist (Checklists)
+2 tip: Control (güvenlik/açılış/kapanış/temizlik) ve Prep (yemek → bileşenler + not alanı). Özelleştirilebilir yazdırma: sütun sayısı ve yön seçimi. Oturum geçmişi, ilerleme takibi.
+- Print ✓ (özelleştirilebilir layout)
+- Metin paylaşımı (oturum sonuçları)
+- Bulut sync ✓
 
-### Cascade trigger zinciri (v2.6.98 + v2.7.0)
+#### Roster
+Haftalık çalışan vardiyası. Personel × gün ızgara; her hücre vardiya saati (başlangıç/bitiş) veya durum kodu. 6 durum kodu (renk kodlu): OFF, AL (izinli), PH (resmi tatil), SL (hastalık), RDO (dinlenme), UNP (ücretsiz izin). Departman/grup bölümleri. İşçilik maliyeti göster/gizle. Tarihçe, şablon kopyalama.
+- Print ✓ (A4 yatay, renkli)
+- Excel ✓ (yatay, renkli, otomatik tek sayfa)
+- JPEG paylaşımı: mobilde native share (WhatsApp vb.), masaüstünde indir
+- Bulut sync ✓ (`rosters` tablosu)
 
-| Trigger | Olay | İş |
-|---|---|---|
-| `trg_cascade_workspace_tombstone` | INSERT on workspace_tombstones | `cascade_soft_delete_workspace_data()` → 21 tablo + workspaces deleted_at SET |
-| `trg_reverse_cascade_workspace_tombstone` | DELETE on workspace_tombstones | `cascade_restore_workspace_data()` → 21 tablo + workspaces deleted_at NULL |
+#### Prep (Prep Sheet)
+Servis hazırlık listesi. Yemek başına bileşen + boş kutu; tariften otomatik çekme + manuel düzenleme. Lamine yazdırma için optimize edilmiş çok sütunlu layout. Kayıtlılar (library).
+- Print ✓ (1–4 sütun seçimi)
+- Bulut sync ✓ (`prepSheets` tablosu)
 
-### DB Function'ları
+---
 
-- `cascade_soft_delete_workspace_data()` (v2.6.98)
-- `cascade_restore_workspace_data()` (v2.7.0)
-- `pcd_cleanup_old_deleted()` (v2.6.97) — 30 gün eski soft-deleted satırları siler
-- `pcd_purge_workspace()` (v2.7.6) — Trash UI "Delete forever" için atomik silme
-- `increment_recipe_view(text)` (v2.8.46) — Discover view counter, anonymous EXECUTE
-- `pcd_update_like_count` (v2.8.46) trigger — `recipes.like_count`'u `recipe_likes COUNT(*)`'tan senkron
+### Sourcing
+
+#### Inventory
+Stok seviyeleri: par (ideal) ve min (kritik) eşikleri. 4 durum: OUT / CRITICAL / LOW / OK. Sayım modu, sayım geçmişi. Dashboard'da düşük stok uyarı badge'i.
+- Print ✓ (stok sayım çıktısı)
+- Excel ✓ (stok sayım snapshot)
+- Bulut sync ✓ (top-level tablo)
 
-### 4 Aktif pg_cron Job
+#### Suppliers
+8 kategori. Ürün bazlı miktar girişi. Sipariş gönderimi: WhatsApp / SMS / Email / navigator.share. Sipariş geçmişi (son 50 kayıt).
+- Bulut sync ✓
 
-| Job | Schedule (UTC) | Süre limit |
-|---|---|---|
-| nightly-backup-to-r2 | 03:00 her gün | 60sn |
-| pcd-cleanup-old-deleted | 03:00 her gün | — |
-| pcd-cleanup-photos-weekly | Pazar 04:00 | — |
-| pcd-cleanup-view-logs (v2.9.18) | Her saat başı (0 * * * *) | — |
+---
 
-### Realtime: 26 tablo subscribed (v2.15.3)
-
-v2.9.17'de `buffets`+`mise_plans`+`team` (24'e çıktı), v2.9.42'de `whiteboards` (25), v2.15.3'te `rosters` (26). Total 26 tablo realtime'da subscribed (`cloud-realtime.js` TABLES dizisi).
-**CHANNEL_ERROR çözüldü:** v2.8.43 — explicit `realtime.setAuth(token)` + `TOKEN_REFRESHED` dinleyici. Multi-device canlı sync güvenilir.
-
-### 4 Edge Function (deployed)
-
-- **`backup-to-r2`** (v2.15.3'te BACKUP_TABLES'a `rosters` eklendi; daha önce v2.9.42 whiteboards + v2.9.17 buffets/mise_plans/team; **rosters için operatör re-deploy etmeli**). Per-table tabloyu jsonl olarak R2'ye yazar. 30-day retention. **Foto bytes yedeklenmiyor**, sadece manifest.
-- **`cleanup-photos`** — Storage orphan foto temizliği. `x-cleanup-secret` header zorunlu.
-- **`delete-account`** — v2.8.50 fix (user_data DELETE bloğu kaldırıldı).
-- **`rate-limited-view`** (v2.9.18 YENİ, operatör deploy etmeli) — Discover view counter rate limit. POST recipe_id, IP header'dan çıkarır, `pcd_rate_limited_view_bump` RPC (service_role) çağırır. 60dk window per (IP, recipe).
-
-**R2 bucket:** `prochefdesk-backups`. Restore prod'da test edildi. **Public Access KAPALI olmalı** — operatör görsel kontrol.
-
-### Storage / Auth
-
-- **Storage:** `recipe-photos` bucket — **PUBLIC bucket**, RLS path-based write (`{user_id}/...`). SELECT herkes (Discover anonymous `<img>` için zorunlu); INSERT/UPDATE/DELETE sadece owner.
-- **Auth:** Email + Google OAuth (production'da aktif). Redirect URLs whitelist: `https://prochefdesk.com/app/**`.
-
-## 5. Tamamlanmış İşler (kategori özeti)
-
-Tek tek sürüm detay → `CHANGELOG.md`. Aşağıda kategori-bazlı yüksek-seviye özet.
-
-| Faz | Konu | Sürümler |
-|---|---|---|
-| **Altyapı** | Per-table sync schema + RLS + cascade triggers + cron + Trash UI + IndexedDB migration + queue persistence | v2.6.66 — v2.7.7 |
-| **Cache & URL** | Cache-busting (build.js + __VERSION__) + App `/app/` altına taşındı + bug fix arc | v2.8.0 — v2.8.5 |
-| **Lansman** | Landing + Privacy/Terms refresh | post-v2.8.5 |
-| **UX modernize Faz 1** | Units + i18n + allergen override + Kitchen Cards + Recipes list redesign + isSubRecipe model | v2.8.19 — v2.8.31 |
-| **Sync reliability** | Drift detection + auto-retry + ambient sync indicator | v2.8.32 — v2.8.33 |
-| **Backlog sweep 1** | Debounce, restore compare, Cook&Cool aylık form, allergen auto-detect kaldır, 2 yeni HACCP form + cloud sync, i18n round 1+2, Discover Faz 1+2, dietFlags, Realtime JWT fix | v2.8.34 — v2.8.47 |
-| **Cross-browser + edge fix** | Safari backdrop-filter prefix + delete-account false-error | v2.8.49 — v2.8.50 |
-| **Print/UX polishing** | HACCP print tek-sayfa + recipe preview share + ingredient separator + standart footer + KC print preview + drag-drop + KC arama + Discover snapshot fix | v2.8.51 — v2.8.58 |
-| **Checklist polishing** | Boş template print + drag-drop editor + session compact + multi-column + kategori şerit + hint + library | v2.8.59 — v2.8.65 |
-| **Recipe + Media polish** | Discover ingredient "(?)" fix + 1:1 photo standardı + Menu Builder modernization | v2.8.66 — v2.8.68 |
-| **Mimari fix** | **Sub-recipe ingredient flattening helper** (6 modüle bağlandı) | v2.8.69 |
-| **Tool consolidation + yeni** | HACCP Hub + Allergen Guardrail + Cost Health + **Buffet Planner** + **Mise en Place** + Tag system + Buffet inline guide | v2.8.70 — v2.8.77 |
-| **Performance** | Boot perf L1 (defer/preload) + L2 (lazy xlsx/i18n/16 tool router) + a11y viewport | v2.8.76 + v2.8.78 |
-| **Buffet overhaul** | 4 item type + Excel + UX + R2 backup fix | v2.8.79 |
-| **UX hijyen** | Recipe ingredient editor birleştirme + Modal focus root cause + Discover author + Buffet input focus + Welcome tour modernize | v2.8.80 — v2.8.83 |
-| **Profile↔Discover** | Author profile-priority + Save profile auto re-enrich + preview modernize + form etiket güncel + Discover live fallback | v2.8.84 — v2.8.85 |
-| **Excel bug fixes** | try/catch debug + Buffet list Cost Report parite + menu-item scope fix | v2.8.86 — v2.8.87 |
-| **Buffet UX modernize** | Smart defaults + Stats hero + status label + list search + compact item + Quick Start preset chooser (7 preset) | v2.8.88 + v2.8.89 + v2.8.93 |
-| **i18n Round 3** | Print/Excel/share surface dil senkronizasyonu (6 dosya 40+ hardcoded → t() + 48 yeni key) | v2.8.90 |
-| **Dashboard + Tools-hub** | Inline guide panel + new chef Get started 3-card + Tools-hub phase grouping | v2.8.91 |
-| **Portion Calculator UX** | Step 1 (Guest count) kaldır + intro/help kart + Avg per portion + signature refactor | v2.8.92 |
-| **Blog SEO** | Faz A: 3 mevcut yazı upgrade (JSON-LD + authority + cross-link). Faz B: 10 yeni yazı 5 round'da (Buffet Cost, Iftar, Cook & Cool, Yield %, Mise en Place, Recipe Scaling, Kitchen Cards, Par Levels, Waste Tracking, Allergen Menu). Total **13 yazı yayında**. | v2.8.94 — v2.8.99 |
-| **Ops (Marketing/SEO)** | Blog altyapı + sitemap + robots + meta tag sweep + GSC verify + edge function deploy + backup function v3 + DISASTER_RECOVERY.md | 2026-05-18 |
-
-## 6. Yapılacaklar
-
-### Sıradaki büyük iş: v2.9.x — NAKED araç sweep
-
-Operatör vizyonu: her araç Buffet Planner seviyesinde RICH. 13 araç paketleri halinde, her tur 2-3 araç bump.
-
-| Tur | Araçlar |
-|---|---|
-| v2.9.0 | yield + waste + variance |
-| v2.9.1 | nutrition + allergens + mise |
-| v2.9.2 | discover + account + team |
-| v2.9.3 | sales + whatif + menu_matrix |
-| v2.9.4 | haccp hub UX upgrade |
-
-**Her tur baseline:** kapatılabilir inline guide + per-field hint + örnek placeholder + empty state onboarding (v2.8.77 buffet pattern).
-
-### Açık backlog (öncelik sırası)
-
-1. **iOS/Safari cross-browser test** — v2.8.49 kod tarama temiz; gerçek cihaz testi operatör tarafına bekliyor.
-2. ~~**Buffet + Mise cloud sync**~~ ✅ **v2.9.17'de kapatıldı** (buffets + mise_plans + team 3 tablo).
-3. ~~**Discover'a Tag + Allergen filter**~~ ✅ **v2.9.15-16'da kapatıldı.** Backfill notu: mevcut public recipe'lerde `computedAllergens` yok; chef her recipe'i bir kez açıp save edince embed olur.
-4. ~~**Categories functional**~~ ❌ **Operatör v2.9.18'de listeden çıkardı** (gereksiz).
-5. ~~**`supabase-functions/` duplicate silme**~~ ✅ **v2.9.18'de kapatıldı** (klasör silindi).
-6. ~~**Buffet Excel footer**~~ ✅ **v2.9.14'te kapatıldı.**
-7. ~~**Discover view count rate limit**~~ ✅ **v2.9.18'de kapatıldı** (Edge Function + saatlik cleanup cron).
-8. **R2 backup foto bytes yedekleme** — şu an sadece manifest. Solo workflow için kabul edilebilir; Pro tier'da Storage PITR çözer. Operatör v2.9.18: "para ödeyecek miyim → şimdilik kalsın".
-9. ~~**App boot perf L3**~~ ❌ **Operatör v2.9.18'de listeden çıkardı** (yüksek risk).
-10. **CHANGELOG.md otomatize CI hook** — manuel hatırlamayla yapılıyor; ileride opsiyonel.
-
-## 7. ❌ Önerme
-
-| İş | Neden |
-|---|---|
-| Pricing / paid tier / Stripe | 50+ aktif kullanıcı + %40 retention kanıtlanmadan yok |
-| AI image gen entegrasyonu | Operatörün kendi GPU donanımı var (RTX 5090 24GB), ürüne entegre gereksiz |
-| Demo seed değişikliği | Mevcut hali iyi |
-| Türkçe landing page | Operatör erteledi |
-| Screenshot ekleme | Operatör kendisi çekecek |
-| `PCD.log` çağrılarını temizleme | `PCD_CONFIG.DEBUG = false` iken silent no-op, gereksiz |
-
-## 8. Operatör Çalışma Kuralları
-
-### İletişim
-1. Türkçe, sade dil, kısa cevaplar.
-2. Operatöre teknik kod (diff, syntax) gösterilmez — değişiklik ne, hangi dosya, ne risk dilinde.
-3. "BUNU SEN SÖYLE / önerin nedir" denince doğrudan görüş ver, soruyla cevap verme.
-4. Hata yapıldığında kısa kabul et, ileri git. Aşırı özür / öz-eleştiri yok.
-
-### İş süreci
-5. **Bir hedef → en küçük adım.** Birden fazla iyileştirmeyi tek sürüme paketleme.
-6. **Bulk regex/script YOK.** Manuel dosya-by-dosya. Geçmişte 226+ syntax error + rollback bulk script'ten geldi.
-7. Her edit'ten sonra `node -c` syntax check.
-8. Frontend tahmin yürütmeden önce SQL ile DB durumunu kontrol et.
-9. **Operatör bir sorunla geldiğinde genel cevap verme.** Önce DevTools console + kod ile mevcut uygulamanın gerçek durumuna göre nokta atışı teşhis yap. Tahmin değil, kanıt.
-10. Yeni özellik önermeden önce repo'da grep ile var mı kontrol et.
-11. GitHub Desktop GUI ile push edilir, terminal/cmd değil.
-
-### Sürüm yönetimi
-12. Sürüm bump'ı SADECE `app/js/core/config.js` `APP_VERSION` satırını değiştirir.
-13. `app/index.html`'e literal sürüm yazılmaz — `__VERSION__` placeholder'ları build.js inject eder.
-14. CHANGELOG yönetimi: oturum boyunca yapılan işleri düzenli not al. Operatör "güncel CHANGELOG hazırla" dediğinde temiz, organize biçimde hazırlanır.
-15. DB-only migration kendi sürüm numarası alabilir (frontend sürüm atlayabilir).
-
-### Onay zorunlu
-16. DROP TABLE / destructive SQL
-17. 50+ satır frontend değişikliği
-18. Yeni dosya/modül ekleme
-19. Cron schedule / RLS policy değişikliği
-20. Cross-device sync mantığı değişikliği (cloud.js, cloud-pertable.js, cloud-realtime.js)
-21. Edge Function deploy
-
-### Backlog & memory
-22. Claude memory özelliği KAPALI. Backlog tek kaynağı: bu dosya §6.
-23. Yapılacaklar listesini güncellemeden önce operatöre göster, doğrulat.
-24. "Tamamlandı" bilgisi memory'den varsayılmaz — repo'da kontrol veya operatöre sorulur.
-
-## 9. Önemli Yerler / Değerler
-
-| | |
-|---|---|
-| Repo path (operatör Windows) | `C:\Users\ahmet\Desktop\prochefdesk` |
-| GitHub repo | `ahmetkayas1926/prochefdesk` |
-| Production sürümü | **v2.11.16** (push'a hazır local; production v2.11.15) |
-| Supabase project ref | `muuwhrcogikpqylsfvgg` (Tokyo, Postgres 17, Free tier) |
-| Cloudflare R2 bucket | `prochefdesk-backups` |
-| CLEANUP_SECRET | `ec79a445-7e92-499b-9322-5c2c949788d4d2886e66-d556-4498-ba9e-17fda6c11ac1` |
-| Operatör e-posta | ahmetkaya.s1926@gmail.com |
-| App e-posta | hello@prochefdesk.com (Cloudflare Email Routing → Gmail) |
-| Test edilmiş platformlar | Desktop Chrome ✅, Android Chrome (PWA install) ✅ |
-| Test edilmemiş | iOS Safari + Safari macOS + Chrome iOS |
-| Cloudflare Pages build command | `node build.js` |
-| Aylık altyapı maliyeti | $1 (sadece domain). 50 aktif kullanıcıya kadar Supabase Free tier. |
-
-### Push Öncesi Rutin Kontrol Listesi (v2.8.50 audit sonrası eklendi)
-
-Her büyük push'tan önce operatör Cloudflare/Supabase Dashboard'dan görsel olarak doğrulayacak:
-
-1. ☐ **R2 bucket Public Access KAPALI** — Cloudflare R2 → `prochefdesk-backups` → Settings. Açıksa felaket.
-2. ☐ **OAuth Redirect URLs whitelist** — Supabase → Authentication → URL Configuration → `https://prochefdesk.com/app/**` listede mi?
-3. ☐ **3 cron job son run tarihi** — son 1-2 gün içinde çalışmış mı?
-4. ☐ **Migration'lar Dashboard'da çalıştırıldı mı** (varsa) — push'tan ÖNCE.
-5. ☐ **Edge function deploy gerek mi** — `supabase/functions/*` değişti mi?
-
-## 10. Yeni Claude Başlangıç Kontrol Listesi
-
-1. ☐ Bu HANDOVER.md tamamen okundu mu?
-2. ☐ CLAUDE.md okundu mu? (Claude Code'sa otomatik yüklenir.)
-3. ☐ CHANGELOG.md son entry'leri okundu mu?
-4. ☐ §7 YAPMA listesi okundu mu? Bu işleri önerme.
-5. ☐ §2 mevcut durum: ürün canlı, aktif kullanım.
-6. ☐ Bir iş yapmadan önce: bu iş zaten yapıldı mı? §5 ve repo'da grep ile kontrol et.
-7. ☐ DB durumunu varsayma — gerekiyorsa SQL ile sor.
-
-## 11. Mimari Kurallar (gotcha'lar)
-
-### 11.1 Cloud sync race condition
-UI eylemi state değiştirip ardından `location.reload()` çağırıyorsa, arada explicit `await PCD.cloudPerTable.flushNow()` olmalı. Yoksa debounced sync tamamlanmadan reload tetiklenir → "verim kayboldu" raporu gelir.
-
-### 11.2 PCD.icon registry — silent info fallback
-`PCD.icon(name, size)` registry'de olmayan isim verince sessizce info ikonuna fallback yapar (kırmızı yuvarlak içinde "i"). Lucide isimleri (`trash-2`, `rotate-ccw`) kabul etmez. Yeni ikon kullanmadan önce: `grep -n "<name>:" app/js/core/utils.js`.
-
-### 11.3 Per-table sync akışı (3 yönlü)
-
-| Yön | Mekanizma |
-|---|---|
-| **Push** (local→cloud) | `cloud-pertable.js` UI yazımlarını dinler, 1.5sn debounce ile Supabase'e UPSERT/DELETE. v2.8.33: auto-retry (1s/2s backoff, 3 deneme transient hatalar için). |
-| **Pull** (cloud→local) | `cloud.js` boot'ta workspace-scoped + user-scoped tablolardan kullanıcı satırlarını çeker. **v2.8.33: drift detection** — local'de olup remote'ta olmayan kayıt otomatik queueUpsert'lenir (self-healing). v2.8.44'te haccp_receiving + haccp_holding pull'a eklendi. |
-| **Realtime** (cloud→local canlı) | `cloud-realtime.js` 26 tabloya WebSocket subscribe (v2.15.3: +rosters). v2.8.43'te JWT setAuth + TOKEN_REFRESHED dinleyici ile CHANNEL_ERROR çözüldü. |
-| **Queue persistence** (v2.6.95+) | `cloud-pertable.queue` her mutation'da IDB'ye yansır. Boot'ta restore. |
-
-Sync bug'ında ÖNCE hangi yön sor — push mu, pull mu, realtime mı, queue mu? Tahmin yürütme.
-
-### 11.4 v2.8.33 sync güvenilirlik katmanları
-
-3 katman sync deneyimini sessizce ayakta tutar:
-1. **Drift detection** (cloud.js pull akışında) — local-cloud uyumsuzluğu pull sırasında otomatik iyileşir.
-2. **Auto-retry** (cloud-pertable.js) — transient hatalar için 1s + 2s backoff ile 3 deneme.
-3. **Ambient sync indicator** (app.js) — sağ alt köşede 10px floating dot (Syncing mavi pulse / synced yeşil / offline gri / error kırmızı).
-
-### 11.5 RLS aktif (tüm 29 tablo)
-Frontend `anon` key kullanıyor. Yeni tablo eklersen RLS policy şart:
-```sql
-ALTER TABLE <table> ENABLE ROW LEVEL SECURITY;
-CREATE POLICY <table>_owner_all ON <table>
-  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-```
-
-### 11.6 OAuth callback URL'leri (v2.8.2+)
-Supabase Dashboard → Authentication → URL Configuration:
-- **Site URL:** `https://prochefdesk.com`
-- **Redirect URLs:** `https://prochefdesk.com/**` ve `https://prochefdesk.com/app/**`
-- `auth.js` Google OAuth `redirectTo: window.location.origin + '/app/'`
-
-### 11.7 Misafir vs üye davranışı
-- **Misafir (login yok):** Sadece IDB. Cloud yazma KAPALI. Demo seed yüklenir.
-- **Üye (login var):** IDB + cloud çift yönlü. Realtime aktif.
+### Catering
 
-Yeni feature: misafir kullanıcı için cloud push tetiklenmemeli (v2.6.93'te bu sızıntı kapatıldı).
+#### Events (Event Planner)
+Etkinlik tarihi, konuk sayısı, menü atama, bütçe vs maliyet karşılaştırması. 4 durum: draft / confirmed / done / cancelled. Otomatik maliyet ölçeği (konuk sayısına göre).
+- Print ✓
+- Metin paylaşımı (navigator.share)
+- Bulut sync ✓
 
-### 11.8 `app/index.html` sürüm string'i ASLA literal yazılmaz
-49 yerde `?v=__VERSION__` placeholder yaşar. `node build.js` deploy zamanı replace eder. Sürüm bump için tek dokunulan yer: `app/js/core/config.js` APP_VERSION satırı.
+#### Buffet (Buffet Planner)
+İstasyon bazlı büfe planlama. Kişi başı tüketim oranı (sektör standartları), refill çarpanı, israf projeksiyonu, toplam kişi başı maliyet.
+- Print ✓ (prep list + maliyet raporu)
+- Excel ✓ (maliyet raporu)
+- Bulut sync ✓
 
-### 11.9 Root dosyalar (landing, privacy, terms, blog/) app'ten BAĞIMSIZ
+---
 
-`index.html`, `privacy.html`, `terms.html`, `/blog/*.html` — hepsi kendi inline CSS'i var. App CSS değişiklikleri etkilemez, tersi de. Sadece **brand tutarlılığı** için: renk (green #16a34a brand CTA, #2D4A3E primary editorial), font, "PC" mark hep tutarlı.
+### HACCP Forms
 
-**Font seçimi:**
-- Landing (`index.html`): Inter
-- Legal (`privacy.html`, `terms.html`): Fraunces (serif başlık) + Manrope (sans body)
-- Blog (`/blog/*.html`): Fraunces (serif başlık) + Inter (sans body)
+#### HACCP
+Hub + 4 form — her form bağımsız URL'e sahip (bookmark korunur):
 
-**Palette farkları:**
-- Landing: `#fafaf9` bg, brand green CTA dominant
-- Legal + blog: `#FAF7F2` cream paper bg, `#2D4A3E` deep forest editorial accent, brand green sadece CTA + "PC" mark'ta
+| Route | Sidebar / Form adı | İçerik |
+|-------|--------------------|--------|
+| `haccp_logs` | Daily Temperature Log | Buzdolabı + dondurucudan günlük iki kez sıcaklık kaydı |
+| `haccp_cooling` | Cook & Cool Log | Pişirme sonrası soğutma — 2 aşamalı doğrulama |
+| `haccp_receiving` | Receiving Inspection | Teslimat sıcaklığı, tedarikçi, ambalaj kontrolü |
+| `haccp_holding` | Hot / Cold Holding | Bain-marie sıcak tutma · soğuk servis takibi |
 
-### 11.9.1 Blog ekleme prosedürü
+- Print ✓ (tüm formlar, 30 günlük / aylık çıktı)
+- Bulut sync ✓
 
-`prochefdesk.com/blog/` altında her yazı **standalone HTML**. Build step / template engine YOK.
+---
 
-**Yeni yazı eklemek (~30 dk):**
-1. Mevcut bir post HTML'i kopyala → `/blog/your-slug.html`
-2. `<head>` meta tag'ler güncel: `<title>`, `<meta description>`, `<link rel="canonical">`, tüm `og:*`, tüm `twitter:*`, `og:image`, `article:published_time`
-3. **JSON-LD Article schema** (v2.8.94 standardı) — `headline` + `description` + `datePublished` + `dateModified` + `author` + `publisher` + `mainEntityOfPage` + `wordCount` + `keywords`
-4. `<article>` içeriği yaz (1500-2000 kelime)
-5. **Body içinde ≥1 authority outbound link** (gov/akademik, `target="_blank" rel="noopener"`)
-6. **Footer'dan önce `<section class="related-posts">`** 2-card cross-link (eski yazılara)
-7. `/blog/index.html` en üste yeni `<a class="post-card">` blok (newest first)
-8. `/sitemap.xml`'e yeni `<url>` + tüm etkilenen `<lastmod>` güncel
-9. Push → Cloudflare Pages otomatik yayınlar
-10. **Operatör manuel:** Google Search Console → URL Inspection → "Request Indexing"
+### Discover
 
-**SEO standartı per post:**
-- `<title>` 60 karakter altı, "— ProChefDesk" suffix
-- `<meta description>` 155 karakter altı, ilk cümle hook
-- `og:image` + `twitter:image` 1200×630 px PNG (henüz placeholder URL'ler)
-- `article:published_time` ISO YYYY-MM-DD
-- `<link rel="canonical">` absolute https URL
+#### Discover
+Herkese açık tarif keşfi feed'i. Arama, beğeni, görüntülenme sayacı (rate-limited, 60 dk/IP). Sadece üyeler tarif yayınlayabilir; ziyaretçiler arama yapabilir.
 
-**Stil değiştirmek:** her post kendi inline `<style>` taşır. Bir postu değiştirmek diğerlerini etkilemez. Genel stil değişimi için her dosyayı tek tek edit et (DRY değil ama Cloudflare'de bundling yok; bilinçli takas).
+---
 
-### 11.9.2 SEO altyapısı
-- `sitemap.xml` (root) — tüm public sayfalar. Blog ekleme talimatı yorum bloğu içinde.
-- `robots.txt` (root) — `Disallow: /app/` + `Sitemap:` satırı.
-- `index.html` `<head>` — GSC verification meta-tag (2026-05-18 operatör verify etti, sitemap submit).
+### Account (Profile & Settings)
+Profil (ad, rol, ülke, işyeri, bio — Discover'da görünür), dil + para birimi + tema tercihleri. Paylaşılan öğe yönetimi. Gece otomatik R2 yedek.
+- JSON yedek indir ✓ (tüm veriyi yerel dosyaya al)
+- JSON geri yükle ✓ (yan yana karşılaştırma önizlemesi ile)
 
-### 11.10 isSubRecipe data model (v2.8.26)
+---
 
-Recipe `isSubRecipe: boolean` alanı tutar (default `false`). `PCD.recipes.isPrep(r)` helper:
-```javascript
-typeof r.isSubRecipe === 'boolean'
-  ? r.isSubRecipe
-  : !!(r.yieldAmount && r.yieldUnit)  // legacy fallback
-```
-Tüm prep/menu ayrımı bu helper'dan geçer. Yield bilgisi (yieldAmount, yieldUnit) factual üretim miktarı; classification'dan ayrı.
+## Veri tabloları
 
-### 11.11 Print akışı standartları (v2.8.54-v2.8.55)
+### Workspace-scoped (her workspace için ayrı veri)
 
-`PCD.print(html, title)` (utils.js) tüm yazdırma akışlarının **tek noktası**:
+| Tablo | İçerik |
+|-------|--------|
+| `recipes` | Tarifler |
+| `ingredients` | Malzeme kütüphanesi |
+| `menus` | Menü tasarımları |
+| `events` | Etkinlikler |
+| `suppliers` | Tedarikçiler |
+| `canvases` | Kitchen card panoları |
+| `checklist_templates` | Checklist şablonları |
+| `checklist_sessions` | Checklist oturumları |
+| `stock_count_history` | Stok sayım geçmişi |
+| `haccp_logs` / `haccp_readings` / `haccp_units` / `haccp_cook_cool` | HACCP günlük + soğutma kayıtları |
+| `haccp_receiving` / `haccp_holding` | HACCP kabul + bekletme kayıtları |
+| `rosters` | Vardiya planları |
+| `prepSheets` | Prep sheet kayıtları |
+| `buffets` | Büfe planları |
+| `whiteboards` | Whiteboard panoları |
+| `waste` / `shopping_lists` / `mise_plans` / `team` | Altyapı mevcut, UI devre dışı |
 
-- **Footer otomatik enjekte edilir.** Custom footer YAZMA, `.pcd-print-footer{display:none}` override KOYMA.
-- **Window boyutu 1200×850px** (sabit). Daha küçük yapma — Kitchen Cards landscape A4 (≈1122px) body sizing'i taşırır, CSS multi-column hesaplaması bozulur.
-- **Caller HTML formatı:** PCD.print full HTML veya partial content kabul eder. Partial → wrapper + style + toolbar otomatik. Full → sadece footer enjekte (body close öncesi).
-- **A4 zorlanan body sizing print-only @media içinde olmalı** veya viewport'a göre seçmeli — aksi halde popup preview ile gerçek print farklı görünür.
+### Top-level (hesap bazlı, workspace'ten bağımsız)
 
-### 11.12 Çoklu kullanıcı / paid tier hazırlığı
-`subscriptions` tablosu DB'de hazır, kullanılmıyor. Operatör 50+ aktif kullanıcı + %40 retention kanıtlanana kadar paid tier eklemiyor.
+| Tablo | İçerik |
+|-------|--------|
+| `workspaces` | Workspace tanımları |
+| `inventory` | Stok seviyeleri |
+| `user_prefs` | Dil, para birimi, tema, aktif workspace |
+| `workspace_tombstones` | Silme cascade için |
 
-### 11.13 App boot performansı (L1 + L2 uygulandı)
+### Supabase-only (frontend'den yazılmaz)
 
-**Başlangıç tanı (v2.8.75 öncesi):** ~1.9MB local JS, Mobile PageSpeed FCP/LCP 5.6 sn / 65 puan, TBT=0/CLS=0 (network bound).
+| Tablo | İçerik |
+|-------|--------|
+| `client_errors` | Frontend hata logları |
+| `discover_view_logs` | Rate-limit penceresi (60 dk/IP) |
+| `recipe_shares` | Paylaşım URL'leri (tarifler, menüler, kitchen cards) |
+| `recipe_likes` | Beğeniler — RLS: kullanıcı sadece kendi beğenilerini okur |
 
-**L1 (v2.8.76):** Tüm `<script>` tag'lerine `defer` + 2 CDN'e `<link rel="preload">` + `preconnect` + `dns-prefetch`. PageSpeed 65→72.
+RLS tüm tablolarda aktif. Frontend `anon` key kullanır.
 
-**L2 (v2.8.78):** (a) viewport zoom unblock (WCAG a11y +5), (b) xlsx-js-style lazy (~500KB), (c) i18n lazy (sadece `en.js` eager + dinamik `loadLocaleBundle(locale)`, ~150KB), (d) 18 tool lazy router (~450KB; dashboard + account + inventory eager kalır). Toplam boot bundle ~1.1MB azalış. Beklenen PageSpeed 72→85, LCP 7.0→3.0-3.5 sn.
+---
 
-**L3 — yüksek risk, önerilmedi:** Cloud sync'i ilk paint sonrasına erteleme. Multi-device "veri kayıp" hissi riski.
+## Kaldırılmış araçlar (JS mevcut, route yok, şema korunuyor)
 
-**L4 (rewrite) — kapsam dışı:** ESM modules + Service Worker pre-cache. Mimari "no bundling, no SW" kararıyla çelişir.
+Bu araçların JS dosyaları ve i18n anahtarları `app/js/tools/` altında duruyor. Router'da kayıtlı değiller, sidenav'da görünmüyorlar. Bulut şeması ve mevcut veri bozulmadan korunuyor; ilerleyen sürümlerde geri eklenebilir.
 
-### 11.14 Sub-recipe ingredient flattening (v2.8.69)
+Nutrition · Yield Calculator · Variance · Sales · What-If · Menu Matrix · Team · Allergens · Tools Hub
 
-`PCD.recipes.flattenIngredients(recipe, ingMap, recipeMap, opts)` (dashboard.js) — recipe'in tüm sub-recipe satırlarını recursive olarak gerçek ingredient seviyesine düşürür.
+---
 
-**Özellikler:**
-- Scale cascading: `ri.amount / sub.yieldAmount` her seviyede çarpılır
-- Birim dönüşümü: `PCD.convertUnit` ile best-effort (mismatch'te orijinal kalır)
-- Cycle protection: visited set ile A→B→A engellenir
-- Separator skip: `ri.separator` satırlar atlanır
-- Output: her item `{ingredient, ingredientId, amount, unit, viaSubRecipe}` (viaSubRecipe = en sığ kaynak adı, gri italik "via Labneh" gösterimi için)
+## Operatöre açık adımlar
 
-**Bağlı 6 modül:** portion.js (canvas + print + share), shopping.js (consolidation + by-recipe group), nutrition.js, allergens-db.js (recipeAllergens), dashboard.js (computeDietCompat).
-
-**Variance.js DOKUNULMADI** — kendi recursive sub-recipe handling'i var (v2.8.16+).
-
-Yeni "tarif → ingredient listesi" ihtiyacında: bu helper'ı kullan.
-
-### 11.15 Lazy tool loading + router (v2.8.78)
-
-Router'da `registerLazy(name, scriptPath, toolName)` + `loadLazyTool()` helper. 18 tool dinamik script tag ile lazy.
-
-**Eager tool'lar (3):**
-- `dashboard` — default home, ilk açılış view'ı
-- `account` — auth flow (logout, oauth callback)
-- `inventory` — dashboard low-stock alert sync `computeStatus` kullanır
-
-**Lazy tool'lar (17):** recipes, ingredients, menus, kitchen_cards, whiteboard, portion, suppliers, events, checklist, haccp_logs, haccp_cooling, haccp_receiving, haccp_holding, haccp, buffet, discover, **roster** (v2.15.1). (v2.11.16: mise kaldırıldı; v2.13.1: waste + shopping kaldırıldı.)
-
-**Yeni tool ekleme:**
-1. Eager mi lazy mi karar ver (default lazy)
-2. `app/index.html`'e script tag EKLEME (lazy ise)
-3. `router.registerLazy(name, scriptPath, toolName)` ekle
-4. Dashboard click handler kullanılıyorsa `_afterToolLoad(toolName, cb)` poll pattern'i (120ms × 3sn)
-
-Tool ilk açılışta 100-300ms network gecikme, sonrası browser cache instant.
-
-### 11.16 xlsx + i18n lazy load (v2.8.78)
-
-**xlsx:** `PCD.loadXLSX()` (utils.js) cached promise. xlsx-js-style (~500KB) CDN'den ilk Excel tıklamasında yüklenir. Wire'lı yerler: `recipes.js` cost report XLSX export, `ingredients.js` Excel import, `buffet.js` `exportBuffetXLSX()`.
-
-**API gotcha:** `PCD.toast.info()` return value pattern'i güvenli değil. v2.8.79'da "loading-toast remove" pattern KALDIRILDI; sessiz lazy load + re-call yeterli.
-
-**i18n:** `setLocale()` async — sadece `en.js` boot'ta baseline. TR/ES/FR/DE/AR `loadLocaleBundle(locale)` cached promise ile dinamik fetch. Yeni i18n key sadece **en.js + tr.js**'e eklenir.
-
-### 11.17 HACCP Hub + Buffet/Mise tools
-
-**HACCP Hub (v2.8.70):** 4 form (`haccp_logs`, `haccp_cooling`, `haccp_receiving`, `haccp_holding`) tek `haccp` hub route altında yaşar. Mevcut 4 route DOKUNULMADI — bookmark + direct link korunur. Sidenav 18→15 item.
-
-**Buffet Planner (v2.8.73 onwards):** Hotel/catering grade tool. Industry standards (`INDUSTRY_RATIOS` + `INDUSTRY_REFILL` + `INDUSTRY_TARGETS`). 7 preset + Start blank. **Cloud sync AKTİF (v2.9.17): `buffets` tablosu workspace-scoped array pattern (waste/team gibi), soft-delete tombstone.**
-
-**Buffet item 3 tipte (v2.8.79):** item.recipeId / item.ingredientId / item.customName ayrımı. `computeItemCost` 3 path: (a) recipe → sub-recipe cost cascade, (b) ingredient → `pricePerUnit × (1/yield)`, (c) custom label → 0. Print/Excel paths üçünü de handle eder.
-
-**Mise en Place Planner (v2.8.74):** Sabah prep listesi. Events + Buffets'ten otomatik prep aggregation, 5 faz grouping (Stocks & Bases / Sauces & Dressings / Protein & Marinade / Garnish & Veg / Final Setup). Sub-recipe expansion `flattenIngredients` ile. **Cloud sync AKTİF (v2.9.17): `mise_plans` tablosu (snake_case DB, camelCase state), soft-delete tombstone (rebuild dahil).**
-
-**Team (workspace-scoped, v2.9.17):** Pre-v2.9.17 state global array idi; cloud sync ile workspace-scoped (her workspace kendi team'i). `readTeamAll` legacy array tespit edip current ws'e aktarır (data loss yok).
-
-### 11.18 Recipe ingredient separator (v2.8.52)
-
-`data.ingredients` array'inde yeni satır tipi: `{ separator: true, label?: '' }`.
-
-**Hesap path'leri** (cost/diet/allergen/variance/integrity): `if (ri.separator) return;` skip etmeli.
-- `dashboard.computeFoodCost` ✓
-- `dashboard.resolveRow` separator için `{ found: false, isSeparator: true }` döndürür
-- `dashboard.computeDietCompat` ✓
-- `allergens-db.recipeAllergens` ✓
-- `variance.js` ✓
-- `store.findRecipesUsingIngredient` ✓
-
-**Display path'leri** (editor + preview modal + Kitchen Card + share/print + text-share + Discover detail modal): görsel çizgi + opsiyonel uppercase label render eder. Share + Kitchen Card snapshot'larında separator alanı korunur.
-
-Yeni `recipe.ingredients` üzerinde forEach yazarken iki path'ten birini seç.
-
-### 11.19 Modal focus (v2.8.81)
-
-`PCD.modal.open()` açılışta body'deki ilk form field'ına (input/textarea/select) focus eder — header'daki "X" close butonuna DEĞİL. `modal.js:192` selector `bodyEl` ile restrict + button çıkarılmış + disabled atlama. Özel field'a focus istersen modal açtıktan sonra setTimeout 300ms ile manuel `.focus()` çağır (recipe editor quick-add v2.8.6 pattern).
-
-### 11.20 Blog SEO standardı (v2.8.94'te kurulan)
-
-Her yeni blog yazısı şunları içermek zorunda:
-1. **`<head>` içinde JSON-LD Article schema** — `headline` + `description` + `datePublished` + `dateModified` + `author.Person` + `publisher.Organization` + `mainEntityOfPage` + `wordCount` + `keywords`
-2. **Body içinde ≥1 authority outbound link** — gov/akademik (USDA / FDA / FSANZ / Cornell / akademik), `target="_blank" rel="noopener"`
-3. **Footer'dan önce `<section class="related-posts">` 2-card cross-link** — eski yazılara ("topic cluster" pattern)
-4. **sitemap.xml** yeni `<url>` blok + tüm etkilenen `<lastmod>` güncel YYYY-MM-DD
-5. **blog/index.html** en üste yeni `<a class="post-card">` blok (newest first)
-
-**Push sonrası operatör manuel iş:** Google Search Console → URL Inspection → "Request Indexing" (1-2 günde indekslenir, otomatik bekleme 2-3 hafta).
-
-## 12. Operatör Bağlamı
-
-Operatör profesyonel şef, full-time mutfakta çalışmak fiziksel olarak zorlanıyor (bacak ağrısı, yaşlanma). ProChefDesk'i gradual transition aracı olarak görüyor — şefliği bırakmak değil, yan-zamanlıya çekip teknolojiden gelir tamamlayıcı yapmak.
-
-**Donanım:** ASUS ROG Strix Scar 18 (RTX 5090 Laptop, 24GB GDDR7 VRAM). ComfyUI/Automatic1111/Kohya_ss kullanıyor. Faz 2 marketing içerik üretimi için (food photography, kısa videolar) bu donanım stratejik.
-
-**Bilinen tercihler:**
-- Manipülatif satış teknikleri istemiyor
-- Karmaşık premium tier'lardan kaçınıyor (basit tek tier tercihi)
-- Erken yatırımcı/exit konusuna kapalı (uzun vadeli, yan-iş zihniyetiyle)
-- Acele kararlardan kaçınıyor — yeni Claude baskı yapmasın, destek versin
+1. **iOS/Safari çapraz-tarayıcı testi** — cihazda manuel test bekliyor.
