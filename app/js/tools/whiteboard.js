@@ -882,20 +882,16 @@
       '</div>';
   }
 
-  // ============ CANVAS SELECTOR ============
+  // ============ CANVAS SELECTOR (library — Kitchen Cards modeli) ============
+  // Otomatik kayıt arka planda devam eder (çalışma kaybolmaz). "Kaydet" butonu
+  // kullanıcıya açık kontrol + isim + "Kaydedildi" onayı verir. "Kayıtlılar"
+  // tüm kayıtlı whiteboard'ları listeler (yükle / sil).
   function buildCanvasSelector(store, canvasCount) {
     return '' +
-      '<div class="card mb-3" style="padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">' +
-        '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;flex-shrink:0;">' +
-          PCD.escapeHtml(t('whiteboard_canvas', 'Canvas')) + ':' +
-        '</div>' +
-        '<select id="wbCanvasSelect" style="flex:1;min-width:160px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--surface-1);color:var(--text-1);font-size:14px;font-weight:600;">' +
-          store.canvases.map(function (c) {
-            return '<option value="' + PCD.escapeHtml(c.id) + '"' + (c.id === store.activeId ? ' selected' : '') + '>' + PCD.escapeHtml(c.name || c.title || 'Untitled') + '</option>';
-          }).join('') +
-        '</select>' +
+      '<div class="card mb-3" style="padding:10px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
+        '<button class="btn btn-primary btn-sm" id="wbSaveBtn">' + PCD.icon('check', 14) + ' <span>' + PCD.escapeHtml(t('whiteboard_save_btn', 'Save')) + '</span></button>' +
+        '<button class="btn btn-outline btn-sm" id="wbSavedListBtn">' + PCD.icon('book-open', 14) + ' <span>' + PCD.escapeHtml(t('whiteboard_saved_list_btn', 'Saved')) + ' (' + canvasCount + ')</span></button>' +
         '<button class="btn btn-outline btn-sm" id="wbNewCanvasBtn">' + PCD.icon('plus', 14) + ' <span>' + PCD.escapeHtml(t('whiteboard_new_canvas', 'New')) + '</span></button>' +
-        (canvasCount > 1 ? '<button class="btn btn-outline btn-sm" id="wbDeleteCanvasBtn" style="color:var(--danger);" title="' + PCD.escapeHtml(t('whiteboard_delete_canvas', 'Delete this canvas')) + '">' + PCD.icon('trash', 14) + '</button>' : '') +
       '</div>';
   }
 
@@ -1322,50 +1318,127 @@
   }
 
   function wireCanvasSelector(root, store) {
-    const sel = root.querySelector('#wbCanvasSelect');
-    if (sel) sel.addEventListener('change', function () {
-      const id = this.value;
-      setActiveId(id);
-      _ui.selectedBlockIdx = -1;
-      rerender();
+    // Kaydet — aktif whiteboard'ı isimle kalıcı kaydeder + onay verir.
+    // Otomatik kayıt arka planda zaten çalışıyor; bu buton kullanıcıya
+    // kontrol + isim + zaman damgası + "Kaydedildi" onayı sağlar.
+    const save = root.querySelector('#wbSaveBtn');
+    if (save) save.addEventListener('click', function () {
+      const titleEl = root.querySelector('#wbTitle');
+      const name = titleEl ? (titleEl.value || '').trim() : '';
+      if (!name) {
+        PCD.toast.error(t('whiteboard_name_required', 'Give your whiteboard a name first'));
+        if (titleEl) titleEl.focus();
+        return;
+      }
+      const cur = getActive(loadStore());
+      cur.title = name; cur.name = name; cur.savedAt = nowIso();
+      persistCanvas(cur);
+      PCD.toast.success(t('whiteboard_saved_ok', 'Whiteboard saved'));
     });
+    // Kayıtlılar — kayıtlı whiteboard listesini açar (yükle / sil).
+    const lst = root.querySelector('#wbSavedListBtn');
+    if (lst) lst.addEventListener('click', function () {
+      openWbPicker(function (picked) {
+        setActiveId(picked.id);
+        _ui.selectedBlockIdx = -1;
+        rerender();
+      });
+    });
+    // Yeni — boş whiteboard çalışma alanı (otomatik kaydedilir).
     const nw = root.querySelector('#wbNewCanvasBtn');
     if (nw) nw.addEventListener('click', function () {
-      const fresh = defaultCanvas('New whiteboard ' + (store.canvases.length + 1));
-      const arr = store.canvases.slice();
+      const fresh = defaultCanvas(t('whiteboard_untitled', 'Untitled'));
+      const arr = readAllVisible().slice();
       arr.push(fresh);
       saveStore({ activeId: fresh.id, canvases: arr });
       _ui.selectedBlockIdx = -1;
       rerender();
       PCD.toast.success(t('whiteboard_new_canvas_created', 'New canvas created'));
     });
-    const del = root.querySelector('#wbDeleteCanvasBtn');
-    if (del) del.addEventListener('click', function () {
+  }
+
+  // ============ SAVED WHITEBOARD PICKER (library) ============
+  // Kitchen Cards openCanvasPicker pattern'i. readAllVisible() ile kayıtlı
+  // whiteboard'ları listeler; yükle (aktif yap) / sil (tombstone) destekler.
+  function openWbPicker(onPick) {
+    const body = PCD.el('div');
+    function paint() {
+      const list = readAllVisible().slice().sort(function (a, b) {
+        return (b.updatedAt || '').localeCompare(a.updatedAt || '');
+      });
+      if (list.length === 0) {
+        body.innerHTML =
+          '<div style="padding:32px 20px;text-align:center;color:var(--text-3);">' +
+            '<div style="font-size:32px;margin-bottom:8px;opacity:0.6;">📝</div>' +
+            '<div style="font-size:14px;font-weight:600;color:var(--text-2);">' +
+              PCD.escapeHtml(t('whiteboard_no_saved', 'No saved whiteboards yet')) +
+            '</div>' +
+          '</div>';
+        return;
+      }
+      const activeId = getActiveId();
+      body.innerHTML = '<div class="flex flex-col gap-2">' +
+        list.map(function (c) {
+          const blocks = (c.blocks || []).length;
+          const isActive = c.id === activeId;
+          return '<div class="card" data-wb-pick="' + PCD.escapeHtml(c.id) + '" style="display:flex;align-items:center;gap:12px;padding:12px;cursor:pointer;' + (isActive ? 'border-color:var(--brand-500);' : '') + '">' +
+            '<div style="width:36px;height:36px;border-radius:6px;background:var(--brand-50);color:var(--brand-700);display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + PCD.icon('file-text', 18) + '</div>' +
+            '<div style="flex:1;min-width:0;">' +
+              '<div style="font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + PCD.escapeHtml(c.name || c.title || 'Untitled') + (isActive ? ' <span style="font-size:10px;color:var(--brand-600);font-weight:700;">(' + PCD.escapeHtml(t('whiteboard_current', 'current')) + ')</span>' : '') + '</div>' +
+              '<div class="text-muted" style="font-size:12px;">' +
+                blocks + ' ' + PCD.escapeHtml(t('whiteboard_blocks_word', 'blocks')) + ' · ' + PCD.escapeHtml(c.paper || 'A4') + ' · ' + PCD.escapeHtml(c.orient || 'portrait') + ' · ' + PCD.fmtRelTime(c.updatedAt) +
+              '</div>' +
+            '</div>' +
+            '<button type="button" class="icon-btn" data-wb-del="' + PCD.escapeHtml(c.id) + '" title="' + PCD.escapeHtml(t('delete', 'Delete')) + '">' + PCD.icon('trash', 16) + '</button>' +
+          '</div>';
+        }).join('') +
+      '</div>';
+    }
+    paint();
+    const closeBtn = PCD.el('button', { type: 'button', class: 'btn btn-secondary', text: t('btn_close', 'Close'), style: { width: '100%' } });
+    const footer = PCD.el('div', { style: { width: '100%' } });
+    footer.appendChild(closeBtn);
+    const m = PCD.modal.open({ title: t('whiteboard_picker_title', 'Saved whiteboards'), body: body, footer: footer, size: 'sm', closable: true });
+    closeBtn.addEventListener('click', function () { m.close(); });
+    PCD.on(body, 'click', '[data-wb-pick]', function (e) {
+      if (e.target.closest('[data-wb-del]')) return;
+      const id = this.getAttribute('data-wb-pick');
+      m.close();
+      setTimeout(function () { onPick({ id: id }); }, 180);
+    });
+    PCD.on(body, 'click', '[data-wb-del]', function (e) {
+      e.stopPropagation();
+      const id = this.getAttribute('data-wb-del');
+      const all = readAllVisible();
+      const target = all.find(function (c) { return c.id === id; });
       PCD.modal.confirm({
-        icon: '🗑',
-        iconKind: 'danger',
-        danger: true,
+        icon: '🗑', iconKind: 'danger', danger: true,
         title: t('whiteboard_delete_canvas_confirm_title', 'Delete this canvas?'),
-        text: t('whiteboard_delete_canvas_confirm_text', 'This canvas will be permanently deleted from this browser. Other saved canvases remain.'),
+        text: '"' + (target && (target.name || target.title) ? (target.name || target.title) : 'Whiteboard') + '" — ' + t('whiteboard_delete_canvas_confirm_text', 'This canvas will be permanently deleted from this browser. Other saved canvases remain.'),
         okText: t('delete', 'Delete'),
-        cancelText: t('cancel', 'Cancel'),
       }).then(function (ok) {
         if (!ok) return;
-        const all = readAllRaw().slice();
-        const active = getActiveId();
-        const idx = all.findIndex(function (c) { return c.id === active; });
-        if (idx >= 0) all[idx] = Object.assign({}, all[idx], { _deletedAt: nowIso() });
-        writeAll(all);
-        const remaining = readAllVisible();
-        if (remaining.length === 0) {
-          const fresh = defaultCanvas('My Whiteboard');
-          writeAll(all.concat([fresh]));
-          setActiveId(fresh.id);
+        const raw = readAllRaw().slice();
+        const idx = raw.findIndex(function (c) { return c.id === id; });
+        if (idx >= 0) raw[idx] = Object.assign({}, raw[idx], { _deletedAt: nowIso() });
+        writeAll(raw);
+        // Silinen aktif whiteboard'sa, kalan ilkine geç (yoksa yeni boş oluştur).
+        if (getActiveId() === id) {
+          const remaining = readAllVisible();
+          if (remaining.length === 0) {
+            const fresh = defaultCanvas(t('whiteboard_untitled', 'Untitled'));
+            writeAll(readAllRaw().concat([fresh]));
+            setActiveId(fresh.id);
+          } else {
+            setActiveId(remaining[0].id);
+          }
+          _ui.selectedBlockIdx = -1;
+          paint();
+          rerender();
         } else {
-          setActiveId(remaining[0].id);
+          paint();
         }
-        _ui.selectedBlockIdx = -1;
-        rerender();
+        PCD.toast.success(t('whiteboard_canvas_deleted', 'Whiteboard deleted'));
       });
     });
   }
@@ -1376,9 +1449,6 @@
       canvas.title = this.value;
       canvas.name = this.value || 'Untitled';
       persistCanvas(canvas);
-      // Update dropdown option live
-      const opt = root.querySelector('#wbCanvasSelect option[value="' + CSS.escape(canvas.id) + '"]');
-      if (opt) opt.textContent = canvas.name;
       // Update sheet title preview if visible
       const sheetTitle = root.querySelector('.wb-canvas .wb-canvas-title-preview');
       if (sheetTitle) sheetTitle.textContent = canvas.title || '';

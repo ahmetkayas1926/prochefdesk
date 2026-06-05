@@ -288,7 +288,7 @@
                 if (ws.name !== 'My Kitchen') return false;
                 if (ws.concept || ws.role || ws.city) return false;
                 if (ws.archived) return false;
-                const wsTables = ['recipes','ingredients','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','stockCountHistory','haccpLogs','haccpUnits','haccpReadings','haccpCookCool','haccpReceiving','haccpHolding','buffets','misePlans','team','whiteboards','rosters'];
+                const wsTables = ['recipes','ingredients','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','stockCountHistory','haccpLogs','haccpUnits','haccpReadings','haccpCookCool','haccpReceiving','haccpHolding','buffets','misePlans','team','whiteboards','rosters','prepSheets'];
                 for (let i = 0; i < wsTables.length; i++) {
                   const t = sourceState && sourceState[wsTables[i]];
                   if (t && t[ws.id] && Object.keys(t[ws.id]).length > 0) return false;
@@ -372,7 +372,9 @@
                 'canvases', 'shoppingLists', 'checklistTemplates',
                 'stockCountHistory',
                 // v2.15.3 — Roster: user-edited, per-record updatedAt merge
-                'rosters'
+                'rosters',
+                // v2.16 — Prep Sheet: user-edited, per-record updatedAt merge
+                'prepSheets'
               ];
               // Tables that are arrays under wsId (append-only logs):
               const ARRAY_WS_TABLES = ['waste', 'checklistSessions'];
@@ -468,6 +470,8 @@
                   ['haccpHolding',       'haccp_holding'],
                   // v2.15.3 — Roster drift detection
                   ['rosters',            'rosters'],
+                  // v2.16 — Prep Sheet drift detection
+                  ['prepSheets',         'prep_sheets'],
                 ];
                 let driftedCount = 0;
                 wsTables.forEach(function (pair) {

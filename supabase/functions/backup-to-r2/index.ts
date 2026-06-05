@@ -94,6 +94,8 @@ const BACKUP_TABLES = [
   'whiteboards',
   // v2.15.3 — Roster cloud sync
   'rosters',
+  // v2.16 — Prep Sheet cloud sync
+  'prep_sheets',
 ]
 
 Deno.serve(async (req) => {

@@ -49,6 +49,7 @@
     haccp_holding:        { stateKey: 'haccpHolding',         wsScoped: true },
     // v2.15.3 — Roster cloud sync (map-table pattern)
     rosters:              { stateKey: 'rosters',              wsScoped: true },
+    prepSheets:           { stateKey: 'prepSheets',           wsScoped: true },
     // Array tablolar (ayrı queueArraySync API'si ile yazılır)
     waste:                { stateKey: 'waste',                wsScoped: true, isArray: true },
     checklist_sessions:   { stateKey: 'checklistSessions',    wsScoped: true, isArray: true },
@@ -506,6 +507,7 @@
       supabase.from('haccp_holding').select('*').eq('user_id', user.id),
       // v2.15.3 — roster cloud sync
       supabase.from('rosters').select('*').eq('user_id', user.id),
+      supabase.from('prep_sheets').select('*').eq('user_id', user.id),
       supabase.from('workspace_tombstones').select('*').eq('user_id', user.id),
     ];
 
@@ -521,6 +523,7 @@
              haccpLogsRes, haccpUnitsRes, haccpReadingsRes, haccpCookCoolRes,
              haccpReceivingRes, haccpHoldingRes,
              rostersRes,
+             prepSheetsRes,
              tombsRes] = results;
 
       // Build state in the format store.js expects:
@@ -601,6 +604,7 @@
       state.haccpHolding = packByWs(haccpHoldingRes.data);
       // v2.15.3 — roster cloud sync
       state.rosters = packByWs(rostersRes.data);
+      state.prepSheets = packByWs(prepSheetsRes.data);
 
       // Inventory: { wsId: { ingredientId: row.data } }
       state.inventory = {};
@@ -675,6 +679,8 @@
       'haccp_receiving', 'haccp_holding',
       // v2.15.3 — Roster cloud sync
       'rosters',
+      // v2.16 — Prep Sheet cloud sync
+      'prep_sheets',
       'workspace_tombstones', 'workspaces', 'user_prefs',
     ];
 
@@ -741,6 +747,8 @@
       ['haccpHolding',        'haccp_holding'],
       // v2.15.3 — Roster cloud sync
       ['rosters',             'rosters'],
+      // v2.16 — Prep Sheet cloud sync
+      ['prepSheets',          'prep_sheets'],
     ];
     wsKeys.forEach(function (pair) {
       const stateKey = pair[0];

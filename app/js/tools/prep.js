@@ -1,0 +1,468 @@
+/* ================================================================
+   ProChefDesk — prep.js  (v2.16 — Prep Sheet / Hazırlık Listesi)
+
+   Servis hazırlık listesi: her DISH (yemek) altında COMPONENT'ler
+   (alt tarifler + malzemeler) + yanında BOŞ kutu (şef el yazısıyla
+   "x / 1x / boil" yazar). Yazdırılıp lamine edilir.
+
+   - Yemek ekle → recipe picker (gruplu: Menü Öğeleri / Alt Tarifler)
+   - Seçilen yemeğin component'leri OTOMATİK dolar (recipe.ingredients
+     top-level satırlardan: sub-recipe adı + ingredient adı). Sonra
+     kullanıcı silip ekleyebilir (karma model).
+   - Manuel yemek de eklenebilir (recipe'siz).
+   - Çok sütunlu A4 yazdırma (Excel "Dinner CheckList" düzeni).
+   - Kaydet + Kayıtlılar (library) — whiteboard/kitchen cards modeli.
+
+   Storage: 'prepSheets' MAP tablo (ws-scoped). Otomatik kayıt
+   (upsertInTable her değişiklikte) + bulut senkron. "Kaydet" butonu
+   isim + onay verir; "Kayıtlılar" library listesini açar.
+   ================================================================ */
+
+(function () {
+  'use strict';
+  const PCD = window.PCD;
+  const TABLE = 'prepSheets';
+  const PREF_ACTIVE = 'prefs.prepActiveId';
+
+  // i18n helper — key yoksa fallback string döner (interpolation yok).
+  function t(k, fb) {
+    const s = (PCD.i18n && PCD.i18n.t) ? PCD.i18n.t(k) : null;
+    return (s && s !== k) ? s : (fb || k);
+  }
+  function esc(s) { return PCD.escapeHtml(s == null ? '' : String(s)); }
+  function uid(p) { return PCD.uid(p || 'x'); }
+
+  // ============ STORAGE ============
+  function listSheets() {
+    return (PCD.store.listTable(TABLE) || []).slice().sort(function (a, b) {
+      return (b.updatedAt || '').localeCompare(a.updatedAt || '');
+    });
+  }
+  function getActiveId() {
+    const sheets = listSheets();
+    if (!sheets.length) return null;
+    const stored = PCD.store.get(PREF_ACTIVE);
+    if (stored && sheets.some(function (s) { return s.id === stored; })) return stored;
+    return sheets[0].id;
+  }
+  function setActiveId(id) { PCD.store.set(PREF_ACTIVE, id); }
+
+  function defaultSheet() {
+    return { name: t('prep_untitled', 'Untitled'), dishes: [], columns: 3 };
+  }
+  // Aktif sheet'i döndür; hiç yoksa bir tane oluştur.
+  function ensureActive() {
+    let id = getActiveId();
+    if (id) {
+      const s = PCD.store.getFromTable(TABLE, id);
+      if (s) return s;
+    }
+    const created = PCD.store.upsertInTable(TABLE, defaultSheet(), 'ps');
+    setActiveId(created.id);
+    return created;
+  }
+  // Aktif sheet'i kaydet (otomatik — her değişiklikte çağrılır).
+  function persist(sheet) {
+    return PCD.store.upsertInTable(TABLE, sheet, 'ps');
+  }
+
+  // ============ RECIPE → COMPONENTS ============
+  // recipe.ingredients top-level satırları → component isimleri
+  // (sub-recipe satırı → alt tarif adı; ingredient satırı → malzeme adı;
+  //  separator atlanır). flatten YAPILMAZ — Excel'deki gibi üst seviye.
+  function recipeComponents(recipeId) {
+    const r = PCD.store.getRecipe ? PCD.store.getRecipe(recipeId) : null;
+    if (!r) return [];
+    const ingMap = {};
+    PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
+    const recipeMap = {};
+    PCD.store.listRecipes().forEach(function (rr) { recipeMap[rr.id] = rr; });
+    const out = [];
+    (r.ingredients || []).forEach(function (ri) {
+      if (!ri || ri.separator) return;
+      let name = '';
+      if (ri.recipeId) {
+        const sub = recipeMap[ri.recipeId];
+        name = sub ? sub.name : '';
+      } else if (ri.ingredientId) {
+        const ing = ingMap[ri.ingredientId];
+        name = ing ? ing.name : '';
+      }
+      if (name) out.push({ id: uid('c'), text: name });
+    });
+    return out;
+  }
+
+  // ============ MAIN RENDER ============
+  function render(view) {
+    const sheet = ensureActive();
+    const count = listSheets().length;
+
+    view.innerHTML =
+      '<div class="page-header">' +
+        '<div class="page-header-text">' +
+          '<div class="page-title">📋 ' + esc(t('prep_title', 'Prep Sheet')) + '</div>' +
+          '<div class="page-subtitle">' + esc(t('prep_subtitle', 'Dish prep checklist — components per dish with a blank box to mark quantities')) + '</div>' +
+        '</div>' +
+        '<div class="page-header-actions" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">' +
+          '<span style="display:inline-flex;align-items:center;gap:5px;padding:6px 10px;background:var(--brand-50);border:1px solid var(--brand-200,#bbf7d0);border-radius:6px;font-size:11px;font-weight:700;color:var(--brand-700);letter-spacing:0.03em;text-transform:uppercase;">' + PCD.icon('check', 12) + '<span>' + esc(t('prep_autosaved', 'Auto-saved')) + '</span></span>' +
+          '<button class="btn btn-outline btn-sm" id="prepPrintBtn">' + PCD.icon('print', 14) + ' <span>' + esc(t('print', 'Print')) + '</span></button>' +
+        '</div>' +
+      '</div>' +
+
+      // Library bar
+      '<div class="card mb-3" style="padding:10px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
+        '<button class="btn btn-primary btn-sm" id="prepSaveBtn">' + PCD.icon('check', 14) + ' <span>' + esc(t('prep_save_btn', 'Save')) + '</span></button>' +
+        '<button class="btn btn-outline btn-sm" id="prepSavedListBtn">' + PCD.icon('book-open', 14) + ' <span>' + esc(t('prep_saved_list_btn', 'Saved')) + ' (' + count + ')</span></button>' +
+        '<button class="btn btn-outline btn-sm" id="prepNewBtn">' + PCD.icon('plus', 14) + ' <span>' + esc(t('prep_new_btn', 'New')) + '</span></button>' +
+      '</div>' +
+
+      // Inline guide (kapatılabilir)
+      buildGuide() +
+
+      // Meta: name + columns
+      '<div class="card mb-3" style="padding:14px;">' +
+        '<div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;align-items:end;">' +
+          '<div>' +
+            '<div class="text-muted text-sm mb-1">' + esc(t('prep_name_label', 'List name')) + '</div>' +
+            '<input id="prepName" type="text" class="input" maxlength="80" placeholder="' + esc(t('prep_name_ph', 'e.g. 2026 Dinner Prep')) + '" value="' + esc(sheet.name || '') + '" style="width:100%;">' +
+          '</div>' +
+          '<div>' +
+            '<div class="text-muted text-sm mb-1">' + esc(t('prep_columns_label', 'Print columns')) + '</div>' +
+            '<div class="flex gap-1" id="prepColsBtns">' +
+              [1, 2, 3, 4].map(function (n) {
+                return '<button type="button" class="btn btn-secondary btn-sm' + ((sheet.columns || 3) === n ? ' active' : '') + '" data-cols="' + n + '" style="flex:1;">' + n + '</button>';
+              }).join('') +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+
+      // Add dish buttons
+      '<div class="flex gap-2 mb-3" style="flex-wrap:wrap;">' +
+        '<button class="btn btn-primary" id="prepAddDishBtn" style="flex:1;min-width:160px;">' + PCD.icon('plus', 16) + ' <span>' + esc(t('prep_add_dish', 'Add dish')) + '</span></button>' +
+        '<button class="btn btn-outline" id="prepAddManualBtn" style="flex:1;min-width:160px;">' + PCD.icon('plus', 16) + ' <span>' + esc(t('prep_add_manual', 'Manual dish')) + '</span></button>' +
+      '</div>' +
+
+      '<div id="prepDishes"></div>';
+
+    renderDishes(view, sheet);
+    wire(view, sheet);
+  }
+
+  function buildGuide() {
+    return '<div class="card mb-3" id="prepGuide" style="padding:12px 14px;background:var(--surface-2);font-size:12px;line-height:1.5;color:var(--text-2);display:flex;gap:10px;align-items:flex-start;">' +
+      '<span style="font-size:16px;">💡</span>' +
+      '<div style="flex:1;">' + esc(t('prep_guide', 'Add a dish to auto-fill its components from the recipe, then delete or add lines as needed. Print produces a laminate-friendly checklist with a blank box next to each component.')) + '</div>' +
+      '<button type="button" class="icon-btn" id="prepGuideClose" title="' + esc(t('close', 'Close')) + '" style="flex-shrink:0;">' + PCD.icon('x', 14) + '</button>' +
+    '</div>';
+  }
+
+  // ============ DISHES EDITOR ============
+  function renderDishes(view, sheet) {
+    const host = view.querySelector('#prepDishes');
+    if (!host) return;
+    const dishes = sheet.dishes || [];
+    if (!dishes.length) {
+      host.innerHTML =
+        '<div class="card" style="padding:40px 24px;text-align:center;">' +
+          '<div style="font-size:40px;margin-bottom:10px;">🍽️</div>' +
+          '<div style="font-weight:700;font-size:16px;margin-bottom:6px;">' + esc(t('prep_empty_title', 'No dishes yet')) + '</div>' +
+          '<div class="text-muted" style="font-size:13px;max-width:420px;margin:0 auto;">' + esc(t('prep_empty_msg', 'Add a dish to pull its components automatically, or add a manual dish to type everything yourself.')) + '</div>' +
+        '</div>';
+      return;
+    }
+    host.innerHTML = dishes.map(function (d, di) {
+      const comps = (d.components || []).map(function (c, ci) {
+        return '<div class="flex items-center gap-2" data-comp-row="' + di + ':' + ci + '" style="margin-bottom:4px;">' +
+          '<input type="text" class="input" data-comp="' + di + ':' + ci + '" value="' + esc(c.text || '') + '" placeholder="' + esc(t('prep_component_ph', 'Component')) + '" style="flex:1;min-width:0;padding:4px 8px;min-height:30px;font-size:13px;">' +
+          '<button type="button" class="icon-btn" data-comp-del="' + di + ':' + ci + '" title="' + esc(t('delete', 'Delete')) + '" style="flex-shrink:0;">' + PCD.icon('trash', 14) + '</button>' +
+        '</div>';
+      }).join('');
+      return '<div class="card mb-3" style="padding:12px 14px;">' +
+        '<div class="flex items-center gap-2" style="margin-bottom:10px;">' +
+          '<input type="text" class="input" data-dish="' + di + '" value="' + esc(d.name || '') + '" placeholder="' + esc(t('prep_dish_ph', 'Dish name')) + '" style="flex:1;min-width:0;font-weight:700;font-size:15px;">' +
+          '<button type="button" class="btn btn-outline btn-sm" data-dish-del="' + di + '" style="flex-shrink:0;color:var(--danger);border-color:var(--danger);">' + PCD.icon('trash', 14) + '</button>' +
+        '</div>' +
+        '<div data-comps="' + di + '">' + comps + '</div>' +
+        '<button type="button" class="btn btn-ghost btn-sm" data-comp-add="' + di + '" style="margin-top:4px;">' + PCD.icon('plus', 13) + ' <span>' + esc(t('prep_add_component', 'Add component')) + '</span></button>' +
+      '</div>';
+    }).join('');
+  }
+
+  // ============ EVENTS ============
+  function wire(view, sheet) {
+    // Guide close
+    const gc = view.querySelector('#prepGuideClose');
+    if (gc) gc.addEventListener('click', function () {
+      const g = view.querySelector('#prepGuide');
+      if (g) g.style.display = 'none';
+    });
+
+    // Name
+    const nameEl = view.querySelector('#prepName');
+    if (nameEl) nameEl.addEventListener('input', PCD.debounce(function () {
+      sheet.name = this.value;
+      persist(sheet);
+    }, 350));
+
+    // Columns
+    PCD.on(view, 'click', '[data-cols]', function () {
+      sheet.columns = parseInt(this.getAttribute('data-cols'), 10) || 3;
+      persist(sheet);
+      render(view);
+    });
+
+    // Save (isimli + onay)
+    const saveBtn = view.querySelector('#prepSaveBtn');
+    if (saveBtn) saveBtn.addEventListener('click', function () {
+      const nm = (view.querySelector('#prepName').value || '').trim();
+      if (!nm) {
+        PCD.toast.error(t('prep_name_required', 'Give your prep sheet a name first'));
+        view.querySelector('#prepName').focus();
+        return;
+      }
+      sheet.name = nm;
+      sheet.savedAt = new Date().toISOString();
+      persist(sheet);
+      PCD.toast.success(t('prep_saved_ok', 'Prep sheet saved'));
+    });
+
+    // Saved list (library)
+    const listBtn = view.querySelector('#prepSavedListBtn');
+    if (listBtn) listBtn.addEventListener('click', function () {
+      openPicker(function (picked) {
+        setActiveId(picked.id);
+        render(view);
+      });
+    });
+
+    // New
+    const newBtn = view.querySelector('#prepNewBtn');
+    if (newBtn) newBtn.addEventListener('click', function () {
+      const created = PCD.store.upsertInTable(TABLE, defaultSheet(), 'ps');
+      setActiveId(created.id);
+      render(view);
+      PCD.toast.success(t('prep_new_created', 'New prep sheet created'));
+    });
+
+    // Add dish (recipe picker)
+    const addDish = view.querySelector('#prepAddDishBtn');
+    if (addDish) addDish.addEventListener('click', function () { openDishPicker(view, sheet); });
+
+    // Add manual dish
+    const addManual = view.querySelector('#prepAddManualBtn');
+    if (addManual) addManual.addEventListener('click', function () {
+      sheet.dishes = (sheet.dishes || []).concat([{ id: uid('d'), recipeId: null, name: '', components: [] }]);
+      persist(sheet);
+      render(view);
+      setTimeout(function () {
+        const inputs = view.querySelectorAll('[data-dish]');
+        if (inputs.length) inputs[inputs.length - 1].focus();
+      }, 50);
+    });
+
+    // Print
+    const printBtn = view.querySelector('#prepPrintBtn');
+    if (printBtn) printBtn.addEventListener('click', function () { printSheet(sheet); });
+
+    // Dish name
+    PCD.on(view, 'input', '[data-dish]', PCD.debounce(function () {
+      const di = parseInt(this.getAttribute('data-dish'), 10);
+      if (sheet.dishes[di]) { sheet.dishes[di].name = this.value; persist(sheet); }
+    }, 350));
+
+    // Dish delete
+    PCD.on(view, 'click', '[data-dish-del]', function () {
+      const di = parseInt(this.getAttribute('data-dish-del'), 10);
+      sheet.dishes.splice(di, 1);
+      persist(sheet);
+      render(view);
+    });
+
+    // Component text
+    PCD.on(view, 'input', '[data-comp]', PCD.debounce(function () {
+      const p = this.getAttribute('data-comp').split(':');
+      const di = parseInt(p[0], 10), ci = parseInt(p[1], 10);
+      if (sheet.dishes[di] && sheet.dishes[di].components[ci]) {
+        sheet.dishes[di].components[ci].text = this.value;
+        persist(sheet);
+      }
+    }, 350));
+
+    // Component delete
+    PCD.on(view, 'click', '[data-comp-del]', function () {
+      const p = this.getAttribute('data-comp-del').split(':');
+      const di = parseInt(p[0], 10), ci = parseInt(p[1], 10);
+      if (sheet.dishes[di]) {
+        sheet.dishes[di].components.splice(ci, 1);
+        persist(sheet);
+        render(view);
+      }
+    });
+
+    // Component add
+    PCD.on(view, 'click', '[data-comp-add]', function () {
+      const di = parseInt(this.getAttribute('data-comp-add'), 10);
+      if (sheet.dishes[di]) {
+        sheet.dishes[di].components = (sheet.dishes[di].components || []).concat([{ id: uid('c'), text: '' }]);
+        persist(sheet);
+        render(view);
+        setTimeout(function () {
+          const inputs = view.querySelectorAll('[data-comp="' + di + ':' + (sheet.dishes[di].components.length - 1) + '"]');
+          if (inputs.length) inputs[0].focus();
+        }, 50);
+      }
+    });
+  }
+
+  // ============ DISH PICKER (recipe seç → otomatik component) ============
+  function openDishPicker(view, sheet) {
+    const allRecipes = PCD.store.listRecipes();
+    const menuItems = allRecipes.filter(function (r) { return !r.isSubRecipe; });
+    const subRecipes = allRecipes.filter(function (r) { return r.isSubRecipe; });
+    const g1 = t('menu_group_dishes', 'Menu Items');
+    const g2 = t('menu_group_subrecipes', 'Sub-recipes & Preparations');
+    const items = menuItems.map(function (r) {
+      return { id: r.id, name: r.name, group: g1, meta: t(r.category || 'cat_main', '') + (r.servings ? ' · ' + r.servings + 'p' : ''), thumb: r.photo || '' };
+    }).concat(subRecipes.map(function (r) {
+      return { id: r.id, name: r.name, group: g2, meta: (r.yieldAmount ? r.yieldAmount + ' ' + (r.yieldUnit || '') : ''), thumb: r.photo || '' };
+    }));
+    if (items.length === 0) { PCD.toast.warning(t('no_recipes_yet', 'No recipes yet')); return; }
+    PCD.picker.open({
+      title: t('prep_add_dish', 'Add dish'),
+      items: items, multi: true, selected: [],
+    }).then(function (selIds) {
+      if (!selIds || !selIds.length) return;
+      const recMap = {};
+      allRecipes.forEach(function (r) { recMap[r.id] = r; });
+      selIds.forEach(function (id) {
+        const r = recMap[id];
+        if (!r) return;
+        sheet.dishes = (sheet.dishes || []).concat([{
+          id: uid('d'),
+          recipeId: id,
+          name: r.name,
+          components: recipeComponents(id),
+        }]);
+      });
+      persist(sheet);
+      render(view);
+      PCD.toast.success(t('prep_dishes_added', 'Dishes added'));
+    });
+  }
+
+  // ============ LIBRARY PICKER ============
+  function openPicker(onPick) {
+    const body = PCD.el('div');
+    function paint() {
+      const list = listSheets();
+      if (list.length === 0) {
+        body.innerHTML =
+          '<div style="padding:32px 20px;text-align:center;color:var(--text-3);">' +
+            '<div style="font-size:32px;margin-bottom:8px;opacity:0.6;">📋</div>' +
+            '<div style="font-size:14px;font-weight:600;color:var(--text-2);">' + esc(t('prep_no_saved', 'No saved prep sheets yet')) + '</div>' +
+          '</div>';
+        return;
+      }
+      const activeId = getActiveId();
+      body.innerHTML = '<div class="flex flex-col gap-2">' +
+        list.map(function (s) {
+          const dishCount = (s.dishes || []).length;
+          const isActive = s.id === activeId;
+          return '<div class="card" data-pick="' + esc(s.id) + '" style="display:flex;align-items:center;gap:12px;padding:12px;cursor:pointer;' + (isActive ? 'border-color:var(--brand-500);' : '') + '">' +
+            '<div style="width:36px;height:36px;border-radius:6px;background:var(--brand-50);color:var(--brand-700);display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + PCD.icon('id-card', 18) + '</div>' +
+            '<div style="flex:1;min-width:0;">' +
+              '<div style="font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + esc(s.name || t('prep_untitled', 'Untitled')) + (isActive ? ' <span style="font-size:10px;color:var(--brand-600);font-weight:700;">(' + esc(t('prep_current', 'current')) + ')</span>' : '') + '</div>' +
+              '<div class="text-muted" style="font-size:12px;">' + dishCount + ' ' + esc(t('prep_dishes_word', 'dishes')) + ' · ' + (PCD.fmtRelTime ? PCD.fmtRelTime(s.updatedAt) : '') + '</div>' +
+            '</div>' +
+            '<button type="button" class="icon-btn" data-del="' + esc(s.id) + '" title="' + esc(t('delete', 'Delete')) + '">' + PCD.icon('trash', 16) + '</button>' +
+          '</div>';
+        }).join('') +
+      '</div>';
+    }
+    paint();
+    const closeBtn = PCD.el('button', { type: 'button', class: 'btn btn-secondary', text: t('btn_close', 'Close'), style: { width: '100%' } });
+    const footer = PCD.el('div', { style: { width: '100%' } });
+    footer.appendChild(closeBtn);
+    const m = PCD.modal.open({ title: t('prep_picker_title', 'Saved prep sheets'), body: body, footer: footer, size: 'sm', closable: true });
+    closeBtn.addEventListener('click', function () { m.close(); });
+    PCD.on(body, 'click', '[data-pick]', function (e) {
+      if (e.target.closest('[data-del]')) return;
+      const id = this.getAttribute('data-pick');
+      m.close();
+      setTimeout(function () { onPick({ id: id }); }, 180);
+    });
+    PCD.on(body, 'click', '[data-del]', function (e) {
+      e.stopPropagation();
+      const id = this.getAttribute('data-del');
+      const target = PCD.store.getFromTable(TABLE, id);
+      PCD.modal.confirm({
+        icon: '🗑', iconKind: 'danger', danger: true,
+        title: t('prep_delete_title', 'Delete this prep sheet?'),
+        text: '"' + (target && target.name ? target.name : 'Prep sheet') + '" — ' + t('prep_delete_msg', 'This will be permanently deleted.'),
+        okText: t('delete', 'Delete'),
+      }).then(function (ok) {
+        if (!ok) return;
+        PCD.store.deleteFromTable(TABLE, id);
+        // Silinen aktifse, kalan ilkine geç
+        if (getActiveId() === id || PCD.store.get(PREF_ACTIVE) === id) {
+          const remaining = listSheets();
+          setActiveId(remaining.length ? remaining[0].id : null);
+        }
+        PCD.toast.success(t('prep_deleted', 'Prep sheet deleted'));
+        paint();
+        // Aktif liste arkada güncellensin
+        const v = PCD.$('#view');
+        if (v && PCD.router && PCD.router.currentView && PCD.router.currentView() === 'prep') render(v);
+      });
+    });
+  }
+
+  // ============ PRINT (çok sütunlu lamine — Excel düzeni) ============
+  function printSheet(sheet) {
+    const cols = sheet.columns || 3;
+    const dishes = (sheet.dishes || []).filter(function (d) {
+      return (d.name || '').trim() || (d.components || []).some(function (c) { return (c.text || '').trim(); });
+    });
+    if (!dishes.length) { PCD.toast.warning(t('prep_nothing_to_print', 'Add at least one dish first')); return; }
+
+    let blocks = '';
+    dishes.forEach(function (d) {
+      let rows = '';
+      (d.components || []).forEach(function (c) {
+        if (!(c.text || '').trim()) return;
+        rows += '<div class="ps-row"><div class="ps-comp">' + esc(c.text) + '</div><div class="ps-prep"></div></div>';
+      });
+      if (!rows) rows = '<div class="ps-row"><div class="ps-comp">&nbsp;</div><div class="ps-prep"></div></div>';
+      blocks +=
+        '<div class="ps-dish">' +
+          '<div class="ps-dish-head">' + esc(d.name || '') + '</div>' +
+          rows +
+        '</div>';
+    });
+
+    const html =
+      '<style>' +
+        '@page{size:A4 portrait;margin:10mm;}' +
+        'body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#111;margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+        '.ps-title{font-size:18px;font-weight:800;margin:0 0 3px;}' +
+        '.ps-sub{font-size:11px;color:#666;margin:0 0 12px;}' +
+        '.ps-grid{column-count:' + cols + ';column-gap:7mm;}' +
+        '.ps-dish{break-inside:avoid;page-break-inside:avoid;border:1px solid #333;border-radius:4px;overflow:hidden;margin-bottom:6mm;}' +
+        '.ps-dish-head{background:#1f3b30;color:#fff;font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:0.03em;padding:5px 8px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+        '.ps-row{display:flex;border-top:1px solid #ccc;font-size:12px;}' +
+        '.ps-comp{flex:1;padding:4px 8px;border-right:1px solid #ccc;line-height:1.3;}' +
+        '.ps-prep{width:30%;min-width:60px;min-height:22px;}' +
+      '</style>' +
+      '<div class="ps-title">' + esc(sheet.name || t('prep_title', 'Prep Sheet')) + '</div>' +
+      '<div class="ps-sub">' + esc(t('prep_print_sub', 'Components per dish · mark quantities in the blank box')) + '</div>' +
+      '<div class="ps-grid">' + blocks + '</div>';
+
+    PCD.print(html, sheet.name || t('prep_title', 'Prep Sheet'));
+  }
+
+  // ============ EXPORT ============
+  PCD.tools = PCD.tools || {};
+  PCD.tools.prep = { render: render };
+})();

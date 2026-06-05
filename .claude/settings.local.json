@@ -159,7 +159,16 @@
       "Bash(node -c \"app/js/core/utils.js\")",
       "Bash(node -c \"app/js/tools/ingredients.js\")",
       "Bash(node -c \"app/js/tools/events.js\")",
-      "Bash(node -c \"app/js/tools/roster.js\")"
+      "Bash(node -c \"app/js/tools/roster.js\")",
+      "Bash(python -c ' *)",
+      "Bash(pip install *)",
+      "Bash(node -c \"app/js/tools/whiteboard.js\")",
+      "Bash(node -c \"app/js/tools/prep.js\")",
+      "Bash(node -c \"app/js/core/app.js\")",
+      "Bash(node -c \"app/js/core/store.js\")",
+      "Bash(node -c \"app/js/core/cloud-pertable.js\")",
+      "Bash(node -c \"app/js/core/cloud-realtime.js\")",
+      "Bash(node -c \"app/js/core/cloud.js\")"
     ]
   }
 }
