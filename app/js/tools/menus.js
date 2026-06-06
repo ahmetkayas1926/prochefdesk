@@ -1559,12 +1559,16 @@
     printBtn.innerHTML = PCD.icon('print',16) + ' <span>' + t('print') + '</span>';
     const qrBtn = PCD.el('button', { class: 'btn btn-outline' });
     qrBtn.innerHTML = PCD.icon('grid',16) + ' <span>QR</span>';
+    // v2.17 — Cost-view paylaşım (patron/muhasebe). Pro özelliği; free'de kilit rozeti.
+    const costViewBtn = PCD.el('button', { class: 'btn btn-outline', title: t('share_cost_view_btn') });
+    costViewBtn.innerHTML = PCD.icon('activity',16) + ((PCD.gate && !PCD.gate.isPro()) ? ' ' + PCD.gate.lockChip(11) : '');
     const shareLinkBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: PCD.i18n.t('menus_share_link_title') });
     shareLinkBtn.innerHTML = PCD.icon('share',16) + ' <span>' + PCD.i18n.t('btn_share_link') + '</span>';
     const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('close') });
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
     footer.appendChild(closeBtn);
     footer.appendChild(qrBtn);
+    footer.appendChild(costViewBtn);
     footer.appendChild(shareLinkBtn);
     footer.appendChild(printBtn);
 
@@ -1620,6 +1624,28 @@
         PCD.toast.error(PCD.i18n.t('toast_share_failed', { msg: e.message || e }));
       });
     });
+    // v2.17 — Cost-view link: menü ciro + ortalama food cost % (patron/muhasebe).
+    costViewBtn.addEventListener('click', function () {
+      const t = PCD.i18n.t;
+      const user = PCD.store.get('user');
+      if (!user || !user.id) { PCD.toast.error(t('qr_signin_required')); return; }
+      if (PCD.gate && !PCD.gate.canUseCostView()) {
+        PCD.gate.showUpgradeModal({ feature: 'costview', message: t('share_cost_view_pro') });
+        return;
+      }
+      if (!PCD.share || !PCD.share.createOrGetShareUrl) { PCD.toast.error(t('qr_share_error')); return; }
+      costViewBtn.disabled = true;
+      const orig = costViewBtn.innerHTML;
+      costViewBtn.innerHTML = '<span class="spinner"></span>';
+      PCD.share.createOrGetShareUrl('menu', mid, 'cost').then(function (url) {
+        costViewBtn.disabled = false; costViewBtn.innerHTML = orig;
+        PCD.qr.show({ title: (menu.name || 'Menu') + ' · ' + t('cost_panel_title_menu'), subtitle: t('share_cost_view_desc'), text: url });
+      }).catch(function (e) {
+        costViewBtn.disabled = false; costViewBtn.innerHTML = orig;
+        PCD.toast.error(t('qr_share_error') + ': ' + (e.message || e));
+      });
+    });
+
     qrBtn.addEventListener('click', function () {
       // Generate a share URL and put THAT in the QR — so scanning opens
       // the menu in a browser, not just a wall of text.

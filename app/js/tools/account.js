@@ -13,6 +13,7 @@
     const prefs = PCD.store.get('prefs') || {};
     const meta = PCD.store.get('_meta') || {};
     const plan = PCD.store.get('plan') || 'free';
+    const isPro = (PCD.gate && PCD.gate.isPro) ? PCD.gate.isPro() : (plan === 'pro' || plan === 'team');
 
     const cur = prefs.currency || 'USD';
     const loc = prefs.locale || 'en';
@@ -106,6 +107,22 @@
       </div>
 
       ${user ? `
+        <!-- PLAN / BILLING (v2.17) -->
+        <div class="section mb-3">
+          <div class="section-title" style="font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">${t('account_plan_title')}</div>
+          <div class="card"><div class="card-body" style="padding:14px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+              <div style="min-width:0;">
+                <div style="font-weight:700;display:flex;align-items:center;gap:6px;">${isPro ? (PCD.icon('star', 16) + ' ' + PCD.escapeHtml(t('plan_pro_active'))) : PCD.escapeHtml(t('free_plan'))}</div>
+                <div class="text-muted text-sm">${isPro ? PCD.escapeHtml(t('account_plan_pro_desc')) : PCD.escapeHtml(t('account_plan_free_desc'))}</div>
+              </div>
+              ${isPro
+                ? '<button class="btn btn-outline btn-sm" id="managePlanBtn">' + PCD.escapeHtml(t('manage_subscription')) + '</button>'
+                : '<button class="btn btn-primary btn-sm" id="upgradeProBtn">' + PCD.icon('star', 14) + ' ' + PCD.escapeHtml(t('upgrade_to_pro')) + '</button>'}
+            </div>
+          </div></div>
+        </div>
+
         <!-- CHEF PROFILE -->
         <div class="section mb-3">
           <div class="section-title" style="font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
@@ -376,6 +393,15 @@
 
     const signInBtn = PCD.$('#signInBtn', view);
     if (signInBtn) signInBtn.addEventListener('click', function () { PCD.auth.openAuthModal(); });
+    // v2.17 — Plan / billing
+    const upgradeProBtn = PCD.$('#upgradeProBtn', view);
+    if (upgradeProBtn) upgradeProBtn.addEventListener('click', function () {
+      if (PCD.gate && PCD.gate.showUpgradeModal) PCD.gate.showUpgradeModal({});
+    });
+    const managePlanBtn = PCD.$('#managePlanBtn', view);
+    if (managePlanBtn) managePlanBtn.addEventListener('click', function () {
+      if (PCD.gate && PCD.gate.openPortal) PCD.gate.openPortal();
+    });
     const signOutBtn = PCD.$('#signOutBtn', view);
     if (signOutBtn) signOutBtn.addEventListener('click', function () {
       PCD.modal.confirm({

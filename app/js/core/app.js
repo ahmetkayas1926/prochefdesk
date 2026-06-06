@@ -125,6 +125,43 @@
         PCD.store.on('ingredients', function () { try { populateSidenav(); } catch (e) {} });
       } catch (e) { /* ignore — boot tolerance */ }
 
+      // v2.17 — Stripe checkout dönüşü: ?checkout=success → kullanıcıyı
+      // bilgilendir + planı yeniden çek. Plan, webhook ile aktive olur ve
+      // birkaç saniye gecikebilir → kısa aralıklı 2 retry.
+      try {
+        const sp = new URLSearchParams(location.search);
+        if (sp.get('checkout') === 'success') {
+          if (history.replaceState) history.replaceState({}, '', location.pathname + location.hash);
+          if (PCD.toast && PCD.toast.success) PCD.toast.success(PCD.i18n.t('checkout_success_toast'));
+          const refetch = function () {
+            if (!PCD.cloud || !PCD.cloud.fetchPlan) return;
+            PCD.cloud.fetchPlan().then(function (p) {
+              if (p && p !== (PCD.store.get('plan') || 'free')) {
+                PCD.store.set('plan', p);
+                try { populateSidenav(); } catch (e) {}
+              }
+            }).catch(function () {});
+          };
+          setTimeout(refetch, 3000);
+          setTimeout(refetch, 9000);
+        } else if (sp.get('upgrade') === '1') {
+          // v2.17 — Landing "Go Pro" → /app/?upgrade=1. Plan boot'ta async
+          // set edilir; kısa gecikmeyle gerçek plana göre çöz.
+          if (history.replaceState) history.replaceState({}, '', location.pathname + location.hash);
+          setTimeout(function () {
+            const u = PCD.store.get('user');
+            if (!u || !u.id) {
+              if (PCD.toast) PCD.toast.info(PCD.i18n.t('gate_signin_first'));
+              if (PCD.auth && PCD.auth.openAuthModal) PCD.auth.openAuthModal();
+              else PCD.router.go('account');
+              return;
+            }
+            if (PCD.gate && PCD.gate.isPro && PCD.gate.isPro()) { PCD.router.go('account'); return; }
+            if (PCD.gate && PCD.gate.showUpgradeModal) PCD.gate.showUpgradeModal({});
+          }, 1200);
+        }
+      } catch (e) { /* ignore */ }
+
       // 11) Hide splash, show app
       setTimeout(function () {
         const splash = PCD.$('#splash');
@@ -661,6 +698,11 @@
   function openWorkspaceEditor(wsId) {
     const t = PCD.i18n.t;
     const existing = wsId ? PCD.store.getWorkspace(wsId) : null;
+    // v2.17 — Free plan workspace limiti (entry-point gate: form açılmadan).
+    if (!existing && PCD.gate && !PCD.gate.canAddWorkspace(PCD.store.listWorkspaces().length)) {
+      PCD.gate.showUpgradeModal({ feature: 'workspaces' });
+      return;
+    }
     const data = existing ? Object.assign({}, existing) : {
       name: '',
       concept: '',

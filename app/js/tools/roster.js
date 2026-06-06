@@ -359,8 +359,11 @@
     html += '<div class="card" style="padding:14px;margin-bottom:12px;">' +
       '<div style="display:flex;gap:18px;flex-wrap:wrap;align-items:center;">' +
         '<div><div class="stat-label" style="font-size:11px;">' + PCD.escapeHtml(t('roster_total_hours') || 'Total hours') + '</div><div style="font-size:20px;font-weight:800;">' + PCD.fmtNumber(tot.hours) + '</div></div>' +
-        '<div><div class="stat-label" style="font-size:11px;">' + PCD.escapeHtml(t('roster_labour_cost') || 'Labour cost') + '</div><div style="font-size:20px;font-weight:800;color:var(--brand-700);">' + (tot.cost > 0 ? PCD.fmtMoney(tot.cost) : '—') + '</div></div>' +
-        '<label class="checkbox" style="margin-inline-start:auto;"><input type="checkbox" id="rShowCost"' + (_showCost ? ' checked' : '') + '><span>' + PCD.escapeHtml(t('roster_show_cost') || 'Show labour cost in print / share / Excel') + '</span></label>' +
+        // v2.17 — İşçilik maliyeti Pro özelliği. Free'de kilitli önizleme.
+        '<div><div class="stat-label" style="font-size:11px;">' + PCD.escapeHtml(t('roster_labour_cost') || 'Labour cost') + '</div><div style="font-size:20px;font-weight:800;color:var(--brand-700);">' + ((PCD.gate && !PCD.gate.canUseLaborCost()) ? PCD.gate.lockChip(12) : (tot.cost > 0 ? PCD.fmtMoney(tot.cost) : '—')) + '</div></div>' +
+        ((PCD.gate && !PCD.gate.canUseLaborCost())
+          ? '<label class="checkbox" id="rShowCostLocked" style="margin-inline-start:auto;cursor:pointer;opacity:0.7;"><span>' + PCD.icon('lock', 12) + ' ' + PCD.escapeHtml(t('roster_show_cost') || 'Show labour cost in print / share / Excel') + '</span></label>'
+          : '<label class="checkbox" style="margin-inline-start:auto;"><input type="checkbox" id="rShowCost"' + (_showCost ? ' checked' : '') + '><span>' + PCD.escapeHtml(t('roster_show_cost') || 'Show labour cost in print / share / Excel') + '</span></label>') +
       '</div>' +
       '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">' + fontControlsHtml(data) + '</div>' +
       '</div>';
@@ -452,7 +455,13 @@
     PCD.$('#rName', view).addEventListener('input', function () { data.name = this.value; persist(data); });
     PCD.$('#rStart', view).addEventListener('change', function () { data.weekStart = this.value || data.weekStart; persist(data); render(view); });
     PCD.$('#rDays', view).addEventListener('change', function () { data.dayCount = parseInt(this.value, 10) || 7; persist(data); render(view); });
-    PCD.$('#rShowCost', view).addEventListener('change', function () { _showCost = this.checked; });
+    // v2.17 — Pro'da gerçek toggle; free'de kilitli label → upgrade modal.
+    const _showCostEl = PCD.$('#rShowCost', view);
+    if (_showCostEl) _showCostEl.addEventListener('change', function () { _showCost = this.checked; });
+    const _showCostLocked = PCD.$('#rShowCostLocked', view);
+    if (_showCostLocked) _showCostLocked.addEventListener('click', function () {
+      if (PCD.gate && PCD.gate.showUpgradeModal) PCD.gate.showUpgradeModal({ feature: 'labor', message: t('labor_cost_locked') });
+    });
     wireFontControls(view, data);
 
     // Templates

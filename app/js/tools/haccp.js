@@ -111,6 +111,24 @@
   // -------- RENDER --------
   function render(view) {
     const t = PCD.i18n.t;
+
+    // v2.17 — HACCP Pro özelliğidir. Free'de kilitli önizleme (gizleme değil:
+    // kullanıcı ne olduğunu görsün, istesin — spec 2.3).
+    if (PCD.gate && !PCD.gate.canUseHaccp()) {
+      view.innerHTML =
+        '<div class="page-header"><div class="page-title">' + PCD.escapeHtml(t('haccp_hub_title') || 'HACCP Forms') + '</div>' +
+        '<div class="page-subtitle">' + PCD.escapeHtml(t('haccp_hub_subtitle') || '') + '</div></div>' +
+        '<div class="card" style="max-width:520px;margin:24px auto;text-align:center;"><div class="card-body" style="padding:28px;">' +
+          '<div style="display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:50%;background:var(--brand-50,#f0fdf4);color:var(--brand-600,#16a34a);margin-bottom:14px;">' + PCD.icon('lock', 30) + '</div>' +
+          '<div style="font-weight:800;font-size:18px;margin-bottom:6px;">' + PCD.escapeHtml(t('haccp_locked_title')) + '</div>' +
+          '<div class="text-muted" style="font-size:13px;line-height:1.6;margin-bottom:18px;max-width:380px;margin-inline:auto;">' + PCD.escapeHtml(t('haccp_locked_desc')) + '</div>' +
+          '<button class="btn btn-primary" id="haccpUpgradeBtn">' + PCD.icon('star', 16) + ' ' + PCD.escapeHtml(t('upgrade_to_pro')) + '</button>' +
+        '</div></div>';
+      const ub = PCD.$('#haccpUpgradeBtn', view);
+      if (ub) ub.addEventListener('click', function () { if (PCD.gate.showUpgradeModal) PCD.gate.showUpgradeModal({ feature: 'haccp' }); });
+      return;
+    }
+
     const cards = getCards();
     const totalToday = cards.reduce(function (a, c) { return a + c.todayCount; }, 0);
     const touchedCount = cards.filter(function (c) { return c.todayCount > 0; }).length;

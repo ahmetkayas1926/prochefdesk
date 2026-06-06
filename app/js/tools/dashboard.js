@@ -510,6 +510,177 @@
     // yerine guided onboarding göster.
     const isNewChef = recipes.length === 0 && ings.length === 0;
 
+    // ============ v2.17 — CHEF OFFICE COMMAND CENTER ============
+    // MUTLAK KURAL: her sayı kullanıcının GERÇEK verisinden. Sahte/örnek
+    // rakam YOK. Verisi olmayan metrik "veri yok — ekle" boş durumunda.
+    let commandCenterHtml = '';
+    if (!isNewChef) {
+      const fcColor = function (pct) { return pct == null ? '' : (pct < 30 ? 'ok' : (pct <= 35 ? 'warn' : 'bad')); };
+
+      // 6.2a — Ortalama menü food cost % (menüler + tarifler)
+      let avgFc = null;
+      (function () {
+        const menus = PCD.store.listTable ? PCD.store.listTable('menus') : [];
+        const recById = {}; recipes.forEach(function (r) { recById[r.id] = r; });
+        let sum = 0, n = 0;
+        menus.forEach(function (mn) {
+          (mn.sections || []).forEach(function (sec) {
+            (sec.items || []).forEach(function (it) {
+              const r = it.recipeId ? recById[it.recipeId] : null;
+              if (!r) return;
+              const price = (it.price != null && it.price !== '') ? Number(it.price) : (r.salePrice != null ? Number(r.salePrice) : null);
+              if (!price || price <= 0) return;
+              const cost = PCD.recipes.computeFoodCost(r, ingMap, recipeMapForCost);
+              const per = (r.servings > 0) ? cost / r.servings : cost;
+              sum += per / price * 100; n++;
+            });
+          });
+        });
+        if (n > 0) avgFc = { pct: sum / n, n: n };
+      })();
+
+      // 6.2b — Bu haftanın işçilik maliyeti (rosters). Pro-gated.
+      let labour = null;
+      (function () {
+        const allR = PCD.store._read('rosters') || {};
+        const rWs = allR[wsId] || {};
+        const list = Object.keys(rWs).map(function (k) { return rWs[k]; }).filter(function (r) { return r && !r._deletedAt && r.weekStart; });
+        if (!list.length) return;
+        const todayMs = Date.now();
+        const startMs = function (r) { const d = new Date(r.weekStart + 'T00:00:00'); return isNaN(d) ? 0 : d.getTime(); };
+        let chosen = null;
+        list.forEach(function (r) { const s = startMs(r); if (!s) return; if (todayMs >= s && todayMs < s + (r.dayCount || 7) * 86400000) chosen = r; });
+        const current = !!chosen;
+        if (!chosen) { list.sort(function (a, b) { return startMs(b) - startMs(a); }); chosen = list[0]; }
+        if (!chosen) return;
+        const parseHM = function (s) { const m = /^(\d{1,2}):(\d{2})$/.exec((s || '').trim()); return m ? (parseInt(m[1], 10) + parseInt(m[2], 10) / 60) : null; };
+        const shiftH = function (c) { if (!c || !c.start || !c.end) return 0; let a = parseHM(c.start), b = parseHM(c.end); if (a == null || b == null) return 0; if (b < a) b += 24; return Math.max(0, b - a); };
+        let cost = 0, hours = 0;
+        (chosen.staff || []).forEach(function (st) {
+          const cells = (chosen.cells && chosen.cells[st.id]) || {};
+          let h = 0; for (let d = 0; d < (chosen.dayCount || 7); d++) h += shiftH(cells[d]);
+          hours += h; cost += (Number(st.rate) || 0) > 0 ? h * Number(st.rate) : 0;
+        });
+        labour = { cost: cost, hours: hours, current: current };
+      })();
+
+      // 6.2d — Eksik tarifler (malzemesi YOK veya satış fiyatı yok [prep hariç])
+      const incompleteRecipes = recipes.filter(function (r) {
+        const hasIng = (r.ingredients || []).some(function (ri) { return ri && !ri.separator && (ri.ingredientId || ri.recipeId); });
+        if (!hasIng) return true;
+        const prep = PCD.recipes && PCD.recipes.isPrep && PCD.recipes.isPrep(r);
+        if (!prep && (r.salePrice == null || r.salePrice === '' || Number(r.salePrice) <= 0)) return true;
+        return false;
+      });
+
+      // 6.3a — Tarif food cost % dağılımı (fiyatlı, prep olmayan)
+      const marginData = [];
+      recipes.forEach(function (r) {
+        if (PCD.recipes && PCD.recipes.isPrep && PCD.recipes.isPrep(r)) return;
+        if (!r.salePrice || r.salePrice <= 0) return;
+        const cost = PCD.recipes.computeFoodCost(r, ingMap, recipeMapForCost);
+        const per = (r.servings > 0) ? cost / r.servings : cost;
+        marginData.push({ name: r.name, pct: per / r.salePrice * 100 });
+      });
+      marginData.sort(function (a, b) { return b.pct - a.pct; });
+
+      // 6.3b — Malzeme fiyat tazeliği (updatedAt'tan)
+      const DAY = 86400000;
+      const fresh = { f: 0, a: 0, s: 0 };
+      ings.forEach(function (i) {
+        if (!i.pricePerUnit || i.pricePerUnit <= 0) return;
+        const ts = i.updatedAt ? new Date(i.updatedAt).getTime() : 0;
+        const age = ts ? (Date.now() - ts) / DAY : 99999;
+        if (age < 30) fresh.f++; else if (age <= 60) fresh.a++; else fresh.s++;
+      });
+      const freshTotal = fresh.f + fresh.a + fresh.s;
+
+      // ---- Kart yapıcı ----
+      const labourLocked = (PCD.gate && !PCD.gate.canUseLaborCost());
+      const metricCard = function (action, lbl, valHtml, sub, cls, extraAttr) {
+        return '<button class="cc-card ' + (cls || '') + '" data-action="' + action + '"' + (extraAttr || '') + '>' +
+          '<span class="cc-lbl">' + lbl + '</span>' +
+          '<span class="cc-val">' + valHtml + '</span>' +
+          '<span class="cc-sub">' + sub + '</span></button>';
+      };
+
+      // avg food cost card
+      const fcCard = avgFc
+        ? metricCard('open-menus', PCD.escapeHtml(t('cc_avg_food_cost') || 'Avg menu food cost'),
+            avgFc.pct.toFixed(1) + '%', PCD.escapeHtml((t('cc_across_items') || 'across {n} menu items').replace('{n}', avgFc.n)), fcColor(avgFc.pct))
+        : metricCard('open-menus', PCD.escapeHtml(t('cc_avg_food_cost') || 'Avg menu food cost'),
+            '—', PCD.escapeHtml(t('cc_add_menu_prices') || 'Add menu items with prices'), '');
+
+      // labour card
+      let labourCard;
+      if (labourLocked) {
+        labourCard = '<button class="cc-card" data-action="upgrade-labor">' +
+          '<span class="cc-lbl">' + (PCD.icon('lock', 12)) + ' ' + PCD.escapeHtml(t('cc_this_week_labour') || 'This week labour') + '</span>' +
+          '<span class="cc-val locked">A$000</span>' +
+          '<span class="cc-sub">' + PCD.escapeHtml(t('cc_pro_unlock') || 'Pro — tap to unlock') + '</span></button>';
+      } else if (labour) {
+        labourCard = metricCard('open-roster', PCD.escapeHtml(t('cc_this_week_labour') || 'This week labour'),
+          PCD.fmtMoney(labour.cost), PCD.fmtNumber(labour.hours) + ' ' + PCD.escapeHtml(t('roster_hours') || 'h') + (labour.current ? '' : ' · ' + PCD.escapeHtml(t('cc_latest_roster') || 'latest roster')), '');
+      } else {
+        labourCard = metricCard('open-roster', PCD.escapeHtml(t('cc_this_week_labour') || 'This week labour'),
+          '—', PCD.escapeHtml(t('cc_add_roster') || 'Build a weekly roster'), '');
+      }
+
+      // low stock card
+      const lowN = lowStockItems.length;
+      const stockCard = metricCard('view-inventory', PCD.escapeHtml(t('cc_low_stock') || 'Low stock items'),
+        String(lowN), lowN > 0 ? PCD.escapeHtml((t('cc_need_reorder') || '{n} need reorder').replace('{n}', lowN)) : PCD.escapeHtml(t('cc_all_stocked') || 'All stocked'),
+        lowN > 0 ? 'warn' : 'ok');
+
+      // incomplete card
+      const incN = incompleteRecipes.length;
+      const incCard = metricCard('view-recipes', PCD.escapeHtml(t('cc_incomplete') || 'Incomplete recipes'),
+        String(incN), incN > 0 ? PCD.escapeHtml(t('cc_missing_data') || 'Missing ingredients or price') : PCD.escapeHtml(t('cc_all_complete') || 'All complete'),
+        incN > 0 ? 'warn' : 'ok');
+
+      // ---- Grafik: margin spread ----
+      let marginChart;
+      if (marginData.length >= 2) {
+        const top = marginData.slice(0, 7);
+        const barColor = function (pct) { return pct < 30 ? '#16a34a' : (pct <= 35 ? '#d97706' : '#dc2626'); };
+        const rows = top.map(function (d) {
+          const w = Math.max(3, Math.min(100, d.pct));
+          return '<div class="cc-bar-row"><span class="cc-bar-name">' + PCD.escapeHtml(d.name) + '</span>' +
+            '<span class="cc-bar-track"><span class="cc-bar-fill" style="width:' + w.toFixed(0) + '%;background:' + barColor(d.pct) + ';"></span></span>' +
+            '<span class="cc-bar-pct" style="color:' + barColor(d.pct) + ';">' + d.pct.toFixed(0) + '%</span></div>';
+        }).join('');
+        marginChart = '<div class="cc-chart" data-action="view-recipes"><h3>' + PCD.escapeHtml(t('cc_margin_spread') || 'Recipe food cost % spread') + '</h3>' + rows + '</div>';
+      } else {
+        marginChart = '<div class="cc-chart" data-action="view-recipes"><h3>' + PCD.escapeHtml(t('cc_margin_spread') || 'Recipe food cost % spread') + '</h3>' +
+          '<div class="cc-empty">' + PCD.escapeHtml(t('cc_not_enough_data') || 'Add priced recipes to see the spread.') + '</div></div>';
+      }
+
+      // ---- Grafik: ingredient freshness donut ----
+      let freshChart;
+      if (freshTotal > 0) {
+        const aDeg = fresh.f / freshTotal * 360;
+        const bDeg = (fresh.f + fresh.a) / freshTotal * 360;
+        const donut = 'background:conic-gradient(#16a34a 0 ' + aDeg.toFixed(1) + 'deg,#d97706 ' + aDeg.toFixed(1) + 'deg ' + bDeg.toFixed(1) + 'deg,#dc2626 ' + bDeg.toFixed(1) + 'deg 360deg);';
+        const stalePct = Math.round(fresh.s / freshTotal * 100);
+        freshChart = '<div class="cc-chart" data-action="open-ingredients"><h3>' + PCD.escapeHtml(t('cc_price_freshness') || 'Ingredient price freshness') + '</h3>' +
+          '<div class="cc-donut-wrap"><div class="cc-donut" style="' + donut + '"><div class="cc-donut-c">' + (100 - stalePct) + '%</div></div>' +
+          '<div class="cc-legend">' +
+            '<div><i style="background:#16a34a;"></i>' + PCD.escapeHtml(t('cc_fresh') || 'Fresh (<30d)') + ' · ' + fresh.f + '</div>' +
+            '<div><i style="background:#d97706;"></i>' + PCD.escapeHtml(t('cc_aging') || 'Aging (30–60d)') + ' · ' + fresh.a + '</div>' +
+            '<div><i style="background:#dc2626;"></i>' + PCD.escapeHtml(t('cc_stale') || 'Stale (>60d)') + ' · ' + fresh.s + '</div>' +
+          '</div></div></div>';
+      } else {
+        freshChart = '<div class="cc-chart" data-action="open-ingredients"><h3>' + PCD.escapeHtml(t('cc_price_freshness') || 'Ingredient price freshness') + '</h3>' +
+          '<div class="cc-empty">' + PCD.escapeHtml(t('cc_add_priced_ings') || 'Add ingredients with prices to track freshness.') + '</div></div>';
+      }
+
+      commandCenterHtml =
+        '<div class="cc-wrap">' +
+          '<div class="cc-metrics">' + fcCard + labourCard + stockCard + incCard + '</div>' +
+          '<div class="cc-charts">' + marginChart + freshChart + '</div>' +
+        '</div>';
+    }
+
     // === Render ===
     view.innerHTML =
       '<style>' +
@@ -544,6 +715,34 @@
         '.dash-gs-emoji { font-size: 32px; line-height: 1; margin-bottom: 10px; display: block; }' +
         '.dash-gs-title { font-weight: 700; font-size: 15px; letter-spacing: -0.01em; margin-bottom: 6px; }' +
         '.dash-gs-desc { font-size: 12px; color: var(--text-3); line-height: 1.5; }' +
+        // v2.17 — Command center
+        '.cc-wrap { margin-bottom: 20px; }' +
+        '.cc-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 12px; }' +
+        '.cc-card { text-align: left; padding: 14px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface); cursor: pointer; transition: all .15s ease; display: flex; flex-direction: column; gap: 4px; }' +
+        '.cc-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); border-color: var(--brand-300); }' +
+        '.cc-card.warn { border-left: 3px solid #f59e0b; }' +
+        '.cc-card.bad { border-left: 3px solid #dc2626; }' +
+        '.cc-card.ok { border-left: 3px solid #16a34a; }' +
+        '.cc-card .cc-lbl { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-3); font-weight: 600; display: flex; align-items: center; gap: 5px; }' +
+        '.cc-card .cc-val { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; color: var(--text); }' +
+        '.cc-card .cc-val.locked { filter: blur(6px); user-select: none; }' +
+        '.cc-card .cc-sub { font-size: 11px; color: var(--text-3); }' +
+        '.cc-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }' +
+        '.cc-chart { padding: 14px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface); cursor: pointer; }' +
+        '.cc-chart:hover { border-color: var(--brand-300); }' +
+        '.cc-chart h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-3); margin: 0 0 12px; font-weight: 700; }' +
+        '.cc-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12px; }' +
+        '.cc-bar-name { flex: 0 0 38%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-2); }' +
+        '.cc-bar-track { flex: 1; height: 10px; background: var(--surface-2); border-radius: 6px; overflow: hidden; }' +
+        '.cc-bar-fill { height: 100%; border-radius: 6px; }' +
+        '.cc-bar-pct { flex: 0 0 42px; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }' +
+        '.cc-donut-wrap { display: flex; align-items: center; gap: 16px; }' +
+        '.cc-donut { width: 96px; height: 96px; border-radius: 50%; flex-shrink: 0; position: relative; }' +
+        '.cc-donut::after { content: ""; position: absolute; inset: 18px; background: var(--surface); border-radius: 50%; z-index: 0; }' +
+        '.cc-donut-c { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; z-index: 1; color: var(--text); }' +
+        '.cc-legend { font-size: 12px; display: flex; flex-direction: column; gap: 5px; }' +
+        '.cc-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-inline-end: 6px; }' +
+        '.cc-empty { font-size: 12px; color: var(--text-3); padding: 8px 0; }' +
       '</style>' +
 
       '<h1 class="dash-greet">' + headline + '</h1>' +
@@ -551,6 +750,9 @@
         const ws = PCD.store.getActiveWorkspace();
         return ws ? ' · <strong style="color:var(--brand-700);">' + PCD.escapeHtml(ws.name) + '</strong>' + (ws.role ? ' (' + PCD.escapeHtml(ws.role) + ')' : '') : '';
       })() + '</div>' +
+
+      // v2.17 — Chef office command center (4 metrik + 2 grafik, gerçek veri)
+      commandCenterHtml +
 
       // v2.8.91 — Inline guide (collapsible, dismissable)
       (!guideHidden ? (
@@ -689,6 +891,13 @@
     // v2.8.72 — Cost health card → recipes view
     PCD.on(view, 'click', '[data-action="view-recipes"]', function () {
       PCD.router.go('recipes');
+    });
+    // v2.17 — Command center: roster + labour upgrade
+    PCD.on(view, 'click', '[data-action="open-roster"]', function () {
+      PCD.router.go('roster');
+    });
+    PCD.on(view, 'click', '[data-action="upgrade-labor"]', function () {
+      if (PCD.gate && PCD.gate.showUpgradeModal) PCD.gate.showUpgradeModal({ feature: 'labor', message: PCD.i18n.t('labor_cost_locked') });
     });
     PCD.on(view, 'click', '[data-action="view-inventory"]', function () {
       PCD.router.go('inventory');

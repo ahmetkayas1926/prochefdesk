@@ -149,7 +149,18 @@
     return !!(user && user.id);
   }
 
+  // v2.17 — Bulut sync Pro özelliğidir (plans.js cloudSync). Free kullanıcı
+  // veriyi yalnızca yerelde (IDB) tutar; buluta PUSH etmez. Pull akışı açık
+  // kalır ve local∪remote merge yaptığı için yerel veri ASLA ezilmez —
+  // yalnızca yazma (enqueue) kapatılır. Operatör plans.js'te cloudSync'i
+  // free için true yaparsa bu kapı global olarak açılır (tek nokta kontrol).
+  // gate yüklenmemişse güvenli varsayılan: sync açık (mevcut davranış bozulmaz).
+  function syncAllowed() {
+    return !PCD.gate || (PCD.gate.canSync && PCD.gate.canSync());
+  }
+
   function queueUpsert(table, id, wsId, data) {
+    if (!syncAllowed()) return;
     if (!WORKSPACE_TABLES[table] && table !== 'workspaces' && table !== 'inventory' && table !== 'user_prefs' && table !== 'workspace_tombstones') {
       PCD.warn && PCD.warn('cloud-pertable: unknown table', table);
       return;
@@ -175,6 +186,7 @@
   }
 
   function queueDelete(table, id, wsId) {
+    if (!syncAllowed()) return;
     const dedupeKey = table + ':' + id + (wsId ? ':' + wsId : '');
     const item = {
       table: table,
@@ -208,6 +220,7 @@
   //   oldArr  — önceki array (null ise hepsi insert)
   //   newArr  — yeni array
   function queueArraySync(table, wsId, oldArr, newArr) {
+    if (!syncAllowed()) return;
     if (!WORKSPACE_TABLES[table] || !WORKSPACE_TABLES[table].isArray) {
       PCD.warn && PCD.warn('cloud-pertable queueArraySync: not array table', table);
       return;
@@ -565,7 +578,11 @@
       // older. New cloud values still win on conflict (Object.assign right
       // wins). Same merge for onboarding (also dynamic field set).
       state.prefs = Object.assign({}, state.prefs || {}, prefsData.prefs || {});
-      state.plan = prefsData.plan || 'free';
+      // v2.17 — Plan artık user_prefs'in AYRI KOLONUNDAN okunur (data blob'dan
+      // değil). Kolon yetkileri frontend'in plan yazmasını engeller; sadece
+      // Stripe webhook (service_role) veya operatör (manuel) yazabilir →
+      // değer güvenilir. auth.js fetchPlan() boot'ta status/expiry ile rafine eder.
+      state.plan = (prefsRes.data && prefsRes.data.plan) || 'free';
       state.onboarding = Object.assign({}, state.onboarding || {}, prefsData.onboarding || {});
       state.costHistory = prefsData.costHistory || [];
 
@@ -790,13 +807,16 @@
 
     // 5. user_prefs (single row, PK user_id)
     // Pull mantığı (cloud-pertable.js içinde) user_prefs.data jsonb'sinden
-    // şu üst-anahtarları arıyor: prefs, plan, onboarding, costHistory.
+    // şu üst-anahtarları arıyor: prefs, onboarding, costHistory.
     // setActiveWorkspaceId aynı yapıyı yazıyor, queueFullState de aynısını
     // yazmalı.
+    // v2.17 — plan ARTIK BLOB'A YAZILMAZ. Plan, user_prefs'in ayrı kolonunda
+    // tutulur ve yalnızca server (Stripe webhook / operatör) yazar. Frontend
+    // upsert'i bu kolonu hiç içermez (kolon yetkisi de yok) → kullanıcı
+    // kendini pro yapamaz.
     queueUpsert('user_prefs', 'user_prefs', null, {
       activeWorkspaceId: state.activeWorkspaceId || null,
       prefs:        state.prefs        || {},
-      plan:         state.plan         || 'free',
       onboarding:   state.onboarding   || {},
       costHistory:  state.costHistory  || [],
     });

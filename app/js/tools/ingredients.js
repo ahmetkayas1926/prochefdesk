@@ -310,6 +310,15 @@
   function openEditor(iid, callback, opts) {
     const t = PCD.i18n.t;
     const existing = iid ? PCD.store.getIngredient(iid) : null;
+    // v2.17 — Free plan malzeme limiti. Merkezi gate + yumuşak duvar.
+    if (!existing && PCD.gate && !PCD.gate.canCreateIngredient(PCD.store.listIngredients().length)) {
+      const limit = PCD.gate.limits().maxIngredients;
+      PCD.gate.showUpgradeModal({
+        feature: 'ingredients',
+        message: t('ingredient_limit_reached').replace('{n}', limit),
+      });
+      return;
+    }
     const data = existing ? PCD.clone(existing) : {
       name: (opts && opts.initialName) || '',
       unit: 'g', pricePerUnit: 0, supplier: '', category: 'cat_other'

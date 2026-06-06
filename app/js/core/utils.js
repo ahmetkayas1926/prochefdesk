@@ -315,6 +315,8 @@
       minus: '<path d="M5 12h14" stroke-linecap="round"/>',
       x: '<path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/>',
       check: '<path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/>',
+      lock: '<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4" stroke-linecap="round" stroke-linejoin="round"/>',
+      star: '<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" stroke-linecap="round" stroke-linejoin="round"/>',
       trash: '<path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke-linecap="round" stroke-linejoin="round"/>',
       edit: '<path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke-linecap="round" stroke-linejoin="round"/><path d="M18.5 2.5a2.121 2.121 0 113 3L12 15l-4 1 1-4 9.5-9.5z" stroke-linecap="round" stroke-linejoin="round"/>',
       search: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35" stroke-linecap="round"/>',
@@ -516,10 +518,14 @@
         '.pcd-print-footer .pcd-brand{color:#16a34a !important;font-weight:700 !important;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}' +
         '@media print{.pcd-print-footer .pcd-brand{color:#16a34a !important;}.pcd-print-footer a{color:#999 !important;}}' +
       '</style>';
-    const FOOTER_HTML = FOOTER_STYLE +
+    // v2.17 — Watermark plana bağlı (spec Bölüm 3). Free: footer KALIR
+    // (pazarlama). Pro: TAMAMEN kalkar — temiz çıktı, sıfır marka. Tek nokta
+    // kontrol: plans.js watermark değeri. gate yoksa güvenli varsayılan: göster.
+    const _showWatermark = !PCD.gate || PCD.gate.showWatermark();
+    const FOOTER_HTML = !_showWatermark ? '' : (FOOTER_STYLE +
       '<div class="pcd-print-footer">' +
         'Made with <a href="https://prochefdesk.com" target="_blank" rel="noopener"><span class="pcd-brand">ProChefDesk</span></a> · <a href="https://prochefdesk.com" target="_blank" rel="noopener">prochefdesk.com</a>' +
-      '</div>';
+      '</div>');
 
     // If input looks like partial content (no <!DOCTYPE>), wrap it
     let fullHtml = htmlOrContent;

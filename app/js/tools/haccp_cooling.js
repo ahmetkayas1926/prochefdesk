@@ -124,6 +124,8 @@
   // ============ MAIN VIEW ============
   function render(view) {
     const t = PCD.i18n.t;
+    // v2.17 — HACCP Pro özelliği: free direct-route → hub (kilitli ekran).
+    if (PCD.gate && !PCD.gate.canUseHaccp()) { if (PCD.router) PCD.router.go('haccp'); return; }
     const u = getTempUnit();
     const records = listForMonth(_viewMonth);
     const months = listMonthsWithRecords();

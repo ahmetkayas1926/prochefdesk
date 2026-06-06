@@ -73,6 +73,26 @@
     --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
 
+  /* v2.17 — Dark mode. Tüm sayfa var() kullandığından değişkenleri
+     override etmek tüm landing'i karartır (app ile tutarlı yeşil vurgu). */
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1311;
+      --surface: #181d1a;
+      --surface-2: #1f2623;
+      --border: #2b332e;
+      --border-strong: #3a443d;
+      --text-1: #f0f2f0;
+      --text-2: #c4ccc6;
+      --text-3: #9aa39d;
+      --text-muted: #6b746e;
+      --brand: #22c55e;
+      --brand-hover: #16a34a;
+      --brand-soft: #14271c;
+      --brand-soft-text: #86efac;
+    }
+  }
+
   *, *::before, *::after { box-sizing: border-box; }
 
   html { scroll-behavior: smooth; }
@@ -612,47 +632,51 @@
       <span>ProChefDesk</span>
     </a>
     <div class="nav-right">
-      <a class="nav-link" href="/blog/">Blog</a>
-      <a class="nav-cta" href="/app/">Open app</a>
+      <a class="nav-link" href="#pricing" data-i18n="nav_pricing">Pricing</a>
+      <a class="nav-link" href="/blog/" data-i18n="nav_blog">Blog</a>
+      <select id="langSelect" aria-label="Language" style="font-family:inherit;font-size:13px;font-weight:600;color:var(--text-2);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 8px;cursor:pointer;">
+        <option value="en">EN</option><option value="tr">TR</option><option value="es">ES</option><option value="fr">FR</option><option value="de">DE</option><option value="ar">AR</option>
+      </select>
+      <a class="nav-cta" href="/app/" id="navCta" data-i18n="nav_cta">Open app</a>
     </div>
   </nav>
 
   <!-- ============ HERO ============ -->
   <section class="hero">
 
-    <div class="hero-eyebrow reveal reveal-1">Professional kitchen management</div>
+    <div class="hero-eyebrow reveal reveal-1" data-i18n="hero_eyebrow">Professional kitchen management</div>
 
-    <h1 class="reveal reveal-2">
+    <h1 class="reveal reveal-2" data-i18n-html="hero_title">
       The kitchen OS<br>
       for <span class="accent">chefs.</span>
     </h1>
 
-    <p class="hero-sub reveal reveal-3">
+    <p class="hero-sub reveal reveal-3" data-i18n="hero_sub">
       Recipe costing, menu engineering, prep planning, inventory, HACCP. A complete toolkit for the modern professional kitchen — built by a chef, for chefs.
     </p>
 
     <div class="cta-row reveal reveal-4">
-      <a href="/app/" class="btn-primary">
-        Get started
+      <a href="/app/" class="btn-primary" id="heroCta">
+        <span data-i18n="cta_start">Start free</span>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
           <path d="M5 12h14M13 5l7 7-7 7"/>
         </svg>
       </a>
-      <a href="#tools" class="btn-secondary">See what's inside</a>
+      <a href="#pricing" class="btn-secondary" data-i18n="hero_secondary">See pricing</a>
     </div>
 
     <div class="hero-meta reveal reveal-4">
       <span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
-        Free to use
+        <span data-i18n="hero_meta1">Free plan to start — no card</span>
       </span>
       <span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
-        Works on any device
+        <span data-i18n="hero_meta2">Works on any device</span>
       </span>
       <span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
-        Nightly cloud backup
+        <span data-i18n="hero_meta3">Cancel anytime</span>
       </span>
     </div>
 
@@ -661,13 +685,13 @@
   <!-- ============ INTRO ============ -->
   <section class="intro">
     <div class="intro-card">
-      <div class="intro-label">Why ProChefDesk</div>
-      <h2>Most kitchen software is built for accountants. This one is built for the line.</h2>
-      <p>
+      <div class="intro-label" data-i18n="intro_label">Why ProChefDesk</div>
+      <h2 data-i18n="intro_h2">Most kitchen software is built for accountants. This one is built for the line.</h2>
+      <p data-i18n="intro_p1">
         Update an ingredient price and your food cost recalculates instantly. Print a kitchen card during service. Plan a banquet for 200 guests in twenty minutes. Track allergens, scale portions, manage HACCP logs — without leaving the page.
       </p>
-      <p>
-        <strong>No subscriptions. No upsells. No data hostage.</strong> Just a toolkit that respects how chefs actually work.
+      <p data-i18n-html="intro_p2">
+        <strong>Start free. Upgrade when it pays for itself.</strong> Your data is always yours — export anytime. Just a toolkit that respects how chefs actually work.
       </p>
     </div>
   </section>
@@ -678,9 +702,9 @@
 <section class="tools" id="tools">
   <div class="container">
     <div class="section-head">
-      <div class="section-label">The Toolset</div>
-      <h2>Ten tools, one kitchen brain.</h2>
-      <p>Everything you need to run a professional kitchen — connected, synced, and ready in seconds.</p>
+      <div class="section-label" data-i18n="tools_label">The Toolset</div>
+      <h2 data-i18n="tools_h2">Ten tools, one kitchen brain.</h2>
+      <p data-i18n="tools_sub">Everything you need to run a professional kitchen — connected, synced, and ready in seconds.</p>
     </div>
 
     <div class="tools-grid">
@@ -691,8 +715,8 @@
             <path d="M4 4h16v16H4z"/><path d="M4 9h16M9 4v16"/>
           </svg>
         </div>
-        <h3>Recipes</h3>
-        <p>Live food cost, allergen tracking, photos, version history. Built around how a chef actually thinks.</p>
+        <h3 data-i18n="tool_recipes_t">Recipes</h3>
+        <p data-i18n="tool_recipes_d">Live food cost, allergen tracking, photos, version history. Built around how a chef actually thinks.</p>
       </div>
 
       <div class="tool">
@@ -701,8 +725,8 @@
             <path d="M12 2v20M5 9l7-7 7 7M5 9v11h14V9"/>
           </svg>
         </div>
-        <h3>Ingredients</h3>
-        <p>Suppliers, prices, units, yield percent. Update one price; every recipe cost recalculates instantly.</p>
+        <h3 data-i18n="tool_ingredients_t">Ingredients</h3>
+        <p data-i18n="tool_ingredients_d">Suppliers, prices, units, yield percent. Update one price; every recipe cost recalculates instantly.</p>
       </div>
 
       <div class="tool">
@@ -711,8 +735,8 @@
             <rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M7 14h6M7 17h4"/>
           </svg>
         </div>
-        <h3>Menu Builder</h3>
-        <p>Sections, prices, allergens, profit margins. Print or share a public link in two taps.</p>
+        <h3 data-i18n="tool_menu_t">Menu Builder</h3>
+        <p data-i18n="tool_menu_d">Sections, prices, allergens, profit margins. Print or share a public link in two taps.</p>
       </div>
 
       <div class="tool">
@@ -721,8 +745,8 @@
             <rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 8h8M8 12h8M8 16h5"/>
           </svg>
         </div>
-        <h3>Kitchen Cards</h3>
-        <p>A4-printable recipe cards for the line. Big text, scaled portions, allergens highlighted.</p>
+        <h3 data-i18n="tool_cards_t">Kitchen Cards</h3>
+        <p data-i18n="tool_cards_d">A4-printable recipe cards for the line. Big text, scaled portions, allergens highlighted.</p>
       </div>
 
       <div class="tool">
@@ -731,8 +755,8 @@
             <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
           </svg>
         </div>
-        <h3>Portion Calculator</h3>
-        <p>Scale any recipe for any guest count. Allergen-safe quantities, rounded to your unit of choice.</p>
+        <h3 data-i18n="tool_portion_t">Portion Calculator</h3>
+        <p data-i18n="tool_portion_d">Scale any recipe for any guest count. Allergen-safe quantities, rounded to your unit of choice.</p>
       </div>
 
       <div class="tool">
@@ -741,8 +765,8 @@
             <path d="M3 6h18l-2 12H5L3 6zM3 6L2 3H1"/><circle cx="9" cy="20" r="1"/><circle cx="17" cy="20" r="1"/>
           </svg>
         </div>
-        <h3>Shopping List</h3>
-        <p>Pulled from your menus or events. Grouped by supplier, ready for WhatsApp or email.</p>
+        <h3 data-i18n="tool_roster_t">Roster &amp; Labour</h3>
+        <p data-i18n="tool_roster_d">Weekly shift planner with leave codes and departments. Labour cost totals, print, Excel, or share as an image.</p>
       </div>
 
       <div class="tool">
@@ -751,8 +775,8 @@
             <path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 12l9 4 9-4M3 17l9 4 9-4"/>
           </svg>
         </div>
-        <h3>Inventory</h3>
-        <p>Stock counts with variance tracking. Spot waste before it eats your margin.</p>
+        <h3 data-i18n="tool_inventory_t">Inventory</h3>
+        <p data-i18n="tool_inventory_d">Stock counts to catch waste before it eats your margin. Low-stock alerts and counting mode.</p>
       </div>
 
       <div class="tool">
@@ -761,8 +785,8 @@
             <path d="M3 12h4l3-7 4 14 3-7h4"/>
           </svg>
         </div>
-        <h3>Suppliers</h3>
-        <p>Contacts, products, lead times. One-tap call, email, or WhatsApp. Order history at a glance.</p>
+        <h3 data-i18n="tool_suppliers_t">Suppliers</h3>
+        <p data-i18n="tool_suppliers_d">Contacts, products, lead times. One-tap call, email, or WhatsApp. Order history at a glance.</p>
       </div>
 
       <div class="tool">
@@ -771,8 +795,8 @@
             <rect x="3" y="5" width="18" height="16" rx="1"/><path d="M3 9h18M8 3v4M16 3v4"/>
           </svg>
         </div>
-        <h3>Events &amp; Catering</h3>
-        <p>Plan a wedding, banquet, or buffet. Guest count, recipe scaling, prep list, food cost — done.</p>
+        <h3 data-i18n="tool_events_t">Events &amp; Catering</h3>
+        <p data-i18n="tool_events_d">Plan a wedding, banquet, or buffet. Guest count, recipe scaling, prep list, food cost — done.</p>
       </div>
 
       <div class="tool">
@@ -781,8 +805,8 @@
             <path d="M9 11l3 3 8-8"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
           </svg>
         </div>
-        <h3>Checklists &amp; HACCP</h3>
-        <p>Opening, closing, cooling logs, temperature checks. HACCP-ready templates included.</p>
+        <h3 data-i18n="tool_haccp_t">Checklists &amp; HACCP</h3>
+        <p data-i18n="tool_haccp_d">Opening, closing, cooling logs, temperature checks. HACCP-ready templates included.</p>
       </div>
 
     </div>
@@ -794,29 +818,29 @@
   <!-- ============ WHY ============ -->
   <section class="why">
     <div class="section-head">
-      <div class="section-label">Built different</div>
-      <h2>Why chefs choose it.</h2>
-      <p>A kitchen tool that doesn't pretend to know your job better than you do.</p>
+      <div class="section-label" data-i18n="why_label">Built different</div>
+      <h2 data-i18n="why_h2">Why chefs choose it.</h2>
+      <p data-i18n="why_sub">A kitchen tool that doesn't pretend to know your job better than you do.</p>
     </div>
 
     <div class="why-grid">
 
       <div class="why-item">
-        <span class="why-num">01 / Multi-device</span>
-        <h3>Works wherever you are</h3>
-        <p>Phone in your pocket during service. Tablet in prep. Laptop after close. Same data, instantly synced — no apps to install.</p>
+        <span class="why-num" data-i18n="why1_num">01 / Multi-device</span>
+        <h3 data-i18n="why1_h3">Works wherever you are</h3>
+        <p data-i18n="why1_p">Phone in your pocket during service. Tablet in prep. Laptop after close. Same data, instantly synced — no apps to install.</p>
       </div>
 
       <div class="why-item">
-        <span class="why-num">02 / Your data</span>
-        <h3>Backed up, always yours</h3>
-        <p>Nightly cloud backups. Six languages. Multiple workspaces per venue. Export anything as CSV or PDF, anytime.</p>
+        <span class="why-num" data-i18n="why2_num">02 / Your data</span>
+        <h3 data-i18n="why2_h3">Backed up, always yours</h3>
+        <p data-i18n="why2_p">Nightly cloud backups. Six languages. Multiple workspaces per venue. Export anything as CSV or PDF, anytime.</p>
       </div>
 
       <div class="why-item">
-        <span class="why-num">03 / No catch</span>
-        <h3>No subscriptions, no surprises</h3>
-        <p>This is a personal project, not a venture-funded startup. No "free trial that auto-renews." No upsells halfway through your menu build.</p>
+        <span class="why-num" data-i18n="why3_num">03 / Fair pricing</span>
+        <h3 data-i18n="why3_h3">Start free, upgrade when it pays for itself</h3>
+        <p data-i18n="why3_p">The free plan runs a real kitchen. Pro unlocks unlimited recipes, HACCP logs, cloud sync and clean exports — one simple price, cancel anytime. No auto-renewing "trials," no surprises.</p>
       </div>
 
     </div>
@@ -824,13 +848,115 @@
 
 </div>
 
+<!-- ============ v2.17 VALUE PROPS + PRICING ============ -->
+<style>
+  .vp-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:18px; margin-top:8px; }
+  .vp-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:24px; }
+  .vp-card .vp-ico { width:44px;height:44px;border-radius:12px;background:var(--brand-soft);color:var(--brand-soft-text);display:flex;align-items:center;justify-content:center;margin-bottom:14px; }
+  .vp-card h3 { margin:0 0 8px; font-size:18px; }
+  .vp-card p { margin:0; color:var(--text-3); font-size:14px; line-height:1.6; }
+  .vp-tag { display:inline-block; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--brand-soft-text); background:var(--brand-soft); padding:2px 8px; border-radius:999px; margin-inline-start:8px; vertical-align:middle; }
+  .price-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:20px; max-width:760px; margin:8px auto 0; }
+  .price-card { background:var(--surface); border:1px solid var(--border); border-radius:18px; padding:28px; display:flex; flex-direction:column; }
+  .price-card.featured { border:2px solid var(--brand); box-shadow:var(--shadow-lg); position:relative; }
+  .price-badge { position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:var(--brand); color:#fff; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; padding:4px 14px; border-radius:999px; }
+  .price-name { font-size:14px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--text-3); }
+  .price-amt { font-size:40px; font-weight:800; letter-spacing:-.02em; margin:8px 0 2px; }
+  .price-amt span { font-size:15px; font-weight:600; color:var(--text-3); }
+  .price-sub { font-size:13px; color:var(--text-3); margin-bottom:18px; }
+  .price-feats { list-style:none; padding:0; margin:0 0 22px; flex:1; }
+  .price-feats li { display:flex; align-items:flex-start; gap:9px; padding:6px 0; font-size:14px; color:var(--text-2); }
+  .price-feats li svg { flex:0 0 auto; margin-top:3px; color:var(--brand); }
+  .price-feats li.off { color:var(--text-muted); }
+  .price-feats li.off svg { color:var(--text-muted); }
+  .price-btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:13px 20px; border-radius:12px; font-weight:700; font-size:15px; text-decoration:none; transition:all .15s ease; }
+  .price-btn.primary { background:var(--brand); color:#fff; }
+  .price-btn.primary:hover { background:var(--brand-hover); }
+  .price-btn.ghost { background:var(--surface-2); color:var(--text-1); border:1px solid var(--border-strong); }
+  .price-note { text-align:center; font-size:13px; color:var(--text-3); margin-top:18px; }
+</style>
+
+<div class="container">
+  <section class="why" id="value" style="padding-top:0;">
+    <div class="section-head">
+      <div class="section-label" data-i18n="vp_label">Why it pays off</div>
+      <h2 data-i18n="vp_h2">Run the numbers, not just the pass.</h2>
+      <p data-i18n="vp_sub">Three things ProChefDesk does that a notebook and a spreadsheet can't.</p>
+    </div>
+    <div class="vp-grid">
+      <div class="vp-card">
+        <div class="vp-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 4-6"/></svg></div>
+        <h3 data-i18n="vp1_h3">Cost &amp; profit control</h3>
+        <p data-i18n="vp1_p">Live food cost % on every recipe and menu. Update one ingredient price and every dish recalculates — so you spot the plates losing money before service, not after the quarter.</p>
+      </div>
+      <div class="vp-card">
+        <div class="vp-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.76V3.5a2.5 2.5 0 00-5 0v11.26a4 4 0 105 0z"/></svg></div>
+        <h3 data-i18n-html="vp2_h3">HACCP compliance <span class="vp-tag">Pro</span></h3>
+        <p data-i18n="vp2_p">Audit-ready records — daily temperature logs, cook &amp; cool, receiving and hot/cold holding. Log in real time on your phone, print the monthly binder in one tap.</p>
+      </div>
+      <div class="vp-card">
+        <div class="vp-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></div>
+        <h3 data-i18n-html="vp3_h3">Cost-view sharing <span class="vp-tag">Pro</span></h3>
+        <p data-i18n="vp3_p">Send your boss or accountant a private, read-only link showing price and food cost % — no login, no app, works on any phone. Numbers stay where they belong: with the people who need them.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PRICING ============ -->
+  <section class="why" id="pricing" style="padding-top:0;">
+    <div class="section-head">
+      <div class="section-label" data-i18n="pricing_label">Pricing</div>
+      <h2 data-i18n="pricing_h2">Simple plans. No surprises.</h2>
+      <p data-i18n="pricing_sub">Start free and stay free for as long as you like. Upgrade to Pro when your kitchen grows.</p>
+    </div>
+
+    <div class="price-grid">
+      <!-- FREE -->
+      <div class="price-card">
+        <div class="price-name" data-i18n="free_name">Free</div>
+        <div class="price-amt">A$0</div>
+        <div class="price-sub" data-i18n="free_sub">For getting started &amp; small kitchens</div>
+        <ul class="price-feats">
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg><span data-i18n="free_f1">Up to 15 recipes</span></li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg><span data-i18n="free_f2">Up to 50 ingredients</span></li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg><span data-i18n="free_f3">1 workspace</span></li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg><span data-i18n="free_f4">Recipe costing, menus, kitchen cards</span></li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg><span data-i18n="free_f5">Print &amp; Excel export</span></li>
+          <li class="off"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg><span data-i18n="free_f6">Local only — no cloud sync</span></li>
+          <li class="off"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg><span data-i18n="free_f7">Exports carry a small footer</span></li>
+        </ul>
+        <a href="/app/" class="price-btn ghost" data-i18n="cta_start">Start free</a>
+      </div>
+
+      <!-- PRO -->
+      <div class="price-card featured">
+        <div class="price-badge" data-i18n="pro_badge">Most popular</div>
+        <div class="price-name" data-i18n="pro_name">Pro</div>
+        <div class="price-amt">A$19<span data-i18n="pro_per_month"> / month</span></div>
+        <div class="price-sub" data-i18n="pro_sub">or A$190 / year — save ~17%</div>
+        <ul class="price-feats">
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg><span data-i18n="pro_f1">Unlimited recipes &amp; ingredients</span></li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg><span data-i18n="pro_f2">Unlimited workspaces</span></li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg><span data-i18n="pro_f3">Cloud sync across all devices</span></li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg><span data-i18n="pro_f4">HACCP food-safety logs</span></li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg><span data-i18n="pro_f5">Roster labour cost</span></li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg><span data-i18n="pro_f6">Cost-view sharing for owners &amp; accountants</span></li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg><span data-i18n="pro_f7">Clean, watermark-free exports</span></li>
+        </ul>
+        <a href="/app/?upgrade=1" class="price-btn primary" id="proCta" data-i18n="cta_pro">Go Pro</a>
+      </div>
+    </div>
+    <div class="price-note" data-i18n="price_note">Cancel anytime from the app. Manual price refresh reminders keep your costs honest.</div>
+  </section>
+</div>
+
 <!-- ============ FINAL CTA ============ -->
 <section class="final-cta">
   <div class="final-cta-inner">
-    <h2>Set up your kitchen<br>in under a minute.</h2>
-    <p>Free to use. No credit card. No nonsense.</p>
-    <a href="/app/" class="btn-final">
-      Open ProChefDesk
+    <h2 data-i18n-html="final_h2">Set up your kitchen<br>in under a minute.</h2>
+    <p data-i18n="final_p">Start on the free plan — no credit card. Upgrade to Pro anytime.</p>
+    <a href="/app/" class="btn-final" id="finalCta">
+      <span data-i18n="cta_start">Start free</span>
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
         <path d="M5 12h14M13 5l7 7-7 7"/>
       </svg>
@@ -847,13 +973,274 @@
         <span>ProChefDesk</span>
       </div>
       <div class="foot-links">
-        <a href="/privacy.html">Privacy</a>
-        <a href="/terms.html">Terms</a>
+        <a href="/privacy.html" data-i18n="foot_privacy">Privacy</a>
+        <a href="/terms.html" data-i18n="foot_terms">Terms</a>
         <a href="mailto:hello@prochefdesk.com">hello@prochefdesk.com</a>
       </div>
     </div>
   </div>
 </footer>
+
+<script>
+  // v2.17 — Landing i18n (6 dil) + dinamik CTA.
+  // İngilizce metinler HTML'den otomatik yakalanır (I18N.en); tr/es/fr/de/ar
+  // aşağıdaki sözlükten gelir. Dil seçimi pcd:prefs.locale'e kaydedilir →
+  // privacy/terms ile aynı tercih. Giriş yapmışsa hero/final CTA "Uygulamayı Aç".
+  (function () {
+    var LANGS = ['en', 'tr', 'es', 'fr', 'de', 'ar'];
+    var I18N = {
+      tr: {
+        nav_pricing: "Fiyatlar", nav_blog: "Blog", nav_cta: "Uygulamayı Aç", cta_open: "Uygulamayı Aç", page_title: "ProChefDesk — Şefler için mutfak OS",
+        hero_eyebrow: "Profesyonel mutfak yönetimi",
+        hero_title: "Şefler için<br><span class=\"accent\">mutfak OS.</span>",
+        hero_sub: "Tarif maliyeti, menü mühendisliği, hazırlık planı, stok, HACCP. Modern profesyonel mutfak için eksiksiz araç seti — bir şef tarafından, şefler için yapıldı.",
+        cta_start: "Ücretsiz başla", hero_secondary: "Fiyatları gör",
+        hero_meta1: "Ücretsiz planla başla — kart yok", hero_meta2: "Her cihazda çalışır", hero_meta3: "İstediğin zaman iptal",
+        intro_label: "Neden ProChefDesk",
+        intro_h2: "Çoğu mutfak yazılımı muhasebeciler için yapılır. Bu, hat için yapıldı.",
+        intro_p1: "Bir malzeme fiyatını güncelle, food cost anında yeniden hesaplansın. Servis sırasında mutfak kartı yazdır. 200 kişilik bir daveti yirmi dakikada planla. Alerjenleri takip et, porsiyonları ölçekle, HACCP kayıtlarını yönet — sayfadan çıkmadan.",
+        intro_p2: "<strong>Ücretsiz başla. İşe yaradığında yükselt.</strong> Verilerin her zaman senin — istediğin an dışa aktar. Şeflerin gerçekte nasıl çalıştığına saygı duyan bir araç seti.",
+        tools_label: "Araç Seti", tools_h2: "On araç, tek mutfak beyni.",
+        tools_sub: "Profesyonel bir mutfağı yönetmek için gereken her şey — bağlı, senkron ve saniyeler içinde hazır.",
+        tool_recipes_t: "Tarifler", tool_recipes_d: "Canlı food cost, alerjen takibi, fotoğraf, sürüm geçmişi. Bir şefin gerçekte nasıl düşündüğüne göre kuruldu.",
+        tool_ingredients_t: "Malzemeler", tool_ingredients_d: "Tedarikçiler, fiyatlar, birimler, verim yüzdesi. Tek fiyatı güncelle; her tarifin maliyeti anında yeniden hesaplanır.",
+        tool_menu_t: "Menü Tasarımcısı", tool_menu_d: "Bölümler, fiyatlar, alerjenler, kâr marjları. İki dokunuşta yazdır veya herkese açık link paylaş.",
+        tool_cards_t: "Mutfak Kartları", tool_cards_d: "Hat için A4 yazdırılabilir tarif kartları. Büyük yazı, ölçeklenmiş porsiyon, vurgulu alerjenler.",
+        tool_portion_t: "Porsiyon Hesaplayıcı", tool_portion_d: "Herhangi bir tarifi herhangi bir kişi sayısına ölçekle. Seçtiğin birime yuvarlanmış miktarlar.",
+        tool_roster_t: "Vardiya & İşçilik", tool_roster_d: "İzin kodları ve departmanlarla haftalık vardiya planı. İşçilik maliyeti toplamı, yazdırma, Excel veya görsel paylaşım.",
+        tool_inventory_t: "Stok", tool_inventory_d: "Marjını yemeden israfı yakalamak için stok sayımı. Düşük stok uyarıları ve sayım modu.",
+        tool_suppliers_t: "Tedarikçiler", tool_suppliers_d: "Kişiler, ürünler, teslim süreleri. Tek dokunuşla arama, e-posta veya WhatsApp. Sipariş geçmişi bir bakışta.",
+        tool_events_t: "Etkinlik & Catering", tool_events_d: "Düğün, ziyafet veya büfe planla. Kişi sayısı, tarif ölçekleme, hazırlık listesi, food cost — tamam.",
+        tool_haccp_t: "Kontrol Listeleri & HACCP", tool_haccp_d: "Açılış, kapanış, soğutma kayıtları, sıcaklık kontrolleri. HACCP'e hazır şablonlar dahil.",
+        why_label: "Farklı kurgu", why_h2: "Şefler neden bunu seçiyor.", why_sub: "İşini senden iyi bildiğini sanmayan bir mutfak aracı.",
+        why1_num: "01 / Çok cihaz", why1_h3: "Nerede olursan ol çalışır", why1_p: "Serviste cebinde telefon. Hazırlıkta tablet. Kapanıştan sonra laptop. Aynı veri, anında senkron — kurulacak uygulama yok.",
+        why2_num: "02 / Verin senin", why2_h3: "Yedeklenir, hep senin", why2_p: "Gece bulut yedekleri. Altı dil. Mekan başına birden fazla workspace. Her şeyi istediğin an CSV veya PDF olarak dışa aktar.",
+        why3_num: "03 / Adil fiyat", why3_h3: "Ücretsiz başla, işe yarayınca yükselt", why3_p: "Ücretsiz plan gerçek bir mutfağı çevirir. Pro; sınırsız tarif, HACCP kayıtları, bulut senkron ve temiz çıktıların kilidini açar — tek basit fiyat, istediğin an iptal. Otomatik yenilenen deneme yok, sürpriz yok.",
+        vp_label: "Neden kazandırır", vp_h2: "Sadece servisi değil, rakamları da yönet.", vp_sub: "ProChefDesk'in bir defter ve tablodan yapamayacağı üç şey.",
+        vp1_h3: "Maliyet & kâr kontrolü", vp1_p: "Her tarif ve menüde canlı food cost %. Bir malzeme fiyatını güncelle, her tabak yeniden hesaplansın — para kaybettiren tabakları çeyrek sonunda değil, servisten önce gör.",
+        vp2_h3: "HACCP uyumu <span class=\"vp-tag\">Pro</span>", vp2_p: "Denetime hazır kayıtlar — günlük sıcaklık, soğutma, mal kabul ve sıcak/soğuk bekletme. Telefonundan gerçek zamanlı kaydet, aylık dosyayı tek dokunuşla yazdır.",
+        vp3_h3: "Maliyetli paylaşım <span class=\"vp-tag\">Pro</span>", vp3_p: "Patronuna veya muhasebecine fiyat ve food cost % gösteren özel, salt-okunur bir link gönder — giriş yok, uygulama yok, her telefonda çalışır. Rakamlar ait olduğu yerde kalır.",
+        pricing_label: "Fiyatlandırma", pricing_h2: "Basit planlar. Sürpriz yok.", pricing_sub: "Ücretsiz başla, istediğin kadar ücretsiz kal. Mutfağın büyüyünce Pro'ya geç.",
+        free_name: "Ücretsiz", free_sub: "Başlangıç & küçük mutfaklar için",
+        free_f1: "15 tarife kadar", free_f2: "50 malzemeye kadar", free_f3: "1 workspace", free_f4: "Tarif maliyeti, menüler, mutfak kartları", free_f5: "Yazdırma & Excel dışa aktarım", free_f6: "Sadece yerel — bulut senkron yok", free_f7: "Çıktılarda küçük bir alt bilgi",
+        pro_badge: "En popüler", pro_name: "Pro", pro_per_month: " / ay", pro_sub: "veya A$190 / yıl — ~%17 tasarruf",
+        pro_f1: "Sınırsız tarif & malzeme", pro_f2: "Sınırsız workspace", pro_f3: "Tüm cihazlarda bulut senkron", pro_f4: "HACCP gıda güvenliği kayıtları", pro_f5: "Roster işçilik maliyeti", pro_f6: "Patron & muhasebe için maliyetli paylaşım", pro_f7: "Temiz, filigranzız çıktılar",
+        cta_pro: "Pro'ya Geç", price_note: "Uygulamadan istediğin an iptal et. Fiyat güncelleme hatırlatmaları maliyetlerini doğru tutar.",
+        final_h2: "Mutfağını bir dakikadan<br>kısa sürede kur.", final_p: "Ücretsiz planla başla — kredi kartı yok. İstediğin an Pro'ya geç.",
+        foot_privacy: "Gizlilik", foot_terms: "Şartlar"
+      },
+      es: {
+        nav_pricing: "Precios", nav_blog: "Blog", nav_cta: "Abrir la app", cta_open: "Abrir la app", page_title: "ProChefDesk — El SO de cocina para chefs",
+        hero_eyebrow: "Gestión profesional de cocina",
+        hero_title: "El sistema operativo<br>de cocina para <span class=\"accent\">chefs.</span>",
+        hero_sub: "Costeo de recetas, ingeniería de menús, planificación de mise en place, inventario, HACCP. Un conjunto de herramientas completo para la cocina profesional moderna — hecho por un chef, para chefs.",
+        cta_start: "Empieza gratis", hero_secondary: "Ver precios",
+        hero_meta1: "Plan gratuito para empezar — sin tarjeta", hero_meta2: "Funciona en cualquier dispositivo", hero_meta3: "Cancela cuando quieras",
+        intro_label: "Por qué ProChefDesk",
+        intro_h2: "La mayoría del software de cocina está hecho para contables. Este está hecho para la línea.",
+        intro_p1: "Actualiza el precio de un ingrediente y tu coste de alimentos se recalcula al instante. Imprime una ficha de cocina durante el servicio. Planifica un banquete para 200 invitados en veinte minutos. Controla alérgenos, escala porciones, gestiona registros HACCP — sin salir de la página.",
+        intro_p2: "<strong>Empieza gratis. Mejora cuando te compense.</strong> Tus datos son siempre tuyos — expórtalos cuando quieras. Una herramienta que respeta cómo trabajan de verdad los chefs.",
+        tools_label: "El conjunto de herramientas", tools_h2: "Diez herramientas, un solo cerebro de cocina.",
+        tools_sub: "Todo lo que necesitas para dirigir una cocina profesional — conectado, sincronizado y listo en segundos.",
+        tool_recipes_t: "Recetas", tool_recipes_d: "Coste de alimentos en vivo, control de alérgenos, fotos, historial de versiones. Diseñado según cómo piensa de verdad un chef.",
+        tool_ingredients_t: "Ingredientes", tool_ingredients_d: "Proveedores, precios, unidades, porcentaje de rendimiento. Actualiza un precio; el coste de cada receta se recalcula al instante.",
+        tool_menu_t: "Creador de menús", tool_menu_d: "Secciones, precios, alérgenos, márgenes de beneficio. Imprime o comparte un enlace público en dos toques.",
+        tool_cards_t: "Fichas de cocina", tool_cards_d: "Fichas de receta imprimibles en A4 para la línea. Texto grande, porciones escaladas, alérgenos resaltados.",
+        tool_portion_t: "Calculadora de porciones", tool_portion_d: "Escala cualquier receta para cualquier número de comensales. Cantidades redondeadas a la unidad que elijas.",
+        tool_roster_t: "Turnos y mano de obra", tool_roster_d: "Planificador semanal de turnos con códigos de ausencia y departamentos. Totales de coste laboral, imprimir, Excel o compartir como imagen.",
+        tool_inventory_t: "Inventario", tool_inventory_d: "Recuentos de stock para detectar el desperdicio antes de que se coma tu margen. Alertas de stock bajo y modo de recuento.",
+        tool_suppliers_t: "Proveedores", tool_suppliers_d: "Contactos, productos, plazos de entrega. Llamada, correo o WhatsApp en un toque. Historial de pedidos de un vistazo.",
+        tool_events_t: "Eventos y catering", tool_events_d: "Planifica una boda, un banquete o un bufé. Número de invitados, escalado de recetas, lista de preparación, coste de alimentos — hecho.",
+        tool_haccp_t: "Listas de control y HACCP", tool_haccp_d: "Apertura, cierre, registros de enfriamiento, controles de temperatura. Plantillas listas para HACCP incluidas.",
+        why_label: "Diferente por diseño", why_h2: "Por qué lo eligen los chefs.", why_sub: "Una herramienta de cocina que no pretende saber tu trabajo mejor que tú.",
+        why1_num: "01 / Multidispositivo", why1_h3: "Funciona estés donde estés", why1_p: "El teléfono en el bolsillo durante el servicio. La tablet en la preparación. El portátil tras el cierre. Los mismos datos, sincronizados al instante — sin apps que instalar.",
+        why2_num: "02 / Tus datos", why2_h3: "Respaldados, siempre tuyos", why2_p: "Copias de seguridad nocturnas en la nube. Seis idiomas. Varios espacios de trabajo por local. Exporta lo que quieras en CSV o PDF, cuando quieras.",
+        why3_num: "03 / Precio justo", why3_h3: "Empieza gratis, mejora cuando te compense", why3_p: "El plan gratuito hace funcionar una cocina real. Pro desbloquea recetas ilimitadas, registros HACCP, sincronización en la nube y exportaciones limpias — un precio simple, cancela cuando quieras. Sin pruebas que se renuevan solas, sin sorpresas.",
+        vp_label: "Por qué compensa", vp_h2: "Gestiona los números, no solo el pase.", vp_sub: "Tres cosas que ProChefDesk hace y que un cuaderno y una hoja de cálculo no pueden.",
+        vp1_h3: "Control de coste y beneficio", vp1_p: "Coste de alimentos % en vivo en cada receta y menú. Actualiza el precio de un ingrediente y cada plato se recalcula — así detectas los platos que pierden dinero antes del servicio, no al cierre del trimestre.",
+        vp2_h3: "Cumplimiento HACCP <span class=\"vp-tag\">Pro</span>", vp2_p: "Registros listos para auditoría — temperatura diaria, enfriamiento, recepción y mantenimiento en caliente/frío. Registra en tiempo real desde el móvil e imprime el archivo mensual en un toque.",
+        vp3_h3: "Compartir vista de costes <span class=\"vp-tag\">Pro</span>", vp3_p: "Envía a tu jefe o contable un enlace privado de solo lectura con el precio y el coste de alimentos % — sin inicio de sesión, sin app, funciona en cualquier móvil. Los números se quedan donde deben.",
+        pricing_label: "Precios", pricing_h2: "Planes simples. Sin sorpresas.", pricing_sub: "Empieza gratis y quédate gratis el tiempo que quieras. Mejora a Pro cuando tu cocina crezca.",
+        free_name: "Gratis", free_sub: "Para empezar y cocinas pequeñas",
+        free_f1: "Hasta 15 recetas", free_f2: "Hasta 50 ingredientes", free_f3: "1 espacio de trabajo", free_f4: "Costeo de recetas, menús, fichas de cocina", free_f5: "Exportación a impresión y Excel", free_f6: "Solo local — sin sincronización en la nube", free_f7: "Las exportaciones llevan un pequeño pie de página",
+        pro_badge: "Más popular", pro_name: "Pro", pro_per_month: " / mes", pro_sub: "o A$190 / año — ahorra ~17%",
+        pro_f1: "Recetas e ingredientes ilimitados", pro_f2: "Espacios de trabajo ilimitados", pro_f3: "Sincronización en la nube en todos los dispositivos", pro_f4: "Registros HACCP de seguridad alimentaria", pro_f5: "Coste laboral de turnos", pro_f6: "Vista de costes para dueños y contables", pro_f7: "Exportaciones limpias, sin marca de agua",
+        cta_pro: "Pasar a Pro", price_note: "Cancela cuando quieras desde la app. Los recordatorios de actualización de precios mantienen tus costes al día.",
+        final_h2: "Configura tu cocina<br>en menos de un minuto.", final_p: "Empieza con el plan gratuito — sin tarjeta de crédito. Mejora a Pro cuando quieras.",
+        foot_privacy: "Privacidad", foot_terms: "Términos"
+      },
+      fr: {
+        nav_pricing: "Tarifs", nav_blog: "Blog", nav_cta: "Ouvrir l'app", cta_open: "Ouvrir l'app", page_title: "ProChefDesk — Le SE de cuisine pour chefs",
+        hero_eyebrow: "Gestion de cuisine professionnelle",
+        hero_title: "Le système d'exploitation<br>de cuisine pour <span class=\"accent\">chefs.</span>",
+        hero_sub: "Coût des recettes, ingénierie des menus, planification de la mise en place, inventaire, HACCP. Une boîte à outils complète pour la cuisine professionnelle moderne — conçue par un chef, pour les chefs.",
+        cta_start: "Commencer gratuitement", hero_secondary: "Voir les tarifs",
+        hero_meta1: "Formule gratuite pour démarrer — sans carte", hero_meta2: "Fonctionne sur tout appareil", hero_meta3: "Annulez à tout moment",
+        intro_label: "Pourquoi ProChefDesk",
+        intro_h2: "La plupart des logiciels de cuisine sont conçus pour les comptables. Celui-ci est conçu pour le piano.",
+        intro_p1: "Mettez à jour le prix d'un ingrédient et votre coût matière se recalcule instantanément. Imprimez une fiche cuisine pendant le service. Planifiez un banquet de 200 couverts en vingt minutes. Suivez les allergènes, ajustez les portions, gérez les relevés HACCP — sans quitter la page.",
+        intro_p2: "<strong>Commencez gratuitement. Passez à la version supérieure quand cela rapporte.</strong> Vos données vous appartiennent toujours — exportez quand vous voulez. Une boîte à outils qui respecte la façon dont les chefs travaillent vraiment.",
+        tools_label: "La boîte à outils", tools_h2: "Dix outils, un seul cerveau de cuisine.",
+        tools_sub: "Tout ce qu'il faut pour gérer une cuisine professionnelle — connecté, synchronisé et prêt en quelques secondes.",
+        tool_recipes_t: "Recettes", tool_recipes_d: "Coût matière en direct, suivi des allergènes, photos, historique des versions. Conçu selon la façon dont un chef pense vraiment.",
+        tool_ingredients_t: "Ingrédients", tool_ingredients_d: "Fournisseurs, prix, unités, pourcentage de rendement. Modifiez un prix ; le coût de chaque recette se recalcule instantanément.",
+        tool_menu_t: "Créateur de menus", tool_menu_d: "Sections, prix, allergènes, marges. Imprimez ou partagez un lien public en deux clics.",
+        tool_cards_t: "Fiches cuisine", tool_cards_d: "Fiches de recette imprimables en A4 pour le piano. Grand texte, portions ajustées, allergènes mis en évidence.",
+        tool_portion_t: "Calculateur de portions", tool_portion_d: "Ajustez n'importe quelle recette à n'importe quel nombre de couverts. Quantités arrondies à l'unité de votre choix.",
+        tool_roster_t: "Planning & main-d'œuvre", tool_roster_d: "Planning hebdomadaire des équipes avec codes de congé et départements. Totaux de coût de main-d'œuvre, impression, Excel ou partage en image.",
+        tool_inventory_t: "Inventaire", tool_inventory_d: "Inventaires pour repérer le gaspillage avant qu'il ne ronge votre marge. Alertes de stock bas et mode comptage.",
+        tool_suppliers_t: "Fournisseurs", tool_suppliers_d: "Contacts, produits, délais. Appel, e-mail ou WhatsApp en un clic. Historique des commandes en un coup d'œil.",
+        tool_events_t: "Événements & traiteur", tool_events_d: "Planifiez un mariage, un banquet ou un buffet. Nombre de couverts, mise à l'échelle des recettes, liste de préparation, coût matière — terminé.",
+        tool_haccp_t: "Check-lists & HACCP", tool_haccp_d: "Ouverture, fermeture, relevés de refroidissement, contrôles de température. Modèles prêts pour le HACCP inclus.",
+        why_label: "Pensé autrement", why_h2: "Pourquoi les chefs le choisissent.", why_sub: "Un outil de cuisine qui ne prétend pas connaître votre métier mieux que vous.",
+        why1_num: "01 / Multi-appareils", why1_h3: "Fonctionne où que vous soyez", why1_p: "Le téléphone en poche pendant le service. La tablette en préparation. L'ordinateur après la fermeture. Les mêmes données, synchronisées instantanément — aucune application à installer.",
+        why2_num: "02 / Vos données", why2_h3: "Sauvegardées, toujours à vous", why2_p: "Sauvegardes cloud nocturnes. Six langues. Plusieurs espaces de travail par établissement. Exportez tout en CSV ou PDF, quand vous voulez.",
+        why3_num: "03 / Tarif équitable", why3_h3: "Commencez gratuitement, évoluez quand cela rapporte", why3_p: "La formule gratuite fait tourner une vraie cuisine. Pro débloque les recettes illimitées, les relevés HACCP, la synchronisation cloud et les exports propres — un prix simple, annulable à tout moment. Pas d'essais qui se renouvellent seuls, pas de surprises.",
+        vp_label: "Pourquoi c'est rentable", vp_h2: "Pilotez les chiffres, pas seulement le service.", vp_sub: "Trois choses que ProChefDesk fait et qu'un carnet et un tableur ne peuvent pas.",
+        vp1_h3: "Maîtrise des coûts et marges", vp1_p: "Coût matière % en direct sur chaque recette et menu. Modifiez le prix d'un ingrédient et chaque plat se recalcule — vous repérez les plats qui perdent de l'argent avant le service, pas à la fin du trimestre.",
+        vp2_h3: "Conformité HACCP <span class=\"vp-tag\">Pro</span>", vp2_p: "Relevés prêts pour l'audit — température quotidienne, refroidissement, réception et maintien chaud/froid. Enregistrez en temps réel sur votre téléphone et imprimez le classeur mensuel en un clic.",
+        vp3_h3: "Partage en vue des coûts <span class=\"vp-tag\">Pro</span>", vp3_p: "Envoyez à votre patron ou comptable un lien privé en lecture seule avec le prix et le coût matière % — sans connexion, sans application, sur n'importe quel téléphone. Les chiffres restent là où ils doivent être.",
+        pricing_label: "Tarifs", pricing_h2: "Des formules simples. Sans surprise.", pricing_sub: "Commencez gratuitement et restez-le aussi longtemps que vous voulez. Passez à Pro quand votre cuisine grandit.",
+        free_name: "Gratuit", free_sub: "Pour démarrer et les petites cuisines",
+        free_f1: "Jusqu'à 15 recettes", free_f2: "Jusqu'à 50 ingrédients", free_f3: "1 espace de travail", free_f4: "Coût des recettes, menus, fiches cuisine", free_f5: "Export impression et Excel", free_f6: "Local uniquement — pas de synchronisation cloud", free_f7: "Les exports portent un petit pied de page",
+        pro_badge: "Le plus choisi", pro_name: "Pro", pro_per_month: " / mois", pro_sub: "ou A$190 / an — économisez ~17%",
+        pro_f1: "Recettes et ingrédients illimités", pro_f2: "Espaces de travail illimités", pro_f3: "Synchronisation cloud sur tous les appareils", pro_f4: "Relevés HACCP de sécurité alimentaire", pro_f5: "Coût de main-d'œuvre du planning", pro_f6: "Partage en vue des coûts pour patrons et comptables", pro_f7: "Exports propres, sans filigrane",
+        cta_pro: "Passer à Pro", price_note: "Annulez à tout moment depuis l'application. Des rappels de mise à jour des prix gardent vos coûts justes.",
+        final_h2: "Configurez votre cuisine<br>en moins d'une minute.", final_p: "Commencez avec la formule gratuite — sans carte bancaire. Passez à Pro quand vous voulez.",
+        foot_privacy: "Confidentialité", foot_terms: "Conditions"
+      },
+      de: {
+        nav_pricing: "Preise", nav_blog: "Blog", nav_cta: "App öffnen", cta_open: "App öffnen", page_title: "ProChefDesk — Das Küchen-OS für Köche",
+        hero_eyebrow: "Professionelles Küchenmanagement",
+        hero_title: "Das Küchen-OS<br>für <span class=\"accent\">Köche.</span>",
+        hero_sub: "Rezeptkalkulation, Menü-Engineering, Mise-en-place-Planung, Inventar, HACCP. Ein komplettes Toolkit für die moderne Profiküche — von einem Koch, für Köche.",
+        cta_start: "Kostenlos starten", hero_secondary: "Preise ansehen",
+        hero_meta1: "Kostenloser Tarif zum Start — keine Karte", hero_meta2: "Funktioniert auf jedem Gerät", hero_meta3: "Jederzeit kündbar",
+        intro_label: "Warum ProChefDesk",
+        intro_h2: "Die meiste Küchensoftware ist für Buchhalter gemacht. Diese ist für die Linie gemacht.",
+        intro_p1: "Aktualisiere einen Zutatenpreis und dein Wareneinsatz wird sofort neu berechnet. Drucke während des Service eine Küchenkarte. Plane ein Bankett für 200 Gäste in zwanzig Minuten. Verfolge Allergene, skaliere Portionen, verwalte HACCP-Protokolle — ohne die Seite zu verlassen.",
+        intro_p2: "<strong>Kostenlos starten. Upgraden, wenn es sich lohnt.</strong> Deine Daten gehören immer dir — exportiere sie jederzeit. Ein Toolkit, das respektiert, wie Köche wirklich arbeiten.",
+        tools_label: "Das Toolkit", tools_h2: "Zehn Werkzeuge, ein Küchengehirn.",
+        tools_sub: "Alles, was du zum Führen einer Profiküche brauchst — verbunden, synchronisiert und in Sekunden bereit.",
+        tool_recipes_t: "Rezepte", tool_recipes_d: "Live-Wareneinsatz, Allergenverfolgung, Fotos, Versionsverlauf. Gebaut nach der Denkweise eines Kochs.",
+        tool_ingredients_t: "Zutaten", tool_ingredients_d: "Lieferanten, Preise, Einheiten, Ausbeute in Prozent. Aktualisiere einen Preis; die Kosten jedes Rezepts werden sofort neu berechnet.",
+        tool_menu_t: "Menü-Builder", tool_menu_d: "Abschnitte, Preise, Allergene, Gewinnmargen. Drucke oder teile einen öffentlichen Link mit zwei Tipps.",
+        tool_cards_t: "Küchenkarten", tool_cards_d: "A4-druckbare Rezeptkarten für die Linie. Große Schrift, skalierte Portionen, hervorgehobene Allergene.",
+        tool_portion_t: "Portionsrechner", tool_portion_d: "Skaliere jedes Rezept auf jede Gästezahl. Mengen gerundet auf die Einheit deiner Wahl.",
+        tool_roster_t: "Dienstplan & Personal", tool_roster_d: "Wöchentlicher Schichtplaner mit Abwesenheitscodes und Abteilungen. Personalkosten-Summen, Druck, Excel oder Teilen als Bild.",
+        tool_inventory_t: "Inventar", tool_inventory_d: "Bestandszählungen, um Verschwendung zu erkennen, bevor sie deine Marge frisst. Warnungen bei niedrigem Bestand und Zählmodus.",
+        tool_suppliers_t: "Lieferanten", tool_suppliers_d: "Kontakte, Produkte, Lieferzeiten. Anruf, E-Mail oder WhatsApp mit einem Tipp. Bestellverlauf auf einen Blick.",
+        tool_events_t: "Events & Catering", tool_events_d: "Plane eine Hochzeit, ein Bankett oder ein Buffet. Gästezahl, Rezeptskalierung, Vorbereitungsliste, Wareneinsatz — fertig.",
+        tool_haccp_t: "Checklisten & HACCP", tool_haccp_d: "Öffnung, Schließung, Abkühlprotokolle, Temperaturkontrollen. HACCP-fertige Vorlagen inklusive.",
+        why_label: "Anders gedacht", why_h2: "Warum Köche es wählen.", why_sub: "Ein Küchenwerkzeug, das nicht vorgibt, deinen Job besser zu kennen als du.",
+        why1_num: "01 / Mehrere Geräte", why1_h3: "Funktioniert, wo immer du bist", why1_p: "Das Telefon in der Tasche während des Service. Das Tablet bei der Vorbereitung. Der Laptop nach Feierabend. Dieselben Daten, sofort synchronisiert — keine App zu installieren.",
+        why2_num: "02 / Deine Daten", why2_h3: "Gesichert, immer deine", why2_p: "Nächtliche Cloud-Backups. Sechs Sprachen. Mehrere Arbeitsbereiche pro Betrieb. Exportiere alles als CSV oder PDF, jederzeit.",
+        why3_num: "03 / Faire Preise", why3_h3: "Kostenlos starten, upgraden, wenn es sich lohnt", why3_p: "Der kostenlose Tarif betreibt eine echte Küche. Pro schaltet unbegrenzte Rezepte, HACCP-Protokolle, Cloud-Sync und saubere Exporte frei — ein einfacher Preis, jederzeit kündbar. Keine sich automatisch verlängernden Testphasen, keine Überraschungen.",
+        vp_label: "Warum es sich lohnt", vp_h2: "Steuere die Zahlen, nicht nur den Pass.", vp_sub: "Drei Dinge, die ProChefDesk kann und ein Notizbuch und eine Tabelle nicht.",
+        vp1_h3: "Kosten- & Gewinnkontrolle", vp1_p: "Live-Wareneinsatz % bei jedem Rezept und Menü. Aktualisiere einen Zutatenpreis und jedes Gericht wird neu berechnet — so erkennst du die Verlustbringer vor dem Service, nicht erst zum Quartalsende.",
+        vp2_h3: "HACCP-Konformität <span class=\"vp-tag\">Pro</span>", vp2_p: "Prüfungsfertige Protokolle — tägliche Temperatur, Abkühlung, Wareneingang und Warm-/Kalthaltung. In Echtzeit am Telefon erfassen, den Monatsordner mit einem Tipp drucken.",
+        vp3_h3: "Kostenansicht teilen <span class=\"vp-tag\">Pro</span>", vp3_p: "Sende deinem Chef oder Buchhalter einen privaten, schreibgeschützten Link mit Preis und Wareneinsatz % — ohne Login, ohne App, auf jedem Telefon. Zahlen bleiben dort, wo sie hingehören.",
+        pricing_label: "Preise", pricing_h2: "Einfache Tarife. Keine Überraschungen.", pricing_sub: "Starte kostenlos und bleibe so lange du willst kostenlos. Wechsle zu Pro, wenn deine Küche wächst.",
+        free_name: "Kostenlos", free_sub: "Für den Einstieg & kleine Küchen",
+        free_f1: "Bis zu 15 Rezepte", free_f2: "Bis zu 50 Zutaten", free_f3: "1 Arbeitsbereich", free_f4: "Rezeptkalkulation, Menüs, Küchenkarten", free_f5: "Druck- & Excel-Export", free_f6: "Nur lokal — keine Cloud-Synchronisierung", free_f7: "Exporte tragen eine kleine Fußzeile",
+        pro_badge: "Am beliebtesten", pro_name: "Pro", pro_per_month: " / Monat", pro_sub: "oder A$190 / Jahr — spare ~17%",
+        pro_f1: "Unbegrenzte Rezepte & Zutaten", pro_f2: "Unbegrenzte Arbeitsbereiche", pro_f3: "Cloud-Sync auf allen Geräten", pro_f4: "HACCP-Lebensmittelsicherheitsprotokolle", pro_f5: "Dienstplan-Personalkosten", pro_f6: "Kostenansicht-Teilen für Inhaber & Buchhalter", pro_f7: "Saubere Exporte ohne Wasserzeichen",
+        cta_pro: "Pro holen", price_note: "Jederzeit in der App kündbar. Erinnerungen zur Preisaktualisierung halten deine Kosten ehrlich.",
+        final_h2: "Richte deine Küche<br>in unter einer Minute ein.", final_p: "Starte mit dem kostenlosen Tarif — keine Kreditkarte. Wechsle jederzeit zu Pro.",
+        foot_privacy: "Datenschutz", foot_terms: "Bedingungen"
+      },
+      ar: {
+        nav_pricing: "الأسعار", nav_blog: "المدونة", nav_cta: "افتح التطبيق", cta_open: "افتح التطبيق", page_title: "ProChefDesk — نظام تشغيل المطبخ للطهاة",
+        hero_eyebrow: "إدارة مطبخ احترافية",
+        hero_title: "نظام تشغيل المطبخ<br>لـ<span class=\"accent\">الطهاة.</span>",
+        hero_sub: "تكلفة الوصفات وهندسة القوائم وتخطيط التحضير والمخزون وHACCP. مجموعة أدوات متكاملة للمطبخ الاحترافي الحديث — صُنعت بيد طاهٍ، للطهاة.",
+        cta_start: "ابدأ مجانًا", hero_secondary: "اطّلع على الأسعار",
+        hero_meta1: "خطة مجانية للبدء — دون بطاقة", hero_meta2: "تعمل على أي جهاز", hero_meta3: "ألغِ في أي وقت",
+        intro_label: "لماذا ProChefDesk",
+        intro_h2: "معظم برامج المطابخ مصممة للمحاسبين. هذا مصمم لخط الطهي.",
+        intro_p1: "حدّث سعر مكوّن فتُعاد تكلفة الطعام فورًا. اطبع بطاقة مطبخ أثناء الخدمة. خطّط لمأدبة 200 ضيف في عشرين دقيقة. تابع مسببات الحساسية، وقِس الحصص، وأدر سجلات HACCP — دون مغادرة الصفحة.",
+        intro_p2: "<strong>ابدأ مجانًا. ارتقِ عندما يستحق ذلك.</strong> بياناتك ملكك دائمًا — صدّرها متى شئت. مجموعة أدوات تحترم طريقة عمل الطهاة الحقيقية.",
+        tools_label: "مجموعة الأدوات", tools_h2: "عشر أدوات، عقل مطبخ واحد.",
+        tools_sub: "كل ما تحتاجه لإدارة مطبخ احترافي — متصل ومتزامن وجاهز في ثوانٍ.",
+        tool_recipes_t: "الوصفات", tool_recipes_d: "تكلفة طعام حية، تتبع مسببات الحساسية، صور، سجل إصدارات. مبني على طريقة تفكير الطاهي فعليًا.",
+        tool_ingredients_t: "المكونات", tool_ingredients_d: "موردون وأسعار ووحدات ونسبة الإنتاجية. حدّث سعرًا واحدًا؛ تُعاد تكلفة كل وصفة فورًا.",
+        tool_menu_t: "منشئ القوائم", tool_menu_d: "أقسام وأسعار ومسببات حساسية وهوامش ربح. اطبع أو شارك رابطًا عامًا بنقرتين.",
+        tool_cards_t: "بطاقات المطبخ", tool_cards_d: "بطاقات وصفات قابلة للطباعة بحجم A4 لخط الطهي. نص كبير، حصص مُقاسة، مسببات حساسية مميّزة.",
+        tool_portion_t: "حاسبة الحصص", tool_portion_d: "قِس أي وصفة لأي عدد من الضيوف. كميات مقرّبة إلى الوحدة التي تختارها.",
+        tool_roster_t: "الجدول والعمالة", tool_roster_d: "مخطّط مناوبات أسبوعي برموز الإجازات والأقسام. إجماليات تكلفة العمالة، طباعة، Excel أو مشاركة كصورة.",
+        tool_inventory_t: "المخزون", tool_inventory_d: "جرد للمخزون لاكتشاف الهدر قبل أن يلتهم هامشك. تنبيهات انخفاض المخزون ووضع الجرد.",
+        tool_suppliers_t: "الموردون", tool_suppliers_d: "جهات اتصال ومنتجات ومُهل التسليم. اتصال أو بريد أو واتساب بنقرة. سجل الطلبات بلمحة.",
+        tool_events_t: "الفعاليات والتموين", tool_events_d: "خطّط لعرس أو مأدبة أو بوفيه. عدد الضيوف، قياس الوصفات، قائمة التحضير، تكلفة الطعام — تم.",
+        tool_haccp_t: "قوائم التحقق وHACCP", tool_haccp_d: "الافتتاح والإغلاق وسجلات التبريد وفحوص الحرارة. قوالب جاهزة لـHACCP مضمّنة.",
+        why_label: "مختلف بالتصميم", why_h2: "لماذا يختاره الطهاة.", why_sub: "أداة مطبخ لا تدّعي أنها تعرف عملك أكثر منك.",
+        why1_num: "01 / تعدد الأجهزة", why1_h3: "تعمل أينما كنت", why1_p: "الهاتف في جيبك أثناء الخدمة. الجهاز اللوحي في التحضير. الحاسوب بعد الإغلاق. البيانات نفسها، متزامنة فورًا — دون تطبيقات تُثبّت.",
+        why2_num: "02 / بياناتك", why2_h3: "محفوظة، وملكك دائمًا", why2_p: "نسخ احتياطية سحابية ليلية. ست لغات. مساحات عمل متعددة لكل منشأة. صدّر أي شيء بصيغة CSV أو PDF، متى شئت.",
+        why3_num: "03 / تسعير عادل", why3_h3: "ابدأ مجانًا، وارتقِ عندما يستحق", why3_p: "الخطة المجانية تدير مطبخًا حقيقيًا. وتفتح خطة Pro وصفات غير محدودة وسجلات HACCP ومزامنة سحابية ومخرجات نظيفة — سعر واحد بسيط، وإلغاء في أي وقت. لا تجارب تتجدد تلقائيًا، ولا مفاجآت.",
+        vp_label: "لماذا يستحق", vp_h2: "أدر الأرقام، لا الخدمة فقط.", vp_sub: "ثلاثة أشياء يفعلها ProChefDesk ولا يستطيعها دفتر وجدول.",
+        vp1_h3: "التحكم بالتكلفة والربح", vp1_p: "نسبة تكلفة طعام حية على كل وصفة وقائمة. حدّث سعر مكوّن فيُعاد حساب كل طبق — لتكتشف الأطباق الخاسرة قبل الخدمة، لا بعد نهاية الربع.",
+        vp2_h3: "الامتثال لـHACCP <span class=\"vp-tag\">Pro</span>", vp2_p: "سجلات جاهزة للتدقيق — حرارة يومية وتبريد واستلام وحفظ ساخن/بارد. سجّل لحظيًا من هاتفك واطبع الملف الشهري بنقرة.",
+        vp3_h3: "مشاركة عرض التكلفة <span class=\"vp-tag\">Pro</span>", vp3_p: "أرسِل لمديرك أو محاسبك رابطًا خاصًا للقراءة فقط يعرض السعر ونسبة تكلفة الطعام — دون تسجيل دخول ولا تطبيق، يعمل على أي هاتف. تبقى الأرقام حيث ينبغي.",
+        pricing_label: "الأسعار", pricing_h2: "خطط بسيطة. دون مفاجآت.", pricing_sub: "ابدأ مجانًا وابقَ كذلك ما شئت. ارتقِ إلى Pro عندما يكبر مطبخك.",
+        free_name: "مجاني", free_sub: "للبدء وللمطابخ الصغيرة",
+        free_f1: "حتى 15 وصفة", free_f2: "حتى 50 مكوّنًا", free_f3: "مساحة عمل واحدة", free_f4: "تكلفة الوصفات والقوائم وبطاقات المطبخ", free_f5: "تصدير للطباعة وExcel", free_f6: "محلي فقط — دون مزامنة سحابية", free_f7: "تحمل المخرجات تذييلًا صغيرًا",
+        pro_badge: "الأكثر شيوعًا", pro_name: "Pro", pro_per_month: " / شهر", pro_sub: "أو A$190 / سنة — وفّر ~17%",
+        pro_f1: "وصفات ومكونات غير محدودة", pro_f2: "مساحات عمل غير محدودة", pro_f3: "مزامنة سحابية على كل الأجهزة", pro_f4: "سجلات HACCP لسلامة الغذاء", pro_f5: "تكلفة عمالة الجدول", pro_f6: "مشاركة عرض التكلفة للملاك والمحاسبين", pro_f7: "مخرجات نظيفة دون علامة مائية",
+        cta_pro: "الترقية إلى Pro", price_note: "ألغِ في أي وقت من التطبيق. تذكيرات تحديث الأسعار تُبقي تكاليفك دقيقة.",
+        final_h2: "جهّز مطبخك<br>في أقل من دقيقة.", final_p: "ابدأ بالخطة المجانية — دون بطاقة ائتمان. ارتقِ إلى Pro في أي وقت.",
+        foot_privacy: "الخصوصية", foot_terms: "الشروط"
+      }
+    };
+
+    // İngilizce'yi HTML'den otomatik yakala (sözlükte tekrar yazmaya gerek yok).
+    var en = { cta_open: "Open ProChefDesk", page_title: "ProChefDesk — The kitchen OS for chefs" };
+    var dnodes = document.querySelectorAll('[data-i18n]');
+    for (var a = 0; a < dnodes.length; a++) { var dk = dnodes[a].getAttribute('data-i18n'); if (en[dk] == null) en[dk] = dnodes[a].textContent; }
+    var hnodes = document.querySelectorAll('[data-i18n-html]');
+    for (var b = 0; b < hnodes.length; b++) { var hk0 = hnodes[b].getAttribute('data-i18n-html'); if (en[hk0] == null) en[hk0] = hnodes[b].innerHTML; }
+    I18N.en = en;
+
+    function readLocale() {
+      try {
+        var raw = localStorage.getItem('pcd:prefs.locale');
+        if (raw) { var v = raw; try { v = JSON.parse(raw); } catch (e) {} if (typeof v === 'string' && LANGS.indexOf(v) >= 0) return v; }
+      } catch (e) {}
+      var nav = (navigator.language || 'en').slice(0, 2).toLowerCase();
+      return LANGS.indexOf(nav) >= 0 ? nav : 'en';
+    }
+    function isLoggedIn() {
+      try { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && /^sb-.*-auth-token$/.test(k) && localStorage.getItem(k)) return true; } } catch (e) {}
+      return false;
+    }
+    function apply(lang) {
+      var dict = I18N[lang] || I18N.en;
+      document.documentElement.setAttribute('lang', lang);
+      document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+      var els = document.querySelectorAll('[data-i18n]');
+      for (var i = 0; i < els.length; i++) { var k = els[i].getAttribute('data-i18n'); if (dict[k] != null) els[i].textContent = dict[k]; }
+      var hels = document.querySelectorAll('[data-i18n-html]');
+      for (var j = 0; j < hels.length; j++) { var hk = hels[j].getAttribute('data-i18n-html'); if (dict[hk] != null) hels[j].innerHTML = dict[hk]; }
+      if (dict.page_title) document.title = dict.page_title;
+      // Giriş yapmışsa hero/final CTA → "Uygulamayı Aç" (dile göre)
+      if (isLoggedIn()) {
+        var hsp = document.querySelector('#heroCta [data-i18n="cta_start"]');
+        var fsp = document.querySelector('#finalCta [data-i18n="cta_start"]');
+        if (hsp) hsp.textContent = dict.cta_open || 'Open ProChefDesk';
+        if (fsp) fsp.textContent = dict.cta_open || 'Open ProChefDesk';
+      }
+    }
+
+    var lang = readLocale();
+    apply(lang);
+    var sel = document.getElementById('langSelect');
+    if (sel) {
+      sel.value = lang;
+      sel.addEventListener('change', function () {
+        apply(sel.value);
+        try { localStorage.setItem('pcd:prefs.locale', JSON.stringify(sel.value)); } catch (e) {}
+      });
+    }
+  })();
+</script>
 
 </body>
 </html>

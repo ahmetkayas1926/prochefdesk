@@ -516,16 +516,30 @@
       });
     },
 
-    // Get plan from subscriptions table
+    // v2.17 — Plan, user_prefs'in AYRI kolonlarından okunur (otoriter kaynak).
+    // Yazma yalnızca server tarafında: Stripe webhook (service_role) veya
+    // operatör (manuel pro). Frontend bu kolonları YAZAMAZ (kolon yetkisi yok),
+    // sadece okuyabilir → değer güvenilir.
+    //   - plan_source='manual' → kalıcı pro (status/expiry'den bağımsız).
+    //   - plan_status='active' → pro.
+    //   - canceled ama plan_expires_at gelecekte → ödenen dönem sonuna kadar pro.
+    //   - aksi halde free.
     fetchPlan: function () {
       if (!cloud.ready) return Promise.resolve('free');
       const user = PCD.store.get('user');
       if (!user || !user.id) return Promise.resolve('free');
-      return supabase.from('subscriptions').select('plan,status')
+      return supabase.from('user_prefs')
+        .select('plan,plan_source,plan_status,plan_expires_at')
         .eq('user_id', user.id).maybeSingle()
         .then(function (res) {
           if (res.error || !res.data) return 'free';
-          return (res.data.status === 'active') ? (res.data.plan || 'free') : 'free';
+          const p = res.data.plan || 'free';
+          if (p === 'free') return 'free';
+          if (res.data.plan_source === 'manual') return p;        // kalıcı manuel pro
+          if (res.data.plan_status === 'active') return p;
+          const exp = res.data.plan_expires_at ? new Date(res.data.plan_expires_at).getTime() : 0;
+          if (exp && exp > Date.now()) return p;                   // iptal sonrası ödenen dönem
+          return 'free';
         }).catch(function () { return 'free'; });
     },
   };

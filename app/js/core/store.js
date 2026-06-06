@@ -723,7 +723,7 @@
       if (PCD.cloudPerTable) PCD.cloudPerTable.queueUpsert('user_prefs', null, null, {
         activeWorkspaceId: wsId,
         prefs: state.prefs,
-        plan: state.plan,
+        // v2.17 — plan blob'a yazılmaz (ayrı kolon, sadece server yazar).
         onboarding: state.onboarding,
         costHistory: state.costHistory,
       });

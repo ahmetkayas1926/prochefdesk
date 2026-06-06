@@ -152,11 +152,72 @@
     return null;
   }
 
+  // ============ v2.17 — COST-VIEW ENRICHMENT ============
+  // Maliyet verisini snapshot payload'una gömer (yalnızca cost-share için).
+  // Mevcut PCD.recipes.computeFoodCost yeniden kullanılır → app ile bire bir
+  // aynı sayılar. Para birimi PCD.currencySymbol() ile aktif tercihten gelir.
+  function _ingMap() {
+    const m = {}; PCD.store.listIngredients().forEach(function (i) { m[i.id] = i; }); return m;
+  }
+  function _cur() { return (PCD.currencySymbol ? PCD.currencySymbol() : '$'); }
+
+  function recipeCostNumbers(r, ingMap, recipeMap) {
+    const total = (PCD.recipes && PCD.recipes.computeFoodCost) ? PCD.recipes.computeFoodCost(r, ingMap, recipeMap) : 0;
+    const servings = Number(r.servings) || 1;
+    const perServing = servings > 0 ? total / servings : total;
+    const sale = (r.salePrice != null && r.salePrice !== '') ? Number(r.salePrice) : null;
+    return {
+      total: total,
+      servings: servings,
+      perServing: perServing,
+      salePrice: sale,
+      foodCostPct: (sale && sale > 0) ? (perServing / sale * 100) : null,
+      grossProfit: (sale != null) ? (sale - perServing) : null,
+    };
+  }
+
+  function enrichRecipeCost(payload, rid) {
+    const r = PCD.store.getRecipe(rid);
+    if (!r) return;
+    const recipeMap = (PCD.recipes && PCD.recipes.buildRecipeMap) ? PCD.recipes.buildRecipeMap() : null;
+    const n = recipeCostNumbers(r, _ingMap(), recipeMap);
+    n.currency = _cur();
+    payload.cost = n;
+  }
+
+  function enrichMenuCost(payload, mid) {
+    const m = PCD.store.getFromTable('menus', mid);
+    if (!m) return;
+    const ingMap = _ingMap();
+    const recipeMap = (PCD.recipes && PCD.recipes.buildRecipeMap) ? PCD.recipes.buildRecipeMap() : null;
+    const recById = {}; PCD.store.listRecipes().forEach(function (r) { recById[r.id] = r; });
+    let totRev = 0, totCost = 0, counted = 0;
+    (m.sections || []).forEach(function (sec) {
+      (sec.items || []).forEach(function (it) {
+        const r = it.recipeId ? recById[it.recipeId] : null;
+        const price = (it.price !== undefined && it.price !== null && it.price !== '') ? Number(it.price) : (r && r.salePrice != null ? Number(r.salePrice) : null);
+        if (r) {
+          const n = recipeCostNumbers(r, ingMap, recipeMap);
+          if (price != null) { totRev += price; totCost += n.perServing; counted++; }
+        }
+      });
+    });
+    payload.cost = {
+      currency: _cur(),
+      totalRevenue: totRev,
+      totalCost: totCost,
+      items: counted,
+      avgFoodCostPct: (totRev > 0) ? (totCost / totRev * 100) : null,
+    };
+  }
+
   // Get or create a share for a recipe/menu/kitchencard.
   // Returns Promise resolving to URL.
-  // Idempotent: same (owner, kind, sourceId) -> same share ID/URL.
+  // Idempotent: same (owner, kind, sourceId, mode) -> same share ID/URL.
   // Snapshot is refreshed on every call so the public view stays current.
-  function createOrGetShareUrl(kind, sourceId) {
+  function createOrGetShareUrl(kind, sourceId, mode) {
+    // v2.17 — mode: 'public' (varsayılan) veya 'cost' (patron/muhasebeci görünümü).
+    mode = (mode === 'cost') ? 'cost' : 'public';
     return new Promise(function (resolve, reject) {
       if (!PCD.cloud || !PCD.cloud.ready) {
         return reject(new Error('Cloud not configured'));
@@ -166,6 +227,11 @@
       const user = PCD.store.get('user');
       if (!user || !user.id) return reject(new Error('Sign in to share'));
 
+      // v2.17 — Cost-view yalnızca Pro'da üretilir (spec 5.2).
+      if (mode === 'cost' && PCD.gate && !PCD.gate.canUseCostView()) {
+        return reject(new Error('cost-view-pro-only'));
+      }
+
       const payload =
         (kind === 'recipe')      ? snapshotRecipe(sourceId) :
         (kind === 'menu')        ? snapshotMenu(sourceId) :
@@ -173,12 +239,28 @@
         null;
       if (!payload) return reject(new Error('Item not found'));
 
-      // 1) Check if a share already exists for this (owner, kind, source)
+      payload._mode = mode;
+      // v2.17 — Cost-view: maliyet verisini snapshot'a göm (yalnızca cost mode).
+      // Normal public paylaşımda maliyet/fiyat ASLA payload'a girmez → public
+      // link maliyet sızdırmaz. Cost link unlisted (tahmin edilemez ID) güvenlikli.
+      if (mode === 'cost') {
+        if (kind === 'recipe') enrichRecipeCost(payload, sourceId);
+        else if (kind === 'menu') enrichMenuCost(payload, sourceId);
+      }
+
+      // v2.17 — Watermark PAYLAŞANIN planına göre snapshot'a gömülür (payload
+      // her create/refresh'te yenilenir → flag güncel kalır). Pro sharer →
+      // temiz (footer'sız) link; free → footer kalır. Görüntüleyenin planı
+      // etkilemez (footer view anında p._wm'den okunur).
+      payload._wm = !PCD.gate || PCD.gate.showWatermark();
+
+      // 1) Check if a share already exists for this (owner, kind, source, mode)
       supabase.from('public_shares')
         .select('id, paused')
         .eq('owner_id', user.id)
         .eq('kind', kind)
         .eq('source_id', sourceId)
+        .eq('share_mode', mode)
         .maybeSingle()
         .then(function (sel) {
           if (sel.error) {
@@ -197,7 +279,7 @@
                   PCD.err('share update error', upd.error);
                   return reject(upd.error);
                 }
-                const url = location.origin + location.pathname + '?share=' + shareId;
+                const url = location.origin + location.pathname + '?share=' + shareId + (mode === 'cost' ? '&view=cost' : '');
                 resolve(url);
               }).catch(reject);
             return;
@@ -213,6 +295,7 @@
               payload: payload,
               owner_id: user.id,
               paused: false,
+              share_mode: mode,
             })
             .then(function (ins) {
               if (ins.error) {
@@ -343,6 +426,41 @@
 
   // Render a share's payload as a self-contained read-only HTML page.
   // Replaces the entire #app content.
+  // v2.17 — Cost-view paneli HTML'i. payload.cost'tan okur (recipe veya menu).
+  // Food cost % anlamsal renk: yeşil <30, amber 30-35, kırmızı >35.
+  function costPanelHtml(p, t) {
+    const c = p.cost || {};
+    const cur = c.currency || '$';
+    const money = function (n) { return cur + (Number(n) || 0).toFixed(2); };
+    const pctColor = function (pct) {
+      if (pct == null) return '#6b7280';
+      if (pct < 30) return '#16a34a';
+      if (pct <= 35) return '#d97706';
+      return '#dc2626';
+    };
+    const cell = function (lbl, val, color) {
+      return '<div class="cost-cell"><div class="lbl">' + escapeHtml(lbl) + '</div>' +
+        '<div class="val"' + (color ? ' style="color:' + color + '"' : '') + '>' + val + '</div></div>';
+    };
+    let cells = '', title = t('cost_panel_title');
+    if (p.kind === 'menu') {
+      title = t('cost_panel_title_menu');
+      cells += cell(t('cost_menu_revenue'), money(c.totalRevenue));
+      cells += cell(t('cost_menu_cost'), money(c.totalCost));
+      cells += cell(t('cost_avg_food_cost'), (c.avgFoodCostPct != null ? c.avgFoodCostPct.toFixed(1) + '%' : '—'), pctColor(c.avgFoodCostPct));
+    } else {
+      if (c.salePrice != null) cells += cell(t('cost_sale_price'), money(c.salePrice));
+      cells += cell(t('cost_food_cost_pct'), (c.foodCostPct != null ? c.foodCostPct.toFixed(1) + '%' : '—'), pctColor(c.foodCostPct));
+      cells += cell(t('cost_per_serving'), money(c.perServing));
+      if (c.grossProfit != null) cells += cell(t('cost_gross_profit'), money(c.grossProfit), c.grossProfit < 0 ? '#dc2626' : '');
+    }
+    return '<div class="cost-panel"><h2>' + escapeHtml(title) + '</h2>' +
+      '<div class="cost-grid">' + cells + '</div>' +
+      (p.kind !== 'menu' && c.total != null ? '<div class="cost-note">' + escapeHtml(t('cost_batch_total')) + ': ' + money(c.total) + ' · ' + (c.servings || 1) + '×</div>' : '') +
+      '<div class="cost-note">' + escapeHtml(t('cost_disclaimer')) + '</div>' +
+    '</div>';
+  }
+
   function renderSharePage(share) {
     const appEl = document.getElementById('app');
     if (!appEl) return;
@@ -402,6 +520,15 @@
       '.share-footer { text-align:center;padding:24px;color:#999;font-size:12px;border-top:1px solid #eee;margin-top:32px; }' +
       '.share-footer a { color:#16a34a;text-decoration:none; }' +
       '.share-footer a:hover { text-decoration:underline; }' +
+      /* v2.17 — Cost-view paneli (patron/muhasebeci) */
+      '.cost-panel{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:18px;margin-bottom:24px;}' +
+      '.cost-panel h2{font-size:13px;text-transform:uppercase;letter-spacing:0.08em;color:#15803d;margin:0 0 12px;}' +
+      '.cost-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;}' +
+      '.cost-cell{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:10px 12px;}' +
+      '.cost-cell .lbl{font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:0.04em;}' +
+      '.cost-cell .val{font-size:20px;font-weight:800;margin-top:2px;}' +
+      '.cost-note{font-size:11px;color:#6b7280;margin-top:10px;}' +
+      '@media print{.cost-panel,.cost-cell{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}}' +
     '</style>';
 
     html += '<div class="share-page">';
@@ -413,6 +540,9 @@
     '</div>';
 
     html += '<div class="share-content">';
+
+    // v2.17 — Cost-view paneli (yalnızca cost-share'de payload.cost olur).
+    if (p.cost) html += costPanelHtml(p, t);
 
     if (p.kind === 'recipe') {
       html += '<h1>' + escapeHtml(p.name || t('share_default_recipe', 'Recipe')) + '</h1>';
@@ -573,9 +703,13 @@
     // v2.8.54 — Standard clickable footer. Brand name + URL link;
     // Same format across all app print + share + QR flows
     // (matches PCD.print in utils.js for visual consistency).
-    html += '<div class="share-footer">' +
-      'Made with <a href="https://prochefdesk.com" target="_blank" rel="noopener"><strong>ProChefDesk</strong></a> · <a href="https://prochefdesk.com" target="_blank" rel="noopener">prochefdesk.com</a>' +
-    '</div>';
+    // v2.17 — Watermark plana bağlı: p._wm===false (Pro sharer) ise footer
+    // gösterilmez. Eski paylaşımlarda flag yok (undefined) → footer kalır.
+    if (p._wm !== false) {
+      html += '<div class="share-footer">' +
+        'Made with <a href="https://prochefdesk.com" target="_blank" rel="noopener"><strong>ProChefDesk</strong></a> · <a href="https://prochefdesk.com" target="_blank" rel="noopener">prochefdesk.com</a>' +
+      '</div>';
+    }
     html += '</div>';
 
     appEl.innerHTML = html;

@@ -262,6 +262,11 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
         const cost = computeCost(r);
         const costPerServing = r.servings ? cost / r.servings : cost;
         const pct = (r.salePrice && cost > 0 && r.servings) ? (costPerServing / r.salePrice) * 100 : null;
+        // v2.17 — Eksik tarif: malzemesi YOK veya (prep değilse) satış fiyatı yok.
+        // Nazik amber nokta ile işaretlenir (dashboard "incomplete recipes" ile aynı mantık).
+        const _hasIng = (r.ingredients || []).some(function (ri) { return ri && !ri.separator && (ri.ingredientId || ri.recipeId); });
+        const incomplete = !_hasIng || (!isPrep(r) && (r.salePrice == null || r.salePrice === '' || Number(r.salePrice) <= 0));
+        const incompleteDot = incomplete ? '<span title="' + PCD.escapeHtml(t('recipe_incomplete_hint') || 'Incomplete — add ingredients or price') + '" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#f59e0b;margin-inline-start:6px;vertical-align:middle;" aria-label="incomplete"></span>' : '';
         const row = PCD.el('div', { class: 'list-item', 'data-rid': r.id });
         const thumb = PCD.el('div', { class: 'list-item-thumb' });
         // v2.6.61 — Native lazy loading for thumbnails. Previously every
@@ -296,7 +301,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
         // badge in the title already conveys classification and category
         // is a menu-item concept.
         body.innerHTML = `
-          <div class="list-item-title">${PCD.escapeHtml(r.name)} ${subBadge}</div>
+          <div class="list-item-title">${PCD.escapeHtml(r.name)} ${subBadge}${incompleteDot}</div>
           <div class="list-item-meta">
             ${!isPrep(r) ? '<span>' + t(r.category || 'cat_main') + '</span>' : ''}
             ${yieldOrServings ? (!isPrep(r) ? '<span>·</span>' : '') + yieldOrServings : ''}
@@ -1633,6 +1638,29 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
     const costPerServing = r.servings ? cost / r.servings : cost;
     const pct = (r.salePrice && cost > 0 && r.servings) ? (costPerServing / r.salePrice) * 100 : null;
 
+    // v2.17 — Fiyat tazeliği rozeti (spec 7.1). En eski fiyatlı malzemenin
+    // updatedAt'ından gün hesaplanır; >30 gün → sarı uyarı. Maliyet güveni.
+    const freshnessBadge = (function () {
+      let oldest = null;
+      (r.ingredients || []).forEach(function (ri) {
+        if (!ri || ri.separator || !ri.ingredientId) return;
+        const ing = ingMap[ri.ingredientId];
+        if (!ing || !ing.pricePerUnit || ing.pricePerUnit <= 0) return;
+        const ts = ing.updatedAt ? new Date(ing.updatedAt).getTime() : 0;
+        const age = ts ? Math.floor((Date.now() - ts) / 86400000) : 9999;
+        if (oldest == null || age > oldest) oldest = age;
+      });
+      if (oldest == null) return '';
+      const stale = oldest > 30;
+      const label = (oldest >= 9999)
+        ? (t('price_never_updated') || 'Prices not yet updated')
+        : (t('price_updated_ago') || 'Prices updated {n}d ago').replace('{n}', oldest);
+      const bg = stale ? '#fef3c7' : 'var(--surface-2)';
+      const col = stale ? '#92400e' : 'var(--text-3)';
+      return '<div style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;padding:4px 10px;border-radius:999px;background:' + bg + ';color:' + col + ';margin-bottom:12px;">' +
+        (stale ? PCD.icon('clock', 12) : '') + '<span>' + PCD.escapeHtml(label) + (stale ? ' · ' + PCD.escapeHtml(t('price_refresh_hint') || 'consider refreshing') : '') + '</span></div>';
+    })();
+
     let ingsHtml = '';
     // v2.8.14 — Sub-recipe rows (ri.recipeId set) were showing as
     // "(removed)" because this loop only looked up ri.ingredientId.
@@ -1685,6 +1713,8 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
         ${pct !== null ? '<div class="stat" style="padding:10px;"><div class="stat-label">' + t('food_cost_percent') + '</div><div class="stat-value" style="font-size:18px;color:' + (pct <= 35 ? 'var(--success)' : (pct <= 45 ? 'var(--warning)' : 'var(--danger)')) + ';">' + PCD.fmtPercent(pct, 1) + '</div></div>' : ''}
       </div>
 
+      ${freshnessBadge}
+
       <div class="section-title mt-3 mb-2">${t('recipe_ingredients')}</div>
       <ul style="list-style:none;padding:0;margin:0 0 16px;">${ingsHtml || '<li class="text-muted" style="padding:8px 0;">—</li>'}</ul>
 
@@ -1722,11 +1752,15 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
     shareBtn.innerHTML = PCD.icon('share', 16) + ' <span>' + PCD.escapeHtml(t('btn_share')) + '</span>';
     const qrBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: 'QR' });
     qrBtn.innerHTML = PCD.icon('grid', 16);
+    // v2.17 — Cost-view paylaşım (patron/muhasebe). Pro özelliği; free'de kilit rozeti.
+    const costViewBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: t('share_cost_view_btn') });
+    costViewBtn.innerHTML = PCD.icon('activity', 16) + ((PCD.gate && !PCD.gate.isPro()) ? ' ' + PCD.gate.lockChip(11) : '');
     const deleteBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: t('delete'), style: { color: 'var(--danger)' } });
     deleteBtn.innerHTML = PCD.icon('trash', 16);
     footer.appendChild(deleteBtn);
     footer.appendChild(shareBtn);
     footer.appendChild(qrBtn);
+    footer.appendChild(costViewBtn);
     footer.appendChild(duplicateBtn);
     footer.appendChild(copyToWsBtn);
     footer.appendChild(costReportBtn);
@@ -1828,6 +1862,27 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
         lines.push(r.steps);
       }
       openRecipeShareSheet({ title: r.name, text: lines.join('\n'), recipe: r, ingMap: ingMap, recipeMap: recipeMap });
+    });
+
+    // v2.17 — Cost-view link: fiyat + food cost % gösteren özel paylaşım.
+    costViewBtn.addEventListener('click', function () {
+      const user = PCD.store.get('user');
+      if (!user || !user.id) { PCD.toast.error(t('qr_signin_required') || 'Sign in first'); return; }
+      if (PCD.gate && !PCD.gate.canUseCostView()) {
+        PCD.gate.showUpgradeModal({ feature: 'costview', message: t('share_cost_view_pro') });
+        return;
+      }
+      if (!PCD.share || !PCD.share.createOrGetShareUrl) { PCD.toast.error(t('qr_share_error') || 'Error'); return; }
+      costViewBtn.disabled = true;
+      const orig = costViewBtn.innerHTML;
+      costViewBtn.innerHTML = '<span class="spinner"></span>';
+      PCD.share.createOrGetShareUrl('recipe', rid, 'cost').then(function (url) {
+        costViewBtn.disabled = false; costViewBtn.innerHTML = orig;
+        PCD.qr.show({ title: r.name + ' · ' + t('cost_panel_title'), subtitle: t('share_cost_view_desc'), text: url });
+      }).catch(function (e) {
+        costViewBtn.disabled = false; costViewBtn.innerHTML = orig;
+        PCD.toast.error((t('qr_share_error') || 'Error') + ': ' + (e.message || e));
+      });
     });
 
     qrBtn.addEventListener('click', function () {
@@ -2126,19 +2181,14 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
     const t = PCD.i18n.t;
     const existing = rid ? PCD.store.getRecipe(rid) : null;
 
-    // Check free plan limit
-    if (!existing) {
-      const plan = PCD.store.get('plan') || 'free';
-      const count = PCD.store.listRecipes().length;
-      if (plan === 'free' && count >= window.PCD_CONFIG.FREE_RECIPE_LIMIT) {
-        PCD.modal.alert({
-          icon: '⭐', iconKind: 'warning',
-          title: PCD.i18n.t('modal_upgrade_needed_title'),
-          text: t('recipe_limit_reached').replace('{n}', window.PCD_CONFIG.FREE_RECIPE_LIMIT),
-          okText: t('upgrade_to_pro')
-        });
-        return;
-      }
+    // v2.17 — Free plan tarif limiti. Merkezi gate (plans.js) + yumuşak duvar.
+    if (!existing && PCD.gate && !PCD.gate.canCreateRecipe(PCD.store.listRecipes().length)) {
+      const limit = PCD.gate.limits().maxRecipes;
+      PCD.gate.showUpgradeModal({
+        feature: 'recipes',
+        message: t('recipe_limit_reached').replace('{n}', limit),
+      });
+      return;
     }
 
     const data = existing ? PCD.clone(existing) : {
