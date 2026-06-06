@@ -256,6 +256,7 @@
           <div class="page-subtitle">${menus.length} ${menus.length === 1 ? 'menu' : 'menus'}</div>
         </div>
         <div class="page-header-actions">
+          <button class="btn btn-outline btn-sm" id="menuStudioBtn" title="Yeni tasarımcı (prototip)">✨ Menu Studio <span style="font-size:10px;font-weight:700;color:var(--brand-700);">beta</span></button>
           <button class="btn btn-primary" id="newMenuBtn">+ ${t('new_menu')}</button>
         </div>
       </div>
@@ -301,6 +302,8 @@
     }
 
     PCD.$('#newMenuBtn', view).addEventListener('click', function () { openEditor(); });
+    const _msBtn = PCD.$('#menuStudioBtn', view);
+    if (_msBtn) _msBtn.addEventListener('click', function () { PCD.router.go('menu_studio'); });
     PCD.on(listEl, 'click', '[data-mid]', function (e) {
       // If user clicked the inline edit/delete/duplicate icon let those handlers fire
       if (e.target.closest('[data-edit-mid]') || e.target.closest('[data-del-mid]') || e.target.closest('[data-copy-mid]') || e.target.closest('[data-dup-mid]')) return;

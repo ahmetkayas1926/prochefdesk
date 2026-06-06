@@ -69,6 +69,7 @@
       PCD.router.registerLazy('recipes',         'js/tools/recipes.js',        'recipes');
       PCD.router.registerLazy('ingredients',     'js/tools/ingredients.js',    'ingredients');
       PCD.router.registerLazy('menus',           'js/tools/menus.js',          'menus');
+      PCD.router.registerLazy('menu_studio',     'js/tools/menu_studio.js',    'menuStudio');
       PCD.router.registerLazy('kitchen_cards',   'js/tools/kitchen_cards.js',  'kitchen_cards');
       PCD.router.registerLazy('whiteboard',      'js/tools/whiteboard.js',     'whiteboard');
       PCD.router.registerLazy('portion',         'js/tools/portion.js',        'portion');

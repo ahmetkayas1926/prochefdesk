@@ -4,6 +4,12 @@ Kronolojik tersine (en son üstte). Her sürüm: başlık + ana değişiklikler.
 
 ---
 
+## v2.18.0 — Menu Studio (beta prototip) · 2026-06-07
+
+- **YENİ (beta):** Menu Studio — blok-kanvas menü tasarımcısı prototipi. Gerçek A4 kanvas (önizleme = çıktı, tek render motoru), serbest font (12 küratörlü), özel hex renk (vurgu/metin/arka plan), yemek fotoğrafı, blok ekle/sil/sırala (başlık, metin, bölüm, görsel, ayraç, boşluk), reçeteden veya manuel yemek, dikey/yatay, hazır şablon. Mevcut "Menus" aracına dokunulmadı; yanına eklendi (Menus header → "✨ Menu Studio beta"). Kalıcılık şimdilik localStorage (prototip). Değerlendirme amaçlı; beğenilirse tam sürümde bulut + çoklu menü + reçete-maliyet zekâsı + serbest yerleşim eklenecek.
+
+---
+
 ## v2.17.1 — Recipes: kalıcı Cost Report butonu · 2026-06-07
 
 - Recipes header'ına her zaman görünür **Cost Report** butonu. O an ekranda görünen tariflere göre rapor üretir (sekme/arama/etiket filtresine saygı; boşsa tüm tarifler). Select modundaki seçili-alt-küme raporu korundu.
