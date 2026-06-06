@@ -4,6 +4,12 @@ Kronolojik tersine (en son üstte). Her sürüm: başlık + ana değişiklikler.
 
 ---
 
+## v2.17.1 — Recipes: kalıcı Cost Report butonu · 2026-06-07
+
+- Recipes header'ına her zaman görünür **Cost Report** butonu. O an ekranda görünen tariflere göre rapor üretir (sekme/arama/etiket filtresine saygı; boşsa tüm tarifler). Select modundaki seçili-alt-küme raporu korundu.
+
+---
+
 ## v2.17.0 — Monetization (Free / Pro + Stripe) · 2026-06-07
 
 Tek katmanlı ücretsiz üründen Free + Pro modele geçiş. Tüm limitler/gate'ler tek dosyadan okunur: `app/js/core/plans.js`.

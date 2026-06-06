@@ -112,6 +112,7 @@
           <div class="page-subtitle">${recipes.length} ${recipes.length === 1 ? t('stat_recipes').toLowerCase().slice(0,-1) : t('stat_recipes').toLowerCase()}</div>
         </div>
         <div class="page-header-actions">
+          ${recipes.length > 0 ? `<button class="btn btn-outline btn-sm" id="headerCostReport">${PCD.icon('activity',14)} <span>${t('btn_cost_report')}</span></button>` : ''}
           ${recipes.length > 0 ? `<button class="btn btn-outline btn-sm" id="toggleSelectMode">${t('select_mode')}</button>` : ''}
           <button class="btn btn-primary" id="newRecipeBtn">+ ${t('new_recipe')}</button>
         </div>
@@ -164,6 +165,9 @@
     // with the search filter. Menu = no yieldAmount (1-portion plates).
     // Preps = recipes with yieldAmount + yieldUnit set (batch/sub-recipes).
     let activeTab = 'all';
+    // v2.17 — Header "Cost Report" butonu için o an görünen tariflerin id'leri
+    // (renderList her çalıştığında güncellenir). "Ne görüyorsam onu raporla".
+    let lastVisibleIds = [];
     // v2.8.75 — Tag filter set. Recipe must have ALL active tags to pass.
     const tagFilterSet = new Set();
     let sorted = recipes.slice().sort(function (a, b) { return (b.updatedAt || '').localeCompare(a.updatedAt || ''); });
@@ -220,6 +224,8 @@
           return ok;
         });
       }
+
+      lastVisibleIds = visible.map(function (r) { return r.id; });
 
 if (visible.length === 0 && !filter && activeTab === 'all') {
         const ws = PCD.store.getActiveWorkspace();
@@ -387,6 +393,15 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
 
     // Wire
     PCD.$('#newRecipeBtn', view).addEventListener('click', function () { openEditor(); });
+    // v2.17 — Header Cost Report: o an görünen tariflere göre rapor (boşsa tüm tarifler).
+    const headerCR = PCD.$('#headerCostReport', view);
+    if (headerCR) headerCR.addEventListener('click', function () {
+      const ids = (lastVisibleIds && lastVisibleIds.length)
+        ? lastVisibleIds.slice()
+        : recipes.map(function (r) { return r.id; });
+      if (!ids.length) { if (PCD.toast && PCD.toast.info) PCD.toast.info(t('cr_no_recipes') || 'No recipes to report'); return; }
+      openCostReport(ids);
+    });
     const toggleSel = PCD.$('#toggleSelectMode', view);
     if (toggleSel) toggleSel.addEventListener('click', enterSelect);
     PCD.$('#exitSelect', view).addEventListener('click', exitSelect);
