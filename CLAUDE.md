@@ -41,15 +41,15 @@ Operatör Türkçe konuşur, Türkçe cevap ver. Yorgun veya kızgınsa tek net 
 - Cron schedule veya RLS policy değişikliği
 - Cross-device sync mantığı değişikliği (cloud.js, cloud-pertable.js, cloud-realtime.js)
 - Edge Function deploy
+- Plan/gating/yetki mantığı (plans.js, gate.js, user_prefs plan kolonları + kolon-seviyesi GRANT'lar)
 
 ---
 
 ## Önerme — bunları spontan önerme
 
-- Pricing / paid tier / Stripe (50+ aktif kullanıcı + %40 retention kanıtlanmadan)
+- Plan limiti / fiyat değişikliği (monetization v2.17'de KURULDU — değişiklik operatör kararı; `plans.js` + landing + Stripe birlikte güncellenmeli)
 - AI image gen entegrasyonu (operatörün RTX 5090 24GB'ı var, kendisi yönetir)
 - Demo seed değişikliği
-- Türkçe landing page (ertelendi)
 - Screenshot ekleme (operatör kendisi çeker)
 
 ---
@@ -57,6 +57,41 @@ Operatör Türkçe konuşur, Türkçe cevap ver. Yorgun veya kızgınsa tek net 
 ## Mimari gotcha'lar
 
 Bunlara bilmeden dokunmak beklenmedik davranışa yol açar. Her biri "bu şekilde çalışır, bu nedenle böyle yap" formatında yazılmıştır.
+
+---
+
+**Plan/gating tek doğruluk kaynağı = plans.js.**
+Tüm limit ve feature gate'leri `app/js/core/plans.js` → `PLAN_LIMITS`'ten okunur. Dağınık `if (plan==='pro')` YAZMA; `PCD.plans.getPlanLimits()` veya `PCD.gate.can*()` kullan (`canCreateRecipe(count)`, `canUseHaccp`, `canSync`, `canUseCostView`, `canUseLaborCost`, `showWatermark`…). Bir özelliği plana açıp kapamak = plans.js'te tek satır. Upgrade akışı + Stripe checkout/portal tetikleyicileri `gate.js`'te.
+
+---
+
+**Plan SUNUCU-OTORİTER; frontend yazamaz.**
+Plan `user_prefs`'in ayrı kolonlarında (`plan`, `plan_source`, `plan_status`, `plan_expires_at`, `stripe_customer_id`). Migration kolon-seviyesi GRANT ile authenticated/anon'un bu kolonları yazmasını engeller → kullanıcı kendini pro yapamaz. Frontend yalnız OKUR (`cloud.fetchPlan` boot'ta kolondan çeker; data blob'undan DEĞİL). Plan'ı asla frontend'den yaz/`user_prefs` upsert'ine plan ekleme. Yalnız `stripe-webhook` (service_role) veya manuel SQL yazar. `getUserPlan()` 'team' değerini de pro sayar.
+
+---
+
+**Manuel pro kalıcıdır — webhook ezmez.**
+`stripe-webhook` tüm plan update'lerini `.neq('plan_source','manual')` ile korur. Operatör SQL'de `plan='pro', plan_source='manual'` set ederse Stripe'sız kalıcı pro olur ve webhook bunu bozmaz. Bu guard'ı kaldırma.
+
+---
+
+**Bulut sync gate'i PUSH tarafındadır (free = yalnız yerel).**
+Free kullanıcıda `cloud-pertable` enqueue fonksiyonları (`queueUpsert`/`queueDelete`/`queueArraySync`) `syncAllowed()` ile erken döner → buluta yazılmaz. Pull AÇIK kalır (local∪remote merge yapar, yerel veri ASLA ezilmez). **Acil fren:** plans.js'te free `cloudSync:true` → herkes yine senkronlanır. Not: operatörün kendisi manuel pro olmalı, yoksa kendi senkronu durur.
+
+---
+
+**Watermark `showWatermark()`'a bağlı.**
+`PCD.print` footer'ı (utils.js) + paylaşılan sayfa footer'ı (share.js) bu gate'ten geçer. Free'de kalır, Pro'da kalkar. Paylaşılan sayfada karar PAYLAŞANIN planına göre snapshot'a gömülür (`payload._wm`, create/refresh'te güncellenir) — görüntüleyenin planı etkilemez.
+
+---
+
+**Cost-view paylaşım modu.**
+`createOrGetShareUrl(kind, id, 'cost')` cost-share üretir (yalnız Pro). Maliyet verisi YALNIZCA cost-share payload'una gömülür (`payload.cost` + `payload._mode='cost'`); normal public link maliyet sızdırmaz. `public_shares` tekilliği `(owner, kind, source, share_mode)` → bir kaynağın hem public hem cost linki olabilir. Görüntüleme `?view=cost` / `payload._mode` ile maliyet panelini render eder.
+
+---
+
+**Stripe Edge Function'ları + verify_jwt.**
+3 fonksiyon Supabase dashboard'dan deploy edilir: `create-checkout-session`, `create-portal-session` (verify_jwt AÇIK — frontend user JWT gönderir), `stripe-webhook` (**verify_jwt KAPALI** — Stripe JWT göndermez, imzayla doğrular). Kod değişirse Edge Function elle yeniden deploy edilmeli (git push frontend'i günceller, Edge'i değil). Şu an test/sandbox modu; canlıya geçişte secret'lar live değerlerle güncellenir.
 
 ---
 

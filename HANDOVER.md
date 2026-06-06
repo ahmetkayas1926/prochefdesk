@@ -155,8 +155,35 @@ Herkese açık tarif keşfi feed'i. Arama, beğeni, görüntülenme sayacı (rat
 
 ### Account (Profile & Settings)
 Profil (ad, rol, ülke, işyeri, bio — Discover'da görünür), dil + para birimi + tema tercihleri. Paylaşılan öğe yönetimi. Gece otomatik R2 yedek.
+- Plan/abonelik: "Pro'ya geç" (Stripe Checkout) · "Aboneliği yönet" (Stripe portal) — bkz. **Plan modeli**
 - JSON yedek indir ✓ (tüm veriyi yerel dosyaya al)
 - JSON geri yükle ✓ (yan yana karşılaştırma önizlemesi ile)
+
+---
+
+## Plan modeli (Free / Pro)
+
+İki katman. **Tüm limitler/gate'ler tek dosyadan:** `app/js/core/plans.js` (`PLAN_LIMITS`). Bir özelliği plana açıp kapamak için orada tek satır değiştirilir. `gate.js` tüm `can*()` gate'lerini + upgrade modalını + Stripe checkout/portal çağrılarını barındırır.
+
+| Özellik | Free | Pro |
+|---------|------|-----|
+| Tarif | 15 | sınırsız |
+| Malzeme | 50 | sınırsız |
+| Workspace | 1 | sınırsız |
+| Bulut sync | kapalı (yalnız yerel) | açık |
+| HACCP | kapalı | açık |
+| Roster işçilik maliyeti | kapalı | açık |
+| Cost-view paylaşım | kapalı | açık |
+| Çıktı/paylaşım footer (watermark) | var | yok |
+| Print/Excel export | açık | açık |
+| Discover yayın | açık | açık |
+
+- **Plan kaynağı = sunucu.** Plan `user_prefs`'in AYRI kolonlarında (`plan`, `plan_source`, `plan_status`, `plan_expires_at`, `stripe_customer_id`). Frontend bu kolonları **yazamaz** (kolon-seviyesi yetki kilidi), yalnızca okur → kullanıcı kendini pro yapamaz. Plan data blob'undan değil kolondan okunur (`cloud.fetchPlan`).
+- **Manuel pro:** operatör SQL'de `plan='pro', plan_source='manual'` set eder → kalıcı pro (Stripe gerekmez). Webhook `plan_source='manual'` satırları **asla ezmez**.
+- **Stripe:** Pro Monthly 19 AUD / Annual 190 AUD. 3 Edge Function — `create-checkout-session`, `create-portal-session`, `stripe-webhook` (imza doğrulamalı; plan'ı yazan **tek otorite**). Şu an **sandbox/test** modunda; canlıya geçiş için Operatöre açık adımlara bak.
+- **Cost-view paylaşım (Pro):** tarif/menü için fiyat + food cost % gösteren özel link (`?view=cost`, salt-okunur, giriş yok). `public_shares.share_mode='cost'`; maliyet **yalnızca** cost-share payload'una gömülür (normal public link maliyet sızdırmaz).
+- **Watermark:** print footer (`PCD.print`) + paylaşılan sayfa footer'ı `PCD.gate.showWatermark()`'a bağlı. Free'de kalır, Pro'da kalkar. Paylaşılan sayfada karar paylaşanın planına göre snapshot'a gömülür (`payload._wm`).
+- **Dashboard komuta merkezi:** 4 metrik kartı + 2 grafik, tamamı gerçek kullanıcı verisinden (sahte sayı yok); işçilik kartı Pro-gated.
 
 ---
 
@@ -189,7 +216,7 @@ Profil (ad, rol, ülke, işyeri, bio — Discover'da görünür), dil + para bir
 |-------|--------|
 | `workspaces` | Workspace tanımları |
 | `inventory` | Stok seviyeleri |
-| `user_prefs` | Dil, para birimi, tema, aktif workspace |
+| `user_prefs` | Dil, para birimi, tema, aktif workspace + **plan kolonları** (plan/source/status/expires/stripe_customer_id — sunucu-yazılır) |
 | `workspace_tombstones` | Silme cascade için |
 
 ### Supabase-only (frontend'den yazılmaz)
@@ -198,7 +225,7 @@ Profil (ad, rol, ülke, işyeri, bio — Discover'da görünür), dil + para bir
 |-------|--------|
 | `client_errors` | Frontend hata logları |
 | `discover_view_logs` | Rate-limit penceresi (60 dk/IP) |
-| `recipe_shares` | Paylaşım URL'leri (tarifler, menüler, kitchen cards) |
+| `public_shares` | Paylaşım URL'leri (tarif/menü/kitchen card) + `share_mode` (public/cost) |
 | `recipe_likes` | Beğeniler — RLS: kullanıcı sadece kendi beğenilerini okur |
 
 RLS tüm tablolarda aktif. Frontend `anon` key kullanır.
@@ -215,4 +242,6 @@ Nutrition · Yield Calculator · Variance · Sales · What-If · Menu Matrix · 
 
 ## Operatöre açık adımlar
 
-1. **iOS/Safari çapraz-tarayıcı testi** — cihazda manuel test bekliyor.
+1. **Stripe canlıya geçiş.** Şu an sandbox/test modu (test anahtarları + test webhook). Canlı için: Stripe'ta live ürünleri (19/190 AUD) + live API anahtarı oluştur, live webhook endpoint'i ekle, Supabase secret'larını live değerlerle güncelle (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, price ID'ler), live Customer Portal'ı aktif et.
+2. **Legal gözden geçirme.** Privacy/Terms profesyonel taslaktır; ticari lansman öncesi iade/ödeme şartlarını Avustralya tüketici hukukuna göre bir avukata/şablona doğrulat.
+3. **iOS/Safari çapraz-tarayıcı testi** — cihazda manuel test bekliyor.

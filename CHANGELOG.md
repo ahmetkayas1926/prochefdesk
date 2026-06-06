@@ -4,6 +4,25 @@ Kronolojik tersine (en son üstte). Her sürüm: başlık + ana değişiklikler.
 
 ---
 
+## v2.17.0 — Monetization (Free / Pro + Stripe) · 2026-06-07
+
+Tek katmanlı ücretsiz üründen Free + Pro modele geçiş. Tüm limitler/gate'ler tek dosyadan okunur: `app/js/core/plans.js`.
+
+- **Merkezi plan config:** `plans.js` (`PLAN_LIMITS` + `getPlanLimits` + `getUserPlan`). `gate.js` tüm gate'leri + upgrade modalını + Stripe checkout/portal tetikleyicilerini barındırır.
+- **Plan alanı:** `user_prefs`'e ayrı kolonlar (`plan`, `plan_source`, `plan_status`, `plan_expires_at`, `stripe_customer_id`). Sunucu otoriter; frontend kolon-seviyesi yetki kilidiyle bu kolonları yazamaz (kullanıcı kendini pro yapamaz). Plan artık data blob'undan değil kolondan okunur.
+- **Manuel pro:** operatör SQL'de set eder → kalıcı (Stripe'sız); webhook manuel satırları asla ezmez.
+- **Stripe:** 3 Edge Function (`create-checkout-session`, `create-portal-session`, `stripe-webhook` — imza doğrulamalı). Pro Monthly 19 AUD / Annual 190 AUD. Account ekranında Pro'ya geç / Aboneliği yönet. `?checkout=success` ve `?upgrade=1` dönüş handler'ları.
+- **Feature gating:** tarif (15) · malzeme (50) · workspace (1) · HACCP (Pro) · roster işçilik maliyeti (Pro) · bulut sync (Pro; free = yalnız yerel, push gate'li) · watermark. Limit aşımında engelleme değil, "Pro'ya geç" yumuşak duvarı + kilit ikonu.
+- **Watermark plana bağlı:** print footer + paylaşılan sayfa footer'ı `showWatermark()`'tan. Free'de kalır, Pro'da kalkar (paylaşılan sayfada karar paylaşanın planına göre snapshot'a gömülür).
+- **Cost-view paylaşım (Pro):** tarif/menü için fiyat + food cost % gösteren özel link (`?view=cost`, salt-okunur, giriş yok). `public_shares.share_mode`; maliyet yalnızca cost-share payload'una gömülür.
+- **Chef office dashboard:** komuta merkezi — 4 metrik (ort. menü food cost%, bu hafta işçilik [Pro], düşük stok, eksik tarif) + 2 grafik (tarif food cost dağılımı, malzeme fiyat tazeliği). Tamamı gerçek veriden, sahte sayı yok. Eksik tarif uyarı ikonu (liste + dashboard).
+- **Güvenilirlik:** tarif önizlemede "Fiyatlar N gün önce güncellendi" rozeti (>30 gün sarı uyarı).
+- **Landing page:** Free vs Pro fiyatlandırma tablosu + Stripe CTA, dark mode, 6 dilli (en/tr/es/fr/de/ar) dil seçici, oturum durumuna göre dinamik CTA. Kaldırılmış araçlar tanıtımdan çıkarıldı.
+- **Privacy/Terms:** 6 dilde güncellendi — Stripe alt-işleyen + ödeme verisi, abonelik/iade şartları, HACCP/maliyet sorumluluk reddi, Avustralya hukuku.
+- Yeni ikonlar: `lock`, `star`. Migration'lar: `v2.17-monetization-plan-fields.sql`, `v2.17-cost-view-share-mode.sql`.
+
+---
+
 ## v2.16.0 — Prep Sheet aracı · 2026-05-22
 
 - **YENİ araç:** Prep Sheet — yemek başına bileşen listesi, tariften otomatik çekme + manuel düzenleme, 1–4 sütun yazdırma, Kayıtlılar (library)
