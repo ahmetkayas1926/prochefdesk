@@ -4,6 +4,19 @@ Kronolojik tersine (en son üstte). Her sürüm: başlık + ana değişiklikler.
 
 ---
 
+## v2.20.1 — Menu Studio Faz 2: Paylaş + QR (dijital menü) · 2026-06-07
+
+Studio menüleri artık **public link + QR** ile paylaşılır (masaya QR menü). Mevcut
+paylaşım altyapısına (public_shares, watermark, cost-view) bağlandı.
+
+- **Paylaş butonu** (editör header'ı): Herkese açık link + QR (PCD.qr) · Maliyet görünümü (Pro).
+- **WYSIWYG public sayfa:** Studio tasarımı snapshot anında standalone HTML olarak üretilip (`renderShareDoc`) snapshot'a gömülür; public sayfa Studio'yu yüklemeden bire bir aynı tasarımı render eder, ekrana **responsive ölçeklenir** (mobilde tam sığar).
+- **Maliyet-görünümü Studio uyumlu:** `enrichMenuCost` artık `studio.blocks` kalemlerinden de ciro/maliyet/marj hesaplar (eskiden yalnız klasik `sections`'a bakıyordu → Studio menüde 0 görünürdü).
+- Güvenlik korunur: herkese açık link maliyet/fiyat sızdırmaz; maliyet linki Pro + unlisted; watermark paylaşanın planına göre. Giriş yoksa "giriş yap" uyarısı.
+- Not: paylaşım oluşturma auth+cloud gerektirir; canlıda giriş yapıp test edilmeli (sandbox misafir modda yalnız renderer + ölçek doğrulandı).
+
+---
+
 ## v2.20.0 — Menu Studio ANA menü aracı oldu (büyük revizyon) · 2026-06-07
 
 Menu Studio artık `menus` route'unun aracı (klasik menus.js route'lanmaz; dosya

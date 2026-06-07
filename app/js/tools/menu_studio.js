@@ -784,6 +784,42 @@
     return '<style>@page{size:' + spec.paperCss + (spec.land ? ' landscape' : ' portrait') + ';margin:0;}@import url("' + GF_HREF + '");body{margin:0;}.ms-print{box-sizing:border-box;width:' + spec.w + 'px;min-height:' + spec.h + 'px;background:' + (page.bg || '#fff') + ';padding:' + (page.pad || 56) + 'px;margin:0 auto;}.ms-block{margin-bottom:18px;}</style><div class="ms-print">' + renderPageInner(design) + '</div>';
   }
 
+  // Studio tasarımını paylaşım/snapshot için standalone HTML üretir.
+  // share.js public sayfada bunu doğrudan enjekte eder (Studio yüklü olmadan).
+  function renderShareDoc(d) {
+    normalizeDesign(d);
+    const spec = pageSpec(d.page);
+    const html = '<div style="width:' + spec.w + 'px;min-height:' + spec.h + 'px;background:' + (d.page.bg || '#fff') + ';padding:' + (d.page.pad || 56) + 'px;box-sizing:border-box;">' + renderPageInner(d) + '</div>';
+    return { html: html, w: spec.w, h: spec.h, bg: d.page.bg || '#fff', fonts: GF_HREF };
+  }
+
+  // ---- Paylaş (public link + QR, opsiyonel cost-view) ----
+  function openShare() {
+    const user = PCD.store.get && PCD.store.get('user');
+    if (!user || !user.id) { if (PCD.toast) PCD.toast.info('Paylaşmak için giriş yap'); return; }
+    if (!PCD.share || !PCD.share.createOrGetShareUrl) { if (PCD.toast) PCD.toast.error('Paylaşım şu an kullanılamıyor'); return; }
+    if (currentMenu) { currentMenu.studio = design; try { PCD.store.upsertInTable('menus', currentMenu, 'm'); } catch (e) {} }
+    const canCost = !(PCD.gate && PCD.gate.canUseCostView) || PCD.gate.canUseCostView();
+    const body = PCD.el('div');
+    body.innerHTML = '<div style="display:flex;flex-direction:column;gap:10px;">' +
+      '<button type="button" class="btn btn-primary" id="msShPublic" style="justify-content:flex-start;">' + (PCD.icon ? PCD.icon('share', 16) : '') + ' Herkese açık menü — link + QR</button>' +
+      '<button type="button" class="btn btn-outline" id="msShCost" style="justify-content:flex-start;">' + (PCD.icon ? PCD.icon('grid', 16) : '') + ' Maliyet görünümü' + (canCost ? '' : ' (Pro)') + '</button>' +
+      '<div class="text-muted text-sm">Herkese açık link maliyet/fiyat sızdırmaz. Maliyet linki yalnız paylaştığın kişi içindir.</div></div>';
+    const m = PCD.modal.open({ title: 'Menüyü paylaş', body: body, size: 'sm', closable: true });
+    body.querySelector('#msShPublic').addEventListener('click', function () { m.close(); doShare('public'); });
+    body.querySelector('#msShCost').addEventListener('click', function () {
+      m.close();
+      if (!canCost) { if (PCD.gate && PCD.gate.showUpgradeModal) PCD.gate.showUpgradeModal({ feature: 'costview' }); return; }
+      doShare('cost');
+    });
+  }
+  function doShare(mode) {
+    PCD.share.createOrGetShareUrl('menu', currentId, mode).then(function (urlStr) {
+      if (PCD.qr && PCD.qr.show) PCD.qr.show({ title: (currentMenu && currentMenu.name) || 'Menu', subtitle: mode === 'cost' ? 'Maliyet görünümü' : 'Menü', text: urlStr });
+      else if (PCD.toast) PCD.toast.success(urlStr);
+    }).catch(function (e) { if (PCD.toast) PCD.toast.error('Paylaşım hatası: ' + ((e && e.message) || e)); });
+  }
+
   // ================= LIBRARY (liste) =================
   function thumbHtml(menu) {
     let d = menu.studio;
@@ -929,7 +965,7 @@
       '</style>' +
       '<div class="page-header"><div class="page-header-text"><div class="page-title" style="display:flex;align-items:center;gap:8px;"><input id="msName" class="input" value="' + esc(currentMenu.name || '') + '" style="font-size:18px;font-weight:800;max-width:280px;"></div>' +
         '<div class="page-subtitle" id="msStats" style="font-size:12px;"></div></div>' +
-        '<div class="page-header-actions"><button class="btn btn-outline btn-sm" id="msBack">← Kütüphane</button><button class="btn btn-outline btn-sm" id="msTemplatesHdr">' + (PCD.icon ? PCD.icon('grid', 14) : '') + ' Şablonlar</button><button class="btn btn-primary btn-sm" id="msPrint">' + (PCD.icon ? PCD.icon('print', 14) : '') + ' Yazdır</button></div></div>' +
+        '<div class="page-header-actions"><button class="btn btn-outline btn-sm" id="msBack">← Kütüphane</button><button class="btn btn-outline btn-sm" id="msTemplatesHdr">' + (PCD.icon ? PCD.icon('grid', 14) : '') + ' Şablonlar</button><button class="btn btn-outline btn-sm" id="msShare">' + (PCD.icon ? PCD.icon('share', 14) : '') + ' Paylaş</button><button class="btn btn-primary btn-sm" id="msPrint">' + (PCD.icon ? PCD.icon('print', 14) : '') + ' Yazdır</button></div></div>' +
       '<div class="ms-addbar"><span class="ms-addbar-label">Blok ekle</span>' +
         addBtnHtml('heading') + addBtnHtml('text') + addBtnHtml('section') + addBtnHtml('image') + addBtnHtml('divider') + addBtnHtml('spacer') + '</div>' +
       '<div class="ms-wrap"><div class="ms-viewport" id="msViewport"><div class="ms-page" id="msPage"></div></div><div class="ms-inspector" id="msInspector"></div></div>';
@@ -946,6 +982,7 @@
     _view.querySelectorAll('[data-add]').forEach(function (el) { el.addEventListener('click', function () { addBlock(el.getAttribute('data-add')); }); });
     PCD.$('#msBack', _view).addEventListener('click', function () { clearTimeout(_saveTimer); if (currentMenu) { currentMenu.studio = design; try { PCD.store.upsertInTable('menus', currentMenu, 'm'); } catch (e) {} } currentId = null; currentMenu = null; renderList(); });
     PCD.$('#msTemplatesHdr', _view).addEventListener('click', openTemplates);
+    PCD.$('#msShare', _view).addEventListener('click', openShare);
     PCD.$('#msPrint', _view).addEventListener('click', function () { PCD.print(buildPrintHtml(), currentMenu.name || 'Menu'); });
     const nm = PCD.$('#msName', _view); if (nm) nm.addEventListener('input', function () { currentMenu.name = nm.value; saveSoon(); });
     let _rsz = null; window.addEventListener('resize', function () { clearTimeout(_rsz); _rsz = setTimeout(applyScale, 120); });
@@ -964,5 +1001,5 @@
   }
 
   PCD.tools = PCD.tools || {};
-  PCD.tools.menuStudio = { render: render };
+  PCD.tools.menuStudio = { render: render, renderShareDoc: renderShareDoc };
 })();

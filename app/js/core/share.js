@@ -111,7 +111,7 @@
         }).filter(function (x) { return x.name; }),
       };
     });
-    return {
+    const out = {
       kind: 'menu',
       name: m.name,
       subtitle: m.subtitle,
@@ -141,6 +141,16 @@
       sections: sections,
       sharedAt: new Date().toISOString(),
     };
+    // v2.20 — Studio tasarımı varsa standalone HTML'i göm; public sayfa
+    // Studio'yu yüklemeden bu HTML'i render eder (WYSIWYG, snapshot anında üretilir).
+    try {
+      const mst = PCD.tools && PCD.tools.menuStudio && PCD.tools.menuStudio.renderShareDoc;
+      if (m.studio && mst) {
+        const doc = mst(m.studio);
+        out._studio = true; out.studioHtml = doc.html; out.studioW = doc.w; out.studioH = doc.h; out.studioBg = doc.bg; out.studioFonts = doc.fonts;
+      }
+    } catch (e) { /* renderer yoksa klasik snapshot kalır */ }
+    return out;
   }
 
   // Forwards to kitchen_cards.js's snapshot function. The tools module
@@ -192,8 +202,15 @@
     const recipeMap = (PCD.recipes && PCD.recipes.buildRecipeMap) ? PCD.recipes.buildRecipeMap() : null;
     const recById = {}; PCD.store.listRecipes().forEach(function (r) { recById[r.id] = r; });
     let totRev = 0, totCost = 0, counted = 0;
-    (m.sections || []).forEach(function (sec) {
-      (sec.items || []).forEach(function (it) {
+    // v2.20 — Studio menüsü varsa kalemler studio.blocks içindedir (m.sections boş olabilir).
+    const itemLists = [];
+    if (m.studio && m.studio.blocks) {
+      m.studio.blocks.forEach(function (b) { if (b.type === 'section' && b.items) itemLists.push(b.items); });
+    } else {
+      (m.sections || []).forEach(function (sec) { itemLists.push(sec.items || []); });
+    }
+    itemLists.forEach(function (items) {
+      items.forEach(function (it) {
         const r = it.recipeId ? recById[it.recipeId] : null;
         const price = (it.price !== undefined && it.price !== null && it.price !== '') ? Number(it.price) : (r && r.salePrice != null ? Number(r.salePrice) : null);
         if (r) {
@@ -583,6 +600,14 @@
         html += '<div class="share-section"><h2>' + escapeHtml(t('share_plating', 'Plating')) + '</h2><div class="steps">' + escapeHtml(p.plating) + '</div></div>';
       }
     } else if (p.kind === 'menu') {
+      if (p._studio && p.studioHtml) {
+        // v2.20 — Studio tasarımı: snapshot anında üretilmiş standalone HTML'i
+        // doğrudan render et (Studio yüklü değil). Responsive ölçek innerHTML sonrası.
+        if (p.studioFonts) html = html.replace('<style>', '<style>@import url("' + p.studioFonts + '");');
+        var _sw = p.studioW || 794, _sh = p.studioH || 1123;
+        html += '<div class="ms-share-wrap" style="width:100%;max-width:' + _sw + 'px;margin:0 auto;overflow:hidden;">' +
+          '<div id="msShareScale" data-sw="' + _sw + '" data-sh="' + _sh + '" style="width:' + _sw + 'px;transform-origin:top left;">' + p.studioHtml + '</div></div>';
+      } else {
       // v2.17/v2.18 — Share page menu render: theme, font, colour, logo, cover, 2-column.
       // Produces identical output to buildStyledHtml() in menus.js.
       var SHARE_THEMES = {
@@ -697,6 +722,7 @@
       }
       if (p.footer) html += '<div class="sm-footer">' + escapeHtml(p.footer) + '</div>';
       html += '</div>';
+      }
     }
 
     html += '</div>';
@@ -715,6 +741,18 @@
     appEl.innerHTML = html;
     appEl.classList.remove('hidden');
     document.title = (p.name || 'ProChefDesk') + ' · ProChefDesk';
+
+    // v2.20 — Studio paylaşımı: sabit-px sayfayı viewport'a sığacak şekilde ölçekle.
+    if (p._studio) {
+      const scaleEl = document.getElementById('msShareScale');
+      if (scaleEl && scaleEl.parentElement) {
+        const wrap = scaleEl.parentElement;
+        const sw = parseFloat(scaleEl.getAttribute('data-sw')) || 794;
+        const sh = parseFloat(scaleEl.getAttribute('data-sh')) || 1123;
+        const fit = function () { const w = wrap.clientWidth || sw; const k = Math.min(1, w / sw); scaleEl.style.transform = 'scale(' + k + ')'; wrap.style.height = (sh * k) + 'px'; };
+        fit(); setTimeout(fit, 60); window.addEventListener('resize', fit);
+      }
+    }
   }
 
   function escapeHtml(s) {
