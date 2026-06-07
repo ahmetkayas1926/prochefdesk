@@ -180,7 +180,9 @@
       "Bash(node -e ' *)",
       "Bash(xargs echo \"data-i18n attribute count:\")",
       "mcp__Claude_in_Chrome__list_connected_browsers",
-      "Bash(rm -f \"C:/Users/ahmet/Desktop/prochefdesk/.claude/devserver.js\")"
+      "Bash(rm -f \"C:/Users/ahmet/Desktop/prochefdesk/.claude/devserver.js\")",
+      "Bash(powershell -NoProfile -Command \"\\(Get-Content app/js/i18n/en.js | Measure-Object -Line\\).Lines\")",
+      "Bash(powershell -NoProfile -Command \"Get-Content app/js/i18n/en.js -Tail 3\")"
     ]
   }
 }

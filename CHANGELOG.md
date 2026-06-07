@@ -4,6 +4,17 @@ Kronolojik tersine (en son üstte). Her sürüm: başlık + ana değişiklikler.
 
 ---
 
+## v2.20.2 — Menu Studio Faz 3: çok dil (i18n) · 2026-06-07
+
+Menu Studio arayüzü artık sabit Türkçe değil — 6 dile çevrildi (EN/TR/ES/FR/DE/AR).
+
+- **~100 `ms_*` anahtarı** her dil bundle'ına eklendi; `menu_studio.js` tamamen `t()`'ye çevrildi (başlık/blok/sayfa/kontrol/şablon/paylaş/modal/placeholder hepsi). Şablon adları + içerik kasıtlı İngilizce (uluslararası).
+- **Canlı dil değişimi:** Editör/library dil değişince anında çevrilir. (`PCD.tools.menus` alias'ı eklendi; i18n `currentView()='menus'` ile aracı bulabiliyor.)
+- TR ve EN tarayıcıda uçtan uca doğrulandı (Türkçe sızıntısı yok, anahtar sızıntısı yok); ES spot-check edildi; konsol temiz.
+- Not: ES/FR/DE/AR bundle'ları zaten kısmi (birçok anahtar İngilizce'ye düşer); Menu Studio bu dillerde tam çevrildi.
+
+---
+
 ## v2.20.1 — Menu Studio Faz 2: Paylaş + QR (dijital menü) · 2026-06-07
 
 Studio menüleri artık **public link + QR** ile paylaşılır (masaya QR menü). Mevcut

@@ -74,6 +74,8 @@
   function uid() { return PCD.uid ? PCD.uid('b') : 'b' + Math.random().toString(36).slice(2); }
   function cur() { return (PCD.currencySymbol && PCD.currencySymbol()) || '$'; }
   function esc(s) { return PCD.escapeHtml(String(s == null ? '' : s)); }
+  function t(k, v) { return (PCD.i18n && PCD.i18n.t) ? PCD.i18n.t(k, v) : k; }
+  function blockTypeLabel(type) { return t('ms_block_' + type); }
 
   // EU alerjen anahtarı → kısa kod (otomatik gösterim)
   const ALLERGEN_CODE = {
@@ -119,9 +121,9 @@
     spacer:  { label: 'Boşluk', glyph: '↕' },
   };
   function blockLabel(b) {
-    if (b.type === 'heading' || b.type === 'text') return (String(b.text || '').trim().slice(0, 30)) || (BLOCK_META[b.type] || {}).label || b.type;
-    if (b.type === 'section') return (String(b.title || '').trim().slice(0, 30)) || 'Bölüm';
-    return (BLOCK_META[b.type] || {}).label || b.type;
+    if (b.type === 'heading' || b.type === 'text') return (String(b.text || '').trim().slice(0, 30)) || blockTypeLabel(b.type);
+    if (b.type === 'section') return (String(b.title || '').trim().slice(0, 30)) || blockTypeLabel('section');
+    return blockTypeLabel(b.type);
   }
 
   // ================= ŞABLONLAR (10 dolu profesyonel) =================
@@ -137,7 +139,7 @@
       blocks: [
         _hd(name || 'Menu', { font: 'Cormorant', size: 42, weight: 500 }),
         _dv('linefloral'),
-        _sec('Bölüm', [], { titleSize: 24, titleAlign: 'center' }),
+        _sec(t('ms_ph_section'), [], { titleSize: 24, titleAlign: 'center' }),
       ],
     };
   }
@@ -423,7 +425,7 @@
       return '<div style="font-family:' + fontCss(b.font || page.baseFont) + ';font-size:' + (b.size || 13) + 'px;text-align:' + (b.align || 'center') + ';color:' + (b.color || ink) + ';letter-spacing:' + (b.tracking || 0) + 'px;' + (b.upper ? 'text-transform:uppercase;' : '') + 'line-height:1.5;white-space:pre-wrap;margin:0;">' + esc(b.text) + '</div>';
     if (b.type === 'divider') return dividerHtml(b, b.color || accent);
     if (b.type === 'image') {
-      if (!b.src) return '<div style="display:flex;align-items:center;justify-content:center;color:#bbb;font-size:12px;border:1px dashed #ccc;padding:24px;border-radius:8px;">Görsel ekle</div>';
+      if (!b.src) return '<div style="display:flex;align-items:center;justify-content:center;color:#bbb;font-size:12px;border:1px dashed #ccc;padding:24px;border-radius:8px;">' + esc(t('ms_img_empty')) + '</div>';
       // Uygulama global CSS'i img{display:block} yapar → text-align ortalamaz.
       // Bu yüzden FLEX justify-content ile hizalanır (her zaman çalışır).
       const j = b.align === 'left' ? 'flex-start' : (b.align === 'right' ? 'flex-end' : 'center');
@@ -514,96 +516,98 @@
   function updateStatsBar() {
     const el = _view && PCD.$('#msStats', _view); if (!el) return;
     const s = computeStats();
-    el.innerHTML = '<span>Ciro: <b>' + cur() + s.revenue.toFixed(2) + '</b></span>' +
-      (s.avgMargin != null ? ' · <span>Ort. marj: <b style="color:' + (s.avgMargin >= 65 ? '#16a34a' : s.avgMargin >= 55 ? '#d97706' : '#dc2626') + ';">%' + s.avgMargin.toFixed(0) + '</b></span>' : '');
+    el.innerHTML = '<span>' + esc(t('ms_revenue')) + ': <b>' + cur() + s.revenue.toFixed(2) + '</b></span>' +
+      (s.avgMargin != null ? ' · <span>' + esc(t('ms_avg_margin')) + ': <b style="color:' + (s.avgMargin >= 65 ? '#16a34a' : s.avgMargin >= 55 ? '#d97706' : '#dc2626') + ';">%' + s.avgMargin.toFixed(0) + '</b></span>' : '');
   }
 
   // ================= INSPECTOR =================
   function sRow(label, html) { return '<div style="margin-bottom:10px;"><div style="font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px;">' + esc(label) + '</div>' + html + '</div>'; }
   function fontSel(attr, val, allowInherit) {
-    let opts = allowInherit ? '<option value=""' + (!val ? ' selected' : '') + '>— Temel font —</option>' : '';
+    let opts = allowInherit ? '<option value=""' + (!val ? ' selected' : '') + '>' + esc(t('ms_font_inherit')) + '</option>' : '';
     opts += FONTS.map(function (f) { return '<option value="' + f.label + '"' + (val === f.label ? ' selected' : '') + '>' + f.label + '</option>'; }).join('');
     return '<select class="select" data-f="' + attr + '" style="width:100%;">' + opts + '</select>';
   }
   function numIn(attr, val, mn, mx) { return '<input type="number" class="input" data-f="' + attr + '" value="' + (val == null ? '' : val) + '" min="' + (mn || 0) + '" max="' + (mx || 999) + '" style="width:100%;">'; }
-  function colIn(attr, val, fb) { return '<input type="color" data-f="' + attr + '" value="' + (val || fb || '#111111') + '" style="width:46px;height:32px;border:1px solid var(--border);border-radius:6px;cursor:pointer;background:none;"> <button type="button" class="btn btn-ghost btn-sm" data-clear="' + attr + '">Tema</button>'; }
+  function colIn(attr, val, fb) { return '<input type="color" data-f="' + attr + '" value="' + (val || fb || '#111111') + '" style="width:46px;height:32px;border:1px solid var(--border);border-radius:6px;cursor:pointer;background:none;"> <button type="button" class="btn btn-ghost btn-sm" data-clear="' + attr + '">' + esc(t('ms_theme')) + '</button>'; }
   function alignB(attr, val) { return ['left', 'center', 'right'].map(function (a) { return '<button type="button" class="btn btn-sm ' + (val === a ? 'btn-primary' : 'btn-outline') + '" data-align="' + attr + '|' + a + '">' + (a === 'left' ? '⟸' : a === 'center' ? '≡' : '⟹') + '</button>'; }).join(' '); }
   function pill(dataAttr, current, opts) { return opts.map(function (o) { return '<button type="button" class="btn btn-sm ' + (String(current) === String(o.v) ? 'btn-primary' : 'btn-outline') + '" ' + dataAttr + '="' + o.v + '">' + o.l + '</button>'; }).join(' '); }
 
   // Katman listesi (yeşil kartlar + sürükle-bırak)
   function layersHtml() {
-    if (!design.blocks || !design.blocks.length) return '<div class="text-muted text-sm">Henüz blok yok. Yukarıdan ekle.</div>';
+    if (!design.blocks || !design.blocks.length) return '<div class="text-muted text-sm">' + esc(t('ms_layers_empty')) + '</div>';
     return design.blocks.map(function (b) {
       const sel = b.id === selectedId;
       const meta = BLOCK_META[b.type] || { glyph: '•' };
       return '<div class="ms-layer' + (sel ? ' sel' : '') + '" draggable="true" data-layer="' + b.id + '">' +
-        '<span class="ms-layer-grip" title="Sürükle">⠿</span>' +
+        '<span class="ms-layer-grip">⠿</span>' +
         '<span class="ms-layer-ico">' + meta.glyph + '</span>' +
         '<span class="ms-layer-name">' + esc(blockLabel(b)) + '</span>' +
-        '<button type="button" class="ms-layer-del" data-layerdel="' + b.id + '" title="Sil">✕</button>' +
+        '<button type="button" class="ms-layer-del" data-layerdel="' + b.id + '" title="' + esc(t('ms_delete')) + '">✕</button>' +
         '</div>';
     }).join('');
   }
 
   function pageControlsHtml() {
     const cols = design.page.columns || 1;
+    const ON = esc(t('ms_on')), OFF = esc(t('ms_off'));
     let h = '';
-    h += sRow('Temel font', fontSel('page.baseFont', design.page.baseFont));
-    h += sRow('Kağıt', pill('data-paper', design.page.paper || 'A4', [{ v: 'A4', l: 'A4' }, { v: 'A3', l: 'A3' }, { v: 'A5', l: 'A5' }, { v: 'letter', l: 'Letter' }]));
-    h += sRow('Yön', pill('data-orient', design.page.orientation || 'portrait', [{ v: 'portrait', l: 'Dikey' }, { v: 'landscape', l: 'Yatay' }]));
-    h += sRow('Sütun', pill('data-cols', cols, [{ v: 1, l: '1' }, { v: 2, l: '2' }, { v: 3, l: '3' }, { v: 4, l: '4' }]));
-    if (cols > 1) h += sRow('Sütun aralığı', numIn('page.columnGap', design.page.columnGap == null ? 28 : design.page.columnGap, 8, 80));
-    h += sRow('Vurgu rengi', colIn('page.accent', design.page.accent, '#c5a572'));
-    h += sRow('Metin rengi', colIn('page.ink', design.page.ink, '#111111'));
-    h += sRow('Arka plan', colIn('page.bg', design.page.bg, '#ffffff'));
-    h += sRow('Kenar boşluğu', numIn('page.pad', design.page.pad, 16, 120));
-    h += sRow('Çerçeve', pill('data-frame', design.page.frame ? (design.page.frameStyle || 'thin') : 'off', [{ v: 'off', l: 'Yok' }, { v: 'thin', l: 'İnce' }, { v: 'double', l: 'Çift' }]) + (design.page.frame ? ' ' + colIn('page.frameColor', design.page.frameColor, design.page.accent) : ''));
-    h += sRow('Fiyatları göster', '<button type="button" class="btn btn-sm ' + (design.page.showPrices !== false ? 'btn-primary' : 'btn-outline') + '" data-toggle-page="showPrices">' + (design.page.showPrices !== false ? 'Açık' : 'Kapalı') + '</button>');
-    h += sRow('Alerjen kodları', '<button type="button" class="btn btn-sm ' + (design.page.showAllergens ? 'btn-primary' : 'btn-outline') + '" data-toggle-page="showAllergens">' + (design.page.showAllergens ? 'Açık' : 'Kapalı') + '</button> <span style="font-size:11px;color:var(--text-3);">reçeteden otomatik</span>');
-    h += '<div style="display:flex;gap:6px;margin-top:8px;"><button type="button" class="btn btn-ghost btn-sm" id="msBrandSave" style="flex:1;">Markamı kaydet</button><button type="button" class="btn btn-ghost btn-sm" id="msBrandApply" style="flex:1;">Uygula</button></div>';
+    h += sRow(t('ms_base_font'), fontSel('page.baseFont', design.page.baseFont));
+    h += sRow(t('ms_paper'), pill('data-paper', design.page.paper || 'A4', [{ v: 'A4', l: 'A4' }, { v: 'A3', l: 'A3' }, { v: 'A5', l: 'A5' }, { v: 'letter', l: 'Letter' }]));
+    h += sRow(t('ms_orientation'), pill('data-orient', design.page.orientation || 'portrait', [{ v: 'portrait', l: esc(t('ms_portrait')) }, { v: 'landscape', l: esc(t('ms_landscape')) }]));
+    h += sRow(t('ms_columns'), pill('data-cols', cols, [{ v: 1, l: '1' }, { v: 2, l: '2' }, { v: 3, l: '3' }, { v: 4, l: '4' }]));
+    if (cols > 1) h += sRow(t('ms_column_gap'), numIn('page.columnGap', design.page.columnGap == null ? 28 : design.page.columnGap, 8, 80));
+    h += sRow(t('ms_accent_color'), colIn('page.accent', design.page.accent, '#c5a572'));
+    h += sRow(t('ms_text_color'), colIn('page.ink', design.page.ink, '#111111'));
+    h += sRow(t('ms_background'), colIn('page.bg', design.page.bg, '#ffffff'));
+    h += sRow(t('ms_margin'), numIn('page.pad', design.page.pad, 16, 120));
+    h += sRow(t('ms_frame'), pill('data-frame', design.page.frame ? (design.page.frameStyle || 'thin') : 'off', [{ v: 'off', l: esc(t('ms_frame_off')) }, { v: 'thin', l: esc(t('ms_frame_thin')) }, { v: 'double', l: esc(t('ms_frame_double')) }]) + (design.page.frame ? ' ' + colIn('page.frameColor', design.page.frameColor, design.page.accent) : ''));
+    h += sRow(t('ms_show_prices'), '<button type="button" class="btn btn-sm ' + (design.page.showPrices !== false ? 'btn-primary' : 'btn-outline') + '" data-toggle-page="showPrices">' + (design.page.showPrices !== false ? ON : OFF) + '</button>');
+    h += sRow(t('ms_allergen_codes'), '<button type="button" class="btn btn-sm ' + (design.page.showAllergens ? 'btn-primary' : 'btn-outline') + '" data-toggle-page="showAllergens">' + (design.page.showAllergens ? ON : OFF) + '</button> <span style="font-size:11px;color:var(--text-3);">' + esc(t('ms_allergen_auto')) + '</span>');
+    h += '<div style="display:flex;gap:6px;margin-top:8px;"><button type="button" class="btn btn-ghost btn-sm" id="msBrandSave" style="flex:1;">' + esc(t('ms_save_brand')) + '</button><button type="button" class="btn btn-ghost btn-sm" id="msBrandApply" style="flex:1;">' + esc(t('ms_apply')) + '</button></div>';
     return h;
   }
 
   function blockControlsHtml(b, cols) {
+    const ON = esc(t('ms_on')), OFF = esc(t('ms_off'));
     let h = '';
-    if (cols > 1 && b.type !== 'spacer') h += sRow('Sütun genişliği', '<button type="button" class="btn btn-sm ' + (blockIsFullWidth(b, cols) ? 'btn-primary' : 'btn-outline') + '" data-spantoggle>' + (blockIsFullWidth(b, cols) ? 'Tam genişlik' : 'Tek sütun') + '</button>');
+    if (cols > 1 && b.type !== 'spacer') h += sRow(t('ms_col_width'), '<button type="button" class="btn btn-sm ' + (blockIsFullWidth(b, cols) ? 'btn-primary' : 'btn-outline') + '" data-spantoggle>' + (blockIsFullWidth(b, cols) ? esc(t('ms_span_full')) : esc(t('ms_span_single'))) + '</button>');
 
     if (b.type === 'heading' || b.type === 'text') {
-      h += sRow('Metin', '<textarea class="textarea" data-f="text" rows="2" style="width:100%;">' + esc(b.text) + '</textarea>');
-      h += sRow('Font', fontSel('font', b.font, true));
-      h += sRow('Boyut', numIn('size', b.size, 8, 120));
-      h += sRow('Hizalama', alignB('align', b.align || 'center'));
-      h += sRow('Renk', colIn('color', b.color, design.page.ink));
-      if (b.type === 'text') h += sRow('BÜYÜK harf', '<button type="button" class="btn btn-sm ' + (b.upper ? 'btn-primary' : 'btn-outline') + '" data-toggle="upper">' + (b.upper ? 'Açık' : 'Kapalı') + '</button>');
+      h += sRow(t('ms_text_label'), '<textarea class="textarea" data-f="text" rows="2" style="width:100%;">' + esc(b.text) + '</textarea>');
+      h += sRow(t('ms_font'), fontSel('font', b.font, true));
+      h += sRow(t('ms_size'), numIn('size', b.size, 8, 120));
+      h += sRow(t('ms_align'), alignB('align', b.align || 'center'));
+      h += sRow(t('ms_color'), colIn('color', b.color, design.page.ink));
+      if (b.type === 'text') h += sRow(t('ms_uppercase'), '<button type="button" class="btn btn-sm ' + (b.upper ? 'btn-primary' : 'btn-outline') + '" data-toggle="upper">' + (b.upper ? ON : OFF) + '</button>');
     } else if (b.type === 'section') {
-      h += sRow('Bölüm adı', '<input type="text" class="input" data-f="title" value="' + esc(b.title) + '" style="width:100%;">');
-      h += sRow('Başlık font', fontSel('titleFont', b.titleFont, true));
-      h += sRow('Başlık boyut', numIn('titleSize', b.titleSize, 12, 60));
-      h += sRow('Başlık renk', colIn('titleColor', b.titleColor, design.page.accent));
-      h += sRow('Başlık hizası', alignB('titleAlign', b.titleAlign || 'left'));
-      h += sRow('Altı çizgi', '<button type="button" class="btn btn-sm ' + (b.rule ? 'btn-primary' : 'btn-outline') + '" data-toggle="rule">' + (b.rule ? 'Açık' : 'Kapalı') + '</button>');
-      h += '<hr style="border:0;border-top:1px dashed var(--border);margin:12px 0;"><div style="font-size:12px;font-weight:700;margin-bottom:6px;">Yemekler</div>';
+      h += sRow(t('ms_section_name'), '<input type="text" class="input" data-f="title" value="' + esc(b.title) + '" style="width:100%;">');
+      h += sRow(t('ms_title_font'), fontSel('titleFont', b.titleFont, true));
+      h += sRow(t('ms_title_size'), numIn('titleSize', b.titleSize, 12, 60));
+      h += sRow(t('ms_title_color'), colIn('titleColor', b.titleColor, design.page.accent));
+      h += sRow(t('ms_title_align'), alignB('titleAlign', b.titleAlign || 'left'));
+      h += sRow(t('ms_underline'), '<button type="button" class="btn btn-sm ' + (b.rule ? 'btn-primary' : 'btn-outline') + '" data-toggle="rule">' + (b.rule ? ON : OFF) + '</button>');
+      h += '<hr style="border:0;border-top:1px dashed var(--border);margin:12px 0;"><div style="font-size:12px;font-weight:700;margin-bottom:6px;">' + esc(t('ms_dishes')) + '</div>';
       (b.items || []).forEach(function (it) {
         const m = itemMargin(it);
         h += '<div class="card" style="padding:8px;margin-bottom:8px;" data-iid="' + it.id + '">';
-        h += '<div style="display:flex;gap:6px;align-items:center;margin-bottom:4px;"><input type="text" class="input" data-itf="name" value="' + esc(it.name) + '" placeholder="Yemek" style="flex:1;"><input type="text" class="input" data-itf="price" value="' + esc(it.price) + '" placeholder="' + cur() + '" style="width:60px;"><button type="button" class="btn btn-ghost btn-sm" data-itmove="up">↑</button><button type="button" class="btn btn-ghost btn-sm" data-itmove="down">↓</button><button type="button" class="btn btn-ghost btn-sm" data-itdel style="color:var(--danger);">✕</button></div>';
-        h += '<input type="text" class="input" data-itf="desc" value="' + esc(it.desc) + '" placeholder="Açıklama" style="width:100%;margin-bottom:4px;">';
-        h += '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">' + (it.photo ? '<img src="' + it.photo + '" style="width:30px;height:30px;object-fit:cover;border-radius:5px;">' : '') + '<button type="button" class="btn btn-outline btn-sm" data-itphoto>' + (it.photo ? 'Foto' : '+ Foto') + '</button>' + (it.photo ? '<button type="button" class="btn btn-ghost btn-sm" data-itphotodel>Kaldır</button>' : '') +
-          (m != null ? '<span style="margin-inline-start:auto;font-size:11px;font-weight:700;color:' + (m >= 65 ? '#16a34a' : m >= 55 ? '#d97706' : '#dc2626') + ';">marj %' + m.toFixed(0) + '</span>' : (it.recipeId ? '' : '<span style="margin-inline-start:auto;font-size:10px;color:var(--text-3);">manuel</span>')) + '</div>';
+        h += '<div style="display:flex;gap:6px;align-items:center;margin-bottom:4px;"><input type="text" class="input" data-itf="name" value="' + esc(it.name) + '" placeholder="' + esc(t('ms_dish_ph')) + '" style="flex:1;"><input type="text" class="input" data-itf="price" value="' + esc(it.price) + '" placeholder="' + cur() + '" style="width:60px;"><button type="button" class="btn btn-ghost btn-sm" data-itmove="up">↑</button><button type="button" class="btn btn-ghost btn-sm" data-itmove="down">↓</button><button type="button" class="btn btn-ghost btn-sm" data-itdel style="color:var(--danger);">✕</button></div>';
+        h += '<input type="text" class="input" data-itf="desc" value="' + esc(it.desc) + '" placeholder="' + esc(t('ms_desc_ph')) + '" style="width:100%;margin-bottom:4px;">';
+        h += '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">' + (it.photo ? '<img src="' + it.photo + '" style="width:30px;height:30px;object-fit:cover;border-radius:5px;">' : '') + '<button type="button" class="btn btn-outline btn-sm" data-itphoto>' + (it.photo ? esc(t('ms_photo')) : esc(t('ms_add_photo'))) + '</button>' + (it.photo ? '<button type="button" class="btn btn-ghost btn-sm" data-itphotodel>' + esc(t('ms_remove')) + '</button>' : '') +
+          (m != null ? '<span style="margin-inline-start:auto;font-size:11px;font-weight:700;color:' + (m >= 65 ? '#16a34a' : m >= 55 ? '#d97706' : '#dc2626') + ';">' + esc(t('ms_margin_pct', { n: m.toFixed(0) })) + '</span>' : (it.recipeId ? '' : '<span style="margin-inline-start:auto;font-size:10px;color:var(--text-3);">' + esc(t('ms_manual_tag')) + '</span>')) + '</div>';
         h += '</div>';
       });
-      h += '<div style="display:flex;gap:6px;"><button type="button" class="btn btn-ghost btn-sm" data-additem-recipe style="flex:1;">+ Reçeteden</button><button type="button" class="btn btn-ghost btn-sm" data-additem-manual style="flex:1;">+ Manuel</button></div>';
+      h += '<div style="display:flex;gap:6px;"><button type="button" class="btn btn-ghost btn-sm" data-additem-recipe style="flex:1;">' + esc(t('ms_add_from_recipe')) + '</button><button type="button" class="btn btn-ghost btn-sm" data-additem-manual style="flex:1;">' + esc(t('ms_add_manual')) + '</button></div>';
     } else if (b.type === 'image') {
-      h += sRow('Görsel', '<button type="button" class="btn btn-outline btn-sm" data-imgupload>' + (b.src ? 'Değiştir' : '+ Yükle') + '</button>' + (b.src ? ' <button type="button" class="btn btn-ghost btn-sm" data-imgdel>Kaldır</button>' : ''));
-      h += sRow('Yükseklik', numIn('height', b.height, 60, 600));
-      h += sRow('Hizalama', alignB('align', b.align || 'center'));
-      h += sRow('Köşe', numIn('radius', b.radius, 0, 40));
+      h += sRow(t('ms_image'), '<button type="button" class="btn btn-outline btn-sm" data-imgupload>' + (b.src ? esc(t('ms_replace')) : esc(t('ms_upload'))) + '</button>' + (b.src ? ' <button type="button" class="btn btn-ghost btn-sm" data-imgdel>' + esc(t('ms_remove')) + '</button>' : ''));
+      h += sRow(t('ms_height'), numIn('height', b.height, 60, 600));
+      h += sRow(t('ms_align'), alignB('align', b.align || 'center'));
+      h += sRow(t('ms_corner'), numIn('radius', b.radius, 0, 40));
     } else if (b.type === 'divider') {
       const curDiv = dividerStyleOf(b);
-      h += sRow('Stil', '<div style="display:flex;flex-wrap:wrap;gap:5px;">' + DIV_STYLES.map(function (d) { return '<button type="button" class="btn btn-sm ' + (curDiv === d.id ? 'btn-primary' : 'btn-outline') + '" data-divstyle="' + d.id + '" title="' + d.id + '" style="min-width:42px;font-size:14px;line-height:1.1;">' + miniDivPreview(d) + '</button>'; }).join('') + '</div>');
-      h += sRow('Renk', colIn('color', b.color, design.page.accent));
-      if (dividerDef(curDiv).kind !== 'line') h += sRow('Süs boyutu', numIn('size', b.size, 10, 60));
-    } else if (b.type === 'spacer') { h += sRow('Yükseklik', numIn('height', b.height, 4, 200)); }
+      h += sRow(t('ms_style'), '<div style="display:flex;flex-wrap:wrap;gap:5px;">' + DIV_STYLES.map(function (d) { return '<button type="button" class="btn btn-sm ' + (curDiv === d.id ? 'btn-primary' : 'btn-outline') + '" data-divstyle="' + d.id + '" title="' + d.id + '" style="min-width:42px;font-size:14px;line-height:1.1;">' + miniDivPreview(d) + '</button>'; }).join('') + '</div>');
+      h += sRow(t('ms_color'), colIn('color', b.color, design.page.accent));
+      if (dividerDef(curDiv).kind !== 'line') h += sRow(t('ms_ornament_size'), numIn('size', b.size, 10, 60));
+    } else if (b.type === 'spacer') { h += sRow(t('ms_height'), numIn('height', b.height, 4, 200)); }
     return h;
   }
 
@@ -615,21 +619,21 @@
 
     let h = '';
     // 1) Katmanlar (bloklar) — yeşil kartlar
-    h += '<div class="ms-card"><div class="ms-card-title">🧱 Bloklar</div><div id="msLayers">' + layersHtml() + '</div></div>';
+    h += '<div class="ms-card"><div class="ms-card-title">🧱 ' + esc(t('ms_blocks')) + '</div><div id="msLayers">' + layersHtml() + '</div></div>';
 
     // 2) Seçili blok düzenleme
     if (b) {
-      const meta = BLOCK_META[b.type] || { label: b.type, glyph: '•' };
+      const meta = BLOCK_META[b.type] || { glyph: '•' };
       h += '<div class="ms-card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">' +
-        '<span class="ms-pill">' + meta.glyph + ' ' + esc(meta.label) + '</span>' +
-        '<span style="display:flex;gap:4px;"><button type="button" class="btn btn-ghost btn-sm" data-move="up" title="Yukarı">↑</button><button type="button" class="btn btn-ghost btn-sm" data-move="down" title="Aşağı">↓</button><button type="button" class="btn btn-ghost btn-sm" data-del-block style="color:var(--danger);" title="Sil">' + (PCD.icon ? PCD.icon('trash', 14) : '✕') + '</button></span></div>' +
+        '<span class="ms-pill">' + meta.glyph + ' ' + esc(blockTypeLabel(b.type)) + '</span>' +
+        '<span style="display:flex;gap:4px;"><button type="button" class="btn btn-ghost btn-sm" data-move="up">↑</button><button type="button" class="btn btn-ghost btn-sm" data-move="down">↓</button><button type="button" class="btn btn-ghost btn-sm" data-del-block style="color:var(--danger);" title="' + esc(t('ms_delete')) + '">' + (PCD.icon ? PCD.icon('trash', 14) : '✕') + '</button></span></div>' +
         blockControlsHtml(b, cols) + '</div>';
     } else {
-      h += '<div class="ms-card text-muted text-sm">✏️ Düzenlemek için bir blok seç (kanvasta veya yukarıdaki listeden).</div>';
+      h += '<div class="ms-card text-muted text-sm">✏️ ' + esc(t('ms_select_hint')) + '</div>';
     }
 
     // 3) Sayfa ayarları
-    h += '<div class="ms-card"><div class="ms-card-title">🎨 Sayfa</div>' + pageControlsHtml() + '</div>';
+    h += '<div class="ms-card"><div class="ms-card-title">🎨 ' + esc(t('ms_page')) + '</div>' + pageControlsHtml() + '</div>';
 
     inspectorEl.innerHTML = h; wireInspector();
   }
@@ -695,7 +699,7 @@
         const phd = row.querySelector('[data-itphotodel]'); if (phd) phd.addEventListener('click', function () { it.photo = null; refreshPage(); renderInspector(); });
       });
       const aR = inspectorEl.querySelector('[data-additem-recipe]'); if (aR) aR.addEventListener('click', function () { openRecipePicker(b); });
-      const aM = inspectorEl.querySelector('[data-additem-manual]'); if (aM) aM.addEventListener('click', function () { b.items = b.items || []; b.items.push({ id: uid(), name: 'Yeni yemek', price: '', desc: '', photo: null }); refreshPage(); renderInspector(); });
+      const aM = inspectorEl.querySelector('[data-additem-manual]'); if (aM) aM.addEventListener('click', function () { b.items = b.items || []; b.items.push({ id: uid(), name: t('ms_new_dish'), price: '', desc: '', photo: null }); refreshPage(); renderInspector(); });
     }
   }
 
@@ -704,24 +708,24 @@
 
   function openRecipePicker(sec) {
     const recipes = (PCD.store.listRecipes && PCD.store.listRecipes()) || [];
-    if (!recipes.length) { if (PCD.toast) PCD.toast.info('Henüz tarif yok'); return; }
+    if (!recipes.length) { if (PCD.toast) PCD.toast.info(t('ms_no_recipes')); return; }
     const body = PCD.el('div');
-    body.innerHTML = '<input type="search" class="input" id="msrq" placeholder="Tarif ara…" style="width:100%;margin-bottom:8px;"><div id="msrl" style="max-height:50vh;overflow:auto;"></div>';
+    body.innerHTML = '<input type="search" class="input" id="msrq" placeholder="' + esc(t('ms_recipe_search_ph')) + '" style="width:100%;margin-bottom:8px;"><div id="msrl" style="max-height:50vh;overflow:auto;"></div>';
     function paint(q) {
       const list = body.querySelector('#msrl'); const ql = (q || '').toLowerCase();
       list.innerHTML = recipes.filter(function (r) { return !ql || (r.name || '').toLowerCase().indexOf(ql) >= 0; }).map(function (r) { return '<button type="button" class="btn btn-ghost btn-sm" data-rid="' + r.id + '" style="display:block;width:100%;text-align:left;">' + esc(r.name) + (r.salePrice ? ' · ' + cur() + r.salePrice : '') + '</button>'; }).join('');
       list.querySelectorAll('[data-rid]').forEach(function (el) { el.addEventListener('click', function () { const r = recipes.find(function (x) { return x.id === el.getAttribute('data-rid'); }); sec.items = sec.items || []; sec.items.push({ id: uid(), name: r.name, price: r.salePrice != null ? String(r.salePrice) : '', desc: r.plating || '', photo: r.photo || null, recipeId: r.id }); refreshPage(); renderInspector(); m.close(); }); });
     }
     paint('');
-    const m = PCD.modal.open({ title: 'Reçeteden ekle', body: body, size: 'sm', closable: true });
+    const m = PCD.modal.open({ title: t('ms_recipe_pick_title'), body: body, size: 'sm', closable: true });
     setTimeout(function () { const s = body.querySelector('#msrq'); if (s) { s.focus(); s.addEventListener('input', function () { paint(s.value); }); } }, 100);
   }
 
   function addBlock(type) {
     const nb = { id: uid(), type: type };
-    if (type === 'heading') Object.assign(nb, { text: 'Başlık', font: '', size: 32, weight: 500, align: 'center', color: '' });
-    else if (type === 'text') Object.assign(nb, { text: 'Metin…', font: '', size: 13, align: 'center', color: '' });
-    else if (type === 'section') Object.assign(nb, { title: 'Yeni Bölüm', titleFont: '', titleSize: 24, items: [] });
+    if (type === 'heading') Object.assign(nb, { text: t('ms_ph_heading'), font: '', size: 32, weight: 500, align: 'center', color: '' });
+    else if (type === 'text') Object.assign(nb, { text: t('ms_ph_text'), font: '', size: 13, align: 'center', color: '' });
+    else if (type === 'section') Object.assign(nb, { title: t('ms_ph_section'), titleFont: '', titleSize: 24, items: [] });
     else if (type === 'image') Object.assign(nb, { src: null, height: 200, align: 'center', radius: 0 });
     else if (type === 'divider') Object.assign(nb, { dividerStyle: 'floral', color: '', size: 20 });
     else if (type === 'spacer') Object.assign(nb, { height: 24 });
@@ -731,32 +735,32 @@
   // ---- Şablon galerisi ----
   function openTemplates() {
     const body = PCD.el('div');
-    body.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' + TEMPLATES.map(function (t) {
-      return '<button type="button" class="ms-tplcard" data-tpl="' + t.id + '"><div class="ms-tplcard-prev" id="mstp-' + t.id + '"></div><div class="ms-tplcard-label">' + esc(t.label) + '</div></button>';
-    }).join('') + '</div><div class="text-muted text-sm" style="margin-top:10px;">Şablon mevcut tasarımın yerine geçer. İçeriği sonra düzenleyebilirsin.</div>' +
+    body.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' + TEMPLATES.map(function (tpl) {
+      return '<button type="button" class="ms-tplcard" data-tpl="' + tpl.id + '"><div class="ms-tplcard-prev" id="mstp-' + tpl.id + '"></div><div class="ms-tplcard-label">' + esc(tpl.label) + '</div></button>';
+    }).join('') + '</div><div class="text-muted text-sm" style="margin-top:10px;">' + esc(t('ms_tpl_note')) + '</div>' +
       '<style>.ms-tplcard{display:block;width:100%;text-align:left;border:1px solid var(--border);border-radius:10px;padding:0;overflow:hidden;cursor:pointer;background:var(--surface);transition:.12s;}.ms-tplcard:hover{border-color:var(--brand-500,#22c55e);transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.1);}.ms-tplcard-prev{height:150px;overflow:hidden;position:relative;background:#fff;}.ms-tplcard-prev>div{transform-origin:top left;pointer-events:none;}.ms-tplcard-label{padding:8px 10px;font-weight:700;font-size:13px;}</style>';
-    const m = PCD.modal.open({ title: 'Şablon seç', body: body, size: 'md', closable: true });
+    const m = PCD.modal.open({ title: t('ms_tpl_title'), body: body, size: 'md', closable: true });
     // mini önizlemeler
     setTimeout(function () {
-      TEMPLATES.forEach(function (t) {
-        const host = body.querySelector('#mstp-' + t.id); if (!host) return;
-        let d; try { d = t.make(); normalizeDesign(d); } catch (e) { return; }
+      TEMPLATES.forEach(function (tpl) {
+        const host = body.querySelector('#mstp-' + tpl.id); if (!host) return;
+        let d; try { d = tpl.make(); normalizeDesign(d); } catch (e) { return; }
         const spec = pageSpec(d.page);
         const w = host.clientWidth || 240; const k = w / spec.w;
         host.innerHTML = '<div style="width:' + spec.w + 'px;height:' + spec.h + 'px;background:' + (d.page.bg || '#fff') + ';padding:' + (d.page.pad || 56) + 'px;box-sizing:border-box;transform:scale(' + k + ');">' + renderPageInner(d) + '</div>';
       });
     }, 60);
-    body.querySelectorAll('[data-tpl]').forEach(function (el) { el.addEventListener('click', function () { const t = TEMPLATES.find(function (x) { return x.id === el.getAttribute('data-tpl'); }); if (t) { design = t.make(); normalizeDesign(design); selectedId = null; refreshPage(); renderInspector(); } m.close(); }); });
+    body.querySelectorAll('[data-tpl]').forEach(function (el) { el.addEventListener('click', function () { const tpl = TEMPLATES.find(function (x) { return x.id === el.getAttribute('data-tpl'); }); if (tpl) { design = tpl.make(); normalizeDesign(design); selectedId = null; refreshPage(); renderInspector(); } m.close(); }); });
   }
 
   // ---- Marka kiti ----
   function saveBrand() {
     const kit = { baseFont: design.page.baseFont, accent: design.page.accent, ink: design.page.ink, bg: design.page.bg };
-    try { localStorage.setItem(BRAND_KEY, JSON.stringify(kit)); if (PCD.toast) PCD.toast.success('Marka kiti kaydedildi'); } catch (e) {}
+    try { localStorage.setItem(BRAND_KEY, JSON.stringify(kit)); if (PCD.toast) PCD.toast.success(t('ms_brand_saved')); } catch (e) {}
   }
   function applyBrand() {
     let kit = null; try { kit = JSON.parse(localStorage.getItem(BRAND_KEY)); } catch (e) {}
-    if (!kit) { if (PCD.toast) PCD.toast.info('Önce "Markamı kaydet" ile bir kit oluştur'); return; }
+    if (!kit) { if (PCD.toast) PCD.toast.info(t('ms_brand_need_save')); return; }
     design.page.baseFont = kit.baseFont; design.page.accent = kit.accent; design.page.ink = kit.ink; design.page.bg = kit.bg;
     refreshPage(); renderInspector();
   }
@@ -796,16 +800,16 @@
   // ---- Paylaş (public link + QR, opsiyonel cost-view) ----
   function openShare() {
     const user = PCD.store.get && PCD.store.get('user');
-    if (!user || !user.id) { if (PCD.toast) PCD.toast.info('Paylaşmak için giriş yap'); return; }
-    if (!PCD.share || !PCD.share.createOrGetShareUrl) { if (PCD.toast) PCD.toast.error('Paylaşım şu an kullanılamıyor'); return; }
+    if (!user || !user.id) { if (PCD.toast) PCD.toast.info(t('ms_share_signin')); return; }
+    if (!PCD.share || !PCD.share.createOrGetShareUrl) { if (PCD.toast) PCD.toast.error(t('ms_share_unavailable')); return; }
     if (currentMenu) { currentMenu.studio = design; try { PCD.store.upsertInTable('menus', currentMenu, 'm'); } catch (e) {} }
     const canCost = !(PCD.gate && PCD.gate.canUseCostView) || PCD.gate.canUseCostView();
     const body = PCD.el('div');
     body.innerHTML = '<div style="display:flex;flex-direction:column;gap:10px;">' +
-      '<button type="button" class="btn btn-primary" id="msShPublic" style="justify-content:flex-start;">' + (PCD.icon ? PCD.icon('share', 16) : '') + ' Herkese açık menü — link + QR</button>' +
-      '<button type="button" class="btn btn-outline" id="msShCost" style="justify-content:flex-start;">' + (PCD.icon ? PCD.icon('grid', 16) : '') + ' Maliyet görünümü' + (canCost ? '' : ' (Pro)') + '</button>' +
-      '<div class="text-muted text-sm">Herkese açık link maliyet/fiyat sızdırmaz. Maliyet linki yalnız paylaştığın kişi içindir.</div></div>';
-    const m = PCD.modal.open({ title: 'Menüyü paylaş', body: body, size: 'sm', closable: true });
+      '<button type="button" class="btn btn-primary" id="msShPublic" style="justify-content:flex-start;">' + (PCD.icon ? PCD.icon('share', 16) : '') + ' ' + esc(t('ms_share_public')) + '</button>' +
+      '<button type="button" class="btn btn-outline" id="msShCost" style="justify-content:flex-start;">' + (PCD.icon ? PCD.icon('grid', 16) : '') + ' ' + esc(t('ms_share_cost')) + (canCost ? '' : ' ' + esc(t('ms_pro_suffix'))) + '</button>' +
+      '<div class="text-muted text-sm">' + esc(t('ms_share_note')) + '</div></div>';
+    const m = PCD.modal.open({ title: t('ms_share_title'), body: body, size: 'sm', closable: true });
     body.querySelector('#msShPublic').addEventListener('click', function () { m.close(); doShare('public'); });
     body.querySelector('#msShCost').addEventListener('click', function () {
       m.close();
@@ -815,9 +819,9 @@
   }
   function doShare(mode) {
     PCD.share.createOrGetShareUrl('menu', currentId, mode).then(function (urlStr) {
-      if (PCD.qr && PCD.qr.show) PCD.qr.show({ title: (currentMenu && currentMenu.name) || 'Menu', subtitle: mode === 'cost' ? 'Maliyet görünümü' : 'Menü', text: urlStr });
+      if (PCD.qr && PCD.qr.show) PCD.qr.show({ title: (currentMenu && currentMenu.name) || 'Menu', subtitle: mode === 'cost' ? t('ms_sub_cost') : t('ms_sub_menu'), text: urlStr });
       else if (PCD.toast) PCD.toast.success(urlStr);
-    }).catch(function (e) { if (PCD.toast) PCD.toast.error('Paylaşım hatası: ' + ((e && e.message) || e)); });
+    }).catch(function (e) { if (PCD.toast) PCD.toast.error(t('ms_share_error', { msg: ((e && e.message) || e) })); });
   }
 
   // ================= LIBRARY (liste) =================
@@ -863,15 +867,15 @@
       '.ms-libcard-actions button{border:0;background:rgba(255,255,255,.92);color:#333;border-radius:7px;width:30px;height:30px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.15);}' +
       '.ms-libcard-actions button:hover{background:#fff;}' +
       '</style>';
-    h += '<div class="page-header"><div class="page-header-text"><div class="page-title">Menu Studio</div><div class="page-subtitle">Menü kütüphanen · tam özelleştirilebilir tasarımcı</div></div><div class="page-header-actions"><button class="btn btn-primary" id="msNew">+ Yeni menü</button></div></div>';
+    h += '<div class="page-header"><div class="page-header-text"><div class="page-title">Menu Studio</div><div class="page-subtitle">' + esc(t('ms_subtitle')) + '</div></div><div class="page-header-actions"><button class="btn btn-primary" id="msNew">' + esc(t('ms_new_menu')) + '</button></div></div>';
     if (!menus.length) {
-      h += '<div class="empty"><div class="empty-icon">🎨</div><div class="empty-title">Henüz menü yok</div><div class="empty-desc">Bir şablonla başla veya boş tasarım oluştur.</div><div class="empty-action"><button class="btn btn-primary" id="msNew2">+ Yeni menü</button></div></div>';
+      h += '<div class="empty"><div class="empty-icon">🎨</div><div class="empty-title">' + esc(t('ms_no_menus_title')) + '</div><div class="empty-desc">' + esc(t('ms_no_menus_desc')) + '</div><div class="empty-action"><button class="btn btn-primary" id="msNew2">' + esc(t('ms_new_menu')) + '</button></div></div>';
     } else {
       h += '<div class="ms-lib">' + menus.map(function (m) {
         const items = (m.studio ? (m.studio.blocks || []).reduce(function (a, b) { return a + (b.type === 'section' ? (b.items || []).length : 0); }, 0) : (m.sections || []).reduce(function (a, s) { return a + ((s.items || []).length); }, 0));
         return '<div class="ms-libcard" data-open="' + m.id + '">' + thumbHtml(m) +
-          '<div class="ms-libcard-body"><div class="ms-libcard-title">' + esc(m.name || 'İsimsiz') + '</div><div class="ms-libcard-meta">' + items + ' kalem · ' + (PCD.fmtRelTime ? PCD.fmtRelTime(m.updatedAt) : '') + '</div></div>' +
-          '<div class="ms-libcard-actions"><button data-dup="' + m.id + '" title="Kopyala">' + (PCD.icon ? PCD.icon('copy', 16) : '⧉') + '</button><button data-del="' + m.id + '" title="Sil">' + (PCD.icon ? PCD.icon('trash', 16) : '✕') + '</button></div></div>';
+          '<div class="ms-libcard-body"><div class="ms-libcard-title">' + esc(m.name || t('ms_default_menu')) + '</div><div class="ms-libcard-meta">' + items + ' ' + esc(t('ms_items')) + ' · ' + (PCD.fmtRelTime ? PCD.fmtRelTime(m.updatedAt) : '') + '</div></div>' +
+          '<div class="ms-libcard-actions"><button data-dup="' + m.id + '">' + (PCD.icon ? PCD.icon('copy', 16) : '⧉') + '</button><button data-del="' + m.id + '" title="' + esc(t('ms_delete')) + '">' + (PCD.icon ? PCD.icon('trash', 16) : '✕') + '</button></div></div>';
       }).join('') + '</div>';
     }
     _view.innerHTML = h;
@@ -884,13 +888,13 @@
     PCD.on(_view, 'click', '[data-dup]', function (e) {
       e.stopPropagation(); const id = this.getAttribute('data-dup');
       const src = PCD.store.getFromTable('menus', id); if (!src) return;
-      const copy = PCD.clone(src); delete copy.id; delete copy.updatedAt; copy.name = (src.name || 'Menü') + ' (kopya)';
+      const copy = PCD.clone(src); delete copy.id; delete copy.updatedAt; copy.name = (src.name || t('ms_default_menu')) + ' ' + t('ms_copy_suffix');
       PCD.store.upsertInTable('menus', copy, 'm'); renderList();
-      if (PCD.toast) PCD.toast.success('Kopyalandı');
+      if (PCD.toast) PCD.toast.success(t('ms_copied'));
     });
     PCD.on(_view, 'click', '[data-del]', function (e) {
       e.stopPropagation(); const id = this.getAttribute('data-del');
-      PCD.modal.confirm({ title: 'Menüyü sil', text: 'Bu menü kalıcı silinecek. Emin misin?', okText: 'Sil' }).then(function (ok) { if (!ok) return; PCD.store.deleteFromTable('menus', id); renderList(); });
+      PCD.modal.confirm({ title: t('ms_del_title'), text: t('ms_del_text'), okText: t('ms_delete') }).then(function (ok) { if (!ok) return; PCD.store.deleteFromTable('menus', id); renderList(); });
     });
     let _rsz = null; window.addEventListener('resize', function () { clearTimeout(_rsz); _rsz = setTimeout(sizeThumbs, 150); });
   }
@@ -900,10 +904,10 @@
     opts = opts || {};
     return new Promise(function (resolve) {
       const body = PCD.el('div');
-      body.innerHTML = '<label style="display:block;font-size:13px;color:var(--text-2);margin-bottom:6px;">' + esc(opts.label || 'İsim') + '</label>' +
+      body.innerHTML = '<label style="display:block;font-size:13px;color:var(--text-2);margin-bottom:6px;">' + esc(opts.label || t('ms_menu_name')) + '</label>' +
         '<input type="text" id="msNameInput" class="input" value="' + esc(opts.value || '') + '" placeholder="' + esc(opts.placeholder || '') + '" style="width:100%;">' +
-        '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px;"><button type="button" class="btn btn-ghost" id="msNameCancel">İptal</button><button type="button" class="btn btn-primary" id="msNameOk">' + esc(opts.okText || 'Tamam') + '</button></div>';
-      const m = PCD.modal.open({ title: opts.title || 'İsim', body: body, size: 'sm', closable: true });
+        '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px;"><button type="button" class="btn btn-ghost" id="msNameCancel">' + esc(t('ms_cancel')) + '</button><button type="button" class="btn btn-primary" id="msNameOk">' + esc(opts.okText || t('ms_ok')) + '</button></div>';
+      const m = PCD.modal.open({ title: opts.title || t('ms_new_title'), body: body, size: 'sm', closable: true });
       const inp = body.querySelector('#msNameInput');
       let done = false;
       function finish(val) { if (done) return; done = true; try { m.close(); } catch (e) {} resolve(val); }
@@ -915,9 +919,9 @@
   }
 
   function createNew() {
-    askName({ title: 'Yeni menü', label: 'Menü adı', placeholder: 'örn. Akşam Menüsü', okText: 'Oluştur' }).then(function (name) {
+    askName({ title: t('ms_new_title'), label: t('ms_menu_name'), placeholder: t('ms_menu_name_ph'), okText: t('ms_create') }).then(function (name) {
       if (name == null) return;
-      name = (name || '').trim() || 'Yeni Menü';
+      name = (name || '').trim() || t('ms_default_menu');
       const rec = PCD.store.upsertInTable('menus', { name: name, sections: [], studio: tplBlank(name) }, 'm');
       if (rec && rec.id) openDesign(rec.id);
     });
@@ -925,7 +929,7 @@
 
   function openDesign(id) {
     const menu = PCD.store.getFromTable('menus', id);
-    if (!menu) { if (PCD.toast) PCD.toast.error('Menü bulunamadı'); return; }
+    if (!menu) { if (PCD.toast) PCD.toast.error(t('ms_menu_not_found')); return; }
     currentId = id; currentMenu = PCD.clone(menu); selectedId = null;
     if (currentMenu.studio) { design = currentMenu.studio; normalizeDesign(design); renderEditor(); return; }
     const hasClassic = (currentMenu.sections || []).some(function (s) { return (s.items || []).length; });
@@ -965,8 +969,8 @@
       '</style>' +
       '<div class="page-header"><div class="page-header-text"><div class="page-title" style="display:flex;align-items:center;gap:8px;"><input id="msName" class="input" value="' + esc(currentMenu.name || '') + '" style="font-size:18px;font-weight:800;max-width:280px;"></div>' +
         '<div class="page-subtitle" id="msStats" style="font-size:12px;"></div></div>' +
-        '<div class="page-header-actions"><button class="btn btn-outline btn-sm" id="msBack">← Kütüphane</button><button class="btn btn-outline btn-sm" id="msTemplatesHdr">' + (PCD.icon ? PCD.icon('grid', 14) : '') + ' Şablonlar</button><button class="btn btn-outline btn-sm" id="msShare">' + (PCD.icon ? PCD.icon('share', 14) : '') + ' Paylaş</button><button class="btn btn-primary btn-sm" id="msPrint">' + (PCD.icon ? PCD.icon('print', 14) : '') + ' Yazdır</button></div></div>' +
-      '<div class="ms-addbar"><span class="ms-addbar-label">Blok ekle</span>' +
+        '<div class="page-header-actions"><button class="btn btn-outline btn-sm" id="msBack">' + esc(t('ms_back_library')) + '</button><button class="btn btn-outline btn-sm" id="msTemplatesHdr">' + (PCD.icon ? PCD.icon('grid', 14) : '') + ' ' + esc(t('ms_templates')) + '</button><button class="btn btn-outline btn-sm" id="msShare">' + (PCD.icon ? PCD.icon('share', 14) : '') + ' ' + esc(t('ms_share')) + '</button><button class="btn btn-primary btn-sm" id="msPrint">' + (PCD.icon ? PCD.icon('print', 14) : '') + ' ' + esc(t('ms_print')) + '</button></div></div>' +
+      '<div class="ms-addbar"><span class="ms-addbar-label">' + esc(t('ms_add_block')) + '</span>' +
         addBtnHtml('heading') + addBtnHtml('text') + addBtnHtml('section') + addBtnHtml('image') + addBtnHtml('divider') + addBtnHtml('spacer') + '</div>' +
       '<div class="ms-wrap"><div class="ms-viewport" id="msViewport"><div class="ms-page" id="msPage"></div></div><div class="ms-inspector" id="msInspector"></div></div>';
 
@@ -988,8 +992,8 @@
     let _rsz = null; window.addEventListener('resize', function () { clearTimeout(_rsz); _rsz = setTimeout(applyScale, 120); });
   }
   function addBtnHtml(type) {
-    const meta = BLOCK_META[type] || { glyph: '+', label: type };
-    return '<button class="ms-addbtn" data-add="' + type + '"><span class="ms-addbtn-ico">' + meta.glyph + '</span>' + esc(meta.label) + '</button>';
+    const meta = BLOCK_META[type] || { glyph: '+' };
+    return '<button class="ms-addbtn" data-add="' + type + '"><span class="ms-addbtn-ico">' + meta.glyph + '</span>' + esc(blockTypeLabel(type)) + '</button>';
   }
 
   // ================= ANA RENDER =================
@@ -1002,4 +1006,7 @@
 
   PCD.tools = PCD.tools || {};
   PCD.tools.menuStudio = { render: render, renderShareDoc: renderShareDoc };
+  // 'menus' route bu aracı yükler; i18n canlı dil değişiminde currentView()='menus'
+  // ile PCD.tools['menus']'i arar → alias olmadan editör anlık çevrilmez.
+  PCD.tools.menus = PCD.tools.menuStudio;
 })();
