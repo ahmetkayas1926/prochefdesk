@@ -20,6 +20,16 @@
   'use strict';
   const PCD = window.PCD;
 
+  // v2.21 — Hazır düzen presetleri. Sadece düzen/stil ayarlarını uygular;
+  // reçete seçimi (layout) korunur. İsimler İngilizce (uluslararası).
+  const KC_PRESETS = [
+    { id: 'standard', label: 'Standard',            s: { columns: 3, orientation: 'landscape', fontSize: 'medium', borderWidth: 'thin',   bodyWeight: 'normal', showMethod: true,  showAmounts: true } },
+    { id: 'compact',  label: 'Compact · 4-column',  s: { columns: 4, orientation: 'landscape', fontSize: 'small',  borderWidth: 'thin',   bodyWeight: 'normal', showMethod: false, showAmounts: true } },
+    { id: 'linecook', label: 'Line cook · large',   s: { columns: 2, orientation: 'landscape', fontSize: 'large',  borderWidth: 'medium', bodyWeight: 'bold',   showMethod: true,  showAmounts: true } },
+    { id: 'prep',     label: 'Detailed prep · 1-col', s: { columns: 1, orientation: 'portrait',  fontSize: 'medium', borderWidth: 'thin',   bodyWeight: 'normal', showMethod: true,  showAmounts: true } },
+    { id: 'amounts',  label: 'Batch amounts',       s: { columns: 3, orientation: 'landscape', fontSize: 'medium', borderWidth: 'thin',   bodyWeight: 'normal', showMethod: false, showAmounts: true } },
+  ];
+
   function render(view) {
     const t = PCD.i18n.t;
     const recipes = PCD.store.listRecipes().sort(function (a, b) { return (a.name || '').localeCompare(b.name || ''); });
@@ -65,6 +75,7 @@
     // bodyWeight: ingredient/method text weight (normal/medium/bold).
     let borderWidth = (lastCanvas && lastCanvas.borderWidth) || 'thin';   // thin | medium | thick
     let bodyWeight = (lastCanvas && lastCanvas.bodyWeight) || 'normal';   // normal | medium | bold
+    let accent = (lastCanvas && lastCanvas.accent) || '#16a34a';          // v2.21 — vurgu rengi
     // v2.9.22 — "Hide recipes used in other canvases" toggle state persisted
     // across renderBody calls (operator bug: checkbox state lost after add)
     let hideUsedElsewhere = false;
@@ -78,6 +89,31 @@
     let layout = (lastCanvas && Array.isArray(lastCanvas.layout))
       ? lastCanvas.layout.filter(function (it) { return recipes.some(function (r) { return r.id === it.recipeId; }); })
       : [];
+
+    // v2.21 — Preset seçici: düzen/stil ayarlarını topluca uygular (reçeteler kalır).
+    function openPresets() {
+      const tt = PCD.i18n.t;
+      const body = PCD.el('div');
+      body.innerHTML = '<div style="display:flex;flex-direction:column;gap:8px;">' + KC_PRESETS.map(function (p) {
+        const meta = p.s.columns + ' ' + (tt('kc_columns') || 'columns').toLowerCase() + ' · ' + (p.s.orientation === 'landscape' ? tt('kc_landscape') : tt('kc_portrait'));
+        return '<button type="button" class="btn btn-outline" data-preset="' + p.id + '" style="justify-content:flex-start;text-align:left;padding:10px 12px;">' +
+          '<span><b>' + PCD.escapeHtml(p.label) + '</b><span style="display:block;color:var(--text-3);font-size:11px;margin-top:2px;">' + PCD.escapeHtml(meta) + '</span></span></button>';
+      }).join('') + '</div><div class="text-muted text-sm" style="margin-top:10px;">' + PCD.escapeHtml(tt('kc2_presets_note') || 'Applies layout & style settings. Your recipe selection stays.') + '</div>';
+      const m = PCD.modal.open({ title: tt('kc2_presets') || 'Presets', body: body, size: 'sm', closable: true });
+      body.querySelectorAll('[data-preset]').forEach(function (el) {
+        el.addEventListener('click', function () {
+          const p = KC_PRESETS.find(function (x) { return x.id === el.getAttribute('data-preset'); });
+          if (p) {
+            columns = p.s.columns; orientation = p.s.orientation; fontSize = p.s.fontSize;
+            borderWidth = p.s.borderWidth; bodyWeight = p.s.bodyWeight;
+            showMethod = p.s.showMethod; showAmounts = p.s.showAmounts;
+            layout = layout.map(function (it) { return { recipeId: it.recipeId, span: Math.min(it.span || 1, columns) }; });
+            renderBody();
+          }
+          m.close();
+        });
+      });
+    }
 
     function renderBody() {
       const allCanvases = (PCD.store.listTable('canvases') || []).slice();
@@ -136,6 +172,10 @@
               </div>
 
               <div class="mb-2">
+                <button type="button" class="btn btn-outline btn-sm" id="kcPresetsBtn" style="width:100%;">${PCD.icon('grid', 14)} <span>${t('kc2_presets') || 'Presets'}</span></button>
+              </div>
+
+              <div class="mb-2">
                 <div class="text-muted text-sm mb-1">${t('kc_orientation')}</div>
                 <div class="flex gap-1">
                   <button type="button" class="btn btn-secondary btn-sm ${orientation==='landscape'?'active':''}" data-orient="landscape" style="flex:1;">${PCD.icon('grid',14)} <span>${t('kc_landscape')}</span></button>
@@ -161,6 +201,14 @@
               <div class="mb-2">
                 <div class="text-muted text-sm mb-1">${t('kc_body_weight') || 'Text weight'}</div>
                 <div class="flex gap-1">${weightButtons}</div>
+              </div>
+
+              <div class="mb-2">
+                <div class="text-muted text-sm mb-1">${t('kc2_accent') || 'Accent color'}</div>
+                <div class="flex gap-1" style="align-items:center;flex-wrap:wrap;">
+                  <input type="color" id="kcAccent" value="${accent}" style="width:42px;height:30px;border:1px solid var(--border);border-radius:6px;cursor:pointer;background:none;">
+                  ${['#16a34a','#1f2937','#b91c1c','#c2410c','#0e7490','#7c3aed','#b45309'].map(function (c) { return '<button type="button" data-accent="' + c + '" title="' + c + '" style="width:22px;height:22px;border-radius:50%;border:2px solid ' + (accent === c ? 'var(--text-1,#000)' : 'transparent') + ';background:' + c + ';cursor:pointer;flex:0 0 auto;padding:0;"></button>'; }).join('')}
+                </div>
               </div>
 
               <div class="flex items-center gap-3 mb-2" style="flex-wrap:wrap;">
@@ -430,6 +478,11 @@
         bodyWeight = this.getAttribute('data-bdy');
         renderBody();
       });
+      const presetsBtn = PCD.$('#kcPresetsBtn', bodyEl);
+      if (presetsBtn) presetsBtn.addEventListener('click', openPresets);
+      const accentInp = PCD.$('#kcAccent', bodyEl);
+      if (accentInp) accentInp.addEventListener('input', function () { accent = this.value; updatePreview(); });
+      PCD.on(bodyEl, 'click', '[data-accent]', function () { accent = this.getAttribute('data-accent'); renderBody(); });
 
       const nameInp = PCD.$('#canvasName', bodyEl);
       if (nameInp) nameInp.addEventListener('input', function () { canvasName = this.value; });
@@ -611,7 +664,7 @@
         const payload = {
           name: finalName,
           columns: columns, orientation: orientation, fontSize: fontSize,
-          borderWidth: borderWidth, bodyWeight: bodyWeight,
+          borderWidth: borderWidth, bodyWeight: bodyWeight, accent: accent,
           showMethod: showMethod, showAmounts: showAmounts,
           layout: layout.slice(),
         };
@@ -705,6 +758,7 @@
         canvasId = null;
         canvasName = 'Kitchen Reference';
         columns = 3; orientation = 'landscape'; fontSize = 'medium';
+        accent = '#16a34a';
         showMethod = true; showAmounts = true;
         // v2.8.21 — Default empty (was: auto-select every recipe)
         layout = [];
@@ -723,6 +777,7 @@
           fontSize = cvs.fontSize || 'medium';
           borderWidth = cvs.borderWidth || 'thin';
           bodyWeight = cvs.bodyWeight || 'normal';
+          accent = cvs.accent || '#16a34a';
           showMethod = !!cvs.showMethod;
           showAmounts = !!cvs.showAmounts;
           if (Array.isArray(cvs.layout)) {
@@ -753,7 +808,7 @@
         printSheet({
           layout: layout.slice(),
           columns: columns, orientation: orientation, fontSize: fontSize,
-          borderWidth: borderWidth, bodyWeight: bodyWeight,
+          borderWidth: borderWidth, bodyWeight: bodyWeight, accent: accent,
           showMethod: showMethod, showAmounts: showAmounts,
           title: canvasName,
           recipes: recipes,
@@ -789,7 +844,7 @@
       const html = buildSheetHtml({
         layoutRecipes: layoutRecipes,
         columns: columns, orientation: orientation, fontSize: fontSize,
-        borderWidth: borderWidth, bodyWeight: bodyWeight,
+        borderWidth: borderWidth, bodyWeight: bodyWeight, accent: accent,
         showMethod: showMethod, showAmounts: showAmounts,
         title: canvasName,
         interactive: true,  // adds drag/resize handles
@@ -1068,6 +1123,7 @@
     const bodyWeights = { normal: 400, medium: 700, bold: 900 };
     const bw = borderWidths[opts.borderWidth] || borderWidths.thin;
     const bdy = bodyWeights[opts.bodyWeight] || bodyWeights.normal;
+    const accent = opts.accent || '#16a34a';  // v2.21 — per-canvas vurgu rengi
     let fs = Object.assign({}, fontSizes[opts.fontSize] || fontSizes.medium);
     // Auto-shrink if narrow columns and big font
     if (opts.columns >= 7 && opts.fontSize === 'large') fs = fontSizes.medium;
@@ -1240,14 +1296,14 @@
         '.kc-header {' +
           'column-span: all;' +
           'display: flex; justify-content: space-between; align-items: baseline;' +
-          'border-bottom: 2px solid #16a34a;' +
+          'border-bottom: 2px solid ' + accent + ';' +
           'padding-bottom: 3px;' +
           'margin-bottom: 2px;' +
         '}' +
         '.kc-header h1 {' +
           'margin: 0;' +
           'font-size: 11pt; font-weight: 700;' +
-          'color: #16a34a;' +
+          'color: ' + accent + ';' +
           'letter-spacing: -0.01em;' +
           'text-transform: uppercase;' +
         '}' +
@@ -1270,7 +1326,7 @@
           'font-size: ' + fs.name + 'pt;' +
           'font-weight: 800;' +
           'color: #fff;' +
-          'background: #16a34a;' +
+          'background: ' + accent + ';' +
           'padding: 3px 6px;' +
           'letter-spacing: 0.02em;' +
           'text-transform: uppercase;' +
@@ -1309,7 +1365,7 @@
         '}' +
         '.kc-ing-amt {' +
           'flex: 0 0 auto;' +
-          'font-weight: 700; color: #16a34a;' +
+          'font-weight: 700; color: ' + accent + ';' +
           'white-space: nowrap;' +
           'font-variant-numeric: tabular-nums;' +
         '}' +
@@ -1336,7 +1392,7 @@
         '}' +
         '.kc-step:first-child { margin-top: 0; }' +
         '.kc-step-num {' +
-          'color: #16a34a;' +
+          'color: ' + accent + ';' +
           'font-weight: 800;' +
           'margin-inline-end: 4px;' +
           'flex-shrink: 0;' +
@@ -1375,7 +1431,7 @@
     const html = buildSheetHtml({
       layoutRecipes: layoutRecipes,
       columns: opts.columns, orientation: opts.orientation, fontSize: opts.fontSize,
-      borderWidth: opts.borderWidth, bodyWeight: opts.bodyWeight,
+      borderWidth: opts.borderWidth, bodyWeight: opts.bodyWeight, accent: opts.accent,
       showMethod: opts.showMethod, showAmounts: opts.showAmounts,
       title: opts.title,
       interactive: false,
@@ -1542,6 +1598,7 @@
       fontSize: cvs.fontSize,
       borderWidth: cvs.borderWidth || 'thin',
       bodyWeight: cvs.bodyWeight || 'normal',
+      accent: cvs.accent || '#16a34a',
       showMethod: cvs.showMethod,
       showAmounts: cvs.showAmounts,
       layoutResolved: layoutResolved,
@@ -1570,6 +1627,7 @@
       fontSize: payload.fontSize,
       borderWidth: payload.borderWidth || 'thin',
       bodyWeight: payload.bodyWeight || 'normal',
+      accent: payload.accent || '#16a34a',
       showMethod: payload.showMethod,
       showAmounts: payload.showAmounts,
       title: payload.name,

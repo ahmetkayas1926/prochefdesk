@@ -4,6 +4,19 @@ Kronolojik tersine (en son üstte). Her sürüm: başlık + ana değişiklikler.
 
 ---
 
+## v2.20.3 — Kitchen Cards geliştirme (1/2): Hazır düzenler + Vurgu rengi · 2026-06-07
+
+8-araç programının ilk aracı Kitchen Cards. Kod-önce analiz sonucu: araç zaten
+olgun + kanvas tabanlı → köklü rewrite YOK, **büyük cila + eksik kapatma.** Bu ara
+sürümde 2 parça (kalan 3'ü sonraki push'ta):
+
+- **Hazır düzenler (Presets):** Yazdır panelinde "Presets" butonu → 5 hazır düzen (Standard / Compact 4-sütun / Line cook büyük punto / Detaylı prep 1-sütun / Batch amounts). Sadece düzen+stil uygulanır; reçete seçimi korunur.
+- **Vurgu rengi (Accent):** Per-canvas renk seçici + 7 ön ayar. Kart başlığı, başlık, fiyat ve adım numarası seçilen rengi alır (önizleme = baskı = paylaşım, kaydedilir).
+- Mevcut olgun motor (tek render motoru, sürükle-sırala, çoklu canvas, çok-dil, dark mode) korundu; tarayıcıda doğrulandı.
+- Sıradaki (sonraki push): ortak tasarım dili (kontrol stili), özel/not kartları, library galerisi.
+
+---
+
 ## v2.20.2 — Menu Studio Faz 3: çok dil (i18n) · 2026-06-07
 
 Menu Studio arayüzü artık sabit Türkçe değil — 6 dile çevrildi (EN/TR/ES/FR/DE/AR).

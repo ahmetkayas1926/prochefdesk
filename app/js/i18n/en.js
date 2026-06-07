@@ -2973,5 +2973,10 @@ window.PCD.i18n.register('en', {
   ms_ph_section: "New Section",
   ms_new_dish: "New dish",
 
+  // ===== Kitchen Cards v2.21 =====
+  kc2_presets: "Presets",
+  kc2_presets_note: "Applies layout & style settings. Your recipe selection stays.",
+  kc2_accent: "Accent color",
+
   // v2.6.65 — Offline dataURL photo migration
 });

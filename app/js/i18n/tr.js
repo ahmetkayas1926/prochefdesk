@@ -2970,5 +2970,10 @@ window.PCD.i18n.register('tr', {
   ms_ph_section: "Yeni Bölüm",
   ms_new_dish: "Yeni yemek",
 
+  // ===== Kitchen Cards v2.21 =====
+  kc2_presets: "Hazır düzenler",
+  kc2_presets_note: "Düzen ve stil ayarlarını uygular. Seçtiğin reçeteler kalır.",
+  kc2_accent: "Vurgu rengi",
+
   // v2.6.65 — Offline dataURL photo migration
 });
