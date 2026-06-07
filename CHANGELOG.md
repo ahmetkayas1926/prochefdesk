@@ -4,6 +4,27 @@ Kronolojik tersine (en son üstte). Her sürüm: başlık + ana değişiklikler.
 
 ---
 
+## v2.20.0 — Menu Studio ANA menü aracı oldu (büyük revizyon) · 2026-06-07
+
+Menu Studio artık `menus` route'unun aracı (klasik menus.js route'lanmaz; dosya
+diskte kalır, eski klasik menüler Studio'da açılırken otomatik bloklara aktarılır).
+Tüm değişiklikler gerçek tarayıcıda tek tek test edildi.
+
+**Hata düzeltmeleri (canlı kök neden):**
+- **Resim ortalanmıyordu:** Uygulamanın global `img{display:block}` kuralı, sarmalayıcıdaki `text-align`'ı etkisiz bırakıyordu. Görsel artık FLEX (`justify-content`) ile hizalanır → her zaman ortalanır.
+- **"Font değişmiyor" algısı:** Bloklar temel fontu gömülü tutuyordu; sayfa "Temel font"u değişince miras almıyorlardı. Artık bloklar varsayılan olarak temel fontu MİRAS alır (`— Temel font —` seçeneği) → sayfa fontunu değiştirince tüm menü değişir. Per-blok override korunur.
+- **İlkel native isim kutusu:** `window.prompt` kaldırıldı; site stiline uygun `PCD.modal` tabanlı "Yeni menü" modalı.
+
+**Yeni / geliştirilmiş:**
+- **Library görünümü:** Kaydedilmiş menüler gerçek WYSIWYG önizlemeli kart ızgarası (hover'da Kopyala/Sil).
+- **Sürükle-bırak:** Her blok (başlık/bölüm/görsel/ayraç…) hem kanvasta hem sağdaki katman listesinde sürüklenerek yeniden sıralanır.
+- **Katman paneli:** Sağ panel kartlara bölündü; bloklar yeşil çerçeveli kart listesi (ikon + isim + sil) — düz yazı yığını gitti.
+- **İkonlu blok ekleme barı:** Her blok türü ikon rozetli buton.
+- **Şablonlar header'da:** Yazdır'ın yanına taşındı; galeri canlı önizlemeli.
+- **10 dolu profesyonel şablon:** Fine Dining, Modern Bistro, Café & Brunch, Minimalist, Wine & Cocktails, Event/Banquet, Steakhouse, Seafood/Raw Bar, Trattoria/Pizza, Vegan/Plant — hepsi gerçek yemek+fiyat+açıklama ile dolu.
+
+---
+
 ## v2.19.2 — Menu Studio: kritik stil hatası + sayfa boyutları/sütun/ayraç kütüphanesi · 2026-06-07
 
 Hatalar gerçek tarayıcıda yeniden üretilerek (tahminle değil) tespit + doğrulandı.

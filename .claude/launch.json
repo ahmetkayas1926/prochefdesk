@@ -12,6 +12,12 @@
       "runtimeExecutable": "python",
       "runtimeArgs": ["-c", "import http.server,socketserver\nclass H(http.server.SimpleHTTPRequestHandler):\n def end_headers(self):\n  self.send_header('Cache-Control','no-store, max-age=0')\n  http.server.SimpleHTTPRequestHandler.end_headers(self)\nsocketserver.TCPServer(('',8766),H).serve_forever()"],
       "port": 8766
+    },
+    {
+      "name": "pcdx",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-c", "import http.server\nclass H(http.server.SimpleHTTPRequestHandler):\n def end_headers(self):\n  self.send_header('Cache-Control','no-store, max-age=0')\n  http.server.SimpleHTTPRequestHandler.end_headers(self)\nhttp.server.ThreadingHTTPServer(('',8767),H).serve_forever()"],
+      "port": 8767
     }
   ]
 }
