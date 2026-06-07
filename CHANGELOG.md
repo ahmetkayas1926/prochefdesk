@@ -4,6 +4,20 @@ Kronolojik tersine (en son üstte). Her sürüm: başlık + ana değişiklikler.
 
 ---
 
+## v2.19.2 — Menu Studio: kritik stil hatası + sayfa boyutları/sütun/ayraç kütüphanesi · 2026-06-07
+
+Hatalar gerçek tarayıcıda yeniden üretilerek (tahminle değil) tespit + doğrulandı.
+
+- **KÖK NEDEN — kontroller çalışmıyordu (align/renk/boyut/font):** Font tanımları (`FONTS[].css`) font adlarını ÇİFT tırnakla tutuyordu (`"Cormorant Garamond"`). Bu stringler inline `style="..."` (çift tırnak) içine girince öznitelik ilk iç tırnakta KESİLİYOR → `font-family`'den sonraki TÜM CSS (text-align, color, font-size…) tarayıcı tarafından çöpe atılıyordu. Yani "yazıyı ortala / renk değiştir" hiç uygulanmıyordu. Fix: tüm font değerleri TEK tırnağa çevrildi → başlık/metin/bölüm/kalem stilleri artık uygulanıyor.
+- **Yatay önizleme taşması:** Kanvas ölçeği `transform-origin: top center` kullanıyordu; sayfa viewport'tan genişse (yatay / A3) merkezden büzülürken sağ yarı kırpılıyordu. `top left` + margin ile ortalamaya çevrildi → yatay/A3 tam görünür.
+- **Sayfa boyutları:** A4 / A3 / A5 / Letter + Dikey/Yatay yön (ayrı kontroller). Yazdırma `@page size` buna göre güncellenir.
+- **Çok sütun düzen:** 1–4 sütun (dikey 2-3, yatay 3-4 için). Başlık/ayraç/görsel/metin tam genişlik (column-span), bölümler sütunlarda akar (break-inside avoid). Blok bazında "Tam genişlik / Tek sütun" anahtarı.
+- **Ayraç kütüphanesi:** 13 stil — çizgi (düz/kısa/kesik/noktalı/çift) + süs (❦ ⚜ ✦ ❖ ❧ • • •) + kombinasyon (çizgi-süs-çizgi). Süs boyutu ayarı.
+- **Pro dokunuşlar:** Bölüm başlığı hizalama (eksikti), dekoratif sayfa çerçevesi (ince/çift), fiyatları gizle/göster.
+- Tüm kontroller (kağıt/yön/sütun/çerçeve/ayraç/hizalama/renk/font) yerel sunucuda gerçek tarayıcıda tıklanarak tek tek doğrulandı. Geriye dönük uyumlu (eski `page.size` ve `divider.variant` otomatik dönüştürülür).
+
+---
+
 ## v2.19.1 — Sync bug fix: array tablo pull + user_prefs grant · 2026-06-07
 
 İki kök neden kod/konsol/DB ile kesin tespit edildi, temiz çözüldü:

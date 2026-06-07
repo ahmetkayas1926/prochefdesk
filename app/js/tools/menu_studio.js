@@ -21,19 +21,22 @@
   const BRAND_KEY = 'pcd_menustudio_brandkit';
 
   // ---- Küratörlü fontlar ----
+  // NOTE: css değerleri TEK tırnak kullanır. Bu stringler inline
+  // style="..." (çift tırnak) içine enjekte edilir; font adında çift tırnak
+  // olursa öznitelik kesilir ve sonraki TÜM CSS (align/color/size) silinir.
   const FONTS = [
-    { label: 'Cormorant', css: '"Cormorant Garamond", Georgia, serif' },
-    { label: 'Playfair', css: '"Playfair Display", Georgia, serif' },
-    { label: 'EB Garamond', css: '"EB Garamond", Georgia, serif' },
-    { label: 'Lora', css: '"Lora", Georgia, serif' },
-    { label: 'Italiana', css: '"Italiana", Georgia, serif' },
-    { label: 'Inter', css: '"Inter", -apple-system, sans-serif' },
-    { label: 'Montserrat', css: '"Montserrat", sans-serif' },
-    { label: 'Poppins', css: '"Poppins", sans-serif' },
-    { label: 'Oswald', css: '"Oswald", sans-serif' },
-    { label: 'Bebas Neue', css: '"Bebas Neue", sans-serif' },
-    { label: 'Caveat', css: '"Caveat", cursive' },
-    { label: 'Nunito', css: '"Nunito", sans-serif' },
+    { label: 'Cormorant', css: "'Cormorant Garamond', Georgia, serif" },
+    { label: 'Playfair', css: "'Playfair Display', Georgia, serif" },
+    { label: 'EB Garamond', css: "'EB Garamond', Georgia, serif" },
+    { label: 'Lora', css: "'Lora', Georgia, serif" },
+    { label: 'Italiana', css: "'Italiana', Georgia, serif" },
+    { label: 'Inter', css: "'Inter', -apple-system, sans-serif" },
+    { label: 'Montserrat', css: "'Montserrat', sans-serif" },
+    { label: 'Poppins', css: "'Poppins', sans-serif" },
+    { label: 'Oswald', css: "'Oswald', sans-serif" },
+    { label: 'Bebas Neue', css: "'Bebas Neue', sans-serif" },
+    { label: 'Caveat', css: "'Caveat', cursive" },
+    { label: 'Nunito', css: "'Nunito', sans-serif" },
   ];
   const GF_HREF = 'https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Caveat:wght@400;600&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=EB+Garamond&family=Italiana&family=Lora:ital@0;1&family=Montserrat:wght@400;600;700&family=Nunito:wght@400;700&family=Oswald:wght@400;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Poppins:wght@400;600;700&display=swap';
   function ensureFonts(doc) {
@@ -45,7 +48,28 @@
   }
   function fontCss(label) { const f = FONTS.find(function (x) { return x.label === label; }); return f ? f.css : FONTS[0].css; }
 
-  const PAGE = { portrait: { w: 794, h: 1123 }, landscape: { w: 1123, h: 794 } };
+  // Kağıt boyutları (96dpi px). pageSpec() yön + kağıttan gerçek w/h üretir.
+  const PAPER = {
+    A4:     { w: 794,  h: 1123, css: 'A4' },
+    A3:     { w: 1123, h: 1587, css: 'A3' },
+    A5:     { w: 559,  h: 794,  css: 'A5' },
+    letter: { w: 816,  h: 1056, css: 'letter' },
+  };
+  function pageSpec(page) {
+    const p = PAPER[(page && page.paper) || 'A4'] || PAPER.A4;
+    const land = !!(page && page.orientation === 'landscape');
+    return { w: land ? p.h : p.w, h: land ? p.w : p.h, paperCss: p.css, land: land };
+  }
+  // Eski tasarımları yeni modele taşı (page.size → paper/orientation) + varsayılanlar.
+  function normalizeDesign(d) {
+    if (!d || !d.page) return d;
+    const p = d.page;
+    if (!p.orientation) p.orientation = (p.size === 'landscape' ? 'landscape' : 'portrait');
+    if (!p.paper) p.paper = 'A4';
+    if (p.columns == null) p.columns = 1;
+    if (p.showPrices == null) p.showPrices = true;
+    return d;
+  }
   function uid() { return PCD.uid ? PCD.uid('b') : 'b' + Math.random().toString(36).slice(2); }
   function cur() { return (PCD.currencySymbol && PCD.currencySymbol()) || '$'; }
   function esc(s) { return PCD.escapeHtml(String(s == null ? '' : s)); }
@@ -57,6 +81,32 @@
     nuts: 'N', treenuts: 'N', peanuts: 'P', soy: 'S', soya: 'S',
     sesame: 'SE', mustard: 'MU', celery: 'C', lupin: 'L', sulphites: 'SU', sulfites: 'SU',
   };
+
+  // ---- Ayraç kütüphanesi (çizgi + süs + kombinasyon) ----
+  const DIV_STYLES = [
+    { id: 'line',       kind: 'line',  css: 'height:1px;width:100%;background:%C;' },
+    { id: 'short',      kind: 'line',  css: 'height:2px;width:64px;margin:0 auto;background:%C;' },
+    { id: 'dashed',     kind: 'line',  css: 'height:0;width:100%;border-top:1px dashed %C;' },
+    { id: 'dotted',     kind: 'line',  css: 'height:0;width:100%;border-top:2px dotted %C;' },
+    { id: 'double',     kind: 'line',  css: 'height:0;width:100%;border-top:3px double %C;' },
+    { id: 'floral',     kind: 'glyph', glyph: '❦' },          // ❦
+    { id: 'fleur',      kind: 'glyph', glyph: '⚜' },          // ⚜
+    { id: 'star',       kind: 'glyph', glyph: '✦' },          // ✦
+    { id: 'diamond',    kind: 'glyph', glyph: '❖' },          // ❖
+    { id: 'leaf',       kind: 'glyph', glyph: '❧' },          // ❧
+    { id: 'dots',       kind: 'glyph', glyph: '• • •' }, // • • •
+    { id: 'linestar',   kind: 'combo', glyph: '✦' },          // —— ✦ ——
+    { id: 'linefloral', kind: 'combo', glyph: '❦' },          // —— ❦ ——
+  ];
+  function dividerStyleOf(b) { return b.dividerStyle || (b.variant === 'line' ? 'line' : (b.variant === 'ornament' ? 'floral' : 'line')); }
+  function dividerDef(id) { return DIV_STYLES.find(function (x) { return x.id === id; }) || DIV_STYLES[0]; }
+  function dividerHtml(b, color) {
+    const d = dividerDef(dividerStyleOf(b));
+    if (d.kind === 'line') return '<div style="' + d.css.replace(/%C/g, color) + '"></div>';
+    if (d.kind === 'glyph') return '<div style="text-align:center;color:' + color + ';font-size:' + (b.size || 20) + 'px;letter-spacing:6px;line-height:1;">' + d.glyph + '</div>';
+    return '<div style="display:flex;align-items:center;gap:14px;color:' + color + ';"><span style="flex:1;height:1px;background:' + color + ';"></span><span style="font-size:' + (b.size || 18) + 'px;line-height:1;">' + d.glyph + '</span><span style="flex:1;height:1px;background:' + color + ';"></span></div>';
+  }
+  function miniDivPreview(d) { return d.kind === 'line' ? '—' : d.glyph; }
 
   // ================= ŞABLONLAR =================
   function tplBlank(name) {
@@ -184,10 +234,7 @@
       return '<div style="font-family:' + fontCss(b.font || page.baseFont) + ';font-size:' + (b.size || 40) + 'px;font-weight:' + (b.weight || 400) + ';text-align:' + (b.align || 'center') + ';color:' + (b.color || ink) + ';letter-spacing:' + (b.spacing || 0) + 'px;line-height:1.1;margin:0;">' + esc(b.text) + '</div>';
     if (b.type === 'text')
       return '<div style="font-family:' + fontCss(b.font || page.baseFont) + ';font-size:' + (b.size || 13) + 'px;text-align:' + (b.align || 'center') + ';color:' + (b.color || ink) + ';letter-spacing:' + (b.tracking || 0) + 'px;' + (b.upper ? 'text-transform:uppercase;' : '') + 'line-height:1.5;white-space:pre-wrap;margin:0;">' + esc(b.text) + '</div>';
-    if (b.type === 'divider') {
-      if (b.variant === 'ornament') return '<div style="text-align:center;color:' + (b.color || accent) + ';font-size:20px;letter-spacing:6px;line-height:1;">&#10086;</div>';
-      return '<div style="height:1px;background:' + (b.color || accent) + ';width:100%;"></div>';
-    }
+    if (b.type === 'divider') return dividerHtml(b, b.color || accent);
     if (b.type === 'image') {
       if (!b.src) return '<div style="text-align:center;color:#bbb;font-size:12px;border:1px dashed #ccc;padding:24px;">Görsel ekle</div>';
       return '<div style="text-align:' + (b.align || 'center') + ';"><img src="' + b.src + '" style="max-width:100%;height:' + (b.height || 200) + 'px;object-fit:cover;border-radius:' + (b.radius || 0) + 'px;"></div>';
@@ -202,7 +249,7 @@
         if (page.showAllergens) { const codes = itemAllergenCodes(it); if (codes.length) nm += ' <span style="font-size:9px;font-weight:700;color:' + (page.ink || ink) + '99;letter-spacing:0.5px;">(' + codes.join(' ') + ')</span>'; }
         h += '<span style="font-family:' + fontCss(b.itemFont || page.baseFont) + ';font-size:' + (b.itemSize || 15) + 'px;font-weight:600;color:' + (page.ink || ink) + ';">' + nm + '</span>';
         h += '<span style="flex:1;border-bottom:1px dotted ' + (page.ink || ink) + '40;margin:0 4px;transform:translateY(-3px);"></span>';
-        if (it.price !== '' && it.price != null) h += '<span style="font-family:' + fontCss(b.itemFont || page.baseFont) + ';font-size:' + (b.itemSize || 15) + 'px;font-weight:600;color:' + (page.ink || ink) + ';">' + esc(cur() + it.price) + '</span>';
+        if (page.showPrices !== false && it.price !== '' && it.price != null) h += '<span style="font-family:' + fontCss(b.itemFont || page.baseFont) + ';font-size:' + (b.itemSize || 15) + 'px;font-weight:600;color:' + (page.ink || ink) + ';">' + esc(cur() + it.price) + '</span>';
         h += '</div>';
         if (it.desc) h += '<div style="font-family:' + fontCss(b.itemFont || page.baseFont) + ';font-size:' + ((b.itemSize || 15) - 3) + 'px;color:' + (page.ink || ink) + '99;font-style:italic;margin-top:2px;line-height:1.4;">' + esc(it.desc) + '</div>';
         h += '</div></div>';
@@ -219,29 +266,50 @@
     const codes = Object.keys(used); if (!codes.length) return '';
     return '<div style="margin-top:20px;font-family:' + fontCss(page.baseFont) + ';font-size:10px;color:' + (page.ink || '#111') + '99;text-align:center;">' + codes.map(function (c) { return '<b>' + c + '</b>'; }).join(' · ') + '</div>';
   }
+  function blockIsFullWidth(b, cols) {
+    if (cols <= 1) return false;
+    if (typeof b.span === 'boolean') return b.span;
+    return b.type === 'heading' || b.type === 'divider' || b.type === 'image' || b.type === 'text';
+  }
   function renderPageInner(d) {
     const page = d.page;
-    let h = (d.blocks || []).map(function (b) {
-      return '<div class="ms-block" data-bid="' + b.id + '" style="margin-bottom:' + (b.type === 'spacer' ? 0 : 18) + 'px;">' + blockInnerHTML(b, page) + '</div>';
+    const cols = Math.max(1, Math.min(4, page.columns || 1));
+    const blocksHtml = (d.blocks || []).map(function (b) {
+      const flow = cols > 1 ? (blockIsFullWidth(b, cols) ? 'column-span:all;-webkit-column-span:all;' : 'break-inside:avoid;-webkit-column-break-inside:avoid;') : '';
+      return '<div class="ms-block" data-bid="' + b.id + '" style="margin-bottom:' + (b.type === 'spacer' ? 0 : 18) + 'px;' + flow + '">' + blockInnerHTML(b, page) + '</div>';
     }).join('');
-    h += legendHtml(page);
-    return h;
+    let body = cols > 1 ? '<div style="column-count:' + cols + ';column-gap:' + (page.columnGap == null ? 28 : page.columnGap) + 'px;">' + blocksHtml + '</div>' : blocksHtml;
+    body += legendHtml(page);
+    if (page.frame) {
+      const spec = pageSpec(page);
+      const pad = (page.pad == null ? 56 : page.pad);
+      const innerH = Math.max(0, spec.h - 2 * pad);
+      const fc = page.frameColor || page.accent || '#c5a572';
+      const fb = page.frameStyle === 'double' ? '3px double' : '1px solid';
+      body = '<div style="border:' + fb + ' ' + fc + ';padding:' + (page.framePad == null ? 22 : page.framePad) + 'px;box-sizing:border-box;min-height:' + innerH + 'px;">' + body + '</div>';
+    }
+    return body;
   }
 
   // ================= KANVAS =================
   function applyScale() {
     if (!viewportEl || !pageScaleEl) return;
-    const spec = PAGE[design.page.size] || PAGE.portrait;
-    const avail = viewportEl.clientWidth - 32;
+    const spec = pageSpec(design.page);
+    const avail = viewportEl.clientWidth - 40;
     if (avail <= 0) { requestAnimationFrame(applyScale); return; }
     const scale = Math.min(1, avail / spec.w);
+    // transform-origin TOP LEFT zorunlu: 'center' kullanılırsa, eleman
+    // viewport'tan genişse (yatay/A3) ölçek merkezden büzülürken sağ yarı
+    // kırpılır. Sol-üstten ölçekleyip kalan boşluğu margin ile ortalıyoruz.
     pageScaleEl.style.transform = 'scale(' + scale + ')';
-    pageScaleEl.style.transformOrigin = 'top center';
+    pageScaleEl.style.transformOrigin = 'top left';
+    pageScaleEl.style.marginLeft = Math.max(0, (avail - spec.w * scale) / 2) + 'px';
     viewportEl.style.height = (spec.h * scale + 40) + 'px';
   }
   function refreshPage() {
     if (!pageScaleEl) return;
-    const spec = PAGE[design.page.size] || PAGE.portrait;
+    normalizeDesign(design);
+    const spec = pageSpec(design.page);
     pageScaleEl.style.width = spec.w + 'px';
     pageScaleEl.style.minHeight = spec.h + 'px';
     pageScaleEl.style.background = design.page.bg || '#fff';
@@ -265,17 +333,25 @@
   function numIn(attr, val, mn, mx) { return '<input type="number" class="input" data-f="' + attr + '" value="' + (val == null ? '' : val) + '" min="' + (mn || 0) + '" max="' + (mx || 999) + '" style="width:100%;">'; }
   function colIn(attr, val, fb) { return '<input type="color" data-f="' + attr + '" value="' + (val || fb || '#111111') + '" style="width:46px;height:32px;border:1px solid var(--border);border-radius:6px;cursor:pointer;background:none;"> <button type="button" class="btn btn-ghost btn-sm" data-clear="' + attr + '">Tema</button>'; }
   function alignB(attr, val) { return ['left', 'center', 'right'].map(function (a) { return '<button type="button" class="btn btn-sm ' + (val === a ? 'btn-primary' : 'btn-outline') + '" data-align="' + attr + '|' + a + '">' + (a === 'left' ? '⟸' : a === 'center' ? '≡' : '⟹') + '</button>'; }).join(' '); }
+  function pill(dataAttr, cur, opts) { return opts.map(function (o) { return '<button type="button" class="btn btn-sm ' + (String(cur) === String(o.v) ? 'btn-primary' : 'btn-outline') + '" ' + dataAttr + '="' + o.v + '">' + o.l + '</button>'; }).join(' '); }
 
   function renderInspector() {
     if (!inspectorEl) return;
+    normalizeDesign(design);
     const b = selectedId ? findBlock(selectedId) : null;
+    const cols = design.page.columns || 1;
     let h = '<div style="font-weight:700;font-size:13px;margin:0 0 8px;">🎨 Sayfa</div>';
     h += sRow('Temel font', fontSel('page.baseFont', design.page.baseFont));
+    h += sRow('Kağıt', pill('data-paper', design.page.paper || 'A4', [{ v: 'A4', l: 'A4' }, { v: 'A3', l: 'A3' }, { v: 'A5', l: 'A5' }, { v: 'letter', l: 'Letter' }]));
+    h += sRow('Yön', pill('data-orient', design.page.orientation || 'portrait', [{ v: 'portrait', l: 'Dikey' }, { v: 'landscape', l: 'Yatay' }]));
+    h += sRow('Sütun', pill('data-cols', cols, [{ v: 1, l: '1' }, { v: 2, l: '2' }, { v: 3, l: '3' }, { v: 4, l: '4' }]));
+    if (cols > 1) h += sRow('Sütun aralığı', numIn('page.columnGap', design.page.columnGap == null ? 28 : design.page.columnGap, 8, 80));
     h += sRow('Vurgu rengi', colIn('page.accent', design.page.accent, '#c5a572'));
     h += sRow('Metin rengi', colIn('page.ink', design.page.ink, '#111111'));
     h += sRow('Arka plan', colIn('page.bg', design.page.bg, '#ffffff'));
     h += sRow('Kenar boşluğu', numIn('page.pad', design.page.pad, 16, 120));
-    h += sRow('Yön', '<button type="button" class="btn btn-sm ' + (design.page.size === 'portrait' ? 'btn-primary' : 'btn-outline') + '" data-size="portrait">Dikey</button> <button type="button" class="btn btn-sm ' + (design.page.size === 'landscape' ? 'btn-primary' : 'btn-outline') + '" data-size="landscape">Yatay</button>');
+    h += sRow('Çerçeve', pill('data-frame', design.page.frame ? (design.page.frameStyle || 'thin') : 'off', [{ v: 'off', l: 'Yok' }, { v: 'thin', l: 'İnce' }, { v: 'double', l: 'Çift' }]) + (design.page.frame ? ' ' + colIn('page.frameColor', design.page.frameColor, design.page.accent) : ''));
+    h += sRow('Fiyatları göster', '<button type="button" class="btn btn-sm ' + (design.page.showPrices !== false ? 'btn-primary' : 'btn-outline') + '" data-toggle-page="showPrices">' + (design.page.showPrices !== false ? 'Açık' : 'Kapalı') + '</button>');
     h += sRow('Alerjen kodları', '<button type="button" class="btn btn-sm ' + (design.page.showAllergens ? 'btn-primary' : 'btn-outline') + '" data-toggle-page="showAllergens">' + (design.page.showAllergens ? 'Açık' : 'Kapalı') + '</button> <span style="font-size:11px;color:var(--text-3);">reçeteden otomatik</span>');
     h += '<div style="display:flex;gap:6px;margin-top:6px;"><button type="button" class="btn btn-outline btn-sm" id="msTemplates" style="flex:1;">Şablonlar</button><button type="button" class="btn btn-outline btn-sm" id="msBrandSave" style="flex:1;">Markamı kaydet</button><button type="button" class="btn btn-outline btn-sm" id="msBrandApply" style="flex:1;">Uygula</button></div>';
     h += '<hr style="border:0;border-top:1px solid var(--border);margin:14px 0;">';
@@ -284,6 +360,7 @@
 
     const tl = { heading: 'Başlık', text: 'Metin', section: 'Bölüm', image: 'Görsel', divider: 'Ayraç', spacer: 'Boşluk' };
     h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><div style="font-weight:700;font-size:13px;">✏️ ' + (tl[b.type] || b.type) + '</div><div style="display:flex;gap:4px;"><button type="button" class="btn btn-ghost btn-sm" data-move="up">↑</button><button type="button" class="btn btn-ghost btn-sm" data-move="down">↓</button><button type="button" class="btn btn-ghost btn-sm" data-del-block style="color:var(--danger);">' + (PCD.icon ? PCD.icon('trash', 14) : '✕') + '</button></div></div>';
+    if (cols > 1 && b.type !== 'spacer') h += sRow('Sütun genişliği', '<button type="button" class="btn btn-sm ' + (blockIsFullWidth(b, cols) ? 'btn-primary' : 'btn-outline') + '" data-spantoggle>' + (blockIsFullWidth(b, cols) ? 'Tam genişlik' : 'Tek sütun') + '</button>');
 
     if (b.type === 'heading' || b.type === 'text') {
       h += sRow('Metin', '<textarea class="textarea" data-f="text" rows="2" style="width:100%;">' + esc(b.text) + '</textarea>');
@@ -297,6 +374,7 @@
       h += sRow('Başlık font', fontSel('titleFont', b.titleFont || design.page.baseFont));
       h += sRow('Başlık boyut', numIn('titleSize', b.titleSize, 12, 60));
       h += sRow('Başlık renk', colIn('titleColor', b.titleColor, design.page.accent));
+      h += sRow('Başlık hizası', alignB('titleAlign', b.titleAlign || 'left'));
       h += sRow('Altı çizgi', '<button type="button" class="btn btn-sm ' + (b.rule ? 'btn-primary' : 'btn-outline') + '" data-toggle="rule">' + (b.rule ? 'Açık' : 'Kapalı') + '</button>');
       h += '<hr style="border:0;border-top:1px dashed var(--border);margin:12px 0;"><div style="font-size:12px;font-weight:700;margin-bottom:6px;">Yemekler</div>';
       (b.items || []).forEach(function (it) {
@@ -315,8 +393,10 @@
       h += sRow('Hizalama', alignB('align', b.align || 'center'));
       h += sRow('Köşe', numIn('radius', b.radius, 0, 40));
     } else if (b.type === 'divider') {
-      h += sRow('Stil', '<button type="button" class="btn btn-sm ' + (b.variant !== 'ornament' ? 'btn-primary' : 'btn-outline') + '" data-divvar="line">Çizgi</button> <button type="button" class="btn btn-sm ' + (b.variant === 'ornament' ? 'btn-primary' : 'btn-outline') + '" data-divvar="ornament">Süs</button>');
+      const curDiv = dividerStyleOf(b);
+      h += sRow('Stil', '<div style="display:flex;flex-wrap:wrap;gap:5px;">' + DIV_STYLES.map(function (d) { return '<button type="button" class="btn btn-sm ' + (curDiv === d.id ? 'btn-primary' : 'btn-outline') + '" data-divstyle="' + d.id + '" title="' + d.id + '" style="min-width:42px;font-size:14px;line-height:1.1;">' + miniDivPreview(d) + '</button>'; }).join('') + '</div>');
       h += sRow('Renk', colIn('color', b.color, design.page.accent));
+      if (dividerDef(curDiv).kind !== 'line') h += sRow('Süs boyutu', numIn('size', b.size, 10, 60));
     } else if (b.type === 'spacer') { h += sRow('Yükseklik', numIn('height', b.height, 4, 200)); }
 
     inspectorEl.innerHTML = h; wireInspector();
@@ -335,8 +415,12 @@
     inspectorEl.querySelectorAll('[data-align]').forEach(function (el) { el.addEventListener('click', function () { const p = el.getAttribute('data-align').split('|'); setField(b || {}, p[0], p[1]); refreshPage(); renderInspector(); }); });
     inspectorEl.querySelectorAll('[data-toggle]').forEach(function (el) { el.addEventListener('click', function () { const k = el.getAttribute('data-toggle'); b[k] = !b[k]; refreshPage(); renderInspector(); }); });
     inspectorEl.querySelectorAll('[data-toggle-page]').forEach(function (el) { el.addEventListener('click', function () { const k = el.getAttribute('data-toggle-page'); design.page[k] = !design.page[k]; refreshPage(); renderInspector(); }); });
-    inspectorEl.querySelectorAll('[data-size]').forEach(function (el) { el.addEventListener('click', function () { design.page.size = el.getAttribute('data-size'); refreshPage(); renderInspector(); }); });
-    inspectorEl.querySelectorAll('[data-divvar]').forEach(function (el) { el.addEventListener('click', function () { b.variant = el.getAttribute('data-divvar'); refreshPage(); renderInspector(); }); });
+    inspectorEl.querySelectorAll('[data-paper]').forEach(function (el) { el.addEventListener('click', function () { design.page.paper = el.getAttribute('data-paper'); refreshPage(); renderInspector(); }); });
+    inspectorEl.querySelectorAll('[data-orient]').forEach(function (el) { el.addEventListener('click', function () { design.page.orientation = el.getAttribute('data-orient'); refreshPage(); renderInspector(); }); });
+    inspectorEl.querySelectorAll('[data-cols]').forEach(function (el) { el.addEventListener('click', function () { design.page.columns = Number(el.getAttribute('data-cols')); refreshPage(); renderInspector(); }); });
+    inspectorEl.querySelectorAll('[data-frame]').forEach(function (el) { el.addEventListener('click', function () { const v = el.getAttribute('data-frame'); design.page.frame = (v !== 'off'); if (v !== 'off') design.page.frameStyle = v; refreshPage(); renderInspector(); }); });
+    inspectorEl.querySelectorAll('[data-divstyle]').forEach(function (el) { el.addEventListener('click', function () { if (!b) return; b.dividerStyle = el.getAttribute('data-divstyle'); delete b.variant; refreshPage(); renderInspector(); }); });
+    const spanT = inspectorEl.querySelector('[data-spantoggle]'); if (spanT) spanT.addEventListener('click', function () { if (!b) return; b.span = !blockIsFullWidth(b, design.page.columns || 1); refreshPage(); renderInspector(); });
     inspectorEl.querySelectorAll('[data-move]').forEach(function (el) { el.addEventListener('click', function () { moveBlock(selectedId, el.getAttribute('data-move')); }); });
     const delB = inspectorEl.querySelector('[data-del-block]'); if (delB) delB.addEventListener('click', function () { design.blocks = design.blocks.filter(function (x) { return x.id !== selectedId; }); selectedId = null; refreshPage(); renderInspector(); });
     const iu = inspectorEl.querySelector('[data-imgupload]'); if (iu) iu.addEventListener('click', function () { pickImage(function (src) { b.src = src; refreshPage(); renderInspector(); }); });
@@ -385,7 +469,7 @@
     else if (type === 'text') Object.assign(nb, { text: 'Metin…', font: 'Montserrat', size: 12, align: 'center', color: '' });
     else if (type === 'section') Object.assign(nb, { title: 'Yeni Bölüm', titleFont: design.page.baseFont, titleSize: 24, items: [] });
     else if (type === 'image') Object.assign(nb, { src: null, height: 200, align: 'center', radius: 0 });
-    else if (type === 'divider') Object.assign(nb, { variant: 'ornament', color: '' });
+    else if (type === 'divider') Object.assign(nb, { dividerStyle: 'floral', color: '', size: 20 });
     else if (type === 'spacer') Object.assign(nb, { height: 24 });
     design.blocks.push(nb); selectedId = nb.id; refreshPage(); renderInspector();
   }
@@ -428,8 +512,9 @@
   }
 
   function buildPrintHtml() {
-    const page = design.page; const spec = PAGE[page.size] || PAGE.portrait;
-    return '<style>@page{size:A4 ' + (page.size === 'landscape' ? 'landscape' : 'portrait') + ';margin:0;}@import url("' + GF_HREF + '");body{margin:0;}.ms-print{box-sizing:border-box;width:' + spec.w + 'px;min-height:' + spec.h + 'px;background:' + (page.bg || '#fff') + ';padding:' + (page.pad || 56) + 'px;margin:0 auto;}.ms-block{margin-bottom:18px;}</style><div class="ms-print">' + renderPageInner(design) + '</div>';
+    normalizeDesign(design);
+    const page = design.page; const spec = pageSpec(page);
+    return '<style>@page{size:' + spec.paperCss + (spec.land ? ' landscape' : ' portrait') + ';margin:0;}@import url("' + GF_HREF + '");body{margin:0;}.ms-print{box-sizing:border-box;width:' + spec.w + 'px;min-height:' + spec.h + 'px;background:' + (page.bg || '#fff') + ';padding:' + (page.pad || 56) + 'px;margin:0 auto;}.ms-block{margin-bottom:18px;}</style><div class="ms-print">' + renderPageInner(design) + '</div>';
   }
 
   // ================= LİSTE GÖRÜNÜMÜ =================

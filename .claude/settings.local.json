@@ -179,7 +179,8 @@
       "Bash(node -e \"const fs=require\\('fs'\\);const h=fs.readFileSync\\('index.html','utf8'\\);const parts=h.split\\('<script>'\\);const last=parts[parts.length-1];const code=last.split\\('</script>'\\)[0];try{new Function\\(code\\);console.log\\('LANDING i18n SCRIPT SYNTAX OK \\('+code.length+' chars\\)'\\);}catch\\(e\\){console.log\\('SYNTAX ERROR:',e.message\\);process.exit\\(1\\);}\")",
       "Bash(node -e ' *)",
       "Bash(xargs echo \"data-i18n attribute count:\")",
-      "mcp__Claude_in_Chrome__list_connected_browsers"
+      "mcp__Claude_in_Chrome__list_connected_browsers",
+      "Bash(rm -f \"C:/Users/ahmet/Desktop/prochefdesk/.claude/devserver.js\")"
     ]
   }
 }
