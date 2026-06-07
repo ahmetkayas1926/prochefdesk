@@ -501,5 +501,6 @@
     window.addEventListener('resize', function () { clearTimeout(_rsz); _rsz = setTimeout(applyScale, 120); });
   }
 
-  PCD.menuStudio = { render: render };
+  PCD.tools = PCD.tools || {};
+  PCD.tools.menuStudio = { render: render };
 })();
