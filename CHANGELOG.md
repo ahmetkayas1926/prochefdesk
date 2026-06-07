@@ -4,6 +4,18 @@ Kronolojik tersine (en son üstte). Her sürüm: başlık + ana değişiklikler.
 
 ---
 
+## v2.21.0 — Kitchen Cards geliştirme (2/2): Özel kartlar + Library galerisi + tutarlı stil · 2026-06-07
+
+8-araç programının 1. aracı Kitchen Cards tamamlandı (köklü rewrite olmadan, olgun
+motor korunarak). v2.20.3'teki Presets + Accent'in üzerine:
+
+- **Özel/not kartları:** Reçete dışı serbest metin kartı (alerjen anahtarı, pişirme sıcaklıkları, bölüm notu). "Özel kartlar" panelinden ekle/düzenle/sil; reçete kartlarıyla aynı stil; sürükle-sırala + sil (birleşik anahtar) + baskı/paylaşıma dahil.
+- **Library galerisi:** "Kayıtlı canvas'lar" artık mini önizlemeli (vurgu rengi + reçete adları) kart ızgarası — **kopyala** (yeni) + sil.
+- **Tutarlı tasarım dili:** Aktif kontrol toggle'ları artık marka renginde (Menu Studio pill hissi). Yeni Presets/Accent/Özel-kart arayüzü aynı kart düzenini kullanır.
+- Tek render motoru (önizleme=baskı=paylaşım), masonry çok-sütun, çoklu canvas, dark mode korundu; her parça tarayıcıda doğrulandı (custom kart ekle/render, accent renk, preset uygula, galeri+kopyala, pill stili).
+
+---
+
 ## v2.20.3 — Kitchen Cards geliştirme (1/2): Hazır düzenler + Vurgu rengi · 2026-06-07
 
 8-araç programının ilk aracı Kitchen Cards. Kod-önce analiz sonucu: araç zaten

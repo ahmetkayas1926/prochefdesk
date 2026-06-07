@@ -2974,6 +2974,17 @@ window.PCD.i18n.register('tr', {
   kc2_presets: "Hazır düzenler",
   kc2_presets_note: "Düzen ve stil ayarlarını uygular. Seçtiğin reçeteler kalır.",
   kc2_accent: "Vurgu rengi",
+  kc2_custom_cards: "Özel kartlar",
+  kc2_custom_card: "Özel kart",
+  kc2_add_custom: "Ekle",
+  kc2_no_custom: "Henüz özel kart yok.",
+  kc2_untitled: "İsimsiz",
+  kc2_edit: "Düzenle",
+  kc2_card_title: "Başlık",
+  kc2_card_title_ph: "örn. Alerjen anahtarı",
+  kc2_card_body: "İçerik",
+  kc2_card_body_ph: "Serbest metin — her satıra bir madde…",
+  kc2_duplicate: "Kopyala",
 
   // v2.6.65 — Offline dataURL photo migration
 });

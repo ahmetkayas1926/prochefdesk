@@ -2977,6 +2977,17 @@ window.PCD.i18n.register('en', {
   kc2_presets: "Presets",
   kc2_presets_note: "Applies layout & style settings. Your recipe selection stays.",
   kc2_accent: "Accent color",
+  kc2_custom_cards: "Custom cards",
+  kc2_custom_card: "Custom card",
+  kc2_add_custom: "Add",
+  kc2_no_custom: "No custom cards yet.",
+  kc2_untitled: "Untitled",
+  kc2_edit: "Edit",
+  kc2_card_title: "Title",
+  kc2_card_title_ph: "e.g. Allergen key",
+  kc2_card_body: "Content",
+  kc2_card_body_ph: "Free text — one line per row…",
+  kc2_duplicate: "Duplicate",
 
   // v2.6.65 — Offline dataURL photo migration
 });

@@ -115,6 +115,32 @@
       });
     }
 
+    // v2.21 — Özel/not kartları yardımcıları.
+    function kcUid() { return PCD.uid ? PCD.uid('kc') : 'kc' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+    // Birleşik anahtar: reçete kartı recipeId, özel kart id ile eşleşir (sürükle/sil ortak).
+    function _itemKey(l) { return l && l.custom ? l.id : (l ? l.recipeId : null); }
+    function openCustomCardModal(existing) {
+      const tt = PCD.i18n.t;
+      const body = PCD.el('div');
+      body.innerHTML =
+        '<label style="display:block;font-size:13px;color:var(--text-2);margin-bottom:4px;">' + PCD.escapeHtml(tt('kc2_card_title') || 'Title') + '</label>' +
+        '<input type="text" id="kcCardTitle" class="input" value="' + PCD.escapeHtml(existing ? (existing.title || '') : '') + '" placeholder="' + PCD.escapeHtml(tt('kc2_card_title_ph') || 'e.g. Allergen key') + '" style="width:100%;margin-bottom:10px;">' +
+        '<label style="display:block;font-size:13px;color:var(--text-2);margin-bottom:4px;">' + PCD.escapeHtml(tt('kc2_card_body') || 'Content') + '</label>' +
+        '<textarea id="kcCardBody" class="textarea" rows="5" placeholder="' + PCD.escapeHtml(tt('kc2_card_body_ph') || 'Free text — one line per row…') + '" style="width:100%;">' + PCD.escapeHtml(existing ? (existing.body || '') : '') + '</textarea>' +
+        '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;"><button type="button" class="btn btn-ghost" id="kcCardCancel">' + PCD.escapeHtml(tt('ms_cancel') || 'Cancel') + '</button><button type="button" class="btn btn-primary" id="kcCardOk">' + PCD.escapeHtml(tt('ms_ok') || 'OK') + '</button></div>';
+      const m = PCD.modal.open({ title: tt('kc2_custom_card') || 'Custom card', body: body, size: 'sm', closable: true });
+      setTimeout(function () { const ti = body.querySelector('#kcCardTitle'); if (ti) ti.focus(); }, 100);
+      body.querySelector('#kcCardCancel').addEventListener('click', function () { m.close(); });
+      body.querySelector('#kcCardOk').addEventListener('click', function () {
+        const title = body.querySelector('#kcCardTitle').value.trim();
+        const text = body.querySelector('#kcCardBody').value;
+        if (!title && !text.trim()) { m.close(); return; }
+        if (existing) { existing.title = title; existing.body = text; }
+        else { layout.push({ custom: true, id: kcUid(), title: title, body: text, span: 1 }); }
+        m.close(); renderBody();
+      });
+    }
+
     function renderBody() {
       const allCanvases = (PCD.store.listTable('canvases') || []).slice();
       allCanvases.sort(function (a, b) { return (b.updatedAt || '').localeCompare(a.updatedAt || ''); });
@@ -148,6 +174,18 @@
       ].map(function (w) {
         return '<button type="button" class="btn btn-secondary btn-sm' + (bodyWeight===w.id?' active':'') + '" data-bdy="' + w.id + '" style="flex:1;">' + (t(w.labelKey) || w.label) + '</button>';
       }).join('');
+
+      // v2.21 — Özel/not kartları listesi (kontrol panelinde düzenle/sil).
+      const customItems = layout.filter(function (l) { return l.custom; });
+      const customListHtml = customItems.length
+        ? customItems.map(function (c) {
+            return '<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--border);">' +
+              '<span style="flex:1;min-width:0;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + PCD.escapeHtml(c.title || (t('kc2_untitled') || 'Untitled')) + '</span>' +
+              '<button type="button" class="btn btn-ghost btn-sm" data-editcustom="' + c.id + '" title="' + PCD.escapeHtml(t('ms_cancel') ? (t('kc2_edit') || 'Edit') : 'Edit') + '" style="padding:2px 6px;">✎</button>' +
+              '<button type="button" class="btn btn-ghost btn-sm" data-delcustom="' + c.id + '" title="' + PCD.escapeHtml(t('ms_delete') || 'Delete') + '" style="padding:2px 6px;color:var(--danger);">' + (PCD.icon ? PCD.icon('trash', 14) : '✕') + '</button>' +
+            '</div>';
+          }).join('')
+        : '<div class="text-muted text-sm" style="padding:4px 0;">' + PCD.escapeHtml(t('kc2_no_custom') || 'No custom cards yet.') + '</div>';
 
       bodyEl.innerHTML = `
         <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:14px;align-items:start;" class="kc-layout">
@@ -255,6 +293,14 @@
               </div>
             </div>
 
+            <div class="card" style="padding:10px 12px;margin-top:10px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                <span style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;">${t('kc2_custom_cards') || 'Custom cards'}</span>
+                <button type="button" class="btn btn-outline btn-sm" id="kcAddCustom">${PCD.icon('plus', 14)} <span>${t('kc2_add_custom') || 'Add'}</span></button>
+              </div>
+              <div id="kcCustomList">${customListHtml}</div>
+            </div>
+
             <div class="flex gap-2 mt-3">
               <!-- v2.8.23 — Save moved to the top of the canvas card.
                    Remaining bottom-row actions: Share, Print, Clear. -->
@@ -336,6 +382,8 @@
              (kc-preview-frame inline background: #fff) so cards render
              accurately, but the surrounding card frame respects theme. */
           .kc-preview-card { background: var(--surface-2); }
+          /* v2.21 — Menu Studio ile tutarlı: aktif toggle = marka rengi (pill hissi) */
+          .kc-layout .btn-secondary.active { background: var(--brand-600) !important; color: #fff !important; border-color: var(--brand-600) !important; }
         </style>
       `;
 
@@ -483,6 +531,11 @@
       const accentInp = PCD.$('#kcAccent', bodyEl);
       if (accentInp) accentInp.addEventListener('input', function () { accent = this.value; updatePreview(); });
       PCD.on(bodyEl, 'click', '[data-accent]', function () { accent = this.getAttribute('data-accent'); renderBody(); });
+      // v2.21 — Özel/not kartları: ekle / düzenle / sil
+      const addCustomBtn = PCD.$('#kcAddCustom', bodyEl);
+      if (addCustomBtn) addCustomBtn.addEventListener('click', function () { openCustomCardModal(null); });
+      PCD.on(bodyEl, 'click', '[data-editcustom]', function () { const id = this.getAttribute('data-editcustom'); const it = layout.find(function (l) { return l.custom && l.id === id; }); if (it) openCustomCardModal(it); });
+      PCD.on(bodyEl, 'click', '[data-delcustom]', function () { const id = this.getAttribute('data-delcustom'); layout = layout.filter(function (l) { return !(l.custom && l.id === id); }); renderBody(); });
 
       const nameInp = PCD.$('#canvasName', bodyEl);
       if (nameInp) nameInp.addEventListener('input', function () { canvasName = this.value; });
@@ -838,8 +891,8 @@
       const recipeMap = {};
       recipes.forEach(function (r) { recipeMap[r.id] = r; });
       const layoutRecipes = layout
-        .map(function (it) { return { recipe: recipeMap[it.recipeId], span: it.span || 1 }; })
-        .filter(function (x) { return !!x.recipe; });
+        .map(function (it) { return it.custom ? { custom: true, cid: it.id, title: it.title, body: it.body, span: it.span || 1 } : { recipe: recipeMap[it.recipeId], span: it.span || 1 }; })
+        .filter(function (x) { return x.custom || !!x.recipe; });
 
       const html = buildSheetHtml({
         layoutRecipes: layoutRecipes,
@@ -1014,8 +1067,8 @@
           clearDropMarkers();
           const draggedRid = e.dataTransfer.getData('text/plain') || (frame.querySelector('.dragging') && frame.querySelector('.dragging').getAttribute('data-rid'));
           if (!draggedRid || draggedRid === rid) return;
-          const fromIdx = layout.findIndex(function (l) { return l.recipeId === draggedRid; });
-          let toIdx = layout.findIndex(function (l) { return l.recipeId === rid; });
+          const fromIdx = layout.findIndex(function (l) { return _itemKey(l) === draggedRid; });
+          let toIdx = layout.findIndex(function (l) { return _itemKey(l) === rid; });
           if (fromIdx < 0 || toIdx < 0) return;
           const moved = layout.splice(fromIdx, 1)[0];
           // Splice shifts indices >= fromIdx down by one
@@ -1030,7 +1083,7 @@
           removeBtn.addEventListener('click', function (e) {
             e.preventDefault();
             e.stopPropagation();
-            layout = layout.filter(function (l) { return l.recipeId !== rid; });
+            layout = layout.filter(function (l) { return _itemKey(l) !== rid; });
             renderBody();
           });
         }
@@ -1135,6 +1188,17 @@
 
     let blocksHtml = '';
     (opts.layoutRecipes || []).forEach(function (item) {
+      // v2.21 — Özel/not kartı: reçete dışı serbest metin (mevcut kart CSS'i).
+      if (item.custom) {
+        const _ix = opts.interactive ? '<button type="button" class="remove-btn" title="Remove from canvas">×</button>' : '';
+        blocksHtml +=
+          '<div class="kc-block" data-rid="' + PCD.escapeHtml(item.cid || '') + '">' +
+            '<div class="kc-name kc-block-header" title="Drag to reorder">' + PCD.escapeHtml(item.title || '') + '</div>' +
+            (item.body ? '<div class="kc-ings" style="white-space:pre-wrap;">' + PCD.escapeHtml(item.body) + '</div>' : '') +
+            _ix +
+          '</div>';
+        return;
+      }
       const r = item.recipe;
       // v2.8.15 — Multi-column (masonry-style) layout replaces CSS grid.
       // Previously rows were sized to the tallest item which left short
@@ -1425,8 +1489,8 @@
     const recipeMap = {};
     (opts.recipes || []).forEach(function (r) { recipeMap[r.id] = r; });
     const layoutRecipes = (opts.layout || [])
-      .map(function (it) { return { recipe: recipeMap[it.recipeId], span: it.span || 1 }; })
-      .filter(function (x) { return !!x.recipe; });
+      .map(function (it) { return it.custom ? { custom: true, cid: it.id, title: it.title, body: it.body, span: it.span || 1 } : { recipe: recipeMap[it.recipeId], span: it.span || 1 }; })
+      .filter(function (x) { return x.custom || !!x.recipe; });
 
     const html = buildSheetHtml({
       layoutRecipes: layoutRecipes,
@@ -1482,19 +1546,28 @@
           '</div>';
         return;
       }
-      body.innerHTML = '<div class="flex flex-col gap-2">' +
+      body.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
         list.map(function (c) {
           const recipeCount = (c.layout || []).length;
-          return '<div class="card" data-cvs="' + c.id + '" style="display:flex;align-items:center;gap:12px;padding:12px;cursor:pointer;">' +
-            '<div style="width:36px;height:36px;border-radius:6px;background:var(--brand-50);color:var(--brand-700);display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + PCD.icon('id-card', 18) + '</div>' +
-            '<div style="flex:1;min-width:0;">' +
-              '<div style="font-weight:700;font-size:14px;">' + PCD.escapeHtml(c.name || 'Untitled') + '</div>' +
-              '<div class="text-muted" style="font-size:12px;">' +
-                recipeCount + ' recipes · ' + (c.columns || 3) + ' cols · ' +
-                (c.orientation || 'landscape') + ' · ' + PCD.fmtRelTime(c.updatedAt) +
-              '</div>' +
+          const acc = c.accent || '#16a34a';
+          const names = (c.layout || []).slice(0, 7).map(function (it) {
+            if (it.custom) return it.title || '';
+            const r = PCD.store.getRecipe(it.recipeId);
+            return r ? r.name : '';
+          }).filter(Boolean).join(' · ');
+          return '<div class="card" data-cvs="' + c.id + '" style="cursor:pointer;overflow:hidden;padding:0;">' +
+            '<div style="height:82px;background:#fff;border-bottom:1px solid var(--border);padding:8px;overflow:hidden;">' +
+              '<span style="font-size:9px;font-weight:800;color:#fff;background:' + acc + ';padding:2px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:0.03em;">' + PCD.escapeHtml((c.name || 'Untitled').slice(0, 26)) + '</span>' +
+              '<div style="margin-top:6px;font-size:8px;color:#555;line-height:1.5;word-break:break-word;">' + PCD.escapeHtml(names) + '</div>' +
             '</div>' +
-            '<button type="button" class="icon-btn" data-del-cvs="' + c.id + '" title="Delete">' + PCD.icon('trash', 16) + '</button>' +
+            '<div style="padding:7px 9px;display:flex;align-items:center;gap:4px;">' +
+              '<div style="flex:1;min-width:0;">' +
+                '<div style="font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + PCD.escapeHtml(c.name || 'Untitled') + '</div>' +
+                '<div class="text-muted" style="font-size:11px;">' + recipeCount + ' · ' + (c.columns || 3) + ' cols · ' + PCD.fmtRelTime(c.updatedAt) + '</div>' +
+              '</div>' +
+              '<button type="button" class="icon-btn" data-dup-cvs="' + c.id + '" title="' + PCD.escapeHtml(PCD.i18n.t('kc2_duplicate') || 'Duplicate') + '">' + PCD.icon('copy', 16) + '</button>' +
+              '<button type="button" class="icon-btn" data-del-cvs="' + c.id + '" title="' + PCD.escapeHtml(PCD.i18n.t('ms_delete') || 'Delete') + '">' + PCD.icon('trash', 16) + '</button>' +
+            '</div>' +
           '</div>';
         }).join('') +
       '</div>';
@@ -1504,16 +1577,28 @@
     const closeBtn = PCD.el('button', { type: 'button', class: 'btn btn-secondary', text: PCD.i18n.t('btn_close'), style: { width: '100%' } });
     const footer = PCD.el('div', { style: { width: '100%' } });
     footer.appendChild(closeBtn);
-    const m = PCD.modal.open({ title: PCD.i18n.t('modal_saved_canvases_title'), body: body, footer: footer, size: 'sm', closable: true });
+    const m = PCD.modal.open({ title: PCD.i18n.t('modal_saved_canvases_title'), body: body, footer: footer, size: 'md', closable: true });
     closeBtn.addEventListener('click', function () { m.close(); });
 
     PCD.on(body, 'click', '[data-cvs]', function (e) {
-      if (e.target.closest('[data-del-cvs]')) return;
+      if (e.target.closest('[data-del-cvs]') || e.target.closest('[data-dup-cvs]')) return;
       const id = this.getAttribute('data-cvs');
       const cvs = PCD.store.getFromTable('canvases', id);
       if (!cvs) return;
       m.close();
       setTimeout(function () { onPick(cvs); }, 200);
+    });
+    // v2.21 — Canvas kopyala (library galerisi)
+    PCD.on(body, 'click', '[data-dup-cvs]', function (e) {
+      e.stopPropagation();
+      const id = this.getAttribute('data-dup-cvs');
+      const src = PCD.store.getFromTable('canvases', id);
+      if (!src) return;
+      const copy = PCD.clone(src); delete copy.id; delete copy.updatedAt;
+      copy.name = (src.name || 'Canvas') + ' ' + (PCD.i18n.t('ms_copy_suffix') || '(copy)');
+      PCD.store.upsertInTable('canvases', copy, 'cvs');
+      if (PCD.toast) PCD.toast.success(PCD.i18n.t('ms_copied') || 'Copied');
+      paintList();
     });
     PCD.on(body, 'click', '[data-del-cvs]', function (e) {
       e.stopPropagation();
@@ -1551,6 +1636,7 @@
     PCD.store.listRecipes().forEach(function (rr) { recipeMap[rr.id] = rr; });
 
     const layoutResolved = (cvs.layout || []).map(function (item) {
+      if (item.custom) return { custom: true, id: item.id, title: item.title, body: item.body, span: Math.max(1, item.span || 1) };
       const r = item.recipeId ? PCD.store.getRecipe(item.recipeId) : null;
       if (!r) return null;
       const ingredients = (r.ingredients || []).map(function (ri) {
@@ -1617,7 +1703,7 @@
 
     // Adapt snapshot's layoutResolved into the shape buildSheetHtml expects.
     const layoutRecipes = payload.layoutResolved.map(function (item) {
-      return { recipe: item.recipe, span: item.span };
+      return item.custom ? { custom: true, cid: item.id, title: item.title, body: item.body, span: item.span } : { recipe: item.recipe, span: item.span };
     });
 
     const sheetHtml = buildSheetHtml({
