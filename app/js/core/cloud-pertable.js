@@ -522,6 +522,12 @@
       supabase.from('rosters').select('*').eq('user_id', user.id),
       supabase.from('prep_sheets').select('*').eq('user_id', user.id),
       supabase.from('workspace_tombstones').select('*').eq('user_id', user.id),
+      // v2.19 — BUG FIX: array tablolar PUSH ediliyordu ama PULL edilmiyordu
+      // (whiteboards v2.9.42, buffets/mise/team v2.9.17) → 2. cihaz görmüyordu.
+      supabase.from('whiteboards').select('*').eq('user_id', user.id),
+      supabase.from('buffets').select('*').eq('user_id', user.id),
+      supabase.from('mise_plans').select('*').eq('user_id', user.id),
+      supabase.from('team').select('*').eq('user_id', user.id),
     ];
 
     return Promise.all(fetches).then(function (results) {
@@ -537,7 +543,8 @@
              haccpReceivingRes, haccpHoldingRes,
              rostersRes,
              prepSheetsRes,
-             tombsRes] = results;
+             tombsRes,
+             wbRes, bufRes, miseRes, teamRes] = results;
 
       // Build state in the format store.js expects:
       // workspaces: { wsId: ws }
@@ -650,6 +657,11 @@
       }
       state.waste = packArrayByWs(wasteRes.data);
       state.checklistSessions = packArrayByWs(chkSessRes.data);
+      // v2.19 — BUG FIX: bu 4 array tablo artık pull ediliyor (önce sadece push).
+      state.whiteboards = packArrayByWs(wbRes.data);
+      state.buffets = packArrayByWs(bufRes.data);
+      state.misePlans = packArrayByWs(miseRes.data);
+      state.team = packArrayByWs(teamRes.data);
 
       // v2.6.74 — Workspace tombstones: { wsId: deletedAt }
       state._deletedWorkspaces = {};

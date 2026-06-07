@@ -4,6 +4,15 @@ Kronolojik tersine (en son üstte). Her sürüm: başlık + ana değişiklikler.
 
 ---
 
+## v2.19.1 — Sync bug fix: array tablo pull + user_prefs grant · 2026-06-07
+
+İki kök neden kod/konsol/DB ile kesin tespit edildi, temiz çözüldü:
+
+- **Whiteboard (+ Buffet, Team, Mise) çapraz-cihaz sync:** Bu array tablolar buluta PUSH ediliyordu ama `pullAll()` onları HİÇ çekmiyordu (yalnız waste + checklist_sessions çekiliyordu) ve `cloud.js` merge listesinde yoktu → 2. cihaz indirmiyordu. Eski boşluk (v2.9.42/v2.9.17). Fix: `pullAll`'a 4 tablo fetch+pack (packArrayByWs) + `cloud.js` ARRAY_WS_TABLES'a eklendi (tombstone/en-yeni-kazanır merge; yerel veri ezilmez).
+- **"Re-sync my data" → 42501 "permission denied for table user_prefs":** v2.17 kolon kilidi UPDATE'i (data, active_workspace_id, updated_at)'e verdi ama `user_id`'ye vermedi; upsert'in ON CONFLICT DO UPDATE'i user_id'yi de set ediyor → izin reddi. Fix: `migrations/v2.19-fix-user-prefs-update-grant.sql` (GRANT UPDATE user_id… — RLS cross-user'ı engeller, plan kolonları kilitli kalır).
+
+---
+
 ## v2.19.0 — Menu Studio Faz 1 (gerçek ürün) · 2026-06-07
 
 Prototip gerçek ürüne dönüştü. Tasarımlar `menus` tablosunda `menu.studio` alanında saklanır (yeni tablo yok) → bulut senkron + yedek + çoklu menü bedava; klasik editör aynı kayıtta çalışmaya devam eder.

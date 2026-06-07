@@ -377,7 +377,10 @@
                 'prepSheets'
               ];
               // Tables that are arrays under wsId (append-only logs):
-              const ARRAY_WS_TABLES = ['waste', 'checklistSessions'];
+              // v2.19 — BUG FIX: whiteboards/buffets/misePlans/team de array-tablo;
+              // pull edilmeye başlandı (cloud-pertable) → merge'e de eklendi ki
+              // local∪remote birleşsin (tombstone + en-yeni-kazanır), ezme olmasın.
+              const ARRAY_WS_TABLES = ['waste', 'checklistSessions', 'whiteboards', 'buffets', 'misePlans', 'team'];
               // Tables without per-record timestamps — keep remote-wins for
               // these (existing behavior). Inventory levels change via
               // counts not edits, so cloud is generally authoritative.
