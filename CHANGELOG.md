@@ -4,6 +4,19 @@ Kronolojik tersine (en son üstte). Her sürüm: başlık + ana değişiklikler.
 
 ---
 
+## v2.19.0 — Menu Studio Faz 1 (gerçek ürün) · 2026-06-07
+
+Prototip gerçek ürüne dönüştü. Tasarımlar `menus` tablosunda `menu.studio` alanında saklanır (yeni tablo yok) → bulut senkron + yedek + çoklu menü bedava; klasik editör aynı kayıtta çalışmaya devam eder.
+
+- **Çoklu menü + bulut + otomatik kayıt:** Studio artık tüm menüleri listeler; yeni tasarım oluştur, aç, otomatik kaydet (bulut senkron). localStorage tek-doc kaldırıldı.
+- **Reçete zekâsı:** kalemler reçeteye bağlı → editörde **canlı kâr marjı** (kalem başına renkli yüzde) + üstte **ciro / ort. marj** çubuğu + reçeteden **otomatik alerjen kodları** (aç/kapa, menüde + lejant).
+- **Klasik menüden içe aktar:** mevcut bölüm/yemekleri Studio bloklarına aktarma (reçete bağlantısı korunur).
+- **Şablon galerisi** (6 profesyonel başlangıç: fine dining, bistro, café, minimalist, şarap, etkinlik) + **marka kiti** (font/renk kaydet-uygula).
+- Tek render motoru (kanvas = çıktı), serbest font/renk/foto/blok sıralama korundu.
+- *Sıradaki (Faz 2): serbest sürükle/boyut, çok sayfa, share/QR/cost-view, AI kancaları.*
+
+---
+
 ## v2.18.0 — Menu Studio (beta prototip) · 2026-06-07
 
 - **YENİ (beta):** Menu Studio — blok-kanvas menü tasarımcısı prototipi. Gerçek A4 kanvas (önizleme = çıktı, tek render motoru), serbest font (12 küratörlü), özel hex renk (vurgu/metin/arka plan), yemek fotoğrafı, blok ekle/sil/sırala (başlık, metin, bölüm, görsel, ayraç, boşluk), reçeteden veya manuel yemek, dikey/yatay, hazır şablon. Mevcut "Menus" aracına dokunulmadı; yanına eklendi (Menus header → "✨ Menu Studio beta"). Kalıcılık şimdilik localStorage (prototip). Değerlendirme amaçlı; beğenilirse tam sürümde bulut + çoklu menü + reçete-maliyet zekâsı + serbest yerleşim eklenecek.
