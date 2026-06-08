@@ -636,6 +636,8 @@ window.PCD.i18n.register('tr', {
   wb_cs_rows_label: "Parametreler (Satırlar)",
   wb_cs_add_item: "Ürün ekle",
   wb_cs_add_row: "Satır ekle",
+  wb_cs_del_row: "Satır sil",
+  wb_cs_add_row: "Satır ekle",
   wb_empty_title: "Boş tahta",
   wb_empty_subtitle: "Paletten blok ekle veya bir şablon yükle.",
   wb_empty_text: "Boş metin bloğu — düzenlemek için dokun",

@@ -52,26 +52,27 @@ Malzeme birim fiyatı, 11 kategori, tedarikçi bağlantısı, verim % (yield). F
 - Excel template: Lists sekmeli doldur-geri-yükle şablonu
 - Bulut sync ✓
 
-#### Menus (Menu Builder)
-4 tema (Fine Dining, Modern Bistro, Cafe, Minimalist), 12 renk paleti, logo/kapak fotoğrafı, 2–6 sütun, A4/A3 dikey/yatay. Diyet + alerjen harf kodları (küçük = diyet uygunluğu, BÜYÜK = içerir; sadece bilgi amaçlı). Fiyat stili: simgeli / simgesiz / gizli. Bölüm sürükle-bırak sıralama.
+#### Menus (Menu Builder = Menu Studio)
+**Blok tabanlı menü tasarım kanvası.** Blok tipleri: başlık, metin, bölüm (yemek listesi — ad/fiyat/açıklama/foto, tariften otomatik çekme), görsel, ayraç, boşluk. Sayfa: A4/A3/A5/Letter, dikey/yatay, 1–4 sütun, sayfa çerçevesi, accent/metin/arka plan rengi, marka kiti (renk kaydet→uygula). **Düzenleme popup ile:** kanvasta blok/grup tıkla → düzenleme modalı (sağdaki "Blocks" katman listesi de tıklanır); her blok etrafında saydam çerçeve (hover'da yeşil belirgin). Sayfa ayarları ayrı 🎨 **Sayfa** popup'ında (her blok altında çıkmaz). Blok ekleyince popup hemen açılır (hızlı yazma). 10 profesyonel hazır şablon (galeri) — home'da **Şablonlar** butonu → şablondan yeni menü. Diyet + alerjen harf kodları (küçük = uygunluk, BÜYÜK = içerir; bilgi amaçlı). WYSIWYG: kanvas = baskı = paylaşım.
 - Print ✓
-- QR + Link paylaşımı: herkese açık menü URL'si
-- Bulut sync ✓
+- QR + Link paylaşımı + cost-view (Pro) — herkese açık menü URL'si
+- Bulut sync ✓ (`menus` tablosu, `studio` blob)
+- _(Yol haritası: şablon sayısı 20'ye çıkarılacak.)_
 
 ---
 
 ### Kitchen
 
 #### Kitchen Cards (Kitchen Cards)
-Sürükle-bırak grid (1–9 sütun). Yazı boyutu, kenar kalınlığı, gövde ağırlığı seçenekleri. Mobil zoom/fit. Her kart: tarif adı, malzeme listesi, adımlar.
+Sürükle-bırak grid (1–9 sütun, masonry). Yazı boyutu, kenar kalınlığı, gövde ağırlığı; hazır düzenler (presets); accent renk (picker + swatch). **Özel/not kartları** (tarif dışı serbest metin — alerjen anahtarı, sıcaklık notu vb.). Çoklu canvas + **library galerisi** (mini önizleme + kopyala + sil). Mobil zoom/fit. **Dark mode uyumlu** (site yüzeyi temalı, A4 kanvas beyaz kalır). WYSIWYG (önizleme = baskı). Her kart: tarif adı, malzeme listesi, adımlar.
 - Print ✓ (A4 yatay)
 - QR + Link paylaşımı
 - Bulut sync ✓ (`canvases` tablosu)
 
 #### Whiteboard (Kitchen Whiteboard)
-Blok tabanlı pano (Notion tarzı). 13 blok tipi: başlık, büyük sayı, checklist, tablo, uyarı, adım listesi, allergen strip, doneness ladder, time range, cook sheet, divider. 6 layout kademe (tam genişlik → 1/6), 6 yazı boyutu (XS–XXL), 14 renk paleti. WYSIWYG — önizleme = çıktı. Kayıtlılar (library).
+Blok tabanlı pano (Notion tarzı). 12 blok tipi: section header, big number, checklist, key-value, table, alert, step list, allergen strip, doneness ladder, time range, **cook sheet (sütun + satır ekle/sil)**, free text, divider. **Düzenleme popup ile:** kanvasta blok tıkla → ortalı modal (blok-tipine özel alanlar korunur); her blokta görünür araç çubuğu (⠿ sürükle + ✎ düzenle + çoğalt + sil); kart hover'da yeşil çerçeve. Sayfa ayarları ayrı. Palette'ten ekle → popup. 12 layout kademe (tam genişlik → 1/12), 6 yazı boyutu (XS–XXL), 14 renk paleti. WYSIWYG — önizleme = çıktı (baskıda araç çubuğu çıkmaz). Kayıtlılar (library) + şablonlar.
 - Print ✓ (A4/A3 dikey/yatay)
-- Bulut sync ✓
+- Bulut sync ✓ (`whiteboards` tablosu)
 
 #### Portion (Portion Calculator)
 Çoklu tarif seçme, porsiyon hedefi girme, otomatik ölçekleme, konsolide malzeme listesi + maliyet. 3 görünüm: tarif bazlı / kategori / tedarikçi.
@@ -80,7 +81,7 @@ Blok tabanlı pano (Notion tarzı). 13 blok tipi: başlık, büyük sayı, check
 - Bulut sync ✓
 
 #### Checklist (Checklists)
-2 tip: Control (güvenlik/açılış/kapanış/temizlik) ve Prep (yemek → bileşenler + not alanı). Özelleştirilebilir yazdırma: sütun sayısı ve yön seçimi. Oturum geçmişi, ilerleme takibi.
+2 tip: Control (güvenlik/açılış/kapanış/temizlik) ve Prep (yemek → bileşenler + not alanı). Kategori renk şeritleri, reçete/menüden otomatik doldurma. Özelleştirilebilir yazdırma: sütun sayısı, yön, yazı boyutu, aralık, kalın. **Editörde canlı A4 baskı önizlemesi** (ayar değiştikçe anında — WYSIWYG). Oturum geçmişi, ilerleme takibi.
 - Print ✓ (özelleştirilebilir layout)
 - Metin paylaşımı (oturum sonuçları)
 - Bulut sync ✓
@@ -93,8 +94,8 @@ Haftalık çalışan vardiyası. Personel × gün ızgara; her hücre vardiya sa
 - Bulut sync ✓ (`rosters` tablosu)
 
 #### Prep (Prep Sheet)
-Servis hazırlık listesi. Yemek başına bileşen + boş kutu; tariften otomatik çekme + manuel düzenleme. Lamine yazdırma için optimize edilmiş çok sütunlu layout. Kayıtlılar (library).
-- Print ✓ (1–4 sütun seçimi)
+Servis hazırlık listesi — **kanvas-merkezli**. Yemekler gerçek A4 kanvasta kart olarak; her yemek başına bileşen + boş kutu; tariften otomatik çekme + manuel. **Düzenleme popup ile:** karta tıkla → modal (isim / istasyon / bileşenler ekle-sil-sırala-foto). Kartta görünür araç çubuğu (⠿ sürükle + ✎ düzenle + 🗑 sil); Whiteboard-stili işaretçi-takipli sürükle-sırala (üst/alt göstergesi). **Önizleme = baskı birebir** (açık sayfalama motoru; `@page margin:0` → Chrome'un tarih/URL/sayfa-no damgaları çıkmaz; ~sıfır kenar boşluğu). Kontroller: 1–5 sütun, dikey/yatay, yazı boyutu XS–XXL, Bold, çerçeve kalınlığı (orta/kalın/extra), kart arası boşluk (extra-bitişik / bitişik / orta / geniş), accent renk, hazır düzenler. İstasyon gruplama. Library galerisi (mini önizleme + kopyala + sil).
+- Print ✓ (gerçek A4 WYSIWYG, dar kenar, damgasız)
 - Bulut sync ✓ (`prepSheets` tablosu)
 
 ---

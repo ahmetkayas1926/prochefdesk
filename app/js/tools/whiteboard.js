@@ -1295,6 +1295,7 @@
             '<div style="display:flex;gap:6px;align-items:center;margin-bottom:4px;">' +
               '<span style="flex:0 0 42px;font-size:9px;color:var(--text-3);text-transform:uppercase;font-weight:700;">' + PCD.escapeHtml(t('wb_cs_row_label', 'Row')) + '</span>' +
               '<input type="text" data-ct-cs-rowlabel="' + ri + '" value="' + PCD.escapeHtml(row.label || '') + '" placeholder="Time / Temp / Note" style="flex:1;min-width:0;padding:4px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface-1);color:var(--text);font-size:11px;font-weight:800;text-transform:uppercase;">' +
+              (csRows.length > 1 ? '<button class="wb-icon-btn danger" data-ct-cs-delrow="' + ri + '" title="' + PCD.escapeHtml(t('wb_cs_del_row', 'Delete row')) + '">×</button>' : '<span style="flex:0 0 24px;"></span>') +
             '</div>' +
             cells +
           '</div>';
@@ -1303,7 +1304,8 @@
           itemInputs +
           '<button class="btn btn-outline btn-sm" data-ct-cs-additem style="width:100%;margin-top:6px;">' + PCD.icon('plus', 13) + ' ' + PCD.escapeHtml(t('wb_cs_add_item', 'Add item')) + '</button>' +
           '<div style="font-size:10px;font-weight:800;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em;margin-top:12px;margin-bottom:0;">' + PCD.escapeHtml(t('wb_cs_rows_label', 'Parameters (Rows)')) + '</div>' +
-          rowEditors;
+          rowEditors +
+          '<button class="btn btn-outline btn-sm" data-ct-cs-addrow style="width:100%;margin-top:6px;">' + PCD.icon('plus', 13) + ' ' + PCD.escapeHtml(t('wb_cs_add_row', 'Add row')) + '</button>';
       }
     }
     return '<div style="color:var(--text-3);font-size:12px;">' + PCD.escapeHtml(t('wb_no_content_fields', 'No content fields for this block.')) + '</div>';
@@ -1972,6 +1974,24 @@
       (block.content.rows || []).forEach(function (row) {
         if (Array.isArray(row.values)) row.values.splice(i, 1);
       });
+      commit();
+    });
+    // v2.33 — Cook Sheet add/del row (satır)
+    PCD.on(root, 'click', '[data-ct-cs-addrow]', function () {
+      const block = getActiveBlock(); if (!block) return;
+      block.content = block.content || { items: [], rows: [] };
+      const n = (block.content.items || []).length;
+      const vals = []; for (let k = 0; k < n; k++) vals.push('');
+      block.content.rows = block.content.rows || [];
+      block.content.rows.push({ label: '', values: vals });
+      commit();
+    });
+    PCD.on(root, 'click', '[data-ct-cs-delrow]', function () {
+      const block = getActiveBlock(); if (!block) return;
+      block.content = block.content || { items: [], rows: [] };
+      if ((block.content.rows || []).length <= 1) return;
+      const i = parseInt(this.getAttribute('data-ct-cs-delrow'), 10);
+      block.content.rows.splice(i, 1);
       commit();
     });
   }

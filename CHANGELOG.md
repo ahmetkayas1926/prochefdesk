@@ -4,6 +4,13 @@ Kronolojik tersine (en son üstte). Her sürüm: başlık + ana değişiklikler.
 
 ---
 
+## v2.33.0 — Whiteboard cook sheet: satır ekle/sil + HANDOVER.md güncellendi · 2026-06-08
+
+- **Whiteboard "Cook Sheet" bloğu — satır ekle/sil:** Önceden yalnız sütun (item) ekle/sil vardı; artık parametre satırları da eklenip silinebiliyor (her satırda × sil butonu + "Satır ekle"). Tarayıcıda doğrulandı (3→4→3).
+- **HANDOVER.md güncellendi:** Tüm overhaul'lar sonrası güncel araç kapasitesi yazıldı (Menu Studio popup düzenleme/şablon/çerçeve, Kitchen Cards preset/accent/özel kart/dark-fix, Whiteboard popup+araç çubuğu+cook-sheet satır, Checklist canlı A4 önizleme, Prep Sheet kanvas-merkezli/önizleme=baskı/damgasız/1-5 sütun/XS-XXL/spacing). Satış stratejisi sohbeti için güncel referans.
+
+---
+
 ## v2.32.0 — Menu Studio: popup düzenleme + Page settings ayrıldı + kanvas çerçeve + home şablon butonu · 2026-06-08
 
 Operatör: araç kullanışlı değil; Prep/Whiteboard'daki popup mantığı gelsin; her
