@@ -2965,6 +2965,8 @@ window.PCD.i18n.register('tr', {
   ms_del_title: "Menüyü sil",
   ms_del_text: "Bu menü kalıcı silinecek. Emin misin?",
   ms_delete: "Sil",
+  ms_done: "Bitti",
+  ms_duplicate: "Çoğalt",
   ms_copied: "Kopyalandı",
   ms_copy_suffix: "(kopya)",
   ms_default_menu: "Yeni Menü",

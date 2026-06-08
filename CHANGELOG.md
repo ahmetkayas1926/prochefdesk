@@ -4,6 +4,31 @@ Kronolojik tersine (en son üstte). Her sürüm: başlık + ana değişiklikler.
 
 ---
 
+## v2.32.0 — Menu Studio: popup düzenleme + Page settings ayrıldı + kanvas çerçeve + home şablon butonu · 2026-06-08
+
+Operatör: araç kullanışlı değil; Prep/Whiteboard'daki popup mantığı gelsin; her
+bloğa tıklayınca altında Page settings çıkması bug; New menu yanına şablon butonu.
+
+- **Popup düzenleme:** Kanvasta blok/grup tıkla → o bloğun **popup editörü** açılır (başlık/metin/bölüm öğeleri/görsel/ayraç). Sağdaki "Blocks" katman listesi de tıklanınca aynı popup'ı açar. Düzenleme canlı; Çoğalt + Sil + Bitti footer'da.
+- **Page settings bug çözüldü:** Artık her blok altında page ayarları ÇIKMIYOR. Page ayarları header'daki **🎨 Sayfa** butonuyla ayrı popup olarak açılır (kağıt/sütun/renk/çerçeve/marka kiti).
+- **Kanvas çerçevesi:** Her blok/grup etrafında saydam kesik çerçeve (hover'da yeşil belirgin) → sınırlar belli, nereye tıklanacağı net.
+- **Home'da Şablonlar butonu:** New menu yanında (+ boş durumda) → şablon seç → o şablondan yeni menü oluşturur.
+- **Hızlı ekleme:** Üst bardan blok ekleyince editör popup'ı hemen açılır.
+- Tek render motoru (kanvas=baskı=paylaşım), realtime sync, i18n korundu. Tarayıcıda doğrulandı: blok popup'ında page ayarı yok, Page popup ayrı, frame + pointer, şablondan menü; konsol temiz.
+- **NOT:** 20 şablon hedefi (10 yeni profesyonel menü) bir sonraki adım — özenle yazılacak.
+
+---
+
+## v2.31.0 — BUG: Kitchen Cards dark mode'da site yüzeyi beyaz · 2026-06-08
+
+Operatör: dark mode'da Kitchen Cards'ta canvas dışındaki site yüzeyi de beyaz.
+
+- **Kök neden:** Kitchen Cards canlı önizlemesi (`buildSheetHtml`, interactive) app dokümanına bir `<style>` enjekte ediyordu; bu blok print/share için olan `@page` + `body { ...; background:#fff }` kurallarını da içeriyordu. Sızan `body{background:#fff}` kuralı app body'sine uygulanıp dark mode'da tüm site yüzeyini beyaz yapıyordu.
+- **Çözüm:** interactive yolda `@page` + `body{}` artık yayılmıyor (sadece print/share pencerelerinde). Canlı önizlemenin renk/font'u `.kc-preview-frame`'e scope'landı; canvas beyaz kalır (paper), kartlar koyu metinli okunur, site yüzeyi temaya uyar.
+- Tarayıcıda doğrulandı: dark mode'da body koyu (rgb 12,10,9), canvas beyaz, kart metni #1a1a1a; baskı yolu hâlâ body{#fff}+@page üretiyor; konsol temiz.
+
+---
+
 ## v2.30.0 — Prep Sheet: kartta sil ikonu + Extra tight boşluk + 5 sütun · 2026-06-08
 
 - **Kart üzerinde sil ikonu (🗑):** Her yemek kartında artık ⠿ sürükle + ✎ düzenle + 🗑 sil (Whiteboard gibi). Tıkla → yemek anında silinir (hover'da kırmızı).

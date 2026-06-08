@@ -348,6 +348,8 @@
             transform-origin: top left;
             position: absolute; top: 0; left: 0;
             background: #fff;
+            color: #1a1a1a;
+            font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
           }
           .kc-block.dragging { opacity: 0.4; }
           /* v2.8.17 — Drop indicator on the precise insertion edge.
@@ -1279,8 +1281,12 @@
 
     return (
       '<style>' +
-        '@page { size: A4 ' + opts.orientation + '; margin: 0; }' +
-        'body { margin: 0; padding: 0; font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif; color: #1a1a1a; background: #fff; }' +
+        // v2.31 — interactive (canlı önizleme) yolu app dokümanına enjekte edilir;
+        // @page + body{} kurallarını YAYMA (yoksa body{background:#fff} app body'sine
+        // sızıp dark mode'da site yüzeyini beyaz yapıyordu). Renk/font .kc-preview-frame'de.
+        (opts.interactive ? '' :
+          '@page { size: A4 ' + opts.orientation + '; margin: 0; }' +
+          'body { margin: 0; padding: 0; font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif; color: #1a1a1a; background: #fff; }') +
 
         // v2.8.18 — Print-path-only body sizing + flex column layout.
         // Without explicit body dimensions, column-fill: auto cannot compute

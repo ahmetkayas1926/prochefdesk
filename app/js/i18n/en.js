@@ -2968,6 +2968,8 @@ window.PCD.i18n.register('en', {
   ms_del_title: "Delete menu",
   ms_del_text: "This menu will be permanently deleted. Are you sure?",
   ms_delete: "Delete",
+  ms_done: "Done",
+  ms_duplicate: "Duplicate",
   ms_copied: "Copied",
   ms_copy_suffix: "(copy)",
   ms_default_menu: "New Menu",

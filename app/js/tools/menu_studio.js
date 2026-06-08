@@ -611,31 +611,65 @@
     return h;
   }
 
+  // v2.32 — Sağ panel SADECE katman (Blocks) listesi. Blok düzenleme + sayfa
+  // ayarları artık POPUP ile (Whiteboard/Prep mantığı). Page settings artık her
+  // blok altında çıkmıyor — ayrı "Sayfa" butonuyla açılır.
+  let _blockRepaint = null;
   function renderInspector() {
     if (!inspectorEl) return;
     normalizeDesign(design);
-    const b = selectedId ? findBlock(selectedId) : null;
+    inspectorEl.innerHTML = '<div class="ms-card"><div class="ms-card-title">🧱 ' + esc(t('ms_blocks')) + '</div><div id="msLayers">' + layersHtml() + '</div>' +
+      '<div class="text-muted text-sm" style="margin-top:9px;line-height:1.4;">✏️ ' + esc(t('ms_select_hint')) + '</div></div>';
+    wireLayers(inspectorEl);
+  }
+
+  function wireLayers(root) {
+    root.querySelectorAll('[data-layer]').forEach(function (el) {
+      el.addEventListener('click', function (e) { if (e.target.closest('[data-layerdel]')) return; openBlockEditor(el.getAttribute('data-layer')); });
+      el.setAttribute('draggable', 'true');
+      el.addEventListener('dragstart', function () { canvasDragId = el.getAttribute('data-layer'); el.style.opacity = '0.4'; });
+      el.addEventListener('dragend', function () { el.style.opacity = ''; root.querySelectorAll('.ms-layer.dragover').forEach(function (x) { x.classList.remove('dragover'); }); });
+      el.addEventListener('dragover', function (e) { e.preventDefault(); el.classList.add('dragover'); });
+      el.addEventListener('dragleave', function () { el.classList.remove('dragover'); });
+      el.addEventListener('drop', function (e) { e.preventDefault(); el.classList.remove('dragover'); reorderBlocks(canvasDragId, el.getAttribute('data-layer')); });
+    });
+    root.querySelectorAll('[data-layerdel]').forEach(function (el) { el.addEventListener('click', function (e) { e.stopPropagation(); const id = el.getAttribute('data-layerdel'); design.blocks = design.blocks.filter(function (x) { return x.id !== id; }); if (selectedId === id) selectedId = null; refreshPage(); renderInspector(); }); });
+  }
+
+  function openBlockEditor(id) {
+    selectedId = id;
+    const b = findBlock(id); if (!b) { refreshPage(); return; }
+    refreshPage();
     const cols = design.page.columns || 1;
-
-    let h = '';
-    // 1) Katmanlar (bloklar) — yeşil kartlar
-    h += '<div class="ms-card"><div class="ms-card-title">🧱 ' + esc(t('ms_blocks')) + '</div><div id="msLayers">' + layersHtml() + '</div></div>';
-
-    // 2) Seçili blok düzenleme
-    if (b) {
-      const meta = BLOCK_META[b.type] || { glyph: '•' };
-      h += '<div class="ms-card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">' +
-        '<span class="ms-pill">' + meta.glyph + ' ' + esc(blockTypeLabel(b.type)) + '</span>' +
-        '<span style="display:flex;gap:4px;"><button type="button" class="btn btn-ghost btn-sm" data-move="up">↑</button><button type="button" class="btn btn-ghost btn-sm" data-move="down">↓</button><button type="button" class="btn btn-ghost btn-sm" data-del-block style="color:var(--danger);" title="' + esc(t('ms_delete')) + '">' + (PCD.icon ? PCD.icon('trash', 14) : '✕') + '</button></span></div>' +
-        blockControlsHtml(b, cols) + '</div>';
-    } else {
-      h += '<div class="ms-card text-muted text-sm">✏️ ' + esc(t('ms_select_hint')) + '</div>';
+    const meta = BLOCK_META[b.type] || { glyph: '•' };
+    const body = PCD.el('div');
+    function repaint() {
+      body.innerHTML =
+        '<div style="display:flex;align-items:center;justify-content:flex-end;gap:4px;margin-bottom:10px;">' +
+          '<button type="button" class="btn btn-ghost btn-sm" data-move="up" title="↑">↑</button>' +
+          '<button type="button" class="btn btn-ghost btn-sm" data-move="down" title="↓">↓</button>' +
+        '</div>' + blockControlsHtml(b, cols);
+      wireBlockControls(body, b, repaint);
     }
+    _blockRepaint = repaint;
+    repaint();
+    const delBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', text: t('ms_delete'), style: { color: 'var(--danger)', borderColor: 'var(--danger)', marginInlineEnd: 'auto' } });
+    const dupBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', text: t('ms_duplicate') });
+    const doneBtn = PCD.el('button', { type: 'button', class: 'btn btn-primary', text: t('ms_done') });
+    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', alignItems: 'center' } });
+    footer.appendChild(delBtn); footer.appendChild(dupBtn); footer.appendChild(doneBtn);
+    const m = PCD.modal.open({ title: meta.glyph + ' ' + blockTypeLabel(b.type), body: body, footer: footer, size: 'sm', closable: true });
+    const close = function () { _blockRepaint = null; m.close(); };
+    delBtn.addEventListener('click', function () { design.blocks = design.blocks.filter(function (x) { return x.id !== id; }); selectedId = null; refreshPage(); renderInspector(); close(); });
+    dupBtn.addEventListener('click', function () { const copy = JSON.parse(JSON.stringify(b)); copy.id = uid(); const i = design.blocks.findIndex(function (x) { return x.id === id; }); design.blocks.splice(i + 1, 0, copy); refreshPage(); renderInspector(); close(); openBlockEditor(copy.id); });
+    doneBtn.addEventListener('click', close);
+  }
 
-    // 3) Sayfa ayarları
-    h += '<div class="ms-card"><div class="ms-card-title">🎨 ' + esc(t('ms_page')) + '</div>' + pageControlsHtml() + '</div>';
-
-    inspectorEl.innerHTML = h; wireInspector();
+  function openPageSettings() {
+    const body = PCD.el('div');
+    function repaint() { body.innerHTML = pageControlsHtml(); wirePageControls(body, repaint); }
+    repaint();
+    PCD.modal.open({ title: '🎨 ' + t('ms_page'), body: body, size: 'sm', closable: true });
   }
 
   function setField(target, path, value) { if (path.indexOf('.') >= 0) { const p = path.split('.'); design[p[0]][p[1]] = value; } else target[path] = value; }
@@ -652,55 +686,45 @@
     refreshPage(); renderInspector();
   }
 
-  function wireInspector() {
-    const b = selectedId ? findBlock(selectedId) : null;
-    inspectorEl.querySelectorAll('[data-f]').forEach(function (el) {
+  // v2.32 — Blok kontrolleri popup gövdesinde wire'lanır (root = modal body, repaint = popup'ı tazele)
+  function wireBlockControls(root, b, repaint) {
+    if (!b) return;
+    root.querySelectorAll('[data-f]').forEach(function (el) {
       const ev = el.tagName === 'SELECT' ? 'change' : 'input';
-      el.addEventListener(ev, function () { let v = el.value; if (el.type === 'number') v = v === '' ? null : Number(v); setField(b || {}, el.getAttribute('data-f'), v); refreshPage(); });
+      el.addEventListener(ev, function () { let v = el.value; if (el.type === 'number') v = v === '' ? null : Number(v); setField(b, el.getAttribute('data-f'), v); refreshPage(); });
     });
-    inspectorEl.querySelectorAll('[data-clear]').forEach(function (el) { el.addEventListener('click', function () { setField(b || {}, el.getAttribute('data-clear'), ''); refreshPage(); renderInspector(); }); });
-    inspectorEl.querySelectorAll('[data-align]').forEach(function (el) { el.addEventListener('click', function () { const p = el.getAttribute('data-align').split('|'); setField(b || {}, p[0], p[1]); refreshPage(); renderInspector(); }); });
-    inspectorEl.querySelectorAll('[data-toggle]').forEach(function (el) { el.addEventListener('click', function () { const k = el.getAttribute('data-toggle'); b[k] = !b[k]; refreshPage(); renderInspector(); }); });
-    inspectorEl.querySelectorAll('[data-toggle-page]').forEach(function (el) { el.addEventListener('click', function () { const k = el.getAttribute('data-toggle-page'); design.page[k] = !design.page[k]; refreshPage(); renderInspector(); }); });
-    inspectorEl.querySelectorAll('[data-paper]').forEach(function (el) { el.addEventListener('click', function () { design.page.paper = el.getAttribute('data-paper'); refreshPage(); renderInspector(); }); });
-    inspectorEl.querySelectorAll('[data-orient]').forEach(function (el) { el.addEventListener('click', function () { design.page.orientation = el.getAttribute('data-orient'); refreshPage(); renderInspector(); }); });
-    inspectorEl.querySelectorAll('[data-cols]').forEach(function (el) { el.addEventListener('click', function () { design.page.columns = Number(el.getAttribute('data-cols')); refreshPage(); renderInspector(); }); });
-    inspectorEl.querySelectorAll('[data-frame]').forEach(function (el) { el.addEventListener('click', function () { const v = el.getAttribute('data-frame'); design.page.frame = (v !== 'off'); if (v !== 'off') design.page.frameStyle = v; refreshPage(); renderInspector(); }); });
-    inspectorEl.querySelectorAll('[data-divstyle]').forEach(function (el) { el.addEventListener('click', function () { if (!b) return; b.dividerStyle = el.getAttribute('data-divstyle'); delete b.variant; refreshPage(); renderInspector(); }); });
-    const spanT = inspectorEl.querySelector('[data-spantoggle]'); if (spanT) spanT.addEventListener('click', function () { if (!b) return; b.span = !blockIsFullWidth(b, design.page.columns || 1); refreshPage(); renderInspector(); });
-    inspectorEl.querySelectorAll('[data-move]').forEach(function (el) { el.addEventListener('click', function () { moveBlock(selectedId, el.getAttribute('data-move')); }); });
-    const delB = inspectorEl.querySelector('[data-del-block]'); if (delB) delB.addEventListener('click', function () { design.blocks = design.blocks.filter(function (x) { return x.id !== selectedId; }); selectedId = null; refreshPage(); renderInspector(); });
-    const iu = inspectorEl.querySelector('[data-imgupload]'); if (iu) iu.addEventListener('click', function () { pickImage(function (src) { b.src = src; refreshPage(); renderInspector(); }); });
-    const idl = inspectorEl.querySelector('[data-imgdel]'); if (idl) idl.addEventListener('click', function () { b.src = null; refreshPage(); renderInspector(); });
-    // marka kiti
-    const bs = inspectorEl.querySelector('#msBrandSave'); if (bs) bs.addEventListener('click', saveBrand);
-    const ba = inspectorEl.querySelector('#msBrandApply'); if (ba) ba.addEventListener('click', applyBrand);
-
-    // Katman listesi: seç + sil + sürükle-bırak
-    inspectorEl.querySelectorAll('[data-layer]').forEach(function (el) {
-      el.addEventListener('click', function (e) { if (e.target.closest('[data-layerdel]')) return; selectedId = el.getAttribute('data-layer'); refreshPage(); renderInspector(); });
-      el.addEventListener('dragstart', function () { canvasDragId = el.getAttribute('data-layer'); el.style.opacity = '0.4'; });
-      el.addEventListener('dragend', function () { el.style.opacity = ''; inspectorEl.querySelectorAll('.ms-layer.dragover').forEach(function (x) { x.classList.remove('dragover'); }); });
-      el.addEventListener('dragover', function (e) { e.preventDefault(); el.classList.add('dragover'); });
-      el.addEventListener('dragleave', function () { el.classList.remove('dragover'); });
-      el.addEventListener('drop', function (e) { e.preventDefault(); el.classList.remove('dragover'); reorderBlocks(canvasDragId, el.getAttribute('data-layer')); });
-    });
-    inspectorEl.querySelectorAll('[data-layerdel]').forEach(function (el) { el.addEventListener('click', function (e) { e.stopPropagation(); const id = el.getAttribute('data-layerdel'); design.blocks = design.blocks.filter(function (x) { return x.id !== id; }); if (selectedId === id) selectedId = null; refreshPage(); renderInspector(); }); });
-
-    // Bölüm yemekleri
-    if (b && b.type === 'section') {
-      inspectorEl.querySelectorAll('[data-iid]').forEach(function (row) {
+    root.querySelectorAll('[data-clear]').forEach(function (el) { el.addEventListener('click', function () { setField(b, el.getAttribute('data-clear'), ''); refreshPage(); repaint(); }); });
+    root.querySelectorAll('[data-align]').forEach(function (el) { el.addEventListener('click', function () { const p = el.getAttribute('data-align').split('|'); setField(b, p[0], p[1]); refreshPage(); repaint(); }); });
+    root.querySelectorAll('[data-toggle]').forEach(function (el) { el.addEventListener('click', function () { const k = el.getAttribute('data-toggle'); b[k] = !b[k]; refreshPage(); repaint(); }); });
+    root.querySelectorAll('[data-divstyle]').forEach(function (el) { el.addEventListener('click', function () { b.dividerStyle = el.getAttribute('data-divstyle'); delete b.variant; refreshPage(); repaint(); }); });
+    const spanT = root.querySelector('[data-spantoggle]'); if (spanT) spanT.addEventListener('click', function () { b.span = !blockIsFullWidth(b, design.page.columns || 1); refreshPage(); repaint(); });
+    root.querySelectorAll('[data-move]').forEach(function (el) { el.addEventListener('click', function () { moveBlock(b.id, el.getAttribute('data-move')); }); });
+    const iu = root.querySelector('[data-imgupload]'); if (iu) iu.addEventListener('click', function () { pickImage(function (src) { b.src = src; refreshPage(); repaint(); }); });
+    const idl = root.querySelector('[data-imgdel]'); if (idl) idl.addEventListener('click', function () { b.src = null; refreshPage(); repaint(); });
+    if (b.type === 'section') {
+      root.querySelectorAll('[data-iid]').forEach(function (row) {
         const iid = row.getAttribute('data-iid'); const it = (b.items || []).find(function (x) { return x.id === iid; }); if (!it) return;
-        row.querySelectorAll('[data-itf]').forEach(function (el) { el.addEventListener('input', function () { it[el.getAttribute('data-itf')] = el.value; refreshPage(); if (el.getAttribute('data-itf') === 'price') { clearTimeout(it._mt); it._mt = setTimeout(renderInspector, 600); } }); });
-        const up = row.querySelector('[data-itmove="up"]'); if (up) up.addEventListener('click', function () { moveItem(b, iid, 'up'); });
-        const dn = row.querySelector('[data-itmove="down"]'); if (dn) dn.addEventListener('click', function () { moveItem(b, iid, 'down'); });
-        const dl = row.querySelector('[data-itdel]'); if (dl) dl.addEventListener('click', function () { b.items = b.items.filter(function (x) { return x.id !== iid; }); refreshPage(); renderInspector(); });
-        const ph = row.querySelector('[data-itphoto]'); if (ph) ph.addEventListener('click', function () { pickImage(function (src) { it.photo = src; refreshPage(); renderInspector(); }); });
-        const phd = row.querySelector('[data-itphotodel]'); if (phd) phd.addEventListener('click', function () { it.photo = null; refreshPage(); renderInspector(); });
+        row.querySelectorAll('[data-itf]').forEach(function (el) { el.addEventListener('input', function () { it[el.getAttribute('data-itf')] = el.value; refreshPage(); }); });
+        const up = row.querySelector('[data-itmove="up"]'); if (up) up.addEventListener('click', function () { moveItem(b, iid, 'up'); repaint(); });
+        const dn = row.querySelector('[data-itmove="down"]'); if (dn) dn.addEventListener('click', function () { moveItem(b, iid, 'down'); repaint(); });
+        const dl = row.querySelector('[data-itdel]'); if (dl) dl.addEventListener('click', function () { b.items = b.items.filter(function (x) { return x.id !== iid; }); refreshPage(); repaint(); });
+        const ph = row.querySelector('[data-itphoto]'); if (ph) ph.addEventListener('click', function () { pickImage(function (src) { it.photo = src; refreshPage(); repaint(); }); });
+        const phd = row.querySelector('[data-itphotodel]'); if (phd) phd.addEventListener('click', function () { it.photo = null; refreshPage(); repaint(); });
       });
-      const aR = inspectorEl.querySelector('[data-additem-recipe]'); if (aR) aR.addEventListener('click', function () { openRecipePicker(b); });
-      const aM = inspectorEl.querySelector('[data-additem-manual]'); if (aM) aM.addEventListener('click', function () { b.items = b.items || []; b.items.push({ id: uid(), name: t('ms_new_dish'), price: '', desc: '', photo: null }); refreshPage(); renderInspector(); });
+      const aR = root.querySelector('[data-additem-recipe]'); if (aR) aR.addEventListener('click', function () { openRecipePicker(b); });
+      const aM = root.querySelector('[data-additem-manual]'); if (aM) aM.addEventListener('click', function () { b.items = b.items || []; b.items.push({ id: uid(), name: t('ms_new_dish'), price: '', desc: '', photo: null }); refreshPage(); repaint(); });
     }
+  }
+
+  // v2.32 — Sayfa ayarları popup gövdesinde wire'lanır
+  function wirePageControls(root, repaint) {
+    root.querySelectorAll('[data-toggle-page]').forEach(function (el) { el.addEventListener('click', function () { const k = el.getAttribute('data-toggle-page'); design.page[k] = !design.page[k]; refreshPage(); repaint(); }); });
+    root.querySelectorAll('[data-paper]').forEach(function (el) { el.addEventListener('click', function () { design.page.paper = el.getAttribute('data-paper'); refreshPage(); repaint(); }); });
+    root.querySelectorAll('[data-orient]').forEach(function (el) { el.addEventListener('click', function () { design.page.orientation = el.getAttribute('data-orient'); refreshPage(); repaint(); }); });
+    root.querySelectorAll('[data-cols]').forEach(function (el) { el.addEventListener('click', function () { design.page.columns = Number(el.getAttribute('data-cols')); refreshPage(); repaint(); }); });
+    root.querySelectorAll('[data-frame]').forEach(function (el) { el.addEventListener('click', function () { const v = el.getAttribute('data-frame'); design.page.frame = (v !== 'off'); if (v !== 'off') design.page.frameStyle = v; refreshPage(); repaint(); }); });
+    const bs = root.querySelector('#msBrandSave'); if (bs) bs.addEventListener('click', saveBrand);
+    const ba = root.querySelector('#msBrandApply'); if (ba) ba.addEventListener('click', applyBrand);
   }
 
   function moveBlock(id, dir) { const i = design.blocks.findIndex(function (x) { return x.id === id; }); const j = dir === 'up' ? i - 1 : i + 1; if (i < 0 || j < 0 || j >= design.blocks.length) return; const t = design.blocks[i]; design.blocks[i] = design.blocks[j]; design.blocks[j] = t; refreshPage(); renderInspector(); }
@@ -714,7 +738,7 @@
     function paint(q) {
       const list = body.querySelector('#msrl'); const ql = (q || '').toLowerCase();
       list.innerHTML = recipes.filter(function (r) { return !ql || (r.name || '').toLowerCase().indexOf(ql) >= 0; }).map(function (r) { return '<button type="button" class="btn btn-ghost btn-sm" data-rid="' + r.id + '" style="display:block;width:100%;text-align:left;">' + esc(r.name) + (r.salePrice ? ' · ' + cur() + r.salePrice : '') + '</button>'; }).join('');
-      list.querySelectorAll('[data-rid]').forEach(function (el) { el.addEventListener('click', function () { const r = recipes.find(function (x) { return x.id === el.getAttribute('data-rid'); }); sec.items = sec.items || []; sec.items.push({ id: uid(), name: r.name, price: r.salePrice != null ? String(r.salePrice) : '', desc: r.plating || '', photo: r.photo || null, recipeId: r.id }); refreshPage(); renderInspector(); m.close(); }); });
+      list.querySelectorAll('[data-rid]').forEach(function (el) { el.addEventListener('click', function () { const r = recipes.find(function (x) { return x.id === el.getAttribute('data-rid'); }); sec.items = sec.items || []; sec.items.push({ id: uid(), name: r.name, price: r.salePrice != null ? String(r.salePrice) : '', desc: r.plating || '', photo: r.photo || null, recipeId: r.id }); refreshPage(); renderInspector(); m.close(); if (_blockRepaint) _blockRepaint(); }); });
     }
     paint('');
     const m = PCD.modal.open({ title: t('ms_recipe_pick_title'), body: body, size: 'sm', closable: true });
@@ -729,11 +753,11 @@
     else if (type === 'image') Object.assign(nb, { src: null, height: 200, align: 'center', radius: 0 });
     else if (type === 'divider') Object.assign(nb, { dividerStyle: 'floral', color: '', size: 20 });
     else if (type === 'spacer') Object.assign(nb, { height: 24 });
-    design.blocks.push(nb); selectedId = nb.id; refreshPage(); renderInspector();
+    design.blocks.push(nb); refreshPage(); renderInspector(); openBlockEditor(nb.id);
   }
 
-  // ---- Şablon galerisi ----
-  function openTemplates() {
+  // ---- Şablon galerisi ---- (forNew=true → home'dan yeni menü olarak oluştur)
+  function openTemplates(forNew) {
     const body = PCD.el('div');
     body.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' + TEMPLATES.map(function (tpl) {
       return '<button type="button" class="ms-tplcard" data-tpl="' + tpl.id + '"><div class="ms-tplcard-prev" id="mstp-' + tpl.id + '"></div><div class="ms-tplcard-label">' + esc(tpl.label) + '</div></button>';
@@ -750,7 +774,7 @@
         host.innerHTML = '<div style="width:' + spec.w + 'px;height:' + spec.h + 'px;background:' + (d.page.bg || '#fff') + ';padding:' + (d.page.pad || 56) + 'px;box-sizing:border-box;transform:scale(' + k + ');">' + renderPageInner(d) + '</div>';
       });
     }, 60);
-    body.querySelectorAll('[data-tpl]').forEach(function (el) { el.addEventListener('click', function () { const tpl = TEMPLATES.find(function (x) { return x.id === el.getAttribute('data-tpl'); }); if (tpl) { design = tpl.make(); normalizeDesign(design); selectedId = null; refreshPage(); renderInspector(); } m.close(); }); });
+    body.querySelectorAll('[data-tpl]').forEach(function (el) { el.addEventListener('click', function () { const tpl = TEMPLATES.find(function (x) { return x.id === el.getAttribute('data-tpl'); }); m.close(); if (!tpl) return; if (forNew) { const d = tpl.make(); normalizeDesign(d); const rec = PCD.store.upsertInTable('menus', { name: tpl.label || t('ms_default_menu'), sections: [], studio: d }, 'm'); if (rec && rec.id) openDesign(rec.id); } else { design = tpl.make(); normalizeDesign(design); selectedId = null; refreshPage(); renderInspector(); } }); });
   }
 
   // ---- Marka kiti ----
@@ -867,9 +891,9 @@
       '.ms-libcard-actions button{border:0;background:rgba(255,255,255,.92);color:#333;border-radius:7px;width:30px;height:30px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.15);}' +
       '.ms-libcard-actions button:hover{background:#fff;}' +
       '</style>';
-    h += '<div class="page-header"><div class="page-header-text"><div class="page-title">Menu Studio</div><div class="page-subtitle">' + esc(t('ms_subtitle')) + '</div></div><div class="page-header-actions"><button class="btn btn-primary" id="msNew">' + esc(t('ms_new_menu')) + '</button></div></div>';
+    h += '<div class="page-header"><div class="page-header-text"><div class="page-title">Menu Studio</div><div class="page-subtitle">' + esc(t('ms_subtitle')) + '</div></div><div class="page-header-actions"><button class="btn btn-outline" id="msTplHome">' + (PCD.icon ? PCD.icon('grid', 14) : '📋') + ' ' + esc(t('ms_templates')) + '</button><button class="btn btn-primary" id="msNew">' + esc(t('ms_new_menu')) + '</button></div></div>';
     if (!menus.length) {
-      h += '<div class="empty"><div class="empty-icon">🎨</div><div class="empty-title">' + esc(t('ms_no_menus_title')) + '</div><div class="empty-desc">' + esc(t('ms_no_menus_desc')) + '</div><div class="empty-action"><button class="btn btn-primary" id="msNew2">' + esc(t('ms_new_menu')) + '</button></div></div>';
+      h += '<div class="empty"><div class="empty-icon">🎨</div><div class="empty-title">' + esc(t('ms_no_menus_title')) + '</div><div class="empty-desc">' + esc(t('ms_no_menus_desc')) + '</div><div class="empty-action" style="display:flex;gap:8px;justify-content:center;"><button class="btn btn-outline" id="msTpl2">' + (PCD.icon ? PCD.icon('grid', 14) : '📋') + ' ' + esc(t('ms_templates')) + '</button><button class="btn btn-primary" id="msNew2">' + esc(t('ms_new_menu')) + '</button></div></div>';
     } else {
       h += '<div class="ms-lib">' + menus.map(function (m) {
         const items = (m.studio ? (m.studio.blocks || []).reduce(function (a, b) { return a + (b.type === 'section' ? (b.items || []).length : 0); }, 0) : (m.sections || []).reduce(function (a, s) { return a + ((s.items || []).length); }, 0));
@@ -884,6 +908,8 @@
     const nw = function () { createNew(); };
     const n1 = PCD.$('#msNew', _view); if (n1) n1.addEventListener('click', nw);
     const n2 = PCD.$('#msNew2', _view); if (n2) n2.addEventListener('click', nw);
+    const th1 = PCD.$('#msTplHome', _view); if (th1) th1.addEventListener('click', function () { openTemplates(true); });
+    const th2 = PCD.$('#msTpl2', _view); if (th2) th2.addEventListener('click', function () { openTemplates(true); });
     PCD.on(_view, 'click', '[data-open]', function (e) { if (e.target.closest('[data-del]') || e.target.closest('[data-dup]')) return; openDesign(this.getAttribute('data-open')); });
     PCD.on(_view, 'click', '[data-dup]', function (e) {
       e.stopPropagation(); const id = this.getAttribute('data-dup');
@@ -947,7 +973,8 @@
       '.ms-wrap{display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start;}@media(max-width:900px){.ms-wrap{grid-template-columns:1fr;}}' +
       '.ms-viewport{background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:20px;overflow:hidden;min-height:200px;}' +
       '.ms-page{box-shadow:0 8px 30px rgba(0,0,0,.15);box-sizing:border-box;}' +
-      '.ms-block{cursor:pointer;border-radius:4px;}' +
+      '.ms-block{cursor:pointer;border-radius:4px;outline:1px dashed rgba(127,127,127,.4);outline-offset:2px;transition:outline-color .12s,outline-width .12s;}' +
+      '.ms-block:hover{outline:2px solid var(--brand-500,#22c55e);outline-offset:2px;}' +
       '.ms-inspector{position:sticky;top:12px;max-height:calc(100vh - 90px);overflow:auto;padding-right:2px;}' +
       '.ms-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:13px;margin-bottom:12px;}' +
       '.ms-card-title{font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--text-3);margin-bottom:10px;}' +
@@ -969,7 +996,7 @@
       '</style>' +
       '<div class="page-header"><div class="page-header-text"><div class="page-title" style="display:flex;align-items:center;gap:8px;"><input id="msName" class="input" value="' + esc(currentMenu.name || '') + '" style="font-size:18px;font-weight:800;max-width:280px;"></div>' +
         '<div class="page-subtitle" id="msStats" style="font-size:12px;"></div></div>' +
-        '<div class="page-header-actions"><button class="btn btn-outline btn-sm" id="msBack">' + esc(t('ms_back_library')) + '</button><button class="btn btn-outline btn-sm" id="msTemplatesHdr">' + (PCD.icon ? PCD.icon('grid', 14) : '') + ' ' + esc(t('ms_templates')) + '</button><button class="btn btn-outline btn-sm" id="msShare">' + (PCD.icon ? PCD.icon('share', 14) : '') + ' ' + esc(t('ms_share')) + '</button><button class="btn btn-primary btn-sm" id="msPrint">' + (PCD.icon ? PCD.icon('print', 14) : '') + ' ' + esc(t('ms_print')) + '</button></div></div>' +
+        '<div class="page-header-actions"><button class="btn btn-outline btn-sm" id="msBack">' + esc(t('ms_back_library')) + '</button><button class="btn btn-outline btn-sm" id="msPageBtn">🎨 ' + esc(t('ms_page')) + '</button><button class="btn btn-outline btn-sm" id="msTemplatesHdr">' + (PCD.icon ? PCD.icon('grid', 14) : '') + ' ' + esc(t('ms_templates')) + '</button><button class="btn btn-outline btn-sm" id="msShare">' + (PCD.icon ? PCD.icon('share', 14) : '') + ' ' + esc(t('ms_share')) + '</button><button class="btn btn-primary btn-sm" id="msPrint">' + (PCD.icon ? PCD.icon('print', 14) : '') + ' ' + esc(t('ms_print')) + '</button></div></div>' +
       '<div class="ms-addbar"><span class="ms-addbar-label">' + esc(t('ms_add_block')) + '</span>' +
         addBtnHtml('heading') + addBtnHtml('text') + addBtnHtml('section') + addBtnHtml('image') + addBtnHtml('divider') + addBtnHtml('spacer') + '</div>' +
       '<div class="ms-wrap"><div class="ms-viewport" id="msViewport"><div class="ms-page" id="msPage"></div></div><div class="ms-inspector" id="msInspector"></div></div>';
@@ -978,7 +1005,7 @@
     refreshPage(); renderInspector();
 
     // kanvas: tıkla-seç + sürükle-bırak (delegation, kalıcı)
-    PCD.on(pageScaleEl, 'click', '.ms-block', function (e) { e.stopPropagation(); selectedId = this.getAttribute('data-bid'); refreshPage(); renderInspector(); });
+    PCD.on(pageScaleEl, 'click', '.ms-block', function (e) { e.stopPropagation(); openBlockEditor(this.getAttribute('data-bid')); });
     pageScaleEl.addEventListener('dragstart', function (e) { const blk = e.target.closest && e.target.closest('.ms-block'); if (blk) { canvasDragId = blk.getAttribute('data-bid'); if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move'; } });
     pageScaleEl.addEventListener('dragover', function (e) { if (e.target.closest && e.target.closest('.ms-block')) e.preventDefault(); });
     pageScaleEl.addEventListener('drop', function (e) { const blk = e.target.closest && e.target.closest('.ms-block'); if (blk && canvasDragId) { e.preventDefault(); reorderBlocks(canvasDragId, blk.getAttribute('data-bid')); } });
@@ -986,6 +1013,7 @@
     _view.querySelectorAll('[data-add]').forEach(function (el) { el.addEventListener('click', function () { addBlock(el.getAttribute('data-add')); }); });
     PCD.$('#msBack', _view).addEventListener('click', function () { clearTimeout(_saveTimer); if (currentMenu) { currentMenu.studio = design; try { PCD.store.upsertInTable('menus', currentMenu, 'm'); } catch (e) {} } currentId = null; currentMenu = null; renderList(); });
     PCD.$('#msTemplatesHdr', _view).addEventListener('click', openTemplates);
+    var _pgBtn = PCD.$('#msPageBtn', _view); if (_pgBtn) _pgBtn.addEventListener('click', openPageSettings);
     PCD.$('#msShare', _view).addEventListener('click', openShare);
     PCD.$('#msPrint', _view).addEventListener('click', function () { PCD.print(buildPrintHtml(), currentMenu.name || 'Menu'); });
     const nm = PCD.$('#msName', _view); if (nm) nm.addEventListener('input', function () { currentMenu.name = nm.value; saveSoon(); });
