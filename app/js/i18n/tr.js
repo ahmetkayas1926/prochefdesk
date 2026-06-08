@@ -617,6 +617,8 @@ window.PCD.i18n.register('tr', {
   wb_fits_one_page: "✓ Tek sayfaya sığar",
   wb_overflow_warn: "Tek sayfaya sığmıyor — blok azalt veya daha büyük kağıt seç (A3)",
   wb_action_duplicate: "Çoğalt",
+  wb_action_edit: "Düzenle",
+  wb_drag: "Sürükleyip sırala",
   wb_action_move_up: "Yukarı taşı",
   wb_action_move_down: "Aşağı taşı",
   wb_action_delete: "Bloğu sil",

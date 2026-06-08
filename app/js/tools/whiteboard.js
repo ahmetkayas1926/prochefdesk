@@ -662,9 +662,14 @@
         'border-radius:6px;margin:0;cursor:pointer;' +
         'transition:box-shadow 0.12s ease, transform 0.12s ease;' +
       '">' +
-        '<div class="wb-block-handle" style="position:absolute;top:6px;left:6px;width:18px;height:18px;display:none;align-items:center;justify-content:center;cursor:grab;opacity:0.5;font-size:14px;">⋮⋮</div>' +
+        '<div class="wb-block-tools">' +
+          '<span class="wb-bt wb-bt-grip wb-block-handle" title="' + PCD.escapeHtml(t('wb_drag', 'Drag to reorder')) + '">⠿</span>' +
+          '<span class="wb-bt" data-blk-edit="' + idx + '" title="' + PCD.escapeHtml(t('wb_action_edit', 'Edit')) + '">' + PCD.icon('edit', 12) + '</span>' +
+          '<span class="wb-bt" data-blk-dup="' + idx + '" title="' + PCD.escapeHtml(t('wb_action_duplicate', 'Duplicate')) + '">' + PCD.icon('copy', 12) + '</span>' +
+          '<span class="wb-bt danger" data-blk-del="' + idx + '" title="' + PCD.escapeHtml(t('wb_action_delete', 'Delete block')) + '">' + PCD.icon('trash', 12) + '</span>' +
+        '</div>' +
         renderBlockContent(block) +
-        '<div class="wb-block-tag" style="position:absolute;top:4px;right:6px;font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;opacity:0.4;pointer-events:none;">' + PCD.escapeHtml(t(meta.labelKey, meta.label)) + '</div>' +
+        '<div class="wb-block-tag" style="position:absolute;bottom:3px;left:8px;font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;opacity:0.35;pointer-events:none;">' + PCD.escapeHtml(t(meta.labelKey, meta.label)) + '</div>' +
       '</div>';
   }
 
@@ -705,10 +710,10 @@
         buildHeader(t) +
         buildCanvasSelector(store, canvasCount) +
         buildCanvasMeta(canvas) +
-        '<div class="wb-workspace" style="display:grid;grid-template-columns:220px minmax(0, 1fr) 280px;gap:16px;margin-top:16px;">' +
+        // v2.27 — Sağ inspector paneli kaldırıldı; düzenleme popup (modal) ile. Kanvas genişler.
+        '<div class="wb-workspace" style="display:grid;grid-template-columns:220px minmax(0, 1fr);gap:16px;margin-top:16px;">' +
           buildPalettePane() +
           buildCanvasPane(canvas) +
-          buildInspectorPane(canvas) +
         '</div>' +
         buildBottomSheet() +
       '</div>';
@@ -824,6 +829,13 @@
       '#wbRoot .wb-block.dragging { opacity: 0.4; }' +
       '#wbRoot .wb-block.drag-over-top { box-shadow: 0 -3px 0 0 #16a34a !important; }' +
       '#wbRoot .wb-block.drag-over-bottom { box-shadow: 0 3px 0 0 #16a34a !important; }' +
+      // v2.27 — Kanvas blok araç çubuğu (Prep hissi): görünür ⠿ sürükle + ✎ düzenle + çoğalt + sil
+      '#wbRoot .wb-block-tools { position:absolute; top:5px; right:5px; display:flex; gap:3px; z-index:6; }' +
+      '#wbRoot .wb-block-tools .wb-bt { width:22px; height:22px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.97); border:1px solid rgba(0,0,0,0.16); border-radius:5px; box-shadow:0 1px 3px rgba(0,0,0,0.22); color:#374151; cursor:pointer; padding:0; font-size:12px; line-height:1; }' +
+      '#wbRoot .wb-block-tools .wb-bt:hover { background:#16a34a; color:#fff; border-color:#16a34a; }' +
+      '#wbRoot .wb-block-tools .wb-bt.danger:hover { background:#dc2626; color:#fff; border-color:#dc2626; }' +
+      '#wbRoot .wb-block-tools .wb-bt-grip { cursor:grab; font-size:13px; }' +
+      '#wbRoot .wb-block-tools .wb-bt-grip:active { cursor:grabbing; }' +
       '#wbRoot .wb-palette-item { display:flex; align-items:center; gap:8px; padding:8px 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; transition: background 0.12s ease, border-color 0.12s ease; user-select: none; }' +
       '#wbRoot .wb-palette-item:hover { background: var(--brand-50); border-color: var(--brand-600); color: var(--brand-700); }' +
       '#wbRoot .wb-palette-item-icon { flex: 0 0 auto; width: 22px; height: 22px; display:inline-flex; align-items:center; justify-content:center; color: var(--brand-600); }' +
@@ -858,6 +870,10 @@
       '}' +
       '@media (min-width: 901px) {' +
         '#wbRoot .wb-mobile-add-bar { display: none !important; }' +
+        // v2.27 — Masaüstünde bottom-sheet'i ortalı modal (Prep popup hissi) yap
+        '#wbRoot .wb-bottom-sheet { left:50%; right:auto; bottom:auto; top:50%; width:560px; max-width:calc(100vw - 40px); max-height:86vh; border-radius:14px; box-shadow:0 18px 60px rgba(0,0,0,0.32); transform:translate(-50%,-48%) scale(0.98); opacity:0; transition:transform .2s ease, opacity .2s ease; }' +
+        '#wbRoot .wb-bottom-sheet.open { transform:translate(-50%,-50%) scale(1); opacity:1; }' +
+        '#wbRoot .wb-bottom-sheet-grab { display:none; }' +
       '}' +
       '@media (hover: none) and (pointer: coarse) {' +
         '#wbRoot .wb-block-handle { display: inline-flex !important; opacity: 0.7; }' +
@@ -1474,28 +1490,40 @@
       persistCanvas(canvas);
       _ui.selectedBlockIdx = canvas.blocks.length - 1;
       rerender();
-      // Auto-open inspector on mobile (bottom sheet)
-      if (window.matchMedia && window.matchMedia('(max-width: 900px)').matches) {
-        openBottomSheet(root, canvas);
-      }
+      // v2.27 — Hızlı ekleme: blok ekledikten sonra düzenleme popup'ını aç (tüm boyutlar)
+      openBottomSheet(root, canvas);
     });
   }
 
   function wireCanvasPane(root, canvas, view) {
-    // Block click → select + open inspector
+    // v2.27 — Bloğa tıkla → düzenleme popup'ı (tüm boyutlarda). ⠿ sürükle ve
+    // çoğalt/sil butonları hariç tutulur (kendi handler'ları var).
     PCD.on(root, 'click', '.wb-block', function (e) {
-      // Skip clicks on handle (drag) or action buttons
-      if (e.target.closest('.wb-block-handle')) return;
+      if (e.target.closest('.wb-block-handle') || e.target.closest('[data-blk-dup]') || e.target.closest('[data-blk-del]')) return;
       const idx = parseInt(this.getAttribute('data-blk-idx'), 10);
       if (isNaN(idx)) return;
       _ui.selectedBlockIdx = idx;
-      // Mobile: open bottom sheet
-      if (window.matchMedia && window.matchMedia('(max-width: 900px)').matches) {
-        rerender();
-        openBottomSheet(root, canvas);
-      } else {
-        rerender();
-      }
+      root.querySelectorAll('.wb-block').forEach(function (b) { b.classList.remove('wb-block-selected'); });
+      this.classList.add('wb-block-selected');
+      openBottomSheet(root, canvas);
+    });
+    // v2.27 — Kart araç çubuğu: çoğalt + sil (idx attribute'tan, selected'ten bağımsız)
+    PCD.on(root, 'click', '[data-blk-dup]', function (e) {
+      e.stopPropagation();
+      const idx = parseInt(this.getAttribute('data-blk-dup'), 10);
+      const blocks = canvas.blocks || []; const block = blocks[idx]; if (!block) return;
+      const copy = JSON.parse(JSON.stringify(block)); copy.id = uid('blk');
+      blocks.splice(idx + 1, 0, copy);
+      _ui.selectedBlockIdx = idx + 1;
+      persistCanvas(canvas); rerender();
+    });
+    PCD.on(root, 'click', '[data-blk-del]', function (e) {
+      e.stopPropagation();
+      const idx = parseInt(this.getAttribute('data-blk-del'), 10);
+      const blocks = canvas.blocks || []; if (!blocks[idx]) return;
+      blocks.splice(idx, 1);
+      _ui.selectedBlockIdx = -1;
+      persistCanvas(canvas); rerender();
     });
 
     // Drag-reorder: HTML5 + touch fallback via unified handlers
@@ -1950,35 +1978,8 @@
 
   // Re-bind canvas pane clicks (called after canvas innerHTML refreshed)
   function bindCanvasPaneClicks(root, canvas) {
-    const canvasEl = root.querySelector('#wbCanvas');
-    if (!canvasEl) return;
-    canvasEl.querySelectorAll('.wb-block').forEach(function (blockEl) {
-      blockEl.addEventListener('click', function (e) {
-        if (e.target.closest('.wb-block-handle')) return;
-        const idx = parseInt(this.getAttribute('data-blk-idx'), 10);
-        if (isNaN(idx)) return;
-        _ui.selectedBlockIdx = idx;
-        // Update visual selection (don't full rerender)
-        canvasEl.querySelectorAll('.wb-block').forEach(function (b) { b.classList.remove('wb-block-selected'); });
-        this.classList.add('wb-block-selected');
-        // Refresh inspector + maybe open bottom sheet
-        const root2 = document.getElementById('wbRoot');
-        if (!root2) return;
-        const inspector = root2.querySelector('.wb-inspector-pane-desktop');
-        if (inspector) {
-          const block = (canvas.blocks || [])[idx];
-          inspector.innerHTML = '' +
-            '<div class="wb-pane-title" style="justify-content:space-between;">' +
-              '<span>' + PCD.icon('settings', 13) + ' ' + PCD.escapeHtml(t('wb_inspector_title', 'Block style')) + '</span>' +
-              (block ? '<span style="font-weight:600;color:var(--brand-700);font-size:10px;">' + PCD.escapeHtml(t(blockTypeMeta(block.type).labelKey, blockTypeMeta(block.type).label)) + '</span>' : '') +
-            '</div>' +
-            (block ? buildInspectorContent(block, idx) : '');
-        }
-        if (window.matchMedia && window.matchMedia('(max-width: 900px)').matches) {
-          openBottomSheet(root2, canvas);
-        }
-      });
-    });
+    // v2.27 — Blok tıklamaları wireCanvasPane'de root üzerinde delege edildi
+    // (innerHTML değişse de çalışır). Yeniden bağlamaya gerek yok; commit() çağırır → no-op.
   }
 
   function wireBottomSheet(root, canvas) {
@@ -2006,9 +2007,8 @@
     body.innerHTML = buildInspectorContent(block, _ui.selectedBlockIdx);
     if (title) title.textContent = t(blockTypeMeta(block.type).labelKey, blockTypeMeta(block.type).label);
     backdrop.classList.add('open');
-    requestAnimationFrame(function () {
-      sheet.classList.add('open');
-    });
+    requestAnimationFrame(function () { sheet.classList.add('open'); });
+    setTimeout(function () { sheet.classList.add('open'); }, 30); // rAF flaky olursa garanti
     _ui.bottomSheetOpen = true;
   }
   function closeBottomSheet(root) {

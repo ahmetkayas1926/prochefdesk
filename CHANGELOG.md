@@ -4,6 +4,20 @@ Kronolojik tersine (en son üstte). Her sürüm: başlık + ana değişiklikler.
 
 ---
 
+## v2.27.0 — Whiteboard: popup editör + kanvas blok araç çubuğu (Araç 5/8) · 2026-06-08
+
+Operatör: sağdaki uzun "Block style" paneli pratik değil; Prep'teki popup sistemine
+geç, kanvas bloklarına Prep hissi (sürükle + düzenle ikonu) ver.
+
+- **Sağ panel → popup.** Bloğa veya ✎'e tıkla → ortalı modal açılır (mevcut mobil bottom-sheet motoru masaüstünde ortalı modal olarak yeniden stillendi → tüm editör mantığı korundu, sıfır kayıp). Her blok tipinin **kendine has alanları** popup'ta aynen korunur + Layout/Renk/Boyut/Kalınlık/Hizalama. **Canlı düzenleme:** değiştirdikçe kanvas anında güncellenir.
+- **Kanvas bloklarında araç çubuğu:** her blokta görünür **⠿ sürükle + ✎ düzenle + çoğalt + sil**; hover'da yeşil çerçeve → düzenlenebilir hissi (Prep ile aynı dil).
+- **Hızlı ekleme:** Palette'ten blok ekleyince düzenleme popup'ı hemen açılır.
+- **Sağ panel kalktı → kanvas genişledi** (3 sütun → palette + kanvas).
+- **Korunan gotcha'lar:** tek render motoru (kanvas=baskı; baskıda araç çubuğu çıkmaz), applyCanvasScale self-retry, ResizeObserver hata filtresi, blok veri modeli + realtime sync — hiçbiri değişmedi.
+- Tarayıcıda doğrulandı: blok ekle→popup, tıkla→popup, değer/renk/boyut canlı yansıma, çoğalt/sil, baskı temiz; konsol temiz.
+
+---
+
 ## v2.26.0 — Prep Sheet: kanvas-merkezli redesign (sol liste kalktı, modal düzenleme) · 2026-06-08
 
 Operatör geri bildirimi: sol uzun düzenleme listesi pratik değildi ("berbat çalışma

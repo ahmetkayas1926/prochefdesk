@@ -620,6 +620,8 @@ window.PCD.i18n.register('en', {
   wb_fits_one_page: "✓ Fits one page",
   wb_overflow_warn: "Will not fit on one printed page — remove blocks or use larger paper (A3)",
   wb_action_duplicate: "Duplicate",
+  wb_action_edit: "Edit",
+  wb_drag: "Drag to reorder",
   wb_action_move_up: "Move up",
   wb_action_move_down: "Move down",
   wb_action_delete: "Delete block",
