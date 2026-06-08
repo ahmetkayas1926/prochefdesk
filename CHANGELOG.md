@@ -4,6 +4,21 @@ Kronolojik tersine (en son üstte). Her sürüm: başlık + ana değişiklikler.
 
 ---
 
+## v2.39.0 — Portion Calculator (Araç 8/8): stilize Excel export · 8-araç programı TAMAMLANDI · 2026-06-08
+
+Kod-önce analiz: Portion Calculator olgun ve aktif ciladan geçmiş (3 görünüm — tarif/kategori/tedarikçi; canlı stats; alt-tarif flatten; focus-koruyan güncelleme; 2 tür yazdırma; WhatsApp/Email/Kopya paylaşım). Kök değişiklik gereksiz → **tek tutarlı boşluğu** doldurdum:
+
+- **📊 Excel export (yeni):** Kardeş veri araçlarının (Recipes, Roster, Buffet, Menu) hepsinde olan stilize Excel artık burada da var. Ortak `PCD.xlsx` motoru (kalın yeşil başlık + çerçeve + alt-satır gölgesi + autofit). **Görünüme uygun**:
+  - Tarif görünümü → ölçekli tarif sayfası (Tarif / Malzeme / Miktar / Birim / Maliyet).
+  - Kategori veya tedarikçi görünümü → konsolide gruplu sipariş sayfası (Kategori|Tedarikçi / Malzeme / Miktar / Birim / Maliyet).
+  - Miktar + maliyet gerçek **sayı** olarak yazılır (Excel'de toplanır/sıralanır), sayfa altında TOPLAM satırı, altyazıda toplam porsiyon + tarif sayısı + tarih.
+  - xlsx lazy-load (buffet/recipes paritesi) + try/catch + hata toast'ı.
+- Tarayıcıda doğrulandı (Carbonara+Tikka, 50'şer porsiyon): tarif görünümünde Spaghetti 400g→5000g (12.5×), maliyet sayı, TOPLAM 367.25; kategori görünümünde gruplar sıralı (Dairy/Dry goods/Meat/Oils/Poultry/Produce), tedarikçi görünümünde başlık "Supplier"e geçti; üç görünümde de toplam tutarlı (367.25). Mevcut maliyet/flatten mantığı korundu.
+
+**🎯 8-araç profesyonel revizyon programı tamamlandı:** Kitchen Cards (1) · Prep Sheet (2) · Checklist (3) · Roster (4) · Whiteboard (5) · Event Planner (6) · Buffet Planner (7) · Portion Calculator (8). Her araç kod-önce analiz + dürüst verdict (zorlama overhaul yok) + gerçek değer katan geliştirme + tarayıcı doğrulaması ile elden geçti.
+
+---
+
 ## v2.38.0 — Buffet Planner (Araç 7/8): tedarikçiye göre sipariş/satın alma listesi · 2026-06-08
 
 Kod-önce analiz: Buffet Planner paketin EN OLGUN aracı (3-yol sektör maliyet motoru — tarif/malzeme/custom, yield%, birim dönüşümü, refill, pickup, fire projeksiyonu; food-cost-% hedefli durum renkleri; 7 uluslararası preset + boş; arama; kart başına Prep/PDF/Excel/Çoğalt/Düzenle; canlı stats hero kartı; focus-koruyan editör). Çoğalt + prep list + cost report + stilize Excel zaten vardı. Kök değişiklik gereksiz → **tek gerçek boşluğu** doldurdum (ve bir tutarsızlığı giderdim):

@@ -223,6 +223,7 @@
           toggleHtml +
           '<div class="flex gap-2 mt-3" style="flex-wrap:wrap;">' +
             '<button class="btn btn-primary" id="pcPrint">' + PCD.icon('print', 16) + ' <span>' + t('pc_print') + '</span></button>' +
+            '<button class="btn btn-outline" id="pcExcel">' + PCD.icon('book-open', 16) + ' <span>Excel</span></button>' +
             '<button class="btn btn-outline" id="pcShare">' + PCD.icon('share', 16) + ' <span>' + t('pc_share') + '</span></button>' +
           '</div>' +
         '</div>' +
@@ -266,6 +267,10 @@
       });
       PCD.$('#pcShare', resultEl).addEventListener('click', function () {
         shareScaled(selectedRecipes, _totalPortionsNow(), portionsPerRecipe, ingMap);
+      });
+      // v2.39 — Excel export: görünüme uygun (tarif → ölçekli sayfa, kategori/tedarikçi → gruplu sipariş sayfası)
+      PCD.$('#pcExcel', resultEl).addEventListener('click', function () {
+        exportPortionXLSX(selectedRecipes, portionsPerRecipe, guestCount, ingMap, recipeMap, viewMode);
       });
 
       // Initial value computation
@@ -640,6 +645,94 @@
       groupsHtml +
       '<div class="tot"><span>' + PCD.escapeHtml(t('label_total_food_cost') || 'Total food cost') + '</span><span style="color:#16a34a;">' + PCD.fmtMoney(res.total) + '</span></div>';
     PCD.print(html, title);
+  }
+
+  // ============ EXCEL EXPORT (v2.39) ============
+  // Ortak PCD.xlsx motoru (yeşil başlık + çerçeve + autofit). Görünüme uygun:
+  //  - 'recipe'  → ölçekli tarif sayfası (Tarif/Malzeme/Miktar/Birim/Maliyet)
+  //  - 'category'|'supplier' → konsolide gruplu sipariş sayfası (Grup/Malzeme/...)
+  // xlsx lazy-load (buffet/recipes paritesi); try/catch + toast.
+  function exportPortionXLSX(selectedRecipes, portionsMap, defaultPortions, ingMap, recipeMap, viewMode) {
+    const t = PCD.i18n.t;
+    if (!selectedRecipes || !selectedRecipes.length) return;
+    if (!window.XLSX) {
+      if (!PCD.loadXLSX) { PCD.toast.error(t('cr_xlsx_unavailable') || 'Excel library not available'); return; }
+      PCD.loadXLSX().then(function () {
+        exportPortionXLSX(selectedRecipes, portionsMap, defaultPortions, ingMap, recipeMap, viewMode);
+      }).catch(function () { PCD.toast.error(t('cr_xlsx_unavailable') || 'Excel library failed to load.'); });
+      return;
+    }
+    try {
+      _doExportPortionXLSX(selectedRecipes, portionsMap, defaultPortions, ingMap, recipeMap, viewMode);
+    } catch (err) {
+      PCD.error && PCD.error('exportPortionXLSX failed:', err);
+      PCD.toast.error((t('cr_xlsx_export_failed') || 'Excel export failed') + ': ' + (err && err.message ? err.message : 'unknown'));
+    }
+  }
+
+  function _doExportPortionXLSX(selectedRecipes, portionsMap, defaultPortions, ingMap, recipeMap, viewMode) {
+    const t = PCD.i18n.t;
+    const totalPortions = selectedRecipes.reduce(function (s, r) { return s + (portionsMap[r.id] != null ? portionsMap[r.id] : defaultPortions); }, 0);
+    const dateStr = new Date().toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || 'en');
+    const subtitle = totalPortions + ' ' + (t('portion_total_portions_label') || 'total portions') + ' · ' +
+      selectedRecipes.length + ' ' + (t('portion_recipes_label') || 'recipes') + ' · ' + dateStr;
+    const AMT = '#,##0.##', MONEY = '#,##0.00';
+    const totalLabel = t('pc_xl_total') || 'TOTAL';
+    let spec;
+
+    if (viewMode === 'recipe') {
+      const rows = [];
+      let total = 0;
+      selectedRecipes.forEach(function (r) {
+        const target = portionsMap[r.id] != null ? portionsMap[r.id] : defaultPortions;
+        const factor = target / (r.servings || 1);
+        const flat = PCD.recipes.flattenIngredients(r, ingMap, recipeMap, { scale: factor });
+        flat.forEach(function (item) {
+          const ing = item.ingredient; if (!ing) return;
+          const amt = Number(item.amount) || 0;
+          let cost = amt * (ing.pricePerUnit || 0);
+          if (item.unit && ing.unit && item.unit !== ing.unit) {
+            try { cost = PCD.convertUnit(amt, item.unit, ing.unit) * (ing.pricePerUnit || 0); } catch (e) {}
+          }
+          total += cost;
+          const nm = (ing.name || '') + (item.viaSubRecipe ? ' (via ' + item.viaSubRecipe + ')' : '');
+          rows.push([r.name + ' (' + target + 'p)', nm, amt, item.unit || '', cost]);
+        });
+      });
+      rows.push(['', totalLabel, '', '', total]);
+      spec = {
+        name: (t('portion_print_title') || 'Scaled recipes').slice(0, 31),
+        title: t('portion_print_title') || 'Scaled recipes',
+        subtitle: subtitle,
+        headers: [t('pc_xl_recipe') || 'Recipe', t('pc_xl_ingredient') || 'Ingredient', t('pc_xl_amount') || 'Amount', t('pc_xl_unit') || 'Unit', t('pc_xl_cost') || 'Cost'],
+        align: ['left', 'left', 'right', 'left', 'right'],
+        numFmt: { 2: AMT, 4: MONEY },
+        rows: rows,
+      };
+    } else {
+      const res = consolidateRows(selectedRecipes, portionsMap, defaultPortions, ingMap, recipeMap);
+      const groups = groupRows(res.rows, viewMode, t);
+      const rows = [];
+      Object.keys(groups).sort().forEach(function (g) {
+        groups[g].forEach(function (c) {
+          rows.push([g, c.ingredient.name || '', Number(c.totalAmount) || 0, c.unit || '', Number(c.totalCost) || 0]);
+        });
+      });
+      rows.push([totalLabel, '', '', '', res.total]);
+      const groupHdr = viewMode === 'supplier' ? (t('pc_xl_supplier') || 'Supplier') : (t('pc_xl_category') || 'Category');
+      spec = {
+        name: (t('pc_consolidated') || 'Consolidated').slice(0, 31),
+        title: t('pc_consolidated') || 'Consolidated ingredients',
+        subtitle: subtitle,
+        headers: [groupHdr, t('pc_xl_ingredient') || 'Ingredient', t('pc_xl_amount') || 'Amount', t('pc_xl_unit') || 'Unit', t('pc_xl_cost') || 'Cost'],
+        align: ['left', 'left', 'right', 'left', 'right'],
+        numFmt: { 2: AMT, 4: MONEY },
+        rows: rows,
+      };
+    }
+
+    const fname = (spec.title || 'Portion').replace(/[\\\/\?\*\[\]:]/g, '_') + '.xlsx';
+    PCD.xlsx.save(window.XLSX, [spec], fname);
   }
 
   PCD.tools = PCD.tools || {};
