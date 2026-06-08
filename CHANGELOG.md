@@ -4,6 +4,20 @@ Kronolojik tersine (en son üstte). Her sürüm: başlık + ana değişiklikler.
 
 ---
 
+## v2.23.0 — Checklist odaklı cila (Araç 3/8): editörde canlı A4 baskı önizlemesi · 2026-06-08
+
+Kod-önce analiz: Checklist zaten en olgun araç (control/prep modları, kategori
+şeritleri, reçete/menüden otomatik doldurma, seans takibi, geçmiş, baskı düzeni
+paneli). Köklü değişiklik gereksiz — operatörün onayıyla **odaklı cila**: baskı
+çıktısının ne göründüğünü editörde anında gösteren canlı önizleme.
+
+- **Canlı A4 önizleme (editörde):** Yön / sütun / yazı boyutu / aralık / kalın değiştikçe ve madde metni yazıldıkça gerçek baskı çıktısı anında güncellenir — WYSIWYG.
+- **Tek render motoru:** Baskı fonksiyonu `buildChecklistHtml()` olarak ayrıldı; hem yazdırma hem önizleme aynı HTML'i üretir (önizleme ≠ çıktı riski yok). Önizleme, baskı CSS'ini modaldan izole etmek için iframe içinde render edilir, A4 px'te + panele sığacak şekilde ölçeklenir.
+- Tarayıcıda doğrulandı: 11 maddelik kontrol listesi yüklenir, yön (dikey↔yatay) boyutları çevirir, 2 sütun düzeni uygulanır, canlı metin düzenlemesi başlığa yansır; konsol temiz.
+- Mevcut motor, seans/bulut sync, çok-dil, kategori sistemi korundu.
+
+---
+
 ## v2.22.0 — Prep Sheet büyük geliştirme (Araç 2/8) · 2026-06-08
 
 Kod-önce analiz: model doğru (dish→component checklist), köklü rewrite YOK —

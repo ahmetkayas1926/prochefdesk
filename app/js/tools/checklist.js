@@ -856,7 +856,8 @@
 
   // ============ PRINT (control + prep, blank or filled) ============
   // Blank prints leave Date BLANK — the chef writes it by hand (operator rule).
-  function printChecklist(tpl, session) {
+  // v2.23 — Baskı HTML'i (PCD.print + canlı önizleme iframe ortak)
+  function buildChecklistHtml(tpl, session) {
     const isPrep = (session ? session.kind : tpl.kind) === 'prep';
     const name = (tpl && tpl.name) || (session && session.templateName) || L('chk_print_default', 'Checklist');
     const filled = !!session;
@@ -975,7 +976,12 @@
       '</div>';
     }
 
-    PCD.print(html, name + (filled ? ' — ' + PCD.fmtDate(session.completedAt || session.startedAt, { month: 'short', day: 'numeric' }) : ' — ' + L('chk_blank', 'blank')));
+    return html;
+  }
+
+  function printChecklist(tpl, session) {
+    const name = (tpl && tpl.name) || (session && session.templateName) || L('chk_print_default', 'Checklist');
+    PCD.print(buildChecklistHtml(tpl, session), name + (session ? ' — ' + PCD.fmtDate(session.completedAt || session.startedAt, { month: 'short', day: 'numeric' }) : ' — ' + L('chk_blank', 'blank')));
   }
 
   // ============ SHARE (light: PDF + text) ============
@@ -1090,6 +1096,7 @@
       if (data.kind === 'prep') renderDishes();
       else renderItems();
       wirePrintLayout();
+      refreshPreview();
     }
 
     // ---- Print layout panel (orientation / columns / font / density / bold) ----
@@ -1111,7 +1118,9 @@
         '<div style="display:flex;gap:6px;">' + seg('density', 'compact', o.density, L('chk_pl_compact', 'Compact')) + seg('density', 'normal', o.density, L('chk_pl_normal', 'Normal')) + seg('density', 'relaxed', o.density, L('chk_pl_relaxed', 'Relaxed')) + '</div>' +
         '<div style="margin-top:8px;"><button type="button" class="btn btn-sm ' + (o.bold ? 'btn-primary' : 'btn-outline') + '" data-pl="bold:toggle" style="width:100%;">' + esc(L('chk_pl_bold', 'Bold text')) + (o.bold ? ' ✓' : '') + '</button></div>' +
         '<div id="plCapacity" style="font-size:12px;padding:8px 10px;border-radius:6px;margin-top:10px;line-height:1.4;"></div>' +
-        '<button type="button" class="btn btn-outline btn-sm" id="plPreview" style="width:100%;margin-top:6px;">' + PCD.icon('print', 14) + ' ' + esc(L('chk_print_blank', 'Print blank')) + '</button>' +
+        '<div class="text-muted" style="font-size:11px;margin:10px 0 4px;text-transform:uppercase;letter-spacing:0.04em;">' + esc(L('chk_live_preview', 'Live preview')) + '</div>' +
+        '<div id="chkPreview" style="max-height:380px;overflow:auto;border-radius:6px;background:var(--surface-2);padding:6px;"></div>' +
+        '<button type="button" class="btn btn-outline btn-sm" id="plPreview" style="width:100%;margin-top:8px;">' + PCD.icon('print', 14) + ' ' + esc(L('chk_print_blank', 'Print blank')) + '</button>' +
       '</div>';
     }
     function wirePrintLayout() {
@@ -1151,6 +1160,31 @@
         el.style.background = '#fef3c7'; el.style.color = '#92400e';
         el.innerHTML = '⚠ ' + esc(L('chk_spills', '≈{n} pages').replace('{n}', pages)) + ' · ' + count + ' ' + esc(unit) + ' / ≈' + cap + ' ' + esc(L('chk_per_page', 'per page'));
       }
+    }
+
+    // v2.23 — Canlı A4 baskı önizlemesi (baskı motorunu iframe içinde izole render)
+    function refreshPreview() {
+      const box = PCD.$('#chkPreview', body);
+      if (!box) return;
+      const o = normalizePrintOpts(data.printOpts, data.kind === 'prep');
+      const land = o.orientation === 'landscape';
+      const MM = 3.7795;
+      const pageW = (land ? 297 : 210) * MM, pageH = (land ? 210 : 297) * MM;
+      let frame = box.querySelector('iframe');
+      let outer = box.querySelector('.chk-pv-outer');
+      if (!frame) {
+        box.innerHTML = '<div class="chk-pv-outer" style="position:relative;overflow:hidden;margin:0 auto;border:1px solid var(--border);border-radius:4px;background:#fff;"><iframe class="chk-pv-frame" style="border:0;transform-origin:top left;background:#fff;"></iframe></div>';
+        frame = box.querySelector('iframe'); outer = box.querySelector('.chk-pv-outer');
+      }
+      frame.style.width = pageW + 'px'; frame.style.height = pageH + 'px';
+      frame.srcdoc = '<!doctype html><html><head><meta charset="utf-8"></head><body style="margin:0;background:#fff;">' + buildChecklistHtml(data, null) + '</body></html>';
+      (function fit() {
+        const w = box.clientWidth; if (!w) { requestAnimationFrame(fit); return; }
+        const k = Math.min(1, (w - 14) / pageW);
+        frame.style.transform = 'scale(' + k + ')';
+        outer.style.width = Math.round(pageW * k) + 'px';
+        outer.style.height = Math.round(pageH * k) + 'px';
+      })();
     }
 
     function renderItems() {
@@ -1228,6 +1262,8 @@
     }
     function findComp(id) { let f = null; data.dishes.forEach(function (d) { (d.comps || []).forEach(function (c) { if (c.id === id) f = c; }); }); return f; }
 
+    // Metin düzenlemeleri canlı önizlemeyi güncellesin (body render2 boyunca sabit kalır)
+    body.addEventListener('input', PCD.debounce(function () { refreshPreview(); }, 400));
     render2();
 
     const saveBtn = PCD.el('button', { class: 'btn btn-primary', text: L('save', 'Save'), style: { flex: '1' } });

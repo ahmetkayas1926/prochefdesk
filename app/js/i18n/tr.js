@@ -2373,6 +2373,7 @@ window.PCD.i18n.register('tr', {
   chk_menu_no_dishes: "Bu menüde tarif bağlı yemek yok",
   chk_import_n: "İçe aktar",
   chk_print_blank: "Boş yazdır",
+  chk_live_preview: "Canlı önizleme",
   chk_print_default: "Kontrol Listesi",
   chk_print_item: "Madde",
   chk_print_done: "Tamam",

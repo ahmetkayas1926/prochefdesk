@@ -2376,6 +2376,7 @@ window.PCD.i18n.register('en', {
   chk_menu_no_dishes: "This menu has no recipe dishes",
   chk_import_n: "Import",
   chk_print_blank: "Print blank",
+  chk_live_preview: "Live preview",
   chk_print_default: "Checklist",
   chk_print_item: "Item",
   chk_print_done: "Done",
