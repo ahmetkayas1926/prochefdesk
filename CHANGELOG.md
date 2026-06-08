@@ -4,6 +4,30 @@ Kronolojik tersine (en son üstte). Her sürüm: başlık + ana değişiklikler.
 
 ---
 
+## v2.26.0 — Prep Sheet: kanvas-merkezli redesign (sol liste kalktı, modal düzenleme) · 2026-06-08
+
+Operatör geri bildirimi: sol uzun düzenleme listesi pratik değildi ("berbat çalışma
+alanı"). Menu Studio mantığına geçildi — kanvas tek çalışma alanı, kart düzenleme modalı.
+
+- **Sol uzun liste kaldırıldı.** Kanvas (gerçek A4, önizleme=baskı) artık tek çalışma alanı, tam genişlikte ~1:1 — kartlar okunaklı, butonlar net.
+- **Kartta belirgin butonlar:** Her yemek kartının sağ üstünde **sürükle tutamacı** (⠿) + **düzenle** (✎) butonu. Kart hover'da yeşil çerçeveyle belirginleşir.
+- **Modal düzenleme:** Karta (veya ✎'e) tıkla → modern modal: yemek adı + istasyon + bileşenler (ekle / sil / sürükle-sırala) → **Kaydet**. "Manuel yemek" boş kart açıp modalı getirir; iptal edilirse boş kart silinir.
+- **Sürükle-sırala** artık tutamaçtan (önceki "tüm kart sürüklenir" yerine net buton). Boşluk / sütun / yön / yazı boyutu / çerçeve / accent / presets üstte kompakt toolbar.
+- Önizleme=baskı motoru, bulut sync, çok-dil korundu; baskıda kart butonları çıkmaz (yalnız ekran). Tarayıcıda doğrulandı: kart→modal, düzenle→kaydet→kanvas güncellenir, tutamaçla sıralama, manuel→modal, baskı temiz.
+
+---
+
+## v2.25.0 — Prep Sheet: kanvasta sürükle-bırak + kart arası boşluk kontrolü · 2026-06-08
+
+Operatör geri bildirimi (2.24.0 sonrası): sürükle-bırak yanlış yerde (editörde),
+kanvasta olmalı; kanvasta kartlar arası boşluk verimsiz, yer israfı var.
+
+- **Kanvas (A4 önizleme) üzerinde sürükle-bırak:** Yemek kartları artık doğrudan önizleme üzerinde sürüklenip yeniden sıralanıyor (hover'da yeşil kesik çerçeve ipucu + grab imleci). Editördeki yemek-seviyesi tutamaç kaldırıldı (kanvasa taşındı); bileşen tutamaçları editörde kaldı (kanvasta bileşen sıralaması pratik değil).
+- **Kart arası boşluk kontrolü:** Çok bitişik / Orta / Geniş — kartlar arası hem yatay hem dikey boşluğu ayarlar. "Çok bitişik" yer israfını ortadan kaldırır (örn. 2 sayfalık liste tek sayfaya sığar). Önizleme + baskı ortak (aynı sayfalama motoru).
+- Tarayıcıda doğrulandı: kanvasta yemek sürükleyip sıralama (sıra değişti), boşluk tight→1 sayfa / medium→2 / wide→2 (yatay aralık tight<medium<wide), editör tutamacı kalktı; konsol temiz. Eski sheet'ler varsayılan (orta boşluk) geriye uyumlu.
+
+---
+
 ## v2.24.0 — Prep Sheet: önizleme = baskı (gerçek A4 motor) + yazı boyutu/Bold/çerçeve · 2026-06-08
 
 Operatör ciddi bug bildirdi: canlı önizleme ile gerçek Chrome çıktısı farklıydı

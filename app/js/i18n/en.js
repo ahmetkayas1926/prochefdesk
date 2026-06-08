@@ -2999,6 +2999,17 @@ window.PCD.i18n.register('en', {
   prep_border_medium: "Medium",
   prep_border_bold: "Bold",
   prep_border_xbold: "Extra",
+  prep_spacing_label: "Spacing",
+  prep_spacing_tight: "Tight",
+  prep_spacing_medium: "Medium",
+  prep_spacing_wide: "Wide",
+  prep_canvas_label: "Canvas",
+  prep_canvas_hint: "Click a card to edit · drag the handle to reorder",
+  prep_edit_dish: "Edit dish",
+  prep_new_dish: "New dish",
+  prep_station_label: "Station (optional)",
+  prep_components_label: "Components",
+  prep_delete_dish: "Delete dish",
 
   // v2.6.65 — Offline dataURL photo migration
 });

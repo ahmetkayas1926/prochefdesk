@@ -24,7 +24,8 @@
   const TABLE = 'prepSheets';
   const PREF_ACTIVE = 'prefs.prepActiveId';
   // v2.22 — Sürükle-sırala durumu (yemek vs bileşen ayrı; guard ile çakışma yok)
-  let _dragDishId = null, _dragComp = null;
+  // v2.25 — _dragCanvasDish: kanvas (önizleme A4) üzerinde yemek sürükleme
+  let _dragDishId = null, _dragComp = null, _dragCanvasDish = null;
   // v2.24 — CSS px / mm @96dpi (açık sayfalama motoru için)
   const MM = 3.7795;
 
@@ -52,7 +53,7 @@
   function setActiveId(id) { PCD.store.set(PREF_ACTIVE, id); }
 
   function defaultSheet() {
-    return { name: t('prep_untitled', 'Untitled'), dishes: [], columns: 3, orientation: 'portrait', accent: '#1f3b30', fontSize: 'm', bold: false, border: 'medium' };
+    return { name: t('prep_untitled', 'Untitled'), dishes: [], columns: 3, orientation: 'portrait', accent: '#1f3b30', fontSize: 'm', bold: false, border: 'medium', spacing: 'medium' };
   }
   // Aktif sheet'i döndür; hiç yoksa bir tane oluştur.
   function ensureActive() {
@@ -116,21 +117,26 @@
         '</div>' +
       '</div>' +
 
-      // v2.22 — 2 panel: sol editör / sağ canlı A4 önizleme + pill stili
-      '<style>@media(max-width:900px){.ps-wrap{grid-template-columns:1fr !important;}}.ps-wrap .btn-secondary.active{background:var(--brand-600)!important;color:#fff!important;border-color:var(--brand-600)!important;}</style>' +
-      '<div class="ps-wrap" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;">' +
-      '<div style="min-width:0;">' +
-        // Library bar
+      // v2.26 — Kanvas-merkezli: sol uzun liste kaldırıldı; kanvas tek çalışma alanı.
+      '<style>.ps-wrap .btn-secondary.active{background:var(--brand-600)!important;color:#fff!important;border-color:var(--brand-600)!important;}' +
+        '.ps-cv-dish{position:relative;cursor:pointer;}' +
+        '.ps-cv-dish:hover{outline:2px solid rgba(22,163,74,.9);outline-offset:1px;border-radius:5px;}' +
+        '.ps-cv-tools{position:absolute;top:3px;right:3px;display:flex;gap:3px;z-index:6;}' +
+        '.ps-cv-tools .ps-cv-b{width:24px;height:24px;display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid #bcbcbc;border-radius:5px;box-shadow:0 1px 3px rgba(0,0,0,.28);color:#333;padding:0;}' +
+        '.ps-cv-tools .ps-cv-grip{cursor:grab;}.ps-cv-tools .ps-cv-grip:active{cursor:grabbing;}' +
+      '</style>' +
+      '<div class="ps-wrap">' +
+        // ---- Aksiyon bar: kayıt/library + isim + yemek ekle ----
         '<div class="card mb-3" style="padding:10px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
           '<button class="btn btn-primary btn-sm" id="prepSaveBtn">' + PCD.icon('check', 14) + ' <span>' + esc(t('prep_save_btn', 'Save')) + '</span></button>' +
           '<button class="btn btn-outline btn-sm" id="prepSavedListBtn">' + PCD.icon('book-open', 14) + ' <span>' + esc(t('prep_saved_list_btn', 'Saved')) + ' (' + count + ')</span></button>' +
           '<button class="btn btn-outline btn-sm" id="prepNewBtn">' + PCD.icon('plus', 14) + ' <span>' + esc(t('prep_new_btn', 'New')) + '</span></button>' +
+          '<input id="prepName" type="text" class="input" maxlength="80" placeholder="' + esc(t('prep_name_ph', 'e.g. 2026 Dinner Prep')) + '" value="' + esc(sheet.name || '') + '" style="flex:1;min-width:150px;">' +
+          '<button class="btn btn-primary btn-sm" id="prepAddDishBtn">' + PCD.icon('plus', 14) + ' <span>' + esc(t('prep_add_dish', 'Add dish')) + '</span></button>' +
+          '<button class="btn btn-outline btn-sm" id="prepAddManualBtn">' + PCD.icon('plus', 14) + ' <span>' + esc(t('prep_add_manual', 'Manual dish')) + '</span></button>' +
         '</div>' +
-        buildGuide() +
-        // Meta: name + columns + orientation + accent + presets
-        '<div class="card mb-3" style="padding:14px;">' +
-          '<div class="text-muted text-sm mb-1">' + esc(t('prep_name_label', 'List name')) + '</div>' +
-          '<input id="prepName" type="text" class="input" maxlength="80" placeholder="' + esc(t('prep_name_ph', 'e.g. 2026 Dinner Prep')) + '" value="' + esc(sheet.name || '') + '" style="width:100%;margin-bottom:12px;">' +
+        // ---- Stil toolbar ----
+        '<div class="card mb-3" style="padding:12px 14px;">' +
           '<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;">' +
             '<div>' +
               '<div class="text-muted text-sm mb-1">' + esc(t('prep_columns_label', 'Print columns')) + '</div>' +
@@ -174,6 +180,14 @@
               '</div>' +
             '</div>' +
             '<div>' +
+              '<div class="text-muted text-sm mb-1">' + esc(t('prep_spacing_label', 'Spacing')) + '</div>' +
+              '<div class="flex gap-1">' +
+                [['tight', t('prep_spacing_tight', 'Tight')], ['medium', t('prep_spacing_medium', 'Medium')], ['wide', t('prep_spacing_wide', 'Wide')]].map(function (s) {
+                  return '<button type="button" class="btn btn-secondary btn-sm' + ((sheet.spacing || 'medium') === s[0] ? ' active' : '') + '" data-spacing="' + s[0] + '">' + esc(s[1]) + '</button>';
+                }).join('') +
+              '</div>' +
+            '</div>' +
+            '<div>' +
               '<div class="text-muted text-sm mb-1">&nbsp;</div>' +
               '<button type="button" class="btn btn-secondary btn-sm' + (sheet.bold ? ' active' : '') + '" data-bold="1" style="font-weight:800;">' + esc(t('prep_bold', 'Bold')) + '</button>' +
             '</div>' +
@@ -182,24 +196,16 @@
             '</div>' +
           '</div>' +
         '</div>' +
-        // Add dish buttons
-        '<div class="flex gap-2 mb-3" style="flex-wrap:wrap;">' +
-          '<button class="btn btn-primary" id="prepAddDishBtn" style="flex:1;min-width:160px;">' + PCD.icon('plus', 16) + ' <span>' + esc(t('prep_add_dish', 'Add dish')) + '</span></button>' +
-          '<button class="btn btn-outline" id="prepAddManualBtn" style="flex:1;min-width:160px;">' + PCD.icon('plus', 16) + ' <span>' + esc(t('prep_add_manual', 'Manual dish')) + '</span></button>' +
-        '</div>' +
-        '<div id="prepDishes"></div>' +
-      '</div>' +
-      '<div style="min-width:0;">' +
-        '<div class="card" style="padding:8px;background:var(--surface-2);position:sticky;top:12px;">' +
-          '<div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px 6px;">' +
-            '<span style="font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-3);">' + esc(t('prep_preview_label', 'Live preview')) + '</span>' +
+        // ---- Kanvas (tek çalışma alanı) ----
+        '<div class="card" style="padding:10px;background:var(--surface-2);">' +
+          '<div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px 8px;gap:8px;flex-wrap:wrap;">' +
+            '<span style="font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-3);">' + esc(t('prep_canvas_label', 'Canvas')) + '</span>' +
+            '<span class="text-muted" style="font-size:11px;">' + esc(t('prep_canvas_hint', 'Click a card to edit · drag the handle to reorder')) + '</span>' +
           '</div>' +
-          '<div id="prepPreview" style="background:var(--surface);border-radius:6px;overflow:auto;max-height:calc(100vh - 150px);"></div>' +
+          '<div id="prepPreview" style="background:var(--surface);border-radius:6px;overflow:auto;max-height:calc(100vh - 240px);"></div>' +
         '</div>' +
-      '</div>' +
       '</div>';
 
-    renderDishes(view, sheet);
     wire(view, sheet);
     updatePreview(view, sheet);
   }
@@ -246,39 +252,83 @@
     '</div>';
   }
 
-  // ============ DISHES EDITOR ============
-  function renderDishes(view, sheet) {
-    const host = view.querySelector('#prepDishes');
-    if (!host) return;
-    const dishes = sheet.dishes || [];
-    if (!dishes.length) {
-      host.innerHTML =
-        '<div class="card" style="padding:40px 24px;text-align:center;">' +
-          '<div style="font-size:40px;margin-bottom:10px;">🍽️</div>' +
-          '<div style="font-weight:700;font-size:16px;margin-bottom:6px;">' + esc(t('prep_empty_title', 'No dishes yet')) + '</div>' +
-          '<div class="text-muted" style="font-size:13px;max-width:420px;margin:0 auto;">' + esc(t('prep_empty_msg', 'Add a dish to pull its components automatically, or add a manual dish to type everything yourself.')) + '</div>' +
-        '</div>';
-      return;
-    }
-    host.innerHTML = dishes.map(function (d, di) {
-      const comps = (d.components || []).map(function (c, ci) {
-        return '<div class="flex items-center gap-2" data-comp-row="' + di + ':' + ci + '" style="margin-bottom:4px;">' +
-          '<span draggable="true" data-comp-drag="' + di + ':' + ci + '" title="' + esc(t('prep_drag', 'Drag to reorder')) + '" style="cursor:grab;color:var(--text-3);font-size:13px;flex-shrink:0;user-select:none;line-height:1;">⠿</span>' +
-          '<input type="text" class="input" data-comp="' + di + ':' + ci + '" value="' + esc(c.text || '') + '" placeholder="' + esc(t('prep_component_ph', 'Component')) + '" style="flex:1;min-width:0;padding:4px 8px;min-height:30px;font-size:13px;">' +
-          '<button type="button" class="icon-btn" data-comp-del="' + di + ':' + ci + '" title="' + esc(t('delete', 'Delete')) + '" style="flex-shrink:0;">' + PCD.icon('trash', 14) + '</button>' +
-        '</div>';
-      }).join('');
-      return '<div class="card mb-3" data-dish-card="' + esc(d.id) + '" style="padding:12px 14px;">' +
-        '<div class="flex items-center gap-2" style="margin-bottom:10px;">' +
-          '<span class="ps-grip" draggable="true" data-dish-drag="' + esc(d.id) + '" title="' + esc(t('prep_drag', 'Drag to reorder')) + '" style="cursor:grab;color:var(--text-3);font-size:16px;flex-shrink:0;user-select:none;line-height:1;">⠿</span>' +
-          '<input type="text" class="input" data-dish="' + di + '" value="' + esc(d.name || '') + '" placeholder="' + esc(t('prep_dish_ph', 'Dish name')) + '" style="flex:1;min-width:0;font-weight:700;font-size:15px;">' +
-          '<button type="button" class="btn btn-outline btn-sm" data-dish-del="' + di + '" style="flex-shrink:0;color:var(--danger);border-color:var(--danger);">' + PCD.icon('trash', 14) + '</button>' +
-        '</div>' +
-        '<input type="text" class="input" data-station="' + di + '" value="' + esc(d.station || '') + '" placeholder="' + esc(t('prep_station_ph', 'Station (optional) — e.g. Grill')) + '" style="width:100%;margin-bottom:8px;padding:4px 8px;min-height:28px;font-size:12px;color:var(--text-2);">' +
-        '<div data-comps="' + di + '">' + comps + '</div>' +
-        '<button type="button" class="btn btn-ghost btn-sm" data-comp-add="' + di + '" style="margin-top:4px;">' + PCD.icon('plus', 13) + ' <span>' + esc(t('prep_add_component', 'Add component')) + '</span></button>' +
+  // ============ DISH EDITOR (modal — kanvas kartına tıkla) ============
+  // v2.26 — Sol uzun liste yerine: karta tıkla → bu modal. İsim + istasyon +
+  // bileşenler (ekle/sil/sürükle-sırala) → Kaydet.
+  let _mDragComp = null; // modal içi bileşen sürükle durumu
+  function openDishEditor(view, sheet, dishId, isNew) {
+    const dish = (sheet.dishes || []).find(function (d) { return d.id === dishId; });
+    if (!dish) return;
+    const work = PCD.clone(dish);
+    if (!Array.isArray(work.components)) work.components = [];
+    const body = PCD.el('div');
+
+    function compRow(c, i) {
+      return '<div class="flex items-center gap-2" data-mc-row="' + i + '" style="margin-bottom:5px;">' +
+        '<span draggable="true" data-mc-drag="' + i + '" title="' + esc(t('prep_drag', 'Drag to reorder')) + '" style="cursor:grab;color:var(--text-3);font-size:14px;flex-shrink:0;user-select:none;line-height:1;">⠿</span>' +
+        '<input type="text" class="input" data-mc="' + i + '" value="' + esc(c.text || '') + '" placeholder="' + esc(t('prep_component_ph', 'Component')) + '" style="flex:1;min-width:0;padding:5px 9px;min-height:32px;font-size:13px;">' +
+        '<button type="button" class="icon-btn" data-mc-del="' + i + '" title="' + esc(t('delete', 'Delete')) + '" style="flex-shrink:0;">' + PCD.icon('trash', 14) + '</button>' +
       '</div>';
-    }).join('');
+    }
+    function syncFromDom() {
+      const nm = PCD.$('#deName', body); if (nm) work.name = nm.value;
+      const st = PCD.$('#deStation', body); if (st) work.station = st.value;
+      body.querySelectorAll('[data-mc]').forEach(function (inp) {
+        const i = parseInt(inp.getAttribute('data-mc'), 10);
+        if (work.components[i]) work.components[i].text = inp.value;
+      });
+    }
+    function paint() {
+      body.innerHTML =
+        '<div class="field" style="margin-bottom:12px;"><label class="field-label">' + esc(t('prep_dish_ph', 'Dish name')) + '</label>' +
+          '<input type="text" id="deName" class="input" value="' + esc(work.name || '') + '" placeholder="' + esc(t('prep_dish_ph', 'Dish name')) + '" style="width:100%;font-weight:600;"></div>' +
+        '<div class="field" style="margin-bottom:12px;"><label class="field-label">' + esc(t('prep_station_label', 'Station (optional)')) + '</label>' +
+          '<input type="text" id="deStation" class="input" value="' + esc(work.station || '') + '" placeholder="' + esc(t('prep_station_ph', 'Station (optional) — e.g. Grill')) + '" style="width:100%;"></div>' +
+        '<div class="field"><label class="field-label">' + esc(t('prep_components_label', 'Components')) + '</label>' +
+          '<div id="deComps">' + work.components.map(compRow).join('') + '</div>' +
+          '<button type="button" class="btn btn-ghost btn-sm" id="deAddComp" style="margin-top:4px;">' + PCD.icon('plus', 13) + ' <span>' + esc(t('prep_add_component', 'Add component')) + '</span></button>' +
+        '</div>';
+    }
+    paint();
+
+    PCD.on(body, 'input', '[data-mc]', function () { const i = parseInt(this.getAttribute('data-mc'), 10); if (work.components[i]) work.components[i].text = this.value; });
+    PCD.on(body, 'click', '[data-mc-del]', function () { syncFromDom(); const i = parseInt(this.getAttribute('data-mc-del'), 10); work.components.splice(i, 1); paint(); });
+    body.addEventListener('click', function (e) {
+      if (!(e.target.closest && e.target.closest('#deAddComp'))) return;
+      syncFromDom(); work.components.push({ id: uid('c'), text: '' }); paint();
+      setTimeout(function () { const ins = body.querySelectorAll('[data-mc]'); if (ins.length) ins[ins.length - 1].focus(); }, 30);
+    });
+    PCD.on(body, 'dragstart', '[data-mc-drag]', function (e) { _mDragComp = parseInt(this.getAttribute('data-mc-drag'), 10); try { e.dataTransfer.effectAllowed = 'move'; } catch (err) {} });
+    PCD.on(body, 'dragover', '[data-mc-row]', function (e) { if (_mDragComp != null) e.preventDefault(); });
+    PCD.on(body, 'drop', '[data-mc-row]', function (e) {
+      if (_mDragComp == null) return; e.preventDefault();
+      syncFromDom();
+      const to = parseInt(this.getAttribute('data-mc-row'), 10); const from = _mDragComp; _mDragComp = null;
+      if (from === to) return;
+      const it = work.components.splice(from, 1)[0];
+      work.components.splice(from < to ? to - 1 : to, 0, it);
+      paint();
+    });
+
+    const delBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', text: t('prep_delete_dish', 'Delete dish'), style: { color: 'var(--danger)', borderColor: 'var(--danger)', marginInlineEnd: 'auto' } });
+    const cancelBtn = PCD.el('button', { type: 'button', class: 'btn btn-secondary', text: t('cancel', 'Cancel') });
+    const saveBtn = PCD.el('button', { type: 'button', class: 'btn btn-primary', text: t('save', 'Save') });
+    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', alignItems: 'center' } });
+    footer.appendChild(delBtn); footer.appendChild(cancelBtn); footer.appendChild(saveBtn);
+    const m = PCD.modal.open({ title: isNew ? t('prep_new_dish', 'New dish') : t('prep_edit_dish', 'Edit dish'), body: body, footer: footer, size: 'sm', closable: true });
+
+    function removeDish() { const idx = (sheet.dishes || []).findIndex(function (d) { return d.id === dishId; }); if (idx >= 0) { sheet.dishes.splice(idx, 1); persist(sheet); render(view); } }
+    cancelBtn.addEventListener('click', function () { if (isNew) removeDish(); m.close(); });
+    delBtn.addEventListener('click', function () { removeDish(); m.close(); });
+    saveBtn.addEventListener('click', function () {
+      syncFromDom();
+      work.name = (work.name || '').trim();
+      work.station = (work.station || '').trim();
+      work.components = work.components.filter(function (c) { return (c.text || '').trim(); });
+      const idx = (sheet.dishes || []).findIndex(function (d) { return d.id === dishId; });
+      if (idx >= 0) sheet.dishes[idx] = work;
+      persist(sheet); render(view); m.close();
+    });
   }
 
   // ============ EVENTS ============
@@ -319,6 +369,26 @@
     PCD.on(view, 'click', '[data-fontsize]', function () { sheet.fontSize = this.getAttribute('data-fontsize'); persist(sheet); render(view); });
     PCD.on(view, 'click', '[data-border]', function () { sheet.border = this.getAttribute('data-border'); persist(sheet); render(view); });
     PCD.on(view, 'click', '[data-bold]', function () { sheet.bold = !sheet.bold; persist(sheet); render(view); });
+    // v2.25 — Boşluk (kart arası yatay + dikey)
+    PCD.on(view, 'click', '[data-spacing]', function () { sheet.spacing = this.getAttribute('data-spacing'); persist(sheet); render(view); });
+    // v2.26 — Kanvas: karta tıkla → düzenle modalı; tutamaçtan sürükle → sırala
+    PCD.on(view, 'click', '[data-card-dish]', function () { openDishEditor(view, sheet, this.getAttribute('data-card-dish')); });
+    PCD.on(view, 'dragstart', '[data-drag-dish]', function (e) { _dragCanvasDish = this.getAttribute('data-drag-dish'); try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', 'cdish'); } catch (err) {} });
+    PCD.on(view, 'dragover', '[data-card-dish]', function (e) { if (_dragCanvasDish) e.preventDefault(); });
+    PCD.on(view, 'drop', '[data-card-dish]', function (e) {
+      if (!_dragCanvasDish) return;
+      e.preventDefault();
+      const dropId = this.getAttribute('data-card-dish');
+      const dragId = _dragCanvasDish; _dragCanvasDish = null;
+      if (dragId === dropId) return;
+      const arr = sheet.dishes || [];
+      const fromIdx = arr.findIndex(function (d) { return d.id === dragId; });
+      const toIdx = arr.findIndex(function (d) { return d.id === dropId; });
+      if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) return;
+      const item = arr.splice(fromIdx, 1)[0];
+      arr.splice(fromIdx < toIdx ? toIdx - 1 : toIdx, 0, item);
+      persist(sheet); render(view);
+    });
     // v2.22 — Presets
     const presetsBtn = view.querySelector('#prepPresetsBtn');
     if (presetsBtn) presetsBtn.addEventListener('click', function () { openPresets(view, sheet); });
@@ -393,16 +463,14 @@
     const addDish = view.querySelector('#prepAddDishBtn');
     if (addDish) addDish.addEventListener('click', function () { openDishPicker(view, sheet); });
 
-    // Add manual dish
+    // Add manual dish → boş kart ekle + düzenle modalını aç
     const addManual = view.querySelector('#prepAddManualBtn');
     if (addManual) addManual.addEventListener('click', function () {
-      sheet.dishes = (sheet.dishes || []).concat([{ id: uid('d'), recipeId: null, name: '', components: [] }]);
+      const nd = { id: uid('d'), recipeId: null, name: '', components: [{ id: uid('c'), text: '' }] };
+      sheet.dishes = (sheet.dishes || []).concat([nd]);
       persist(sheet);
       render(view);
-      setTimeout(function () {
-        const inputs = view.querySelectorAll('[data-dish]');
-        if (inputs.length) inputs[inputs.length - 1].focus();
-      }, 50);
+      openDishEditor(view, sheet, nd.id, true);
     });
 
     // Print
@@ -667,7 +735,7 @@
     const atoms = [];
     groups.forEach(function (g) {
       if (g.station) atoms.push({ kind: 'station', html: '<div class="ps-station">' + esc(g.station) + '</div>' });
-      g.dishes.forEach(function (d) { atoms.push({ kind: 'dish', html: dishHtmlOf(d) }); });
+      g.dishes.forEach(function (d) { atoms.push({ kind: 'dish', id: d.id, html: dishHtmlOf(d) }); });
     });
     return { atoms: atoms, count: dishes.length };
   }
@@ -694,7 +762,10 @@
   function paginate(sheet) {
     const land = sheet.orientation === 'landscape';
     const N = Math.max(1, Math.min(4, sheet.columns || 3));
-    const gapPx = 7 * MM, dishGapPx = 6 * MM, stationGapPx = 4 * MM;
+    // v2.25 — Kart arası boşluk (yatay = col, dikey = dish); önizleme + baskı ortak
+    const SPACING = { tight: { col: 3, dish: 2 }, medium: { col: 7, dish: 6 }, wide: { col: 12, dish: 11 } };
+    const sp = SPACING[sheet.spacing] || SPACING.medium;
+    const gapPx = sp.col * MM, dishGapPx = sp.dish * MM, stationGapPx = 4 * MM;
     const contentWpx = ((land ? 297 : 210) - 20) * MM;
     const contentHpx = ((land ? 210 : 297) - 20) * MM - 4; // ufak güvenlik payı
     const colWpx = (contentWpx - (N - 1) * gapPx) / N;
@@ -723,7 +794,7 @@
           ci++;
           if (ci >= N) { newPage(0); cap = contentHpx; }
         }
-        cur.items.push({ x: colX(ci), y: Math.round(bandTop + colH[ci]), w: Math.round(colWpx), h: a.h, html: a.html });
+        cur.items.push({ x: colX(ci), y: Math.round(bandTop + colH[ci]), w: Math.round(colWpx), h: a.h, html: a.html, id: a.id, kind: 'dish' });
         colH[ci] += a.h + dishGapPx;
       }
     });
@@ -742,11 +813,20 @@
     const pages = pageData.pages;
     let out = '<style>' + sheetCss(sheet);
     if (mode === 'print') out += '@page{size:A4 ' + (land ? 'landscape' : 'portrait') + ';margin:10mm;}html,body{margin:0;padding:0;}body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#111;-webkit-print-color-adjust:exact;print-color-adjust:exact;}';
+    else out += '.ps-cv-dish{cursor:grab;} .ps-cv-dish:hover{outline:2px dashed rgba(22,163,74,.6);outline-offset:2px;border-radius:5px;} .ps-cv-dish:active{cursor:grabbing;}';
     out += '</style>';
     pages.forEach(function (pg, pi) {
       let inner = '';
       pg.items.forEach(function (it) {
-        inner += '<div style="position:absolute;left:' + it.x + 'px;top:' + it.y + 'px;width:' + it.w + 'px;">' + it.html + '</div>';
+        if (mode === 'screen' && it.kind === 'dish' && it.id) {
+          const tools = '<div class="ps-cv-tools">' +
+            '<span class="ps-cv-b ps-cv-grip" draggable="true" data-drag-dish="' + it.id + '" title="' + esc(t('prep_drag', 'Drag to reorder')) + '" style="font-size:13px;line-height:1;">⠿</span>' +
+            '<span class="ps-cv-b" title="' + esc(t('prep_edit_dish', 'Edit dish')) + '">' + PCD.icon('edit', 13) + '</span>' +
+          '</div>';
+          inner += '<div class="ps-cv-dish" data-card-dish="' + it.id + '" style="position:absolute;left:' + it.x + 'px;top:' + it.y + 'px;width:' + it.w + 'px;">' + tools + it.html + '</div>';
+        } else {
+          inner += '<div style="position:absolute;left:' + it.x + 'px;top:' + it.y + 'px;width:' + it.w + 'px;">' + it.html + '</div>';
+        }
       });
       if (mode === 'screen') {
         out += '<div class="ps-page" style="position:relative;box-sizing:border-box;width:' + pageWmm + 'mm;height:' + pageHmm + 'mm;padding:10mm;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.20);margin:0 auto 16px;overflow:hidden;color:#111;font-family:-apple-system,Segoe UI,Roboto,sans-serif;">' +

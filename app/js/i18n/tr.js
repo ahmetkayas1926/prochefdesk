@@ -2996,6 +2996,17 @@ window.PCD.i18n.register('tr', {
   prep_border_medium: "Orta",
   prep_border_bold: "Kalın",
   prep_border_xbold: "Ekstra",
+  prep_spacing_label: "Boşluk",
+  prep_spacing_tight: "Çok bitişik",
+  prep_spacing_medium: "Orta",
+  prep_spacing_wide: "Geniş",
+  prep_canvas_label: "Kanvas",
+  prep_canvas_hint: "Düzenlemek için karta tıkla · sıralamak için tutamacı sürükle",
+  prep_edit_dish: "Yemeği düzenle",
+  prep_new_dish: "Yeni yemek",
+  prep_station_label: "İstasyon (opsiyonel)",
+  prep_components_label: "Bileşenler",
+  prep_delete_dish: "Yemeği sil",
 
   // v2.6.65 — Offline dataURL photo migration
 });
