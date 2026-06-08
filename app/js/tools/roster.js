@@ -353,7 +353,8 @@
     // Grid
     html += '<div class="card" style="padding:12px;margin-bottom:12px;overflow-x:auto;">' +
       '<table id="rosterGrid" style="width:100%;border-collapse:collapse;min-width:' + (160 + dayCount * 96) + 'px;">' + gridHtml(data) + '</table>' +
-      '<button class="btn btn-ghost btn-sm" id="addStaff" style="margin-top:10px;">' + PCD.icon('plus', 14) + ' ' + PCD.escapeHtml(t('roster_add_staff') || 'Add staff') + '</button></div>';
+      '<button class="btn btn-ghost btn-sm" id="addStaff" style="margin-top:10px;">' + PCD.icon('plus', 14) + ' ' + PCD.escapeHtml(t('roster_add_staff') || 'Add staff') + '</button>' +
+      '<button class="btn btn-ghost btn-sm" id="rCopyPrev" style="margin-top:10px;margin-inline-start:8px;">⧉ ' + PCD.escapeHtml(t('roster_copy_prev') || 'Copy previous week') + '</button></div>';
 
     // Labour summary + cost toggle + actions
     html += '<div class="card" style="padding:14px;margin-bottom:12px;">' +
@@ -367,6 +368,11 @@
       '</div>' +
       '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">' + fontControlsHtml(data) + '</div>' +
       '</div>';
+
+    // v2.36 — Canlı A4 baskı önizlemesi (çıktıyla birebir; tek motor buildRosterTable)
+    html += '<details class="card" id="rPreviewWrap" style="padding:0;margin-bottom:12px;overflow:hidden;">' +
+      '<summary style="cursor:pointer;padding:12px 14px;font-weight:700;list-style:none;">📄 ' + PCD.escapeHtml(t('roster_preview') || 'Print preview') + '</summary>' +
+      '<div id="rPreview" style="padding:12px 14px;overflow-x:auto;background:#fff;border-top:1px solid var(--border);">' + buildRosterTable(data, _showCost) + '</div></details>';
 
     html += '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
       '<button class="btn btn-secondary" id="rPrint">' + PCD.icon('print', 14) + ' ' + PCD.escapeHtml(t('print') || 'Print') + '</button>' +
@@ -421,6 +427,7 @@
             '<div style="font-weight:600;font-size:13px;">' + PCD.escapeHtml(st.name || '—') + '</div>' +
             '<div class="text-muted" style="font-size:11px;">' + PCD.escapeHtml(st.role || '') + (Number(st.rate) > 0 ? ' · ' + (PCD.currencySymbol && PCD.currencySymbol() || '$') + PCD.fmtNumber(st.rate) + '/h' : '') + '</div>' +
             '<button class="btn btn-ghost btn-sm" data-edit-staff="' + st.id + '" style="padding:2px 6px;font-size:11px;margin-top:2px;">' + PCD.escapeHtml(t('edit') || 'Edit') + '</button>' +
+            '<button class="btn btn-ghost btn-sm" data-fill-row="' + st.id + '" style="padding:2px 6px;font-size:11px;margin-top:2px;color:var(--brand-700);" title="' + PCD.escapeHtml(t('roster_fill_week') || 'Fill week') + '">⚡ ' + PCD.escapeHtml(t('roster_fill_week') || 'Fill week') + '</button>' +
           '</td>';
         for (let d = 0; d < dayCount; d++) {
           h += '<td style="padding:3px;border-bottom:1px solid var(--border);text-align:center;">' + cellButtonHtml(st.id, d, cells[d]) + '</td>';
@@ -457,7 +464,7 @@
     PCD.$('#rDays', view).addEventListener('change', function () { data.dayCount = parseInt(this.value, 10) || 7; persist(data); render(view); });
     // v2.17 — Pro'da gerçek toggle; free'de kilitli label → upgrade modal.
     const _showCostEl = PCD.$('#rShowCost', view);
-    if (_showCostEl) _showCostEl.addEventListener('change', function () { _showCost = this.checked; });
+    if (_showCostEl) _showCostEl.addEventListener('change', function () { _showCost = this.checked; const pv = PCD.$('#rPreview', view); if (pv) pv.innerHTML = buildRosterTable(data, _showCost); });
     const _showCostLocked = PCD.$('#rShowCostLocked', view);
     if (_showCostLocked) _showCostLocked.addEventListener('click', function () {
       if (PCD.gate && PCD.gate.showUpgradeModal) PCD.gate.showUpgradeModal({ feature: 'labor', message: t('labor_cost_locked') });
@@ -476,6 +483,9 @@
     // Staff
     PCD.$('#addStaff', view).addEventListener('click', function () { openStaffEditor(view, data, null); });
     PCD.on(view, 'click', '[data-edit-staff]', function () { openStaffEditor(view, data, this.getAttribute('data-edit-staff')); });
+    // v2.36 — Hızlı doldurma + önceki haftayı kopyala
+    PCD.on(view, 'click', '[data-fill-row]', function () { openRowFill(view, data, this.getAttribute('data-fill-row')); });
+    const _cpEl = PCD.$('#rCopyPrev', view); if (_cpEl) _cpEl.addEventListener('click', function () { copyPreviousWeek(view, data); });
 
     // Cells
     PCD.on(view, 'click', '[data-cell]', function () {
@@ -580,6 +590,75 @@
       // v2.15.4 — Saat girilince durum kodunu temizle (ikisi bir arada olmaz)
       if (!s || !e) { delete data.cells[sid][day]; } else { data.cells[sid][day] = { start: s, end: e, note: (PCD.$('#cNote', body).value || '').trim() }; }
       persist(data); m.close(); render(view);
+    });
+  }
+
+  // v2.36 — Hızlı doldurma: bir personelin TÜM haftasını tek popup'tan doldur/temizle.
+  function openRowFill(view, data, sid) {
+    const st = (data.staff || []).find(function (s) { return s.id === sid; });
+    if (!st) return;
+    data.cells = data.cells || {}; data.cells[sid] = data.cells[sid] || {};
+    const dayCount = data.dayCount || 7;
+    const grpHd = 'font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-3);margin:2px 0 6px;';
+    const body = PCD.el('div');
+    const tplBtns = (data.templates || []).map(function (tp) {
+      return '<button type="button" class="btn btn-outline btn-sm" data-fill-tpl="' + tp.id + '">' + PCD.escapeHtml((tp.label || '') + ' ' + (tp.start || '') + '-' + (tp.end || '')) + '</button>';
+    }).join('');
+    const statusBtns = ROSTER_STATUS.map(function (s) {
+      return '<button type="button" class="btn btn-sm" data-fill-status="' + s.id + '" style="background:' + s.fill + ';border:1px solid ' + s.color + ';color:' + s.color + ';font-weight:700;">' + PCD.escapeHtml(s.id + ' · ' + (t(s.labelKey) || s.id)) + '</button>';
+    }).join('');
+    body.innerHTML =
+      '<div class="text-muted text-sm mb-2">' + PCD.escapeHtml(st.name + ' — ' + (t('roster_fill_week_hint') || ('apply to all ' + dayCount + ' days'))) + '</div>' +
+      '<div style="' + grpHd + '">' + PCD.escapeHtml(t('roster_shift_time') || 'Shift time') + '</div>' +
+      (tplBtns ? '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">' + tplBtns + '</div>' : '') +
+      '<div class="field-row"><div class="field"><label class="field-label">' + PCD.escapeHtml(t('roster_start') || 'Start') + '</label><input type="time" class="input" id="fStart"></div>' +
+      '<div class="field"><label class="field-label">' + PCD.escapeHtml(t('roster_end') || 'End') + '</label><input type="time" class="input" id="fEnd"></div></div>' +
+      '<button type="button" class="btn btn-primary btn-sm" id="fApplyTime" style="width:100%;">' + PCD.escapeHtml(t('roster_fill_apply') || 'Fill week with this time') + '</button>' +
+      '<div style="border-top:1px solid var(--border);margin:12px 0 10px;"></div>' +
+      '<div style="' + grpHd + '">' + PCD.escapeHtml(t('roster_fill_status') || 'Or mark whole week as') + '</div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;">' + statusBtns + '</div>';
+    const clear = PCD.el('button', { class: 'btn btn-ghost', text: t('roster_clear_week') || 'Clear week', style: { color: 'var(--danger)' } });
+    const cancel = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') || 'Cancel' });
+    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
+    footer.appendChild(clear); footer.appendChild(cancel);
+    const m = PCD.modal.open({ title: t('roster_fill_week') || 'Fill week', body: body, footer: footer, size: 'sm', closable: true });
+    function fillAll(makeCell) { for (let d = 0; d < dayCount; d++) data.cells[sid][d] = makeCell(); persist(data); m.close(); render(view); }
+    PCD.on(body, 'click', '[data-fill-tpl]', function () {
+      const id = this.getAttribute('data-fill-tpl');
+      const tp = (data.templates || []).find(function (x) { return x.id === id; });
+      if (tp && tp.start && tp.end) fillAll(function () { return { start: tp.start, end: tp.end }; });
+    });
+    PCD.on(body, 'click', '[data-fill-status]', function () {
+      const id = this.getAttribute('data-fill-status');
+      fillAll(function () { return { status: id }; });
+    });
+    PCD.$('#fApplyTime', body).addEventListener('click', function () {
+      const s = PCD.$('#fStart', body).value, e = PCD.$('#fEnd', body).value;
+      if (!s || !e) { PCD.toast.error(t('roster_need_time') || 'Enter start and end'); return; }
+      fillAll(function () { return { start: s, end: e }; });
+    });
+    cancel.addEventListener('click', function () { m.close(); });
+    clear.addEventListener('click', function () { data.cells[sid] = {}; persist(data); m.close(); render(view); });
+  }
+
+  // v2.36 — Önceki haftanın vardiyalarını bu rostera kopyala (isimle eşleştirir).
+  function copyPreviousWeek(view, data) {
+    const prev = listRosters().filter(function (r) { return r.id !== data.id && (r.weekStart || '') < (data.weekStart || ''); })
+      .sort(function (a, b) { return (b.weekStart || '').localeCompare(a.weekStart || ''); })[0];
+    if (!prev) { PCD.toast.info(t('roster_copy_none') || 'No earlier roster to copy from'); return; }
+    PCD.modal.confirm({
+      icon: '⧉', title: t('roster_copy_prev') || 'Copy previous week',
+      text: (t('roster_copy_confirm') || 'Copy shifts from') + ' ' + (prev.name || weekRange(prev)) + '? ' + (t('roster_copy_overwrite') || 'This overwrites the current week.'),
+      okText: t('roster_copy_prev') || 'Copy',
+    }).then(function (ok) {
+      if (!ok) return;
+      const byName = {};
+      (prev.staff || []).forEach(function (s) { byName[(s.name || '').trim().toLowerCase()] = (prev.cells || {})[s.id]; });
+      data.cells = data.cells || {};
+      let n = 0;
+      (data.staff || []).forEach(function (s) { const pc = byName[(s.name || '').trim().toLowerCase()]; if (pc) { data.cells[s.id] = PCD.clone(pc); n++; } });
+      persist(data); render(view);
+      PCD.toast.success((n || 0) + ' ' + (t('roster_copy_done') || 'staff copied from previous week'));
     });
   }
 

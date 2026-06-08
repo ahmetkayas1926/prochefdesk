@@ -4,6 +4,19 @@ Kronolojik tersine (en son üstte). Her sürüm: başlık + ana değişiklikler.
 
 ---
 
+## v2.36.0 — Roster (Araç 4/8): hızlı doldurma + önceki haftayı kopyala + canlı önizleme · 2026-06-08
+
+Kod-önce analiz: Roster zaten en olgun araçlardan (hücre/personel popup düzenleme, tek
+çıktı motoru print=Excel=JPEG, library, durum kodları, işçilik maliyeti). Köklü değişiklik
+gereksiz → operatörün "gelişmiş + profesyonel + kullanışlı" isteğine uygun **gerçek verim cilası**:
+
+- **⚡ Haftayı doldur (satır):** Her personel satırında tek butonla → popup → bir vardiya şablonu / durum / serbest saat seç → **tüm haftası tek tıkla dolar**. (Önceden 7×N hücre tek tek tıklanıyordu.) "Haftayı temizle" de var.
+- **⧉ Önceki haftayı kopyala:** En son önceki rosterı bulur, personeli **isimle eşleştirir**, vardiyaları bu haftaya kopyalar (onaylı; üzerine yazar). Haftalık rosterda en büyük zaman kazancı.
+- **📄 Canlı baskı önizlemesi:** Editörde açılır panel — `buildRosterTable` (print/Excel/JPEG ile aynı motor) ile çıktının birebir hali; işçilik-maliyeti toggle'ı önizlemeyi anında günceller.
+- Tarayıcıda doğrulandı: haftayı tek tıkla doldur (7 gün), önceki haftayı kopyala (Alice 06:00-14:00 + Bob OFF isimle eşleşti), canlı önizleme yansıttı; konsol temiz. Tek çıktı motoru / sync / Pro-gating korundu.
+
+---
+
 ## v2.35.0 — Menu Studio: 10 yeni profesyonel şablon (toplam 20) · 2026-06-08
 
 Operatör: 20 şablon olsun, her biri özel/profesyonel/dolu, sektörde farklı konsept/seviye/standart (yüzeysel/aceleci DEĞİL).
