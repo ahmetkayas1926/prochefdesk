@@ -361,6 +361,256 @@
           _it('Baked Apple Crumble', '8', 'Oat, cinnamon, vanilla'),
         ], { titleFont: 'Poppins', titleSize: 22, titleColor: '#16a34a' }),
       ] }; } },
+
+    // ---- v2.35 — 10 yeni profesyonel şablon (toplam 20) ----
+    { id: 'tasting', label: "Chef's Tasting", make: function () { return {
+      page: { paper: 'A4', orientation: 'portrait', columns: 1, bg: '#16130f', ink: '#ece3d2', accent: '#c9a86a', baseFont: 'Cormorant', pad: 60, showAllergens: false, showPrices: false, frame: true, frameStyle: 'thin', framePad: 26 },
+      blocks: [
+        _tx("THE CHEF'S TABLE", { font: 'Montserrat', size: 10, tracking: 6, upper: true, color: '#c9a86a' }),
+        _hd('Degustation', { font: 'Italiana', size: 44, weight: 400, spacing: 2 }),
+        _tx('Seven courses · 165 per guest · Wine pairing 95', { font: 'Cormorant', size: 15 }),
+        _dv('linestar', { color: '#c9a86a' }),
+        _sec('I · Snack', [ _it('Gougère', '', 'Aged comté, black truffle') ], { titleFont: 'Cormorant', titleSize: 22, titleAlign: 'center', titleColor: '#c9a86a' }),
+        _sec('II · Sea', [ _it('Cured Hamachi', '', 'Yuzu, kohlrabi, finger lime') ], { titleFont: 'Cormorant', titleSize: 22, titleAlign: 'center', titleColor: '#c9a86a' }),
+        _sec('III · Garden', [ _it('Heritage Beetroot', '', 'Goat curd, smoked honey, walnut') ], { titleFont: 'Cormorant', titleSize: 22, titleAlign: 'center', titleColor: '#c9a86a' }),
+        _sec('IV · Pasta', [ _it('Hand-Rolled Agnolotti', '', 'Braised oxtail, parmesan, sage') ], { titleFont: 'Cormorant', titleSize: 22, titleAlign: 'center', titleColor: '#c9a86a' }),
+        _sec('V · Land', [ _it('Aged Duck Breast', '', 'Cherry, salsify, juniper jus') ], { titleFont: 'Cormorant', titleSize: 22, titleAlign: 'center', titleColor: '#c9a86a' }),
+        _sec('VI · Cheese', [ _it('Affineur Selection', '', 'Quince, lavash, toasted grain') ], { titleFont: 'Cormorant', titleSize: 22, titleAlign: 'center', titleColor: '#c9a86a' }),
+        _sec('VII · Sweet', [ _it('Valrhona Soufflé', '', 'Crème anglaise, cocoa nib') ], { titleFont: 'Cormorant', titleSize: 22, titleAlign: 'center', titleColor: '#c9a86a' }),
+      ] }; } },
+
+    { id: 'cocktail', label: 'Cocktail Bar', make: function () { return {
+      page: { paper: 'A4', orientation: 'portrait', columns: 1, bg: '#121417', ink: '#e8e6e1', accent: '#b08d57', baseFont: 'Lora', pad: 54, showAllergens: false, showPrices: true },
+      blocks: [
+        _hd('The Gilded Owl', { font: 'Bebas Neue', size: 54, weight: 400, spacing: 2 }),
+        _tx('COCKTAILS & SPIRITS', { font: 'Oswald', size: 13, tracking: 5, upper: true, color: '#b08d57' }),
+        _dv('short', { color: '#b08d57' }),
+        _sec('Signatures', [
+          _it('Smoked Old Fashioned', '18', 'Bourbon, demerara, applewood smoke, bitters'),
+          _it('Garden Gimlet', '16', 'Gin, cucumber, basil, lime cordial'),
+          _it('Velvet Negroni', '17', 'Barrel-aged gin, Campari, sweet vermouth'),
+          _it('Paloma Brava', '15', 'Tequila, grapefruit, lime, sea salt, soda'),
+        ], { titleFont: 'Oswald', titleSize: 22, titleColor: '#b08d57', titleAlign: 'left' }),
+        _sec('Low & No', [
+          _it('Seedlip Spritz', '11', 'Non-alcoholic, citrus, tonic, rosemary'),
+          _it('Spiced Ginger Fizz', '9', 'Ginger, honey, lime, soda'),
+        ], { titleFont: 'Oswald', titleSize: 22, titleColor: '#b08d57', titleAlign: 'left' }),
+        _sec('Spirits · 25ml', [
+          _it('Single Malt Selection', 'from 9'),
+          _it('Small-Batch Gin', 'from 7'),
+          _it('Aged Rum', 'from 8'),
+        ], { titleFont: 'Oswald', titleSize: 22, titleColor: '#b08d57', titleAlign: 'left' }),
+      ] }; } },
+
+    { id: 'winelist', label: 'Wine List', make: function () { return {
+      page: { paper: 'A4', orientation: 'portrait', columns: 2, columnGap: 38, bg: '#fbf7f0', ink: '#2a211c', accent: '#7c2233', baseFont: 'EB Garamond', pad: 52, showAllergens: false, showPrices: true },
+      blocks: [
+        _hd('Cellar List', { font: 'Cormorant', size: 42, weight: 500 }),
+        _tx('BY THE GLASS · BY THE BOTTLE', { font: 'Montserrat', size: 10, tracking: 4, upper: true, color: '#7c2233' }),
+        _dv('line', { color: '#7c2233' }),
+        _sec('Sparkling', [
+          _it('Prosecco DOC, Veneto', '11 / 48', 'Italy · NV'),
+          _it('Champagne Brut, Reims', '16 / 82', 'France · NV'),
+        ], { titleFont: 'Cormorant', titleSize: 22, titleColor: '#7c2233' }),
+        _sec('White', [
+          _it('Picpoul de Pinet', '9 / 36', 'Languedoc · 2022'),
+          _it('Chablis, Domaine', '14 / 62', 'Burgundy · 2021'),
+          _it('Sauvignon Blanc', '10 / 42', 'Marlborough · 2023'),
+        ], { titleFont: 'Cormorant', titleSize: 22, titleColor: '#7c2233' }),
+        _sec('Red', [
+          _it('Côtes du Rhône', '9 / 38', 'Rhône · 2021'),
+          _it('Rioja Reserva', '12 / 54', 'Spain · 2018'),
+          _it('Barolo DOCG', '18 / 96', 'Piedmont · 2019'),
+        ], { titleFont: 'Cormorant', titleSize: 22, titleColor: '#7c2233' }),
+        _sec('Dessert · 75ml', [
+          _it('Sauternes', '12', 'Bordeaux · 2019'),
+          _it('Tawny Port 10yr', '10', 'Douro'),
+        ], { titleFont: 'Cormorant', titleSize: 22, titleColor: '#7c2233' }),
+      ] }; } },
+
+    { id: 'patisserie', label: 'Pâtisserie', make: function () { return {
+      page: { paper: 'A4', orientation: 'portrait', columns: 1, bg: '#fdf2f4', ink: '#3a2230', accent: '#c2557a', baseFont: 'Playfair', pad: 56, showAllergens: true, showPrices: true, frame: true, frameStyle: 'thin', framePad: 24 },
+      blocks: [
+        _hd('Maison Sucrée', { font: 'Playfair', size: 42, weight: 500 }),
+        _tx('PÂTISSERIE FINE', { font: 'Montserrat', size: 11, tracking: 5, upper: true, color: '#c2557a' }),
+        _dv('linefloral', { color: '#c2557a' }),
+        _sec('Plated Desserts', [
+          _it('Tarte au Citron', '11', 'Torched meringue, raspberry, basil'),
+          _it('Chocolate Fondant', '12', 'Molten Valrhona, salted caramel ice cream'),
+          _it('Vanilla Mille-Feuille', '11', 'Crème pâtissière, caramelised puff'),
+        ], { titleFont: 'Cormorant', titleSize: 24, titleAlign: 'center', titleColor: '#c2557a' }),
+        _sec('From the Counter', [
+          _it('Pistachio Éclair', '6'),
+          _it('Raspberry Macaron', '3.5'),
+          _it('Opéra Slice', '7'),
+          _it('Seasonal Fruit Tart', '6.5'),
+        ], { titleFont: 'Cormorant', titleSize: 24, titleAlign: 'center', titleColor: '#c2557a' }),
+        _sec('Viennoiserie', [
+          _it('Butter Croissant', '3.5'),
+          _it('Pain au Chocolat', '4'),
+          _it('Almond Croissant', '4.5'),
+        ], { titleFont: 'Cormorant', titleSize: 24, titleAlign: 'center', titleColor: '#c2557a' }),
+      ] }; } },
+
+    { id: 'coffee', label: 'Coffee Roasters', make: function () { return {
+      page: { paper: 'A4', orientation: 'portrait', columns: 2, columnGap: 34, bg: '#f4ece2', ink: '#2c211a', accent: '#7b4b27', baseFont: 'Inter', pad: 48, showAllergens: false, showPrices: true },
+      blocks: [
+        _hd('Daybreak Coffee', { font: 'Oswald', size: 40, weight: 600 }),
+        _tx('SPECIALTY · ROASTED IN-HOUSE', { font: 'Inter', size: 10, tracking: 3, upper: true, color: '#7b4b27' }),
+        _dv('dotted', { color: '#7b4b27' }),
+        _sec('Espresso', [
+          _it('Espresso', '3.0'),
+          _it('Macchiato', '3.4'),
+          _it('Flat White', '4.2'),
+          _it('Cappuccino', '4.2'),
+          _it('Latte', '4.5'),
+          _it('Mocha', '4.8'),
+        ], { titleFont: 'Oswald', titleSize: 20, titleColor: '#7b4b27' }),
+        _sec('Filter & Cold', [
+          _it('Batch Brew', '3.8'),
+          _it('V60 Pour-Over', '5.0', 'Single origin, rotating'),
+          _it('Cold Brew', '4.8'),
+          _it('Iced Latte', '4.8'),
+        ], { titleFont: 'Oswald', titleSize: 20, titleColor: '#7b4b27' }),
+        _sec('Beans · 250g', [
+          _it('House Blend', '12', 'Chocolate, hazelnut, caramel'),
+          _it('Ethiopia Yirgacheffe', '15', 'Floral, citrus, tea-like'),
+        ], { titleFont: 'Oswald', titleSize: 20, titleColor: '#7b4b27' }),
+        _tx('Oat · Almond · Soy +0.6', { font: 'Inter', size: 11, color: '#7b4b27' }),
+      ] }; } },
+
+    { id: 'bbq', label: 'Smokehouse BBQ', make: function () { return {
+      page: { paper: 'A4', orientation: 'portrait', columns: 1, bg: '#1a1614', ink: '#efe6da', accent: '#d4762a', baseFont: 'Oswald', pad: 52, showAllergens: false, showPrices: true },
+      blocks: [
+        _hd('Ember & Oak', { font: 'Bebas Neue', size: 58, weight: 400, spacing: 1 }),
+        _tx('LOW · SLOW · WOOD-SMOKED', { font: 'Oswald', size: 13, tracking: 4, upper: true, color: '#d4762a' }),
+        _dv('double', { color: '#d4762a' }),
+        _sec('From the Pit', [
+          _it('Beef Brisket', '24', '14-hour oak smoke, per 250g'),
+          _it('Baby Back Ribs', '22', 'Full rack, house dry rub'),
+          _it('Pulled Pork', '18', 'Brioche bun, slaw, pickles'),
+          _it('Smoked Half Chicken', '19', 'Honey-chipotle glaze'),
+        ], { titleFont: 'Bebas Neue', titleSize: 30, titleColor: '#d4762a', titleAlign: 'left' }),
+        _sec('Platters', [
+          _it('The Pitmaster', '58', 'Brisket, ribs, sausage, 3 sides — serves 2'),
+          _it('Burnt Ends Bowl', '20', 'Cheesy grits, pickled onion'),
+        ], { titleFont: 'Bebas Neue', titleSize: 30, titleColor: '#d4762a', titleAlign: 'left' }),
+        _sec('Sides', [
+          _it('Mac & Cheese', '7'),
+          _it('Smoked Beans', '6'),
+          _it('Buttermilk Slaw', '5'),
+          _it('Skillet Cornbread', '5'),
+        ], { titleFont: 'Bebas Neue', titleSize: 30, titleColor: '#d4762a', titleAlign: 'left' }),
+      ] }; } },
+
+    { id: 'sushi', label: 'Sushi / Omakase', make: function () { return {
+      page: { paper: 'A4', orientation: 'portrait', columns: 2, columnGap: 40, bg: '#fbfbf9', ink: '#1b1b1b', accent: '#b3252b', baseFont: 'Montserrat', pad: 52, showAllergens: true, showPrices: true },
+      blocks: [
+        _hd('Kaze', { font: 'Montserrat', size: 46, weight: 700, spacing: 4 }),
+        _tx('SUSHI · OMAKASE', { font: 'Montserrat', size: 11, tracking: 6, upper: true, color: '#b3252b' }),
+        _dv('short', { color: '#b3252b' }),
+        _sec('Nigiri · per piece', [
+          _it('Salmon · Sake', '4'),
+          _it('Tuna · Maguro', '5'),
+          _it('Yellowtail · Hamachi', '5'),
+          _it('Eel · Unagi', '5.5'),
+          _it('Prawn · Ebi', '4'),
+        ], { titleFont: 'Montserrat', titleSize: 18, titleColor: '#b3252b', titleWeight: 700 }),
+        _sec('Maki', [
+          _it('Spicy Tuna Roll', '9'),
+          _it('Dragon Roll', '14', 'Eel, avocado, tobiko'),
+          _it('Salmon Avocado', '8'),
+          _it('Vegetable Futomaki', '7'),
+        ], { titleFont: 'Montserrat', titleSize: 18, titleColor: '#b3252b', titleWeight: 700 }),
+        _sec('Sashimi', [
+          _it('Chef Selection', '24', '12 slices, daily catch'),
+        ], { titleFont: 'Montserrat', titleSize: 18, titleColor: '#b3252b', titleWeight: 700 }),
+        _sec('Omakase', [
+          _it("Chef's Tasting", '85', '12 courses, seasonal'),
+        ], { titleFont: 'Montserrat', titleSize: 18, titleColor: '#b3252b', titleWeight: 700 }),
+      ] }; } },
+
+    { id: 'tapas', label: 'Tapas & Mezze', make: function () { return {
+      page: { paper: 'A4', orientation: 'portrait', columns: 2, columnGap: 36, bg: '#fbf3e8', ink: '#33241a', accent: '#c0532b', baseFont: 'Lora', pad: 50, showAllergens: true, showPrices: true },
+      blocks: [
+        _hd('Plaza', { font: 'Playfair', size: 46, weight: 700 }),
+        _tx('SMALL PLATES TO SHARE', { font: 'Montserrat', size: 11, tracking: 4, upper: true, color: '#c0532b' }),
+        _dv('diamond', { color: '#c0532b' }),
+        _sec('Cold', [
+          _it('Marinated Olives', '5'),
+          _it('Jamón Ibérico', '12', '24-month cured'),
+          _it('Pan con Tomate', '6', 'Grilled sourdough, garlic'),
+          _it('Whipped Feta', '7', 'Honey, thyme, pistachio'),
+        ], { titleFont: 'Playfair', titleSize: 22, titleColor: '#c0532b', rule: true }),
+        _sec('Hot', [
+          _it('Gambas al Ajillo', '11', 'Garlic prawns, chilli, lemon'),
+          _it('Patatas Bravas', '7', 'Smoked aioli, spicy tomato'),
+          _it('Croquetas de Jamón', '8'),
+          _it('Chorizo al Vino', '9', 'Red wine, rosemary'),
+          _it('Grilled Halloumi', '8', "Za'atar, pomegranate"),
+        ], { titleFont: 'Playfair', titleSize: 22, titleColor: '#c0532b', rule: true }),
+        _sec('Sweet', [
+          _it('Churros', '7', 'Dark chocolate'),
+          _it('Basque Cheesecake', '8'),
+        ], { titleFont: 'Playfair', titleSize: 22, titleColor: '#c0532b', rule: true }),
+      ] }; } },
+
+    { id: 'gastropub', label: 'Gastropub', make: function () { return {
+      page: { paper: 'A4', orientation: 'portrait', columns: 1, bg: '#faf4e6', ink: '#2b2316', accent: '#9a6a1f', baseFont: 'Lora', pad: 54, showAllergens: true, showPrices: true },
+      blocks: [
+        _hd('The Crown & Anchor', { font: 'Playfair', size: 40, weight: 700, align: 'left' }),
+        _tx('EST. 1911 · KITCHEN & TAP', { font: 'Oswald', size: 12, tracking: 3, upper: true, align: 'left', color: '#9a6a1f' }),
+        _dv('line', { color: '#9a6a1f' }),
+        _sec('Starters', [
+          _it('Scotch Egg', '8', 'Black pudding, piccalilli'),
+          _it('Soup of the Day', '7', 'Warm sourdough'),
+          _it('Crispy Whitebait', '8', 'Tartare, lemon'),
+        ], { titleFont: 'Playfair', titleSize: 24, rule: true, titleAlign: 'left' }),
+        _sec('Pub Classics', [
+          _it('Fish & Chips', '17', 'Beer batter, mushy peas, tartare'),
+          _it('Steak & Ale Pie', '16', 'Buttery mash, gravy'),
+          _it('The Anchor Burger', '16', 'Aged beef, cheddar, bacon, chips'),
+          _it('Bangers & Mash', '15', 'Cumberland sausage, onion gravy'),
+        ], { titleFont: 'Playfair', titleSize: 24, rule: true, titleAlign: 'left' }),
+        _sec('Sunday Roast', [
+          _it('Roast Sirloin', '19', 'Yorkshire pud, duck-fat potatoes, greens'),
+          _it('Roast Chicken', '17'),
+          _it('Nut Roast', '15'),
+        ], { titleFont: 'Playfair', titleSize: 24, rule: true, titleAlign: 'left' }),
+        _sec('On Tap', [
+          _it('House Pale Ale', '6'),
+          _it('Guest Cask', '6.5'),
+          _it('Cider', '5.5'),
+        ], { titleFont: 'Playfair', titleSize: 24, rule: true, titleAlign: 'left' }),
+      ] }; } },
+
+    { id: 'afternoontea', label: 'Afternoon Tea', make: function () { return {
+      page: { paper: 'A4', orientation: 'portrait', columns: 1, bg: '#f7f4ef', ink: '#33302a', accent: '#9c7b4a', baseFont: 'EB Garamond', pad: 58, showAllergens: true, showPrices: false, frame: true, frameStyle: 'double', framePad: 28 },
+      blocks: [
+        _tx('THE DRAWING ROOM', { font: 'Montserrat', size: 10, tracking: 6, upper: true, color: '#9c7b4a' }),
+        _hd('Afternoon Tea', { font: 'Cormorant', size: 44, weight: 500, spacing: 1 }),
+        _tx('Served daily 2 – 5 pm · 38 per guest · with Champagne 52', { font: 'EB Garamond', size: 15 }),
+        _dv('linefloral', { color: '#9c7b4a' }),
+        _sec('Savouries', [
+          _it('Coronation Chicken', '', 'Toasted brioche'),
+          _it('Cucumber & Cream Cheese', '', 'Dill, white bloomer'),
+          _it('Smoked Salmon', '', 'Lemon crème fraîche'),
+          _it('Honey-Glazed Ham', '', 'English mustard'),
+        ], { titleFont: 'Cormorant', titleSize: 24, titleAlign: 'center', titleColor: '#9c7b4a' }),
+        _sec('Scones', [
+          _it('Plain & Fruit Scones', '', 'Clotted cream, strawberry preserve, lemon curd'),
+        ], { titleFont: 'Cormorant', titleSize: 24, titleAlign: 'center', titleColor: '#9c7b4a' }),
+        _sec('Pastries', [
+          _it('Victoria Sponge', ''),
+          _it('Lemon & Elderflower Tart', ''),
+          _it('Chocolate Délice', ''),
+          _it('Seasonal Macaron', ''),
+        ], { titleFont: 'Cormorant', titleSize: 24, titleAlign: 'center', titleColor: '#9c7b4a' }),
+        _sec('Loose-Leaf Teas', [
+          _it('English Breakfast · Earl Grey · Darjeeling', ''),
+          _it('Jasmine Green · Peppermint · Chamomile', ''),
+        ], { titleFont: 'Cormorant', titleSize: 24, titleAlign: 'center', titleColor: '#9c7b4a' }),
+      ] }; } },
   ];
 
   // ================= DURUM =================

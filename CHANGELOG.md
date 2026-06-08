@@ -4,6 +4,25 @@ Kronolojik tersine (en son üstte). Her sürüm: başlık + ana değişiklikler.
 
 ---
 
+## v2.35.0 — Menu Studio: 10 yeni profesyonel şablon (toplam 20) · 2026-06-08
+
+Operatör: 20 şablon olsun, her biri özel/profesyonel/dolu, sektörde farklı konsept/seviye/standart (yüzeysel/aceleci DEĞİL).
+
+- **10 yeni hazır menü şablonu** (mevcut 10 + 10 = **20**), her biri farklı konsept + uygun font/renk/yerleşim + gerçek dolu içerik (bölümler, yemekler, fiyatlar, açıklamalar):
+  1. **Chef's Tasting** — 7 kur degustasyon (set fiyat, wine pairing), koyu + altın, Italiana/Cormorant, çerçeve.
+  2. **Cocktail Bar** — imza kokteyller (içerik+ABV mantığı), spirits; koyu, Bebas/Oswald.
+  3. **Wine List** — kadeh/şişe; sparkling/white/red/dessert, bölge+vintage; 2 sütun, EB Garamond.
+  4. **Pâtisserie** — tabak tatlılar + vitrin + viennoiserie; pembe/altın, Playfair.
+  5. **Coffee Roasters** — espresso/filter/çekirdek + süt opsiyonu; 2 sütun, Oswald/Inter.
+  6. **Smokehouse BBQ** — pitten (brisket/ribs), platter, yan; koyu charcoal, Bebas.
+  7. **Sushi / Omakase** — nigiri/maki/sashimi/omakase; temiz, Montserrat, kırmızı accent.
+  8. **Tapas & Mezze** — paylaşımlık sıcak/soğuk; 2 sütun, Playfair, terracotta.
+  9. **Gastropub** — pub klasikleri/burger/Sunday roast/tap; Lora/Playfair.
+  10. **Afternoon Tea** — kat kat: savoury/scone/pastry/çay (set fiyat); EB Garamond, çerçeve.
+- Tarayıcıda doğrulandı: galeri 20 şablon, yeniler hatasız render (ör. BBQ → 6 blok, dolu içerik, profesyonel görünüm); konsol temiz. Menu Studio "hepsi tek seferde" işi tamamlandı (overhaul 2.32 + şablonlar 2.35).
+
+---
+
 ## v2.34.0 — Menu Studio: "Sayfa & Tema" etiketi + "Tema rengi" netleştirme · 2026-06-08
 
 - Header butonu "Page/Sayfa" → **"Page & theme / Sayfa & Tema"** (daha belirgin; sayfa boyutu + tema renkleri/fontu bir arada).
