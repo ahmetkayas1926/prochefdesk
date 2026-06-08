@@ -24,14 +24,69 @@
   const TABLE = 'prepSheets';
   const PREF_ACTIVE = 'prefs.prepActiveId';
   // v2.22 — Sürükle-sırala durumu (yemek vs bileşen ayrı; guard ile çakışma yok)
-  // v2.25 — _dragCanvasDish: kanvas (önizleme A4) üzerinde yemek sürükleme
-  let _dragDishId = null, _dragComp = null, _dragCanvasDish = null;
+  let _dragDishId = null, _dragComp = null;
   // v2.24 — CSS px / mm @96dpi (açık sayfalama motoru için)
   const MM = 3.7795;
   // v2.28 — Dar sayfa iç kenar boşluğu. @page margin:0 ile birlikte: Chrome
   // başlık/altbilgi damgaları (tarih/başlık/about:blank/sayfa no) çıkmaz +
   // yüzey verimli kullanılır. Önizleme ve baskı bu PAD'i ortak kullanır → tutarlı.
-  const PAD_MM = 5;
+  const PAD_MM = 3;
+
+  // v2.29 — Kanvas sürükle-sırala: Whiteboard mantığı (işaretçi-takipli + üst/alt
+  // göstergesi). HTML5 native drag yerine pointer events → akıcı, net sınırlar.
+  let _pdrag = null, _pdragBound = false;
+  function _pPoint(e) {
+    if (e.touches && e.touches.length) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    if (e.changedTouches && e.changedTouches.length) return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+    return { x: e.clientX, y: e.clientY };
+  }
+  function _clearDragOver() {
+    const host = document.getElementById('prepPreview');
+    if (host) host.querySelectorAll('.ps-dragover-top, .ps-dragover-bottom').forEach(function (c) { c.classList.remove('ps-dragover-top', 'ps-dragover-bottom'); });
+  }
+  function startCanvasDrag(e, gripEl, view, sheet) {
+    const card = gripEl.closest('[data-card-dish]'); if (!card) return;
+    const pt = _pPoint(e);
+    _pdrag = { view: view, sheet: sheet, dragId: card.getAttribute('data-card-dish'), startX: pt.x, startY: pt.y, moved: false, target: null, pos: null };
+    document.body.style.userSelect = 'none';
+  }
+  function moveCanvasDrag(e) {
+    if (!_pdrag) return;
+    const pt = _pPoint(e);
+    if (!_pdrag.moved && Math.hypot(pt.x - _pdrag.startX, pt.y - _pdrag.startY) < 6) return;
+    _pdrag.moved = true;
+    if (e.cancelable) e.preventDefault();
+    const host = document.getElementById('prepPreview'); if (!host) return;
+    const cards = host.querySelectorAll('[data-card-dish]');
+    _clearDragOver();
+    _pdrag.target = null;
+    for (let i = 0; i < cards.length; i++) {
+      const c = cards[i];
+      if (c.getAttribute('data-card-dish') === _pdrag.dragId) continue;
+      const r = c.getBoundingClientRect();
+      if (pt.x >= r.left && pt.x <= r.right && pt.y >= r.top && pt.y <= r.bottom) {
+        const pos = pt.y < (r.top + r.height / 2) ? 'top' : 'bottom';
+        c.classList.add(pos === 'top' ? 'ps-dragover-top' : 'ps-dragover-bottom');
+        _pdrag.target = c.getAttribute('data-card-dish'); _pdrag.pos = pos;
+        break;
+      }
+    }
+  }
+  function endCanvasDrag() {
+    if (!_pdrag) return;
+    const d = _pdrag; _pdrag = null;
+    document.body.style.userSelect = '';
+    _clearDragOver();
+    if (!d.moved || !d.target || d.target === d.dragId) return;
+    const arr = d.sheet.dishes || [];
+    const from = arr.findIndex(function (x) { return x.id === d.dragId; });
+    if (from < 0) return;
+    const item = arr.splice(from, 1)[0];
+    const to = arr.findIndex(function (x) { return x.id === d.target; });
+    if (to < 0) { arr.splice(from, 0, item); return; }
+    arr.splice(d.pos === 'bottom' ? to + 1 : to, 0, item);
+    persist(d.sheet); render(d.view);
+  }
 
   // i18n helper — key yoksa fallback string döner (interpolation yok).
   function t(k, fb) {
@@ -375,24 +430,20 @@
     PCD.on(view, 'click', '[data-bold]', function () { sheet.bold = !sheet.bold; persist(sheet); render(view); });
     // v2.25 — Boşluk (kart arası yatay + dikey)
     PCD.on(view, 'click', '[data-spacing]', function () { sheet.spacing = this.getAttribute('data-spacing'); persist(sheet); render(view); });
-    // v2.26 — Kanvas: karta tıkla → düzenle modalı; tutamaçtan sürükle → sırala
-    PCD.on(view, 'click', '[data-card-dish]', function () { openDishEditor(view, sheet, this.getAttribute('data-card-dish')); });
-    PCD.on(view, 'dragstart', '[data-drag-dish]', function (e) { _dragCanvasDish = this.getAttribute('data-drag-dish'); try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', 'cdish'); } catch (err) {} });
-    PCD.on(view, 'dragover', '[data-card-dish]', function (e) { if (_dragCanvasDish) e.preventDefault(); });
-    PCD.on(view, 'drop', '[data-card-dish]', function (e) {
-      if (!_dragCanvasDish) return;
-      e.preventDefault();
-      const dropId = this.getAttribute('data-card-dish');
-      const dragId = _dragCanvasDish; _dragCanvasDish = null;
-      if (dragId === dropId) return;
-      const arr = sheet.dishes || [];
-      const fromIdx = arr.findIndex(function (d) { return d.id === dragId; });
-      const toIdx = arr.findIndex(function (d) { return d.id === dropId; });
-      if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) return;
-      const item = arr.splice(fromIdx, 1)[0];
-      arr.splice(fromIdx < toIdx ? toIdx - 1 : toIdx, 0, item);
-      persist(sheet); render(view);
+    // v2.29 — Karta tıkla → düzenle (grip hariç). Sürükle: pointer-tabanlı (Whiteboard mantığı).
+    PCD.on(view, 'click', '[data-card-dish]', function (e) {
+      if (e.target.closest('[data-drag-dish]')) return; // grip = sadece sürükle
+      openDishEditor(view, sheet, this.getAttribute('data-card-dish'));
     });
+    PCD.on(view, 'mousedown', '[data-drag-dish]', function (e) { e.preventDefault(); startCanvasDrag(e, this, view, sheet); });
+    PCD.on(view, 'touchstart', '[data-drag-dish]', function (e) { startCanvasDrag(e, this, view, sheet); });
+    if (!_pdragBound) {
+      _pdragBound = true;
+      document.addEventListener('mousemove', moveCanvasDrag);
+      document.addEventListener('touchmove', moveCanvasDrag, { passive: false });
+      document.addEventListener('mouseup', endCanvasDrag);
+      document.addEventListener('touchend', endCanvasDrag);
+    }
     // v2.22 — Presets
     const presetsBtn = view.querySelector('#prepPresetsBtn');
     if (presetsBtn) presetsBtn.addEventListener('click', function () { openPresets(view, sheet); });
@@ -767,7 +818,7 @@
     const land = sheet.orientation === 'landscape';
     const N = Math.max(1, Math.min(4, sheet.columns || 3));
     // v2.25 — Kart arası boşluk (yatay = col, dikey = dish); önizleme + baskı ortak
-    const SPACING = { tight: { col: 3, dish: 2 }, medium: { col: 7, dish: 6 }, wide: { col: 12, dish: 11 } };
+    const SPACING = { tight: { col: 1.5, dish: 1 }, medium: { col: 4, dish: 3 }, wide: { col: 9, dish: 8 } };
     const sp = SPACING[sheet.spacing] || SPACING.medium;
     const gapPx = sp.col * MM, dishGapPx = sp.dish * MM, stationGapPx = 4 * MM;
     const contentWpx = ((land ? 297 : 210) - 2 * PAD_MM) * MM;
@@ -819,14 +870,14 @@
     // v2.28 — @page margin:0 → Chrome başlık/altbilgi damgaları çıkmaz + tam yüzey.
     // Dar kenar boşluğu sayfa kutusunun kendi PAD padding'i ile sağlanır.
     if (mode === 'print') out += '@page{size:A4 ' + (land ? 'landscape' : 'portrait') + ';margin:0;}html,body{margin:0;padding:0;}body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#111;-webkit-print-color-adjust:exact;print-color-adjust:exact;}';
-    else out += '.ps-cv-dish{cursor:grab;} .ps-cv-dish:hover{outline:2px dashed rgba(22,163,74,.6);outline-offset:2px;border-radius:5px;} .ps-cv-dish:active{cursor:grabbing;}';
+    else out += '.ps-dragover-top{box-shadow:0 -3px 0 0 #16a34a !important;} .ps-dragover-bottom{box-shadow:0 3px 0 0 #16a34a !important;}';
     out += '</style>';
     pages.forEach(function (pg, pi) {
       let inner = '';
       pg.items.forEach(function (it) {
         if (mode === 'screen' && it.kind === 'dish' && it.id) {
           const tools = '<div class="ps-cv-tools">' +
-            '<span class="ps-cv-b ps-cv-grip" draggable="true" data-drag-dish="' + it.id + '" title="' + esc(t('prep_drag', 'Drag to reorder')) + '" style="font-size:13px;line-height:1;">⠿</span>' +
+            '<span class="ps-cv-b ps-cv-grip" data-drag-dish="' + it.id + '" title="' + esc(t('prep_drag', 'Drag to reorder')) + '" style="font-size:13px;line-height:1;">⠿</span>' +
             '<span class="ps-cv-b" title="' + esc(t('prep_edit_dish', 'Edit dish')) + '">' + PCD.icon('edit', 13) + '</span>' +
           '</div>';
           inner += '<div class="ps-cv-dish" data-card-dish="' + it.id + '" style="position:absolute;left:' + it.x + 'px;top:' + it.y + 'px;width:' + it.w + 'px;">' + tools + it.html + '</div>';

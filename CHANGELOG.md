@@ -4,6 +4,20 @@ Kronolojik tersine (en son üstte). Her sürüm: başlık + ana değişiklikler.
 
 ---
 
+## v2.29.0 — Prep Sheet: Whiteboard-stili sürükle + ~sıfır kenar + sıkı boşluk · 2026-06-08
+
+Operatör: Whiteboard'un sürükle mantığı zarif; Prep'teki pratik değil — aynı olsun.
+Kenar boşlukları sıfıra yaklaşsın, item boşlukları daha da küçülsün, drag butonu
+üzerine gelince el imleci olsun.
+
+- **Sürükle-bırak = Whiteboard mantığı:** HTML5 native drag kaldırıldı, yerine işaretçi-takipli (pointer) sürükleme geldi — sürüklerken hedef kartta **yeşil üst/alt göstergesi** çıkar, bıraktığın yere (öncesine/sonrasına) eklenir. Akıcı, net sınırlar.
+- **Drag butonu (⠿) hover → el (grab) imleci**, basılıyken grabbing — Whiteboard'daki his. Kart gövdesi = pointer (tıkla→düzenle).
+- **Kenar boşluğu 5mm → 3mm** (~sıfır) önizleme + baskı.
+- **Item boşlukları küçültüldü:** Çok bitişik 3/2 → 1.5/1mm, Orta 7/6 → 4/3mm, Geniş 12/11 → 9/8mm (yatay/dikey).
+- Önizleme = baskı geometrisi korundu; tarayıcıda doğrulandı: grip grab imleci, kart pointer, sürüklerken üst/alt gösterge + doğru sıralama, padding 3mm; konsol temiz.
+
+---
+
 ## v2.28.0 — Prep Sheet baskı: Chrome damgaları kaldırıldı + dar kenar boşluğu (Whiteboard ile aynı) · 2026-06-08
 
 Operatör: Whiteboard baskısı kusursuz; Prep Sheet de aynı olmalı. Chrome'un eklediği
