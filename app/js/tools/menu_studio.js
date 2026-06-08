@@ -1100,7 +1100,11 @@
   function buildPrintHtml() {
     normalizeDesign(design);
     const page = design.page; const spec = pageSpec(page);
-    return '<style>@page{size:' + spec.paperCss + (spec.land ? ' landscape' : ' portrait') + ';margin:0;}@import url("' + GF_HREF + '");body{margin:0;}.ms-print{box-sizing:border-box;width:' + spec.w + 'px;min-height:' + spec.h + 'px;background:' + (page.bg || '#fff') + ';padding:' + (page.pad || 56) + 'px;margin:0 auto;}.ms-block{margin-bottom:18px;}</style><div class="ms-print">' + renderPageInner(design) + '</div>';
+    // v2.40 — FIX: print-color-adjust:exact eklendi. Tarayıcı varsayılan olarak arka plan
+    // renklerini YAZDIRMAZ → menü arka planı (page.bg) print diyaloğunda beyaz çıkıyordu.
+    // Bu özellik kalıtsaldır (html/body'de tüm alt öğeleri kapsar) → önizleme = Chrome print
+    // = local print birebir aynı arka plan + renkler.
+    return '<style>@page{size:' + spec.paperCss + (spec.land ? ' landscape' : ' portrait') + ';margin:0;}@import url("' + GF_HREF + '");html,body{margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;}.ms-print{box-sizing:border-box;width:' + spec.w + 'px;min-height:' + spec.h + 'px;background:' + (page.bg || '#fff') + ';padding:' + (page.pad || 56) + 'px;margin:0 auto;-webkit-print-color-adjust:exact;print-color-adjust:exact;}.ms-block{margin-bottom:18px;}</style><div class="ms-print">' + renderPageInner(design) + '</div>';
   }
 
   // Studio tasarımını paylaşım/snapshot için standalone HTML üretir.
@@ -1151,17 +1155,25 @@
     const spec = pageSpec(d.page);
     return '<div class="ms-thumb"><div class="ms-thumb-inner" data-pw="' + spec.w + '" data-ph="' + spec.h + '" style="width:' + spec.w + 'px;height:' + spec.h + 'px;background:' + (d.page.bg || '#fff') + ';padding:' + (d.page.pad || 56) + 'px;box-sizing:border-box;">' + renderPageInner(d) + '</div></div>';
   }
-  function sizeThumbs() {
+  // v2.40 — FIX: hard refresh / F5'te layout henüz hazır olmadığında host.clientWidth=0
+  // oluyordu → eski kod sessizce return edip scale'i HİÇ uygulamıyordu → thumbnail tam
+  // A4 boyutta kalıp karttan taşıyordu. Artık bir kart bile ölçülemiyorsa bounded rAF
+  // self-retry yapılır (genişlik birkaç frame içinde gelir). Desen: applyScale (742).
+  function sizeThumbs(_tries) {
     if (!_view) return;
+    _tries = _tries || 0;
+    let pending = false;
     _view.querySelectorAll('.ms-thumb-inner').forEach(function (inner) {
       const pw = parseFloat(inner.getAttribute('data-pw')) || 794;
       const ph = parseFloat(inner.getAttribute('data-ph')) || 1123;
       const host = inner.parentElement;
-      const w = host.clientWidth; if (!w) return;
+      const w = host.clientWidth;
+      if (!w) { pending = true; return; }   // bu kart henüz ölçülemedi
       const k = w / pw;
       inner.style.transform = 'scale(' + k + ')';
       host.style.height = (ph * k) + 'px';
     });
+    if (pending && _tries < 60) { requestAnimationFrame(function () { sizeThumbs(_tries + 1); }); }
   }
 
   function renderList() {

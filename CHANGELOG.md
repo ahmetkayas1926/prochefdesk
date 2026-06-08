@@ -28,6 +28,11 @@ Kronolojik tersine (en son üstte). Her sürüm: başlık + ana değişiklikler.
 - **Kök neden:** `wirePageControls` `data-f` (renk/font/sayı) ve `data-clear` input'larını bağlamıyordu (v2.32 popup refactor'unda unutulmuştu) → Base font, Column gap, **Theme accent, Text color, Background**, Margin, Frame color hiçbir değişiklik yapmıyordu. Eklendi (blok editörüyle aynı desen).
 - **Tema cascade:** Şablonlar accent/font'u blok-seviyesinde gömüyordu (titleColor/titleFont), bu yüzden Theme accent + Base font değişimi görünmüyordu. Artık **Theme accent** değişince section başlık + ayraç override'ları temizlenir → hepsi accent'i izler (güçlü, öngörülebilir global accent); **Base font** değişince temayı izleyen bloklar güncellenir, kasıtlı display fontları korunur.
 - Kurucu fotoğrafı landing'de 132→180px büyütüldü + 585KB→46KB optimize edildi.
+- **Menu Studio kütüphane thumbnail BUG fix (hard refresh):** `sizeThumbs` ilk paint'te `host.clientWidth=0` olunca sessizce return edip scale'i hiç uygulamıyordu → F5/hard refresh'te kartlar tam A4 boyutta taşıyordu. Artık bounded rAF self-retry (genişlik birkaç frame içinde gelir). Doğrulandı: 3 thumbnail de ölçeklendi, taşma yok.
+- **Menu Studio print arka plan BUG fix:** `buildPrintHtml` arka plana `background:page.bg` veriyordu ama `print-color-adjust:exact` yoktu → tarayıcı arka plan rengini basmıyordu (print diyaloğunda beyaz çıkıyordu). Eklendi (kalıtsal → tüm renkler/arka plan basılır). Artık önizleme = Chrome print = local print birebir aynı. (Diğer 5 araçta zaten vardı; sadece menu_studio eksikti.)
+
+**Mobil uyum fix (16 araç denetimi):**
+- Tüm araçlar 390px'te tarandı; **Ingredients + Inventory** header buton satırı taşıyordu (`flex:1` basis:0 + wrap yok → 4 buton tek satırda sıkışıyordu). Ortak `.page-header-actions` mobil CSS'i `flex-wrap:wrap` + `flex:1 1 auto` ile düzeltildi → butonlar 2. satıra sarar. Diğer 14 araç temizdi. Doğrulandı: ikisi de 474/398→390, temiz sarma.
 
 ---
 

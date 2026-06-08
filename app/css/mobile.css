@@ -33,8 +33,9 @@
   }
   .page-header-actions {
     width: 100%;
+    flex-wrap: wrap;   /* v2.40 — çok butonlu header'lar (Ingredients/Inventory) mobilde taşmasın → 2. satıra sar */
   }
-  .page-header-actions .btn { flex: 1; }
+  .page-header-actions .btn { flex: 1 1 auto; }  /* basis:auto → içerik genişliği; sığmazsa sarar (eski flex:1=basis:0 sarmayı engelliyordu) */
 }
 
 /* ---------- MOBILE LANDSCAPE ---------- */
