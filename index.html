@@ -48,6 +48,7 @@
 <style>
   /* App-aligned color palette */
   :root {
+    color-scheme: light;   /* Landing daima light — cihaz dark olsa bile satış vitrini sabit kalır */
     --bg: #fafaf9;
     --surface: #ffffff;
     --surface-2: #f5f5f4;
@@ -73,25 +74,9 @@
     --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
 
-  /* v2.17 — Dark mode. Tüm sayfa var() kullandığından değişkenleri
-     override etmek tüm landing'i karartır (app ile tutarlı yeşil vurgu). */
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #0f1311;
-      --surface: #181d1a;
-      --surface-2: #1f2623;
-      --border: #2b332e;
-      --border-strong: #3a443d;
-      --text-1: #f0f2f0;
-      --text-2: #c4ccc6;
-      --text-3: #9aa39d;
-      --text-muted: #6b746e;
-      --brand: #22c55e;
-      --brand-hover: #16a34a;
-      --brand-soft: #14271c;
-      --brand-soft-text: #86efac;
-    }
-  }
+  /* Dark mode KALDIRILDI. Landing artık daima light (satış vitrini).
+     Cihaz dark moddaysa color-scheme:light sayfayı light tutar. App'in (/app/)
+     kendi dark mode'u ayrı, etkilenmez. */
 
   *, *::before, *::after { box-sizing: border-box; }
 
@@ -620,6 +605,123 @@
     .hero-meta { gap: 14px; }
     .btn-primary, .btn-secondary { padding: 13px 20px; font-size: 14px; }
   }
+
+  /* ════════════════════════════════════════════════════════════
+     LANDING REDESIGN — app-aligned UI mockups + new sections
+     Mockup'lar /app/ ile aynı token'ları kullanır → gerçek arayüz,
+     stok foto değil. Raster yerine HTML/CSS: retina-net + hızlı.
+     ════════════════════════════════════════════════════════════ */
+
+  /* Browser-framed app shot */
+  .shot { border:1px solid var(--border); border-radius:14px; background:var(--surface); box-shadow:var(--shadow-lg); overflow:hidden; text-align:start; }
+  .shot-bar { display:flex; align-items:center; gap:6px; padding:9px 12px; border-bottom:1px solid var(--border); background:var(--surface-2); }
+  .shot-bar i { width:9px; height:9px; border-radius:50%; background:var(--border-strong); display:block; }
+  .shot-url { margin-inline-start:8px; font-size:11px; color:var(--text-muted); background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:3px 12px; flex:1; max-width:260px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .shot-body { padding:14px 16px 16px; }
+
+  /* App UI primitives (faithful to /app/) */
+  .ui-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:13px; gap:10px; }
+  .ui-title { font-size:17px; font-weight:800; letter-spacing:-.02em; color:var(--text-1); }
+  .ui-title small { display:block; font-size:11px; font-weight:600; color:var(--text-3); letter-spacing:0; }
+  .ui-ws { font-size:11px; font-weight:600; color:var(--text-2); border:1px solid var(--border); border-radius:999px; padding:4px 11px; white-space:nowrap; }
+  .ui-row { display:flex; align-items:center; gap:11px; padding:9px 10px; border:1px solid var(--border); border-radius:10px; margin-bottom:7px; background:var(--surface); }
+  .ui-row:last-child { margin-bottom:0; }
+  .ui-thumb { width:38px; height:38px; border-radius:8px; background:var(--surface-2); display:flex; align-items:center; justify-content:center; font-size:18px; flex:0 0 auto; }
+  .ui-rmain { flex:1; min-width:0; }
+  .ui-rname { font-weight:600; font-size:13.5px; color:var(--text-1); }
+  .ui-rmeta { font-size:11.5px; color:var(--text-3); margin-top:1px; }
+  .ui-price { font-weight:700; font-size:13px; color:var(--text-2); white-space:nowrap; }
+  .ui-chip { font-size:11px; font-weight:800; padding:3px 8px; border-radius:999px; white-space:nowrap; }
+  .ui-chip.good { background:var(--brand-soft); color:var(--brand-soft-text); }
+  .ui-chip.warn { background:#fef3c7; color:#92400e; }
+  .ui-chip.bad  { background:#fee2e2; color:#991b1b; }
+
+  /* Menu mockup */
+  .ui-msec { font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.07em; color:var(--brand); border-bottom:1px solid var(--border); padding-bottom:4px; margin:12px 0 7px; }
+  .ui-msec:first-child { margin-top:0; }
+  .ui-mitem { display:flex; justify-content:space-between; align-items:baseline; gap:12px; padding:4px 0; }
+  .ui-mitem .n { font-size:13px; font-weight:600; color:var(--text-1); }
+  .ui-mitem .n small { display:block; font-weight:400; font-size:11px; color:var(--text-3); }
+  .ui-mitem .p { font-size:13px; font-weight:700; color:var(--text-2); white-space:nowrap; }
+
+  /* Roster mockup */
+  .ui-roster { width:100%; border-collapse:collapse; font-size:11px; }
+  .ui-roster th, .ui-roster td { border:1px solid var(--border); padding:5px 6px; text-align:center; }
+  .ui-roster th { background:var(--surface-2); font-weight:700; color:var(--text-3); font-size:10px; }
+  .ui-roster td.nm { text-align:start; font-weight:600; color:var(--text-1); white-space:nowrap; }
+  .ui-roster .sh { color:var(--text-2); }
+  .ui-roster .off { color:var(--text-muted); font-weight:600; }
+
+  /* HACCP mockup */
+  .ui-log { display:flex; align-items:center; gap:10px; padding:7px 0; border-bottom:1px solid var(--border); font-size:12.5px; }
+  .ui-log:last-child { border-bottom:0; }
+  .ui-log .ok { width:18px; height:18px; border-radius:50%; background:var(--brand-soft); color:var(--brand-soft-text); display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
+  .ui-log .lt { flex:1; color:var(--text-1); }
+  .ui-log .tm { color:var(--text-3); font-size:11px; }
+  .ui-log .tp { font-weight:700; color:var(--text-2); font-variant-numeric:tabular-nums; }
+
+  /* Stats strip */
+  .ui-stats { display:flex; gap:18px; flex-wrap:wrap; padding:12px 14px; background:linear-gradient(135deg,var(--brand-soft),var(--surface)); border:1px solid var(--border); border-radius:12px; margin-bottom:12px; }
+  .ui-stat .l { font-size:10.5px; color:var(--text-3); text-transform:uppercase; letter-spacing:.04em; font-weight:600; }
+  .ui-stat .v { font-size:18px; font-weight:800; letter-spacing:-.02em; color:var(--text-1); }
+  .ui-stat .v.green { color:var(--brand); }
+
+  /* ── HERO visual ── */
+  .hero-visual { max-width:760px; margin:46px auto 0; }
+  .hero-visual .shot-body { padding:16px 18px 18px; }
+
+  /* ── LIVE MOMENT ── */
+  .live { padding:40px 0 8px; }
+  .live-grid { display:grid; grid-template-columns:1.05fr .95fr; gap:48px; align-items:center; }
+  .live-copy .section-label { margin-bottom:14px; }
+  .live-copy h2 { font-size:clamp(26px,3.4vw,38px); line-height:1.12; letter-spacing:-.025em; margin:0 0 16px; }
+  .live-copy p { color:var(--text-2); font-size:16px; line-height:1.65; margin:0 0 14px; max-width:46ch; }
+  .live-note { display:inline-flex; align-items:center; gap:8px; font-size:13.5px; font-weight:600; color:var(--brand-soft-text); background:var(--brand-soft); padding:8px 14px; border-radius:10px; }
+  .live-note svg { flex:0 0 auto; }
+  /* phone + desktop pairing */
+  .live-devices { position:relative; padding:10px 0 10px 0; }
+  .live-devices .desk { width:100%; }
+  .live-devices .phone { position:absolute; right:-6px; bottom:-18px; width:34%; max-width:150px; border:7px solid #1c1917; border-radius:26px; background:#1c1917; box-shadow:var(--shadow-lg); overflow:hidden; }
+  .live-devices .phone .shot { border:0; border-radius:18px; box-shadow:none; }
+  .live-devices .phone .shot-bar { padding:7px 9px; }
+  .live-devices .phone .shot-body { padding:10px 10px 12px; }
+
+  /* ── PROOF (screenshots) ── */
+  .proof { padding:56px 0; }
+  .proof-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:26px 24px; margin-top:8px; }
+  .proof-card .pc-cap { margin-bottom:12px; }
+  .proof-card .pc-tag { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--brand-soft-text); background:var(--brand-soft); padding:2px 9px; border-radius:999px; }
+  .proof-card .pc-cap h3 { font-size:18px; margin:10px 0 4px; letter-spacing:-.01em; }
+  .proof-card .pc-cap p { font-size:14px; color:var(--text-3); margin:0; line-height:1.55; }
+
+  /* ── FOUNDER ── */
+  .founder { padding:8px 0 56px; }
+  .founder-card { background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:36px; display:grid; grid-template-columns:auto 1fr; gap:32px; align-items:center; box-shadow:var(--shadow-sm); }
+  .founder-photo { width:132px; height:132px; border-radius:20px; background:var(--surface-2); border:1px dashed var(--border-strong); display:flex; align-items:center; justify-content:center; text-align:center; font-size:11px; font-weight:600; color:var(--text-muted); flex:0 0 auto; padding:10px; line-height:1.4; overflow:hidden; }
+  .founder-photo img { width:100%; height:100%; object-fit:cover; object-position:center 22%; border-radius:inherit; }
+  .founder-body .section-label { margin-bottom:12px; }
+  .founder-body blockquote { margin:0 0 16px; font-size:clamp(18px,2.1vw,22px); line-height:1.5; letter-spacing:-.01em; color:var(--text-1); font-weight:500; }
+  .founder-sig { display:flex; align-items:center; gap:10px; font-size:14px; }
+  .founder-sig b { color:var(--text-1); }
+  .founder-sig span { color:var(--text-3); }
+  .founder-ph { background:#fffbeb; border:1px dashed var(--warning); color:#92400e; border-radius:8px; padding:2px 7px; font-size:12px; font-weight:600; }
+
+  @media (max-width: 860px) {
+    .live-grid { grid-template-columns:1fr; gap:30px; }
+    .live-devices { max-width:520px; margin:0 auto; }
+    .proof-grid { grid-template-columns:1fr; gap:24px; }
+    .founder-card { grid-template-columns:1fr; gap:22px; padding:26px; text-align:center; }
+    .founder-photo { margin:0 auto; }
+    .founder-sig { justify-content:center; }
+  }
+  @media (max-width: 480px) {
+    .live-devices .phone { width:38%; right:0; bottom:-10px; }
+    .shot-body { padding:12px 12px 13px; }
+    .founder-card { padding:22px; }
+    /* Mobil nav: kalabalığı azalt — logo + dil + CTA kalır (Pricing bölüm + hero CTA ile erişilir) */
+    nav .nav-link { display:none; }
+    nav .nav-right { gap:12px; }
+  }
 </style>
 </head>
 <body>
@@ -644,15 +746,15 @@
   <!-- ============ HERO ============ -->
   <section class="hero">
 
-    <div class="hero-eyebrow reveal reveal-1" data-i18n="hero_eyebrow">Professional kitchen management</div>
+    <div class="hero-eyebrow reveal reveal-1" data-i18n="hero_eyebrow">The kitchen OS for chefs</div>
 
     <h1 class="reveal reveal-2" data-i18n-html="hero_title">
-      The kitchen OS<br>
-      for <span class="accent">chefs.</span>
+      Food cost, menus, prep<br>
+      &amp; HACCP — <span class="accent">in one place.</span>
     </h1>
 
     <p class="hero-sub reveal reveal-3" data-i18n="hero_sub">
-      Recipe costing, menu engineering, prep planning, inventory, HACCP. A complete toolkit for the modern professional kitchen — built by a chef, for chefs.
+      Every number and every sheet your kitchen runs on — recipe costing, menu engineering, prep, rosters, inventory and HACCP — in one fast app. Built by a working chef, for chefs.
     </p>
 
     <div class="cta-row reveal reveal-4">
@@ -662,7 +764,7 @@
           <path d="M5 12h14M13 5l7 7-7 7"/>
         </svg>
       </a>
-      <a href="#pricing" class="btn-secondary" data-i18n="hero_secondary">See pricing</a>
+      <a href="#proof" class="btn-secondary" data-i18n="hero_secondary">See how it works</a>
     </div>
 
     <div class="hero-meta reveal reveal-4">
@@ -680,6 +782,91 @@
       </span>
     </div>
 
+    <!-- Hero visual: real Recipes screen with live food cost % -->
+    <div class="hero-visual reveal reveal-4">
+      <div class="shot">
+        <div class="shot-bar">
+          <i></i><i></i><i></i>
+          <span class="shot-url">prochefdesk.com/app</span>
+        </div>
+        <div class="shot-body">
+          <div class="ui-head">
+            <div class="ui-title">Recipes <small data-i18n="shot_recipes_count">6 recipes · live food cost</small></div>
+            <div class="ui-ws">My Kitchen</div>
+          </div>
+          <div class="ui-row">
+            <div class="ui-thumb">🍝</div>
+            <div class="ui-rmain"><div class="ui-rname">Spaghetti alla Carbonara</div><div class="ui-rmeta" data-i18n="shot_r1_meta">Main · serves 4</div></div>
+            <div class="ui-price">$11.39</div><div class="ui-chip good">16%</div>
+          </div>
+          <div class="ui-row">
+            <div class="ui-thumb">🍛</div>
+            <div class="ui-rmain"><div class="ui-rname">Chicken Tikka Masala</div><div class="ui-rmeta" data-i18n="shot_r2_meta">Main · serves 4</div></div>
+            <div class="ui-price">$17.99</div><div class="ui-chip good">20%</div>
+          </div>
+          <div class="ui-row">
+            <div class="ui-thumb">🍔</div>
+            <div class="ui-rmain"><div class="ui-rname">Classic Cheeseburger</div><div class="ui-rmeta" data-i18n="shot_r3_meta">Main · serves 2</div></div>
+            <div class="ui-price">$8.16</div><div class="ui-chip warn">27%</div>
+          </div>
+          <div class="ui-row">
+            <div class="ui-thumb">🐟</div>
+            <div class="ui-rmain"><div class="ui-rname">Pan-Seared Salmon</div><div class="ui-rmeta" data-i18n="shot_r4_meta">Main · serves 2</div></div>
+            <div class="ui-price">$14.18</div><div class="ui-chip bad">30%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ============ LIVE MOMENT ============ -->
+  <section class="live">
+    <div class="live-grid">
+      <div class="live-copy">
+        <div class="section-label" data-i18n="live_label">One kitchen, every screen</div>
+        <h2 data-i18n="live_h2">Change a price on the line. Every menu updates.</h2>
+        <p data-i18n="live_p1">Bump an ingredient price on your phone mid-service, and the food cost on every recipe, every menu and every cost report recalculates — on the pass, in the office, on any device.</p>
+        <p data-i18n="live_p2">Pull a cost report, share a read-only cost link with the owner, edit and send a menu — full power on mobile, not a watered-down view.</p>
+        <div class="live-note">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4 4 10-10"/></svg>
+          <span data-i18n="live_note">Works even offline — syncs across your devices the moment you reconnect.</span>
+        </div>
+      </div>
+
+      <div class="live-devices">
+        <!-- Desktop: menu with live margin -->
+        <div class="shot desk">
+          <div class="shot-bar"><i></i><i></i><i></i><span class="shot-url">prochefdesk.com/app</span></div>
+          <div class="shot-body">
+            <div class="ui-head"><div class="ui-title">Dinner Menu</div><div class="ui-ws">My Kitchen</div></div>
+            <div class="ui-stats">
+              <div class="ui-stat"><div class="l" data-i18n="live_stat_margin">Menu margin</div><div class="v green">71%</div></div>
+              <div class="ui-stat"><div class="l" data-i18n="live_stat_cost">Avg food cost</div><div class="v">22%</div></div>
+              <div class="ui-stat"><div class="l" data-i18n="live_stat_dishes">Dishes</div><div class="v">12</div></div>
+            </div>
+            <div class="ui-msec" data-i18n="live_menu_sec">Mains</div>
+            <div class="ui-mitem"><div class="n">Spaghetti alla Carbonara</div><div class="p">$24.00 <span class="ui-chip good" style="margin-inline-start:6px;">16%</span></div></div>
+            <div class="ui-mitem"><div class="n">Chicken Tikka Masala</div><div class="p">$26.00 <span class="ui-chip good" style="margin-inline-start:6px;">20%</span></div></div>
+            <div class="ui-mitem"><div class="n">Pan-Seared Salmon</div><div class="p">$32.00 <span class="ui-chip warn" style="margin-inline-start:6px;">30%</span></div></div>
+          </div>
+        </div>
+        <!-- Phone: editing the recipe price -->
+        <div class="phone">
+          <div class="shot">
+            <div class="shot-bar"><i></i><i></i><i></i></div>
+            <div class="shot-body">
+              <div class="ui-head"><div class="ui-title" style="font-size:14px;">Carbonara</div></div>
+              <div class="ui-row" style="padding:7px 8px;"><div class="ui-rmain"><div class="ui-rname" style="font-size:12px;">Pancetta</div><div class="ui-rmeta" data-i18n="live_phone_ing">150 g</div></div><div class="ui-price" style="font-size:12px;">$4.20</div></div>
+              <div class="ui-stats" style="margin:10px 0 0;padding:9px 11px;">
+                <div class="ui-stat"><div class="l" data-i18n="live_phone_fc">Food cost</div><div class="v green" style="font-size:15px;">16%</div></div>
+                <div class="ui-stat"><div class="l" data-i18n="live_phone_plate">Per plate</div><div class="v" style="font-size:15px;">$2.85</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- ============ INTRO ============ -->
@@ -688,7 +875,7 @@
       <div class="intro-label" data-i18n="intro_label">Why ProChefDesk</div>
       <h2 data-i18n="intro_h2">Most kitchen software is built for accountants. This one is built for the line.</h2>
       <p data-i18n="intro_p1">
-        Update an ingredient price and your food cost recalculates instantly. Print a kitchen card during service. Plan a banquet for 200 guests in twenty minutes. Track allergens, scale portions, manage HACCP logs — without leaving the page.
+        You know the chaos: a dozen Excel files that don't talk to each other, recipes trapped on one office laptop, formulas that break the second a supplier price moves. ProChefDesk replaces all of it — update one ingredient price and every food cost recalculates, print a kitchen card mid-service, plan a 200-cover banquet in twenty minutes, track allergens, scale portions and keep HACCP logs, all in one place.
       </p>
       <p data-i18n-html="intro_p2">
         <strong>Start free. Upgrade when it pays for itself.</strong> Your data is always yours — export anytime. Just a toolkit that respects how chefs actually work.
@@ -697,6 +884,128 @@
   </section>
 
 </div>
+
+<!-- ============ PRODUCT PROOF / SCREENS ============ -->
+<section class="proof" id="proof">
+  <div class="container">
+    <div class="section-head">
+      <div class="section-label" data-i18n="proof_label">See it in action</div>
+      <h2 data-i18n="proof_h2">Real screens. Real numbers.</h2>
+      <p data-i18n="proof_sub">The actual tools you'll use on the line — each one built to kill a job you currently do on paper or in a spreadsheet.</p>
+    </div>
+
+    <div class="proof-grid">
+
+      <!-- Menu Studio -->
+      <div class="proof-card">
+        <div class="pc-cap">
+          <span class="pc-tag" data-i18n="proof1_tag">Menus</span>
+          <h3 data-i18n="proof1_h3">Engineer the menu, not just type it</h3>
+          <p data-i18n="proof1_p">Sections, prices, allergens and live margin — then print or share a public link in two taps.</p>
+        </div>
+        <div class="shot">
+          <div class="shot-bar"><i></i><i></i><i></i><span class="shot-url">prochefdesk.com/app</span></div>
+          <div class="shot-body">
+            <div class="ui-head"><div class="ui-title" style="font-size:15px;">Tasting Menu</div><div class="ui-ws" data-i18n="proof1_badge">Share link ✓</div></div>
+            <div class="ui-msec" data-i18n="proof1_sec1">Starters</div>
+            <div class="ui-mitem"><div class="n">Burrata, heirloom tomato <small data-i18n="proof1_d1">V · contains dairy</small></div><div class="p">$18</div></div>
+            <div class="ui-mitem"><div class="n">Kingfish crudo <small data-i18n="proof1_d2">GF · contains fish</small></div><div class="p">$22</div></div>
+            <div class="ui-msec" data-i18n="proof1_sec2">Mains</div>
+            <div class="ui-mitem"><div class="n">Dry-aged sirloin, café de Paris <small data-i18n="proof1_d3">GF</small></div><div class="p">$46</div></div>
+            <div class="ui-mitem"><div class="n">Spaghetti alla Carbonara <small data-i18n="proof1_d4">contains egg, dairy</small></div><div class="p">$24</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Roster & Labour -->
+      <div class="proof-card">
+        <div class="pc-cap">
+          <span class="pc-tag" data-i18n="proof2_tag">Roster &amp; labour · Pro</span>
+          <h3 data-i18n="proof2_h3">See the wage bill before you commit</h3>
+          <p data-i18n="proof2_p">Plan the week with leave codes and departments — labour cost totals add up as you type.</p>
+        </div>
+        <div class="shot">
+          <div class="shot-bar"><i></i><i></i><i></i><span class="shot-url">prochefdesk.com/app</span></div>
+          <div class="shot-body">
+            <div class="ui-stats">
+              <div class="ui-stat"><div class="l" data-i18n="proof2_s1">Labour cost</div><div class="v">$4,820</div></div>
+              <div class="ui-stat"><div class="l" data-i18n="proof2_s2">% of sales</div><div class="v green">28%</div></div>
+              <div class="ui-stat"><div class="l" data-i18n="proof2_s3">Hours</div><div class="v">186</div></div>
+            </div>
+            <table class="ui-roster">
+              <thead><tr><th data-i18n="proof2_staff">Staff</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th></tr></thead>
+              <tbody>
+                <tr><td class="nm">Marco</td><td class="sh">06–14</td><td class="sh">06–14</td><td class="off">OFF</td><td class="sh">06–14</td><td class="sh">06–14</td></tr>
+                <tr><td class="nm">Aisha</td><td class="sh">14–22</td><td class="sh">14–22</td><td class="sh">14–22</td><td class="off">OFF</td><td class="sh">14–22</td></tr>
+                <tr><td class="nm">Tom</td><td class="off">AL</td><td class="sh">10–18</td><td class="sh">10–18</td><td class="sh">10–18</td><td class="sh">10–18</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- HACCP -->
+      <div class="proof-card">
+        <div class="pc-cap">
+          <span class="pc-tag" data-i18n="proof3_tag">HACCP · Pro</span>
+          <h3 data-i18n="proof3_h3">Audit-ready, logged from the pass</h3>
+          <p data-i18n="proof3_p">Temperature, cooling, receiving and holding logs on your phone — print the monthly binder in one tap.</p>
+        </div>
+        <div class="shot">
+          <div class="shot-bar"><i></i><i></i><i></i><span class="shot-url">prochefdesk.com/app</span></div>
+          <div class="shot-body">
+            <div class="ui-head"><div class="ui-title" style="font-size:15px;">Fridge temps <small data-i18n="proof3_sub">Today · auto-timestamped</small></div></div>
+            <div class="ui-log"><span class="ok"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4 4 10-10"/></svg></span><span class="lt" data-i18n="proof3_l1">Walk-in cool room</span><span class="tp">3.2°C</span><span class="tm">06:12</span></div>
+            <div class="ui-log"><span class="ok"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4 4 10-10"/></svg></span><span class="lt" data-i18n="proof3_l2">Line fridge 1</span><span class="tp">4.0°C</span><span class="tm">06:14</span></div>
+            <div class="ui-log"><span class="ok"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4 4 10-10"/></svg></span><span class="lt" data-i18n="proof3_l3">Freezer</span><span class="tp">−18.5°C</span><span class="tm">06:15</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Kitchen Cards -->
+      <div class="proof-card">
+        <div class="pc-cap">
+          <span class="pc-tag" data-i18n="proof4_tag">Kitchen Cards</span>
+          <h3 data-i18n="proof4_h3">Big, clear cards for the line</h3>
+          <p data-i18n="proof4_p">Scale to any cover count, allergens highlighted, A4-printable — readable across a hot, busy pass.</p>
+        </div>
+        <div class="shot">
+          <div class="shot-bar"><i></i><i></i><i></i><span class="shot-url">prochefdesk.com/app</span></div>
+          <div class="shot-body">
+            <div class="ui-head"><div class="ui-title" style="font-size:15px;">Carbonara <small data-i18n="proof4_scale">scaled to 40 covers</small></div></div>
+            <div class="ui-mitem"><div class="n">Spaghetti</div><div class="p">4.0 kg</div></div>
+            <div class="ui-mitem"><div class="n">Pancetta</div><div class="p">1.5 kg</div></div>
+            <div class="ui-mitem"><div class="n">Egg yolks</div><div class="p">80</div></div>
+            <div class="ui-mitem"><div class="n">Pecorino</div><div class="p">800 g</div></div>
+            <div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);font-size:12px;color:var(--text-3);" data-i18n="proof4_allergen">Allergens: egg, dairy</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOUNDER ============ -->
+<section class="founder">
+  <div class="container">
+    <div class="founder-card">
+      <div class="founder-photo" style="border:0;background:var(--brand);">
+        <img src="/app/assets/founder.jpg" alt="Ahmet Kaya — Head Chef, ProChefDesk" loading="lazy" decoding="async">
+      </div>
+      <div class="founder-body">
+        <div class="section-label" data-i18n="founder_label">Built by a chef, for chefs</div>
+        <blockquote data-i18n-html="founder_quote">
+          I'm Ahmet — a head chef in Perth with over ten years on the line, from Istanbul restaurants to Gulf hotels, including Marriott multi-property banquets during the 2022 World Cup in Qatar. For years I ran my kitchen the way most of us do: a mess of disconnected Excel files, recipes and food costs stranded offline on a single computer, formulas I rebuilt by hand every time a supplier price moved — and I was the only one who could make sense of any of it. So I built ProChefDesk for my own kitchen: one place where recipes, costs, menus, prep and HACCP live together and stay in sync on every device — plus kitchen cards I can print so the whole team works from the same page mid-service. No more spreadsheets fighting each other, no more being chained to one laptop. It's the tool I now use every single day on a real line — and I'm putting it in the hands of chefs who'd rather spend their time cooking than wrestling formulas.
+        </blockquote>
+        <div class="founder-sig">
+          <b data-i18n="founder_name">Ahmet Kaya</b>
+          <span data-i18n="founder_role">Head Chef · Perth, WA</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
 <!-- ============ TOOLS ============ -->
 <section class="tools" id="tools">
@@ -828,7 +1137,7 @@
       <div class="why-item">
         <span class="why-num" data-i18n="why1_num">01 / Multi-device</span>
         <h3 data-i18n="why1_h3">Works wherever you are</h3>
-        <p data-i18n="why1_p">Phone in your pocket during service. Tablet in prep. Laptop after close. Same data, instantly synced — no apps to install.</p>
+        <p data-i18n="why1_p">Phone in your pocket during service. Tablet in prep. Laptop after close. Same data on every device — synced when you're online, ready even offline. No apps to install.</p>
       </div>
 
       <div class="why-item">
@@ -844,6 +1153,24 @@
       </div>
 
     </div>
+
+    <!-- Honest signal — real, no fabricated social proof (no fake logos/testimonials/badges) -->
+    <div style="text-align:center;margin-top:36px;">
+      <span style="display:inline-flex;align-items:center;gap:9px;font-size:14px;font-weight:600;color:var(--text-2);background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:9px 18px;box-shadow:var(--shadow-sm);">
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--brand);box-shadow:0 0 0 3px var(--brand-soft);flex:0 0 auto;"></span>
+        <span data-i18n="trust_live">Used every day in a working professional kitchen in Perth, WA.</span>
+      </span>
+    </div>
+
+    <!-- TESTIMONIALS — structure ready, intentionally EMPTY until real chef quotes exist.
+         Do NOT fabricate social proof. When real quotes arrive, drop in here:
+    <div style="margin-top:34px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;">
+      <figure style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px;margin:0;">
+        <blockquote style="margin:0 0 12px;font-size:15px;line-height:1.6;color:var(--text-1);">"[Real chef quote]"</blockquote>
+        <figcaption style="font-size:13px;color:var(--text-3);"><b>[Name]</b> · [Venue, City]</figcaption>
+      </figure>
+    </div>
+    -->
   </section>
 
 </div>
@@ -991,14 +1318,35 @@
     var I18N = {
       tr: {
         nav_pricing: "Fiyatlar", nav_blog: "Blog", nav_cta: "Uygulamayı Aç", cta_open: "Uygulamayı Aç", page_title: "ProChefDesk — Şefler için mutfak OS",
-        hero_eyebrow: "Profesyonel mutfak yönetimi",
-        hero_title: "Şefler için<br><span class=\"accent\">mutfak OS.</span>",
-        hero_sub: "Tarif maliyeti, menü mühendisliği, hazırlık planı, stok, HACCP. Modern profesyonel mutfak için eksiksiz araç seti — bir şef tarafından, şefler için yapıldı.",
-        cta_start: "Ücretsiz başla", hero_secondary: "Fiyatları gör",
+        hero_eyebrow: "Şefler için mutfak OS",
+        hero_title: "Food cost, menü, prep<br>&amp; HACCP — <span class=\"accent\">tek yerde.</span>",
+        hero_sub: "Mutfağının döndüğü her sayı ve her föy — tarif maliyeti, menü mühendisliği, prep, vardiya, stok ve HACCP — tek hızlı uygulamada. Bir şef tarafından, şefler için yapıldı.",
+        cta_start: "Ücretsiz başla", hero_secondary: "Nasıl çalıştığını gör",
+        shot_recipes_count: "6 tarif · canlı food cost", shot_r1_meta: "Ana · 4 kişilik", shot_r2_meta: "Ana · 4 kişilik", shot_r3_meta: "Ana · 2 kişilik", shot_r4_meta: "Ana · 2 kişilik",
+        live_label: "Tek mutfak, her ekran", live_h2: "Hatta bir fiyatı değiştir. Her menü güncellensin.",
+        live_p1: "Servis sırasında telefonundan bir malzeme fiyatını değiştir — her tarifin, her menünün ve her maliyet raporunun food cost'u yeniden hesaplansın. Hatta, ofiste, her cihazda.",
+        live_p2: "Maliyet raporu çek, patrona salt-okunur maliyet linki gönder, menüyü düzenleyip paylaş — mobilde tam güç, kırpılmış görünüm değil.",
+        live_note: "Çevrimdışı bile çalışır — yeniden bağlandığın an cihazların arasında senkronlanır.",
+        live_stat_margin: "Menü marjı", live_stat_cost: "Ort. food cost", live_stat_dishes: "Tabak", live_menu_sec: "Ana Yemekler",
+        live_phone_ing: "150 g", live_phone_fc: "Food cost", live_phone_plate: "Tabak başı",
+        proof_label: "İş başında gör", proof_h2: "Gerçek ekranlar. Gerçek sayılar.",
+        proof_sub: "Hatta kullanacağın gerçek araçlar — her biri şu an kağıtta veya Excel'de yaptığın bir işi bitirmek için kuruldu.",
+        proof1_tag: "Menüler", proof1_h3: "Menüyü yazma, mühendisliğini yap", proof1_p: "Bölümler, fiyatlar, alerjenler ve canlı marj — sonra iki dokunuşla yazdır veya herkese açık link paylaş.",
+        proof1_badge: "Paylaşım linki ✓", proof1_sec1: "Başlangıçlar", proof1_d1: "V · süt içerir", proof1_d2: "GF · balık içerir", proof1_sec2: "Ana Yemekler", proof1_d3: "GF", proof1_d4: "yumurta, süt içerir",
+        proof2_tag: "Vardiya & işçilik · Pro", proof2_h3: "Söz vermeden önce maaş yükünü gör", proof2_p: "Haftayı izin kodları ve departmanlarla planla — işçilik maliyeti yazdıkça toplanır.",
+        proof2_s1: "İşçilik maliyeti", proof2_s2: "Cironun %'si", proof2_s3: "Saat", proof2_staff: "Personel",
+        proof3_tag: "HACCP · Pro", proof3_h3: "Denetime hazır, hattan kaydedildi", proof3_p: "Sıcaklık, soğutma, mal kabul ve bekletme kayıtları telefonunda — aylık dosyayı tek dokunuşla yazdır.",
+        proof3_sub: "Bugün · otomatik zaman damgalı", proof3_l1: "Soğuk hava deposu", proof3_l2: "Hat dolabı 1", proof3_l3: "Dondurucu",
+        proof4_tag: "Mutfak Kartları", proof4_h3: "Hat için büyük, net kartlar", proof4_p: "Her kişi sayısına ölçekle, alerjenler vurgulu, A4 yazdırılabilir — sıcak, yoğun bir hatta okunur.",
+        proof4_scale: "40 kişiye ölçeklendi", proof4_allergen: "Alerjenler: yumurta, süt",
+        founder_label: "Bir şef tarafından, şefler için",
+        founder_quote: "Ben Ahmet — Perth'te bir head chef'im; İstanbul restoranlarından Körfez otellerine, 2022 Katar Dünya Kupası'ndaki Marriott çok-tesis banketlerine kadar on yılı aşkın süredir hattın içindeyim. Yıllarca mutfağımı çoğumuzun yaptığı gibi yönettim: birbirinden kopuk bir sürü Excel dosyası, tek bir bilgisayarda offline kalmış tarifler ve food cost'lar, her tedarikçi fiyatı değiştiğinde elle yeniden kurduğum formüller — ve bunların hiçbirini benden başkası okuyamıyordu. Bu yüzden ProChefDesk'i kendi mutfağım için yaptım: tarifler, maliyetler, menüler, prep ve HACCP'in tek yerde toplandığı, her cihazda senkron kalan bir sistem — bir de servis sırasında tüm ekibin aynı sayfadan çalışması için yazdırdığım mutfak kartları. Artık birbiriyle çakışan tablolar yok, tek bir laptopa zincirlenmek yok. Gerçek bir hatta her gün kullandığım araç bu — ve şimdi vaktini formüllerle boğuşmak yerine yemek yapmaya ayırmak isteyen şeflere veriyorum.",
+        founder_name: "Ahmet Kaya", founder_role: "Head Chef · Perth, WA",
+        trust_live: "Perth, WA'da aktif bir profesyonel mutfakta her gün kullanılıyor.",
         hero_meta1: "Ücretsiz planla başla — kart yok", hero_meta2: "Her cihazda çalışır", hero_meta3: "İstediğin zaman iptal",
         intro_label: "Neden ProChefDesk",
         intro_h2: "Çoğu mutfak yazılımı muhasebeciler için yapılır. Bu, hat için yapıldı.",
-        intro_p1: "Bir malzeme fiyatını güncelle, food cost anında yeniden hesaplansın. Servis sırasında mutfak kartı yazdır. 200 kişilik bir daveti yirmi dakikada planla. Alerjenleri takip et, porsiyonları ölçekle, HACCP kayıtlarını yönet — sayfadan çıkmadan.",
+        intro_p1: "O kaosu bilirsin: birbiriyle konuşmayan bir düzine Excel dosyası, ofis bilgisayarına hapsolmuş tarifler, bir tedarikçi fiyatı değişince bozulan formüller. ProChefDesk hepsinin yerini alır — tek bir malzeme fiyatını güncelle, her food cost yeniden hesaplansın; servis sırasında mutfak kartı yazdır; 200 kişilik daveti yirmi dakikada planla; alerjen takibi, porsiyon ölçekleme ve HACCP kayıtları, hepsi tek yerde.",
         intro_p2: "<strong>Ücretsiz başla. İşe yaradığında yükselt.</strong> Verilerin her zaman senin — istediğin an dışa aktar. Şeflerin gerçekte nasıl çalıştığına saygı duyan bir araç seti.",
         tools_label: "Araç Seti", tools_h2: "On araç, tek mutfak beyni.",
         tools_sub: "Profesyonel bir mutfağı yönetmek için gereken her şey — bağlı, senkron ve saniyeler içinde hazır.",
@@ -1013,7 +1361,7 @@
         tool_events_t: "Etkinlik & Catering", tool_events_d: "Düğün, ziyafet veya büfe planla. Kişi sayısı, tarif ölçekleme, hazırlık listesi, food cost — tamam.",
         tool_haccp_t: "Kontrol Listeleri & HACCP", tool_haccp_d: "Açılış, kapanış, soğutma kayıtları, sıcaklık kontrolleri. HACCP'e hazır şablonlar dahil.",
         why_label: "Farklı kurgu", why_h2: "Şefler neden bunu seçiyor.", why_sub: "İşini senden iyi bildiğini sanmayan bir mutfak aracı.",
-        why1_num: "01 / Çok cihaz", why1_h3: "Nerede olursan ol çalışır", why1_p: "Serviste cebinde telefon. Hazırlıkta tablet. Kapanıştan sonra laptop. Aynı veri, anında senkron — kurulacak uygulama yok.",
+        why1_num: "01 / Çok cihaz", why1_h3: "Nerede olursan ol çalışır", why1_p: "Serviste cebinde telefon. Hazırlıkta tablet. Kapanıştan sonra laptop. Aynı veri her cihazda — çevrimiçiyken senkron, çevrimdışı bile hazır. Kurulacak uygulama yok.",
         why2_num: "02 / Verin senin", why2_h3: "Yedeklenir, hep senin", why2_p: "Gece bulut yedekleri. Altı dil. Mekan başına birden fazla workspace. Her şeyi istediğin an CSV veya PDF olarak dışa aktar.",
         why3_num: "03 / Adil fiyat", why3_h3: "Ücretsiz başla, işe yarayınca yükselt", why3_p: "Ücretsiz plan gerçek bir mutfağı çevirir. Pro; sınırsız tarif, HACCP kayıtları, bulut senkron ve temiz çıktıların kilidini açar — tek basit fiyat, istediğin an iptal. Otomatik yenilenen deneme yok, sürpriz yok.",
         vp_label: "Neden kazandırır", vp_h2: "Sadece servisi değil, rakamları da yönet.", vp_sub: "ProChefDesk'in bir defter ve tablodan yapamayacağı üç şey.",
@@ -1034,7 +1382,7 @@
         hero_eyebrow: "Gestión profesional de cocina",
         hero_title: "El sistema operativo<br>de cocina para <span class=\"accent\">chefs.</span>",
         hero_sub: "Costeo de recetas, ingeniería de menús, planificación de mise en place, inventario, HACCP. Un conjunto de herramientas completo para la cocina profesional moderna — hecho por un chef, para chefs.",
-        cta_start: "Empieza gratis", hero_secondary: "Ver precios",
+        cta_start: "Empieza gratis", hero_secondary: "Ver cómo funciona",
         hero_meta1: "Plan gratuito para empezar — sin tarjeta", hero_meta2: "Funciona en cualquier dispositivo", hero_meta3: "Cancela cuando quieras",
         intro_label: "Por qué ProChefDesk",
         intro_h2: "La mayoría del software de cocina está hecho para contables. Este está hecho para la línea.",
@@ -1053,7 +1401,7 @@
         tool_events_t: "Eventos y catering", tool_events_d: "Planifica una boda, un banquete o un bufé. Número de invitados, escalado de recetas, lista de preparación, coste de alimentos — hecho.",
         tool_haccp_t: "Listas de control y HACCP", tool_haccp_d: "Apertura, cierre, registros de enfriamiento, controles de temperatura. Plantillas listas para HACCP incluidas.",
         why_label: "Diferente por diseño", why_h2: "Por qué lo eligen los chefs.", why_sub: "Una herramienta de cocina que no pretende saber tu trabajo mejor que tú.",
-        why1_num: "01 / Multidispositivo", why1_h3: "Funciona estés donde estés", why1_p: "El teléfono en el bolsillo durante el servicio. La tablet en la preparación. El portátil tras el cierre. Los mismos datos, sincronizados al instante — sin apps que instalar.",
+        why1_num: "01 / Multidispositivo", why1_h3: "Funciona estés donde estés", why1_p: "El teléfono en el bolsillo durante el servicio. La tablet en la preparación. El portátil tras el cierre. Los mismos datos en cada dispositivo — sincronizados cuando tienes conexión, listos incluso sin conexión. Sin apps que instalar.",
         why2_num: "02 / Tus datos", why2_h3: "Respaldados, siempre tuyos", why2_p: "Copias de seguridad nocturnas en la nube. Seis idiomas. Varios espacios de trabajo por local. Exporta lo que quieras en CSV o PDF, cuando quieras.",
         why3_num: "03 / Precio justo", why3_h3: "Empieza gratis, mejora cuando te compense", why3_p: "El plan gratuito hace funcionar una cocina real. Pro desbloquea recetas ilimitadas, registros HACCP, sincronización en la nube y exportaciones limpias — un precio simple, cancela cuando quieras. Sin pruebas que se renuevan solas, sin sorpresas.",
         vp_label: "Por qué compensa", vp_h2: "Gestiona los números, no solo el pase.", vp_sub: "Tres cosas que ProChefDesk hace y que un cuaderno y una hoja de cálculo no pueden.",
@@ -1074,7 +1422,7 @@
         hero_eyebrow: "Gestion de cuisine professionnelle",
         hero_title: "Le système d'exploitation<br>de cuisine pour <span class=\"accent\">chefs.</span>",
         hero_sub: "Coût des recettes, ingénierie des menus, planification de la mise en place, inventaire, HACCP. Une boîte à outils complète pour la cuisine professionnelle moderne — conçue par un chef, pour les chefs.",
-        cta_start: "Commencer gratuitement", hero_secondary: "Voir les tarifs",
+        cta_start: "Commencer gratuitement", hero_secondary: "Voir comment ça marche",
         hero_meta1: "Formule gratuite pour démarrer — sans carte", hero_meta2: "Fonctionne sur tout appareil", hero_meta3: "Annulez à tout moment",
         intro_label: "Pourquoi ProChefDesk",
         intro_h2: "La plupart des logiciels de cuisine sont conçus pour les comptables. Celui-ci est conçu pour le piano.",
@@ -1093,7 +1441,7 @@
         tool_events_t: "Événements & traiteur", tool_events_d: "Planifiez un mariage, un banquet ou un buffet. Nombre de couverts, mise à l'échelle des recettes, liste de préparation, coût matière — terminé.",
         tool_haccp_t: "Check-lists & HACCP", tool_haccp_d: "Ouverture, fermeture, relevés de refroidissement, contrôles de température. Modèles prêts pour le HACCP inclus.",
         why_label: "Pensé autrement", why_h2: "Pourquoi les chefs le choisissent.", why_sub: "Un outil de cuisine qui ne prétend pas connaître votre métier mieux que vous.",
-        why1_num: "01 / Multi-appareils", why1_h3: "Fonctionne où que vous soyez", why1_p: "Le téléphone en poche pendant le service. La tablette en préparation. L'ordinateur après la fermeture. Les mêmes données, synchronisées instantanément — aucune application à installer.",
+        why1_num: "01 / Multi-appareils", why1_h3: "Fonctionne où que vous soyez", why1_p: "Le téléphone en poche pendant le service. La tablette en préparation. L'ordinateur après la fermeture. Les mêmes données sur chaque appareil — synchronisées en ligne, disponibles même hors ligne. Aucune application à installer.",
         why2_num: "02 / Vos données", why2_h3: "Sauvegardées, toujours à vous", why2_p: "Sauvegardes cloud nocturnes. Six langues. Plusieurs espaces de travail par établissement. Exportez tout en CSV ou PDF, quand vous voulez.",
         why3_num: "03 / Tarif équitable", why3_h3: "Commencez gratuitement, évoluez quand cela rapporte", why3_p: "La formule gratuite fait tourner une vraie cuisine. Pro débloque les recettes illimitées, les relevés HACCP, la synchronisation cloud et les exports propres — un prix simple, annulable à tout moment. Pas d'essais qui se renouvellent seuls, pas de surprises.",
         vp_label: "Pourquoi c'est rentable", vp_h2: "Pilotez les chiffres, pas seulement le service.", vp_sub: "Trois choses que ProChefDesk fait et qu'un carnet et un tableur ne peuvent pas.",
@@ -1114,7 +1462,7 @@
         hero_eyebrow: "Professionelles Küchenmanagement",
         hero_title: "Das Küchen-OS<br>für <span class=\"accent\">Köche.</span>",
         hero_sub: "Rezeptkalkulation, Menü-Engineering, Mise-en-place-Planung, Inventar, HACCP. Ein komplettes Toolkit für die moderne Profiküche — von einem Koch, für Köche.",
-        cta_start: "Kostenlos starten", hero_secondary: "Preise ansehen",
+        cta_start: "Kostenlos starten", hero_secondary: "So funktioniert's",
         hero_meta1: "Kostenloser Tarif zum Start — keine Karte", hero_meta2: "Funktioniert auf jedem Gerät", hero_meta3: "Jederzeit kündbar",
         intro_label: "Warum ProChefDesk",
         intro_h2: "Die meiste Küchensoftware ist für Buchhalter gemacht. Diese ist für die Linie gemacht.",
@@ -1133,7 +1481,7 @@
         tool_events_t: "Events & Catering", tool_events_d: "Plane eine Hochzeit, ein Bankett oder ein Buffet. Gästezahl, Rezeptskalierung, Vorbereitungsliste, Wareneinsatz — fertig.",
         tool_haccp_t: "Checklisten & HACCP", tool_haccp_d: "Öffnung, Schließung, Abkühlprotokolle, Temperaturkontrollen. HACCP-fertige Vorlagen inklusive.",
         why_label: "Anders gedacht", why_h2: "Warum Köche es wählen.", why_sub: "Ein Küchenwerkzeug, das nicht vorgibt, deinen Job besser zu kennen als du.",
-        why1_num: "01 / Mehrere Geräte", why1_h3: "Funktioniert, wo immer du bist", why1_p: "Das Telefon in der Tasche während des Service. Das Tablet bei der Vorbereitung. Der Laptop nach Feierabend. Dieselben Daten, sofort synchronisiert — keine App zu installieren.",
+        why1_num: "01 / Mehrere Geräte", why1_h3: "Funktioniert, wo immer du bist", why1_p: "Das Telefon in der Tasche während des Service. Das Tablet bei der Vorbereitung. Der Laptop nach Feierabend. Dieselben Daten auf jedem Gerät — synchronisiert online, auch offline verfügbar. Keine App zu installieren.",
         why2_num: "02 / Deine Daten", why2_h3: "Gesichert, immer deine", why2_p: "Nächtliche Cloud-Backups. Sechs Sprachen. Mehrere Arbeitsbereiche pro Betrieb. Exportiere alles als CSV oder PDF, jederzeit.",
         why3_num: "03 / Faire Preise", why3_h3: "Kostenlos starten, upgraden, wenn es sich lohnt", why3_p: "Der kostenlose Tarif betreibt eine echte Küche. Pro schaltet unbegrenzte Rezepte, HACCP-Protokolle, Cloud-Sync und saubere Exporte frei — ein einfacher Preis, jederzeit kündbar. Keine sich automatisch verlängernden Testphasen, keine Überraschungen.",
         vp_label: "Warum es sich lohnt", vp_h2: "Steuere die Zahlen, nicht nur den Pass.", vp_sub: "Drei Dinge, die ProChefDesk kann und ein Notizbuch und eine Tabelle nicht.",
@@ -1154,7 +1502,7 @@
         hero_eyebrow: "إدارة مطبخ احترافية",
         hero_title: "نظام تشغيل المطبخ<br>لـ<span class=\"accent\">الطهاة.</span>",
         hero_sub: "تكلفة الوصفات وهندسة القوائم وتخطيط التحضير والمخزون وHACCP. مجموعة أدوات متكاملة للمطبخ الاحترافي الحديث — صُنعت بيد طاهٍ، للطهاة.",
-        cta_start: "ابدأ مجانًا", hero_secondary: "اطّلع على الأسعار",
+        cta_start: "ابدأ مجانًا", hero_secondary: "شاهد كيف يعمل",
         hero_meta1: "خطة مجانية للبدء — دون بطاقة", hero_meta2: "تعمل على أي جهاز", hero_meta3: "ألغِ في أي وقت",
         intro_label: "لماذا ProChefDesk",
         intro_h2: "معظم برامج المطابخ مصممة للمحاسبين. هذا مصمم لخط الطهي.",
@@ -1173,7 +1521,7 @@
         tool_events_t: "الفعاليات والتموين", tool_events_d: "خطّط لعرس أو مأدبة أو بوفيه. عدد الضيوف، قياس الوصفات، قائمة التحضير، تكلفة الطعام — تم.",
         tool_haccp_t: "قوائم التحقق وHACCP", tool_haccp_d: "الافتتاح والإغلاق وسجلات التبريد وفحوص الحرارة. قوالب جاهزة لـHACCP مضمّنة.",
         why_label: "مختلف بالتصميم", why_h2: "لماذا يختاره الطهاة.", why_sub: "أداة مطبخ لا تدّعي أنها تعرف عملك أكثر منك.",
-        why1_num: "01 / تعدد الأجهزة", why1_h3: "تعمل أينما كنت", why1_p: "الهاتف في جيبك أثناء الخدمة. الجهاز اللوحي في التحضير. الحاسوب بعد الإغلاق. البيانات نفسها، متزامنة فورًا — دون تطبيقات تُثبّت.",
+        why1_num: "01 / تعدد الأجهزة", why1_h3: "تعمل أينما كنت", why1_p: "الهاتف في جيبك أثناء الخدمة. الجهاز اللوحي في التحضير. الحاسوب بعد الإغلاق. البيانات نفسها على كل جهاز — تتزامن عند الاتصال، ومتاحة حتى دون اتصال. دون تطبيقات تُثبّت.",
         why2_num: "02 / بياناتك", why2_h3: "محفوظة، وملكك دائمًا", why2_p: "نسخ احتياطية سحابية ليلية. ست لغات. مساحات عمل متعددة لكل منشأة. صدّر أي شيء بصيغة CSV أو PDF، متى شئت.",
         why3_num: "03 / تسعير عادل", why3_h3: "ابدأ مجانًا، وارتقِ عندما يستحق", why3_p: "الخطة المجانية تدير مطبخًا حقيقيًا. وتفتح خطة Pro وصفات غير محدودة وسجلات HACCP ومزامنة سحابية ومخرجات نظيفة — سعر واحد بسيط، وإلغاء في أي وقت. لا تجارب تتجدد تلقائيًا، ولا مفاجآت.",
         vp_label: "لماذا يستحق", vp_h2: "أدر الأرقام، لا الخدمة فقط.", vp_sub: "ثلاثة أشياء يفعلها ProChefDesk ولا يستطيعها دفتر وجدول.",
