@@ -641,6 +641,7 @@
           // (operatör: "kaydedilmiş büfelerde de cost report, pdf ve excel olmalı").
           // Editor açmadan doğrudan print/export. Mobile'da sığması için kompakt.
           '<button type="button" class="icon-btn" data-buf-prep="' + b.id + '" title="' + PCD.escapeHtml(t('buffet_print_prep') || 'Prep List') + '">' + PCD.icon('list', 18) + '</button>' +
+          '<button type="button" class="icon-btn" data-buf-order="' + b.id + '" title="' + PCD.escapeHtml(t('buffet_order_list') || 'Order List') + '">' + PCD.icon('truck', 18) + '</button>' +
           '<button type="button" class="icon-btn" data-buf-pdf="' + b.id + '" title="' + PCD.escapeHtml(t('buffet_print_report') || 'Cost Report') + '">' + PCD.icon('print', 18) + '</button>' +
           '<button type="button" class="icon-btn" data-buf-excel="' + b.id + '" title="Excel">' + PCD.icon('book-open', 18) + '</button>' +
           '<button type="button" class="icon-btn" data-buf-dup="' + b.id + '" title="' + PCD.escapeHtml(t('buffet_duplicate') || 'Duplicate') + '">' + PCD.icon('copy', 18) + '</button>' +
@@ -671,7 +672,7 @@
       // v2.8.86 — Edit/Dup butonları + yeni Prep/PDF/Excel butonları satır click'i tetiklemesin
       if (e.target.closest('[data-buf-edit]') || e.target.closest('[data-buf-dup]') ||
           e.target.closest('[data-buf-prep]') || e.target.closest('[data-buf-pdf]') ||
-          e.target.closest('[data-buf-excel]')) return;
+          e.target.closest('[data-buf-order]') || e.target.closest('[data-buf-excel]')) return;
       openEditor(this.getAttribute('data-bid'));
     });
     PCD.on(listEl, 'click', '[data-buf-edit]', function (e) {
@@ -683,6 +684,11 @@
       e.stopPropagation();
       const b = getBuffet(this.getAttribute('data-buf-prep'));
       if (b) printPrepList(b);
+    });
+    PCD.on(listEl, 'click', '[data-buf-order]', function (e) {
+      e.stopPropagation();
+      const b = getBuffet(this.getAttribute('data-buf-order'));
+      if (b) openBuffetOrderList(b);
     });
     PCD.on(listEl, 'click', '[data-buf-pdf]', function (e) {
       e.stopPropagation();
@@ -1403,6 +1409,9 @@
     const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') || 'Cancel' });
     const prepBtn = PCD.el('button', { class: 'btn btn-outline' });
     prepBtn.innerHTML = PCD.icon('list', 16) + ' <span>' + (t('buffet_print_prep') || 'Prep List') + '</span>';
+    // v2.38 — Tedarikçiye göre sipariş/satın alma listesi
+    const orderBtn = PCD.el('button', { class: 'btn btn-outline' });
+    orderBtn.innerHTML = PCD.icon('truck', 16) + ' <span>' + (t('buffet_order_list') || 'Order List') + '</span>';
     const reportBtn = PCD.el('button', { class: 'btn btn-outline' });
     reportBtn.innerHTML = PCD.icon('print', 16) + ' <span>' + (t('buffet_print_report') || 'Cost Report') + '</span>';
     // v2.8.79 — Excel export butonu (operatör request: "excel cost report
@@ -1417,6 +1426,7 @@
     if (deleteBtn) footer.appendChild(deleteBtn);
     footer.appendChild(cancelBtn);
     footer.appendChild(prepBtn);
+    footer.appendChild(orderBtn);
     footer.appendChild(reportBtn);
     footer.appendChild(excelBtn);
     footer.appendChild(saveBtn);
@@ -1462,6 +1472,11 @@
       if (existing) { upsertBuffet(Object.assign({}, existing, data)); }
       printPrepList(data);
     });
+    orderBtn.addEventListener('click', function () {
+      data.name = (PCD.$('#bufName', body).value || '').trim() || t('untitled');
+      if (existing) { upsertBuffet(Object.assign({}, existing, data)); }
+      openBuffetOrderList(data);
+    });
     reportBtn.addEventListener('click', function () {
       data.name = (PCD.$('#bufName', body).value || '').trim() || t('untitled');
       if (existing) { upsertBuffet(Object.assign({}, existing, data)); }
@@ -1473,6 +1488,129 @@
       if (existing) { upsertBuffet(Object.assign({}, existing, data)); }
       exportBuffetXLSX(data);
     });
+  }
+
+  // ---------- ORDER / SHOPPING LIST (v2.38) ----------
+  // Tedarikçiye göre satın alma listesi. Mevcut maliyet motoruyla BİREBİR
+  // tutarlı: prep miktarı = covers × per_guest × refillX (item override dahil).
+  //  - Tarif kalemi → alt-tarifler dahil gerçek malzemeye iner (flattenIngredients,
+  //    scale = prepInRecipeUnit / recipeYield — computeItemCost Path B mantığı).
+  //  - Malzeme kalemi → doğrudan, stok birimine çevrilir.
+  //  - Custom kalem → ad + prep miktarıyla "Bağlanmamış" grubuna düşer.
+  // Aynı malzeme stok birimine normalize edilip toplanır; tedarikçiye gruplanır.
+  function buildBuffetOrder(buffet, ingMap, recipeMap) {
+    const t = PCD.i18n.t;
+    const coverCount = Number(buffet.coverCount) || 0;
+    const refillX = buffet.refillMultiplier != null
+      ? Number(buffet.refillMultiplier)
+      : (INDUSTRY_REFILL[buffet.type] || INDUSTRY_REFILL.custom);
+    const acc = {};
+    function addIng(ing, amount, unit) {
+      if (!ing) return;
+      let amt = Number(amount) || 0;
+      if (!(amt > 0)) return;
+      let u = unit || '';
+      // Stok birimine normalize → aynı malzemenin g/kg gibi varyantları birleşir
+      if (ing.unit && u && u !== ing.unit) {
+        try { const c = PCD.convertUnit(amt, u, ing.unit); if (c != null && isFinite(c) && c > 0) { amt = c; u = ing.unit; } } catch (e) {}
+      }
+      const key = 'i:' + ing.id + '|' + u;
+      if (!acc[key]) acc[key] = { name: ing.name || '', unit: u, amount: 0, supplier: (ing.supplier || '').trim(), custom: false };
+      acc[key].amount += amt;
+    }
+    (buffet.stations || []).forEach(function (st) {
+      (st.items || []).forEach(function (it) {
+        const perGuest = Number(it.amountPerGuest) || 0;
+        const itemRefill = it.refillX != null ? Number(it.refillX) : refillX;
+        const prepAmount = coverCount * perGuest * itemRefill;
+        if (!(prepAmount > 0)) return;
+        const r = it.recipeId ? recipeMap[it.recipeId] : null;
+        const ing = it.ingredientId ? ingMap[it.ingredientId] : null;
+        if (r) {
+          const recipeYield = Number(r.yieldAmount) || Number(r.servings) || 1;
+          let prepInRecipeUnit = prepAmount;
+          if (it.unit && r.yieldUnit && it.unit !== r.yieldUnit) {
+            try { prepInRecipeUnit = PCD.convertUnit(prepAmount, it.unit, r.yieldUnit); } catch (e) {}
+          }
+          const scale = (recipeYield > 0) ? (prepInRecipeUnit / recipeYield) : 0;
+          if (!(scale > 0)) return;
+          const flat = PCD.recipes.flattenIngredients(r, ingMap, recipeMap, { scale: scale });
+          flat.forEach(function (f) { if (f.ingredient) addIng(f.ingredient, f.amount, f.unit); });
+        } else if (ing) {
+          addIng(ing, prepAmount, it.unit);
+        } else if (it.customName) {
+          const u = it.unit || '';
+          const key = 'c:' + it.customName.toLowerCase() + '|' + u;
+          if (!acc[key]) acc[key] = { name: it.customName, unit: u, amount: 0, supplier: '', custom: true };
+          acc[key].amount += prepAmount;
+        }
+      });
+    });
+    const unlinkedLabel = t('buffet_order_unlinked') || 'Unlinked / manual';
+    const groups = {};
+    Object.keys(acc).forEach(function (k) {
+      const row = acc[k];
+      const sup = row.supplier || unlinkedLabel;
+      (groups[sup] = groups[sup] || []).push(row);
+    });
+    const names = Object.keys(groups).sort(function (a, b) {
+      if (a === unlinkedLabel) return 1;   // bağlanmamış grup en sona
+      if (b === unlinkedLabel) return -1;
+      return a.localeCompare(b);
+    });
+    return names.map(function (sup) {
+      return { supplier: sup, rows: groups[sup].sort(function (a, b) { return (a.name || '').localeCompare(b.name || ''); }) };
+    });
+  }
+
+  function orderListHtml(groups, forPrint) {
+    const t = PCD.i18n.t;
+    if (!groups.length) {
+      return '<div class="text-muted" style="padding:16px;text-align:center;">' + PCD.escapeHtml(t('buffet_order_empty') || 'Link items to recipes or ingredients to generate a supplier order list.') + '</div>';
+    }
+    const fmt = function (n) { return (Math.round(n * 100) / 100).toString(); };
+    const titleColor = forPrint ? '#16a34a' : 'var(--brand-700)';
+    const lineColor = forPrint ? '#e5e5e5' : 'var(--border)';
+    return groups.map(function (g) {
+      return '<div style="margin-bottom:14px;">' +
+        '<div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:' + titleColor + ';border-bottom:1px solid ' + lineColor + ';padding-bottom:4px;margin-bottom:6px;">' + PCD.escapeHtml(g.supplier) + '</div>' +
+        g.rows.map(function (r) {
+          return '<div style="display:flex;justify-content:space-between;gap:12px;padding:3px 0;font-size:13px;">' +
+            '<span>' + PCD.escapeHtml(r.name || '') + (r.custom ? ' <span style="color:#999;font-size:11px;">(' + PCD.escapeHtml(t('buffet_order_manual_tag') || 'manual') + ')</span>' : '') + '</span>' +
+            '<span style="font-weight:600;white-space:nowrap;">' + fmt(r.amount) + ' ' + PCD.escapeHtml(r.unit) + '</span>' +
+          '</div>';
+        }).join('') +
+      '</div>';
+    }).join('');
+  }
+
+  function openBuffetOrderList(buffet) {
+    const t = PCD.i18n.t;
+    const ingMap = {};
+    PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
+    const recipeMap = PCD.recipes.buildRecipeMap();
+    const groups = buildBuffetOrder(buffet, ingMap, recipeMap);
+    const refillX = buffet.refillMultiplier != null ? Number(buffet.refillMultiplier) : (INDUSTRY_REFILL[buffet.type] || INDUSTRY_REFILL.custom);
+    const metaStr = (buffet.coverCount || 0) + ' ' + (t('buffet_covers') || 'covers') + ' · ' + (t('buffet_refill_label') || 'Refill') + ' ' + refillX + '×';
+    const body = PCD.el('div');
+    body.innerHTML = '<div class="text-muted text-sm" style="margin-bottom:10px;">' + PCD.escapeHtml(metaStr) + '</div>' + orderListHtml(groups, false);
+    const printBtn = PCD.el('button', { class: 'btn btn-outline' });
+    printBtn.innerHTML = PCD.icon('print', 14) + ' ' + PCD.escapeHtml(t('print') || 'Print');
+    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: (t('btn_close') || 'Close'), style: { marginInlineStart: 'auto' } });
+    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
+    footer.appendChild(printBtn); footer.appendChild(closeBtn);
+    const m = PCD.modal.open({ title: '🛒 ' + (t('buffet_order_list') || 'Order list'), body: body, footer: footer, size: 'md', closable: true });
+    printBtn.addEventListener('click', function () {
+      const dateStr = buffet.serviceDate ? PCD.fmtDate(buffet.serviceDate) : new Date().toLocaleDateString();
+      const html =
+        '<style>@page{size:A4;margin:14mm;}body{font-family:-apple-system,"Segoe UI",Roboto,sans-serif;color:#111;max-width:760px;margin:0 auto;}' +
+        '.hdr{border-bottom:3px solid #16a34a;padding-bottom:8px;margin-bottom:14px;}.hdr h1{margin:0;font-size:18pt;color:#16a34a;}.hdr .meta{font-size:10pt;color:#666;margin-top:2px;}</style>' +
+        '<div class="hdr"><h1>' + PCD.escapeHtml(buffet.name || (t('buffet_untitled') || 'Buffet')) + ' — ' + PCD.escapeHtml(t('buffet_order_list') || 'Order list') + '</h1>' +
+        '<div class="meta">' + PCD.escapeHtml(metaStr) + ' · ' + dateStr + '</div></div>' +
+        orderListHtml(groups, true);
+      PCD.print(html, (buffet.name || 'Buffet') + ' — ' + (t('buffet_order_list') || 'Order list'));
+    });
+    closeBtn.addEventListener('click', function () { m.close(); });
   }
 
   // ---------- PRINT: PREP LIST ----------

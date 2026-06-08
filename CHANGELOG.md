@@ -4,6 +4,20 @@ Kronolojik tersine (en son üstte). Her sürüm: başlık + ana değişiklikler.
 
 ---
 
+## v2.38.0 — Buffet Planner (Araç 7/8): tedarikçiye göre sipariş/satın alma listesi · 2026-06-08
+
+Kod-önce analiz: Buffet Planner paketin EN OLGUN aracı (3-yol sektör maliyet motoru — tarif/malzeme/custom, yield%, birim dönüşümü, refill, pickup, fire projeksiyonu; food-cost-% hedefli durum renkleri; 7 uluslararası preset + boş; arama; kart başına Prep/PDF/Excel/Çoğalt/Düzenle; canlı stats hero kartı; focus-koruyan editör). Çoğalt + prep list + cost report + stilize Excel zaten vardı. Kök değişiklik gereksiz → **tek gerçek boşluğu** doldurdum (ve bir tutarsızlığı giderdim):
+
+- **🛒 Sipariş / satın alma listesi (yeni çıktı):** Aracın kendi rehberi *"alt-tarifler gerçek malzemeye iner ve shopping list'te görünür"* diye vaat ediyordu ama böyle bir liste **yoktu** (mevcut Prep List istasyona göre kalem adı gösteriyordu, ham malzeme değil). Artık:
+  - Tarif kalemlerini **alt-tarifler dahil gerçek malzemeye indirir** (`flattenIngredients`), mevcut maliyet motoruyla **birebir aynı ölçek** (prep = kapak × kişi-başı × refill; scale = prepInRecipeUnit ÷ recipeYield).
+  - Malzeme-bağlı kalemleri doğrudan ekler, aynı malzemeyi **stok birimine normalize edip toplar** (tarif-içi + doğrudan aynı malzeme tek satırda birleşir).
+  - Custom kalemleri "Bağlanmamış / manuel" grubuna düşürür (şef yine de ne hazırlayacağını/alacağını görür).
+  - **Tedarikçiye göre gruplar**, A4 yazdırır. Hem liste kartından (🚚 ikon) hem editör footer'ından erişilir.
+- Rehber adım 5 + dosya başlığı güncellendi — artık vaat **gerçek** (Prep List / Sipariş Listesi / Cost Report üç çıktı).
+- Tarayıcıda doğrulandı (100 kapak, dinner refill 1.30×): Carbonara tarifi 16.25× ölçeklenip Spaghetti **6500g** (Pasta Co), tarif-içi yumurta (65) + doğrudan yumurta kalemi (130) = **195 pcs** tek satırda konsolide (Farm Fresh), Croissants (manual) "Bağlanmamış" grubunda; tedarikçi başlıkları sıralı, bağlanmamış en sonda. Maliyet motoru / sync / Pro-gating korundu.
+
+---
+
 ## v2.37.0 — Event Planner (Araç 6/8): alışveriş listesi + çoğalt + canlı A4 önizleme + kişi başı maliyet · 2026-06-08
 
 Kod-önce analiz: Event Planner çekirdeği zaten sağlamdı (konuk sayısına ölçekli yemek maliyeti, gelir/kâr/marj, bütçe takibi, durum, yazdır/paylaş). Köklü redesign gereksiz → operatörün "Tam paket" seçimine uygun **gerçek değer katan 4 ekleme**:
