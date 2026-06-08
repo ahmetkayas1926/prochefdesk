@@ -2993,6 +2993,12 @@ window.PCD.i18n.register('en', {
   prep_preview_empty: "Add a dish to see the printable sheet",
   prep_drag: "Drag to reorder",
   prep_station_ph: "Station (optional) — e.g. Grill",
+  prep_fontsize_label: "Text size",
+  prep_bold: "Bold",
+  prep_border_label: "Border",
+  prep_border_medium: "Medium",
+  prep_border_bold: "Bold",
+  prep_border_xbold: "Extra",
 
   // v2.6.65 — Offline dataURL photo migration
 });

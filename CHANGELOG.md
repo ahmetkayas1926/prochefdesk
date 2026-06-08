@@ -4,6 +4,22 @@ Kronolojik tersine (en son üstte). Her sürüm: başlık + ana değişiklikler.
 
 ---
 
+## v2.24.0 — Prep Sheet: önizleme = baskı (gerçek A4 motor) + yazı boyutu/Bold/çerçeve · 2026-06-08
+
+Operatör ciddi bug bildirdi: canlı önizleme ile gerçek Chrome çıktısı farklıydı
+(önizleme tek uzun dengeli sütun bloğu, baskı @page ile farklı sayfalıyordu).
+Kök neden iki ayrı dizgi yöntemiydi — tek motora bağlandı.
+
+- **Açık sayfalama motoru (önizleme = baskı birebir):** İçerik gerçek A4 sayfalara bölünür; her öğe (başlık / istasyon / yemek) ölçülüp sütun-sütun MUTLAK konumla yerleştirilir. Önizleme (`screen`) ve baskı (`print`) AYNI sayfa+konum verisini kullanır → çıktı ne ise önizleme o. Eski `column-count` motoru kaldırıldı.
+- **Gerçek A4 önizleme (dikey + yatay):** Önizlemede sayfa sınırları net; çok sayfalıysa her sayfa ayrı A4 kutu olarak (gölge + "1 / 2" numarası) gösterilir.
+- **Yazı boyutu:** 6 kademe — XS / S / M / L / XL / XXL (tüm başlık + satır + istasyon fontlarını ölçekler).
+- **Bold:** Bileşen metnini kalınlaştırır.
+- **Çerçeve kalınlığı:** Orta / Kalın / Ekstra (yemek kartı çerçevesi + iç ayraçlar).
+- Sürükle-sırala (yemek + bileşen) korundu; otomatik kayıt + bulut + çok-dil korundu. Eski prep sheet'ler varsayılan stille (m / normal / orta) geriye uyumlu açılır.
+- Tarayıcıda doğrulandı: dikey/yatay gerçek A4, tek→çok sayfa geçişi, yazı boyutu/Bold/çerçeve canlı etki, baskı HTML'i önizlemeyle birebir (aynı yemek sayısı + sayfa kırılımı + @page + mutlak konum); konsol temiz.
+
+---
+
 ## v2.23.0 — Checklist odaklı cila (Araç 3/8): editörde canlı A4 baskı önizlemesi · 2026-06-08
 
 Kod-önce analiz: Checklist zaten en olgun araç (control/prep modları, kategori

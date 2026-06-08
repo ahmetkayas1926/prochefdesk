@@ -2990,6 +2990,12 @@ window.PCD.i18n.register('tr', {
   prep_preview_empty: "Yazdırılacak sayfayı görmek için yemek ekle",
   prep_drag: "Sürükleyip sırala",
   prep_station_ph: "İstasyon (opsiyonel) — örn. Izgara",
+  prep_fontsize_label: "Yazı boyutu",
+  prep_bold: "Kalın",
+  prep_border_label: "Çerçeve",
+  prep_border_medium: "Orta",
+  prep_border_bold: "Kalın",
+  prep_border_xbold: "Ekstra",
 
   // v2.6.65 — Offline dataURL photo migration
 });

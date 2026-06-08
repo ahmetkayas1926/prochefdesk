@@ -25,6 +25,8 @@
   const PREF_ACTIVE = 'prefs.prepActiveId';
   // v2.22 — Sürükle-sırala durumu (yemek vs bileşen ayrı; guard ile çakışma yok)
   let _dragDishId = null, _dragComp = null;
+  // v2.24 — CSS px / mm @96dpi (açık sayfalama motoru için)
+  const MM = 3.7795;
 
   // i18n helper — key yoksa fallback string döner (interpolation yok).
   function t(k, fb) {
@@ -50,7 +52,7 @@
   function setActiveId(id) { PCD.store.set(PREF_ACTIVE, id); }
 
   function defaultSheet() {
-    return { name: t('prep_untitled', 'Untitled'), dishes: [], columns: 3, orientation: 'portrait', accent: '#1f3b30' };
+    return { name: t('prep_untitled', 'Untitled'), dishes: [], columns: 3, orientation: 'portrait', accent: '#1f3b30', fontSize: 'm', bold: false, border: 'medium' };
   }
   // Aktif sheet'i döndür; hiç yoksa bir tane oluştur.
   function ensureActive() {
@@ -154,6 +156,27 @@
                 }).join('') +
               '</div>' +
             '</div>' +
+            // v2.24 — Yazı boyutu (xs–xxl) + Çerçeve kalınlığı + Bold
+            '<div>' +
+              '<div class="text-muted text-sm mb-1">' + esc(t('prep_fontsize_label', 'Text size')) + '</div>' +
+              '<div class="flex gap-1">' +
+                ['xs', 's', 'm', 'l', 'xl', 'xxl'].map(function (sz) {
+                  return '<button type="button" class="btn btn-secondary btn-sm' + ((sheet.fontSize || 'm') === sz ? ' active' : '') + '" data-fontsize="' + sz + '" style="min-width:30px;text-transform:uppercase;">' + sz + '</button>';
+                }).join('') +
+              '</div>' +
+            '</div>' +
+            '<div>' +
+              '<div class="text-muted text-sm mb-1">' + esc(t('prep_border_label', 'Border')) + '</div>' +
+              '<div class="flex gap-1">' +
+                [['medium', t('prep_border_medium', 'Medium')], ['bold', t('prep_border_bold', 'Bold')], ['xbold', t('prep_border_xbold', 'Extra')]].map(function (b) {
+                  return '<button type="button" class="btn btn-secondary btn-sm' + ((sheet.border || 'medium') === b[0] ? ' active' : '') + '" data-border="' + b[0] + '">' + esc(b[1]) + '</button>';
+                }).join('') +
+              '</div>' +
+            '</div>' +
+            '<div>' +
+              '<div class="text-muted text-sm mb-1">&nbsp;</div>' +
+              '<button type="button" class="btn btn-secondary btn-sm' + (sheet.bold ? ' active' : '') + '" data-bold="1" style="font-weight:800;">' + esc(t('prep_bold', 'Bold')) + '</button>' +
+            '</div>' +
             '<div style="margin-inline-start:auto;">' +
               '<button type="button" class="btn btn-outline btn-sm" id="prepPresetsBtn">' + PCD.icon('grid', 14) + ' <span>' + esc(t('kc2_presets', 'Presets')) + '</span></button>' +
             '</div>' +
@@ -186,20 +209,27 @@
     const host = view.querySelector('#prepPreview');
     if (!host) return;
     const land = sheet.orientation === 'landscape';
-    const MM = 3.7795;
-    const pageW = (land ? 297 : 210) * MM;
-    const pageH = (land ? 210 : 297) * MM;
-    host.innerHTML = '<div id="prepPvOuter" style="position:relative;"><div class="prep-pv-frame" style="transform-origin:top left;position:absolute;top:0;left:0;width:' + pageW + 'px;min-height:' + pageH + 'px;box-shadow:0 1px 4px rgba(0,0,0,.12);">' + buildPreviewHtml(sheet) + '</div></div>';
-    const frame = host.querySelector('.prep-pv-frame');
+    const pageWpx = (land ? 297 : 210) * MM;
+    const pageData = paginate(sheet);
+    if (!pageData.pages.length) {
+      host.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:200px;color:#999;font-size:13px;text-align:center;padding:30px;">' + esc(t('prep_preview_empty', 'Add a dish to see the printable sheet')) + '</div>';
+      return;
+    }
+    host.innerHTML = '<div id="prepPvOuter" style="position:relative;"><div class="prep-pv-stack" style="transform-origin:top left;position:absolute;top:0;left:0;width:' + pageWpx + 'px;">' + renderPages(sheet, pageData, 'screen') + '</div></div>';
+    const stack = host.querySelector('.prep-pv-stack');
     const outer = host.querySelector('#prepPvOuter');
     function fit() {
       const w = host.clientWidth; if (!w) { requestAnimationFrame(fit); return; }
-      const k = Math.min(1, (w - 4) / pageW);
-      frame.style.transform = 'scale(' + k + ')';
-      outer.style.width = Math.round(pageW * k) + 'px';
-      outer.style.height = Math.round((frame.scrollHeight || pageH) * k) + 'px';
+      const k = Math.min(1, (w - 4) / pageWpx);
+      stack.style.transform = 'scale(' + k + ')';
+      outer.style.width = Math.round(pageWpx * k) + 'px';
+      outer.style.height = Math.round((stack.scrollHeight || pageWpx) * k) + 'px';
     }
+    // Çoklu deneme: sync (anında, flash yok) + rAF + setTimeout fallback (render
+    // sonrası clientWidth henüz 0 ise garantili uygulama; whiteboard self-retry mantığı).
+    fit();
     requestAnimationFrame(fit);
+    setTimeout(fit, 80);
     if (typeof ResizeObserver !== 'undefined') {
       if (updatePreview._ro) updatePreview._ro.disconnect();
       let _lw = -1;
@@ -285,6 +315,10 @@
     const accInp = view.querySelector('#prepAccent');
     if (accInp) accInp.addEventListener('input', function () { sheet.accent = this.value; persist(sheet); updatePreview(view, sheet); });
     PCD.on(view, 'click', '[data-accent]', function () { sheet.accent = this.getAttribute('data-accent'); persist(sheet); render(view); });
+    // v2.24 — Yazı boyutu / çerçeve kalınlığı / Bold
+    PCD.on(view, 'click', '[data-fontsize]', function () { sheet.fontSize = this.getAttribute('data-fontsize'); persist(sheet); render(view); });
+    PCD.on(view, 'click', '[data-border]', function () { sheet.border = this.getAttribute('data-border'); persist(sheet); render(view); });
+    PCD.on(view, 'click', '[data-bold]', function () { sheet.bold = !sheet.bold; persist(sheet); render(view); });
     // v2.22 — Presets
     const presetsBtn = view.querySelector('#prepPresetsBtn');
     if (presetsBtn) presetsBtn.addEventListener('click', function () { openPresets(view, sheet); });
@@ -578,82 +612,159 @@
     });
   }
 
-  // ============ SHEET HTML (baskı + canlı önizleme ORTAK motor) ============
-  // v2.22 — Dish blokları + stil tek yerden; printSheet ve buildPreviewHtml
-  // ikisi de kullanır → önizleme = çıktı (WYSIWYG).
-  function buildDishBlocks(sheet) {
+  // ============ RENDER MOTORU (v2.24 — açık sayfalama: önizleme = baskı) ============
+  // İçerik gerçek A4 sayfalara bölünür; her atom (başlık / istasyon / yemek)
+  // ölçülür ve sütun-sütun MUTLAK konumla yerleştirilir. updatePreview ('screen')
+  // ve printSheet ('print') AYNI sayfa+konum verisini kullanır → birebir aynı,
+  // sayfa sınırları net (dikey + yatay). Eski tek-uzun-sütun (column-count) motoru
+  // baskıda @page ile farklı sayfalanıyordu (operatör bug raporu) — bu motor o
+  // uyumsuzluğu kökten kaldırır.
+  const FS_SCALE = { xs: 0.82, s: 0.91, m: 1, l: 1.13, xl: 1.28, xxl: 1.45 };
+  const BORDER_W = { medium: 1, bold: 2, xbold: 3 };
+  function psFont(sheet) { return FS_SCALE[sheet.fontSize] || 1; }
+
+  function sheetCss(sheet) {
+    const f = psFont(sheet);
+    const accent = sheet.accent || '#1f3b30';
+    const bw = BORDER_W[sheet.border] || 1;
+    const iw = Math.max(1, bw - 1);
+    const cw = sheet.bold ? '700' : '400';
+    return '.ps-title{font-size:' + (18 * f).toFixed(1) + 'px;font-weight:800;margin:0 0 3px;}' +
+      '.ps-sub{font-size:' + (11 * f).toFixed(1) + 'px;color:#666;margin:0;}' +
+      '.ps-station{font-weight:800;font-size:' + (11 * f).toFixed(1) + 'px;text-transform:uppercase;letter-spacing:0.08em;color:' + accent + ';border-bottom:2px solid ' + accent + ';padding:1px 0 3px;margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+      '.ps-dish{border:' + bw + 'px solid #333;border-radius:4px;overflow:hidden;margin:0;}' +
+      '.ps-dish-head{background:' + accent + ';color:#fff;font-weight:800;font-size:' + (12 * f).toFixed(1) + 'px;text-transform:uppercase;letter-spacing:0.03em;padding:5px 8px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+      '.ps-row{display:flex;border-top:' + iw + 'px solid #ccc;font-size:' + (12 * f).toFixed(1) + 'px;}' +
+      '.ps-comp{flex:1;padding:4px 8px;border-right:' + iw + 'px solid #ccc;line-height:1.3;font-weight:' + cw + ';}' +
+      '.ps-prep{width:30%;min-width:60px;min-height:' + (22 * f).toFixed(1) + 'px;}';
+  }
+
+  function dishHtmlOf(d) {
+    let rows = '';
+    (d.components || []).forEach(function (c) {
+      if (!(c.text || '').trim()) return;
+      rows += '<div class="ps-row"><div class="ps-comp">' + esc(c.text) + '</div><div class="ps-prep"></div></div>';
+    });
+    if (!rows) rows = '<div class="ps-row"><div class="ps-comp">&nbsp;</div><div class="ps-prep"></div></div>';
+    return '<div class="ps-dish"><div class="ps-dish-head">' + esc(d.name || '') + '</div>' + rows + '</div>';
+  }
+  function titleHtmlOf(sheet) {
+    return '<div class="ps-title">' + esc(sheet.name || t('prep_title', 'Prep Sheet')) + '</div>' +
+      '<div class="ps-sub">' + esc(t('prep_print_sub', 'Components per dish · mark quantities in the blank box')) + '</div>';
+  }
+
+  // Sıralı atom listesi (istasyon gruplaması korunur — '' grubu = istasyonsuzlar)
+  function layoutAtoms(sheet) {
     const dishes = (sheet.dishes || []).filter(function (d) {
       return (d.name || '').trim() || (d.components || []).some(function (c) { return (c.text || '').trim(); });
     });
-    // v2.22 — İstasyona göre grupla (ilk görülme sırası korunur; istasyonsuzlar '' grubu)
     const groups = []; const gIdx = {};
     dishes.forEach(function (d) {
       const st = (d.station || '').trim();
       if (!(st in gIdx)) { gIdx[st] = groups.length; groups.push({ station: st, dishes: [] }); }
       groups[gIdx[st]].dishes.push(d);
     });
-    function dishHtml(d) {
-      let rows = '';
-      (d.components || []).forEach(function (c) {
-        if (!(c.text || '').trim()) return;
-        rows += '<div class="ps-row"><div class="ps-comp">' + esc(c.text) + '</div><div class="ps-prep"></div></div>';
-      });
-      if (!rows) rows = '<div class="ps-row"><div class="ps-comp">&nbsp;</div><div class="ps-prep"></div></div>';
-      return '<div class="ps-dish"><div class="ps-dish-head">' + esc(d.name || '') + '</div>' + rows + '</div>';
-    }
-    let blocks = '';
+    const atoms = [];
     groups.forEach(function (g) {
-      if (g.station) blocks += '<div class="ps-station">' + esc(g.station) + '</div>';
-      g.dishes.forEach(function (d) { blocks += dishHtml(d); });
+      if (g.station) atoms.push({ kind: 'station', html: '<div class="ps-station">' + esc(g.station) + '</div>' });
+      g.dishes.forEach(function (d) { atoms.push({ kind: 'dish', html: dishHtmlOf(d) }); });
     });
-    return { blocks: blocks, count: dishes.length };
+    return { atoms: atoms, count: dishes.length };
   }
-  function psStyleRules(cols, accent) {
-    return '.ps-title{font-size:18px;font-weight:800;margin:0 0 3px;}' +
-      '.ps-sub{font-size:11px;color:#666;margin:0 0 12px;}' +
-      '.ps-grid{column-count:' + cols + ';column-gap:7mm;}' +
-      '.ps-station{column-span:all;-webkit-column-span:all;font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:' + accent + ';border-bottom:2px solid ' + accent + ';padding:1px 0 3px;margin:2mm 0 4mm;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
-      '.ps-dish{break-inside:avoid;page-break-inside:avoid;border:1px solid #333;border-radius:4px;overflow:hidden;margin-bottom:6mm;}' +
-      '.ps-dish-head{background:' + accent + ';color:#fff;font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:0.03em;padding:5px 8px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
-      '.ps-row{display:flex;border-top:1px solid #ccc;font-size:12px;}' +
-      '.ps-comp{flex:1;padding:4px 8px;border-right:1px solid #ccc;line-height:1.3;}' +
-      '.ps-prep{width:30%;min-width:60px;min-height:22px;}';
+
+  // Atom yüksekliklerini gerçek CSS ile ölç (yemek = colW, istasyon/başlık = tam genişlik)
+  function measureLayout(sheet, atoms, colWpx, contentWpx) {
+    const host = document.createElement('div');
+    host.style.cssText = 'position:absolute;left:-99999px;top:0;visibility:hidden;font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#111;';
+    let html = '<style>' + sheetCss(sheet) + '</style><div id="mTitle" style="width:' + contentWpx + 'px;">' + titleHtmlOf(sheet) + '</div>';
+    atoms.forEach(function (a, i) {
+      html += '<div class="mAtom" data-i="' + i + '" style="width:' + (a.kind === 'station' ? contentWpx : colWpx) + 'px;">' + a.html + '</div>';
+    });
+    host.innerHTML = html;
+    document.body.appendChild(host);
+    const titleH = host.querySelector('#mTitle').offsetHeight + 8;
+    host.querySelectorAll('.mAtom').forEach(function (el) {
+      atoms[parseInt(el.getAttribute('data-i'), 10)].h = el.offsetHeight;
+    });
+    document.body.removeChild(host);
+    return titleH;
   }
-  function sheetInner(sheet) {
-    const built = buildDishBlocks(sheet);
-    if (!built.count) return { empty: true, html: '' };
-    return { empty: false, html:
-      '<div class="ps-title">' + esc(sheet.name || t('prep_title', 'Prep Sheet')) + '</div>' +
-      '<div class="ps-sub">' + esc(t('prep_print_sub', 'Components per dish · mark quantities in the blank box')) + '</div>' +
-      '<div class="ps-grid">' + built.blocks + '</div>'
-    };
+
+  // Sayfalara böl: sütun-sütun doldur; istasyon başlığı tam-genişlik yeni bant açar.
+  function paginate(sheet) {
+    const land = sheet.orientation === 'landscape';
+    const N = Math.max(1, Math.min(4, sheet.columns || 3));
+    const gapPx = 7 * MM, dishGapPx = 6 * MM, stationGapPx = 4 * MM;
+    const contentWpx = ((land ? 297 : 210) - 20) * MM;
+    const contentHpx = ((land ? 210 : 297) - 20) * MM - 4; // ufak güvenlik payı
+    const colWpx = (contentWpx - (N - 1) * gapPx) / N;
+
+    const built = layoutAtoms(sheet);
+    if (!built.count) return { pages: [], colWpx: colWpx, contentWpx: contentWpx };
+    const titleH = measureLayout(sheet, built.atoms, colWpx, contentWpx);
+
+    const pages = [];
+    let cur, colH, ci, bandTop;
+    function colX(i) { return Math.round(i * (colWpx + gapPx)); }
+    function newPage(startY) { cur = { items: [], usedH: 0 }; pages.push(cur); colH = []; for (let i = 0; i < N; i++) colH.push(0); ci = 0; bandTop = startY || 0; }
+    newPage(titleH);
+    cur.items.push({ x: 0, y: 0, w: Math.round(contentWpx), h: titleH, html: titleHtmlOf(sheet) });
+
+    built.atoms.forEach(function (a) {
+      if (a.kind === 'station') {
+        let bottom = bandTop + Math.max.apply(null, colH);
+        if (bottom + a.h > contentHpx) { newPage(0); bottom = 0; }
+        cur.items.push({ x: 0, y: Math.round(bottom), w: Math.round(contentWpx), h: a.h, html: a.html });
+        bandTop = bottom + a.h + stationGapPx;
+        for (let i = 0; i < N; i++) colH[i] = 0; ci = 0;
+      } else {
+        let cap = contentHpx - bandTop;
+        if (colH[ci] > 0 && colH[ci] + a.h > cap) {
+          ci++;
+          if (ci >= N) { newPage(0); cap = contentHpx; }
+        }
+        cur.items.push({ x: colX(ci), y: Math.round(bandTop + colH[ci]), w: Math.round(colWpx), h: a.h, html: a.html });
+        colH[ci] += a.h + dishGapPx;
+      }
+    });
+    pages.forEach(function (pg) {
+      let mx = 0; pg.items.forEach(function (it) { mx = Math.max(mx, it.y + (it.h || 0)); }); pg.usedH = mx;
+    });
+    return { pages: pages, colWpx: colWpx, contentWpx: contentWpx };
+  }
+
+  // Sayfa kutularını üret. mode='screen' → tam A4 kutu (gölge + sayfa no);
+  // mode='print' → içerik-yükseklikli kutu + break-after:page (PCD.print @page).
+  function renderPages(sheet, pageData, mode) {
+    const land = sheet.orientation === 'landscape';
+    const pageWmm = land ? 297 : 210, pageHmm = land ? 210 : 297;
+    const contentWmm = pageWmm - 20, contentHmm = pageHmm - 20;
+    const pages = pageData.pages;
+    let out = '<style>' + sheetCss(sheet);
+    if (mode === 'print') out += '@page{size:A4 ' + (land ? 'landscape' : 'portrait') + ';margin:10mm;}html,body{margin:0;padding:0;}body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#111;-webkit-print-color-adjust:exact;print-color-adjust:exact;}';
+    out += '</style>';
+    pages.forEach(function (pg, pi) {
+      let inner = '';
+      pg.items.forEach(function (it) {
+        inner += '<div style="position:absolute;left:' + it.x + 'px;top:' + it.y + 'px;width:' + it.w + 'px;">' + it.html + '</div>';
+      });
+      if (mode === 'screen') {
+        out += '<div class="ps-page" style="position:relative;box-sizing:border-box;width:' + pageWmm + 'mm;height:' + pageHmm + 'mm;padding:10mm;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.20);margin:0 auto 16px;overflow:hidden;color:#111;font-family:-apple-system,Segoe UI,Roboto,sans-serif;">' +
+          '<div style="position:relative;width:100%;height:100%;">' + inner + '</div>' +
+          '<div style="position:absolute;bottom:3mm;right:6mm;font-size:8px;color:#c4c4c4;letter-spacing:0.06em;">' + (pi + 1) + ' / ' + pages.length + '</div>' +
+          '</div>';
+      } else {
+        const usedMm = Math.min(contentHmm, Math.ceil(pg.usedH / MM) + 1);
+        out += '<div style="position:relative;width:' + contentWmm + 'mm;height:' + usedMm + 'mm;color:#111;' + (pi < pages.length - 1 ? 'break-after:page;page-break-after:always;' : '') + '">' + inner + '</div>';
+      }
+    });
+    return out;
   }
 
   function printSheet(sheet) {
-    const inner = sheetInner(sheet);
-    if (inner.empty) { PCD.toast.warning(t('prep_nothing_to_print', 'Add at least one dish first')); return; }
-    const land = sheet.orientation === 'landscape';
-    const html =
-      '<style>' +
-        '@page{size:A4 ' + (land ? 'landscape' : 'portrait') + ';margin:10mm;}' +
-        'body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#111;margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
-        psStyleRules(sheet.columns || 3, sheet.accent || '#1f3b30') +
-      '</style>' + inner.html;
-    PCD.print(html, sheet.name || t('prep_title', 'Prep Sheet'));
-  }
-
-  // Canlı önizleme: A4 ölçülü .ps-sheet (editör içine gömülü, ölçeklenir).
-  function buildPreviewHtml(sheet) {
-    const land = sheet.orientation === 'landscape';
-    const inner = sheetInner(sheet);
-    const body = inner.empty
-      ? '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#999;font-size:13px;text-align:center;padding:30px;">' + esc(t('prep_preview_empty', 'Add a dish to see the printable sheet')) + '</div>'
-      : inner.html;
-    return '<style>' +
-      '.ps-sheet{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#111;box-sizing:border-box;width:' + (land ? 297 : 210) + 'mm;min-height:' + (land ? 210 : 297) + 'mm;padding:10mm;background:#fff;}' +
-      psStyleRules(sheet.columns || 3, sheet.accent || '#1f3b30') +
-      '</style>' +
-      '<div class="ps-sheet">' + body + '</div>';
+    const pageData = paginate(sheet);
+    if (!pageData.pages.length) { PCD.toast.warning(t('prep_nothing_to_print', 'Add at least one dish first')); return; }
+    PCD.print(renderPages(sheet, pageData, 'print'), sheet.name || t('prep_title', 'Prep Sheet'));
   }
 
   // ============ EXPORT ============
