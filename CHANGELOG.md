@@ -4,6 +4,13 @@ Kronolojik tersine (en son üstte). Her sürüm: başlık + ana değişiklikler.
 
 ---
 
+## v2.34.0 — Menu Studio: "Sayfa & Tema" etiketi + "Tema rengi" netleştirme · 2026-06-08
+
+- Header butonu "Page/Sayfa" → **"Page & theme / Sayfa & Tema"** (daha belirgin; sayfa boyutu + tema renkleri/fontu bir arada).
+- Page popup'taki "Accent color/Vurgu rengi" → **"Theme accent / Tema rengi"**. Bu, menünün genel tema rengidir: kendine özel renk verilmemiş bölüm başlıkları, başlık-altı çizgileri, ayraçlar ve sayfa çerçevesi için VARSAYILAN renk. Bir bloğa özel renk verilince o blok bunu ezer (çakışma yok, tamamlayıcı). Etiket netleştirildi.
+
+---
+
 ## v2.33.0 — Whiteboard cook sheet: satır ekle/sil + HANDOVER.md güncellendi · 2026-06-08
 
 - **Whiteboard "Cook Sheet" bloğu — satır ekle/sil:** Önceden yalnız sütun (item) ekle/sil vardı; artık parametre satırları da eklenip silinebiliyor (her satırda × sil butonu + "Satır ekle"). Tarayıcıda doğrulandı (3→4→3).
