@@ -183,6 +183,8 @@
         '.ps-cv-tools{position:absolute;top:3px;right:3px;display:flex;gap:3px;z-index:6;}' +
         '.ps-cv-tools .ps-cv-b{width:24px;height:24px;display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid #bcbcbc;border-radius:5px;box-shadow:0 1px 3px rgba(0,0,0,.28);color:#333;padding:0;}' +
         '.ps-cv-tools .ps-cv-grip{cursor:grab;}.ps-cv-tools .ps-cv-grip:active{cursor:grabbing;}' +
+        '.ps-cv-tools .ps-cv-b:hover{background:var(--brand-600,#16a34a);color:#fff;border-color:var(--brand-600,#16a34a);}' +
+        '.ps-cv-tools .ps-cv-del:hover{background:var(--danger,#dc2626);color:#fff;border-color:var(--danger,#dc2626);}' +
       '</style>' +
       '<div class="ps-wrap">' +
         // ---- Aksiyon bar: kayıt/library + isim + yemek ekle ----
@@ -200,7 +202,7 @@
             '<div>' +
               '<div class="text-muted text-sm mb-1">' + esc(t('prep_columns_label', 'Print columns')) + '</div>' +
               '<div class="flex gap-1" id="prepColsBtns">' +
-                [1, 2, 3, 4].map(function (n) {
+                [1, 2, 3, 4, 5].map(function (n) {
                   return '<button type="button" class="btn btn-secondary btn-sm' + ((sheet.columns || 3) === n ? ' active' : '') + '" data-cols="' + n + '" style="min-width:34px;">' + n + '</button>';
                 }).join('') +
               '</div>' +
@@ -241,7 +243,7 @@
             '<div>' +
               '<div class="text-muted text-sm mb-1">' + esc(t('prep_spacing_label', 'Spacing')) + '</div>' +
               '<div class="flex gap-1">' +
-                [['tight', t('prep_spacing_tight', 'Tight')], ['medium', t('prep_spacing_medium', 'Medium')], ['wide', t('prep_spacing_wide', 'Wide')]].map(function (s) {
+                [['xtight', t('prep_spacing_xtight', 'Extra tight')], ['tight', t('prep_spacing_tight', 'Tight')], ['medium', t('prep_spacing_medium', 'Medium')], ['wide', t('prep_spacing_wide', 'Wide')]].map(function (s) {
                   return '<button type="button" class="btn btn-secondary btn-sm' + ((sheet.spacing || 'medium') === s[0] ? ' active' : '') + '" data-spacing="' + s[0] + '">' + esc(s[1]) + '</button>';
                 }).join('') +
               '</div>' +
@@ -432,8 +434,18 @@
     PCD.on(view, 'click', '[data-spacing]', function () { sheet.spacing = this.getAttribute('data-spacing'); persist(sheet); render(view); });
     // v2.29 — Karta tıkla → düzenle (grip hariç). Sürükle: pointer-tabanlı (Whiteboard mantığı).
     PCD.on(view, 'click', '[data-card-dish]', function (e) {
-      if (e.target.closest('[data-drag-dish]')) return; // grip = sadece sürükle
+      if (e.target.closest('[data-drag-dish]') || e.target.closest('[data-del-dish]')) return; // grip = sürükle, çöp = sil
       openDishEditor(view, sheet, this.getAttribute('data-card-dish'));
+    });
+    // v2.30 — Kart üzerinde silme (Whiteboard gibi): doğrudan sil
+    PCD.on(view, 'click', '[data-del-dish]', function (e) {
+      e.stopPropagation();
+      const id = this.getAttribute('data-del-dish');
+      const arr = sheet.dishes || [];
+      const idx = arr.findIndex(function (d) { return d.id === id; });
+      if (idx < 0) return;
+      arr.splice(idx, 1);
+      persist(sheet); render(view);
     });
     PCD.on(view, 'mousedown', '[data-drag-dish]', function (e) { e.preventDefault(); startCanvasDrag(e, this, view, sheet); });
     PCD.on(view, 'touchstart', '[data-drag-dish]', function (e) { startCanvasDrag(e, this, view, sheet); });
@@ -816,9 +828,10 @@
   // Sayfalara böl: sütun-sütun doldur; istasyon başlığı tam-genişlik yeni bant açar.
   function paginate(sheet) {
     const land = sheet.orientation === 'landscape';
-    const N = Math.max(1, Math.min(4, sheet.columns || 3));
+    const N = Math.max(1, Math.min(5, sheet.columns || 3));
     // v2.25 — Kart arası boşluk (yatay = col, dikey = dish); önizleme + baskı ortak
-    const SPACING = { tight: { col: 1.5, dish: 1 }, medium: { col: 4, dish: 3 }, wide: { col: 9, dish: 8 } };
+    // v2.30 — xtight ≈ sıfır boşluk
+    const SPACING = { xtight: { col: 0, dish: 0 }, tight: { col: 1.5, dish: 1 }, medium: { col: 4, dish: 3 }, wide: { col: 9, dish: 8 } };
     const sp = SPACING[sheet.spacing] || SPACING.medium;
     const gapPx = sp.col * MM, dishGapPx = sp.dish * MM, stationGapPx = 4 * MM;
     const contentWpx = ((land ? 297 : 210) - 2 * PAD_MM) * MM;
@@ -879,6 +892,7 @@
           const tools = '<div class="ps-cv-tools">' +
             '<span class="ps-cv-b ps-cv-grip" data-drag-dish="' + it.id + '" title="' + esc(t('prep_drag', 'Drag to reorder')) + '" style="font-size:13px;line-height:1;">⠿</span>' +
             '<span class="ps-cv-b" title="' + esc(t('prep_edit_dish', 'Edit dish')) + '">' + PCD.icon('edit', 13) + '</span>' +
+            '<span class="ps-cv-b ps-cv-del" data-del-dish="' + it.id + '" title="' + esc(t('prep_delete_dish', 'Delete dish')) + '">' + PCD.icon('trash', 13) + '</span>' +
           '</div>';
           inner += '<div class="ps-cv-dish" data-card-dish="' + it.id + '" style="position:absolute;left:' + it.x + 'px;top:' + it.y + 'px;width:' + it.w + 'px;">' + tools + it.html + '</div>';
         } else {

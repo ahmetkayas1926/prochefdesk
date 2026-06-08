@@ -3002,6 +3002,7 @@ window.PCD.i18n.register('en', {
   prep_border_bold: "Bold",
   prep_border_xbold: "Extra",
   prep_spacing_label: "Spacing",
+  prep_spacing_xtight: "Extra tight",
   prep_spacing_tight: "Tight",
   prep_spacing_medium: "Medium",
   prep_spacing_wide: "Wide",

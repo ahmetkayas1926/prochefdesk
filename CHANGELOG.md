@@ -4,6 +4,15 @@ Kronolojik tersine (en son üstte). Her sürüm: başlık + ana değişiklikler.
 
 ---
 
+## v2.30.0 — Prep Sheet: kartta sil ikonu + Extra tight boşluk + 5 sütun · 2026-06-08
+
+- **Kart üzerinde sil ikonu (🗑):** Her yemek kartında artık ⠿ sürükle + ✎ düzenle + 🗑 sil (Whiteboard gibi). Tıkla → yemek anında silinir (hover'da kırmızı).
+- **Spacing → "Extra tight":** Yeni 4. seçenek; kart arası boşluk ≈ sıfır (kartlar bitişik).
+- **5 sütun:** Print columns 1–4'e 5 eklendi (yoğun listeler için).
+- Tarayıcıda doğrulandı: her kartta 3 ikon, sil çalışıyor (10→9), xtight gap≈0 (kartlar bitişik), 5-sütun seçilebilir; konsol temiz.
+
+---
+
 ## v2.29.0 — Prep Sheet: Whiteboard-stili sürükle + ~sıfır kenar + sıkı boşluk · 2026-06-08
 
 Operatör: Whiteboard'un sürükle mantığı zarif; Prep'teki pratik değil — aynı olsun.

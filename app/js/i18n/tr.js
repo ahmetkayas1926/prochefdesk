@@ -2999,6 +2999,7 @@ window.PCD.i18n.register('tr', {
   prep_border_bold: "Kalın",
   prep_border_xbold: "Ekstra",
   prep_spacing_label: "Boşluk",
+  prep_spacing_xtight: "Ekstra bitişik",
   prep_spacing_tight: "Çok bitişik",
   prep_spacing_medium: "Orta",
   prep_spacing_wide: "Geniş",
