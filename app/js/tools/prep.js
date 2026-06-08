@@ -23,6 +23,8 @@
   const PCD = window.PCD;
   const TABLE = 'prepSheets';
   const PREF_ACTIVE = 'prefs.prepActiveId';
+  // v2.22 — Sürükle-sırala durumu (yemek vs bileşen ayrı; guard ile çakışma yok)
+  let _dragDishId = null, _dragComp = null;
 
   // i18n helper — key yoksa fallback string döner (interpolation yok).
   function t(k, fb) {
@@ -48,7 +50,7 @@
   function setActiveId(id) { PCD.store.set(PREF_ACTIVE, id); }
 
   function defaultSheet() {
-    return { name: t('prep_untitled', 'Untitled'), dishes: [], columns: 3 };
+    return { name: t('prep_untitled', 'Untitled'), dishes: [], columns: 3, orientation: 'portrait', accent: '#1f3b30' };
   }
   // Aktif sheet'i döndür; hiç yoksa bir tane oluştur.
   function ensureActive() {
@@ -96,6 +98,8 @@
   // ============ MAIN RENDER ============
   function render(view) {
     const sheet = ensureActive();
+    // v2.22 — Sürükle-sırala için stabil id (eski sheet'lerde eksikse doldur)
+    (sheet.dishes || []).forEach(function (d) { if (!d.id) d.id = uid('d'); });
     const count = listSheets().length;
 
     view.innerHTML =
@@ -110,44 +114,98 @@
         '</div>' +
       '</div>' +
 
-      // Library bar
-      '<div class="card mb-3" style="padding:10px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
-        '<button class="btn btn-primary btn-sm" id="prepSaveBtn">' + PCD.icon('check', 14) + ' <span>' + esc(t('prep_save_btn', 'Save')) + '</span></button>' +
-        '<button class="btn btn-outline btn-sm" id="prepSavedListBtn">' + PCD.icon('book-open', 14) + ' <span>' + esc(t('prep_saved_list_btn', 'Saved')) + ' (' + count + ')</span></button>' +
-        '<button class="btn btn-outline btn-sm" id="prepNewBtn">' + PCD.icon('plus', 14) + ' <span>' + esc(t('prep_new_btn', 'New')) + '</span></button>' +
-      '</div>' +
-
-      // Inline guide (kapatılabilir)
-      buildGuide() +
-
-      // Meta: name + columns
-      '<div class="card mb-3" style="padding:14px;">' +
-        '<div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;align-items:end;">' +
-          '<div>' +
-            '<div class="text-muted text-sm mb-1">' + esc(t('prep_name_label', 'List name')) + '</div>' +
-            '<input id="prepName" type="text" class="input" maxlength="80" placeholder="' + esc(t('prep_name_ph', 'e.g. 2026 Dinner Prep')) + '" value="' + esc(sheet.name || '') + '" style="width:100%;">' +
-          '</div>' +
-          '<div>' +
-            '<div class="text-muted text-sm mb-1">' + esc(t('prep_columns_label', 'Print columns')) + '</div>' +
-            '<div class="flex gap-1" id="prepColsBtns">' +
-              [1, 2, 3, 4].map(function (n) {
-                return '<button type="button" class="btn btn-secondary btn-sm' + ((sheet.columns || 3) === n ? ' active' : '') + '" data-cols="' + n + '" style="flex:1;">' + n + '</button>';
-              }).join('') +
+      // v2.22 — 2 panel: sol editör / sağ canlı A4 önizleme + pill stili
+      '<style>@media(max-width:900px){.ps-wrap{grid-template-columns:1fr !important;}}.ps-wrap .btn-secondary.active{background:var(--brand-600)!important;color:#fff!important;border-color:var(--brand-600)!important;}</style>' +
+      '<div class="ps-wrap" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;">' +
+      '<div style="min-width:0;">' +
+        // Library bar
+        '<div class="card mb-3" style="padding:10px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
+          '<button class="btn btn-primary btn-sm" id="prepSaveBtn">' + PCD.icon('check', 14) + ' <span>' + esc(t('prep_save_btn', 'Save')) + '</span></button>' +
+          '<button class="btn btn-outline btn-sm" id="prepSavedListBtn">' + PCD.icon('book-open', 14) + ' <span>' + esc(t('prep_saved_list_btn', 'Saved')) + ' (' + count + ')</span></button>' +
+          '<button class="btn btn-outline btn-sm" id="prepNewBtn">' + PCD.icon('plus', 14) + ' <span>' + esc(t('prep_new_btn', 'New')) + '</span></button>' +
+        '</div>' +
+        buildGuide() +
+        // Meta: name + columns + orientation + accent + presets
+        '<div class="card mb-3" style="padding:14px;">' +
+          '<div class="text-muted text-sm mb-1">' + esc(t('prep_name_label', 'List name')) + '</div>' +
+          '<input id="prepName" type="text" class="input" maxlength="80" placeholder="' + esc(t('prep_name_ph', 'e.g. 2026 Dinner Prep')) + '" value="' + esc(sheet.name || '') + '" style="width:100%;margin-bottom:12px;">' +
+          '<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;">' +
+            '<div>' +
+              '<div class="text-muted text-sm mb-1">' + esc(t('prep_columns_label', 'Print columns')) + '</div>' +
+              '<div class="flex gap-1" id="prepColsBtns">' +
+                [1, 2, 3, 4].map(function (n) {
+                  return '<button type="button" class="btn btn-secondary btn-sm' + ((sheet.columns || 3) === n ? ' active' : '') + '" data-cols="' + n + '" style="min-width:34px;">' + n + '</button>';
+                }).join('') +
+              '</div>' +
+            '</div>' +
+            '<div>' +
+              '<div class="text-muted text-sm mb-1">' + esc(t('kc_orientation', 'Orientation')) + '</div>' +
+              '<div class="flex gap-1">' +
+                '<button type="button" class="btn btn-secondary btn-sm' + (sheet.orientation !== 'landscape' ? ' active' : '') + '" data-orient="portrait">' + esc(t('kc_portrait', 'Portrait')) + '</button>' +
+                '<button type="button" class="btn btn-secondary btn-sm' + (sheet.orientation === 'landscape' ? ' active' : '') + '" data-orient="landscape">' + esc(t('kc_landscape', 'Landscape')) + '</button>' +
+              '</div>' +
+            '</div>' +
+            '<div>' +
+              '<div class="text-muted text-sm mb-1">' + esc(t('kc2_accent', 'Accent color')) + '</div>' +
+              '<div style="display:flex;gap:6px;align-items:center;">' +
+                '<input type="color" id="prepAccent" value="' + (sheet.accent || '#1f3b30') + '" style="width:40px;height:30px;border:1px solid var(--border);border-radius:6px;cursor:pointer;background:none;">' +
+                ['#1f3b30', '#16a34a', '#1e3a5f', '#7c2d12', '#b91c1c', '#5b21b6'].map(function (c) {
+                  return '<button type="button" data-accent="' + c + '" title="' + c + '" style="width:22px;height:22px;border-radius:50%;border:2px solid ' + ((sheet.accent || '#1f3b30') === c ? 'var(--text-1,#000)' : 'transparent') + ';background:' + c + ';cursor:pointer;padding:0;"></button>';
+                }).join('') +
+              '</div>' +
+            '</div>' +
+            '<div style="margin-inline-start:auto;">' +
+              '<button type="button" class="btn btn-outline btn-sm" id="prepPresetsBtn">' + PCD.icon('grid', 14) + ' <span>' + esc(t('kc2_presets', 'Presets')) + '</span></button>' +
             '</div>' +
           '</div>' +
         '</div>' +
+        // Add dish buttons
+        '<div class="flex gap-2 mb-3" style="flex-wrap:wrap;">' +
+          '<button class="btn btn-primary" id="prepAddDishBtn" style="flex:1;min-width:160px;">' + PCD.icon('plus', 16) + ' <span>' + esc(t('prep_add_dish', 'Add dish')) + '</span></button>' +
+          '<button class="btn btn-outline" id="prepAddManualBtn" style="flex:1;min-width:160px;">' + PCD.icon('plus', 16) + ' <span>' + esc(t('prep_add_manual', 'Manual dish')) + '</span></button>' +
+        '</div>' +
+        '<div id="prepDishes"></div>' +
       '</div>' +
-
-      // Add dish buttons
-      '<div class="flex gap-2 mb-3" style="flex-wrap:wrap;">' +
-        '<button class="btn btn-primary" id="prepAddDishBtn" style="flex:1;min-width:160px;">' + PCD.icon('plus', 16) + ' <span>' + esc(t('prep_add_dish', 'Add dish')) + '</span></button>' +
-        '<button class="btn btn-outline" id="prepAddManualBtn" style="flex:1;min-width:160px;">' + PCD.icon('plus', 16) + ' <span>' + esc(t('prep_add_manual', 'Manual dish')) + '</span></button>' +
+      '<div style="min-width:0;">' +
+        '<div class="card" style="padding:8px;background:var(--surface-2);position:sticky;top:12px;">' +
+          '<div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px 6px;">' +
+            '<span style="font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-3);">' + esc(t('prep_preview_label', 'Live preview')) + '</span>' +
+          '</div>' +
+          '<div id="prepPreview" style="background:var(--surface);border-radius:6px;overflow:auto;max-height:calc(100vh - 150px);"></div>' +
+        '</div>' +
       '</div>' +
-
-      '<div id="prepDishes"></div>';
+      '</div>';
 
     renderDishes(view, sheet);
     wire(view, sheet);
+    updatePreview(view, sheet);
+  }
+
+  // ============ CANLI ÖNİZLEME ============
+  function updatePreview(view, sheet) {
+    const host = view.querySelector('#prepPreview');
+    if (!host) return;
+    const land = sheet.orientation === 'landscape';
+    const MM = 3.7795;
+    const pageW = (land ? 297 : 210) * MM;
+    const pageH = (land ? 210 : 297) * MM;
+    host.innerHTML = '<div id="prepPvOuter" style="position:relative;"><div class="prep-pv-frame" style="transform-origin:top left;position:absolute;top:0;left:0;width:' + pageW + 'px;min-height:' + pageH + 'px;box-shadow:0 1px 4px rgba(0,0,0,.12);">' + buildPreviewHtml(sheet) + '</div></div>';
+    const frame = host.querySelector('.prep-pv-frame');
+    const outer = host.querySelector('#prepPvOuter');
+    function fit() {
+      const w = host.clientWidth; if (!w) { requestAnimationFrame(fit); return; }
+      const k = Math.min(1, (w - 4) / pageW);
+      frame.style.transform = 'scale(' + k + ')';
+      outer.style.width = Math.round(pageW * k) + 'px';
+      outer.style.height = Math.round((frame.scrollHeight || pageH) * k) + 'px';
+    }
+    requestAnimationFrame(fit);
+    if (typeof ResizeObserver !== 'undefined') {
+      if (updatePreview._ro) updatePreview._ro.disconnect();
+      let _lw = -1;
+      updatePreview._ro = new ResizeObserver(function () { const w = host.clientWidth; if (!w || w === _lw) return; _lw = w; fit(); });
+      updatePreview._ro.observe(host.parentElement || host);
+    }
   }
 
   function buildGuide() {
@@ -175,15 +233,18 @@
     host.innerHTML = dishes.map(function (d, di) {
       const comps = (d.components || []).map(function (c, ci) {
         return '<div class="flex items-center gap-2" data-comp-row="' + di + ':' + ci + '" style="margin-bottom:4px;">' +
+          '<span draggable="true" data-comp-drag="' + di + ':' + ci + '" title="' + esc(t('prep_drag', 'Drag to reorder')) + '" style="cursor:grab;color:var(--text-3);font-size:13px;flex-shrink:0;user-select:none;line-height:1;">⠿</span>' +
           '<input type="text" class="input" data-comp="' + di + ':' + ci + '" value="' + esc(c.text || '') + '" placeholder="' + esc(t('prep_component_ph', 'Component')) + '" style="flex:1;min-width:0;padding:4px 8px;min-height:30px;font-size:13px;">' +
           '<button type="button" class="icon-btn" data-comp-del="' + di + ':' + ci + '" title="' + esc(t('delete', 'Delete')) + '" style="flex-shrink:0;">' + PCD.icon('trash', 14) + '</button>' +
         '</div>';
       }).join('');
-      return '<div class="card mb-3" style="padding:12px 14px;">' +
+      return '<div class="card mb-3" data-dish-card="' + esc(d.id) + '" style="padding:12px 14px;">' +
         '<div class="flex items-center gap-2" style="margin-bottom:10px;">' +
+          '<span class="ps-grip" draggable="true" data-dish-drag="' + esc(d.id) + '" title="' + esc(t('prep_drag', 'Drag to reorder')) + '" style="cursor:grab;color:var(--text-3);font-size:16px;flex-shrink:0;user-select:none;line-height:1;">⠿</span>' +
           '<input type="text" class="input" data-dish="' + di + '" value="' + esc(d.name || '') + '" placeholder="' + esc(t('prep_dish_ph', 'Dish name')) + '" style="flex:1;min-width:0;font-weight:700;font-size:15px;">' +
           '<button type="button" class="btn btn-outline btn-sm" data-dish-del="' + di + '" style="flex-shrink:0;color:var(--danger);border-color:var(--danger);">' + PCD.icon('trash', 14) + '</button>' +
         '</div>' +
+        '<input type="text" class="input" data-station="' + di + '" value="' + esc(d.station || '') + '" placeholder="' + esc(t('prep_station_ph', 'Station (optional) — e.g. Grill')) + '" style="width:100%;margin-bottom:8px;padding:4px 8px;min-height:28px;font-size:12px;color:var(--text-2);">' +
         '<div data-comps="' + di + '">' + comps + '</div>' +
         '<button type="button" class="btn btn-ghost btn-sm" data-comp-add="' + di + '" style="margin-top:4px;">' + PCD.icon('plus', 13) + ' <span>' + esc(t('prep_add_component', 'Add component')) + '</span></button>' +
       '</div>';
@@ -204,6 +265,7 @@
     if (nameEl) nameEl.addEventListener('input', PCD.debounce(function () {
       sheet.name = this.value;
       persist(sheet);
+      updatePreview(view, sheet);
     }, 350));
 
     // Columns
@@ -211,6 +273,53 @@
       sheet.columns = parseInt(this.getAttribute('data-cols'), 10) || 3;
       persist(sheet);
       render(view);
+    });
+
+    // v2.22 — Orientation
+    PCD.on(view, 'click', '[data-orient]', function () {
+      sheet.orientation = this.getAttribute('data-orient');
+      persist(sheet);
+      render(view);
+    });
+    // v2.22 — Accent color (picker + swatches)
+    const accInp = view.querySelector('#prepAccent');
+    if (accInp) accInp.addEventListener('input', function () { sheet.accent = this.value; persist(sheet); updatePreview(view, sheet); });
+    PCD.on(view, 'click', '[data-accent]', function () { sheet.accent = this.getAttribute('data-accent'); persist(sheet); render(view); });
+    // v2.22 — Presets
+    const presetsBtn = view.querySelector('#prepPresetsBtn');
+    if (presetsBtn) presetsBtn.addEventListener('click', function () { openPresets(view, sheet); });
+
+    // v2.22 — Sürükle-sırala (yemek + bileşen; ayrı drag-state + guard)
+    PCD.on(view, 'dragstart', '[data-dish-drag]', function (e) { _dragDishId = this.getAttribute('data-dish-drag'); _dragComp = null; try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', 'dish'); } catch (err) {} });
+    PCD.on(view, 'dragstart', '[data-comp-drag]', function (e) { const p = this.getAttribute('data-comp-drag').split(':'); _dragComp = { di: parseInt(p[0], 10), ci: parseInt(p[1], 10) }; _dragDishId = null; try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', 'comp'); } catch (err) {} });
+    PCD.on(view, 'dragover', '[data-dish-card]', function (e) { e.preventDefault(); });
+    PCD.on(view, 'dragover', '[data-comp-row]', function (e) { e.preventDefault(); });
+    PCD.on(view, 'drop', '[data-comp-row]', function (e) {
+      if (!_dragComp) return;
+      e.preventDefault();
+      const p = this.getAttribute('data-comp-row').split(':');
+      const toDi = parseInt(p[0], 10), toCi = parseInt(p[1], 10);
+      const dc = _dragComp; _dragComp = null;
+      if (dc.di !== toDi) return; // yalnız aynı yemek içinde sıralama
+      const comps = sheet.dishes[toDi] && sheet.dishes[toDi].components;
+      if (!comps || dc.ci === toCi) return;
+      const item = comps.splice(dc.ci, 1)[0];
+      comps.splice(dc.ci < toCi ? toCi - 1 : toCi, 0, item);
+      persist(sheet); render(view);
+    });
+    PCD.on(view, 'drop', '[data-dish-card]', function (e) {
+      if (!_dragDishId) return;
+      e.preventDefault();
+      const dropId = this.getAttribute('data-dish-card');
+      const dragId = _dragDishId; _dragDishId = null;
+      if (dragId === dropId) return;
+      const arr = sheet.dishes;
+      const fromIdx = arr.findIndex(function (d) { return d.id === dragId; });
+      const toIdx = arr.findIndex(function (d) { return d.id === dropId; });
+      if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) return;
+      const item = arr.splice(fromIdx, 1)[0];
+      arr.splice(fromIdx < toIdx ? toIdx - 1 : toIdx, 0, item);
+      persist(sheet); render(view);
     });
 
     // Save (isimli + onay)
@@ -269,7 +378,13 @@
     // Dish name
     PCD.on(view, 'input', '[data-dish]', PCD.debounce(function () {
       const di = parseInt(this.getAttribute('data-dish'), 10);
-      if (sheet.dishes[di]) { sheet.dishes[di].name = this.value; persist(sheet); }
+      if (sheet.dishes[di]) { sheet.dishes[di].name = this.value; persist(sheet); updatePreview(view, sheet); }
+    }, 350));
+
+    // v2.22 — Dish station (istasyon)
+    PCD.on(view, 'input', '[data-station]', PCD.debounce(function () {
+      const di = parseInt(this.getAttribute('data-station'), 10);
+      if (sheet.dishes[di]) { sheet.dishes[di].station = this.value; persist(sheet); updatePreview(view, sheet); }
     }, 350));
 
     // Dish delete
@@ -287,6 +402,7 @@
       if (sheet.dishes[di] && sheet.dishes[di].components[ci]) {
         sheet.dishes[di].components[ci].text = this.value;
         persist(sheet);
+        updatePreview(view, sheet);
       }
     }, 350));
 
@@ -313,6 +429,29 @@
           if (inputs.length) inputs[0].focus();
         }, 50);
       }
+    });
+  }
+
+  // ============ PRESETS (düzen/stil) ============
+  function openPresets(view, sheet) {
+    const presets = [
+      { id: 'standard', label: 'Standard',          s: { columns: 3, orientation: 'portrait',  accent: '#1f3b30' } },
+      { id: 'compact',  label: 'Compact · 4-col',   s: { columns: 4, orientation: 'portrait',  accent: '#1f3b30' } },
+      { id: 'large',    label: 'Large · 2-col',     s: { columns: 2, orientation: 'portrait',  accent: '#16a34a' } },
+      { id: 'wide',     label: 'Wide · landscape',  s: { columns: 4, orientation: 'landscape', accent: '#1e3a5f' } },
+    ];
+    const body = PCD.el('div');
+    body.innerHTML = '<div style="display:flex;flex-direction:column;gap:8px;">' + presets.map(function (p) {
+      const meta = p.s.columns + ' ' + t('kc_columns', 'columns').toLowerCase() + ' · ' + (p.s.orientation === 'landscape' ? t('kc_landscape', 'landscape') : t('kc_portrait', 'portrait'));
+      return '<button type="button" class="btn btn-outline" data-preset="' + p.id + '" style="justify-content:flex-start;text-align:left;padding:10px 12px;"><span><b>' + esc(p.label) + '</b><span style="display:block;color:var(--text-3);font-size:11px;margin-top:2px;">' + esc(meta) + '</span></span></button>';
+    }).join('') + '</div>';
+    const m = PCD.modal.open({ title: t('kc2_presets', 'Presets'), body: body, size: 'sm', closable: true });
+    body.querySelectorAll('[data-preset]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        const p = presets.find(function (x) { return x.id === el.getAttribute('data-preset'); });
+        if (p) { sheet.columns = p.s.columns; sheet.orientation = p.s.orientation; sheet.accent = p.s.accent; persist(sheet); render(view); }
+        m.close();
+      });
     });
   }
 
@@ -366,17 +505,25 @@
         return;
       }
       const activeId = getActiveId();
-      body.innerHTML = '<div class="flex flex-col gap-2">' +
+      body.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
         list.map(function (s) {
           const dishCount = (s.dishes || []).length;
           const isActive = s.id === activeId;
-          return '<div class="card" data-pick="' + esc(s.id) + '" style="display:flex;align-items:center;gap:12px;padding:12px;cursor:pointer;' + (isActive ? 'border-color:var(--brand-500);' : '') + '">' +
-            '<div style="width:36px;height:36px;border-radius:6px;background:var(--brand-50);color:var(--brand-700);display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + PCD.icon('id-card', 18) + '</div>' +
-            '<div style="flex:1;min-width:0;">' +
-              '<div style="font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + esc(s.name || t('prep_untitled', 'Untitled')) + (isActive ? ' <span style="font-size:10px;color:var(--brand-600);font-weight:700;">(' + esc(t('prep_current', 'current')) + ')</span>' : '') + '</div>' +
-              '<div class="text-muted" style="font-size:12px;">' + dishCount + ' ' + esc(t('prep_dishes_word', 'dishes')) + ' · ' + (PCD.fmtRelTime ? PCD.fmtRelTime(s.updatedAt) : '') + '</div>' +
+          const acc = s.accent || '#1f3b30';
+          const names = (s.dishes || []).slice(0, 8).map(function (d) { return (d.name || '').trim(); }).filter(Boolean).join(' · ');
+          return '<div class="card" data-pick="' + esc(s.id) + '" style="cursor:pointer;overflow:hidden;padding:0;' + (isActive ? 'box-shadow:0 0 0 2px var(--brand-500);' : '') + '">' +
+            '<div style="height:80px;background:#fff;border-bottom:1px solid var(--border);padding:8px;overflow:hidden;">' +
+              '<span style="font-size:9px;font-weight:800;color:#fff;background:' + acc + ';padding:2px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:0.03em;">' + esc((s.name || t('prep_untitled', 'Untitled')).slice(0, 26)) + '</span>' +
+              '<div style="margin-top:6px;font-size:8px;color:#555;line-height:1.5;word-break:break-word;">' + esc(names) + '</div>' +
             '</div>' +
-            '<button type="button" class="icon-btn" data-del="' + esc(s.id) + '" title="' + esc(t('delete', 'Delete')) + '">' + PCD.icon('trash', 16) + '</button>' +
+            '<div style="padding:7px 9px;display:flex;align-items:center;gap:4px;">' +
+              '<div style="flex:1;min-width:0;">' +
+                '<div style="font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(s.name || t('prep_untitled', 'Untitled')) + (isActive ? ' <span style="font-size:9px;color:var(--brand-600);">(' + esc(t('prep_current', 'current')) + ')</span>' : '') + '</div>' +
+                '<div class="text-muted" style="font-size:11px;">' + dishCount + ' ' + esc(t('prep_dishes_word', 'dishes')) + ' · ' + (PCD.fmtRelTime ? PCD.fmtRelTime(s.updatedAt) : '') + '</div>' +
+              '</div>' +
+              '<button type="button" class="icon-btn" data-dup-ps="' + esc(s.id) + '" title="' + esc(t('kc2_duplicate', 'Duplicate')) + '">' + PCD.icon('copy', 16) + '</button>' +
+              '<button type="button" class="icon-btn" data-del="' + esc(s.id) + '" title="' + esc(t('delete', 'Delete')) + '">' + PCD.icon('trash', 16) + '</button>' +
+            '</div>' +
           '</div>';
         }).join('') +
       '</div>';
@@ -385,13 +532,25 @@
     const closeBtn = PCD.el('button', { type: 'button', class: 'btn btn-secondary', text: t('btn_close', 'Close'), style: { width: '100%' } });
     const footer = PCD.el('div', { style: { width: '100%' } });
     footer.appendChild(closeBtn);
-    const m = PCD.modal.open({ title: t('prep_picker_title', 'Saved prep sheets'), body: body, footer: footer, size: 'sm', closable: true });
+    const m = PCD.modal.open({ title: t('prep_picker_title', 'Saved prep sheets'), body: body, footer: footer, size: 'md', closable: true });
     closeBtn.addEventListener('click', function () { m.close(); });
     PCD.on(body, 'click', '[data-pick]', function (e) {
-      if (e.target.closest('[data-del]')) return;
+      if (e.target.closest('[data-del]') || e.target.closest('[data-dup-ps]')) return;
       const id = this.getAttribute('data-pick');
       m.close();
       setTimeout(function () { onPick({ id: id }); }, 180);
+    });
+    // v2.22 — Prep sheet kopyala (library galerisi)
+    PCD.on(body, 'click', '[data-dup-ps]', function (e) {
+      e.stopPropagation();
+      const id = this.getAttribute('data-dup-ps');
+      const src = PCD.store.getFromTable(TABLE, id);
+      if (!src) return;
+      const copy = PCD.clone(src); delete copy.id; delete copy.updatedAt;
+      copy.name = (src.name || t('prep_untitled', 'Untitled')) + ' ' + t('ms_copy_suffix', '(copy)');
+      PCD.store.upsertInTable(TABLE, copy, 'ps');
+      if (PCD.toast) PCD.toast.success(t('ms_copied', 'Copied'));
+      paint();
     });
     PCD.on(body, 'click', '[data-del]', function (e) {
       e.stopPropagation();
@@ -419,47 +578,82 @@
     });
   }
 
-  // ============ PRINT (çok sütunlu lamine — Excel düzeni) ============
-  function printSheet(sheet) {
-    const cols = sheet.columns || 3;
+  // ============ SHEET HTML (baskı + canlı önizleme ORTAK motor) ============
+  // v2.22 — Dish blokları + stil tek yerden; printSheet ve buildPreviewHtml
+  // ikisi de kullanır → önizleme = çıktı (WYSIWYG).
+  function buildDishBlocks(sheet) {
     const dishes = (sheet.dishes || []).filter(function (d) {
       return (d.name || '').trim() || (d.components || []).some(function (c) { return (c.text || '').trim(); });
     });
-    if (!dishes.length) { PCD.toast.warning(t('prep_nothing_to_print', 'Add at least one dish first')); return; }
-
-    let blocks = '';
+    // v2.22 — İstasyona göre grupla (ilk görülme sırası korunur; istasyonsuzlar '' grubu)
+    const groups = []; const gIdx = {};
     dishes.forEach(function (d) {
+      const st = (d.station || '').trim();
+      if (!(st in gIdx)) { gIdx[st] = groups.length; groups.push({ station: st, dishes: [] }); }
+      groups[gIdx[st]].dishes.push(d);
+    });
+    function dishHtml(d) {
       let rows = '';
       (d.components || []).forEach(function (c) {
         if (!(c.text || '').trim()) return;
         rows += '<div class="ps-row"><div class="ps-comp">' + esc(c.text) + '</div><div class="ps-prep"></div></div>';
       });
       if (!rows) rows = '<div class="ps-row"><div class="ps-comp">&nbsp;</div><div class="ps-prep"></div></div>';
-      blocks +=
-        '<div class="ps-dish">' +
-          '<div class="ps-dish-head">' + esc(d.name || '') + '</div>' +
-          rows +
-        '</div>';
+      return '<div class="ps-dish"><div class="ps-dish-head">' + esc(d.name || '') + '</div>' + rows + '</div>';
+    }
+    let blocks = '';
+    groups.forEach(function (g) {
+      if (g.station) blocks += '<div class="ps-station">' + esc(g.station) + '</div>';
+      g.dishes.forEach(function (d) { blocks += dishHtml(d); });
     });
-
-    const html =
-      '<style>' +
-        '@page{size:A4 portrait;margin:10mm;}' +
-        'body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#111;margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
-        '.ps-title{font-size:18px;font-weight:800;margin:0 0 3px;}' +
-        '.ps-sub{font-size:11px;color:#666;margin:0 0 12px;}' +
-        '.ps-grid{column-count:' + cols + ';column-gap:7mm;}' +
-        '.ps-dish{break-inside:avoid;page-break-inside:avoid;border:1px solid #333;border-radius:4px;overflow:hidden;margin-bottom:6mm;}' +
-        '.ps-dish-head{background:#1f3b30;color:#fff;font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:0.03em;padding:5px 8px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
-        '.ps-row{display:flex;border-top:1px solid #ccc;font-size:12px;}' +
-        '.ps-comp{flex:1;padding:4px 8px;border-right:1px solid #ccc;line-height:1.3;}' +
-        '.ps-prep{width:30%;min-width:60px;min-height:22px;}' +
-      '</style>' +
+    return { blocks: blocks, count: dishes.length };
+  }
+  function psStyleRules(cols, accent) {
+    return '.ps-title{font-size:18px;font-weight:800;margin:0 0 3px;}' +
+      '.ps-sub{font-size:11px;color:#666;margin:0 0 12px;}' +
+      '.ps-grid{column-count:' + cols + ';column-gap:7mm;}' +
+      '.ps-station{column-span:all;-webkit-column-span:all;font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:' + accent + ';border-bottom:2px solid ' + accent + ';padding:1px 0 3px;margin:2mm 0 4mm;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+      '.ps-dish{break-inside:avoid;page-break-inside:avoid;border:1px solid #333;border-radius:4px;overflow:hidden;margin-bottom:6mm;}' +
+      '.ps-dish-head{background:' + accent + ';color:#fff;font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:0.03em;padding:5px 8px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+      '.ps-row{display:flex;border-top:1px solid #ccc;font-size:12px;}' +
+      '.ps-comp{flex:1;padding:4px 8px;border-right:1px solid #ccc;line-height:1.3;}' +
+      '.ps-prep{width:30%;min-width:60px;min-height:22px;}';
+  }
+  function sheetInner(sheet) {
+    const built = buildDishBlocks(sheet);
+    if (!built.count) return { empty: true, html: '' };
+    return { empty: false, html:
       '<div class="ps-title">' + esc(sheet.name || t('prep_title', 'Prep Sheet')) + '</div>' +
       '<div class="ps-sub">' + esc(t('prep_print_sub', 'Components per dish · mark quantities in the blank box')) + '</div>' +
-      '<div class="ps-grid">' + blocks + '</div>';
+      '<div class="ps-grid">' + built.blocks + '</div>'
+    };
+  }
 
+  function printSheet(sheet) {
+    const inner = sheetInner(sheet);
+    if (inner.empty) { PCD.toast.warning(t('prep_nothing_to_print', 'Add at least one dish first')); return; }
+    const land = sheet.orientation === 'landscape';
+    const html =
+      '<style>' +
+        '@page{size:A4 ' + (land ? 'landscape' : 'portrait') + ';margin:10mm;}' +
+        'body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#111;margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+        psStyleRules(sheet.columns || 3, sheet.accent || '#1f3b30') +
+      '</style>' + inner.html;
     PCD.print(html, sheet.name || t('prep_title', 'Prep Sheet'));
+  }
+
+  // Canlı önizleme: A4 ölçülü .ps-sheet (editör içine gömülü, ölçeklenir).
+  function buildPreviewHtml(sheet) {
+    const land = sheet.orientation === 'landscape';
+    const inner = sheetInner(sheet);
+    const body = inner.empty
+      ? '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#999;font-size:13px;text-align:center;padding:30px;">' + esc(t('prep_preview_empty', 'Add a dish to see the printable sheet')) + '</div>'
+      : inner.html;
+    return '<style>' +
+      '.ps-sheet{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#111;box-sizing:border-box;width:' + (land ? 297 : 210) + 'mm;min-height:' + (land ? 210 : 297) + 'mm;padding:10mm;background:#fff;}' +
+      psStyleRules(sheet.columns || 3, sheet.accent || '#1f3b30') +
+      '</style>' +
+      '<div class="ps-sheet">' + body + '</div>';
   }
 
   // ============ EXPORT ============

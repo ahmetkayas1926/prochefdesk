@@ -4,6 +4,21 @@ Kronolojik tersine (en son üstte). Her sürüm: başlık + ana değişiklikler.
 
 ---
 
+## v2.22.0 — Prep Sheet büyük geliştirme (Araç 2/8) · 2026-06-08
+
+Kod-önce analiz: model doğru (dish→component checklist), köklü rewrite YOK —
+profesyonel katman eklendi (motor + reçeteden otomatik doldurma korundu).
+
+- **Canlı A4 önizleme (2-panel):** Sol editör / sağ WYSIWYG önizleme; tek render motoru (`buildDishBlocks`/`psStyleRules`) baskı + önizleme + paylaşımda ortak. Yazdıkça anında güncellenir, ölçek panele sığar.
+- **Özelleştirme:** Vurgu rengi (picker + 6 ön ayar), yön (dikey/yatay), 4 hazır düzen preseti.
+- **Sürükle-sırala:** Yemekler ve bileşenler grip'ten sürüklenip yeniden sıralanır (ayrı drag-state + guard ile çakışmasız).
+- **İstasyon gruplama:** Yemeğe opsiyonel istasyon alanı → baskı/önizlemede istasyon başlıklarıyla gruplanır (Grill / Pastry…).
+- **Library galerisi:** Kayıtlı prep sheet'ler mini önizlemeli kart ızgarası + **kopyala** + sil.
+- **Tutarlı stil:** Aktif kontroller marka renginde (Menu Studio pill hissi).
+- Her parça yerel sunucuda gerçek tarayıcıda doğrulandı; otomatik kayıt + bulut + çok-dil korundu.
+
+---
+
 ## v2.21.0 — Kitchen Cards geliştirme (2/2): Özel kartlar + Library galerisi + tutarlı stil · 2026-06-07
 
 8-araç programının 1. aracı Kitchen Cards tamamlandı (köklü rewrite olmadan, olgun

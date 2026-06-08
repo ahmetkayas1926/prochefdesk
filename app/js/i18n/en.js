@@ -2988,6 +2988,10 @@ window.PCD.i18n.register('en', {
   kc2_card_body: "Content",
   kc2_card_body_ph: "Free text — one line per row…",
   kc2_duplicate: "Duplicate",
+  prep_preview_label: "Live preview",
+  prep_preview_empty: "Add a dish to see the printable sheet",
+  prep_drag: "Drag to reorder",
+  prep_station_ph: "Station (optional) — e.g. Grill",
 
   // v2.6.65 — Offline dataURL photo migration
 });

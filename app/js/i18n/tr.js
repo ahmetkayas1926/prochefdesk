@@ -2985,6 +2985,10 @@ window.PCD.i18n.register('tr', {
   kc2_card_body: "İçerik",
   kc2_card_body_ph: "Serbest metin — her satıra bir madde…",
   kc2_duplicate: "Kopyala",
+  prep_preview_label: "Canlı önizleme",
+  prep_preview_empty: "Yazdırılacak sayfayı görmek için yemek ekle",
+  prep_drag: "Sürükleyip sırala",
+  prep_station_ph: "İstasyon (opsiyonel) — örn. Izgara",
 
   // v2.6.65 — Offline dataURL photo migration
 });
