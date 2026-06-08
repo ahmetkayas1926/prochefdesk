@@ -715,7 +715,8 @@
     .founder-sig { justify-content:center; }
   }
   @media (max-width: 480px) {
-    .live-devices .phone { width:38%; right:0; bottom:-10px; }
+    /* Mobilde telefon overlap yerine masaüstü altında, daha büyük → "canlı an" hikayesi net okunur */
+    .live-devices .phone { position:static; width:170px; max-width:58%; right:auto; bottom:auto; margin:14px auto 0; }
     .shot-body { padding:12px 12px 13px; }
     .founder-card { padding:22px; }
     /* Mobil nav: kalabalığı azalt — logo + dil + CTA kalır (Pricing bölüm + hero CTA ile erişilir) */
@@ -739,7 +740,7 @@
       <select id="langSelect" aria-label="Language" style="font-family:inherit;font-size:13px;font-weight:600;color:var(--text-2);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 8px;cursor:pointer;">
         <option value="en">EN</option><option value="tr">TR</option><option value="es">ES</option><option value="fr">FR</option><option value="de">DE</option><option value="ar">AR</option>
       </select>
-      <a class="nav-cta" href="/app/" id="navCta" data-i18n="nav_cta">Open app</a>
+      <a class="nav-cta" href="/app/" id="navCta" data-i18n="cta_start">Start free</a>
     </div>
   </nav>
 
@@ -1568,12 +1569,15 @@
       var hels = document.querySelectorAll('[data-i18n-html]');
       for (var j = 0; j < hels.length; j++) { var hk = hels[j].getAttribute('data-i18n-html'); if (dict[hk] != null) hels[j].innerHTML = dict[hk]; }
       if (dict.page_title) document.title = dict.page_title;
-      // Giriş yapmışsa hero/final CTA → "Uygulamayı Aç" (dile göre)
+      // Giriş yapmışsa hero/final/nav CTA → "Uygulamayı Aç" (dile göre).
+      // Giriş YAPMAMIŞ ziyaretçide üçü de "Ücretsiz başla" → tutarlı tek mesaj.
       if (isLoggedIn()) {
         var hsp = document.querySelector('#heroCta [data-i18n="cta_start"]');
         var fsp = document.querySelector('#finalCta [data-i18n="cta_start"]');
+        var nsp = document.getElementById('navCta');
         if (hsp) hsp.textContent = dict.cta_open || 'Open ProChefDesk';
         if (fsp) fsp.textContent = dict.cta_open || 'Open ProChefDesk';
+        if (nsp) nsp.textContent = dict.cta_open || 'Open ProChefDesk';
       }
     }
 

@@ -15,6 +15,8 @@ Kronolojik tersine (en son üstte). Her sürüm: başlık + ana değişiklikler.
 - **Kurucu bölümü** (yeni, güvenin kalbi) — gerçek kurucu fotoğrafı + hikaye (prestij: İstanbul→Marriott/2022 Dünya Kupası→Perth; acı: Excel kaosu; çözüm). Foto 585KB→46KB optimize.
 - **Perth onur sinyali** (uydurma sosyal kanıt yok), testimonial iskeleti boş/hazır.
 - EN+TR tam; es/fr/de/ar yeni bölümlerde EN'e düşer (graceful).
+- **Dönüşüm cilası:** nav CTA giriş-yapmamış ziyaretçide "Start free" (hero ile tutarlı tek mesaj), giriş yapınca "Open app"; mobilde "canlı an" telefon önizlemesi overlap yerine masaüstü altında istiflenip büyütüldü (116→170px, okunur).
+- **og-image.png eklendi** (1200×630 marka görseli — cream zemin, yeşil logo + fayda başlığı + food-cost çipi). Sosyal paylaşımda kırık kart sorunu giderildi (meta tag'ler zaten bu dosyaya işaret ediyordu).
 
 **Kitchen Cards yüzey optimizasyonu:**
 - **Aksiyon çubuğu kanvasın üstüne taşındı** — canvas adı + kaydet/yeni solda, paylaş/yazdır/sil sağda (tek satır, mobilde sarar). Tüm ID'ler korundu → handler'lar aynı çalışır.
