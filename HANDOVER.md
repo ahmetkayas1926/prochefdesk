@@ -75,10 +75,10 @@ Blok tabanlı pano (Notion tarzı). 12 blok tipi: section header, big number, ch
 - Bulut sync ✓ (`whiteboards` tablosu)
 
 #### Portion (Portion Calculator)
-Çoklu tarif seçme, porsiyon hedefi girme, otomatik ölçekleme, konsolide malzeme listesi + maliyet. 3 görünüm: tarif bazlı / kategori / tedarikçi.
-- Print ✓
+Çoklu tarif seçme, tarif başına porsiyon hedefi, otomatik ölçekleme, konsolide malzeme listesi + maliyet. 3 görünüm: tarif bazlı / kategori / tedarikçi. Alt-tarifler ingredient seviyesine flatten edilir. Canlı stats (tarif / toplam porsiyon / toplam maliyet / ortalama porsiyon).
+- Print ✓ (tarif-tarif veya konsolide gruplu)
+- Excel ✓ (stilize, görünüme uygun — tarif sayfası veya konsolide kategori/tedarikçi sipariş sayfası + TOPLAM satırı)
 - Metin paylaşımı (navigator.share)
-- Bulut sync ✓
 
 #### Checklist (Checklists)
 2 tip: Control (güvenlik/açılış/kapanış/temizlik) ve Prep (yemek → bileşenler + not alanı). Kategori renk şeritleri, reçete/menüden otomatik doldurma. Özelleştirilebilir yazdırma: sütun sayısı, yön, yazı boyutu, aralık, kalın. **Editörde canlı A4 baskı önizlemesi** (ayar değiştikçe anında — WYSIWYG). Oturum geçmişi, ilerleme takibi.
@@ -87,7 +87,7 @@ Blok tabanlı pano (Notion tarzı). 12 blok tipi: section header, big number, ch
 - Bulut sync ✓
 
 #### Roster
-Haftalık çalışan vardiyası. Personel × gün ızgara; her hücre vardiya saati (başlangıç/bitiş) veya durum kodu. 6 durum kodu (renk kodlu): OFF, AL (izinli), PH (resmi tatil), SL (hastalık), RDO (dinlenme), UNP (ücretsiz izin). Departman/grup bölümleri. İşçilik maliyeti göster/gizle. Tarihçe, şablon kopyalama.
+Haftalık çalışan vardiyası. Personel × gün ızgara; her hücre vardiya saati (başlangıç/bitiş) veya durum kodu. 6 durum kodu (renk kodlu): OFF, AL (izinli), PH (resmi tatil), SL (hastalık), RDO (dinlenme), UNP (ücretsiz izin). Departman/grup bölümleri. İşçilik maliyeti göster/gizle. **⚡ Haftayı doldur:** tek personelin tüm haftasını bir vardiya/durum/saat ile tek tıkla doldur veya temizle. **Önceki haftayı kopyala:** en son rosterı bulup personeli isimle eşleştirir, vardiyaları kopyalar. **Editörde canlı baskı önizlemesi** (tek motor — print/Excel/JPEG ile aynı). Tarihçe.
 - Print ✓ (A4 yatay, renkli)
 - Excel ✓ (yatay, renkli, otomatik tek sayfa)
 - JPEG paylaşımı: mobilde native share (WhatsApp vb.), masaüstünde indir
@@ -117,16 +117,16 @@ Stok seviyeleri: par (ideal) ve min (kritik) eşikleri. 4 durum: OUT / CRITICAL 
 ### Catering
 
 #### Events (Event Planner)
-Etkinlik tarihi, konuk sayısı, menü atama, bütçe vs maliyet karşılaştırması. 4 durum: draft / confirmed / done / cancelled. Otomatik maliyet ölçeği (konuk sayısına göre).
-- Print ✓
+Etkinlik tarihi, konuk sayısı, menü atama, bütçe vs maliyet karşılaştırması. 4 durum: draft / confirmed / done / cancelled. Otomatik maliyet ölçeği (konuk sayısına göre) + kişi başı yemek maliyeti göstergesi. **🛒 Alışveriş listesi:** menüyü konuk sayısına ölçekle → alt-tarifler dahil gerçek malzemeye in (flattenIngredients) → tedarikçiye göre grupla → yazdır. **Etkinliği çoğalt** (liste kartından, "(kopya)" + taslak). **Editörde canlı A4 önizleme** (baskıyla aynı `eventPrintHtml` motoru, izole iframe → sızıntı yok).
+- Print ✓ (A4 stilize)
 - Metin paylaşımı (navigator.share)
-- Bulut sync ✓
+- Bulut sync ✓ (`events` tablosu)
 
 #### Buffet (Buffet Planner)
-İstasyon bazlı büfe planlama. Kişi başı tüketim oranı (sektör standartları), refill çarpanı, israf projeksiyonu, toplam kişi başı maliyet.
-- Print ✓ (prep list + maliyet raporu)
+İstasyon bazlı büfe planlama. 3-yol maliyet (tarif / malzeme / custom), kişi başı tüketim oranı (sektör standartları), refill çarpanı, yield%, israf projeksiyonu, food cost % hedef durumu (yeşil/sarı/kırmızı). 7 uluslararası hazır preset + boş başlangıç, arama, çoğalt. **🚚 Tedarikçiye göre sipariş listesi:** tarif kalemlerini alt-tarifler dahil gerçek malzemeye in → stok birimine normalize edip topla → tedarikçiye grupla → yazdır (custom kalemler "bağlanmamış" grubunda).
+- Print ✓ (prep list + sipariş listesi + maliyet raporu)
 - Excel ✓ (maliyet raporu)
-- Bulut sync ✓
+- Bulut sync ✓ (`buffets` tablosu)
 
 ---
 
