@@ -4,6 +4,19 @@ Kronolojik tersine (en son üstte). Her sürüm: başlık + ana değişiklikler.
 
 ---
 
+## v2.37.0 — Event Planner (Araç 6/8): alışveriş listesi + çoğalt + canlı A4 önizleme + kişi başı maliyet · 2026-06-08
+
+Kod-önce analiz: Event Planner çekirdeği zaten sağlamdı (konuk sayısına ölçekli yemek maliyeti, gelir/kâr/marj, bütçe takibi, durum, yazdır/paylaş). Köklü redesign gereksiz → operatörün "Tam paket" seçimine uygun **gerçek değer katan 4 ekleme**:
+
+- **🛒 Alışveriş/hazırlık listesi:** Menüdeki tüm tarifleri konuk sayısına **otomatik ölçekler**, `flattenIngredients` ile gerçek malzeme seviyesine indirir (alt-tarifler + birim dönüşümü dahil), aynı malzeme+birimi **toplar**, **tedarikçiye göre gruplar**. Modalde görüntü + tek tık **yazdır** (A4, marka yeşili başlık). Banket için tek liste = sipariş hazır.
+- **⧉ Etkinliği çoğalt:** Liste kartında tek butonla → menü + konuk + fiyat + bütçe kopyalanır, adına "(kopya)" eklenir, durum "taslak" olur. Tekrarlayan iş (haftalık catering, benzer düğün) için zaman kazancı.
+- **📄 Canlı A4 önizleme:** Editörde açılır panel — çıktının birebir hali (print ile **aynı `eventPrintHtml` motoru**). İzole iframe → baskı stili uygulama sayfasına sızmaz.
+- **Kişi başı yemek maliyeti** göstergesi: editör istatistik kartında toplam maliyet ÷ konuk = fiyatlama kararı için anlık metrik.
+
+- Tarayıcıda doğrulandı: alışveriş listesi 100 konuk için 25× ölçekledi (spaghetti 400g→10.000g, yumurta→100 pcs, pancetta→3.750g), tedarikçi gruplaması çalıştı; çoğalt yeni id + "(kopya)" + taslak üretti; canlı önizleme menü+maliyeti yansıttı, sızıntı yok (app body max-width "none" kaldı); kişi başı maliyet göründü. Yazdır motoru / sync / Pro-gating korundu.
+
+---
+
 ## v2.36.0 — Roster (Araç 4/8): hızlı doldurma + önceki haftayı kopyala + canlı önizleme · 2026-06-08
 
 Kod-önce analiz: Roster zaten en olgun araçlardan (hücre/personel popup düzenleme, tek

@@ -84,7 +84,10 @@
                 ${e.venue ? ' · ' + PCD.escapeHtml(e.venue) : ''}
               </div>
             </div>
-            <span class="chip" style="background:${statusColor(e.status || 'draft')}20;color:${statusColor(e.status || 'draft')};font-weight:700;">${t('event_status_' + (e.status || 'draft'))}</span>
+            <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+              <span class="chip" style="background:${statusColor(e.status || 'draft')}20;color:${statusColor(e.status || 'draft')};font-weight:700;">${t('event_status_' + (e.status || 'draft'))}</span>
+              <button class="icon-btn" data-dup-ev="${e.id}" title="${PCD.escapeHtml(t('event_duplicate') || 'Duplicate')}">${PCD.icon('copy', 16)}</button>
+            </div>
           </div>
           <div class="flex gap-2" style="flex-wrap:wrap;">
             <span class="chip">${t('event_total_cost')}: <strong>${PCD.fmtMoney(stats.totalCost)}</strong></span>
@@ -98,8 +101,22 @@
     }
 
     PCD.$('#newEventBtn', view).addEventListener('click', function () { openEditor(); });
-    PCD.on(listEl, 'click', '[data-eid]', function () {
+    PCD.on(listEl, 'click', '[data-eid]', function (e) {
+      if (e.target.closest('[data-dup-ev]')) return;
       openEditor(this.getAttribute('data-eid'));
+    });
+    // v2.37 — Etkinliği çoğalt
+    PCD.on(listEl, 'click', '[data-dup-ev]', function (e) {
+      e.stopPropagation();
+      const id = this.getAttribute('data-dup-ev');
+      const src = PCD.store.getFromTable('events', id);
+      if (!src) return;
+      const copy = PCD.clone(src); delete copy.id;
+      copy.name = (src.name || t('untitled')) + ' ' + (t('event_copy_suffix') || '(copy)');
+      copy.status = 'draft';
+      PCD.store.upsertInTable('events', copy, 'ev');
+      PCD.toast.success(t('event_duplicated') || 'Event duplicated');
+      render(view);
     });
   }
 
@@ -130,6 +147,7 @@
     };
 
     const body = PCD.el('div');
+    let previewOpen = false; // v2.37 — canlı A4 önizleme açık/kapalı durumu (render'lar arası korunur)
 
     function render() {
       const ingMap = {}, recipeMap = {};
@@ -190,6 +208,7 @@
               <div class="stat-label">${t('event_total_cost')}</div>
               <div style="font-size:18px;font-weight:800;">${PCD.fmtMoney(stats.totalCost)}</div>
             </div>
+            ${(Number(data.guestCount) > 0) ? '<div><div class="stat-label">' + (t('event_cost_per_head') || 'Food cost / guest') + '</div><div style="font-size:18px;font-weight:800;">' + PCD.fmtMoney(stats.totalCost / Number(data.guestCount)) + '</div></div>' : ''}
             ${data.budget > 0 ? (function () {
               const remaining = (data.budget || 0) - stats.totalCost;
               const usedPct = data.budget > 0 ? (stats.totalCost / data.budget) * 100 : 0;
@@ -220,6 +239,13 @@
           <label class="field-label">${t('event_notes')}</label>
           <textarea class="textarea" id="eNotes" rows="2">${PCD.escapeHtml(data.notes || '')}</textarea>
         </div>
+
+        <details id="evPreviewWrap" ${previewOpen ? 'open' : ''} style="margin-top:4px;">
+          <summary style="cursor:pointer;font-weight:700;font-size:13px;color:var(--brand-700);user-select:none;list-style:none;">${PCD.icon('print', 14)} ${t('event_preview') || 'Print preview'}</summary>
+          <div style="margin-top:10px;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:#e9edf0;">
+            <iframe id="evPreview" title="${t('event_preview') || 'Print preview'}" style="width:100%;height:440px;border:0;display:block;background:#fff;"></iframe>
+          </div>
+        </details>
       `;
 
       // Menu list
@@ -326,6 +352,22 @@
         render();
       });
 
+      // v2.37 — canlı A4 önizleme (iframe izole; body{} sızıntısı yok)
+      const prevWrap = PCD.$('#evPreviewWrap', body);
+      if (prevWrap) {
+        const paintPreview = function () {
+          const fr = PCD.$('#evPreview', body);
+          if (fr && prevWrap.open) {
+            fr.srcdoc = '<!doctype html><html><head><meta charset="utf-8"></head><body>' + eventPrintHtml(data) + '</body></html>';
+          }
+        };
+        prevWrap.addEventListener('toggle', function () {
+          previewOpen = prevWrap.open;
+          paintPreview();
+        });
+        if (prevWrap.open) paintPreview();
+      }
+
     }
 
     render();
@@ -341,8 +383,12 @@
       shareBtn = PCD.el('button', { class: 'btn btn-outline', title: t('btn_share') });
       shareBtn.innerHTML = PCD.icon('share', 16);
     }
+    // v2.37 — Alışveriş listesi (her zaman; data'dan canlı üretir)
+    const shopBtn = PCD.el('button', { class: 'btn btn-outline' });
+    shopBtn.innerHTML = '🛒 ' + PCD.escapeHtml(t('event_shopping_list') || 'Shopping list');
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
     if (deleteBtn) footer.appendChild(deleteBtn);
+    footer.appendChild(shopBtn);
     if (printBtn) footer.appendChild(printBtn);
     if (shareBtn) footer.appendChild(shareBtn);
     footer.appendChild(cancelBtn);
@@ -375,6 +421,7 @@
     if (shareBtn) shareBtn.addEventListener('click', function () {
       shareEvent(existing);
     });
+    shopBtn.addEventListener('click', function () { openShoppingList(data); });
     saveBtn.addEventListener('click', function () {
       if (!data.name || !data.name.trim()) { PCD.toast.error(t('event_name') + ' ' + t('required')); return; }
       if (existing) data.id = existing.id;
@@ -429,7 +476,8 @@
     return lines.join('\n');
   }
 
-  function printEvent(event) {
+  function printEvent(event) { PCD.print(eventPrintHtml(event), event.name || (PCD.i18n.t('ev_print_default_title') || 'Event')); }
+  function eventPrintHtml(event) {
     const t = PCD.i18n.t;
     const ingMap = {}, recipeMap = {};
     PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
@@ -506,7 +554,7 @@
         '<div class="ev-notes"><div class="ev-notes-label">' + PCD.escapeHtml(t('ev_print_notes') || 'Notes') + '</div>' + PCD.escapeHtml(event.notes) + '</div>'
       : '');
 
-    PCD.print(html, event.name || (t('ev_print_default_title') || 'Event'));
+    return html;
   }
 
   function shareEvent(event) {
@@ -558,6 +606,79 @@
         }
       }
     });
+  }
+
+  // v2.37 — Etkinlik alışveriş/hazırlık listesi: menüdeki tarifleri konuk sayısına
+  // ölçekle, flattenIngredients ile gerçek malzemelere indir, tedarikçiye göre grupla + topla.
+  function buildEventShopping(event, ingMap, recipeMap) {
+    const t = PCD.i18n.t;
+    const guests = Number(event.guestCount) || 0;
+    const acc = {};
+    (event.menu || []).forEach(function (item) {
+      const r = recipeMap[item.recipeId]; if (!r) return;
+      const portions = guests * (Number(item.portionsPerGuest) || 1);
+      const scale = portions / (Number(r.servings) || 1);
+      if (!(scale > 0)) return;
+      const flat = PCD.recipes.flattenIngredients(r, ingMap, recipeMap, { scale: scale });
+      flat.forEach(function (f) {
+        if (!f.ingredient) return;
+        const key = f.ingredientId + '|' + (f.unit || '');
+        if (!acc[key]) acc[key] = { ing: f.ingredient, unit: f.unit || '', amount: 0 };
+        acc[key].amount += (Number(f.amount) || 0);
+      });
+    });
+    const groups = {};
+    Object.keys(acc).forEach(function (k) {
+      const row = acc[k];
+      const sup = (row.ing.supplier || '').trim() || (t('event_shop_other') || 'Other');
+      (groups[sup] = groups[sup] || []).push(row);
+    });
+    return Object.keys(groups).sort().map(function (sup) {
+      return { supplier: sup, rows: groups[sup].sort(function (a, b) { return (a.ing.name || '').localeCompare(b.ing.name || ''); }) };
+    });
+  }
+
+  function shoppingListHtml(groups, forPrint) {
+    const t = PCD.i18n.t;
+    if (!groups.length) return '<div class="text-muted" style="padding:16px;text-align:center;">' + PCD.escapeHtml(t('event_shop_empty') || 'Add menu items with recipes to generate a shopping list.') + '</div>';
+    const fmtAmt = function (n) { return (Math.round(n * 100) / 100).toString(); };
+    const titleColor = forPrint ? '#16a34a' : 'var(--brand-700)';
+    const lineColor = forPrint ? '#e5e5e5' : 'var(--border)';
+    return groups.map(function (g) {
+      return '<div style="margin-bottom:14px;">' +
+        '<div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:' + titleColor + ';border-bottom:1px solid ' + lineColor + ';padding-bottom:4px;margin-bottom:6px;">' + PCD.escapeHtml(g.supplier) + '</div>' +
+        g.rows.map(function (r) {
+          return '<div style="display:flex;justify-content:space-between;gap:12px;padding:3px 0;font-size:13px;">' +
+            '<span>' + PCD.escapeHtml(r.ing.name || '') + '</span>' +
+            '<span style="font-weight:600;white-space:nowrap;">' + fmtAmt(r.amount) + ' ' + PCD.escapeHtml(r.unit) + '</span>' +
+          '</div>';
+        }).join('') +
+      '</div>';
+    }).join('');
+  }
+
+  function openShoppingList(event) {
+    const t = PCD.i18n.t;
+    const ingMap = {}, recipeMap = {};
+    PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
+    PCD.store.listRecipes().forEach(function (r) { recipeMap[r.id] = r; });
+    const groups = buildEventShopping(event, ingMap, recipeMap);
+    const body = PCD.el('div');
+    body.innerHTML = '<div class="text-muted text-sm" style="margin-bottom:10px;">' + PCD.escapeHtml((event.guestCount || 0) + ' ' + (t('event_guests') || 'guests')) + '</div>' + shoppingListHtml(groups, false);
+    const printBtn = PCD.el('button', { class: 'btn btn-outline', text: (t('print') || 'Print') });
+    printBtn.innerHTML = PCD.icon('print', 14) + ' ' + PCD.escapeHtml(t('print') || 'Print');
+    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: (t('btn_close') || 'Close'), style: { marginInlineStart: 'auto' } });
+    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
+    footer.appendChild(printBtn); footer.appendChild(closeBtn);
+    const m = PCD.modal.open({ title: '🛒 ' + (t('event_shopping_list') || 'Shopping list'), body: body, footer: footer, size: 'md', closable: true });
+    printBtn.addEventListener('click', function () {
+      const html = '<style>@page{size:A4;margin:16mm;}body{font-family:-apple-system,"Segoe UI",Roboto,sans-serif;color:#1a1a1a;max-width:760px;margin:0 auto;}h1{font-size:20pt;color:#16a34a;margin:0 0 4px;}.sub{color:#666;font-size:11pt;margin-bottom:16px;}</style>' +
+        '<h1>' + PCD.escapeHtml(event.name || (t('event_shopping_list') || 'Shopping list')) + '</h1>' +
+        '<div class="sub">' + PCD.escapeHtml((t('event_shopping_list') || 'Shopping list') + ' · ' + (event.guestCount || 0) + ' ' + (t('event_guests') || 'guests')) + '</div>' +
+        shoppingListHtml(groups, true);
+      PCD.print(html, (event.name || 'Event') + ' — ' + (t('event_shopping_list') || 'Shopping list'));
+    });
+    closeBtn.addEventListener('click', function () { m.close(); });
   }
 
   PCD.tools = PCD.tools || {};
