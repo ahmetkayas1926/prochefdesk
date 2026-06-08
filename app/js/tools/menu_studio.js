@@ -966,8 +966,49 @@
     }
   }
 
+  // v2.40 — Tema cascade: şablonlar accent/font'u blok-seviyesinde gömdüğü için
+  // (titleColor/titleFont/itemFont/divider color), sayfa teması değişince ESKİ tema
+  // değerini izleyen blokları da yeni değere taşı. Kullanıcının elle FARKLI renge/fonta
+  // ayarladığı bloklar (oldVal'a eşit olmayan) dokunulmadan korunur. titleColor hiç
+  // set edilmemiş bloklar zaten accent fallback'i kullanır (otomatik takip).
+  function cascadeTheme(kind, oldVal, newVal) {
+    if (!newVal || oldVal === newVal) return;
+    (design.blocks || []).forEach(function (b) {
+      if (kind === 'accent') {
+        // Güçlü global accent: section başlık + ayraç override'larını temizle →
+        // hepsi page.accent'i izler (şablon başlık rengini ezse bile accent çalışır).
+        // Bölüm-bazlı özel renk hâlâ blok editöründen accent değişiminden SONRA verilebilir.
+        if (b.type === 'section') delete b.titleColor;
+        if (b.type === 'divider') delete b.color;
+      } else if (kind === 'font') {
+        // Base font: yalnız ESKİ temayı izleyen blokları güncelle — kasıtlı display
+        // fontları (ör. büyük başlıkta Bebas Neue) korunur.
+        if (b.titleFont && b.titleFont === oldVal) b.titleFont = newVal;
+        if (b.itemFont && b.itemFont === oldVal) b.itemFont = newVal;
+        if (b.font && b.font === oldVal) b.font = newVal;
+      }
+    });
+    if (kind === 'accent') delete design.page.frameColor; // çerçeve de accent'i izlesin
+  }
+
   // v2.32 — Sayfa ayarları popup gövdesinde wire'lanır
   function wirePageControls(root, repaint) {
+    // v2.40 — FIX: data-f (renk/font/sayı) + data-clear input'ları sayfa popup'ında
+    // bağlanmıyordu (v2.32 refactor'unda unutulmuştu) → Base font, Column gap, Theme
+    // accent, Text color, Background, Margin, Frame color hiçbir değişiklik yapmıyordu.
+    // wireBlockControls ile aynı desen.
+    root.querySelectorAll('[data-f]').forEach(function (el) {
+      const ev = el.tagName === 'SELECT' ? 'change' : 'input';
+      el.addEventListener(ev, function () {
+        let v = el.value; if (el.type === 'number') v = v === '' ? null : Number(v);
+        const path = el.getAttribute('data-f');
+        if (path === 'page.accent') { cascadeTheme('accent', design.page.accent, v); design.page.accent = v; }
+        else if (path === 'page.baseFont') { cascadeTheme('font', design.page.baseFont, v); design.page.baseFont = v; }
+        else { setField(design, path, v); }
+        refreshPage();
+      });
+    });
+    root.querySelectorAll('[data-clear]').forEach(function (el) { el.addEventListener('click', function () { setField(design, el.getAttribute('data-clear'), ''); refreshPage(); repaint(); }); });
     root.querySelectorAll('[data-toggle-page]').forEach(function (el) { el.addEventListener('click', function () { const k = el.getAttribute('data-toggle-page'); design.page[k] = !design.page[k]; refreshPage(); repaint(); }); });
     root.querySelectorAll('[data-paper]').forEach(function (el) { el.addEventListener('click', function () { design.page.paper = el.getAttribute('data-paper'); refreshPage(); repaint(); }); });
     root.querySelectorAll('[data-orient]').forEach(function (el) { el.addEventListener('click', function () { design.page.orientation = el.getAttribute('data-orient'); refreshPage(); repaint(); }); });

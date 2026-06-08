@@ -946,6 +946,7 @@ window.PCD.i18n.register('en', {
   kc_canvas_name_placeholder: "Canvas name",
   kc_new_canvas_tooltip: "Start a new canvas",
   kc_load_canvas_tooltip: "Load saved canvas",
+  kc_layout_style: "Layout & style",
   kc_orientation: "Orientation",
   kc_landscape: "Landscape",
   kc_portrait: "Portrait",

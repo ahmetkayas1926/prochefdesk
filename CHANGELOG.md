@@ -4,6 +4,31 @@ Kronolojik tersine (en son üstte). Her sürüm: başlık + ana değişiklikler.
 
 ---
 
+## v2.40.0 — Landing yeniden tasarımı + Kitchen Cards yüzey optimizasyonu · 2026-06-09
+
+**Landing page (root index.html) satış-odaklı yeniden tasarım:**
+- **Light mode sabiti** — `color-scheme:light` + dark mode media query kaldırıldı (cihaz dark olsa bile satış vitrini light kalır; `/app/` dark mode'una dokunulmadı).
+- **Hero** fayda-odaklı ("Food cost, menus, prep & HACCP — in one place") + gerçek UI mockup (food cost % görünür Recipes ekranı).
+- **Canlı an** bölümü (telefon+masaüstü, dürüstlük notu: çevrimdışı çalışır, bağlanınca senkron).
+- **Problem** bölümü Excel-kaosu diliyle güçlendirildi.
+- **Ürün kanıtı** — 4 gerçek-arayüz HTML/CSS mockup (Menü, Roster/işçilik, HACCP, Kitchen Cards), raster yerine (retina-net + hızlı).
+- **Kurucu bölümü** (yeni, güvenin kalbi) — gerçek kurucu fotoğrafı + hikaye (prestij: İstanbul→Marriott/2022 Dünya Kupası→Perth; acı: Excel kaosu; çözüm). Foto 585KB→46KB optimize.
+- **Perth onur sinyali** (uydurma sosyal kanıt yok), testimonial iskeleti boş/hazır.
+- EN+TR tam; es/fr/de/ar yeni bölümlerde EN'e düşer (graceful).
+
+**Kitchen Cards yüzey optimizasyonu:**
+- **Aksiyon çubuğu kanvasın üstüne taşındı** — canvas adı + kaydet/yeni solda, paylaş/yazdır/sil sağda (tek satır, mobilde sarar). Tüm ID'ler korundu → handler'lar aynı çalışır.
+- **Presets butonu kaldırıldı** (gereksiz; wiring de temizlendi).
+- Sol panel artık yalnız **Düzen & stil + reçete seçimi + custom kartlar** → belirgin şekilde kısaldı, daha pratik.
+- Tarayıcıda doğrulandı: çift ID yok, reçete toggle → sayaç/önizleme güncelleniyor, kaydet/yazdır/paylaş aktif, konsol temiz. Print/preview motoru ve sync korundu.
+
+**Menu Studio — Page & theme renk/font BUG fix:**
+- **Kök neden:** `wirePageControls` `data-f` (renk/font/sayı) ve `data-clear` input'larını bağlamıyordu (v2.32 popup refactor'unda unutulmuştu) → Base font, Column gap, **Theme accent, Text color, Background**, Margin, Frame color hiçbir değişiklik yapmıyordu. Eklendi (blok editörüyle aynı desen).
+- **Tema cascade:** Şablonlar accent/font'u blok-seviyesinde gömüyordu (titleColor/titleFont), bu yüzden Theme accent + Base font değişimi görünmüyordu. Artık **Theme accent** değişince section başlık + ayraç override'ları temizlenir → hepsi accent'i izler (güçlü, öngörülebilir global accent); **Base font** değişince temayı izleyen bloklar güncellenir, kasıtlı display fontları korunur.
+- Kurucu fotoğrafı landing'de 132→180px büyütüldü + 585KB→46KB optimize edildi.
+
+---
+
 ## v2.39.0 — Portion Calculator (Araç 8/8): stilize Excel export · 8-araç programı TAMAMLANDI · 2026-06-08
 
 Kod-önce analiz: Portion Calculator olgun ve aktif ciladan geçmiş (3 görünüm — tarif/kategori/tedarikçi; canlı stats; alt-tarif flatten; focus-koruyan güncelleme; 2 tür yazdırma; WhatsApp/Email/Kopya paylaşım). Kök değişiklik gereksiz → **tek tutarlı boşluğu** doldurdum:

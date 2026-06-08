@@ -943,6 +943,7 @@ window.PCD.i18n.register('tr', {
   kc_canvas_name_placeholder: "Kart adı",
   kc_new_canvas_tooltip: "Yeni kart başlat",
   kc_load_canvas_tooltip: "Kaydedilmiş kartı yükle",
+  kc_layout_style: "Düzen & stil",
   kc_orientation: "Yön",
   kc_landscape: "Yatay",
   kc_portrait: "Dikey",

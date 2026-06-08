@@ -188,30 +188,30 @@
         : '<div class="text-muted text-sm" style="padding:4px 0;">' + PCD.escapeHtml(t('kc2_no_custom') || 'No custom cards yet.') + '</div>';
 
       bodyEl.innerHTML = `
+        <!-- v2.40 — Aksiyon çubuğu kanvasın üstüne taşındı: canvas adı + kaydet/yeni
+             solda, paylaş/yazdır/sil sağda. Sol panel artık yalnız düzen/stil + reçete
+             seçimi (daha kısa, pratik). Tüm ID'ler korundu → handler'lar aynı çalışır. -->
+        <div class="card mb-3" style="padding:10px 12px;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <input type="text" class="input" id="canvasName" value="${PCD.escapeHtml(canvasName)}" placeholder="${PCD.escapeHtml(t('kc_canvas_name_placeholder'))}" style="flex:1 1 200px;min-width:140px;font-weight:700;">
+            <button type="button" class="btn btn-outline btn-sm" id="loadCanvasBtn" style="flex:0 0 auto;" title="${PCD.escapeHtml(t('kc_load_canvas_tooltip'))}">${PCD.icon('book-open', 14)} <span>${allCanvases.length}</span></button>
+            <button type="button" class="btn btn-primary btn-sm" id="saveCanvasTopBtn" style="flex:0 0 auto;" ${layout.length === 0 ? 'disabled' : ''}>${PCD.icon('check', 14)} <span>${t('kc_save_canvas')}</span></button>
+            <button type="button" class="btn btn-outline btn-sm" id="newCanvasBtn" style="flex:0 0 auto;">${PCD.icon('plus', 14)} <span>${t('kc_new_canvas')}</span></button>
+            <div style="flex:1 1 auto;min-width:8px;"></div>
+            <button type="button" class="btn btn-outline btn-sm" id="shareCanvasBtn" style="flex:0 0 auto;" ${layout.length === 0 ? 'disabled' : ''} title="${PCD.escapeHtml((PCD.i18n && PCD.i18n.t) ? PCD.i18n.t('canvas_share_btn') : 'Share QR')}" aria-label="${PCD.escapeHtml((PCD.i18n && PCD.i18n.t) ? PCD.i18n.t('canvas_share_btn') : 'Share QR')}">${PCD.icon('share', 16)}</button>
+            <button type="button" class="btn btn-primary btn-sm" id="printSheetBtn" style="flex:0 0 auto;" ${layout.length === 0 ? 'disabled' : ''}>${PCD.icon('print', 16)} <span>${t('kc_print_x_recipes', { n: layout.length })}</span></button>
+            <button type="button" class="btn btn-outline btn-sm" id="clearCanvasBtn" style="flex:0 0 auto;color:var(--danger);border-color:var(--danger);" ${layout.length === 0 ? 'disabled' : ''} title="${PCD.escapeHtml(t('kc_clear_canvas_btn'))}" aria-label="${PCD.escapeHtml(t('kc_clear_canvas_btn'))}">${PCD.icon('trash', 16)}</button>
+          </div>
+          <div id="kcSaveReminder" style="margin-top:8px;padding:7px 10px;background:var(--brand-50);border:1px solid var(--brand-200,#bbf7d0);border-radius:6px;font-size:11px;color:var(--brand-700);display:${layout.length > 0 ? 'flex' : 'none'};align-items:center;gap:8px;line-height:1.4;">
+            ${PCD.icon('info', 14)}
+            <span>${t('kc_save_reminder')}</span>
+          </div>
+        </div>
+
         <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:14px;align-items:start;" class="kc-layout">
           <div style="min-width:0;">
             <div class="card mb-3" style="padding:14px;">
-              <!-- v2.8.23 — Canvas controls modernized. Row 1: name input
-                   + always-visible Saved Canvases button with count badge.
-                   Row 2: two prominent labeled buttons (Save Canvas /
-                   New Canvas) replacing the cramped icon-only buttons
-                   that confused new users. -->
-              <div class="flex items-center gap-2 mb-2" style="flex-wrap:nowrap;">
-                <input type="text" class="input" id="canvasName" value="${PCD.escapeHtml(canvasName)}" placeholder="${PCD.escapeHtml(t('kc_canvas_name_placeholder'))}" style="flex:1;min-width:0;font-weight:700;">
-                <button type="button" class="btn btn-outline btn-sm" id="loadCanvasBtn" style="flex:0 0 auto;" title="${PCD.escapeHtml(t('kc_load_canvas_tooltip'))}">${PCD.icon('book-open', 14)} <span>${allCanvases.length}</span></button>
-              </div>
-              <div class="flex gap-2 mb-2">
-                <button type="button" class="btn btn-primary btn-sm" id="saveCanvasTopBtn" style="flex:1;min-width:0;" ${layout.length === 0 ? 'disabled' : ''}>
-                  ${PCD.icon('check', 14)} <span>${t('kc_save_canvas')}</span>
-                </button>
-                <button type="button" class="btn btn-outline btn-sm" id="newCanvasBtn" style="flex:1;min-width:0;">
-                  ${PCD.icon('plus', 14)} <span>${t('kc_new_canvas')}</span>
-                </button>
-              </div>
-
-              <div class="mb-2">
-                <button type="button" class="btn btn-outline btn-sm" id="kcPresetsBtn" style="width:100%;">${PCD.icon('grid', 14)} <span>${t('kc2_presets') || 'Presets'}</span></button>
-              </div>
+              <div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px;">${t('kc_layout_style') || 'Layout & style'}</div>
 
               <div class="mb-2">
                 <div class="text-muted text-sm mb-1">${t('kc_orientation')}</div>
@@ -299,29 +299,6 @@
                 <button type="button" class="btn btn-outline btn-sm" id="kcAddCustom">${PCD.icon('plus', 14)} <span>${t('kc2_add_custom') || 'Add'}</span></button>
               </div>
               <div id="kcCustomList">${customListHtml}</div>
-            </div>
-
-            <div class="flex gap-2 mt-3">
-              <!-- v2.8.23 — Save moved to the top of the canvas card.
-                   Remaining bottom-row actions: Share, Print, Clear. -->
-              <button type="button" class="btn btn-outline" id="shareCanvasBtn" style="flex:0 0 auto;padding-inline:12px;" ${layout.length === 0 ? 'disabled' : ''} title="${PCD.escapeHtml((PCD.i18n && PCD.i18n.t) ? PCD.i18n.t('canvas_share_btn') : 'Share QR')}" aria-label="${PCD.escapeHtml((PCD.i18n && PCD.i18n.t) ? PCD.i18n.t('canvas_share_btn') : 'Share QR')}">
-                ${PCD.icon('share', 18)}
-              </button>
-              <button type="button" class="btn btn-primary" id="printSheetBtn" style="flex:1;min-width:0;" ${layout.length === 0 ? 'disabled' : ''}>
-                ${PCD.icon('print', 16)} <span>${t('kc_print_x_recipes', { n: layout.length })}</span>
-              </button>
-              <button type="button" class="btn btn-outline" id="clearCanvasBtn" style="flex:0 0 auto;padding-inline:12px;color:var(--danger);border-color:var(--danger);" ${layout.length === 0 ? 'disabled' : ''} title="${PCD.escapeHtml(t('kc_clear_canvas_btn'))}" aria-label="${PCD.escapeHtml(t('kc_clear_canvas_btn'))}">
-                ${PCD.icon('trash', 18)}
-              </button>
-            </div>
-
-            <!-- v2.8.20 — Save reminder. Gentle accent banner shown when
-                 there are recipes on the canvas; nudges the user to name +
-                 save before they leave / refresh the page. Single line,
-                 brand color, info icon. -->
-            <div id="kcSaveReminder" style="margin-top:10px;padding:8px 10px;background:var(--brand-50);border:1px solid var(--brand-200,#bbf7d0);border-radius:6px;font-size:11px;color:var(--brand-700);display:${layout.length > 0 ? 'flex' : 'none'};align-items:center;gap:8px;line-height:1.4;">
-              ${PCD.icon('info', 14)}
-              <span>${t('kc_save_reminder')}</span>
             </div>
           </div>
 
@@ -528,8 +505,6 @@
         bodyWeight = this.getAttribute('data-bdy');
         renderBody();
       });
-      const presetsBtn = PCD.$('#kcPresetsBtn', bodyEl);
-      if (presetsBtn) presetsBtn.addEventListener('click', openPresets);
       const accentInp = PCD.$('#kcAccent', bodyEl);
       if (accentInp) accentInp.addEventListener('input', function () { accent = this.value; updatePreview(); });
       PCD.on(bodyEl, 'click', '[data-accent]', function () { accent = this.getAttribute('data-accent'); renderBody(); });
