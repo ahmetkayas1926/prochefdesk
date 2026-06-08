@@ -28,6 +28,10 @@
   let _dragDishId = null, _dragComp = null, _dragCanvasDish = null;
   // v2.24 — CSS px / mm @96dpi (açık sayfalama motoru için)
   const MM = 3.7795;
+  // v2.28 — Dar sayfa iç kenar boşluğu. @page margin:0 ile birlikte: Chrome
+  // başlık/altbilgi damgaları (tarih/başlık/about:blank/sayfa no) çıkmaz +
+  // yüzey verimli kullanılır. Önizleme ve baskı bu PAD'i ortak kullanır → tutarlı.
+  const PAD_MM = 5;
 
   // i18n helper — key yoksa fallback string döner (interpolation yok).
   function t(k, fb) {
@@ -766,8 +770,8 @@
     const SPACING = { tight: { col: 3, dish: 2 }, medium: { col: 7, dish: 6 }, wide: { col: 12, dish: 11 } };
     const sp = SPACING[sheet.spacing] || SPACING.medium;
     const gapPx = sp.col * MM, dishGapPx = sp.dish * MM, stationGapPx = 4 * MM;
-    const contentWpx = ((land ? 297 : 210) - 20) * MM;
-    const contentHpx = ((land ? 210 : 297) - 20) * MM - 4; // ufak güvenlik payı
+    const contentWpx = ((land ? 297 : 210) - 2 * PAD_MM) * MM;
+    const contentHpx = ((land ? 210 : 297) - 2 * PAD_MM) * MM - 4; // ufak güvenlik payı
     const colWpx = (contentWpx - (N - 1) * gapPx) / N;
 
     const built = layoutAtoms(sheet);
@@ -809,10 +813,12 @@
   function renderPages(sheet, pageData, mode) {
     const land = sheet.orientation === 'landscape';
     const pageWmm = land ? 297 : 210, pageHmm = land ? 210 : 297;
-    const contentWmm = pageWmm - 20, contentHmm = pageHmm - 20;
+    const contentWmm = pageWmm - 2 * PAD_MM, contentHmm = pageHmm - 2 * PAD_MM;
     const pages = pageData.pages;
     let out = '<style>' + sheetCss(sheet);
-    if (mode === 'print') out += '@page{size:A4 ' + (land ? 'landscape' : 'portrait') + ';margin:10mm;}html,body{margin:0;padding:0;}body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#111;-webkit-print-color-adjust:exact;print-color-adjust:exact;}';
+    // v2.28 — @page margin:0 → Chrome başlık/altbilgi damgaları çıkmaz + tam yüzey.
+    // Dar kenar boşluğu sayfa kutusunun kendi PAD padding'i ile sağlanır.
+    if (mode === 'print') out += '@page{size:A4 ' + (land ? 'landscape' : 'portrait') + ';margin:0;}html,body{margin:0;padding:0;}body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#111;-webkit-print-color-adjust:exact;print-color-adjust:exact;}';
     else out += '.ps-cv-dish{cursor:grab;} .ps-cv-dish:hover{outline:2px dashed rgba(22,163,74,.6);outline-offset:2px;border-radius:5px;} .ps-cv-dish:active{cursor:grabbing;}';
     out += '</style>';
     pages.forEach(function (pg, pi) {
@@ -829,13 +835,17 @@
         }
       });
       if (mode === 'screen') {
-        out += '<div class="ps-page" style="position:relative;box-sizing:border-box;width:' + pageWmm + 'mm;height:' + pageHmm + 'mm;padding:10mm;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.20);margin:0 auto 16px;overflow:hidden;color:#111;font-family:-apple-system,Segoe UI,Roboto,sans-serif;">' +
+        out += '<div class="ps-page" style="position:relative;box-sizing:border-box;width:' + pageWmm + 'mm;height:' + pageHmm + 'mm;padding:' + PAD_MM + 'mm;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.20);margin:0 auto 16px;overflow:hidden;color:#111;font-family:-apple-system,Segoe UI,Roboto,sans-serif;">' +
           '<div style="position:relative;width:100%;height:100%;">' + inner + '</div>' +
           '<div style="position:absolute;bottom:3mm;right:6mm;font-size:8px;color:#c4c4c4;letter-spacing:0.06em;">' + (pi + 1) + ' / ' + pages.length + '</div>' +
           '</div>';
       } else {
+        // v2.28 — Baskı sayfası: tam-genişlik A4 + dar PAD padding + içerik-yükseklik
+        // sarmalayıcı (footer son sayfaya sığar). İçerik alanı = ekrandakiyle aynı (contentW).
         const usedMm = Math.min(contentHmm, Math.ceil(pg.usedH / MM) + 1);
-        out += '<div style="position:relative;width:' + contentWmm + 'mm;height:' + usedMm + 'mm;color:#111;' + (pi < pages.length - 1 ? 'break-after:page;page-break-after:always;' : '') + '">' + inner + '</div>';
+        out += '<div style="position:relative;box-sizing:border-box;width:' + pageWmm + 'mm;padding:' + PAD_MM + 'mm;color:#111;' + (pi < pages.length - 1 ? 'break-after:page;page-break-after:always;' : '') + '">' +
+          '<div style="position:relative;width:100%;height:' + usedMm + 'mm;">' + inner + '</div>' +
+        '</div>';
       }
     });
     return out;

@@ -4,6 +4,19 @@ Kronolojik tersine (en son üstte). Her sürüm: başlık + ana değişiklikler.
 
 ---
 
+## v2.28.0 — Prep Sheet baskı: Chrome damgaları kaldırıldı + dar kenar boşluğu (Whiteboard ile aynı) · 2026-06-08
+
+Operatör: Whiteboard baskısı kusursuz; Prep Sheet de aynı olmalı. Chrome'un eklediği
+"08/06/2026 · NAZZAR PREP CHECKLIST · about:blank · 1/1" damgaları gitmeli, kenar
+boşlukları dar olmalı, önizleme = Chrome diyaloğu = çıktı birebir.
+
+- **`@page margin:0`** (Whiteboard ile aynı yöntem) → Chrome'un başlık/altbilgi damgaları (tarih / başlık / about:blank / sayfa no) **tamamen kalkar**.
+- **Dar kenar boşluğu (10mm → 5mm)**, sayfanın kendi iç padding'i ile → yüzey verimli kullanılır.
+- **Önizleme ve baskı geometrisi birebir aynı:** ikisi de aynı PAD'i ve aynı içerik alanını (sayfa − 2×5mm) kullanır → 3 alan (önizleme / Chrome diyaloğu / çıktı) tutarlı.
+- Tarayıcıda doğrulandı: print HTML `@page ...margin:0`, 10mm yok, sayfa padding 5mm, önizleme padding 5mm, içerik alanı eşit; konsol temiz.
+
+---
+
 ## v2.27.0 — Whiteboard: popup editör + kanvas blok araç çubuğu (Araç 5/8) · 2026-06-08
 
 Operatör: sağdaki uzun "Block style" paneli pratik değil; Prep'teki popup sistemine
