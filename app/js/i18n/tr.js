@@ -1991,6 +1991,8 @@ window.PCD.i18n.register('tr', {
   roster_copy_overwrite: "Bu, mevcut haftanın üzerine yazar.",
   roster_copy_done: "personel önceki haftadan kopyalandı",
   roster_preview: "Baskı önizleme",
+  roster_tap_zoom: "Yakınlaştır",
+  roster_zoom_hint: "Tüm günleri görmek için sağa / sola kaydır",
   roster_shift: "Vardiya",
   roster_off: "izin",
   roster_message: "Mesaj (düzenlenebilir)",

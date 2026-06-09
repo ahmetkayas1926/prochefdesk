@@ -372,7 +372,7 @@
     // v2.36 — Canlı A4 baskı önizlemesi (çıktıyla birebir; tek motor buildRosterTable)
     html += '<details class="card" id="rPreviewWrap" style="padding:0;margin-bottom:12px;overflow:hidden;">' +
       '<summary style="cursor:pointer;padding:12px 14px;font-weight:700;list-style:none;">📄 ' + PCD.escapeHtml(t('roster_preview') || 'Print preview') + '</summary>' +
-      '<div id="rPreview" style="padding:12px 14px;overflow-x:auto;background:#fff;border-top:1px solid var(--border);">' + buildRosterTable(data, _showCost) + '</div></details>';
+      '<div id="rPreview" style="padding:12px 14px;background:#fff;border-top:1px solid var(--border);"></div></details>';
 
     html += '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
       '<button class="btn btn-secondary" id="rPrint">' + PCD.icon('print', 14) + ' ' + PCD.escapeHtml(t('print') || 'Print') + '</button>' +
@@ -464,7 +464,12 @@
     PCD.$('#rDays', view).addEventListener('change', function () { data.dayCount = parseInt(this.value, 10) || 7; persist(data); render(view); });
     // v2.17 — Pro'da gerçek toggle; free'de kilitli label → upgrade modal.
     const _showCostEl = PCD.$('#rShowCost', view);
-    if (_showCostEl) _showCostEl.addEventListener('change', function () { _showCost = this.checked; const pv = PCD.$('#rPreview', view); if (pv) pv.innerHTML = buildRosterTable(data, _showCost); });
+    if (_showCostEl) _showCostEl.addEventListener('change', function () { _showCost = this.checked; mountRosterPv(PCD.$('#rPreview', view), data, _showCost); });
+    // v2.40 — Önizlemeyi scale-to-fit mount et; details açılınca/yeniden boyutlanınca yeniden ölçekle.
+    mountRosterPv(PCD.$('#rPreview', view), data, _showCost);
+    const _rpWrap = PCD.$('#rPreviewWrap', view);
+    if (_rpWrap) _rpWrap.addEventListener('toggle', function () { if (_rpWrap.open) { const b = view.querySelector('#rPreview .rost-pvbox'); if (b) fitRosterPv(b); } });
+    let _rpRsz = null; window.addEventListener('resize', function () { clearTimeout(_rpRsz); _rpRsz = setTimeout(function () { const b = view.querySelector('.rost-pvbox'); if (b) fitRosterPv(b); }, 150); });
     const _showCostLocked = PCD.$('#rShowCostLocked', view);
     if (_showCostLocked) _showCostLocked.addEventListener('click', function () {
       if (PCD.gate && PCD.gate.showUpgradeModal) PCD.gate.showUpgradeModal({ feature: 'labor', message: t('labor_cost_locked') });
@@ -719,6 +724,39 @@
     return h;
   }
 
+  // v2.40 — Roster önizleme: tabloyu SABİT doğal genişlikte (ROST_PV_W) render edip
+  // kapsayıcıya scale-to-fit → mobilde hücreler sıkışmaz, gerçek oranla tam sığar.
+  // Tıkla → zoom popup (geniş tablo + yatay pan; tüm günleri kaydırarak gör).
+  var ROST_PV_W = 760, ROST_ZOOM_W = 920;
+  function rosterPvBox(data, showCost) {
+    return '<div class="rost-pvbox" style="overflow:hidden;position:relative;cursor:zoom-in;background:#fff;border-radius:6px;">' +
+      '<div class="rost-pvbox-in" style="width:' + ROST_PV_W + 'px;transform-origin:top left;">' + buildRosterTable(data, showCost) + '</div>' +
+      '<div style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,.55);color:#fff;border-radius:999px;padding:4px 10px;font-size:11px;font-weight:600;pointer-events:none;">🔍 ' + PCD.escapeHtml(t('roster_tap_zoom') || 'Tap to zoom') + '</div>' +
+    '</div>';
+  }
+  function fitRosterPv(box, _tries) {
+    if (!box) return;
+    var inner = box.querySelector('.rost-pvbox-in'); if (!inner) return;
+    var w = box.clientWidth;
+    // Hard refresh / kapalı details → clientWidth=0 olabilir; bounded rAF self-retry.
+    if (!w) { if ((_tries || 0) < 60) requestAnimationFrame(function () { fitRosterPv(box, (_tries || 0) + 1); }); return; }
+    var k = Math.min(1, w / ROST_PV_W);
+    inner.style.transform = 'scale(' + k + ')';
+    box.style.height = Math.ceil(inner.scrollHeight * k) + 'px';
+  }
+  function mountRosterPv(container, data, showCost) {
+    if (!container) return;
+    container.innerHTML = rosterPvBox(data, showCost);
+    var box = container.querySelector('.rost-pvbox');
+    if (box) { box.addEventListener('click', function () { openRosterZoom(data, showCost); }); fitRosterPv(box); }
+  }
+  function openRosterZoom(data, showCost) {
+    var body = PCD.el('div');
+    body.innerHTML = '<div style="overflow:auto;-webkit-overflow-scrolling:touch;max-height:78vh;border:1px solid var(--border);border-radius:8px;background:#fff;"><div style="width:' + ROST_ZOOM_W + 'px;padding:14px;">' + buildRosterTable(data, showCost) + '</div></div>' +
+      '<div class="text-muted text-sm" style="margin-top:8px;text-align:center;">' + PCD.escapeHtml(t('roster_zoom_hint') || 'Swipe left / right to view all days') + '</div>';
+    PCD.modal.open({ title: data.venue || data.name || (t('roster_title') || 'Roster'), body: body, size: 'lg', closable: true });
+  }
+
   // v2.15.6 — Print = renkli tablo + A4 yatay. print-color-adjust:exact →
   // "Background graphics" kapalıyken bile renkler basar. table-layout fixed → tek sayfa.
   function printRoster(data, showCost) {
@@ -893,8 +931,11 @@
       '<button class="btn btn-secondary" id="pvPrint">' + PCD.icon('print', 14) + ' ' + esc(t('roster_pdf') || 'Print / PDF') + '</button>' +
       '<button class="btn btn-secondary" id="pvExcel">' + PCD.icon('download', 14) + ' ' + esc(t('roster_excel') || 'Excel') + '</button>' +
       '</div>';
-    html += '<div class="card" style="padding:16px;overflow-x:auto;"><div id="pvTable" style="min-width:760px;">' + buildRosterTable(data, _showCost) + '</div></div>';
+    html += '<div class="card" style="padding:16px;"><div id="pvTable"></div></div>';
     view.innerHTML = html;
+    // v2.40 — scale-to-fit önizleme + tıkla→zoom (mobilde tablo sıkışmaz, gerçek oran)
+    mountRosterPv(PCD.$('#pvTable', view), data, _showCost);
+    let _pvRsz = null; window.addEventListener('resize', function () { clearTimeout(_pvRsz); _pvRsz = setTimeout(function () { const b = view.querySelector('.rost-pvbox'); if (b) fitRosterPv(b); }, 150); });
     PCD.$('#rosterBack', view).addEventListener('click', function () { history.back(); });
     PCD.$('#pvEdit', view).addEventListener('click', function () { PCD.router.go('roster', { editId: data.id }); });
     PCD.$('#pvImg', view).addEventListener('click', function () { sendRosterImage(data, _showCost); });

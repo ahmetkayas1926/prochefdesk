@@ -1994,6 +1994,8 @@ window.PCD.i18n.register('en', {
   roster_copy_overwrite: "This overwrites the current week.",
   roster_copy_done: "staff copied from the previous week",
   roster_preview: "Print preview",
+  roster_tap_zoom: "Tap to zoom",
+  roster_zoom_hint: "Swipe left / right to view all days",
   roster_shift: "Shift",
   roster_off: "off",
   roster_message: "Message (editable)",
