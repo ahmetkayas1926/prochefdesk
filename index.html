@@ -681,6 +681,19 @@
   .shot-body.shot-real { padding:0; }
   .shot-body.shot-real img { display:block; width:100%; height:auto; }
   .proof-card .shot-body.shot-real img { aspect-ratio:1.6; object-fit:cover; object-position:center top; }
+
+  /* Costs · any-device showcase (section directly under the hero) */
+  .costs { max-width:1080px; margin:0 auto; padding:18px 24px 8px; }
+  .costs .section-head { text-align:center; max-width:660px; margin:0 auto; }
+  .cost-row { display:flex; align-items:center; justify-content:center; gap:22px; margin-top:34px; flex-wrap:wrap; }
+  .cost-desk { flex:0 1 520px; max-width:520px; }
+  .cost-phone { flex:0 0 200px; width:200px; border:8px solid #1c1917; border-radius:30px; background:#1c1917; box-shadow:var(--shadow-lg); overflow:hidden; }
+  .cost-phone img { display:block; width:100%; height:auto; }
+  @media (max-width:880px){
+    .cost-row { gap:16px; margin-top:26px; }
+    .cost-desk { flex-basis:100%; max-width:480px; order:-1; }
+    .cost-phone { flex:0 1 44%; width:44%; max-width:200px; }
+  }
 </style>
 </head>
 <body>
@@ -754,6 +767,29 @@
       </div>
     </div>
 
+  </section>
+
+  <!-- ============ COSTS · ANY DEVICE ============ -->
+  <section class="costs">
+    <div class="section-head">
+      <div class="section-label" data-i18n="costs_label">On the pass, on the phone</div>
+      <h2 data-i18n="costs_h2">The full cost report — in your pocket</h2>
+      <p data-i18n="costs_sub">Tap any dish for the live recipe, its food cost and margin — then pull a complete cost report and a PDF. Full power on your phone, not a watered-down view.</p>
+    </div>
+    <div class="cost-row reveal">
+      <div class="cost-phone">
+        <img src="/assets/shots/recipe_detail_m.webp" alt="ProChefDesk recipe detail on a phone — dish photo, live food cost and margin" width="660" height="1425" loading="lazy" decoding="async">
+      </div>
+      <div class="cost-desk shot">
+        <div class="shot-bar"><i></i><i></i><i></i><span class="shot-url">prochefdesk.com/app</span></div>
+        <div class="shot-body shot-real">
+          <img src="/assets/shots/cost_report.webp" alt="ProChefDesk cost report — ingredient-level food cost, suggested price and margin" width="1400" height="1348" loading="lazy" decoding="async">
+        </div>
+      </div>
+      <div class="cost-phone">
+        <img src="/assets/shots/cost_report_m.webp" alt="ProChefDesk full cost report on a phone" width="660" height="1425" loading="lazy" decoding="async">
+      </div>
+    </div>
   </section>
 
   <!-- ============ LIVE MOMENT ============ -->
@@ -1224,6 +1260,8 @@
         live_note: "Çevrimdışı bile çalışır — yeniden bağlandığın an cihazların arasında senkronlanır.",
         proof_label: "İş başında gör", proof_h2: "Gerçek ekranlar. Gerçek sayılar.",
         proof_sub: "Hatta kullanacağın gerçek araçlar — her biri şu an kağıtta veya Excel'de yaptığın bir işi bitirmek için kuruldu.",
+        costs_label: "Hatta da, telefonda da", costs_h2: "Tam maliyet raporu — cebinde",
+        costs_sub: "Herhangi bir yemeğe dokun: canlı tarif, food cost ve marj — sonra tam maliyet raporunu ve PDF'i çıkar. Telefonunda da tam güç, kırpılmış görünüm değil.",
         proof1_tag: "Menüler", proof1_h3: "Menüyü yazma, mühendisliğini yap", proof1_p: "Bölümler, fiyatlar, alerjenler ve canlı marj — sonra iki dokunuşla yazdır veya herkese açık link paylaş.",
         proof2_tag: "Vardiya & işçilik · Pro", proof2_h3: "Söz vermeden önce maaş yükünü gör", proof2_p: "Haftayı izin kodları ve departmanlarla planla — işçilik maliyeti yazdıkça toplanır.",
         proof3_tag: "HACCP · Pro", proof3_h3: "Denetime hazır, hattan kaydedildi", proof3_p: "Sıcaklık, soğutma, mal kabul ve bekletme kayıtları telefonunda — aylık dosyayı tek dokunuşla yazdır.",
