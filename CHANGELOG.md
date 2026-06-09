@@ -4,39 +4,38 @@ Kronolojik tersine (en son üstte). Her sürüm: başlık + ana değişiklikler.
 
 ---
 
-## v2.40.0 — Landing yeniden tasarımı + Kitchen Cards yüzey optimizasyonu · 2026-06-09
+## v2.40.0 — Landing yeniden tasarımı + araç cilaları, mobil & print bug fix'leri · 2026-06-09
 
-**Landing page (root index.html) satış-odaklı yeniden tasarım:**
-- **Light mode sabiti** — `color-scheme:light` + dark mode media query kaldırıldı (cihaz dark olsa bile satış vitrini light kalır; `/app/` dark mode'una dokunulmadı).
-- **Hero** fayda-odaklı ("Food cost, menus, prep & HACCP — in one place") + gerçek UI mockup (food cost % görünür Recipes ekranı).
-- **Canlı an** bölümü (telefon+masaüstü, dürüstlük notu: çevrimdışı çalışır, bağlanınca senkron).
-- **Problem** bölümü Excel-kaosu diliyle güçlendirildi.
-- **Ürün kanıtı** — 4 gerçek-arayüz HTML/CSS mockup (Menü, Roster/işçilik, HACCP, Kitchen Cards), raster yerine (retina-net + hızlı).
-- **Kurucu bölümü** (yeni, güvenin kalbi) — gerçek kurucu fotoğrafı + hikaye (prestij: İstanbul→Marriott/2022 Dünya Kupası→Perth; acı: Excel kaosu; çözüm). Foto 585KB→46KB optimize.
-- **Perth onur sinyali** (uydurma sosyal kanıt yok), testimonial iskeleti boş/hazır.
-- EN+TR tam; es/fr/de/ar yeni bölümlerde EN'e düşer (graceful).
-- **Dönüşüm cilası:** nav CTA giriş-yapmamış ziyaretçide "Start free" (hero ile tutarlı tek mesaj), giriş yapınca "Open app"; mobilde "canlı an" telefon önizlemesi overlap yerine masaüstü altında istiflenip büyütüldü (116→170px, okunur).
-- **og-image.png eklendi** (1200×630 marka görseli — cream zemin, yeşil logo + fayda başlığı + food-cost çipi). Sosyal paylaşımda kırık kart sorunu giderildi (meta tag'ler zaten bu dosyaya işaret ediyordu).
+### Landing page (root index.html) — satış-odaklı yeniden tasarım
+- **Light mode sabiti:** `color-scheme:light` + dark mode media query kaldırıldı (cihaz dark olsa bile vitrin light kalır; `/app/` dark mode'una dokunulmadı).
+- **Hero** fayda-odaklı ("Food cost, menus, prep & HACCP — in one place") + gerçek UI mockup (canlı food cost % görünür).
+- **Yeni bölümler:** Canlı an (telefon+masaüstü; dürüstlük notu: çevrimdışı çalışır/bağlanınca senkron) · Problem (Excel-kaosu dili) · Ürün kanıtı (4 HTML/CSS mockup) · **Kurucu** (gerçek foto + hikaye; foto 585KB→46KB, çerçeve 180px).
+- **Dönüşüm cilası:** nav CTA giriş-yapmamışta "Start free" (giriş varsa "Open app") · fiyat-notu netleştirildi → **"No lock-in, no surprises."** (6 dilde) · mobilde "canlı an" telefonu istiflenip büyütüldü (116→170px).
+- **og-image.png** eklendi (1200×630 marka görseli) → sosyal paylaşımda kırık kart düzeldi.
+- Perth onur sinyali (uydurma sosyal kanıt yok; testimonial iskeleti boş/hazır). EN+TR tam; es/fr/de/ar yeni bölümlerde EN'e düşer.
 
-**Kitchen Cards yüzey optimizasyonu:**
-- **Aksiyon çubuğu kanvasın üstüne taşındı** — canvas adı + kaydet/yeni solda, paylaş/yazdır/sil sağda (tek satır, mobilde sarar). Tüm ID'ler korundu → handler'lar aynı çalışır.
-- **Presets butonu kaldırıldı** (gereksiz; wiring de temizlendi).
-- Sol panel artık yalnız **Düzen & stil + reçete seçimi + custom kartlar** → belirgin şekilde kısaldı, daha pratik.
-- Tarayıcıda doğrulandı: çift ID yok, reçete toggle → sayaç/önizleme güncelleniyor, kaydet/yazdır/paylaş aktif, konsol temiz. Print/preview motoru ve sync korundu.
+### Kitchen Cards
+- **Yüzey optimizasyonu:** aksiyon çubuğu (ad/kaydet/yeni · paylaş/yazdır/sil) kanvas üstüne taşındı, **Presets kaldırıldı**, sol panel kısaldı (Düzen & stil + reçete + custom kartlar).
+- **Mobil önizleme fix:** `applyScale` ilk mount'ta `clientWidth=0` olunca A4'ü ölçeklemiyordu (mobilde tam-boy + yatay scroll) → bounded rAF self-retry.
 
-**Menu Studio — Page & theme renk/font BUG fix:**
-- **Kök neden:** `wirePageControls` `data-f` (renk/font/sayı) ve `data-clear` input'larını bağlamıyordu (v2.32 popup refactor'unda unutulmuştu) → Base font, Column gap, **Theme accent, Text color, Background**, Margin, Frame color hiçbir değişiklik yapmıyordu. Eklendi (blok editörüyle aynı desen).
-- **Tema cascade:** Şablonlar accent/font'u blok-seviyesinde gömüyordu (titleColor/titleFont), bu yüzden Theme accent + Base font değişimi görünmüyordu. Artık **Theme accent** değişince section başlık + ayraç override'ları temizlenir → hepsi accent'i izler (güçlü, öngörülebilir global accent); **Base font** değişince temayı izleyen bloklar güncellenir, kasıtlı display fontları korunur.
-- Kurucu fotoğrafı landing'de 132→180px büyütüldü + 585KB→46KB optimize edildi.
-- **Menu Studio kütüphane thumbnail BUG fix (hard refresh):** `sizeThumbs` ilk paint'te `host.clientWidth=0` olunca sessizce return edip scale'i hiç uygulamıyordu → F5/hard refresh'te kartlar tam A4 boyutta taşıyordu. Artık bounded rAF self-retry (genişlik birkaç frame içinde gelir). Doğrulandı: 3 thumbnail de ölçeklendi, taşma yok.
-- **Menu Studio print arka plan BUG fix:** `buildPrintHtml` arka plana `background:page.bg` veriyordu ama `print-color-adjust:exact` yoktu → tarayıcı arka plan rengini basmıyordu (print diyaloğunda beyaz çıkıyordu). Eklendi (kalıtsal → tüm renkler/arka plan basılır). Artık önizleme = Chrome print = local print birebir aynı. (Diğer 5 araçta zaten vardı; sadece menu_studio eksikti.)
+### Menu Studio
+- **Page & theme renk/font fix:** `wirePageControls` `data-f`/`data-clear` input'larını bağlamıyordu (v2.32 refactor'unda unutulmuştu) → Theme accent, Text color, Background, Base font, Column gap, Margin hiçbir şey yapmıyordu → eklendi. **Theme accent** artık güçlü global accent (section/ayraç override'larını temizler); **Base font** temayı izleyen blokları günceller (display fontları korunur).
+- **Thumbnail hard-refresh fix:** `sizeThumbs` `clientWidth=0`'da scale'i atlıyordu (F5'te kartlar tam A4 taşıyordu) → bounded rAF self-retry.
+- **Print arka plan fix:** `buildPrintHtml`'e `print-color-adjust:exact` eklendi → arka plan + renkler basılır (önizleme = Chrome print = local print). (Diğer araçlarda zaten vardı; sadece menu_studio eksikti.)
+- **"Menu not found" toast fix:** kütüphane handler'ları GENEL `data-open/dup/del`'i paylaşılan kalıcı `#view`'a delege ediyordu → roster'ın `data-open`'ıyla çakışıp roster açınca `openDesign(rosterId)` tetikliyordu → menü-özel `data-ms-open/dup/del` yapıldı.
 
-**Mobil uyum fix (16 araç denetimi):**
-- Tüm araçlar 390px'te tarandı; **Ingredients + Inventory** header buton satırı taşıyordu (`flex:1` basis:0 + wrap yok → 4 buton tek satırda sıkışıyordu). Ortak `.page-header-actions` mobil CSS'i `flex-wrap:wrap` + `flex:1 1 auto` ile düzeltildi → butonlar 2. satıra sarar. (Aynı fix Menü editör toolbar'ını da kapsar.) Diğer 14 araç temizdi.
-- **Buffet liste kartı mobil squish BUG fix:** 6 aksiyon ikonu body'yi 76px'e sıkıştırıyordu (meta dikey yığılıyordu). Butonlar `.list-item-actions` sarmalına alındı + `buf-card` mobil kuralı → kart sarar, aksiyonlar tam-genişlik alt satıra düşer (body 269px). Doğrulandı.
-- **Kitchen Cards mobil önizleme BUG fix:** `applyScale` ilk mount'ta `previewEl.clientWidth=0` olunca retry'sız return edip A4'ü ölçeklemiyordu → mobilde önizleme tam-boy + yatay scroll + çöküyordu. Bounded rAF self-retry eklendi. Doğrulandı: frame scale(0.30), iç-scroll yok.
-- **Roster mobil önizleme — fit + tıkla-zoom:** Önizleme tablosu mobilde sıkışıp hücreler üst üste biniyordu (`table width:100%`). Artık tablo 760px doğal genişlikte render edilip kapsayıcıya **scale-to-fit** (gerçek oran, sıkışma yok). Önizlemeye **tıklayınca zoom popup** açılır (920px tablo, yatay pan → tüm günleri kaydırarak gör). Editör + read-only önizleme ortak `mountRosterPv`. Doğrulandı: fit scale 0.44, zoom pan çalışıyor.
-- **Roster "Menu not found" toast BUG fix:** menu_studio kütüphane handler'ları GENEL `data-open/dup/del` attribute'larını paylaşılan kalıcı `#view`'a delege ediyordu; roster da `data-open` kullandığından, menü aracı ziyaret edildikten sonra herhangi bir kayıtlı roster'a girince event sızıp `openDesign(rosterId)` → "Menu not found" toast'ı tetikliyordu. menu_studio attribute'ları menü-özel `data-ms-open/dup/del` yapıldı → çakışma giderildi. Doğrulandı: sentetik `[data-open]` tıklaması artık toast tetiklemiyor, menü kartları hâlâ açılıyor.
+### Roster
+- **Mobil önizleme — fit + tıkla-zoom:** tablo 760px doğal genişlikte render edilip kapsayıcıya **scale-to-fit** (sıkışma yok) + **tıkla→zoom popup** (920px, yatay pan → tüm günler). Ortak `mountRosterPv`.
+- **Önizleme stay-open fix:** editör "Print preview" details her aksiyonda (re-render) kapanıyordu → `_rPreviewOpen` ile varsayılan AÇIK + durum korunur.
+- **Editör kompaktlaştırma:** aksiyonlar (Print/Excel/Share/Delete) header'a taşındı; shift templates **daraltılabilir** (`<details>`) → daha az dikey scroll.
+
+### Buffet
+- **Mobil kart squish fix:** 6 aksiyon ikonu body'yi 76px'e sıkıştırıyordu → butonlar `.list-item-actions` + `buf-card` mobil kuralı ile tam-genişlik alt satıra sarar.
+
+### Mobil uyum (16 araç denetimi)
+- **Ingredients + Inventory** header buton satırı taşıyordu (`flex:1` basis:0 + wrap yok) → ortak `.page-header-actions` mobil CSS'i `flex-wrap:wrap` + `flex:1 1 auto` (Menü editör toolbar'ını + Roster header'ını da kapsar). Diğer 14 araç temizdi.
+
+> **Not (yinelenen mobil ölçek deseni):** clientWidth=0 ilk-paint yarışı bu sürümde 3 yerde aynı **bounded rAF self-retry** ile çözüldü (menü thumbnail, kitchen cards önizleme, roster önizleme). Whiteboard `applyCanvasScale` ile aynı desen.
 
 ---
 

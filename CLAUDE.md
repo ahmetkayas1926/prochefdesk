@@ -115,6 +115,7 @@ Sync bug'ında önce hangi yön sorun yaşıyor onu belirle.
 
 **Print akışı tek noktadan geçer.**
 Tüm yazdırma `PCD.print(html, title)` (utils.js) üzerinden. Footer otomatik enjekte edilir (tıklanabilir "Made with ProChefDesk · prochefdesk.com"). Custom footer yazma, `.pcd-print-footer{display:none}` override koyma. Window genişliği 1200px (Kitchen Cards landscape A4 için).
+**Arka plan rengi basılacaksa `print-color-adjust:exact` (+ `-webkit-print-color-adjust:exact`) ZORUNLU.** Tarayıcı varsayılanı arka plan renklerini basmaz (print diyaloğunda beyaz çıkar). Kalıtsaldır → print HTML'inin `body`/root'una koy, alt elemanlar miras alır. Renkli arka planı olan her yeni print/export bunu içermeli (menu_studio bunu unutmuştu → v2.40 fix).
 
 ---
 
@@ -157,6 +158,11 @@ Yeni feature'da misafir için cloud push tetiklenmemeli.
 
 **Lazy tool loading.**
 17 araç dinamik script tag ile lazy yüklenir. Eager kalanlar: **dashboard** (default home), **account** (auth flow), **inventory** (dashboard low-stock alert sync). `PCD.router.go(name)` lazy route varsa: loading state → script load → routes[name] wire → render. Yeni araç eklerken: (a) `router.registerLazy(name, scriptPath, toolName)` ekle, (b) dashboard click handler gerektiriyorsa `_afterToolLoad(toolName, cb)` poll pattern'i kullan (120ms × 3sn).
+
+---
+
+**`PCD.on` delegasyonu kalıcıdır — GENEL `data-*` isimleri araçlar arası sızar.**
+`PCD.on(node, ev, sel, handler)` paylaşılan kalıcı `#view`'a delege eder ve navigasyonda ASLA kaldırılmaz. İki farklı araç aynı genel attribute'u (`data-open`, `data-del`, `data-dup`, `data-edit`…) kullanırsa, bir aracın handler'ı diğer aracın elemanında da tetiklenir → o aracı ilk ziyaretten sonra sızıntı kalıcı olur. (v2.40: menu_studio kütüphane `data-open`'ı, roster satırlarının `data-open`'ıyla çakışıp roster açınca `openDesign(rosterId)` → "Menu not found" toast'ı tetikledi.) **Kural:** `#view`-delege selektörlerini araç-özel prefix'le (`data-ms-open`, `data-rost-open`…), genel `data-open/del/dup/edit` kullanma. Yeni araçta delege handler eklerken aynı selektörü başka araç kullanıyor mu grep et.
 
 ---
 
@@ -215,6 +221,11 @@ Print body `display:flex;flex-direction:column` + `.wb-print-sheet{flex:1}` → 
 
 **Whiteboard canvas ölçek + zoom.**
 `applyCanvasScale()` ilk yüklemede clientWidth=0 ise self-retry yapar (rAF, bounded 60). ResizeObserver sadece sonraki resize/zoom için. `app.js` global error handler'da "ResizeObserver" içeren hatalar filtrelidir — bu filtreyi kaldırma.
+
+---
+
+**clientWidth=0 ilk-paint yarışı — standart çözüm bounded rAF self-retry.**
+scale-to-fit önizleme (sabit doğal genişlikte render → `transform:scale` ile kapsayıcıya sığdır) yapan kod, ilk mount'ta kapsayıcı `clientWidth=0` dönerse ölçeği HİÇ uygulamaz → çıktı tam-boy taşar (özellikle hard-refresh + mobil). Çözüm her yerde aynı: `if(!w){ if((_t||0)<60) requestAnimationFrame(()=>fn((_t||0)+1)); return; }`. Kullanan: whiteboard `applyCanvasScale`, menu_studio `sizeThumbs`, kitchen_cards `applyScale`, roster `fitRosterPv`. Yeni scale-to-fit önizleme eklerken bu deseni kullan, yoksa F5'te bozulur.
 
 ---
 

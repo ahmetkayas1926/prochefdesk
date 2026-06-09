@@ -25,6 +25,7 @@
   let _editingId = null;        // null = list view; id = editor
   let _previewId = null;        // v2.15.6 — id = read-only preview view
   let _showCost = false;        // include labour cost in print/excel/share
+  let _rPreviewOpen = true;     // v2.40 — önizleme details açık/kapalı durumu (re-render'lar arası korunur; varsayılan açık)
   let _h2cPromise = null;       // v2.15.6 — html2canvas lazy-load cache
 
   const DAY_OPTIONS = [5, 6, 7];
@@ -329,6 +330,13 @@
       '<div class="page-header"><div class="page-header-text">' +
         '<button class="btn btn-ghost btn-sm" id="rosterBack" style="margin-bottom:6px;">' + PCD.icon('chevronLeft', 16) + ' ' + PCD.escapeHtml(t('btn_back') || 'Back') + '</button>' +
         '<div class="page-title" style="font-size:20px;">' + PCD.escapeHtml(data.venue || data.name || weekRange(data)) + '</div>' +
+      '</div>' +
+      // v2.40 — Aksiyonlar header'a taşındı (en alta kaydırmaya gerek yok; mobilde flex-wrap ile sarar)
+      '<div class="page-header-actions">' +
+        '<button class="btn btn-secondary btn-sm" id="rPrint">' + PCD.icon('print', 14) + ' ' + PCD.escapeHtml(t('print') || 'Print') + '</button>' +
+        '<button class="btn btn-secondary btn-sm" id="rExcel">' + PCD.icon('download', 14) + ' ' + PCD.escapeHtml(t('roster_excel') || 'Excel') + '</button>' +
+        '<button class="btn btn-primary btn-sm" id="rShare">' + PCD.icon('send', 14) + ' ' + PCD.escapeHtml(t('roster_share') || 'Share / Send') + '</button>' +
+        '<button class="btn btn-ghost btn-sm" id="rDelete" style="color:var(--danger);">' + PCD.icon('trash', 14) + ' ' + PCD.escapeHtml(t('delete') || 'Delete') + '</button>' +
       '</div></div>';
 
     // Meta row
@@ -344,11 +352,13 @@
           '<select class="select" id="rDays">' + DAY_OPTIONS.map(function (d) { return '<option value="' + d + '"' + (dayCount === d ? ' selected' : '') + '>' + d + '</option>'; }).join('') + '</select></div>' +
       '</div>';
 
-    // Shift templates
-    html += '<div class="card" style="padding:12px;margin-bottom:12px;">' +
-      '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-3);margin-bottom:8px;">' + PCD.escapeHtml(t('roster_templates') || 'Shift templates') + '</div>' +
-      '<div id="tplList" style="display:flex;flex-direction:column;gap:6px;"></div>' +
-      '<button class="btn btn-ghost btn-sm" id="addTpl" style="margin-top:6px;">' + PCD.icon('plus', 14) + ' ' + PCD.escapeHtml(t('roster_add_template') || 'Add template') + '</button></div>';
+    // Shift templates — v2.40: daraltılabilir (yer kazanır; cell-fill yine kullanır)
+    html += '<details class="card" style="padding:0;margin-bottom:12px;overflow:hidden;">' +
+      '<summary style="cursor:pointer;padding:11px 12px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-3);list-style:none;">⏱ ' + PCD.escapeHtml(t('roster_templates') || 'Shift templates') + '</summary>' +
+      '<div style="padding:0 12px 12px;">' +
+        '<div id="tplList" style="display:flex;flex-direction:column;gap:6px;"></div>' +
+        '<button class="btn btn-ghost btn-sm" id="addTpl" style="margin-top:6px;">' + PCD.icon('plus', 14) + ' ' + PCD.escapeHtml(t('roster_add_template') || 'Add template') + '</button>' +
+      '</div></details>';
 
     // Grid
     html += '<div class="card" style="padding:12px;margin-bottom:12px;overflow-x:auto;">' +
@@ -370,17 +380,9 @@
       '</div>';
 
     // v2.36 — Canlı A4 baskı önizlemesi (çıktıyla birebir; tek motor buildRosterTable)
-    html += '<details class="card" id="rPreviewWrap" style="padding:0;margin-bottom:12px;overflow:hidden;">' +
+    html += '<details class="card" id="rPreviewWrap" ' + (_rPreviewOpen ? 'open' : '') + ' style="padding:0;margin-bottom:12px;overflow:hidden;">' +
       '<summary style="cursor:pointer;padding:12px 14px;font-weight:700;list-style:none;">📄 ' + PCD.escapeHtml(t('roster_preview') || 'Print preview') + '</summary>' +
       '<div id="rPreview" style="padding:12px 14px;background:#fff;border-top:1px solid var(--border);"></div></details>';
-
-    html += '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
-      '<button class="btn btn-secondary" id="rPrint">' + PCD.icon('print', 14) + ' ' + PCD.escapeHtml(t('print') || 'Print') + '</button>' +
-      '<button class="btn btn-secondary" id="rExcel">' + PCD.icon('download', 14) + ' ' + PCD.escapeHtml(t('roster_excel') || 'Excel') + '</button>' +
-      '<button class="btn btn-primary" id="rShare">' + PCD.icon('send', 14) + ' ' + PCD.escapeHtml(t('roster_share') || 'Share / Send') + '</button>' +
-      '<div style="flex:1;"></div>' +
-      '<button class="btn btn-ghost" id="rDelete" style="color:var(--danger);">' + PCD.icon('trash', 14) + ' ' + PCD.escapeHtml(t('delete') || 'Delete') + '</button>' +
-      '</div>';
 
     view.innerHTML = html;
     renderTemplates(view, data);
@@ -468,7 +470,7 @@
     // v2.40 — Önizlemeyi scale-to-fit mount et; details açılınca/yeniden boyutlanınca yeniden ölçekle.
     mountRosterPv(PCD.$('#rPreview', view), data, _showCost);
     const _rpWrap = PCD.$('#rPreviewWrap', view);
-    if (_rpWrap) _rpWrap.addEventListener('toggle', function () { if (_rpWrap.open) { const b = view.querySelector('#rPreview .rost-pvbox'); if (b) fitRosterPv(b); } });
+    if (_rpWrap) _rpWrap.addEventListener('toggle', function () { _rPreviewOpen = _rpWrap.open; if (_rpWrap.open) { const b = view.querySelector('#rPreview .rost-pvbox'); if (b) fitRosterPv(b); } });
     let _rpRsz = null; window.addEventListener('resize', function () { clearTimeout(_rpRsz); _rpRsz = setTimeout(function () { const b = view.querySelector('.rost-pvbox'); if (b) fitRosterPv(b); }, 150); });
     const _showCostLocked = PCD.$('#rShowCostLocked', view);
     if (_showCostLocked) _showCostLocked.addEventListener('click', function () {

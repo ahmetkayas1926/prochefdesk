@@ -64,7 +64,7 @@ Malzeme birim fiyatı, 11 kategori, tedarikçi bağlantısı, verim % (yield). F
 ### Kitchen
 
 #### Kitchen Cards (Kitchen Cards)
-Sürükle-bırak grid (1–9 sütun, masonry). Yazı boyutu, kenar kalınlığı, gövde ağırlığı; hazır düzenler (presets); accent renk (picker + swatch). **Özel/not kartları** (tarif dışı serbest metin — alerjen anahtarı, sıcaklık notu vb.). Çoklu canvas + **library galerisi** (mini önizleme + kopyala + sil). Mobil zoom/fit. **Dark mode uyumlu** (site yüzeyi temalı, A4 kanvas beyaz kalır). WYSIWYG (önizleme = baskı). Her kart: tarif adı, malzeme listesi, adımlar.
+Sürükle-bırak grid (1–9 sütun, masonry). Yazı boyutu, kenar kalınlığı, gövde ağırlığı, accent renk (picker + swatch). **Aksiyon çubuğu kanvasın üstünde** (canvas adı + kaydet/yeni · paylaş/yazdır/sil); sol panel = Düzen & stil + reçete seçimi + custom kartlar. **Özel/not kartları** (tarif dışı serbest metin — alerjen anahtarı, sıcaklık notu vb.). Çoklu canvas + **library galerisi** (mini önizleme + kopyala + sil). Mobil zoom/fit. **Dark mode uyumlu** (site yüzeyi temalı, A4 kanvas beyaz kalır). WYSIWYG (önizleme = baskı). Her kart: tarif adı, malzeme listesi, adımlar.
 - Print ✓ (A4 yatay)
 - QR + Link paylaşımı
 - Bulut sync ✓ (`canvases` tablosu)
@@ -87,7 +87,7 @@ Blok tabanlı pano (Notion tarzı). 12 blok tipi: section header, big number, ch
 - Bulut sync ✓
 
 #### Roster
-Haftalık çalışan vardiyası. Personel × gün ızgara; her hücre vardiya saati (başlangıç/bitiş) veya durum kodu. 6 durum kodu (renk kodlu): OFF, AL (izinli), PH (resmi tatil), SL (hastalık), RDO (dinlenme), UNP (ücretsiz izin). Departman/grup bölümleri. İşçilik maliyeti göster/gizle. **⚡ Haftayı doldur:** tek personelin tüm haftasını bir vardiya/durum/saat ile tek tıkla doldur veya temizle. **Önceki haftayı kopyala:** en son rosterı bulup personeli isimle eşleştirir, vardiyaları kopyalar. **Editörde canlı baskı önizlemesi** (tek motor — print/Excel/JPEG ile aynı). Tarihçe.
+Haftalık çalışan vardiyası. Personel × gün ızgara; her hücre vardiya saati (başlangıç/bitiş) veya durum kodu. 6 durum kodu (renk kodlu): OFF, AL (izinli), PH (resmi tatil), SL (hastalık), RDO (dinlenme), UNP (ücretsiz izin). Departman/grup bölümleri. İşçilik maliyeti göster/gizle. **⚡ Haftayı doldur:** tek personelin tüm haftasını bir vardiya/durum/saat ile tek tıkla doldur veya temizle. **Önceki haftayı kopyala:** en son rosterı bulup personeli isimle eşleştirir, vardiyaları kopyalar. **Editörde canlı baskı önizlemesi** (tek motor — print/Excel/JPEG ile aynı; mobilde fit + önizlemeye tıkla→zoom popup). Kompakt editör: aksiyonlar header'da, shift şablonları daraltılabilir. Tarihçe.
 - Print ✓ (A4 yatay, renkli)
 - Excel ✓ (yatay, renkli, otomatik tek sayfa)
 - JPEG paylaşımı: mobilde native share (WhatsApp vb.), masaüstünde indir
