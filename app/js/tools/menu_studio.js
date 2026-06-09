@@ -1200,9 +1200,9 @@
     } else {
       h += '<div class="ms-lib">' + menus.map(function (m) {
         const items = (m.studio ? (m.studio.blocks || []).reduce(function (a, b) { return a + (b.type === 'section' ? (b.items || []).length : 0); }, 0) : (m.sections || []).reduce(function (a, s) { return a + ((s.items || []).length); }, 0));
-        return '<div class="ms-libcard" data-open="' + m.id + '">' + thumbHtml(m) +
+        return '<div class="ms-libcard" data-ms-open="' + m.id + '">' + thumbHtml(m) +
           '<div class="ms-libcard-body"><div class="ms-libcard-title">' + esc(m.name || t('ms_default_menu')) + '</div><div class="ms-libcard-meta">' + items + ' ' + esc(t('ms_items')) + ' · ' + (PCD.fmtRelTime ? PCD.fmtRelTime(m.updatedAt) : '') + '</div></div>' +
-          '<div class="ms-libcard-actions"><button data-dup="' + m.id + '">' + (PCD.icon ? PCD.icon('copy', 16) : '⧉') + '</button><button data-del="' + m.id + '" title="' + esc(t('ms_delete')) + '">' + (PCD.icon ? PCD.icon('trash', 16) : '✕') + '</button></div></div>';
+          '<div class="ms-libcard-actions"><button data-ms-dup="' + m.id + '">' + (PCD.icon ? PCD.icon('copy', 16) : '⧉') + '</button><button data-ms-del="' + m.id + '" title="' + esc(t('ms_delete')) + '">' + (PCD.icon ? PCD.icon('trash', 16) : '✕') + '</button></div></div>';
       }).join('') + '</div>';
     }
     _view.innerHTML = h;
@@ -1213,16 +1213,19 @@
     const n2 = PCD.$('#msNew2', _view); if (n2) n2.addEventListener('click', nw);
     const th1 = PCD.$('#msTplHome', _view); if (th1) th1.addEventListener('click', function () { openTemplates(true); });
     const th2 = PCD.$('#msTpl2', _view); if (th2) th2.addEventListener('click', function () { openTemplates(true); });
-    PCD.on(_view, 'click', '[data-open]', function (e) { if (e.target.closest('[data-del]') || e.target.closest('[data-dup]')) return; openDesign(this.getAttribute('data-open')); });
-    PCD.on(_view, 'click', '[data-dup]', function (e) {
-      e.stopPropagation(); const id = this.getAttribute('data-dup');
+    // v2.40 — FIX: data-open/dup/del menü-özel (data-ms-*) yapıldı. Eskiden bu GENEL
+    // attribute'lar paylaşılan #view'a delege ediliyordu → roster gibi data-open kullanan
+    // araçlara sızıp "Menu not found" toast'ı tetikliyordu. Artık çakışma yok.
+    PCD.on(_view, 'click', '[data-ms-open]', function (e) { if (e.target.closest('[data-ms-del]') || e.target.closest('[data-ms-dup]')) return; openDesign(this.getAttribute('data-ms-open')); });
+    PCD.on(_view, 'click', '[data-ms-dup]', function (e) {
+      e.stopPropagation(); const id = this.getAttribute('data-ms-dup');
       const src = PCD.store.getFromTable('menus', id); if (!src) return;
       const copy = PCD.clone(src); delete copy.id; delete copy.updatedAt; copy.name = (src.name || t('ms_default_menu')) + ' ' + t('ms_copy_suffix');
       PCD.store.upsertInTable('menus', copy, 'm'); renderList();
       if (PCD.toast) PCD.toast.success(t('ms_copied'));
     });
-    PCD.on(_view, 'click', '[data-del]', function (e) {
-      e.stopPropagation(); const id = this.getAttribute('data-del');
+    PCD.on(_view, 'click', '[data-ms-del]', function (e) {
+      e.stopPropagation(); const id = this.getAttribute('data-ms-del');
       PCD.modal.confirm({ title: t('ms_del_title'), text: t('ms_del_text'), okText: t('ms_delete') }).then(function (ok) { if (!ok) return; PCD.store.deleteFromTable('menus', id); renderList(); });
     });
     let _rsz = null; window.addEventListener('resize', function () { clearTimeout(_rsz); _rsz = setTimeout(sizeThumbs, 150); });

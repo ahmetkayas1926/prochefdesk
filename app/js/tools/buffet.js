@@ -620,7 +620,7 @@
         const typeLabel = (BUFFET_TYPES.find(function (x) { return x.id === b.type; }) || {});
         // v2.8.88 — Renkli sol kenarlık (food cost % status'a göre yeşil/sarı/kırmızı)
         // — listede gözden geçirilirken hangi buffet'in margin'i tehlikede anında belli.
-        const row = PCD.el('div', { class: 'list-item', 'data-bid': b.id,
+        const row = PCD.el('div', { class: 'list-item buf-card', 'data-bid': b.id,
           'data-buf-name': (b.name || '').toLowerCase(),
           style: { cursor: 'pointer', borderLeft: '4px solid ' + statusColor(totals.status) } });
         row.innerHTML =
@@ -637,15 +637,16 @@
               '<span style="font-weight:700;color:' + statusColor(totals.status) + ';">' + PCD.fmtMoney(totals.totalPrepCost) + '</span>' +
             '</div>' +
           '</div>' +
-          // v2.8.86 — Liste kartında Prep / PDF (Cost Report) / Excel butonları
-          // (operatör: "kaydedilmiş büfelerde de cost report, pdf ve excel olmalı").
-          // Editor açmadan doğrudan print/export. Mobile'da sığması için kompakt.
+          // v2.8.86 — Liste kartında Prep / Order / PDF / Excel / Dup / Edit butonları.
+          // v2.40 — .list-item-actions sarmalı + buf-card → mobilde aksiyonlar alt satıra sarar (squish fix).
+          '<div class="list-item-actions">' +
           '<button type="button" class="icon-btn" data-buf-prep="' + b.id + '" title="' + PCD.escapeHtml(t('buffet_print_prep') || 'Prep List') + '">' + PCD.icon('list', 18) + '</button>' +
           '<button type="button" class="icon-btn" data-buf-order="' + b.id + '" title="' + PCD.escapeHtml(t('buffet_order_list') || 'Order List') + '">' + PCD.icon('truck', 18) + '</button>' +
           '<button type="button" class="icon-btn" data-buf-pdf="' + b.id + '" title="' + PCD.escapeHtml(t('buffet_print_report') || 'Cost Report') + '">' + PCD.icon('print', 18) + '</button>' +
           '<button type="button" class="icon-btn" data-buf-excel="' + b.id + '" title="Excel">' + PCD.icon('book-open', 18) + '</button>' +
           '<button type="button" class="icon-btn" data-buf-dup="' + b.id + '" title="' + PCD.escapeHtml(t('buffet_duplicate') || 'Duplicate') + '">' + PCD.icon('copy', 18) + '</button>' +
-          '<button type="button" class="icon-btn" data-buf-edit="' + b.id + '" title="' + PCD.escapeHtml(t('edit') || 'Edit') + '">' + PCD.icon('edit', 18) + '</button>';
+          '<button type="button" class="icon-btn" data-buf-edit="' + b.id + '" title="' + PCD.escapeHtml(t('edit') || 'Edit') + '">' + PCD.icon('edit', 18) + '</button>' +
+          '</div>';
         cont.appendChild(row);
       });
       listEl.appendChild(cont);

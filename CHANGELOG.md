@@ -32,7 +32,10 @@ Kronolojik tersine (en son üstte). Her sürüm: başlık + ana değişiklikler.
 - **Menu Studio print arka plan BUG fix:** `buildPrintHtml` arka plana `background:page.bg` veriyordu ama `print-color-adjust:exact` yoktu → tarayıcı arka plan rengini basmıyordu (print diyaloğunda beyaz çıkıyordu). Eklendi (kalıtsal → tüm renkler/arka plan basılır). Artık önizleme = Chrome print = local print birebir aynı. (Diğer 5 araçta zaten vardı; sadece menu_studio eksikti.)
 
 **Mobil uyum fix (16 araç denetimi):**
-- Tüm araçlar 390px'te tarandı; **Ingredients + Inventory** header buton satırı taşıyordu (`flex:1` basis:0 + wrap yok → 4 buton tek satırda sıkışıyordu). Ortak `.page-header-actions` mobil CSS'i `flex-wrap:wrap` + `flex:1 1 auto` ile düzeltildi → butonlar 2. satıra sarar. Diğer 14 araç temizdi. Doğrulandı: ikisi de 474/398→390, temiz sarma.
+- Tüm araçlar 390px'te tarandı; **Ingredients + Inventory** header buton satırı taşıyordu (`flex:1` basis:0 + wrap yok → 4 buton tek satırda sıkışıyordu). Ortak `.page-header-actions` mobil CSS'i `flex-wrap:wrap` + `flex:1 1 auto` ile düzeltildi → butonlar 2. satıra sarar. (Aynı fix Menü editör toolbar'ını da kapsar.) Diğer 14 araç temizdi.
+- **Buffet liste kartı mobil squish BUG fix:** 6 aksiyon ikonu body'yi 76px'e sıkıştırıyordu (meta dikey yığılıyordu). Butonlar `.list-item-actions` sarmalına alındı + `buf-card` mobil kuralı → kart sarar, aksiyonlar tam-genişlik alt satıra düşer (body 269px). Doğrulandı.
+- **Kitchen Cards mobil önizleme BUG fix:** `applyScale` ilk mount'ta `previewEl.clientWidth=0` olunca retry'sız return edip A4'ü ölçeklemiyordu → mobilde önizleme tam-boy + yatay scroll + çöküyordu. Bounded rAF self-retry eklendi. Doğrulandı: frame scale(0.30), iç-scroll yok.
+- **Roster "Menu not found" toast BUG fix:** menu_studio kütüphane handler'ları GENEL `data-open/dup/del` attribute'larını paylaşılan kalıcı `#view`'a delege ediyordu; roster da `data-open` kullandığından, menü aracı ziyaret edildikten sonra herhangi bir kayıtlı roster'a girince event sızıp `openDesign(rosterId)` → "Menu not found" toast'ı tetikliyordu. menu_studio attribute'ları menü-özel `data-ms-open/dup/del` yapıldı → çakışma giderildi. Doğrulandı: sentetik `[data-open]` tıklaması artık toast tetiklemiyor, menü kartları hâlâ açılıyor.
 
 ---
 

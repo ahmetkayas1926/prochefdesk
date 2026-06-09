@@ -36,6 +36,18 @@
     flex-wrap: wrap;   /* v2.40 — çok butonlu header'lar (Ingredients/Inventory) mobilde taşmasın → 2. satıra sar */
   }
   .page-header-actions .btn { flex: 1 1 auto; }  /* basis:auto → içerik genişliği; sığmazsa sarar (eski flex:1=basis:0 sarmayı engelliyordu) */
+
+  /* v2.40 — Buffet liste kartı: 6 aksiyon ikonu mobilde body'yi sıkıştırıyordu →
+     kart sarsın, aksiyonlar tam-genişlik alt satıra düşsün (sadece buf-card; diğer listeler etkilenmez). */
+  .buf-card { flex-wrap: wrap; }
+  .buf-card .list-item-thumb { align-self: flex-start; }
+  .buf-card .list-item-actions {
+    width: 100%;
+    justify-content: flex-end;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
 }
 
 /* ---------- MOBILE LANDSCAPE ---------- */

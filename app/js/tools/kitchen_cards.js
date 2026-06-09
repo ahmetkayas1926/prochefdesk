@@ -909,9 +909,12 @@
 
       // v2.8.11 pattern — clientWidth=0 on initial mount; rAF + ResizeObserver.
       var _lastPvW = -1;
-      function applyScale() {
+      function applyScale(_tries) {
         const containerW = previewEl.clientWidth;
-        if (!containerW) return;
+        // v2.40 — FIX: mobilde ilk mount'ta clientWidth=0 olunca eski kod sessizce return
+        // edip scale'i HİÇ uygulamıyordu → A4 tam boyutta kalıp önizleme yatay scroll + çöküyordu.
+        // Bounded rAF self-retry (Whiteboard applyCanvasScale + menü thumbnail deseni).
+        if (!containerW) { if ((_tries || 0) < 60) requestAnimationFrame(function () { applyScale((_tries || 0) + 1); }); return; }
         _lastPvW = containerW;
         const fitScale = containerW / pageW;
         const scale = fitScale * pvUserZoom;
