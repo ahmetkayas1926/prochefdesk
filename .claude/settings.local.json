@@ -194,7 +194,17 @@
       "Bash(python -)",
       "Bash(cat .claude/launch.json)",
       "Bash(grep -n \"\\\\.claude\" .gitignore)",
-      "Bash(python -c \"from PIL import Image; print\\(Image.open\\('app/assets/founder.jpg'\\).size\\)\")"
+      "Bash(python -c \"from PIL import Image; print\\(Image.open\\('app/assets/founder.jpg'\\).size\\)\")",
+      "Bash(python -m pip install playwright)",
+      "Bash(python -m playwright install chromium)",
+      "Bash(python -m http.server 8766 --bind 127.0.0.1)",
+      "Read(//c/Users/ahmet/AppData/Local/Temp/pcd_shots/**)",
+      "Bash(python shoot.py)",
+      "Bash(python optimize.py)",
+      "Bash(python verify.py)",
+      "Bash(awk '{print $5, $9}')",
+      "PowerShell(try { Get-NetTCPConnection -LocalPort 8766 -State Listen -ErrorAction Stop | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue } ; \"stopped 8766\" } catch { \"no listener on 8766\" })",
+      "WebFetch(domain:unsplash.com)"
     ]
   }
 }

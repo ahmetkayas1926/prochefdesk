@@ -619,53 +619,6 @@
   .shot-url { margin-inline-start:8px; font-size:11px; color:var(--text-muted); background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:3px 12px; flex:1; max-width:260px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .shot-body { padding:14px 16px 16px; }
 
-  /* App UI primitives (faithful to /app/) */
-  .ui-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:13px; gap:10px; }
-  .ui-title { font-size:17px; font-weight:800; letter-spacing:-.02em; color:var(--text-1); }
-  .ui-title small { display:block; font-size:11px; font-weight:600; color:var(--text-3); letter-spacing:0; }
-  .ui-ws { font-size:11px; font-weight:600; color:var(--text-2); border:1px solid var(--border); border-radius:999px; padding:4px 11px; white-space:nowrap; }
-  .ui-row { display:flex; align-items:center; gap:11px; padding:9px 10px; border:1px solid var(--border); border-radius:10px; margin-bottom:7px; background:var(--surface); }
-  .ui-row:last-child { margin-bottom:0; }
-  .ui-thumb { width:38px; height:38px; border-radius:8px; background:var(--surface-2); display:flex; align-items:center; justify-content:center; font-size:18px; flex:0 0 auto; }
-  .ui-rmain { flex:1; min-width:0; }
-  .ui-rname { font-weight:600; font-size:13.5px; color:var(--text-1); }
-  .ui-rmeta { font-size:11.5px; color:var(--text-3); margin-top:1px; }
-  .ui-price { font-weight:700; font-size:13px; color:var(--text-2); white-space:nowrap; }
-  .ui-chip { font-size:11px; font-weight:800; padding:3px 8px; border-radius:999px; white-space:nowrap; }
-  .ui-chip.good { background:var(--brand-soft); color:var(--brand-soft-text); }
-  .ui-chip.warn { background:#fef3c7; color:#92400e; }
-  .ui-chip.bad  { background:#fee2e2; color:#991b1b; }
-
-  /* Menu mockup */
-  .ui-msec { font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.07em; color:var(--brand); border-bottom:1px solid var(--border); padding-bottom:4px; margin:12px 0 7px; }
-  .ui-msec:first-child { margin-top:0; }
-  .ui-mitem { display:flex; justify-content:space-between; align-items:baseline; gap:12px; padding:4px 0; }
-  .ui-mitem .n { font-size:13px; font-weight:600; color:var(--text-1); }
-  .ui-mitem .n small { display:block; font-weight:400; font-size:11px; color:var(--text-3); }
-  .ui-mitem .p { font-size:13px; font-weight:700; color:var(--text-2); white-space:nowrap; }
-
-  /* Roster mockup */
-  .ui-roster { width:100%; border-collapse:collapse; font-size:11px; }
-  .ui-roster th, .ui-roster td { border:1px solid var(--border); padding:5px 6px; text-align:center; }
-  .ui-roster th { background:var(--surface-2); font-weight:700; color:var(--text-3); font-size:10px; }
-  .ui-roster td.nm { text-align:start; font-weight:600; color:var(--text-1); white-space:nowrap; }
-  .ui-roster .sh { color:var(--text-2); }
-  .ui-roster .off { color:var(--text-muted); font-weight:600; }
-
-  /* HACCP mockup */
-  .ui-log { display:flex; align-items:center; gap:10px; padding:7px 0; border-bottom:1px solid var(--border); font-size:12.5px; }
-  .ui-log:last-child { border-bottom:0; }
-  .ui-log .ok { width:18px; height:18px; border-radius:50%; background:var(--brand-soft); color:var(--brand-soft-text); display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
-  .ui-log .lt { flex:1; color:var(--text-1); }
-  .ui-log .tm { color:var(--text-3); font-size:11px; }
-  .ui-log .tp { font-weight:700; color:var(--text-2); font-variant-numeric:tabular-nums; }
-
-  /* Stats strip */
-  .ui-stats { display:flex; gap:18px; flex-wrap:wrap; padding:12px 14px; background:linear-gradient(135deg,var(--brand-soft),var(--surface)); border:1px solid var(--border); border-radius:12px; margin-bottom:12px; }
-  .ui-stat .l { font-size:10.5px; color:var(--text-3); text-transform:uppercase; letter-spacing:.04em; font-weight:600; }
-  .ui-stat .v { font-size:18px; font-weight:800; letter-spacing:-.02em; color:var(--text-1); }
-  .ui-stat .v.green { color:var(--brand); }
-
   /* ── HERO visual ── */
   .hero-visual { max-width:760px; margin:46px auto 0; }
   .hero-visual .shot-body { padding:16px 18px 18px; }
@@ -723,6 +676,11 @@
     nav .nav-link { display:none; }
     nav .nav-right { gap:12px; }
   }
+
+  /* Real product screenshots inside the browser-frame mockups */
+  .shot-body.shot-real { padding:0; }
+  .shot-body.shot-real img { display:block; width:100%; height:auto; }
+  .proof-card .shot-body.shot-real img { aspect-ratio:1.6; object-fit:cover; object-position:center top; }
 </style>
 </head>
 <body>
@@ -790,31 +748,8 @@
           <i></i><i></i><i></i>
           <span class="shot-url">prochefdesk.com/app</span>
         </div>
-        <div class="shot-body">
-          <div class="ui-head">
-            <div class="ui-title">Recipes <small data-i18n="shot_recipes_count">6 recipes · live food cost</small></div>
-            <div class="ui-ws">My Kitchen</div>
-          </div>
-          <div class="ui-row">
-            <div class="ui-thumb">🍝</div>
-            <div class="ui-rmain"><div class="ui-rname">Spaghetti alla Carbonara</div><div class="ui-rmeta" data-i18n="shot_r1_meta">Main · serves 4</div></div>
-            <div class="ui-price">$11.39</div><div class="ui-chip good">16%</div>
-          </div>
-          <div class="ui-row">
-            <div class="ui-thumb">🍛</div>
-            <div class="ui-rmain"><div class="ui-rname">Chicken Tikka Masala</div><div class="ui-rmeta" data-i18n="shot_r2_meta">Main · serves 4</div></div>
-            <div class="ui-price">$17.99</div><div class="ui-chip good">20%</div>
-          </div>
-          <div class="ui-row">
-            <div class="ui-thumb">🍔</div>
-            <div class="ui-rmain"><div class="ui-rname">Classic Cheeseburger</div><div class="ui-rmeta" data-i18n="shot_r3_meta">Main · serves 2</div></div>
-            <div class="ui-price">$8.16</div><div class="ui-chip warn">27%</div>
-          </div>
-          <div class="ui-row">
-            <div class="ui-thumb">🐟</div>
-            <div class="ui-rmain"><div class="ui-rname">Pan-Seared Salmon</div><div class="ui-rmeta" data-i18n="shot_r4_meta">Main · serves 2</div></div>
-            <div class="ui-price">$14.18</div><div class="ui-chip bad">30%</div>
-          </div>
+        <div class="shot-body shot-real">
+          <img src="/assets/shots/recipes.webp" alt="ProChefDesk recipes list showing live food cost percentage on every dish" width="1500" height="1050" decoding="async">
         </div>
       </div>
     </div>
@@ -839,30 +774,16 @@
         <!-- Desktop: menu with live margin -->
         <div class="shot desk">
           <div class="shot-bar"><i></i><i></i><i></i><span class="shot-url">prochefdesk.com/app</span></div>
-          <div class="shot-body">
-            <div class="ui-head"><div class="ui-title">Dinner Menu</div><div class="ui-ws">My Kitchen</div></div>
-            <div class="ui-stats">
-              <div class="ui-stat"><div class="l" data-i18n="live_stat_margin">Menu margin</div><div class="v green">71%</div></div>
-              <div class="ui-stat"><div class="l" data-i18n="live_stat_cost">Avg food cost</div><div class="v">22%</div></div>
-              <div class="ui-stat"><div class="l" data-i18n="live_stat_dishes">Dishes</div><div class="v">12</div></div>
-            </div>
-            <div class="ui-msec" data-i18n="live_menu_sec">Mains</div>
-            <div class="ui-mitem"><div class="n">Spaghetti alla Carbonara</div><div class="p">$24.00 <span class="ui-chip good" style="margin-inline-start:6px;">16%</span></div></div>
-            <div class="ui-mitem"><div class="n">Chicken Tikka Masala</div><div class="p">$26.00 <span class="ui-chip good" style="margin-inline-start:6px;">20%</span></div></div>
-            <div class="ui-mitem"><div class="n">Pan-Seared Salmon</div><div class="p">$32.00 <span class="ui-chip warn" style="margin-inline-start:6px;">30%</span></div></div>
+          <div class="shot-body shot-real">
+            <img src="/assets/shots/dashboard.webp" alt="ProChefDesk dashboard — average food cost, weekly labour, low stock and a cost-health alert" width="1500" height="950" loading="lazy" decoding="async">
           </div>
         </div>
         <!-- Phone: editing the recipe price -->
         <div class="phone">
           <div class="shot">
             <div class="shot-bar"><i></i><i></i><i></i></div>
-            <div class="shot-body">
-              <div class="ui-head"><div class="ui-title" style="font-size:14px;">Carbonara</div></div>
-              <div class="ui-row" style="padding:7px 8px;"><div class="ui-rmain"><div class="ui-rname" style="font-size:12px;">Pancetta</div><div class="ui-rmeta" data-i18n="live_phone_ing">150 g</div></div><div class="ui-price" style="font-size:12px;">$4.20</div></div>
-              <div class="ui-stats" style="margin:10px 0 0;padding:9px 11px;">
-                <div class="ui-stat"><div class="l" data-i18n="live_phone_fc">Food cost</div><div class="v green" style="font-size:15px;">16%</div></div>
-                <div class="ui-stat"><div class="l" data-i18n="live_phone_plate">Per plate</div><div class="v" style="font-size:15px;">$2.85</div></div>
-              </div>
+            <div class="shot-body shot-real">
+              <img src="/assets/shots/recipes_mobile.webp" alt="ProChefDesk recipes and live food cost on a phone" width="640" height="1170" loading="lazy" decoding="async">
             </div>
           </div>
         </div>
@@ -906,14 +827,8 @@
         </div>
         <div class="shot">
           <div class="shot-bar"><i></i><i></i><i></i><span class="shot-url">prochefdesk.com/app</span></div>
-          <div class="shot-body">
-            <div class="ui-head"><div class="ui-title" style="font-size:15px;">Tasting Menu</div><div class="ui-ws" data-i18n="proof1_badge">Share link ✓</div></div>
-            <div class="ui-msec" data-i18n="proof1_sec1">Starters</div>
-            <div class="ui-mitem"><div class="n">Burrata, heirloom tomato <small data-i18n="proof1_d1">V · contains dairy</small></div><div class="p">$18</div></div>
-            <div class="ui-mitem"><div class="n">Kingfish crudo <small data-i18n="proof1_d2">GF · contains fish</small></div><div class="p">$22</div></div>
-            <div class="ui-msec" data-i18n="proof1_sec2">Mains</div>
-            <div class="ui-mitem"><div class="n">Dry-aged sirloin, café de Paris <small data-i18n="proof1_d3">GF</small></div><div class="p">$46</div></div>
-            <div class="ui-mitem"><div class="n">Spaghetti alla Carbonara <small data-i18n="proof1_d4">contains egg, dairy</small></div><div class="p">$24</div></div>
+          <div class="shot-body shot-real">
+            <img src="/assets/shots/menu.webp" alt="ProChefDesk Menu Studio — sections, dish prices, allergen codes and live margin" width="1320" height="828" loading="lazy" decoding="async">
           </div>
         </div>
       </div>
@@ -927,20 +842,8 @@
         </div>
         <div class="shot">
           <div class="shot-bar"><i></i><i></i><i></i><span class="shot-url">prochefdesk.com/app</span></div>
-          <div class="shot-body">
-            <div class="ui-stats">
-              <div class="ui-stat"><div class="l" data-i18n="proof2_s1">Labour cost</div><div class="v">$4,820</div></div>
-              <div class="ui-stat"><div class="l" data-i18n="proof2_s2">% of sales</div><div class="v green">28%</div></div>
-              <div class="ui-stat"><div class="l" data-i18n="proof2_s3">Hours</div><div class="v">186</div></div>
-            </div>
-            <table class="ui-roster">
-              <thead><tr><th data-i18n="proof2_staff">Staff</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th></tr></thead>
-              <tbody>
-                <tr><td class="nm">Marco</td><td class="sh">06–14</td><td class="sh">06–14</td><td class="off">OFF</td><td class="sh">06–14</td><td class="sh">06–14</td></tr>
-                <tr><td class="nm">Aisha</td><td class="sh">14–22</td><td class="sh">14–22</td><td class="sh">14–22</td><td class="off">OFF</td><td class="sh">14–22</td></tr>
-                <tr><td class="nm">Tom</td><td class="off">AL</td><td class="sh">10–18</td><td class="sh">10–18</td><td class="sh">10–18</td><td class="sh">10–18</td></tr>
-              </tbody>
-            </table>
+          <div class="shot-body shot-real">
+            <img src="/assets/shots/roster.webp" alt="ProChefDesk weekly roster — staff shifts by department with total hours and labour cost" width="1320" height="825" loading="lazy" decoding="async">
           </div>
         </div>
       </div>
@@ -954,11 +857,8 @@
         </div>
         <div class="shot">
           <div class="shot-bar"><i></i><i></i><i></i><span class="shot-url">prochefdesk.com/app</span></div>
-          <div class="shot-body">
-            <div class="ui-head"><div class="ui-title" style="font-size:15px;">Fridge temps <small data-i18n="proof3_sub">Today · auto-timestamped</small></div></div>
-            <div class="ui-log"><span class="ok"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4 4 10-10"/></svg></span><span class="lt" data-i18n="proof3_l1">Walk-in cool room</span><span class="tp">3.2°C</span><span class="tm">06:12</span></div>
-            <div class="ui-log"><span class="ok"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4 4 10-10"/></svg></span><span class="lt" data-i18n="proof3_l2">Line fridge 1</span><span class="tp">4.0°C</span><span class="tm">06:14</span></div>
-            <div class="ui-log"><span class="ok"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4 4 10-10"/></svg></span><span class="lt" data-i18n="proof3_l3">Freezer</span><span class="tp">−18.5°C</span><span class="tm">06:15</span></div>
+          <div class="shot-body shot-real">
+            <img src="/assets/shots/haccp.webp" alt="ProChefDesk HACCP daily fridge and freezer temperature log with morning and evening readings" width="1320" height="828" loading="lazy" decoding="async">
           </div>
         </div>
       </div>
@@ -972,13 +872,8 @@
         </div>
         <div class="shot">
           <div class="shot-bar"><i></i><i></i><i></i><span class="shot-url">prochefdesk.com/app</span></div>
-          <div class="shot-body">
-            <div class="ui-head"><div class="ui-title" style="font-size:15px;">Carbonara <small data-i18n="proof4_scale">scaled to 40 covers</small></div></div>
-            <div class="ui-mitem"><div class="n">Spaghetti</div><div class="p">4.0 kg</div></div>
-            <div class="ui-mitem"><div class="n">Pancetta</div><div class="p">1.5 kg</div></div>
-            <div class="ui-mitem"><div class="n">Egg yolks</div><div class="p">80</div></div>
-            <div class="ui-mitem"><div class="n">Pecorino</div><div class="p">800 g</div></div>
-            <div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);font-size:12px;color:var(--text-3);" data-i18n="proof4_allergen">Allergens: egg, dairy</div>
+          <div class="shot-body shot-real">
+            <img src="/assets/shots/kitchen_cards.webp" alt="ProChefDesk Kitchen Cards — printable A4 recipe cards laid out on a canvas for the line" width="1320" height="822" loading="lazy" decoding="async">
           </div>
         </div>
       </div>
@@ -1323,23 +1218,16 @@
         hero_title: "Food cost, menü, prep<br>&amp; HACCP — <span class=\"accent\">tek yerde.</span>",
         hero_sub: "Mutfağının döndüğü her sayı ve her föy — tarif maliyeti, menü mühendisliği, prep, vardiya, stok ve HACCP — tek hızlı uygulamada. Bir şef tarafından, şefler için yapıldı.",
         cta_start: "Ücretsiz başla", hero_secondary: "Nasıl çalıştığını gör",
-        shot_recipes_count: "6 tarif · canlı food cost", shot_r1_meta: "Ana · 4 kişilik", shot_r2_meta: "Ana · 4 kişilik", shot_r3_meta: "Ana · 2 kişilik", shot_r4_meta: "Ana · 2 kişilik",
         live_label: "Tek mutfak, her ekran", live_h2: "Hatta bir fiyatı değiştir. Her menü güncellensin.",
         live_p1: "Servis sırasında telefonundan bir malzeme fiyatını değiştir — her tarifin, her menünün ve her maliyet raporunun food cost'u yeniden hesaplansın. Hatta, ofiste, her cihazda.",
         live_p2: "Maliyet raporu çek, patrona salt-okunur maliyet linki gönder, menüyü düzenleyip paylaş — mobilde tam güç, kırpılmış görünüm değil.",
         live_note: "Çevrimdışı bile çalışır — yeniden bağlandığın an cihazların arasında senkronlanır.",
-        live_stat_margin: "Menü marjı", live_stat_cost: "Ort. food cost", live_stat_dishes: "Tabak", live_menu_sec: "Ana Yemekler",
-        live_phone_ing: "150 g", live_phone_fc: "Food cost", live_phone_plate: "Tabak başı",
         proof_label: "İş başında gör", proof_h2: "Gerçek ekranlar. Gerçek sayılar.",
         proof_sub: "Hatta kullanacağın gerçek araçlar — her biri şu an kağıtta veya Excel'de yaptığın bir işi bitirmek için kuruldu.",
         proof1_tag: "Menüler", proof1_h3: "Menüyü yazma, mühendisliğini yap", proof1_p: "Bölümler, fiyatlar, alerjenler ve canlı marj — sonra iki dokunuşla yazdır veya herkese açık link paylaş.",
-        proof1_badge: "Paylaşım linki ✓", proof1_sec1: "Başlangıçlar", proof1_d1: "V · süt içerir", proof1_d2: "GF · balık içerir", proof1_sec2: "Ana Yemekler", proof1_d3: "GF", proof1_d4: "yumurta, süt içerir",
         proof2_tag: "Vardiya & işçilik · Pro", proof2_h3: "Söz vermeden önce maaş yükünü gör", proof2_p: "Haftayı izin kodları ve departmanlarla planla — işçilik maliyeti yazdıkça toplanır.",
-        proof2_s1: "İşçilik maliyeti", proof2_s2: "Cironun %'si", proof2_s3: "Saat", proof2_staff: "Personel",
         proof3_tag: "HACCP · Pro", proof3_h3: "Denetime hazır, hattan kaydedildi", proof3_p: "Sıcaklık, soğutma, mal kabul ve bekletme kayıtları telefonunda — aylık dosyayı tek dokunuşla yazdır.",
-        proof3_sub: "Bugün · otomatik zaman damgalı", proof3_l1: "Soğuk hava deposu", proof3_l2: "Hat dolabı 1", proof3_l3: "Dondurucu",
         proof4_tag: "Mutfak Kartları", proof4_h3: "Hat için büyük, net kartlar", proof4_p: "Her kişi sayısına ölçekle, alerjenler vurgulu, A4 yazdırılabilir — sıcak, yoğun bir hatta okunur.",
-        proof4_scale: "40 kişiye ölçeklendi", proof4_allergen: "Alerjenler: yumurta, süt",
         founder_label: "Bir şef tarafından, şefler için",
         founder_quote: "Ben Ahmet — Perth'te bir head chef'im; İstanbul restoranlarından Körfez otellerine, 2022 Katar Dünya Kupası'ndaki Marriott çok-tesis banketlerine kadar on yılı aşkın süredir hattın içindeyim. Yıllarca mutfağımı çoğumuzun yaptığı gibi yönettim: birbirinden kopuk bir sürü Excel dosyası, tek bir bilgisayarda offline kalmış tarifler ve food cost'lar, her tedarikçi fiyatı değiştiğinde elle yeniden kurduğum formüller — ve bunların hiçbirini benden başkası okuyamıyordu. Bu yüzden ProChefDesk'i kendi mutfağım için yaptım: tarifler, maliyetler, menüler, prep ve HACCP'in tek yerde toplandığı, her cihazda senkron kalan bir sistem — bir de servis sırasında tüm ekibin aynı sayfadan çalışması için yazdırdığım mutfak kartları. Artık birbiriyle çakışan tablolar yok, tek bir laptopa zincirlenmek yok. Gerçek bir hatta her gün kullandığım araç bu — ve şimdi vaktini formüllerle boğuşmak yerine yemek yapmaya ayırmak isteyen şeflere veriyorum.",
         founder_name: "Ahmet Kaya", founder_role: "Head Chef · Perth, WA",
