@@ -209,7 +209,9 @@
       "Bash(python tool_check.py prep 1300)",
       "Bash(python tool_check.py buffet 280)",
       "Bash(python capture_recipe.py)",
-      "Bash(python costs_verify.py)"
+      "Bash(python costs_verify.py)",
+      "Bash(python tool_check.py checklist 1300)",
+      "Bash(python wb_tpl_check.py)"
     ]
   }
 }

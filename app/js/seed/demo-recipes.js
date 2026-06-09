@@ -495,25 +495,25 @@
         ].filter(Boolean) },
       ],
       studio: {
-        page: { paper: 'A4', orientation: 'portrait', columns: 1, bg: '#fffdf7', ink: '#23201a', accent: '#b8902f', baseFont: 'Cormorant', pad: 46, showAllergens: false, showPrices: true },
+        page: { paper: 'A3', orientation: 'portrait', columns: 1, bg: '#fffdf7', ink: '#23201a', accent: '#b8902f', baseFont: 'Cormorant', pad: 64, showAllergens: false, showPrices: true },
         blocks: [
-          sblk({ type: 'heading', text: 'À la Carte', align: 'center', size: 40, weight: 500, color: '' }),
-          sblk({ type: 'divider', dividerStyle: 'floral', size: 14, color: '' }),
-          sblk({ type: 'section', title: 'Entrées', items: [
+          sblk({ type: 'heading', text: 'À la Carte', align: 'center', size: 64, weight: 500, color: '' }),
+          sblk({ type: 'divider', dividerStyle: 'floral', size: 18, color: '' }),
+          sblk({ type: 'section', title: 'Entrées', titleSize: 36, itemSize: 22, items: [
             sit('Soupe à l\'Oignon Gratinée', 18, 'Slow-cooked onions, beef broth, Gruyère gratin'),
             sit('Foie Gras au Torchon', 44, 'House-cured foie gras, brioche, shallot & honey'),
             sit('Coquilles Saint-Jacques', 40, 'Seared scallops, leek fondue, white-wine velouté'),
             sit('Tartare de Bœuf', 30, 'Hand-cut tenderloin, capers, cornichons, yolk'),
             sit('Salade de Chèvre Chaud', 18, 'Warm goat cheese, walnuts, apple, honey'),
           ] }),
-          sblk({ type: 'section', title: 'Plats', items: [
+          sblk({ type: 'section', title: 'Plats', titleSize: 36, itemSize: 22, items: [
             sit('Filet de Bœuf au Poivre', 54, 'Eye fillet, green-peppercorn & Cognac cream'),
             sit('Sole Meunière', 48, 'Pan-fried sole, beurre noisette, lemon, capers'),
             sit('Confit de Canard', 38, 'Slow-cooked duck leg, orange jus'),
             sit('Coq au Vin', 34, 'Braised chicken, red wine, lardons, mushrooms'),
             sit('Bouillabaisse Marseillaise', 52, 'Snapper, prawns, mussels, saffron broth, rouille'),
           ] }),
-          sblk({ type: 'section', title: 'Desserts', items: [
+          sblk({ type: 'section', title: 'Desserts', titleSize: 36, itemSize: 22, items: [
             sit('Crème Brûlée', 14, 'Vanilla custard, caramelised sugar'),
             sit('Tarte Tatin', 14, 'Caramelised apple tart, crème fraîche'),
             sit('Mousse au Chocolat', 13, 'Dark chocolate mousse, cocoa'),

@@ -312,6 +312,48 @@
         { type: 'alert',          layout: 'full', style: { color: 'amber', size: 'md', align: 'center' }, content: { text: 'Hot-hold ≥ 63°C · Calibrate probes weekly', icon: '🌡️' } },
       ],
     },
+    // 7) Station — Cook & Plating (added from a real operator's board): equipment
+    //    settings + fry/oven cook sheet + reheating + per-plate plating weights +
+    //    fry/roast notes. A dense, single-page station reference (A3 landscape).
+    {
+      id: 'me_station_ref', labelKey: 'wb_tpl_me_station', label: 'Station — Cook & Plating',
+      paper: 'A3', orient: 'landscape', title: 'STATION — COOK & PLATING',
+      blocks: [
+        { type: 'alert',          layout: 'full',  style: { color: 'forest', size: 'xl', align: 'center' }, content: { text: 'EQUIPMENT — OVEN 240°C · FRYER 165°C', icon: '' } },
+        { type: 'cook_sheet',     layout: 'full',  style: { color: 'cream',  size: 'md', align: 'center' }, content: {
+          items: ['KIBBEH', 'BEYTI', 'CHICKEN', 'FISH', 'SKEWER', 'FALAFEL', 'KATMER'],
+          rows: [
+            { label: 'Time', values: ['12 min', '8 min', '8 min', '8 min', '5 min', '5 min', '8 min'] },
+            { label: 'Temp', values: ['64°C', '64°C', '64°C', '64°C', '52–56°C', '—', '—'] },
+          ],
+        } },
+        { type: 'section_header', layout: 'third', style: { color: 'forest', size: 'md', align: 'left' }, content: { text: 'REHEATING · FROM CHILLED' } },
+        { type: 'section_header', layout: 'third', style: { color: 'forest', size: 'md', align: 'left' }, content: { text: 'COLD MEZZE · PER PLATE' } },
+        { type: 'section_header', layout: 'third', style: { color: 'forest', size: 'md', align: 'left' }, content: { text: 'HOT · PER PLATE' } },
+        { type: 'kv', layout: 'third', style: { color: 'cream', size: 'md', align: 'left' }, content: { pairs: [
+          { key: 'Rice', value: '2 min' }, { key: 'Couscous', value: '2 min' }, { key: 'Small rice', value: '1 min' },
+          { key: 'Small couscous', value: '1 min' }, { key: 'Saffron syrup (200g)', value: '2 min' },
+        ] } },
+        { type: 'kv', layout: 'third', style: { color: 'white', size: 'md', align: 'left' }, content: { pairs: [
+          { key: 'Hummus', value: '150 g' }, { key: 'Muhammara', value: '150 g' }, { key: 'Herbed labneh', value: '150 g' },
+          { key: 'Halloumi', value: '125 g' }, { key: 'Batata harra', value: '150 g' }, { key: 'Cauliflower', value: '250 g' },
+        ] } },
+        { type: 'kv', layout: 'third', style: { color: 'white', size: 'md', align: 'left' }, content: { pairs: [
+          { key: 'Beef skewer', value: '250 g' }, { key: 'Chicken', value: '250 g' }, { key: 'Beyti', value: '250 g' },
+          { key: 'Lamb shank (cooked)', value: '300 g' }, { key: 'Kibbeh filling (cooked)', value: '150 g' }, { key: 'Kibbeh shell', value: '170 g (85+85)' },
+        ] } },
+        { type: 'divider',        layout: 'full',  style: { color: 'reheat', size: 'sm', align: 'center' }, content: { label: 'FRY / ROAST NOTES' } },
+        { type: 'kv', layout: 'half', style: { color: 'cream', size: 'md', align: 'left' }, content: { pairs: [
+          { key: 'Fried chickpea (wash, drain)', value: '3 min fry' },
+          { key: 'Cauliflower', value: '28 min steam 100°C' },
+          { key: 'Pitta crouton', value: '4 min fry · basket on top' },
+        ] } },
+        { type: 'kv', layout: 'half', style: { color: 'cream', size: 'md', align: 'left' }, content: { pairs: [
+          { key: 'Diced potatoes', value: 'Steam 100°C 25–30 min / Roast 240°C 22 min' },
+          { key: 'Almond flakes', value: '160°C 12–15 min' },
+        ] } },
+      ],
+    },
   ];
 
   // ============ USER TEMPLATES (LS) ============
