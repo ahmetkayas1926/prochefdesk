@@ -204,7 +204,10 @@
       "Bash(python verify.py)",
       "Bash(awk '{print $5, $9}')",
       "PowerShell(try { Get-NetTCPConnection -LocalPort 8766 -State Listen -ErrorAction Stop | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue } ; \"stopped 8766\" } catch { \"no listener on 8766\" })",
-      "WebFetch(domain:unsplash.com)"
+      "WebFetch(domain:unsplash.com)",
+      "Bash(python menu_check.py)",
+      "Bash(python tool_check.py prep 1300)",
+      "Bash(python tool_check.py buffet 280)"
     ]
   }
 }

@@ -460,8 +460,16 @@
     });
     PCD.store.set('inventory', inv);
 
-    // 5) Menu — À la Carte (Entrées · Plats · Desserts) with diet/allergen codes
+    // 5) Menu — À la Carte. Seeded with a pre-built STUDIO design so it does NOT
+    //    auto-convert from the recipes on first open. importFromClassic() pulls
+    //    each recipe's plating note (kitchen text, not menu copy) + a 56px photo
+    //    into every line — 14 dishes of that overflow one A4 page and read like a
+    //    diner, not fine dining. Instead: no per-dish photos, concise menu copy,
+    //    tuned to fit a single A4 page (verified rendered). Classic `sections`
+    //    kept for data/allergens; `studio` is what the editor & print render.
     function mi(name, codes) { const r = R(name); return r ? { id: PCD.uid('mi'), recipeId: r.id, codes: codes } : null; }
+    function sit(name, price, desc) { const r = R(name); return { id: PCD.uid('mi'), name: name, price: String(price), desc: desc, recipeId: r ? r.id : undefined }; }
+    function sblk(o) { return Object.assign({ id: PCD.uid('blk') }, o); }
     PCD.store.upsertInTable('menus', {
       name: 'À la Carte', subtitle: 'Sample · customize me', allergenStyle: 'codes',
       sections: [
@@ -486,6 +494,33 @@
           mi('Profiteroles', ['v', 'a_g', 'a_d', 'a_e']),
         ].filter(Boolean) },
       ],
+      studio: {
+        page: { paper: 'A4', orientation: 'portrait', columns: 1, bg: '#fffdf7', ink: '#23201a', accent: '#b8902f', baseFont: 'Cormorant', pad: 46, showAllergens: false, showPrices: true },
+        blocks: [
+          sblk({ type: 'heading', text: 'À la Carte', align: 'center', size: 40, weight: 500, color: '' }),
+          sblk({ type: 'divider', dividerStyle: 'floral', size: 14, color: '' }),
+          sblk({ type: 'section', title: 'Entrées', items: [
+            sit('Soupe à l\'Oignon Gratinée', 18, 'Slow-cooked onions, beef broth, Gruyère gratin'),
+            sit('Foie Gras au Torchon', 44, 'House-cured foie gras, brioche, shallot & honey'),
+            sit('Coquilles Saint-Jacques', 40, 'Seared scallops, leek fondue, white-wine velouté'),
+            sit('Tartare de Bœuf', 30, 'Hand-cut tenderloin, capers, cornichons, yolk'),
+            sit('Salade de Chèvre Chaud', 18, 'Warm goat cheese, walnuts, apple, honey'),
+          ] }),
+          sblk({ type: 'section', title: 'Plats', items: [
+            sit('Filet de Bœuf au Poivre', 54, 'Eye fillet, green-peppercorn & Cognac cream'),
+            sit('Sole Meunière', 48, 'Pan-fried sole, beurre noisette, lemon, capers'),
+            sit('Confit de Canard', 38, 'Slow-cooked duck leg, orange jus'),
+            sit('Coq au Vin', 34, 'Braised chicken, red wine, lardons, mushrooms'),
+            sit('Bouillabaisse Marseillaise', 52, 'Snapper, prawns, mussels, saffron broth, rouille'),
+          ] }),
+          sblk({ type: 'section', title: 'Desserts', items: [
+            sit('Crème Brûlée', 14, 'Vanilla custard, caramelised sugar'),
+            sit('Tarte Tatin', 14, 'Caramelised apple tart, crème fraîche'),
+            sit('Mousse au Chocolat', 13, 'Dark chocolate mousse, cocoa'),
+            sit('Profiteroles', 15, 'Choux, Chantilly, warm chocolate sauce'),
+          ] }),
+        ],
+      },
       hidePrices: false, _demo: true,
     }, 'm');
 
@@ -517,6 +552,140 @@
         _demo: true,
       }, 'e');
     }
+
+    // 8) Roster — a full fine-dining brigade for the week (Kitchen + Front of House).
+    //    Restaurant dark on Monday; busiest Fri/Sat. The grid is free; labour cost
+    //    is a Pro stat (free guests see a lock). Rates/hours stay realistic.
+    (function () {
+      const rid = function () { return PCD.uid('rs'); };
+      const AM = { start: '09:00', end: '17:00' }, MID = { start: '12:00', end: '20:00' }, PM = { start: '15:00', end: '23:30' }, OFF = { status: 'OFF' };
+      const st = [
+        { id: rid(), name: 'Marco Rossi',    role: 'Head Chef',          rate: 46, group: 'Kitchen',        sh: [OFF, MID, MID, OFF, PM, PM, MID] },
+        { id: rid(), name: 'Aisha Khan',     role: 'Sous Chef',          rate: 38, group: 'Kitchen',        sh: [OFF, MID, MID, MID, PM, PM, OFF] },
+        { id: rid(), name: 'Tom Walker',     role: 'Chef de Partie',     rate: 32, group: 'Kitchen',        sh: [OFF, OFF, MID, MID, PM, PM, MID] },
+        { id: rid(), name: 'Lena Bauer',     role: 'Chef de Partie',     rate: 32, group: 'Kitchen',        sh: [OFF, MID, OFF, MID, PM, PM, MID] },
+        { id: rid(), name: 'Priya Anand',    role: 'Pastry Chef',        rate: 34, group: 'Kitchen',        sh: [OFF, AM, AM, AM, AM, AM, OFF] },
+        { id: rid(), name: 'Hugo Lefèvre',   role: 'Commis Chef',        rate: 27, group: 'Kitchen',        sh: [OFF, MID, MID, OFF, PM, PM, MID] },
+        { id: rid(), name: 'Sam Okafor',     role: 'Kitchen Hand',       rate: 25, group: 'Kitchen',        sh: [OFF, MID, MID, MID, PM, PM, OFF] },
+        { id: rid(), name: 'Sofia Costa',    role: 'Restaurant Manager', rate: 40, group: 'Front of House', sh: [OFF, MID, MID, MID, PM, PM, MID] },
+        { id: rid(), name: 'Daniel Reyes',   role: 'Sommelier',          rate: 36, group: 'Front of House', sh: [OFF, OFF, PM, PM, PM, PM, MID] },
+        { id: rid(), name: 'Émilie Laurent', role: 'Waiter',             rate: 28, group: 'Front of House', sh: [OFF, PM, OFF, PM, PM, PM, MID] },
+      ];
+      const cells = {};
+      st.forEach(function (s) { const c = {}; s.sh.forEach(function (v, d) { c[d] = v; }); cells[s.id] = c; });
+      function monday() { const d = new Date(); const day = (d.getDay() + 6) % 7; d.setDate(d.getDate() - day); return d.toISOString().slice(0, 10); }
+      PCD.store.upsertInTable('rosters', {
+        name: 'Week — Dinner Service', venue: 'Main Kitchen — Duty Roster', weekStart: monday(), dayCount: 7,
+        templates: [{ id: PCD.uid('st'), label: 'AM', start: '09:00', end: '17:00' }, { id: PCD.uid('st'), label: 'PM', start: '15:00', end: '23:30' }],
+        staff: st.map(function (s) { return { id: s.id, name: s.name, role: s.role, rate: s.rate, group: s.group }; }),
+        cells: cells, _demo: true,
+      }, 'rost');
+    })();
+
+    // 9) Prep sheet — dinner-service mise en place, organised by station.
+    //    Each dish lists its prep components; the printed sheet has a blank box
+    //    per line for the section to write quantities. Set active so it opens.
+    (function () {
+      function comp(text) { return { id: PCD.uid('c'), text: text }; }
+      function pdish(name, station, comps) { const r = R(name); return { id: PCD.uid('d'), recipeId: r ? r.id : null, name: r ? r.name : name, station: station, components: comps.map(comp) }; }
+      const ps = PCD.store.upsertInTable('prepSheets', {
+        name: 'Dinner Service — Mise en Place', columns: 3, orientation: 'portrait',
+        accent: '#1f3b30', fontSize: 'm', bold: false, border: 'medium', spacing: 'medium',
+        dishes: [
+          pdish('Tartare de Bœuf', 'Garde Manger', ['Tenderloin — hand-diced', 'Capers · cornichons · shallot', 'Egg yolks portioned']),
+          pdish('Salade de Chèvre Chaud', 'Garde Manger', ['Chèvre croûtes ×40', 'Walnuts toasted', 'Honey vinaigrette']),
+          pdish('Filet de Bœuf au Poivre', 'Sauce', ['Fillets portioned 160 g', 'Green peppercorns cracked', 'Peppercorn–Cognac base']),
+          pdish('Confit de Canard', 'Sauce', ['Duck legs confit (overnight)', 'Orange jus']),
+          pdish('Coq au Vin', 'Sauce', ['Chicken browned + lardons', 'Red-wine braise', 'Mushrooms glazed']),
+          pdish('Coquilles Saint-Jacques', 'Poisson', ['Scallops cleaned', 'Leek fondue', 'White-wine velouté']),
+          pdish('Bouillabaisse Marseillaise', 'Poisson', ['Saffron broth', 'Snapper · prawns · mussels', 'Rouille']),
+          pdish('Crème Brûlée', 'Pâtisserie', ['Custard baked ×60', 'Sugar for torching']),
+          pdish('Tarte Tatin', 'Pâtisserie', ['Tatins baked ×6']),
+          pdish('Profiteroles', 'Pâtisserie', ['Choux piped + baked', 'Chantilly', 'Chocolate sauce']),
+        ],
+        _demo: true,
+      }, 'ps');
+      PCD.store.set('prefs.prepActiveId', ps.id);
+    })();
+
+    // 10) Buffet — a French wedding reception. IMPORTANT: recipe items use
+    //     amountPerGuest = PORTIONS per guest (not grams — grams ~100× the cost);
+    //     custom items use grams/ml/pcs and cost 0 (placeholder labels).
+    (function () {
+      const nowIso = new Date().toISOString();
+      function ritem(name, perGuest, pickup) { const r = R(name); return r ? { recipeId: r.id, amountPerGuest: perGuest, unit: 'serving', pickupRatio: pickup, refillX: null } : null; }
+      function citem(name, amt, unit, pickup) { return { customName: name, amountPerGuest: amt, unit: unit, pickupRatio: pickup, refillX: null }; }
+      const buffet = {
+        id: PCD.uid('bf'), createdAt: nowIso, updatedAt: nowIso, _demo: true,
+        name: 'Wedding Reception', type: 'dinner', coverCount: 80, ticketPrice: 115, durationHours: 3, refillMultiplier: null,
+        notes: 'Sample buffet · customize or delete',
+        stations: [
+          { name: 'Hors d\'Œuvres', type: 'cold', items: [
+            ritem('Salade de Chèvre Chaud', 0.5, 0.55),
+            ritem('Tartare de Bœuf', 0.4, 0.5),
+            citem('Smoked salmon blini', 2, 'pcs', 0.6),
+            citem('Charcuterie & cornichons', 50, 'g', 0.5),
+          ].filter(Boolean) },
+          { name: 'Plats', type: 'hot', items: [
+            ritem('Coq au Vin', 0.7, 0.75),
+            ritem('Confit de Canard', 0.6, 0.65),
+            ritem('Filet de Bœuf au Poivre', 0.4, 0.6),
+            citem('Gratin dauphinois', 120, 'g', 0.8),
+            citem('Ratatouille', 90, 'g', 0.55),
+          ].filter(Boolean) },
+          { name: 'Fromage', type: 'cold', items: [
+            citem('French cheese selection', 60, 'g', 0.5),
+            citem('Baguette & crackers', 40, 'g', 0.6),
+            citem('Fig & quince paste', 20, 'g', 0.3),
+          ] },
+          { name: 'Desserts', type: 'bakery', items: [
+            ritem('Crème Brûlée', 0.6, 0.5),
+            ritem('Profiteroles', 0.6, 0.55),
+            citem('Assorted macarons', 2, 'pcs', 0.6),
+            citem('Fresh berries', 60, 'g', 0.5),
+          ].filter(Boolean) },
+        ],
+      };
+      const root = PCD.store._read('buffets') || {};
+      const next = Array.isArray(root) ? {} : Object.assign({}, root);
+      const arr = (Array.isArray(root) ? [] : (root[wsId] || [])).slice();
+      arr.push(buffet);
+      next[wsId] = arr;
+      PCD.store.set('buffets', next);
+    })();
+
+    // 11) Whiteboard — tonight's service board (covers, dietary counts, 86 list,
+    //     specials). Set active so it opens straight to the board.
+    (function () {
+      function wblk(type, layout, style, content) { return { id: PCD.uid('blk'), type: type, layout: layout, style: style, content: content }; }
+      const board = {
+        id: PCD.uid('wb'), name: "Tonight's Service", title: "TONIGHT'S SERVICE", paper: 'A4', orient: 'landscape',
+        format: 'v2', updatedAt: new Date().toISOString(),
+        blocks: [
+          wblk('section_header', 'full', { color: 'forest', size: 'xl', align: 'center' }, { text: "TONIGHT'S SERVICE — FRI" }),
+          wblk('big_number', 'half', { color: 'brand', size: 'xxl', align: 'center' }, { value: '78', label: 'COVERS BOOKED', sub: '2 sittings' }),
+          wblk('big_number', 'half', { color: 'amber', size: 'xxl', align: 'center' }, { value: '12', label: 'WALK-IN ROOM', sub: '' }),
+          wblk('big_number', 'third', { color: 'mint', size: 'lg', align: 'center' }, { value: '3', label: 'VEGAN' }),
+          wblk('big_number', 'third', { color: 'blue', size: 'lg', align: 'center' }, { value: '6', label: 'GF / DF' }),
+          wblk('big_number', 'third', { color: 'red', size: 'lg', align: 'center' }, { value: '2', label: 'ALLERGY' }),
+          wblk('divider', 'full', { color: 'steak', size: 'sm', align: 'center' }, { label: '86 · OUT OF STOCK' }),
+          wblk('checklist', 'full', { color: 'white', size: 'md', align: 'left' }, { items: [
+            { text: 'Sole — 4 portions left', done: false },
+            { text: 'Foie gras — 86 (sold out)', done: true },
+            { text: 'Soufflé — 30 min notice', done: false },
+          ] }),
+          wblk('divider', 'full', { color: 'forest', size: 'sm', align: 'center' }, { label: "TONIGHT'S SPECIALS" }),
+          wblk('text', 'full', { color: 'cream', size: 'md', align: 'left' }, { text: 'Amuse — chilled pea velouté\nSpecial — roasted venison, blackberry jus · $54\nPairing — Côtes du Rhône 2021' }),
+        ],
+      };
+      const root = PCD.store._read('whiteboards') || {};
+      const next = Array.isArray(root) ? {} : Object.assign({}, root);
+      const arr = (Array.isArray(root) ? [] : (root[wsId] || [])).slice();
+      arr.push(board);
+      next[wsId] = arr;
+      PCD.store.set('whiteboards', next);
+      PCD.store.set('prefs.whiteboardActiveId', board.id);
+    })();
 
     PCD.store.update('onboarding', { demoSeeded: true });
     PCD.log('Demo data seeded (French à la carte).');
