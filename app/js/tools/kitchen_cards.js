@@ -208,10 +208,9 @@
           </div>
         </div>
 
-        <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:14px;align-items:start;" class="kc-layout">
-          <div style="min-width:0;">
-            <div class="card mb-3" style="padding:14px;">
-              <div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px;">${t('kc_layout_style') || 'Layout & style'}</div>
+        <div class="card kc-stylebar" style="padding:12px 14px;margin-bottom:14px;">
+          <div style="display:flex;flex-wrap:wrap;gap:12px 18px;align-items:flex-start;">
+            <div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;align-self:center;">${t('kc_layout_style') || 'Layout & style'}</div>
 
               <div class="mb-2">
                 <div class="text-muted text-sm mb-1">${t('kc_orientation')}</div>
@@ -267,9 +266,12 @@
                 • ${t('kc_tip_3')}
               </div>
             </div>
+          </div>
 
-            <div class="card" style="padding:8px 0;">
-              <div style="padding:6px 12px;font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;">${t('kc_recipes_on_canvas')}</div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:14px;align-items:start;" class="kc-layout">
+            <div style="min-width:0;">
+              <div class="card" style="padding:8px 0;">
+                <div style="padding:6px 12px;font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;">${t('kc_recipes_on_canvas')}</div>
               <!-- v2.8.57 — Recipe arama. Anlık filter (case-insensitive,
                    substring). Section header'ları match yoksa gizlenir.
                    Search input scroll'un dışında — kullanıcı liste içinde
@@ -362,7 +364,7 @@
              accurately, but the surrounding card frame respects theme. */
           .kc-preview-card { background: var(--surface-2); }
           /* v2.21 — Menu Studio ile tutarlı: aktif toggle = marka rengi (pill hissi) */
-          .kc-layout .btn-secondary.active { background: var(--brand-600) !important; color: #fff !important; border-color: var(--brand-600) !important; }
+          .kc-stylebar .btn-secondary.active, .kc-layout .btn-secondary.active { background: var(--brand-600) !important; color: #fff !important; border-color: var(--brand-600) !important; }
         </style>
       `;
 
