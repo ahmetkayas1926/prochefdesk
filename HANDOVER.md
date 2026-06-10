@@ -233,24 +233,13 @@ RLS tüm tablolarda aktif. Frontend `anon` key kullanır.
 
 ---
 
-## Kaldırılmış araçlar (JS mevcut, route yok, şema korunuyor)
+## Kaldırılmış araçlar (dosyalar silindi, şema korunuyor)
 
-Bu JS dosyaları `app/js/tools/` altında duruyor ama **router'da kayıtlı değil, hiçbir `<script>` ile yüklenmiyor, sidenav'da yok → siteden erişilemez (ölü kod).** Tüm route kayıtları `app/js/core/app.js`'tedir (eager: dashboard/account/inventory + 19 lazy); aşağıdakiler listede yok. Bulut şeması ve mevcut veri korunuyor. **Yeni iş yaparken bu dosyaları canlı özellik sanma — grep bir tanesini döndürürse ölü koddur.**
+v2.43'te şu **10 ölü tool dosyası tamamen silindi** (`app/js/tools/`'tan) — route'lanmıyor, hiçbir `<script>` ile yüklenmiyor, sidenav'da yoktular → erişilemiyordu. Eski kod git geçmişinde; gerekirse oradan canlandırılır:
 
-| Dosya | `PCD.tools.*` | Not |
-|-------|---------------|-----|
-| `menu_matrix.js` | `menuMatrix` | Menü mühendisliği matrisi |
-| `sales.js` | `sales` | Satış kaydı |
-| `nutrition.js` | `nutrition` | Kalori / besin değeri |
-| `whatif.js` | `whatif` | Senaryo (what-if) analizi |
-| `yield.js` | `yield_calc` | Verim hesaplayıcı |
-| `variance.js` | `varianceTool` | **Dikkat:** `core/variance.js` CANLI (dashboard kullanır); ölü olan bu `tools/variance.js` |
-| `team.js` | `team` | Ekip yönetimi |
-| `allergens.js` | `allergens` | **Dikkat:** `core/allergens-db.js` CANLI; ölü olan bu `tools/allergens.js` |
-| `menus.js` | `menus` | Klasik menü kurucu — `'menus'` route'u artık `menu_studio.js` yükler |
-| `tools-hub.js` | `toolsHub` | Araç merkezi grid'i (kayıtlı olmayan route'lara link verir) |
+`menu_matrix.js` (menuMatrix) · `sales.js` · `nutrition.js` · `whatif.js` · `yield.js` (yield_calc) · `variance.js` (varianceTool — **NOT:** `core/variance.js` CANLI, silinmedi) · `team.js` · `allergens.js` (**NOT:** `core/allergens-db.js` CANLI, silinmedi) · `menus.js` (klasik; `'menus'` route'u `menu_studio.js` yükler) · `tools-hub.js`
 
-**UI'sız sync tabloları:** `waste` · `shopping_lists` · `mise_plans` — cloud sync/realtime/backup kodu tam ama hiçbir araç bu state'i okumuyor/yazmıyor. (`team` tablosu da aynı durumda; veri sync'leniyor, UI yok.)
+**UI'sız sync tabloları (kod VAR, ekran YOK — SİLİNMEDİ):** `waste` · `shopping_lists` · `mise_plans` · `team` — cloud sync/realtime/backup şeması tam ama hiçbir araç bu state'i okumuyor/yazmıyor. İleride tekrar tool eklenirse veri durur. Tüm route kayıtları `app/js/core/app.js`'tedir.
 
 ---
 

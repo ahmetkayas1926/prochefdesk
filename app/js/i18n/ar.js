@@ -808,3 +808,30 @@ window.PCD.i18n.register('ar', {
   ms_ph_section: "قسم جديد",
   ms_new_dish: "طبق جديد",
 });
+
+// v2.43 — eksik anahtarlar dolduruluyor (batch 1: gate/upgrade). register() MERGE eder.
+window.PCD.i18n.register('ar', {
+  gate_pro_badge: "Pro",
+  gate_upgrade_title: "الترقية إلى Pro",
+  gate_upgrade_sub: "افتح {feature} — وكل ميزات Pro في ProChefDesk.",
+  gate_feat_generic: "هذه الميزة",
+  gate_feat_recipes: "وصفات غير محدودة",
+  gate_feat_ingredients: "مكوّنات غير محدودة",
+  gate_feat_haccp: "سجلات سلامة الغذاء HACCP",
+  gate_feat_sync: "مزامنة سحابية عبر جميع أجهزتك",
+  gate_feat_labor: "تكلفة العمالة في جدول المناوبات",
+  gate_feat_costview: "مشاركة عرض التكاليف للمُلّاك والمحاسبين",
+  gate_feat_workspaces: "مساحات عمل متعددة",
+  gate_btn_monthly: "اشترك في Pro — A$19/شهر",
+  gate_btn_annual: "سنوي — A$190/سنة",
+  gate_annual_save: "وفّر ~17%",
+  gate_not_now: "ربما لاحقًا",
+  gate_signin_first: "سجّل الدخول للترقية.",
+  gate_redirecting: "جارٍ فتح الدفع الآمن…",
+  gate_redirect_portal: "جارٍ فتح بوابة الاشتراك…",
+  gate_checkout_error: "تعذّر فتح صفحة الدفع. حاول مرة أخرى.",
+  gate_portal_error: "تعذّر فتح بوابة الاشتراك. حاول مرة أخرى.",
+  gate_terms_agree: "بالمتابعة فإنك توافق على",
+  gate_terms_link: "الشروط",
+  gate_privacy_link: "سياسة الخصوصية",
+});

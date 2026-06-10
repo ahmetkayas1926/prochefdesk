@@ -161,8 +161,8 @@ Yeni feature'da misafir için cloud push tetiklenmemeli.
 
 ---
 
-**Ölü araç dosyaları — `app/js/tools/`'ta VAR ama SİTEDE YOK.**
-Şu dosyalar route'lanmıyor, hiçbir `<script>`/`registerLazy` ile yüklenmiyor, sidenav'da yok → siteden erişilemez (ölü kod): `menu_matrix.js` · `sales.js` · `nutrition.js` · `whatif.js` · `yield.js` · `variance.js` (TOOL — `core/variance.js` CANLI) · `team.js` · `allergens.js` (TOOL — `core/allergens-db.js` CANLI) · `menus.js` (klasik — `'menus'` route'u `menu_studio.js` yükler) · `tools-hub.js`. UI'sız sync tabloları (sync/backup kodu var, ekran yok): `waste` · `shopping_lists` · `mise_plans`. **Grep bunlardan birini döndürürse mevcut özellik SANMA — ölü.** Route'ların tek doğruluk kaynağı: `app/js/core/app.js`. Detay: HANDOVER.md → "Kaldırılmış araçlar".
+**Kaldırılmış araçlar — 10 tool dosyası SİLİNDİ (v2.43).**
+Şu dosyalar `app/js/tools/`'tan tamamen silindi (route yok, yüklenmiyordu, erişilemiyordu): `menu_matrix, sales, nutrition, whatif, yield, variance` (TOOL — `core/variance.js` CANLI, silinmedi)`, team, allergens` (TOOL — `core/allergens-db.js` CANLI, silinmedi)`, menus` (klasik), `tools-hub`. Kod git geçmişinde. **Schema-only kalan (sync/backup VAR, UI YOK, SİLİNMEDİ):** `waste`, `shopping_lists`, `mise_plans`, `team`. Route'ların tek doğruluk kaynağı: `app/js/core/app.js`. Detay: HANDOVER.md → "Kaldırılmış araçlar".
 
 ---
 

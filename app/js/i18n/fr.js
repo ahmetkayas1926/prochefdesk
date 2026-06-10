@@ -808,3 +808,30 @@ window.PCD.i18n.register('fr', {
   ms_ph_section: "Nouvelle section",
   ms_new_dish: "Nouveau plat",
 });
+
+// v2.43 — eksik anahtarlar dolduruluyor (batch 1: gate/upgrade). register() MERGE eder.
+window.PCD.i18n.register('fr', {
+  gate_pro_badge: "Pro",
+  gate_upgrade_title: "Passez à Pro",
+  gate_upgrade_sub: "Débloquez {feature} — et toutes les fonctionnalités Pro de ProChefDesk.",
+  gate_feat_generic: "cette fonctionnalité",
+  gate_feat_recipes: "Recettes illimitées",
+  gate_feat_ingredients: "Ingrédients illimités",
+  gate_feat_haccp: "Registres de sécurité alimentaire HACCP",
+  gate_feat_sync: "Synchronisation cloud sur tous vos appareils",
+  gate_feat_labor: "Coût de main-d'œuvre du planning",
+  gate_feat_costview: "Partage de la vue des coûts pour propriétaires et comptables",
+  gate_feat_workspaces: "Plusieurs espaces de travail",
+  gate_btn_monthly: "Passer à Pro — 19 A$/mois",
+  gate_btn_annual: "Annuel — 190 A$/an",
+  gate_annual_save: "Économisez ~17%",
+  gate_not_now: "Plus tard",
+  gate_signin_first: "Connectez-vous pour passer à la version supérieure.",
+  gate_redirecting: "Ouverture du paiement sécurisé…",
+  gate_redirect_portal: "Ouverture du portail d'abonnement…",
+  gate_checkout_error: "Impossible d'ouvrir le paiement. Veuillez réessayer.",
+  gate_portal_error: "Impossible d'ouvrir le portail d'abonnement. Veuillez réessayer.",
+  gate_terms_agree: "En continuant, vous acceptez nos",
+  gate_terms_link: "Conditions",
+  gate_privacy_link: "Politique de confidentialité",
+});
