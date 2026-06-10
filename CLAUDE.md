@@ -244,6 +244,16 @@ scale-to-fit önizleme (sabit doğal genişlikte render → `transform:scale` il
 
 ---
 
+**i18n çoklu dil dolumu DEVAM EDİYOR (es/fr/de/ar) — `register()` MERGE pattern.**
+en+tr TAM (2942 anahtar). es/fr/de/ar erken sürümde bırakılmış, görünür-öncelikli batch'lerle dolduruluyor (~%44, v2.43.6). Yeni çeviri eklerken: ilgili dil dosyasının (`app/js/i18n/<lang>.js`) **SONUNA** yeni bir `window.PCD.i18n.register('<lang>', { ...anahtarlar });` bloğu ekle — `register` `Object.assign` ile MERGE eder (i18n.js:72), mevcut objeye dokunma. Placeholder'ları (`{n}`,`{name}`…) + escape'li tırnakları (`\"`) + emoji'leri KORU. İngilizce çoğul işaretçilerini (`{s}`,`{s_lines_n}`) DÜŞÜR, doğal çoğul kullan. ÖLÜ araç anahtarlarını (sales/yield/nutrition/matrix/team/allergens/variance) ÇEVİRME. `node -c` + `setLocale` doğrula. Durum/kalan: HANDOVER "açık adımlar" + MEMORY.
+
+---
+
+**`fmtMoney` (utils.js 128-142) bilinen sorun — YAPILACAK, düzeltilmedi.**
+Compact format (≥100k→0 ondalık, ≥1000→1 ondalık, sonu-sıfır kırpılır, binlik ayraç YOK) iki uçta bozuk: ucuz birim fiyat `$0/g` (cost report), büyük sayı `$4800.0`/`$1000000`. Planlanan düzeltme: her zaman 2 ondalık + binlik ayraç + birim fiyat `$/kg`. Uygulama geneli (print/Excel/share/kitchen cards) olduğu için doğrulamayla birlikte ayrı yapılacak. Yeni para gösterimi eklerken bunu bil.
+
+---
+
 **Menü diyet/alerjen harf kodları.**
 `MENU_CODES` registry: küçük harf = diyet/uygunluk (v/vg/gf/gfo/df/dfo/nf/h), BÜYÜK = "içerir" alerjen (N/G/D/E/F/SF/S/SE). Kodlar SADECE BİLGİ amaçlıdır — filtre veya kısıtlama değil. Gösterim `displayCodeIds(it)` = manuel `it.codes` ∪ otomatik `autoAllergenCodeIds(it)` (recipe malzeme alerjenlerinden). Manuel kodlar recipe'yi değiştirmez. Yeni kod eklersen MENU_CODES + 6 dilde `menu_code_*` i18n.
 
