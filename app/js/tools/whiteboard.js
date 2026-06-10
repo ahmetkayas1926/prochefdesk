@@ -354,6 +354,142 @@
         ] } },
       ],
     },
+    // 8) Line Check — açılış + kapanış kontrol listeleri (servis öncesi/sonrası)
+    {
+      id: 'line_check', labelKey: 'wb_tpl_line_check', label: 'Line Check — Open & Close',
+      paper: 'A4', orient: 'portrait', title: 'LINE CHECK — OPEN & CLOSE',
+      blocks: [
+        { type: 'section_header', layout: 'full', style: { color: 'forest', size: 'lg', align: 'center' }, content: { text: 'LINE CHECK — OPEN & CLOSE' } },
+        { type: 'divider', layout: 'full', style: { color: 'forest', size: 'sm', align: 'center' }, content: { label: 'OPEN · BEFORE SERVICE' } },
+        { type: 'checklist', layout: 'full', style: { color: 'white', size: 'md', align: 'left' }, content: { items: [
+          { text: 'Fridge / freezer temps logged (≤5°C / ≤-18°C)', done: false },
+          { text: 'Hot-hold & bain-marie ≥ 60°C', done: false },
+          { text: 'Mise en place topped to par', done: false },
+          { text: 'Sauces tasted & seasoned', done: false },
+          { text: 'Probe calibrated · sanitiser buckets fresh', done: false },
+          { text: 'Station stocked, labelled & dated', done: false },
+        ] } },
+        { type: 'divider', layout: 'full', style: { color: 'reheat', size: 'sm', align: 'center' }, content: { label: 'CLOSE · AFTER SERVICE' } },
+        { type: 'checklist', layout: 'full', style: { color: 'white', size: 'md', align: 'left' }, content: { items: [
+          { text: 'Surfaces & boards cleaned + sanitised', done: false },
+          { text: 'Food covered, labelled, dated · FIFO', done: false },
+          { text: 'Fridges restocked & rotated', done: false },
+          { text: 'Fryer off · oil filtered', done: false },
+          { text: 'Floors swept & mopped · bins out', done: false },
+          { text: 'Gas & equipment off · alarm set', done: false },
+        ] } },
+      ],
+    },
+    // 9) Cleaning & Sanitation Rota — günlük/haftalık + kimyasal seyreltme
+    {
+      id: 'cleaning_rota', labelKey: 'wb_tpl_cleaning_rota', label: 'Cleaning & Sanitation Rota',
+      paper: 'A4', orient: 'portrait', title: 'CLEANING & SANITATION',
+      blocks: [
+        { type: 'section_header', layout: 'full', style: { color: 'dark', size: 'lg', align: 'center' }, content: { text: 'CLEANING & SANITATION' } },
+        { type: 'divider', layout: 'full', style: { color: 'forest', size: 'sm', align: 'center' }, content: { label: 'DAILY' } },
+        { type: 'checklist', layout: 'full', style: { color: 'white', size: 'md', align: 'left' }, content: { items: [
+          { text: 'Work surfaces, boards & knives', done: false },
+          { text: 'Sinks, taps & splashbacks', done: false },
+          { text: 'Floors & drains', done: false },
+          { text: 'Bins, handles & switches', done: false },
+        ] } },
+        { type: 'divider', layout: 'full', style: { color: 'blue', size: 'sm', align: 'center' }, content: { label: 'WEEKLY · DEEP' } },
+        { type: 'checklist', layout: 'full', style: { color: 'white', size: 'md', align: 'left' }, content: { items: [
+          { text: 'Walk-in shelves & door seals', done: false },
+          { text: 'Oven, grill & salamander', done: false },
+          { text: 'Extraction filters', done: false },
+          { text: 'Dry store rotation & wipe-down', done: false },
+        ] } },
+        { type: 'divider', layout: 'full', style: { color: 'steak', size: 'sm', align: 'center' }, content: { label: 'SANITISER · DILUTION & CONTACT' } },
+        { type: 'kv', layout: 'full', style: { color: 'cream', size: 'md', align: 'left' }, content: { pairs: [
+          { key: 'Food-contact sanitiser', value: 'Per label · 1 min contact' },
+          { key: 'Degreaser', value: '1:10 hot water' },
+          { key: 'Floor cleaner', value: '1:50' },
+          { key: 'Change cloth & water', value: 'Every 30 min' },
+        ] } },
+        { type: 'alert', layout: 'full', style: { color: 'amber', size: 'md', align: 'center' }, content: { text: 'Colour-code cloths · never mix chemicals', icon: '🧴' } },
+      ],
+    },
+    // 10) Cooling & Reheating — FSANZ 2sa/4sa + tehlike bölgesi (AU 5–60°C)
+    {
+      id: 'cooling_reheating', labelKey: 'wb_tpl_cooling_reheating', label: 'Cooling & Reheating',
+      paper: 'A4', orient: 'landscape', title: 'COOLING & REHEATING',
+      blocks: [
+        { type: 'section_header', layout: 'full', style: { color: 'forest', size: 'xl', align: 'center' }, content: { text: 'COOLING & REHEATING' } },
+        { type: 'kv', layout: 'half', style: { color: 'cream', size: 'md', align: 'left' }, content: { pairs: [
+          { key: 'Cool · stage 1', value: '60°C → 21°C within 2 h' },
+          { key: 'Cool · stage 2', value: '21°C → 5°C within 4 h' },
+          { key: 'Total cooling', value: 'Max 6 h' },
+          { key: 'Method', value: 'Shallow trays · ice bath · blast chill' },
+        ] } },
+        { type: 'kv', layout: 'half', style: { color: 'white', size: 'md', align: 'left' }, content: { pairs: [
+          { key: 'Reheat', value: 'Rapidly to ≥ 60°C — once only' },
+          { key: 'Hot-hold', value: '≥ 60°C' },
+          { key: 'Cold storage', value: '≤ 5°C' },
+          { key: 'Frozen', value: '≤ -18°C' },
+        ] } },
+        { type: 'table', layout: 'full', style: { color: 'white', size: 'md', align: 'left' }, content: {
+          headers: ['Time in 5–60°C', 'Status', 'Action'],
+          rows: [
+            ['Under 2 hours', 'Safe', 'Use or refrigerate'],
+            ['2 – 4 hours', 'Use now', 'Do not return to fridge'],
+            ['Over 4 hours', 'Unsafe', 'Discard'],
+          ],
+        } },
+        { type: 'alert', layout: 'full', style: { color: 'red', size: 'md', align: 'center' }, content: { text: 'Danger zone 5–60°C · 2-hour / 4-hour rule', icon: '⚠' } },
+      ],
+    },
+    // 11) Butchery & Portion Yields — porsiyon g + verim % + trim kullanımı
+    {
+      id: 'portion_yields', labelKey: 'wb_tpl_portion_yields', label: 'Butchery & Portion Yields',
+      paper: 'A4', orient: 'landscape', title: 'BUTCHERY & PORTION YIELDS',
+      blocks: [
+        { type: 'section_header', layout: 'full', style: { color: 'steak', size: 'xl', align: 'center' }, content: { text: 'BUTCHERY & PORTION YIELDS' } },
+        { type: 'table', layout: 'full', style: { color: 'white', size: 'md', align: 'left' }, content: {
+          headers: ['Item', 'Portion', 'Yield', 'Use trim for'],
+          rows: [
+            ['Beef eye fillet', '200 g', '~90%', 'Tartare · stir-fry'],
+            ['Salmon fillet', '160 g', '~75%', 'Rillettes · stock'],
+            ['Chicken breast', '180 g', '~95%', 'Stock · pie'],
+            ['Lamb rack (frenched)', '3 bones', '~60%', 'Mince · sausage'],
+            ['Whole snapper', '1 ÷ 2', '~45%', 'Stock · soup'],
+          ],
+        } },
+        { type: 'kv', layout: 'full', style: { color: 'cream', size: 'md', align: 'left' }, content: { pairs: [
+          { key: 'Order raw weight', value: 'Portion ÷ yield %' },
+          { key: 'Example', value: '200 g ÷ 0.90 ≈ 222 g raw' },
+          { key: 'Label every cut', value: 'Item + date + initials' },
+        ] } },
+        { type: 'alert', layout: 'full', style: { color: 'amber', size: 'md', align: 'center' }, content: { text: 'Weigh every portion · log waste · use the trim', icon: '⚖️' } },
+      ],
+    },
+    // 12) Function / Banquet Pass — kapak/masa/diyet + servis akışı + diyet tablosu
+    {
+      id: 'function_pass', labelKey: 'wb_tpl_function_pass', label: 'Function / Banquet Pass',
+      paper: 'A4', orient: 'landscape', title: 'FUNCTION PASS',
+      blocks: [
+        { type: 'section_header', layout: 'full', style: { color: 'forest', size: 'xl', align: 'center' }, content: { text: 'FUNCTION PASS' } },
+        { type: 'big_number', layout: 'third', style: { color: 'brand', size: 'lg', align: 'center' }, content: { value: '0', label: 'GUESTS' } },
+        { type: 'big_number', layout: 'third', style: { color: 'amber', size: 'lg', align: 'center' }, content: { value: '0', label: 'TABLES' } },
+        { type: 'big_number', layout: 'third', style: { color: 'red', size: 'lg', align: 'center' }, content: { value: '0', label: 'DIETARY' } },
+        { type: 'divider', layout: 'full', style: { color: 'forest', size: 'sm', align: 'center' }, content: { label: 'RUN SHEET · COURSE TIMING' } },
+        { type: 'table', layout: 'full', style: { color: 'white', size: 'md', align: 'left' }, content: {
+          headers: ['Time', 'Course', 'Plates', 'Notes'],
+          rows: [
+            ['19:00', 'Canapés', '', ''],
+            ['19:45', 'Entrée', '', ''],
+            ['20:30', 'Main', '', ''],
+            ['21:30', 'Dessert', '', ''],
+          ],
+        } },
+        { type: 'divider', layout: 'full', style: { color: 'steak', size: 'sm', align: 'center' }, content: { label: 'DIETARY / ALLERGY · BY TABLE' } },
+        { type: 'table', layout: 'full', style: { color: 'white', size: 'md', align: 'left' }, content: {
+          headers: ['Table', 'Seat', 'Requirement', 'Alt dish'],
+          rows: [ ['', '', '', ''], ['', '', '', ''], ['', '', '', ''] ],
+        } },
+        { type: 'alert', layout: 'full', style: { color: 'katmer', size: 'md', align: 'center' }, content: { text: 'Plate dietary first · all plates leave together', icon: '🔔' } },
+      ],
+    },
   ];
 
   // ============ USER TEMPLATES (LS) ============

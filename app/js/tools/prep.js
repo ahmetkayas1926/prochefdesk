@@ -135,26 +135,36 @@
   // (sub-recipe satırı → alt tarif adı; ingredient satırı → malzeme adı;
   //  separator atlanır). flatten YAPILMAZ — Excel'deki gibi üst seviye.
   function recipeComponents(recipeId) {
-    const r = PCD.store.getRecipe ? PCD.store.getRecipe(recipeId) : null;
-    if (!r) return [];
     const ingMap = {};
     PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
     const recipeMap = {};
     PCD.store.listRecipes().forEach(function (rr) { recipeMap[rr.id] = rr; });
-    const out = [];
-    (r.ingredients || []).forEach(function (ri) {
-      if (!ri || ri.separator) return;
-      let name = '';
-      if (ri.recipeId) {
-        const sub = recipeMap[ri.recipeId];
-        name = sub ? sub.name : '';
-      } else if (ri.ingredientId) {
-        const ing = ingMap[ri.ingredientId];
-        name = ing ? ing.name : '';
-      }
-      if (name) out.push({ id: uid('c'), text: name });
-    });
-    return out;
+    // v2.41 — Sub-recipe'leri AÇ: alt tarif tek satır ismi yerine bir başlık
+    // satırı ("Alt tarif:") + içindeki gerçek malzemeler olarak açılır (portion
+    // calculator ile aynı mantık). Özyinelemeli; döngü koruması (seen) +
+    // derinlik sınırı (5). Düz ingredient'lar eskisi gibi tek satır kalır.
+    function expand(rid, depth, seen) {
+      const r = recipeMap[rid] || (PCD.store.getRecipe ? PCD.store.getRecipe(rid) : null);
+      if (!r || depth > 5 || seen[rid]) return [];
+      seen[rid] = true;
+      const out = [];
+      (r.ingredients || []).forEach(function (ri) {
+        if (!ri || ri.separator) return;
+        if (ri.recipeId) {
+          const sub = recipeMap[ri.recipeId];
+          if (sub && sub.name) {
+            out.push({ id: uid('c'), text: sub.name + ':' });
+            expand(ri.recipeId, depth + 1, seen).forEach(function (c) { out.push(c); });
+          }
+        } else if (ri.ingredientId) {
+          const ing = ingMap[ri.ingredientId];
+          if (ing && ing.name) out.push({ id: uid('c'), text: ing.name });
+        }
+      });
+      seen[rid] = false;
+      return out;
+    }
+    return expand(recipeId, 0, {});
   }
 
   // ============ MAIN RENDER ============

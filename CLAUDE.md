@@ -161,6 +161,11 @@ Yeni feature'da misafir için cloud push tetiklenmemeli.
 
 ---
 
+**Ölü araç dosyaları — `app/js/tools/`'ta VAR ama SİTEDE YOK.**
+Şu dosyalar route'lanmıyor, hiçbir `<script>`/`registerLazy` ile yüklenmiyor, sidenav'da yok → siteden erişilemez (ölü kod): `menu_matrix.js` · `sales.js` · `nutrition.js` · `whatif.js` · `yield.js` · `variance.js` (TOOL — `core/variance.js` CANLI) · `team.js` · `allergens.js` (TOOL — `core/allergens-db.js` CANLI) · `menus.js` (klasik — `'menus'` route'u `menu_studio.js` yükler) · `tools-hub.js`. UI'sız sync tabloları (sync/backup kodu var, ekran yok): `waste` · `shopping_lists` · `mise_plans`. **Grep bunlardan birini döndürürse mevcut özellik SANMA — ölü.** Route'ların tek doğruluk kaynağı: `app/js/core/app.js`. Detay: HANDOVER.md → "Kaldırılmış araçlar".
+
+---
+
 **`PCD.on` delegasyonu kalıcıdır — GENEL `data-*` isimleri araçlar arası sızar.**
 `PCD.on(node, ev, sel, handler)` paylaşılan kalıcı `#view`'a delege eder ve navigasyonda ASLA kaldırılmaz. İki farklı araç aynı genel attribute'u (`data-open`, `data-del`, `data-dup`, `data-edit`…) kullanırsa, bir aracın handler'ı diğer aracın elemanında da tetiklenir → o aracı ilk ziyaretten sonra sızıntı kalıcı olur. (v2.40: menu_studio kütüphane `data-open`'ı, roster satırlarının `data-open`'ıyla çakışıp roster açınca `openDesign(rosterId)` → "Menu not found" toast'ı tetikledi.) **Kural:** `#view`-delege selektörlerini araç-özel prefix'le (`data-ms-open`, `data-rost-open`…), genel `data-open/del/dup/edit` kullanma. Yeni araçta delege handler eklerken aynı selektörü başka araç kullanıyor mu grep et.
 

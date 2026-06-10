@@ -957,7 +957,7 @@ window.PCD.i18n.register('en', {
   kc_tips_title: "Tips:",
   kc_tip_1: "Drag a card from its header to reorder",
   kc_tip_2: "Resize a card by dragging its right edge",
-  kc_tip_3: "Add/remove recipes below",
+  kc_tip_3: "Add/remove recipes from the left panel",
   kc_recipes_on_canvas: "Recipes on canvas",
   kc_save_canvas: "Save canvas",
   kc_print_x_recipes: "Print · {n} recipes",

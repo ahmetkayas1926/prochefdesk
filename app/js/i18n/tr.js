@@ -954,7 +954,7 @@ window.PCD.i18n.register('tr', {
   kc_tips_title: "İpuçları:",
   kc_tip_1: "Sıralamak için bir kartı başlığından sürükle",
   kc_tip_2: "Kartı sağ kenarından sürükleyerek yeniden boyutlandır",
-  kc_tip_3: "Aşağıdan tarif ekle/çıkar",
+  kc_tip_3: "Soldaki panelden tarif ekle/çıkar",
   kc_recipes_on_canvas: "Karttaki tarifler",
   kc_save_canvas: "Kanvası kaydet",
   kc_print_x_recipes: "Yazdır · {n} tarif",

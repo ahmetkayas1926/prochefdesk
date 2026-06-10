@@ -682,13 +682,15 @@
     const sub = (data.venue && data.name ? data.name + '  ·  ' : '') + weekRange(data);
     const fp = fontPx(data);
     const wt = data.bold ? '700' : '400';
-    const cb = 'border:1px solid #c7c7c7;padding:0;font-size:' + fp + 'px;text-align:center;vertical-align:middle;';
-    const hd = 'border:1px solid #c7c7c7;padding:0;font-size:' + (fp - 1) + 'px;text-align:center;vertical-align:middle;background:#1f3b30;color:#fff;font-weight:700;text-transform:uppercase;';
-    // html2canvas doesn't support vertical-align:middle on td/th — use flex wrapper inside each cell
-    const mh = (fp + 14) + 'px'; // min-height for flex wrapper
-    function cw(content, justify) {
-      return '<div style="display:flex;align-items:center;justify-content:' + (justify || 'center') + ';min-height:' + mh + ';padding:4px 6px;line-height:1.3;">' + content + '</div>';
-    }
+    const cb = 'border:1px solid #c7c7c7;padding:5px 7px;font-size:' + fp + 'px;text-align:center;vertical-align:middle;line-height:1.3;';
+    const hd = 'border:1px solid #c7c7c7;padding:5px 7px;font-size:' + (fp - 1) + 'px;text-align:center;vertical-align:middle;line-height:1.3;background:#1f3b30;color:#fff;font-weight:700;text-transform:uppercase;';
+    // v2.41 — html2canvas 1.4.1 td/th `vertical-align:middle`'ı DOĞRU uyguluyor.
+    // Eski flex-wrapper `align-items:center`'ı UYGULAMIYORDU → notlu (2-satırlık)
+    // hücreler satırı uzatınca tek-satırlık hücrelerin yazısı yukarı kayıyordu
+    // (JPEG export'ta "ortalanmıyor" bug'ı). Ortalama artık doğrudan td'de
+    // (vertical-align:middle + text-align:left/center). cw() pass-through; sol
+    // hizalı hücrelerin td'sinde zaten `text-align:left` var.
+    function cw(content) { return content; }
     let h = '';
     h += '<div style="background:#16a34a;color:#fff;padding:11px 15px;border-radius:6px;margin-bottom:11px;">'
       + '<div style="font-size:' + (fp + 8) + 'px;font-weight:800;">' + esc(title) + '</div>'
