@@ -10,6 +10,8 @@ ProChefDesk — profesyonel şefler için web tabanlı mutfak yönetim sistemi.
 
 Araç envanteri ve mimari detay için: **`HANDOVER.md`** · Sürüm geçmişi için: **`CHANGELOG.md`**
 
+**Açık yapılacaklar + büyüme roadmap'i** (i18n dolumu · fmtMoney · tasarım/logo · launch QA · veri-bütünlüğü QA · **rakip-paritesi:** POS entegrasyonu, e-procurement+fatura OCR, muhasebe, besin DB, çoklu-şube, eğitim/LMS) → HANDOVER "Operatöre açık adımlar" + "Rakip-paritesi roadmap" bölümlerinde. Operatör değerlendirip ekleyecek — spontan kurma, önce HANDOVER'a bak.
+
 ---
 
 ## Operatör + çalışma akışı

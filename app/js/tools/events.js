@@ -608,12 +608,15 @@
     });
   }
 
-  // v2.37 — Etkinlik alışveriş/hazırlık listesi: menüdeki tarifleri konuk sayısına
-  // ölçekle, flattenIngredients ile gerçek malzemelere indir, tedarikçiye göre grupla + topla.
+  // v2.37 — Etkinlik alışveriş listesi: menü tariflerini konuk sayısına ölçekle,
+  // flattenIngredients ile gerçek malzemelere indir.
+  // v2.44 — DİREKT malzemeler tedarikçiye göre grupla; her SUB-RECIPE'nin
+  // malzemeleri kendi grubunda (yarı saydam başlık + belirgin ayraç) → karışmaz.
   function buildEventShopping(event, ingMap, recipeMap) {
     const t = PCD.i18n.t;
     const guests = Number(event.guestCount) || 0;
-    const acc = {};
+    const direct = {};   // tedarikçili direkt malzemeler: key -> row
+    const subs = {};     // { subRecipeAdı: { key -> row } }
     (event.menu || []).forEach(function (item) {
       const r = recipeMap[item.recipeId]; if (!r) return;
       const portions = guests * (Number(item.portionsPerGuest) || 1);
@@ -623,19 +626,28 @@
       flat.forEach(function (f) {
         if (!f.ingredient) return;
         const key = f.ingredientId + '|' + (f.unit || '');
-        if (!acc[key]) acc[key] = { ing: f.ingredient, unit: f.unit || '', amount: 0 };
-        acc[key].amount += (Number(f.amount) || 0);
+        const bucket = f.viaSubRecipe ? (subs[f.viaSubRecipe] || (subs[f.viaSubRecipe] = {})) : direct;
+        if (!bucket[key]) bucket[key] = { ing: f.ingredient, unit: f.unit || '', amount: 0 };
+        bucket[key].amount += (Number(f.amount) || 0);
       });
     });
-    const groups = {};
-    Object.keys(acc).forEach(function (k) {
-      const row = acc[k];
+    function byName(a, b) { return (a.ing.name || '').localeCompare(b.ing.name || ''); }
+    const out = [];
+    // 1) Direkt malzemeler — tedarikçiye göre grupla (eski davranış korunur)
+    const supGroups = {};
+    Object.keys(direct).forEach(function (k) {
+      const row = direct[k];
       const sup = (row.ing.supplier || '').trim() || (t('event_shop_other') || 'Other');
-      (groups[sup] = groups[sup] || []).push(row);
+      (supGroups[sup] = supGroups[sup] || []).push(row);
     });
-    return Object.keys(groups).sort().map(function (sup) {
-      return { supplier: sup, rows: groups[sup].sort(function (a, b) { return (a.ing.name || '').localeCompare(b.ing.name || ''); }) };
+    Object.keys(supGroups).sort().forEach(function (sup) {
+      out.push({ label: sup, isSub: false, rows: supGroups[sup].sort(byName) });
     });
+    // 2) Her sub-recipe — kendi grubu (yarı saydam başlık + ayraç)
+    Object.keys(subs).sort().forEach(function (name) {
+      out.push({ label: name, isSub: true, rows: Object.keys(subs[name]).map(function (k) { return subs[name][k]; }).sort(byName) });
+    });
+    return out;
   }
 
   function shoppingListHtml(groups, forPrint) {
@@ -644,11 +656,17 @@
     const fmtAmt = function (n) { return (Math.round(n * 100) / 100).toString(); };
     const titleColor = forPrint ? '#16a34a' : 'var(--brand-700)';
     const lineColor = forPrint ? '#e5e5e5' : 'var(--border)';
+    const subColor = forPrint ? '#9a9a9a' : 'var(--text-3)';
+    const subBg = forPrint ? '#f6f6f6' : 'var(--surface-2)';
     return groups.map(function (g) {
-      return '<div style="margin-bottom:14px;">' +
-        '<div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:' + titleColor + ';border-bottom:1px solid ' + lineColor + ';padding-bottom:4px;margin-bottom:6px;">' + PCD.escapeHtml(g.supplier) + '</div>' +
+      // Sub-recipe grubu: yarı saydam başlık + üstte belirgin (dashed) ayraç.
+      const header = g.isSub
+        ? '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:' + subColor + ';background:' + subBg + ';border-radius:6px;padding:3px 9px;margin-bottom:6px;opacity:0.8;">↳ ' + PCD.escapeHtml(g.label) + '</div>'
+        : '<div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:' + titleColor + ';border-bottom:1px solid ' + lineColor + ';padding-bottom:4px;margin-bottom:6px;">' + PCD.escapeHtml(g.label) + '</div>';
+      return '<div style="margin-bottom:14px;' + (g.isSub ? 'border-top:2px dashed ' + lineColor + ';padding-top:12px;' : '') + '">' +
+        header +
         g.rows.map(function (r) {
-          return '<div style="display:flex;justify-content:space-between;gap:12px;padding:3px 0;font-size:13px;">' +
+          return '<div style="display:flex;justify-content:space-between;gap:12px;padding:3px 0;font-size:13px;' + (g.isSub ? 'opacity:0.9;' : '') + '">' +
             '<span>' + PCD.escapeHtml(r.ing.name || '') + '</span>' +
             '<span style="font-weight:600;white-space:nowrap;">' + fmtAmt(r.amount) + ' ' + PCD.escapeHtml(r.unit) + '</span>' +
           '</div>';
