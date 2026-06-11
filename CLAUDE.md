@@ -10,7 +10,7 @@ ProChefDesk — profesyonel şefler için web tabanlı mutfak yönetim sistemi.
 
 Araç envanteri ve mimari detay için: **`HANDOVER.md`** · Sürüm geçmişi için: **`CHANGELOG.md`**
 
-**Açık yapılacaklar + büyüme roadmap'i** (i18n dolumu · fmtMoney · tasarım/logo · launch QA · veri-bütünlüğü QA · **rakip-paritesi:** POS entegrasyonu, e-procurement+fatura OCR, muhasebe, besin DB, çoklu-şube, eğitim/LMS) → HANDOVER "Operatöre açık adımlar" + "Rakip-paritesi roadmap" bölümlerinde. Operatör değerlendirip ekleyecek — spontan kurma, önce HANDOVER'a bak.
+**Açık yapılacaklar + büyüme roadmap'i** (fmtMoney · cost-report sub-recipe · tasarım/logo · launch QA · veri-bütünlüğü QA · **rakip-paritesi:** POS entegrasyonu, e-procurement+fatura OCR, muhasebe, besin DB, çoklu-şube, eğitim/LMS) → HANDOVER "Operatöre açık adımlar" + "Rakip-paritesi roadmap" bölümlerinde. Operatör değerlendirip ekleyecek — spontan kurma, önce HANDOVER'a bak.
 
 ---
 
@@ -246,8 +246,8 @@ scale-to-fit önizleme (sabit doğal genişlikte render → `transform:scale` il
 
 ---
 
-**i18n çoklu dil dolumu DEVAM EDİYOR (es/fr/de/ar) — `register()` MERGE pattern.**
-en+tr TAM (2942 anahtar). es/fr/de/ar erken sürümde bırakılmış, görünür-öncelikli batch'lerle dolduruluyor (~%44, v2.43.6). Yeni çeviri eklerken: ilgili dil dosyasının (`app/js/i18n/<lang>.js`) **SONUNA** yeni bir `window.PCD.i18n.register('<lang>', { ...anahtarlar });` bloğu ekle — `register` `Object.assign` ile MERGE eder (i18n.js:72), mevcut objeye dokunma. Placeholder'ları (`{n}`,`{name}`…) + escape'li tırnakları (`\"`) + emoji'leri KORU. İngilizce çoğul işaretçilerini (`{s}`,`{s_lines_n}`) DÜŞÜR, doğal çoğul kullan. ÖLÜ araç anahtarlarını (sales/yield/nutrition/matrix/team/allergens/variance) ÇEVİRME. `node -c` + `setLocale` doğrula. Durum/kalan: HANDOVER "açık adımlar" + MEMORY.
+**i18n 6 dil de TAM (en/tr/es/fr/de/ar) — `register()` MERGE pattern.**
+en+tr (2942 anahtar) + es/fr/de/ar (2598 canlı anahtarın HEPSİ, v2.43.17 — 0 eksik). Gelecekte YENİ anahtar eklerken: ilgili dil dosyasının (`app/js/i18n/<lang>.js`) **SONUNA** yeni bir `window.PCD.i18n.register('<lang>', { ...anahtarlar });` bloğu ekle — `register` `Object.assign` ile MERGE eder (i18n.js:72), mevcut objeye dokunma. Placeholder'ları (`{n}`,`{name}`…) + escape'li tırnakları (`\"`) + emoji'leri KORU. İngilizce çoğul işaretçilerini DÜŞÜR, doğal çoğul kullan. ÖLÜ araç anahtarlarını (sales/yield/nutrition/matrix/team/allergens/variance/whatif/tools_hub/menus + `t_*`) ÇEVİRME. `node -c` doğrula. NOT: preview `setLocale` eski bundle'ı cache'ler → gerçek doğrulama = `fetch('...?cb='+Date.now())` + `eval` + setLocale.
 
 ---
 
