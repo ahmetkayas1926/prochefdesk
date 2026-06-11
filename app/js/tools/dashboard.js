@@ -233,12 +233,65 @@
     return out;
   }
 
+  // v2.43.18 — Cost-report breakdown rows (simple vs detailed sub-recipe view).
+  // detailed=false → one row per recipe line (sub-recipes as a single SUB line,
+  // current behaviour). detailed=true → each sub-recipe row becomes a sub-header
+  // followed by its underlying ingredients (indented), expanded via
+  // flattenIngredients at the exact usage scale and costed via resolveRow.
+  // Σ(lineCost) is IDENTICAL in both modes (== computeFoodCost): cost is linear
+  // in amount, so a sub-recipe's expanded children always sum back to its own
+  // line cost. Shared by recipe/event/buffet cost reports.
+  // Returns [{ name, isSub, isSubHeader, indent, unitPrice, stockUnit, amount,
+  // qtyUnit, lineCost }].
+  function costBreakdownRows(recipe, ingMap, recipeMap, detailed) {
+    if (!recipeMap) recipeMap = buildRecipeMap();
+    const rows = [];
+    if (!recipe || !Array.isArray(recipe.ingredients)) return rows;
+    recipe.ingredients.forEach(function (ri) {
+      if (!ri || ri.separator) return;
+      const rr = resolveRow(ri, ingMap, recipeMap);
+      if (!rr || !rr.found) return;
+
+      // Direct ingredient, OR sub-recipe in simple mode → single line.
+      if (!detailed || !rr.isSub) {
+        rows.push({
+          name: rr.name, isSub: !!rr.isSub, isSubHeader: false, indent: 0,
+          unitPrice: rr.unitPrice, stockUnit: rr.stockUnit, amount: rr.amount,
+          qtyUnit: rr.qtyUnit, qtyInStock: rr.qtyInStock, lineCost: rr.lineCost,
+        });
+        return;
+      }
+
+      // Detailed sub-recipe → header line + expanded children at usage scale.
+      const sub = recipeMap[ri.recipeId];
+      rows.push({
+        name: rr.name, isSub: true, isSubHeader: !!sub, indent: 0,
+        unitPrice: rr.unitPrice, stockUnit: rr.stockUnit, amount: rr.amount,
+        qtyUnit: rr.qtyUnit, qtyInStock: rr.qtyInStock, lineCost: rr.lineCost,
+      });
+      if (!sub) return;
+      const subYield = Number(sub.yieldAmount) || Number(sub.servings) || 1;
+      const subScale = (Number(rr.qtyInStock) || 0) / (subYield || 1);
+      flattenIngredients(sub, ingMap, recipeMap, { scale: subScale }).forEach(function (item) {
+        const cr = resolveRow({ ingredientId: item.ingredientId, amount: item.amount, unit: item.unit }, ingMap, recipeMap);
+        if (!cr || !cr.found) return;
+        rows.push({
+          name: cr.name, isSub: false, isSubHeader: false, indent: 1,
+          unitPrice: cr.unitPrice, stockUnit: cr.stockUnit, amount: cr.amount,
+          qtyUnit: cr.qtyUnit, qtyInStock: cr.qtyInStock, lineCost: cr.lineCost,
+        });
+      });
+    });
+    return rows;
+  }
+
   PCD.recipes = PCD.recipes || {};
   PCD.recipes.computeFoodCost = computeFoodCost;
   PCD.recipes.buildRecipeMap = buildRecipeMap;
   PCD.recipes.resolveRow = resolveRow;
   PCD.recipes.isPrep = isPrep;
   PCD.recipes.flattenIngredients = flattenIngredients;
+  PCD.recipes.costBreakdownRows = costBreakdownRows;
 
   // ============ TODAY-FOCUSED DASHBOARD ============
   function render(view) {

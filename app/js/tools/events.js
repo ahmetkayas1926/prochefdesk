@@ -86,6 +86,8 @@
             </div>
             <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
               <span class="chip" style="background:${statusColor(e.status || 'draft')}20;color:${statusColor(e.status || 'draft')};font-weight:700;">${t('event_status_' + (e.status || 'draft'))}</span>
+              <button class="icon-btn" data-ev-cost="${e.id}" title="${PCD.escapeHtml(t('btn_cost_report') || 'Cost Report')}">${PCD.icon('activity', 16)}</button>
+              <button class="icon-btn" data-ev-shop="${e.id}" title="${PCD.escapeHtml(t('event_shopping_list') || 'Shopping list')}">${PCD.icon('list', 16)}</button>
               <button class="icon-btn" data-dup-ev="${e.id}" title="${PCD.escapeHtml(t('event_duplicate') || 'Duplicate')}">${PCD.icon('copy', 16)}</button>
             </div>
           </div>
@@ -102,8 +104,25 @@
 
     PCD.$('#newEventBtn', view).addEventListener('click', function () { openEditor(); });
     PCD.on(listEl, 'click', '[data-eid]', function (e) {
-      if (e.target.closest('[data-dup-ev]')) return;
+      if (e.target.closest('button')) return;  // any quick-access action button
       openEditor(this.getAttribute('data-eid'));
+    });
+    // v2.43.18 — Quick-access: cost report (Simple/Detailed preview modal)
+    PCD.on(listEl, 'click', '[data-ev-cost]', function (e) {
+      e.stopPropagation();
+      const ev = PCD.store.getFromTable('events', this.getAttribute('data-ev-cost'));
+      if (!ev) return;
+      PCD.costReportPreview({
+        title: (ev.name || t('untitled')) + ' · ' + (t('btn_cost_report') || 'Cost Report'),
+        buildHtml: function (detailed) { return eventPrintHtml(ev, detailed); },
+        onPrint: function (detailed) { printEvent(ev, detailed); },
+      });
+    });
+    // v2.43.18 — Quick-access: shopping list
+    PCD.on(listEl, 'click', '[data-ev-shop]', function (e) {
+      e.stopPropagation();
+      const ev = PCD.store.getFromTable('events', this.getAttribute('data-ev-shop'));
+      if (ev) openShoppingList(ev);
     });
     // v2.37 — Etkinliği çoğalt
     PCD.on(listEl, 'click', '[data-dup-ev]', function (e) {
@@ -476,8 +495,8 @@
     return lines.join('\n');
   }
 
-  function printEvent(event) { PCD.print(eventPrintHtml(event), event.name || (PCD.i18n.t('ev_print_default_title') || 'Event')); }
-  function eventPrintHtml(event) {
+  function printEvent(event, detailed) { PCD.print(eventPrintHtml(event, detailed), event.name || (PCD.i18n.t('ev_print_default_title') || 'Event')); }
+  function eventPrintHtml(event, detailed) {
     const t = PCD.i18n.t;
     const ingMap = {}, recipeMap = {};
     PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
@@ -490,13 +509,35 @@
       const r = recipeMap[item.recipeId];
       if (!r) return;
       const portions = (event.guestCount || 0) * (item.portionsPerGuest || 1);
-      const fc = PCD.recipes.computeFoodCost(r, ingMap) * (portions / (r.servings || 1));
+      const scale = portions / (r.servings || 1);
+      const fc = PCD.recipes.computeFoodCost(r, ingMap, recipeMap) * scale;
       menuRows += '<tr>' +
         '<td>' + PCD.escapeHtml(r.name) + '</td>' +
         '<td style="text-align:center;">' + (item.portionsPerGuest || 1) + '/guest</td>' +
         '<td style="text-align:right;">' + portions + '</td>' +
         '<td style="text-align:right;font-weight:600;">' + PCD.fmtMoney(fc) + '</td>' +
         '</tr>';
+      // v2.43.18 — detailed sub-recipe breakdown per dish, scaled to event portions.
+      // Child lineCosts × scale sum back to the dish cost (fc), so the report total stays exact.
+      if (detailed) {
+        PCD.recipes.costBreakdownRows(r, ingMap, recipeMap, true).forEach(function (row) {
+          if (row.isSubHeader) {
+            menuRows += '<tr style="font-size:9pt;color:#777;">' +
+              '<td style="padding-left:26px;border-bottom:1px dashed #f0f0f0;">↳ ' + PCD.escapeHtml(row.name) + '</td>' +
+              '<td></td><td></td>' +
+              '<td style="text-align:right;border-bottom:1px dashed #f0f0f0;">' + PCD.fmtMoney(row.lineCost * scale) + '</td>' +
+            '</tr>';
+            return;
+          }
+          const q = (row.qtyInStock != null ? row.qtyInStock : row.amount) * scale;
+          menuRows += '<tr style="font-size:9pt;color:#777;">' +
+            '<td style="padding-left:' + (row.indent ? '42px' : '26px') + ';">' + (row.indent ? '└ ' : '') + PCD.escapeHtml(row.name) + '</td>' +
+            '<td></td>' +
+            '<td style="text-align:right;">' + PCD.fmtNumber(q) + ' ' + PCD.escapeHtml(row.stockUnit || row.qtyUnit || '') + '</td>' +
+            '<td style="text-align:right;">' + PCD.fmtMoney(row.lineCost * scale) + '</td>' +
+          '</tr>';
+        });
+      }
     });
 
     const html =

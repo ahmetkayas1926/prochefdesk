@@ -2821,3 +2821,15 @@ window.PCD.i18n.register('fr', {
   unit_package: "paquet",
   unit_piece: "pièce",
 });
+
+window.PCD.i18n.register('fr', {
+  cr_detail_simple: "Simple",
+  cr_detail_full: "Détaillé",
+  recipes_sort_label: "Trier",
+  recipes_sort_updated: "Récemment modifié",
+  recipes_sort_name: "Nom (A–Z)",
+  recipes_sort_cost: "Coût / portion",
+  recipes_sort_price: "Prix de vente",
+  recipes_sort_fcpct: "% coût matière",
+  recipes_sort_category: "Catégorie",
+});

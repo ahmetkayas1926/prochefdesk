@@ -132,13 +132,12 @@
     const sym = cfg ? cfg.symbol : currency;
     const n = Number(amount);
     const abs = Math.abs(n);
-    let str;
-    if (abs >= 100000) str = n.toFixed(0);
-    else if (abs >= 1000) str = n.toFixed(1);
-    else str = n.toFixed(2);
-    // remove trailing .00
-    str = str.replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');
-    return sym + str;
+    // Always 2 decimals + thousands separator ($4,800.00). Tiny unit prices
+    // (< $0.01) would round to "0.00" → give them extra precision so they stay
+    // readable ($0.002/g instead of $0/g).
+    let decimals = 2;
+    if (abs > 0 && abs < 0.01) decimals = abs < 0.001 ? 4 : 3;
+    return sym + n.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
   };
 
   // v2.14.7 — Aktif para birimi SİMGESİNİ döndürür (fmtMoney değer döndürür;
@@ -160,6 +159,51 @@
     if (n === null || n === undefined || isNaN(n)) return '—';
     decimals = decimals === undefined ? 1 : decimals;
     return Number(n).toFixed(decimals) + '%';
+  };
+
+  // v2.43.18 — Shared cost-report preview modal with a Simple/Detailed toggle.
+  // Used by event + buffet cost reports (recipes have their own richer modal).
+  // opts: { title, buildHtml(detailed)→htmlString, onPrint(detailed), onExcel(detailed)|null }
+  // The preview renders the exact print HTML inside an isolated <iframe> so its
+  // <style>/@page rules can't leak into the app.
+  PCD.costReportPreview = function (opts) {
+    const t = PCD.i18n.t;
+    let detailed = false;
+    const body = PCD.el('div');
+    body.innerHTML =
+      '<div style="display:flex;gap:6px;margin-bottom:12px;">' +
+        '<button type="button" data-cro="0" class="btn btn-sm btn-primary">' + (t('cr_detail_simple') || 'Simple') + '</button>' +
+        '<button type="button" data-cro="1" class="btn btn-sm btn-outline">' + (t('cr_detail_full') || 'Detailed') + '</button>' +
+      '</div>' +
+      '<iframe id="croFrame" title="cost report preview" style="width:100%;height:58vh;border:1px solid var(--border);border-radius:8px;background:#fff;"></iframe>';
+    function render() {
+      const fr = body.querySelector('#croFrame');
+      if (fr) fr.srcdoc = opts.buildHtml(detailed);
+      const b0 = body.querySelector('[data-cro="0"]');
+      const b1 = body.querySelector('[data-cro="1"]');
+      if (b0) b0.className = 'btn btn-sm ' + (!detailed ? 'btn-primary' : 'btn-outline');
+      if (b1) b1.className = 'btn btn-sm ' + (detailed ? 'btn-primary' : 'btn-outline');
+    }
+    PCD.on(body, 'click', '[data-cro]', function () {
+      detailed = this.getAttribute('data-cro') === '1';
+      render();
+    });
+    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
+    const closeBtn = PCD.el('button', { type: 'button', class: 'btn btn-secondary', text: t('cr_close') || 'Close' });
+    footer.appendChild(closeBtn);
+    if (opts.onExcel) {
+      const xb = PCD.el('button', { type: 'button', class: 'btn btn-outline' });
+      xb.innerHTML = PCD.icon('book-open', 16) + ' <span>' + (t('cr_excel') || 'Excel') + '</span>';
+      xb.addEventListener('click', function () { opts.onExcel(detailed); });
+      footer.appendChild(xb);
+    }
+    const pb = PCD.el('button', { type: 'button', class: 'btn btn-primary' });
+    pb.innerHTML = PCD.icon('print', 16) + ' <span>' + (t('print_pdf') || 'Print / PDF') + '</span>';
+    pb.addEventListener('click', function () { opts.onPrint(detailed); });
+    footer.appendChild(pb);
+    const m = PCD.modal.open({ title: opts.title, body: body, footer: footer, size: 'lg', closable: true });
+    closeBtn.addEventListener('click', function () { m.close(); });
+    render();
   };
 
   PCD.fmtDate = function (iso, opts) {

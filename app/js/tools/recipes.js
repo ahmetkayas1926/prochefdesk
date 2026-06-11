@@ -123,6 +123,18 @@
         <input type="search" id="recipeSearch" placeholder="${t('search_recipes_placeholder')}" autocomplete="off">
       </div>
 
+      <div class="flex items-center gap-2 mb-3" style="justify-content:flex-end;">
+        <span class="text-muted text-sm" style="flex-shrink:0;">${t('recipes_sort_label')}</span>
+        <select id="recipeSort" class="select" style="width:auto;min-width:150px;flex:0 1 auto;">
+          <option value="updated">${t('recipes_sort_updated')}</option>
+          <option value="name">${t('recipes_sort_name')}</option>
+          <option value="cost">${t('recipes_sort_cost')}</option>
+          <option value="price">${t('recipes_sort_price')}</option>
+          <option value="fcpct">${t('recipes_sort_fcpct')}</option>
+          <option value="category">${t('recipes_sort_category')}</option>
+        </select>
+      </div>
+
       <!-- v2.8.22 — Filter tabs: All / Menu / Preps. Splits the library
            between 1-portion plates and batch preps (recipes with
            yieldAmount set). Combines with the search and bulk-select
@@ -170,7 +182,34 @@
     let lastVisibleIds = [];
     // v2.8.75 — Tag filter set. Recipe must have ALL active tags to pass.
     const tagFilterSet = new Set();
-    let sorted = recipes.slice().sort(function (a, b) { return (b.updatedAt || '').localeCompare(a.updatedAt || ''); });
+    // v2.43.18 — Sort state + multi-field sort (replaces the old fixed
+    // updatedAt sort). cost/fcpct precompute cost-per-serving once per recipe.
+    let sortBy = 'updated';
+    let sorted = recipes.slice();
+    function applySort() {
+      const simple = {
+        updated: function (a, b) { return (b.updatedAt || '').localeCompare(a.updatedAt || ''); },
+        name: function (a, b) { return (a.name || '').localeCompare(b.name || ''); },
+        price: function (a, b) { return (Number(b.salePrice) || 0) - (Number(a.salePrice) || 0); },
+        category: function (a, b) { return PCD.i18n.t(a.category || 'cat_other').localeCompare(PCD.i18n.t(b.category || 'cat_other')); },
+      };
+      if (simple[sortBy]) { sorted = recipes.slice().sort(simple[sortBy]); return; }
+      const ingMap = currentIngMap();
+      const recipeMap = PCD.recipes.buildRecipeMap();
+      const m = {};
+      recipes.forEach(function (r) {
+        const tc = PCD.recipes.computeFoodCost(r, ingMap, recipeMap);
+        m[r.id] = { cps: tc / (r.servings || 1), price: Number(r.salePrice) || 0 };
+      });
+      sorted = recipes.slice().sort(function (a, b) {
+        const A = m[a.id] || {}, B = m[b.id] || {};
+        if (sortBy === 'cost') return (B.cps || 0) - (A.cps || 0);  // high → low
+        const fa = A.price > 0 ? A.cps / A.price : Infinity;
+        const fb = B.price > 0 ? B.cps / B.price : Infinity;
+        return fb - fa;  // food cost % high → low (worst first; no-price last)
+      });
+    }
+    applySort();
 
     function isPrep(r) {
       // v2.8.26 — Delegated to PCD.recipes.isPrep so all tools share the
@@ -318,18 +357,20 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
         row.appendChild(thumb);
         row.appendChild(body);
 
-        // Copy-to-workspace icon button (only when not in select mode)
+        // v2.43.18 — Quick-access actions (cost report · duplicate · copy-to-ws),
+        // mirroring the buffet list row. Only in normal (non-select) mode.
         if (!selectMode) {
-          const copyBtn = PCD.el('button', {
-            type: 'button',
-            class: 'icon-btn',
-            'data-copy-rid': r.id,
-            'data-name': r.name,
-            title: PCD.i18n.t('modal_copy_to_workspace_title'),
-            style: { flexShrink: '0' }
-          });
+          const actions = PCD.el('div', { class: 'list-item-actions', style: { flexShrink: '0' } });
+          const crBtn = PCD.el('button', { type: 'button', class: 'icon-btn', 'data-rec-cost': r.id, title: PCD.i18n.t('btn_cost_report') || 'Cost Report' });
+          crBtn.innerHTML = PCD.icon('activity', 18);
+          const dupBtn = PCD.el('button', { type: 'button', class: 'icon-btn', 'data-rec-dup': r.id, title: PCD.i18n.t('kc2_duplicate') || 'Duplicate' });
+          dupBtn.innerHTML = PCD.icon('copy', 18);
+          const copyBtn = PCD.el('button', { type: 'button', class: 'icon-btn', 'data-copy-rid': r.id, 'data-name': r.name, title: PCD.i18n.t('modal_copy_to_workspace_title') });
           copyBtn.innerHTML = PCD.icon('truck', 18);
-          row.appendChild(copyBtn);
+          actions.appendChild(crBtn);
+          actions.appendChild(dupBtn);
+          actions.appendChild(copyBtn);
+          row.appendChild(actions);
         }
 
         // Select checkbox when in select mode
@@ -546,11 +587,18 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
       updateBulkBar();
     }, 150));
 
+    // v2.43.18 — Sort dropdown
+    const sortSel = PCD.$('#recipeSort', view);
+    if (sortSel) {
+      sortSel.value = sortBy;
+      sortSel.addEventListener('change', function () { sortBy = this.value; applySort(); paint(); });
+    }
+
     // Tap row → preview (NOT edit) — fix from v43
     PCD.on(listEl, 'click', '[data-rid]', function (e) {
-      // ignore if clicked on checkbox or copy button
+      // ignore if clicked on checkbox or any quick-access action button
       if (e.target.closest('.select-cb')) return;
-      if (e.target.closest('[data-copy-rid]')) return;
+      if (e.target.closest('.list-item-actions')) return;
       if (selectMode) {
         const cb = this.querySelector('.select-cb');
         if (cb) { cb.checked = !cb.checked; cb.dispatchEvent(new Event('change')); }
@@ -566,6 +614,25 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
       const rid = this.getAttribute('data-copy-rid');
       const name = this.getAttribute('data-name');
       if (PCD.openCopyToWorkspace) PCD.openCopyToWorkspace('recipes', rid, name);
+    });
+
+    // v2.43.18 — Quick-access: cost report
+    PCD.on(listEl, 'click', '[data-rec-cost]', function (e) {
+      e.stopPropagation();
+      openCostReport([this.getAttribute('data-rec-cost')]);
+    });
+
+    // v2.43.18 — Quick-access: duplicate (mirrors editor dup → opens the copy)
+    PCD.on(listEl, 'click', '[data-rec-dup]', function (e) {
+      e.stopPropagation();
+      const original = PCD.store.getRecipe(this.getAttribute('data-rec-dup'));
+      if (!original) return;
+      const copy = PCD.clone(original);
+      delete copy.id; delete copy.createdAt; delete copy.updatedAt;
+      copy.name = copy.name + ' (Copy)';
+      const saved = PCD.store.upsertRecipe(copy);
+      PCD.toast.success(PCD.i18n.t('toast_recipe_duplicated'));
+      setTimeout(function () { openEditor(saved.id); }, 150);
     });
 
     // Long-press / right-click for quick actions (mobile + desktop)
@@ -674,6 +741,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
     }
 
     const body = PCD.el('div');
+    let detailed = false;  // v2.43.18 — sub-recipe detail toggle
     function paint() {
       let summaryTotalCost = 0;
       let summaryTotalRevenue = 0;
@@ -682,6 +750,13 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
         t(recipeKey, { n: items.length }) +
         ' · ' + t('cr_target_food_cost') + ': <strong>' + TARGET_FOOD_COST_PCT + '%</strong>' +
         ' · ' + t('cr_tip') +
+      '</div>';
+
+      // v2.43.18 — Sub-recipe detail toggle: simple (sub = 1 line) vs detailed
+      // (sub-recipes expanded into their ingredients). Σ cost identical either way.
+      html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;">' +
+        '<button type="button" data-cr-detail="0" class="btn btn-sm ' + (!detailed ? 'btn-primary' : 'btn-outline') + '">' + t('cr_detail_simple') + '</button>' +
+        '<button type="button" data-cr-detail="1" class="btn btn-sm ' + (detailed ? 'btn-primary' : 'btn-outline') + '">' + t('cr_detail_full') + '</button>' +
       '</div>';
 
       items.forEach(function (it, idx) {
@@ -695,17 +770,26 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
         const status = fcPct === 0 ? 'gray' : fcPct < 25 ? 'green' : fcPct < 35 ? 'amber' : 'red';
         const statusColor = status === 'green' ? 'var(--success)' : status === 'amber' ? '#d97706' : status === 'red' ? 'var(--danger)' : 'var(--text-3)';
 
-        // Ingredient table
+        // Ingredient table — v2.43.18: simple (sub-recipe as 1 line) or detailed
+        // (sub-recipes expanded into their ingredients) via costBreakdownRows.
         let ingRowsHtml = '';
-        (r.ingredients || []).forEach(function (ri) {
-          const row = PCD.recipes.resolveRow(ri, ingMap, recipeMap);
-          if (!row || !row.found) return;
+        PCD.recipes.costBreakdownRows(r, ingMap, recipeMap, detailed).forEach(function (row) {
+          if (row.isSubHeader) {
+            ingRowsHtml +=
+              '<tr>' +
+                '<td colspan="3" style="padding:5px 8px;border-bottom:1px dashed var(--border);font-weight:700;color:var(--text-3);">↳ ' + PCD.escapeHtml(row.name) + '</td>' +
+                '<td style="padding:5px 8px;border-bottom:1px dashed var(--border);text-align:end;font-family:var(--font-mono);font-weight:700;color:var(--text-3);">' + PCD.fmtMoney(row.lineCost) + '</td>' +
+              '</tr>';
+            return;
+          }
           const subBadge = row.isSub
             ? ' <span style="display:inline-block;background:var(--brand-50);color:var(--brand-700);font-size:9px;font-weight:700;padding:2px 6px;border-radius:999px;letter-spacing:0.06em;text-transform:uppercase;">SUB</span>'
             : '';
+          const namePad = row.indent ? 'padding-left:24px;' : '';
+          const nameCol = (row.indent ? '<span style="color:var(--text-3);">└ </span>' : '') + PCD.escapeHtml(row.name) + subBadge;
           ingRowsHtml +=
             '<tr>' +
-              '<td style="padding:4px 8px;border-bottom:1px solid var(--border);">' + PCD.escapeHtml(row.name) + subBadge + '</td>' +
+              '<td style="padding:4px 8px;' + namePad + 'border-bottom:1px solid var(--border);' + (row.indent ? 'color:var(--text-2);' : '') + '">' + nameCol + '</td>' +
               '<td style="padding:4px 8px;border-bottom:1px solid var(--border);text-align:end;font-family:var(--font-mono);font-size:12px;color:var(--text-3);">' + PCD.fmtMoney(row.unitPrice) + '/' + PCD.escapeHtml(row.stockUnit) + '</td>' +
               '<td style="padding:4px 8px;border-bottom:1px solid var(--border);text-align:end;font-family:var(--font-mono);font-size:13px;">' + PCD.fmtNumber(row.amount) + ' ' + PCD.escapeHtml(row.qtyUnit) + '</td>' +
               '<td style="padding:4px 8px;border-bottom:1px solid var(--border);text-align:end;font-family:var(--font-mono);font-weight:700;color:var(--brand-700);">' + PCD.fmtMoney(row.lineCost) + '</td>' +
@@ -816,6 +900,12 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
     }
     paint();
 
+    // v2.43.18 — detail toggle (registered once; body persists across paints)
+    PCD.on(body, 'click', '[data-cr-detail]', function () {
+      detailed = this.getAttribute('data-cr-detail') === '1';
+      paint();
+    });
+
     const closeBtn = PCD.el('button', { type: 'button', class: 'btn btn-secondary', text: t('cr_close') });
     const pdfBtn = PCD.el('button', { type: 'button', class: 'btn btn-primary' });
     pdfBtn.innerHTML = PCD.icon('print', 16) + ' <span>' + t('cr_pdf') + '</span>';
@@ -832,12 +922,12 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
       body: body, footer: footer, size: 'lg', closable: true
     });
     closeBtn.addEventListener('click', function () { m.close(); });
-    pdfBtn.addEventListener('click', function () { exportCostReportPDF(items, TARGET_FOOD_COST_PCT); });
-    xlsxBtn.addEventListener('click', function () { exportCostReportXLSX(items, TARGET_FOOD_COST_PCT); });
+    pdfBtn.addEventListener('click', function () { exportCostReportPDF(items, TARGET_FOOD_COST_PCT, detailed); });
+    xlsxBtn.addEventListener('click', function () { exportCostReportXLSX(items, TARGET_FOOD_COST_PCT, detailed); });
   }
 
   // PDF: minimal, professional, image-free
-  function exportCostReportPDF(items, targetPct) {
+  function exportCostReportPDF(items, targetPct, detailed) {
     const t = PCD.i18n.t;
     const ingMap = currentIngMap();
     // v2.8.16 — recipeMap for sub-recipe rows (same fix as openCostReport)
@@ -859,14 +949,23 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
       const fcPct = (it.testPrice && it.testPrice > 0) ? (it.costPerServing / it.testPrice) * 100 : 0;
 
       let ingRows = '';
-      (r.ingredients || []).forEach(function (ri) {
-        const row = PCD.recipes.resolveRow(ri, ingMap, recipeMap);
-        if (!row || !row.found) return;
+      // v2.43.18 — simple/detailed sub-recipe breakdown via shared helper.
+      PCD.recipes.costBreakdownRows(r, ingMap, recipeMap, detailed).forEach(function (row) {
+        if (row.isSubHeader) {
+          ingRows +=
+            '<tr>' +
+              '<td colspan="3" style="font-weight:700;color:#555;border-bottom:1px dashed #ccc;">↳ ' + PCD.escapeHtml(row.name) + '</td>' +
+              '<td class="num" style="font-weight:700;color:#555;border-bottom:1px dashed #ccc;">' + PCD.fmtMoney(row.lineCost) + '</td>' +
+            '</tr>';
+          return;
+        }
         // For PDF: small inline (SUB) marker keeps the badge in monochrome print
         const subMark = row.isSub ? ' <span style="font-size:8pt;color:#16a34a;font-weight:700;">(SUB)</span>' : '';
+        const pad = row.indent ? 'padding-left:20px;' : '';
+        const nm = (row.indent ? '└ ' : '') + PCD.escapeHtml(row.name) + subMark;
         ingRows +=
           '<tr>' +
-            '<td>' + PCD.escapeHtml(row.name) + subMark + '</td>' +
+            '<td style="' + pad + (row.indent ? 'color:#555;' : '') + '">' + nm + '</td>' +
             '<td class="num">' + PCD.fmtMoney(row.unitPrice) + '/' + PCD.escapeHtml(row.stockUnit) + '</td>' +
             '<td class="num">' + PCD.fmtNumber(row.amount) + ' ' + PCD.escapeHtml(row.qtyUnit) + '</td>' +
             '<td class="num bold">' + PCD.fmtMoney(row.lineCost) + '</td>' +
@@ -977,7 +1076,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
   }
 
   // Excel: 1 sheet per recipe + Summary sheet, with full professional styling
-  function exportCostReportXLSX(items, targetPct) {
+  function exportCostReportXLSX(items, targetPct, detailed) {
     const t = PCD.i18n.t;
     // v2.8.78 — xlsx artık on-demand. v2.8.79 — toast.info API'si problemliydi
     // ("Something went wrong"); kaldırıldı. Sessiz lazy load + re-call.
@@ -987,7 +1086,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
         return;
       }
       PCD.loadXLSX().then(function () {
-        exportCostReportXLSX(items, targetPct);  // re-call, XLSX hazır
+        exportCostReportXLSX(items, targetPct, detailed);  // re-call, XLSX hazır
       }).catch(function () {
         PCD.toast.error(t('cr_xlsx_unavailable') || 'Excel library failed to load. Check your connection.');
       });
@@ -997,7 +1096,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
     // error görüyor (global onerror handler tetikleniyor). Asıl hatayı
     // console'a logla + meaningful toast göster.
     try {
-      _doExportCostReportXLSX(items, targetPct);
+      _doExportCostReportXLSX(items, targetPct, detailed);
     } catch (err) {
       PCD.error && PCD.error('exportCostReportXLSX failed:', err);
       // Console'da tam hata + stack görünür; toast'ta operatöre kısa mesaj
@@ -1005,7 +1104,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
     }
   }
 
-  function _doExportCostReportXLSX(items, targetPct) {
+  function _doExportCostReportXLSX(items, targetPct, detailed) {
     const t = PCD.i18n.t;
     const ingMap = currentIngMap();
     // v2.8.16 — recipeMap for sub-recipe rows (same fix pattern)
@@ -1359,17 +1458,25 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
       const startIngRow = row;
       let lastIngRow = row - 1;
 
-      (r.ingredients || []).forEach(function (ri, ingIdx) {
-        const rRow = PCD.recipes.resolveRow(ri, ingMap, recipeMap);
-        if (!rRow || !rRow.found) return;
-        // v2.8.16 — Sub-recipe rows were silently dropped; now included.
-        // D holds qty in stock unit so the B*D formula stays valid (the
-        // existing xlsx behavior shows converted quantities, e.g. "1 kg"
-        // entered → "1000 g" displayed when stockUnit is g). E shows the
-        // stock unit to match D. Sub-recipes get a "(SUB)" suffix in the
-        // name cell since xlsx cells can't carry HTML badges.
-        const displayName = rRow.isSub ? rRow.name + ' (SUB)' : rRow.name;
+      // v2.43.18 — simple/detailed sub-recipe breakdown via shared helper.
+      // Detailed: sub-recipe → header row (blank cost; SUM range skips it so
+      // the children carry the cost with no double-count) + indented children.
+      PCD.recipes.costBreakdownRows(r, ingMap, recipeMap, detailed).forEach(function (rRow, ingIdx) {
         const isAlt = ingIdx % 2 === 1;
+        if (rRow.isSubHeader) {
+          setCell(ws, 'A' + row, '↳ ' + rRow.name, isAlt ? cellAltStyle : cellStyle);
+          setCell(ws, 'B' + row, '', isAlt ? cellAltStyle : cellStyle);
+          setCell(ws, 'C' + row, '', isAlt ? cellAltStyle : cellStyle);
+          setCell(ws, 'D' + row, '', isAlt ? cellQtyAltStyle : cellQtyStyle);
+          setCell(ws, 'E' + row, '', isAlt ? cellAltStyle : cellStyle);
+          setCell(ws, 'F' + row, '', isAlt ? cellNumAltStyle : cellNumStyle);
+          lastIngRow = row;
+          row++;
+          return;
+        }
+        // D holds qty in stock unit so the B*D formula stays valid. Sub-recipes
+        // get a "(SUB)" suffix; detailed children get an indent marker.
+        const displayName = (rRow.indent ? '   • ' : '') + (rRow.isSub ? rRow.name + ' (SUB)' : rRow.name);
         setCell(ws, 'A' + row, displayName, isAlt ? cellAltStyle : cellStyle);
         setCell(ws, 'B' + row, rRow.unitPrice, isAlt ? cellNumAltStyle : cellNumStyle);
         setCell(ws, 'C' + row, rRow.stockUnit, isAlt ? cellAltStyle : cellStyle);
@@ -1524,15 +1631,13 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
         [t('cr_ingredient_breakdown')],
         [t('cr_ingredient'), t('cr_unit_price'), t('cr_unit'), t('cr_qty'), t('cr_qty_unit'), t('cr_line_cost')],
       ];
-      (r.ingredients || []).forEach(function (ri) {
-        const rRow = PCD.recipes.resolveRow(ri, ingMap, recipeMap);
-        if (!rRow || !rRow.found) return;
-        // v2.8.16 — Sub-recipe rows are now included. Also incidentally
-        // fixes a pre-existing unit-conversion bug: the old code did
-        // `pricePerUnit × ri.amount` without converting when ri.unit
-        // differed from ing.unit, so a "1 kg" line against a g-priced
-        // ingredient showed cost as ~$0.0004 instead of correct value.
-        const displayName = rRow.isSub ? rRow.name + ' (SUB)' : rRow.name;
+      // v2.43.18 — width calc mirrors the rendered (simple/detailed) rows.
+      PCD.recipes.costBreakdownRows(r, ingMap, recipeMap, detailed).forEach(function (rRow) {
+        if (rRow.isSubHeader) {
+          detailRows.push(['↳ ' + rRow.name, '', '', '', '', '']);
+          return;
+        }
+        const displayName = (rRow.indent ? '   • ' : '') + (rRow.isSub ? rRow.name + ' (SUB)' : rRow.name);
         detailRows.push([
           displayName,
           '$' + rRow.unitPrice.toFixed(2),

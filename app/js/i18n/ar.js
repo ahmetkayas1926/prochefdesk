@@ -2821,3 +2821,15 @@ window.PCD.i18n.register('ar', {
   unit_package: "عبوة",
   unit_piece: "قطعة",
 });
+
+window.PCD.i18n.register('ar', {
+  cr_detail_simple: "بسيط",
+  cr_detail_full: "مفصّل",
+  recipes_sort_label: "ترتيب",
+  recipes_sort_updated: "المحدّث مؤخرًا",
+  recipes_sort_name: "الاسم (أ–ي)",
+  recipes_sort_cost: "التكلفة / حصة",
+  recipes_sort_price: "سعر البيع",
+  recipes_sort_fcpct: "نسبة تكلفة الطعام",
+  recipes_sort_category: "الفئة",
+});

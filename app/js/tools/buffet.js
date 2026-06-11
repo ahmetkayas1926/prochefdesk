@@ -694,7 +694,14 @@
     PCD.on(listEl, 'click', '[data-buf-pdf]', function (e) {
       e.stopPropagation();
       const b = getBuffet(this.getAttribute('data-buf-pdf'));
-      if (b) printCostReport(b);
+      if (!b) return;
+      // v2.43.18 — cost report preview with Simple/Detailed sub-recipe toggle.
+      PCD.costReportPreview({
+        title: (b.name || (PCD.i18n.t('buffet_untitled') || 'Buffet')) + ' · ' + (PCD.i18n.t('buffet_print_report') || 'Cost Report'),
+        buildHtml: function (detailed) { return buffetCostReportHtml(b, detailed); },
+        onPrint: function (detailed) { printCostReport(b, detailed); },
+        onExcel: function (detailed) { exportBuffetXLSX(b, detailed); },
+      });
     });
     PCD.on(listEl, 'click', '[data-buf-excel]', function (e) {
       e.stopPropagation();
@@ -1688,7 +1695,7 @@
 
   // ---------- PRINT: COST REPORT ----------
 
-  function printCostReport(buffet) {
+  function buffetCostReportHtml(buffet, detailed) {
     const t = PCD.i18n.t;
     const ingMap = {};
     PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
@@ -1719,6 +1726,23 @@
             '<td style="text-align:right;font-weight:700;">' + PCD.fmtMoney(c.prepCost) + '</td>' +
             '<td style="text-align:right;' + wasteStyle + '">' + PCD.fmtMoney(c.expectedWaste) + '</td>' +
           '</tr>';
+        // v2.43.18 — detailed sub-recipe breakdown for recipe items, scaled
+        // proportionally so the children always sum back to the item's prepCost.
+        if (detailed && r) {
+          const baseCost = PCD.recipes.computeFoodCost(r, ingMap, recipeMap);
+          const itemScale = baseCost > 0 ? (c.prepCost / baseCost) : 0;
+          PCD.recipes.costBreakdownRows(r, ingMap, recipeMap, true).forEach(function (row) {
+            const pad = row.isSubHeader ? '22px' : (row.indent ? '36px' : '22px');
+            const prefix = row.isSubHeader ? '↳ ' : (row.indent ? '└ ' : '');
+            itemRows +=
+              '<tr style="font-size:8.5pt;color:#777;">' +
+                '<td style="padding-left:' + pad + ';' + (row.isSubHeader ? 'font-weight:700;' : '') + '">' + prefix + PCD.escapeHtml(row.name) + '</td>' +
+                '<td></td><td></td>' +
+                '<td style="text-align:right;">' + PCD.fmtMoney(row.lineCost * itemScale) + '</td>' +
+                '<td></td>' +
+              '</tr>';
+          });
+        }
       });
       const stMeta = STATION_TYPES.find(function (x) { return x.id === st.type; }) || STATION_TYPES[5];
       rowsHtml +=
@@ -1765,12 +1789,17 @@
         '<tbody>' + rowsHtml + '</tbody>' +
       '</table>';
 
-    PCD.print(html, (buffet.name || (t('buffet_untitled') || 'Buffet')) + ' — ' + (t('buffet_print_report') || 'Cost Report'));
+    return html;
+  }
+
+  function printCostReport(buffet, detailed) {
+    const t = PCD.i18n.t;
+    PCD.print(buffetCostReportHtml(buffet, detailed), (buffet.name || (t('buffet_untitled') || 'Buffet')) + ' — ' + (t('buffet_print_report') || 'Cost Report'));
   }
 
   // ---------- EXCEL EXPORT (v2.8.79) ----------
 
-  function exportBuffetXLSX(buffet) {
+  function exportBuffetXLSX(buffet, detailed) {
     const t = PCD.i18n.t;
     if (!window.XLSX) {
       if (!PCD.loadXLSX) {
@@ -1778,7 +1807,7 @@
         return;
       }
       PCD.loadXLSX().then(function () {
-        exportBuffetXLSX(buffet);
+        exportBuffetXLSX(buffet, detailed);
       }).catch(function () {
         PCD.toast.error(t('cr_xlsx_unavailable') || 'Excel library failed to load.');
       });
@@ -1786,14 +1815,14 @@
     }
     // v2.8.86 — Try/catch sargı (recipes.js paritesi)
     try {
-      _doExportBuffetXLSX(buffet);
+      _doExportBuffetXLSX(buffet, detailed);
     } catch (err) {
       PCD.error && PCD.error('exportBuffetXLSX failed:', err);
       PCD.toast.error((t('cr_xlsx_export_failed') || 'Excel export failed') + ': ' + (err && err.message ? err.message : 'unknown'));
     }
   }
 
-  function _doExportBuffetXLSX(buffet) {
+  function _doExportBuffetXLSX(buffet, detailed) {
     const t = PCD.i18n.t;
     const ingMap = {};
     PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
@@ -1866,6 +1895,23 @@
           { v: c.prepCost, s: moneyStyle },
           { v: c.expectedWaste, s: moneyStyle },
         ]);
+        // v2.43.18 — detailed: expand recipe items into ingredients, scaled
+        // proportionally (itemScale) so the child costs sum back to prepCost.
+        if (detailed && r) {
+          const baseCost = PCD.recipes.computeFoodCost(r, ingMap, recipeMap);
+          const itemScale = baseCost > 0 ? (c.prepCost / baseCost) : 0;
+          const childStyle = { alignment: { vertical: 'center' }, font: { name: 'Calibri', sz: 9, color: { rgb: '777777' } }, border: thinBorder };
+          PCD.recipes.costBreakdownRows(r, ingMap, recipeMap, true).forEach(function (row) {
+            const nm = (row.isSubHeader ? '  ↳ ' : (row.indent ? '     • ' : '   ')) + row.name;
+            aoa.push([
+              { v: '', s: labelStyle },
+              { v: nm, s: childStyle },
+              { v: '', s: childStyle }, { v: '', s: childStyle }, { v: '', s: childStyle },
+              { v: row.isSubHeader ? '' : (row.lineCost * itemScale), s: moneyStyle },
+              { v: '', s: childStyle },
+            ]);
+          });
+        }
       });
     });
 
