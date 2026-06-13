@@ -515,19 +515,19 @@
     }
 
     let html = '<style>' +
-      '.share-page { max-width: 800px; margin: 0 auto; padding: 24px; font-family: -apple-system, "Segoe UI", Roboto, sans-serif; }' +
+      '.share-page { max-width: 800px; margin: 0 auto; padding: 24px; font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif; font-variant-numeric:tabular-nums; }' +
       '.share-topbrand { text-align:center;padding:14px 16px 18px;font-size:13px;color:#888;border-bottom:1px solid #eee;margin-bottom:24px; }' +
-      '.share-topbrand a { color:#16a34a;font-weight:700;text-decoration:none; }' +
+      '.share-topbrand a { color:#1f9d6b;font-weight:700;text-decoration:none; }' +
       '.share-topbrand a:hover { text-decoration:underline; }' +
-      '.share-content h1 { font-size:28px;margin:0 0 8px; }' +
+      '.share-content h1 { font-family:"Fraunces","Georgia",serif;font-size:28px;font-weight:600;letter-spacing:-0.01em;color:#16433a;margin:0 0 8px; }' +
       '.share-meta { color:#666;font-size:14px;margin-bottom:18px; }' +
       /* v2.8.67 — 1:1 standard (8 surfaces consistent). max-w 360px on desktop,
          100% width on mobile but still square. */
       '.share-photo { display:block;width:100%;max-width:360px;aspect-ratio:1/1;object-fit:cover;border-radius:12px;margin:0 auto 18px; }' +
       '.share-section { margin-bottom:22px; }' +
-      '.share-section h2 { font-size:16px;color:#16a34a;margin:0 0 10px;text-transform:uppercase;letter-spacing:0.04em; }' +
+      '.share-section h2 { font-size:16px;color:#16433a;margin:0 0 10px;text-transform:uppercase;letter-spacing:0.04em; }' +
       '.ing-row { display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #eee;font-size:14px; }' +
-      '.ing-row strong { color:#16a34a;font-family:monospace; }' +
+      '.ing-row strong { color:#1f9d6b;font-family:var(--font-mono, monospace);font-variant-numeric:tabular-nums; }' +
       '.steps { white-space:pre-wrap;line-height:1.7;font-size:14px;color:#333; }' +
       '.menu-section { margin-bottom:24px; }' +
       '.menu-section-title { font-size:14px;text-transform:uppercase;letter-spacing:0.2em;color:#888;text-align:center;margin-bottom:14px; }' +
@@ -535,15 +535,15 @@
       '.menu-item-name { font-weight:600;font-size:16px;display:flex;justify-content:space-between; }' +
       '.menu-item-desc { color:#666;font-size:13px;font-style:italic;margin-top:4px; }' +
       '.share-footer { text-align:center;padding:24px;color:#999;font-size:12px;border-top:1px solid #eee;margin-top:32px; }' +
-      '.share-footer a { color:#16a34a;text-decoration:none; }' +
+      '.share-footer a { color:#1f9d6b;text-decoration:none; }' +
       '.share-footer a:hover { text-decoration:underline; }' +
       /* v2.17 — Cost-view paneli (patron/muhasebeci) */
-      '.cost-panel{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:18px;margin-bottom:24px;}' +
-      '.cost-panel h2{font-size:13px;text-transform:uppercase;letter-spacing:0.08em;color:#15803d;margin:0 0 12px;}' +
+      '.cost-panel{background:#edf6f0;border:1px solid #cbe8d8;border-radius:12px;padding:18px;margin-bottom:24px;}' +
+      '.cost-panel h2{font-family:"Fraunces","Georgia",serif;font-size:14px;text-transform:uppercase;letter-spacing:0.06em;color:#16433a;margin:0 0 12px;}' +
       '.cost-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;}' +
       '.cost-cell{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:10px 12px;}' +
       '.cost-cell .lbl{font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:0.04em;}' +
-      '.cost-cell .val{font-size:20px;font-weight:800;margin-top:2px;}' +
+      '.cost-cell .val{font-size:20px;font-weight:800;margin-top:2px;font-variant-numeric:tabular-nums;}' +
       '.cost-note{font-size:11px;color:#6b7280;margin-top:10px;}' +
       '@media print{.cost-panel,.cost-cell{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}}' +
     '</style>';
@@ -804,7 +804,7 @@
         appEl.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif;color:#666;text-align:center;padding:20px;">' +
           '<h1 style="font-size:24px;color:#dc2626;">Share not found</h1>' +
           '<p>' + escapeHtml(msg) + '</p>' +
-          '<a href="' + location.origin + location.pathname + '" style="color:#16a34a;font-weight:700;text-decoration:none;margin-top:14px;">Open ProChefDesk →</a>' +
+          '<a href="' + location.origin + location.pathname + '" style="color:#1f9d6b;font-weight:700;text-decoration:none;margin-top:14px;">Open ProChefDesk →</a>' +
           '</div>';
       }
     }
@@ -819,7 +819,7 @@
           '<div style="font-size:56px;margin-bottom:18px;">⏸</div>' +
           '<h1 style="font-size:22px;color:#444;margin:0;font-weight:700;">' + escapeHtml(title) + '</h1>' +
           '<p style="margin:14px 0 0;max-width:420px;line-height:1.6;">' + escapeHtml(body) + '</p>' +
-          '<a href="' + location.origin + location.pathname + '" style="color:#16a34a;font-weight:700;text-decoration:none;margin-top:24px;">' + escapeHtml(back) + '</a>' +
+          '<a href="' + location.origin + location.pathname + '" style="color:#1f9d6b;font-weight:700;text-decoration:none;margin-top:24px;">' + escapeHtml(back) + '</a>' +
           '</div>';
       }
     }

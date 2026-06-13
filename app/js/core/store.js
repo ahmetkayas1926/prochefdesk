@@ -1164,6 +1164,35 @@
       return out;
     },
 
+    // v2.44 — like findRecipesUsingIngredient but returns {id,name} for cross-tool navigation (E1 deep links)
+    findRecipesUsingIngredientRefs: function (ingId) {
+      const wsId = currentWsId();
+      if (!state.recipes[wsId]) return [];
+      const recipes = state.recipes[wsId];
+      const out = [];
+      Object.keys(recipes).forEach(function (rid) {
+        const r = recipes[rid];
+        if (!r || r._deletedAt) return;
+        if (!r.ingredients || !r.ingredients.length) return;
+        if (r.ingredients.some(function (ri) { return ri.ingredientId === ingId; })) {
+          out.push({ id: rid, name: r.name || '(untitled)' });
+        }
+      });
+      return out;
+    },
+
+    // v2.44 — events whose menu uses a recipe → {id,name} (E1 recipe→events deep link)
+    findEventsUsingRecipeRefs: function (recipeId) {
+      const list = (PCD.store && PCD.store.listTable) ? (PCD.store.listTable('events') || []) : [];
+      const out = [];
+      list.forEach(function (e) {
+        if (e && !e._deletedAt && Array.isArray(e.menu) && e.menu.some(function (m) { return m && m.recipeId === recipeId; })) {
+          out.push({ id: e.id, name: e.name || e.title || '(untitled)' });
+        }
+      });
+      return out;
+    },
+
     // v2.6.55 — Detect recipes with "(removed ingredient)" or
     // "(removed sub-recipe)" lines. These are leftover from the pre-v2.6.36
     // era when ingredient deletion silently broke recipes. Returns:

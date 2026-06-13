@@ -78,6 +78,10 @@
       PCD.router.registerLazy('portion',         'js/tools/portion.js',        'portion');
       // Inventory eager-kept: dashboard kullanır (computeStatus low-stock alert için)
       PCD.router.registerLazy('suppliers',       'js/tools/suppliers.js',      'suppliers');
+      PCD.router.registerLazy('waste',           'js/tools/waste.js',          'waste');
+      PCD.router.registerLazy('variance',        'js/tools/variance.js',       'variance');
+      PCD.router.registerLazy('invoice',         'js/tools/invoice.js',        'invoiceScan');
+      PCD.router.registerLazy('nutrition',       'js/tools/nutrition.js',      'nutrition');
       PCD.router.registerLazy('events',          'js/tools/events.js',         'events');
       PCD.router.registerLazy('roster',          'js/tools/roster.js',         'roster');
       PCD.router.registerLazy('prep',            'js/tools/prep.js',           'prep');
@@ -364,6 +368,7 @@
         { key: 'recipes',     icon: 'book-open', route: 'recipes' },
         { key: 'ingredients', icon: 'carrot', route: 'ingredients' },
         { key: 'menus',       icon: 'menu', route: 'menus' },
+        { key: 'nutrition',   icon: 'scale', route: 'nutrition' },
       ]},
       { title: t('section_kitchen'), items: [
         { key: 'kitchen_cards', icon: 'id-card', route: 'kitchen_cards' },
@@ -378,6 +383,9 @@
       { title: t('section_sourcing'), items: [
         { key: 'inventory', icon: 'package', route: 'inventory' },
         { key: 'suppliers', icon: 'truck', route: 'suppliers' },
+        { key: 'waste',     icon: 'trash',  route: 'waste' },
+        { key: 'variance',  icon: 'activity', route: 'variance' },
+        { key: 'invoice',   icon: 'file-text', route: 'invoice' },
       ]},
       { title: t('section_catering'), items: [
         { key: 'events',  icon: 'calendar', route: 'events' },
@@ -985,7 +993,7 @@
     banner.id = 'pcd-install-banner';
     banner.style.cssText = 'position:fixed;bottom:16px;inset-inline-start:16px;inset-inline-end:16px;max-width:420px;margin:0 auto;background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow-lg);border-radius:var(--r-md);padding:12px 14px;z-index:90;display:flex;align-items:center;gap:12px;animation:slideUp .3s ease;';
     banner.innerHTML =
-      '<div style="width:40px;height:40px;border-radius:var(--r-sm);background:linear-gradient(135deg,var(--brand-500),var(--brand-700));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0;">PC</div>' +
+      '<div style="width:40px;height:40px;border-radius:var(--r-sm);background:linear-gradient(135deg,var(--brand-500),var(--brand-700));color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg viewBox="0 0 24 24" fill="none" style="width:62%;height:62%" aria-hidden="true"><path d="M6.5 13.6 C5 13 4.2 11.6 4.5 10 C4.6 9.3 5 8.6 5.7 8.2 C5.4 7 6 6.1 7 5.8 C7 4.6 7.8 3.8 9 3.8 C9.3 2.8 10.5 2.2 12 2.2 C13.5 2.2 14.7 2.8 15 3.8 C16.2 3.8 17 4.6 17 5.8 C18 6.1 18.6 7 18.3 8.2 C19 8.6 19.4 9.3 19.5 10 C19.8 11.6 19 13 17.5 13.6 Z" fill="#fff"/><path d="M6.3 13.6 L17.7 13.6 L17.7 19.3 C17.7 20.2 17 21 16.1 21 L7.9 21 C7 21 6.3 20.2 6.3 19.3 Z" fill="#fff"/><path d="M8 13.4 C7.7 10.4 8 7.4 8.9 5 M10 13.5 C9.9 10 10 6.6 10.5 3.4 M12 13.5 V2.6 M14 13.5 C14.1 10 14 6.6 13.5 3.4 M16 13.4 C16.3 10.4 16 7.4 15.1 5" stroke="#16433a" stroke-width="0.5" stroke-linecap="round" fill="none"/></svg></div>' +
       '<div style="flex:1;min-width:0;">' +
         '<div style="font-weight:700;font-size:14px;">Install ProChefDesk</div>' +
         '<div class="text-muted" style="font-size:12px;">Add to home screen for faster access</div>' +
@@ -1074,6 +1082,52 @@
   // (touch devices have no Ctrl key, so this never affected mobile); pinch-zoom
   // is a touch gesture handled separately and is untouched.
 
+  // ============ GLOBAL SEARCH (Ctrl/Cmd+K command palette) — E2 ============
+  PCD.openGlobalSearch = function () {
+    const t = PCD.i18n.t;
+    const body = PCD.el('div');
+    body.innerHTML =
+      '<input type="search" id="gblQ" class="input" placeholder="' + PCD.escapeHtml(t('search')) + '…" autocomplete="off" style="margin-bottom:10px;">' +
+      '<div id="gblR" style="max-height:52vh;overflow-y:auto;min-height:48px;"></div>';
+    const m = PCD.modal.open({ title: t('search'), body: body, size: 'md', closable: true });
+    const input = body.querySelector('#gblQ');
+    const out = body.querySelector('#gblR');
+    function afterLoad(name, cb) {
+      const tl = PCD.tools[name];
+      if (tl && tl.openEditor) { cb(tl); return; }
+      let a = 0; const tr = setInterval(function () { const x = PCD.tools[name]; if (x && x.openEditor) { clearInterval(tr); cb(x); } else if (++a > 25) clearInterval(tr); }, 120);
+    }
+    function nav(kind, id) {
+      m.close();
+      const route = { recipe: 'recipes', ingredient: 'ingredients', event: 'events', supplier: 'suppliers', buffet: 'buffet' }[kind] || 'recipes';
+      PCD.router.go(route);
+      afterLoad(route, function (tool) { if (tool.openEditor) tool.openEditor(id); });
+    }
+    function render(q) {
+      q = (q || '').toLowerCase().trim();
+      if (!q) { out.innerHTML = ''; return; }
+      const res = [];
+      (PCD.store.listRecipes() || []).forEach(function (r) { if ((r.name || '').toLowerCase().indexOf(q) >= 0) res.push({ k: 'recipe', id: r.id, n: r.name, i: '📖' }); });
+      (PCD.store.listIngredients() || []).forEach(function (g) { if ((g.name || '').toLowerCase().indexOf(q) >= 0) res.push({ k: 'ingredient', id: g.id, n: g.name, i: '🥕' }); });
+      (PCD.store.listTable('events') || []).forEach(function (e) { var nm = e.name || e.title || ''; if (nm.toLowerCase().indexOf(q) >= 0) res.push({ k: 'event', id: e.id, n: nm, i: '📅' }); });
+      (PCD.store.listTable('suppliers') || []).forEach(function (s) { if ((s.name || '').toLowerCase().indexOf(q) >= 0) res.push({ k: 'supplier', id: s.id, n: s.name, i: '🚚' }); });
+      (PCD.store.listTable('buffets') || []).forEach(function (b) { if ((b.name || '').toLowerCase().indexOf(q) >= 0) res.push({ k: 'buffet', id: b.id, n: b.name || '—', i: '🍽️' }); });
+      if (!res.length) { out.innerHTML = '<div style="padding:22px;text-align:center;color:var(--text-3);font-size:14px;">—</div>'; return; }
+      out.innerHTML = res.slice(0, 40).map(function (r) {
+        return '<button type="button" class="gblItem" data-k="' + r.k + '" data-id="' + r.id + '" style="display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 12px;border-radius:var(--r-md);background:transparent;border:0;cursor:pointer;font-size:14px;color:var(--text);">' +
+          '<span style="font-size:17px;">' + r.i + '</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + PCD.escapeHtml(r.n) + '</span>' +
+          '<span style="font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em;">' + r.k + '</span></button>';
+      }).join('');
+      out.querySelectorAll('.gblItem').forEach(function (b) {
+        b.addEventListener('mouseenter', function () { this.style.background = 'var(--surface-2)'; });
+        b.addEventListener('mouseleave', function () { this.style.background = 'transparent'; });
+        b.addEventListener('click', function () { nav(this.getAttribute('data-k'), this.getAttribute('data-id')); });
+      });
+    }
+    input.addEventListener('input', function () { render(this.value); });
+    setTimeout(function () { input.focus(); }, 80);
+  };
+
   // ============ KEYBOARD SHORTCUTS (desktop) ============
   document.addEventListener('keydown', function (e) {
     // Ignore if typing in input/textarea/select (except for Esc which always works)
@@ -1094,17 +1148,7 @@
     // Ctrl/Cmd + K: focus search (context-aware: go to recipes page and focus search)
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
       e.preventDefault();
-      const cur = PCD.router.currentView();
-      const search = document.querySelector('#recipeSearch, #ingSearch, input[type=search]');
-      if (search) {
-        search.focus();
-      } else {
-        PCD.router.go('recipes');
-        setTimeout(function () {
-          const s = document.querySelector('#recipeSearch, input[type=search]');
-          if (s) s.focus();
-        }, 200);
-      }
+      if (PCD.openGlobalSearch) PCD.openGlobalSearch();
       return;
     }
 

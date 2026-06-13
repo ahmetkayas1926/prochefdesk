@@ -695,9 +695,10 @@
       let marginChart;
       if (marginData.length >= 2) {
         const top = marginData.slice(0, 7);
-        const barColor = function (pct) { return pct < 30 ? '#16a34a' : (pct <= 35 ? '#d97706' : '#dc2626'); };
+        const barColor = function (pct) { return pct < 30 ? 'var(--brand-600)' : (pct <= 35 ? 'var(--warning)' : 'var(--danger)'); };
         const rows = top.map(function (d) {
-          const w = Math.max(3, Math.min(100, d.pct));
+          // width scaled to a 30% reference so healthy bars are substantial (not mostly-empty gray)
+          const w = Math.max(8, Math.min(100, d.pct / 30 * 100));
           return '<div class="cc-bar-row"><span class="cc-bar-name">' + PCD.escapeHtml(d.name) + '</span>' +
             '<span class="cc-bar-track"><span class="cc-bar-fill" style="width:' + w.toFixed(0) + '%;background:' + barColor(d.pct) + ';"></span></span>' +
             '<span class="cc-bar-pct" style="color:' + barColor(d.pct) + ';">' + d.pct.toFixed(0) + '%</span></div>';
@@ -713,12 +714,12 @@
       if (freshTotal > 0) {
         const aDeg = fresh.f / freshTotal * 360;
         const bDeg = (fresh.f + fresh.a) / freshTotal * 360;
-        const donut = 'background:conic-gradient(#16a34a 0 ' + aDeg.toFixed(1) + 'deg,#d97706 ' + aDeg.toFixed(1) + 'deg ' + bDeg.toFixed(1) + 'deg,#dc2626 ' + bDeg.toFixed(1) + 'deg 360deg);';
+        const donut = 'background:conic-gradient(#1f9d6b 0 ' + aDeg.toFixed(1) + 'deg,#d97706 ' + aDeg.toFixed(1) + 'deg ' + bDeg.toFixed(1) + 'deg,#dc2626 ' + bDeg.toFixed(1) + 'deg 360deg);';
         const stalePct = Math.round(fresh.s / freshTotal * 100);
         freshChart = '<div class="cc-chart" data-action="open-ingredients"><h3>' + PCD.escapeHtml(t('cc_price_freshness') || 'Ingredient price freshness') + '</h3>' +
           '<div class="cc-donut-wrap"><div class="cc-donut" style="' + donut + '"><div class="cc-donut-c">' + (100 - stalePct) + '%</div></div>' +
           '<div class="cc-legend">' +
-            '<div><i style="background:#16a34a;"></i>' + PCD.escapeHtml(t('cc_fresh') || 'Fresh (<30d)') + ' · ' + fresh.f + '</div>' +
+            '<div><i style="background:#1f9d6b;"></i>' + PCD.escapeHtml(t('cc_fresh') || 'Fresh (<30d)') + ' · ' + fresh.f + '</div>' +
             '<div><i style="background:#d97706;"></i>' + PCD.escapeHtml(t('cc_aging') || 'Aging (30–60d)') + ' · ' + fresh.a + '</div>' +
             '<div><i style="background:#dc2626;"></i>' + PCD.escapeHtml(t('cc_stale') || 'Stale (>60d)') + ' · ' + fresh.s + '</div>' +
           '</div></div></div>';
@@ -727,10 +728,25 @@
           '<div class="cc-empty">' + PCD.escapeHtml(t('cc_add_priced_ings') || 'Add ingredients with prices to track freshness.') + '</div></div>';
       }
 
+      // E4 — upcoming events widget (catering niche, DB-free; reuses data-action="view-event" handler)
+      let upcomingChart = '';
+      const _evList = (PCD.store.listTable ? PCD.store.listTable('events') : []) || [];
+      const _todayStr = new Date().toISOString().slice(0, 10);
+      const _upcoming = _evList.filter(function (e) { return e && !e._deletedAt && e.date && e.date >= _todayStr; })
+        .sort(function (a, b) { return (a.date || '').localeCompare(b.date || ''); }).slice(0, 3);
+      if (_upcoming.length) {
+        upcomingChart = '<div class="cc-chart" style="cursor:default;"><h3>' + PCD.escapeHtml(t('cc_upcoming_events') || 'Upcoming events') + '</h3>' +
+          _upcoming.map(function (e) {
+            const _d = e.date ? PCD.fmtDate(new Date(e.date).getTime()) : '';
+            const _g = e.guestCount ? (' · ' + e.guestCount + ' ' + (t('event_guests') || 'guests').toLowerCase()) : '';
+            return '<div data-action="view-event" data-eid="' + e.id + '" style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;font-size:13px;"><span style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + PCD.escapeHtml(e.name || '(untitled)') + '</span><span style="color:var(--text-3);white-space:nowrap;">' + _d + _g + '</span></div>';
+          }).join('') +
+          '</div>';
+      }
       commandCenterHtml =
         '<div class="cc-wrap">' +
           '<div class="cc-metrics">' + fcCard + labourCard + stockCard + incCard + '</div>' +
-          '<div class="cc-charts">' + marginChart + freshChart + '</div>' +
+          '<div class="cc-charts">' + marginChart + freshChart + upcomingChart + '</div>' +
         '</div>';
     }
 
@@ -775,7 +791,7 @@
         '.cc-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); border-color: var(--brand-300); }' +
         '.cc-card.warn { border-left: 3px solid #f59e0b; }' +
         '.cc-card.bad { border-left: 3px solid #dc2626; }' +
-        '.cc-card.ok { border-left: 3px solid #16a34a; }' +
+        '.cc-card.ok { border-left: 3px solid #1f9d6b; }' +
         '.cc-card .cc-lbl { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-3); font-weight: 600; display: flex; align-items: center; gap: 5px; }' +
         '.cc-card .cc-val { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; color: var(--text); }' +
         '.cc-card .cc-val.locked { filter: blur(6px); user-select: none; }' +
@@ -787,7 +803,7 @@
         '.cc-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12px; }' +
         '.cc-bar-name { flex: 0 0 38%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-2); }' +
         '.cc-bar-track { flex: 1; height: 10px; background: var(--surface-2); border-radius: 6px; overflow: hidden; }' +
-        '.cc-bar-fill { height: 100%; border-radius: 6px; }' +
+        '.cc-bar-fill { display: block; height: 100%; border-radius: 6px; }' +
         '.cc-bar-pct { flex: 0 0 42px; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }' +
         '.cc-donut-wrap { display: flex; align-items: center; gap: 16px; }' +
         '.cc-donut { width: 96px; height: 96px; border-radius: 50%; flex-shrink: 0; position: relative; }' +

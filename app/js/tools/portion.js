@@ -423,7 +423,7 @@
         ingRows +=
           '<tr>' +
             '<td>' + PCD.escapeHtml(name) + viaHint + '</td>' +
-            '<td style="text-align:right;font-weight:700;color:#16a34a;font-family:monospace;white-space:nowrap;">' + PCD.fmtNumber(scaled) + ' ' + PCD.escapeHtml(item.unit || '') + '</td>' +
+            '<td style="text-align:right;font-weight:700;color:#1f9d6b;font-family:monospace;white-space:nowrap;">' + PCD.fmtNumber(scaled) + ' ' + PCD.escapeHtml(item.unit || '') + '</td>' +
           '</tr>';
       });
 
@@ -450,13 +450,13 @@
     const html =
       '<style>' +
         '@page { size: A4; margin: 12mm; }' +
-        'body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; color: #1a1a1a; }' +
-        '.kc-header { border-bottom: 3px solid #16a34a; padding-bottom: 10px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: baseline; }' +
-        '.kc-header h1 { margin: 0; font-size: 22pt; color: #16a34a; }' +
+        'body { font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif; color: #1c2620; font-variant-numeric: tabular-nums; }' +
+        '.kc-header { border-bottom: 3px solid #16433a; padding-bottom: 10px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: baseline; }' +
+        '.kc-header h1 { margin: 0; font-family: "Fraunces","Georgia",serif; font-size: 22pt; font-weight: 600; letter-spacing: -0.01em; color: #16433a; }' +
         '.kc-header .meta { font-size: 11pt; color: #666; }' +
         '.kc-block { break-inside: avoid; margin-bottom: 14px; padding: 8px 10px; border-bottom: 1px solid #e5e5e5; page-break-inside: avoid; }' +
         '.kc-block:last-child { border-bottom: 0; }' +
-        '.kc-name { font-size: 12pt; font-weight: 800; color: #16a34a; text-transform: uppercase; letter-spacing: 0.04em; padding-bottom: 4px; border-bottom: 1px solid #16a34a; margin-bottom: 6px; }' +
+        '.kc-name { font-size: 12pt; font-weight: 700; color: #16433a; text-transform: uppercase; letter-spacing: 0.04em; padding-bottom: 4px; border-bottom: 1px solid #cbe8d8; margin-bottom: 6px; }' +
         '.kc-srv { font-size: 10pt; font-weight: 500; color: #666; text-transform: none; letter-spacing: 0; }' +
         '.kc-ings { width: 100%; border-collapse: collapse; font-size: 10pt; line-height: 1.4; margin-bottom: 6px; }' +
         '.kc-ings td { padding: 2px 0; }' +
@@ -472,7 +472,7 @@
       blocks +
       '<div style="margin-top:14px;padding:10px 14px;background:#f0fdf4;border-radius:8px;display:flex;justify-content:space-between;font-size:11pt;font-weight:700;">' +
         '<span>' + PCD.i18n.t('label_total_food_cost') + '</span>' +
-        '<span style="color:#16a34a;">' + PCD.fmtMoney(totalCost) + ' (' + PCD.fmtMoney(totalPortions > 0 ? totalCost / totalPortions : 0) + ' / ' + PCD.escapeHtml(PCD.i18n.t('portion_per_portion_short') || 'portion') + ')</span>' +
+        '<span style="color:#16433a;">' + PCD.fmtMoney(totalCost) + ' (' + PCD.fmtMoney(totalPortions > 0 ? totalCost / totalPortions : 0) + ' / ' + PCD.escapeHtml(PCD.i18n.t('portion_per_portion_short') || 'portion') + ')</span>' +
       '</div>';
 
     PCD.print(html, (PCD.i18n.t('portion_print_title') || 'Scaled recipes') + ' — ' + totalPortions + ' ' + (PCD.i18n.t('portion_total_portions_label') || 'portions'));
@@ -628,22 +628,22 @@
     const html =
       '<style>' +
         '@page { size: A4; margin: 12mm; }' +
-        'body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; color: #1a1a1a; }' +
-        '.h { border-bottom: 3px solid #16a34a; padding-bottom: 10px; margin-bottom: 16px; display:flex; justify-content:space-between; align-items:baseline; }' +
-        '.h h1 { margin:0; font-size: 22pt; color:#16a34a; }' +
+        'body { font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif; color: #1c2620; font-variant-numeric: tabular-nums; }' +
+        '.h { border-bottom: 3px solid #16433a; padding-bottom: 10px; margin-bottom: 16px; display:flex; justify-content:space-between; align-items:baseline; }' +
+        '.h h1 { margin:0; font-family: "Fraunces","Georgia",serif; font-size: 22pt; font-weight: 600; letter-spacing: -0.01em; color:#16433a; }' +
         '.h .m { font-size: 11pt; color:#666; }' +
         '.grp { break-inside: avoid; page-break-inside: avoid; margin-bottom: 12px; }' +
-        '.grp-h { font-size: 11pt; font-weight: 800; color:#16a34a; text-transform:uppercase; letter-spacing:0.04em; border-bottom:1px solid #16a34a; padding-bottom:3px; margin-bottom:4px; }' +
+        '.grp-h { font-size: 11pt; font-weight: 700; color:#16433a; text-transform:uppercase; letter-spacing:0.04em; border-bottom:1px solid #cbe8d8; padding-bottom:3px; margin-bottom:4px; }' +
         '.t { width:100%; border-collapse:collapse; font-size:10pt; }' +
         '.t td { padding:3px 0; border-bottom:1px solid #eee; }' +
         '.t .a { text-align:right; font-family:monospace; font-weight:700; white-space:nowrap; padding-left:10px; }' +
-        '.tot { margin-top:14px; padding:10px 14px; background:#f0fdf4; border-radius:8px; display:flex; justify-content:space-between; font-size:11pt; font-weight:700; }' +
+        '.tot { margin-top:14px; padding:10px 14px; background:#edf6f0; border:1px solid #cbe8d8; border-radius:8px; display:flex; justify-content:space-between; font-size:11pt; font-weight:700; }' +
       '</style>' +
       '<div class="h"><h1>' + PCD.escapeHtml(title) + '</h1>' +
         '<div class="m">' + totalPortions + ' ' + PCD.escapeHtml(t('portion_total_portions_label') || 'total portions') + ' · ' + selectedRecipes.length + ' ' + PCD.escapeHtml(t('portion_recipes_label') || 'recipes') + ' · ' + new Date().toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || 'en') + '</div>' +
       '</div>' +
       groupsHtml +
-      '<div class="tot"><span>' + PCD.escapeHtml(t('label_total_food_cost') || 'Total food cost') + '</span><span style="color:#16a34a;">' + PCD.fmtMoney(res.total) + '</span></div>';
+      '<div class="tot"><span>' + PCD.escapeHtml(t('label_total_food_cost') || 'Total food cost') + '</span><span style="color:#16433a;">' + PCD.fmtMoney(res.total) + '</span></div>';
     PCD.print(html, title);
   }
 

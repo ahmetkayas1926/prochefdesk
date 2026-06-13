@@ -1588,7 +1588,7 @@
       return '<div class="text-muted" style="padding:16px;text-align:center;">' + PCD.escapeHtml(t('buffet_order_empty') || 'Link items to recipes or ingredients to generate a supplier order list.') + '</div>';
     }
     const fmt = function (n) { return (Math.round(n * 100) / 100).toString(); };
-    const titleColor = forPrint ? '#16a34a' : 'var(--brand-700)';
+    const titleColor = forPrint ? '#16433a' : 'var(--brand-700)';
     const lineColor = forPrint ? '#e5e5e5' : 'var(--border)';
     const subColor = forPrint ? '#9a9a9a' : 'var(--text-3)';
     const subBg = forPrint ? '#f6f6f6' : 'var(--surface-2)';
@@ -1628,8 +1628,8 @@
     printBtn.addEventListener('click', function () {
       const dateStr = buffet.serviceDate ? PCD.fmtDate(buffet.serviceDate) : new Date().toLocaleDateString();
       const html =
-        '<style>@page{size:A4;margin:14mm;}body{font-family:-apple-system,"Segoe UI",Roboto,sans-serif;color:#111;max-width:760px;margin:0 auto;}' +
-        '.hdr{border-bottom:3px solid #16a34a;padding-bottom:8px;margin-bottom:14px;}.hdr h1{margin:0;font-size:18pt;color:#16a34a;}.hdr .meta{font-size:10pt;color:#666;margin-top:2px;}</style>' +
+        '<style>@page{size:A4;margin:14mm;}body{font-family:"Inter",-apple-system,"Segoe UI",Roboto,sans-serif;color:#1c2620;max-width:760px;margin:0 auto;font-variant-numeric:tabular-nums;}' +
+        '.hdr{border-bottom:3px solid #16433a;padding-bottom:8px;margin-bottom:14px;}.hdr h1{margin:0;font-family:"Fraunces","Georgia",serif;font-size:18pt;font-weight:600;letter-spacing:-0.01em;color:#16433a;}.hdr .meta{font-size:10pt;color:#666;margin-top:2px;}</style>' +
         '<div class="hdr"><h1>' + PCD.escapeHtml(buffet.name || (t('buffet_untitled') || 'Buffet')) + ' — ' + PCD.escapeHtml(t('buffet_order_list') || 'Order list') + '</h1>' +
         '<div class="meta">' + PCD.escapeHtml(metaStr) + ' · ' + dateStr + '</div></div>' +
         orderListHtml(groups, true);
@@ -1672,9 +1672,9 @@
     const html =
       '<style>' +
         '@page { size: A4; margin: 12mm; }' +
-        'body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; color: #111; }' +
-        '.hdr { border-bottom: 3px solid #16a34a; padding-bottom: 8px; margin-bottom: 12px; }' +
-        '.hdr h1 { margin: 0; font-size: 18pt; color: #16a34a; }' +
+        'body { font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif; color: #1c2620; font-variant-numeric: tabular-nums; }' +
+        '.hdr { border-bottom: 3px solid #16433a; padding-bottom: 8px; margin-bottom: 12px; }' +
+        '.hdr h1 { margin: 0; font-family: "Fraunces","Georgia",serif; font-size: 18pt; font-weight: 600; letter-spacing: -0.01em; color: #16433a; }' +
         '.hdr .meta { font-size: 10pt; color: #666; margin-top: 2px; }' +
         'table { width: 100%; border-collapse: collapse; font-size: 11pt; }' +
         'th, td { padding: 5px 8px; border-bottom: 1px solid #e5e5e5; vertical-align: middle; }' +
@@ -1753,9 +1753,9 @@
     const html =
       '<style>' +
         '@page { size: A4; margin: 12mm; }' +
-        'body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; color: #111; }' +
-        '.hdr { border-bottom: 3px solid #16a34a; padding-bottom: 8px; margin-bottom: 12px; }' +
-        '.hdr h1 { margin: 0; font-size: 18pt; color: #16a34a; }' +
+        'body { font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif; color: #1c2620; font-variant-numeric: tabular-nums; }' +
+        '.hdr { border-bottom: 3px solid #16433a; padding-bottom: 8px; margin-bottom: 12px; }' +
+        '.hdr h1 { margin: 0; font-family: "Fraunces","Georgia",serif; font-size: 18pt; font-weight: 600; letter-spacing: -0.01em; color: #16433a; }' +
         '.hdr .meta { font-size: 10pt; color: #666; margin-top: 2px; }' +
         '.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 14px 0; }' +
         '.stat { background: #f5f5f4; padding: 8px 10px; border-radius: 6px; }' +

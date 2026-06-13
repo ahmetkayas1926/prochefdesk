@@ -113,6 +113,7 @@
         </div>
         <div class="page-header-actions">
           ${recipes.length > 0 ? `<button class="btn btn-outline btn-sm" id="headerCostReport">${PCD.icon('activity',14)} <span>${t('btn_cost_report')}</span></button>` : ''}
+          ${recipes.length > 0 ? `<button class="btn btn-outline btn-sm" id="headerAllergenMatrix"><span>${t('label_allergens')}</span></button>` : ''}
           ${recipes.length > 0 ? `<button class="btn btn-outline btn-sm" id="toggleSelectMode">${t('select_mode')}</button>` : ''}
           <button class="btn btn-primary" id="newRecipeBtn">+ ${t('new_recipe')}</button>
         </div>
@@ -367,8 +368,11 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
           dupBtn.innerHTML = PCD.icon('copy', 18);
           const copyBtn = PCD.el('button', { type: 'button', class: 'icon-btn', 'data-copy-rid': r.id, 'data-name': r.name, title: PCD.i18n.t('modal_copy_to_workspace_title') });
           copyBtn.innerHTML = PCD.icon('truck', 18);
+          const lblBtn = PCD.el('button', { type: 'button', class: 'icon-btn', 'data-rec-label': r.id, title: PCD.i18n.t('label_title') });
+          lblBtn.innerHTML = PCD.icon('calendar', 18);
           actions.appendChild(crBtn);
           actions.appendChild(dupBtn);
+          actions.appendChild(lblBtn);
           actions.appendChild(copyBtn);
           row.appendChild(actions);
         }
@@ -442,6 +446,12 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
         : recipes.map(function (r) { return r.id; });
       if (!ids.length) { if (PCD.toast && PCD.toast.info) PCD.toast.info(t('cr_no_recipes') || 'No recipes to report'); return; }
       openCostReport(ids);
+    });
+    // B2 — header allergen matrix (FOH/audit print)
+    const headerAM = PCD.$('#headerAllergenMatrix', view);
+    if (headerAM) headerAM.addEventListener('click', function () {
+      const ids = (lastVisibleIds && lastVisibleIds.length) ? lastVisibleIds.slice() : recipes.map(function (r) { return r.id; });
+      printAllergenMatrix(ids);
     });
     const toggleSel = PCD.$('#toggleSelectMode', view);
     if (toggleSel) toggleSel.addEventListener('click', enterSelect);
@@ -622,6 +632,24 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
       openCostReport([this.getAttribute('data-rec-cost')]);
     });
 
+    // B1 — quick prep/day label from a recipe (auto-populates allergens)
+    PCD.on(listEl, 'click', '[data-rec-label]', function (e) {
+      e.stopPropagation();
+      const rr = PCD.store.getRecipe(this.getAttribute('data-rec-label'));
+      if (!PCD.openPrepLabel) return;
+      var allergenStr = '';
+      if (rr && PCD.allergensDB) {
+        var ingMap = {};
+        PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
+        var keys = PCD.allergensDB.recipeAllergens(rr, ingMap);
+        allergenStr = keys.map(function (k) {
+          var a = PCD.allergensDB.getByKey(k);
+          return a ? (a.icon + ' ' + k.charAt(0).toUpperCase() + k.slice(1)) : k;
+        }).join(' · ');
+      }
+      PCD.openPrepLabel({ name: rr ? rr.name : '', allergens: allergenStr });
+    });
+
     // v2.43.18 — Quick-access: duplicate (mirrors editor dup → opens the copy)
     PCD.on(listEl, 'click', '[data-rec-dup]', function (e) {
       e.stopPropagation();
@@ -704,6 +732,53 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
   // ============ COST REPORT ============
   // Multi-recipe cost report. Shows detailed breakdown, lets user override
   // sale price live, exports to PDF or Excel.
+  // B2 — Allergen matrix: recipes (rows) × 14 EU allergens (icon columns) → print (FOH/audit).
+  function printAllergenMatrix(ids) {
+    const t = PCD.i18n.t;
+    const allergens = (PCD.allergensDB && PCD.allergensDB.list) || [];
+    const ingArr = PCD.store.listIngredients();
+    const recs = (ids || []).map(function (id) { return PCD.store.getRecipe(id); }).filter(Boolean);
+    if (!recs.length || !allergens.length) { if (PCD.toast && PCD.toast.info) PCD.toast.info(t('cr_no_recipes') || 'No recipes'); return; }
+    const dietCodes = [
+      {key:'vg', label:'VG',  title:'Vegan'},
+      {key:'v',  label:'V',   title:'Vegetarian'},
+      {key:'gf', label:'GF',  title:'Gluten-Free'},
+      {key:'gfo',label:'GFO', title:'GF Option'},
+      {key:'df', label:'DF',  title:'Dairy-Free'},
+      {key:'nf', label:'NF',  title:'Nut-Free'}
+    ];
+    const SEP_TH = '<th style="width:5px;padding:0;border:1px solid #ccc;background:#f0f0f0;-webkit-print-color-adjust:exact;print-color-adjust:exact;"></th>';
+    const SEP_TD = '<td style="width:5px;padding:0;border:1px solid #ccc;background:#f0f0f0;-webkit-print-color-adjust:exact;print-color-adjust:exact;"></td>';
+    const allergenHead = allergens.map(function (a) {
+      return '<th style="text-align:center;padding:6px 3px;border:1px solid #ccc;font-size:15px;">' + a.icon + '<div style="font-size:7px;color:#666;text-transform:uppercase;margin-top:1px;">' + PCD.escapeHtml(a.key.slice(0, 4)) + '</div></th>';
+    }).join('');
+    const dietHead = dietCodes.map(function (dc) {
+      return '<th style="text-align:center;padding:4px 3px;border:1px solid #ccc;background:#edf6f0;-webkit-print-color-adjust:exact;print-color-adjust:exact;">' +
+        '<div style="font-size:8px;font-weight:700;color:#16433a;text-transform:uppercase;">' + dc.label + '</div>' +
+        '<div style="font-size:6px;color:#555;margin-top:1px;">' + dc.title + '</div></th>';
+    }).join('');
+    const head = '<th style="text-align:left;padding:6px 8px;border:1px solid #ccc;">' + PCD.escapeHtml(t('label_product')) + '</th>' +
+      allergenHead + SEP_TH + dietHead;
+    const rows = recs.map(function (r) {
+      const keys = (r.computedAllergens && r.computedAllergens.length) ? r.computedAllergens
+        : (PCD.allergensDB.recipeAllergens ? (PCD.allergensDB.recipeAllergens(r, ingArr) || []) : []);
+      const allergenCells = allergens.map(function (a) {
+        const has = keys.indexOf(a.key) >= 0;
+        return '<td style="text-align:center;border:1px solid #ccc;' + (has ? 'background:#fde2e2;-webkit-print-color-adjust:exact;print-color-adjust:exact;color:#b91c1c;font-weight:800;' : '') + '">' + (has ? '●' : '') + '</td>';
+      }).join('');
+      const rcodes = r.codes || [];
+      const dietCells = dietCodes.map(function (dc) {
+        const has = rcodes.indexOf(dc.key) >= 0;
+        return '<td style="text-align:center;border:1px solid #ccc;' + (has ? 'background:#edf6f0;-webkit-print-color-adjust:exact;print-color-adjust:exact;color:#16433a;font-weight:700;' : '') + '">' + (has ? '✓' : '') + '</td>';
+      }).join('');
+      return '<tr><td style="text-align:left;padding:5px 8px;border:1px solid #ccc;font-weight:600;">' + PCD.escapeHtml(r.name) + '</td>' + allergenCells + SEP_TD + dietCells + '</tr>';
+    }).join('');
+    const html = '<style>@page{size:A4 landscape;margin:12mm}</style>' +
+      '<h2 style="margin:0 0 10px;">' + PCD.escapeHtml(t('label_allergens')) + ' · ' + recs.length + '</h2>' +
+      '<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr>' + head + '</tr></thead><tbody>' + rows + '</tbody></table>';
+    PCD.print(html, t('label_allergens'));
+  }
+
   function openCostReport(recipeIds) {
     const t = PCD.i18n.t;
     const TARGET_FOOD_COST_PCT = 30;  // industry standard
@@ -960,7 +1035,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
           return;
         }
         // For PDF: small inline (SUB) marker keeps the badge in monochrome print
-        const subMark = row.isSub ? ' <span style="font-size:8pt;color:#16a34a;font-weight:700;">(SUB)</span>' : '';
+        const subMark = row.isSub ? ' <span style="font-size:8pt;color:#1f9d6b;font-weight:700;">(SUB)</span>' : '';
         const pad = row.indent ? 'padding-left:20px;' : '';
         const nm = (row.indent ? '└ ' : '') + PCD.escapeHtml(row.name) + subMark;
         ingRows +=
@@ -1018,32 +1093,32 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
     const html =
       '<style>' +
         '@page { size: A4; margin: 14mm; }' +
-        'body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; color: #1a1a1a; }' +
-        '.report-header { border-bottom: 3px solid #16a34a; padding-bottom: 10px; margin-bottom: 18px; display:flex; justify-content:space-between; align-items:flex-end; }' +
-        '.report-header h1 { font-size: 22pt; color: #16a34a; margin: 0; }' +
+        'body { font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif; color: #1c2620; font-variant-numeric: tabular-nums; }' +
+        '.report-header { border-bottom: 3px solid #16433a; padding-bottom: 10px; margin-bottom: 18px; display:flex; justify-content:space-between; align-items:flex-end; }' +
+        '.report-header h1 { font-family: "Fraunces","Georgia",serif; font-size: 22pt; font-weight: 600; letter-spacing: -0.01em; color: #16433a; margin: 0; }' +
         '.report-header .sub { color: #666; font-size: 10pt; margin-top: 4px; }' +
         '.report-header .meta { color: #888; font-size: 9pt; text-align: end; }' +
         '.recipe { margin-bottom: 22px; padding-bottom: 14px; break-inside: avoid; page-break-inside: avoid; }' +
         '.recipe + .recipe { border-top: 1px solid #e5e5e5; padding-top: 14px; }' +
         '.recipe-header { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom: 8px; }' +
-        '.recipe-header h2 { font-size: 14pt; margin: 0; color: #111; }' +
+        '.recipe-header h2 { font-family: "Fraunces","Georgia",serif; font-size: 14pt; font-weight: 600; margin: 0; color: #16433a; }' +
         '.recipe-header .meta { font-size: 9pt; color: #888; text-transform: capitalize; }' +
-        '.fc-badge { font-size: 10pt; color: #16a34a; padding: 4px 10px; border: 1.5px solid #16a34a; border-radius: 999px; }' +
+        '.fc-badge { font-size: 10pt; color: #1f9d6b; padding: 4px 10px; border: 1.5px solid #1f9d6b; border-radius: 999px; }' +
         '.fc-badge b { font-size: 11pt; }' +
-        '.ing-table { width:100%; border-collapse: collapse; font-size: 9.5pt; margin-bottom: 10px; }' +
+        '.ing-table { width:100%; border-collapse: collapse; font-size: 9.5pt; margin-bottom: 10px; font-variant-numeric: tabular-nums; }' +
         '.ing-table th { background: #f8f8f8; text-align: start; padding: 6px 8px; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.04em; color: #666; border-bottom: 1.5px solid #ddd; }' +
         '.ing-table th.num, .ing-table td.num { text-align: end; }' +
         '.ing-table td { padding: 4px 8px; border-bottom: 1px solid #f0f0f0; }' +
         '.ing-table tfoot td { border-bottom: 0; padding-top: 6px; }' +
-        '.ing-table tfoot tr:first-child td { border-top: 2px solid #16a34a; padding-top: 8px; }' +
-        '.ing-table .bold { font-weight: 700; color: #16a34a; }' +
+        '.ing-table tfoot tr:first-child td { border-top: 2px solid #16433a; padding-top: 8px; }' +
+        '.ing-table .bold { font-weight: 700; color: #16433a; }' +
         '.ing-table .minor { color: #888; font-size: 9pt; }' +
         '.pricing { display:grid; grid-template-columns: repeat(4, 1fr); gap: 12px; padding: 10px 14px; background: #f8f8f8; border-radius: 6px; }' +
         '.pricing .lbl { font-size: 8pt; color: #888; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; }' +
         '.pricing .val { font-size: 12pt; font-weight: 700; }' +
-        '.pricing .brand { color: #16a34a; }' +
-        '.summary { margin-top: 20px; padding: 14px; background: #f0fdf4; border: 1.5px solid #16a34a; border-radius: 8px; }' +
-        '.summary h3 { font-size: 11pt; color: #16a34a; margin: 0 0 10px; text-transform: uppercase; letter-spacing: 0.04em; }' +
+        '.pricing .brand { color: #1f9d6b; }' +
+        '.summary { margin-top: 20px; padding: 14px; background: #edf6f0; border: 1.5px solid #cbe8d8; border-radius: 8px; }' +
+        '.summary h3 { font-family: "Fraunces","Georgia",serif; font-size: 11pt; color: #16433a; margin: 0 0 10px; text-transform: uppercase; letter-spacing: 0.04em; }' +
         '.summary-grid { display:grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }' +
         '.pcd-print-footer { display: none !important; }' +
         '.cr-foot { margin-top: 18px; text-align: center; font-size: 8pt; color: #999; padding-top: 10px; border-top: 1px solid #eee; }' +
@@ -2548,6 +2623,27 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
         data.tags = (data.tags || []).filter(function (x) { return x !== tg; });
         paintTagChips();
       });
+
+      // E1 — recipe → events deep link ("used in N events", clickable chips)
+      if (existing && existing.id && PCD.store.findEventsUsingRecipeRefs) {
+        const evRefs = PCD.store.findEventsUsingRecipeRefs(existing.id);
+        const oldSec = PCD.$('#recipeUsedEvents', body); if (oldSec) oldSec.remove();
+        if (evRefs.length) {
+          const sec = PCD.el('div', { id: 'recipeUsedEvents', class: 'field', style: { marginTop: '4px' } });
+          sec.innerHTML = '<label class="field-label">' + PCD.escapeHtml((t('recipe_used_in_events') || 'Used in {n} events').replace('{n}', evRefs.length)) + '</label>' +
+            '<div style="display:flex;flex-wrap:wrap;gap:6px;">' +
+            evRefs.map(function (ev) { return '<button type="button" data-go-event="' + ev.id + '" style="background:var(--brand-50);color:var(--brand-700);font-size:12px;padding:4px 10px;border-radius:999px;font-weight:600;cursor:pointer;border:1px solid var(--brand-200);">' + PCD.escapeHtml(ev.name) + ' ›</button>'; }).join('') +
+            '</div>';
+          body.appendChild(sec);
+          PCD.on(body, 'click', '[data-go-event]', function () {
+            const eid = this.getAttribute('data-go-event');
+            if (PCD.modal && PCD.modal.closeTop) PCD.modal.closeTop();
+            PCD.router.go('events');
+            if (PCD.tools.events && PCD.tools.events.openEditor) { PCD.tools.events.openEditor(eid); return; }
+            let att = 0; const tr = setInterval(function () { if (PCD.tools.events && PCD.tools.events.openEditor) { clearInterval(tr); PCD.tools.events.openEditor(eid); } else if (++att > 25) clearInterval(tr); }, 120);
+          });
+        }
+      }
       const tagInp = PCD.$('#recipeTagInput', body);
       if (tagInp) {
         tagInp.addEventListener('keydown', function (e) {

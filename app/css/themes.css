@@ -5,26 +5,35 @@
 
 /* ---------- DARK MODE ---------- */
 [data-theme="dark"] {
-  --bg:        #0c0a09;
-  --surface:   #1c1917;
-  --surface-2: #292524;
-  --surface-3: #44403c;
-  --border:    #292524;
-  --border-strong: #44403c;
-  --text:      #fafaf9;
-  --text-2:    #d6d3d1;
-  --text-3:    #a8a29e;
-  --text-muted:#78716c;
+  /* Midnight Premium (v2.44 dark) */
+  --bg:        #101826;
+  --surface:   #1a2536;
+  --surface-2: #243246;
+  --surface-3: #2f4058;
+  --border:    #26344a;
+  --border-strong: #384961;
+  --text:      #e8edf2;
+  --text-2:    #b6c2d0;
+  --text-3:    #8593a4;
+  --text-muted:#667384;
 
-  --success-bg: rgba(22,163,74,0.15);
-  --warning-bg: rgba(217,119,6,0.15);
-  --danger-bg: rgba(220,38,38,0.15);
-  --info-bg: rgba(2,132,199,0.15);
+  /* Midnight chrome (topbar/sidenav) + jewel action + gold detail */
+  --chrome:    #0b111b;
+  --brand-500: #2fc492;
+  --brand-600: #27c08a;
+  --brass:     #d4af6a;
+  --brass-bg:  rgba(212,175,106,0.14);
+  --brass-border: rgba(212,175,106,0.35);
 
-  --shadow-sm: 0 1px 2px rgba(0,0,0,.3), 0 1px 3px rgba(0,0,0,.2);
-  --shadow-md: 0 4px 6px -1px rgba(0,0,0,.4), 0 2px 4px -2px rgba(0,0,0,.2);
-  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,.5), 0 4px 6px -4px rgba(0,0,0,.2);
-  --shadow-xl: 0 20px 25px -5px rgba(0,0,0,.6), 0 8px 10px -6px rgba(0,0,0,.2);
+  --success-bg: rgba(39,192,138,0.16);
+  --warning-bg: rgba(217,138,43,0.16);
+  --danger-bg: rgba(220,80,60,0.16);
+  --info-bg: rgba(40,120,180,0.16);
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.4), 0 1px 3px rgba(0,0,0,.3);
+  --shadow-md: 0 2px 6px rgba(0,0,0,.4), 0 10px 24px -6px rgba(0,0,0,.5);
+  --shadow-lg: 0 4px 10px rgba(0,0,0,.45), 0 22px 44px -10px rgba(0,0,0,.6);
+  --shadow-xl: 0 8px 16px rgba(0,0,0,.5), 0 32px 60px -12px rgba(0,0,0,.7);
 }
 
 [data-theme="dark"] .splash { background: var(--bg); }
@@ -37,11 +46,11 @@
   border-color: var(--brand-600);
 }
 [data-theme="dark"] .sidenav-item.active {
-  background: rgba(234,88,12,0.15);
+  background: rgba(39,192,138,0.15);
   color: var(--brand-300);
 }
 [data-theme="dark"] .chip-brand {
-  background: rgba(234,88,12,0.15);
+  background: rgba(39,192,138,0.15);
   color: var(--brand-300);
 }
 [data-theme="dark"] .plan-free {
@@ -53,6 +62,8 @@
 [data-theme="dark"] .toast-success { background: var(--success); color: white; border: 0; }
 [data-theme="dark"] .toast-error { background: var(--danger); color: white; border: 0; }
 [data-theme="dark"] .toast-warning { background: var(--warning); color: white; border: 0; }
+/* v2.44 — dark button hover frame (light translucent, mirrors light-mode rule) */
+[data-theme="dark"] .btn:hover { border-color: rgba(255,255,255,.16); }
 
 /* v2.9.4 — Comprehensive dark mode brand-50 contrast fix
 
@@ -66,18 +77,18 @@
 
    Strategy: surgical CSS attribute selectors using `--brand-50)` (with
    closing paren, distinguishes from --brand-500) that retint affected
-   components to subtle dark green (`rgba(22,163,74,0.14)`) while preserving
+   components to subtle dark green (`rgba(39,192,138,0.14)`) while preserving
    green accent identity. Chips/badges intentionally stay light as visual
    accent. */
 
 /* 1. Inline gradient guides + accent cards (15+ places) */
 [data-theme="dark"] [style*="--brand-50)"][style*="linear-gradient"] {
-  background: linear-gradient(135deg, rgba(22,163,74,0.14), var(--surface-2)) !important;
+  background: linear-gradient(135deg, rgba(39,192,138,0.14), var(--surface-2)) !important;
 }
 /* dash-card.priority-now uses the same gradient but as injected CSS
    (not inline style), so the attribute selector above misses it. */
 [data-theme="dark"] .dash-card.priority-now {
-  background: linear-gradient(135deg, rgba(22,163,74,0.14), var(--surface-2)) !important;
+  background: linear-gradient(135deg, rgba(39,192,138,0.14), var(--surface-2)) !important;
 }
 
 /* 2. Solid brand-50 inline bg (any element except chips, gradients).
@@ -85,7 +96,7 @@
    containers (bulk bars, alerts), bare div sections (checklist sticky tops,
    ingredients/inventory notification cards, hover/selected row states). */
 [data-theme="dark"] [style*="--brand-50)"]:not(.chip):not([class*="chip"]):not([style*="linear-gradient"]) {
-  background: rgba(22,163,74,0.14) !important;
+  background: rgba(39,192,138,0.14) !important;
 }
 
 /* 3. brand-700 text on brand-50 bg → flip text to brand-300 for contrast.

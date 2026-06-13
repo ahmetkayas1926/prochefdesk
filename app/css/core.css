@@ -5,20 +5,36 @@
 
 /* ---------- DESIGN TOKENS ---------- */
 :root {
-  /* Brand */
-  /* Brand — Forest Green (professional chef tone) */
-  --brand-50:  #f0fdf4;
-  --brand-100: #dcfce7;
-  --brand-200: #bbf7d0;
-  --brand-300: #86efac;
-  --brand-400: #4ade80;
-  --brand-500: #22c55e;
-  --brand-600: #16a34a;
-  --brand-700: #15803d;
-  --brand-800: #166534;
+  /* Brand — Deep Pine system (v2.44): action = refined emerald ramp,
+     chrome = pine, premium detail = brass */
+  --brand-50:  #eaf6f0;
+  --brand-100: #d2ece0;
+  --brand-200: #a9dac4;
+  --brand-300: #74c2a0;
+  --brand-400: #45ad84;
+  --brand-500: #2aa979;
+  --brand-600: #1f9d6b;
+  --brand-700: #1a7e57;
+  --brand-800: #155f42;
+
+  /* Chrome (topbar/sidenav/headers) + premium detail */
+  --pine:      #16433a;
+  --pine-2:    #1c5147;
+  --pine-ink:  #0f3329;
+  --pine-on:   #eaf1ee;   /* text/icons on pine surfaces */
+  --brass:     #b8895a;
+  --brass-bg:  #fbf4ea;
+  --brass-border: #e8d7c2;
+
+  /* Chrome surface (topbar/sidenav) — light = pine; dark overrides to midnight */
+  --chrome:        var(--pine);
+  --chrome-on:     var(--pine-on);
+  --chrome-hover:  rgba(255,255,255,.10);
+  --chrome-active: rgba(255,255,255,.16);
+  --chrome-line:   rgba(255,255,255,.14);
 
   /* Neutrals (light) */
-  --bg:        #fafaf9;
+  --bg:        #f5f1ea;
   --surface:   #ffffff;
   --surface-2: #f5f5f4;
   --surface-3: #e7e5e4;
@@ -40,10 +56,10 @@
   --info-bg: #e0f2fe;
 
   /* Elevation */
-  --shadow-sm: 0 1px 2px rgba(0,0,0,.04), 0 1px 3px rgba(0,0,0,.06);
-  --shadow-md: 0 4px 6px -1px rgba(0,0,0,.08), 0 2px 4px -2px rgba(0,0,0,.04);
-  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,.10), 0 4px 6px -4px rgba(0,0,0,.04);
-  --shadow-xl: 0 20px 25px -5px rgba(0,0,0,.12), 0 8px 10px -6px rgba(0,0,0,.04);
+  --shadow-sm: 0 1px 2px rgba(20,40,33,.05), 0 1px 3px rgba(20,40,33,.06);
+  --shadow-md: 0 1px 3px rgba(20,40,33,.06), 0 8px 18px -6px rgba(20,40,33,.12);
+  --shadow-lg: 0 2px 6px rgba(20,40,33,.07), 0 18px 36px -10px rgba(20,40,33,.16);
+  --shadow-xl: 0 4px 10px rgba(20,40,33,.08), 0 28px 50px -12px rgba(20,40,33,.20);
 
   /* Radius */
   --r-sm: 6px;
@@ -67,7 +83,7 @@
 
   /* Typography */
   --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
-  --font-display: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: "Fraunces", "Georgia", "Times New Roman", serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   /* Layout */
@@ -115,6 +131,7 @@ body {
   line-height: 1.5;
   color: var(--text);
   background: var(--bg);
+  font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
@@ -138,6 +155,7 @@ input, textarea, select {
 a { color: var(--brand-600); text-decoration: none; }
 a:hover { text-decoration: underline; }
 h1, h2, h3, h4, h5, h6 { margin: 0; font-weight: 700; line-height: 1.25; letter-spacing: -0.01em; }
+h1 { font-family: var(--font-display); letter-spacing: -0.02em; } /* v2.44 — Fraunces display titles */
 p { margin: 0; }
 ul, ol { margin: 0; padding: 0; list-style: none; }
 
@@ -202,8 +220,9 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
   padding: 0 12px;
   padding-top: var(--sa-t);
   height: calc(var(--topbar-h) + var(--sa-t));
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  background: var(--chrome);
+  color: var(--chrome-on);
+  border-bottom: 1px solid var(--chrome-line);
   -webkit-backdrop-filter: saturate(180%) blur(8px); /* v2.8.49: iOS Safari + macOS Safari 16-17 için vendor prefix; modern Safari 18+ aşağıdaki standart property'i kullanır */
   backdrop-filter: saturate(180%) blur(8px);
 }
@@ -219,18 +238,18 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
   display: flex; align-items: center; gap: 8px;
   margin-inline-start: 12px;
   padding: 6px 10px 6px 8px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--chrome-line);
   border-radius: 999px;
-  background: var(--surface);
+  background: var(--chrome-hover);
   cursor: pointer;
   font-size: 13px; font-weight: 600;
-  color: var(--text);
+  color: var(--chrome-on);
   transition: all .15s ease;
   flex: 1;
   min-width: 0;
   max-width: 280px;
 }
-.ws-switcher:hover { border-color: var(--brand-300); background: var(--brand-50); }
+.ws-switcher:hover { border-color: rgba(255,255,255,.30); background: var(--chrome-active); }
 .ws-switcher .ws-dot {
   width: 10px; height: 10px; border-radius: 50%;
   background: var(--brand-600);
@@ -276,6 +295,10 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 [data-theme="dark"] .icon-btn .icon-moon { display: block; }
 .lang-btn { font-size: 12px; font-weight: 600; letter-spacing: 0.02em; }
 .user-btn { font-size: 18px; }
+/* v2.44 — topbar lives on pine chrome: light icons + translucent hovers */
+.topbar .icon-btn { color: var(--chrome-on); }
+.topbar .icon-btn:hover { background: var(--chrome-hover); }
+.topbar .icon-btn:active { background: var(--chrome-active); }
 
 /* ---------- MAIN / VIEW ---------- */
 .main {
@@ -309,8 +332,9 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 .sidenav-panel {
   position: absolute; top: 0; left: 0; bottom: 0;
   width: var(--sidenav-w); max-width: 85vw;
-  background: var(--surface);
-  border-right: 1px solid var(--border);
+  background: var(--chrome);
+  color: var(--chrome-on);
+  border-right: 1px solid var(--chrome-line);
   display: flex; flex-direction: column;
   transform: translateX(-100%);
   transition: transform var(--dur-med) var(--ease);
@@ -326,7 +350,7 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 .sidenav-header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 16px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--chrome-line);
 }
 .sidenav-brand {
   display: flex; align-items: center; gap: 10px;
@@ -340,16 +364,17 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
   display: flex; align-items: center; gap: 12px;
   padding: 12px 14px;
   border-radius: var(--r-md);
-  color: var(--text-2);
+  color: var(--chrome-on);
   font-weight: 500; font-size: 14px;
   transition: background var(--dur-fast) var(--ease);
   width: 100%;
   text-align: start;
 }
-.sidenav-item:hover { background: var(--surface-2); color: var(--text); }
+.sidenav-item:hover { background: var(--chrome-hover); color: var(--chrome-on); }
 .sidenav-item.active {
-  background: var(--brand-50);
-  color: var(--brand-700);
+  background: rgba(31,157,107,0.22);
+  color: var(--brand-300);
+  font-weight: 700;
 }
 .sidenav-item svg { width: 20px; height: 20px; flex-shrink: 0; }
 .sidenav-item-icon {
@@ -361,12 +386,12 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 .sidenav-section {
   padding: 12px 14px 6px;
   font-size: 11px; font-weight: 600;
-  color: var(--text-3);
+  color: rgba(234,241,238,0.55);
   text-transform: uppercase; letter-spacing: 0.08em;
 }
 .sidenav-footer {
   padding: 16px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--chrome-line);
   display: flex; flex-direction: column; gap: 10px;
 }
 .plan-badge {

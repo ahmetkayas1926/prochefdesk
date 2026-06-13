@@ -101,6 +101,7 @@
           text: t(cat)
         }));
         const inner = PCD.el('div', { class: 'flex flex-col gap-2' });
+        groups[cat].sort(function (a, b) { return (a.name || '').localeCompare(b.name || ''); }); // E3: consistent alpha order within category
         groups[cat].forEach(function (i) {
           const row = PCD.el('div', { class: 'list-item', 'data-iid': i.id });
           const thumb = PCD.el('div', { class: 'list-item-thumb' });
@@ -381,6 +382,24 @@ ${existing && existing.priceHistory && existing.priceHistory.length > 0 ? `
           </div>
         </div>
       ` : ''}
+${existing ? (function () {
+        var used = (PCD.store.findRecipesUsingIngredientRefs && PCD.store.findRecipesUsingIngredientRefs(existing.id)) || [];
+        if (!used.length) return '';
+        // A3 — show each affected recipe's food cost % (price-change impact awareness)
+        var ingMapFc = {}; (PCD.store.listIngredients() || []).forEach(function (g) { ingMapFc[g.id] = g; });
+        var recipeMapFc = (PCD.recipes && PCD.recipes.buildRecipeMap) ? PCD.recipes.buildRecipeMap() : {};
+        function fcPct(rid) {
+          var rc = PCD.store.getRecipe(rid);
+          if (!rc || !PCD.recipes || !PCD.recipes.computeFoodCost) return null;
+          var cost = PCD.recipes.computeFoodCost(rc, ingMapFc, recipeMapFc);
+          var cps = rc.servings ? cost / rc.servings : cost;
+          return (rc.salePrice && cost > 0 && rc.servings) ? (cps / rc.salePrice) * 100 : null;
+        }
+        var title = (t('ing_used_in_n') || 'Used in {n} recipes').replace('{n}', used.length).replace(/:$/, '');
+        return '<div class="section"><div class="section-title" style="font-size:14px;color:var(--text-3);margin-bottom:6px;">' + PCD.escapeHtml(title) + '</div><div style="display:flex;flex-wrap:wrap;gap:6px;">' +
+          used.map(function (r) { var p = fcPct(r.id); var pctTxt = (p != null) ? ' <span style="opacity:.7;">· ' + p.toFixed(0) + '%</span>' : ''; return '<button type="button" data-go-recipe="' + r.id + '" style="background:var(--brand-50);color:var(--brand-700);font-size:12px;padding:4px 10px;border-radius:999px;font-weight:600;cursor:pointer;border:1px solid var(--brand-200);">' + PCD.escapeHtml(r.name) + pctTxt + ' ›</button>'; }).join('') +
+          '</div></div>';
+      })() : ''}
     `;
 
 // Update symbol on unit change
@@ -412,6 +431,22 @@ ${existing && existing.priceHistory && existing.priceHistory.length > 0 ? `
     });
 
     cancelBtn.addEventListener('click', function () { m.close(); if (callback) callback(null); });
+
+    // E1 — "used in" chip → close modal + open that recipe (lazy-load safe poll)
+    body.querySelectorAll('[data-go-recipe]').forEach(function (chip) {
+      chip.addEventListener('click', function () {
+        var rid = this.getAttribute('data-go-recipe');
+        m.close();
+        PCD.router.go('recipes');
+        if (PCD.tools.recipes && PCD.tools.recipes.openEditor) { PCD.tools.recipes.openEditor(rid); return; }
+        var att = 0;
+        var tr = setInterval(function () {
+          if (PCD.tools.recipes && PCD.tools.recipes.openEditor) { clearInterval(tr); PCD.tools.recipes.openEditor(rid); }
+          else if (++att > 25) { clearInterval(tr); }
+        }, 120);
+      });
+    });
+
     if (deleteBtn) deleteBtn.addEventListener('click', function () {
       // v2.6.36: block deletion if ingredient is used in any recipe.
       // Prevents recipes from showing "(removed)" lines and silent
@@ -892,7 +927,7 @@ Pasta,3,kg,cat_dry_goods,,</code></pre>
     const body = PCD.el('div');
     let html = '';
     if (deletedCount > 0) {
-      html += '<div style="padding:10px 12px;background:#f0fdf4;border:1px solid #16a34a;border-radius:8px;margin-bottom:12px;font-weight:600;color:#15803d;">' +
+      html += '<div style="padding:10px 12px;background:var(--brand-50);border:1px solid var(--brand-300);border-radius:8px;margin-bottom:12px;font-weight:600;color:var(--brand-700);">' +
         '✓ ' + (t('ing_bulk_deleted') || '{n} malzeme silindi').replace('{n}', deletedCount) +
       '</div>';
     }

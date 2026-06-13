@@ -871,9 +871,9 @@
 
     const styleCommon =
       '@page { size: A4 ' + o.orientation + '; margin: ' + margin + '; }' +
-      'body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; color: #1a1a1a; margin: 0; }' +
-      '.h-row { border-bottom: 2px solid #16a34a; padding-bottom: 4px; margin-bottom: 6px; }' +
-      '.h-row h1 { margin: 0; font-size: ' + pt(15) + '; color: #16a34a; }' +
+      'body { font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif; color: #1c2620; margin: 0; font-variant-numeric: tabular-nums; }' +
+      '.h-row { border-bottom: 2px solid #16433a; padding-bottom: 4px; margin-bottom: 6px; }' +
+      '.h-row h1 { margin: 0; font-family: "Fraunces","Georgia",serif; font-weight: 600; font-size: ' + pt(15) + '; color: #16433a; }' +
       '.h-row .sub { color: #666; font-size: ' + pt(9) + '; }' +
       '.h-meta { display: flex; gap: 14px; margin: 6px 0 10px; padding: 6px 10px; background: #f7f7f7; border-radius: 4px; }' +
       '.h-meta-item { display: flex; align-items: baseline; gap: 6px; flex: 1; }' +

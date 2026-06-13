@@ -73,6 +73,46 @@
     PCD.store.set('inventory', next);
   }
 
+  // v2.44 — A1: batch-deduct stock for tracked ingredients (event → inventory).
+  // deductions: { ingredientId: amountInBaseUnit }. Reads once, applies, writes once.
+  // Untracked items (no inventory row / null stock) are skipped (reported tracked:false).
+  function applyStockDeductions(deductions) {
+    const inv = readInventory();
+    const report = [];
+    Object.keys(deductions || {}).forEach(function (iid) {
+      const amt = Number(deductions[iid]) || 0;
+      const row = inv[iid];
+      if (!row || row.stock == null) { report.push({ id: iid, tracked: false, deducted: amt }); return; }
+      const cur = Number(row.stock) || 0;
+      const to = Math.max(0, cur - amt);
+      inv[iid] = Object.assign({}, row, { stock: to, updatedAt: Date.now() });
+      report.push({ id: iid, tracked: true, from: cur, deducted: amt, to: to, status: computeStatus(inv[iid]) });
+    });
+    writeInventory(inv);
+    return report;
+  }
+
+  // v2.44 — A2: batch-add stock for received goods (PO received → inventory).
+  // Inverse of applyStockDeductions. additions: { ingredientId: amountInBaseUnit }.
+  // Reads once, applies, writes once. If an item has no inventory row yet, a new
+  // tracked row is created (stock = amount, par/min null) — receiving starts tracking.
+  function applyStockAdditions(additions) {
+    const inv = readInventory();
+    const report = [];
+    Object.keys(additions || {}).forEach(function (iid) {
+      const amt = Number(additions[iid]) || 0;
+      if (amt <= 0) return;
+      const row = inv[iid];
+      const cur = row && row.stock != null ? (Number(row.stock) || 0) : 0;
+      const to = cur + amt;
+      const base = row || { stock: null, parLevel: null, minLevel: null };
+      inv[iid] = Object.assign({}, base, { stock: to, lastReceivedAt: new Date().toISOString(), updatedAt: Date.now() });
+      report.push({ id: iid, from: cur, added: amt, to: to, status: computeStatus(inv[iid]) });
+    });
+    writeInventory(inv);
+    return report;
+  }
+
   function computeStatus(invRow) {
     if (!invRow || invRow.parLevel == null) return 'untracked';
     const stock = Number(invRow.stock) || 0;
@@ -602,8 +642,8 @@
       '<style>' +
         '@page { size: A4; margin: 15mm; }' +
         'body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; color: #1a1a1a; }' +
-        'h1 { font-size: 22pt; margin: 0; color: #16a34a; border-bottom: 3px solid #16a34a; padding-bottom: 8px; }' +
-        'h2 { font-size: 11pt; color: #16a34a; text-transform: uppercase; letter-spacing: 0.04em; margin: 20px 0 6px; }' +
+        'h1 { font-size: 22pt; margin: 0; color: #16433a; border-bottom: 3px solid #16433a; padding-bottom: 8px; }' +
+        'h2 { font-size: 11pt; color: #16433a; text-transform: uppercase; letter-spacing: 0.04em; margin: 20px 0 6px; }' +
         'table { width: 100%; border-collapse: collapse; font-size: 10pt; }' +
         'td { padding: 4px 8px; border-bottom: 1px solid #eee; }' +
         '.meta { color: #666; font-size: 11pt; margin: 4px 0 14px; }' +
@@ -1000,11 +1040,14 @@
     const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('cancel') });
     const printBtn = PCD.el('button', { class: 'btn btn-outline' });
     printBtn.innerHTML = PCD.icon('print', 14) + ' <span>' + PCD.i18n.t('print') + '</span>';
+    const receivedBtn = PCD.el('button', { class: 'btn btn-outline' });
+    receivedBtn.innerHTML = '📥 <span>' + PCD.i18n.t('inv_mark_received') + '</span>';
     const shareBtn = PCD.el('button', { class: 'btn btn-primary', style: { flex: '1' } });
     shareBtn.innerHTML = PCD.icon('send', 14) + ' <span>' + PCD.i18n.t('btn_share_order') + '</span>';
-    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
+    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
     footer.appendChild(cancelBtn);
     footer.appendChild(printBtn);
+    footer.appendChild(receivedBtn);
     footer.appendChild(shareBtn);
 
     const m = PCD.modal.open({
@@ -1114,6 +1157,43 @@
             sm.close();
           });
         }
+      });
+    });
+
+    receivedBtn.addEventListener('click', function () {
+      const d = collectSelected();
+      const supKeys = Object.keys(d.selectedBySupplier);
+      if (supKeys.length === 0) { PCD.toast.warning(PCD.i18n.t('toast_no_items_selected')); return; }
+      const additions = {};
+      const items = [];
+      supKeys.forEach(function (sup) {
+        d.selectedBySupplier[sup].forEach(function (it) {
+          additions[it.ing.id] = (additions[it.ing.id] || 0) + it.qty;
+          items.push(it);
+        });
+      });
+      const n = items.length;
+      const preview = items.slice(0, 6).map(function (it) {
+        return '• ' + it.ing.name + ': +' + PCD.fmtNumber(it.qty) + ' ' + (it.ing.unit || '');
+      }).join('\n');
+      const more = n - 6;
+      const text = (PCD.i18n.t('inv_receive_msg') || '{n} item(s) will be added to stock. Continue?').replace('{n}', n) +
+        '\n\n' + preview + (more > 0 ? '\n• … +' + more : '');
+      PCD.modal.confirm({
+        icon: '📥', iconKind: 'info',
+        title: PCD.i18n.t('inv_mark_received'),
+        text: text,
+        okText: PCD.i18n.t('inv_mark_received')
+      }).then(function (ok) {
+        if (!ok) return;
+        const report = (PCD.tools.inventory && PCD.tools.inventory.applyStockAdditions)
+          ? PCD.tools.inventory.applyStockAdditions(additions) : [];
+        PCD.toast.success((PCD.i18n.t('inv_receive_done') || '{n} item(s) added to stock').replace('{n}', report.length));
+        m.close();
+        setTimeout(function () {
+          const v = PCD.$('#view');
+          if (PCD.router.currentView() === 'inventory') render(v);
+        }, 200);
       });
     });
   }
@@ -1235,5 +1315,5 @@
   }
 
   PCD.tools = PCD.tools || {};
-  PCD.tools.inventory = { render: render, openEditor: openEditor, computeStatus: computeStatus };
+  PCD.tools.inventory = { render: render, openEditor: openEditor, computeStatus: computeStatus, applyStockDeductions: applyStockDeductions, applyStockAdditions: applyStockAdditions };
 })();

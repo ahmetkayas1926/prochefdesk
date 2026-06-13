@@ -806,7 +806,7 @@
           'width:297mm;height:210mm;display:flex;flex-direction:column;}' +
         '@media screen { body { height: auto !important; } }' +
         '.h-sheet{flex:1 1 auto;min-height:0;padding:4mm;display:flex;flex-direction:column;}' +
-        '.h-head{margin-bottom:2px;border-bottom:1.5px solid #16a34a;padding-bottom:3px;flex:0 0 auto;}' +
+        '.h-head{margin-bottom:2px;border-bottom:1.5px solid #16433a;padding-bottom:3px;flex:0 0 auto;}' +
         '.h-head h1{margin:0;font-size:14px;}' +
         '.h-head .sub{font-size:10px;color:#555;margin-top:1px;}' +
         (showFitWarning ? '.h-warn{padding:3px 6px;background:#fef3c7;color:#92400e;font-size:9px;border-radius:3px;margin-bottom:2px;flex:0 0 auto;}' : '') +

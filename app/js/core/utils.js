@@ -446,7 +446,7 @@
   //     align:['left','right',...], numFmt:{1:'#,##0.00'} }], 'file.xlsx');
   // });
   PCD.xlsx = (function () {
-    const BRAND = '16A34A', HEADER_BG = '16A34A', ROW_ALT = 'FAFAFA', BORDER_COLOR = 'D4D4D4';
+    const BRAND = '16433A', HEADER_BG = '16433A', ROW_ALT = 'F6F3EE', BORDER_COLOR = 'E0DDD5';
     const thin = { style: 'thin', color: { rgb: BORDER_COLOR } };
     const allBorder = { top: thin, bottom: thin, left: thin, right: thin };
 
@@ -544,6 +544,50 @@
 
   // Print helper — popup window on desktop, iframe modal on mobile.
   // Takes a full HTML string or just the body content (wraps if needed).
+  // ============ PREP / DAY LABEL (B1) ============
+  // Quick kitchen prep label: product name + prep date + use-by + (optional) allergens → print.
+  PCD.openPrepLabel = function (opts) {
+    opts = opts || {};
+    const t = PCD.i18n.t;
+    const body = PCD.el('div');
+    body.innerHTML =
+      '<div class="field"><label class="field-label">' + PCD.escapeHtml(t('label_product')) + '</label>' +
+        '<input type="text" class="input" id="plName" value="' + PCD.escapeHtml(opts.name || '') + '" placeholder="' + PCD.escapeHtml(t('label_product')) + '"></div>' +
+      '<div class="field"><label class="field-label">' + PCD.escapeHtml(t('label_days')) + '</label>' +
+        '<input type="number" class="input" id="plDays" value="' + (opts.days != null ? opts.days : 2) + '" min="0" max="90" step="1"></div>' +
+      '<div class="field-hint" id="plPrev" style="margin-top:6px;font-size:13px;"></div>' +
+      (opts.allergens ? '<div class="field-hint" style="margin-top:4px;font-size:12px;color:var(--danger);">⚠ ' + PCD.escapeHtml(t('label_allergens')) + ': ' + PCD.escapeHtml(opts.allergens) + '</div>' : '');
+    function fmt(d) { return PCD.fmtDate ? PCD.fmtDate(d.getTime()) : (d.getDate() + '/' + (d.getMonth() + 1) + '/' + d.getFullYear()); }
+    function dates() {
+      const made = new Date();
+      let n = parseInt((body.querySelector('#plDays') || {}).value, 10); if (isNaN(n)) n = 2;
+      const use = new Date(); use.setHours(0, 0, 0, 0); use.setDate(use.getDate() + n);
+      return { made: made, use: use };
+    }
+    function doPrint() {
+      const dd = dates();
+      const nm = ((body.querySelector('#plName') || {}).value || '').trim() || (opts.name || '—');
+      const label =
+        '<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;width:80mm;border:2px solid #111;border-radius:8px;padding:6mm;-webkit-print-color-adjust:exact;print-color-adjust:exact;">' +
+          '<div style="font-size:22px;font-weight:800;line-height:1.15;margin-bottom:5mm;">' + PCD.escapeHtml(nm) + '</div>' +
+          '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3mm;"><span style="color:#555;">' + PCD.escapeHtml(t('label_made')) + '</span><strong>' + fmt(dd.made) + '</strong></div>' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;font-size:16px;font-weight:800;background:#111;color:#fff;padding:3mm 4mm;border-radius:5px;-webkit-print-color-adjust:exact;print-color-adjust:exact;"><span>' + PCD.escapeHtml(t('label_useby')) + '</span><span>' + fmt(dd.use) + '</span></div>' +
+          (opts.allergens ? '<div style="margin-top:3mm;font-size:12px;"><strong>' + PCD.escapeHtml(t('label_allergens')) + ':</strong> ' + PCD.escapeHtml(opts.allergens) + '</div>' : '') +
+        '</div>';
+      PCD.print('<div style="display:flex;justify-content:center;padding:8mm;">' + label + '</div>', t('label_title'));
+    }
+    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
+    const cancel = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') });
+    const printBtn = PCD.el('button', { class: 'btn btn-primary', text: t('print_pdf'), style: { flex: '1' } });
+    footer.appendChild(cancel); footer.appendChild(printBtn);
+    const m = PCD.modal.open({ title: t('label_title'), body: body, footer: footer, size: 'sm', closable: true });
+    cancel.addEventListener('click', function () { m.close(); });
+    printBtn.addEventListener('click', doPrint);
+    function prev() { const dd = dates(); body.querySelector('#plPrev').textContent = t('label_made') + ': ' + fmt(dd.made) + '   ·   ' + t('label_useby') + ': ' + fmt(dd.use); }
+    body.querySelector('#plDays').addEventListener('input', prev);
+    prev();
+  };
+
   PCD.print = function (htmlOrContent, title) {
     title = title || 'Print';
 
@@ -580,15 +624,17 @@
       const contentHasPageRule = /@page/.test(htmlOrContent);
       fullHtml = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' +
         title + '</title>' +
+        '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
+        '<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">' +
         '<style>' +
-        'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:24px;color:#000;background:#fff;margin:0}' +
+        'body{font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:24px;color:#1c2620;background:#fff;margin:0;font-variant-numeric:tabular-nums;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
         (contentHasPageRule ? '' : '@page{margin:15mm;size:A4}') +
-        'h1,h2,h3{margin:0 0 8px}' +
-        'table{width:100%;border-collapse:collapse}' +
-        'td,th{padding:6px 10px;text-align:left;border-bottom:1px solid #ddd}' +
-        'th{background:#f5f5f5;font-size:11px;text-transform:uppercase;letter-spacing:0.04em}' +
+        'h1,h2,h3{margin:0 0 8px;font-family:"Fraunces","Georgia",serif;color:#16433a;letter-spacing:-0.01em;font-weight:600}' +
+        'table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}' +
+        'td,th{padding:6px 10px;text-align:left;border-bottom:1px solid #e4e1da}' +
+        'th{background:#eef3f1;color:#16433a;font-size:11px;text-transform:uppercase;letter-spacing:0.04em;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
         'pre{white-space:pre-wrap;font-family:inherit;font-size:13px;line-height:1.8}' +
-        '.no-print{display:flex;gap:10px;padding:12px 16px;margin-bottom:16px;border-bottom:2px solid #16a34a;align-items:center;flex-wrap:wrap}' +
+        '.no-print{display:flex;gap:10px;padding:12px 16px;margin-bottom:16px;border-bottom:2px solid #1f9d6b;align-items:center;flex-wrap:wrap}' +
         '@media print{.no-print{display:none !important}body{padding:0}}' +
         '</style></head><body>' +
         htmlOrContent +
@@ -612,7 +658,7 @@
     // Inject print button at top (skipped when printing)
     const printableHtml = fullHtml.replace(
       /<body[^>]*>/,
-      '$&<div class="no-print"><button onclick="window.print()" style="padding:8px 18px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer">' + labelPrintSavePdf + '</button><button onclick="window.close()" style="padding:8px 14px;background:#f0f0f0;color:#333;border:none;border-radius:6px;font-size:13px;cursor:pointer">' + labelClose + '</button><span style="font-size:11px;color:#888">' + labelTip + '</span></div>'
+      '$&<div class="no-print"><button onclick="window.print()" style="padding:8px 18px;background:#1f9d6b;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer">' + labelPrintSavePdf + '</button><button onclick="window.close()" style="padding:8px 14px;background:#f0f0f0;color:#333;border:none;border-radius:6px;font-size:13px;cursor:pointer">' + labelClose + '</button><span style="font-size:11px;color:#888">' + labelTip + '</span></div>'
     );
 
     // Try popup (desktop / allowing browsers).
@@ -647,7 +693,7 @@
       '</div>' +
       '<iframe id="pcd-print-frame" style="flex:1;border:none;background:#fff;width:100%"></iframe>' +
       '<div style="padding:10px 14px;display:flex;gap:8px;border-top:1px solid #e5e5e5;flex-shrink:0;background:#fff">' +
-        '<button id="pcd-print-go" style="flex:1;padding:12px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">Print / Save as PDF</button>' +
+        '<button id="pcd-print-go" style="flex:1;padding:12px;background:#1f9d6b;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">Print / Save as PDF</button>' +
         '<button id="pcd-print-close2" style="padding:12px 18px;background:#f0f0f0;color:#333;border:1px solid #ddd;border-radius:8px;font-size:13px;cursor:pointer">Close</button>' +
       '</div>';
     document.body.appendChild(modal);

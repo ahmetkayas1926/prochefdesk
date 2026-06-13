@@ -156,6 +156,37 @@
     return { totalCost: totalCost, totalRevenue: totalRevenue, profit: profit, margin: margin };
   }
 
+  // v2.44 — A1 Step 2: compute total ingredient needs for an event, in each
+  // ingredient's base unit, ready for inventory deduction.
+  // Returns { deductions: {ingredientId: amountInBaseUnit}, skipped: [name,...] }.
+  // Units that can't convert to the ingredient's base unit are SKIPPED (not deducted).
+  function computeEventDeductions(event, ingMap, recipeMap) {
+    const guests = Number(event.guestCount) || 0;
+    const need = {};
+    const skippedSet = {};
+    (event.menu || []).forEach(function (item) {
+      const r = recipeMap[item.recipeId];
+      if (!r) return;
+      const portionsTotal = guests * (Number(item.portionsPerGuest) || 1);
+      if (portionsTotal <= 0) return;
+      const scale = portionsTotal / (r.servings || 1);
+      const flat = PCD.recipes.flattenIngredients(r, ingMap, recipeMap, { scale: scale }) || [];
+      flat.forEach(function (it) {
+        const ing = ingMap[it.ingredientId];
+        if (!ing) return;
+        let amt = Number(it.amount) || 0;
+        if (amt <= 0) return;
+        if (it.unit && ing.unit && it.unit !== ing.unit) {
+          try { amt = PCD.convertUnit(amt, it.unit, ing.unit); }
+          catch (e) { skippedSet[ing.name || it.ingredientId] = true; return; }
+          if (!(amt > 0)) { skippedSet[ing.name || it.ingredientId] = true; return; }
+        }
+        need[it.ingredientId] = (need[it.ingredientId] || 0) + amt;
+      });
+    });
+    return { deductions: need, skipped: Object.keys(skippedSet) };
+  }
+
   function openEditor(eid) {
     const t = PCD.i18n.t;
     const existing = eid ? PCD.store.getFromTable('events', eid) : null;
@@ -405,9 +436,16 @@
     // v2.37 — Alışveriş listesi (her zaman; data'dan canlı üretir)
     const shopBtn = PCD.el('button', { class: 'btn btn-outline' });
     shopBtn.innerHTML = '🛒 ' + PCD.escapeHtml(t('event_shopping_list') || 'Shopping list');
+    // v2.44 — A1: opt-in "deduct stock from inventory" (only when menu has items)
+    let applyInvBtn = null;
+    if (data.menu && data.menu.length) {
+      applyInvBtn = PCD.el('button', { class: 'btn btn-outline' });
+      applyInvBtn.innerHTML = '📦 ' + PCD.escapeHtml(t('event_apply_inventory') || 'Deduct stock');
+    }
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
     if (deleteBtn) footer.appendChild(deleteBtn);
     footer.appendChild(shopBtn);
+    if (applyInvBtn) footer.appendChild(applyInvBtn);
     if (printBtn) footer.appendChild(printBtn);
     if (shareBtn) footer.appendChild(shareBtn);
     footer.appendChild(cancelBtn);
@@ -441,6 +479,35 @@
       shareEvent(existing);
     });
     shopBtn.addEventListener('click', function () { openShoppingList(data); });
+    if (applyInvBtn) applyInvBtn.addEventListener('click', function () {
+      const ingMap = {}, recipeMap = {};
+      PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
+      PCD.store.listRecipes().forEach(function (r) { recipeMap[r.id] = r; });
+      const dd = PCD.tools.events.computeEventDeductions(data, ingMap, recipeMap);
+      const ids = Object.keys(dd.deductions);
+      if (!ids.length) { PCD.toast.info(t('event_apply_inv_done').replace('{n}', 0)); return; }
+      const preview = ids.slice(0, 6).map(function (iid) {
+        const ing = ingMap[iid];
+        return '• ' + (ing ? ing.name : iid) + ': ' + (Math.round(dd.deductions[iid] * 10) / 10) + (ing ? ing.unit : '');
+      }).join('\n');
+      const more = ids.length - 6;
+      const text = (t('event_apply_inv_msg') || '{n} ingredient(s) will be deducted from inventory. Continue?').replace('{n}', ids.length) +
+        '\n\n' + preview + (more > 0 ? '\n• … +' + more : '') +
+        (dd.skipped.length ? '\n\n⚠ ' + dd.skipped.length + ': ' + dd.skipped.slice(0, 5).join(', ') : '');
+      PCD.modal.confirm({
+        icon: '📦', iconKind: 'warning',
+        title: t('event_apply_inventory') || 'Deduct stock',
+        text: text,
+        okText: t('event_apply_inventory') || 'Deduct stock'
+      }).then(function (ok) {
+        if (!ok) return;
+        const report = (PCD.tools.inventory && PCD.tools.inventory.applyStockDeductions)
+          ? PCD.tools.inventory.applyStockDeductions(dd.deductions) : [];
+        const deducted = report.filter(function (r) { return r.tracked; }).length;
+        const lowNow = report.filter(function (r) { return r.tracked && (r.status === 'low' || r.status === 'critical' || r.status === 'out'); }).length;
+        PCD.toast.success((t('event_apply_inv_done') || '{n} item(s) deducted from stock').replace('{n}', deducted) + (lowNow ? ' · ' + lowNow + ' ⚠' : ''));
+      });
+    });
     saveBtn.addEventListener('click', function () {
       if (!data.name || !data.name.trim()) { PCD.toast.error(t('event_name') + ' ' + t('required')); return; }
       if (existing) data.id = existing.id;
@@ -543,9 +610,9 @@
     const html =
       '<style>' +
         '@page { size: A4; margin: 18mm; }' +
-        'body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; color: #1a1a1a; max-width: 800px; margin: 0 auto; }' +
-        '.ev-header { border-bottom: 3px solid #16a34a; padding-bottom: 14px; margin-bottom: 20px; }' +
-        '.ev-header h1 { margin: 0 0 6px; font-size: 24pt; color: #16a34a; }' +
+        'body { font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif; color: #1c2620; max-width: 800px; margin: 0 auto; font-variant-numeric: tabular-nums; }' +
+        '.ev-header { border-bottom: 3px solid #16433a; padding-bottom: 14px; margin-bottom: 20px; }' +
+        '.ev-header h1 { margin: 0 0 6px; font-family: "Fraunces","Georgia",serif; font-size: 24pt; font-weight: 600; letter-spacing: -0.01em; color: #16433a; }' +
         '.ev-status { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 9pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }' +
         '.ev-status.confirmed { background: #dcfce7; color: #166534; }' +
         '.ev-status.draft { background: #f1f5f9; color: #475569; }' +
@@ -555,13 +622,13 @@
         '.ev-meta-item { display: flex; gap: 8px; align-items: center; }' +
         '.ev-meta-label { font-size: 9pt; text-transform: uppercase; color: #888; letter-spacing: 0.04em; font-weight: 700; }' +
         '.ev-meta-value { font-size: 12pt; color: #111; font-weight: 500; }' +
-        '.ev-section-title { font-size: 13pt; font-weight: 700; color: #16a34a; margin: 20px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #e5e5e5; }' +
+        '.ev-section-title { font-family: "Fraunces","Georgia",serif; font-size: 13pt; font-weight: 600; color: #16433a; margin: 20px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #e5e5e5; }' +
         '.ev-table { width: 100%; border-collapse: collapse; font-size: 11pt; }' +
         '.ev-table th { text-align: left; padding: 8px 10px; background: #f8f8f8; font-size: 9pt; text-transform: uppercase; color: #555; letter-spacing: 0.04em; }' +
         '.ev-table td { padding: 8px 10px; border-bottom: 1px solid #eee; }' +
-        '.ev-summary { background: #f0fdf4; border-radius: 8px; padding: 14px 18px; margin-top: 16px; }' +
+        '.ev-summary { background: #edf6f0; border: 1px solid #cbe8d8; border-radius: 8px; padding: 14px 18px; margin-top: 16px; }' +
         '.ev-summary-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 12pt; }' +
-        '.ev-summary-row.total { font-weight: 700; font-size: 14pt; border-top: 2px solid #16a34a; margin-top: 6px; padding-top: 8px; color: #16a34a; }' +
+        '.ev-summary-row.total { font-weight: 700; font-size: 14pt; border-top: 2px solid #16433a; margin-top: 6px; padding-top: 8px; color: #16433a; }' +
         '.ev-notes { background: #f8f8f8; padding: 14px; border-radius: 8px; margin-top: 16px; font-size: 11pt; line-height: 1.6; white-space: pre-wrap; }' +
         '.ev-notes-label { font-size: 9pt; text-transform: uppercase; color: #888; letter-spacing: 0.04em; font-weight: 700; margin-bottom: 6px; }' +
       '</style>' +
@@ -695,7 +762,7 @@
     const t = PCD.i18n.t;
     if (!groups.length) return '<div class="text-muted" style="padding:16px;text-align:center;">' + PCD.escapeHtml(t('event_shop_empty') || 'Add menu items with recipes to generate a shopping list.') + '</div>';
     const fmtAmt = function (n) { return (Math.round(n * 100) / 100).toString(); };
-    const titleColor = forPrint ? '#16a34a' : 'var(--brand-700)';
+    const titleColor = forPrint ? '#16433a' : 'var(--brand-700)';
     const lineColor = forPrint ? '#e5e5e5' : 'var(--border)';
     const subColor = forPrint ? '#9a9a9a' : 'var(--text-3)';
     const subBg = forPrint ? '#f6f6f6' : 'var(--surface-2)';
@@ -731,7 +798,7 @@
     footer.appendChild(printBtn); footer.appendChild(closeBtn);
     const m = PCD.modal.open({ title: '🛒 ' + (t('event_shopping_list') || 'Shopping list'), body: body, footer: footer, size: 'md', closable: true });
     printBtn.addEventListener('click', function () {
-      const html = '<style>@page{size:A4;margin:16mm;}body{font-family:-apple-system,"Segoe UI",Roboto,sans-serif;color:#1a1a1a;max-width:760px;margin:0 auto;}h1{font-size:20pt;color:#16a34a;margin:0 0 4px;}.sub{color:#666;font-size:11pt;margin-bottom:16px;}</style>' +
+      const html = '<style>@page{size:A4;margin:16mm;}body{font-family:"Inter",-apple-system,"Segoe UI",Roboto,sans-serif;color:#1c2620;max-width:760px;margin:0 auto;font-variant-numeric:tabular-nums;}h1{font-family:"Fraunces","Georgia",serif;font-size:20pt;font-weight:600;letter-spacing:-0.01em;color:#16433a;margin:0 0 4px;}.sub{color:#666;font-size:11pt;margin-bottom:16px;}</style>' +
         '<h1>' + PCD.escapeHtml(event.name || (t('event_shopping_list') || 'Shopping list')) + '</h1>' +
         '<div class="sub">' + PCD.escapeHtml((t('event_shopping_list') || 'Shopping list') + ' · ' + (event.guestCount || 0) + ' ' + (t('event_guests') || 'guests')) + '</div>' +
         shoppingListHtml(groups, true);
@@ -741,5 +808,5 @@
   }
 
   PCD.tools = PCD.tools || {};
-  PCD.tools.events = { render: render, openEditor: openEditor };
+  PCD.tools.events = { render: render, openEditor: openEditor, computeEventDeductions: computeEventDeductions };
 })();
