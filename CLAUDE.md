@@ -163,8 +163,8 @@ Yeni feature'da misafir için cloud push tetiklenmemeli.
 
 ---
 
-**Kaldırılmış araçlar — 10 tool dosyası SİLİNDİ (v2.43).**
-Şu dosyalar `app/js/tools/`'tan tamamen silindi (route yok, yüklenmiyordu, erişilemiyordu): `menu_matrix, sales, nutrition, whatif, yield, variance` (TOOL — `core/variance.js` CANLI, silinmedi)`, team, allergens` (TOOL — `core/allergens-db.js` CANLI, silinmedi)`, menus` (klasik), `tools-hub`. Kod git geçmişinde. **Schema-only kalan (sync/backup VAR, UI YOK, SİLİNMEDİ):** `waste`, `shopping_lists`, `mise_plans`, `team`. Route'ların tek doğruluk kaynağı: `app/js/core/app.js`. Detay: HANDOVER.md → "Kaldırılmış araçlar".
+**Kaldırılmış araçlar + yeniden inşa (v2.43 → v2.44.21).**
+v2.43'te 10 ölü tool dosyası silindi. **8'i hâlâ silik** (route yok, git geçmişinde): `menu_matrix, sales, whatif, yield, team` (TOOL), `allergens` (TOOL — `core/allergens-db.js` CANLI), `menus` (klasik; `'menus'` route'u menu_studio yükler), `tools-hub`. **3'ü v2.44.21'de YENİDEN İNŞA edildi → artık CANLI tool:** `nutrition`, `variance` (`core/variance.js` motoru zaten canlıydı; bu onun UI'ı), `waste` (eski şema-only → tam UI). Bu 3 + `portion` + `prep` v2.44.30'da **sidebar yerine sub-nav sekmelerinde** (Stok/Tarif/Liste, `PCD.subNav`) — route'ları app.js'te DURUYOR, sadece sidebar `sections` dizisinden çıkarıldılar. **Hâlâ şema-only (UI YOK):** `shopping_lists`, `mise_plans`, `team`. Route tek doğruluk kaynağı: `app/js/core/app.js`. Detay: HANDOVER.md → "Kaldırılmış araçlar".
 
 ---
 

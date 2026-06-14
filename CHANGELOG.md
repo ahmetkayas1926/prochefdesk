@@ -4,6 +4,58 @@ Kronolojik tersine (en son üstte). Her sürüm: başlık + ana değişiklikler.
 
 ---
 
+## v2.44.30 — Araç konsolidasyonu + landing görsel yenileme · 2026-06-15
+
+### Araç konsolidasyonu (sidebar sadeleştirme)
+- Sidebar **20 → 15 öğe.** Birbirine sıkı-bağlı araçlar ortak **alt-sekme (sub-nav) çubuğu** altında gruplandı: **Stok** (Inventory · Variance · Waste) · **Tarif** (Recipes · Nutrition · Portion) · **Liste** (Checklist · Prep).
+- Yeni `PCD.subNav` bileşeni — temalı sekme çubuğu, router-tabanlı navigasyon. Araç route'ları korundu (erişim grup primary'sinden sekmeyle). `tab_*` anahtarları 6 dilde.
+
+### Landing page görsel yenileme
+- Tüm ürün ekran görüntüleri **canlı app'ten** yeniden üretildi (rehber kartları kapalı, zengin demo verisi, USD, Pro özellikleri açık) — **light + dark + mobil + masaüstü.**
+- Yeni **"Day & night"** light/dark vitrini (dashboard açık|koyu çifti + 3-shot dark galeri) + ürün-kanıtı bölümü **4 → 6 kart** (Inventory + Buffet). 6 dilde çeviri.
+
+---
+
+## v2.44.21–.29 — "Bağlı sistem" operasyonel araçlar + marka + QA · 2026-06-13…14
+
+### Yeni operasyonel araçlar (v2.44.21)
+- **Waste (fire) aracı** — şema-only'den canlı UI'a: stok düşümü + $ fire takibi.
+- **Variance (dönemsel stok-farkı)** ve **Nutrition (besin)** araç UI'ları eklendi (eski sürümleri v2.43'te sadeleştirilmişti; yeni araç olarak yeniden inşa).
+- **Operasyonel geliştirmeler** — events · inventory · recipes · ingredients · dashboard araçları genişletildi (bağlı-sistem temelleri). 6 dilde ~100'er yeni i18n anahtarı.
+
+### Marka + web tutarlılığı (v2.44.25–.29)
+- **Toque app ikonu** — şef şapkası monogramı **tüm web sayfalarında** (app + landing + blog + privacy/terms) + merkezi `icon.svg`.
+- **Restore/purge senkron fix** — geri yükleme/temizleme sonrası bulut senkron tutarlılığı.
+- Variance snapshot'sız çalışma + ikon kullanımı standartlaştırıldı + çoğul-form düzeltmeleri.
+
+### SEO
+- **Catering cost-per-head** blog yazısı (SEO standardına uygun).
+
+---
+
+## v2.43.0–.18 — Büyük sadeleştirme + Whiteboard + i18n 6 dil + maliyet motoru · 2026-06-10…11
+
+### Araç sadeleştirme
+- **10 kullanılmayan tool dosyası silindi** (menu_matrix · sales · nutrition[eski] · whatif · yield · variance[eski] · team · allergens[eski] · menus[klasik] · tools-hub) — route'lanmıyor, yüklenmiyordu. Core motorlar (`variance`, `allergens-db`) canlı kaldı. *(nutrition/variance/waste sonradan v2.44.21'de yeni araç olarak yeniden inşa edildi.)*
+- **Whiteboard** aracı eklendi — gerçek-A4 WYSIWYG kanvas (önizleme = çıktı).
+
+### i18n — 6 dil tam (v2.43.17)
+- es/fr/de/ar dört dil de **2598 canlı anahtarın hepsine** sahip (0 eksik); en+tr zaten tamdı.
+
+### Maliyet motoru cilaları (v2.43.18)
+- **fmtMoney düzeltmesi** — her zaman 2 ondalık + binlik ayraç (`$4,800.00`); küçük birim fiyatlarda hassasiyet (`$0.003/g`). Uygulama geneli (print/Excel/share/kitchen cards).
+- **Cost report alt-tarif genişletme** — bir tarifteki alt-tarifi tek satır yerine **içindeki malzemeler + tek tek fiyatlarıyla** açar (recipe + buffet + event; önizleme + PDF + Excel).
+- Tarif/event **hızlı-erişim butonları** + tarif **sıralama** dropdown'ı (6 ölçüt).
+
+---
+
+## v2.41.0 — Kitchen Cards araç oldu + demo overhaul · 2026-06-09
+- **Kitchen Cards** tam araç hâline geldi (lazy route + sidebar).
+- **Demo seed overhaul** — whiteboard + kitchen card demoları, zengin tarif/menü verisi.
+- Landing cilaları (kurucu fotoğrafı) + roster/menu_studio/buffet iyileştirmeleri.
+
+---
+
 ## v2.40.0 — Landing yeniden tasarımı + araç cilaları, mobil & print bug fix'leri · 2026-06-09
 
 ### Landing page (root index.html) — satış-odaklı yeniden tasarım
