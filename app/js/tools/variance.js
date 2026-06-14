@@ -1,27 +1,24 @@
 /* ================================================================
    ProChefDesk — variance.js (tool)
    ----------------------------------------------------------------
-   Periodic cost-variance check (no POS): compares THEORETICAL usage
-   (from production counts the chef enters) vs ACTUAL usage (opening
-   stock count − closing stock count). Surfaces where food cost is
-   leaking — biggest $ gaps first.
-   Reuses the recursive engine PCD.variance.computeTheoreticalUsage.
-   Directional weekly/period check (not accounting-grade — mid-period
-   purchases shown as an optional note). No new table — transient.
+   Periodic cost-variance check (no POS, no stock-count required):
+   chef enters PRODUCTION (recipe × qty) → THEORETICAL ingredient usage
+   is computed. Each ingredient row shows an editable ACTUAL-used field
+   (defaults to theoretical); the chef edits what they really used (or
+   lost) for items they measured → VARIANCE ($) updates live, biggest
+   leak first. If stock counts exist, one tap can pre-fill actuals from
+   them. Transient — nothing is saved.
    ================================================================ */
 (function () {
   'use strict';
   const PCD = window.PCD;
 
-  // production rows entered for the current report (transient, not persisted)
-  let production = [];
-  let openingId = '';   // stockCountHistory snapshot id
-  let closingId = '__current__';
+  let production = [];   // [{recipeId, qty}]
+  let actuals = {};      // { ingredientId: actualAmountString } — user overrides
 
   function snapshots() {
-    return (PCD.store.listTable('stockCountHistory') || []).slice().sort(function (a, b) {
-      return (b.date || '').localeCompare(a.date || '');
-    });
+    return (PCD.store.listTable('stockCountHistory') || []).filter(function (s) { return s && !s._deletedAt; })
+      .slice().sort(function (a, b) { return (b.date || '').localeCompare(a.date || ''); });
   }
   function snapStocks(id) {
     if (!id) return {};
@@ -38,8 +35,8 @@
     const wsId = PCD.store.getActiveWorkspaceId();
     const root = PCD.store._read('inventory') || {};
     let inv = root[wsId] || root;
-    const sample = inv && Object.keys(inv)[0] ? inv[Object.keys(inv)[0]] : null;
-    if (sample && sample.stock === undefined && root[wsId]) inv = root[wsId];
+    const keys = Object.keys(inv || {});
+    if (keys.length && inv[keys[0]] && inv[keys[0]].stock === undefined && root[wsId]) inv = root[wsId];
     const out = {};
     Object.keys(inv || {}).forEach(function (iid) {
       const r = inv[iid];
@@ -55,8 +52,7 @@
     return { ingMap: ingMap, recipeMap: recipeMap };
   }
 
-  // Recursive theoretical usage (inlined — core/variance.js is not loaded in index.html).
-  // production entries: [{recipeId, qty}] → { ingredientId: amountInIngredientUnit }
+  // Recursive theoretical usage (core/variance.js isn't loaded in index.html — inlined).
   function computeTheoreticalUsage(entries, recipeMap, ingMap) {
     const usage = {};
     (entries || []).forEach(function (s) {
@@ -64,8 +60,7 @@
       if (!recipe) return;
       const qty = Number(s.qty) || 0;
       if (qty <= 0) return;
-      const baseServings = recipe.servings || 1;
-      addRecipeUsage(recipe, qty / baseServings, recipeMap, ingMap, usage, {});
+      addRecipeUsage(recipe, qty / (recipe.servings || 1), recipeMap, ingMap, usage, {});
     });
     return usage;
   }
@@ -79,84 +74,50 @@
       if (ri.recipeId) {
         const sub = recipeMap[ri.recipeId];
         if (!sub) return;
-        const subYield = sub.yieldAmount || sub.servings || 1;
-        addRecipeUsage(sub, amt / (subYield || 1), recipeMap, ingMap, usage, Object.assign({}, _visited));
+        addRecipeUsage(sub, amt / (sub.yieldAmount || sub.servings || 1), recipeMap, ingMap, usage, Object.assign({}, _visited));
         return;
       }
       const ing = ingMap[ri.ingredientId];
       if (!ing) return;
-      let amtInIngUnit = amt;
+      let a = amt;
       if (ri.unit && ing.unit && ri.unit !== ing.unit) {
-        try { amtInIngUnit = PCD.convertUnit(amt, ri.unit, ing.unit); } catch (e) { /* keep */ }
+        try { a = PCD.convertUnit(amt, ri.unit, ing.unit); } catch (e) { /* keep */ }
       }
-      usage[ri.ingredientId] = (usage[ri.ingredientId] || 0) + amtInIngUnit;
+      usage[ri.ingredientId] = (usage[ri.ingredientId] || 0) + a;
     });
   }
 
-  function computeReport() {
+  function buildRows() {
     const m = maps();
-    const theoretical = computeTheoreticalUsage(production.filter(function (p) { return p.recipeId && Number(p.qty) > 0; }), m.recipeMap, m.ingMap);
-    const opening = snapStocks(openingId);
-    const closing = closingId === '__current__' ? currentStocks() : snapStocks(closingId);
-
-    // Only ingredients present in the opening count have a meaningful actual
-    // (opening − closing). Uncounted ingredients are skipped to avoid spurious
-    // negative "consumption" from items that only exist in closing/current stock.
-    const ids = {};
-    Object.keys(opening).forEach(function (k) { ids[k] = 1; });
-
-    const rows = [];
-    let totalTheoCost = 0, totalActCost = 0;
-    Object.keys(ids).forEach(function (iid) {
+    const theo = computeTheoreticalUsage(production.filter(function (p) { return p.recipeId && Number(p.qty) > 0; }), m.recipeMap, m.ingMap);
+    const rows = Object.keys(theo).map(function (iid) {
       const ing = m.ingMap[iid];
-      if (!ing) return;
-      const theo = Number(theoretical[iid]) || 0;
-      const act = (Number(opening[iid]) || 0) - (Number(closing[iid]) || 0); // consumption
+      if (!ing) return null;
+      const theoAmt = Number(theo[iid]) || 0;
+      const has = actuals[iid] != null && actuals[iid] !== '';
+      const actual = has ? (Number(actuals[iid]) || 0) : theoAmt;
       const price = Number(ing.pricePerUnit) || 0;
-      const theoCost = theo * price, actCost = act * price;
-      const diffCost = actCost - theoCost;
-      totalTheoCost += theoCost; totalActCost += actCost;
-      rows.push({ ing: ing, theo: theo, act: act, diff: act - theo, theoCost: theoCost, actCost: actCost, diffCost: diffCost });
-    });
-    rows.sort(function (a, b) { return Math.abs(b.diffCost) - Math.abs(a.diffCost); });
-    return { rows: rows, totalTheoCost: totalTheoCost, totalActCost: totalActCost, totalVarCost: totalActCost - totalTheoCost };
+      return { iid: iid, ing: ing, theo: theoAmt, actual: actual, hasActual: has, price: price, varCost: (actual - theoAmt) * price };
+    }).filter(Boolean);
+    rows.sort(function (a, b) { return Math.abs(b.varCost) - Math.abs(a.varCost); });
+    return rows;
   }
+
+  function varColor(v) { return v > 0.005 ? 'var(--danger)' : (v < -0.005 ? 'var(--warning)' : 'var(--text-2)'); }
 
   function render(view) {
     const t = PCD.i18n.t;
-    const snaps = snapshots();
     const recs = PCD.store.listRecipes().filter(function (r) { return !(PCD.recipes && PCD.recipes.isPrep && PCD.recipes.isPrep(r)); })
       .slice().sort(function (a, b) { return (a.name || '').localeCompare(b.name || ''); });
-
-    if (openingId === '' && snaps.length >= 1) openingId = snaps.length >= 2 ? snaps[1].id : '';
-
-    function snapOpts(sel, includeCurrent) {
-      let h = '';
-      if (includeCurrent) h += '<option value="__current__"' + (sel === '__current__' ? ' selected' : '') + '>' + PCD.escapeHtml(t('var_current_stock')) + '</option>';
-      h += '<option value=""' + (sel === '' ? ' selected' : '') + '>—</option>';
-      snaps.forEach(function (s) {
-        const d = s.date ? PCD.fmtDate(new Date(s.date).getTime()) : s.id;
-        h += '<option value="' + s.id + '"' + (sel === s.id ? ' selected' : '') + '>' + PCD.escapeHtml(d) + '</option>';
-      });
-      return h;
-    }
+    const hasSnaps = snapshots().length > 0;
 
     view.innerHTML =
       '<div class="page-header"><div class="page-header-text">' +
         '<div class="page-title">' + PCD.escapeHtml(t('var_title')) + '</div>' +
         '<div class="page-subtitle">' + PCD.escapeHtml(t('var_subtitle')) + '</div>' +
       '</div></div>' +
-      (snaps.length < 1 ?
-        '<div class="card mb-3" style="padding:14px;background:var(--brand-50);border-color:var(--brand-300);">' + PCD.escapeHtml(t('var_need_counts')) + '</div>' : '') +
       '<div class="card mb-3" style="padding:14px;">' +
-        '<div class="field-row">' +
-          '<div class="field"><label class="field-label">' + PCD.escapeHtml(t('var_opening')) + '</label><select class="select" id="vOpen">' + snapOpts(openingId, false) + '</select></div>' +
-          '<div class="field"><label class="field-label">' + PCD.escapeHtml(t('var_closing')) + '</label><select class="select" id="vClose">' + snapOpts(closingId, true) + '</select></div>' +
-        '</div>' +
-        '<div class="text-muted text-sm">' + PCD.escapeHtml(t('var_period_hint')) + '</div>' +
-      '</div>' +
-      '<div class="card mb-3" style="padding:14px;">' +
-        '<div style="font-weight:700;margin-bottom:4px;">' + PCD.escapeHtml(t('var_production')) + '</div>' +
+        '<div style="font-weight:700;margin-bottom:2px;">' + PCD.escapeHtml(t('var_production')) + '</div>' +
         '<div class="text-muted text-sm mb-2">' + PCD.escapeHtml(t('var_production_hint')) + '</div>' +
         '<div id="vProdList" class="flex flex-col gap-1"></div>' +
         '<button class="btn btn-ghost btn-sm mt-2" id="vAddProd" style="width:100%;">' + PCD.icon('plus', 14) + ' ' + PCD.escapeHtml(t('var_add_production')) + '</button>' +
@@ -171,10 +132,10 @@
       production.forEach(function (p, idx) {
         const row = PCD.el('div', { style: { display: 'flex', gap: '6px', alignItems: 'center' } });
         row.innerHTML =
-          '<select class="select" data-vrec="' + idx + '" style="flex:1;"><option value="">—</option>' +
+          '<select class="select" data-vrec="' + idx + '" style="flex:1;min-width:0;"><option value="">—</option>' +
             recs.map(function (r) { return '<option value="' + r.id + '"' + (p.recipeId === r.id ? ' selected' : '') + '>' + PCD.escapeHtml(r.name) + '</option>'; }).join('') +
           '</select>' +
-          '<input type="number" class="input" data-vqty="' + idx + '" value="' + (p.qty != null && p.qty !== '' ? p.qty : '') + '" min="0" step="1" placeholder="' + PCD.escapeHtml(t('var_qty')) + '" style="width:90px;">' +
+          '<input type="number" class="input" data-vqty="' + idx + '" value="' + (p.qty != null && p.qty !== '' ? p.qty : '') + '" min="0" step="1" placeholder="' + PCD.escapeHtml(t('var_qty')) + '" style="width:84px;">' +
           '<button class="icon-btn" data-vdel="' + idx + '">' + PCD.icon('x', 16) + '</button>';
         prodList.appendChild(row);
       });
@@ -185,45 +146,81 @@
     renderProd();
 
     PCD.$('#vAddProd', view).addEventListener('click', function () { production.push({ recipeId: '', qty: '' }); renderProd(); });
-    PCD.$('#vOpen', view).addEventListener('change', function () { openingId = this.value; });
-    PCD.$('#vClose', view).addEventListener('change', function () { closingId = this.value; });
-    PCD.$('#vCompute', view).addEventListener('click', function () {
-      const rep = computeReport();
-      renderReport(PCD.$('#vReport', view), rep, t);
+    PCD.$('#vCompute', view).addEventListener('click', function () { renderTable(PCD.$('#vReport', view), t, hasSnaps); });
+  }
+
+  function prefillFromCounts() {
+    const snaps = snapshots();
+    if (!snaps.length) return;
+    const opening = snapStocks(snaps[snaps.length - 1].id); // oldest snapshot = opening
+    const closing = snaps.length >= 2 ? snapStocks(snaps[0].id) : currentStocks(); // newest snapshot, else current
+    const rows = buildRows();
+    rows.forEach(function (r) {
+      if (opening[r.iid] != null) {
+        const used = (Number(opening[r.iid]) || 0) - (Number(closing[r.iid]) || 0);
+        actuals[r.iid] = String(Math.round(used * 100) / 100);
+      }
     });
   }
 
-  function renderReport(el, rep, t) {
-    if (!rep.rows.length) { el.innerHTML = '<div class="empty" style="padding:30px 0;"><div class="empty-title">' + PCD.escapeHtml(t('var_no_result')) + '</div><div class="empty-desc">' + PCD.escapeHtml(t('var_no_result_desc')) + '</div></div>'; return; }
-    const varCls = rep.totalVarCost > 0.005 ? 'var(--danger)' : (rep.totalVarCost < -0.005 ? 'var(--warning)' : 'var(--success)');
+  function renderTable(el, t, hasSnaps) {
+    const rows = buildRows();
+    if (!rows.length) {
+      el.innerHTML = '<div class="empty" style="padding:30px 0;"><div class="empty-title">' + PCD.escapeHtml(t('var_no_result')) + '</div><div class="empty-desc">' + PCD.escapeHtml(t('var_no_result_desc')) + '</div></div>';
+      return;
+    }
+    let total = rows.reduce(function (s, r) { return s + r.varCost; }, 0);
+
     let html =
-      '<div class="card mb-3" style="background:var(--brand-50);border-color:var(--brand-300);padding:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">' +
+      '<div class="card mb-2" id="vTotalCard" style="background:var(--brand-50);border-color:var(--brand-300);padding:14px;display:flex;justify-content:space-between;align-items:center;gap:10px;">' +
         '<div><div class="text-muted text-sm" style="text-transform:uppercase;letter-spacing:0.04em;">' + PCD.escapeHtml(t('var_total_variance')) + '</div>' +
-        '<div style="font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;color:' + varCls + ';">' + (rep.totalVarCost >= 0 ? '+' : '') + PCD.fmtMoney(rep.totalVarCost) + '</div></div>' +
-        '<div class="text-muted text-sm" style="text-align:right;">' + PCD.escapeHtml(t('var_theoretical')) + ': ' + PCD.fmtMoney(rep.totalTheoCost) + '<br>' + PCD.escapeHtml(t('var_actual')) + ': ' + PCD.fmtMoney(rep.totalActCost) + '</div>' +
-      '</div>';
-    html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums;">' +
-      '<thead><tr style="text-align:left;border-bottom:2px solid var(--border);">' +
-        '<th style="padding:6px 8px;">' + PCD.escapeHtml(t('var_ingredient')) + '</th>' +
-        '<th style="padding:6px 8px;text-align:right;">' + PCD.escapeHtml(t('var_theoretical')) + '</th>' +
-        '<th style="padding:6px 8px;text-align:right;">' + PCD.escapeHtml(t('var_actual')) + '</th>' +
-        '<th style="padding:6px 8px;text-align:right;">' + PCD.escapeHtml(t('var_variance')) + '</th>' +
-      '</tr></thead><tbody>';
-    rep.rows.forEach(function (r) {
-      const dc = r.diffCost;
-      const col = dc > 0.005 ? 'var(--danger)' : (dc < -0.005 ? 'var(--warning)' : 'var(--text-2)');
+        '<div id="vTotalVal" style="font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;color:' + varColor(total) + ';">' + (total >= 0 ? '+' : '') + PCD.fmtMoney(total) + '</div></div>' +
+        (hasSnaps ? '<button class="btn btn-outline btn-sm" id="vPrefill">' + PCD.escapeHtml(t('var_prefill')) + '</button>' : '') +
+      '</div>' +
+      '<div class="text-muted text-sm mb-2">' + PCD.escapeHtml(t('var_actual_hint')) + '</div>' +
+      '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums;">' +
+        '<thead><tr style="text-align:left;border-bottom:2px solid var(--border);">' +
+          '<th style="padding:6px 8px;">' + PCD.escapeHtml(t('var_ingredient')) + '</th>' +
+          '<th style="padding:6px 6px;text-align:right;">' + PCD.escapeHtml(t('var_theoretical')) + '</th>' +
+          '<th style="padding:6px 6px;text-align:right;">' + PCD.escapeHtml(t('var_actual')) + '</th>' +
+          '<th style="padding:6px 8px;text-align:right;">' + PCD.escapeHtml(t('var_variance')) + '</th>' +
+        '</tr></thead><tbody>';
+    rows.forEach(function (r) {
       html += '<tr style="border-bottom:1px solid var(--border);">' +
         '<td style="padding:6px 8px;">' + PCD.escapeHtml(r.ing.name) + '</td>' +
-        '<td style="padding:6px 8px;text-align:right;">' + PCD.fmtNumber(Math.round(r.theo * 10) / 10) + ' ' + PCD.escapeHtml(r.ing.unit || '') + '</td>' +
-        '<td style="padding:6px 8px;text-align:right;">' + PCD.fmtNumber(Math.round(r.act * 10) / 10) + ' ' + PCD.escapeHtml(r.ing.unit || '') + '</td>' +
-        '<td style="padding:6px 8px;text-align:right;font-weight:700;color:' + col + ';">' + (dc >= 0 ? '+' : '') + PCD.fmtMoney(dc) + '</td>' +
+        '<td style="padding:6px 6px;text-align:right;white-space:nowrap;">' + PCD.fmtNumber(Math.round(r.theo * 10) / 10) + ' <span class="text-muted">' + PCD.escapeHtml(r.ing.unit || '') + '</span></td>' +
+        '<td style="padding:4px 6px;text-align:right;"><input type="number" class="input" data-aiid="' + r.iid + '" value="' + (Math.round(r.actual * 100) / 100) + '" step="0.1" min="0" style="width:78px;text-align:right;padding:4px 6px;font-variant-numeric:tabular-nums;"></td>' +
+        '<td style="padding:6px 8px;text-align:right;font-weight:700;white-space:nowrap;color:' + varColor(r.varCost) + ';" data-vc="' + r.iid + '">' + (r.varCost >= 0 ? '+' : '') + PCD.fmtMoney(r.varCost) + '</td>' +
       '</tr>';
     });
-    html += '</tbody></table></div>';
-    html += '<div class="text-muted text-sm mt-2">' + PCD.escapeHtml(t('var_legend')) + '</div>';
+    html += '</tbody></table></div>' +
+      '<div class="text-muted text-sm mt-2">' + PCD.escapeHtml(t('var_legend')) + '</div>';
     el.innerHTML = html;
+
+    // map iid → row for live recompute
+    const byId = {}; rows.forEach(function (r) { byId[r.iid] = r; });
+    function recomputeTotal() {
+      let tot = 0; Object.keys(byId).forEach(function (k) { tot += byId[k].varCost; });
+      const tv = PCD.$('#vTotalVal', el);
+      if (tv) { tv.textContent = (tot >= 0 ? '+' : '') + PCD.fmtMoney(tot); tv.style.color = varColor(tot); }
+    }
+    el.querySelectorAll('[data-aiid]').forEach(function (inp) {
+      inp.addEventListener('input', function () {
+        const iid = inp.getAttribute('data-aiid');
+        actuals[iid] = inp.value;
+        const r = byId[iid];
+        if (!r) return;
+        r.actual = inp.value === '' ? r.theo : (Number(inp.value) || 0);
+        r.varCost = (r.actual - r.theo) * r.price;
+        const cell = el.querySelector('[data-vc="' + iid + '"]');
+        if (cell) { cell.textContent = (r.varCost >= 0 ? '+' : '') + PCD.fmtMoney(r.varCost); cell.style.color = varColor(r.varCost); }
+        recomputeTotal();
+      });
+    });
+    const pf = PCD.$('#vPrefill', el);
+    if (pf) pf.addEventListener('click', function () { prefillFromCounts(); renderTable(el, t, hasSnaps); });
   }
 
   PCD.tools = PCD.tools || {};
-  PCD.tools.variance = { render: render };
+  PCD.tools.variance = { render: render, computeTheoreticalUsage: computeTheoreticalUsage };
 })();

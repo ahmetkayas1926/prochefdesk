@@ -985,7 +985,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
     const pdfBtn = PCD.el('button', { type: 'button', class: 'btn btn-primary' });
     pdfBtn.innerHTML = PCD.icon('print', 16) + ' <span>' + t('cr_pdf') + '</span>';
     const xlsxBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline' });
-    xlsxBtn.innerHTML = PCD.icon('book-open', 16) + ' <span>' + t('cr_excel') + '</span>';
+    xlsxBtn.innerHTML = PCD.icon('download', 16) + ' <span>' + t('cr_excel') + '</span>';
 
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
     footer.appendChild(closeBtn);

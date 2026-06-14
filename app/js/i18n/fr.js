@@ -2937,3 +2937,19 @@ window.PCD.i18n.register('fr', {
   nutr_disclaimer: "Estimé à partir des données publiques USDA / FSANZ — à titre indicatif uniquement. PAS une étiquette nutritionnelle certifiée. Les valeurs varient selon la marque, le morceau et la préparation. Liquides approximés par volume.",
   nutr_no_recipes: "Ajoutez d'abord une recette pour estimer sa valeur nutritionnelle.",
 });
+
+// Cost variance — v2
+window.PCD.i18n.register('fr', {
+  var_actual_hint: "Modifiez « Réel utilisé » pour ce que vous avez mesuré (ou perdu) — l'écart se met à jour en direct. Le reste reste théorique.",
+  var_prefill: "Remplir depuis les comptages",
+  var_legend: "Rouge = plus que la théorie (perte / surportionnement). Ambre = moins. Théorique par défaut jusqu'à saisie du réel.",
+  var_no_result_desc: "Ajoutez ci-dessus les plats préparés, puis appuyez sur Calculer.",
+  var_production_hint: "Ajoutez les plats préparés ou vendus et combien — cela donne l'usage théorique des ingrédients.",
+});
+
+// Invoice OCR — v2 extras
+window.PCD.i18n.register('fr', {
+  ocr_detected: "lu",
+  ocr_current: "actuel",
+  ocr_first_note: "(le premier scan télécharge le lecteur, ~une fois)",
+});

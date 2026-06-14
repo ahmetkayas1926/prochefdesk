@@ -335,7 +335,7 @@
       '<div class="page-header-actions">' +
         '<button class="btn btn-secondary btn-sm" id="rPrint">' + PCD.icon('print', 14) + ' ' + PCD.escapeHtml(t('print') || 'Print') + '</button>' +
         '<button class="btn btn-secondary btn-sm" id="rExcel">' + PCD.icon('download', 14) + ' ' + PCD.escapeHtml(t('roster_excel') || 'Excel') + '</button>' +
-        '<button class="btn btn-primary btn-sm" id="rShare">' + PCD.icon('send', 14) + ' ' + PCD.escapeHtml(t('roster_share') || 'Share / Send') + '</button>' +
+        '<button class="btn btn-primary btn-sm" id="rShare">' + PCD.icon('share', 14) + ' ' + PCD.escapeHtml(t('roster_share') || 'Share / Send') + '</button>' +
         '<button class="btn btn-ghost btn-sm" id="rDelete" style="color:var(--danger);">' + PCD.icon('trash', 14) + ' ' + PCD.escapeHtml(t('delete') || 'Delete') + '</button>' +
       '</div></div>';
 

@@ -2937,3 +2937,19 @@ window.PCD.i18n.register('de', {
   nutr_disclaimer: "Geschätzt aus öffentlichen USDA-/FSANZ-Nährwertdaten — nur als Orientierung. KEIN zertifiziertes Nährwertetikett. Werte variieren je nach Marke, Teilstück und Zubereitung. Flüssigkeiten nach Volumen angenähert.",
   nutr_no_recipes: "Füge zuerst ein Rezept hinzu, um die Nährwerte zu schätzen.",
 });
+
+// Cost variance — v2
+window.PCD.i18n.register('de', {
+  var_actual_hint: "Bearbeite das Feld Tatsächlich für Gemessenes (oder Verlorenes) — die Abweichung aktualisiert sich live. Der Rest bleibt theoretisch.",
+  var_prefill: "Aus Zählungen füllen",
+  var_legend: "Rot = mehr als Theorie (Verlust / Überportionierung). Bernstein = weniger. Standardmäßig theoretisch, bis du Ist-Werte eingibst.",
+  var_no_result_desc: "Füge oben die zubereiteten Gerichte hinzu und tippe auf Berechnen.",
+  var_production_hint: "Füge zubereitete oder verkaufte Gerichte und Mengen hinzu — das ergibt den theoretischen Zutatenverbrauch.",
+});
+
+// Invoice OCR — v2 extras
+window.PCD.i18n.register('de', {
+  ocr_detected: "gelesen",
+  ocr_current: "jetzt",
+  ocr_first_note: "(erster Scan lädt den Leser herunter, ~einmal)",
+});

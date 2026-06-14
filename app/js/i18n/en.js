@@ -482,7 +482,7 @@ window.PCD.i18n.register('en', {
   account_guide_step2_title: "Fill your chef profile",
   account_guide_step2_body: "Name + role + country + workplace + bio. These appear on every recipe you share on Discover — build a recognisable identity.",
   account_guide_step3_title: "Tune preferences",
-  account_guide_step3_body: "Currency for cost displays, language (EN + TR fully translated), dark mode for night service, haptic feedback for mobile.",
+  account_guide_step3_body: "Currency for cost displays, language, dark mode for night service, haptic feedback for mobile.",
   account_guide_step4_title: "Backup + safety",
   account_guide_step4_body: "Cloud backup runs nightly automatically. Manual JSON export available below for off-platform archive. Danger Zone lets you wipe a workspace or delete your account permanently.",
   account_guide_tip_title: "Pro tip",
@@ -3167,4 +3167,20 @@ window.PCD.i18n.register('en', {
   nutr_missing: "Not estimated",
   nutr_disclaimer: "Estimated from public USDA / FSANZ nutrition data — for guidance only. NOT a certified nutrition label. Values vary by brand, cut and preparation. Liquids approximated by volume.",
   nutr_no_recipes: "Add a recipe first to estimate its nutrition.",
+});
+
+// Cost variance — v2 (no stock-count required)
+window.PCD.i18n.register('en', {
+  var_actual_hint: "Edit 'Actual used' for items you measured (or lost) — variance updates live. Others stay at theoretical.",
+  var_prefill: "Fill from stock counts",
+  var_legend: "Red = used more than theory (waste / over-portioning / loss). Amber = used less. Defaults to theoretical until you enter actuals.",
+  var_no_result_desc: "Add the dishes you made above, then tap Compute.",
+  var_production_hint: "Add the dishes you made or sold and how many — this gives theoretical ingredient usage.",
+});
+
+// Invoice OCR — v2 extras
+window.PCD.i18n.register('en', {
+  ocr_detected: "read",
+  ocr_current: "now",
+  ocr_first_note: "(first scan downloads the reader, ~once)",
 });

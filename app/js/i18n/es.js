@@ -2937,3 +2937,19 @@ window.PCD.i18n.register('es', {
   nutr_disclaimer: "Estimado a partir de datos públicos de USDA / FSANZ — solo orientativo. NO es una etiqueta nutricional certificada. Los valores varían según marca, corte y preparación. Los líquidos se aproximan por volumen.",
   nutr_no_recipes: "Añade una receta primero para estimar su valor nutricional.",
 });
+
+// Cost variance — v2
+window.PCD.i18n.register('es', {
+  var_actual_hint: "Edita 'Real usado' para lo que mediste (o perdiste) — la variación se actualiza en vivo. El resto queda en teórico.",
+  var_prefill: "Rellenar desde conteos",
+  var_legend: "Rojo = más que la teoría (merma / sobreporción / pérdida). Ámbar = menos. Por defecto teórico hasta que introduzcas valores reales.",
+  var_no_result_desc: "Añade arriba los platos que hiciste y pulsa Calcular.",
+  var_production_hint: "Añade los platos que hiciste o vendiste y cuántos — esto da el uso teórico de ingredientes.",
+});
+
+// Invoice OCR — v2 extras
+window.PCD.i18n.register('es', {
+  ocr_detected: "leído",
+  ocr_current: "ahora",
+  ocr_first_note: "(el primer escaneo descarga el lector, ~una vez)",
+});

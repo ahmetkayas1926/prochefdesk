@@ -643,7 +643,7 @@
           '<button type="button" class="icon-btn" data-buf-prep="' + b.id + '" title="' + PCD.escapeHtml(t('buffet_print_prep') || 'Prep List') + '">' + PCD.icon('list', 18) + '</button>' +
           '<button type="button" class="icon-btn" data-buf-order="' + b.id + '" title="' + PCD.escapeHtml(t('buffet_order_list') || 'Order List') + '">' + PCD.icon('truck', 18) + '</button>' +
           '<button type="button" class="icon-btn" data-buf-pdf="' + b.id + '" title="' + PCD.escapeHtml(t('buffet_print_report') || 'Cost Report') + '">' + PCD.icon('print', 18) + '</button>' +
-          '<button type="button" class="icon-btn" data-buf-excel="' + b.id + '" title="Excel">' + PCD.icon('book-open', 18) + '</button>' +
+          '<button type="button" class="icon-btn" data-buf-excel="' + b.id + '" title="Excel">' + PCD.icon('download', 18) + '</button>' +
           '<button type="button" class="icon-btn" data-buf-dup="' + b.id + '" title="' + PCD.escapeHtml(t('buffet_duplicate') || 'Duplicate') + '">' + PCD.icon('copy', 18) + '</button>' +
           '<button type="button" class="icon-btn" data-buf-edit="' + b.id + '" title="' + PCD.escapeHtml(t('edit') || 'Edit') + '">' + PCD.icon('edit', 18) + '</button>' +
           '</div>';
@@ -1425,7 +1425,7 @@
     // v2.8.79 — Excel export butonu (operatör request: "excel cost report
     // buffet costing'e de ekle"). Aynı pattern: xlsx on-demand load.
     const excelBtn = PCD.el('button', { class: 'btn btn-outline' });
-    excelBtn.innerHTML = PCD.icon('book-open', 16) + ' <span>Excel</span>';
+    excelBtn.innerHTML = PCD.icon('download', 16) + ' <span>Excel</span>';
     let deleteBtn = null;
     if (existing) {
       deleteBtn = PCD.el('button', { class: 'btn btn-ghost', text: t('delete') || 'Delete', style: { color: 'var(--danger)' } });

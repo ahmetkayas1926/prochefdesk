@@ -482,7 +482,7 @@ window.PCD.i18n.register('tr', {
   account_guide_step2_title: "Şef profilini doldur",
   account_guide_step2_body: "Ad + rol + ülke + işyeri + bio. Discover’da paylaştığın her tarifin altında görünür — tanınır bir kimlik kur.",
   account_guide_step3_title: "Tercihleri ayarla",
-  account_guide_step3_body: "Maliyet için para birimi, dil (EN + TR tam çevirili), gece servisi için karanlık mod, mobil için titreşim.",
+  account_guide_step3_body: "Maliyet için para birimi, dil, gece servisi için karanlık mod, mobil için titreşim.",
   account_guide_step4_title: "Yedek + güvenlik",
   account_guide_step4_body: "Bulut yedeği her gece otomatik çalışır. Aşağıda platform-dışı arşiv için manuel JSON export var. Tehlikeli Bölge bir workspace’i veya hesabını kalıcı silmene izin verir.",
   account_guide_tip_title: "Profi tüyo",
@@ -3164,4 +3164,20 @@ window.PCD.i18n.register('tr', {
   nutr_missing: "Tahmin edilemedi",
   nutr_disclaimer: "Açık USDA / FSANZ besin verisinden tahmin edilmiştir — yalnızca rehber amaçlıdır. Sertifikalı besin etiketi DEĞİLDİR. Değerler markaya, parçaya ve hazırlığa göre değişir. Sıvılar hacme göre yaklaşıktır.",
   nutr_no_recipes: "Besin değeri için önce bir tarif ekle.",
+});
+
+// Cost variance — v2 (stok sayımı zorunlu değil)
+window.PCD.i18n.register('tr', {
+  var_actual_hint: "Ölçtüğün (veya kaybettiğin) kalemler için 'Gerçek'i düzenle — varyans canlı güncellenir. Diğerleri teorikte kalır.",
+  var_prefill: "Stok sayımından doldur",
+  var_legend: "Kırmızı = teoriden fazla (fire / fazla porsiyon / kayıp). Amber = daha az. Gerçek girilene kadar teorik kabul edilir.",
+  var_no_result_desc: "Yukarıda yaptığın yemekleri ekle, sonra Hesapla'ya bas.",
+  var_production_hint: "Yaptığın veya sattığın yemekleri ve adetlerini ekle — bu teorik malzeme kullanımını verir.",
+});
+
+// Invoice OCR — v2 extras
+window.PCD.i18n.register('tr', {
+  ocr_detected: "okundu",
+  ocr_current: "şu an",
+  ocr_first_note: "(ilk taramada okuyucu indirilir, ~bir kez)",
 });

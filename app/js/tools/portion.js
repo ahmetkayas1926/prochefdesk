@@ -223,7 +223,7 @@
           toggleHtml +
           '<div class="flex gap-2 mt-3" style="flex-wrap:wrap;">' +
             '<button class="btn btn-primary" id="pcPrint">' + PCD.icon('print', 16) + ' <span>' + t('pc_print') + '</span></button>' +
-            '<button class="btn btn-outline" id="pcExcel">' + PCD.icon('book-open', 16) + ' <span>Excel</span></button>' +
+            '<button class="btn btn-outline" id="pcExcel">' + PCD.icon('download', 16) + ' <span>Excel</span></button>' +
             '<button class="btn btn-outline" id="pcShare">' + PCD.icon('share', 16) + ' <span>' + t('pc_share') + '</span></button>' +
           '</div>' +
         '</div>' +

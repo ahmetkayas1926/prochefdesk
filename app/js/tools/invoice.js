@@ -93,15 +93,21 @@
       resultsEl.innerHTML = '';
       statusEl.textContent = t('ocr_loading');
       const url = URL.createObjectURL(file);
+      statusEl.textContent = t('ocr_loading') + ' ' + (t('ocr_first_note') || '');
       loadTesseract().then(function (T) {
         statusEl.textContent = t('ocr_reading');
-        return T.recognize(url, 'eng');
+        return T.recognize(url, 'eng', { logger: function (msg) {
+          if (msg && msg.status === 'recognizing text' && typeof msg.progress === 'number') {
+            statusEl.textContent = t('ocr_reading') + ' ' + Math.round(msg.progress * 100) + '%';
+          }
+        } });
       }).then(function (res) {
         try { URL.revokeObjectURL(url); } catch (e) { /* */ }
         const text = (res && res.data && res.data.text) || '';
         const ings = PCD.store.listIngredients();
-        const rows = parseLines(text).map(function (p) { return { p: p, match: matchIngredient(p.name, ings) }; })
-          .filter(function (r) { return r.match; });
+        // keep ALL detected price lines (matched + unmatched) so the chef can
+        // assign unmatched ones manually — robust on real-world invoices.
+        const rows = parseLines(text).map(function (p) { return { p: p, match: matchIngredient(p.name, ings) }; });
         renderResults(resultsEl, statusEl, rows, ings, t);
       }).catch(function (e) {
         statusEl.textContent = t('ocr_error');
@@ -114,15 +120,17 @@
     statusEl.textContent = (t('ocr_found') || '{n} prices found').replace('{n}', rows.length);
     let html = '<div class="card" style="padding:8px 14px;">';
     rows.forEach(function (r, idx) {
-      const cur = Number(r.match.pricePerUnit) || 0;
+      const cur = r.match ? (Number(r.match.pricePerUnit) || 0) : null;
       html +=
-        '<div style="display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">' +
-          '<input type="checkbox" class="iv-ck" data-i="' + idx + '" checked style="width:18px;height:18px;flex-shrink:0;">' +
-          '<select class="select iv-ing" data-i="' + idx + '" style="flex:1;min-width:0;">' +
-            ings.map(function (g) { return '<option value="' + g.id + '"' + (g.id === r.match.id ? ' selected' : '') + '>' + PCD.escapeHtml(g.name) + '</option>'; }).join('') +
-          '</select>' +
-          '<span class="text-muted text-sm" style="white-space:nowrap;font-variant-numeric:tabular-nums;">' + PCD.fmtMoney(cur) + ' →</span>' +
-          '<input type="number" class="input iv-price" data-i="' + idx + '" value="' + r.p.price + '" step="0.001" min="0" style="width:96px;font-variant-numeric:tabular-nums;">' +
+        '<div style="padding:8px 0;border-bottom:1px solid var(--border);">' +
+          '<div style="display:flex;gap:8px;align-items:center;">' +
+            '<input type="checkbox" class="iv-ck" data-i="' + idx + '"' + (r.match ? ' checked' : '') + ' style="width:18px;height:18px;flex-shrink:0;">' +
+            '<select class="select iv-ing" data-i="' + idx + '" style="flex:1;min-width:0;"><option value="">—</option>' +
+              ings.map(function (g) { return '<option value="' + g.id + '"' + (r.match && g.id === r.match.id ? ' selected' : '') + '>' + PCD.escapeHtml(g.name) + '</option>'; }).join('') +
+            '</select>' +
+            '<input type="number" class="input iv-price" data-i="' + idx + '" value="' + r.p.price + '" step="0.001" min="0" style="width:88px;font-variant-numeric:tabular-nums;">' +
+          '</div>' +
+          '<div class="text-muted" style="font-size:11px;margin-top:3px;margin-inline-start:26px;">' + PCD.escapeHtml(t('ocr_detected')) + ': "' + PCD.escapeHtml(r.p.name) + '"' + (cur != null ? ' · ' + PCD.escapeHtml(t('ocr_current')) + ' ' + PCD.fmtMoney(cur) : '') + '</div>' +
         '</div>';
     });
     html += '</div>' +
