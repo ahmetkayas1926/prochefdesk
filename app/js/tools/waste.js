@@ -107,6 +107,7 @@
           '<button class="btn btn-primary" id="newWasteBtn">' + PCD.icon('plus', 16) + ' ' + PCD.escapeHtml(t('waste_log_btn')) + '</button>' +
         '</div>' +
       '</div>' +
+      PCD.guideCard('waste', t('waste_g_t'), [t('waste_g1'), t('waste_g2'), t('waste_g3')]) +
       '<div id="wasteList"></div>';
 
     const listEl = PCD.$('#wasteList', view);

@@ -118,6 +118,7 @@
           <button class="btn btn-primary" id="newRecipeBtn">+ ${t('new_recipe')}</button>
         </div>
       </div>
+      ${PCD.guideCard('recipes', t('recipes_g_t'), [t('recipes_g1'), t('recipes_g2'), t('recipes_g3')])}
 
       <div class="searchbar mb-3">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35" stroke-linecap="round"/></svg>
@@ -2146,6 +2147,14 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
           PCD.icon('share', 14) + ' <span>' + PCD.i18n.t('btn_generate_share_link') + '</span>' +
         '</button>' +
         '<input type="text" id="rShLinkOutput" readonly style="display:none;width:100%;margin-top:8px;padding:8px;border:1.5px solid var(--brand-600);border-radius:6px;font-family:var(--font-mono);font-size:12px;background:#fff;">' +
+        '<div id="rShQr" style="display:none;text-align:center;margin-top:12px;">' +
+          '<div style="display:inline-block;padding:12px;background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);"><img id="rShQrImg" alt="QR" style="width:170px;height:170px;display:block;"></div>' +
+          '<div class="text-muted text-sm" style="margin-top:8px;">📱 ' + PCD.escapeHtml(PCD.i18n.t('qr_scan_hint')) + '</div>' +
+          '<div style="display:flex;gap:8px;justify-content:center;margin-top:10px;">' +
+            '<button type="button" class="btn btn-outline btn-sm" id="rShQrDl">' + PCD.icon('download', 14) + ' <span>PNG</span></button>' +
+            '<button type="button" class="btn btn-outline btn-sm" id="rShQrSend">' + PCD.icon('send', 14) + ' <span>' + PCD.escapeHtml(PCD.i18n.t('btn_send_qr')) + '</span></button>' +
+          '</div>' +
+        '</div>' +
       '</div>' +
 
       '<div style="font-weight:600;font-size:12px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Or share as text</div>' +
@@ -2192,6 +2201,14 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
       PCD.share.createOrGetShareUrl('recipe', opts.recipe.id).then(function (url) {
         linkOut.value = url;
         linkOut.style.display = 'block';
+        // v2.44 — show URL + QR together (standard share UX across all tools)
+        var _qrImg = PCD.$('#rShQrImg', body), _qrWrap = PCD.$('#rShQr', body);
+        if (_qrImg && _qrWrap && PCD.qr) {
+          _qrImg.src = PCD.qr.url(url, 360); _qrWrap.style.display = 'block';
+          var _dl = PCD.$('#rShQrDl', body), _snd = PCD.$('#rShQrSend', body);
+          if (_dl) _dl.onclick = function () { PCD.qr.downloadPng(url, opts.title); };
+          if (_snd) _snd.onclick = function () { PCD.qr.sharePng(url, opts.title); };
+        }
         linkBtn.innerHTML = PCD.icon('copy', 14) + ' <span>' + PCD.i18n.t('btn_copy_link') + '</span>';
         linkBtn.disabled = false;
         // First click: select all in input. Second click: copy.

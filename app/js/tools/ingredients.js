@@ -37,6 +37,7 @@
         </div>
       </div>
 
+      ${PCD.guideCard('ingredients', t('ing_g_t'), [t('ing_g1'), t('ing_g2'), t('ing_g3')])}
       <div class="searchbar mb-3">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35" stroke-linecap="round"/></svg>
         <input type="search" id="ingSearch" placeholder="${t('search_ingredients_placeholder')}" autocomplete="off">
@@ -59,15 +60,24 @@
 
     const listEl = PCD.$('#ingListView', view);
     let filter = '';
+    // v2.44 — arrived from the dashboard "price freshness" donut → show only ingredients
+    // whose price is aging (>30 days) so the chef can find + refresh stale prices.
+    let agingFilter = (function () { try { if (sessionStorage.getItem('pcd_ing_aging') === '1') { sessionStorage.removeItem('pcd_ing_aging'); return true; } } catch (e) {} return false; })();
+    function priceAgeDays(i) {
+      if (!i.pricePerUnit || i.pricePerUnit <= 0) return null;
+      const ts = i.updatedAt ? new Date(i.updatedAt).getTime() : 0;
+      return ts ? Math.floor((Date.now() - ts) / 86400000) : null;
+    }
 
     function paint() {
       PCD.clear(listEl);
       let visible = ings;
+      if (agingFilter) visible = visible.filter(function (i) { const a = priceAgeDays(i); return a != null && a > 30; });
       if (filter) {
         const q = filter.toLowerCase();
-        visible = ings.filter(function (i) { return (i.name || '').toLowerCase().indexOf(q) >= 0; });
+        visible = visible.filter(function (i) { return (i.name || '').toLowerCase().indexOf(q) >= 0; });
       }
-      if (visible.length === 0 && !filter) {
+      if (visible.length === 0 && !filter && !agingFilter) {
         listEl.innerHTML = `
           <div class="empty">
             <div class="empty-icon">🥕</div>
@@ -80,8 +90,17 @@
         if (btn) btn.addEventListener('click', function () { openEditor(); });
         return;
       }
+      if (agingFilter) {
+        const banner = PCD.el('div', { class: 'card', style: { padding: '10px 12px', marginBottom: '10px', background: 'var(--brand-50)', borderColor: 'var(--brand-300)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' } });
+        banner.innerHTML = '<span class="text-sm" style="font-weight:600;">' + PCD.icon('clock', 13) + ' ' + PCD.escapeHtml(t('fresh_aging_n').replace('{n}', visible.length)) + '</span>' +
+          '<button class="btn btn-ghost btn-sm" id="ingShowAll">' + PCD.escapeHtml(t('view_all') || 'Show all') + '</button>';
+        listEl.appendChild(banner);
+        const sa = PCD.$('#ingShowAll', banner); if (sa) sa.addEventListener('click', function () { agingFilter = false; paint(); });
+      }
       if (visible.length === 0) {
-        listEl.innerHTML = '<div class="empty"><div class="empty-desc">No results</div></div>';
+        const e = PCD.el('div', { class: 'empty', style: { padding: '24px 0' } });
+        e.innerHTML = '<div class="empty-desc">' + (agingFilter ? PCD.escapeHtml(t('fresh_all_fresh') || '✓ All prices are up to date') : 'No results') + '</div>';
+        listEl.appendChild(e);
         return;
       }
 
@@ -121,11 +140,18 @@
                 (up ? '▲' : '▼') + ' ' + Math.abs(((cur-prev)/prev)*100).toFixed(0) + '%</span>';
             }
           }
+          // v2.44 — price-age badge: surface ingredients whose price is going stale (>30d)
+          let ageHtml = '';
+          const _pa = priceAgeDays(i);
+          if (_pa != null && _pa > 30) {
+            ageHtml = '<span style="color:' + (_pa > 60 ? 'var(--danger)' : 'var(--warning)') + ';font-weight:600;font-size:11px;white-space:nowrap;">' + PCD.icon('clock', 11) + ' ' + PCD.escapeHtml(t('fresh_last_priced').replace('{n}', _pa)) + '</span>';
+          }
           bodyDiv.innerHTML = `
             <div class="list-item-title">${PCD.escapeHtml(i.name)}</div>
             <div class="list-item-meta">
               <span>${PCD.fmtMoney(i.pricePerUnit)} / ${i.unit}</span>
               ${trendHtml ? '<span>·</span>' + trendHtml : ''}
+              ${ageHtml ? '<span>·</span>' + ageHtml : ''}
               ${i.supplier ? '<span>·</span><span>' + PCD.escapeHtml(i.supplier) + '</span>' : ''}
             </div>
           `;

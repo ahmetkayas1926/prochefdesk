@@ -37,6 +37,7 @@
           <button class="btn btn-primary" id="newSupBtn">${PCD.icon('plus',16)} ${t('supplier_new') || 'New Supplier'}</button>
         </div>
       </div>
+      ${PCD.guideCard('suppliers', t('sup_g_t'), [t('sup_g1'), t('sup_g2'), t('sup_g3')])}
       <div id="supList"></div>
     `;
 

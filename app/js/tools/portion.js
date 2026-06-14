@@ -56,16 +56,7 @@
         </div>
       </div>
 
-      <!-- v2.8.92 — Step 1 input kaldırıldı, yerine nazik intro/help kartı -->
-      <div class="card mb-3" style="padding:14px;background:linear-gradient(135deg,var(--brand-50),var(--surface));border:1px solid var(--brand-300);">
-        <div style="display:flex;align-items:flex-start;gap:10px;">
-          <span style="font-size:20px;line-height:1;flex-shrink:0;margin-top:2px;">💡</span>
-          <div style="flex:1;">
-            <div style="font-weight:700;font-size:14px;color:var(--brand-700);margin-bottom:4px;letter-spacing:-0.01em;">${PCD.escapeHtml(t('pc_intro_title') || 'How to use')}</div>
-            <div style="font-size:13px;color:var(--text-2);line-height:1.55;">${PCD.escapeHtml(t('pc_intro_body') || 'Pick the recipes you want to scale below, then enter how many portions you need for each one. Total food cost and average per-portion cost are calculated instantly.')}</div>
-          </div>
-        </div>
-      </div>
+      ${PCD.guideCard('portion', t('portion_g_t'), [t('portion_g1'), t('portion_g2'), t('portion_g3')])}
 
       <div class="card mb-3" style="padding:14px;">
         <div class="flex items-center justify-between mb-2">

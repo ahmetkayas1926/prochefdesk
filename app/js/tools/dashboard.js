@@ -716,7 +716,7 @@
         const bDeg = (fresh.f + fresh.a) / freshTotal * 360;
         const donut = 'background:conic-gradient(#1f9d6b 0 ' + aDeg.toFixed(1) + 'deg,#d97706 ' + aDeg.toFixed(1) + 'deg ' + bDeg.toFixed(1) + 'deg,#dc2626 ' + bDeg.toFixed(1) + 'deg 360deg);';
         const stalePct = Math.round(fresh.s / freshTotal * 100);
-        freshChart = '<div class="cc-chart" data-action="open-ingredients"><h3>' + PCD.escapeHtml(t('cc_price_freshness') || 'Ingredient price freshness') + '</h3>' +
+        freshChart = '<div class="cc-chart" data-action="open-ingredients-aging" style="cursor:pointer;"><h3>' + PCD.escapeHtml(t('cc_price_freshness') || 'Ingredient price freshness') + '</h3>' +
           '<div class="cc-donut-wrap"><div class="cc-donut" style="' + donut + '"><div class="cc-donut-c">' + (100 - stalePct) + '%</div></div>' +
           '<div class="cc-legend">' +
             '<div><i style="background:#1f9d6b;"></i>' + PCD.escapeHtml(t('cc_fresh') || 'Fresh (<30d)') + ' · ' + fresh.f + '</div>' +
@@ -936,6 +936,12 @@
 
     // v2.8.91 — New chef: open-ingredients button → ingredients tool
     PCD.on(view, 'click', '[data-action="open-ingredients"]', function () {
+      PCD.router.go('ingredients');
+    });
+
+    // v2.44 — price-freshness donut → ingredients filtered to aging-price items (actionable)
+    PCD.on(view, 'click', '[data-action="open-ingredients-aging"]', function () {
+      try { sessionStorage.setItem('pcd_ing_aging', '1'); } catch (e) {}
       PCD.router.go('ingredients');
     });
 

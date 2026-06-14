@@ -110,12 +110,26 @@
     const recs = PCD.store.listRecipes().filter(function (r) { return !(PCD.recipes && PCD.recipes.isPrep && PCD.recipes.isPrep(r)); })
       .slice().sort(function (a, b) { return (a.name || '').localeCompare(b.name || ''); });
     const hasSnaps = snapshots().length > 0;
+    const guideHidden = (function () { try { return localStorage.getItem('pcd_var_guide_hidden') === '1'; } catch (e) { return false; } })();
 
     view.innerHTML =
       '<div class="page-header"><div class="page-header-text">' +
         '<div class="page-title">' + PCD.escapeHtml(t('var_title')) + '</div>' +
         '<div class="page-subtitle">' + PCD.escapeHtml(t('var_subtitle')) + '</div>' +
       '</div></div>' +
+      (guideHidden ? '' :
+      '<div class="card mb-3" id="vGuide" style="padding:12px 14px;background:var(--brand-50);border-color:var(--brand-300);">' +
+        '<div style="display:flex;align-items:center;gap:8px;font-weight:700;color:var(--brand-700);margin-bottom:6px;">' +
+          '<span style="flex:1;">💡 ' + PCD.escapeHtml(t('var_guide_title')) + '</span>' +
+          '<button type="button" id="vGuideDismiss" style="background:transparent;border:0;color:var(--text-3);cursor:pointer;font-size:12px;padding:2px 6px;" title="' + PCD.escapeHtml(t('dash_guide_dismiss') || 'Hide') + '">✕</button>' +
+        '</div>' +
+        '<ol style="margin:0;padding-inline-start:18px;font-size:13px;line-height:1.6;color:var(--text-2);">' +
+          '<li>' + PCD.escapeHtml(t('var_guide_step1')) + '</li>' +
+          '<li>' + PCD.escapeHtml(t('var_guide_step2')) + '</li>' +
+          '<li>' + PCD.escapeHtml(t('var_guide_step3')) + '</li>' +
+          '<li>' + PCD.escapeHtml(t('var_guide_step4')) + '</li>' +
+        '</ol>' +
+      '</div>') +
       '<div class="card mb-3" style="padding:14px;">' +
         '<div style="font-weight:700;margin-bottom:2px;">' + PCD.escapeHtml(t('var_production')) + '</div>' +
         '<div class="text-muted text-sm mb-2">' + PCD.escapeHtml(t('var_production_hint')) + '</div>' +
@@ -146,7 +160,16 @@
     renderProd();
 
     PCD.$('#vAddProd', view).addEventListener('click', function () { production.push({ recipeId: '', qty: '' }); renderProd(); });
-    PCD.$('#vCompute', view).addEventListener('click', function () { renderTable(PCD.$('#vReport', view), t, hasSnaps); });
+    PCD.$('#vCompute', view).addEventListener('click', function () {
+      // Auto-fill actuals from stock counts on first compute (counts exist + user hasn't typed any) → real variance immediately
+      if (hasSnaps && Object.keys(actuals).length === 0) prefillFromCounts();
+      renderTable(PCD.$('#vReport', view), t, hasSnaps);
+    });
+    const gd = PCD.$('#vGuideDismiss', view);
+    if (gd) gd.addEventListener('click', function () {
+      try { localStorage.setItem('pcd_var_guide_hidden', '1'); } catch (e) {}
+      const g = PCD.$('#vGuide', view); if (g) g.remove();
+    });
   }
 
   function prefillFromCounts() {
@@ -175,7 +198,7 @@
       '<div class="card mb-2" id="vTotalCard" style="background:var(--brand-50);border-color:var(--brand-300);padding:14px;display:flex;justify-content:space-between;align-items:center;gap:10px;">' +
         '<div><div class="text-muted text-sm" style="text-transform:uppercase;letter-spacing:0.04em;">' + PCD.escapeHtml(t('var_total_variance')) + '</div>' +
         '<div id="vTotalVal" style="font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;color:' + varColor(total) + ';">' + (total >= 0 ? '+' : '') + PCD.fmtMoney(total) + '</div></div>' +
-        (hasSnaps ? '<button class="btn btn-outline btn-sm" id="vPrefill">' + PCD.escapeHtml(t('var_prefill')) + '</button>' : '') +
+        (hasSnaps ? '<button class="btn btn-outline btn-sm" id="vPrefill">' + PCD.escapeHtml(t('var_prefill')) + '</button>' : '<div class="text-muted text-sm" style="max-width:210px;text-align:right;line-height:1.4;">' + PCD.escapeHtml(t('var_no_counts_hint')) + '</div>') +
       '</div>' +
       '<div class="text-muted text-sm mb-2">' + PCD.escapeHtml(t('var_actual_hint')) + '</div>' +
       '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums;">' +

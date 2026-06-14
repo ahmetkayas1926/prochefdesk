@@ -80,7 +80,6 @@
       PCD.router.registerLazy('suppliers',       'js/tools/suppliers.js',      'suppliers');
       PCD.router.registerLazy('waste',           'js/tools/waste.js',          'waste');
       PCD.router.registerLazy('variance',        'js/tools/variance.js',       'variance');
-      PCD.router.registerLazy('invoice',         'js/tools/invoice.js',        'invoiceScan');
       PCD.router.registerLazy('nutrition',       'js/tools/nutrition.js',      'nutrition');
       PCD.router.registerLazy('events',          'js/tools/events.js',         'events');
       PCD.router.registerLazy('roster',          'js/tools/roster.js',         'roster');
@@ -385,7 +384,6 @@
         { key: 'suppliers', icon: 'truck', route: 'suppliers' },
         { key: 'waste',     icon: 'trash',  route: 'waste' },
         { key: 'variance',  icon: 'activity', route: 'variance' },
-        { key: 'invoice',   icon: 'file-text', route: 'invoice' },
       ]},
       { title: t('section_catering'), items: [
         { key: 'events',  icon: 'calendar', route: 'events' },

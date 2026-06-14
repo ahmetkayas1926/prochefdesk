@@ -1195,6 +1195,7 @@
       '.ms-libcard-actions button:hover{background:#fff;}' +
       '</style>';
     h += '<div class="page-header"><div class="page-header-text"><div class="page-title">Menu Studio</div><div class="page-subtitle">' + esc(t('ms_subtitle')) + '</div></div><div class="page-header-actions"><button class="btn btn-outline" id="msTplHome">' + (PCD.icon ? PCD.icon('grid', 14) : '📋') + ' ' + esc(t('ms_templates')) + '</button><button class="btn btn-primary" id="msNew">' + esc(t('ms_new_menu')) + '</button></div></div>';
+    h += PCD.guideCard('menu', t('menu_g_t'), [t('menu_g1'), t('menu_g2'), t('menu_g3')]);
     if (!menus.length) {
       h += '<div class="empty"><div class="empty-icon">🎨</div><div class="empty-title">' + esc(t('ms_no_menus_title')) + '</div><div class="empty-desc">' + esc(t('ms_no_menus_desc')) + '</div><div class="empty-action" style="display:flex;gap:8px;justify-content:center;"><button class="btn btn-outline" id="msTpl2">' + (PCD.icon ? PCD.icon('grid', 14) : '📋') + ' ' + esc(t('ms_templates')) + '</button><button class="btn btn-primary" id="msNew2">' + esc(t('ms_new_menu')) + '</button></div></div>';
     } else {

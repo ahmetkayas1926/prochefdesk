@@ -87,6 +87,36 @@
     });
   };
 
+  // ---- Dismissible "guide" card (v2.44 — standardised across all tools) ----
+  // PCD.guideCard(key, title, steps[]) → HTML string for a collapsible/dismissible
+  // help card. Returns '' once the user has hidden it (remembered in localStorage
+  // under pcd_guide_<key>_hidden). Drop the returned string into a tool's render
+  // right after the page-header. The ✕ dismiss is wired once via #view delegation.
+  let _guideDismissWired = false;
+  PCD.guideCard = function (key, title, steps) {
+    if (!_guideDismissWired) {
+      const vw = document.getElementById('view');
+      if (vw && PCD.on) {
+        PCD.on(vw, 'click', '[data-guide-dismiss]', function () {
+          const k = this.getAttribute('data-guide-dismiss');
+          try { localStorage.setItem('pcd_guide_' + k + '_hidden', '1'); } catch (e) {}
+          const c = this.closest('.pcd-guide'); if (c) c.remove();
+        });
+        _guideDismissWired = true;
+      }
+    }
+    try { if (localStorage.getItem('pcd_guide_' + key + '_hidden') === '1') return ''; } catch (e) {}
+    const tt = (PCD.i18n && PCD.i18n.t) ? PCD.i18n.t : function (x) { return x; };
+    const lis = (steps || []).filter(Boolean).map(function (s) { return '<li>' + PCD.escapeHtml(s) + '</li>'; }).join('');
+    return '<div class="card mb-3 pcd-guide" style="padding:12px 14px;background:var(--brand-50);border-color:var(--brand-300);">' +
+      '<div style="display:flex;align-items:center;gap:8px;font-weight:700;color:var(--brand-700);margin-bottom:6px;">' +
+        '<span style="flex:1;">💡 ' + PCD.escapeHtml(title) + '</span>' +
+        '<button type="button" data-guide-dismiss="' + PCD.escapeHtml(key) + '" style="background:transparent;border:0;color:var(--text-3);cursor:pointer;font-size:13px;padding:2px 6px;line-height:1;" title="' + PCD.escapeHtml(tt('dash_guide_dismiss') || 'Hide') + '">✕</button>' +
+      '</div>' +
+      '<ol style="margin:0;padding-inline-start:18px;font-size:13px;line-height:1.6;color:var(--text-2);">' + lis + '</ol>' +
+    '</div>';
+  };
+
   PCD.escapeHtml = function (s) {
     if (s === null || s === undefined) return '';
     return String(s)

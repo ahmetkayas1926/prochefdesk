@@ -34,6 +34,28 @@
     });
   }
 
+  // v2.44 — reusable PNG actions so every QR (modal or inline) can download/send the same way.
+  function _fname(title) {
+    return (title || 'qr').replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '').toLowerCase() + '-qr.png';
+  }
+  function downloadPng(text, title) {
+    toDataURL(text, 800).then(function (d) {
+      const a = document.createElement('a');
+      a.href = d; a.download = _fname(title); a.click();
+    }).catch(function () { window.open(url(text, 800), '_blank'); });
+  }
+  function sharePng(text, title) {
+    toDataURL(text, 800).then(function (d) {
+      return fetch(d).then(function (r) { return r.blob(); });
+    }).then(function (blob) {
+      const file = new File([blob], _fname(title), { type: 'image/png' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        return navigator.share({ files: [file], title: title || 'QR' });
+      }
+      downloadPng(text, title); // desktop / no native file-share → fall back to download
+    }).catch(function () { downloadPng(text, title); });
+  }
+
   function show(opts) {
     opts = opts || {};
     const text = opts.text || '';
@@ -56,12 +78,15 @@
     copyBtn.innerHTML = PCD.icon('copy', 14) + ' <span>' + PCD.i18n.t('btn_copy_link') + '</span>';
     const downloadBtn = PCD.el('button', { class: 'btn btn-outline' });
     downloadBtn.innerHTML = PCD.icon('download', 14) + ' <span>PNG</span>';
+    const sendBtn = PCD.el('button', { class: 'btn btn-outline' });
+    sendBtn.innerHTML = PCD.icon('send', 14) + ' <span>' + PCD.i18n.t('btn_send_qr') + '</span>';
     const printBtn = PCD.el('button', { class: 'btn btn-primary', style: { flex: '1' } });
     printBtn.innerHTML = PCD.icon('print', 14) + ' <span>' + PCD.i18n.t('print') + '</span>';
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
     footer.appendChild(closeBtn);
     footer.appendChild(copyBtn);
     footer.appendChild(downloadBtn);
+    footer.appendChild(sendBtn);
     footer.appendChild(printBtn);
 
     const m = PCD.modal.open({ title: title, body: body, footer: footer, size: 'md', closable: true });
@@ -104,6 +129,8 @@
       a.click();
     });
 
+    sendBtn.addEventListener('click', function () { sharePng(text, title); });
+
     printBtn.addEventListener('click', function () {
       const qrSrc = dataURL || url(text, 800);
       const html =
@@ -118,5 +145,5 @@
     });
   }
 
-  PCD.qr = { url: url, toDataURL: toDataURL, show: show };
+  PCD.qr = { url: url, toDataURL: toDataURL, show: show, downloadPng: downloadPng, sharePng: sharePng };
 })();

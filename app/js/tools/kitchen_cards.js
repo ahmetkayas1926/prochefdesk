@@ -41,6 +41,7 @@
           <div class="page-subtitle">${t('kc_subtitle')}</div>
         </div>
       </div>
+      ${PCD.guideCard('kitchencards', t('kc_g_t'), [t('kc_g1'), t('kc_g2'), t('kc_g3')])}
       <div id="kcBody"></div>
     `;
     const bodyEl = PCD.$('#kcBody', view);

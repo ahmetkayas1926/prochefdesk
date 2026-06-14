@@ -86,6 +86,69 @@
     { k: ['parsley', 'thyme', 'basil', 'herb', 'maydanoz', 'kekik', 'fesleğen', 'nane', 'mint', 'rosemary', 'biberiye'], n: [28, 1, 5, 0.4] },
     { k: ['chocolate', 'çikolata', 'cikolata'], n: [546, 5, 61, 31] },
     { k: ['cocoa', 'kakao'], n: [228, 20, 58, 14] },
+    // v2.44 — expanded coverage: 0-cal items + common spices/herbs/nuts/dairy/grains/seafood.
+    // Keeps "Not estimated" low. Short/ambiguous keywords avoided; longest-match wins so
+    // e.g. 'rice' beats 'ice', 'black pepper' beats 'pepper'.
+    { k: ['salt', 'tuz'], n: [0, 0, 0, 0] },
+    { k: ['water', 'ice'], n: [0, 0, 0, 0] },
+    { k: ['baking powder', 'baking soda', 'bicarb', 'kabartma'], n: [0, 0, 0, 0] },
+    { k: ['xanthan', 'guar', 'gellan'], n: [330, 0, 78, 0] },
+    { k: ['gelatin', 'gelatine', 'jelatin'], n: [335, 86, 0, 0] },
+    { k: ['yeast', 'maya'], n: [325, 40, 38, 8] },
+    { k: ['coriander', 'cilantro', 'kişniş', 'kisnis'], n: [23, 2.1, 3.7, 0.5] },
+    { k: ['chilli', 'chili', 'chile', 'jalapeno', 'jalapeño'], n: [40, 1.9, 9, 0.4] },
+    { k: ['ginger', 'zencefil'], n: [80, 1.8, 18, 0.8] },
+    { k: ['cumin', 'kimyon'], n: [375, 18, 44, 22] },
+    { k: ['paprika', 'pul biber', 'kırmızı biber', 'kirmizi biber'], n: [282, 14, 54, 13] },
+    { k: ['black pepper', 'karabiber', 'peppercorn'], n: [251, 11, 64, 3.3] },
+    { k: ['cinnamon', 'tarçın', 'tarcin'], n: [247, 4, 81, 1.2] },
+    { k: ['turmeric', 'zerdeçal', 'zerdecal'], n: [312, 10, 67, 3.3] },
+    { k: ['sumac', 'sumak'], n: [310, 5, 70, 5] },
+    { k: ['nutmeg', 'clove', 'karanfil', 'cardamom', 'kakule', 'allspice', 'baharat', 'spice'], n: [290, 8, 60, 13] },
+    { k: ['bay leaf', 'defne'], n: [313, 8, 75, 8] },
+    { k: ['sesame', 'susam'], n: [573, 18, 23, 50] },
+    { k: ['tahini', 'tahin'], n: [595, 17, 21, 54] },
+    { k: ['pistachio', 'antep fıstığı', 'fıstık', 'fistik'], n: [560, 20, 28, 45] },
+    { k: ['hazelnut', 'fındık', 'findik'], n: [628, 15, 17, 61] },
+    { k: ['pine nut', 'çam fıstığı', 'cam fistigi'], n: [673, 14, 13, 68] },
+    { k: ['cashew', 'kaju'], n: [553, 18, 30, 44] },
+    { k: ['peanut', 'yer fıstığı'], n: [567, 26, 16, 49] },
+    { k: ['coconut', 'hindistan cevizi'], n: [354, 3.3, 15, 33] },
+    { k: ['date', 'hurma'], n: [282, 2.5, 75, 0.4] },
+    { k: ['raisin', 'sultana', 'kuru üzüm'], n: [299, 3.1, 79, 0.5] },
+    { k: ['apricot', 'kayısı', 'kayisi'], n: [48, 1.4, 11, 0.4] },
+    { k: ['fig', 'incir'], n: [74, 0.8, 19, 0.3] },
+    { k: ['pomegranate molasses', 'nar ekşisi', 'nar eksisi'], n: [240, 1, 60, 0] },
+    { k: ['pomegranate', 'nar'], n: [83, 1.7, 19, 1.2] },
+    { k: ['banana', 'muz'], n: [89, 1.1, 23, 0.3] },
+    { k: ['strawberry', 'çilek', 'cilek', 'berry'], n: [33, 0.7, 8, 0.3] },
+    { k: ['grape', 'üzüm', 'uzum'], n: [69, 0.7, 18, 0.2] },
+    { k: ['avocado', 'avokado'], n: [160, 2, 9, 15] },
+    { k: ['mango'], n: [60, 0.8, 15, 0.4] },
+    { k: ['pineapple', 'ananas'], n: [50, 0.5, 13, 0.1] },
+    { k: ['labneh', 'labne'], n: [174, 9, 5, 13] },
+    { k: ['halloumi', 'hellim'], n: [321, 21, 2.2, 25] },
+    { k: ['ricotta'], n: [174, 11, 3, 13] },
+    { k: ['sour cream', 'crème fraîche', 'creme fraiche'], n: [198, 2.4, 4.6, 19] },
+    { k: ['buttermilk', 'ayran'], n: [40, 3.3, 4.8, 0.9] },
+    { k: ['mayonnaise', 'mayonez', 'aioli'], n: [680, 1, 0.6, 75] },
+    { k: ['ketchup', 'ketçap'], n: [101, 1.2, 27, 0.1] },
+    { k: ['molasses', 'pekmez'], n: [290, 0, 75, 0.1] },
+    { k: ['jam', 'marmalade', 'reçel', 'recel'], n: [250, 0.4, 65, 0.1] },
+    { k: ['bulgur', 'bulghur'], n: [342, 12, 76, 1.3] },
+    { k: ['semolina', 'irmik'], n: [360, 13, 73, 1] },
+    { k: ['quinoa', 'kinoa'], n: [368, 14, 64, 6] },
+    { k: ['barley', 'arpa'], n: [354, 12, 73, 2.3] },
+    { k: ['ham', 'jambon'], n: [145, 21, 1.5, 6] },
+    { k: ['sausage', 'sosis', 'sucuk', 'chorizo'], n: [300, 13, 2, 27] },
+    { k: ['turkey', 'hindi'], n: [189, 29, 0, 7] },
+    { k: ['crab', 'yengeç', 'yengec'], n: [97, 19, 0, 1.5] },
+    { k: ['mussel', 'midye'], n: [86, 12, 3.7, 2.2] },
+    { k: ['octopus', 'ahtapot'], n: [82, 15, 2.2, 1] },
+    { k: ['squid', 'calamari', 'kalamar'], n: [92, 16, 3.1, 1.4] },
+    { k: ['tofu'], n: [76, 8, 1.9, 4.8] },
+    { k: ['coffee', 'espresso', 'kahve'], n: [1, 0.1, 0, 0] },
+    { k: ['vanilla', 'vanilya'], n: [288, 0.1, 13, 0.1] },
   ];
 
   function matchNutrition(name) {
@@ -146,6 +209,7 @@
         '<div class="page-title">' + PCD.escapeHtml(t('nutr_title')) + '</div>' +
         '<div class="page-subtitle">' + PCD.escapeHtml(t('nutr_subtitle')) + '</div>' +
       '</div></div>' +
+      PCD.guideCard('nutrition', t('nutr_g_t'), [t('nutr_g1'), t('nutr_g2'), t('nutr_g3')]) +
       (recs.length === 0 ? '<div class="card" style="padding:14px;">' + PCD.escapeHtml(t('nutr_no_recipes')) + '</div>' :
       '<div class="card mb-3" style="padding:14px;">' +
         '<div class="field"><label class="field-label">' + PCD.escapeHtml(t('nutr_pick_recipe')) + '</label>' +

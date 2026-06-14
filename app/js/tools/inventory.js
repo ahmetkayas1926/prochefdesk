@@ -168,6 +168,8 @@
         </div>
       </div>
 
+      ${PCD.guideCard('inventory', t('inv_g_t'), [t('inv_g1'), t('inv_g2'), t('inv_g3')])}
+
       ${pending && pending.status === 'pending' ? `
         <div class="card mb-3" style="padding:14px;background:linear-gradient(135deg,#fef3c7,#fde68a);border-color:#f59e0b;">
           <div class="flex items-center gap-3" style="flex-wrap:wrap;">

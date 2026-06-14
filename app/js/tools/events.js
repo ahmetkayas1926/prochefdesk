@@ -49,6 +49,7 @@
           <button class="btn btn-primary" id="newEventBtn">+ ${t('new_event')}</button>
         </div>
       </div>
+      ${PCD.guideCard('events', t('events_g_t'), [t('events_g1'), t('events_g2'), t('events_g3')])}
       <div id="eventList"></div>
     `;
 

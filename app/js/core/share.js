@@ -506,10 +506,26 @@
     // kitchen_cards.js (so the layout & CSS stay in sync with the live
     // editor's print output). Delegate and return early.
     if (p.kind === 'kitchencard') {
+      var _kcUnavailable = '<div style="padding:40px;text-align:center;color:#666;">Kitchen card renderer unavailable</div>';
+      var _kcRender = function () {
+        if (PCD.tools && PCD.tools.kitchenCards && PCD.tools.kitchenCards.renderFromSnapshot) {
+          appEl.innerHTML = PCD.tools.kitchenCards.renderFromSnapshot(p);
+        } else {
+          appEl.innerHTML = _kcUnavailable;
+        }
+      };
       if (PCD.tools && PCD.tools.kitchenCards && PCD.tools.kitchenCards.renderFromSnapshot) {
-        appEl.innerHTML = PCD.tools.kitchenCards.renderFromSnapshot(p);
+        _kcRender();
       } else {
-        appEl.innerHTML = '<div style="padding:40px;text-align:center;color:#666;">Kitchen card renderer unavailable</div>';
+        // v2.44 fix — The public share page is the app shell with tools
+        // lazy-loaded; the kitchen_cards renderer isn't loaded here (no route
+        // navigation happens on a share view). Inject it on demand so shared
+        // kitchen card links render instead of "renderer unavailable".
+        var _kc = document.createElement('script');
+        _kc.src = 'js/tools/kitchen_cards.js';
+        _kc.onload = _kcRender;
+        _kc.onerror = function () { appEl.innerHTML = _kcUnavailable; };
+        document.head.appendChild(_kc);
       }
       return;
     }

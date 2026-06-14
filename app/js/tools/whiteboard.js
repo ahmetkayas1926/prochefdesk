@@ -1073,7 +1073,8 @@
           '<button class="btn btn-outline btn-sm" id="wbClearBtn">' + PCD.icon('refresh', 14) + ' <span>' + PCD.escapeHtml(t('whiteboard_reset', 'Reset')) + '</span></button>' +
           '<button class="btn btn-primary btn-sm" id="wbPrintBtn">' + PCD.icon('print', 14) + ' <span>' + PCD.escapeHtml(t('print', 'Print')) + '</span></button>' +
         '</div>' +
-      '</div>';
+      '</div>' +
+      PCD.guideCard('whiteboard', t('wb_g_t'), [t('wb_g1'), t('wb_g2'), t('wb_g3')]);
   }
 
   // ============ CANVAS SELECTOR (library — Kitchen Cards modeli) ============
