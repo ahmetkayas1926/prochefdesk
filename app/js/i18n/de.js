@@ -2960,3 +2960,15 @@ window.PCD.i18n.register('de', {
   waste_entry: "Eintrag",
   recipe_used_in_event: "In {n} Event verwendet",
 });
+
+// Tab-Beschriftungen für Werkzeuggruppen (v2.44.30)
+window.PCD.i18n.register('de', {
+  tab_stock: "Bestand",
+  tab_variance: "Abweichung",
+  tab_waste: "Verlust",
+  tab_recipes: "Rezepte",
+  tab_nutrition: "Nährwerte",
+  tab_portion: "Portionen",
+  tab_checklist: "Listen",
+  tab_prep: "Prep-Blatt",
+});

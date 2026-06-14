@@ -168,6 +168,8 @@
         </div>
       </div>
 
+      ${PCD.subNav('stock', 'inventory')}
+
       ${PCD.guideCard('inventory', t('inv_g_t'), [t('inv_g1'), t('inv_g2'), t('inv_g3')])}
 
       ${pending && pending.status === 'pending' ? `

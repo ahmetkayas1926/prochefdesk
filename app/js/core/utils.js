@@ -134,6 +134,45 @@
     '</details>';
   };
 
+  // ---- Tool-group sub-nav (v2.44.29 — consolidate tightly-coupled tools, leaner sidebar) ----
+  // PCD.subNav(group, activeKey) → a tab bar that switches between the tools in a group.
+  // Inventory·Variance·Waste act as one "stock" hub; Recipes·Nutrition·Portion as one
+  // "recipes" hub; Checklist·Prep as one "lists" hub. Tabs navigate (routes stay intact);
+  // only the sidebar items for the secondary tools are removed.
+  const _subNavGroups = {
+    stock:   [{ key: 'inventory', route: 'inventory', label: 'tab_stock',     icon: 'package' },
+              { key: 'variance',  route: 'variance',  label: 'tab_variance',  icon: 'activity' },
+              { key: 'waste',     route: 'waste',     label: 'tab_waste',     icon: 'trash' }],
+    recipes: [{ key: 'recipes',   route: 'recipes',   label: 'tab_recipes',   icon: 'book-open' },
+              { key: 'nutrition', route: 'nutrition', label: 'tab_nutrition', icon: 'activity' },
+              { key: 'portion',   route: 'portion',   label: 'tab_portion',   icon: 'scale' }],
+    lists:   [{ key: 'checklist', route: 'checklist', label: 'tab_checklist', icon: 'check-square' },
+              { key: 'prep',      route: 'prep',      label: 'tab_prep',      icon: 'file-text' }],
+  };
+  let _subNavWired = false;
+  PCD.subNav = function (group, activeKey) {
+    const tabs = _subNavGroups[group];
+    if (!tabs) return '';
+    if (!_subNavWired) {
+      const vw = document.getElementById('view');
+      if (vw && PCD.on && PCD.router) {
+        PCD.on(vw, 'click', '[data-subnav]', function () {
+          if (this.hasAttribute('data-subnav-active')) return;
+          const r = this.getAttribute('data-subnav');
+          if (r) PCD.router.go(r);
+        });
+        _subNavWired = true;
+      }
+    }
+    const tt = (PCD.i18n && PCD.i18n.t) ? PCD.i18n.t : function (x) { return x; };
+    const btns = tabs.map(function (tb) {
+      const active = tb.key === activeKey;
+      return '<button type="button" class="btn btn-sm ' + (active ? 'btn-primary' : 'btn-ghost') + '" data-subnav="' + tb.route + '"' + (active ? ' data-subnav-active="1"' : '') + ' style="white-space:nowrap;">' +
+        (tb.icon ? PCD.icon(tb.icon, 14) + ' ' : '') + PCD.escapeHtml(tt(tb.label)) + '</button>';
+    }).join('');
+    return '<div class="segment pcd-subnav" style="display:inline-flex;gap:4px;background:var(--surface-2);border-radius:var(--r-md);padding:4px;margin-bottom:14px;flex-wrap:wrap;max-width:100%;">' + btns + '</div>';
+  };
+
   PCD.escapeHtml = function (s) {
     if (s === null || s === undefined) return '';
     return String(s)

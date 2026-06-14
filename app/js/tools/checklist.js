@@ -413,6 +413,8 @@
         '</div>' +
       '</div>' +
 
+      PCD.subNav('lists', 'checklist') +
+
       (showGuide ?
         '<div class="card" id="chkGuide" style="padding:12px 14px;margin-bottom:14px;background:linear-gradient(135deg,var(--brand-50),var(--surface));border:1px solid var(--brand-200);">' +
           '<div style="display:flex;gap:10px;align-items:flex-start;">' +

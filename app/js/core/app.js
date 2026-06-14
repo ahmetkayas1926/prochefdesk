@@ -367,23 +367,22 @@
         { key: 'recipes',     icon: 'book-open', route: 'recipes' },
         { key: 'ingredients', icon: 'carrot', route: 'ingredients' },
         { key: 'menus',       icon: 'menu', route: 'menus' },
-        { key: 'nutrition',   icon: 'scale', route: 'nutrition' },
+        // v2.44.30 — nutrition Recipes sub-nav'a taşındı (route duruyor; recipes sayfasından sekme ile erişilir).
       ]},
       { title: t('section_kitchen'), items: [
         { key: 'kitchen_cards', icon: 'id-card', route: 'kitchen_cards' },
         // v2.9.40 — Kitchen Whiteboard (customizable A4/A3 reference grid)
         { key: 'whiteboard',    icon: 'grid', route: 'whiteboard' },
-        { key: 'portion',       icon: 'scale', route: 'portion' },
         // v2.11.16 — 'mise' sidenav item kaldırıldı (Mise en Place Planner tool kaldırıldı).
+        // v2.44.30 — portion Recipes sub-nav'a taşındı.
         { key: 'checklist',     icon: 'check-square', route: 'checklist' },
         { key: 'roster',        icon: 'clock', route: 'roster' },
-        { key: 'prep',          icon: 'file-text', route: 'prep' },
+        // v2.44.30 — prep Checklist sub-nav'a taşındı (Listeler · Prep Föyü).
       ]},
       { title: t('section_sourcing'), items: [
         { key: 'inventory', icon: 'package', route: 'inventory' },
         { key: 'suppliers', icon: 'truck', route: 'suppliers' },
-        { key: 'waste',     icon: 'trash',  route: 'waste' },
-        { key: 'variance',  icon: 'activity', route: 'variance' },
+        // v2.44.30 — waste + variance Inventory sub-nav'a taşındı (Stok · Varyans · Fire).
       ]},
       { title: t('section_catering'), items: [
         { key: 'events',  icon: 'calendar', route: 'events' },

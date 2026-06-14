@@ -695,6 +695,14 @@
     .cost-desk { flex-basis:100%; max-width:480px; order:-1; }
     .cost-phone { flex:0 1 44%; width:44%; max-width:200px; }
   }
+
+  /* Light & dark showcase (v2.44.30) */
+  .theme-pair { display:grid; grid-template-columns:1fr 1fr; gap:26px; margin-top:34px; }
+  .theme-tag { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--text-3); margin:0 0 12px 2px; }
+  .theme-tag svg { width:16px; height:16px; color:var(--brand); }
+  .theme-gallery { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin-top:22px; }
+  .theme-gallery img { width:100%; aspect-ratio:1.5; object-fit:cover; object-position:center top; border-radius:12px; border:1px solid var(--border); box-shadow:var(--shadow-lg); display:block; background:#101826; }
+  @media (max-width:760px){ .theme-pair { grid-template-columns:1fr; gap:30px; } .theme-gallery { grid-template-columns:1fr; gap:16px; } }
 </style>
 </head>
 <body>
@@ -763,7 +771,7 @@
           <span class="shot-url">prochefdesk.com/app</span>
         </div>
         <div class="shot-body shot-real">
-          <img src="/assets/shots/recipes.webp" alt="ProChefDesk recipes list showing live food cost percentage on every dish" width="1500" height="1050" decoding="async">
+          <img src="/assets/shots/recipes.webp" alt="ProChefDesk recipes list showing live food cost percentage on every dish" width="1200" height="880" decoding="async">
         </div>
       </div>
     </div>
@@ -812,7 +820,7 @@
         <div class="shot desk">
           <div class="shot-bar"><i></i><i></i><i></i><span class="shot-url">prochefdesk.com/app</span></div>
           <div class="shot-body shot-real">
-            <img src="/assets/shots/dashboard.webp" alt="ProChefDesk dashboard — average food cost, weekly labour, low stock and a cost-health alert" width="1500" height="950" loading="lazy" decoding="async">
+            <img src="/assets/shots/dashboard.webp" alt="ProChefDesk dashboard — average food cost, weekly labour, low stock and a cost-health alert" width="1200" height="800" loading="lazy" decoding="async">
           </div>
         </div>
         <!-- Phone: editing the recipe price -->
@@ -820,7 +828,7 @@
           <div class="shot">
             <div class="shot-bar"><i></i><i></i><i></i></div>
             <div class="shot-body shot-real">
-              <img src="/assets/shots/recipes_mobile.webp" alt="ProChefDesk recipes and live food cost on a phone" width="640" height="1170" loading="lazy" decoding="async">
+              <img src="/assets/shots/recipes_mobile.webp" alt="ProChefDesk recipes and live food cost on a phone" width="430" height="1360" loading="lazy" decoding="async">
             </div>
           </div>
         </div>
@@ -915,6 +923,68 @@
         </div>
       </div>
 
+      <!-- Inventory & ordering -->
+      <div class="proof-card">
+        <div class="pc-cap">
+          <span class="pc-tag" data-i18n="proof5_tag">Stock &amp; ordering</span>
+          <h3 data-i18n="proof5_h3">Par levels that chase the order for you</h3>
+          <p data-i18n="proof5_p">Count stock, see what's under par at a glance, and generate a supplier order in one tap — delivered stock flows straight back in.</p>
+        </div>
+        <div class="shot">
+          <div class="shot-bar"><i></i><i></i><i></i><span class="shot-url">prochefdesk.com/app</span></div>
+          <div class="shot-body shot-real">
+            <img src="/assets/shots/inventory.webp" alt="ProChefDesk inventory — stock levels, par-level alerts and one-tap supplier ordering" width="1320" height="825" loading="lazy" decoding="async">
+          </div>
+        </div>
+      </div>
+
+      <!-- Buffet & catering -->
+      <div class="proof-card">
+        <div class="pc-cap">
+          <span class="pc-tag" data-i18n="proof6_tag">Banquets &amp; catering</span>
+          <h3 data-i18n="proof6_h3">Cost a 200-cover function in minutes</h3>
+          <p data-i18n="proof6_p">Build a buffet or event menu, scale every dish to the headcount, and see the food cost per guest before you send the quote.</p>
+        </div>
+        <div class="shot">
+          <div class="shot-bar"><i></i><i></i><i></i><span class="shot-url">prochefdesk.com/app</span></div>
+          <div class="shot-body shot-real">
+            <img src="/assets/shots/buffet.webp" alt="ProChefDesk buffet planner — per-guest food cost for a catering function" width="1320" height="825" loading="lazy" decoding="async">
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============ LIGHT & DARK ============ -->
+<section class="theme-sec" style="padding:48px 0 6px;">
+  <div class="container">
+    <div class="section-head">
+      <div class="section-label" data-i18n="theme_label">Day &amp; night</div>
+      <h2 data-i18n="theme_h2">Easy on the eyes, every shift</h2>
+      <p data-i18n="theme_sub">Bright and crisp for the daytime pass, a calm dark mode for the late service — the same numbers, switchable any time, on every device.</p>
+    </div>
+    <div class="theme-pair reveal">
+      <div>
+        <div class="theme-tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2M12 19.5v2M4.3 4.3l1.5 1.5M18.2 18.2l1.5 1.5M2.5 12h2M19.5 12h2M4.3 19.7l1.5-1.5M18.2 5.8l1.5-1.5"/></svg><span data-i18n="theme_light">Light mode</span></div>
+        <div class="shot">
+          <div class="shot-bar"><i></i><i></i><i></i><span class="shot-url">prochefdesk.com/app</span></div>
+          <div class="shot-body shot-real"><img src="/assets/shots/dashboard.webp" alt="ProChefDesk dashboard in light mode — food cost, labour and low stock at a glance" width="1500" height="1000" loading="lazy" decoding="async"></div>
+        </div>
+      </div>
+      <div>
+        <div class="theme-tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg><span data-i18n="theme_dark">Dark mode</span></div>
+        <div class="shot">
+          <div class="shot-bar"><i></i><i></i><i></i><span class="shot-url">prochefdesk.com/app</span></div>
+          <div class="shot-body shot-real"><img src="/assets/shots/dashboard_dark.webp" alt="ProChefDesk dashboard in dark mode — the same kitchen, easy on the eyes for the evening service" width="1500" height="1000" loading="lazy" decoding="async"></div>
+        </div>
+      </div>
+    </div>
+    <div class="theme-gallery reveal">
+      <img src="/assets/shots/recipes_dark.webp" alt="ProChefDesk recipe list with live food cost, in dark mode" width="1200" height="800" loading="lazy" decoding="async">
+      <img src="/assets/shots/menu_dark.webp" alt="ProChefDesk Menu Studio with live margin, in dark mode" width="1200" height="800" loading="lazy" decoding="async">
+      <img src="/assets/shots/inventory_dark.webp" alt="ProChefDesk inventory and par-level alerts, in dark mode" width="1200" height="800" loading="lazy" decoding="async">
     </div>
   </div>
 </section>
@@ -1250,6 +1320,8 @@
     var LANGS = ['en', 'tr', 'es', 'fr', 'de', 'ar'];
     var I18N = {
       tr: {
+        theme_label: "Gündüz & gece", theme_h2: "Her vardiyada göz yormaz", theme_sub: "Gündüz servisi için aydınlık ve net, gece servisi için sakin bir koyu mod — aynı sayılar, istediğin an, her cihazda.", theme_light: "Açık mod", theme_dark: "Koyu mod",
+        proof5_tag: "Stok & sipariş", proof5_h3: "Par seviyesi siparişi senin yerine kovalar", proof5_p: "Stok say, par altına düşeni tek bakışta gör, tek dokunuşla tedarikçi siparişi oluştur — gelen mal doğrudan stoğa işlenir.", proof6_tag: "Banket & catering", proof6_h3: "200 kişilik daveti dakikalar içinde maliyetlendir", proof6_p: "Büfe veya etkinlik menüsü kur, her yemeği kişi sayısına ölçekle, teklifi göndermeden kişi başı food cost'u gör.",
         nav_pricing: "Fiyatlar", nav_blog: "Blog", nav_cta: "Uygulamayı Aç", cta_open: "Uygulamayı Aç", page_title: "ProChefDesk — Şefler için mutfak OS",
         hero_eyebrow: "Şefler için mutfak OS",
         hero_title: "Food cost, menü, prep<br>&amp; HACCP — <span class=\"accent\">tek yerde.</span>",
@@ -1306,6 +1378,8 @@
         foot_privacy: "Gizlilik", foot_terms: "Şartlar"
       },
       es: {
+        theme_label: "Día y noche", theme_h2: "Cómodo a la vista, en cada turno", theme_sub: "Claro y nítido para el servicio de día, un modo oscuro tranquilo para la noche: los mismos números, conmutables en cualquier momento, en todos los dispositivos.", theme_light: "Modo claro", theme_dark: "Modo oscuro",
+        proof5_tag: "Stock y pedidos", proof5_h3: "Niveles mínimos que piden por ti", proof5_p: "Cuenta el stock, ve de un vistazo qué está bajo mínimos y genera un pedido al proveedor con un toque: el stock recibido vuelve directo al inventario.", proof6_tag: "Banquetes y catering", proof6_h3: "Calcula un evento de 200 comensales en minutos", proof6_p: "Crea un menú de bufé o evento, escala cada plato al número de comensales y ve el coste por invitado antes de enviar el presupuesto.",
         nav_pricing: "Precios", nav_blog: "Blog", nav_cta: "Abrir la app", cta_open: "Abrir la app", page_title: "ProChefDesk — El SO de cocina para chefs",
         hero_eyebrow: "Gestión profesional de cocina",
         hero_title: "El sistema operativo<br>de cocina para <span class=\"accent\">chefs.</span>",
@@ -1346,6 +1420,8 @@
         foot_privacy: "Privacidad", foot_terms: "Términos"
       },
       fr: {
+        theme_label: "Jour & nuit", theme_h2: "Agréable à l'œil, à chaque service", theme_sub: "Clair et net pour le service de jour, un mode sombre apaisant pour le soir — les mêmes chiffres, à basculer à tout moment, sur chaque appareil.", theme_light: "Mode clair", theme_dark: "Mode sombre",
+        proof5_tag: "Stock & commandes", proof5_h3: "Des seuils qui passent la commande pour vous", proof5_p: "Comptez le stock, voyez d'un coup d'œil ce qui est sous le seuil et générez une commande fournisseur en un geste — le stock reçu revient directement à l'inventaire.", proof6_tag: "Banquets & traiteur", proof6_h3: "Chiffrez un événement de 200 couverts en minutes", proof6_p: "Composez un menu buffet ou événement, adaptez chaque plat au nombre de convives et voyez le coût matière par invité avant d'envoyer le devis.",
         nav_pricing: "Tarifs", nav_blog: "Blog", nav_cta: "Ouvrir l'app", cta_open: "Ouvrir l'app", page_title: "ProChefDesk — Le SE de cuisine pour chefs",
         hero_eyebrow: "Gestion de cuisine professionnelle",
         hero_title: "Le système d'exploitation<br>de cuisine pour <span class=\"accent\">chefs.</span>",
@@ -1386,6 +1462,8 @@
         foot_privacy: "Confidentialité", foot_terms: "Conditions"
       },
       de: {
+        theme_label: "Tag & Nacht", theme_h2: "Augenschonend, in jeder Schicht", theme_sub: "Hell und klar für den Tagesservice, ein ruhiger Dunkelmodus für den Abend – dieselben Zahlen, jederzeit umschaltbar, auf jedem Gerät.", theme_light: "Heller Modus", theme_dark: "Dunkler Modus",
+        proof5_tag: "Bestand & Bestellung", proof5_h3: "Mindestbestände, die die Bestellung auslösen", proof5_p: "Zähle den Bestand, sieh auf einen Blick, was unter dem Mindestbestand liegt, und erstelle mit einem Tippen eine Lieferantenbestellung – gelieferte Ware fließt direkt zurück in den Bestand.", proof6_tag: "Bankett & Catering", proof6_h3: "Kalkuliere ein Event für 200 Gäste in Minuten", proof6_p: "Erstelle ein Buffet- oder Event-Menü, skaliere jedes Gericht auf die Gästezahl und sieh die Lebensmittelkosten pro Gast, bevor du das Angebot sendest.",
         nav_pricing: "Preise", nav_blog: "Blog", nav_cta: "App öffnen", cta_open: "App öffnen", page_title: "ProChefDesk — Das Küchen-OS für Köche",
         hero_eyebrow: "Professionelles Küchenmanagement",
         hero_title: "Das Küchen-OS<br>für <span class=\"accent\">Köche.</span>",
@@ -1426,6 +1504,8 @@
         foot_privacy: "Datenschutz", foot_terms: "Bedingungen"
       },
       ar: {
+        theme_label: "نهاراً وليلاً", theme_h2: "مريح للعين في كل وردية", theme_sub: "ساطع وواضح لخدمة النهار، ووضع داكن هادئ لخدمة المساء — الأرقام نفسها، قابلة للتبديل في أي وقت، على كل جهاز.", theme_light: "الوضع الفاتح", theme_dark: "الوضع الداكن",
+        proof5_tag: "المخزون والطلب", proof5_h3: "حدود إعادة الطلب تلاحق الطلب نيابةً عنك", proof5_p: "عُدّ المخزون، وشاهد ما هو دون الحد بنظرة واحدة، وأنشئ طلب مورّد بلمسة واحدة — المخزون المستلَم يعود مباشرةً إلى الجرد.", proof6_tag: "الولائم والتموين", proof6_h3: "احسب تكلفة مناسبة لـ200 ضيف في دقائق", proof6_p: "أنشئ قائمة بوفيه أو مناسبة، وقِس كل طبق حسب عدد الضيوف، وشاهد تكلفة الطعام لكل ضيف قبل إرسال عرض السعر.",
         nav_pricing: "الأسعار", nav_blog: "المدونة", nav_cta: "افتح التطبيق", cta_open: "افتح التطبيق", page_title: "ProChefDesk — نظام تشغيل المطبخ للطهاة",
         hero_eyebrow: "إدارة مطبخ احترافية",
         hero_title: "نظام تشغيل المطبخ<br>لـ<span class=\"accent\">الطهاة.</span>",

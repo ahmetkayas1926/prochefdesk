@@ -3261,3 +3261,15 @@ window.PCD.i18n.register('en', {
   prep_g2: "Pick print columns, orientation and text size, then laminate it for the line.",
   prep_g3: "Auto-saved per workspace; save named versions to reuse.",
 });
+
+// Tool-group sub-nav tab labels (v2.44.29 — merged tools)
+window.PCD.i18n.register('en', {
+  tab_stock: "Stock",
+  tab_variance: "Variance",
+  tab_waste: "Waste",
+  tab_recipes: "Recipes",
+  tab_nutrition: "Nutrition",
+  tab_portion: "Portion",
+  tab_checklist: "Checklists",
+  tab_prep: "Prep Sheet",
+});

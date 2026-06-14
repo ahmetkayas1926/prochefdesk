@@ -3258,3 +3258,15 @@ window.PCD.i18n.register('tr', {
   prep_g2: "Yazdırma kolonları, yön ve yazı boyutu seç, sonra hat için lamine et.",
   prep_g3: "Workspace başına otomatik kaydedilir; tekrar kullanmak için isimli versiyon kaydet.",
 });
+
+// Araç-grubu sekme etiketleri (v2.44.29 — birleştirilen araçlar)
+window.PCD.i18n.register('tr', {
+  tab_stock: "Stok",
+  tab_variance: "Varyans",
+  tab_waste: "Fire",
+  tab_recipes: "Tarifler",
+  tab_nutrition: "Besin",
+  tab_portion: "Porsiyon",
+  tab_checklist: "Listeler",
+  tab_prep: "Prep Föyü",
+});

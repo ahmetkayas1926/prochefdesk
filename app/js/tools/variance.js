@@ -117,6 +117,7 @@
         '<div class="page-title">' + PCD.escapeHtml(t('var_title')) + '</div>' +
         '<div class="page-subtitle">' + PCD.escapeHtml(t('var_subtitle')) + '</div>' +
       '</div></div>' +
+      PCD.subNav('stock', 'variance') +
       (guideHidden ? '' :
       '<div class="card mb-3" id="vGuide" style="padding:12px 14px;background:var(--brand-50);border-color:var(--brand-300);">' +
         '<div style="display:flex;align-items:center;gap:8px;font-weight:700;color:var(--brand-700);margin-bottom:6px;">' +

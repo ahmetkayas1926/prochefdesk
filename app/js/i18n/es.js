@@ -2960,3 +2960,15 @@ window.PCD.i18n.register('es', {
   waste_entry: "registro",
   recipe_used_in_event: "Usado en {n} evento",
 });
+
+// Etiquetas de pestañas de grupo de herramientas (v2.44.30)
+window.PCD.i18n.register('es', {
+  tab_stock: "Stock",
+  tab_variance: "Variación",
+  tab_waste: "Mermas",
+  tab_recipes: "Recetas",
+  tab_nutrition: "Nutrición",
+  tab_portion: "Porciones",
+  tab_checklist: "Listas",
+  tab_prep: "Hoja prep",
+});

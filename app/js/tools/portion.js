@@ -27,6 +27,7 @@
             <div class="page-subtitle">${t('portion_desc') || 'Scale recipes for events'}</div>
           </div>
         </div>
+        ${PCD.subNav('recipes', 'portion')}
         <div class="empty">
           <div class="empty-icon" style="color:var(--brand-600);">${PCD.icon('scale', 48)}</div>
           <div class="empty-title">No recipes yet</div>
@@ -55,6 +56,8 @@
           <div class="page-subtitle">${t('pc_subtitle')}</div>
         </div>
       </div>
+
+      ${PCD.subNav('recipes', 'portion')}
 
       ${PCD.guideCard('portion', t('portion_g_t'), [t('portion_g1'), t('portion_g2'), t('portion_g3')])}
 

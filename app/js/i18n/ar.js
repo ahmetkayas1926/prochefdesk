@@ -2960,3 +2960,15 @@ window.PCD.i18n.register('ar', {
   waste_entry: "سجل",
   recipe_used_in_event: "مستخدم في {n} فعالية",
 });
+
+// تسميات تبويبات مجموعة الأدوات (v2.44.30)
+window.PCD.i18n.register('ar', {
+  tab_stock: "المخزون",
+  tab_variance: "التباين",
+  tab_waste: "الهدر",
+  tab_recipes: "الوصفات",
+  tab_nutrition: "التغذية",
+  tab_portion: "الحصص",
+  tab_checklist: "القوائم",
+  tab_prep: "ورقة التحضير",
+});

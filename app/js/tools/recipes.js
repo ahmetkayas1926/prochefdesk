@@ -118,6 +118,7 @@
           <button class="btn btn-primary" id="newRecipeBtn">+ ${t('new_recipe')}</button>
         </div>
       </div>
+      ${PCD.subNav('recipes', 'recipes')}
       ${PCD.guideCard('recipes', t('recipes_g_t'), [t('recipes_g1'), t('recipes_g2'), t('recipes_g3')])}
 
       <div class="searchbar mb-3">

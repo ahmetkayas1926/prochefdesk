@@ -2960,3 +2960,15 @@ window.PCD.i18n.register('fr', {
   waste_entry: "entrée",
   recipe_used_in_event: "Utilisé dans {n} événement",
 });
+
+// Libellés d'onglets de groupe d'outils (v2.44.30)
+window.PCD.i18n.register('fr', {
+  tab_stock: "Stock",
+  tab_variance: "Écart",
+  tab_waste: "Pertes",
+  tab_recipes: "Recettes",
+  tab_nutrition: "Nutrition",
+  tab_portion: "Portions",
+  tab_checklist: "Listes",
+  tab_prep: "Fiche prep",
+});

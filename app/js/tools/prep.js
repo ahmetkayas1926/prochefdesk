@@ -185,6 +185,7 @@
           '<button class="btn btn-outline btn-sm" id="prepPrintBtn">' + PCD.icon('print', 14) + ' <span>' + esc(t('print', 'Print')) + '</span></button>' +
         '</div>' +
       '</div>' +
+      PCD.subNav('lists', 'prep') +
       PCD.guideCard('prep', t('prep_g_t'), [t('prep_g1'), t('prep_g2'), t('prep_g3')]) +
 
       // v2.26 — Kanvas-merkezli: sol uzun liste kaldırıldı; kanvas tek çalışma alanı.

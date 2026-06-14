@@ -209,6 +209,7 @@
         '<div class="page-title">' + PCD.escapeHtml(t('nutr_title')) + '</div>' +
         '<div class="page-subtitle">' + PCD.escapeHtml(t('nutr_subtitle')) + '</div>' +
       '</div></div>' +
+      PCD.subNav('recipes', 'nutrition') +
       PCD.guideCard('nutrition', t('nutr_g_t'), [t('nutr_g1'), t('nutr_g2'), t('nutr_g3')]) +
       (recs.length === 0 ? '<div class="card" style="padding:14px;">' + PCD.escapeHtml(t('nutr_no_recipes')) + '</div>' :
       '<div class="card mb-3" style="padding:14px;">' +
