@@ -92,14 +92,17 @@
   // help card. Returns '' once the user has hidden it (remembered in localStorage
   // under pcd_guide_<key>_hidden). Drop the returned string into a tool's render
   // right after the page-header. The ✕ dismiss is wired once via #view delegation.
+  // steps: array of plain strings, or { t: bold-title, d: body } objects.
+  // tip (optional): a string, or { t: tip-title, d: tip-body } → renders a 💎 highlight box.
   let _guideDismissWired = false;
-  PCD.guideCard = function (key, title, steps) {
+  PCD.guideCard = function (key, title, steps, tip) {
     if (!_guideDismissWired) {
       const vw = document.getElementById('view');
       if (vw && PCD.on) {
-        PCD.on(vw, 'click', '[data-guide-dismiss]', function () {
+        PCD.on(vw, 'click', '[data-guide-dismiss]', function (e) {
+          if (e && e.preventDefault) e.preventDefault();   // ✕ lives in <summary> — don't toggle the <details>
           const k = this.getAttribute('data-guide-dismiss');
-          try { localStorage.setItem('pcd_guide_' + k + '_hidden', '1'); } catch (e) {}
+          try { localStorage.setItem('pcd_guide_' + k + '_hidden', '1'); } catch (er) {}
           const c = this.closest('.pcd-guide'); if (c) c.remove();
         });
         _guideDismissWired = true;
@@ -107,14 +110,28 @@
     }
     try { if (localStorage.getItem('pcd_guide_' + key + '_hidden') === '1') return ''; } catch (e) {}
     const tt = (PCD.i18n && PCD.i18n.t) ? PCD.i18n.t : function (x) { return x; };
-    const lis = (steps || []).filter(Boolean).map(function (s) { return '<li>' + PCD.escapeHtml(s) + '</li>'; }).join('');
-    return '<div class="card mb-3 pcd-guide" style="padding:12px 14px;background:var(--brand-50);border-color:var(--brand-300);">' +
-      '<div style="display:flex;align-items:center;gap:8px;font-weight:700;color:var(--brand-700);margin-bottom:6px;">' +
-        '<span style="flex:1;">💡 ' + PCD.escapeHtml(title) + '</span>' +
+    const lis = (steps || []).filter(Boolean).map(function (s) {
+      if (s && typeof s === 'object') {
+        return '<li><strong style="color:var(--text-1);">' + PCD.escapeHtml(s.t || '') + '</strong>' + (s.d ? ' — ' + PCD.escapeHtml(s.d) : '') + '</li>';
+      }
+      return '<li>' + PCD.escapeHtml(s) + '</li>';
+    }).join('');
+    let tipHtml = '';
+    if (tip) {
+      const tp = (typeof tip === 'object') ? tip : { d: tip };
+      tipHtml = '<div style="margin-top:10px;padding:8px 10px;background:var(--surface-2);border-radius:6px;font-size:12px;color:var(--text-3);">' +
+        (tp.t ? '<strong>💎 ' + PCD.escapeHtml(tp.t) + ':</strong> ' : '') + PCD.escapeHtml(tp.d || '') + '</div>';
+    }
+    return '<details open class="card pcd-guide" style="padding:0;margin-bottom:14px;background:linear-gradient(135deg,var(--brand-50),var(--surface));border:1px solid var(--brand-300);">' +
+      '<summary style="cursor:pointer;padding:12px 14px;font-weight:700;font-size:13px;color:var(--brand-700);display:flex;align-items:center;gap:8px;list-style:none;">' +
+        '<span style="font-size:16px;">💡</span>' +
+        '<span style="flex:1;">' + PCD.escapeHtml(title) + '</span>' +
         '<button type="button" data-guide-dismiss="' + PCD.escapeHtml(key) + '" style="background:transparent;border:0;color:var(--text-3);cursor:pointer;font-size:13px;padding:2px 6px;line-height:1;" title="' + PCD.escapeHtml(tt('dash_guide_dismiss') || 'Hide') + '">✕</button>' +
+      '</summary>' +
+      '<div style="padding:0 14px 14px;font-size:13px;color:var(--text-2);line-height:1.65;">' +
+        '<ol style="margin:0;padding-inline-start:20px;">' + lis + '</ol>' + tipHtml +
       '</div>' +
-      '<ol style="margin:0;padding-inline-start:18px;font-size:13px;line-height:1.6;color:var(--text-2);">' + lis + '</ol>' +
-    '</div>';
+    '</details>';
   };
 
   PCD.escapeHtml = function (s) {
