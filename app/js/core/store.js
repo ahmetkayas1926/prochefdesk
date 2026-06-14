@@ -822,7 +822,7 @@
       delete next[wsId];
       state.workspaces = next;
       // Wipe workspace-bound data
-      ['recipes','ingredients','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','pendingStockCount','stockCountHistory','rosters','prepSheets','haccpLogs','haccpUnits','haccpReadings','haccpCookCool'].forEach(function (tbl) {
+      ['recipes','ingredients','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','pendingStockCount','stockCountHistory','rosters','prepSheets','haccpLogs','haccpUnits','haccpReadings','haccpCookCool','haccpReceiving','haccpHolding','buffets','misePlans','team','whiteboards'].forEach(function (tbl) {
         if (state[tbl] && state[tbl][wsId] !== undefined) {
           const t = Object.assign({}, state[tbl]);
           delete t[wsId];
@@ -865,7 +865,7 @@
     // flag'leri temizlenir, tombstone state'ten kaldırılır. (2) bulut —
     // DB'den workspace_tombstones row'u silinir; reverse cascade trigger
     // (trg_reverse_cascade_workspace_tombstone, v2.6.98) otomatik çalışır
-    // ve workspaces + 16 ws-scoped tabloda deleted_at = NULL yapar.
+    // ve workspaces + 24 ws-scoped tabloda deleted_at = NULL yapar.
     //
     // workspace_tombstones tablosunun PK'sı workspace_id (id değil),
     // dolayısıyla generic cloud-pertable queueDelete kullanılmaz —
@@ -888,7 +888,7 @@
       }
 
       // 2) Lokal state — ws-bound tabloların satırlarındaki _deletedAt temizle
-      ['recipes','ingredients','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','pendingStockCount','stockCountHistory','rosters','prepSheets','haccpLogs','haccpUnits','haccpReadings','haccpCookCool'].forEach(function (tbl) {
+      ['recipes','ingredients','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','pendingStockCount','stockCountHistory','rosters','prepSheets','haccpLogs','haccpUnits','haccpReadings','haccpCookCool','haccpReceiving','haccpHolding','buffets','misePlans','team','whiteboards'].forEach(function (tbl) {
         const tblData = state[tbl] && state[tbl][wsId];
         if (!tblData) return;
         if (Array.isArray(tblData)) {
@@ -935,7 +935,7 @@
       persist();
 
       // 4) Bulut — workspace_tombstones'tan DELETE; reverse cascade trigger
-      // workspaces + 16 ws-scoped tabloda deleted_at = NULL yapar.
+      // workspaces + 24 ws-scoped tabloda deleted_at = NULL yapar.
       if (PCD.cloud && PCD.cloud.getClient) {
         const supabase = PCD.cloud.getClient();
         if (supabase) {
@@ -966,7 +966,7 @@
     // Üç adım: (1) lokal state'te workspace, children, tombstone tamamen
     // silinir (state'ten map entry'leri çıkarılır). (2) DB'de
     // pcd_purge_workspace SQL fonksiyonu RPC ile çağrılır — atomik
-    // transaction'da 16 ws-scoped tablo + workspaces + workspace_tombstones'tan
+    // transaction'da 24 ws-scoped tablo + workspaces + workspace_tombstones'tan
     // ilgili satırları fiziksel siler.
     //
     // Geri dönüş yok — UI confirm modal'ı kullanıcıyı bu konuda uyarır.
@@ -985,8 +985,8 @@
         state.workspaces = next;
       }
 
-      // 2) Lokal state — 17 ws-scoped tablodan workspace entry'sini sil
-      ['recipes','ingredients','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','pendingStockCount','stockCountHistory','rosters','prepSheets','haccpLogs','haccpUnits','haccpReadings','haccpCookCool'].forEach(function (tbl) {
+      // 2) Lokal state — 24 ws-scoped tablodan workspace entry'sini sil
+      ['recipes','ingredients','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','pendingStockCount','stockCountHistory','rosters','prepSheets','haccpLogs','haccpUnits','haccpReadings','haccpCookCool','haccpReceiving','haccpHolding','buffets','misePlans','team','whiteboards'].forEach(function (tbl) {
         if (state[tbl] && state[tbl][wsId] !== undefined) {
           const t = Object.assign({}, state[tbl]);
           delete t[wsId];
@@ -1621,8 +1621,9 @@
           'recipes', 'ingredients', 'menus', 'events', 'suppliers',
           'canvases', 'shoppingLists', 'checklistTemplates',
           'stockCountHistory', 'rosters', 'prepSheets', 'haccpLogs', 'haccpUnits',
-          'haccpReadings', 'haccpCookCool',
+          'haccpReadings', 'haccpCookCool', 'haccpReceiving', 'haccpHolding',
           'inventory', 'waste', 'checklistSessions',
+          'buffets', 'misePlans', 'team', 'whiteboards',
         ];
         wsScopedKeys.forEach(function (key) {
           const ns = state[key];

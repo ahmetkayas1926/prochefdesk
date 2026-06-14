@@ -2953,3 +2953,10 @@ window.PCD.i18n.register('de', {
   ocr_current: "jetzt",
   ocr_first_note: "(erster Scan lädt den Leser herunter, ~einmal)",
 });
+
+// Singular-Varianten — wenn count === 1 (v2.44.26 Plural-Fix)
+window.PCD.i18n.register('de', {
+  roster_week: "Woche",
+  waste_entry: "Eintrag",
+  recipe_used_in_event: "In {n} Event verwendet",
+});

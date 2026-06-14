@@ -3181,3 +3181,10 @@ window.PCD.i18n.register('tr', {
   ocr_current: "şu an",
   ocr_first_note: "(ilk taramada okuyucu indirilir, ~bir kez)",
 });
+
+// Tekil varyantlar — count === 1 olunca (v2.44.26 çoğul düzeltmesi)
+window.PCD.i18n.register('tr', {
+  roster_week: "hafta",
+  waste_entry: "kayıt",
+  recipe_used_in_event: "{n} etkinlikte kullanılıyor",
+});

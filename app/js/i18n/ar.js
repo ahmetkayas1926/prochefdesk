@@ -2953,3 +2953,10 @@ window.PCD.i18n.register('ar', {
   ocr_current: "حاليًا",
   ocr_first_note: "(أول مسح يُنزّل القارئ، ~مرة واحدة)",
 });
+
+// صيغ المفرد — عند count === 1 (v2.44.26 إصلاح الجمع)
+window.PCD.i18n.register('ar', {
+  roster_week: "أسبوع",
+  waste_entry: "سجل",
+  recipe_used_in_event: "مستخدم في {n} فعالية",
+});

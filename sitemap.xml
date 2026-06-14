@@ -39,7 +39,7 @@
   <!-- Blog index -->
   <url>
     <loc>https://prochefdesk.com/blog/</loc>
-    <lastmod>2026-05-19</lastmod>
+    <lastmod>2026-06-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -48,7 +48,13 @@
        v2.8.95 — +2 (buffet-food-cost + iftar). v2.8.96 — +2 (cook-cool + yield).
        v2.8.97 — +2 (prep-list + recipe-scaling). v2.8.98 — +2 (kitchen-cards + par-levels).
        v2.8.99 — +2 (waste-tracking + allergen-menu, FİNAL: Faz B 5-round plan tamam).
-       Total 13 posts published. -->
+       v2.44.26 — +1 (catering-cost-per-head). Total 14 posts published. -->
+  <url>
+    <loc>https://prochefdesk.com/blog/catering-cost-per-head.html</loc>
+    <lastmod>2026-06-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
   <url>
     <loc>https://prochefdesk.com/blog/allergen-safe-menu-design.html</loc>
     <lastmod>2026-05-19</lastmod>

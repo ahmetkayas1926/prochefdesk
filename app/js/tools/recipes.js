@@ -2630,7 +2630,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
         const oldSec = PCD.$('#recipeUsedEvents', body); if (oldSec) oldSec.remove();
         if (evRefs.length) {
           const sec = PCD.el('div', { id: 'recipeUsedEvents', class: 'field', style: { marginTop: '4px' } });
-          sec.innerHTML = '<label class="field-label">' + PCD.escapeHtml((t('recipe_used_in_events') || 'Used in {n} events').replace('{n}', evRefs.length)) + '</label>' +
+          sec.innerHTML = '<label class="field-label">' + PCD.escapeHtml((evRefs.length === 1 ? (t('recipe_used_in_event') || 'Used in {n} event') : (t('recipe_used_in_events') || 'Used in {n} events')).replace('{n}', evRefs.length)) + '</label>' +
             '<div style="display:flex;flex-wrap:wrap;gap:6px;">' +
             evRefs.map(function (ev) { return '<button type="button" data-go-event="' + ev.id + '" style="background:var(--brand-50);color:var(--brand-700);font-size:12px;padding:4px 10px;border-radius:999px;font-weight:600;cursor:pointer;border:1px solid var(--brand-200);">' + PCD.escapeHtml(ev.name) + ' ›</button>'; }).join('') +
             '</div>';

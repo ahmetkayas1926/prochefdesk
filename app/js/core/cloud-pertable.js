@@ -706,6 +706,8 @@
       'haccp_logs', 'haccp_units', 'haccp_readings', 'haccp_cook_cool',
       // v2.8.44 — HACCP Receiving + Holding cloud sync
       'haccp_receiving', 'haccp_holding',
+      // v2.9.17 + v2.9.42 — Buffet/Mise/Team + Whiteboard (restore wipe eksikti, v2.44.26 fix)
+      'buffets', 'mise_plans', 'team', 'whiteboards',
       // v2.15.3 — Roster cloud sync
       'rosters',
       // v2.16 — Prep Sheet cloud sync
@@ -801,20 +803,27 @@
       });
     });
 
-    // 4. Array tabloları: waste, checklistSessions
-    const waste = state.waste || {};
-    Object.keys(waste).forEach(function (wsId) {
-      const arr = waste[wsId];
-      if (Array.isArray(arr) && arr.length > 0) {
-        queueArraySync('waste', wsId, [], arr);
-      }
-    });
-    const sessions = state.checklistSessions || {};
-    Object.keys(sessions).forEach(function (wsId) {
-      const arr = sessions[wsId];
-      if (Array.isArray(arr) && arr.length > 0) {
-        queueArraySync('checklist_sessions', wsId, [], arr);
-      }
+    // 4. Array tabloları: waste, checklistSessions, buffets, misePlans, team, whiteboards
+    //    v2.44.26 — buffets/mise/team/whiteboards eklendi (restore push'ta eksikti →
+    //    geri-yükleme sonrası bu 4 araç buluta gitmiyordu, cross-device boşluk).
+    const arrayTables = [
+      ['waste',         'waste'],
+      ['checklistSessions', 'checklist_sessions'],
+      ['buffets',       'buffets'],
+      ['misePlans',     'mise_plans'],
+      ['team',          'team'],
+      ['whiteboards',   'whiteboards'],
+    ];
+    arrayTables.forEach(function (pair) {
+      const stateKey = pair[0];
+      const table = pair[1];
+      const data = state[stateKey] || {};
+      Object.keys(data).forEach(function (wsId) {
+        const arr = data[wsId];
+        if (Array.isArray(arr) && arr.length > 0) {
+          queueArraySync(table, wsId, [], arr);
+        }
+      });
     });
 
     // 5. user_prefs (single row, PK user_id)

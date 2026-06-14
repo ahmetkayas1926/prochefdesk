@@ -126,7 +126,7 @@
         '<div class="card mb-3" style="background:var(--brand-50);border-color:var(--brand-300);padding:14px;display:flex;justify-content:space-between;align-items:center;">' +
           '<div><div class="text-muted text-sm" style="text-transform:uppercase;letter-spacing:0.04em;">' + PCD.escapeHtml(t('waste_total_loss')) + '</div>' +
           '<div style="font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--danger);">' + PCD.fmtMoney(total) + '</div></div>' +
-          '<div class="text-muted text-sm">' + list.length + ' ' + PCD.escapeHtml(t('waste_entries')) + '</div>' +
+          '<div class="text-muted text-sm">' + list.length + ' ' + PCD.escapeHtml(list.length === 1 ? t('waste_entry') : t('waste_entries')) + '</div>' +
         '</div>';
       html += '<div class="list">';
       list.forEach(function (e) {

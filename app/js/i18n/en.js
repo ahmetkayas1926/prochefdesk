@@ -3184,3 +3184,10 @@ window.PCD.i18n.register('en', {
   ocr_current: "now",
   ocr_first_note: "(first scan downloads the reader, ~once)",
 });
+
+// Singular variants — used when count === 1 (v2.44.26 plural fix)
+window.PCD.i18n.register('en', {
+  roster_week: "week",
+  waste_entry: "entry",
+  recipe_used_in_event: "Used in {n} event",
+});

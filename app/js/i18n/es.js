@@ -2953,3 +2953,10 @@ window.PCD.i18n.register('es', {
   ocr_current: "ahora",
   ocr_first_note: "(el primer escaneo descarga el lector, ~una vez)",
 });
+
+// Variantes singulares — cuando count === 1 (v2.44.26 corrección de plural)
+window.PCD.i18n.register('es', {
+  roster_week: "semana",
+  waste_entry: "registro",
+  recipe_used_in_event: "Usado en {n} evento",
+});

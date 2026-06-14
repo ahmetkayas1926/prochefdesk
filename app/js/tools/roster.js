@@ -250,7 +250,7 @@
     view.innerHTML =
       '<div class="page-header"><div class="page-header-text">' +
         '<div class="page-title">' + PCD.escapeHtml(t('roster_title') || 'Roster') + '</div>' +
-        '<div class="page-subtitle">' + rosters.length + ' ' + PCD.escapeHtml(t('roster_weeks') || 'weeks') + '</div>' +
+        '<div class="page-subtitle">' + rosters.length + ' ' + PCD.escapeHtml(rosters.length === 1 ? (t('roster_week') || 'week') : (t('roster_weeks') || 'weeks')) + '</div>' +
       '</div><div class="page-header-actions">' +
         '<button class="btn btn-primary" id="newRosterBtn">' + PCD.icon('plus', 16) + ' ' + PCD.escapeHtml(t('roster_new') || 'New roster') + '</button>' +
       '</div></div>' +
