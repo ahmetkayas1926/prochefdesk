@@ -41,38 +41,53 @@
   })();
 </script>
 
-<!-- Fonts: Inter (matches app) -->
+<!-- Fonts: Inter (UI) + Fraunces (display headings) — matches app v2.44 Deep Pine -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet">
 
 <style>
   /* App-aligned color palette */
   :root {
     color-scheme: light;   /* Landing daima light — cihaz dark olsa bile satış vitrini sabit kalır */
-    --bg: #fafaf9;
+    /* v2.44 Deep Pine — app ile aynı: krem zemin + rafine zümrüt aksiyon + pine chrome + pirinç detay */
+    --bg: #f5f1ea;
     --surface: #ffffff;
-    --surface-2: #f5f5f4;
-    --border: #e7e5e4;
-    --border-strong: #d6d3d1;
+    --surface-2: #f3efe7;
+    --border: #e6e0d5;
+    --border-strong: #d8d0c2;
 
     --text-1: #1c1917;
     --text-2: #44403c;
     --text-3: #78716c;
     --text-muted: #a8a29e;
 
-    --brand: #16a34a;
-    --brand-hover: #15803d;
-    --brand-soft: #dcfce7;
-    --brand-soft-text: #166534;
+    --brand: #1f9d6b;
+    --brand-hover: #1a7e57;
+    --brand-soft: #eaf6f0;
+    --brand-soft-text: #155f42;
+
+    /* chrome (pine) + premium detail (brass) */
+    --pine: #16433a;
+    --pine-ink: #0f3329;
+    --brass: #b8895a;
+    --brass-soft: #fbf4ea;
+    --brass-border: #e8d7c2;
 
     --warning: #d97706;
 
-    --shadow-sm: 0 1px 2px rgba(0,0,0,.04), 0 1px 3px rgba(0,0,0,.06);
-    --shadow-md: 0 4px 6px -1px rgba(0,0,0,.06), 0 2px 4px -2px rgba(0,0,0,.04);
-    --shadow-lg: 0 10px 15px -3px rgba(0,0,0,.08), 0 4px 6px -4px rgba(0,0,0,.04);
+    --shadow-sm: 0 1px 2px rgba(20,40,33,.05), 0 1px 3px rgba(20,40,33,.06);
+    --shadow-md: 0 1px 3px rgba(20,40,33,.06), 0 8px 18px -6px rgba(20,40,33,.12);
+    --shadow-lg: 0 2px 6px rgba(20,40,33,.07), 0 18px 36px -10px rgba(20,40,33,.16);
 
     --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-display: 'Fraunces', 'Georgia', 'Times New Roman', serif;
+  }
+
+  /* v2.44 — Fraunces display headings (matches app) */
+  h1, h2, .hero h1, .section-head h2, .intro-card h2, .live-copy h2, .costs h2 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
   }
 
   /* Dark mode KALDIRILDI. Landing artık daima light (satış vitrini).
@@ -915,6 +930,177 @@
         </div>
       </div>
 
+      <!-- Service Whiteboard -->
+      <div class="proof-card">
+        <div class="pc-cap">
+          <span class="pc-tag">Service board</span>
+          <h3>The whole pass, on one board</h3>
+          <p>Covers booked, dietary counts, the 86 list and tonight's specials — a colour-coded board the whole brigade reads at a glance. Build it from blocks, print A3 for the pass.</p>
+        </div>
+        <div class="shot">
+          <div class="shot-bar"><i></i><i></i><i></i><span class="shot-url">prochefdesk.com/app</span></div>
+          <div class="shot-body shot-real">
+            <img src="/assets/shots/whiteboard.webp" alt="ProChefDesk service whiteboard — covers booked, dietary counts, 86 list and tonight's specials" width="1320" height="825" loading="lazy" decoding="async">
+          </div>
+        </div>
+      </div>
+
+      <!-- Cost variance -->
+      <div class="proof-card">
+        <div class="pc-cap">
+          <span class="pc-tag">Cost variance · Pro</span>
+          <h3>Find where the food cost leaks</h3>
+          <p>Theoretical usage from what you sold against what you actually used — the dollar variance per ingredient, so silent losses stop hiding in the spread.</p>
+        </div>
+        <div class="shot">
+          <div class="shot-bar"><i></i><i></i><i></i><span class="shot-url">prochefdesk.com/app</span></div>
+          <div class="shot-body shot-real">
+            <img src="/assets/shots/variance.webp" alt="ProChefDesk cost variance — theoretical vs actual ingredient usage with dollar variance" width="1320" height="825" loading="lazy" decoding="async">
+          </div>
+        </div>
+      </div>
+
+      <!-- Nutrition -->
+      <div class="proof-card">
+        <div class="pc-cap">
+          <span class="pc-tag">Nutrition</span>
+          <h3>Calories &amp; macros, per serving</h3>
+          <p>Auto-estimated from each recipe's ingredients — calories, protein, carbs and fat. A fast guide for specials boards and guest questions, from public USDA &amp; FSANZ data.</p>
+        </div>
+        <div class="shot">
+          <div class="shot-bar"><i></i><i></i><i></i><span class="shot-url">prochefdesk.com/app</span></div>
+          <div class="shot-body shot-real">
+            <img src="/assets/shots/nutrition.webp" alt="ProChefDesk nutrition estimate — calories, protein, carbs and fat per serving" width="1320" height="825" loading="lazy" decoding="async">
+          </div>
+        </div>
+      </div>
+
+      <!-- Waste log -->
+      <div class="proof-card">
+        <div class="pc-cap">
+          <span class="pc-tag">Waste log</span>
+          <h3>See the money in the bin</h3>
+          <p>Log spoilage, trim and overproduction with its real cost attached — a running total that turns waste from a feeling into a number you can act on.</p>
+        </div>
+        <div class="shot">
+          <div class="shot-bar"><i></i><i></i><i></i><span class="shot-url">prochefdesk.com/app</span></div>
+          <div class="shot-body shot-real">
+            <img src="/assets/shots/waste.webp" alt="ProChefDesk waste log — spoilage, trim and overproduction with cost and running total" width="1320" height="825" loading="lazy" decoding="async">
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============ EVENTS & BUFFETS ============ -->
+<section class="proof">
+  <div class="container">
+    <div class="section-head">
+      <div class="section-label">Banquets · weddings · buffets</div>
+      <h2>Plan a 200-cover event without the spreadsheet</h2>
+      <p>Build the menu, set the head count, and watch food cost, revenue and profit land in real time — then pull a shopping list and deduct stock in a tap.</p>
+    </div>
+
+    <div class="proof-grid">
+      <!-- Events list -->
+      <div class="proof-card">
+        <div class="pc-cap">
+          <span class="pc-tag">Events</span>
+          <h3>Every function, costed and confirmed</h3>
+          <p>Banquets, weddings and caterings in one list — guest count, venue, food cost, revenue and profit on every card.</p>
+        </div>
+        <div class="shot">
+          <div class="shot-bar"><i></i><i></i><i></i><span class="shot-url">prochefdesk.com/app</span></div>
+          <div class="shot-body shot-real">
+            <img src="/assets/shots/events.webp" alt="ProChefDesk events list — banquets and weddings with food cost, revenue and profit per event" width="1320" height="825" loading="lazy" decoding="async">
+          </div>
+        </div>
+      </div>
+
+      <!-- Event detail -->
+      <div class="proof-card">
+        <div class="pc-cap">
+          <span class="pc-tag">Event · Pro</span>
+          <h3>Know the profit before you say yes</h3>
+          <p>Per-guest food cost, profit against the customer's budget and the full dish list — quote the function with the numbers in front of you.</p>
+        </div>
+        <div class="shot">
+          <div class="shot-bar"><i></i><i></i><i></i><span class="shot-url">prochefdesk.com/app</span></div>
+          <div class="shot-body shot-real">
+            <img src="/assets/shots/event_detail.webp" alt="ProChefDesk event detail — total food cost, food cost per guest, profit and event menu" width="1320" height="825" loading="lazy" decoding="async">
+          </div>
+        </div>
+      </div>
+
+      <!-- Buffet planner -->
+      <div class="proof-card">
+        <div class="pc-cap">
+          <span class="pc-tag">Buffet Planner</span>
+          <h3>Buffets that don't blow the budget</h3>
+          <p>Covers, ticket price and live food-cost % on every buffet — green when it's healthy, amber when it needs a second look.</p>
+        </div>
+        <div class="shot">
+          <div class="shot-bar"><i></i><i></i><i></i><span class="shot-url">prochefdesk.com/app</span></div>
+          <div class="shot-body shot-real">
+            <img src="/assets/shots/buffet.webp" alt="ProChefDesk buffet planner — covers, ticket price and live food cost percentage per buffet" width="1320" height="825" loading="lazy" decoding="async">
+          </div>
+        </div>
+      </div>
+
+      <!-- Buffet detail -->
+      <div class="proof-card">
+        <div class="pc-cap">
+          <span class="pc-tag">Buffet · Pro</span>
+          <h3>Stations, portions and pickup — dialled in</h3>
+          <p>Per-guest amounts, realistic pickup rates and expected waste by station — so you cook enough for the room, not double.</p>
+        </div>
+        <div class="shot">
+          <div class="shot-bar"><i></i><i></i><i></i><span class="shot-url">prochefdesk.com/app</span></div>
+          <div class="shot-body shot-real">
+            <img src="/assets/shots/buffet_detail.webp" alt="ProChefDesk buffet detail — food cost percent, per-cover cost, expected waste and stations" width="1320" height="825" loading="lazy" decoding="async">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ IN YOUR POCKET (mobile dishes) ============ -->
+<section class="proof" style="padding-top:8px;">
+  <div class="container">
+    <div class="section-head">
+      <div class="section-label">On the line, in your hand</div>
+      <h2>The whole dish — photo, cost and method — on your phone</h2>
+      <p>Tap any recipe for the full spec: the plated photo, live food cost and margin, scaled ingredients and method. No office laptop, no laminated printout.</p>
+    </div>
+    <div class="cost-row">
+      <div class="cost-phone">
+        <img src="/assets/shots/recipe_detail_m.webp" alt="ProChefDesk recipe on a phone — steak photo, food cost, margin, ingredients and method" width="412" height="1320" loading="lazy" decoding="async">
+      </div>
+      <div class="cost-phone">
+        <img src="/assets/shots/dish_scallops_m.webp" alt="ProChefDesk scallops recipe on a phone — photo, food cost and margin" width="412" height="1320" loading="lazy" decoding="async">
+      </div>
+      <div class="cost-phone">
+        <img src="/assets/shots/dish_dessert_m.webp" alt="ProChefDesk crème brûlée recipe on a phone — photo, food cost and margin" width="412" height="1320" loading="lazy" decoding="async">
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ DARK MODE SHOWCASE ============ -->
+<section style="background:var(--pine-ink);padding:72px 0;">
+  <div class="container">
+    <div class="section-head">
+      <div class="section-label" style="color:var(--brass);">Midnight Premium</div>
+      <h2 style="color:#f1ede6;">A dark mode built for the late service</h2>
+      <p style="color:#b9c6bd;">Easy on the eyes at 11pm, crisp on every screen. The same tools and the same numbers — dressed for the pass after dark.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin-top:30px;">
+      <img src="/assets/shots/dashboard_dark.webp" alt="ProChefDesk dashboard in dark mode" loading="lazy" decoding="async" style="width:100%;aspect-ratio:1.5;object-fit:cover;object-position:center top;border-radius:14px;border:1px solid #2a3b34;box-shadow:0 18px 36px -12px rgba(0,0,0,.5);">
+      <img src="/assets/shots/whiteboard_dark.webp" alt="ProChefDesk service whiteboard in dark mode" loading="lazy" decoding="async" style="width:100%;aspect-ratio:1.5;object-fit:cover;object-position:center top;border-radius:14px;border:1px solid #2a3b34;box-shadow:0 18px 36px -12px rgba(0,0,0,.5);">
+      <img src="/assets/shots/menu_dark.webp" alt="ProChefDesk menu studio in dark mode" loading="lazy" decoding="async" style="width:100%;aspect-ratio:1.5;object-fit:cover;object-position:center top;border-radius:14px;border:1px solid #2a3b34;box-shadow:0 18px 36px -12px rgba(0,0,0,.5);">
     </div>
   </div>
 </section>

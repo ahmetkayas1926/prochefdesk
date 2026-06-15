@@ -213,7 +213,18 @@
       "Bash(python tool_check.py checklist 1300)",
       "Bash(python wb_tpl_check.py)",
       "Bash(cd \"C:/Users/ahmet/.claude/projects/C--Users-ahmet-Desktop-prochefdesk/memory\" && rm -f loop-progress.md \"baglantı-kopukluklari.md\" && echo \"deleted stale roadmap/loop files\" && ls *.md)",
-      "Bash(rm -rf \"C:/Users/ahmet/.claude/projects/C--Users-ahmet-Desktop-prochefdesk/memory\" && echo \"memory klasörü silindi\" && ls \"C:/Users/ahmet/.claude/projects/C--Users-ahmet-Desktop-prochefdesk/memory\" 2>/dev/null && echo \"\\(hala var\\)\" || echo \"doğrulandı: memory yok\")"
+      "Bash(rm -rf \"C:/Users/ahmet/.claude/projects/C--Users-ahmet-Desktop-prochefdesk/memory\" && echo \"memory klasörü silindi\" && ls \"C:/Users/ahmet/.claude/projects/C--Users-ahmet-Desktop-prochefdesk/memory\" 2>/dev/null && echo \"\\(hala var\\)\" || echo \"doğrulandı: memory yok\")",
+      "Bash(ls -la .claude/)",
+      "Bash(mkdir -p \"C:/Users/ahmet/pcd-shot-tool\")",
+      "Read(//c/Users/ahmet/**)",
+      "Bash(npm init *)",
+      "Bash(npm i *)",
+      "Bash(node capture.js dashboard)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code} in %{time_total}s\\\\n\" http://localhost:8766/app/)",
+      "Bash(node -e \"console.log\\(require\\('puppeteer-core/package.json'\\).version\\)\")",
+      "Bash(\"/c/Program Files/Google/Chrome/Application/chrome.exe\" --version)",
+      "Bash(powershell -c \"\\(Get-Item 'C:\\\\Program Files\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe'\\).VersionInfo.ProductVersion\")",
+      "PowerShell(\\(Get-Item 'C:\\\\Program Files\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe'\\).VersionInfo.ProductVersion)"
     ]
   }
 }
