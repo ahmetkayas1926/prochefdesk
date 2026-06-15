@@ -1,714 +1,95 @@
 # ProChefDesk — Sürüm Geçmişi
 
-Kronolojik tersine (en son üstte). Her sürüm: başlık + ana değişiklikler.
+Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
-## v2.44.31 — Landing net orijinale dönüş + roster yazdırma + toplu fiyat-onay · 2026-06-15
-
-### Landing — v2.44.30 görsel yenilemesi GERİ ALINDI
-- v2.44.30'da html2canvas ile yeniden üretilen ürün screenshot'ları metni kırpıyordu (tarif adı descender'ları kesik, "1 4" boşluk artefaktı), bir mobil shot absürt uzundu, dashboard tekrar ediyordu → **tüm regenerate shot'lar + `index.html` net orijinallerine geri alındı.** Dark-mode vitrini + inventory/buffet proof kartları kaldırıldı (gerçek screenshot ile geri eklenecek). 7 orphan görsel silindi.
-- **Kural pekişti:** ürün ekran görüntüleri html2canvas ile ÜRETİLMEZ (metni kırpar) — operatör gerçek tarayıcı yakalaması alır.
-- Not: araç konsolidasyonu / sub-nav (v2.44.30) korundu — yalnız landing görselleri geri alındı.
-
-### Roster yazdırma — tarayıcı damgaları kalktı
-- Print `@page{margin:10mm}` → `margin:0` + içeriğe `padding:10mm` → Chrome'un başlık/altbilgi damgaları (tarih · başlık · about:blank · 1/1) artık basılmıyor. (HACCP deseni; margin:0 = tarayıcı damga koyamaz.)
-
-### Ingredients — toplu "Fiyatları onayla"
-- Toplu-işlem çubuğuna buton: seçili malzemelerin fiyat tarihini bugüne çeker (**fiyat değişmez**), "priced Nd ago" eski-fiyat etiketini temizler. Cloud-sync; aynı fiyatta geçmiş kaydı eklemez. 6 dil. Akış: eskiyenleri filtrele → tümünü seç → onayla.
-
----
+## v2.44.31 — Landing orijinale dönüş + roster print + toplu fiyat-onay · 2026-06-15
+- **Landing:** v2.44.30'un html2canvas ile üretilmiş ürün görselleri metni kırpıyordu → net orijinallere geri alındı; 7 orphan görsel silindi. **Kural:** ürün screenshot'ları html2canvas ile ÜRETİLMEZ (operatör gerçek tarayıcı yakalaması alır). Araç konsolidasyonu/sub-nav korundu.
+- **Roster print:** `@page margin:0` + içeriğe `padding` → Chrome'un başlık/altbilgi damgaları kalktı.
+- **Ingredients:** toplu "Fiyatları onayla" — seçili malzemelerin fiyat tarihini bugüne çeker (fiyat değişmez), eski-fiyat etiketini temizler; 6 dil.
 
 ## v2.44.30 — Araç konsolidasyonu + landing görsel yenileme · 2026-06-15
-
-### Araç konsolidasyonu (sidebar sadeleştirme)
-- Sidebar **20 → 15 öğe.** Birbirine sıkı-bağlı araçlar ortak **alt-sekme (sub-nav) çubuğu** altında gruplandı: **Stok** (Inventory · Variance · Waste) · **Tarif** (Recipes · Nutrition · Portion) · **Liste** (Checklist · Prep).
-- Yeni `PCD.subNav` bileşeni — temalı sekme çubuğu, router-tabanlı navigasyon. Araç route'ları korundu (erişim grup primary'sinden sekmeyle). `tab_*` anahtarları 6 dilde.
-
-### Landing page görsel yenileme
-- Tüm ürün ekran görüntüleri **canlı app'ten** yeniden üretildi (rehber kartları kapalı, zengin demo verisi, USD, Pro özellikleri açık) — **light + dark + mobil + masaüstü.**
-- Yeni **"Day & night"** light/dark vitrini (dashboard açık|koyu çifti + 3-shot dark galeri) + ürün-kanıtı bölümü **4 → 6 kart** (Inventory + Buffet). 6 dilde çeviri.
-
----
-
-## v2.44.21–.29 — "Bağlı sistem" operasyonel araçlar + marka + QA · 2026-06-13…14
-
-### Yeni operasyonel araçlar (v2.44.21)
-- **Waste (fire) aracı** — şema-only'den canlı UI'a: stok düşümü + $ fire takibi.
-- **Variance (dönemsel stok-farkı)** ve **Nutrition (besin)** araç UI'ları eklendi (eski sürümleri v2.43'te sadeleştirilmişti; yeni araç olarak yeniden inşa).
-- **Operasyonel geliştirmeler** — events · inventory · recipes · ingredients · dashboard araçları genişletildi (bağlı-sistem temelleri). 6 dilde ~100'er yeni i18n anahtarı.
-
-### Marka + web tutarlılığı (v2.44.25–.29)
-- **Toque app ikonu** — şef şapkası monogramı **tüm web sayfalarında** (app + landing + blog + privacy/terms) + merkezi `icon.svg`.
-- **Restore/purge senkron fix** — geri yükleme/temizleme sonrası bulut senkron tutarlılığı.
-- Variance snapshot'sız çalışma + ikon kullanımı standartlaştırıldı + çoğul-form düzeltmeleri.
-
-### SEO
-- **Catering cost-per-head** blog yazısı (SEO standardına uygun).
-
----
-
-## v2.43.0–.18 — Büyük sadeleştirme + Whiteboard + i18n 6 dil + maliyet motoru · 2026-06-10…11
-
-### Araç sadeleştirme
-- **10 kullanılmayan tool dosyası silindi** (menu_matrix · sales · nutrition[eski] · whatif · yield · variance[eski] · team · allergens[eski] · menus[klasik] · tools-hub) — route'lanmıyor, yüklenmiyordu. Core motorlar (`variance`, `allergens-db`) canlı kaldı. *(nutrition/variance/waste sonradan v2.44.21'de yeni araç olarak yeniden inşa edildi.)*
-- **Whiteboard** aracı eklendi — gerçek-A4 WYSIWYG kanvas (önizleme = çıktı).
-
-### i18n — 6 dil tam (v2.43.17)
-- es/fr/de/ar dört dil de **2598 canlı anahtarın hepsine** sahip (0 eksik); en+tr zaten tamdı.
-
-### Maliyet motoru cilaları (v2.43.18)
-- **fmtMoney düzeltmesi** — her zaman 2 ondalık + binlik ayraç (`$4,800.00`); küçük birim fiyatlarda hassasiyet (`$0.003/g`). Uygulama geneli (print/Excel/share/kitchen cards).
-- **Cost report alt-tarif genişletme** — bir tarifteki alt-tarifi tek satır yerine **içindeki malzemeler + tek tek fiyatlarıyla** açar (recipe + buffet + event; önizleme + PDF + Excel).
-- Tarif/event **hızlı-erişim butonları** + tarif **sıralama** dropdown'ı (6 ölçüt).
-
----
-
-## v2.41.0 — Kitchen Cards araç oldu + demo overhaul · 2026-06-09
-- **Kitchen Cards** tam araç hâline geldi (lazy route + sidebar).
-- **Demo seed overhaul** — whiteboard + kitchen card demoları, zengin tarif/menü verisi.
-- Landing cilaları (kurucu fotoğrafı) + roster/menu_studio/buffet iyileştirmeleri.
-
----
-
-## v2.40.0 — Landing yeniden tasarımı + araç cilaları, mobil & print bug fix'leri · 2026-06-09
-
-### Landing page (root index.html) — satış-odaklı yeniden tasarım
-- **Light mode sabiti:** `color-scheme:light` + dark mode media query kaldırıldı (cihaz dark olsa bile vitrin light kalır; `/app/` dark mode'una dokunulmadı).
-- **Hero** fayda-odaklı ("Food cost, menus, prep & HACCP — in one place") + gerçek UI mockup (canlı food cost % görünür).
-- **Yeni bölümler:** Canlı an (telefon+masaüstü; dürüstlük notu: çevrimdışı çalışır/bağlanınca senkron) · Problem (Excel-kaosu dili) · Ürün kanıtı (4 HTML/CSS mockup) · **Kurucu** (gerçek foto + hikaye; foto 585KB→46KB, çerçeve 180px).
-- **Dönüşüm cilası:** nav CTA giriş-yapmamışta "Start free" (giriş varsa "Open app") · fiyat-notu netleştirildi → **"No lock-in, no surprises."** (6 dilde) · mobilde "canlı an" telefonu istiflenip büyütüldü (116→170px).
-- **og-image.png** eklendi (1200×630 marka görseli) → sosyal paylaşımda kırık kart düzeldi.
-- Perth onur sinyali (uydurma sosyal kanıt yok; testimonial iskeleti boş/hazır). EN+TR tam; es/fr/de/ar yeni bölümlerde EN'e düşer.
-
-### Kitchen Cards
-- **Yüzey optimizasyonu:** aksiyon çubuğu (ad/kaydet/yeni · paylaş/yazdır/sil) kanvas üstüne taşındı, **Presets kaldırıldı**, sol panel kısaldı (Düzen & stil + reçete + custom kartlar).
-- **Mobil önizleme fix:** `applyScale` ilk mount'ta `clientWidth=0` olunca A4'ü ölçeklemiyordu (mobilde tam-boy + yatay scroll) → bounded rAF self-retry.
-
-### Menu Studio
-- **Page & theme renk/font fix:** `wirePageControls` `data-f`/`data-clear` input'larını bağlamıyordu (v2.32 refactor'unda unutulmuştu) → Theme accent, Text color, Background, Base font, Column gap, Margin hiçbir şey yapmıyordu → eklendi. **Theme accent** artık güçlü global accent (section/ayraç override'larını temizler); **Base font** temayı izleyen blokları günceller (display fontları korunur).
-- **Thumbnail hard-refresh fix:** `sizeThumbs` `clientWidth=0`'da scale'i atlıyordu (F5'te kartlar tam A4 taşıyordu) → bounded rAF self-retry.
-- **Print arka plan fix:** `buildPrintHtml`'e `print-color-adjust:exact` eklendi → arka plan + renkler basılır (önizleme = Chrome print = local print). (Diğer araçlarda zaten vardı; sadece menu_studio eksikti.)
-- **"Menu not found" toast fix:** kütüphane handler'ları GENEL `data-open/dup/del`'i paylaşılan kalıcı `#view`'a delege ediyordu → roster'ın `data-open`'ıyla çakışıp roster açınca `openDesign(rosterId)` tetikliyordu → menü-özel `data-ms-open/dup/del` yapıldı.
-
-### Roster
-- **Mobil önizleme — fit + tıkla-zoom:** tablo 760px doğal genişlikte render edilip kapsayıcıya **scale-to-fit** (sıkışma yok) + **tıkla→zoom popup** (920px, yatay pan → tüm günler). Ortak `mountRosterPv`.
-- **Önizleme stay-open fix:** editör "Print preview" details her aksiyonda (re-render) kapanıyordu → `_rPreviewOpen` ile varsayılan AÇIK + durum korunur.
-- **Editör kompaktlaştırma:** aksiyonlar (Print/Excel/Share/Delete) header'a taşındı; shift templates **daraltılabilir** (`<details>`) → daha az dikey scroll.
-
-### Buffet
-- **Mobil kart squish fix:** 6 aksiyon ikonu body'yi 76px'e sıkıştırıyordu → butonlar `.list-item-actions` + `buf-card` mobil kuralı ile tam-genişlik alt satıra sarar.
-
-### Mobil uyum (16 araç denetimi)
-- **Ingredients + Inventory** header buton satırı taşıyordu (`flex:1` basis:0 + wrap yok) → ortak `.page-header-actions` mobil CSS'i `flex-wrap:wrap` + `flex:1 1 auto` (Menü editör toolbar'ını + Roster header'ını da kapsar). Diğer 14 araç temizdi.
-
-> **Not (yinelenen mobil ölçek deseni):** clientWidth=0 ilk-paint yarışı bu sürümde 3 yerde aynı **bounded rAF self-retry** ile çözüldü (menü thumbnail, kitchen cards önizleme, roster önizleme). Whiteboard `applyCanvasScale` ile aynı desen.
-
----
-
-## v2.39.0 — Portion Calculator (Araç 8/8): stilize Excel export · 8-araç programı TAMAMLANDI · 2026-06-08
-
-Kod-önce analiz: Portion Calculator olgun ve aktif ciladan geçmiş (3 görünüm — tarif/kategori/tedarikçi; canlı stats; alt-tarif flatten; focus-koruyan güncelleme; 2 tür yazdırma; WhatsApp/Email/Kopya paylaşım). Kök değişiklik gereksiz → **tek tutarlı boşluğu** doldurdum:
-
-- **📊 Excel export (yeni):** Kardeş veri araçlarının (Recipes, Roster, Buffet, Menu) hepsinde olan stilize Excel artık burada da var. Ortak `PCD.xlsx` motoru (kalın yeşil başlık + çerçeve + alt-satır gölgesi + autofit). **Görünüme uygun**:
-  - Tarif görünümü → ölçekli tarif sayfası (Tarif / Malzeme / Miktar / Birim / Maliyet).
-  - Kategori veya tedarikçi görünümü → konsolide gruplu sipariş sayfası (Kategori|Tedarikçi / Malzeme / Miktar / Birim / Maliyet).
-  - Miktar + maliyet gerçek **sayı** olarak yazılır (Excel'de toplanır/sıralanır), sayfa altında TOPLAM satırı, altyazıda toplam porsiyon + tarif sayısı + tarih.
-  - xlsx lazy-load (buffet/recipes paritesi) + try/catch + hata toast'ı.
-- Tarayıcıda doğrulandı (Carbonara+Tikka, 50'şer porsiyon): tarif görünümünde Spaghetti 400g→5000g (12.5×), maliyet sayı, TOPLAM 367.25; kategori görünümünde gruplar sıralı (Dairy/Dry goods/Meat/Oils/Poultry/Produce), tedarikçi görünümünde başlık "Supplier"e geçti; üç görünümde de toplam tutarlı (367.25). Mevcut maliyet/flatten mantığı korundu.
-
-**🎯 8-araç profesyonel revizyon programı tamamlandı:** Kitchen Cards (1) · Prep Sheet (2) · Checklist (3) · Roster (4) · Whiteboard (5) · Event Planner (6) · Buffet Planner (7) · Portion Calculator (8). Her araç kod-önce analiz + dürüst verdict (zorlama overhaul yok) + gerçek değer katan geliştirme + tarayıcı doğrulaması ile elden geçti.
-
----
-
-## v2.38.0 — Buffet Planner (Araç 7/8): tedarikçiye göre sipariş/satın alma listesi · 2026-06-08
-
-Kod-önce analiz: Buffet Planner paketin EN OLGUN aracı (3-yol sektör maliyet motoru — tarif/malzeme/custom, yield%, birim dönüşümü, refill, pickup, fire projeksiyonu; food-cost-% hedefli durum renkleri; 7 uluslararası preset + boş; arama; kart başına Prep/PDF/Excel/Çoğalt/Düzenle; canlı stats hero kartı; focus-koruyan editör). Çoğalt + prep list + cost report + stilize Excel zaten vardı. Kök değişiklik gereksiz → **tek gerçek boşluğu** doldurdum (ve bir tutarsızlığı giderdim):
-
-- **🛒 Sipariş / satın alma listesi (yeni çıktı):** Aracın kendi rehberi *"alt-tarifler gerçek malzemeye iner ve shopping list'te görünür"* diye vaat ediyordu ama böyle bir liste **yoktu** (mevcut Prep List istasyona göre kalem adı gösteriyordu, ham malzeme değil). Artık:
-  - Tarif kalemlerini **alt-tarifler dahil gerçek malzemeye indirir** (`flattenIngredients`), mevcut maliyet motoruyla **birebir aynı ölçek** (prep = kapak × kişi-başı × refill; scale = prepInRecipeUnit ÷ recipeYield).
-  - Malzeme-bağlı kalemleri doğrudan ekler, aynı malzemeyi **stok birimine normalize edip toplar** (tarif-içi + doğrudan aynı malzeme tek satırda birleşir).
-  - Custom kalemleri "Bağlanmamış / manuel" grubuna düşürür (şef yine de ne hazırlayacağını/alacağını görür).
-  - **Tedarikçiye göre gruplar**, A4 yazdırır. Hem liste kartından (🚚 ikon) hem editör footer'ından erişilir.
-- Rehber adım 5 + dosya başlığı güncellendi — artık vaat **gerçek** (Prep List / Sipariş Listesi / Cost Report üç çıktı).
-- Tarayıcıda doğrulandı (100 kapak, dinner refill 1.30×): Carbonara tarifi 16.25× ölçeklenip Spaghetti **6500g** (Pasta Co), tarif-içi yumurta (65) + doğrudan yumurta kalemi (130) = **195 pcs** tek satırda konsolide (Farm Fresh), Croissants (manual) "Bağlanmamış" grubunda; tedarikçi başlıkları sıralı, bağlanmamış en sonda. Maliyet motoru / sync / Pro-gating korundu.
-
----
-
-## v2.37.0 — Event Planner (Araç 6/8): alışveriş listesi + çoğalt + canlı A4 önizleme + kişi başı maliyet · 2026-06-08
-
-Kod-önce analiz: Event Planner çekirdeği zaten sağlamdı (konuk sayısına ölçekli yemek maliyeti, gelir/kâr/marj, bütçe takibi, durum, yazdır/paylaş). Köklü redesign gereksiz → operatörün "Tam paket" seçimine uygun **gerçek değer katan 4 ekleme**:
-
-- **🛒 Alışveriş/hazırlık listesi:** Menüdeki tüm tarifleri konuk sayısına **otomatik ölçekler**, `flattenIngredients` ile gerçek malzeme seviyesine indirir (alt-tarifler + birim dönüşümü dahil), aynı malzeme+birimi **toplar**, **tedarikçiye göre gruplar**. Modalde görüntü + tek tık **yazdır** (A4, marka yeşili başlık). Banket için tek liste = sipariş hazır.
-- **⧉ Etkinliği çoğalt:** Liste kartında tek butonla → menü + konuk + fiyat + bütçe kopyalanır, adına "(kopya)" eklenir, durum "taslak" olur. Tekrarlayan iş (haftalık catering, benzer düğün) için zaman kazancı.
-- **📄 Canlı A4 önizleme:** Editörde açılır panel — çıktının birebir hali (print ile **aynı `eventPrintHtml` motoru**). İzole iframe → baskı stili uygulama sayfasına sızmaz.
-- **Kişi başı yemek maliyeti** göstergesi: editör istatistik kartında toplam maliyet ÷ konuk = fiyatlama kararı için anlık metrik.
-
-- Tarayıcıda doğrulandı: alışveriş listesi 100 konuk için 25× ölçekledi (spaghetti 400g→10.000g, yumurta→100 pcs, pancetta→3.750g), tedarikçi gruplaması çalıştı; çoğalt yeni id + "(kopya)" + taslak üretti; canlı önizleme menü+maliyeti yansıttı, sızıntı yok (app body max-width "none" kaldı); kişi başı maliyet göründü. Yazdır motoru / sync / Pro-gating korundu.
-
----
-
-## v2.36.0 — Roster (Araç 4/8): hızlı doldurma + önceki haftayı kopyala + canlı önizleme · 2026-06-08
-
-Kod-önce analiz: Roster zaten en olgun araçlardan (hücre/personel popup düzenleme, tek
-çıktı motoru print=Excel=JPEG, library, durum kodları, işçilik maliyeti). Köklü değişiklik
-gereksiz → operatörün "gelişmiş + profesyonel + kullanışlı" isteğine uygun **gerçek verim cilası**:
-
-- **⚡ Haftayı doldur (satır):** Her personel satırında tek butonla → popup → bir vardiya şablonu / durum / serbest saat seç → **tüm haftası tek tıkla dolar**. (Önceden 7×N hücre tek tek tıklanıyordu.) "Haftayı temizle" de var.
-- **⧉ Önceki haftayı kopyala:** En son önceki rosterı bulur, personeli **isimle eşleştirir**, vardiyaları bu haftaya kopyalar (onaylı; üzerine yazar). Haftalık rosterda en büyük zaman kazancı.
-- **📄 Canlı baskı önizlemesi:** Editörde açılır panel — `buildRosterTable` (print/Excel/JPEG ile aynı motor) ile çıktının birebir hali; işçilik-maliyeti toggle'ı önizlemeyi anında günceller.
-- Tarayıcıda doğrulandı: haftayı tek tıkla doldur (7 gün), önceki haftayı kopyala (Alice 06:00-14:00 + Bob OFF isimle eşleşti), canlı önizleme yansıttı; konsol temiz. Tek çıktı motoru / sync / Pro-gating korundu.
-
----
-
-## v2.35.0 — Menu Studio: 10 yeni profesyonel şablon (toplam 20) · 2026-06-08
-
-Operatör: 20 şablon olsun, her biri özel/profesyonel/dolu, sektörde farklı konsept/seviye/standart (yüzeysel/aceleci DEĞİL).
-
-- **10 yeni hazır menü şablonu** (mevcut 10 + 10 = **20**), her biri farklı konsept + uygun font/renk/yerleşim + gerçek dolu içerik (bölümler, yemekler, fiyatlar, açıklamalar):
-  1. **Chef's Tasting** — 7 kur degustasyon (set fiyat, wine pairing), koyu + altın, Italiana/Cormorant, çerçeve.
-  2. **Cocktail Bar** — imza kokteyller (içerik+ABV mantığı), spirits; koyu, Bebas/Oswald.
-  3. **Wine List** — kadeh/şişe; sparkling/white/red/dessert, bölge+vintage; 2 sütun, EB Garamond.
-  4. **Pâtisserie** — tabak tatlılar + vitrin + viennoiserie; pembe/altın, Playfair.
-  5. **Coffee Roasters** — espresso/filter/çekirdek + süt opsiyonu; 2 sütun, Oswald/Inter.
-  6. **Smokehouse BBQ** — pitten (brisket/ribs), platter, yan; koyu charcoal, Bebas.
-  7. **Sushi / Omakase** — nigiri/maki/sashimi/omakase; temiz, Montserrat, kırmızı accent.
-  8. **Tapas & Mezze** — paylaşımlık sıcak/soğuk; 2 sütun, Playfair, terracotta.
-  9. **Gastropub** — pub klasikleri/burger/Sunday roast/tap; Lora/Playfair.
-  10. **Afternoon Tea** — kat kat: savoury/scone/pastry/çay (set fiyat); EB Garamond, çerçeve.
-- Tarayıcıda doğrulandı: galeri 20 şablon, yeniler hatasız render (ör. BBQ → 6 blok, dolu içerik, profesyonel görünüm); konsol temiz. Menu Studio "hepsi tek seferde" işi tamamlandı (overhaul 2.32 + şablonlar 2.35).
-
----
-
-## v2.34.0 — Menu Studio: "Sayfa & Tema" etiketi + "Tema rengi" netleştirme · 2026-06-08
-
-- Header butonu "Page/Sayfa" → **"Page & theme / Sayfa & Tema"** (daha belirgin; sayfa boyutu + tema renkleri/fontu bir arada).
-- Page popup'taki "Accent color/Vurgu rengi" → **"Theme accent / Tema rengi"**. Bu, menünün genel tema rengidir: kendine özel renk verilmemiş bölüm başlıkları, başlık-altı çizgileri, ayraçlar ve sayfa çerçevesi için VARSAYILAN renk. Bir bloğa özel renk verilince o blok bunu ezer (çakışma yok, tamamlayıcı). Etiket netleştirildi.
-
----
-
-## v2.33.0 — Whiteboard cook sheet: satır ekle/sil + HANDOVER.md güncellendi · 2026-06-08
-
-- **Whiteboard "Cook Sheet" bloğu — satır ekle/sil:** Önceden yalnız sütun (item) ekle/sil vardı; artık parametre satırları da eklenip silinebiliyor (her satırda × sil butonu + "Satır ekle"). Tarayıcıda doğrulandı (3→4→3).
-- **HANDOVER.md güncellendi:** Tüm overhaul'lar sonrası güncel araç kapasitesi yazıldı (Menu Studio popup düzenleme/şablon/çerçeve, Kitchen Cards preset/accent/özel kart/dark-fix, Whiteboard popup+araç çubuğu+cook-sheet satır, Checklist canlı A4 önizleme, Prep Sheet kanvas-merkezli/önizleme=baskı/damgasız/1-5 sütun/XS-XXL/spacing). Satış stratejisi sohbeti için güncel referans.
-
----
-
-## v2.32.0 — Menu Studio: popup düzenleme + Page settings ayrıldı + kanvas çerçeve + home şablon butonu · 2026-06-08
-
-Operatör: araç kullanışlı değil; Prep/Whiteboard'daki popup mantığı gelsin; her
-bloğa tıklayınca altında Page settings çıkması bug; New menu yanına şablon butonu.
-
-- **Popup düzenleme:** Kanvasta blok/grup tıkla → o bloğun **popup editörü** açılır (başlık/metin/bölüm öğeleri/görsel/ayraç). Sağdaki "Blocks" katman listesi de tıklanınca aynı popup'ı açar. Düzenleme canlı; Çoğalt + Sil + Bitti footer'da.
-- **Page settings bug çözüldü:** Artık her blok altında page ayarları ÇIKMIYOR. Page ayarları header'daki **🎨 Sayfa** butonuyla ayrı popup olarak açılır (kağıt/sütun/renk/çerçeve/marka kiti).
-- **Kanvas çerçevesi:** Her blok/grup etrafında saydam kesik çerçeve (hover'da yeşil belirgin) → sınırlar belli, nereye tıklanacağı net.
-- **Home'da Şablonlar butonu:** New menu yanında (+ boş durumda) → şablon seç → o şablondan yeni menü oluşturur.
-- **Hızlı ekleme:** Üst bardan blok ekleyince editör popup'ı hemen açılır.
-- Tek render motoru (kanvas=baskı=paylaşım), realtime sync, i18n korundu. Tarayıcıda doğrulandı: blok popup'ında page ayarı yok, Page popup ayrı, frame + pointer, şablondan menü; konsol temiz.
-- **NOT:** 20 şablon hedefi (10 yeni profesyonel menü) bir sonraki adım — özenle yazılacak.
-
----
-
-## v2.31.0 — BUG: Kitchen Cards dark mode'da site yüzeyi beyaz · 2026-06-08
-
-Operatör: dark mode'da Kitchen Cards'ta canvas dışındaki site yüzeyi de beyaz.
-
-- **Kök neden:** Kitchen Cards canlı önizlemesi (`buildSheetHtml`, interactive) app dokümanına bir `<style>` enjekte ediyordu; bu blok print/share için olan `@page` + `body { ...; background:#fff }` kurallarını da içeriyordu. Sızan `body{background:#fff}` kuralı app body'sine uygulanıp dark mode'da tüm site yüzeyini beyaz yapıyordu.
-- **Çözüm:** interactive yolda `@page` + `body{}` artık yayılmıyor (sadece print/share pencerelerinde). Canlı önizlemenin renk/font'u `.kc-preview-frame`'e scope'landı; canvas beyaz kalır (paper), kartlar koyu metinli okunur, site yüzeyi temaya uyar.
-- Tarayıcıda doğrulandı: dark mode'da body koyu (rgb 12,10,9), canvas beyaz, kart metni #1a1a1a; baskı yolu hâlâ body{#fff}+@page üretiyor; konsol temiz.
-
----
-
-## v2.30.0 — Prep Sheet: kartta sil ikonu + Extra tight boşluk + 5 sütun · 2026-06-08
-
-- **Kart üzerinde sil ikonu (🗑):** Her yemek kartında artık ⠿ sürükle + ✎ düzenle + 🗑 sil (Whiteboard gibi). Tıkla → yemek anında silinir (hover'da kırmızı).
-- **Spacing → "Extra tight":** Yeni 4. seçenek; kart arası boşluk ≈ sıfır (kartlar bitişik).
-- **5 sütun:** Print columns 1–4'e 5 eklendi (yoğun listeler için).
-- Tarayıcıda doğrulandı: her kartta 3 ikon, sil çalışıyor (10→9), xtight gap≈0 (kartlar bitişik), 5-sütun seçilebilir; konsol temiz.
-
----
-
-## v2.29.0 — Prep Sheet: Whiteboard-stili sürükle + ~sıfır kenar + sıkı boşluk · 2026-06-08
-
-Operatör: Whiteboard'un sürükle mantığı zarif; Prep'teki pratik değil — aynı olsun.
-Kenar boşlukları sıfıra yaklaşsın, item boşlukları daha da küçülsün, drag butonu
-üzerine gelince el imleci olsun.
-
-- **Sürükle-bırak = Whiteboard mantığı:** HTML5 native drag kaldırıldı, yerine işaretçi-takipli (pointer) sürükleme geldi — sürüklerken hedef kartta **yeşil üst/alt göstergesi** çıkar, bıraktığın yere (öncesine/sonrasına) eklenir. Akıcı, net sınırlar.
-- **Drag butonu (⠿) hover → el (grab) imleci**, basılıyken grabbing — Whiteboard'daki his. Kart gövdesi = pointer (tıkla→düzenle).
-- **Kenar boşluğu 5mm → 3mm** (~sıfır) önizleme + baskı.
-- **Item boşlukları küçültüldü:** Çok bitişik 3/2 → 1.5/1mm, Orta 7/6 → 4/3mm, Geniş 12/11 → 9/8mm (yatay/dikey).
-- Önizleme = baskı geometrisi korundu; tarayıcıda doğrulandı: grip grab imleci, kart pointer, sürüklerken üst/alt gösterge + doğru sıralama, padding 3mm; konsol temiz.
-
----
-
-## v2.28.0 — Prep Sheet baskı: Chrome damgaları kaldırıldı + dar kenar boşluğu (Whiteboard ile aynı) · 2026-06-08
-
-Operatör: Whiteboard baskısı kusursuz; Prep Sheet de aynı olmalı. Chrome'un eklediği
-"08/06/2026 · NAZZAR PREP CHECKLIST · about:blank · 1/1" damgaları gitmeli, kenar
-boşlukları dar olmalı, önizleme = Chrome diyaloğu = çıktı birebir.
-
-- **`@page margin:0`** (Whiteboard ile aynı yöntem) → Chrome'un başlık/altbilgi damgaları (tarih / başlık / about:blank / sayfa no) **tamamen kalkar**.
-- **Dar kenar boşluğu (10mm → 5mm)**, sayfanın kendi iç padding'i ile → yüzey verimli kullanılır.
-- **Önizleme ve baskı geometrisi birebir aynı:** ikisi de aynı PAD'i ve aynı içerik alanını (sayfa − 2×5mm) kullanır → 3 alan (önizleme / Chrome diyaloğu / çıktı) tutarlı.
-- Tarayıcıda doğrulandı: print HTML `@page ...margin:0`, 10mm yok, sayfa padding 5mm, önizleme padding 5mm, içerik alanı eşit; konsol temiz.
-
----
-
-## v2.27.0 — Whiteboard: popup editör + kanvas blok araç çubuğu (Araç 5/8) · 2026-06-08
-
-Operatör: sağdaki uzun "Block style" paneli pratik değil; Prep'teki popup sistemine
-geç, kanvas bloklarına Prep hissi (sürükle + düzenle ikonu) ver.
-
-- **Sağ panel → popup.** Bloğa veya ✎'e tıkla → ortalı modal açılır (mevcut mobil bottom-sheet motoru masaüstünde ortalı modal olarak yeniden stillendi → tüm editör mantığı korundu, sıfır kayıp). Her blok tipinin **kendine has alanları** popup'ta aynen korunur + Layout/Renk/Boyut/Kalınlık/Hizalama. **Canlı düzenleme:** değiştirdikçe kanvas anında güncellenir.
-- **Kanvas bloklarında araç çubuğu:** her blokta görünür **⠿ sürükle + ✎ düzenle + çoğalt + sil**; hover'da yeşil çerçeve → düzenlenebilir hissi (Prep ile aynı dil).
-- **Hızlı ekleme:** Palette'ten blok ekleyince düzenleme popup'ı hemen açılır.
-- **Sağ panel kalktı → kanvas genişledi** (3 sütun → palette + kanvas).
-- **Korunan gotcha'lar:** tek render motoru (kanvas=baskı; baskıda araç çubuğu çıkmaz), applyCanvasScale self-retry, ResizeObserver hata filtresi, blok veri modeli + realtime sync — hiçbiri değişmedi.
-- Tarayıcıda doğrulandı: blok ekle→popup, tıkla→popup, değer/renk/boyut canlı yansıma, çoğalt/sil, baskı temiz; konsol temiz.
-
----
-
-## v2.26.0 — Prep Sheet: kanvas-merkezli redesign (sol liste kalktı, modal düzenleme) · 2026-06-08
-
-Operatör geri bildirimi: sol uzun düzenleme listesi pratik değildi ("berbat çalışma
-alanı"). Menu Studio mantığına geçildi — kanvas tek çalışma alanı, kart düzenleme modalı.
-
-- **Sol uzun liste kaldırıldı.** Kanvas (gerçek A4, önizleme=baskı) artık tek çalışma alanı, tam genişlikte ~1:1 — kartlar okunaklı, butonlar net.
-- **Kartta belirgin butonlar:** Her yemek kartının sağ üstünde **sürükle tutamacı** (⠿) + **düzenle** (✎) butonu. Kart hover'da yeşil çerçeveyle belirginleşir.
-- **Modal düzenleme:** Karta (veya ✎'e) tıkla → modern modal: yemek adı + istasyon + bileşenler (ekle / sil / sürükle-sırala) → **Kaydet**. "Manuel yemek" boş kart açıp modalı getirir; iptal edilirse boş kart silinir.
-- **Sürükle-sırala** artık tutamaçtan (önceki "tüm kart sürüklenir" yerine net buton). Boşluk / sütun / yön / yazı boyutu / çerçeve / accent / presets üstte kompakt toolbar.
-- Önizleme=baskı motoru, bulut sync, çok-dil korundu; baskıda kart butonları çıkmaz (yalnız ekran). Tarayıcıda doğrulandı: kart→modal, düzenle→kaydet→kanvas güncellenir, tutamaçla sıralama, manuel→modal, baskı temiz.
-
----
-
-## v2.25.0 — Prep Sheet: kanvasta sürükle-bırak + kart arası boşluk kontrolü · 2026-06-08
-
-Operatör geri bildirimi (2.24.0 sonrası): sürükle-bırak yanlış yerde (editörde),
-kanvasta olmalı; kanvasta kartlar arası boşluk verimsiz, yer israfı var.
-
-- **Kanvas (A4 önizleme) üzerinde sürükle-bırak:** Yemek kartları artık doğrudan önizleme üzerinde sürüklenip yeniden sıralanıyor (hover'da yeşil kesik çerçeve ipucu + grab imleci). Editördeki yemek-seviyesi tutamaç kaldırıldı (kanvasa taşındı); bileşen tutamaçları editörde kaldı (kanvasta bileşen sıralaması pratik değil).
-- **Kart arası boşluk kontrolü:** Çok bitişik / Orta / Geniş — kartlar arası hem yatay hem dikey boşluğu ayarlar. "Çok bitişik" yer israfını ortadan kaldırır (örn. 2 sayfalık liste tek sayfaya sığar). Önizleme + baskı ortak (aynı sayfalama motoru).
-- Tarayıcıda doğrulandı: kanvasta yemek sürükleyip sıralama (sıra değişti), boşluk tight→1 sayfa / medium→2 / wide→2 (yatay aralık tight<medium<wide), editör tutamacı kalktı; konsol temiz. Eski sheet'ler varsayılan (orta boşluk) geriye uyumlu.
-
----
-
-## v2.24.0 — Prep Sheet: önizleme = baskı (gerçek A4 motor) + yazı boyutu/Bold/çerçeve · 2026-06-08
-
-Operatör ciddi bug bildirdi: canlı önizleme ile gerçek Chrome çıktısı farklıydı
-(önizleme tek uzun dengeli sütun bloğu, baskı @page ile farklı sayfalıyordu).
-Kök neden iki ayrı dizgi yöntemiydi — tek motora bağlandı.
-
-- **Açık sayfalama motoru (önizleme = baskı birebir):** İçerik gerçek A4 sayfalara bölünür; her öğe (başlık / istasyon / yemek) ölçülüp sütun-sütun MUTLAK konumla yerleştirilir. Önizleme (`screen`) ve baskı (`print`) AYNI sayfa+konum verisini kullanır → çıktı ne ise önizleme o. Eski `column-count` motoru kaldırıldı.
-- **Gerçek A4 önizleme (dikey + yatay):** Önizlemede sayfa sınırları net; çok sayfalıysa her sayfa ayrı A4 kutu olarak (gölge + "1 / 2" numarası) gösterilir.
-- **Yazı boyutu:** 6 kademe — XS / S / M / L / XL / XXL (tüm başlık + satır + istasyon fontlarını ölçekler).
-- **Bold:** Bileşen metnini kalınlaştırır.
-- **Çerçeve kalınlığı:** Orta / Kalın / Ekstra (yemek kartı çerçevesi + iç ayraçlar).
-- Sürükle-sırala (yemek + bileşen) korundu; otomatik kayıt + bulut + çok-dil korundu. Eski prep sheet'ler varsayılan stille (m / normal / orta) geriye uyumlu açılır.
-- Tarayıcıda doğrulandı: dikey/yatay gerçek A4, tek→çok sayfa geçişi, yazı boyutu/Bold/çerçeve canlı etki, baskı HTML'i önizlemeyle birebir (aynı yemek sayısı + sayfa kırılımı + @page + mutlak konum); konsol temiz.
-
----
-
-## v2.23.0 — Checklist odaklı cila (Araç 3/8): editörde canlı A4 baskı önizlemesi · 2026-06-08
-
-Kod-önce analiz: Checklist zaten en olgun araç (control/prep modları, kategori
-şeritleri, reçete/menüden otomatik doldurma, seans takibi, geçmiş, baskı düzeni
-paneli). Köklü değişiklik gereksiz — operatörün onayıyla **odaklı cila**: baskı
-çıktısının ne göründüğünü editörde anında gösteren canlı önizleme.
-
-- **Canlı A4 önizleme (editörde):** Yön / sütun / yazı boyutu / aralık / kalın değiştikçe ve madde metni yazıldıkça gerçek baskı çıktısı anında güncellenir — WYSIWYG.
-- **Tek render motoru:** Baskı fonksiyonu `buildChecklistHtml()` olarak ayrıldı; hem yazdırma hem önizleme aynı HTML'i üretir (önizleme ≠ çıktı riski yok). Önizleme, baskı CSS'ini modaldan izole etmek için iframe içinde render edilir, A4 px'te + panele sığacak şekilde ölçeklenir.
-- Tarayıcıda doğrulandı: 11 maddelik kontrol listesi yüklenir, yön (dikey↔yatay) boyutları çevirir, 2 sütun düzeni uygulanır, canlı metin düzenlemesi başlığa yansır; konsol temiz.
-- Mevcut motor, seans/bulut sync, çok-dil, kategori sistemi korundu.
-
----
-
-## v2.22.0 — Prep Sheet büyük geliştirme (Araç 2/8) · 2026-06-08
-
-Kod-önce analiz: model doğru (dish→component checklist), köklü rewrite YOK —
-profesyonel katman eklendi (motor + reçeteden otomatik doldurma korundu).
-
-- **Canlı A4 önizleme (2-panel):** Sol editör / sağ WYSIWYG önizleme; tek render motoru (`buildDishBlocks`/`psStyleRules`) baskı + önizleme + paylaşımda ortak. Yazdıkça anında güncellenir, ölçek panele sığar.
-- **Özelleştirme:** Vurgu rengi (picker + 6 ön ayar), yön (dikey/yatay), 4 hazır düzen preseti.
-- **Sürükle-sırala:** Yemekler ve bileşenler grip'ten sürüklenip yeniden sıralanır (ayrı drag-state + guard ile çakışmasız).
-- **İstasyon gruplama:** Yemeğe opsiyonel istasyon alanı → baskı/önizlemede istasyon başlıklarıyla gruplanır (Grill / Pastry…).
-- **Library galerisi:** Kayıtlı prep sheet'ler mini önizlemeli kart ızgarası + **kopyala** + sil.
-- **Tutarlı stil:** Aktif kontroller marka renginde (Menu Studio pill hissi).
-- Her parça yerel sunucuda gerçek tarayıcıda doğrulandı; otomatik kayıt + bulut + çok-dil korundu.
-
----
-
-## v2.21.0 — Kitchen Cards geliştirme (2/2): Özel kartlar + Library galerisi + tutarlı stil · 2026-06-07
-
-8-araç programının 1. aracı Kitchen Cards tamamlandı (köklü rewrite olmadan, olgun
-motor korunarak). v2.20.3'teki Presets + Accent'in üzerine:
-
-- **Özel/not kartları:** Reçete dışı serbest metin kartı (alerjen anahtarı, pişirme sıcaklıkları, bölüm notu). "Özel kartlar" panelinden ekle/düzenle/sil; reçete kartlarıyla aynı stil; sürükle-sırala + sil (birleşik anahtar) + baskı/paylaşıma dahil.
-- **Library galerisi:** "Kayıtlı canvas'lar" artık mini önizlemeli (vurgu rengi + reçete adları) kart ızgarası — **kopyala** (yeni) + sil.
-- **Tutarlı tasarım dili:** Aktif kontrol toggle'ları artık marka renginde (Menu Studio pill hissi). Yeni Presets/Accent/Özel-kart arayüzü aynı kart düzenini kullanır.
-- Tek render motoru (önizleme=baskı=paylaşım), masonry çok-sütun, çoklu canvas, dark mode korundu; her parça tarayıcıda doğrulandı (custom kart ekle/render, accent renk, preset uygula, galeri+kopyala, pill stili).
-
----
-
-## v2.20.3 — Kitchen Cards geliştirme (1/2): Hazır düzenler + Vurgu rengi · 2026-06-07
-
-8-araç programının ilk aracı Kitchen Cards. Kod-önce analiz sonucu: araç zaten
-olgun + kanvas tabanlı → köklü rewrite YOK, **büyük cila + eksik kapatma.** Bu ara
-sürümde 2 parça (kalan 3'ü sonraki push'ta):
-
-- **Hazır düzenler (Presets):** Yazdır panelinde "Presets" butonu → 5 hazır düzen (Standard / Compact 4-sütun / Line cook büyük punto / Detaylı prep 1-sütun / Batch amounts). Sadece düzen+stil uygulanır; reçete seçimi korunur.
-- **Vurgu rengi (Accent):** Per-canvas renk seçici + 7 ön ayar. Kart başlığı, başlık, fiyat ve adım numarası seçilen rengi alır (önizleme = baskı = paylaşım, kaydedilir).
-- Mevcut olgun motor (tek render motoru, sürükle-sırala, çoklu canvas, çok-dil, dark mode) korundu; tarayıcıda doğrulandı.
-- Sıradaki (sonraki push): ortak tasarım dili (kontrol stili), özel/not kartları, library galerisi.
-
----
-
-## v2.20.2 — Menu Studio Faz 3: çok dil (i18n) · 2026-06-07
-
-Menu Studio arayüzü artık sabit Türkçe değil — 6 dile çevrildi (EN/TR/ES/FR/DE/AR).
-
-- **~100 `ms_*` anahtarı** her dil bundle'ına eklendi; `menu_studio.js` tamamen `t()`'ye çevrildi (başlık/blok/sayfa/kontrol/şablon/paylaş/modal/placeholder hepsi). Şablon adları + içerik kasıtlı İngilizce (uluslararası).
-- **Canlı dil değişimi:** Editör/library dil değişince anında çevrilir. (`PCD.tools.menus` alias'ı eklendi; i18n `currentView()='menus'` ile aracı bulabiliyor.)
-- TR ve EN tarayıcıda uçtan uca doğrulandı (Türkçe sızıntısı yok, anahtar sızıntısı yok); ES spot-check edildi; konsol temiz.
-- Not: ES/FR/DE/AR bundle'ları zaten kısmi (birçok anahtar İngilizce'ye düşer); Menu Studio bu dillerde tam çevrildi.
-
----
-
-## v2.20.1 — Menu Studio Faz 2: Paylaş + QR (dijital menü) · 2026-06-07
-
-Studio menüleri artık **public link + QR** ile paylaşılır (masaya QR menü). Mevcut
-paylaşım altyapısına (public_shares, watermark, cost-view) bağlandı.
-
-- **Paylaş butonu** (editör header'ı): Herkese açık link + QR (PCD.qr) · Maliyet görünümü (Pro).
-- **WYSIWYG public sayfa:** Studio tasarımı snapshot anında standalone HTML olarak üretilip (`renderShareDoc`) snapshot'a gömülür; public sayfa Studio'yu yüklemeden bire bir aynı tasarımı render eder, ekrana **responsive ölçeklenir** (mobilde tam sığar).
-- **Maliyet-görünümü Studio uyumlu:** `enrichMenuCost` artık `studio.blocks` kalemlerinden de ciro/maliyet/marj hesaplar (eskiden yalnız klasik `sections`'a bakıyordu → Studio menüde 0 görünürdü).
-- Güvenlik korunur: herkese açık link maliyet/fiyat sızdırmaz; maliyet linki Pro + unlisted; watermark paylaşanın planına göre. Giriş yoksa "giriş yap" uyarısı.
-- Not: paylaşım oluşturma auth+cloud gerektirir; canlıda giriş yapıp test edilmeli (sandbox misafir modda yalnız renderer + ölçek doğrulandı).
-
----
-
-## v2.20.0 — Menu Studio ANA menü aracı oldu (büyük revizyon) · 2026-06-07
-
-Menu Studio artık `menus` route'unun aracı (klasik menus.js route'lanmaz; dosya
-diskte kalır, eski klasik menüler Studio'da açılırken otomatik bloklara aktarılır).
-Tüm değişiklikler gerçek tarayıcıda tek tek test edildi.
-
-**Hata düzeltmeleri (canlı kök neden):**
-- **Resim ortalanmıyordu:** Uygulamanın global `img{display:block}` kuralı, sarmalayıcıdaki `text-align`'ı etkisiz bırakıyordu. Görsel artık FLEX (`justify-content`) ile hizalanır → her zaman ortalanır.
-- **"Font değişmiyor" algısı:** Bloklar temel fontu gömülü tutuyordu; sayfa "Temel font"u değişince miras almıyorlardı. Artık bloklar varsayılan olarak temel fontu MİRAS alır (`— Temel font —` seçeneği) → sayfa fontunu değiştirince tüm menü değişir. Per-blok override korunur.
-- **İlkel native isim kutusu:** `window.prompt` kaldırıldı; site stiline uygun `PCD.modal` tabanlı "Yeni menü" modalı.
-
-**Yeni / geliştirilmiş:**
-- **Library görünümü:** Kaydedilmiş menüler gerçek WYSIWYG önizlemeli kart ızgarası (hover'da Kopyala/Sil).
-- **Sürükle-bırak:** Her blok (başlık/bölüm/görsel/ayraç…) hem kanvasta hem sağdaki katman listesinde sürüklenerek yeniden sıralanır.
-- **Katman paneli:** Sağ panel kartlara bölündü; bloklar yeşil çerçeveli kart listesi (ikon + isim + sil) — düz yazı yığını gitti.
-- **İkonlu blok ekleme barı:** Her blok türü ikon rozetli buton.
-- **Şablonlar header'da:** Yazdır'ın yanına taşındı; galeri canlı önizlemeli.
-- **10 dolu profesyonel şablon:** Fine Dining, Modern Bistro, Café & Brunch, Minimalist, Wine & Cocktails, Event/Banquet, Steakhouse, Seafood/Raw Bar, Trattoria/Pizza, Vegan/Plant — hepsi gerçek yemek+fiyat+açıklama ile dolu.
-
----
-
-## v2.19.2 — Menu Studio: kritik stil hatası + sayfa boyutları/sütun/ayraç kütüphanesi · 2026-06-07
-
-Hatalar gerçek tarayıcıda yeniden üretilerek (tahminle değil) tespit + doğrulandı.
-
-- **KÖK NEDEN — kontroller çalışmıyordu (align/renk/boyut/font):** Font tanımları (`FONTS[].css`) font adlarını ÇİFT tırnakla tutuyordu (`"Cormorant Garamond"`). Bu stringler inline `style="..."` (çift tırnak) içine girince öznitelik ilk iç tırnakta KESİLİYOR → `font-family`'den sonraki TÜM CSS (text-align, color, font-size…) tarayıcı tarafından çöpe atılıyordu. Yani "yazıyı ortala / renk değiştir" hiç uygulanmıyordu. Fix: tüm font değerleri TEK tırnağa çevrildi → başlık/metin/bölüm/kalem stilleri artık uygulanıyor.
-- **Yatay önizleme taşması:** Kanvas ölçeği `transform-origin: top center` kullanıyordu; sayfa viewport'tan genişse (yatay / A3) merkezden büzülürken sağ yarı kırpılıyordu. `top left` + margin ile ortalamaya çevrildi → yatay/A3 tam görünür.
-- **Sayfa boyutları:** A4 / A3 / A5 / Letter + Dikey/Yatay yön (ayrı kontroller). Yazdırma `@page size` buna göre güncellenir.
-- **Çok sütun düzen:** 1–4 sütun (dikey 2-3, yatay 3-4 için). Başlık/ayraç/görsel/metin tam genişlik (column-span), bölümler sütunlarda akar (break-inside avoid). Blok bazında "Tam genişlik / Tek sütun" anahtarı.
-- **Ayraç kütüphanesi:** 13 stil — çizgi (düz/kısa/kesik/noktalı/çift) + süs (❦ ⚜ ✦ ❖ ❧ • • •) + kombinasyon (çizgi-süs-çizgi). Süs boyutu ayarı.
-- **Pro dokunuşlar:** Bölüm başlığı hizalama (eksikti), dekoratif sayfa çerçevesi (ince/çift), fiyatları gizle/göster.
-- Tüm kontroller (kağıt/yön/sütun/çerçeve/ayraç/hizalama/renk/font) yerel sunucuda gerçek tarayıcıda tıklanarak tek tek doğrulandı. Geriye dönük uyumlu (eski `page.size` ve `divider.variant` otomatik dönüştürülür).
-
----
-
-## v2.19.1 — Sync bug fix: array tablo pull + user_prefs grant · 2026-06-07
-
-İki kök neden kod/konsol/DB ile kesin tespit edildi, temiz çözüldü:
-
-- **Whiteboard (+ Buffet, Team, Mise) çapraz-cihaz sync:** Bu array tablolar buluta PUSH ediliyordu ama `pullAll()` onları HİÇ çekmiyordu (yalnız waste + checklist_sessions çekiliyordu) ve `cloud.js` merge listesinde yoktu → 2. cihaz indirmiyordu. Eski boşluk (v2.9.42/v2.9.17). Fix: `pullAll`'a 4 tablo fetch+pack (packArrayByWs) + `cloud.js` ARRAY_WS_TABLES'a eklendi (tombstone/en-yeni-kazanır merge; yerel veri ezilmez).
-- **"Re-sync my data" → 42501 "permission denied for table user_prefs":** v2.17 kolon kilidi UPDATE'i (data, active_workspace_id, updated_at)'e verdi ama `user_id`'ye vermedi; upsert'in ON CONFLICT DO UPDATE'i user_id'yi de set ediyor → izin reddi. Fix: `migrations/v2.19-fix-user-prefs-update-grant.sql` (GRANT UPDATE user_id… — RLS cross-user'ı engeller, plan kolonları kilitli kalır).
-
----
-
-## v2.19.0 — Menu Studio Faz 1 (gerçek ürün) · 2026-06-07
-
-Prototip gerçek ürüne dönüştü. Tasarımlar `menus` tablosunda `menu.studio` alanında saklanır (yeni tablo yok) → bulut senkron + yedek + çoklu menü bedava; klasik editör aynı kayıtta çalışmaya devam eder.
-
-- **Çoklu menü + bulut + otomatik kayıt:** Studio artık tüm menüleri listeler; yeni tasarım oluştur, aç, otomatik kaydet (bulut senkron). localStorage tek-doc kaldırıldı.
-- **Reçete zekâsı:** kalemler reçeteye bağlı → editörde **canlı kâr marjı** (kalem başına renkli yüzde) + üstte **ciro / ort. marj** çubuğu + reçeteden **otomatik alerjen kodları** (aç/kapa, menüde + lejant).
-- **Klasik menüden içe aktar:** mevcut bölüm/yemekleri Studio bloklarına aktarma (reçete bağlantısı korunur).
-- **Şablon galerisi** (6 profesyonel başlangıç: fine dining, bistro, café, minimalist, şarap, etkinlik) + **marka kiti** (font/renk kaydet-uygula).
-- Tek render motoru (kanvas = çıktı), serbest font/renk/foto/blok sıralama korundu.
-- *Sıradaki (Faz 2): serbest sürükle/boyut, çok sayfa, share/QR/cost-view, AI kancaları.*
-
----
-
-## v2.18.0 — Menu Studio (beta prototip) · 2026-06-07
-
-- **YENİ (beta):** Menu Studio — blok-kanvas menü tasarımcısı prototipi. Gerçek A4 kanvas (önizleme = çıktı, tek render motoru), serbest font (12 küratörlü), özel hex renk (vurgu/metin/arka plan), yemek fotoğrafı, blok ekle/sil/sırala (başlık, metin, bölüm, görsel, ayraç, boşluk), reçeteden veya manuel yemek, dikey/yatay, hazır şablon. Mevcut "Menus" aracına dokunulmadı; yanına eklendi (Menus header → "✨ Menu Studio beta"). Kalıcılık şimdilik localStorage (prototip). Değerlendirme amaçlı; beğenilirse tam sürümde bulut + çoklu menü + reçete-maliyet zekâsı + serbest yerleşim eklenecek.
-
----
-
-## v2.17.1 — Recipes: kalıcı Cost Report butonu · 2026-06-07
-
-- Recipes header'ına her zaman görünür **Cost Report** butonu. O an ekranda görünen tariflere göre rapor üretir (sekme/arama/etiket filtresine saygı; boşsa tüm tarifler). Select modundaki seçili-alt-küme raporu korundu.
-
----
-
-## v2.17.0 — Monetization (Free / Pro + Stripe) · 2026-06-07
-
-Tek katmanlı ücretsiz üründen Free + Pro modele geçiş. Tüm limitler/gate'ler tek dosyadan okunur: `app/js/core/plans.js`.
-
-- **Merkezi plan config:** `plans.js` (`PLAN_LIMITS` + `getPlanLimits` + `getUserPlan`). `gate.js` tüm gate'leri + upgrade modalını + Stripe checkout/portal tetikleyicilerini barındırır.
-- **Plan alanı:** `user_prefs`'e ayrı kolonlar (`plan`, `plan_source`, `plan_status`, `plan_expires_at`, `stripe_customer_id`). Sunucu otoriter; frontend kolon-seviyesi yetki kilidiyle bu kolonları yazamaz (kullanıcı kendini pro yapamaz). Plan artık data blob'undan değil kolondan okunur.
-- **Manuel pro:** operatör SQL'de set eder → kalıcı (Stripe'sız); webhook manuel satırları asla ezmez.
-- **Stripe:** 3 Edge Function (`create-checkout-session`, `create-portal-session`, `stripe-webhook` — imza doğrulamalı). Pro Monthly 19 AUD / Annual 190 AUD. Account ekranında Pro'ya geç / Aboneliği yönet. `?checkout=success` ve `?upgrade=1` dönüş handler'ları.
-- **Feature gating:** tarif (15) · malzeme (50) · workspace (1) · HACCP (Pro) · roster işçilik maliyeti (Pro) · bulut sync (Pro; free = yalnız yerel, push gate'li) · watermark. Limit aşımında engelleme değil, "Pro'ya geç" yumuşak duvarı + kilit ikonu.
-- **Watermark plana bağlı:** print footer + paylaşılan sayfa footer'ı `showWatermark()`'tan. Free'de kalır, Pro'da kalkar (paylaşılan sayfada karar paylaşanın planına göre snapshot'a gömülür).
-- **Cost-view paylaşım (Pro):** tarif/menü için fiyat + food cost % gösteren özel link (`?view=cost`, salt-okunur, giriş yok). `public_shares.share_mode`; maliyet yalnızca cost-share payload'una gömülür.
-- **Chef office dashboard:** komuta merkezi — 4 metrik (ort. menü food cost%, bu hafta işçilik [Pro], düşük stok, eksik tarif) + 2 grafik (tarif food cost dağılımı, malzeme fiyat tazeliği). Tamamı gerçek veriden, sahte sayı yok. Eksik tarif uyarı ikonu (liste + dashboard).
-- **Güvenilirlik:** tarif önizlemede "Fiyatlar N gün önce güncellendi" rozeti (>30 gün sarı uyarı).
-- **Landing page:** Free vs Pro fiyatlandırma tablosu + Stripe CTA, dark mode, 6 dilli (en/tr/es/fr/de/ar) dil seçici, oturum durumuna göre dinamik CTA. Kaldırılmış araçlar tanıtımdan çıkarıldı.
-- **Privacy/Terms:** 6 dilde güncellendi — Stripe alt-işleyen + ödeme verisi, abonelik/iade şartları, HACCP/maliyet sorumluluk reddi, Avustralya hukuku.
-- Yeni ikonlar: `lock`, `star`. Migration'lar: `v2.17-monetization-plan-fields.sql`, `v2.17-cost-view-share-mode.sql`.
-
----
-
-## v2.16.0 — Prep Sheet aracı · 2026-05-22
-
-- **YENİ araç:** Prep Sheet — yemek başına bileşen listesi, tariften otomatik çekme + manuel düzenleme, 1–4 sütun yazdırma, Kayıtlılar (library)
-- Prep Sheet bulut senkronu (`prepSheets` MAP-tablosu, 3 yönlü sync)
-- Birim ekleme / düzeltmeler
-
----
-
-## v2.15.x — Roster aracı + büyük güncelleme · 2026-05-22
-
-### v2.15.7
-- Roster JPEG'inde hücre yazıları ortalandı (html2canvas için HTML `align`/`valign` attribute)
-- Excel sütun genişliği içeriğe göre genişletildi; `fitToWidth` tek sayfa korundu
-
-### v2.15.6
-- Roster liste → tıkla = önizleme, Edit butonu = editör
-- JPEG gönder: html2canvas → mobil native share (WhatsApp vb.), masaüstü indir
-- Geri tuşu: editör/önizlemeden listeye güvenilir döner
-- Excel otomatik yatay + tek sayfa (JSZip XML enjeksiyonu)
-- Yazı boyutu S/M/L + kalın; print / JPEG / Excel'e uygulanır
-
-### v2.15.5
-- Roster Excel: PDF ile aynı renkli görünüm — departman bantları + renkli durum hücreleri (xlsx-js-style inline worksheet)
-
-### v2.15.4
-- Menü alerjen/diyet kodları: filtre/kısıtlama değil, sadece bilgi; yemek gizleyen filtre kaldırıldı
-- Tarif menü öğesinde alerjen otomatik gösterim (`recipeAllergens`'ten); orijinal tarife dokunulmaz
-- Roster: 6 renkli durum kodu (OFF/AL/PH/SL/RDO/UNP) + departman grupları + renkli yazdırma + venue başlık bandı
-
-### v2.15.3
-- Roster bulut senkronu (`rosters` MAP-tablosu, HIGH_EDIT per-record merge)
-
-### v2.15.2
-- Menü önizlemesinde "N öğe filtreyle gizlendi" uyarı şeridi
-
-### v2.15.1
-- **YENİ araç:** Roster (haftalık vardiya planı) — personel × gün ızgara, vardiya saati, işçilik maliyeti göster/gizle, tarihçe, print + Excel + JPEG paylaş
-
-### v2.15.0
-- Tedarikçi sipariş geçmişi (son 50 kayıt, tüm gönderim kanalları)
-
----
-
-## v2.14.x — Veri I/O standardı + menü kodları + demo seed · 2026-05-22
-
-### v2.14.8
-- Menü allergen-safe filtre genişletildi (18 chip, `it.codes` ile eşleşme)
-
-### v2.14.7
-- Para birimi kalıcılık düzeltmesi — kaydet + yenile sonrası currency korunur
-- Tüm export / rapor / paylaşım `PCD.currencySymbol()` ile currency'e bağlandı
-
-### v2.14.6
-- Discover "My public recipes" hesap bazlı sayaç (tüm workspace'ler, aktif workspace değil)
-- Whiteboard template adları 4 dile (es/fr/de/ar) çevrildi
-
-### v2.14.5
-- Menü fiyat gösterim stili: simgeli / simgesiz (Cornell) / gizli
-- es/fr/de/ar çeviri: menü kodları + Excel import/export + fiyat stili (~35 anahtar)
-
-### v2.14.4
-- Demo büfe maliyet hesabı düzeltildi (porsiyon/kişi — gram değil)
-- Demo etkinlik menü alanı düzeltildi (`menu:` → `recipes:` değil)
-
-### v2.14.3
-- Demo seed genişletildi: 3 yeni tarif + 9 malzeme + 1 büfe (Sunday Brunch) + 1 tedarikçi
-- Demo envanter yüklenme ve tedarikçi kategori hataları giderildi
-
-### v2.14.2
-- Ortak styled-Excel motoru (`PCD.xlsx`): kalın başlık + çerçeve + gölge + autofit; tüm yeni exportlar buradan geçer
-- Malzeme Excel export + doldur-geri-yükle şablonu (Lists sekmeli)
-- Stok sayım Excel export (YENİ)
-
-### v2.14.1
-- Menü manuel harf kodları: küçük = diyet/uygunluk (v/vg/gf…), BÜYÜK = "içerir" alerjen (G/D/N…)
-- `MENU_CODES` registry + `displayCodeIds` (manuel ∪ otomatik) + lejant
-
-### v2.14.0
-- Whiteboard mobil blok düzenleme: bottom sheet her zaman canlı DOM'a bağlanır
-
----
-
-## v2.13.x — Whiteboard WYSIWYG + araç sadeleştirme · 2026-05-21/22
-
-### v2.13.9
-- Menü rozetinde 🌶 emoji → "SPICY" metin etiketi
-
-### v2.13.8
-- Re-sync sonrası workspace karışıklığı giderildi (`location.reload()` pattern)
-
-### v2.13.6
-- Whiteboard Ctrl+wheel zoom hata spam'i giderildi (ResizeObserver benign hataları filtreli)
-- Canvas ölçek: ilk yüklemede self-retry (clientWidth=0 durumu güvenilir)
-
-### v2.13.5
-- "Sync now" butonu kaldırıldı (auto-sync zaten aktif)
-- `i18n t()` interpolasyon hatası giderildi (3. arg yok sayılıyordu)
-
-### v2.13.4
-- Profil kaydı anında IDB'ye yazılır (`PCD.store.flush()` explicit — close/reload race giderildi)
-
-### v2.13.3
-- Whiteboard 6 yeni profesyonel template (Tonight's Service, Steak Doneness, Allergen Board…)
-- Print footer tek sayfada kalır (flex-column + sheet flex:1)
-
-### v2.13.2
-- Portion Calculator: birleşik malzeme görünümü (by recipe / category / supplier) — Shopping'den taşındı
-
-### v2.13.1
-- Waste Log + Shopping List araçları kaldırıldı (JS + i18n silindi; bulut şeması korundu)
-
-### v2.13.0
-- Whiteboard WYSIWYG: canvas önizleme = print çıktısı (tek `renderBlockContent` + `blockBoxStyle`)
-- Canvas gerçek A4/A3 px + `transform:scale`; print aynı px mm `@page`'de basar
-
----
-
-## v2.12.x — Checklist yeniden + profil + Privacy/Terms · 2026-05-20/21
-
-- **Checklist aracı baştan yazıldı:** Control + Prep iki tip; oturum geçmişi, ilerleme takibi, özelleştirilebilir yazdırma (sütun/yön/punto)
-- Profil alanları (rol/ülke/işyeri/bio) her session'da merge edilir, artık kaybolmaz
-- Privacy + Terms 6 dilde yayınlandı
-- HACCP Fridge Log şablonunda tarih damgası kaldırıldı (şef elle yazar)
-- Masaüstü Ctrl+wheel zoom etkin; whiteboard ek print ince ayarları
-
----
+- **Sidebar 20 → 15:** sıkı-bağlı araçlar ortak alt-sekme (`PCD.subNav`) altında — Stok (Inventory·Variance·Waste) · Tarif (Recipes·Nutrition·Portion) · Liste (Checklist·Prep). Route'lar korundu; `tab_*` 6 dil.
+- **Landing görselleri** canlı app'ten yenilendi (light+dark+mobil) + "Day & night" vitrini + ürün-kanıtı 4 → 6 kart.
+
+## v2.44.21–.29 — Operasyonel araçlar + marka + QA · 2026-06-13…14
+- **Waste** şema-only → canlı UI (stok düşümü + $ fire); **Variance** + **Nutrition** araç UI'ları yeniden inşa.
+- Events/inventory/recipes/ingredients/dashboard genişletildi (~100/dil i18n).
+- Toque app ikonu tüm web sayfalarında + merkezi `icon.svg`; restore/purge senkron fix; catering-cost-per-head blog.
+
+## v2.43.0–.18 — Sadeleştirme + Whiteboard + i18n 6 dil + maliyet · 2026-06-10…11
+- **10 ölü tool dosyası silindi** (route'lanmıyordu; core motorlar kaldı; nutrition/variance/waste sonra v2.44.21'de yeniden inşa).
+- **Whiteboard** aracı (gerçek-A4 WYSIWYG).
+- **i18n 6 dil tam** (2598 anahtar, 0 eksik — v2.43.17).
+- **fmtMoney:** her zaman 2 ondalık + binlik ayraç + küçük-birim-fiyat hassasiyeti; cost report alt-tarif genişletme (malzeme + tek tek fiyat); tarif sıralama dropdown.
+
+## v2.41.0 — Kitchen Cards araç + demo overhaul · 2026-06-09
+- Kitchen Cards tam araç (lazy route + sidebar); demo seed overhaul (whiteboard + kitchen card + zengin veri); landing/roster/menu/buffet cilaları.
+
+## v2.40.0 — Landing yeniden tasarımı + mobil & print fix · 2026-06-09
+- **Landing satış-odaklı redesign:** light-mode sabiti (`color-scheme:light`), fayda hero + UI mockup, yeni bölümler (canlı an / problem / ürün-kanıtı / kurucu), og-image, "No lock-in, no surprises" fiyat-notu. EN+TR tam (es/fr/de/ar yeni bölümlerde EN'e düşer).
+- **Kitchen Cards:** aksiyon çubuğu kanvas üstüne + mobil scale fix.
+- **Menu Studio:** page/theme renk+font kontrolleri bağlandı (v2.32'de unutulmuş), thumbnail hard-refresh fix, print `print-color-adjust:exact`, "Menu not found" toast fix (araç-özel `data-ms-*`).
+- **Roster:** mobil scale-to-fit + tıkla-zoom, önizleme stay-open, editör kompakt. **Buffet:** mobil kart squish fix. **Ingredients/Inventory:** header wrap fix.
+- Desen notu: clientWidth=0 ilk-paint yarışı = bounded rAF self-retry (menü thumb, kitchen cards, roster, whiteboard).
+
+## v2.16–v2.39 — 8-araç profesyonel revizyon programı + Menu Studio · 2026-06-07…08
+Her araç: kod-önce analiz → gerçek değer katan geliştirme → tarayıcı doğrulaması (köklü rewrite zorlanmadı). Çekirdek değişiklikler:
+- **v2.39** Portion Calculator: stilize Excel export (PCD.xlsx; tarif/kategori/tedarikçi görünümüne uygun). → 8-araç programı tamam.
+- **v2.38** Buffet Planner: tedarikçiye göre sipariş/satın-alma listesi (`flattenIngredients` + stok birimine normalize + grupla).
+- **v2.37** Event Planner: alışveriş listesi + etkinliği çoğalt + canlı A4 önizleme + kişi-başı maliyet.
+- **v2.36** Roster: ⚡ haftayı doldur + önceki haftayı kopyala (isimle eşleştir) + canlı önizleme.
+- **v2.35** Menu Studio: +10 profesyonel şablon (toplam 20).
+- **v2.34** Menu Studio: "Page & theme" + "Theme accent" etiket netleştirme.
+- **v2.33** Whiteboard cook-sheet satır ekle/sil; HANDOVER güncellendi.
+- **v2.32** Menu Studio: popup düzenleme + Page settings ayrı popup + kanvas çerçeve + home şablon butonu.
+- **v2.31** Fix: Kitchen Cards dark mode'da site yüzeyi beyaz (sızan `body{background:#fff}` `.kc-preview-frame`'e scope'landı).
+- **v2.30** Prep Sheet: kartta sil ikonu + "Extra tight" boşluk + 5 sütun.
+- **v2.29** Prep Sheet: Whiteboard-stili pointer sürükle (üst/alt gösterge) + ~sıfır kenar.
+- **v2.28** Prep Sheet print: `@page margin:0` (Chrome damgaları kalktı) + dar kenar.
+- **v2.27** Whiteboard: popup editör + kanvas blok araç çubuğu (sürükle/düzenle/çoğalt/sil).
+- **v2.26** Prep Sheet: kanvas-merkezli redesign (sol liste kalktı, modal düzenleme).
+- **v2.25** Prep Sheet: kanvasta sürükle-bırak + kart-arası boşluk kontrolü.
+- **v2.24** Prep Sheet: önizleme = baskı (gerçek A4 sayfalama motoru) + yazı boyutu/Bold/çerçeve.
+- **v2.23** Checklist: editörde canlı A4 önizleme (tek `buildChecklistHtml` motoru).
+- **v2.22** Prep Sheet: canlı önizleme + vurgu rengi/yön/preset + sürükle + istasyon gruplama + library.
+- **v2.20.3–.21** Kitchen Cards: presets + accent renk + özel/not kartları + library galerisi.
+- **v2.20.0–.2** Menu Studio ANA menü aracı (`menus` route; klasik import) + library + sürükle + 10 şablon + i18n (`ms_*` 6 dil) + Paylaş/QR/cost-view.
+- **v2.19.0/.2** Menu Studio Faz 1 (gerçek ürün: çoklu menü + bulut + reçete zekâsı/canlı marj + import + şablon/marka kiti) — `menu.studio` blob; **v2.19.2** kritik stil fix (font çift-tırnağı inline `style`'ı kesiyordu) + sayfa boyut/sütun/ayraç kütüphanesi.
+- **v2.19.1** Sync fix: array tablo pull (whiteboard/buffet/team/mise 2. cihaza inmiyordu) + `user_prefs` UPDATE grant (42501).
+- **v2.18** Menu Studio beta prototip (localStorage).
+- **v2.17.0/.1** **Monetization (Free/Pro + Stripe):** `plans.js` merkezi limit/gate; sunucu-otoriter plan kolonları (frontend yazamaz); 3 Edge Function (19/190 AUD); feature gating + watermark + cost-view share; chef dashboard (gerçek veri); landing fiyatlandırma + Privacy/Terms 6 dil. **.1** kalıcı Cost Report butonu.
+- **v2.16** **YENİ araç:** Prep Sheet + bulut sync (`prepSheets` MAP-tablo).
+
+## v2.15.x — Roster aracı · 2026-05-22
+- **YENİ:** Roster (personel×gün ızgara, vardiya saati/durum kodu, işçilik maliyeti, tarihçe). 6 renkli durum (OFF/AL/PH/SL/RDO/UNP) + departman grupları + renkli çıktı. Bulut sync (`rosters` MAP). Çıktı: print + Excel (yatay tek-sayfa, JSZip) + JPEG paylaşım. Tedarikçi sipariş geçmişi (son 50).
+
+## v2.14.x — Veri I/O + menü kodları + demo · 2026-05-22
+- Ortak styled-Excel motoru (`PCD.xlsx`); malzeme/stok Excel import-export + doldur-geri-yükle şablonu.
+- Menü harf kodları (küçük=diyet, BÜYÜK=alerjen — bilgi amaçlı, filtre değil) + tariften otomatik alerjen.
+- Currency kalıcılık fix; Discover hesap-bazlı public sayaç; demo seed genişletme + maliyet/menü-alanı fix'leri.
+
+## v2.13.x — Whiteboard WYSIWYG + sadeleştirme · 2026-05-21/22
+- Whiteboard WYSIWYG (canvas = print, tek `renderBlockContent`/`blockBoxStyle`) + 6 şablon.
+- Waste Log + Shopping List araçları kaldırıldı (bulut şeması korundu); Portion birleşik malzeme görünümü.
+- `i18n t()` interpolasyon fix; profil flush fix; "Sync now" kaldırıldı (auto-sync aktif).
+
+## v2.12.x — Checklist + profil + legal · 2026-05-20/21
+- Checklist baştan yazıldı (Control + Prep, oturum geçmişi, özelleştirilebilir baskı). Profil alanları her session merge (kaybolmaz). Privacy + Terms 6 dil.
 
 ## v2.11.x — Whiteboard Block Composer · 2026-05-20
-
-### v2.11.16
-- Mise en Place Planner kaldırıldı (bulut şeması + veri korundu)
-
-### v2.11.15
-- FAQ 3 cevap faktüel düzeltildi (IndexedDB doğru, "offline-first" yeniden tanımlandı)
-
-### v2.11.14
-- Whiteboard: 4 yeni blok tipi (Step List, Allergen Strip, Doneness Ladder, Time Range)
-- Layout 6 kademe (tam → 1/6); Size 6 kademe (XS–XXL)
-
-### v2.11.13
-- Whiteboard Key·Value blok inspector dikey layout (taşma giderildi)
-
-### v2.11.12
-- HACCP alt form geri tuşu: her yoldan hub'a döner (`ROUTE_PARENTS` pattern)
-
-### v2.11.11
-- Discover arama debounce 400ms
-
-### v2.11.10
-- Tarif etiketleri: yeni etiket için `+ Add "X"` CTA chip
-
-### v2.11.9
-- Whiteboard Tablo blok inspector dikey layout (taşma giderildi)
-
-### v2.11.8
-- HACCP Fridge Log: gün isimleri kaldırıldı (sadece rakam); log seçici/print uyumsuzluğu giderildi
-
-### v2.11.4-5
-- Kitchen Cards WYSIWYG: önizleme = print popup = PDF (`column-fill:balance`)
-
-### v2.11.3
-- Discover arama eklendi (name/description/yazar/etiket, debounce 200ms)
-
-### v2.11.2
-- Whiteboard A4/A3 sayfa sınırı çerçevesi + taşma uyarısı
-
-### v2.11.0-1
-- **Whiteboard tam yeniden yazıldı:** Notion-tarzı blok besteci, 8 blok tipi, 3 sütun masaüstü UI, mobil bottom sheet, sürükle-sırala, A4/A3 print engine
-
----
+- Whiteboard tam yeniden (Notion-tarzı blok besteci, 12 blok tipi, sürükle-sırala, A4/A3 print engine). Mise en Place kaldırıldı (şema korundu). HACCP alt-form geri-tuş hub'a döner; Discover arama + debounce.
 
 ## v2.10.x — Whiteboard pro + Kitchen Cards · 2026-05-20
+- Whiteboard pro (tipografi/palet/hücre tipleri/şablon). Diyet uyumluluk sistemi kaldırıldı (şema korundu). Araçlar-arası delegated listener bleed fix.
 
-### v2.10.4
-- Araçlar arası geçişte delegated event listener bleed giderildi
+## v2.9.x — NAKED→RICH sweep + Discover + cloud sync · 2026-05-19
+- NAKED→RICH araç sweep (kapatılabilir guide + stats hero + per-field hint + empty CTA + dark kontrast). Buffets/Mise/Team + Whiteboard bulut sync. Discover tag/allergen filtre + rate-limited view (60dk/IP Edge) + `recipe_likes` RLS sıkılaştırma. hCaptcha `render=explicit` + scroll-lock fix. Blog: 13 yazı (SEO upgrade + Faz B).
 
-### v2.10.3
-- Diyet uyumluluk sistemi kaldırıldı (bulut şeması korundu)
-- Kitchen Cards dark mode renk düzeltildi
+## v2.8.x — Altyapı + büyük araçlar · 2025–2026
+- **YENİ araçlar:** Buffet Planner (v2.8.73), Mise en Place (v2.8.74 — v2.11.16'da kaldırıldı). **Discover MVP** (anonim view/like/public recipe). HACCP Receiving+Holding (+sync) + HACCP Hub konsolidasyon (4 form → tek hub).
+- Buffet overhaul (3 item tipi: recipe/ingredient/custom + Excel). Sub-recipe flattening helper (`flattenIngredients`). Menu Builder modernizasyon. Standart tıklanabilir footer (tüm print/share). Modal focus root-cause fix. Recipe etiket + ingredient ayraç. App boot perf (lazy/defer/preload).
 
-### v2.10.2
-- Kitchen Cards Orientation butonu → Whiteboard yönlendirmesi giderildi
-
-### v2.10.0-1
-- Whiteboard pro: tipografi + palet + hücre tipleri (header/bigNumber/alert/text) + sürükle-boyutlandır + 5 şablon + kullanıcı şablonları
-
----
-
-## v2.9.x — NAKED→RICH araç sweep + Discover + cloud sync · 2026-05-19
-
-- **NAKED→RICH sweep tamamlandı** (5 round, 13 araç): kapatılabilir inline guide + stats hero + per-field hint + empty state CTA + dark mode kontrast. Araçlar: Yield, Variance, Nutrition, Allergens, Discover, Account, Team, Sales, What-If, Menu Matrix, HACCP Hub
-- Buffets + Mise + Team bulut senkronu (v2.9.17)
-- Kitchen Whiteboard bulut senkronu (v2.9.42)
-- Discover Tag filter + Allergen free-from filter (v2.9.15-16)
-- Discover görüntülenme rate limit: Edge Function, 60 dk/IP (v2.9.18)
-- `recipe_likes` RLS sıkılaştırıldı (v2.9.24)
-- hCaptcha `render=explicit` + window callback pattern (v2.9.29)
-- Modal scroll lock `overflow:hidden` (hCaptcha popup offset giderildi — v2.9.30)
-- Buffet Quick Start 4 preset (v2.9.89); Buffet UX modernize stats hero + search (v2.9.88)
-- Blog 13 yazı: Faz A SEO upgrade (3 yazı) + Faz B 5 round (10 yeni yazı) — v2.8.94→v2.8.99
-
----
-
-## v2.8.x — Altyapı + büyük araçlar · 2025-2026
-
-### v2.8.80-89
-- Buffet overhaul: 3 item tipi (recipe/ingredient/custom) + Excel + UX
-- Buffet liste kartında prep/cost/Excel butonları (editor açmadan)
-- Profile ↔ Discover bağlantısı (authorName, public recipe enrich)
-- Welcome tour modernizasyon (4-step, animasyonlu)
-- Modal focus root cause fix (evrensel — ilk form field'ına focus)
-- Recipe ingredient editor "+Add new" tam modal akışı
-
-### v2.8.59-79
-- App boot perf L1+L2 (lazy load, defer, preload, dns-prefetch)
-- Tarif serbest etiket sistemi + filtre
-- HACCP Hub konsolidasyon (4 form → tek hub, sidenav sadeleşti)
-- Sub-recipe ingredient flattening helper (`PCD.recipes.flattenIngredients`)
-- Menu Builder modernizasyon (4 tema + 12 renk + 2 sütun + duplicate)
-- Allergen Guardrail (free-from filter)
-- **YENİ araç:** Buffet Planner (v2.8.73)
-- **YENİ araç:** Mise en Place Planner (v2.8.74 — v2.11.16'da kaldırıldı)
-
-### v2.8.34-58
-- Standart tıklanabilir footer (tüm print/share/QR, tek format)
-- Kitchen Cards: recipe arama + drag-drop sıralama
-- Recipe ingredient grup ayracı (`separator` tipi)
-- HACCP Receiving + Holding formları (YENİ, bulut sync dahil)
-- **Discover MVP:** anonim view, like, public recipe paylaşımı
-- Realtime JWT `setAuth` fix
-
-### v2.6.x — v2.8.33
-- Per-table sync schema (16 workspace-scoped + top-level tablolar)
-- RLS tüm tablolarda aktif
-- Cascade trigger'lar + workspace silme
-- Çok cihazlı senkron temel altyapısı (push/pull/realtime 3 yön)
-- Cache-busting, queue IDB persist (offline yazım korunur)
+## v2.6–v2.8.33 — Çok-cihazlı senkron temeli
+- Per-table sync schema (workspace-scoped + top-level tablolar) + RLS tüm tablolarda + cascade trigger'lar + workspace silme. Push/pull/realtime 3-yön; queue IDB persist (offline yazım korunur); cache-busting.
