@@ -764,7 +764,7 @@
   // v2.15.6 — Print = renkli tablo + A4 yatay. print-color-adjust:exact →
   // "Background graphics" kapalıyken bile renkler basar. table-layout fixed → tek sayfa.
   function printRoster(data, showCost) {
-    const css = '<style>@page{size:A4 landscape;margin:10mm;}body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#1a1a1a;-webkit-print-color-adjust:exact;print-color-adjust:exact;}</style>';
+    const css = '<style>@page{size:A4 landscape;margin:0;}body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#1a1a1a;padding:10mm;-webkit-print-color-adjust:exact;print-color-adjust:exact;}</style>';
     PCD.print(css + buildRosterTable(data, showCost), (data.venue || t('roster_title') || 'Roster') + ' ' + data.weekStart);
   }
 
