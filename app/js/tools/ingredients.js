@@ -49,6 +49,7 @@
             <label class="checkbox" style="min-height:auto;"><input type="checkbox" id="selAllI"><span class="text-sm font-semibold"><span id="selCountI">0</span> ${t('selected')}</span></label>
           </div>
           <div class="flex gap-2">
+            <button class="btn btn-outline btn-sm" id="bulkConfirmPriceI">${PCD.icon('check',14)} ${t('bulk_confirm_price')}</button>
             <button class="btn btn-danger btn-sm" id="bulkDeleteI">${PCD.icon('trash',14)} ${t('delete')}</button>
             <button class="btn btn-ghost btn-sm" id="exitSelectI">${t('cancel')}</button>
           </div>
@@ -244,6 +245,22 @@
         selectedIds = new Set(); selectMode = false;
         renderList(view);
       });
+    });
+
+    // v2.44 — Bulk "Confirm prices": chef re-confirms that the selected prices are
+    // still current. Price value is untouched — upsertIngredient only bumps updatedAt
+    // (and adds NO history entry because the price is unchanged), which clears the
+    // "priced Nd ago" aging badge. Flow: filter aging → select all → Confirm prices.
+    PCD.$('#bulkConfirmPriceI', view).addEventListener('click', function () {
+      if (selectedIds.size === 0) return;
+      let n = 0;
+      Array.from(selectedIds).forEach(function (id) {
+        const ing = PCD.store.getIngredient(id);
+        if (ing) { PCD.store.upsertIngredient(Object.assign({}, ing)); n++; }
+      });
+      PCD.toast.success(PCD.i18n.t('prices_confirmed').replace('{n}', n));
+      selectedIds = new Set(); selectMode = false;
+      renderList(view);
     });
 
     PCD.$('#ingSearch', view).addEventListener('input', PCD.debounce(function (e) {

@@ -2971,4 +2971,6 @@ window.PCD.i18n.register('ar', {
   tab_portion: "الحصص",
   tab_checklist: "القوائم",
   tab_prep: "ورقة التحضير",
+  bulk_confirm_price: "تأكيد الأسعار",
+  prices_confirmed: "تم تأكيد {n} سعر كحالي",
 });

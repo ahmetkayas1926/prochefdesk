@@ -3269,4 +3269,6 @@ window.PCD.i18n.register('tr', {
   tab_portion: "Porsiyon",
   tab_checklist: "Listeler",
   tab_prep: "Prep Föyü",
+  bulk_confirm_price: "Fiyatları onayla",
+  prices_confirmed: "{n} fiyat güncel olarak onaylandı",
 });

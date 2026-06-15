@@ -3272,4 +3272,6 @@ window.PCD.i18n.register('en', {
   tab_portion: "Portion",
   tab_checklist: "Checklists",
   tab_prep: "Prep Sheet",
+  bulk_confirm_price: "Confirm prices",
+  prices_confirmed: "{n} prices confirmed as current",
 });
