@@ -495,7 +495,7 @@
         ].filter(Boolean) },
       ],
       studio: {
-        page: { paper: 'A3', orientation: 'portrait', columns: 1, bg: '#fffdf7', ink: '#23201a', accent: '#b8902f', baseFont: 'Cormorant', pad: 64, showAllergens: false, showPrices: true },
+        page: { paper: 'A3', orientation: 'portrait', columns: 1, bg: '#f3ece0', ink: '#2b251e', accent: '#9a6c3c', baseFont: 'Cormorant', pad: 64, showAllergens: false, showPrices: true, frame: true, frameStyle: 'double', framePad: 26 },
         blocks: [
           sblk({ type: 'heading', text: 'À la Carte', align: 'center', size: 64, weight: 500, color: '' }),
           sblk({ type: 'divider', dividerStyle: 'floral', size: 18, color: '' }),
