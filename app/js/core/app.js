@@ -78,6 +78,7 @@
       PCD.router.registerLazy('portion',         'js/tools/portion.js',        'portion');
       // Inventory eager-kept: dashboard kullanır (computeStatus low-stock alert için)
       PCD.router.registerLazy('suppliers',       'js/tools/suppliers.js',      'suppliers');
+      PCD.router.registerLazy('invoice',         'js/tools/invoice.js',        'invoice');
       PCD.router.registerLazy('waste',           'js/tools/waste.js',          'waste');
       PCD.router.registerLazy('variance',        'js/tools/variance.js',       'variance');
       PCD.router.registerLazy('nutrition',       'js/tools/nutrition.js',      'nutrition');
@@ -382,6 +383,7 @@
       { title: t('section_sourcing'), items: [
         { key: 'inventory', icon: 'package', route: 'inventory' },
         { key: 'suppliers', icon: 'truck', route: 'suppliers' },
+        { key: 'invoice',   icon: 'file-text', route: 'invoice' },
         // v2.44.30 — waste + variance Inventory sub-nav'a taşındı (Stok · Varyans · Fire).
       ]},
       { title: t('section_catering'), items: [

@@ -10,13 +10,15 @@ ProChefDesk — profesyonel şefler için web tabanlı mutfak yönetim sistemi.
 
 Araç envanteri ve mimari detay için: **`HANDOVER.md`** · Sürüm geçmişi için: **`CHANGELOG.md`**
 
-**Açık yapılacaklar + büyüme roadmap'i** (fmtMoney · cost-report sub-recipe · tasarım/logo · launch QA · veri-bütünlüğü QA · **rakip-paritesi:** POS entegrasyonu, e-procurement+fatura OCR, muhasebe, besin DB, çoklu-şube, eğitim/LMS) → HANDOVER "Operatöre açık adımlar" + "Rakip-paritesi roadmap" bölümlerinde. Operatör değerlendirip ekleyecek — spontan kurma, önce HANDOVER'a bak.
+**Açık iş listesi + büyüme roadmap'i operatörde tutulur — dokümanda backlog YOK.** Yeni özelliği spontan kurma; ne yapılacağını operatör söyler. (Sürüm geçmişi → CHANGELOG.md.)
 
 ---
 
 ## Operatör + çalışma akışı
 
 Operatör Türkçe konuşur, Türkçe cevap ver. Yorgun veya kızgınsa tek net talimat ver. "BUNU SEN SÖYLE" veya "öneri ver" derse doğrudan görüş ver, soruyla cevap verme.
+
+**Memory KULLANMA.** Operatör memory sistemini kapattı (2026-06) — oturum-arası not tutma, `~/.claude/.../memory/`'ye yazma. Her oturum tertemiz başla; iş durumu/geçmiş için tek doğruluk kaynağı = bu dosya (CLAUDE.md) + HANDOVER.md + CHANGELOG.md + kodun kendisi.
 
 **Push akışı:** GitHub Desktop GUI. Operatör Windows kullanır. Terminal/cmd komutu önerme.
 
@@ -52,7 +54,7 @@ Operatör Türkçe konuşur, Türkçe cevap ver. Yorgun veya kızgınsa tek net 
 - Plan limiti / fiyat değişikliği (monetization v2.17'de KURULDU — değişiklik operatör kararı; `plans.js` + landing + Stripe birlikte güncellenmeli)
 - AI image gen entegrasyonu (operatörün RTX 5090 24GB'ı var, kendisi yönetir)
 - Demo seed değişikliği
-- Screenshot ekleme (operatör kendisi çeker)
+- Screenshot ekleme (operatör kendisi çeker — **html2canvas ile ÜRETME:** liste-ağırlıklı ekranlarda metin descender'larını kırpar + "1 4" gibi boşluk artefaktı yapar; modal'ları bomboş render eder. v2.44.30'da denendi → v2.44.31'de geri alındı. Gerçek tarayıcı yakalaması şart.)
 
 ---
 
@@ -118,6 +120,7 @@ Sync bug'ında önce hangi yön sorun yaşıyor onu belirle.
 **Print akışı tek noktadan geçer.**
 Tüm yazdırma `PCD.print(html, title)` (utils.js) üzerinden. Footer otomatik enjekte edilir (tıklanabilir "Made with ProChefDesk · prochefdesk.com"). Custom footer yazma, `.pcd-print-footer{display:none}` override koyma. Window genişliği 1200px (Kitchen Cards landscape A4 için).
 **Arka plan rengi basılacaksa `print-color-adjust:exact` (+ `-webkit-print-color-adjust:exact`) ZORUNLU.** Tarayıcı varsayılanı arka plan renklerini basmaz (print diyaloğunda beyaz çıkar). Kalıtsaldır → print HTML'inin `body`/root'una koy, alt elemanlar miras alır. Renkli arka planı olan her yeni print/export bunu içermeli (menu_studio bunu unutmuştu → v2.40 fix).
+**Tarayıcının print damgalarını (tarih · başlık · about:blank · sayfa no) gizlemek için `@page{margin:0}` ZORUNLU** — marj varsa Chrome o boşluğa damga basar. margin:0 + içeriğe kendi iç dolgusunu (`padding`) ver (roster v2.44.31 fix; HACCP zaten böyleydi).
 
 ---
 

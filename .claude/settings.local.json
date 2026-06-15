@@ -211,7 +211,9 @@
       "Bash(python capture_recipe.py)",
       "Bash(python costs_verify.py)",
       "Bash(python tool_check.py checklist 1300)",
-      "Bash(python wb_tpl_check.py)"
+      "Bash(python wb_tpl_check.py)",
+      "Bash(cd \"C:/Users/ahmet/.claude/projects/C--Users-ahmet-Desktop-prochefdesk/memory\" && rm -f loop-progress.md \"baglantı-kopukluklari.md\" && echo \"deleted stale roadmap/loop files\" && ls *.md)",
+      "Bash(rm -rf \"C:/Users/ahmet/.claude/projects/C--Users-ahmet-Desktop-prochefdesk/memory\" && echo \"memory klasörü silindi\" && ls \"C:/Users/ahmet/.claude/projects/C--Users-ahmet-Desktop-prochefdesk/memory\" 2>/dev/null && echo \"\\(hala var\\)\" || echo \"doğrulandı: memory yok\")"
     ]
   }
 }

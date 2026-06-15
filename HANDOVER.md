@@ -245,44 +245,6 @@ v2.43'te 10 ölü tool dosyası silindi (`app/js/tools/`'tan) — route'lanmıyo
 
 ---
 
-## Operatöre açık adımlar (konsolide yapılacaklar — tek liste)
+## Açık adımlar / roadmap
 
-**Devam eden**
-1. **i18n çoklu dil dolumu — ✅ TAMAMLANDI (v2.43.17).** es/fr/de/ar 4 dil de 2598 canlı anahtarın HEPSİNE sahip (0 eksik); en+tr zaten tamdı. Tüm gruplar bitti: checklist · haccp(+hcc/hcr/hhd) · buffet · suppliers/PO · events · share · landing(about/faq/tip) · acc/cost/btn/nav/quota/kc2/selfheal/force/ingredients/rec/portion/qr/unit/sync + tekiller. Ölü araç anahtarları (sales/yield/nutrition/matrix/team/allergens/variance/whatif/tools_hub/menus + `t_*`) çevrilmedi. `ingredients_csv_placeholder` import uyumu için İngilizce. Doğrulandı: node -c + 4 dilde fresh-fetch render + placeholder interpolasyon.
-
-**Bug / kalite**
-2. **`fmtMoney` + cost report alt-tarif — ✅ TAMAMLANDI (v2.43.18).** fmtMoney artık her zaman 2 ondalık + binlik ayraç (`$4,800.00`) + küçük birim fiyatlarda hassasiyet (`$0.003/g`); uygulama geneli (print/Excel/share/kitchen cards) doğrulandı. Cost report bir tarifteki alt-tarifi tek satır yerine içindeki malzemeler + tek tek fiyatlarıyla açar (recipe + buffet + event; önizleme + PDF + Excel). + tarif/event hızlı-erişim butonları + tarif sıralama dropdown'ı.
-
-**Tasarım / marka (i18n bitince)**
-3. **Yeni logo — ✅ TAMAMLANDI (v2.44.26/29).** Toque (şef şapkası) monogramı tüm web sayfalarında (app + landing + blog + privacy/terms) + merkezi `icon.svg`. (Logo parçası bitti; tam palet + bileşen-kiti revizyonu madde 4-5'te sürüyor.)
-4. **Renk paleti** — daha profesyonel, daha güven veren, göz yormayan bir palet.
-5. **Tek standart UI** — dashboard grafik/çerçeveler daha modern + yüksek-teknolojik; bu görünüm tüm araçlara yayılıp tek tasarım dili olur.
-
-**Launch öncesi QA (tasarım sonrası, operatör + Claude birlikte)**
-6. **Footer denetimi** — Free: indirme/PDF/share/yazdırma HEPSİNDE ProChefDesk footer + tek standart. Pro: TÜM footer'lar temiz. (`showWatermark()` gate'i; her çıktı yolu tek tek denetlenecek.)
-7. **iOS/Safari gerçek cihaz testi** — offline PWA + IndexedDB + print + hCaptcha riskli.
-8. **Veri bütünlüğü QA.** (a) **Backup indirme:** tüm araç verisi + TÜM history'ler (stok sayım geçmişi · tarif versiyonları · checklist oturumları · fiyat geçmişi · HACCP kayıtları…) detaylıca iniyor mu? Eksik tablo var mı? (b) **Restore** doğru çalışıyor mu? (c) **Cloud sync:** tüm araçlar + tüm içerik buluta senkron mu, mobil ↔ masaüstü erişim/veri AYNI mı? **Yöntem:** `backup-to-r2` BACKUP_TABLES vs `cloud-pertable` WORKSPACE_TABLES vs `cloud.js` pull listesi çapraz-kontrol.
-
-**Lansman / altyapı**
-9. **Stripe canlıya geçiş.** Operatör ABN sürecinde; sonra: live ürünler (19/190 AUD) + live API key + live webhook + Supabase secret'ları (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, price ID'ler) + live Customer Portal.
-10. **Legal gözden geçirme.** Privacy/Terms taslak; AU tüketici hukukuna göre iade/ödeme şartlarını doğrulat.
-11. **McAfee / site reputation.** `sitelookup.mcafee.com` + `safeweb.norton.com`'a URL submit; Google Safe Browsing kontrol. Opsiyonel kod: `_headers` (CSP YOK) + `/.well-known/security.txt`.
-
-**SEO**
-12. **Blog yazısı.** 13 yazı var; eksik konular: Labour cost % · Menu pricing · Cleaning schedule · Catering cost-per-head.
-
----
-
-## Rakip-paritesi / büyüme özellikleri (değerlendirilecek — operatör isteği)
-
-Rakiplerde (meez · ChefTec · Apicbase · Kitchen Numbers) olup PCD'de olmayan, operatörün eklemeyi düşündüğü araçlar. Öncelik sırasıyla:
-
-1. **POS entegrasyonu** — gerçek satıştan teorik↔gerçek food cost **varyansı** + otomatik stok düşümü. *(En kritik; rakiplerin asıl üstünlüğü buradan gelir.)*
-2. **Tedarikçi e-procurement + fatura OCR** — canlı tedarikçi fiyatı, otomatik satın alma siparişi, faturayı tarayıp fiyat/stok otomatik güncelleme.
-3. **Muhasebe entegrasyonu** — QuickBooks / Xero.
-4. **Gerçek besin değeri veritabanı + yasal etiket** — makro/kalori + alerjen/besin etiketi (silinen `nutrition` tool'un yerine, gerçek DB ile).
-5. **Çoklu-şube / franchise paneli + merkez mutfak** — şubeler arası transfer, merkezi üretim, HQ görünürlüğü. *(Not: `team`/array-tablo altyapısı kısmen var.)*
-6. **Personel eğitim / LMS** — yeni aşçı onboarding, beceri takibi, plating kılavuzları (meez tarzı).
-7. **Derin menü mühendisliği analitiği** — star/dog/plowhorse sınıflandırma, kârlılık dashboard'ları (silinen `menu_matrix` tool'un olgun hâli).
-
-**Konumlandırma kuralı:** PCD'nin kozu **offline-first + ucuz + print-first + tek-mutfak all-in-one**. Bu özellikler eklenirken bu konum korunmalı — Apicbase'in kurumsal-karmaşıklığına/maliyetine kaçılmamalı.
+Launch checklist + büyüme roadmap'i **operatörde** tutuluyor (doküman dışı — burada listelenmez).

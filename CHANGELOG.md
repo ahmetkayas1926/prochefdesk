@@ -4,6 +4,21 @@ Kronolojik tersine (en son üstte). Her sürüm: başlık + ana değişiklikler.
 
 ---
 
+## v2.44.31 — Landing net orijinale dönüş + roster yazdırma + toplu fiyat-onay · 2026-06-15
+
+### Landing — v2.44.30 görsel yenilemesi GERİ ALINDI
+- v2.44.30'da html2canvas ile yeniden üretilen ürün screenshot'ları metni kırpıyordu (tarif adı descender'ları kesik, "1 4" boşluk artefaktı), bir mobil shot absürt uzundu, dashboard tekrar ediyordu → **tüm regenerate shot'lar + `index.html` net orijinallerine geri alındı.** Dark-mode vitrini + inventory/buffet proof kartları kaldırıldı (gerçek screenshot ile geri eklenecek). 7 orphan görsel silindi.
+- **Kural pekişti:** ürün ekran görüntüleri html2canvas ile ÜRETİLMEZ (metni kırpar) — operatör gerçek tarayıcı yakalaması alır.
+- Not: araç konsolidasyonu / sub-nav (v2.44.30) korundu — yalnız landing görselleri geri alındı.
+
+### Roster yazdırma — tarayıcı damgaları kalktı
+- Print `@page{margin:10mm}` → `margin:0` + içeriğe `padding:10mm` → Chrome'un başlık/altbilgi damgaları (tarih · başlık · about:blank · 1/1) artık basılmıyor. (HACCP deseni; margin:0 = tarayıcı damga koyamaz.)
+
+### Ingredients — toplu "Fiyatları onayla"
+- Toplu-işlem çubuğuna buton: seçili malzemelerin fiyat tarihini bugüne çeker (**fiyat değişmez**), "priced Nd ago" eski-fiyat etiketini temizler. Cloud-sync; aynı fiyatta geçmiş kaydı eklemez. 6 dil. Akış: eskiyenleri filtrele → tümünü seç → onayla.
+
+---
+
 ## v2.44.30 — Araç konsolidasyonu + landing görsel yenileme · 2026-06-15
 
 ### Araç konsolidasyonu (sidebar sadeleştirme)
