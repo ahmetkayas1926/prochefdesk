@@ -224,7 +224,9 @@
       "Bash(node -e \"console.log\\(require\\('puppeteer-core/package.json'\\).version\\)\")",
       "Bash(\"/c/Program Files/Google/Chrome/Application/chrome.exe\" --version)",
       "Bash(powershell -c \"\\(Get-Item 'C:\\\\Program Files\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe'\\).VersionInfo.ProductVersion\")",
-      "PowerShell(\\(Get-Item 'C:\\\\Program Files\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe'\\).VersionInfo.ProductVersion)"
+      "PowerShell(\\(Get-Item 'C:\\\\Program Files\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe'\\).VersionInfo.ProductVersion)",
+      "Bash(node -e *)",
+      "Bash(curl -s -o /dev/null -w \"server HTTP %{http_code}\\\\n\" http://localhost:8799/app/index.html)"
     ]
   }
 }
