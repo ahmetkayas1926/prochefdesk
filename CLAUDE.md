@@ -10,7 +10,23 @@ ProChefDesk — profesyonel şefler için web tabanlı mutfak yönetim sistemi.
 
 Araç envanteri ve mimari detay için: **`HANDOVER.md`** · Sürüm geçmişi için: **`CHANGELOG.md`**
 
-**Açık iş listesi + büyüme roadmap'i operatörde tutulur — dokümanda backlog YOK.** Yeni özelliği spontan kurma; ne yapılacağını operatör söyler. (Sürüm geçmişi → CHANGELOG.md.)
+**Launch yapılacaklar listesi → aşağıdaki "Launch — yapılacaklar" bölümünde. Büyüme roadmap'i (yeni özellikler) operatörde.** Yeni özelliği spontan kurma; ne yapılacağını operatör söyler. (Sürüm geçmişi → CHANGELOG.md.)
+
+---
+
+## Launch — yapılacaklar
+
+Operatör'ün launch öncesi açık iş listesi (büyüme roadmap'i burada DEĞİL — o operatörde). Madde bitince işaretle/çıkar.
+
+- [ ] Stripe canlı bağlantısının tamamlanması (şu an sandbox/test modu)
+- [ ] Legal gözden geçirme — AU iade/ödeme
+- [ ] McAfee/Norton reputation submit
+- [ ] iOS/Safari gerçek cihaz testi
+- [ ] Blog 2 yazı: "Labour cost %" · "Cleaning schedule" (kodda doğrulandı — henüz yok)
+- [ ] Launch QA — beraber, doğrulama pass'leri (özellikler hazır, kontrol gerek)
+- [ ] Çıktı tutarlılığı — print/PDF/Excel/share aynı tasarım dilinde mi? (şu an karışık: HACCP print çam yeşili, roster print generik). Operatör tüm çıktıları tek tek MANUEL kontrol eder; değişiklik/yenilik gerekirse talimatı operatör verir — kendiliğinden tekleştirme YAPMA.
+- [ ] Footer — Free=footer var / Pro=temiz, her çıktı yolunda
+- [ ] Veri bütünlüğü — backup indir + restore + cloud sync, tüm tablolar/history tam mı
 
 ---
 
@@ -251,11 +267,6 @@ scale-to-fit önizleme (sabit doğal genişlikte render → `transform:scale` il
 
 **i18n 6 dil de TAM (en/tr/es/fr/de/ar) — `register()` MERGE pattern.**
 en+tr (2942 anahtar) + es/fr/de/ar (2598 canlı anahtarın HEPSİ, v2.43.17 — 0 eksik). Gelecekte YENİ anahtar eklerken: ilgili dil dosyasının (`app/js/i18n/<lang>.js`) **SONUNA** yeni bir `window.PCD.i18n.register('<lang>', { ...anahtarlar });` bloğu ekle — `register` `Object.assign` ile MERGE eder (i18n.js:72), mevcut objeye dokunma. Placeholder'ları (`{n}`,`{name}`…) + escape'li tırnakları (`\"`) + emoji'leri KORU. İngilizce çoğul işaretçilerini DÜŞÜR, doğal çoğul kullan. ÖLÜ araç anahtarlarını (sales/yield/nutrition/matrix/team/allergens/variance/whatif/tools_hub/menus + `t_*`) ÇEVİRME. `node -c` doğrula. NOT: preview `setLocale` eski bundle'ı cache'ler → gerçek doğrulama = `fetch('...?cb='+Date.now())` + `eval` + setLocale.
-
----
-
-**`fmtMoney` (utils.js 128-142) bilinen sorun — YAPILACAK, düzeltilmedi.**
-Compact format (≥100k→0 ondalık, ≥1000→1 ondalık, sonu-sıfır kırpılır, binlik ayraç YOK) iki uçta bozuk: ucuz birim fiyat `$0/g` (cost report), büyük sayı `$4800.0`/`$1000000`. Planlanan düzeltme: her zaman 2 ondalık + binlik ayraç + birim fiyat `$/kg`. Uygulama geneli (print/Excel/share/kitchen cards) olduğu için doğrulamayla birlikte ayrı yapılacak. Yeni para gösterimi eklerken bunu bil.
 
 ---
 
