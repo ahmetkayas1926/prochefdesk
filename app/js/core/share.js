@@ -189,9 +189,21 @@
   function enrichRecipeCost(payload, rid) {
     const r = PCD.store.getRecipe(rid);
     if (!r) return;
+    const ingMap = _ingMap();
     const recipeMap = (PCD.recipes && PCD.recipes.buildRecipeMap) ? PCD.recipes.buildRecipeMap() : null;
-    const n = recipeCostNumbers(r, _ingMap(), recipeMap);
+    const n = recipeCostNumbers(r, ingMap, recipeMap);
     n.currency = _cur();
+    // v2.44.34 — Per-ingredient breakdown gömülür ki cost-share sayfası iç-uygulama
+    // Cost Report'la AYNI tabloyu (birim fiyat · miktar · satır maliyeti) basabilsin.
+    // Görüntüleyende fiyat DB'si yok → kırılım payload ile gitmek zorunda.
+    if (PCD.recipes && PCD.recipes.costBreakdownRows) {
+      n.rows = PCD.recipes.costBreakdownRows(r, ingMap, recipeMap, false).map(function (row) {
+        return { name: row.name, isSub: !!row.isSub, unitPrice: row.unitPrice, stockUnit: row.stockUnit, amount: row.amount, qtyUnit: row.qtyUnit, lineCost: row.lineCost };
+      });
+    }
+    n.isSubRecipe = (PCD.recipes && PCD.recipes.isPrep ? PCD.recipes.isPrep(r) : false) || !!(r.yieldAmount && r.yieldUnit);
+    n.yieldAmount = r.yieldAmount || null;
+    n.yieldUnit = r.yieldUnit || null;
     payload.cost = n;
   }
 
@@ -478,6 +490,38 @@
     '</div>';
   }
 
+  // v2.44.34 — Recipe cost-share için tam maliyet kırılım tablosu. İç-uygulama
+  // Cost Report (Simple) ile aynı: Ingredient · Unit price · Qty · Cost + toplam.
+  // payload.cost.rows'tan okur (paylaşım anında gömülür). Etiketler İngilizce —
+  // patron/muhasebeci için özel iç belge; iç-uygulama önizlemesiyle birebir.
+  function costTableHtml(p) {
+    const c = p.cost || {};
+    if (!c.rows || !c.rows.length) return '';
+    const cur = c.currency || '$';
+    const money = function (n) { return cur + (Number(n) || 0).toFixed(2); };
+    const num = function (n) { const x = Number(n) || 0; return (Math.round(x * 100) / 100).toString(); };
+    let body = '';
+    c.rows.forEach(function (row) {
+      const up = (row.unitPrice != null) ? (cur + (Number(row.unitPrice) || 0).toFixed(2) + (row.stockUnit ? '/' + row.stockUnit : '')) : '—';
+      const qty = num(row.amount) + (row.qtyUnit ? ' ' + row.qtyUnit : '');
+      const sub = row.isSub ? ' <span class="ct-sub">SUB</span>' : '';
+      body += '<tr><td class="ct-name">' + escapeHtml(row.name) + sub + '</td>' +
+        '<td class="ct-up">' + escapeHtml(up) + '</td>' +
+        '<td class="ct-qty">' + escapeHtml(qty) + '</td>' +
+        '<td class="ct-cost">' + money(row.lineCost) + '</td></tr>';
+    });
+    let foot = '<tr class="ct-total"><td colspan="3">Total food cost</td><td>' + money(c.total) + '</td></tr>';
+    if (c.isSubRecipe && c.yieldAmount) {
+      foot += '<tr class="ct-sub2"><td colspan="3">Cost per ' + escapeHtml(c.yieldUnit || 'unit') + '</td><td>' + money((Number(c.total) || 0) / (Number(c.yieldAmount) || 1)) + '</td></tr>';
+    } else if (c.servings) {
+      foot += '<tr class="ct-sub2"><td colspan="3">Cost per serving</td><td>' + money(c.perServing) + '</td></tr>';
+    }
+    return '<div class="share-section"><h2>Cost breakdown</h2>' +
+      '<table class="cost-table"><thead><tr>' +
+        '<th class="ct-name">Ingredient</th><th class="ct-up">Unit price</th><th class="ct-qty">Qty</th><th class="ct-cost">Cost</th>' +
+      '</tr></thead><tbody>' + body + '</tbody><tfoot>' + foot + '</tfoot></table></div>';
+  }
+
   function renderSharePage(share) {
     const appEl = document.getElementById('app');
     if (!appEl) return;
@@ -560,6 +604,18 @@
       '.cost-cell{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:10px 12px;}' +
       '.cost-cell .lbl{font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:0.04em;}' +
       '.cost-cell .val{font-size:20px;font-weight:800;margin-top:2px;font-variant-numeric:tabular-nums;}' +
+      '.cost-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:4px;font-variant-numeric:tabular-nums;}' +
+      '.cost-table th{text-align:right;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.04em;color:#78716c;border-bottom:2px solid #16433a;font-weight:700;}' +
+      '.cost-table th.ct-name{text-align:left;}' +
+      '.cost-table td{padding:7px 10px;border-bottom:1px solid #e7e5e4;text-align:right;color:#1c1917;}' +
+      '.cost-table td.ct-name{text-align:left;}' +
+      '.cost-table td.ct-up,.cost-table td.ct-qty{color:#78716c;font-size:12px;}' +
+      '.cost-table td.ct-cost{color:#1f9d6b;font-weight:700;}' +
+      '.cost-table .ct-sub{display:inline-block;font-size:9px;font-weight:700;color:#16433a;background:#eaf6f0;border-radius:4px;padding:1px 5px;letter-spacing:0.04em;vertical-align:middle;margin-inline-start:4px;}' +
+      '.cost-table tfoot .ct-total td{border-top:2px solid #16433a;border-bottom:none;font-weight:800;color:#16433a;padding-top:10px;}' +
+      '.cost-table tfoot .ct-sub2 td{border-bottom:none;color:#78716c;padding-top:2px;}' +
+      '.cost-table tfoot td:first-child{text-align:right;}' +
+      '@media print{.cost-table td.ct-cost,.cost-table .ct-sub,.cost-table tfoot .ct-total td{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}}' +
       '.cost-note{font-size:11px;color:#6b7280;margin-top:10px;}' +
       '@media print{.cost-panel,.cost-cell{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}}' +
     '</style>';
@@ -596,7 +652,7 @@
       html += '</div>';
       if (p.photo) html += '<img class="share-photo" src="' + escapeHtml(p.photo) + '" alt="">';
 
-      if (p.ingredients && p.ingredients.length > 0) {
+      if (p.ingredients && p.ingredients.length > 0 && !(p.cost && p.cost.rows && p.cost.rows.length)) {
         html += '<div class="share-section"><h2>' + escapeHtml(t('share_ingredients', 'Ingredients')) + '</h2>';
         p.ingredients.forEach(function (ri) {
           // v2.8.52 — Separator row: thin divider line + optional label
@@ -609,6 +665,7 @@
         });
         html += '</div>';
       }
+      if (p.cost && p.cost.rows && p.cost.rows.length) html += costTableHtml(p);
       if (p.steps) {
         html += '<div class="share-section"><h2>' + escapeHtml(t('share_method', 'Method')) + '</h2><div class="steps">' + escapeHtml(p.steps) + '</div></div>';
       }

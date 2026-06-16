@@ -2576,6 +2576,7 @@ window.PCD.i18n.register('es', {
   share_copied: "Copiado",
   share_copied_clipboard: "Copiado al portapapeles",
   share_cost_view_btn: "Vista de costes (propietario / contable)",
+  share_cost_view_label: "Compartir coste",
   share_cost_view_creating: "Creando enlace de vista de costes…",
   share_cost_view_desc: "Un enlace privado que muestra el precio y el % de coste de alimentos — para tu jefe o contable. Solo lectura, sin inicio de sesión.",
   share_cost_view_pro: "La vista de costes es una función Pro.",

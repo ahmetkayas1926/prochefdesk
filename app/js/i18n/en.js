@@ -137,6 +137,7 @@ window.PCD.i18n.register('en', {
   cost_avg_food_cost: "Avg food cost %",
   cost_disclaimer: "Cost figures are based on data entered by the chef. For internal use only — keep this link private.",
   share_cost_view_btn: "Cost view (owner / accountant)",
+  share_cost_view_label: "Cost share",
   share_cost_view_desc: "A private link showing price and food cost % — for your boss or accountant. Read-only, no login.",
   share_cost_view_pro: "Cost view is a Pro feature.",
   share_cost_view_creating: "Creating cost-view link…",

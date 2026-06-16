@@ -474,7 +474,13 @@
       });
     });
     if (printBtn) printBtn.addEventListener('click', function () {
-      printEvent(existing);
+      // v2.44.35 — Liste kısayoluyla AYNI: Simple/Detailed önizleme chooser
+      // (önce doğrudan Chrome print'e gidiyordu → tutarsızdı).
+      PCD.costReportPreview({
+        title: (existing.name || t('untitled')) + ' · ' + (t('btn_cost_report') || 'Cost Report'),
+        buildHtml: function (detailed) { return eventPrintHtml(existing, detailed); },
+        onPrint: function (detailed) { printEvent(existing, detailed); },
+      });
     });
     if (shareBtn) shareBtn.addEventListener('click', function () {
       shareEvent(existing);
@@ -672,7 +678,7 @@
     body.innerHTML =
       '<div class="field"><label class="field-label">Message (editable)</label>' +
       '<textarea class="textarea" id="evShareText" rows="14" style="font-family:var(--font-mono);font-size:13px;">' + PCD.escapeHtml(text) + '</textarea></div>' +
-      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-top:14px;">' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(72px,1fr));gap:8px;margin-top:14px;">' +
         '<button class="btn btn-outline" id="evShWa" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;">' +
           '<div style="color:#25D366;">' + PCD.icon('message-circle', 24) + '</div>' +
           '<div style="font-weight:600;font-size:12px;">WhatsApp</div></button>' +
@@ -682,6 +688,9 @@
         '<button class="btn btn-outline" id="evShCopy" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;">' +
           '<div style="color:var(--brand-600);">' + PCD.icon('copy', 24) + '</div>' +
           '<div style="font-weight:600;font-size:12px;">Copy</div></button>' +
+        '<button class="btn btn-outline" id="evShPdf" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;">' +
+          '<div style="color:var(--brand-700);">' + PCD.icon('print', 24) + '</div>' +
+          '<div style="font-weight:600;font-size:12px;">PDF</div></button>' +
         '<button class="btn btn-outline" id="evShMore" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;">' +
           '<div style="color:var(--text-2);">' + PCD.icon('share', 24) + '</div>' +
           '<div style="font-weight:600;font-size:12px;">More...</div></button>' +
@@ -705,6 +714,12 @@
       if (navigator.clipboard) {
         navigator.clipboard.writeText(getMsg()).then(function () { PCD.toast.success(PCD.i18n.t('toast_copied')); m.close(); });
       }
+    });
+    PCD.$('#evShPdf', body).addEventListener('click', function () {
+      // v2.44.35 — "PDF olarak gönder": biçimli event sayfasını yazdırma ekranında
+      // aç → "PDF kaydet" (mobilde oradan PDF'i paylaşabilir). Bağımlılık yok.
+      m.close();
+      printEvent(event);
     });
     PCD.$('#evShMore', body).addEventListener('click', function () {
       if (navigator.share) {

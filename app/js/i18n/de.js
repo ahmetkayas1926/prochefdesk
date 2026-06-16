@@ -2576,6 +2576,7 @@ window.PCD.i18n.register('de', {
   share_copied: "Kopiert",
   share_copied_clipboard: "In die Zwischenablage kopiert",
   share_cost_view_btn: "Kostenansicht (Inhaber / Buchhalter)",
+  share_cost_view_label: "Kosten teilen",
   share_cost_view_creating: "Kostenansicht-Link wird erstellt…",
   share_cost_view_desc: "Ein privater Link, der Preis und Wareneinsatz % zeigt — für deinen Chef oder Buchhalter. Schreibgeschützt, ohne Login.",
   share_cost_view_pro: "Die Kostenansicht ist eine Pro-Funktion.",

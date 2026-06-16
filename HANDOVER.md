@@ -93,6 +93,7 @@ Tüm limit + gate'ler tek dosyada: `plans.js` (`PLAN_LIMITS`) — özelliği aç
 - **Stripe:** Pro Monthly 19 AUD / Annual 190 AUD. 3 Edge Function (`create-checkout-session`, `create-portal-session`, `stripe-webhook` — imza doğrulamalı, plan'ı yazan tek otorite). Şu an **sandbox/test**; canlı = operatör açık adımları.
 - **Cost-view paylaşım (Pro):** fiyat + food cost % gösteren özel salt-okunur link (`?view=cost`); maliyet yalnız cost-share payload'unda (`public_shares.share_mode='cost'`), normal link sızdırmaz.
 - **Watermark:** footer TÜM çıktılarda (print/PDF · Excel · roster JPEG · paylaşım/URL) `PCD.gate.showWatermark()`'a bağlı — Free'de var, Pro'da temiz; paylaşılan sayfada paylaşanın planına göre snapshot'a gömülür (`payload._wm`). Metin/WhatsApp paylaşımı kapsam dışı.
+- **Çıktı paleti (v2.44 Deep Pine — tek standart):** TÜM print/PDF · Excel · roster JPEG · share aynı dili konuşur — başlık+kenarlık pine `#16433a` · aksan/CTA `#1f9d6b` · metin `#1c1917` · kenarlık `#e7e5e4` · th zemini `#eaf6f0` · Inter+Fraunces; Excel pine `16433A` başlık + `E0DDD5` kenarlık + `F6F3EE` alt-satır (PCD.xlsx + inline roster/buffet/recipes AYNI). Tüm print `@page{margin:0}`+içerik padding → tarayıcı damgası (tarih/about:blank/sayfa no) yok. Yeni çıktıda bu paleti kullan. Bilerek istisna: whiteboard (Oswald/Barlow), menu_studio temalı menüleri, HACCP grid `#999`.
 - **Dashboard:** 4 metrik + 2 grafik, tamamı gerçek veriden (sahte yok); işçilik kartı Pro-gated.
 
 ## Veri tabloları

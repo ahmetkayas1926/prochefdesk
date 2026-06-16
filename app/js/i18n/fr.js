@@ -2576,6 +2576,7 @@ window.PCD.i18n.register('fr', {
   share_copied: "Copié",
   share_copied_clipboard: "Copié dans le presse-papiers",
   share_cost_view_btn: "Vue des coûts (propriétaire / comptable)",
+  share_cost_view_label: "Partage coûts",
   share_cost_view_creating: "Création du lien de vue des coûts…",
   share_cost_view_desc: "Un lien privé montrant le prix et le % de coût matière — pour votre patron ou comptable. Lecture seule, sans connexion.",
   share_cost_view_pro: "La vue des coûts est une fonction Pro.",

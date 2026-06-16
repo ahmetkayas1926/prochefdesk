@@ -1951,7 +1951,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
     qrBtn.innerHTML = PCD.icon('grid', 16);
     // v2.17 — Cost-view paylaşım (patron/muhasebe). Pro özelliği; free'de kilit rozeti.
     const costViewBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: t('share_cost_view_btn') });
-    costViewBtn.innerHTML = PCD.icon('activity', 16) + ((PCD.gate && !PCD.gate.isPro()) ? ' ' + PCD.gate.lockChip(11) : '');
+    costViewBtn.innerHTML = PCD.icon('activity', 16) + ' <span>' + PCD.escapeHtml(t('share_cost_view_label')) + '</span>' + ((PCD.gate && !PCD.gate.isPro()) ? ' ' + PCD.gate.lockChip(11) : '');
     const deleteBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: t('delete'), style: { color: 'var(--danger)' } });
     deleteBtn.innerHTML = PCD.icon('trash', 16);
     footer.appendChild(deleteBtn);

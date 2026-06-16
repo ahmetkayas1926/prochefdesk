@@ -2576,6 +2576,7 @@ window.PCD.i18n.register('ar', {
   share_copied: "تم النسخ",
   share_copied_clipboard: "تم النسخ إلى الحافظة",
   share_cost_view_btn: "عرض التكلفة (المالك / المحاسب)",
+  share_cost_view_label: "مشاركة التكلفة",
   share_cost_view_creating: "جارٍ إنشاء رابط عرض التكلفة…",
   share_cost_view_desc: "رابط خاص يعرض السعر ونسبة تكلفة الطعام — لمديرك أو محاسبك. للقراءة فقط، بدون تسجيل دخول.",
   share_cost_view_pro: "عرض التكلفة ميزة Pro.",

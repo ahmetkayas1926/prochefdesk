@@ -644,6 +644,7 @@
           '<button type="button" class="icon-btn" data-buf-order="' + b.id + '" title="' + PCD.escapeHtml(t('buffet_order_list') || 'Order List') + '">' + PCD.icon('truck', 18) + '</button>' +
           '<button type="button" class="icon-btn" data-buf-pdf="' + b.id + '" title="' + PCD.escapeHtml(t('buffet_print_report') || 'Cost Report') + '">' + PCD.icon('print', 18) + '</button>' +
           '<button type="button" class="icon-btn" data-buf-excel="' + b.id + '" title="Excel">' + PCD.icon('download', 18) + '</button>' +
+          '<button type="button" class="icon-btn" data-buf-share="' + b.id + '" title="' + PCD.escapeHtml(t('btn_share') || 'Share') + '">' + PCD.icon('share', 18) + '</button>' +
           '<button type="button" class="icon-btn" data-buf-dup="' + b.id + '" title="' + PCD.escapeHtml(t('buffet_duplicate') || 'Duplicate') + '">' + PCD.icon('copy', 18) + '</button>' +
           '<button type="button" class="icon-btn" data-buf-edit="' + b.id + '" title="' + PCD.escapeHtml(t('edit') || 'Edit') + '">' + PCD.icon('edit', 18) + '</button>' +
           '</div>';
@@ -673,7 +674,8 @@
       // v2.8.86 — Edit/Dup butonları + yeni Prep/PDF/Excel butonları satır click'i tetiklemesin
       if (e.target.closest('[data-buf-edit]') || e.target.closest('[data-buf-dup]') ||
           e.target.closest('[data-buf-prep]') || e.target.closest('[data-buf-pdf]') ||
-          e.target.closest('[data-buf-order]') || e.target.closest('[data-buf-excel]')) return;
+          e.target.closest('[data-buf-order]') || e.target.closest('[data-buf-excel]') ||
+          e.target.closest('[data-buf-share]')) return;
       openEditor(this.getAttribute('data-bid'));
     });
     PCD.on(listEl, 'click', '[data-buf-edit]', function (e) {
@@ -707,6 +709,11 @@
       e.stopPropagation();
       const b = getBuffet(this.getAttribute('data-buf-excel'));
       if (b) exportBuffetXLSX(b);
+    });
+    PCD.on(listEl, 'click', '[data-buf-share]', function (e) {
+      e.stopPropagation();
+      const b = getBuffet(this.getAttribute('data-buf-share'));
+      if (b) shareBuffet(b);
     });
     PCD.on(listEl, 'click', '[data-buf-dup]', function (e) {
       e.stopPropagation();
@@ -1422,6 +1429,9 @@
     orderBtn.innerHTML = PCD.icon('truck', 16) + ' <span>' + (t('buffet_order_list') || 'Order List') + '</span>';
     const reportBtn = PCD.el('button', { class: 'btn btn-outline' });
     reportBtn.innerHTML = PCD.icon('print', 16) + ' <span>' + (t('buffet_print_report') || 'Cost Report') + '</span>';
+    // v2.44.35 — Share (metin + "PDF olarak gönder" → cost report yazdır)
+    const shareBtn = PCD.el('button', { class: 'btn btn-outline' });
+    shareBtn.innerHTML = PCD.icon('share', 16) + ' <span>' + (t('btn_share') || 'Share') + '</span>';
     // v2.8.79 — Excel export butonu (operatör request: "excel cost report
     // buffet costing'e de ekle"). Aynı pattern: xlsx on-demand load.
     const excelBtn = PCD.el('button', { class: 'btn btn-outline' });
@@ -1437,6 +1447,7 @@
     footer.appendChild(orderBtn);
     footer.appendChild(reportBtn);
     footer.appendChild(excelBtn);
+    footer.appendChild(shareBtn);
     footer.appendChild(saveBtn);
 
     const m = PCD.modal.open({
@@ -1488,13 +1499,25 @@
     reportBtn.addEventListener('click', function () {
       data.name = (PCD.$('#bufName', body).value || '').trim() || t('untitled');
       if (existing) { upsertBuffet(Object.assign({}, existing, data)); }
-      printCostReport(data);
+      // v2.44.35 — Liste kısayoluyla AYNI davranış: Simple/Detailed önizleme
+      // chooser'ı (önce doğrudan print'e gidiyordu → tutarsızdı + chooser yoktu).
+      PCD.costReportPreview({
+        title: (data.name || (t('buffet_untitled') || 'Buffet')) + ' · ' + (t('buffet_print_report') || 'Cost Report'),
+        buildHtml: function (detailed) { return buffetCostReportHtml(data, detailed); },
+        onPrint: function (detailed) { printCostReport(data, detailed); },
+        onExcel: function (detailed) { exportBuffetXLSX(data, detailed); },
+      });
     });
     // v2.8.79 — Excel export click: lazy-load xlsx if needed, then export
     excelBtn.addEventListener('click', function () {
       data.name = (PCD.$('#bufName', body).value || '').trim() || t('untitled');
       if (existing) { upsertBuffet(Object.assign({}, existing, data)); }
       exportBuffetXLSX(data);
+    });
+    shareBtn.addEventListener('click', function () {
+      data.name = (PCD.$('#bufName', body).value || '').trim() || t('untitled');
+      if (existing) { upsertBuffet(Object.assign({}, existing, data)); }
+      shareBuffet(data);
     });
   }
 
@@ -1795,6 +1818,73 @@
   function printCostReport(buffet, detailed) {
     const t = PCD.i18n.t;
     PCD.print(buffetCostReportHtml(buffet, detailed), (buffet.name || (t('buffet_untitled') || 'Buffet')) + ' — ' + (t('buffet_print_report') || 'Cost Report'));
+  }
+
+  // ---------- SHARE (v2.44.35) — metin + "PDF olarak gönder" ----------
+  // Event share ile aynı kalıp (metin İngilizce, cost özeti dahil — sharer kendi
+  // verisini paylaşır). PDF = biçimli Cost Report'u yazdırma ekranında açar.
+  function buildBuffetText(buffet) {
+    const ingMap = {};
+    PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
+    const recipeMap = PCD.recipes.buildRecipeMap();
+    const totals = computeBuffetTotals(buffet, ingMap, recipeMap);
+    const dateStr = buffet.serviceDate ? PCD.fmtDate(buffet.serviceDate) : '';
+    const lines = [];
+    lines.push(buffet.name || 'Buffet');
+    lines.push('');
+    const meta = [];
+    if (buffet.type) meta.push(buffet.type.charAt(0).toUpperCase() + buffet.type.slice(1));
+    if (buffet.coverCount) meta.push(buffet.coverCount + ' covers');
+    if (dateStr) meta.push(dateStr);
+    if (meta.length) lines.push('📋 ' + meta.join(' · '));
+    if (buffet.ticketPrice) lines.push('💵 ' + PCD.fmtMoney(buffet.ticketPrice) + ' per cover');
+    lines.push('');
+    (buffet.stations || []).forEach(function (st) {
+      if (!st.items || !st.items.length) return;
+      lines.push('— ' + (st.name || 'Station') + ' —');
+      st.items.forEach(function (it) {
+        const r = it.recipeId ? recipeMap[it.recipeId] : null;
+        const ing = it.ingredientId ? ingMap[it.ingredientId] : null;
+        const name = r ? r.name : (ing ? ing.name : (it.customName || ''));
+        if (name) lines.push('• ' + name);
+      });
+      lines.push('');
+    });
+    lines.push('— Cost summary —');
+    lines.push('Food cost: ' + (totals.foodCostPct || 0).toFixed(1) + '%');
+    lines.push('Per cover: ' + PCD.fmtMoney(totals.perGuestCost));
+    if (totals.revenue > 0) lines.push('Revenue: ' + PCD.fmtMoney(totals.revenue));
+    return lines.join('\n');
+  }
+
+  function shareBuffet(buffet) {
+    const t = PCD.i18n.t;
+    const text = buildBuffetText(buffet);
+    const body = PCD.el('div');
+    body.innerHTML =
+      '<div class="field"><label class="field-label">Message (editable)</label>' +
+      '<textarea class="textarea" id="bufShareText" rows="14" style="font-family:var(--font-mono);font-size:13px;">' + PCD.escapeHtml(text) + '</textarea></div>' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(72px,1fr));gap:8px;margin-top:14px;">' +
+        '<button class="btn btn-outline" id="bufShWa" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;"><div style="color:#25D366;">' + PCD.icon('message-circle', 24) + '</div><div style="font-weight:600;font-size:12px;">WhatsApp</div></button>' +
+        '<button class="btn btn-outline" id="bufShEmail" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;"><div style="color:#EA4335;">' + PCD.icon('mail', 24) + '</div><div style="font-weight:600;font-size:12px;">Email</div></button>' +
+        '<button class="btn btn-outline" id="bufShCopy" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;"><div style="color:var(--brand-600);">' + PCD.icon('copy', 24) + '</div><div style="font-weight:600;font-size:12px;">Copy</div></button>' +
+        '<button class="btn btn-outline" id="bufShPdf" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;"><div style="color:var(--brand-700);">' + PCD.icon('print', 24) + '</div><div style="font-weight:600;font-size:12px;">PDF</div></button>' +
+        '<button class="btn btn-outline" id="bufShMore" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;"><div style="color:var(--text-2);">' + PCD.icon('share', 24) + '</div><div style="font-weight:600;font-size:12px;">More...</div></button>' +
+      '</div>';
+    const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('btn_close') });
+    const footer = PCD.el('div', { style: { display: 'flex', width: '100%' } });
+    footer.appendChild(closeBtn);
+    const m = PCD.modal.open({ title: t('modal_share_named', { name: (buffet.name || 'Buffet') }), body: body, footer: footer, size: 'md', closable: true });
+    function getMsg() { return PCD.$('#bufShareText', body).value; }
+    closeBtn.addEventListener('click', function () { m.close(); });
+    PCD.$('#bufShWa', body).addEventListener('click', function () { window.open('https://wa.me/?text=' + encodeURIComponent(getMsg()), '_blank'); m.close(); });
+    PCD.$('#bufShEmail', body).addEventListener('click', function () { window.location.href = 'mailto:?subject=' + encodeURIComponent(buffet.name || 'Buffet') + '&body=' + encodeURIComponent(getMsg()); m.close(); });
+    PCD.$('#bufShCopy', body).addEventListener('click', function () { if (navigator.clipboard) navigator.clipboard.writeText(getMsg()).then(function () { PCD.toast.success(t('toast_copied')); m.close(); }); });
+    PCD.$('#bufShPdf', body).addEventListener('click', function () { m.close(); printCostReport(buffet); });
+    PCD.$('#bufShMore', body).addEventListener('click', function () {
+      if (navigator.share) { navigator.share({ title: buffet.name || 'Buffet', text: getMsg() }).then(function () { m.close(); }).catch(function () {}); }
+      else if (navigator.clipboard) { navigator.clipboard.writeText(getMsg()).then(function () { PCD.toast.success(t('toast_copied')); m.close(); }); }
+    });
   }
 
   // ---------- EXCEL EXPORT (v2.8.79) ----------

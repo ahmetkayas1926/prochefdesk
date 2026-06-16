@@ -137,6 +137,7 @@ window.PCD.i18n.register('tr', {
   cost_avg_food_cost: "Ort. food cost %",
   cost_disclaimer: "Maliyet rakamları şefin girdiği verilere dayanır. Yalnızca iç kullanım — bu bağlantıyı özel tut.",
   share_cost_view_btn: "Maliyetli görünüm (patron / muhasebe)",
+  share_cost_view_label: "Maliyet paylaş",
   share_cost_view_desc: "Fiyat ve food cost % gösteren özel bağlantı — patronun veya muhasebecin için. Salt-okunur, giriş yok.",
   share_cost_view_pro: "Maliyetli görünüm Pro özelliğidir.",
   share_cost_view_creating: "Maliyetli görünüm bağlantısı oluşturuluyor…",
