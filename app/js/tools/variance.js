@@ -3,11 +3,11 @@
    ----------------------------------------------------------------
    Periodic cost-variance check (no POS, no stock-count required):
    chef enters PRODUCTION (recipe × qty) → THEORETICAL ingredient usage
-   is computed. Each ingredient row shows an editable ACTUAL-used field
-   (defaults to theoretical); the chef edits what they really used (or
-   lost) for items they measured → VARIANCE ($) updates live, biggest
-   leak first. If stock counts exist, one tap can pre-fill actuals from
-   them. Transient — nothing is saved.
+   is computed. Two entry modes:
+   • Direct — edit the Actual column per ingredient
+   • Opening/Closing — enter period start & end stock; actual = start − end
+   If stock count snapshots exist, one tap pre-fills from them.
+   Transient — nothing is saved.
    ================================================================ */
 (function () {
   'use strict';
@@ -15,6 +15,8 @@
 
   let production = [];   // [{recipeId, qty}]
   let actuals = {};      // { ingredientId: actualAmountString } — user overrides
+  let varMode = 'direct'; // 'direct' | 'oc'
+  let ocStocks = {};       // { ingredientId: { o: '', c: '' } }
 
   function snapshots() {
     return (PCD.store.listTable('stockCountHistory') || []).filter(function (s) { return s && !s._deletedAt; })
@@ -107,6 +109,11 @@
 
   function render(view) {
     const t = PCD.i18n.t;
+    // Reset transient state on each tool mount
+    production = [];
+    actuals = {};
+    varMode = 'direct';
+    ocStocks = {};
     const recs = PCD.store.listRecipes().filter(function (r) { return !(PCD.recipes && PCD.recipes.isPrep && PCD.recipes.isPrep(r)); })
       .slice().sort(function (a, b) { return (a.name || '').localeCompare(b.name || ''); });
     const hasSnaps = snapshots().length > 0;
@@ -193,54 +200,138 @@
       el.innerHTML = '<div class="empty" style="padding:30px 0;"><div class="empty-title">' + PCD.escapeHtml(t('var_no_result')) + '</div><div class="empty-desc">' + PCD.escapeHtml(t('var_no_result_desc')) + '</div></div>';
       return;
     }
-    let total = rows.reduce(function (s, r) { return s + r.varCost; }, 0);
 
+    const modeOc = (varMode === 'oc');
+    let total = rows.reduce(function (s, r) { return s + r.varCost; }, 0);
+    const missingPriceCount = rows.filter(function (r) { return r.price <= 0; }).length;
+
+    // Total card
     let html =
       '<div class="card mb-2" id="vTotalCard" style="background:var(--brand-50);border-color:var(--brand-300);padding:14px;display:flex;justify-content:space-between;align-items:center;gap:10px;">' +
         '<div><div class="text-muted text-sm" style="text-transform:uppercase;letter-spacing:0.04em;">' + PCD.escapeHtml(t('var_total_variance')) + '</div>' +
         '<div id="vTotalVal" style="font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;color:' + varColor(total) + ';">' + (total >= 0 ? '+' : '') + PCD.fmtMoney(total) + '</div></div>' +
-        (hasSnaps ? '<button class="btn btn-outline btn-sm" id="vPrefill">' + PCD.escapeHtml(t('var_prefill')) + '</button>' : '<div class="text-muted text-sm" style="max-width:210px;text-align:right;line-height:1.4;">' + PCD.escapeHtml(t('var_no_counts_hint')) + '</div>') +
-      '</div>' +
-      '<div class="text-muted text-sm mb-2">' + PCD.escapeHtml(t('var_actual_hint')) + '</div>' +
-      '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums;">' +
-        '<thead><tr style="text-align:left;border-bottom:2px solid var(--border);">' +
-          '<th style="padding:6px 8px;">' + PCD.escapeHtml(t('var_ingredient')) + '</th>' +
-          '<th style="padding:6px 6px;text-align:right;">' + PCD.escapeHtml(t('var_theoretical')) + '</th>' +
-          '<th style="padding:6px 6px;text-align:right;">' + PCD.escapeHtml(t('var_actual')) + '</th>' +
-          '<th style="padding:6px 8px;text-align:right;">' + PCD.escapeHtml(t('var_variance')) + '</th>' +
-        '</tr></thead><tbody>';
+        (hasSnaps ? '<button class="btn btn-outline btn-sm" id="vPrefill">' + PCD.escapeHtml(t('var_prefill')) + '</button>' : '') +
+      '</div>';
+
+    // Mode toggle
+    html += '<div style="display:flex;gap:6px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">' +
+      '<span style="font-size:12px;color:var(--text-2);white-space:nowrap;">' + PCD.escapeHtml(t('var_mode_label') || 'Entry mode:') + '</span>' +
+      '<button class="btn btn-sm ' + (!modeOc ? 'btn-primary' : 'btn-outline') + '" id="vModeDirect">' + PCD.escapeHtml(t('var_mode_direct') || 'Enter actual directly') + '</button>' +
+      '<button class="btn btn-sm ' + (modeOc ? 'btn-primary' : 'btn-outline') + '" id="vModeOC">' + PCD.escapeHtml(t('var_mode_oc') || 'Opening − Closing stock') + '</button>' +
+    '</div>';
+
+    // Missing price warning
+    if (missingPriceCount > 0) {
+      html += '<div class="text-muted text-sm mb-2" style="padding:6px 10px;background:var(--warning-50,#fef9c3);border:1px solid var(--warning-200,#fde68a);border-radius:6px;">⚠ ' +
+        PCD.escapeHtml((t('var_no_price') || '{n} ingredient(s) have no price — cost variance shows $0. Add prices in Ingredients.').replace('{n}', missingPriceCount)) +
+      '</div>';
+    }
+
+    // Hint text
+    html += '<div class="text-muted text-sm mb-2">' + PCD.escapeHtml(modeOc ? (t('var_oc_hint') || 'Enter opening and closing stock per ingredient — actual usage = opening − closing.') : t('var_actual_hint')) + '</div>';
+
+    // Table
+    html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums;">' +
+      '<thead><tr style="text-align:left;border-bottom:2px solid var(--border);">' +
+        '<th style="padding:6px 8px;">' + PCD.escapeHtml(t('var_ingredient')) + '</th>' +
+        '<th style="padding:6px 6px;text-align:right;">' + PCD.escapeHtml(t('var_theoretical')) + '</th>';
+
+    if (modeOc) {
+      html += '<th style="padding:6px 6px;text-align:right;">' + PCD.escapeHtml(t('var_opening') || 'Opening') + '</th>' +
+              '<th style="padding:6px 6px;text-align:right;">' + PCD.escapeHtml(t('var_closing') || 'Closing') + '</th>';
+    } else {
+      html += '<th style="padding:6px 6px;text-align:right;">' + PCD.escapeHtml(t('var_actual')) + '</th>';
+    }
+
+    html += '<th style="padding:6px 8px;text-align:right;">' + PCD.escapeHtml(t('var_variance')) + '</th>' +
+      '</tr></thead><tbody>';
+
     rows.forEach(function (r) {
+      const oc = ocStocks[r.iid] || { o: '', c: '' };
       html += '<tr style="border-bottom:1px solid var(--border);">' +
         '<td style="padding:6px 8px;">' + PCD.escapeHtml(r.ing.name) + '</td>' +
-        '<td style="padding:6px 6px;text-align:right;white-space:nowrap;">' + PCD.fmtNumber(Math.round(r.theo * 10) / 10) + ' <span class="text-muted">' + PCD.escapeHtml(r.ing.unit || '') + '</span></td>' +
-        '<td style="padding:4px 6px;text-align:right;"><input type="number" class="input" data-aiid="' + r.iid + '" value="' + (Math.round(r.actual * 100) / 100) + '" step="0.1" min="0" style="width:78px;text-align:right;padding:4px 6px;font-variant-numeric:tabular-nums;"></td>' +
-        '<td style="padding:6px 8px;text-align:right;font-weight:700;white-space:nowrap;color:' + varColor(r.varCost) + ';" data-vc="' + r.iid + '">' + (r.varCost >= 0 ? '+' : '') + PCD.fmtMoney(r.varCost) + '</td>' +
-      '</tr>';
+        '<td style="padding:6px 6px;text-align:right;white-space:nowrap;">' + PCD.fmtNumber(Math.round(r.theo * 10) / 10) + ' <span class="text-muted">' + PCD.escapeHtml(r.ing.unit || '') + '</span></td>';
+
+      if (modeOc) {
+        html += '<td style="padding:4px 6px;text-align:right;"><input type="number" class="input" data-vopen="' + r.iid + '" value="' + (oc.o !== '' ? oc.o : '') + '" step="0.1" min="0" placeholder="—" style="width:72px;text-align:right;padding:4px 6px;font-variant-numeric:tabular-nums;"></td>' +
+                '<td style="padding:4px 6px;text-align:right;"><input type="number" class="input" data-vclos="' + r.iid + '" value="' + (oc.c !== '' ? oc.c : '') + '" step="0.1" min="0" placeholder="—" style="width:72px;text-align:right;padding:4px 6px;font-variant-numeric:tabular-nums;"></td>';
+      } else {
+        html += '<td style="padding:4px 6px;text-align:right;"><input type="number" class="input" data-aiid="' + r.iid + '" value="' + (Math.round(r.actual * 100) / 100) + '" step="0.1" min="0" style="width:78px;text-align:right;padding:4px 6px;font-variant-numeric:tabular-nums;"></td>';
+      }
+
+      html += '<td style="padding:6px 8px;text-align:right;font-weight:700;white-space:nowrap;color:' + varColor(r.varCost) + ';" data-vc="' + r.iid + '">' + (r.varCost >= 0 ? '+' : '') + PCD.fmtMoney(r.varCost) + '</td>' +
+        '</tr>';
     });
+
     html += '</tbody></table></div>' +
       '<div class="text-muted text-sm mt-2">' + PCD.escapeHtml(t('var_legend')) + '</div>';
     el.innerHTML = html;
 
-    // map iid → row for live recompute
+    // Mode toggle handlers
+    const mdBtn = PCD.$('#vModeDirect', el);
+    const ocBtn = PCD.$('#vModeOC', el);
+    if (mdBtn) mdBtn.addEventListener('click', function () { varMode = 'direct'; renderTable(el, t, hasSnaps); });
+    if (ocBtn) ocBtn.addEventListener('click', function () { varMode = 'oc'; renderTable(el, t, hasSnaps); });
+
+    // Map iid → row for live recompute
     const byId = {}; rows.forEach(function (r) { byId[r.iid] = r; });
     function recomputeTotal() {
       let tot = 0; Object.keys(byId).forEach(function (k) { tot += byId[k].varCost; });
       const tv = PCD.$('#vTotalVal', el);
       if (tv) { tv.textContent = (tot >= 0 ? '+' : '') + PCD.fmtMoney(tot); tv.style.color = varColor(tot); }
     }
-    el.querySelectorAll('[data-aiid]').forEach(function (inp) {
-      inp.addEventListener('input', function () {
-        const iid = inp.getAttribute('data-aiid');
-        actuals[iid] = inp.value;
-        const r = byId[iid];
-        if (!r) return;
-        r.actual = inp.value === '' ? r.theo : (Number(inp.value) || 0);
-        r.varCost = (r.actual - r.theo) * r.price;
-        const cell = el.querySelector('[data-vc="' + iid + '"]');
-        if (cell) { cell.textContent = (r.varCost >= 0 ? '+' : '') + PCD.fmtMoney(r.varCost); cell.style.color = varColor(r.varCost); }
-        recomputeTotal();
+    function updateVarCell(iid) {
+      const r = byId[iid]; if (!r) return;
+      r.varCost = (r.actual - r.theo) * r.price;
+      const cell = el.querySelector('[data-vc="' + iid + '"]');
+      if (cell) { cell.textContent = (r.varCost >= 0 ? '+' : '') + PCD.fmtMoney(r.varCost); cell.style.color = varColor(r.varCost); }
+      recomputeTotal();
+    }
+
+    if (!modeOc) {
+      // Direct mode — edit actual per row
+      el.querySelectorAll('[data-aiid]').forEach(function (inp) {
+        inp.addEventListener('input', function () {
+          const iid = inp.getAttribute('data-aiid');
+          actuals[iid] = inp.value;
+          const r = byId[iid]; if (!r) return;
+          r.actual = inp.value === '' ? r.theo : (Number(inp.value) || 0);
+          updateVarCell(iid);
+        });
       });
-    });
+    } else {
+      // Opening/Closing mode — actual = opening − closing
+      function applyOC(iid) {
+        const oc = ocStocks[iid] || { o: '', c: '' };
+        const r = byId[iid]; if (!r) return;
+        if (oc.o !== '' || oc.c !== '') {
+          const used = Math.max(0, (Number(oc.o) || 0) - (Number(oc.c) || 0));
+          actuals[iid] = String(Math.round(used * 100) / 100);
+          r.actual = used;
+        } else {
+          delete actuals[iid];
+          r.actual = r.theo;
+        }
+        updateVarCell(iid);
+      }
+      el.querySelectorAll('[data-vopen]').forEach(function (inp) {
+        inp.addEventListener('input', function () {
+          const iid = inp.getAttribute('data-vopen');
+          if (!ocStocks[iid]) ocStocks[iid] = { o: '', c: '' };
+          ocStocks[iid].o = inp.value;
+          applyOC(iid);
+        });
+      });
+      el.querySelectorAll('[data-vclos]').forEach(function (inp) {
+        inp.addEventListener('input', function () {
+          const iid = inp.getAttribute('data-vclos');
+          if (!ocStocks[iid]) ocStocks[iid] = { o: '', c: '' };
+          ocStocks[iid].c = inp.value;
+          applyOC(iid);
+        });
+      });
+    }
+
     const pf = PCD.$('#vPrefill', el);
     if (pf) pf.addEventListener('click', function () { prefillFromCounts(); renderTable(el, t, hasSnaps); });
   }

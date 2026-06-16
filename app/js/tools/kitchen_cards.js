@@ -1267,7 +1267,7 @@
         // sızıp dark mode'da site yüzeyini beyaz yapıyordu). Renk/font .kc-preview-frame'de.
         (opts.interactive ? '' :
           '@page { size: A4 ' + opts.orientation + '; margin: 0; }' +
-          'body { margin: 0; padding: 0; font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif; color: #1a1a1a; background: #fff; }') +
+          'body { margin: 0; padding: 0; font-family: "Inter", -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif; color: #1c1917; background: #fff; }') +
 
         // v2.8.18 — Print-path-only body sizing + flex column layout.
         // Without explicit body dimensions, column-fill: auto cannot compute

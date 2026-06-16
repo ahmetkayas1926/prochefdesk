@@ -644,8 +644,8 @@
 
     const html =
       '<style>' +
-        '@page { size: A4; margin: 15mm; }' +
-        'body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; color: #1a1a1a; }' +
+        '@page { size: A4; margin: 0; }' +
+        'body { font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif; color: #1c1917; padding: 15mm; }' +
         'h1 { font-size: 22pt; margin: 0; color: #16433a; border-bottom: 3px solid #16433a; padding-bottom: 8px; }' +
         'h2 { font-size: 11pt; color: #16433a; text-transform: uppercase; letter-spacing: 0.04em; margin: 20px 0 6px; }' +
         'table { width: 100%; border-collapse: collapse; font-size: 10pt; }' +

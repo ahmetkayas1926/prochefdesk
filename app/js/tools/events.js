@@ -610,8 +610,8 @@
 
     const html =
       '<style>' +
-        '@page { size: A4; margin: 18mm; }' +
-        'body { font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif; color: #1c2620; max-width: 800px; margin: 0 auto; font-variant-numeric: tabular-nums; }' +
+        '@page { size: A4; margin: 0; }' +
+        'body { font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif; color: #1c1917; max-width: 800px; margin: 0 auto; padding: 18mm; font-variant-numeric: tabular-nums; }' +
         '.ev-header { border-bottom: 3px solid #16433a; padding-bottom: 14px; margin-bottom: 20px; }' +
         '.ev-header h1 { margin: 0 0 6px; font-family: "Fraunces","Georgia",serif; font-size: 24pt; font-weight: 600; letter-spacing: -0.01em; color: #16433a; }' +
         '.ev-status { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 9pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }' +
@@ -622,10 +622,10 @@
         '.ev-meta { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px 24px; margin-bottom: 20px; }' +
         '.ev-meta-item { display: flex; gap: 8px; align-items: center; }' +
         '.ev-meta-label { font-size: 9pt; text-transform: uppercase; color: #888; letter-spacing: 0.04em; font-weight: 700; }' +
-        '.ev-meta-value { font-size: 12pt; color: #111; font-weight: 500; }' +
-        '.ev-section-title { font-family: "Fraunces","Georgia",serif; font-size: 13pt; font-weight: 600; color: #16433a; margin: 20px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #e5e5e5; }' +
+        '.ev-meta-value { font-size: 12pt; color: #1c1917; font-weight: 500; }' +
+        '.ev-section-title { font-family: "Fraunces","Georgia",serif; font-size: 13pt; font-weight: 600; color: #16433a; margin: 20px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #e7e5e4; }' +
         '.ev-table { width: 100%; border-collapse: collapse; font-size: 11pt; }' +
-        '.ev-table th { text-align: left; padding: 8px 10px; background: #f8f8f8; font-size: 9pt; text-transform: uppercase; color: #555; letter-spacing: 0.04em; }' +
+        '.ev-table th { text-align: left; padding: 8px 10px; background: #eaf6f0; font-size: 9pt; text-transform: uppercase; color: #16433a; letter-spacing: 0.04em; }' +
         '.ev-table td { padding: 8px 10px; border-bottom: 1px solid #eee; }' +
         '.ev-summary { background: #edf6f0; border: 1px solid #cbe8d8; border-radius: 8px; padding: 14px 18px; margin-top: 16px; }' +
         '.ev-summary-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 12pt; }' +
@@ -764,7 +764,7 @@
     if (!groups.length) return '<div class="text-muted" style="padding:16px;text-align:center;">' + PCD.escapeHtml(t('event_shop_empty') || 'Add menu items with recipes to generate a shopping list.') + '</div>';
     const fmtAmt = function (n) { return (Math.round(n * 100) / 100).toString(); };
     const titleColor = forPrint ? '#16433a' : 'var(--brand-700)';
-    const lineColor = forPrint ? '#e5e5e5' : 'var(--border)';
+    const lineColor = forPrint ? '#e7e5e4' : 'var(--border)';
     const subColor = forPrint ? '#9a9a9a' : 'var(--text-3)';
     const subBg = forPrint ? '#f6f6f6' : 'var(--surface-2)';
     return groups.map(function (g) {
@@ -799,7 +799,7 @@
     footer.appendChild(printBtn); footer.appendChild(closeBtn);
     const m = PCD.modal.open({ title: '🛒 ' + (t('event_shopping_list') || 'Shopping list'), body: body, footer: footer, size: 'md', closable: true });
     printBtn.addEventListener('click', function () {
-      const html = '<style>@page{size:A4;margin:16mm;}body{font-family:"Inter",-apple-system,"Segoe UI",Roboto,sans-serif;color:#1c2620;max-width:760px;margin:0 auto;font-variant-numeric:tabular-nums;}h1{font-family:"Fraunces","Georgia",serif;font-size:20pt;font-weight:600;letter-spacing:-0.01em;color:#16433a;margin:0 0 4px;}.sub{color:#666;font-size:11pt;margin-bottom:16px;}</style>' +
+      const html = '<style>@page{size:A4;margin:0;}body{font-family:"Inter",-apple-system,"Segoe UI",Roboto,sans-serif;color:#1c1917;max-width:760px;margin:0 auto;padding:16mm;font-variant-numeric:tabular-nums;}h1{font-family:"Fraunces","Georgia",serif;font-size:20pt;font-weight:600;letter-spacing:-0.01em;color:#16433a;margin:0 0 4px;}.sub{color:#666;font-size:11pt;margin-bottom:16px;}</style>' +
         '<h1>' + PCD.escapeHtml(event.name || (t('event_shopping_list') || 'Shopping list')) + '</h1>' +
         '<div class="sub">' + PCD.escapeHtml((t('event_shopping_list') || 'Shopping list') + ' · ' + (event.guestCount || 0) + ' ' + (t('event_guests') || 'guests')) + '</div>' +
         shoppingListHtml(groups, true);

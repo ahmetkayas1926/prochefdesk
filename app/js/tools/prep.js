@@ -112,7 +112,7 @@
   function setActiveId(id) { PCD.store.set(PREF_ACTIVE, id); }
 
   function defaultSheet() {
-    return { name: t('prep_untitled', 'Untitled'), dishes: [], columns: 3, orientation: 'portrait', accent: '#1f3b30', fontSize: 'm', bold: false, border: 'medium', spacing: 'medium' };
+    return { name: t('prep_untitled', 'Untitled'), dishes: [], columns: 3, orientation: 'portrait', accent: '#16433a', fontSize: 'm', bold: false, border: 'medium', spacing: 'medium' };
   }
   // Aktif sheet'i döndür; hiç yoksa bir tane oluştur.
   function ensureActive() {
@@ -229,9 +229,9 @@
             '<div>' +
               '<div class="text-muted text-sm mb-1">' + esc(t('kc2_accent', 'Accent color')) + '</div>' +
               '<div style="display:flex;gap:6px;align-items:center;">' +
-                '<input type="color" id="prepAccent" value="' + (sheet.accent || '#1f3b30') + '" style="width:40px;height:30px;border:1px solid var(--border);border-radius:6px;cursor:pointer;background:none;">' +
-                ['#1f3b30', '#16a34a', '#1e3a5f', '#7c2d12', '#b91c1c', '#5b21b6'].map(function (c) {
-                  return '<button type="button" data-accent="' + c + '" title="' + c + '" style="width:22px;height:22px;border-radius:50%;border:2px solid ' + ((sheet.accent || '#1f3b30') === c ? 'var(--text-1,#000)' : 'transparent') + ';background:' + c + ';cursor:pointer;padding:0;"></button>';
+                '<input type="color" id="prepAccent" value="' + (sheet.accent || '#16433a') + '" style="width:40px;height:30px;border:1px solid var(--border);border-radius:6px;cursor:pointer;background:none;">' +
+                ['#16433a', '#16a34a', '#1e3a5f', '#7c2d12', '#b91c1c', '#5b21b6'].map(function (c) {
+                  return '<button type="button" data-accent="' + c + '" title="' + c + '" style="width:22px;height:22px;border-radius:50%;border:2px solid ' + ((sheet.accent || '#16433a') === c ? 'var(--text-1,#000)' : 'transparent') + ';background:' + c + ';cursor:pointer;padding:0;"></button>';
                 }).join('') +
               '</div>' +
             '</div>' +
@@ -616,8 +616,8 @@
   // ============ PRESETS (düzen/stil) ============
   function openPresets(view, sheet) {
     const presets = [
-      { id: 'standard', label: 'Standard',          s: { columns: 3, orientation: 'portrait',  accent: '#1f3b30' } },
-      { id: 'compact',  label: 'Compact · 4-col',   s: { columns: 4, orientation: 'portrait',  accent: '#1f3b30' } },
+      { id: 'standard', label: 'Standard',          s: { columns: 3, orientation: 'portrait',  accent: '#16433a' } },
+      { id: 'compact',  label: 'Compact · 4-col',   s: { columns: 4, orientation: 'portrait',  accent: '#16433a' } },
       { id: 'large',    label: 'Large · 2-col',     s: { columns: 2, orientation: 'portrait',  accent: '#16a34a' } },
       { id: 'wide',     label: 'Wide · landscape',  s: { columns: 4, orientation: 'landscape', accent: '#1e3a5f' } },
     ];
@@ -690,7 +690,7 @@
         list.map(function (s) {
           const dishCount = (s.dishes || []).length;
           const isActive = s.id === activeId;
-          const acc = s.accent || '#1f3b30';
+          const acc = s.accent || '#16433a';
           const names = (s.dishes || []).slice(0, 8).map(function (d) { return (d.name || '').trim(); }).filter(Boolean).join(' · ');
           return '<div class="card" data-pick="' + esc(s.id) + '" style="cursor:pointer;overflow:hidden;padding:0;' + (isActive ? 'box-shadow:0 0 0 2px var(--brand-500);' : '') + '">' +
             '<div style="height:80px;background:#fff;border-bottom:1px solid var(--border);padding:8px;overflow:hidden;">' +
@@ -772,7 +772,7 @@
 
   function sheetCss(sheet) {
     const f = psFont(sheet);
-    const accent = sheet.accent || '#1f3b30';
+    const accent = sheet.accent || '#16433a';
     const bw = BORDER_W[sheet.border] || 1;
     const iw = Math.max(1, bw - 1);
     const cw = sheet.bold ? '700' : '400';
@@ -894,7 +894,7 @@
     let out = '<style>' + sheetCss(sheet);
     // v2.28 — @page margin:0 → Chrome başlık/altbilgi damgaları çıkmaz + tam yüzey.
     // Dar kenar boşluğu sayfa kutusunun kendi PAD padding'i ile sağlanır.
-    if (mode === 'print') out += '@page{size:A4 ' + (land ? 'landscape' : 'portrait') + ';margin:0;}html,body{margin:0;padding:0;}body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#111;-webkit-print-color-adjust:exact;print-color-adjust:exact;}';
+    if (mode === 'print') out += '@page{size:A4 ' + (land ? 'landscape' : 'portrait') + ';margin:0;}html,body{margin:0;padding:0;}body{font-family:"Inter",-apple-system,Segoe UI,Roboto,sans-serif;color:#1c1917;-webkit-print-color-adjust:exact;print-color-adjust:exact;}';
     else out += '.ps-dragover-top{box-shadow:0 -3px 0 0 #16a34a !important;} .ps-dragover-bottom{box-shadow:0 3px 0 0 #16a34a !important;}';
     out += '</style>';
     pages.forEach(function (pg, pi) {

@@ -590,7 +590,7 @@
       function pdish(name, station, comps) { const r = R(name); return { id: PCD.uid('d'), recipeId: r ? r.id : null, name: r ? r.name : name, station: station, components: comps.map(comp) }; }
       const ps = PCD.store.upsertInTable('prepSheets', {
         name: 'Dinner Service — Mise en Place', columns: 3, orientation: 'portrait',
-        accent: '#1f3b30', fontSize: 'm', bold: false, border: 'medium', spacing: 'medium',
+        accent: '#16433a', fontSize: 'm', bold: false, border: 'medium', spacing: 'medium',
         dishes: [
           pdish('Tartare de Bœuf', 'Garde Manger', ['Tenderloin — hand-diced', 'Capers · cornichons · shallot', 'Egg yolks portioned']),
           pdish('Salade de Chèvre Chaud', 'Garde Manger', ['Chèvre croûtes ×40', 'Walnuts toasted', 'Honey vinaigrette']),

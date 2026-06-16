@@ -476,7 +476,7 @@
         // satırlarına bindirilir (operatör bug raporu). Fix: @media screen
         // body height auto, @media print body 210mm fixed. Print PDF zaten
         // doğruydu, sadece popup preview tutarsızdı.
-        'body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#000;margin:0;padding:0;' +
+        'body{font-family:"Inter",-apple-system,Segoe UI,Roboto,sans-serif;color:#1c1917;margin:0;padding:0;' +
           'width:297mm;height:210mm;display:flex;flex-direction:column;}' +
         '@media screen { body { height: auto !important; } }' +
         '.h-sheet{flex:1 1 auto;min-height:0;padding:4mm;display:flex;flex-direction:column;}' +
@@ -486,7 +486,7 @@
         '.h-head .right{font-size:10px;color:#555;text-align:end;}' +
         'table.h-grid{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed;flex:0 0 auto;}' +
         'table.h-grid th, table.h-grid td{border:1px solid #999;padding:3px 4px;vertical-align:middle;line-height:1.3;}' +
-        'table.h-grid th{background:#f3f4f6;font-weight:700;font-size:9px;text-align:center;text-transform:uppercase;letter-spacing:0.03em;}' +
+        'table.h-grid th{background:#eaf6f0;color:#16433a;font-weight:700;font-size:9px;text-align:center;text-transform:uppercase;letter-spacing:0.03em;}' +
         'table.h-grid tr{height:22px;page-break-inside:avoid;}' +
         'table.h-grid td.day{text-align:center;width:3%;font-weight:700;color:#444;}' +
         'table.h-grid td.food{width:32%;font-weight:600;}' +

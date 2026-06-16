@@ -775,7 +775,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
       }).join('');
       return '<tr><td style="text-align:left;padding:5px 8px;border:1px solid #ccc;font-weight:600;">' + PCD.escapeHtml(r.name) + '</td>' + allergenCells + SEP_TD + dietCells + '</tr>';
     }).join('');
-    const html = '<style>@page{size:A4 landscape;margin:12mm}</style>' +
+    const html = '<style>@page{size:A4 landscape;margin:0}body{padding:12mm}</style>' +
       '<h2 style="margin:0 0 10px;">' + PCD.escapeHtml(t('label_allergens')) + ' · ' + recs.length + '</h2>' +
       '<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr>' + head + '</tr></thead><tbody>' + rows + '</tbody></table>';
     PCD.print(html, t('label_allergens'));
@@ -1094,21 +1094,21 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
 
     const html =
       '<style>' +
-        '@page { size: A4; margin: 14mm; }' +
-        'body { font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif; color: #1c2620; font-variant-numeric: tabular-nums; }' +
+        '@page { size: A4; margin: 0; }' +
+        'body { font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif; color: #1c1917; padding: 14mm; font-variant-numeric: tabular-nums; }' +
         '.report-header { border-bottom: 3px solid #16433a; padding-bottom: 10px; margin-bottom: 18px; display:flex; justify-content:space-between; align-items:flex-end; }' +
         '.report-header h1 { font-family: "Fraunces","Georgia",serif; font-size: 22pt; font-weight: 600; letter-spacing: -0.01em; color: #16433a; margin: 0; }' +
         '.report-header .sub { color: #666; font-size: 10pt; margin-top: 4px; }' +
         '.report-header .meta { color: #888; font-size: 9pt; text-align: end; }' +
         '.recipe { margin-bottom: 22px; padding-bottom: 14px; break-inside: avoid; page-break-inside: avoid; }' +
-        '.recipe + .recipe { border-top: 1px solid #e5e5e5; padding-top: 14px; }' +
+        '.recipe + .recipe { border-top: 1px solid #e7e5e4; padding-top: 14px; }' +
         '.recipe-header { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom: 8px; }' +
         '.recipe-header h2 { font-family: "Fraunces","Georgia",serif; font-size: 14pt; font-weight: 600; margin: 0; color: #16433a; }' +
         '.recipe-header .meta { font-size: 9pt; color: #888; text-transform: capitalize; }' +
         '.fc-badge { font-size: 10pt; color: #1f9d6b; padding: 4px 10px; border: 1.5px solid #1f9d6b; border-radius: 999px; }' +
         '.fc-badge b { font-size: 11pt; }' +
         '.ing-table { width:100%; border-collapse: collapse; font-size: 9.5pt; margin-bottom: 10px; font-variant-numeric: tabular-nums; }' +
-        '.ing-table th { background: #f8f8f8; text-align: start; padding: 6px 8px; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.04em; color: #666; border-bottom: 1.5px solid #ddd; }' +
+        '.ing-table th { background: #eaf6f0; text-align: start; padding: 6px 8px; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.04em; color: #16433a; border-bottom: 1.5px solid #d6d3d1; }' +
         '.ing-table th.num, .ing-table td.num { text-align: end; }' +
         '.ing-table td { padding: 4px 8px; border-bottom: 1px solid #f0f0f0; }' +
         '.ing-table tfoot td { border-bottom: 0; padding-top: 6px; }' +
@@ -1190,12 +1190,12 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
     const curSym = (PCD.currencySymbol && PCD.currencySymbol()) || '$'; // v2.14.7 — aktif para simgesi (numFmt mask için; eskiden "$" sabitti)
 
     // ============ STYLE PRESETS ============
-    const BRAND = '16A34A';        // green
-    const BRAND_LIGHT = 'F0FDF4';
-    const HEADER_BG = '16A34A';
-    const ROW_ALT = 'FAFAFA';
+    const BRAND = '16433A';        // pine (matches PCD.xlsx + chrome)
+    const BRAND_LIGHT = 'EAF6F0';
+    const HEADER_BG = '16433A';
+    const ROW_ALT = 'F6F3EE';
     const TEST_BG = 'FEF3C7';      // amber for editable test price
-    const BORDER_COLOR = 'D4D4D4';
+    const BORDER_COLOR = 'E0DDD5';
     const LINK_COLOR = '0066CC';
 
     const thinBorder = {

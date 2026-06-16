@@ -682,8 +682,8 @@
     const sub = (data.venue && data.name ? data.name + '  ·  ' : '') + weekRange(data);
     const fp = fontPx(data);
     const wt = data.bold ? '700' : '400';
-    const cb = 'border:1px solid #c7c7c7;padding:5px 7px;font-size:' + fp + 'px;text-align:center;vertical-align:middle;line-height:1.3;';
-    const hd = 'border:1px solid #c7c7c7;padding:5px 7px;font-size:' + (fp - 1) + 'px;text-align:center;vertical-align:middle;line-height:1.3;background:#1f3b30;color:#fff;font-weight:700;text-transform:uppercase;';
+    const cb = 'border:1px solid #d6d3d1;padding:5px 7px;font-size:' + fp + 'px;text-align:center;vertical-align:middle;line-height:1.3;';
+    const hd = 'border:1px solid #d6d3d1;padding:5px 7px;font-size:' + (fp - 1) + 'px;text-align:center;vertical-align:middle;line-height:1.3;background:#16433a;color:#fff;font-weight:700;text-transform:uppercase;';
     // v2.41 — html2canvas 1.4.1 td/th `vertical-align:middle`'ı DOĞRU uyguluyor.
     // Eski flex-wrapper `align-items:center`'ı UYGULAMIYORDU → notlu (2-satırlık)
     // hücreler satırı uzatınca tek-satırlık hücrelerin yazısı yukarı kayıyordu
@@ -692,7 +692,7 @@
     // hizalı hücrelerin td'sinde zaten `text-align:left` var.
     function cw(content) { return content; }
     let h = '';
-    h += '<div style="background:#16a34a;color:#fff;padding:11px 15px;border-radius:6px;margin-bottom:11px;">'
+    h += '<div style="background:#16433a;color:#fff;padding:11px 15px;border-radius:6px;margin-bottom:11px;">'
       + '<div style="font-size:' + (fp + 8) + 'px;font-weight:800;">' + esc(title) + '</div>'
       + '<div style="font-size:' + fp + 'px;opacity:0.93;margin-top:2px;">' + esc(sub) + '</div></div>';
     h += '<table style="width:100%;border-collapse:collapse;table-layout:fixed;">';
@@ -703,7 +703,7 @@
     if (showCost) h += '<th align="center" valign="middle" style="' + hd + 'width:8%;">' + cw(esc(t('roster_labour_cost') || 'Cost')) + '</th>';
     h += '</tr>';
     mx.groups.forEach(function (g) {
-      if (g.name) h += '<tr><td colspan="' + ncol + '" align="left" valign="middle" style="' + cb + 'background:#cfe0ee;color:#1f3b30;font-weight:800;text-align:left;text-transform:uppercase;">' + cw(esc(g.name), 'flex-start') + '</td></tr>';
+      if (g.name) h += '<tr><td colspan="' + ncol + '" align="left" valign="middle" style="' + cb + 'background:#eaf6f0;color:#16433a;font-weight:800;text-align:left;text-transform:uppercase;">' + cw(esc(g.name), 'flex-start') + '</td></tr>';
       g.rows.forEach(function (row) {
         h += '<tr><td align="left" valign="middle" style="' + cb + 'text-align:left;">' + cw('<span style="font-weight:700;word-break:break-word;">' + esc(row.staff.name || '') + '</span>', 'flex-start') + '</td>'
           + '<td align="left" valign="middle" style="' + cb + 'text-align:left;">' + cw('<span style="color:#555;font-size:' + (fp - 1) + 'px;word-break:break-word;">' + esc(row.staff.role || '') + '</span>', 'flex-start') + '</td>';
@@ -764,7 +764,7 @@
   // v2.15.6 — Print = renkli tablo + A4 yatay. print-color-adjust:exact →
   // "Background graphics" kapalıyken bile renkler basar. table-layout fixed → tek sayfa.
   function printRoster(data, showCost) {
-    const css = '<style>@page{size:A4 landscape;margin:0;}body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#1a1a1a;padding:10mm;-webkit-print-color-adjust:exact;print-color-adjust:exact;}</style>';
+    const css = '<style>@page{size:A4 landscape;margin:0;}body{font-family:"Inter",-apple-system,Segoe UI,Roboto,sans-serif;color:#1c1917;padding:10mm;-webkit-print-color-adjust:exact;print-color-adjust:exact;}</style>';
     PCD.print(css + buildRosterTable(data, showCost), (data.venue || t('roster_title') || 'Roster') + ' ' + data.weekStart);
   }
 
@@ -773,9 +773,9 @@
   function sendRosterImage(data, showCost) {
     const run = function (h2c) {
       const wrap = document.createElement('div');
-      wrap.style.cssText = 'position:fixed;left:-99999px;top:0;width:1180px;background:#fff;padding:22px;font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#1a1a1a;';
+      wrap.style.cssText = 'position:fixed;left:-99999px;top:0;width:1180px;background:#fff;padding:22px;font-family:"Inter",-apple-system,Segoe UI,Roboto,sans-serif;color:#1c1917;';
       wrap.innerHTML = buildRosterTable(data, showCost) +
-        ((!PCD.gate || PCD.gate.showWatermark()) ? '<div style="margin-top:10px;padding-top:6px;border-top:1px solid #e5e5e5;text-align:center;font-size:11px;color:#999;font-family:-apple-system,Segoe UI,Roboto,sans-serif;">Made with ProChefDesk · prochefdesk.com</div>' : '');
+        ((!PCD.gate || PCD.gate.showWatermark()) ? '<div style="margin-top:10px;padding-top:6px;border-top:1px solid #e5e5e5;text-align:center;font-size:11px;color:#999;font-family:"Inter",-apple-system,Segoe UI,Roboto,sans-serif;">Made with ProChefDesk · prochefdesk.com</div>' : '');
       document.body.appendChild(wrap);
       h2c(wrap, { scale: 2, backgroundColor: '#ffffff', logging: false }).then(function (canvas) {
         wrap.remove();
@@ -814,7 +814,7 @@
       const lastC = ncol - 1;
       const ws = {};
       const merges = [];
-      const thin = { style: 'thin', color: { rgb: 'C7C7C7' } };
+      const thin = { style: 'thin', color: { rgb: 'E0DDD5' } };
       const allB = { top: thin, bottom: thin, left: thin, right: thin };
       let r = 0;
       function put(rr, cc, v, s) {
@@ -824,8 +824,8 @@
       }
       function fillRow(rr, fillRgb) { for (let c = 0; c < ncol; c++) put(rr, c, '', { fill: { fgColor: { rgb: fillRgb } } }); }
 
-      fillRow(r, '16A34A');
-      put(r, 0, data.venue || data.name || (t('roster_title') || 'Roster'), { font: { name: 'Calibri', sz: 16, bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '16A34A' } }, alignment: { vertical: 'center', horizontal: 'left' } });
+      fillRow(r, '16433A');
+      put(r, 0, data.venue || data.name || (t('roster_title') || 'Roster'), { font: { name: 'Calibri', sz: 16, bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '16433A' } }, alignment: { vertical: 'center', horizontal: 'left' } });
       merges.push({ s: { r: r, c: 0 }, e: { r: r, c: lastC } }); r++;
       put(r, 0, weekRange(data) + (data.venue && data.name ? '  ·  ' + data.name : ''), { font: { name: 'Calibri', sz: 10, color: { rgb: '666666' } }, alignment: { vertical: 'center' } });
       merges.push({ s: { r: r, c: 0 }, e: { r: r, c: lastC } }); r++;
@@ -833,14 +833,14 @@
 
       const headers = [t('roster_staff') || 'Staff', t('roster_staff_role') || 'Role'].concat(mx.days);
       headers.push(t('roster_hours') || 'H'); if (showCost) headers.push(t('roster_labour_cost') || 'Cost');
-      headers.forEach(function (h, c) { put(r, c, h, { font: { name: 'Calibri', sz: esz, bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '1F3B30' } }, alignment: { vertical: 'center', horizontal: c <= 1 ? 'left' : 'center' }, border: allB }); });
+      headers.forEach(function (h, c) { put(r, c, h, { font: { name: 'Calibri', sz: esz, bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '16433A' } }, alignment: { vertical: 'center', horizontal: c <= 1 ? 'left' : 'center' }, border: allB }); });
       r++;
 
       mx.groups.forEach(function (g) {
         if (g.name) {
-          fillRow(r, 'CFE0EE');
-          put(r, 0, g.name, { font: { name: 'Calibri', sz: esz, bold: true, color: { rgb: '1F3B30' } }, fill: { fgColor: { rgb: 'CFE0EE' } }, alignment: { vertical: 'center', horizontal: 'left' }, border: allB });
-          for (let c = 1; c < ncol; c++) put(r, c, '', { fill: { fgColor: { rgb: 'CFE0EE' } }, border: allB });
+          fillRow(r, 'EAF6F0');
+          put(r, 0, g.name, { font: { name: 'Calibri', sz: esz, bold: true, color: { rgb: '16433A' } }, fill: { fgColor: { rgb: 'EAF6F0' } }, alignment: { vertical: 'center', horizontal: 'left' }, border: allB });
+          for (let c = 1; c < ncol; c++) put(r, c, '', { fill: { fgColor: { rgb: 'EAF6F0' } }, border: allB });
           merges.push({ s: { r: r, c: 0 }, e: { r: r, c: lastC } }); r++;
         }
         g.rows.forEach(function (row) {

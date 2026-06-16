@@ -443,12 +443,12 @@
 
     const html =
       '<style>' +
-        '@page { size: A4; margin: 12mm; }' +
-        'body { font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif; color: #1c2620; font-variant-numeric: tabular-nums; }' +
+        '@page { size: A4; margin: 0; }' +
+        'body { font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif; color: #1c1917; padding: 12mm; font-variant-numeric: tabular-nums; }' +
         '.kc-header { border-bottom: 3px solid #16433a; padding-bottom: 10px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: baseline; }' +
         '.kc-header h1 { margin: 0; font-family: "Fraunces","Georgia",serif; font-size: 22pt; font-weight: 600; letter-spacing: -0.01em; color: #16433a; }' +
         '.kc-header .meta { font-size: 11pt; color: #666; }' +
-        '.kc-block { break-inside: avoid; margin-bottom: 14px; padding: 8px 10px; border-bottom: 1px solid #e5e5e5; page-break-inside: avoid; }' +
+        '.kc-block { break-inside: avoid; margin-bottom: 14px; padding: 8px 10px; border-bottom: 1px solid #e7e5e4; page-break-inside: avoid; }' +
         '.kc-block:last-child { border-bottom: 0; }' +
         '.kc-name { font-size: 12pt; font-weight: 700; color: #16433a; text-transform: uppercase; letter-spacing: 0.04em; padding-bottom: 4px; border-bottom: 1px solid #cbe8d8; margin-bottom: 6px; }' +
         '.kc-srv { font-size: 10pt; font-weight: 500; color: #666; text-transform: none; letter-spacing: 0; }' +
@@ -621,8 +621,8 @@
     const title = t('pc_consolidated', 'Consolidated ingredients');
     const html =
       '<style>' +
-        '@page { size: A4; margin: 12mm; }' +
-        'body { font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif; color: #1c2620; font-variant-numeric: tabular-nums; }' +
+        '@page { size: A4; margin: 0; }' +
+        'body { font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif; color: #1c1917; padding: 12mm; font-variant-numeric: tabular-nums; }' +
         '.h { border-bottom: 3px solid #16433a; padding-bottom: 10px; margin-bottom: 16px; display:flex; justify-content:space-between; align-items:baseline; }' +
         '.h h1 { margin:0; font-family: "Fraunces","Georgia",serif; font-size: 22pt; font-weight: 600; letter-spacing: -0.01em; color:#16433a; }' +
         '.h .m { font-size: 11pt; color:#666; }' +

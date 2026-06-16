@@ -723,15 +723,15 @@
         '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
         '<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">' +
         '<style>' +
-        'body{font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:24px;color:#1c2620;background:#fff;margin:0;font-variant-numeric:tabular-nums;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
-        (contentHasPageRule ? '' : '@page{margin:15mm;size:A4}') +
+        'body{font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:14mm;color:#1c1917;background:#fff;margin:0;font-variant-numeric:tabular-nums;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+        (contentHasPageRule ? '' : '@page{margin:0;size:A4}') +
         'h1,h2,h3{margin:0 0 8px;font-family:"Fraunces","Georgia",serif;color:#16433a;letter-spacing:-0.01em;font-weight:600}' +
         'table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}' +
-        'td,th{padding:6px 10px;text-align:left;border-bottom:1px solid #e4e1da}' +
-        'th{background:#eef3f1;color:#16433a;font-size:11px;text-transform:uppercase;letter-spacing:0.04em;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+        'td,th{padding:6px 10px;text-align:left;border-bottom:1px solid #e7e5e4}' +
+        'th{background:#eaf6f0;color:#16433a;font-size:11px;text-transform:uppercase;letter-spacing:0.04em;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
         'pre{white-space:pre-wrap;font-family:inherit;font-size:13px;line-height:1.8}' +
         '.no-print{display:flex;gap:10px;padding:12px 16px;margin-bottom:16px;border-bottom:2px solid #1f9d6b;align-items:center;flex-wrap:wrap}' +
-        '@media print{.no-print{display:none !important}body{padding:0}}' +
+        '@media print{.no-print{display:none !important}}' +
         '</style></head><body>' +
         htmlOrContent +
         FOOTER_HTML +

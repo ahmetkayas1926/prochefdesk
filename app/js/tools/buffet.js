@@ -1628,7 +1628,7 @@
     printBtn.addEventListener('click', function () {
       const dateStr = buffet.serviceDate ? PCD.fmtDate(buffet.serviceDate) : new Date().toLocaleDateString();
       const html =
-        '<style>@page{size:A4;margin:14mm;}body{font-family:"Inter",-apple-system,"Segoe UI",Roboto,sans-serif;color:#1c2620;max-width:760px;margin:0 auto;font-variant-numeric:tabular-nums;}' +
+        '<style>@page{size:A4;margin:0;}body{font-family:"Inter",-apple-system,"Segoe UI",Roboto,sans-serif;color:#1c1917;max-width:760px;margin:0 auto;padding:14mm;font-variant-numeric:tabular-nums;}' +
         '.hdr{border-bottom:3px solid #16433a;padding-bottom:8px;margin-bottom:14px;}.hdr h1{margin:0;font-family:"Fraunces","Georgia",serif;font-size:18pt;font-weight:600;letter-spacing:-0.01em;color:#16433a;}.hdr .meta{font-size:10pt;color:#666;margin-top:2px;}</style>' +
         '<div class="hdr"><h1>' + PCD.escapeHtml(buffet.name || (t('buffet_untitled') || 'Buffet')) + ' — ' + PCD.escapeHtml(t('buffet_order_list') || 'Order list') + '</h1>' +
         '<div class="meta">' + PCD.escapeHtml(metaStr) + ' · ' + dateStr + '</div></div>' +
@@ -1671,14 +1671,14 @@
     const dateStr = buffet.serviceDate ? PCD.fmtDate(buffet.serviceDate) : new Date().toLocaleDateString();
     const html =
       '<style>' +
-        '@page { size: A4; margin: 12mm; }' +
-        'body { font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif; color: #1c2620; font-variant-numeric: tabular-nums; }' +
+        '@page { size: A4; margin: 0; }' +
+        'body { font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif; color: #1c1917; padding: 12mm; font-variant-numeric: tabular-nums; }' +
         '.hdr { border-bottom: 3px solid #16433a; padding-bottom: 8px; margin-bottom: 12px; }' +
         '.hdr h1 { margin: 0; font-family: "Fraunces","Georgia",serif; font-size: 18pt; font-weight: 600; letter-spacing: -0.01em; color: #16433a; }' +
         '.hdr .meta { font-size: 10pt; color: #666; margin-top: 2px; }' +
         'table { width: 100%; border-collapse: collapse; font-size: 11pt; }' +
-        'th, td { padding: 5px 8px; border-bottom: 1px solid #e5e5e5; vertical-align: middle; }' +
-        'th { background: #f5f5f4; text-align: left; font-size: 9pt; text-transform: uppercase; letter-spacing: 0.04em; color: #666; }' +
+        'th, td { padding: 5px 8px; border-bottom: 1px solid #e7e5e4; vertical-align: middle; }' +
+        'th { background: #eaf6f0; text-align: left; font-size: 9pt; text-transform: uppercase; letter-spacing: 0.04em; color: #16433a; }' +
         '.st-head { padding-top: 10px !important; }' +
       '</style>' +
       '<div class="hdr">' +
@@ -1752,19 +1752,19 @@
 
     const html =
       '<style>' +
-        '@page { size: A4; margin: 12mm; }' +
-        'body { font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif; color: #1c2620; font-variant-numeric: tabular-nums; }' +
+        '@page { size: A4; margin: 0; }' +
+        'body { font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif; color: #1c1917; padding: 12mm; font-variant-numeric: tabular-nums; }' +
         '.hdr { border-bottom: 3px solid #16433a; padding-bottom: 8px; margin-bottom: 12px; }' +
         '.hdr h1 { margin: 0; font-family: "Fraunces","Georgia",serif; font-size: 18pt; font-weight: 600; letter-spacing: -0.01em; color: #16433a; }' +
         '.hdr .meta { font-size: 10pt; color: #666; margin-top: 2px; }' +
         '.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 14px 0; }' +
         '.stat { background: #f5f5f4; padding: 8px 10px; border-radius: 6px; }' +
         '.stat .lbl { font-size: 8pt; color: #666; text-transform: uppercase; letter-spacing: 0.04em; }' +
-        '.stat .val { font-size: 14pt; font-weight: 800; color: #111; }' +
-        '.good { color: #16a34a; } .warn { color: #f59e0b; } .bad { color: #dc2626; }' +
+        '.stat .val { font-size: 14pt; font-weight: 800; color: #1c1917; }' +
+        '.good { color: #16a34a; } .warn { color: #d97706; } .bad { color: #dc2626; }' +
         'table { width: 100%; border-collapse: collapse; font-size: 10pt; }' +
-        'th, td { padding: 4px 8px; border-bottom: 1px solid #e5e5e5; }' +
-        'th { background: #f5f5f4; text-align: left; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.04em; color: #666; }' +
+        'th, td { padding: 4px 8px; border-bottom: 1px solid #e7e5e4; }' +
+        'th { background: #eaf6f0; text-align: left; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.04em; color: #16433a; }' +
       '</style>' +
       '<div class="hdr">' +
         '<h1>' + PCD.escapeHtml(buffet.name || (t('buffet_untitled') || 'Buffet')) + ' — ' + PCD.escapeHtml(t('buffet_print_report') || 'Cost Report') + '</h1>' +
@@ -1830,9 +1830,9 @@
     const totals = computeBuffetTotals(buffet, ingMap, recipeMap);
     const refillX = totals.refillX;
 
-    const BRAND = '16A34A';
-    const HEADER_BG = '16A34A';
-    const BORDER_COLOR = 'D4D4D4';
+    const BRAND = '16433A';
+    const HEADER_BG = '16433A';
+    const BORDER_COLOR = 'E0DDD5';
     const thinBorder = {
       top:    { style: 'thin', color: { rgb: BORDER_COLOR } },
       bottom: { style: 'thin', color: { rgb: BORDER_COLOR } },
