@@ -3134,22 +3134,6 @@ window.PCD.i18n.register('tr', {
   var_legend: "Kırmızı = teoriden fazla kullanılmış (fire / fazla porsiyon / kayıp). Amber = az kullanılmış (sayımları kontrol et). Dönem içi alımlar dahil değil.",
 });
 
-// Invoice OCR tool
-window.PCD.i18n.register('tr', {
-  ocr_title: "Fatura tara",
-  ocr_subtitle: "Tedarikçi faturasının fotoğrafı → malzeme fiyatlarını güncelle",
-  ocr_hint: "Faturanın net bir fotoğrafını çek veya yükle. Okuyup, onaylaman için fiyat güncellemeleri önerelim.",
-  ocr_pick: "Fotoğraf seç",
-  ocr_loading: "Tarayıcı yükleniyor…",
-  ocr_reading: "Fatura okunuyor…",
-  ocr_error: "Bu görüntü okunamadı. Daha net, düz bir fotoğraf dene.",
-  ocr_none: "Fiyat bulunamadı. Daha net bir fotoğraf dene veya fiyatları elle güncelle.",
-  ocr_found: "{n} fiyat bulundu — gözden geçir ve onayla:",
-  ocr_review_hint: "Uygulamadan önce her eşleşmeyi ve fiyatı kontrol et. İstemediğinin işaretini kaldır.",
-  ocr_apply: "Fiyatları uygula",
-  ocr_updated: "{n} fiyat güncellendi",
-});
-
 // Nutrition (estimated) tool
 window.PCD.i18n.register('tr', {
   nutr_title: "Besin değeri (tahmini)",
@@ -3174,13 +3158,6 @@ window.PCD.i18n.register('tr', {
   var_legend: "Kırmızı = teoriden fazla (fire / fazla porsiyon / kayıp). Amber = daha az. Gerçek girilene kadar teorik kabul edilir.",
   var_no_result_desc: "Yukarıda yaptığın yemekleri ekle, sonra Hesapla'ya bas.",
   var_production_hint: "Yaptığın veya sattığın yemekleri ve adetlerini ekle — bu teorik malzeme kullanımını verir.",
-});
-
-// Invoice OCR — v2 extras
-window.PCD.i18n.register('tr', {
-  ocr_detected: "okundu",
-  ocr_current: "şu an",
-  ocr_first_note: "(ilk taramada okuyucu indirilir, ~bir kez)",
 });
 
 // Tekil varyantlar — count === 1 olunca (v2.44.26 çoğul düzeltmesi)

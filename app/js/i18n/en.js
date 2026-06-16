@@ -3137,22 +3137,6 @@ window.PCD.i18n.register('en', {
   var_legend: "Red = used more than theory (waste / over-portioning / loss). Amber = used less (check counts). Mid-period purchases not included.",
 });
 
-// Invoice OCR tool
-window.PCD.i18n.register('en', {
-  ocr_title: "Scan invoice",
-  ocr_subtitle: "Photo of a supplier invoice → update ingredient prices",
-  ocr_hint: "Take or upload a clear photo of an invoice. We'll read it and suggest price updates for you to confirm.",
-  ocr_pick: "Choose photo",
-  ocr_loading: "Loading scanner…",
-  ocr_reading: "Reading invoice…",
-  ocr_error: "Couldn't read that image. Try a clearer, straight photo.",
-  ocr_none: "No prices detected. Try a clearer photo or update prices manually.",
-  ocr_found: "{n} prices found — review and confirm:",
-  ocr_review_hint: "Check each match and price before applying. Uncheck any you don't want.",
-  ocr_apply: "Apply prices",
-  ocr_updated: "{n} prices updated",
-});
-
 // Nutrition (estimated) tool
 window.PCD.i18n.register('en', {
   nutr_title: "Nutrition (estimated)",
@@ -3177,13 +3161,6 @@ window.PCD.i18n.register('en', {
   var_legend: "Red = used more than theory (waste / over-portioning / loss). Amber = used less. Defaults to theoretical until you enter actuals.",
   var_no_result_desc: "Add the dishes you made above, then tap Compute.",
   var_production_hint: "Add the dishes you made or sold and how many — this gives theoretical ingredient usage.",
-});
-
-// Invoice OCR — v2 extras
-window.PCD.i18n.register('en', {
-  ocr_detected: "read",
-  ocr_current: "now",
-  ocr_first_note: "(first scan downloads the reader, ~once)",
 });
 
 // Singular variants — used when count === 1 (v2.44.26 plural fix)

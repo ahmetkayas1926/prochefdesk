@@ -2905,22 +2905,6 @@ window.PCD.i18n.register('de', {
   var_legend: "Rot = mehr als Theorie (Verlust / Überportionierung). Bernstein = weniger (Zählungen prüfen). Ohne Einkäufe im Zeitraum.",
 });
 
-// Invoice OCR tool
-window.PCD.i18n.register('de', {
-  ocr_title: "Rechnung scannen",
-  ocr_subtitle: "Foto einer Lieferantenrechnung → Zutatenpreise aktualisieren",
-  ocr_hint: "Mache oder lade ein klares Foto einer Rechnung hoch. Wir lesen sie und schlagen Preisaktualisierungen zur Bestätigung vor.",
-  ocr_pick: "Foto wählen",
-  ocr_loading: "Scanner wird geladen…",
-  ocr_reading: "Rechnung wird gelesen…",
-  ocr_error: "Bild nicht lesbar. Versuche ein klareres, gerades Foto.",
-  ocr_none: "Keine Preise erkannt. Versuche ein klareres Foto oder aktualisiere manuell.",
-  ocr_found: "{n} Preise gefunden — prüfen und bestätigen:",
-  ocr_review_hint: "Prüfe jede Zuordnung und jeden Preis vor dem Anwenden. Hake ab, was du nicht willst.",
-  ocr_apply: "Preise anwenden",
-  ocr_updated: "{n} Preise aktualisiert",
-});
-
 // Nutrition (estimated) tool
 window.PCD.i18n.register('de', {
   nutr_title: "Nährwerte (geschätzt)",
@@ -2945,13 +2929,6 @@ window.PCD.i18n.register('de', {
   var_legend: "Rot = mehr als Theorie (Verlust / Überportionierung). Bernstein = weniger. Standardmäßig theoretisch, bis du Ist-Werte eingibst.",
   var_no_result_desc: "Füge oben die zubereiteten Gerichte hinzu und tippe auf Berechnen.",
   var_production_hint: "Füge zubereitete oder verkaufte Gerichte und Mengen hinzu — das ergibt den theoretischen Zutatenverbrauch.",
-});
-
-// Invoice OCR — v2 extras
-window.PCD.i18n.register('de', {
-  ocr_detected: "gelesen",
-  ocr_current: "jetzt",
-  ocr_first_note: "(erster Scan lädt den Leser herunter, ~einmal)",
 });
 
 // Singular-Varianten — wenn count === 1 (v2.44.26 Plural-Fix)

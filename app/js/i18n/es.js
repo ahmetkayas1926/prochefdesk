@@ -2905,22 +2905,6 @@ window.PCD.i18n.register('es', {
   var_legend: "Rojo = más que la teoría (merma / sobreporción / pérdida). Ámbar = menos (revisa conteos). No incluye compras del periodo.",
 });
 
-// Invoice OCR tool
-window.PCD.i18n.register('es', {
-  ocr_title: "Escanear factura",
-  ocr_subtitle: "Foto de una factura de proveedor → actualiza precios de ingredientes",
-  ocr_hint: "Haz o sube una foto clara de una factura. La leeremos y sugeriremos actualizaciones de precio para que confirmes.",
-  ocr_pick: "Elegir foto",
-  ocr_loading: "Cargando escáner…",
-  ocr_reading: "Leyendo factura…",
-  ocr_error: "No se pudo leer la imagen. Prueba una foto más clara y recta.",
-  ocr_none: "No se detectaron precios. Prueba una foto más clara o actualiza manualmente.",
-  ocr_found: "{n} precios encontrados — revisa y confirma:",
-  ocr_review_hint: "Revisa cada coincidencia y precio antes de aplicar. Desmarca los que no quieras.",
-  ocr_apply: "Aplicar precios",
-  ocr_updated: "{n} precios actualizados",
-});
-
 // Nutrition (estimated) tool
 window.PCD.i18n.register('es', {
   nutr_title: "Valor nutricional (estimado)",
@@ -2945,13 +2929,6 @@ window.PCD.i18n.register('es', {
   var_legend: "Rojo = más que la teoría (merma / sobreporción / pérdida). Ámbar = menos. Por defecto teórico hasta que introduzcas valores reales.",
   var_no_result_desc: "Añade arriba los platos que hiciste y pulsa Calcular.",
   var_production_hint: "Añade los platos que hiciste o vendiste y cuántos — esto da el uso teórico de ingredientes.",
-});
-
-// Invoice OCR — v2 extras
-window.PCD.i18n.register('es', {
-  ocr_detected: "leído",
-  ocr_current: "ahora",
-  ocr_first_note: "(el primer escaneo descarga el lector, ~una vez)",
 });
 
 // Variantes singulares — cuando count === 1 (v2.44.26 corrección de plural)

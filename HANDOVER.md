@@ -92,7 +92,7 @@ Tüm limit + gate'ler tek dosyada: `plans.js` (`PLAN_LIMITS`) — özelliği aç
 - **Manuel pro:** SQL'de `plan='pro', plan_source='manual'` → kalıcı pro (Stripe'sız); webhook `plan_source='manual'` satırlarını ASLA ezmez.
 - **Stripe:** Pro Monthly 19 AUD / Annual 190 AUD. 3 Edge Function (`create-checkout-session`, `create-portal-session`, `stripe-webhook` — imza doğrulamalı, plan'ı yazan tek otorite). Şu an **sandbox/test**; canlı = operatör açık adımları.
 - **Cost-view paylaşım (Pro):** fiyat + food cost % gösteren özel salt-okunur link (`?view=cost`); maliyet yalnız cost-share payload'unda (`public_shares.share_mode='cost'`), normal link sızdırmaz.
-- **Watermark:** print + paylaşım footer'ı `PCD.gate.showWatermark()`'a bağlı (Free'de kalır); paylaşılan sayfada paylaşanın planına göre snapshot'a gömülür (`payload._wm`).
+- **Watermark:** footer TÜM çıktılarda (print/PDF · Excel · roster JPEG · paylaşım/URL) `PCD.gate.showWatermark()`'a bağlı — Free'de var, Pro'da temiz; paylaşılan sayfada paylaşanın planına göre snapshot'a gömülür (`payload._wm`). Metin/WhatsApp paylaşımı kapsam dışı.
 - **Dashboard:** 4 metrik + 2 grafik, tamamı gerçek veriden (sahte yok); işçilik kartı Pro-gated.
 
 ## Veri tabloları

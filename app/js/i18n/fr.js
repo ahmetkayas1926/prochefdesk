@@ -2905,22 +2905,6 @@ window.PCD.i18n.register('fr', {
   var_legend: "Rouge = plus que la théorie (perte / surportionnement). Ambre = moins (vérifiez les comptages). Hors achats de la période.",
 });
 
-// Invoice OCR tool
-window.PCD.i18n.register('fr', {
-  ocr_title: "Scanner une facture",
-  ocr_subtitle: "Photo d'une facture fournisseur → met à jour les prix des ingrédients",
-  ocr_hint: "Prenez ou importez une photo nette d'une facture. Nous la lisons et proposons des mises à jour de prix à confirmer.",
-  ocr_pick: "Choisir une photo",
-  ocr_loading: "Chargement du scanner…",
-  ocr_reading: "Lecture de la facture…",
-  ocr_error: "Image illisible. Essayez une photo plus nette et droite.",
-  ocr_none: "Aucun prix détecté. Essayez une photo plus nette ou mettez à jour manuellement.",
-  ocr_found: "{n} prix trouvés — vérifiez et confirmez :",
-  ocr_review_hint: "Vérifiez chaque correspondance et prix avant d'appliquer. Décochez ceux que vous ne voulez pas.",
-  ocr_apply: "Appliquer les prix",
-  ocr_updated: "{n} prix mis à jour",
-});
-
 // Nutrition (estimated) tool
 window.PCD.i18n.register('fr', {
   nutr_title: "Valeur nutritionnelle (estimée)",
@@ -2945,13 +2929,6 @@ window.PCD.i18n.register('fr', {
   var_legend: "Rouge = plus que la théorie (perte / surportionnement). Ambre = moins. Théorique par défaut jusqu'à saisie du réel.",
   var_no_result_desc: "Ajoutez ci-dessus les plats préparés, puis appuyez sur Calculer.",
   var_production_hint: "Ajoutez les plats préparés ou vendus et combien — cela donne l'usage théorique des ingrédients.",
-});
-
-// Invoice OCR — v2 extras
-window.PCD.i18n.register('fr', {
-  ocr_detected: "lu",
-  ocr_current: "actuel",
-  ocr_first_note: "(le premier scan télécharge le lecteur, ~une fois)",
 });
 
 // Variantes singulières — quand count === 1 (v2.44.26 correction du pluriel)
