@@ -1915,24 +1915,28 @@
       });
     });
 
-    // v2.9.14 — Footer row (matches Recipe Cost Excel pattern, backlog #6)
-    const footerRowIdx = aoa.length + 1; // empty row inserted next, then footer
-    aoa.push([]);
-    aoa.push([{
-      v: t('cr_made_with') || 'Made with ProChefDesk · prochefdesk.com',
-      s: {
-        font: { name: 'Calibri', sz: 8, italic: true, color: { rgb: '999999' } },
-        alignment: { vertical: 'center', horizontal: 'center' },
-      },
-    }]);
+    // v2.9.14 — Footer row. v2.44.32 — Free plan only (Pro = clean), same gate as print/share.
+    let footerRowIdx = -1;
+    if (!PCD.gate || PCD.gate.showWatermark()) {
+      footerRowIdx = aoa.length + 1; // empty row inserted next, then footer
+      aoa.push([]);
+      aoa.push([{
+        v: t('cr_made_with') || 'Made with ProChefDesk · prochefdesk.com',
+        s: {
+          font: { name: 'Calibri', sz: 8, italic: true, color: { rgb: '999999' } },
+          alignment: { vertical: 'center', horizontal: 'center' },
+        },
+      }]);
+    }
 
     const ws = XLSX.utils.aoa_to_sheet(aoa);
     ws['!cols'] = [{ wch: 18 }, { wch: 32 }, { wch: 12 }, { wch: 8 }, { wch: 10 }, { wch: 12 }, { wch: 14 }];
-    ws['!merges'] = [
+    const _bMerges = [
       { s: { r: 0, c: 0 }, e: { r: 0, c: 6 } },
       { s: { r: 1, c: 0 }, e: { r: 1, c: 6 } },
-      { s: { r: footerRowIdx, c: 0 }, e: { r: footerRowIdx, c: 6 } }, // footer merged across all columns
     ];
+    if (footerRowIdx >= 0) _bMerges.push({ s: { r: footerRowIdx, c: 0 }, e: { r: footerRowIdx, c: 6 } }); // footer merged across all columns
+    ws['!merges'] = _bMerges;
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Buffet Cost');
     const safeName = (buffet.name || 'buffet').replace(/[^a-zA-Z0-9\-_]/g, '_');

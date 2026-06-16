@@ -1147,7 +1147,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
           ) +
         '</div>' +
       '</div>' : '') +
-      '<div class="cr-foot">' + t('cr_made_with') + '</div>';
+      ((!PCD.gate || PCD.gate.showWatermark()) ? '<div class="cr-foot">' + t('cr_made_with') + '</div>' : '');
 
     PCD.print(html, t('cr_title') + ' ' + new Date().toISOString().slice(0, 10));
   }
@@ -1449,9 +1449,9 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
     // I column on total row blank
     setCell(summaryWs, 'I' + totalRow, '', totalLabelStyle);
 
-    // Footer row
+    // Footer row — v2.44.32 Free plan only (Pro = clean)
     const footerRow = totalRow + 2;
-    setCell(summaryWs, 'A' + footerRow, t('cr_made_with'), footerStyle);
+    if (!PCD.gate || PCD.gate.showWatermark()) setCell(summaryWs, 'A' + footerRow, t('cr_made_with'), footerStyle);
 
     // Column widths — auto-fit based on content
     function autoFit(rows) {
@@ -1697,9 +1697,9 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
 
       }  // end !isPrepXlsx pricing section
 
-      // Footer
+      // Footer — v2.44.32 Free plan only (Pro = clean)
       const detailFooterRow = row + 1;
-      setCell(ws, 'A' + detailFooterRow, t('cr_made_with'), footerStyle);
+      if (!PCD.gate || PCD.gate.showWatermark()) setCell(ws, 'A' + detailFooterRow, t('cr_made_with'), footerStyle);
 
       // Column widths — compute based on actual content for this sheet
       const detailRows = [

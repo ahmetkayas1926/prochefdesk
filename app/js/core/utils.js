@@ -595,12 +595,22 @@
         }
         r++;
       });
+      // v2.44.32 — Watermark footer row (Free plan only; Pro = clean). Same gate as PCD.print / share.
+      let _wmFootRow = 0;
+      if (!PCD.gate || PCD.gate.showWatermark()) {
+        r++; // blank spacer
+        _wmFootRow = r;
+        setCell(ws, 'A' + r, ((PCD.i18n && PCD.i18n.t && PCD.i18n.t('cr_made_with')) || 'Made with ProChefDesk · prochefdesk.com'),
+          { font: { name: 'Calibri', sz: 8, italic: true, color: { rgb: '999999' } }, alignment: { vertical: 'center', horizontal: 'center' } });
+        r++;
+      }
       const lastRow = Math.max(headerRow, r - 1);
       ws['!ref'] = 'A1:' + lastColL + lastRow;
       // Title/subtitle merges across all columns
       const merges = [];
       if (spec.title) merges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: ncol - 1 } });
       if (spec.subtitle) { const sr = spec.title ? 1 : 0; merges.push({ s: { r: sr, c: 0 }, e: { r: sr, c: ncol - 1 } }); }
+      if (_wmFootRow) merges.push({ s: { r: _wmFootRow - 1, c: 0 }, e: { r: _wmFootRow - 1, c: ncol - 1 } });
       if (merges.length) ws['!merges'] = merges;
       // Column widths: fixed if given, else auto-fit from content (clamp 8..40)
       if (spec.widths) {

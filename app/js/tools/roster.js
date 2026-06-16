@@ -774,7 +774,8 @@
     const run = function (h2c) {
       const wrap = document.createElement('div');
       wrap.style.cssText = 'position:fixed;left:-99999px;top:0;width:1180px;background:#fff;padding:22px;font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#1a1a1a;';
-      wrap.innerHTML = buildRosterTable(data, showCost);
+      wrap.innerHTML = buildRosterTable(data, showCost) +
+        ((!PCD.gate || PCD.gate.showWatermark()) ? '<div style="margin-top:10px;padding-top:6px;border-top:1px solid #e5e5e5;text-align:center;font-size:11px;color:#999;font-family:-apple-system,Segoe UI,Roboto,sans-serif;">Made with ProChefDesk · prochefdesk.com</div>' : '');
       document.body.appendChild(wrap);
       h2c(wrap, { scale: 2, backgroundColor: '#ffffff', logging: false }).then(function (canvas) {
         wrap.remove();
@@ -876,6 +877,12 @@
         });
       }
 
+      // v2.44.32 — Watermark footer (Free plan only; Pro = clean), same gate as print/share.
+      if (!PCD.gate || PCD.gate.showWatermark()) {
+        r++;
+        put(r, 0, (t('cr_made_with') || 'Made with ProChefDesk · prochefdesk.com'), { font: { name: 'Calibri', sz: 8, italic: true, color: { rgb: '999999' } }, alignment: { vertical: 'center', horizontal: 'left' } });
+        merges.push({ s: { r: r, c: 0 }, e: { r: r, c: lastC } }); r++;
+      }
       ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(r, 1), c: lastC } });
       ws['!merges'] = merges;
       // v2.15.7 — Sütunlar içeriğe sığacak kadar GENİŞ ("Mon, May 18" / "08:00-18:00"
