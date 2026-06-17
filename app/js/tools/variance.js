@@ -116,6 +116,27 @@
     ocStocks = {};
     const recs = PCD.store.listRecipes().filter(function (r) { return !(PCD.recipes && PCD.recipes.isPrep && PCD.recipes.isPrep(r)); })
       .slice().sort(function (a, b) { return (a.name || '').localeCompare(b.name || ''); });
+
+    if (recs.length === 0) {
+      view.innerHTML =
+        '<div class="page-header"><div class="page-header-text">' +
+          '<div class="page-title">' + PCD.escapeHtml(t('var_title')) + '</div>' +
+          '<div class="page-subtitle">' + PCD.escapeHtml(t('var_subtitle')) + '</div>' +
+        '</div></div>' +
+        PCD.subNav('stock', 'variance') +
+        '<div class="empty" style="padding:40px 0;">' +
+          '<div class="empty-icon">📊</div>' +
+          '<div class="empty-title">' + PCD.escapeHtml(t('var_no_recipes')) + '</div>' +
+          '<div class="empty-desc">' + PCD.escapeHtml(t('var_no_recipes_desc')) + '</div>' +
+          '<div class="empty-action"><button class="btn btn-primary" id="vGoRecipes">' +
+            PCD.icon('book-open', 14) + ' ' + PCD.escapeHtml(t('nav_recipes') || 'Recipes') +
+          '</button></div>' +
+        '</div>';
+      var goBtn = PCD.$('#vGoRecipes', view);
+      if (goBtn) goBtn.addEventListener('click', function () { PCD.router.go('recipes'); });
+      return;
+    }
+
     const hasSnaps = snapshots().length > 0;
     const guideHidden = (function () { try { return localStorage.getItem('pcd_var_guide_hidden') === '1'; } catch (e) { return false; } })();
 
@@ -212,6 +233,13 @@
         '<div id="vTotalVal" style="font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;color:' + varColor(total) + ';">' + (total >= 0 ? '+' : '') + PCD.fmtMoney(total) + '</div></div>' +
         (hasSnaps ? '<button class="btn btn-outline btn-sm" id="vPrefill">' + PCD.escapeHtml(t('var_prefill')) + '</button>' : '') +
       '</div>';
+
+    // No-snapshot hint: var_no_counts_hint is defined but was never rendered
+    if (!hasSnaps) {
+      html += '<div class="text-sm mb-2" style="padding:7px 10px;background:var(--brand-50);border:1px solid var(--brand-300,#86efac);border-radius:6px;color:var(--brand-700,#15803d);">' +
+        PCD.escapeHtml(t('var_no_counts_hint')) +
+      '</div>';
+    }
 
     // Mode toggle
     html += '<div style="display:flex;gap:6px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">' +

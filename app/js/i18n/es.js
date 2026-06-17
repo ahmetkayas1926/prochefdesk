@@ -2952,3 +2952,14 @@ window.PCD.i18n.register('es', {
   bulk_confirm_price: "Confirmar precios",
   prices_confirmed: "{n} precios confirmados como actuales",
 });
+
+// Variación — claves de alternancia de modo faltantes (v2.44.32)
+window.PCD.i18n.register('es', {
+  var_mode_label: "Modo de entrada",
+  var_mode_direct: "Ingresar uso real directamente",
+  var_mode_oc: "Stock inicial − final",
+  var_oc_hint: "Introduce el stock inicial y final por ingrediente — uso real = inicial − final.",
+  var_no_price: "{n} ingrediente(s) sin precio — la variación muestra $0. Añade precios en Ingredientes.",
+  var_no_recipes: "Sin recetas aún",
+  var_no_recipes_desc: "La variación de coste necesita recetas para calcular el uso teórico. Añade tu primera receta en la Biblioteca.",
+});

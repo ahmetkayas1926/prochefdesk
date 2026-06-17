@@ -3253,3 +3253,14 @@ window.PCD.i18n.register('en', {
   bulk_confirm_price: "Confirm prices",
   prices_confirmed: "{n} prices confirmed as current",
 });
+
+// Variance — missing mode-toggle keys (v2.44.32)
+window.PCD.i18n.register('en', {
+  var_mode_label: "Entry mode",
+  var_mode_direct: "Enter actual directly",
+  var_mode_oc: "Opening − Closing stock",
+  var_oc_hint: "Enter opening and closing stock per ingredient — actual usage = opening − closing.",
+  var_no_price: "{n} ingredient(s) have no price — cost variance shows $0. Add prices in Ingredients.",
+  var_no_recipes: "No recipes yet",
+  var_no_recipes_desc: "Cost variance needs recipes to calculate theoretical usage. Add your first recipe in the Library.",
+});

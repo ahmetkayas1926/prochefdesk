@@ -914,9 +914,6 @@
       var _lastPvW = -1;
       function applyScale(_tries) {
         const containerW = previewEl.clientWidth;
-        // v2.40 — FIX: mobilde ilk mount'ta clientWidth=0 olunca eski kod sessizce return
-        // edip scale'i HİÇ uygulamıyordu → A4 tam boyutta kalıp önizleme yatay scroll + çöküyordu.
-        // Bounded rAF self-retry (Whiteboard applyCanvasScale + menü thumbnail deseni).
         if (!containerW) { if ((_tries || 0) < 60) requestAnimationFrame(function () { applyScale((_tries || 0) + 1); }); return; }
         _lastPvW = containerW;
         const fitScale = containerW / pageW;
@@ -924,12 +921,16 @@
         const frame = previewEl.querySelector('.kc-preview-frame');
         const outer = previewEl.querySelector('#kcPvOuter');
         if (frame) frame.style.transform = 'scale(' + scale + ')';
-        // outer sized to scaled dims so previewEl scrolls correctly
         if (outer) {
           outer.style.width  = Math.round(pageW * scale) + 'px';
           outer.style.height = Math.round(pageH * scale) + 'px';
         }
       }
+
+      // v2.44.33 — sync call immediately after HTML set: clientWidth forces reflow → guaranteed
+      // non-zero on first call. RAF/setTimeout were unreliable (second updatePreview() call could
+      // replace innerHTML before RAF fired, leaving the first closure referencing a detached node).
+      applyScale();
 
       requestAnimationFrame(function () {
         applyScale();
@@ -964,6 +965,9 @@
           }, { passive: false });
         }
       });
+      // Fallback: setTimeout ensures scale is applied even when RAF fires too early
+      // on mobile/lazy-load (containerW=0 at RAF time → all 60 retries exhaust before layout).
+      setTimeout(applyScale, 60);
 
       // Mobil titreme fix: ResizeObserver SADECE genişlik değişince yeniden
       // ölçekler. Mobilde sayfa kaydırınca adres çubuğu gizlenip görünür →
@@ -982,6 +986,23 @@
         // ile değişir → loop kırılır.
         updatePreview._ro.observe(previewEl.parentElement || previewEl);
       }
+
+      // v2.44.34 — Boot sırasında #app display:none iken render edilirse tüm
+      // clientWidth'ler 0 döner; RAF retry 250ms sonra #app.hidden kaldırılmadan
+      // biter. MutationObserver #app'i izler, 'hidden' sınıfı kaldırılınca
+      // applyScale çağırır ve kendini temizler.
+      (function () {
+        var appEl = document.getElementById('app');
+        if (!appEl || !appEl.classList.contains('hidden')) return;
+        if (updatePreview._mo) updatePreview._mo.disconnect();
+        updatePreview._mo = new MutationObserver(function () {
+          if (!appEl.classList.contains('hidden')) {
+            updatePreview._mo.disconnect();
+            applyScale();
+          }
+        });
+        updatePreview._mo.observe(appEl, { attributes: true, attributeFilter: ['class'] });
+      })();
     }
 
     // ============ DRAG & RESIZE ============

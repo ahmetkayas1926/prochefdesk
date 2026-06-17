@@ -3250,3 +3250,14 @@ window.PCD.i18n.register('tr', {
   bulk_confirm_price: "Fiyatları onayla",
   prices_confirmed: "{n} fiyat güncel olarak onaylandı",
 });
+
+// Varyans — eksik mod-geçiş anahtarları (v2.44.32)
+window.PCD.i18n.register('tr', {
+  var_mode_label: "Giriş modu",
+  var_mode_direct: "Gerçek kullanımı doğrudan gir",
+  var_mode_oc: "Açılış − Kapanış stok",
+  var_oc_hint: "Malzeme başına açılış ve kapanış stok gir — gerçek kullanım = açılış − kapanış.",
+  var_no_price: "{n} malzemenin fiyatı yok — maliyet varyansı $0 gösterir. Malzemeler'de fiyat ekle.",
+  var_no_recipes: "Henüz tarif yok",
+  var_no_recipes_desc: "Maliyet varyansı teorik kullanımı hesaplamak için tariflere ihtiyaç duyar. Kütüphane'de ilk tarifini ekle.",
+});

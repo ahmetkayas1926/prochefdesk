@@ -2952,3 +2952,14 @@ window.PCD.i18n.register('de', {
   bulk_confirm_price: "Preise bestätigen",
   prices_confirmed: "{n} Preise als aktuell bestätigt",
 });
+
+// Kostenvarianz — fehlende Moduswechsel-Schlüssel (v2.44.32)
+window.PCD.i18n.register('de', {
+  var_mode_label: "Eingabemodus",
+  var_mode_direct: "Tatsächlichen Verbrauch direkt eingeben",
+  var_mode_oc: "Eröffnungs- − Schlussbestand",
+  var_oc_hint: "Eröffnungs- und Schlussbestand pro Zutat eingeben — tatsächlicher Verbrauch = Eröffnung − Schluss.",
+  var_no_price: "{n} Zutat(en) ohne Preis — Kostenvarianz zeigt $0. Preise in Zutaten hinzufügen.",
+  var_no_recipes: "Noch keine Rezepte",
+  var_no_recipes_desc: "Die Kostenvarianz benötigt Rezepte für die theoretische Verbrauchsberechnung. Fügen Sie Ihr erstes Rezept in der Bibliothek hinzu.",
+});

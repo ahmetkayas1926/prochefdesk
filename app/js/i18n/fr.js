@@ -2952,3 +2952,14 @@ window.PCD.i18n.register('fr', {
   bulk_confirm_price: "Confirmer les prix",
   prices_confirmed: "{n} prix confirmés comme actuels",
 });
+
+// Écart de coût — clés du sélecteur de mode manquantes (v2.44.32)
+window.PCD.i18n.register('fr', {
+  var_mode_label: "Mode de saisie",
+  var_mode_direct: "Saisir l'utilisation réelle directement",
+  var_mode_oc: "Stock initial − final",
+  var_oc_hint: "Entrez le stock initial et final par ingrédient — utilisation réelle = initial − final.",
+  var_no_price: "{n} ingrédient(s) sans prix — l'écart de coût affiche $0. Ajoutez les prix dans Ingrédients.",
+  var_no_recipes: "Pas encore de recettes",
+  var_no_recipes_desc: "L'écart de coût nécessite des recettes pour calculer l'usage théorique. Ajoutez votre première recette dans la Bibliothèque.",
+});

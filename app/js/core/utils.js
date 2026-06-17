@@ -500,6 +500,11 @@
       archive: '<rect x="2" y="4" width="20" height="5" rx="1" stroke-linejoin="round"/><path d="M4 9v10a2 2 0 002 2h12a2 2 0 002-2V9M10 13h4" stroke-linecap="round" stroke-linejoin="round"/>',
       thermometer: '<path d="M14 14.76V3.5a2.5 2.5 0 00-5 0v11.26a4 4 0 105 0z" stroke-linecap="round" stroke-linejoin="round"/>',
       snowflake: '<line x1="2" y1="12" x2="22" y2="12" stroke-linecap="round"/><line x1="12" y1="2" x2="12" y2="22" stroke-linecap="round"/><path d="M20 16l-4-4 4-4M4 8l4 4-4 4M16 4l-4 4-4-4M8 20l4-4 4 4" stroke-linecap="round" stroke-linejoin="round"/>',
+      check: '<polyline points="20 6 9 17 4 12" stroke-linecap="round" stroke-linejoin="round"/>',
+      plus: '<line x1="12" y1="5" x2="12" y2="19" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke-linecap="round"/>',
+      x: '<line x1="18" y1="6" x2="6" y2="18" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke-linecap="round"/>',
+      lock: '<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4" stroke-linecap="round" stroke-linejoin="round"/>',
+      star: '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" stroke-linecap="round" stroke-linejoin="round"/>',
     };
     const body = icons[name] || icons.info;
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="' + size + '" height="' + size + '">' + body + '</svg>';

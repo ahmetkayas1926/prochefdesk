@@ -164,7 +164,7 @@
                  a default yield (amount + unit) applied to all selected.
                  "To Menu" just clears yieldAmount/yieldUnit. -->
             <button type="button" class="btn btn-outline btn-sm" id="bulkToPrep" title="${PCD.escapeHtml(t('recipes_bulk_to_prep'))}">${PCD.icon('check',14)} <span>${t('recipes_bulk_to_prep')}</span></button>
-            <button type="button" class="btn btn-outline btn-sm" id="bulkToMenu" title="${PCD.escapeHtml(t('recipes_bulk_to_menu'))}">${PCD.icon('book',14)} <span>${t('recipes_bulk_to_menu')}</span></button>
+            <button type="button" class="btn btn-outline btn-sm" id="bulkToMenu" title="${PCD.escapeHtml(t('recipes_bulk_to_menu'))}">${PCD.icon('book-open',14)} <span>${t('recipes_bulk_to_menu')}</span></button>
             <button type="button" class="btn btn-danger btn-sm" id="bulkDelete">${PCD.icon('trash',14)} ${t('delete')}</button>
             <button type="button" class="btn btn-ghost btn-sm" id="exitSelect">${t('cancel')}</button>
           </div>

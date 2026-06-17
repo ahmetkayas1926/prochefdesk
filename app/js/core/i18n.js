@@ -47,6 +47,10 @@
     const dir = cfg ? cfg.dir : 'ltr';
     document.documentElement.setAttribute('lang', locale);
     document.documentElement.setAttribute('data-dir', dir);
+    // v2.44.36 — Gerçek `dir` attribute'u da set et → tarayıcının native RTL
+    // motoru devreye girer (flex sıra ters, metin sağa yaslı, logical props).
+    // Önceden yalnız data-dir vardı → Arapça düzeni yalnız kısmen aynalanıyordu.
+    document.documentElement.setAttribute('dir', dir);
     i18n.currentLocale = locale;
     i18n.currentDir = dir;
     i18n.applyAll();
