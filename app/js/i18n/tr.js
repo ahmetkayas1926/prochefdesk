@@ -3172,10 +3172,10 @@ window.PCD.i18n.register('tr', {
 window.PCD.i18n.register('tr', {
   var_guide_title: "Maliyet varyansı nasıl çalışır",
   var_guide_step1: "Ne ürettiğini gir (yemek × adet). Tariflerinin gerektirdiği teorik malzeme kullanımını hesaplarız.",
-  var_guide_step2: "Bunu gerçek kullanımınla karşılaştırırız. \"Stok sayımından doldur\"a bas (açılış − kapanış stok) ya da malzeme başına gerçekte kullandığını yaz.",
+  var_guide_step2: "Hesaplama sonrası, tabloda her malzeme için gerçekte kullandığın miktarı gir — varyans anlık güncellenir. Stok sayımı yaptıysan otomatik doldurma düğmesi otomatik belirir.",
   var_guide_step3: "Varyans = (gerçek − teorik) × fiyat. Kırmızı = tarifin dediğinden fazla kullandın (fire / fazla porsiyon / kayıp). En büyük $ sızıntı önce.",
   var_guide_step4: "POS gerekmez — dönemsel kontroldür. Dönem-içi alımlar dahil değildir.",
-  var_no_counts_hint: "💡 Gerçek kullanımı otomatik doldurmak için stok sayımı yap (Envanter → Stok say).",
+  var_no_counts_hint: "💡 Henüz stok sayımın yok mu? Sorun değil — yukarıdaki 'Gerçek' sütununa miktarları doğrudan gir ya da 'Açılış − Kapanış stok' modunu kullanarak dönem hareketlerini manuel olarak gir.",
   fresh_title: "Fiyat tazeliği",
   fresh_aging_n: "{n} malzemenin fiyatı 30+ gündür güncellenmedi",
   fresh_last_priced: "{n}g önce fiyatlandı",

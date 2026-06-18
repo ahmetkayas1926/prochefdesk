@@ -3175,10 +3175,10 @@ window.PCD.i18n.register('en', {
 window.PCD.i18n.register('en', {
   var_guide_title: "How cost variance works",
   var_guide_step1: "Enter what you produced (dish × quantity). We work out the theoretical ingredient usage your recipes require.",
-  var_guide_step2: "We compare it to your actual usage. Tap \"Fill from stock counts\" (opening − closing stock) — or type what you really used per ingredient.",
+  var_guide_step2: "After computing, type the actual amount used per ingredient in the table — variance updates live. If you've done stock counts, a pre-fill button appears automatically.",
   var_guide_step3: "Variance = (actual − theoretical) × price. Red = used more than the recipe says (waste / over-portioning / loss). The biggest $ leak shows first.",
   var_guide_step4: "No POS needed — it's a periodic check. Mid-period purchases aren't included.",
-  var_no_counts_hint: "💡 Do a stock count (Inventory → Count stock) to auto-fill actual usage.",
+  var_no_counts_hint: "💡 No stock counts yet? Type actuals directly in the 'Actual' column above — or switch to 'Opening − Closing stock' mode to enter period movements manually.",
   fresh_title: "Price freshness",
   fresh_aging_n: "{n} ingredient prices not updated in over 30 days",
   fresh_last_priced: "priced {n}d ago",
