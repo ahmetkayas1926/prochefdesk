@@ -8,7 +8,7 @@
    Food-cost spread is intentionally realistic: most dishes 18–34%
    (healthy), premium-protein dishes flagged (foie gras red ~48%,
    scallops & bouillabaisse amber ~36–40%) so the "cost control"
-   message lands. Currency-agnostic numbers (operator workspace = AUD).
+   message lands. Currency-agnostic numbers (default workspace currency = USD).
    ================================================================ */
 
 (function () {

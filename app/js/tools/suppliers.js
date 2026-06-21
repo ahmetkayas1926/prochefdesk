@@ -484,7 +484,7 @@
       body.innerHTML = `
         <div class="field">
           <label class="field-label">Name *</label>
-          <input type="text" class="input" id="sName" value="${PCD.escapeHtml(data.name || '')}" placeholder="e.g. Perth Fresh Produce">
+          <input type="text" class="input" id="sName" value="${PCD.escapeHtml(data.name || '')}" placeholder="e.g. Fresh Produce Co">
         </div>
         <div class="field">
           <label class="field-label">Category</label>

@@ -669,7 +669,7 @@
       if (labourLocked) {
         labourCard = '<button class="cc-card" data-action="upgrade-labor">' +
           '<span class="cc-lbl">' + (PCD.icon('lock', 12)) + ' ' + PCD.escapeHtml(t('cc_this_week_labour') || 'This week labour') + '</span>' +
-          '<span class="cc-val locked">A$000</span>' +
+          '<span class="cc-val locked">' + ((PCD.currencySymbol && PCD.currencySymbol()) || '$') + '000</span>' +
           '<span class="cc-sub">' + PCD.escapeHtml(t('cc_pro_unlock') || 'Pro — tap to unlock') + '</span></button>';
       } else if (labour) {
         labourCard = metricCard('open-roster', PCD.escapeHtml(t('cc_this_week_labour') || 'This week labour'),

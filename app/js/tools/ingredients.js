@@ -635,7 +635,7 @@ ${existing ? (function () {
           subtitle: t('import_xlsx_tpl_subtitle') || 'Fill one row per ingredient. Price = cost of ONE unit. See the "Lists" tab for valid Unit & Category values. Delete the example rows before importing.',
           headers: ['Name', 'Price', 'Unit', 'Category', 'Supplier', 'Yield%'],
           rows: [
-            ['Olive Oil', 18, 'l', 'cat_oils', 'Perth Fresh', ''],
+            ['Olive Oil', 18, 'l', 'cat_oils', 'Fresh Co', ''],
             ['Chicken Breast', 18, 'kg', 'cat_poultry', 'Meat Co', 88],
             ['Tomato', 5, 'kg', 'cat_produce', '', 90],
           ],
@@ -750,7 +750,7 @@ ${existing ? (function () {
           ${PCD.escapeHtml(t('import_format_desc') || 'Paste CSV/TSV or upload a file. Columns in this order:')}
         </div>
         <pre style="background:var(--surface);padding:10px;border-radius:var(--r-sm);margin-top:8px;font-family:var(--font-mono);font-size:12px;overflow-x:auto;border:1px solid var(--border);"><code>Name,Price,Unit,Category,Supplier,Yield%
-Olive Oil,18,l,cat_oils,Perth Fresh,
+Olive Oil,18,l,cat_oils,Fresh Co,
 Chicken Breast,18,kg,cat_poultry,Meat Co,88
 Tomato,5,kg,cat_produce,,90
 Pasta,3,kg,cat_dry_goods,,</code></pre>
@@ -797,7 +797,7 @@ Pasta,3,kg,cat_dry_goods,,</code></pre>
     const dlBtn = PCD.$('#dlTemplateBtn', body);
     if (dlBtn) dlBtn.addEventListener('click', function () {
       const tplCsv = 'Name,Price,Unit,Category,Supplier,Yield%\n' +
-        'Olive Oil,18,l,cat_oils,Perth Fresh,\n' +
+        'Olive Oil,18,l,cat_oils,Fresh Co,\n' +
         'Chicken Breast,18,kg,cat_poultry,Meat Co,88\n' +
         'Tomato,5,kg,cat_produce,,90\n' +
         'Pasta,3,kg,cat_dry_goods,,\n';

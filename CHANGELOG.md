@@ -4,6 +4,11 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.32–.38 — Stripe canlı + USD/LLC geçişi + free→pro fix · 2026-06-21
+- **Stripe CANLI:** `ProChefDesk, LLC` (Delaware) · ürünler **USD $19/$190** · pk_live + 3 Edge Function + webhook (3 olay) live · Mercury payout · uçtan uca test geçti (upgrade/cancel/refund/portal/realtime).
+- **free→pro fix** (`migrations/v2.44.38`): signup'ta `user_prefs` satırı yaratan SECURITY DEFINER trigger + backfill. Kök neden: free kullanıcı sync etmez + trigger yoktu → satırsız hesapta `.update().eq(user_id)` 0 satır eşler → plan yazılmaz. **Kural:** yeni böyle Edge Function/SQL satırın varlığını varsaymalı ya da upsert.
+- **Site → LLC/USD/Delaware (6 dil):** terms+privacy (işletici→ProChefDesk LLC · governing law→Delaware · liability cap→US$100 · Stripe→Stripe Inc. · adres→Newark DE) · landing $0/$19/$190 · app gate butonları $ · `dashboard.js` A$→`currencySymbol()` · örnek placeholder'lar + kurucu "Perth" yer-pini temizlendi. **Üründe Perth/AUD=0**; kurucu kimliği + kariyer hikâyesi (İstanbul/Körfez/Katar) + FSANZ/AUD-para-seçeneği bilerek KALDI.
+
 ## v2.44.31 — Landing orijinale dönüş + roster print + toplu fiyat-onay · 2026-06-15
 - **Landing:** v2.44.30'un html2canvas ile üretilmiş ürün görselleri metni kırpıyordu → net orijinallere geri alındı; 7 orphan görsel silindi. **Kural:** ürün screenshot'ları html2canvas ile ÜRETİLMEZ (operatör gerçek tarayıcı yakalaması alır). Araç konsolidasyonu/sub-nav korundu.
 - **Roster print:** `@page margin:0` + içeriğe `padding` → Chrome'un başlık/altbilgi damgaları kalktı.
