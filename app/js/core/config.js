@@ -21,7 +21,7 @@ window.PCD_CONFIG = {
   // ==============================================================
   // 2. STRIPE — fill later when enabling payments
   // ==============================================================
-  STRIPE_PK: 'YOUR_STRIPE_PUBLISHABLE_KEY',
+  STRIPE_PK: 'pk_live_51TjLCPPAp6Hx01isdgztx6JbwgPQHy0ZXDHW2rFOtNW9n0jkbwYblnsV5E2znbcsqT7SsihY7PyXQeffvIcMUz5Q00RdJ9voD9',
 
   // ==============================================================
   // 3. APP DEFAULTS
