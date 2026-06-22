@@ -461,6 +461,23 @@
       u.workplace = (PCD.$('#chefWorkplace', view).value || '').trim();
       u.bio = (PCD.$('#chefBio', view).value || '').trim();
       PCD.store.set('user', u);
+      // v2.44.39 — Profili prefs.profile'a yaz → user_prefs.data.prefs üzerinden
+      // cihazlar-arası senkron (currency/haccpRegion ile AYNI kanal). Diğer cihaz
+      // realtime'da alır; auth._applyProfileFromPrefs yerel user'a yansıtır.
+      PCD.store.set('prefs.profile', {
+        name: u.name || '', role: u.role || '', country: u.country || '',
+        workplace: u.workplace || '', bio: u.bio || '',
+      });
+      if (PCD.cloudPerTable && PCD.cloudPerTable.queueUpsert) {
+        PCD.cloudPerTable.queueUpsert('user_prefs', null, null, {
+          activeWorkspaceId: PCD.store.getActiveWorkspaceId(),
+          prefs: PCD.store.get('prefs'),
+          plan: PCD.store.get('plan'),
+          onboarding: PCD.store.get('onboarding'),
+          costHistory: PCD.store.get('costHistory') || [],
+        });
+        if (PCD.cloudPerTable.flushNow) PCD.cloudPerTable.flushNow();
+      }
       // v2.13.4 — Debounced persist (400ms) yerine ANINDA IDB'ye yaz. Rapor:
       // kaydet sonrası sekme kapanınca/yenileyince/arka plana atınca (özellikle
       // mobil) 400ms timer ateşlemeden profil kayboluyordu. flush() bunu garantiler.
@@ -520,6 +537,22 @@
       u.workplace = (PCD.$('#chefWorkplace', view).value || '').trim();
       u.bio = (PCD.$('#chefBio', view).value || '').trim();
       PCD.store.set('user', u);
+      // v2.44.39 — Önizleme de kaydeder → prefs.profile'ı user ile eşit tut
+      // (senkron kanalına yaz). Save handler ile aynı.
+      PCD.store.set('prefs.profile', {
+        name: u.name || '', role: u.role || '', country: u.country || '',
+        workplace: u.workplace || '', bio: u.bio || '',
+      });
+      if (PCD.cloudPerTable && PCD.cloudPerTable.queueUpsert) {
+        PCD.cloudPerTable.queueUpsert('user_prefs', null, null, {
+          activeWorkspaceId: PCD.store.getActiveWorkspaceId(),
+          prefs: PCD.store.get('prefs'),
+          plan: PCD.store.get('plan'),
+          onboarding: PCD.store.get('onboarding'),
+          costHistory: PCD.store.get('costHistory') || [],
+        });
+        if (PCD.cloudPerTable.flushNow) PCD.cloudPerTable.flushNow();
+      }
       if (PCD.store.flush) PCD.store.flush();
       openPublicProfilePreview(u);
     });

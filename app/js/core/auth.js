@@ -9,6 +9,15 @@
 
   const auth = {
     init: function () {
+      // v2.44.39 — Profil senkronu. prefs.profile (ad/rol/ülke/işyeri/bio)
+      // user_prefs.data.prefs üzerinden cihazlar-arası senkron olur. Realtime
+      // bir değişiklik geldiğinde cloud-realtime applyToUserPrefs store.set('prefs')
+      // çağırır → 'prefs' event → bu mirror prefs.profile'ı yerel `user`
+      // okuma-objesine yansıtır. Bir kez kaydedilir.
+      if (PCD.store && PCD.store.on) {
+        PCD.store.on('prefs', function () { auth._applyProfileFromPrefs(); });
+      }
+
       const supabase = PCD.cloud && PCD.cloud.getClient();
       if (!supabase) {
         PCD.log('auth: no supabase — guest mode only.');
@@ -41,6 +50,8 @@
           if (event === 'SIGNED_IN' && session && session.user) {
             if (PCD.cloud && PCD.cloud.pull) {
               PCD.cloud.pull().then(function () {
+                // v2.44.39 — Pull sonrası senkron profili yerel user'a yansıt.
+                auth._applyProfileFromPrefs();
                 // v2.6.65 — After cloud pull, migrate any dataURL photos
                 // (created offline on this or another device) to Storage.
                 // Best-effort: errors logged but never thrown.
@@ -75,6 +86,8 @@
           return PCD.cloud.pull().catch(function (e) {
             PCD.warn('Cloud pull failed (will retry on next sync):', e && e.message);
           }).then(function () {
+            // v2.44.39 — Pull sonrası senkron profili yerel user'a yansıt.
+            auth._applyProfileFromPrefs();
             // v2.6.65 — Migrate dataURL photos to Storage after pull.
             // Runs once per session; idempotent if no dataURLs exist.
             if (PCD.photoStorage && PCD.photoStorage.migrateDataUrlPhotos) {
@@ -121,6 +134,43 @@
         avatar: (supaUser.user_metadata && supaUser.user_metadata.avatar_url) || base.avatar || null,
       });
       PCD.store.set('user', user);
+      // v2.44.39 — Yerel prefs.profile varsa (senkronlanmış değer) onu user'a
+      // yansıt. _setUser boot'ta pull'dan ÖNCE çalışır; burada yerel-IDB
+      // prefs.profile uygulanır, pull sonrası mirror tekrar (cloud değeriyle)
+      // çağrılır → tutarlı.
+      auth._applyProfileFromPrefs();
+    },
+
+    // v2.44.39 — prefs.profile → yerel `user` okuma-objesi aynası. Şef profili
+    // artık prefs.profile içinde tutulur (cihazlar-arası senkron kanalı); tüm
+    // okuyucular (HACCP log chef alanı, header/avatar, Discover yazarı, profil
+    // formu) hâlâ user.name/role/... okur, bu yüzden senkron değeri user'a
+    // yansıtırız. Çağrı: boot pull sonrası + realtime 'prefs' event + _setUser.
+    _applyProfileFromPrefs: function () {
+      try {
+        const u = PCD.store.get('user');
+        if (!u || !u.id) return; // misafir → profil senkronu yok
+        const prof = (PCD.store._read('prefs') || {}).profile;
+        if (!prof || typeof prof !== 'object') return;
+        const next = Object.assign({}, u);
+        let changed = false;
+        if (prof.name && prof.name !== next.name) { next.name = prof.name; changed = true; }
+        ['role', 'country', 'workplace', 'bio'].forEach(function (k) {
+          const v = prof[k] || '';
+          if ((next[k] || '') !== v) { next[k] = v; changed = true; }
+        });
+        if (!changed) return;
+        PCD.store.set('user', next);
+        // Açık bir profil/HACCP ekranı varsa anlık yansısın diye görünümü tazele.
+        if (PCD.router && PCD.router.currentView && PCD.router._renderView) {
+          const cur = PCD.router.currentView();
+          if (cur) {
+            try {
+              PCD.router._renderView(cur, PCD.router.params ? PCD.router.params() : {}, { skipHistory: true });
+            } catch (e) { /* ignore */ }
+          }
+        }
+      } catch (e) { /* non-fatal */ }
     },
 
     _clearUser: function (wipeData) {

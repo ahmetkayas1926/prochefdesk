@@ -4,6 +4,11 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.39 — Şef profili cihazlar-arası senkron · 2026-06-22
+- **Kök neden:** Şef profili (ad/rol/ülke/işyeri/bio) yalnız yerel `user` objesinde tutuluyordu — hiçbir senkron yola bağlı değildi. Bir cihazda değişiklik diğerine GİTMİYORDU; HACCP log'una giriş anında o cihazın YEREL adı snapshot olarak gömülüyordu → masaüstü eski isimle log basıyordu.
+- **Çözüm (mevcut çalışan kanalı kullan):** Profil artık `prefs.profile` içinde tutulur → `user_prefs.data.prefs` üzerinden cihazlar-arası senkron olur (currency/haccpRegion ile AYNI kanal: push+pull-merge+realtime). `auth._applyProfileFromPrefs` aynası senkron `prefs.profile`'ı yerel `user` okuma-objesine yansıtır (boot pull sonrası + realtime 'prefs' event). 70 okuyucu (HACCP/header/Discover/form) `user.name` okumaya devam eder. **Sync-core'a (cloud.js/cloud-pertable/cloud-realtime) SIFIR dokunuş** — profil, prefs'in içinde olduğu için 4 user_prefs builder'ına otomatik biner (wipe riski yok).
+- **Not:** Senkron, profil bir kez kaydedildiğinde aktifleşir (ilk save `prefs.profile`'ı doldurur + push eder). Geniş tarama: profil, cihazlar-arası senkron olmayan TEK hesap-verisiydi; başka araçta bu sorun yok.
+
 ## v2.44.32–.38 — Stripe canlı + USD/LLC geçişi + free→pro fix · 2026-06-21
 - **Stripe CANLI:** `ProChefDesk, LLC` (Delaware) · ürünler **USD $19/$190** · pk_live + 3 Edge Function + webhook (3 olay) live · Mercury payout · uçtan uca test geçti (upgrade/cancel/refund/portal/realtime).
 - **free→pro fix** (`migrations/v2.44.38`): signup'ta `user_prefs` satırı yaratan SECURITY DEFINER trigger + backfill. Kök neden: free kullanıcı sync etmez + trigger yoktu → satırsız hesapta `.update().eq(user_id)` 0 satır eşler → plan yazılmaz. **Kural:** yeni böyle Edge Function/SQL satırın varlığını varsaymalı ya da upsert.
