@@ -324,7 +324,7 @@
           items: ['KIBBEH', 'BEYTI', 'CHICKEN', 'FISH', 'SKEWER', 'FALAFEL', 'KATMER'],
           rows: [
             { label: 'Time', values: ['12 min', '8 min', '8 min', '8 min', '5 min', '5 min', '8 min'] },
-            { label: 'Temp', values: ['64°C', '64°C', '64°C', '64°C', '52–56°C', '—', '—'] },
+            { label: 'Temp', values: ['64°C', '64°C', '74°C', '74°C', '52–56°C', '—', '—'] },
           ],
         } },
         { type: 'section_header', layout: 'third', style: { color: 'forest', size: 'md', align: 'left' }, content: { text: 'REHEATING · FROM CHILLED' } },
