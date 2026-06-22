@@ -115,5 +115,57 @@ Excel / arkadaş sordu / "tahmin ediyordum" hikâyeleri = **SINIRLI ÇAPA** (3-5
 
 ---
 
-## Sıradaki oturum için
-İçerik motoru kuruldu, format + 2 örnek script hazır. Devam: operatör gerçek konu/sayı verir → iskelet/script → çek → AI keser. Hedef: tutarlı yayın + ilk 10-50 kullanıcı + testimonial.
+# 2026-06-22 — Çok kanallı aktivasyon (LinkedIn + sıcak outreach)
+
+> Bu bölüm operatör + Claude Code ile kuruldu. Claude Code erişimi bitiyor → bundan sonra **Claude chat (free)** ile devam. Bu dosya kendi başına yeterli: aç, ilgili kısmı yapıştır, devam et.
+
+## 17. Kanal stratejisi + gerçekçi takvim
+Üç kanal, farklı hız:
+- **Sıcak outreach — EN HIZLI (haftalar):** tanıdığın şefler + LinkedIn post'unda etkileşenler → DM, "ücretsiz dene + geri bildirim iste". **İlk 10-50 kullanıcı + testimonial buradan.**
+- **Organik içerik (Reels + LinkedIn) — YAVAŞ (3-6 ay):** uzun vadeli güven/kitle motoru. Birikir, başta yavaş sonra hızlanır. Hızlı nakit DEĞİL. Paralel yürür.
+- **Paid ads — SONRA:** şimdi cold reklam riskli ($19 ürün, dar B2B hedefleme → CAC > LTV olabilir). Doğrusu: organikte **TUTAN** bir reel bul → onu **şef-hedefli boost** et. Kanıtlanmışı büyüt, sıfırdan soğuk reklam verme.
+
+**Gerçekçi para beklentisi:** organik tek başına yavaş; ilk gelir sıcak outreach'ten gelir (haftalar), düzenli gelir aylar alır.
+
+**Funnel mantığı (üründen hiç bahsetmesem nereden bilecekler):** Video/post = **ÖĞRET** (güven + ilgi çek). Profil/bio linki = **ÜRÜN** (meraklı oraya bakar). Video'nun işi satmak değil — yeterince meraklandırıp **profiline baktırmak.** Satın alma anı = **acı + güven + kanıt** aynı anda.
+
+## 18. LinkedIn profil kurulumu — YAPILDI
+İniş alanı: biri adını görünce → profil → ürünü görür. Doldurulan alanlar + metinler:
+- **Featured (en üste SABİTLE):** `prochefdesk.com` link kartı.
+  - Title: `ProChefDesk — The kitchen OS for chefs`
+  - Description: `Real recipe & sub-recipe costing, menus, prep sheets, rosters and HACCP logs — in one place. Built by a working chef, for chefs who are on the hook for food cost. Free to start.`
+- **Contact info → Website:** `prochefdesk.com` (Company). + IG/Pinterest gerçek profiller.
+- **Headline:** `Head Chef · Founder of ProChefDesk — recipe costing, sub-recipes, prep & HACCP, built for working chefs`
+- **About (yayınlandı):**
+> I'm a... → tam metin: kariyer arkı (İstanbul/Körfez/Katar/Avustralya · 10+ yıl · à la carte/banquet · ME/Med/EU/TR mutfak) → "the numbers live in your head/spreadsheets that break" acısı → "So I built ProChefDesk — the system I wished I'd had on the line" → araçlar (costing/sub-recipe/prep/roster/HACCP/kitchen cards) → "Built by a working chef, for the chef on the hook for food cost" → "link in my profile. Free to start." (Klişeler atıldı: "results-driven/proven expertise/BirchStreet".)
+
+## 19. İlk LinkedIn gönderisi — YAYINLANDI (2026-06-22)
+Kuruluş hikâyesi + plowhorse kancası. Metin:
+> "A 'popular' dish on my menu was quietly losing money for months — and I never saw it. Because the real cost was never on paper..." → kariyer + acı → "So I built the tool I wished I'd had on the line" → ProChefDesk ne yapıyor → "I still use it every service" → "for working chefs on the hook for food cost — honest feedback welcome. Free to start. Link in the comments." → soru: "What's the one kitchen task you still hate doing on paper or in Excel?"
+
+**İlk YORUM (link burada, gönderide DEĞİL):** `Here it is → prochefdesk.com — free to start. Honest feedback welcome.`
+**3 taktik:** (1) link gönderiye değil **ilk yoruma** (LinkedIn dış-link erişimi kısar); (2) **ilk 1 saat** her yoruma cevap → etkileşim → erişim; (3) kısa satırlar + sonda soru.
+
+## 20. Sıcak outreach playbook + DM şablonu
+1. **Post'ta etkileşen herkese DM** (en sıcak lead — az önce ilgi gösterdi).
+2. **Sıcak ağ listesi (20-50 şef):** Körfez/Katar/İstanbul/Avustralya — eski meslektaşlar, sous/head chef, chef-owner.
+3. **DM şablonu (her birini KİŞİSELLEŞTİR — kopyala-blast ölür):**
+> Hey [İsim] — hope the kitchen's treating you well 👨‍🍳 / Quick one: after years of juggling recipes, costs and HACCP in spreadsheets, I finally built a tool for it — ProChefDesk... / You're exactly the chef I built it for, and I'd really value your honest take. No pitch — free to start. / Want me to send you the link?
+
+**Kurallar:** SATMA → geri bildirim iste · kişiselleştir · yanıt yoksa 3-4 gün sonra tek nazik takip · **hedef: ilk 10-50 kullanıcı + 2-3 testimonial** (sonraki herkesi ikna eden sosyal kanıt).
+
+## 21. Menü mühendisliği — içerik çerçevesi (öğreti konuları)
+Menüdeki her yemek 4 türden biri (her biri bir video konusu):
+- ⭐ **Star** — çok satar + çok kazandırır
+- 🐴 **Plowhorse** — çok satar + AZ kazandırır (popüler ama ince kâr) ← **en güçlü hook** ("en sevdiğin yemek para kaybettiriyor olabilir")
+- ❓ **Puzzle** — az satar + çok kazandırır
+- 🐶 **Dog** — az satar + az kazandırır → menüden çıkar
+
+---
+
+## Sıradaki oturum için (Claude chat free ile devam)
+**Kurulum tamam:** içerik motoru + format + LinkedIn profil + ilk post (yayında). **Devam:**
+1. **Sıcak outreach'i yürüt** — post etkileşenlerine + ağına DM (§20). En hızlı yol.
+2. İlk kullanıcı gelince **onboarding mesajı** hazırla (2 dakikada değer görmeye götüren).
+3. **Reels serisini çek** — operatör gerçek konu/sayı verir → iskelet → çek → AI keser (§8, §13).
+4. **2-3 testimonial topla.** Hedef: **ilk 10-50 kullanıcı.**

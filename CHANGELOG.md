@@ -4,6 +4,12 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.40–.43 — Whiteboard + Kitchen Cards düzeltmeleri · 2026-06-22
+- **v2.44.40 — Kitchen Cards önizleme = print.** Önizleme çerçevesindeki `padding:8mm` (print'te olmayan sahte kenar) önizlemenin kullanılabilir yüksekliğini ~16mm kısaltıyordu; `column-fill:balance` yükseklik-kısıtlı multicol'da fazlalığı 7. sütuna taşırıyordu (önizleme ≠ çıktı). `padding:0` → sheet alanı print'le birebir (yatay+dikey). Whiteboard/prep'te aynı sınıf yok (kontrol edildi).
+- **v2.44.41 — STATION template temp düzeltme.** `me_station_ref` cook_sheet: CHICKEN + FISH `64°C → 74°C` (64 tavuk için güvensizdi).
+- **v2.44.42 — Whiteboard hayalet-overlay bug.** Kapalı edit modalı (`​.wb-bottom-sheet`) sadece `opacity:0` ile gizleniyordu ama `pointer-events:none` yoktu → masaüstünde görünmez 560px katman canvas ortasında tıklamaları yutuyordu (renk/boyut değişiyor, blok tıklanamıyor). Fix: kapalıyken `pointer-events:none`, `.open` ile `auto` (fade korunur).
+- **v2.44.43 — Edit popup'a Kaydet butonu.** Bottom-sheet altına sticky, tam genişlik yeşil "Save" (değişiklikler zaten canlı commit; buton = onayla & kapat, × ile aynı).
+
 ## v2.44.39 — Şef profili cihazlar-arası senkron · 2026-06-22
 - **Kök neden:** Şef profili (ad/rol/ülke/işyeri/bio) yalnız yerel `user` objesinde tutuluyordu — hiçbir senkron yola bağlı değildi. Bir cihazda değişiklik diğerine GİTMİYORDU; HACCP log'una giriş anında o cihazın YEREL adı snapshot olarak gömülüyordu → masaüstü eski isimle log basıyordu.
 - **Çözüm (mevcut çalışan kanalı kullan):** Profil artık `prefs.profile` içinde tutulur → `user_prefs.data.prefs` üzerinden cihazlar-arası senkron olur (currency/haccpRegion ile AYNI kanal: push+pull-merge+realtime). `auth._applyProfileFromPrefs` aynası senkron `prefs.profile`'ı yerel `user` okuma-objesine yansıtır (boot pull sonrası + realtime 'prefs' event). 70 okuyucu (HACCP/header/Discover/form) `user.name` okumaya devam eder. **Sync-core'a (cloud.js/cloud-pertable/cloud-realtime) SIFIR dokunuş** — profil, prefs'in içinde olduğu için 4 user_prefs builder'ına otomatik biner (wipe riski yok).
