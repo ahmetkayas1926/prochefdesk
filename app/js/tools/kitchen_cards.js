@@ -907,7 +907,13 @@
           '<button id="kcPvZoomIn" style="' + zBtnStyle + '">+</button>' +
         '</div>' +
         '<div id="kcPvOuter" style="position:relative;">' +
-          '<div class="kc-preview-frame" style="width:' + pageW + 'px;height:' + pageH + 'px;padding:8mm;box-sizing:border-box;">' + html + '</div>' +
+          // v2.44.40 — padding:8mm → 0. Önceki 8mm çerçeve dolgusu, print'te
+          // OLMAYAN sahte bir sayfa kenarıydı (print @page margin:0 + sheet
+          // padding 1.5mm → kenara kadar). Bu 8mm önizlemenin kullanılabilir
+          // yüksekliğini ~16mm kısaltıyordu; column-fill:balance yükseklik-
+          // kısıtlı multicol'da fazlalığı 7. sütuna taşırıyordu (önizleme ≠ print).
+          // padding:0 ile sheet alanı print'le birebir (yatay+dikey her ikisi).
+          '<div class="kc-preview-frame" style="width:' + pageW + 'px;height:' + pageH + 'px;padding:0;box-sizing:border-box;">' + html + '</div>' +
         '</div>';
 
       // v2.8.11 pattern — clientWidth=0 on initial mount; rAF + ResizeObserver.
