@@ -1035,8 +1035,13 @@
       '#wbRoot .wb-icon-btn.danger:hover { background: rgba(220,38,38,0.1); color: #dc2626; }' +
       '#wbRoot .wb-bottom-sheet-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 9998; display: none; opacity: 0; transition: opacity 0.18s ease; }' +
       '#wbRoot .wb-bottom-sheet-backdrop.open { display: block; opacity: 1; }' +
-      '#wbRoot .wb-bottom-sheet { position: fixed; left: 0; right: 0; bottom: 0; max-height: 85vh; overflow-y: auto; background: var(--surface); border-top: 1px solid var(--border); border-radius: 16px 16px 0 0; box-shadow: 0 -8px 32px rgba(0,0,0,0.25); z-index: 9999; padding: 14px 16px env(safe-area-inset-bottom) 16px; transform: translateY(100%); transition: transform 0.22s cubic-bezier(0.32,0.72,0,1); }' +
-      '#wbRoot .wb-bottom-sheet.open { transform: translateY(0); }' +
+      // v2.44.42 — pointer-events: none kapalıyken. Önceki hata: masaüstü modalı
+      // kapanınca sadece opacity:0 oluyordu (görünmez) ama position:fixed ortada
+      // kalıp tıklamaları yutuyordu → canvas'a tıklayınca görünmez modalın
+      // LAYOUT/COLOR/SIZE butonlarına basılıyor (renk/boyut değişiyor, blok
+      // tıklanamıyor). .open ile tekrar etkileşime açılır; fade animasyonu korunur.
+      '#wbRoot .wb-bottom-sheet { position: fixed; left: 0; right: 0; bottom: 0; max-height: 85vh; overflow-y: auto; background: var(--surface); border-top: 1px solid var(--border); border-radius: 16px 16px 0 0; box-shadow: 0 -8px 32px rgba(0,0,0,0.25); z-index: 9999; padding: 14px 16px env(safe-area-inset-bottom) 16px; transform: translateY(100%); transition: transform 0.22s cubic-bezier(0.32,0.72,0,1); pointer-events: none; }' +
+      '#wbRoot .wb-bottom-sheet.open { transform: translateY(0); pointer-events: auto; }' +
       '#wbRoot .wb-bottom-sheet-grab { width: 36px; height: 4px; background: var(--border-strong); border-radius: 2px; margin: 4px auto 12px; }' +
       '#wbRoot .wb-bottom-sheet-title { font-size: 14px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 10px; display:flex; align-items:center; justify-content:space-between; gap:8px; }' +
       // RESPONSIVE — mobile breakpoint
@@ -1501,6 +1506,11 @@
           '<button class="wb-icon-btn" id="wbBSClose" style="font-size:20px;">×</button>' +
         '</div>' +
         '<div id="wbBSBody"></div>' +
+        // v2.44.43 — Edit popup'ın altına Kaydet butonu (sticky). Değişiklikler
+        // zaten canlı uygulanıyor (her alan commit ediyor); buton = onayla & kapat.
+        '<div style="position:sticky;bottom:0;margin-top:14px;padding:12px 0 2px;background:var(--surface);border-top:1px solid var(--border);">' +
+          '<button class="btn btn-primary" id="wbBSSave" style="width:100%;justify-content:center;">' + PCD.icon('check', 16) + ' <span>' + PCD.escapeHtml(t('whiteboard_save_btn', 'Save')) + '</span></button>' +
+        '</div>' +
       '</div>';
   }
 
@@ -2185,8 +2195,10 @@
     const backdrop = root.querySelector('#wbSheetBackdrop');
     const sheet = root.querySelector('#wbBottomSheet');
     const close = root.querySelector('#wbBSClose');
+    const save = root.querySelector('#wbBSSave');
     function doClose() { closeBottomSheet(root); }
     if (close) close.addEventListener('click', doClose);
+    if (save) save.addEventListener('click', doClose); // v2.44.43 — Kaydet = onayla & kapat
     if (backdrop) backdrop.addEventListener('click', doClose);
   }
 
