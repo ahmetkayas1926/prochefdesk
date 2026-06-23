@@ -868,6 +868,52 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
     return { newRec: newRec, updRec: updRec, newIng: newIng, subLinks: subLinks };
   }
 
+  // v2.44.53 — Stilize Excel template (malzeme import'taki PCD.xlsx motoru):
+  // "Recipes" sayfası + örnek satırlar + "Lists" sayfası (geçerli Type/Category/Unit).
+  function downloadRecipeXlsxTemplate() {
+    const t = PCD.i18n.t;
+    function L(k, fb) { try { var v = PCD.i18n.t(k); return (v == null || v === k) ? fb : v; } catch (e) { return fb; } }
+    const go = function (XLSX) {
+      if (!XLSX || !XLSX.utils || !PCD.xlsx) { PCD.toast.error(t('toast_excel_parser_unavailable')); return; }
+      const TYPES = ['dish', 'prep'];
+      const CATS = ['cat_appetizer', 'cat_soup', 'cat_salad', 'cat_main', 'cat_side', 'cat_dessert', 'cat_breakfast', 'cat_drink', 'cat_other'];
+      const UNITS = ['g', 'kg', 'ml', 'l', 'tsp', 'tbsp', 'cup', 'oz', 'lb', 'pcs', 'portion', 'each', 'unit'];
+      const maxLen = Math.max(TYPES.length, CATS.length, UNITS.length);
+      const listRows = [];
+      for (let i = 0; i < maxLen; i++) listRows.push([TYPES[i] || '', CATS[i] || '', UNITS[i] || '']);
+      PCD.xlsx.save(XLSX, [
+        {
+          name: 'Recipes',
+          title: 'ProChefDesk — Recipe Template',
+          subtitle: L('ri_xlsx_subtitle', 'One row per ingredient; rows sharing a Recipe name = one recipe. Type "prep" marks a sub-recipe; Yield (e.g. "4 portion") = how much a prep makes. A name matching another recipe links as a sub-recipe. See the "Lists" tab. Delete the example rows before importing.'),
+          headers: ['Recipe', 'Type', 'Category', 'Servings', 'Yield', 'Price', 'Ingredient', 'Amount', 'Unit'],
+          rows: [
+            ['Labneh', 'prep', '', 4, '4 portion', '', 'Yogurt', 1000, 'g'],
+            ['Labneh', 'prep', '', 4, '4 portion', '', 'Salt', 10, 'g'],
+            ['Mezze Plate', 'dish', 'cat_appetizer', 2, '', 16, 'Labneh', 1, 'portion'],
+            ['Mezze Plate', 'dish', 'cat_appetizer', 2, '', 16, 'Olive Oil', 30, 'ml'],
+            ['Tomato Soup', 'dish', 'cat_soup', 4, '', 12, 'Tomato', 800, 'g'],
+            ['Tomato Soup', 'dish', 'cat_soup', 4, '', 12, 'Cream', 100, 'ml'],
+          ],
+          align: ['left', 'left', 'left', 'right', 'left', 'right', 'left', 'right', 'left'],
+          widths: [22, 8, 14, 9, 12, 8, 22, 9, 8],
+        },
+        {
+          name: 'Lists',
+          title: 'Valid values',
+          subtitle: L('ri_xlsx_lists', 'Type = dish or prep. Copy Category/Unit exactly. Category, Yield and Price can be left empty.'),
+          headers: ['Type', 'Category', 'Unit'],
+          rows: listRows,
+          align: ['left', 'left', 'left'],
+          widths: [10, 18, 14],
+        },
+      ], 'prochefdesk-recipes-template.xlsx');
+    };
+    if (window.XLSX && window.XLSX.utils) go(window.XLSX);
+    else if (PCD.loadXLSX) PCD.loadXLSX().then(go).catch(function () { PCD.toast.error(t('toast_excel_parser_unavailable')); });
+    else PCD.toast.error(t('toast_excel_parser_unavailable'));
+  }
+
   function openRecipeImport() {
     function L(k, fb) { try { var v = PCD.i18n.t(k); return (v == null || v === k) ? fb : v; } catch (e) { return fb; } }
     const body = PCD.el('div');
@@ -876,7 +922,11 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
         '<div style="font-weight:700;margin-bottom:4px;">' + PCD.escapeHtml(L('ri_format', 'Format — one row per ingredient, grouped by recipe')) + '</div>' +
         PCD.escapeHtml(L('ri_desc', 'Columns: Recipe · Type (prep/dish) · Category · Servings · Yield · Price · Ingredient · Amount · Unit. Rows sharing a Recipe name become one recipe. Type "prep" marks a sub-recipe; Yield (e.g. "4 portion") sets how much a prep makes. Ingredients match by name (auto-created if new); a name matching another recipe links as a sub-recipe. Only Recipe + Ingredient are required.')) +
       '</div>' +
-      '<div style="margin-bottom:10px;"><button type="button" class="btn btn-outline btn-sm" id="riTemplate">' + PCD.icon('download', 14) + ' ' + PCD.escapeHtml(L('ri_template', 'Download template (.csv)')) + '</button></div>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px;">' +
+        '<button type="button" class="btn btn-primary btn-sm" id="riTemplateXlsx">' + PCD.icon('download', 14) + ' ' + PCD.escapeHtml(L('ri_template_xlsx', 'Download Excel template (.xlsx)')) + '</button>' +
+        '<button type="button" class="btn btn-outline btn-sm" id="riTemplate">' + PCD.icon('download', 14) + ' ' + PCD.escapeHtml(L('ri_template', 'Blank .csv template')) + '</button>' +
+      '</div>' +
+      '<div class="text-muted" style="font-size:11px;margin-bottom:10px;line-height:1.5;">' + PCD.escapeHtml(L('ri_template_hint', 'Easiest: download the Excel template, fill it cell by cell (no commas). The "Lists" tab shows valid Type, Category & Unit values.')) + '</div>' +
       '<label class="field-label">' + PCD.escapeHtml(L('import_paste', 'Paste from Excel/CSV')) + '</label>' +
       '<textarea class="textarea" id="riText" rows="8" placeholder="Recipe,Type,Category,Servings,Yield,Price,Ingredient,Amount,Unit" style="font-family:var(--font-mono);font-size:13px;"></textarea>' +
       '<div style="text-align:center;margin:8px 0;" class="text-muted text-sm">' + PCD.escapeHtml(L('import_or', 'or')) + '</div>' +
@@ -907,14 +957,15 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
         '<br><span style="color:var(--text-3);font-size:12px;">' + sample + (parsed.recipes.length > 4 ? ' …' : '') + '</span></div>';
     }
 
+    PCD.$('#riTemplateXlsx', body).addEventListener('click', downloadRecipeXlsxTemplate);
     PCD.$('#riTemplate', body).addEventListener('click', function () {
       const tpl = 'Recipe,Type,Category,Servings,Yield,Price,Ingredient,Amount,Unit\n' +
         'Labneh,prep,,4,4 portion,,Yogurt,1000,g\n' +
         'Labneh,prep,,4,4 portion,,Salt,10,g\n' +
-        'Mezze Plate,dish,cat_starter,2,,16,Labneh,1,portion\n' +
-        'Mezze Plate,dish,cat_starter,2,,16,Olive Oil,30,ml\n' +
-        'Tomato Soup,dish,cat_main,4,,12,Tomato,800,g\n' +
-        'Tomato Soup,dish,cat_main,4,,12,Cream,100,ml';
+        'Mezze Plate,dish,cat_appetizer,2,,16,Labneh,1,portion\n' +
+        'Mezze Plate,dish,cat_appetizer,2,,16,Olive Oil,30,ml\n' +
+        'Tomato Soup,dish,cat_soup,4,,12,Tomato,800,g\n' +
+        'Tomato Soup,dish,cat_soup,4,,12,Cream,100,ml';
       const blob = new Blob([tpl], { type: 'text/csv' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a'); a.href = url; a.download = 'prochefdesk-recipes-template.csv';
