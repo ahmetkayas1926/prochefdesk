@@ -777,8 +777,8 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
     const cIng = ci(['ingredient', 'malzeme', 'item']);
     const hasHeader = cRec >= 0 && cIng >= 0;
     const map = hasHeader
-      ? { rec: cRec, srv: ci(['serving', 'porsiyon', 'yield']), price: ci(['price', 'fiyat', 'sale']), ing: cIng, amt: ci(['amount', 'qty', 'quantity', 'miktar']), unit: ci(['unit', 'birim']) }
-      : { rec: 0, srv: 1, price: 2, ing: 3, amt: 4, unit: 5 };
+      ? { rec: cRec, type: ci(['type', 'tip', 'prep', 'kind']), category: ci(['category', 'kategori']), srv: ci(['serving', 'porsiyon', 'servis']), yield: ci(['yield', 'verim']), price: ci(['price', 'fiyat', 'sale']), ing: cIng, amt: ci(['amount', 'qty', 'quantity', 'miktar']), unit: ci(['unit', 'birim']) }
+      : { rec: 0, type: -1, category: -1, srv: 1, yield: -1, price: 2, ing: 3, amt: 4, unit: 5 };
     const dataRows = hasHeader ? aoa.slice(1) : aoa;
     const byName = {};
     dataRows.forEach(function (cells) {
@@ -787,9 +787,12 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
       if (!rName) return;
       const key = rName.toLowerCase();
       let rec = byName[key];
-      if (!rec) { rec = byName[key] = { name: rName, servings: null, price: null, lines: [] }; out.recipes.push(rec); }
+      if (!rec) { rec = byName[key] = { name: rName, servings: null, price: null, type: null, category: null, yieldStr: null, lines: [] }; out.recipes.push(rec); }
       if (rec.servings == null && map.srv >= 0) { const s = parseFloat(String(cells[map.srv] || '').replace(/[^0-9.]/g, '')); if (!isNaN(s) && s > 0) rec.servings = s; }
       if (rec.price == null && map.price >= 0) { const p = parseFloat(String(cells[map.price] || '').replace(/[^0-9.\-]/g, '')); if (!isNaN(p)) rec.price = p; }
+      if (rec.type == null && map.type >= 0) { const tv = String(cells[map.type] || '').trim().toLowerCase(); if (tv) rec.type = tv; }
+      if (rec.category == null && map.category >= 0) { const cv = String(cells[map.category] || '').trim(); if (cv) rec.category = cv; }
+      if (rec.yieldStr == null && map.yield >= 0) { const yv = String(cells[map.yield] || '').trim(); if (yv) rec.yieldStr = yv; }
       const iName = map.ing >= 0 ? String(cells[map.ing] || '').trim() : '';
       if (iName) {
         const amt = parseFloat(String(cells[map.amt] || '').replace(/[^0-9.\-]/g, ''));
@@ -805,9 +808,10 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
     const ingByName = {}; PCD.store.listIngredients().forEach(function (i) { ingByName[i.name.toLowerCase()] = true; });
     const recByName = {}; PCD.store.listRecipes().forEach(function (r) { recByName[r.name.toLowerCase()] = true; });
     const imported = {}; parsed.recipes.forEach(function (r) { imported[r.name.toLowerCase()] = true; });
-    let newRec = 0, updRec = 0, matchedIng = 0, subLinks = 0, noAmount = 0; const newIngSet = {};
+    let newRec = 0, updRec = 0, matchedIng = 0, subLinks = 0, noAmount = 0, preps = 0; const newIngSet = {};
     parsed.recipes.forEach(function (rec) {
       if (recByName[rec.name.toLowerCase()]) updRec++; else newRec++;
+      if (rec.type && /prep|sub/.test(rec.type)) preps++;
       rec.lines.forEach(function (line) {
         const ln = line.ingredient.toLowerCase();
         if (imported[ln] || recByName[ln]) { subLinks++; return; }
@@ -816,7 +820,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
         if (line.amount == null) noAmount++;
       });
     });
-    return { recipes: parsed.recipes.length, newRec: newRec, updRec: updRec, lineCount: parsed.lineCount, matchedIng: matchedIng, newIng: Object.keys(newIngSet).length, subLinks: subLinks, noAmount: noAmount };
+    return { recipes: parsed.recipes.length, newRec: newRec, updRec: updRec, lineCount: parsed.lineCount, matchedIng: matchedIng, newIng: Object.keys(newIngSet).length, subLinks: subLinks, noAmount: noAmount, preps: preps };
   }
 
   function applyRecipeImport(recipes) {
@@ -849,6 +853,13 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
       recipeObj.name = rec.name;
       recipeObj.servings = rec.servings != null ? rec.servings : ((existing && existing.servings) || 1);
       if (rec.price != null) recipeObj.salePrice = rec.price;
+      // v2.44.52 — Type/prep, Category, Yield sütunları.
+      if (rec.type) { if (/prep|sub/.test(rec.type)) recipeObj.isSubRecipe = true; else if (/dish|main|menu/.test(rec.type)) recipeObj.isSubRecipe = false; }
+      if (rec.category) recipeObj.category = rec.category;
+      if (rec.yieldStr) {
+        const ym = rec.yieldStr.match(/([0-9]*\.?[0-9]+)\s*(.*)/);
+        if (ym) { recipeObj.yieldAmount = parseFloat(ym[1]) || null; recipeObj.yieldUnit = (ym[2] || '').trim() || 'portion'; }
+      }
       recipeObj.ingredients = ingredients;
       recipeObj.computedAllergens = [];  // allergen raporu canlı yeniden hesaplar
       PCD.store.upsertRecipe(recipeObj);
@@ -863,11 +874,11 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
     body.innerHTML =
       '<div style="padding:10px 12px;background:var(--surface-2);border-radius:var(--r-md);font-size:13px;line-height:1.6;margin-bottom:10px;">' +
         '<div style="font-weight:700;margin-bottom:4px;">' + PCD.escapeHtml(L('ri_format', 'Format — one row per ingredient, grouped by recipe')) + '</div>' +
-        PCD.escapeHtml(L('ri_desc', 'Columns: Recipe · Servings · Price · Ingredient · Amount · Unit. Rows sharing a Recipe name become one recipe. Ingredients match by name (auto-created if new); a name matching another recipe links as a sub-recipe.')) +
+        PCD.escapeHtml(L('ri_desc', 'Columns: Recipe · Type (prep/dish) · Category · Servings · Yield · Price · Ingredient · Amount · Unit. Rows sharing a Recipe name become one recipe. Type "prep" marks a sub-recipe; Yield (e.g. "4 portion") sets how much a prep makes. Ingredients match by name (auto-created if new); a name matching another recipe links as a sub-recipe. Only Recipe + Ingredient are required.')) +
       '</div>' +
       '<div style="margin-bottom:10px;"><button type="button" class="btn btn-outline btn-sm" id="riTemplate">' + PCD.icon('download', 14) + ' ' + PCD.escapeHtml(L('ri_template', 'Download template (.csv)')) + '</button></div>' +
       '<label class="field-label">' + PCD.escapeHtml(L('import_paste', 'Paste from Excel/CSV')) + '</label>' +
-      '<textarea class="textarea" id="riText" rows="8" placeholder="Recipe,Servings,Price,Ingredient,Amount,Unit" style="font-family:var(--font-mono);font-size:13px;"></textarea>' +
+      '<textarea class="textarea" id="riText" rows="8" placeholder="Recipe,Type,Category,Servings,Yield,Price,Ingredient,Amount,Unit" style="font-family:var(--font-mono);font-size:13px;"></textarea>' +
       '<div style="text-align:center;margin:8px 0;" class="text-muted text-sm">' + PCD.escapeHtml(L('import_or', 'or')) + '</div>' +
       '<input type="file" id="riFile" accept=".csv,.tsv,.txt,.xlsx" style="display:none;">' +
       '<button class="btn btn-outline btn-block" id="riPick">' + PCD.icon('upload', 16) + ' ' + PCD.escapeHtml(L('import_upload_file', 'Upload CSV or Excel file')) + '</button>' +
@@ -891,14 +902,19 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
         '<br>' + s.lineCount + ' ' + PCD.escapeHtml(L('ri_lines', 'ingredient lines')) + ' · ' + s.matchedIng + ' ' + PCD.escapeHtml(L('ri_matched', 'matched')) +
         (s.newIng ? ' · <span style="color:var(--success);">+' + s.newIng + ' ' + PCD.escapeHtml(L('ri_new_ing', 'new ingredients')) + '</span>' : '') +
         (s.subLinks ? ' · ' + s.subLinks + ' ' + PCD.escapeHtml(L('ri_sublinks', 'sub-recipe links')) : '') +
+        (s.preps ? ' · ' + s.preps + ' ' + PCD.escapeHtml(L('ri_preps', 'preps')) : '') +
         (s.noAmount ? '<br><span style="color:var(--warning);">⚠ ' + s.noAmount + ' ' + PCD.escapeHtml(L('ri_no_amount', 'lines have no amount (import as 0 — fix later)')) + '</span>' : '') +
         '<br><span style="color:var(--text-3);font-size:12px;">' + sample + (parsed.recipes.length > 4 ? ' …' : '') + '</span></div>';
     }
 
     PCD.$('#riTemplate', body).addEventListener('click', function () {
-      const tpl = 'Recipe,Servings,Price,Ingredient,Amount,Unit\n' +
-        'Tomato Soup,4,12,Tomato,800,g\nTomato Soup,4,12,Onion,150,g\nTomato Soup,4,12,Cream,100,ml\n' +
-        'Grilled Cheese,1,9,Sourdough,2,pcs\nGrilled Cheese,1,9,Cheddar,60,g';
+      const tpl = 'Recipe,Type,Category,Servings,Yield,Price,Ingredient,Amount,Unit\n' +
+        'Labneh,prep,,4,4 portion,,Yogurt,1000,g\n' +
+        'Labneh,prep,,4,4 portion,,Salt,10,g\n' +
+        'Mezze Plate,dish,cat_starter,2,,16,Labneh,1,portion\n' +
+        'Mezze Plate,dish,cat_starter,2,,16,Olive Oil,30,ml\n' +
+        'Tomato Soup,dish,cat_main,4,,12,Tomato,800,g\n' +
+        'Tomato Soup,dish,cat_main,4,,12,Cream,100,ml';
       const blob = new Blob([tpl], { type: 'text/csv' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a'); a.href = url; a.download = 'prochefdesk-recipes-template.csv';

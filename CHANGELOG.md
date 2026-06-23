@@ -4,13 +4,14 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
-## v2.44.51 — Recipe toplu import (Excel/CSV) · 2026-06-23
+## v2.44.51–.52 — Recipe toplu import (Excel/CSV) · 2026-06-23
 Kategori denetimi bulgusu: kurulum yükü (40-80 tarifi elle girmek) ASIL hedef kitleyi (caterer/private chef/danışman/restoran) zorluyordu. Mevcut malzeme-import desenini tariflere taşıdım (recipes.js header "Import" butonu).
 - **Format:** her satır = bir malzeme satırı, aynı Recipe adı = bir tarif (`Recipe·Servings·Price·Ingredient·Amount·Unit`). CSV/TSV/XLSX dosya + yapıştır + indirilebilir CSV şablon.
 - **Akıllı eşleştirme (ID yok):** malzeme isimle eşleşir (yoksa otomatik oluşur, price 0); bir ad başka bir tarif adıyla (mevcut veya aynı import) eşleşirse **sub-recipe** olarak bağlanır (iki-pass). Mevcut tarif adı → günceller (kopya değil).
 - **Güvenli önizleme:** import'tan önce "X tarif (+Y yeni/↻Z güncelle) · N satır · M eşleşti · +K yeni malzeme · L sub-link · uyarılar" gösterir.
 - **Kapsamlı test (preview, gerçek UI):** çok-satır gruplama · yeni/mevcut malzeme · sub-recipe (aynı+mevcut, büyük/küçük harf) · TSV · başlıksız pozisyonel · güncelleme-kopya-değil · eksik miktar→0+uyarı · eksik birim→g · $fiyat parse · cost cascade hatasız · liste+sayı güncelleme. 6 senaryo batch'i, 0 console hatası.
-- **Notlar:** yeni etiketler İngilizce (L() fallback; sonra çevrilir). Sub-recipe olarak kullanılan tarifler otomatik "prep" işaretlenmez (yemek kalır; şef "Convert to Prep" ile işaretler).
+- **Notlar:** yeni etiketler İngilizce (L() fallback; sonra çevrilir).
+- **v2.44.52 — 3 yeni sütun:** `Type` (prep/dish → isSubRecipe), `Category` (recipe.category), `Yield` ("4 portion" → yieldAmount+yieldUnit). Başlıkla isimle bulunur, pozisyonel eski 6-sütun korunur; yalnız Recipe+Ingredient zorunlu. Doğrulandı: Type=prep → prep sınıflandı + Menü Mühendisliği'nden otomatik dışlandı; dish → category set + dish kaldı; Yield→yieldAmount/Unit; önizleme "N preps" gösterir. 0 console hatası.
 
 ## v2.44.46–.50 — Menü Mühendisliği + prep/yemek ayrımı · 2026-06-23
 Kategori denetimi bulgusu: app food cost % gösteriyor ama "hangi yemek para kaybettiriyor"u tablo olarak vermiyordu (eski `menu_matrix` izole + elle veriydi, silinmişti). Yeni **bağlı + eyleme dönük** araç (`menu_engineering.js`, recipes sub-nav'ında yeni sekme, `grid` ikonu).
