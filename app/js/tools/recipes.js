@@ -780,7 +780,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
       }).join('');
       return '<tr><td style="text-align:left;padding:5px 8px;border:1px solid #ccc;font-weight:600;">' + PCD.escapeHtml(r.name) + '</td>' + allergenCells + SEP_TD + dietCells + '</tr>';
     }).join('');
-    const html = '<style>@page{size:A4 landscape;margin:0}body{padding:12mm}</style>' +
+    const html = '<style>@page{size:A4 landscape;margin:0}body{padding:5mm}</style>' +
       '<h2 style="margin:0 0 10px;">' + PCD.escapeHtml(t('label_allergens')) + ' · ' + recs.length + '</h2>' +
       '<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr>' + head + '</tr></thead><tbody>' + rows + '</tbody></table>';
     PCD.print(html, t('label_allergens'));
