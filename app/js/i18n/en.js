@@ -3273,4 +3273,5 @@ window.PCD.i18n.register('en', {
   inv_servings: "Servings",
   inv_no_recipes_for_sales: "No dishes yet — add recipes first.",
   inv_no_sales_entered: "Enter a quantity for at least one dish.",
+  tab_menu_eng: "Menu engineering",
 });

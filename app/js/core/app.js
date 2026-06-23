@@ -76,6 +76,7 @@
       PCD.router.registerLazy('kitchen_cards',   'js/tools/kitchen_cards.js',  'kitchen_cards');
       PCD.router.registerLazy('whiteboard',      'js/tools/whiteboard.js',     'whiteboard');
       PCD.router.registerLazy('portion',         'js/tools/portion.js',        'portion');
+      PCD.router.registerLazy('menu_engineering','js/tools/menu_engineering.js','menuEngineering');
       // Inventory eager-kept: dashboard kullanır (computeStatus low-stock alert için)
       PCD.router.registerLazy('suppliers',       'js/tools/suppliers.js',      'suppliers');
       PCD.router.registerLazy('waste',           'js/tools/waste.js',          'waste');

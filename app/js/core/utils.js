@@ -145,7 +145,8 @@
               { key: 'waste',     route: 'waste',     label: 'tab_waste',     icon: 'trash' }],
     recipes: [{ key: 'recipes',   route: 'recipes',   label: 'tab_recipes',   icon: 'book-open' },
               { key: 'nutrition', route: 'nutrition', label: 'tab_nutrition', icon: 'activity' },
-              { key: 'portion',   route: 'portion',   label: 'tab_portion',   icon: 'scale' }],
+              { key: 'portion',   route: 'portion',   label: 'tab_portion',   icon: 'scale' },
+              { key: 'menu_engineering', route: 'menu_engineering', label: 'tab_menu_eng', icon: 'grid' }],
     lists:   [{ key: 'checklist', route: 'checklist', label: 'tab_checklist', icon: 'check-square' },
               { key: 'prep',      route: 'prep',      label: 'tab_prep',      icon: 'file-text' }],
   };

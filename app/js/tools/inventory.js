@@ -1080,6 +1080,11 @@
       }).then(function (ok) {
         if (!ok) return;
         const report = PCD.tools.inventory.applyStockDeductions(dd.deductions);
+        // v2.44.46 — Satışı recipe.salesCount'a akıt → Menü Mühendisliği popülerlik ekseni.
+        Object.keys(sales).forEach(function (rid) {
+          const rr = PCD.store.getRecipe(rid);
+          if (rr) { rr.salesCount = (Number(rr.salesCount) || 0) + (Number(sales[rid]) || 0); PCD.store.upsertRecipe(rr); }
+        });
         const deducted = report.filter(function (r) { return r.tracked; }).length;
         const lowNow = report.filter(function (r) { return r.tracked && (r.status === 'low' || r.status === 'critical' || r.status === 'out'); }).length;
         PCD.toast.success((t('event_apply_inv_done') || '{n} item(s) deducted from stock').replace('{n}', deducted) + (lowNow ? ' · ' + lowNow + ' ⚠' : ''));

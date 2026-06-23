@@ -4,6 +4,13 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.46 — Menü Mühendisliği (kâr × popülerlik matrisi) · 2026-06-23
+Kategori denetimi bulgusu: app food cost % gösteriyor ama "hangi yemek para kaybettiriyor"u tablo olarak vermiyordu (eski `menu_matrix` izole + elle veriydi, silinmişti). Yeni **bağlı + eyleme dönük** araç (`menu_engineering.js`, recipes sub-nav'ında yeni sekme, `grid` ikonu).
+- **Veri (yeni toplama yok):** maliyet → `computeFoodCost` (sub-recipe dahil) · fiyat → `recipe.salePrice` · satış → `recipe.salesCount`. Fiyat/satış inline düzenlenir → recipe'ye yazılır (recipes tablosu zaten senkron).
+- **Otomatik bağlantı:** envanter **Record sales** artık `recipe.salesCount`'u artırır → popülerlik ekseni kendiliğinden dolar (eski matrix'in yapamadığı).
+- **Çıktı:** her yemek 4 kutuya → ⭐Star · 🐴Plowhorse · ❓Puzzle · 🐶Dog + kutu başına tek-cümle tavsiye + tablo (maliyet/fiyat/satış/marj/kâr + food cost %). **Maliyetin altında satılan** yemekler kırmızı + üstte uyarı bandı. "Reset period sales" ile dönem sıfırlama. Tıkla→tarifi düzenle kısayolu.
+- **Test:** Soupe — maliyet $3.68, fiyat $20, sat 10 → marj $16.32 (18% fc), kâr $163.17, Plowhorse. salesCount bağlantısı 10→+5→15. 0 console hatası. Gating eklenmedi (monetization operatör kararı — istenirse plans.js).
+
 ## v2.44.44–.45 — Envanter zinciri: buffet + satış → otomatik tüketim · 2026-06-23
 Denetim bulgusu: envanter tüketimi yarımdı — yalnız Event "Deduct stock" + Order/Receiving çalışıyordu; **satış→tüketim YOK**, **buffet→envanter YOK**. İki boşluk kapatıldı (kanıtlı primitive'i yeniden kullanır: `flattenIngredients` + `applyStockDeductions`, events ile AYNI sözleşme).
 - **v2.44.44 — Buffet → envanter.** Yeni `computeBuffetDeductions` (buffet.js): `buildBuffetOrder` ile AYNI miktar modeli (`prepAmount = covers × per_guest × refillX`, item override dahil; recipe kalemi flatten, ingredient kalemi direkt, custom atlanır; stok birimine normalize). Editöre **"📦 Deduct stock"** butonu (event ile aynı onaylı akış + aynı i18n). **Test:** buffet 10 kişi, sub-recipe'li recipe + ingredient item → flour 7000g, butter 2kg, envanter doğru düştü.
