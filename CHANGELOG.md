@@ -4,7 +4,8 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
-## v2.44.59 — i18n: yeni etiketler 5 dile · 2026-06-23
+## v2.44.59–.60 — i18n: yeni etiketler 5 dile + sızıntı denetimi · 2026-06-23
+- **v2.44.60 — Denetim sonrası kapatma.** Tüm oturum-içi yeni metinler kod seviyesinde tarandı: Menü Mühendisliği/Satış kaydet/Recipe import/Batch UI'si 5 dilde TAM (0 eksik). Ek bulgular: (a) Excel şablonu 2 kozmetik sayfa başlığı (`ri_xlsx_title` "Tarif Şablonu" + `ri_xlsx_lists_title` "Geçerli değerler") çevrildi — alt-açıklamalarla tutarlı; (b) **eski** (v2.8.2) `bulkCostReport` butonundaki ham `Cost Report` → `t('btn_cost_report')` ile çevrildi. **Kasıtlı İngilizce kalan tek şey:** import dosya formatı (sütun başlıkları Recipe/Type/Ingredient + `dish`/`prep`/`cat_*` token + örnek satırlar) — parser bunları eşleştiriyor, çeviri import'u bozardı.
 - Bu oturumda eklenen İngilizce etiketler (Menü Mühendisliği `me_*` · Satış kaydet `inv_*` · Recipe import `ri_*` · `tab_menu_eng` · Batch adı/portion override) **tr/es/fr/de/ar**'a çevrildi. Her dilin sonuna tek `register` bloğu (MERGE); portion anahtarları (tab_portion/portion_title/portion_desc/pc_subtitle) override edildi.
 - **Batch** ürün adı tüm dillerde İngilizce korundu (sekme "Batch"); başlık yerelleştirildi (Batch Hesaplayıcı / Calculadora Batch / Calculateur Batch / Batch-Rechner / حاسبة الدفعات). Çeyrek etiketleri yerel (Yıldız/İş Atı/Bilmece/Köpek · Estrella/… · Star/Arbeitspferd/Rätsel/Ladenhüter · نجم/…). `import_*` zaten 6 dilde vardı (dokunulmadı). en.js'te `me_*`/`ri_*` L() fallback ile İngilizce kalıyor (tasarım). `{nr}`/`{ni}` placeholder + `prep`/`dish`/`Lists` literal değerleri korundu. **5 dil canlı preview'da doğrulandı** (raw key/fallback sızıntısı yok).
 

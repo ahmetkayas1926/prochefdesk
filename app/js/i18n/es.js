@@ -3093,4 +3093,6 @@ window.PCD.i18n.register('es', {
   ri_done: "{nr} recetas importadas · {ni} ingredientes nuevos",
   ri_xlsx_subtitle: "Una fila por ingrediente. Escribe el nombre de la receta + sus detalles UNA VEZ en la primera fila, luego déjalos en blanco para el resto de sus ingredientes. El tipo \"prep\" marca una sub-receta; el Rendimiento (p. ej. \"4 portion\") = cuánto produce un prep. Un nombre que coincide con otra receta se enlaza como sub-receta. Mira la pestaña \"Lists\". Elimina las filas de ejemplo antes de importar.",
   ri_xlsx_lists: "Tipo = dish o prep. Copia Categoría/Unidad exactamente. Categoría, Rendimiento y Precio pueden quedar vacíos.",
+  ri_xlsx_title: "Plantilla de recetas",
+  ri_xlsx_lists_title: "Valores válidos",
 });

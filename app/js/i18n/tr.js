@@ -3324,4 +3324,6 @@ window.PCD.i18n.register('tr', {
   ri_done: "{nr} tarif içe aktarıldı · {ni} yeni malzeme",
   ri_xlsx_subtitle: "Malzeme başına bir satır. Tarif adını + detaylarını ilk satıra BİR KEZ yaz, kalan malzemeleri için boş bırak. \"prep\" türü alt-tarif demektir; Verim (örn. \"4 portion\") = bir prep'in ne kadar verdiği. Başka bir tarifle eşleşen ad alt-tarif olarak bağlanır. \"Lists\" sekmesine bak. İçe aktarmadan önce örnek satırları sil.",
   ri_xlsx_lists: "Tür = dish veya prep. Kategori/Birim'i birebir kopyala. Kategori, Verim ve Fiyat boş bırakılabilir.",
+  ri_xlsx_title: "Tarif Şablonu",
+  ri_xlsx_lists_title: "Geçerli değerler",
 });

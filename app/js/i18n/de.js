@@ -3093,4 +3093,6 @@ window.PCD.i18n.register('de', {
   ri_done: "{nr} Rezepte importiert · {ni} neue Zutaten",
   ri_xlsx_subtitle: "Eine Zeile pro Zutat. Schreibe den Rezeptnamen + seine Details EINMAL in die erste Zeile, lasse sie für die restlichen Zutaten leer. Typ \"prep\" kennzeichnet ein Unterrezept; Ausbeute (z. B. \"4 portion\") = wie viel ein Prep ergibt. Ein Name, der mit einem anderen Rezept übereinstimmt, wird als Unterrezept verknüpft. Siehe Reiter \"Lists\". Lösche die Beispielzeilen vor dem Import.",
   ri_xlsx_lists: "Typ = dish oder prep. Kopiere Kategorie/Einheit exakt. Kategorie, Ausbeute und Preis können leer bleiben.",
+  ri_xlsx_title: "Rezeptvorlage",
+  ri_xlsx_lists_title: "Gültige Werte",
 });

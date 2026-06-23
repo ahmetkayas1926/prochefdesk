@@ -159,7 +159,7 @@
             <label class="checkbox" style="min-height:auto;"><input type="checkbox" id="selAll"><span class="text-sm font-semibold"><span id="selCount">0</span> ${t('selected')}</span></label>
           </div>
           <div class="flex gap-2" style="flex-wrap:wrap;">
-            <button type="button" class="btn btn-primary btn-sm" id="bulkCostReport">${PCD.icon('activity',14)} <span>Cost Report</span></button>
+            <button type="button" class="btn btn-primary btn-sm" id="bulkCostReport">${PCD.icon('activity',14)} <span>${t('btn_cost_report')}</span></button>
             <!-- v2.8.25 — Bulk yield set/clear: flips recipes between Menu
                  and Preps in one go. "To Prep" opens a small modal to pick
                  a default yield (amount + unit) applied to all selected.
@@ -892,7 +892,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
       PCD.xlsx.save(XLSX, [
         {
           name: 'Recipes',
-          title: 'ProChefDesk — Recipe Template',
+          title: 'ProChefDesk — ' + L('ri_xlsx_title', 'Recipe Template'),
           subtitle: L('ri_xlsx_subtitle', 'One row per ingredient. Write the recipe name + its details ONCE on the first row, then leave them blank for the rest of its ingredients. Type "prep" marks a sub-recipe; Yield (e.g. "4 portion") = how much a prep makes. A name matching another recipe links as a sub-recipe. See the "Lists" tab. Delete the example rows before importing.'),
           headers: ['Recipe', 'Type', 'Category', 'Servings', 'Yield', 'Price', 'Ingredient', 'Amount', 'Unit'],
           rows: [
@@ -908,7 +908,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
         },
         {
           name: 'Lists',
-          title: 'Valid values',
+          title: L('ri_xlsx_lists_title', 'Valid values'),
           subtitle: L('ri_xlsx_lists', 'Type = dish or prep. Copy Category/Unit exactly. Category, Yield and Price can be left empty.'),
           headers: ['Type', 'Category', 'Unit'],
           rows: listRows,

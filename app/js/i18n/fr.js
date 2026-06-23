@@ -3093,4 +3093,6 @@ window.PCD.i18n.register('fr', {
   ri_done: "{nr} recettes importées · {ni} nouveaux ingrédients",
   ri_xlsx_subtitle: "Une ligne par ingrédient. Écrivez le nom de la recette + ses détails UNE FOIS sur la première ligne, puis laissez-les vides pour le reste de ses ingrédients. Le type « prep » marque une sous-recette ; le Rendement (p. ex. « 4 portion ») = ce que produit un prep. Un nom correspondant à une autre recette est lié comme sous-recette. Voir l'onglet « Lists ». Supprimez les lignes d'exemple avant d'importer.",
   ri_xlsx_lists: "Type = dish ou prep. Copiez Catégorie/Unité exactement. Catégorie, Rendement et Prix peuvent rester vides.",
+  ri_xlsx_title: "Modèle de recettes",
+  ri_xlsx_lists_title: "Valeurs valides",
 });
