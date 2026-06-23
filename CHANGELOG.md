@@ -4,7 +4,7 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
-## v2.44.51–.53 — Recipe toplu import (Excel/CSV) · 2026-06-23
+## v2.44.51–.54 — Recipe toplu import (Excel/CSV) · 2026-06-23
 Kategori denetimi bulgusu: kurulum yükü (40-80 tarifi elle girmek) ASIL hedef kitleyi (caterer/private chef/danışman/restoran) zorluyordu. Mevcut malzeme-import desenini tariflere taşıdım (recipes.js header "Import" butonu).
 - **Format:** her satır = bir malzeme satırı, aynı Recipe adı = bir tarif (`Recipe·Servings·Price·Ingredient·Amount·Unit`). CSV/TSV/XLSX dosya + yapıştır + indirilebilir CSV şablon.
 - **Akıllı eşleştirme (ID yok):** malzeme isimle eşleşir (yoksa otomatik oluşur, price 0); bir ad başka bir tarif adıyla (mevcut veya aynı import) eşleşirse **sub-recipe** olarak bağlanır (iki-pass). Mevcut tarif adı → günceller (kopya değil).
@@ -13,6 +13,7 @@ Kategori denetimi bulgusu: kurulum yükü (40-80 tarifi elle girmek) ASIL hedef 
 - **Notlar:** yeni etiketler İngilizce (L() fallback; sonra çevrilir).
 - **v2.44.52 — 3 yeni sütun:** `Type` (prep/dish → isSubRecipe), `Category` (recipe.category), `Yield` ("4 portion" → yieldAmount+yieldUnit). Başlıkla isimle bulunur, pozisyonel eski 6-sütun korunur; yalnız Recipe+Ingredient zorunlu. Doğrulandı: Type=prep → prep sınıflandı + Menü Mühendisliği'nden otomatik dışlandı; dish → category set + dish kaldı; Yield→yieldAmount/Unit; önizleme "N preps" gösterir. 0 console hatası.
 - **v2.44.53 — Stilize Excel template** (malzeme import paritesi). `PCD.xlsx.save` motoruyla 2-sayfalı `.xlsx`: **Recipes** (9 sütun + 6 örnek satır, kalın yeşil başlık + çerçeve) + **Lists** (geçerli Type/Category/Unit). Modal artık 2 buton: yeşil "Download Excel template (.xlsx)" + "Blank .csv". CSV örneğindeki geçersiz `cat_starter` → `cat_appetizer`/`cat_soup` düzeltildi. Doğrulandı: 2 sheet, 9 başlık, Lists doğru.
+- **v2.44.54 — `PCD.xlsx` subtitle satır yüksekliği (motor fix).** Subtitle merge+wrapText ile sarılıyordu ama satır yüksekliği ayarlanmadığından metin kırpılıyordu (sıkışık). Artık toplam genişlik + metin uzunluğundan satır sayısı hesaplanıp `!rows` hpt ayarlanıyor (örn. 42pt ≈ 3 satır). **Tüm stilize Excel template'lerini düzeltir** (recipe + ingredient + cost report vb.). Doğrulandı: subtitle satırı hpt=42, wrapText korundu.
 
 ## v2.44.46–.50 — Menü Mühendisliği + prep/yemek ayrımı · 2026-06-23
 Kategori denetimi bulgusu: app food cost % gösteriyor ama "hangi yemek para kaybettiriyor"u tablo olarak vermiyordu (eski `menu_matrix` izole + elle veriydi, silinmişti). Yeni **bağlı + eyleme dönük** araç (`menu_engineering.js`, recipes sub-nav'ında yeni sekme, `grid` ikonu).

@@ -618,6 +618,17 @@
       if (spec.subtitle) { const sr = spec.title ? 1 : 0; merges.push({ s: { r: sr, c: 0 }, e: { r: sr, c: ncol - 1 } }); }
       if (_wmFootRow) merges.push({ s: { r: _wmFootRow - 1, c: 0 }, e: { r: _wmFootRow - 1, c: ncol - 1 } });
       if (merges.length) ws['!merges'] = merges;
+      // v2.44.54 — Subtitle satırı merge + wrapText ile sarılıyor ama satır yüksekliği
+      // ayarlanmazsa metin kırpılır (sıkışık görünür). Toplam genişlik + metin
+      // uzunluğundan satır sayısını tahmin edip yüksekliği ayarla (tüm template'leri düzeltir).
+      if (spec.subtitle) {
+        const sr2 = spec.title ? 1 : 0;
+        const totalW = (spec.widths && spec.widths.length) ? spec.widths.reduce(function (a, b) { return a + (Number(b) || 0); }, 0) : (ncol * 12);
+        const lines = Math.max(1, Math.ceil(String(spec.subtitle).length / Math.max(20, totalW * 0.92)));
+        const rowsArr = ws['!rows'] || [];
+        rowsArr[sr2] = { hpt: Math.min(140, Math.max(18, lines * 14)) };
+        ws['!rows'] = rowsArr;
+      }
       // Column widths: fixed if given, else auto-fit from content (clamp 8..40)
       if (spec.widths) {
         ws['!cols'] = spec.widths.map(function (w) { return { wch: w }; });
