@@ -241,8 +241,10 @@
       });
     }
 
-    function paint() {
-      PCD.clear(listEl);
+    // v2.44.63 — Görünür set TEK kaynaktan: arama + sekme (all/menu/preps) + etiket.
+    // Hem liste (paint) hem "tümünü seç"/bulk bar AYNI seti kullanır → select-all artık
+    // aktif sekmeye uyar (Menu sekmesinde sadece menü item'ları seçer, prep'leri değil).
+    function computeVisible() {
       let visible = sorted;
       if (filter) {
         const q = filter.toLowerCase();
@@ -257,23 +259,24 @@
           });
         });
       }
-      // v2.8.22 — Tab filter applies AFTER search filter so the count in
-      // search results stays scoped to the chosen tab.
+      // Tab filter applies AFTER search filter so the count stays scoped to the tab.
       if (activeTab === 'menu') visible = visible.filter(function (r) { return !isPrep(r); });
       else if (activeTab === 'preps') visible = visible.filter(isPrep);
-
-      // v2.8.75 — Tag filter: recipe must have ALL active tags
+      // Tag filter: recipe must have ALL active tags
       if (tagFilterSet.size > 0) {
         visible = visible.filter(function (r) {
           if (!Array.isArray(r.tags) || r.tags.length === 0) return false;
           let ok = true;
-          tagFilterSet.forEach(function (tg) {
-            if (r.tags.indexOf(tg) < 0) ok = false;
-          });
+          tagFilterSet.forEach(function (tg) { if (r.tags.indexOf(tg) < 0) ok = false; });
           return ok;
         });
       }
+      return visible;
+    }
 
+    function paint() {
+      PCD.clear(listEl);
+      let visible = computeVisible();
       lastVisibleIds = visible.map(function (r) { return r.id; });
 
 if (visible.length === 0 && !filter && activeTab === 'all') {
@@ -425,10 +428,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
       bar.style.display = selectMode ? '' : 'none';
       PCD.$('#selCount', view).textContent = selectedIds.size;
       const selAll = PCD.$('#selAll', view);
-      const currentShown = sorted.filter(function (r) {
-        if (!filter) return true;
-        return (r.name || '').toLowerCase().indexOf(filter.toLowerCase()) >= 0;
-      });
+      const currentShown = computeVisible();
       selAll.checked = currentShown.length > 0 && currentShown.every(function (r) { return selectedIds.has(r.id); });
     }
 
@@ -485,6 +485,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
       activeTab = tab;
       paintTabs();
       paint();
+      updateBulkBar(); // v2.44.63 — selAll/sayaç yeni sekmenin görünür setine göre tazelensin
     });
     paintTabs();
 
@@ -523,10 +524,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
     });
     paintTagFilter();
     PCD.$('#selAll', view).addEventListener('change', function () {
-      const currentShown = sorted.filter(function (r) {
-        if (!filter) return true;
-        return (r.name || '').toLowerCase().indexOf(filter.toLowerCase()) >= 0;
-      });
+      const currentShown = computeVisible();
       if (this.checked) currentShown.forEach(function (r) { selectedIds.add(r.id); });
       else selectedIds.clear();
       paint();

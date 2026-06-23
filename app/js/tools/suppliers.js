@@ -348,6 +348,12 @@
     const m = PCD.modal.open({ title: PCD.i18n.t('modal_send_to', { name: supplier.name }), body: body, footer: footer, size: 'md', closable: true });
 
     function getMsg() { return PCD.$('#shareMsg', body).value; }
+    // v2.44.63 — gönderim anındaki kalemleri yapısal yakala (draftQty send sonrası
+    // temizlenir) → history'e gömülür → "Geldi → stoğa ekle" köprüsü bunu kullanır.
+    const _dq = draftQty[supplier.id] || {};
+    const orderItems = items.map(function (it) {
+      return { name: it.name, qty: Number(_dq[it.id]) || 0, unit: _dq['_unit_' + it.id] || it.unit || '' };
+    });
     cancelBtn.addEventListener('click', function () { m.close(); });
 
     PCD.$('#shWa', body).addEventListener('click', function () {
@@ -355,7 +361,7 @@
         ? 'https://wa.me/' + waNumber + '?text=' + encodeURIComponent(getMsg())
         : 'https://wa.me/?text=' + encodeURIComponent(getMsg());
       window.open(url, '_blank');
-      recordOrder(supplier.id, 'whatsapp', waNumber, getMsg(), items.length, deliveryDate);
+      recordOrder(supplier.id, 'whatsapp', waNumber, getMsg(), orderItems, deliveryDate);
       onSentSuccess(supplier);
       m.close();
     });
@@ -364,7 +370,7 @@
         ? 'sms:' + supplier.phone + '?&body=' + encodeURIComponent(getMsg())
         : 'sms:?&body=' + encodeURIComponent(getMsg());
       window.location.href = url;
-      recordOrder(supplier.id, 'sms', (supplier.phone || ''), getMsg(), items.length, deliveryDate);
+      recordOrder(supplier.id, 'sms', (supplier.phone || ''), getMsg(), orderItems, deliveryDate);
       onSentSuccess(supplier);
       m.close();
     });
@@ -374,7 +380,7 @@
         ? 'mailto:' + email + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(getMsg())
         : 'mailto:?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(getMsg());
       window.location.href = url;
-      recordOrder(supplier.id, 'email', email, getMsg(), items.length, deliveryDate);
+      recordOrder(supplier.id, 'email', email, getMsg(), orderItems, deliveryDate);
       onSentSuccess(supplier);
       m.close();
     });
@@ -386,7 +392,7 @@
           title: PCD.i18n.t('supplier_order_title', { name: supplier.name }),
           text: txt
         }).then(function () {
-          recordOrder(supplier.id, 'share', '', txt, items.length, deliveryDate);
+          recordOrder(supplier.id, 'share', '', txt, orderItems, deliveryDate);
           onSentSuccess(supplier);
           m.close();
         }).catch(function () {
@@ -394,7 +400,7 @@
         });
       } else if (navigator.clipboard) {
         navigator.clipboard.writeText(txt).then(function () {
-          recordOrder(supplier.id, 'copy', '', txt, items.length, deliveryDate);
+          recordOrder(supplier.id, 'copy', '', txt, orderItems, deliveryDate);
           PCD.toast.success(PCD.i18n.t('toast_copied_to_clipboard'));
         });
       }
@@ -415,17 +421,22 @@
   // ============ ORDER HISTORY (v2.15.0) ============
   // Gönderilen siparişi tedarikçi nesnesine göm (suppliers tablosu zaten cloud-sync'li
   // → yeni tablo/RLS gerekmez). Her kayıt: tarih-saat + kanal + alıcı + mesaj + kalem.
-  function recordOrder(supplierId, channel, to, message, itemCount, deliveryDate) {
+  function recordOrder(supplierId, channel, to, message, items, deliveryDate) {
     const sup = PCD.store.getFromTable('suppliers', supplierId);
     if (!sup) return;
     const hist = Array.isArray(sup.orderHistory) ? sup.orderHistory.slice() : [];
+    // v2.44.63 — yapısal kalemleri sakla (isim/miktar/birim) → "Geldi → stoğa ekle"
+    // köprüsü mesajı parse etmeden doğrudan kullanır. Eski sürüm uyumluluğu: items
+    // sayıysa (eski çağrı) itemCount olarak alınır.
+    const arr = Array.isArray(items) ? items.filter(function (x) { return x && x.name && Number(x.qty) > 0; }) : [];
     hist.unshift({
       id: PCD.uid('so'),
       sentAt: new Date().toISOString(),
       channel: channel,
       to: to || '',
       message: message || '',
-      itemCount: itemCount || 0,
+      items: arr,
+      itemCount: Array.isArray(items) ? arr.length : (Number(items) || 0),
       deliveryDate: deliveryDate || '',
     });
     sup.orderHistory = hist.slice(0, 50); // son 50 sipariş
@@ -439,17 +450,24 @@
     const hist = Array.isArray(sup.orderHistory) ? sup.orderHistory : [];
     const chLabel = { whatsapp: 'WhatsApp', sms: 'SMS', email: 'Email', share: (t('supplier_ch_share') || 'Share'), copy: (t('supplier_ch_copy') || 'Copy') };
     const body = PCD.el('div');
-    if (!hist.length) {
-      body.innerHTML = '<div class="empty" style="padding:24px 8px;">' +
-        '<div class="empty-icon" style="color:var(--brand-600);">' + PCD.icon('clock', 40) + '</div>' +
-        '<div class="empty-title">' + PCD.escapeHtml(t('supplier_history_empty') || 'No orders sent yet') + '</div>' +
-        '<div class="empty-desc">' + PCD.escapeHtml(t('supplier_history_empty_desc') || 'Sent orders are saved here with date, channel and message.') + '</div></div>';
-    } else {
+
+    function paint() {
+      if (!hist.length) {
+        body.innerHTML = '<div class="empty" style="padding:24px 8px;">' +
+          '<div class="empty-icon" style="color:var(--brand-600);">' + PCD.icon('clock', 40) + '</div>' +
+          '<div class="empty-title">' + PCD.escapeHtml(t('supplier_history_empty') || 'No orders sent yet') + '</div>' +
+          '<div class="empty-desc">' + PCD.escapeHtml(t('supplier_history_empty_desc') || 'Sent orders are saved here with date, channel and message.') + '</div></div>';
+        return;
+      }
       let html = '';
       hist.forEach(function (o) {
         const d = new Date(o.sentAt);
         const dateStr = d.toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || 'en', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) +
           ' · ' + d.toLocaleTimeString((PCD.i18n && PCD.i18n.currentLocale) || 'en', { hour: '2-digit', minute: '2-digit' });
+        // v2.44.63 — "Geldi → stoğa ekle" köprüsü: kalem varsa buton; eklendiyse rozet.
+        const receiveCtrl = o.receivedAt
+          ? '<span style="font-size:11px;font-weight:700;color:#15803d;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:3px 9px;">' + PCD.icon('check', 12) + ' ' + PCD.escapeHtml(t('sup_received') || 'Added to stock') + '</span>'
+          : (orderItemsOf(o).length > 0 ? '<button class="btn btn-outline btn-sm" data-receive-oid="' + o.id + '">' + PCD.icon('truck', 14) + ' ' + PCD.escapeHtml(t('sup_receive_add') || 'Add to stock') + '</button>' : '');
         html += '<div style="border:1px solid var(--border);border-radius:var(--r-md);padding:10px 12px;margin-bottom:8px;">' +
           '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px;">' +
             '<span style="font-weight:700;font-size:13px;">' + PCD.escapeHtml(dateStr) + '</span>' +
@@ -457,15 +475,115 @@
           '</div>' +
           '<div class="text-muted" style="font-size:11px;margin-bottom:6px;">' + (o.itemCount || 0) + ' ' + PCD.escapeHtml(t('supplier_order_items') || 'items') + '</div>' +
           '<pre style="white-space:pre-wrap;font-family:var(--font-mono);font-size:11px;background:var(--surface-2);border-radius:var(--r-sm);padding:8px 10px;margin:0;max-height:170px;overflow:auto;">' + PCD.escapeHtml(o.message || '') + '</pre>' +
+          (receiveCtrl ? '<div style="margin-top:8px;display:flex;justify-content:flex-end;">' + receiveCtrl + '</div>' : '') +
         '</div>';
       });
       body.innerHTML = html;
     }
+    paint();
+    body.addEventListener('click', function (e) {
+      const btn = e.target.closest('[data-receive-oid]');
+      if (!btn) return;
+      const o = hist.find(function (x) { return x.id === btn.getAttribute('data-receive-oid'); });
+      if (o) openReceiveStock(sup, o, paint);
+    });
+
     const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('btn_close') });
     const footer = PCD.el('div', { style: { display: 'flex', width: '100%' } });
     footer.appendChild(closeBtn);
     const m = PCD.modal.open({ title: (t('supplier_history_title') || 'Order history') + ' · ' + (sup.name || ''), body: body, footer: footer, size: 'md', closable: true });
     closeBtn.addEventListener('click', function () { m.close(); });
+  }
+
+  // v2.44.63 — Sipariş kalemlerini al: yapısal items varsa onu, yoksa mesajı parse et
+  // (eski kayıtlar). Mesaj formatı buildMessage ile: "• AD — MİKTAR BİRİM".
+  function orderItemsOf(o) {
+    if (Array.isArray(o.items) && o.items.length) {
+      return o.items.map(function (it) { return { name: it.name, qty: Number(it.qty) || 0, unit: it.unit || '' }; })
+        .filter(function (it) { return it.name && it.qty > 0; });
+    }
+    const out = [];
+    (o.message || '').split('\n').forEach(function (ln) {
+      const mm = ln.match(/^\s*•\s*(.+?)\s+—\s+([0-9]+(?:[.,][0-9]+)?)\s*(\S*)/);
+      if (mm) out.push({ name: mm[1].trim(), qty: parseFloat(mm[2].replace(',', '.')) || 0, unit: (mm[3] || '').trim() });
+    });
+    return out.filter(function (it) { return it.name && it.qty > 0; });
+  }
+
+  // v2.44.63 — "Geldi → stoğa ekle": sipariş kalemlerini inventory'ye (isimle eşleşen
+  // malzeme) ekler. Eşleşen = checkbox (varsayılan açık) + düzenlenebilir miktar (kısmi
+  // teslim). Eşleşmeyen atlanır. applyStockAdditions stok yoksa tracked satır yaratır
+  // (receiving takip başlatır). Çift ekleme koruması: o.receivedAt set edilir.
+  function openReceiveStock(sup, o, onDone) {
+    const t = PCD.i18n.t;
+    const items = orderItemsOf(o);
+    const byName = {};
+    PCD.store.listIngredients().forEach(function (i) { byName[(i.name || '').toLowerCase()] = i; });
+    const matched = [];
+    const unmatched = [];
+    items.forEach(function (it) {
+      const ing = byName[(it.name || '').toLowerCase()];
+      if (ing) matched.push({ it: it, ing: ing }); else unmatched.push(it);
+    });
+    const body = PCD.el('div');
+    let html = '<div class="text-muted text-sm" style="margin-bottom:10px;">' + PCD.escapeHtml(t('sup_receive_help') || 'Tick what arrived — stock goes up automatically. Edit quantities for partial deliveries.') + '</div>';
+    if (matched.length) {
+      html += '<div style="display:flex;flex-direction:column;gap:6px;">';
+      matched.forEach(function (r, idx) {
+        html += '<label class="rcv-row" data-idx="' + idx + '" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);">' +
+          '<input type="checkbox" class="rcv-cb" checked style="width:18px;height:18px;flex-shrink:0;">' +
+          '<div style="flex:1;min-width:0;font-weight:600;font-size:14px;">' + PCD.escapeHtml(r.it.name) + '</div>' +
+          '<input type="number" class="input rcv-qty" value="' + (r.it.qty || 0) + '" min="0" step="0.1" style="width:74px;text-align:center;font-weight:600;">' +
+          '<span class="text-muted" style="font-size:12px;width:34px;">' + PCD.escapeHtml(r.it.unit || r.ing.unit || '') + '</span>' +
+          '</label>';
+      });
+      html += '</div>';
+    } else {
+      html += '<div class="text-muted text-sm">' + PCD.escapeHtml(t('sup_receive_none_matched') || 'None of these products are tracked in inventory.') + '</div>';
+    }
+    if (unmatched.length) {
+      html += '<div class="text-muted" style="font-size:12px;margin-top:10px;">' + PCD.escapeHtml(t('sup_receive_skipped') || 'Not in inventory (skipped)') + ': ' + unmatched.map(function (it) { return PCD.escapeHtml(it.name); }).join(', ') + '</div>';
+    }
+    body.innerHTML = html;
+    const cancel = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') });
+    const addBtn = PCD.el('button', { class: 'btn btn-primary', style: { flex: '1' } });
+    addBtn.innerHTML = PCD.icon('check', 14) + ' <span>' + PCD.escapeHtml(t('sup_receive_add') || 'Add to stock') + '</span>';
+    if (!matched.length) addBtn.style.display = 'none';
+    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
+    footer.appendChild(cancel);
+    footer.appendChild(addBtn);
+    const m = PCD.modal.open({ title: t('sup_receive_title') || 'Add order to stock', body: body, footer: footer, size: 'md', closable: true });
+    cancel.addEventListener('click', function () { m.close(); });
+    addBtn.addEventListener('click', function () {
+      const additions = {};
+      let n = 0;
+      const skipped = [];
+      PCD.$$('.rcv-row', body).forEach(function (rowEl) {
+        const cb = rowEl.querySelector('.rcv-cb');
+        if (!cb || !cb.checked) return;
+        const r = matched[Number(rowEl.getAttribute('data-idx'))];
+        if (!r) return;
+        let amt = Number(rowEl.querySelector('.rcv-qty').value) || 0;
+        if (!(amt > 0)) return;
+        const fromU = r.it.unit || r.ing.unit;
+        const toU = r.ing.unit;
+        if (fromU && toU && fromU !== toU) {
+          try { amt = PCD.convertUnit(amt, fromU, toU); }
+          catch (e) { skipped.push(r.it.name); return; }
+          if (!(amt > 0)) { skipped.push(r.it.name); return; }
+        }
+        additions[r.ing.id] = (additions[r.ing.id] || 0) + amt;
+        n++;
+      });
+      if (!n) { PCD.toast.info(t('sup_receive_nothing') || 'Tick at least one product.'); return; }
+      const report = (PCD.tools.inventory && PCD.tools.inventory.applyStockAdditions)
+        ? PCD.tools.inventory.applyStockAdditions(additions) : [];
+      o.receivedAt = new Date().toISOString();
+      PCD.store.upsertInTable('suppliers', sup, 'sup');
+      PCD.toast.success(t('sup_receive_done', { n: report.length }) + (skipped.length ? ' · ⚠ ' + skipped.length : ''));
+      m.close();
+      if (typeof onDone === 'function') onDone();
+    });
   }
 
   // ============ EDITOR ============
