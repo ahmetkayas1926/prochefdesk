@@ -29,11 +29,19 @@
     dog:       { emoji: '🐶', label: 'Dog',       color: '#dc2626', rec: 'Low sales + low profit — consider removing it.' },
   };
 
+  function isPrep(r) {
+    return (PCD.recipes && PCD.recipes.isPrep) ? PCD.recipes.isPrep(r) : !!(r && r.yieldAmount && r.yieldUnit);
+  }
+
   function buildRows() {
     const ingMap = {}, recipeMap = {};
     PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
-    const recipes = PCD.store.listRecipes() || [];
-    recipes.forEach(function (r) { recipeMap[r.id] = r; });
+    const allRecipes = PCD.store.listRecipes() || [];
+    // recipeMap TÜM tarifleri içerir → sub-recipe maliyet cascade'i çözülebilsin.
+    allRecipes.forEach(function (r) { recipeMap[r.id] = r; });
+    // Analiz YALNIZ satılabilir yemekler: sub-recipe/prep'ler (yemeğin içinde
+    // kullanılan bileşenler) hariç — PCD.recipes.isPrep paylaşımlı sınıflandırıcı.
+    const recipes = allRecipes.filter(function (r) { return !isPrep(r); });
     const rows = recipes.map(function (r) {
       const totalCost = PCD.recipes.computeFoodCost(r, ingMap, recipeMap) || 0;
       const servings = Number(r.servings) || 1;
