@@ -4,6 +4,12 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.44–.45 — Envanter zinciri: buffet + satış → otomatik tüketim · 2026-06-23
+Denetim bulgusu: envanter tüketimi yarımdı — yalnız Event "Deduct stock" + Order/Receiving çalışıyordu; **satış→tüketim YOK**, **buffet→envanter YOK**. İki boşluk kapatıldı (kanıtlı primitive'i yeniden kullanır: `flattenIngredients` + `applyStockDeductions`, events ile AYNI sözleşme).
+- **v2.44.44 — Buffet → envanter.** Yeni `computeBuffetDeductions` (buffet.js): `buildBuffetOrder` ile AYNI miktar modeli (`prepAmount = covers × per_guest × refillX`, item override dahil; recipe kalemi flatten, ingredient kalemi direkt, custom atlanır; stok birimine normalize). Editöre **"📦 Deduct stock"** butonu (event ile aynı onaylı akış + aynı i18n). **Test:** buffet 10 kişi, sub-recipe'li recipe + ingredient item → flour 7000g, butter 2kg, envanter doğru düştü.
+- **v2.44.45 — Satış → tüketim.** Envantere **"Record sales"** (inventory.js): dishes listesi + satılan adet → `computeSalesDeductions` (scale = qty/servings, flatten, stok birimine çevir) → onay → `applyStockDeductions`. **Test:** 8 Pastry sat (servings 1) → flour 4000g + butter 1.6kg, envanter 10000→6000g / 5→3.4kg doğru. 6 yeni i18n anahtarı (en.js; diğer diller en'e fallback — sonra çevrilebilir).
+- **Mimari:** üç tüketim yolu (event/buffet/satış) artık AYNI `{ingredientId: amount}` sözleşmesi + tek `applyStockDeductions`. İnventory top-level senkron tablo → cihazlar-arası geçer. Hepsi manuel + onaylı (otomatik ezme yok).
+
 ## v2.44.40–.43 — Whiteboard + Kitchen Cards düzeltmeleri · 2026-06-22
 - **v2.44.40 — Kitchen Cards önizleme = print.** Önizleme çerçevesindeki `padding:8mm` (print'te olmayan sahte kenar) önizlemenin kullanılabilir yüksekliğini ~16mm kısaltıyordu; `column-fill:balance` yükseklik-kısıtlı multicol'da fazlalığı 7. sütuna taşırıyordu (önizleme ≠ çıktı). `padding:0` → sheet alanı print'le birebir (yatay+dikey). Whiteboard/prep'te aynı sınıf yok (kontrol edildi).
 - **v2.44.41 — STATION template temp düzeltme.** `me_station_ref` cook_sheet: CHICKEN + FISH `64°C → 74°C` (64 tavuk için güvensizdi).

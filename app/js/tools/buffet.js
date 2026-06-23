@@ -1427,6 +1427,9 @@
     // v2.38 — Tedarikçiye göre sipariş/satın alma listesi
     const orderBtn = PCD.el('button', { class: 'btn btn-outline' });
     orderBtn.innerHTML = PCD.icon('truck', 16) + ' <span>' + (t('buffet_order_list') || 'Order List') + '</span>';
+    // v2.44.44 — Buffet → envanter düşüşü (event ile aynı: manuel buton + onay)
+    const deductBtn = PCD.el('button', { class: 'btn btn-outline' });
+    deductBtn.innerHTML = '📦 <span>' + (t('event_apply_inventory') || 'Deduct stock') + '</span>';
     const reportBtn = PCD.el('button', { class: 'btn btn-outline' });
     reportBtn.innerHTML = PCD.icon('print', 16) + ' <span>' + (t('buffet_print_report') || 'Cost Report') + '</span>';
     // v2.44.35 — Share (metin + "PDF olarak gönder" → cost report yazdır)
@@ -1445,6 +1448,7 @@
     footer.appendChild(cancelBtn);
     footer.appendChild(prepBtn);
     footer.appendChild(orderBtn);
+    footer.appendChild(deductBtn);
     footer.appendChild(reportBtn);
     footer.appendChild(excelBtn);
     footer.appendChild(shareBtn);
@@ -1496,6 +1500,35 @@
       if (existing) { upsertBuffet(Object.assign({}, existing, data)); }
       openBuffetOrderList(data);
     });
+    deductBtn.addEventListener('click', function () {
+      const ingMap = {}, recipeMap = {};
+      PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
+      PCD.store.listRecipes().forEach(function (r) { recipeMap[r.id] = r; });
+      const dd = computeBuffetDeductions(data, ingMap, recipeMap);
+      const ids = Object.keys(dd.deductions);
+      if (!ids.length) { PCD.toast.info((t('event_apply_inv_done') || '{n} item(s) deducted from stock').replace('{n}', 0)); return; }
+      const preview = ids.slice(0, 6).map(function (iid) {
+        const ing = ingMap[iid];
+        return '• ' + (ing ? ing.name : iid) + ': ' + (Math.round(dd.deductions[iid] * 10) / 10) + (ing ? ing.unit : '');
+      }).join('\n');
+      const more = ids.length - 6;
+      const text = (t('event_apply_inv_msg') || '{n} ingredient(s) will be deducted from inventory. Continue?').replace('{n}', ids.length) +
+        '\n\n' + preview + (more > 0 ? '\n• … +' + more : '') +
+        (dd.skipped.length ? '\n\n⚠ ' + dd.skipped.length + ': ' + dd.skipped.slice(0, 5).join(', ') : '');
+      PCD.modal.confirm({
+        icon: '📦', iconKind: 'warning',
+        title: t('event_apply_inventory') || 'Deduct stock',
+        text: text,
+        okText: t('event_apply_inventory') || 'Deduct stock'
+      }).then(function (ok) {
+        if (!ok) return;
+        const report = (PCD.tools.inventory && PCD.tools.inventory.applyStockDeductions)
+          ? PCD.tools.inventory.applyStockDeductions(dd.deductions) : [];
+        const deducted = report.filter(function (r) { return r.tracked; }).length;
+        const lowNow = report.filter(function (r) { return r.tracked && (r.status === 'low' || r.status === 'critical' || r.status === 'out'); }).length;
+        PCD.toast.success((t('event_apply_inv_done') || '{n} item(s) deducted from stock').replace('{n}', deducted) + (lowNow ? ' · ' + lowNow + ' ⚠' : ''));
+      });
+    });
     reportBtn.addEventListener('click', function () {
       data.name = (PCD.$('#bufName', body).value || '').trim() || t('untitled');
       if (existing) { upsertBuffet(Object.assign({}, existing, data)); }
@@ -1529,6 +1562,56 @@
   //  - Malzeme kalemi → doğrudan, stok birimine çevrilir.
   //  - Custom kalem → ad + prep miktarıyla "Bağlanmamış" grubuna düşer.
   // Aynı malzeme stok birimine normalize edilip toplanır; tedarikçiye gruplanır.
+  // v2.44.44 — Buffet → envanter düşüşü. buildBuffetOrder ile AYNI miktar modeli:
+  // prepAmount = covers × per_guest × refillX (item override dahil); recipe kalemi
+  // flattenIngredients ile gerçek malzemeye iner (Path B), ingredient kalemi
+  // doğrudan (Path A), custom kalem atlanır (envanter bağı yok). Her malzeme stok
+  // birimine normalize edilir. { ingredientId: amountInStockUnit } döner —
+  // events.computeEventDeductions ile AYNI sözleşme → inventory.applyStockDeductions.
+  function computeBuffetDeductions(buffet, ingMap, recipeMap) {
+    const coverCount = Number(buffet.coverCount) || 0;
+    const refillX = buffet.refillMultiplier != null
+      ? Number(buffet.refillMultiplier)
+      : (INDUSTRY_REFILL[buffet.type] || INDUSTRY_REFILL.custom);
+    const need = {};
+    const skippedSet = {};
+    function add(ing, amount, unit) {
+      if (!ing) return;
+      let amt = Number(amount) || 0;
+      if (!(amt > 0)) return;
+      if (ing.unit && unit && unit !== ing.unit) {
+        try { amt = PCD.convertUnit(amt, unit, ing.unit); }
+        catch (e) { skippedSet[ing.name || ing.id] = true; return; }
+        if (!(amt > 0)) { skippedSet[ing.name || ing.id] = true; return; }
+      }
+      need[ing.id] = (need[ing.id] || 0) + amt;
+    }
+    (buffet.stations || []).forEach(function (st) {
+      (st.items || []).forEach(function (it) {
+        const perGuest = Number(it.amountPerGuest) || 0;
+        const itemRefill = it.refillX != null ? Number(it.refillX) : refillX;
+        const prepAmount = coverCount * perGuest * itemRefill;
+        if (!(prepAmount > 0)) return;
+        const r = it.recipeId ? recipeMap[it.recipeId] : null;
+        const ing = it.ingredientId ? ingMap[it.ingredientId] : null;
+        if (r) {
+          const recipeYield = Number(r.yieldAmount) || Number(r.servings) || 1;
+          let prepInRecipeUnit = prepAmount;
+          if (it.unit && r.yieldUnit && it.unit !== r.yieldUnit) {
+            try { prepInRecipeUnit = PCD.convertUnit(prepAmount, it.unit, r.yieldUnit); } catch (e) {}
+          }
+          const scale = (recipeYield > 0) ? (prepInRecipeUnit / recipeYield) : 0;
+          if (!(scale > 0)) return;
+          const flat = PCD.recipes.flattenIngredients(r, ingMap, recipeMap, { scale: scale }) || [];
+          flat.forEach(function (f) { add(f.ingredient, f.amount, f.unit); });
+        } else if (ing) {
+          add(ing, prepAmount, it.unit);
+        }
+      });
+    });
+    return { deductions: need, skipped: Object.keys(skippedSet) };
+  }
+
   function buildBuffetOrder(buffet, ingMap, recipeMap) {
     const t = PCD.i18n.t;
     const coverCount = Number(buffet.coverCount) || 0;
@@ -2038,5 +2121,6 @@
   PCD.tools.buffet = {
     render: render,
     openEditor: openEditor,
+    computeBuffetDeductions: computeBuffetDeductions,
   };
 })();

@@ -3264,3 +3264,13 @@ window.PCD.i18n.register('en', {
   var_no_recipes: "No recipes yet",
   var_no_recipes_desc: "Cost variance needs recipes to calculate theoretical usage. Add your first recipe in the Library.",
 });
+
+// v2.44.45 — Satış → tüketim (Record sales) anahtarları.
+window.PCD.i18n.register('en', {
+  inv_record_sales: "Record sales",
+  inv_record_sales_help: "Enter how many of each dish you sold — stock is deducted automatically, sub-recipes included.",
+  inv_sold: "sold",
+  inv_servings: "Servings",
+  inv_no_recipes_for_sales: "No dishes yet — add recipes first.",
+  inv_no_sales_entered: "Enter a quantity for at least one dish.",
+});

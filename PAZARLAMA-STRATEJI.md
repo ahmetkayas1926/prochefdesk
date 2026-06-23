@@ -149,8 +149,16 @@ Kuruluş hikâyesi + plowhorse kancası. Metin:
 ## 20. Sıcak outreach playbook + DM şablonu
 1. **Post'ta etkileşen herkese DM** (en sıcak lead — az önce ilgi gösterdi).
 2. **Sıcak ağ listesi (20-50 şef):** Körfez/Katar/İstanbul/Avustralya — eski meslektaşlar, sous/head chef, chef-owner.
-3. **DM şablonu (her birini KİŞİSELLEŞTİR — kopyala-blast ölür):**
-> Hey [İsim] — hope the kitchen's treating you well 👨‍🍳 / Quick one: after years of juggling recipes, costs and HACCP in spreadsheets, I finally built a tool for it — ProChefDesk... / You're exactly the chef I built it for, and I'd really value your honest take. No pitch — free to start. / Want me to send you the link?
+3. **DM şablonu (profesyonel-akran üslubu · her birini KİŞİSELLEŞTİR — kopyala-blast ölür):**
+```
+Hi [İsim], hope you're keeping well.
+
+I built a kitchen-management tool for working chefs — ProChefDesk — and you're exactly the kind of chef whose judgment I'd trust on it.
+
+After years of running recipes, costs and HACCP through spreadsheets, I made a proper system for it: recipe, sub-recipe and buffet costing, event planning, prep, rosters and HACCP — all in one place.
+
+I'd genuinely value your honest, professional take — no sales pitch, it's free to start. Would you be open to taking a look?
+```
 
 **Kurallar:** SATMA → geri bildirim iste · kişiselleştir · yanıt yoksa 3-4 gün sonra tek nazik takip · **hedef: ilk 10-50 kullanıcı + 2-3 testimonial** (sonraki herkesi ikna eden sosyal kanıt).
 
@@ -160,6 +168,35 @@ Menüdeki her yemek 4 türden biri (her biri bir video konusu):
 - 🐴 **Plowhorse** — çok satar + AZ kazandırır (popüler ama ince kâr) ← **en güçlü hook** ("en sevdiğin yemek para kaybettiriyor olabilir")
 - ❓ **Puzzle** — az satar + çok kazandırır
 - 🐶 **Dog** — az satar + az kazandırır → menüden çıkar
+
+## 22. İçerik kümeleri — konu haritası (menü mühendisliği bitince devam)
+Lane = "tabağın arkasındaki para". Menü mühendisliği **1 küme**; her küme onlarca video (kaynak operatörde — gerçek servis kararları, §9). Kümeler:
+1. **Menü mühendisliği** (Star/Plowhorse/Puzzle/Dog)
+2. **Gerçek maliyet / yield** — fatura yalan söyler (trim/fire sonrası gerçek rakam)
+3. **İşçilik maliyeti** — kâğıtta ucuz, hatta pahalı tabak
+4. **Fire / waste** — over-portion, çürüme, trim'i değerlendirmek
+5. **Tedarik / satın alma** — sessiz fiyat artışı, par level, sipariş disiplini
+6. **Fiyatlandırma** — kapasiteyi kaybetmeden fiyat artırma
+7. **Tutarlılık / standardizasyon** — sen yokken aynı tabak, kitchen card, reçete disiplini
+8. **Uyum / HACCP** — ceza yemeyen log, gıda güvenliği = işletme koruması
+9. **Prep / mise** — prep sheet, batch verimliliği
+10. **Roster / personel** — vardiya maliyeti, fazla mesai sızıntısı
+
+**Örnek script (işçilik kümesi):**
+> "The cheapest dish on your menu might be your most expensive one. Food cost looks great — three dollars on a plate you sell for eighteen. On paper, a winner. But it takes one cook twenty minutes of prep, every service. That labour never shows up in your food cost — so the dish looks profitable while it quietly eats your most expensive resource: your team's time. A dish isn't cheap because the ingredients are cheap. It's cheap when it's cheap to put on the plate — food AND labour. Cost the time, not just the ingredients."
+> *(Sahnede kelime kelime okuma — kendi sözlerinle, gerçek sayınla.)*
+
+## 23. Video edit stili (kısıtlı = otoriter · 2026 araştırma)
+**İlke: "görünmez edit."** Aşırı edit güvensizlik kokar; kısıtlama otorite. Profesyonel ≠ cilalı. AI çağında insani kusur **premium** (mükemmel avatar herkeste; doğal duraklama yok).
+- **Kes SADECE:** ölü an, filler ("ee/yani"), tekrar, kekeleme. Başka kesme.
+- **Az kesim, sakin tempo** — hızlı jump-cut enerjisi DEĞİL.
+- **Temiz altyazı** (1-2 satır, statik/fade) — zıplayan kelime-kelime animasyon DEĞİL (%70 sessiz izler).
+- **B-roll seyrek** — yalnız gerçek şeye kes (tabak/ekran/maliyet) anlam katınca.
+- **Müzik yok / çok kısık** — trend müzik = ucuz; gerçek mutfak ambient sesi daha iyi.
+- **Efekt/geçiş/zoom-punch/emoji/sticker YOK.**
+- **İnsani kusuru bırak** — her nefesi kesme; doğal = otantik.
+- **Ses iyi (mikrofon)** — kısma yapmayacağın tek yer.
+- **Kaçın (ucuz edit):** hızlı kesim · zıplayan altyazı · yüksek müzik · zoom-punch · emoji · aşırı b-roll · satış enerjisi.
 
 ---
 

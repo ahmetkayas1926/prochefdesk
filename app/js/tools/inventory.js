@@ -113,6 +113,39 @@
     return report;
   }
 
+  // v2.44.45 — Satış → tüketim. sales = { recipeId: qtySold }. Her satılan dish =
+  // 1 porsiyon; recipe.servings porsiyon verir → scale = qty / servings. Recipe
+  // flattenIngredients ile gerçek malzemeye iner (alt-tarifler dahil), stok birimine
+  // çevrilir. { ingredientId: amount } döner — events/buffet ile AYNI sözleşme →
+  // applyStockDeductions.
+  function computeSalesDeductions(sales, ingMap, recipeMap) {
+    const need = {};
+    const skippedSet = {};
+    Object.keys(sales || {}).forEach(function (rid) {
+      const qty = Number(sales[rid]) || 0;
+      if (qty <= 0) return;
+      const r = recipeMap[rid];
+      if (!r) return;
+      const servings = Number(r.servings) || 1;
+      const scale = qty / servings;
+      if (!(scale > 0)) return;
+      const flat = PCD.recipes.flattenIngredients(r, ingMap, recipeMap, { scale: scale }) || [];
+      flat.forEach(function (f) {
+        const ing = ingMap[f.ingredientId];
+        if (!ing) return;
+        let amt = Number(f.amount) || 0;
+        if (!(amt > 0)) return;
+        if (f.unit && ing.unit && f.unit !== ing.unit) {
+          try { amt = PCD.convertUnit(amt, f.unit, ing.unit); }
+          catch (e) { skippedSet[ing.name || f.ingredientId] = true; return; }
+          if (!(amt > 0)) { skippedSet[ing.name || f.ingredientId] = true; return; }
+        }
+        need[f.ingredientId] = (need[f.ingredientId] || 0) + amt;
+      });
+    });
+    return { deductions: need, skipped: Object.keys(skippedSet) };
+  }
+
   function computeStatus(invRow) {
     if (!invRow || invRow.parLevel == null) return 'untracked';
     const stock = Number(invRow.stock) || 0;
@@ -165,6 +198,7 @@
           <button class="btn btn-outline btn-sm" id="historyHeaderBtn" title="${PCD.escapeHtml(t('inv_view_past_counts_tooltip'))}">${PCD.icon('clock',14)} ${t('inv_history')}</button>
           <button class="btn btn-outline btn-sm" id="bulkCountBtn">${PCD.icon('list',14)} ${t('inv_count_stock')}</button>
           <button class="btn btn-outline btn-sm" id="genOrderBtn">${PCD.icon('send',14)} ${t('inv_generate_order')}</button>
+          <button class="btn btn-outline btn-sm" id="recordSalesBtn">${PCD.icon('edit',14)} ${t('inv_record_sales')}</button>
         </div>
       </div>
 
@@ -351,6 +385,8 @@
 
     const genBtn = PCD.$('#genOrderBtn', view);
     if (genBtn) genBtn.addEventListener('click', function () { openGenerateOrder(); });
+    const rsBtn = PCD.$('#recordSalesBtn', view);
+    if (rsBtn) rsBtn.addEventListener('click', function () { openRecordSales(); });
 
     const bulkBtn = PCD.$('#bulkCountBtn', view);
     if (bulkBtn) bulkBtn.addEventListener('click', function () { openBulkCount(); });
@@ -976,6 +1012,83 @@
   }
 
   // ============ AUTO-GENERATE PURCHASE ORDER ============
+  // v2.44.45 — Satış kaydet: dishes (recipe) listesi + satılan adet → otomatik
+  // tüketim (computeSalesDeductions → applyStockDeductions). Event/buffet ile aynı
+  // onaylı düşüş akışı + aynı i18n anahtarları.
+  function openRecordSales() {
+    const t = PCD.i18n.t;
+    const recipes = (PCD.store.listRecipes() || []).slice().sort(function (a, b) { return (a.name || '').localeCompare(b.name || ''); });
+    if (!recipes.length) { PCD.toast.info(t('inv_no_recipes_for_sales')); return; }
+    const body = PCD.el('div');
+    let html = '<div class="mb-3" style="padding:12px;background:var(--brand-50);border-radius:var(--r-md);">' +
+      '<div style="font-weight:700;">' + PCD.escapeHtml(t('inv_record_sales')) + '</div>' +
+      '<div class="text-muted text-sm">' + PCD.escapeHtml(t('inv_record_sales_help')) + '</div>' +
+      '</div>';
+    html += '<input type="search" id="rsSearch" placeholder="' + PCD.escapeHtml(t('inv_filter_placeholder')) + '" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);font-size:13px;margin-bottom:8px;box-sizing:border-box;">';
+    html += '<div id="rsList">';
+    recipes.forEach(function (r) {
+      html += '<label class="rs-row" data-name="' + PCD.escapeHtml((r.name || '').toLowerCase()) + '" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:4px;">' +
+        '<div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:14px;">' + PCD.escapeHtml(r.name || '') + '</div>' +
+        '<div class="text-muted" style="font-size:11px;">' + PCD.escapeHtml(t('inv_servings')) + ': ' + PCD.fmtNumber(r.servings || 1) + '</div></div>' +
+        '<input type="number" class="input rs-qty" data-rid="' + r.id + '" value="0" min="0" step="1" style="width:72px;text-align:center;font-weight:600;">' +
+        '<span class="text-muted" style="font-size:11px;">' + PCD.escapeHtml(t('inv_sold')) + '</span>' +
+        '</label>';
+    });
+    html += '</div>';
+    body.innerHTML = html;
+
+    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') });
+    const deductBtn = PCD.el('button', { class: 'btn btn-primary', style: { flex: '1' } });
+    deductBtn.innerHTML = PCD.icon('check', 14) + ' <span>' + (t('event_apply_inventory') || 'Deduct stock') + '</span>';
+    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
+    footer.appendChild(cancelBtn);
+    footer.appendChild(deductBtn);
+    const m = PCD.modal.open({ title: t('inv_record_sales'), body: body, footer: footer, size: 'md', closable: true });
+    cancelBtn.addEventListener('click', function () { m.close(); });
+
+    const search = PCD.$('#rsSearch', body);
+    if (search) search.addEventListener('input', function () {
+      const q = (this.value || '').toLowerCase();
+      PCD.$$('.rs-row', body).forEach(function (row) {
+        row.style.display = (!q || (row.getAttribute('data-name') || '').indexOf(q) >= 0) ? '' : 'none';
+      });
+    });
+
+    deductBtn.addEventListener('click', function () {
+      const sales = {};
+      PCD.$$('.rs-qty', body).forEach(function (inp) { const q = Number(inp.value) || 0; if (q > 0) sales[inp.getAttribute('data-rid')] = q; });
+      if (!Object.keys(sales).length) { PCD.toast.info(t('inv_no_sales_entered')); return; }
+      const ingMap = {}, recipeMap = {};
+      PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
+      PCD.store.listRecipes().forEach(function (r) { recipeMap[r.id] = r; });
+      const dd = computeSalesDeductions(sales, ingMap, recipeMap);
+      const ids = Object.keys(dd.deductions);
+      if (!ids.length) { PCD.toast.info((t('event_apply_inv_done') || '{n} item(s) deducted from stock').replace('{n}', 0)); return; }
+      const preview = ids.slice(0, 6).map(function (iid) {
+        const ing = ingMap[iid];
+        return '• ' + (ing ? ing.name : iid) + ': ' + (Math.round(dd.deductions[iid] * 10) / 10) + (ing ? ing.unit : '');
+      }).join('\n');
+      const more = ids.length - 6;
+      const text = (t('event_apply_inv_msg') || '{n} ingredient(s) will be deducted from inventory. Continue?').replace('{n}', ids.length) +
+        '\n\n' + preview + (more > 0 ? '\n• … +' + more : '') +
+        (dd.skipped.length ? '\n\n⚠ ' + dd.skipped.length + ': ' + dd.skipped.slice(0, 5).join(', ') : '');
+      PCD.modal.confirm({
+        icon: '📦', iconKind: 'warning',
+        title: t('event_apply_inventory') || 'Deduct stock',
+        text: text,
+        okText: t('event_apply_inventory') || 'Deduct stock'
+      }).then(function (ok) {
+        if (!ok) return;
+        const report = PCD.tools.inventory.applyStockDeductions(dd.deductions);
+        const deducted = report.filter(function (r) { return r.tracked; }).length;
+        const lowNow = report.filter(function (r) { return r.tracked && (r.status === 'low' || r.status === 'critical' || r.status === 'out'); }).length;
+        PCD.toast.success((t('event_apply_inv_done') || '{n} item(s) deducted from stock').replace('{n}', deducted) + (lowNow ? ' · ' + lowNow + ' ⚠' : ''));
+        m.close();
+        setTimeout(function () { const v = PCD.$('#view'); if (v && PCD.router.currentView() === 'inventory') render(v); }, 200);
+      });
+    });
+  }
+
   function openGenerateOrder() {
     const ings = PCD.store.listIngredients();
     const invAll = readInventory();
@@ -1319,5 +1432,5 @@
   }
 
   PCD.tools = PCD.tools || {};
-  PCD.tools.inventory = { render: render, openEditor: openEditor, computeStatus: computeStatus, applyStockDeductions: applyStockDeductions, applyStockAdditions: applyStockAdditions };
+  PCD.tools.inventory = { render: render, openEditor: openEditor, computeStatus: computeStatus, applyStockDeductions: applyStockDeductions, applyStockAdditions: applyStockAdditions, computeSalesDeductions: computeSalesDeductions };
 })();
