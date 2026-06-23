@@ -781,13 +781,21 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
       : { rec: 0, type: -1, category: -1, srv: 1, yield: -1, price: 2, ing: 3, amt: 4, unit: 5 };
     const dataRows = hasHeader ? aoa.slice(1) : aoa;
     const byName = {};
+    let current = null;
     dataRows.forEach(function (cells) {
       if (!cells) return;
       const rName = String(cells[map.rec] || '').trim();
-      if (!rName) return;
-      const key = rName.toLowerCase();
-      let rec = byName[key];
-      if (!rec) { rec = byName[key] = { name: rName, servings: null, price: null, type: null, category: null, yieldStr: null, lines: [] }; out.recipes.push(rec); }
+      if (rName) {
+        const key = rName.toLowerCase();
+        let r2 = byName[key];
+        if (!r2) { r2 = byName[key] = { name: rName, servings: null, price: null, type: null, category: null, yieldStr: null, lines: [] }; out.recipes.push(r2); }
+        current = r2;
+      }
+      // v2.44.55 — fill-down: boş Recipe satırı bir ÜSTTEKİ tarife ait. Şef tarif
+      // adını + tarif-seviyesi alanları (Type/Category/Servings/Yield/Price) YALNIZ
+      // ilk satıra yazar, kalan malzeme satırlarını boş bırakır. (Tekrar yazmak da çalışır.)
+      if (!current) return;
+      const rec = current;
       if (rec.servings == null && map.srv >= 0) { const s = parseFloat(String(cells[map.srv] || '').replace(/[^0-9.]/g, '')); if (!isNaN(s) && s > 0) rec.servings = s; }
       if (rec.price == null && map.price >= 0) { const p = parseFloat(String(cells[map.price] || '').replace(/[^0-9.\-]/g, '')); if (!isNaN(p)) rec.price = p; }
       if (rec.type == null && map.type >= 0) { const tv = String(cells[map.type] || '').trim().toLowerCase(); if (tv) rec.type = tv; }
@@ -885,15 +893,15 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
         {
           name: 'Recipes',
           title: 'ProChefDesk — Recipe Template',
-          subtitle: L('ri_xlsx_subtitle', 'One row per ingredient; rows sharing a Recipe name = one recipe. Type "prep" marks a sub-recipe; Yield (e.g. "4 portion") = how much a prep makes. A name matching another recipe links as a sub-recipe. See the "Lists" tab. Delete the example rows before importing.'),
+          subtitle: L('ri_xlsx_subtitle', 'One row per ingredient. Write the recipe name + its details ONCE on the first row, then leave them blank for the rest of its ingredients. Type "prep" marks a sub-recipe; Yield (e.g. "4 portion") = how much a prep makes. A name matching another recipe links as a sub-recipe. See the "Lists" tab. Delete the example rows before importing.'),
           headers: ['Recipe', 'Type', 'Category', 'Servings', 'Yield', 'Price', 'Ingredient', 'Amount', 'Unit'],
           rows: [
             ['Labneh', 'prep', '', 4, '4 portion', '', 'Yogurt', 1000, 'g'],
-            ['Labneh', 'prep', '', 4, '4 portion', '', 'Salt', 10, 'g'],
+            ['', '', '', '', '', '', 'Salt', 10, 'g'],
             ['Mezze Plate', 'dish', 'cat_appetizer', 2, '', 16, 'Labneh', 1, 'portion'],
-            ['Mezze Plate', 'dish', 'cat_appetizer', 2, '', 16, 'Olive Oil', 30, 'ml'],
+            ['', '', '', '', '', '', 'Olive Oil', 30, 'ml'],
             ['Tomato Soup', 'dish', 'cat_soup', 4, '', 12, 'Tomato', 800, 'g'],
-            ['Tomato Soup', 'dish', 'cat_soup', 4, '', 12, 'Cream', 100, 'ml'],
+            ['', '', '', '', '', '', 'Cream', 100, 'ml'],
           ],
           align: ['left', 'left', 'left', 'right', 'left', 'right', 'left', 'right', 'left'],
           widths: [22, 8, 14, 9, 12, 8, 22, 9, 8],
@@ -920,7 +928,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
     body.innerHTML =
       '<div style="padding:10px 12px;background:var(--surface-2);border-radius:var(--r-md);font-size:13px;line-height:1.6;margin-bottom:10px;">' +
         '<div style="font-weight:700;margin-bottom:4px;">' + PCD.escapeHtml(L('ri_format', 'Format — one row per ingredient, grouped by recipe')) + '</div>' +
-        PCD.escapeHtml(L('ri_desc', 'Columns: Recipe · Type (prep/dish) · Category · Servings · Yield · Price · Ingredient · Amount · Unit. Rows sharing a Recipe name become one recipe. Type "prep" marks a sub-recipe; Yield (e.g. "4 portion") sets how much a prep makes. Ingredients match by name (auto-created if new); a name matching another recipe links as a sub-recipe. Only Recipe + Ingredient are required.')) +
+        PCD.escapeHtml(L('ri_desc', 'Columns: Recipe · Type (prep/dish) · Category · Servings · Yield · Price · Ingredient · Amount · Unit. Write the recipe name + its details ONCE on its first row, then leave them blank for the rest of its ingredients (repeating the name also works). Type "prep" marks a sub-recipe; Yield (e.g. "4 portion") sets how much a prep makes. Ingredients match by name (auto-created if new); a name matching another recipe links as a sub-recipe. Only Recipe + Ingredient are required.')) +
       '</div>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px;">' +
         '<button type="button" class="btn btn-primary btn-sm" id="riTemplateXlsx">' + PCD.icon('download', 14) + ' ' + PCD.escapeHtml(L('ri_template_xlsx', 'Download Excel template (.xlsx)')) + '</button>' +
@@ -961,11 +969,11 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
     PCD.$('#riTemplate', body).addEventListener('click', function () {
       const tpl = 'Recipe,Type,Category,Servings,Yield,Price,Ingredient,Amount,Unit\n' +
         'Labneh,prep,,4,4 portion,,Yogurt,1000,g\n' +
-        'Labneh,prep,,4,4 portion,,Salt,10,g\n' +
+        ',,,,,,Salt,10,g\n' +
         'Mezze Plate,dish,cat_appetizer,2,,16,Labneh,1,portion\n' +
-        'Mezze Plate,dish,cat_appetizer,2,,16,Olive Oil,30,ml\n' +
+        ',,,,,,Olive Oil,30,ml\n' +
         'Tomato Soup,dish,cat_soup,4,,12,Tomato,800,g\n' +
-        'Tomato Soup,dish,cat_soup,4,,12,Cream,100,ml';
+        ',,,,,,Cream,100,ml';
       const blob = new Blob([tpl], { type: 'text/csv' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a'); a.href = url; a.download = 'prochefdesk-recipes-template.csv';
