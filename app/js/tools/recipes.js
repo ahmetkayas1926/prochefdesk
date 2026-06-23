@@ -115,6 +115,7 @@
           ${recipes.length > 0 ? `<button class="btn btn-outline btn-sm" id="headerCostReport">${PCD.icon('activity',14)} <span>${t('btn_cost_report')}</span></button>` : ''}
           ${recipes.length > 0 ? `<button class="btn btn-outline btn-sm" id="headerAllergenMatrix"><span>${t('label_allergens')}</span></button>` : ''}
           ${recipes.length > 0 ? `<button class="btn btn-outline btn-sm" id="toggleSelectMode">${t('select_mode')}</button>` : ''}
+          <button class="btn btn-outline btn-sm" id="headerRecipeImport">${PCD.icon('upload',14)} <span>${t('ingredients_import') || 'Import'}</span></button>
           <button class="btn btn-primary" id="newRecipeBtn">+ ${t('new_recipe')}</button>
         </div>
       </div>
@@ -465,6 +466,8 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
       const _dishes = base.filter(function (id) { return _byId[id] && !isPrep(_byId[id]); });
       printAllergenMatrix(_dishes.length ? _dishes : base);
     });
+    const headerRI = PCD.$('#headerRecipeImport', view);
+    if (headerRI) headerRI.addEventListener('click', function () { openRecipeImport(); });
     const toggleSel = PCD.$('#toggleSelectMode', view);
     if (toggleSel) toggleSel.addEventListener('click', enterSelect);
     PCD.$('#exitSelect', view).addEventListener('click', exitSelect);
@@ -745,6 +748,205 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
   // Multi-recipe cost report. Shows detailed breakdown, lets user override
   // sale price live, exports to PDF or Excel.
   // B2 — Allergen matrix: recipes (rows) × 14 EU allergens (icon columns) → print (FOH/audit).
+  // ============ RECIPE BULK IMPORT (v2.44.51) ============
+  // Excel/CSV: her satır = bir malzeme satırı, aynı Recipe adı = bir tarif.
+  // Malzeme isimle eşleşir (yoksa otomatik oluşur); bir ad başka bir tarif adıyla
+  // eşleşirse sub-recipe olarak bağlanır. İki geçiş: (1) tüm tarif id'leri,
+  // (2) malzeme/sub-recipe çöz + upsert.
+  function parseRecipeRows(text) {
+    const out = { recipes: [], lineCount: 0 };
+    if (!text || !text.trim()) return out;
+    const firstLine = (text.split(/\r?\n/).find(function (l) { return l.trim(); }) || '');
+    const sep = firstLine.indexOf('\t') >= 0 ? '\t' : ',';
+    let aoa = null;
+    if (window.XLSX && window.XLSX.read && window.XLSX.utils) {
+      try {
+        const wb = window.XLSX.read(text, { type: 'string', FS: sep, raw: false });
+        const sh = wb.Sheets[wb.SheetNames[0]];
+        if (sh) aoa = window.XLSX.utils.sheet_to_json(sh, { header: 1, defval: '', blankrows: false });
+      } catch (e) { aoa = null; }
+    }
+    if (!aoa) {
+      aoa = text.split(/\r?\n/).map(function (l) { return l.trim(); }).filter(function (l) { return l; })
+        .map(function (l) { return l.split(sep).map(function (c) { return String(c).trim(); }); });
+    }
+    if (!aoa.length) return out;
+    const hdr = aoa[0].map(function (h) { return String(h || '').trim().toLowerCase(); });
+    function ci(names) { for (var i = 0; i < hdr.length; i++) { for (var j = 0; j < names.length; j++) { if (hdr[i].indexOf(names[j]) >= 0) return i; } } return -1; }
+    const cRec = ci(['recipe', 'dish', 'tarif', 'yemek']);
+    const cIng = ci(['ingredient', 'malzeme', 'item']);
+    const hasHeader = cRec >= 0 && cIng >= 0;
+    const map = hasHeader
+      ? { rec: cRec, srv: ci(['serving', 'porsiyon', 'yield']), price: ci(['price', 'fiyat', 'sale']), ing: cIng, amt: ci(['amount', 'qty', 'quantity', 'miktar']), unit: ci(['unit', 'birim']) }
+      : { rec: 0, srv: 1, price: 2, ing: 3, amt: 4, unit: 5 };
+    const dataRows = hasHeader ? aoa.slice(1) : aoa;
+    const byName = {};
+    dataRows.forEach(function (cells) {
+      if (!cells) return;
+      const rName = String(cells[map.rec] || '').trim();
+      if (!rName) return;
+      const key = rName.toLowerCase();
+      let rec = byName[key];
+      if (!rec) { rec = byName[key] = { name: rName, servings: null, price: null, lines: [] }; out.recipes.push(rec); }
+      if (rec.servings == null && map.srv >= 0) { const s = parseFloat(String(cells[map.srv] || '').replace(/[^0-9.]/g, '')); if (!isNaN(s) && s > 0) rec.servings = s; }
+      if (rec.price == null && map.price >= 0) { const p = parseFloat(String(cells[map.price] || '').replace(/[^0-9.\-]/g, '')); if (!isNaN(p)) rec.price = p; }
+      const iName = map.ing >= 0 ? String(cells[map.ing] || '').trim() : '';
+      if (iName) {
+        const amt = parseFloat(String(cells[map.amt] || '').replace(/[^0-9.\-]/g, ''));
+        const unit = map.unit >= 0 ? String(cells[map.unit] || '').trim() : '';
+        out.lineCount++;
+        rec.lines.push({ ingredient: iName, amount: isNaN(amt) ? null : amt, unit: unit });
+      }
+    });
+    return out;
+  }
+
+  function recipeImportPreview(parsed) {
+    const ingByName = {}; PCD.store.listIngredients().forEach(function (i) { ingByName[i.name.toLowerCase()] = true; });
+    const recByName = {}; PCD.store.listRecipes().forEach(function (r) { recByName[r.name.toLowerCase()] = true; });
+    const imported = {}; parsed.recipes.forEach(function (r) { imported[r.name.toLowerCase()] = true; });
+    let newRec = 0, updRec = 0, matchedIng = 0, subLinks = 0, noAmount = 0; const newIngSet = {};
+    parsed.recipes.forEach(function (rec) {
+      if (recByName[rec.name.toLowerCase()]) updRec++; else newRec++;
+      rec.lines.forEach(function (line) {
+        const ln = line.ingredient.toLowerCase();
+        if (imported[ln] || recByName[ln]) { subLinks++; return; }
+        if (ingByName[ln]) matchedIng++;
+        else if (!newIngSet[ln]) { newIngSet[ln] = true; }
+        if (line.amount == null) noAmount++;
+      });
+    });
+    return { recipes: parsed.recipes.length, newRec: newRec, updRec: updRec, lineCount: parsed.lineCount, matchedIng: matchedIng, newIng: Object.keys(newIngSet).length, subLinks: subLinks, noAmount: noAmount };
+  }
+
+  function applyRecipeImport(recipes) {
+    const ingByName = {}; PCD.store.listIngredients().forEach(function (i) { ingByName[i.name.toLowerCase()] = i; });
+    const recByName = {}; PCD.store.listRecipes().forEach(function (r) { recByName[r.name.toLowerCase()] = r; });
+    const idByName = {};
+    recipes.forEach(function (rec) { const k = rec.name.toLowerCase(); idByName[k] = (recByName[k] && recByName[k].id) || PCD.uid('r'); });
+    let newRec = 0, updRec = 0, newIng = 0, subLinks = 0;
+    recipes.forEach(function (rec) {
+      const key = rec.name.toLowerCase();
+      const id = idByName[key];
+      const existing = recByName[key];
+      const ingredients = [];
+      rec.lines.forEach(function (line) {
+        const ln = line.ingredient.toLowerCase();
+        if ((idByName[ln] && idByName[ln] !== id) || (recByName[ln] && recByName[ln].id !== id)) {
+          const subId = idByName[ln] || recByName[ln].id;
+          ingredients.push({ recipeId: subId, amount: line.amount != null ? line.amount : 1, unit: line.unit || 'portion' });
+          subLinks++; return;
+        }
+        let ing = ingByName[ln];
+        if (!ing) {
+          ing = { id: PCD.uid('i'), name: line.ingredient, unit: line.unit || 'g', pricePerUnit: 0, category: 'cat_other' };
+          PCD.store.upsertIngredient(ing); ingByName[ln] = ing; newIng++;
+        }
+        ingredients.push({ ingredientId: ing.id, amount: line.amount != null ? line.amount : 0, unit: line.unit || ing.unit || 'g' });
+      });
+      const recipeObj = existing ? Object.assign({}, existing) : { id: id, name: rec.name };
+      recipeObj.id = id;
+      recipeObj.name = rec.name;
+      recipeObj.servings = rec.servings != null ? rec.servings : ((existing && existing.servings) || 1);
+      if (rec.price != null) recipeObj.salePrice = rec.price;
+      recipeObj.ingredients = ingredients;
+      recipeObj.computedAllergens = [];  // allergen raporu canlı yeniden hesaplar
+      PCD.store.upsertRecipe(recipeObj);
+      if (existing) updRec++; else newRec++;
+    });
+    return { newRec: newRec, updRec: updRec, newIng: newIng, subLinks: subLinks };
+  }
+
+  function openRecipeImport() {
+    function L(k, fb) { try { var v = PCD.i18n.t(k); return (v == null || v === k) ? fb : v; } catch (e) { return fb; } }
+    const body = PCD.el('div');
+    body.innerHTML =
+      '<div style="padding:10px 12px;background:var(--surface-2);border-radius:var(--r-md);font-size:13px;line-height:1.6;margin-bottom:10px;">' +
+        '<div style="font-weight:700;margin-bottom:4px;">' + PCD.escapeHtml(L('ri_format', 'Format — one row per ingredient, grouped by recipe')) + '</div>' +
+        PCD.escapeHtml(L('ri_desc', 'Columns: Recipe · Servings · Price · Ingredient · Amount · Unit. Rows sharing a Recipe name become one recipe. Ingredients match by name (auto-created if new); a name matching another recipe links as a sub-recipe.')) +
+      '</div>' +
+      '<div style="margin-bottom:10px;"><button type="button" class="btn btn-outline btn-sm" id="riTemplate">' + PCD.icon('download', 14) + ' ' + PCD.escapeHtml(L('ri_template', 'Download template (.csv)')) + '</button></div>' +
+      '<label class="field-label">' + PCD.escapeHtml(L('import_paste', 'Paste from Excel/CSV')) + '</label>' +
+      '<textarea class="textarea" id="riText" rows="8" placeholder="Recipe,Servings,Price,Ingredient,Amount,Unit" style="font-family:var(--font-mono);font-size:13px;"></textarea>' +
+      '<div style="text-align:center;margin:8px 0;" class="text-muted text-sm">' + PCD.escapeHtml(L('import_or', 'or')) + '</div>' +
+      '<input type="file" id="riFile" accept=".csv,.tsv,.txt,.xlsx" style="display:none;">' +
+      '<button class="btn btn-outline btn-block" id="riPick">' + PCD.icon('upload', 16) + ' ' + PCD.escapeHtml(L('import_upload_file', 'Upload CSV or Excel file')) + '</button>' +
+      '<div id="riPreview"></div>';
+
+    let parsed = null;
+    function preview(text) {
+      const prev = PCD.$('#riPreview', body);
+      if (!text || !text.trim()) { prev.innerHTML = ''; parsed = null; return; }
+      parsed = parseRecipeRows(text);
+      if (!parsed.recipes.length) {
+        prev.innerHTML = '<div style="margin-top:10px;padding:10px;background:var(--warning-bg);color:var(--warning);border-radius:var(--r-sm);font-size:13px;">⚠ ' + PCD.escapeHtml(L('ri_parse_fail', 'Could not read any recipes. Check the Recipe and Ingredient columns.')) + '</div>';
+        return;
+      }
+      const s = recipeImportPreview(parsed);
+      const sample = parsed.recipes.slice(0, 4).map(function (r) { return PCD.escapeHtml(r.name) + ' (' + r.lines.length + ')'; }).join(' · ');
+      prev.innerHTML = '<div style="margin-top:12px;padding:10px;background:var(--brand-50);border-radius:var(--r-md);font-size:13px;line-height:1.7;">' +
+        '<strong>' + s.recipes + ' ' + PCD.escapeHtml(L('ri_recipes', 'recipes')) + '</strong> — ' +
+        '<span style="color:var(--success);font-weight:700;">+' + s.newRec + ' ' + PCD.escapeHtml(L('import_new', 'new')) + '</span>' +
+        (s.updRec ? ' · <span style="color:var(--brand-700);font-weight:700;">↻ ' + s.updRec + ' ' + PCD.escapeHtml(L('import_update', 'update')) + '</span>' : '') +
+        '<br>' + s.lineCount + ' ' + PCD.escapeHtml(L('ri_lines', 'ingredient lines')) + ' · ' + s.matchedIng + ' ' + PCD.escapeHtml(L('ri_matched', 'matched')) +
+        (s.newIng ? ' · <span style="color:var(--success);">+' + s.newIng + ' ' + PCD.escapeHtml(L('ri_new_ing', 'new ingredients')) + '</span>' : '') +
+        (s.subLinks ? ' · ' + s.subLinks + ' ' + PCD.escapeHtml(L('ri_sublinks', 'sub-recipe links')) : '') +
+        (s.noAmount ? '<br><span style="color:var(--warning);">⚠ ' + s.noAmount + ' ' + PCD.escapeHtml(L('ri_no_amount', 'lines have no amount (import as 0 — fix later)')) + '</span>' : '') +
+        '<br><span style="color:var(--text-3);font-size:12px;">' + sample + (parsed.recipes.length > 4 ? ' …' : '') + '</span></div>';
+    }
+
+    PCD.$('#riTemplate', body).addEventListener('click', function () {
+      const tpl = 'Recipe,Servings,Price,Ingredient,Amount,Unit\n' +
+        'Tomato Soup,4,12,Tomato,800,g\nTomato Soup,4,12,Onion,150,g\nTomato Soup,4,12,Cream,100,ml\n' +
+        'Grilled Cheese,1,9,Sourdough,2,pcs\nGrilled Cheese,1,9,Cheddar,60,g';
+      const blob = new Blob([tpl], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'prochefdesk-recipes-template.csv';
+      document.body.appendChild(a); a.click();
+      setTimeout(function () { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+    });
+
+    const fileInp = PCD.$('#riFile', body);
+    PCD.$('#riPick', body).addEventListener('click', function () { fileInp.click(); });
+    fileInp.addEventListener('change', function (e) {
+      const f = e.target.files && e.target.files[0]; if (!f) return;
+      if (f.name.toLowerCase().endsWith('.xlsx')) {
+        const doIt = function () {
+          const reader = new FileReader();
+          reader.onload = function (evt) {
+            try {
+              const wb = window.XLSX.read(new Uint8Array(evt.target.result), { type: 'array' });
+              const csv = window.XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]]);
+              PCD.$('#riText', body).value = csv; preview(csv);
+            } catch (err) { PCD.toast.error(PCD.i18n.t('toast_excel_parse_failed', { msg: err.message })); }
+          };
+          reader.readAsArrayBuffer(f);
+        };
+        if (window.XLSX && window.XLSX.read) doIt();
+        else if (PCD.loadXLSX) PCD.loadXLSX().then(doIt).catch(function () { PCD.toast.error(PCD.i18n.t('toast_excel_parser_unavailable')); });
+      } else {
+        const reader = new FileReader();
+        reader.onload = function (evt) { PCD.$('#riText', body).value = evt.target.result; preview(evt.target.result); };
+        reader.readAsText(f);
+      }
+    });
+    PCD.$('#riText', body).addEventListener('input', PCD.debounce(function () { preview(this.value); }, 300));
+
+    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('cancel') });
+    const goBtn = PCD.el('button', { class: 'btn btn-primary', text: L('import_go', 'Import'), style: { flex: '1' } });
+    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
+    footer.appendChild(cancelBtn); footer.appendChild(goBtn);
+    const m = PCD.modal.open({ title: L('ri_title', 'Import recipes'), body: body, footer: footer, size: 'lg', closable: true });
+    cancelBtn.addEventListener('click', function () { m.close(); });
+    goBtn.addEventListener('click', function () {
+      if (!parsed || !parsed.recipes.length) { PCD.toast.error(L('ri_nothing', 'Nothing to import.')); return; }
+      const res = applyRecipeImport(parsed.recipes);
+      PCD.toast.success(L('ri_done', '{nr} recipes imported · {ni} new ingredients').replace('{nr}', res.newRec + res.updRec).replace('{ni}', res.newIng));
+      m.close();
+      setTimeout(function () { const v = PCD.$('#view'); if (v && PCD.router.currentView() === 'recipes') render(v); }, 200);
+    });
+  }
+
   function printAllergenMatrix(ids) {
     const t = PCD.i18n.t;
     const allergens = (PCD.allergensDB && PCD.allergensDB.list) || [];
