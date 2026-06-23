@@ -452,8 +452,13 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
     // B2 — header allergen matrix (FOH/audit print)
     const headerAM = PCD.$('#headerAllergenMatrix', view);
     if (headerAM) headerAM.addEventListener('click', function () {
-      const ids = (lastVisibleIds && lastVisibleIds.length) ? lastVisibleIds.slice() : recipes.map(function (r) { return r.id; });
-      printAllergenMatrix(ids);
+      const base = (lastVisibleIds && lastVisibleIds.length) ? lastVisibleIds.slice() : recipes.map(function (r) { return r.id; });
+      // v2.44.48 — Allergen matrisi FOH/menü belgesidir → sub-recipe/prep'leri çıkar
+      // (yemek allergenleri zaten sub-recipe'lerden cascade ediyor, bilgi kaybolmaz).
+      // Sonuç boş kalırsa (ör. Preps sekmesindeyken) base'e geri düş.
+      const _byId = {}; recipes.forEach(function (r) { _byId[r.id] = r; });
+      const _dishes = base.filter(function (id) { return _byId[id] && !isPrep(_byId[id]); });
+      printAllergenMatrix(_dishes.length ? _dishes : base);
     });
     const toggleSel = PCD.$('#toggleSelectMode', view);
     if (toggleSel) toggleSel.addEventListener('click', enterSelect);

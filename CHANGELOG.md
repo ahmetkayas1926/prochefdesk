@@ -4,13 +4,14 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
-## v2.44.46–.47 — Menü Mühendisliği (kâr × popülerlik matrisi) · 2026-06-23
+## v2.44.46–.48 — Menü Mühendisliği + prep/yemek ayrımı · 2026-06-23
 Kategori denetimi bulgusu: app food cost % gösteriyor ama "hangi yemek para kaybettiriyor"u tablo olarak vermiyordu (eski `menu_matrix` izole + elle veriydi, silinmişti). Yeni **bağlı + eyleme dönük** araç (`menu_engineering.js`, recipes sub-nav'ında yeni sekme, `grid` ikonu).
 - **Veri (yeni toplama yok):** maliyet → `computeFoodCost` (sub-recipe dahil) · fiyat → `recipe.salePrice` · satış → `recipe.salesCount`. Fiyat/satış inline düzenlenir → recipe'ye yazılır (recipes tablosu zaten senkron).
 - **Otomatik bağlantı:** envanter **Record sales** artık `recipe.salesCount`'u artırır → popülerlik ekseni kendiliğinden dolar (eski matrix'in yapamadığı).
 - **Çıktı:** her yemek 4 kutuya → ⭐Star · 🐴Plowhorse · ❓Puzzle · 🐶Dog + kutu başına tek-cümle tavsiye + tablo (maliyet/fiyat/satış/marj/kâr + food cost %). **Maliyetin altında satılan** yemekler kırmızı + üstte uyarı bandı. "Reset period sales" ile dönem sıfırlama. Tıkla→tarifi düzenle kısayolu.
 - **Test:** Soupe — maliyet $3.68, fiyat $20, sat 10 → marj $16.32 (18% fc), kâr $163.17, Plowhorse. salesCount bağlantısı 10→+5→15. 0 console hatası. Gating eklenmedi (monetization operatör kararı — istenirse plans.js).
 - **v2.44.47 fix:** Sub-recipe/prep'ler (HERB LABNEH/GHEE/marinasyonlar gibi — yemeğin İÇİNDE kullanılan bileşenler) analiz listesinden çıkarıldı; yalnız satılabilir yemekler analiz edilir (`PCD.recipes.isPrep` paylaşımlı sınıflandırıcı). recipeMap TÜM tarifleri tutmaya devam eder → maliyet cascade korunur (doğrulandı: prep dışlandı, yemek + maliyeti kaldı).
+- **v2.44.48 — Allergen matrisi (recipes.js) aynı düzeltme.** FOH/menü belgesi → sub-recipe/prep'ler çıkarıldı, yalnız satılabilir yemekler. Yemek allergenleri zaten sub-recipe'lerden cascade ettiği için bilgi kaybolmaz (recipeAllergens, v2.8.69 flatten). Boş kalırsa base'e düşer. Doğrulandı: PCD.print HTML'inde prep yok, yemek var.
 
 ## v2.44.44–.45 — Envanter zinciri: buffet + satış → otomatik tüketim · 2026-06-23
 Denetim bulgusu: envanter tüketimi yarımdı — yalnız Event "Deduct stock" + Order/Receiving çalışıyordu; **satış→tüketim YOK**, **buffet→envanter YOK**. İki boşluk kapatıldı (kanıtlı primitive'i yeniden kullanır: `flattenIngredients` + `applyStockDeductions`, events ile AYNI sözleşme).
