@@ -3075,6 +3075,8 @@ window.PCD.i18n.register('es', {
   inv_servings: "Porciones",
   inv_no_recipes_for_sales: "Aún no hay platos — agrega recetas primero.",
   inv_no_sales_entered: "Ingresa una cantidad para al menos un plato.",
+  inv_cat_dishes: "Platos del menú",
+  inv_cat_preps: "Preps",
   ri_title: "Importar recetas",
   ri_format: "Formato — una fila por ingrediente, agrupado por receta",
   ri_desc: "Columnas: Receta · Tipo (prep/dish) · Categoría · Porciones · Rendimiento · Precio · Ingrediente · Cantidad · Unidad. Escribe el nombre de la receta + sus detalles UNA VEZ en su primera fila, luego déjalos en blanco para el resto de sus ingredientes (repetir el nombre también funciona). El tipo \"prep\" marca una sub-receta; el Rendimiento (p. ej. \"4 portion\") define cuánto produce un prep. Los ingredientes se emparejan por nombre (se crean automáticamente si son nuevos); un nombre que coincide con otra receta se enlaza como sub-receta. Solo Receta + Ingrediente son obligatorios.",

@@ -3075,6 +3075,8 @@ window.PCD.i18n.register('de', {
   inv_servings: "Portionen",
   inv_no_recipes_for_sales: "Noch keine Gerichte — füge zuerst Rezepte hinzu.",
   inv_no_sales_entered: "Gib für mindestens ein Gericht eine Menge ein.",
+  inv_cat_dishes: "Menü-Gerichte",
+  inv_cat_preps: "Preps",
   ri_title: "Rezepte importieren",
   ri_format: "Format — eine Zeile pro Zutat, nach Rezept gruppiert",
   ri_desc: "Spalten: Rezept · Typ (prep/dish) · Kategorie · Portionen · Ausbeute · Preis · Zutat · Menge · Einheit. Schreibe den Rezeptnamen + seine Details EINMAL in die erste Zeile, lasse sie für die restlichen Zutaten leer (den Namen zu wiederholen funktioniert auch). Typ \"prep\" kennzeichnet ein Unterrezept; die Ausbeute (z. B. \"4 portion\") legt fest, wie viel ein Prep ergibt. Zutaten werden über den Namen abgeglichen (neue werden automatisch angelegt); ein Name, der mit einem anderen Rezept übereinstimmt, wird als Unterrezept verknüpft. Nur Rezept + Zutat sind erforderlich.",

@@ -102,6 +102,12 @@
 
   function renderList(view) {
     const t = PCD.i18n.t;
+    // v2.44.62 — Select modu kalıcı DEĞİL: liste her taze render'da (başka araca geçip
+    // dönmek dahil) sıfırlanır. İç repaint'ler (arama/sort/tab/tag) paint() kullanır →
+    // etkilenmez. Önceden modül-seviyesi selectMode sürüyordu → checkbox'lar kalıyor ama
+    // bulkBar gidiyordu (yarım durum).
+    selectMode = false;
+    selectedIds = new Set();
     const recipes = PCD.store.listRecipes();
     const ingMap = currentIngMap();
 

@@ -4,6 +4,13 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.62 — Recipes Select modu sızıntısı düzeltildi · 2026-06-24
+- **Bug:** Recipes'te Select moduna girip (seçili/seçimsiz) başka araca geçip dönünce checkbox'lar kalıyordu ama bulk araç çubuğu (X selected / Cost Report / Convert / Delete / Cancel) gidiyordu → yarım/bozuk durum. Sebep: `selectMode`/`selectedIds` modül-seviyesindeydi, navigasyonda sürüyordu; `renderList` re-render'da checkbox'ları çiziyor ama bulkBar `display:none` default'ta kalıyordu (refresh yalnız event'le çağrılıyordu).
+- **Çözüm:** `renderList` başında `selectMode=false; selectedIds=new Set()` → liste her taze render'da (navigasyon dönüşü dahil) temiz. İç repaint'ler (arama/sort/tab/tag) `paint()` kullanır, etkilenmez. Doğrulandı: select+sort modu KORUYOR · araç değiştir+dön TEMİZ (0 checkbox/bar) · 0 console hatası.
+
+## v2.44.61 — Record sales: kategori filtresi · 2026-06-24
+- **Record sales modal'ına segmented kategori filtresi** eklendi: **Menu items** (default) · **Preps** · **All**. Önceden tüm tarifler (prep'ler + menu item'lar) karışık listeleniyordu; satılan şey menu item, prep'ler zaten tüketim cascade'iyle otomatik düşüyor → varsayılan yalnız menu item'ları gösteriyor. `PCD.recipes.isPrep` ile ayrım (Menu Engineering/Allergen/Cost Report ile aynı sınıflandırıcı). Metin arama ile birleşik çalışır; hiç dish yoksa otomatik "All"a düşer. Yeni etiketler `inv_cat_dishes`/`inv_cat_preps` 6 dile çevrildi (`all` mevcut). Preview'da doğrulandı (25 dish / 3 prep · default prep'leri gizliyor · 0 console hatası).
+
 ## v2.44.59–.60 — i18n: yeni etiketler 5 dile + sızıntı denetimi · 2026-06-23
 - **v2.44.60 — Denetim sonrası kapatma.** Tüm oturum-içi yeni metinler kod seviyesinde tarandı: Menü Mühendisliği/Satış kaydet/Recipe import/Batch UI'si 5 dilde TAM (0 eksik). Ek bulgular: (a) Excel şablonu 2 kozmetik sayfa başlığı (`ri_xlsx_title` "Tarif Şablonu" + `ri_xlsx_lists_title` "Geçerli değerler") çevrildi — alt-açıklamalarla tutarlı; (b) **eski** (v2.8.2) `bulkCostReport` butonundaki ham `Cost Report` → `t('btn_cost_report')` ile çevrildi. **Kasıtlı İngilizce kalan tek şey:** import dosya formatı (sütun başlıkları Recipe/Type/Ingredient + `dish`/`prep`/`cat_*` token + örnek satırlar) — parser bunları eşleştiriyor, çeviri import'u bozardı.
 - Bu oturumda eklenen İngilizce etiketler (Menü Mühendisliği `me_*` · Satış kaydet `inv_*` · Recipe import `ri_*` · `tab_menu_eng` · Batch adı/portion override) **tr/es/fr/de/ar**'a çevrildi. Her dilin sonuna tek `register` bloğu (MERGE); portion anahtarları (tab_portion/portion_title/portion_desc/pc_subtitle) override edildi.

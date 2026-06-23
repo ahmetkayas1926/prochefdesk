@@ -1024,10 +1024,19 @@
       '<div style="font-weight:700;">' + PCD.escapeHtml(t('inv_record_sales')) + '</div>' +
       '<div class="text-muted text-sm">' + PCD.escapeHtml(t('inv_record_sales_help')) + '</div>' +
       '</div>';
+    const _isPrep = function (r) { return (PCD.recipes && PCD.recipes.isPrep) ? PCD.recipes.isPrep(r) : !!(r.yieldAmount && r.yieldUnit); };
+    const _hasDishes = recipes.some(function (r) { return !_isPrep(r); });
+    let rsCat = _hasDishes ? 'dishes' : 'all';
+    const _catBtn = function (cat, label) {
+      const on = cat === rsCat;
+      return '<button type="button" class="btn btn-sm rs-cat-btn ' + (on ? 'btn-primary' : 'btn-outline') + '" data-cat="' + cat + '">' + PCD.escapeHtml(label) + '</button>';
+    };
+    html += '<div id="rsCat" style="display:flex;gap:6px;margin-bottom:8px;">' +
+      _catBtn('dishes', t('inv_cat_dishes')) + _catBtn('preps', t('inv_cat_preps')) + _catBtn('all', t('all')) + '</div>';
     html += '<input type="search" id="rsSearch" placeholder="' + PCD.escapeHtml(t('inv_filter_placeholder')) + '" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);font-size:13px;margin-bottom:8px;box-sizing:border-box;">';
     html += '<div id="rsList">';
     recipes.forEach(function (r) {
-      html += '<label class="rs-row" data-name="' + PCD.escapeHtml((r.name || '').toLowerCase()) + '" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:4px;">' +
+      html += '<label class="rs-row" data-prep="' + (_isPrep(r) ? '1' : '0') + '" data-name="' + PCD.escapeHtml((r.name || '').toLowerCase()) + '" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:4px;">' +
         '<div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:14px;">' + PCD.escapeHtml(r.name || '') + '</div>' +
         '<div class="text-muted" style="font-size:11px;">' + PCD.escapeHtml(t('inv_servings')) + ': ' + PCD.fmtNumber(r.servings || 1) + '</div></div>' +
         '<input type="number" class="input rs-qty" data-rid="' + r.id + '" value="0" min="0" step="1" style="width:72px;text-align:center;font-weight:600;">' +
@@ -1047,12 +1056,28 @@
     cancelBtn.addEventListener('click', function () { m.close(); });
 
     const search = PCD.$('#rsSearch', body);
-    if (search) search.addEventListener('input', function () {
-      const q = (this.value || '').toLowerCase();
+    function rsFilter() {
+      const q = (search && search.value || '').toLowerCase();
       PCD.$$('.rs-row', body).forEach(function (row) {
-        row.style.display = (!q || (row.getAttribute('data-name') || '').indexOf(q) >= 0) ? '' : 'none';
+        const isP = row.getAttribute('data-prep') === '1';
+        const catOk = rsCat === 'all' || (rsCat === 'preps' ? isP : !isP);
+        const textOk = !q || (row.getAttribute('data-name') || '').indexOf(q) >= 0;
+        row.style.display = (catOk && textOk) ? '' : 'none';
+      });
+    }
+    if (search) search.addEventListener('input', rsFilter);
+    PCD.$$('.rs-cat-btn', body).forEach(function (b) {
+      b.addEventListener('click', function () {
+        rsCat = b.getAttribute('data-cat');
+        PCD.$$('.rs-cat-btn', body).forEach(function (x) {
+          const on = x.getAttribute('data-cat') === rsCat;
+          x.classList.toggle('btn-primary', on);
+          x.classList.toggle('btn-outline', !on);
+        });
+        rsFilter();
       });
     });
+    rsFilter();
 
     deductBtn.addEventListener('click', function () {
       const sales = {};

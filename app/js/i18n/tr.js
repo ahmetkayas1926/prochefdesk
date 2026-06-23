@@ -3306,6 +3306,8 @@ window.PCD.i18n.register('tr', {
   inv_servings: "Porsiyon",
   inv_no_recipes_for_sales: "Henüz yemek yok — önce tarif ekle.",
   inv_no_sales_entered: "En az bir yemek için miktar gir.",
+  inv_cat_dishes: "Menü öğeleri",
+  inv_cat_preps: "Prepler",
   ri_title: "Tarif içe aktar",
   ri_format: "Format — malzeme başına bir satır, tarife göre gruplanmış",
   ri_desc: "Sütunlar: Tarif · Tür (prep/dish) · Kategori · Porsiyon · Verim · Fiyat · Malzeme · Miktar · Birim. Tarif adını + detaylarını ilk satırına BİR KEZ yaz, kalan malzemeleri için boş bırak (adı tekrarlamak da çalışır). \"prep\" türü alt-tarif demektir; Verim (örn. \"4 portion\") bir prep'in ne kadar verdiğini belirler. Malzemeler ada göre eşleşir (yoksa otomatik oluşturulur); başka bir tarifle eşleşen ad alt-tarif olarak bağlanır. Yalnız Tarif + Malzeme zorunlu.",
