@@ -4,6 +4,10 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.59 — i18n: yeni etiketler 5 dile · 2026-06-23
+- Bu oturumda eklenen İngilizce etiketler (Menü Mühendisliği `me_*` · Satış kaydet `inv_*` · Recipe import `ri_*` · `tab_menu_eng` · Batch adı/portion override) **tr/es/fr/de/ar**'a çevrildi. Her dilin sonuna tek `register` bloğu (MERGE); portion anahtarları (tab_portion/portion_title/portion_desc/pc_subtitle) override edildi.
+- **Batch** ürün adı tüm dillerde İngilizce korundu (sekme "Batch"); başlık yerelleştirildi (Batch Hesaplayıcı / Calculadora Batch / Calculateur Batch / Batch-Rechner / حاسبة الدفعات). Çeyrek etiketleri yerel (Yıldız/İş Atı/Bilmece/Köpek · Estrella/… · Star/Arbeitspferd/Rätsel/Ladenhüter · نجم/…). `import_*` zaten 6 dilde vardı (dokunulmadı). en.js'te `me_*`/`ri_*` L() fallback ile İngilizce kalıyor (tasarım). `{nr}`/`{ni}` placeholder + `prep`/`dish`/`Lists` literal değerleri korundu. **5 dil canlı preview'da doğrulandı** (raw key/fallback sızıntısı yok).
+
 ## v2.44.57–.58 — Sub-nav sırası + Portion → Batch · 2026-06-23
 - **v2.44.57 — Menu engineering Recipes'in yanına.** Recipes sub-nav sırası: Recipes · **Menu engineering** · Nutrition · Batch (önce sondaydı).
 - **v2.44.58 — "Portion" → "Batch" yeniden adlandırma.** Araç gerçekte recipe/sub-recipe'yi N'e ölçekleyip toplam malzeme + maliyet veriyor (porsiyon değil). Sekme `Batch`, başlık `Batch Calculator`, alt-açıklama "Scale any recipe or sub-recipe to the quantity you need — total ingredients + cost". **Route `portion` SABİT** (bookmark/link güvenli). en.js güncellendi; tr/es/fr/de/ar mevcut i18n-temizlik TODO'sunda (şu an eski çeviri görünür).
