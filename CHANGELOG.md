@@ -4,6 +4,11 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.56 — Menu Engineering P&L özeti · 2026-06-23
+Menünün mini P&L'i: tablonun üstüne tek özet kartı (girilen satışlardan otomatik toplanır). Takvim/geçmiş bilinçli ERTELENDİ (manuel günlük giriş disiplini şüpheli — önce şefler satışı gerçekten giriyor mu doğrula, sonra geçmiş'e yatırım yap).
+- **5 metrik:** Sold (adet) · Revenue (ciro) · Food cost ($) · **Food cost %** (KPI; renk: ≤35 yeşil · ≤40 amber · >40 kırmızı) · **Profit** (yeşil/kırmızı). Fiyatsız yemekler ciro/kâr'a girmez. Satış yoksa "satış gir" ipucu.
+- **Doğrulandı:** 2 dish (rev 50/60, cost 10/10) → Sold 30 · Revenue $110 · Food cost $20 · FC% 18 · Profit $90. 0 console hatası.
+
 ## v2.44.51–.55 — Recipe toplu import (Excel/CSV) · 2026-06-23
 Kategori denetimi bulgusu: kurulum yükü (40-80 tarifi elle girmek) ASIL hedef kitleyi (caterer/private chef/danışman/restoran) zorluyordu. Mevcut malzeme-import desenini tariflere taşıdım (recipes.js header "Import" butonu).
 - **Format:** her satır = bir malzeme satırı, aynı Recipe adı = bir tarif (`Recipe·Servings·Price·Ingredient·Amount·Unit`). CSV/TSV/XLSX dosya + yapıştır + indirilebilir CSV şablon.

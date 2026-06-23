@@ -80,6 +80,33 @@
       view.innerHTML = html; return;
     }
 
+    // v2.44.56 — Menünün mini P&L özeti: satılan adet · ciro · yemek maliyeti ·
+    // food cost % · toplam kâr (tek bakışta "kazanıyor muyum?").
+    let totSold = 0, totRev = 0, totCost = 0, totProfit = 0;
+    rows.forEach(function (x) {
+      totSold += x.sold;
+      if (x.price > 0) { totRev += x.price * x.sold; totCost += x.costPer * x.sold; totProfit += (x.margin || 0) * x.sold; }
+    });
+    const fcPct = totRev > 0 ? (totCost / totRev) * 100 : null;
+    const fcColor = fcPct == null ? 'var(--text-3)' : (fcPct <= 35 ? '#1f9d6b' : (fcPct <= 40 ? '#d97706' : '#dc2626'));
+    const profitColor = totProfit >= 0 ? '#1f9d6b' : '#dc2626';
+    function meMetric(label, value, color) {
+      return '<div style="background:var(--surface-2);border-radius:var(--r-md);padding:10px 12px;">' +
+        '<div style="font-size:12px;color:var(--text-3);">' + PCD.escapeHtml(label) + '</div>' +
+        '<div style="font-size:20px;font-weight:700;color:' + (color || 'var(--text-1)') + ';margin-top:2px;">' + PCD.escapeHtml(value) + '</div></div>';
+    }
+    if (totSold > 0) {
+      html += '<div class="card mb-3" style="padding:14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:12px;">' +
+        meMetric(L('me_sum_sold', 'Sold'), String(Math.round(totSold)), 'var(--text-1)') +
+        meMetric(L('me_sum_revenue', 'Revenue'), money(totRev), 'var(--text-1)') +
+        meMetric(L('me_sum_cost', 'Food cost'), money(totCost), 'var(--text-1)') +
+        meMetric(L('me_sum_fcpct', 'Food cost %'), (fcPct == null ? '—' : Math.round(fcPct) + '%'), fcColor) +
+        meMetric(L('me_sum_profit', 'Profit'), money(totProfit), profitColor) +
+        '</div>';
+    } else {
+      html += '<div class="card mb-3" style="padding:12px 14px;color:var(--text-3);font-size:13px;">' + PCD.escapeHtml(L('me_sum_hint', 'Enter how many of each dish you sold (in the table below) to see total revenue, food cost % and profit.')) + '</div>';
+    }
+
     const losing = rows.filter(function (x) { return x.margin != null && x.margin < 0; });
     const unpriced = rows.filter(function (x) { return x.price <= 0; });
     if (losing.length) {
