@@ -53,16 +53,33 @@ B) PREVIEW SEVİYESİ: dev server başlat; MOBİL (375px) ve MASAÜSTÜ ayrı ay
 C) FİZİKSEL OPERASYON: persona kur, tam operasyon döngüsünü HİÇBİR ADIM ATLAMADAN yürüt, her
    aşamada sayıyı (matematik) doğrula ve ekranda ne olduğunu göster.
 
-Rota master listesi = app/js/core/app.js. Mimari/gotcha referansı = CLAUDE.md + HANDOVER.md.
+Rota master listesi = app/js/core/app.js (TEK doğruluk kaynağı). Aşağıdaki araç/özellik
+listeleri ANLIK GÖRÜNTÜdür → app.js'teki TÜM rotaları + CHANGELOG.md'deki SON sürümü esas al;
+listede adı geçmeyen ama app.js/CHANGELOG'da olan her şeyi de denetle. Mimari/gotcha referansı
+= CLAUDE.md + HANDOVER.md.
 
 ══════════════════════════════════════════════
 KISIM 1 — TEKNİK BÜTÜNLÜK DENETİMİ (kod + preview, A+B modu)
 ══════════════════════════════════════════════
-1.1 ARAÇLAR (hiçbirini atlama): dashboard, account/auth, inventory, recipes + discover,
-   menu_studio, buffets, events, roster, haccp (logs/cooling/receiving/holding 4 form),
-   whiteboard, kitchen_cards, nutrition, variance, waste, batch (eski portion), prep/prep
-   sheets, stock count, checklists, menu_engineering. Şema-only olanları (shopping_lists,
-   mise_plans, team) da kontrol et: route var mı, UI var mı, ölü/yetim bağlantı var mı.
+1.1 ARAÇLAR (hiçbirini atlama): dashboard, account/auth, inventory, suppliers, recipes +
+   discover, menu_studio, buffets, events, roster, haccp (logs/cooling/receiving/holding 4
+   form), whiteboard, kitchen_cards, nutrition, variance, waste, batch (eski portion),
+   prep/prep sheets, stock count, checklists, menu_engineering. Şema-only olanları
+   (shopping_lists, mise_plans, team) da kontrol et: route var mı, UI var mı, ölü/yetim
+   bağlantı var mı.
+1.1b SON EKLENEN ÖZELLİKLER (mutlaka ayrıca derinlemesine denetle — bunlar bu listeyi
+   yazdıktan SONRA eklendi, kod + gerçek kullanım + i18n 6 dil):
+   - Recipe toplu IMPORT (Excel/CSV: header eşleştirme, fill-down, sub-recipe linkleme,
+     otomatik ingredient, Type/Category/Yield, styled .xlsx şablon).
+   - Inventory "Record sales" (satış→tüketim; sub-recipe cascade; kategori filtresi
+     Menu items/Preps/All) + buffet "Deduct stock".
+   - Tedarikçi → envanter "GELDİ → STOĞA EKLE" köprüsü (order history'den; isimle eşleşen
+     malzemeye applyStockAdditions; kısmi teslim; birim çevrimi; receivedAt çift-ekleme
+     koruması; eski kayıtta mesaj-parse fallback). Gönderme akışı değişmedi — köprü opsiyonel.
+   - Menü Mühendisliği aracı (Star/Plowhorse/Puzzle/Dog matrisi + P&L özet kartı).
+   - "Batch" aracı (eski "Portion" — recipe/sub-recipe'yi N'e ölçekle → toplam malzeme+maliyet).
+   - Recipes Select modu: navigasyonda sıfırlanır; select-all aktif sekmeye (Menu/Preps/All)
+     uyar; menu-level çıktılar (Cost Report/Allergen/Menu eng.) prep'leri dışlar (isPrep).
 1.2 HESAPLAR (formül + edge-case + preview'da gerçek sayıyla çapraz doğrula): tarif maliyeti
    (sub-recipe flatten + yield + birim dönüşümü + separator skip), maliyet/porsiyon, labor
    cost, menü fiyat/marj, menu engineering (Star/Plowhorse/Puzzle/Dog + P&L), büfe maliyeti
