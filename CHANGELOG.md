@@ -4,6 +4,10 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.57–.58 — Sub-nav sırası + Portion → Batch · 2026-06-23
+- **v2.44.57 — Menu engineering Recipes'in yanına.** Recipes sub-nav sırası: Recipes · **Menu engineering** · Nutrition · Batch (önce sondaydı).
+- **v2.44.58 — "Portion" → "Batch" yeniden adlandırma.** Araç gerçekte recipe/sub-recipe'yi N'e ölçekleyip toplam malzeme + maliyet veriyor (porsiyon değil). Sekme `Batch`, başlık `Batch Calculator`, alt-açıklama "Scale any recipe or sub-recipe to the quantity you need — total ingredients + cost". **Route `portion` SABİT** (bookmark/link güvenli). en.js güncellendi; tr/es/fr/de/ar mevcut i18n-temizlik TODO'sunda (şu an eski çeviri görünür).
+
 ## v2.44.56 — Menu Engineering P&L özeti · 2026-06-23
 Menünün mini P&L'i: tablonun üstüne tek özet kartı (girilen satışlardan otomatik toplanır). Takvim/geçmiş bilinçli ERTELENDİ (manuel günlük giriş disiplini şüpheli — önce şefler satışı gerçekten giriyor mu doğrula, sonra geçmiş'e yatırım yap).
 - **5 metrik:** Sold (adet) · Revenue (ciro) · Food cost ($) · **Food cost %** (KPI; renk: ≤35 yeşil · ≤40 amber · >40 kırmızı) · **Profit** (yeşil/kırmızı). Fiyatsız yemekler ciro/kâr'a girmez. Satış yoksa "satış gir" ipucu.

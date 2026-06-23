@@ -27,7 +27,7 @@ window.PCD_CONFIG = {
   // 3. APP DEFAULTS
   // ==============================================================
   APP_NAME: 'ProChefDesk',
-  APP_VERSION: '2.44.56',
+  APP_VERSION: '2.44.58',
   DEFAULT_CURRENCY: 'USD',
   DEFAULT_LOCALE: 'en',
 
