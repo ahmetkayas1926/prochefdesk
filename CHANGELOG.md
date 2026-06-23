@@ -4,7 +4,7 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
-## v2.44.46–.49 — Menü Mühendisliği + prep/yemek ayrımı · 2026-06-23
+## v2.44.46–.50 — Menü Mühendisliği + prep/yemek ayrımı · 2026-06-23
 Kategori denetimi bulgusu: app food cost % gösteriyor ama "hangi yemek para kaybettiriyor"u tablo olarak vermiyordu (eski `menu_matrix` izole + elle veriydi, silinmişti). Yeni **bağlı + eyleme dönük** araç (`menu_engineering.js`, recipes sub-nav'ında yeni sekme, `grid` ikonu).
 - **Veri (yeni toplama yok):** maliyet → `computeFoodCost` (sub-recipe dahil) · fiyat → `recipe.salePrice` · satış → `recipe.salesCount`. Fiyat/satış inline düzenlenir → recipe'ye yazılır (recipes tablosu zaten senkron).
 - **Otomatik bağlantı:** envanter **Record sales** artık `recipe.salesCount`'u artırır → popülerlik ekseni kendiliğinden dolar (eski matrix'in yapamadığı).
@@ -13,6 +13,7 @@ Kategori denetimi bulgusu: app food cost % gösteriyor ama "hangi yemek para kay
 - **v2.44.47 fix:** Sub-recipe/prep'ler (HERB LABNEH/GHEE/marinasyonlar gibi — yemeğin İÇİNDE kullanılan bileşenler) analiz listesinden çıkarıldı; yalnız satılabilir yemekler analiz edilir (`PCD.recipes.isPrep` paylaşımlı sınıflandırıcı). recipeMap TÜM tarifleri tutmaya devam eder → maliyet cascade korunur (doğrulandı: prep dışlandı, yemek + maliyeti kaldı).
 - **v2.44.48 — Allergen matrisi (recipes.js) aynı düzeltme.** FOH/menü belgesi → sub-recipe/prep'ler çıkarıldı, yalnız satılabilir yemekler. Yemek allergenleri zaten sub-recipe'lerden cascade ettiği için bilgi kaybolmaz (recipeAllergens, v2.8.69 flatten). Boş kalırsa base'e düşer. Doğrulandı: PCD.print HTML'inde prep yok, yemek var.
 - **v2.44.49 — Allergen print kenar boşluğu.** `body{padding:12mm → 5mm}` (@page margin:0 zaten); yatay+dikey ~14mm kazanç → daha çok satır/sütun sığar. 5mm yazıcının basamadığı kenar payı için güvenli alt sınır.
+- **v2.44.50 — Header Cost Report aynı düzeltme.** Recipes başlığındaki "Cost Report" artık yalnız satılabilir yemekleri raporlar (sub-recipe/prep hariç); bir prep raporu istenirse **Select** ile elle seçilir (o yol + tek-tarif raporu dokunulmadı). Prep, kullanan yemeğin maliyet KIRILIMINDA alt-tarif satırı olarak kalır (cascade korunur). Doğrulandı: 16 tarif (1 prep+15 yemek) → rapor 15.
 
 ## v2.44.44–.45 — Envanter zinciri: buffet + satış → otomatik tüketim · 2026-06-23
 Denetim bulgusu: envanter tüketimi yarımdı — yalnız Event "Deduct stock" + Order/Receiving çalışıyordu; **satış→tüketim YOK**, **buffet→envanter YOK**. İki boşluk kapatıldı (kanıtlı primitive'i yeniden kullanır: `flattenIngredients` + `applyStockDeductions`, events ile AYNI sözleşme).

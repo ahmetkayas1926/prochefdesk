@@ -443,9 +443,14 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
     // v2.17 — Header Cost Report: o an görünen tariflere göre rapor (boşsa tüm tarifler).
     const headerCR = PCD.$('#headerCostReport', view);
     if (headerCR) headerCR.addEventListener('click', function () {
-      const ids = (lastVisibleIds && lastVisibleIds.length)
+      const base = (lastVisibleIds && lastVisibleIds.length)
         ? lastVisibleIds.slice()
         : recipes.map(function (r) { return r.id; });
+      // v2.44.50 — Header Cost Report = menü maliyet raporu → sub-recipe/prep'ler
+      // çıkarılır (bir prep'in raporu istenirse Select ile elle seçilir). Boşsa base.
+      const _byId = {}; recipes.forEach(function (r) { _byId[r.id] = r; });
+      const _dishes = base.filter(function (id) { return _byId[id] && !isPrep(_byId[id]); });
+      const ids = _dishes.length ? _dishes : base;
       if (!ids.length) { if (PCD.toast && PCD.toast.info) PCD.toast.info(t('cr_no_recipes') || 'No recipes to report'); return; }
       openCostReport(ids);
     });
