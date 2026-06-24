@@ -30,8 +30,8 @@
         ${PCD.subNav('recipes', 'portion')}
         <div class="empty">
           <div class="empty-icon" style="color:var(--brand-600);">${PCD.icon('scale', 48)}</div>
-          <div class="empty-title">No recipes yet</div>
-          <div class="empty-desc">Create recipes first to use the portion calculator.</div>
+          <div class="empty-title">${t('no_recipes_yet')}</div>
+          <div class="empty-desc">${t('pc_empty_desc')}</div>
         </div>
       `;
       return;
@@ -504,7 +504,7 @@
 
     const body = PCD.el('div');
     body.innerHTML =
-      '<div class="field"><label class="field-label">Message</label>' +
+      '<div class="field"><label class="field-label">' + t('share_message_label') + '</label>' +
       '<textarea class="textarea" id="shText" rows="14" style="font-family:var(--font-mono);font-size:13px;">' + PCD.escapeHtml(text) + '</textarea></div>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-top:14px;">' +
         '<button class="btn btn-outline" id="shWa" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;">' +

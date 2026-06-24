@@ -3106,3 +3106,13 @@ window.PCD.i18n.register('es', {
   ri_xlsx_title: "Plantilla de recetas",
   ri_xlsx_lists_title: "Valores válidos",
 });
+
+// v2.44.64 — Correcciones i18n tras la auditoría.
+window.PCD.i18n.register('es', {
+  pc_empty_desc: "Crea primero recetas para usar la calculadora Batch.",
+  portion_g_t: "Cómo funciona la calculadora Batch",
+  me_g_t: "Cómo funciona la ingeniería de menú",
+  me_g1: "Fija un precio de venta y cuántos vendiste de cada plato (en la tabla); el coste viene de la receta automáticamente.",
+  me_g2: "Cada plato cae en un cuadrante: ⭐ Estrella (mantener), 🐴 Caballo de tiro (subir precio), ❓ Enigma (promocionar), 🐶 Perro (considerar quitar).",
+  me_g3: "La tarjeta de resumen muestra ingresos, coste de comida % y beneficio. Los platos vendidos por debajo del coste se marcan en rojo.",
+});

@@ -3106,3 +3106,13 @@ window.PCD.i18n.register('fr', {
   ri_xlsx_title: "Modèle de recettes",
   ri_xlsx_lists_title: "Valeurs valides",
 });
+
+// v2.44.64 — Corrections i18n après l'audit.
+window.PCD.i18n.register('fr', {
+  pc_empty_desc: "Créez d'abord des recettes pour utiliser le calculateur Batch.",
+  portion_g_t: "Comment fonctionne le calculateur Batch",
+  me_g_t: "Comment fonctionne l'ingénierie de menu",
+  me_g1: "Définissez un prix de vente et la quantité vendue pour chaque plat (dans le tableau) ; le coût vient automatiquement de la recette.",
+  me_g2: "Chaque plat tombe dans un quadrant : ⭐ Star (à garder), 🐴 Cheval de trait (augmenter le prix), ❓ Énigme (promouvoir), 🐶 Chien (envisager de retirer).",
+  me_g3: "La carte de résumé affiche le chiffre d'affaires, le coût matière % et le bénéfice. Les plats vendus sous le coût sont signalés en rouge.",
+});

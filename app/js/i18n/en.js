@@ -3285,3 +3285,13 @@ window.PCD.i18n.register('en', {
   inv_cat_preps: "Preps",
   tab_menu_eng: "Menu engineering",
 });
+
+// v2.44.64 — Denetim sonrası i18n düzeltmeleri: Batch guide başlığı + portion boş-durum + Menu Engineering guide.
+window.PCD.i18n.register('en', {
+  pc_empty_desc: "Create recipes first to use the Batch calculator.",
+  portion_g_t: "How the Batch calculator works",
+  me_g_t: "How menu engineering works",
+  me_g1: "Set a sale price and how many you sold for each dish (in the table) — cost comes from the recipe automatically.",
+  me_g2: "Each dish lands in a quadrant: ⭐ Star (keep & feature), 🐴 Plowhorse (raise price), ❓ Puzzle (promote), 🐶 Dog (consider dropping).",
+  me_g3: "The summary card shows revenue, food cost % and profit. Dishes selling below cost are flagged red.",
+});

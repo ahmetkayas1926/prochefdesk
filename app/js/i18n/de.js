@@ -3106,3 +3106,13 @@ window.PCD.i18n.register('de', {
   ri_xlsx_title: "Rezeptvorlage",
   ri_xlsx_lists_title: "Gültige Werte",
 });
+
+// v2.44.64 — i18n-Korrekturen nach dem Audit.
+window.PCD.i18n.register('de', {
+  pc_empty_desc: "Erstelle zuerst Rezepte, um den Batch-Rechner zu nutzen.",
+  portion_g_t: "So funktioniert der Batch-Rechner",
+  me_g_t: "So funktioniert Menu Engineering",
+  me_g1: "Lege für jedes Gericht einen Verkaufspreis und die verkaufte Menge fest (in der Tabelle) — die Kosten kommen automatisch aus dem Rezept.",
+  me_g2: "Jedes Gericht landet in einem Quadranten: ⭐ Star (behalten), 🐴 Arbeitspferd (Preis erhöhen), ❓ Rätsel (bewerben), 🐶 Ladenhüter (Entfernen erwägen).",
+  me_g3: "Die Übersichtskarte zeigt Umsatz, Wareneinsatz % und Gewinn. Gerichte, die unter Kosten verkauft werden, sind rot markiert.",
+});

@@ -74,6 +74,11 @@
       '<div class="page-subtitle">' + PCD.escapeHtml(L('me_subtitle', 'Which dishes make money — and which quietly lose it')) + '</div>' +
       '</div></div>';
     html += PCD.subNav('recipes', 'menu_engineering');
+    html += PCD.guideCard('menu_engineering', L('me_g_t', 'How menu engineering works'), [
+      L('me_g1', 'Set a sale price and how many you sold for each dish (in the table) — cost comes from the recipe automatically.'),
+      L('me_g2', 'Each dish lands in a quadrant: ⭐ Star (keep & feature), 🐴 Plowhorse (raise price), ❓ Puzzle (promote), 🐶 Dog (consider dropping).'),
+      L('me_g3', 'The summary card shows revenue, food cost % and profit. Dishes selling below cost are flagged red.')
+    ]);
 
     if (!rows.length) {
       html += '<div class="card" style="padding:24px;text-align:center;color:var(--text-3);">' + PCD.escapeHtml(L('me_no_recipes', 'No dishes yet — add recipes first.')) + '</div>';

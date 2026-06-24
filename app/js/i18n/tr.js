@@ -3337,3 +3337,13 @@ window.PCD.i18n.register('tr', {
   ri_xlsx_title: "Tarif Şablonu",
   ri_xlsx_lists_title: "Geçerli değerler",
 });
+
+// v2.44.64 — Denetim sonrası i18n düzeltmeleri.
+window.PCD.i18n.register('tr', {
+  pc_empty_desc: "Batch hesaplayıcıyı kullanmak için önce tarif oluştur.",
+  portion_g_t: "Batch hesaplayıcı nasıl çalışır",
+  me_g_t: "Menü mühendisliği nasıl çalışır",
+  me_g1: "Her yemek için satış fiyatını ve kaç adet sattığını (tabloda) gir — maliyet tariften otomatik gelir.",
+  me_g2: "Her yemek bir çeyreğe düşer: ⭐ Yıldız (koru), 🐴 İş Atı (fiyat yükselt), ❓ Bilmece (öne çıkar), 🐶 Köpek (kaldırmayı düşün).",
+  me_g3: "Özet kartı ciro, food cost % ve kârı gösterir. Maliyetin altında satılan yemekler kırmızıyla işaretlenir.",
+});
