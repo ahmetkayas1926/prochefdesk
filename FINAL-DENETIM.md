@@ -100,6 +100,20 @@ KISIM 1 — TEKNİK BÜTÜNLÜK DENETİMİ (kod + preview, A+B modu)
    tipografi/buton/boşluk/ikon araçlar arası AYNI mı); davranış (ekle/sil/çoğalt/düzenle/
    paylaş her araçta aynı mı; data-* handler çakışması/sızıntısı); terminoloji (aynı kavram
    her yerde + 6 dilde aynı kelime mi).
+1.7 REHBER / İPUCU KARTLARI ("How X works" — açılır/kapanır guide kartı, `PCD.guideCard`):
+   HER araç ve alanda tek tek dolaş ve cevapla:
+   - VAR MI / EKSİK Mİ: her aracın üstünde bu açıklama kartı var mı? Olması gerekip olmayan
+     hangileri (özellikle son eklenenler: suppliers köprüsü, record sales, recipe import,
+     menu_engineering, batch — bunların kartı/metni var mı, güncel mi)?
+   - İÇERİK DOĞRU MU (aracı GERÇEKTEN kullandıktan SONRA değerlendir): kart, aracın bugün
+     yaptığı işi doğru anlatıyor mu? Eksik adım / yanlış-eski bilgi / artık olmayan özellik /
+     yeni özelliğin hiç anılmaması var mı? (ör. "Portion" → "Batch" oldu, kart hâlâ porsiyon mu
+     diyor; record sales/stoğa-ekle köprüsü kartta geçiyor mu.)
+   - TUTARLILIK: kartların dili/uzunluğu/üslubu/aç-kapa davranışı (× ile kapanma, kalıcılık)
+     araçlar arası AYNI mı; 6 dilde çevrili + simetrik mi; kapatınca geri geliyor mu.
+   - YETERLİLİK: yeni bir şef o kartı okuyunca aracı kullanabilir mi, yoksa kart yüzeysel /
+     kritik adımı atlıyor mu? Her bulgu: araç adı + kart durumu (yok / var-doğru / var-eksik /
+     var-yanlış) + somut örnek.
 
 ══════════════════════════════════════════════
 KISIM 2 — ENVANTER ↔ ARAÇ ZİNCİRİ (uçtan uca bağlılık, A+B+C modu)
