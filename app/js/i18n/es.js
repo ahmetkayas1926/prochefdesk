@@ -3116,4 +3116,11 @@ window.PCD.i18n.register('es', {
   me_g1: "Fija un precio de venta y cuántos vendiste de cada plato (en la tabla); el coste viene de la receta automáticamente.",
   me_g2: "Cada plato cae en un cuadrante: ⭐ Estrella (mantener), 🐴 Caballo de tiro (subir precio), ❓ Enigma (promocionar), 🐶 Perro (considerar quitar).",
   me_g3: "La tarjeta de resumen muestra ingresos, coste de comida % y beneficio. Los platos vendidos por debajo del coste se marcan en rojo.",
+  ms_menu_items: "Elementos del menú",
+  ms_sub_recipes: "Sub-recetas",
+  ms_add_selected: "Añadir seleccionados",
+  var_load_sales: "Cargar desde ventas",
+  var_from_sales_hint: "O importa lo que vendiste directamente desde Registrar ventas, sin volver a teclear.",
+  var_no_sales_period: "No hay ventas registradas en este período. Usa Inventario → Registrar ventas primero.",
+  var_sales_loaded: "{n} plato(s) cargado(s) desde ventas",
 });

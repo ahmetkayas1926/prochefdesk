@@ -1110,6 +1110,20 @@
           const rr = PCD.store.getRecipe(rid);
           if (rr) { rr.salesCount = (Number(rr.salesCount) || 0) + (Number(sales[rid]) || 0); PCD.store.upsertRecipe(rr); }
         });
+        // v2.44.x — Tarihli satış kaydı (salesLog): Variance / Menü Müh. / Dashboard
+        // tek satış gerçeğinden beslenir → çift giriş biter. Yerel; bulut senkronu ayrı faz.
+        try {
+          const slWs = PCD.store.getActiveWorkspaceId();
+          const slRoot = PCD.store._read('salesLog') || {};
+          const slArr = (slRoot[slWs] || []).slice();
+          const slToday = new Date().toISOString().slice(0, 10);
+          Object.keys(sales).forEach(function (rid) {
+            const q = Number(sales[rid]) || 0;
+            if (q > 0) slArr.push({ id: PCD.uid('sl'), date: slToday, recipeId: rid, qty: q });
+          });
+          const slNext = Object.assign({}, slRoot); slNext[slWs] = slArr;
+          PCD.store.set('salesLog', slNext);
+        } catch (e) { PCD.warn && PCD.warn('salesLog write failed', e); }
         const deducted = report.filter(function (r) { return r.tracked; }).length;
         const lowNow = report.filter(function (r) { return r.tracked && (r.status === 'low' || r.status === 'critical' || r.status === 'out'); }).length;
         PCD.toast.success((t('event_apply_inv_done') || '{n} item(s) deducted from stock').replace('{n}', deducted) + (lowNow ? ' · ' + lowNow + ' ⚠' : ''));

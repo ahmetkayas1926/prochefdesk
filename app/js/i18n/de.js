@@ -3116,4 +3116,11 @@ window.PCD.i18n.register('de', {
   me_g1: "Lege für jedes Gericht einen Verkaufspreis und die verkaufte Menge fest (in der Tabelle) — die Kosten kommen automatisch aus dem Rezept.",
   me_g2: "Jedes Gericht landet in einem Quadranten: ⭐ Star (behalten), 🐴 Arbeitspferd (Preis erhöhen), ❓ Rätsel (bewerben), 🐶 Ladenhüter (Entfernen erwägen).",
   me_g3: "Die Übersichtskarte zeigt Umsatz, Wareneinsatz % und Gewinn. Gerichte, die unter Kosten verkauft werden, sind rot markiert.",
+  ms_menu_items: "Menügerichte",
+  ms_sub_recipes: "Unterrezepte",
+  ms_add_selected: "Auswahl hinzufügen",
+  var_load_sales: "Aus Verkäufen laden",
+  var_from_sales_hint: "Oder übernimm das Verkaufte direkt aus Verkäufe erfassen — ohne erneutes Tippen.",
+  var_no_sales_period: "Keine Verkäufe in diesem Zeitraum erfasst. Nutze zuerst Inventar → Verkäufe erfassen.",
+  var_sales_loaded: "{n} Gericht(e) aus Verkäufen geladen",
 });

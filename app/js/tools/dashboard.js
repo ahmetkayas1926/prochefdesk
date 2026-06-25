@@ -577,16 +577,21 @@
         const recById = {}; recipes.forEach(function (r) { recById[r.id] = r; });
         let sum = 0, n = 0;
         menus.forEach(function (mn) {
-          (mn.sections || []).forEach(function (sec) {
-            (sec.items || []).forEach(function (it) {
-              const r = it.recipeId ? recById[it.recipeId] : null;
-              if (!r) return;
-              const price = (it.price != null && it.price !== '') ? Number(it.price) : (r.salePrice != null ? Number(r.salePrice) : null);
-              if (!price || price <= 0) return;
-              const cost = PCD.recipes.computeFoodCost(r, ingMap, recipeMapForCost);
-              const per = (r.servings > 0) ? cost / r.servings : cost;
-              sum += per / price * 100; n++;
-            });
+          // Studio menüsü öğeleri studio.blocks[].items içinde; klasik menü sections[].items içinde.
+          let items = [];
+          if (mn.studio && mn.studio.blocks) {
+            mn.studio.blocks.forEach(function (b) { if (b.type === 'section') items = items.concat(b.items || []); });
+          } else {
+            (mn.sections || []).forEach(function (sec) { items = items.concat(sec.items || []); });
+          }
+          items.forEach(function (it) {
+            const r = it.recipeId ? recById[it.recipeId] : null;
+            if (!r) return;
+            const price = (it.price != null && it.price !== '') ? Number(it.price) : (r.salePrice != null ? Number(r.salePrice) : null);
+            if (!price || price <= 0) return;
+            const cost = PCD.recipes.computeFoodCost(r, ingMap, recipeMapForCost);
+            const per = (r.servings > 0) ? cost / r.servings : cost;
+            sum += per / price * 100; n++;
           });
         });
         if (n > 0) avgFc = { pct: sum / n, n: n };

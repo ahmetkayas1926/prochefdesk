@@ -3116,4 +3116,11 @@ window.PCD.i18n.register('fr', {
   me_g1: "Définissez un prix de vente et la quantité vendue pour chaque plat (dans le tableau) ; le coût vient automatiquement de la recette.",
   me_g2: "Chaque plat tombe dans un quadrant : ⭐ Star (à garder), 🐴 Cheval de trait (augmenter le prix), ❓ Énigme (promouvoir), 🐶 Chien (envisager de retirer).",
   me_g3: "La carte de résumé affiche le chiffre d'affaires, le coût matière % et le bénéfice. Les plats vendus sous le coût sont signalés en rouge.",
+  ms_menu_items: "Plats du menu",
+  ms_sub_recipes: "Sous-recettes",
+  ms_add_selected: "Ajouter la sélection",
+  var_load_sales: "Charger depuis les ventes",
+  var_from_sales_hint: "Ou importez ce que vous avez vendu directement depuis Enregistrer les ventes — sans ressaisie.",
+  var_no_sales_period: "Aucune vente enregistrée sur cette période. Utilisez d'abord Inventaire → Enregistrer les ventes.",
+  var_sales_loaded: "{n} plat(s) chargé(s) depuis les ventes",
 });

@@ -3347,4 +3347,11 @@ window.PCD.i18n.register('tr', {
   me_g1: "Her yemek için satış fiyatını ve kaç adet sattığını (tabloda) gir — maliyet tariften otomatik gelir.",
   me_g2: "Her yemek bir çeyreğe düşer: ⭐ Yıldız (koru), 🐴 İş Atı (fiyat yükselt), ❓ Bilmece (öne çıkar), 🐶 Köpek (kaldırmayı düşün).",
   me_g3: "Özet kartı ciro, food cost % ve kârı gösterir. Maliyetin altında satılan yemekler kırmızıyla işaretlenir.",
+  ms_menu_items: "Menü öğeleri",
+  ms_sub_recipes: "Alt tarifler",
+  ms_add_selected: "Seçilenleri ekle",
+  var_load_sales: "Satıştan yükle",
+  var_from_sales_hint: "Ya da sattıklarını doğrudan Satış kaydından çek — tekrar yazmana gerek yok.",
+  var_no_sales_period: "Bu dönemde satış kaydı yok. Önce Envanter → Satış kaydı kullan.",
+  var_sales_loaded: "{n} yemek satıştan yüklendi",
 });

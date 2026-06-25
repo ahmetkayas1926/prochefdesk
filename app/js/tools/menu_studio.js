@@ -1024,15 +1024,51 @@
   function openRecipePicker(sec) {
     const recipes = (PCD.store.listRecipes && PCD.store.listRecipes()) || [];
     if (!recipes.length) { if (PCD.toast) PCD.toast.info(t('ms_no_recipes')); return; }
+    const isPrep = function (r) { return !!(PCD.recipes && PCD.recipes.isPrep && PCD.recipes.isPrep(r)); };
+    const dishes = recipes.filter(function (r) { return !isPrep(r); });
+    const preps = recipes.filter(function (r) { return isPrep(r); });
+    const selected = {};
     const body = PCD.el('div');
     body.innerHTML = '<input type="search" class="input" id="msrq" placeholder="' + esc(t('ms_recipe_search_ph')) + '" style="width:100%;margin-bottom:8px;"><div id="msrl" style="max-height:50vh;overflow:auto;"></div>';
+    function rowHtml(r) {
+      return '<label style="display:flex;align-items:center;gap:10px;padding:7px 9px;border:1px solid var(--border);border-radius:var(--r-sm,8px);margin-bottom:4px;cursor:pointer;">' +
+        '<input type="checkbox" class="msr-cb" data-rid="' + r.id + '"' + (selected[r.id] ? ' checked' : '') + ' style="width:17px;height:17px;flex-shrink:0;accent-color:var(--brand-600);">' +
+        '<span style="flex:1;min-width:0;">' + esc(r.name) + (r.salePrice ? ' · ' + cur() + r.salePrice : '') + '</span></label>';
+    }
+    function groupHtml(title, arr) {
+      if (!arr.length) return '';
+      return '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-3);margin:10px 0 5px;">' + esc(title) + '</div>' + arr.map(rowHtml).join('');
+    }
     function paint(q) {
       const list = body.querySelector('#msrl'); const ql = (q || '').toLowerCase();
-      list.innerHTML = recipes.filter(function (r) { return !ql || (r.name || '').toLowerCase().indexOf(ql) >= 0; }).map(function (r) { return '<button type="button" class="btn btn-ghost btn-sm" data-rid="' + r.id + '" style="display:block;width:100%;text-align:left;">' + esc(r.name) + (r.salePrice ? ' · ' + cur() + r.salePrice : '') + '</button>'; }).join('');
-      list.querySelectorAll('[data-rid]').forEach(function (el) { el.addEventListener('click', function () { const r = recipes.find(function (x) { return x.id === el.getAttribute('data-rid'); }); sec.items = sec.items || []; sec.items.push({ id: uid(), name: r.name, price: r.salePrice != null ? String(r.salePrice) : '', desc: r.plating || '', photo: r.photo || null, recipeId: r.id }); refreshPage(); renderInspector(); m.close(); if (_blockRepaint) _blockRepaint(); }); });
+      const f = function (r) { return !ql || (r.name || '').toLowerCase().indexOf(ql) >= 0; };
+      const d = dishes.filter(f), p = preps.filter(f);
+      list.innerHTML = ((d.length ? groupHtml(t('ms_menu_items') || 'Menu items', d) : '') +
+        (p.length ? groupHtml(t('ms_sub_recipes') || 'Sub-recipes', p) : '')) ||
+        ('<div class="text-muted text-sm" style="padding:8px;">' + esc(t('ms_no_recipes')) + '</div>');
+      list.querySelectorAll('.msr-cb').forEach(function (cb) {
+        cb.addEventListener('change', function () { selected[cb.getAttribute('data-rid')] = cb.checked; });
+      });
     }
     paint('');
-    const m = PCD.modal.open({ title: t('ms_recipe_pick_title'), body: body, size: 'sm', closable: true });
+    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') });
+    const addBtn = PCD.el('button', { class: 'btn btn-primary' });
+    addBtn.textContent = t('ms_add_selected') || 'Add selected';
+    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', justifyContent: 'flex-end', width: '100%' } });
+    footer.appendChild(cancelBtn); footer.appendChild(addBtn);
+    const m = PCD.modal.open({ title: t('ms_recipe_pick_title'), body: body, footer: footer, size: 'sm', closable: true });
+    cancelBtn.addEventListener('click', function () { m.close(); });
+    addBtn.addEventListener('click', function () {
+      const ids = Object.keys(selected).filter(function (k) { return selected[k]; });
+      if (!ids.length) { m.close(); return; }
+      sec.items = sec.items || [];
+      ids.forEach(function (rid) {
+        const r = recipes.find(function (x) { return x.id === rid; });
+        if (!r) return;
+        sec.items.push({ id: uid(), name: r.name, price: r.salePrice != null ? String(r.salePrice) : '', desc: r.plating || '', photo: r.photo || null, recipeId: r.id });
+      });
+      refreshPage(); renderInspector(); m.close(); if (_blockRepaint) _blockRepaint();
+    });
     setTimeout(function () { const s = body.querySelector('#msrq'); if (s) { s.focus(); s.addEventListener('input', function () { paint(s.value); }); } }, 100);
   }
 

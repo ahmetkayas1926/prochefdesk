@@ -164,6 +164,15 @@
         '<div class="text-muted text-sm mb-2">' + PCD.escapeHtml(t('var_production_hint')) + '</div>' +
         '<div id="vProdList" class="flex flex-col gap-1"></div>' +
         '<button class="btn btn-ghost btn-sm mt-2" id="vAddProd" style="width:100%;">' + PCD.icon('plus', 14) + ' ' + PCD.escapeHtml(t('var_add_production')) + '</button>' +
+        '<div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px;">' +
+          '<div class="text-muted text-sm mb-2">' + PCD.escapeHtml(t('var_from_sales_hint') || 'Or pull what you sold straight from Record sales — no re-typing.') + '</div>' +
+          '<div class="flex gap-2" style="align-items:center;flex-wrap:wrap;">' +
+            '<input type="date" class="input" id="vSalesFrom" style="flex:1;min-width:130px;">' +
+            '<span class="text-muted">→</span>' +
+            '<input type="date" class="input" id="vSalesTo" style="flex:1;min-width:130px;">' +
+            '<button class="btn btn-outline btn-sm" id="vLoadSales">' + PCD.icon('activity', 14) + ' ' + PCD.escapeHtml(t('var_load_sales') || 'Load from sales') + '</button>' +
+          '</div>' +
+        '</div>' +
       '</div>' +
       '<div class="flex gap-2 mb-3"><button class="btn btn-primary" id="vCompute" style="flex:1;">' + PCD.icon('activity', 16) + ' ' + PCD.escapeHtml(t('var_compute')) + '</button></div>' +
       '<div id="vReport"></div>';
@@ -189,6 +198,28 @@
     renderProd();
 
     PCD.$('#vAddProd', view).addEventListener('click', function () { production.push({ recipeId: '', qty: '' }); renderProd(); });
+    // v2.44.x — Satıştan getir: Record sales'e girilen tarihli satışları dönem bazında
+    // üretim listesine doldur → çift giriş biter (tek satış gerçeği).
+    (function () {
+      const vsf = PCD.$('#vSalesFrom', view), vst = PCD.$('#vSalesTo', view), vls = PCD.$('#vLoadSales', view);
+      if (vsf && vst) {
+        const now = new Date();
+        vst.value = now.toISOString().slice(0, 10);
+        vsf.value = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+      }
+      if (vls) vls.addEventListener('click', function () {
+        const from = vsf.value, to = vst.value;
+        const wsId = PCD.store.getActiveWorkspaceId();
+        const root = PCD.store._read('salesLog') || {};
+        const arr = (root[wsId] || []).filter(function (s) { return s && !s._deletedAt && (!from || s.date >= from) && (!to || s.date <= to); });
+        if (!arr.length) { PCD.toast.info(t('var_no_sales_period') || 'No sales recorded in this period. Use Inventory → Record sales first.'); return; }
+        const agg = {};
+        arr.forEach(function (s) { agg[s.recipeId] = (agg[s.recipeId] || 0) + (Number(s.qty) || 0); });
+        production = Object.keys(agg).map(function (rid) { return { recipeId: rid, qty: agg[rid] }; });
+        renderProd();
+        PCD.toast.success((t('var_sales_loaded') || '{n} dish(es) loaded from sales').replace('{n}', production.length));
+      });
+    })();
     PCD.$('#vCompute', view).addEventListener('click', function () {
       // Auto-fill actuals from stock counts on first compute (counts exist + user hasn't typed any) → real variance immediately
       if (hasSnaps && Object.keys(actuals).length === 0) prefillFromCounts();

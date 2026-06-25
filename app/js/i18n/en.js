@@ -3295,4 +3295,11 @@ window.PCD.i18n.register('en', {
   me_g1: "Set a sale price and how many you sold for each dish (in the table) — cost comes from the recipe automatically.",
   me_g2: "Each dish lands in a quadrant: ⭐ Star (keep & feature), 🐴 Plowhorse (raise price), ❓ Puzzle (promote), 🐶 Dog (consider dropping).",
   me_g3: "The summary card shows revenue, food cost % and profit. Dishes selling below cost are flagged red.",
+  ms_menu_items: "Menu items",
+  ms_sub_recipes: "Sub-recipes",
+  ms_add_selected: "Add selected",
+  var_load_sales: "Load from sales",
+  var_from_sales_hint: "Or pull what you sold straight from Record sales — no re-typing.",
+  var_no_sales_period: "No sales recorded in this period. Use Inventory → Record sales first.",
+  var_sales_loaded: "{n} dish(es) loaded from sales",
 });
