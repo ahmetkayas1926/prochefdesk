@@ -395,6 +395,95 @@
         plating: 'Three puffs stacked, chocolate sauce poured at the table.',
         allergens: ['gluten', 'dairy', 'eggs'],
       },
+      // ---------------- PREPS / SUB-RECIPES ----------------
+      // Klasik Fransız "mother" prep'leri. isSubRecipe:true → Preps sekmesinde
+      // görünür; aşağıda bazı yemeklerin içine bağlanır (alt-tarif cost cascade demosu).
+      {
+        name: 'Demi-Glace', category: 'cat_other', cuisine: 'French', isSubRecipe: true,
+        yieldAmount: 1000, yieldUnit: 'ml', servings: 1, prepTime: 30, cookTime: 240,
+        ingredients: [
+          { ingredientId: I('Beef stock'),        amount: 2000, unit: 'ml' },
+          { ingredientId: I('Red wine'),          amount: 250,  unit: 'ml' },
+          { ingredientId: I('Carrot'),            amount: 100,  unit: 'g' },
+          { ingredientId: I('Brown onion'),       amount: 100,  unit: 'g' },
+          { ingredientId: I('Celery'),            amount: 80,   unit: 'g' },
+          { ingredientId: I('Butter (unsalted)'), amount: 40,   unit: 'g' },
+          { ingredientId: I('Fresh thyme'),       amount: 4,    unit: 'g' },
+        ],
+        steps: [
+          'Roast the mirepoix, deglaze with red wine and reduce to a syrup.',
+          'Add the brown stock and reduce slowly by half, skimming often.',
+          'Strain, mount with butter, and reduce to a glossy demi.'
+        ].join('\n\n'),
+        allergens: ['dairy'],
+      },
+      {
+        name: 'Beurre Blanc', category: 'cat_other', cuisine: 'French', isSubRecipe: true,
+        yieldAmount: 400, yieldUnit: 'ml', servings: 1, prepTime: 15, cookTime: 15,
+        ingredients: [
+          { ingredientId: I('Shallot'),           amount: 60,  unit: 'g' },
+          { ingredientId: I('White wine'),        amount: 150, unit: 'ml' },
+          { ingredientId: I('Pouring cream'),     amount: 50,  unit: 'ml' },
+          { ingredientId: I('Butter (unsalted)'), amount: 300, unit: 'g' },
+          { ingredientId: I('Lemon'),             amount: 20,  unit: 'g' },
+        ],
+        steps: [
+          'Reduce shallot and white wine to a glaze.',
+          'Add a splash of cream, then whisk cold butter in off the heat.',
+          'Finish with lemon; keep just warm so it never splits.'
+        ].join('\n\n'),
+        allergens: ['dairy'],
+      },
+      {
+        name: 'Sauce Hollandaise', category: 'cat_other', cuisine: 'French', isSubRecipe: true,
+        yieldAmount: 400, yieldUnit: 'ml', servings: 1, prepTime: 15, cookTime: 10,
+        ingredients: [
+          { ingredientId: I('Egg yolks'),         amount: 6,   unit: 'pcs' },
+          { ingredientId: I('Butter (unsalted)'), amount: 300, unit: 'g' },
+          { ingredientId: I('Lemon'),             amount: 30,  unit: 'g' },
+          { ingredientId: I('White wine'),        amount: 30,  unit: 'ml' },
+        ],
+        steps: [
+          'Whisk yolks with a wine reduction over a bain-marie until ribboned.',
+          'Stream in warm clarified butter, whisking to a stable emulsion.',
+          'Season with lemon and salt; hold warm.'
+        ].join('\n\n'),
+        allergens: ['eggs', 'dairy'],
+      },
+      {
+        name: 'Crème Pâtissière', category: 'cat_other', cuisine: 'French', isSubRecipe: true,
+        yieldAmount: 800, yieldUnit: 'g', servings: 1, prepTime: 15, cookTime: 10,
+        ingredients: [
+          { ingredientId: I('Milk'),         amount: 500, unit: 'ml' },
+          { ingredientId: I('Egg yolks'),    amount: 6,   unit: 'pcs' },
+          { ingredientId: I('Caster sugar'), amount: 120, unit: 'g' },
+          { ingredientId: I('Plain flour'),  amount: 50,  unit: 'g' },
+          { ingredientId: I('Vanilla bean'), amount: 1,   unit: 'pcs' },
+        ],
+        steps: [
+          'Infuse the milk with split vanilla.',
+          'Whisk yolks, sugar and flour; temper with the milk and cook to a thick cream.',
+          'Pass, cover on the surface and chill.'
+        ].join('\n\n'),
+        allergens: ['dairy', 'eggs', 'gluten'],
+      },
+      {
+        name: 'Crème Anglaise', category: 'cat_other', cuisine: 'French', isSubRecipe: true,
+        yieldAmount: 600, yieldUnit: 'ml', servings: 1, prepTime: 10, cookTime: 12,
+        ingredients: [
+          { ingredientId: I('Milk'),          amount: 250, unit: 'ml' },
+          { ingredientId: I('Pouring cream'), amount: 250, unit: 'ml' },
+          { ingredientId: I('Egg yolks'),     amount: 6,   unit: 'pcs' },
+          { ingredientId: I('Caster sugar'),  amount: 100, unit: 'g' },
+          { ingredientId: I('Vanilla bean'),  amount: 1,   unit: 'pcs' },
+        ],
+        steps: [
+          'Heat the milk, cream and vanilla.',
+          'Whisk yolks and sugar, temper, then cook gently to 82°C until it coats a spoon.',
+          'Strain and chill over ice.'
+        ].join('\n\n'),
+        allergens: ['dairy', 'eggs'],
+      },
     ];
 
     recipes.forEach(function (r) { PCD.store.upsertRecipe(Object.assign({ _demo: true }, r)); });
@@ -404,6 +493,24 @@
     const byName = {};
     all.forEach(function (r) { byName[r.name] = r; });
     const R = function (n) { return byName[n]; };
+
+    // 2b) Alt-tarif demosu: klasik prep'leri mevcut yemeklere EKLE. Mevcut malzeme
+    // satırları korunur; yalnız bir { recipeId } satırı eklenir → ziyaretçi sub-recipe
+    // maliyet cascade'ini gerçek veride görür. (Demi-Glace 2 yemekte = reuse gösterimi.)
+    [
+      ['Filet de Bœuf au Poivre', 'Demi-Glace',        60,  'ml'],
+      ['Confit de Canard',        'Demi-Glace',        50,  'ml'],
+      ['Coquilles Saint-Jacques', 'Beurre Blanc',      60,  'ml'],
+      ['Sole Meunière',           'Sauce Hollandaise', 60,  'ml'],
+      ['Profiteroles',            'Crème Pâtissière',  200, 'g'],
+      ['Tarte Tatin',             'Crème Anglaise',    80,  'ml'],
+    ].forEach(function (lnk) {
+      const dish = R(lnk[0]); const prep = R(lnk[1]);
+      if (dish && prep) {
+        dish.ingredients = (dish.ingredients || []).concat([{ recipeId: prep.id, amount: lnk[2], unit: lnk[3] }]);
+        PCD.store.upsertRecipe(dish);
+      }
+    });
 
     // 3) Suppliers
     const supplierData = [
