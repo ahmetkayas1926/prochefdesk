@@ -3163,7 +3163,9 @@ window.PCD.i18n.register('es', {
   gate_guest_signup: "Iniciar sesión / Crear cuenta",
   gate_guest_later: "Seguir explorando",
   gate_create_limit: "Has alcanzado el límite del plan gratis. Pásate a Pro para uso ilimitado.",
-  gate_export_limit: "Plan gratis: 1 exportación por herramienta al día. Pásate a Pro para exportaciones ilimitadas.",
+  gate_export_limit: "Plan gratis: 1 exportación gratis por herramienta. Pásate a Pro para exportaciones ilimitadas.",
+  gate_share_pro: "Compartir enlaces y códigos QR es una función Pro. Pásate a Pro para compartir tus recetas y menús.",
+  account_perk_share: "Compartir enlaces y QR",
   sup_add_stock_q_title: "¿Añadir este pedido al stock?",
   sup_add_stock_q: "¿Llevas el inventario? Añade estos artículos a tu stock ahora. Si solo usas la hoja de pedido, omítelo.",
 });

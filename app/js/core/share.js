@@ -256,6 +256,11 @@
       const user = PCD.store.get('user');
       if (!user || !user.id) return reject(new Error('Sign in to share'));
 
+      // Tüm public paylaşım (link / URL / QR) yalnız Pro — merkezi net.
+      if (PCD.gate && PCD.gate.canShare && !PCD.gate.canShare()) {
+        return reject(new Error('share-pro-only'));
+      }
+
       // v2.17 — Cost-view yalnızca Pro'da üretilir (spec 5.2).
       if (mode === 'cost' && PCD.gate && !PCD.gate.canUseCostView()) {
         return reject(new Error('cost-view-pro-only'));

@@ -815,6 +815,7 @@
   // sığma (pageSetup landscape/fitToWidth). Ortak PCD.xlsx hücre rengi desteklemez →
   // roster kendi worksheet'ini xlsx-js-style ile inline kurar. Font data.fontSize'a bağlı.
   function excelRoster(data, showCost) {
+    if (PCD.gate && !PCD.gate.requireExport('roster')) return;
     const go = function (XLSX) {
       if (!XLSX || !XLSX.utils) { PCD.toast.error(t('toast_excel_parser_unavailable') || 'Excel unavailable'); return; }
       const hex = function (h) { return (h || '').replace('#', '').toUpperCase(); };

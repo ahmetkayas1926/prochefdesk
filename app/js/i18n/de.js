@@ -3163,7 +3163,9 @@ window.PCD.i18n.register('de', {
   gate_guest_signup: "Anmelden / Konto erstellen",
   gate_guest_later: "Weiter umsehen",
   gate_create_limit: "Limit des kostenlosen Plans erreicht. Wechsle zu Pro für unbegrenzte Nutzung.",
-  gate_export_limit: "Kostenloser Plan: 1 Export pro Werkzeug und Tag. Wechsle zu Pro für unbegrenzte Exporte.",
+  gate_export_limit: "Kostenloser Plan: 1 kostenloser Export pro Werkzeug. Wechsle zu Pro für unbegrenzte Exporte.",
+  gate_share_pro: "Teilen per Link & QR-Code ist eine Pro-Funktion. Wechsle zu Pro, um deine Rezepte und Menüs zu teilen.",
+  account_perk_share: "Teilen per Link & QR-Code",
   sup_add_stock_q_title: "Diese Bestellung zum Bestand hinzufügen?",
   sup_add_stock_q: "Führst du Inventar? Füge diese Artikel jetzt deinem Bestand hinzu. Wenn du nur die Bestellliste nutzt, überspringe.",
 });

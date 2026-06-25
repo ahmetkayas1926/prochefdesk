@@ -717,6 +717,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
               PCD.toast.error(t('qr_share_error'));
               return;
             }
+            if (PCD.gate && !PCD.gate.requireShare()) return;
             PCD.toast.info(t('qr_generating'));
             PCD.share.createOrGetShareUrl('recipe', rid).then(function (url) {
               PCD.qr.show({
@@ -1069,6 +1070,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
     const html = '<style>@page{size:A4 landscape;margin:0}body{padding:5mm}</style>' +
       '<h2 style="margin:0 0 10px;">' + PCD.escapeHtml(t('label_allergens')) + ' · ' + recs.length + '</h2>' +
       '<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr>' + head + '</tr></thead><tbody>' + rows + '</tbody></table>';
+    if (PCD.gate && !PCD.gate.requireExport('recipes')) return;
     PCD.print(html, t('label_allergens'));
   }
 
@@ -1461,6 +1463,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
       });
       return;
     }
+    if (PCD.gate && !PCD.gate.requireExport('recipes')) return;
     // v2.8.86 — Try/catch sargı. Operatör "Something went wrong" generic
     // error görüyor (global onerror handler tetikleniyor). Asıl hatayı
     // console'a logla + meaningful toast göster.
@@ -2309,6 +2312,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
     });
 
     shareBtn.addEventListener('click', function () {
+      if (PCD.gate && !PCD.gate.requireShare()) return;
       const ingMap = {};
       PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
       // v2.8.14 — Build recipeMap so sub-recipe rows resolve to their
@@ -2375,6 +2379,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
     });
 
     qrBtn.addEventListener('click', function () {
+      if (PCD.gate && !PCD.gate.requireShare()) return;
       // Generate a share URL and put THAT in the QR — so scanning opens
       // the recipe in a browser, not just a wall of text.
       const user = PCD.store.get('user');

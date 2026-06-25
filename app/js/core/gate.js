@@ -80,27 +80,27 @@
   // Roster: free'de tamamen kapalı. Pro: sınırsız.
   function canExport(toolKey) {
     const lim = limits();
-    if (toolKey === 'roster' && lim.rosterExport === false) return false;
-    if (!lim.exportFirstFree) return true; // pro / sınırsız
+    if (isGuest()) return false;                                    // misafir: HİÇ çıktı yok
+    if (toolKey === 'roster' && lim.rosterExport === false) return false; // roster free: tamamen kapalı
+    if (!lim.exportFirstFree) return true;                           // pro: sınırsız
     try {
-      const today = new Date().toISOString().slice(0, 10);
       const log = JSON.parse(localStorage.getItem('pcd_export_log') || '{}');
-      return log[toolKey] !== today; // bugün bu araçtan çıktı alınmadıysa serbest
+      return !log[toolKey];                                          // free: araç başına ÖMÜR-BOYU 1
     } catch (e) { return true; }
   }
   function _markExport(toolKey) {
     const lim = limits();
-    if (!lim.exportFirstFree) return; // pro → işaretleme
+    if (!lim.exportFirstFree) return; // pro → işaretleme yok
     try {
-      const today = new Date().toISOString().slice(0, 10);
       const log = JSON.parse(localStorage.getItem('pcd_export_log') || '{}');
-      log[toolKey] = today;
+      log[toolKey] = true; // ömür-boyu işaretle (bu araçtan ücretsiz çıktı tükendi)
       localStorage.setItem('pcd_export_log', JSON.stringify(log));
     } catch (e) {}
   }
-  // Çıktı tetikleyicisinin başında çağrılır: izin varsa işaretle + true; yoksa
-  // upgrade duvarı + false.
+  // Çıktı/print tetikleyicisinin başında çağrılır. Misafir → giriş duvarı;
+  // free + izin varsa işaretle + true; free + limit dolu → upgrade duvarı + false.
   function requireExport(toolKey) {
+    if (isGuest()) { showSignupGate(); return false; }
     if (canExport(toolKey)) { _markExport(toolKey); return true; }
     showUpgradeModal({ feature: 'exports', message: t('gate_export_limit') });
     return false;
@@ -111,7 +111,17 @@
   function canUseHaccp()    { return !!limits().haccp; }
   function canUseLaborCost(){ return !!limits().laborCost; }
   function canUseCostView() { return !!limits().costViewShare; }
+  function canShare()       { return !!limits().publicShare; }       // link/URL/QR = yalnız Pro
   function showWatermark()  { return limits().watermark !== false; } // güvenli varsayılan: göster
+
+  // Paylaşım (link/URL/QR) tetikleyicisinin başında çağrılır. Misafir → giriş
+  // duvarı; free → Pro duvarı; Pro → true.
+  function requireShare() {
+    if (isGuest()) { showSignupGate(); return false; }
+    if (canShare()) return true;
+    showUpgradeModal({ feature: 'sharing', message: t('gate_share_pro') });
+    return false;
+  }
 
   // ---------- KİLİT ROZETİ (inline UI) ----------
   // Pro'da boş döner (rozet yok); free'de küçük kilit chip'i.
@@ -243,6 +253,8 @@
     canUseHaccp: canUseHaccp,
     canUseLaborCost: canUseLaborCost,
     canUseCostView: canUseCostView,
+    canShare: canShare,
+    requireShare: requireShare,
     showWatermark: showWatermark,
     lockChip: lockChip,
     showUpgradeModal: showUpgradeModal,

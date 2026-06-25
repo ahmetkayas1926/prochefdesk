@@ -201,12 +201,14 @@
 
     PCD.$$('.me-price', view).forEach(function (inp) {
       inp.addEventListener('change', function () {
+        if (PCD.gate && !PCD.gate.requireAuth()) { render(view); return; }
         const r = PCD.store.getRecipe(this.getAttribute('data-rid')); if (!r) return;
         r.salePrice = Number(this.value) || 0; PCD.store.upsertRecipe(r); render(view);
       });
     });
     PCD.$$('.me-sold', view).forEach(function (inp) {
       inp.addEventListener('change', function () {
+        if (PCD.gate && !PCD.gate.requireAuth()) { render(view); return; }
         const r = PCD.store.getRecipe(this.getAttribute('data-rid')); if (!r) return;
         r.salesCount = Math.max(0, Number(this.value) || 0); PCD.store.upsertRecipe(r); render(view);
       });

@@ -39,6 +39,7 @@
       haccp:            false,
       laborCost:        false,
       costViewShare:    false,
+      publicShare:      false,  // link / URL / QR paylaşımı = yalnız Pro
       watermark:        true,   // free çıktı/paylaşımda footer KALIR (pazarlama)
       // Çıktı: araç başına İLK çıktı ücretsiz (kanca), sonrası Pro duvarı.
       exportFirstFree:  true,
@@ -60,6 +61,7 @@
       haccp:            true,
       laborCost:        true,
       costViewShare:    true,
+      publicShare:      true,
       watermark:        false,  // pro çıktı/URL/QR paylaşım TEMİZ — marka yok
       exportFirstFree:  false,  // sınırsız çıktı
       rosterExport:     true,

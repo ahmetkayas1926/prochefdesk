@@ -1161,6 +1161,7 @@
     const user = PCD.store.get && PCD.store.get('user');
     if (!user || !user.id) { if (PCD.toast) PCD.toast.info(t('ms_share_signin')); return; }
     if (!PCD.share || !PCD.share.createOrGetShareUrl) { if (PCD.toast) PCD.toast.error(t('ms_share_unavailable')); return; }
+    if (PCD.gate && !PCD.gate.requireShare()) return;
     if (currentMenu) { currentMenu.studio = design; try { PCD.store.upsertInTable('menus', currentMenu, 'm'); } catch (e) {} }
     const canCost = !(PCD.gate && PCD.gate.canUseCostView) || PCD.gate.canUseCostView();
     const body = PCD.el('div');
@@ -1362,7 +1363,7 @@
     PCD.$('#msTemplatesHdr', _view).addEventListener('click', openTemplates);
     var _pgBtn = PCD.$('#msPageBtn', _view); if (_pgBtn) _pgBtn.addEventListener('click', openPageSettings);
     PCD.$('#msShare', _view).addEventListener('click', openShare);
-    PCD.$('#msPrint', _view).addEventListener('click', function () { PCD.print(buildPrintHtml(), currentMenu.name || 'Menu'); });
+    PCD.$('#msPrint', _view).addEventListener('click', function () { if (PCD.gate && !PCD.gate.requireExport('menus')) return; PCD.print(buildPrintHtml(), currentMenu.name || 'Menu'); });
     const nm = PCD.$('#msName', _view); if (nm) nm.addEventListener('input', function () { currentMenu.name = nm.value; saveSoon(); });
     let _rsz = null; window.addEventListener('resize', function () { clearTimeout(_rsz); _rsz = setTimeout(applyScale, 120); });
   }

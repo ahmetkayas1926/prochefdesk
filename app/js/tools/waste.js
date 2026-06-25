@@ -267,6 +267,7 @@
       setTimeout(function () { const v = PCD.$('#view'); if (v && PCD.router.currentView() === 'waste') render(v); }, 200);
     });
     saveBtn.addEventListener('click', function () {
+      if (PCD.gate && !PCD.gate.requireAuth()) return;
       collect();
       if (data.itemType === 'ingredient' && !data.ingredientId) { PCD.toast.error(t('waste_pick_ingredient')); return; }
       if (data.itemType === 'recipe' && !data.recipeId) { PCD.toast.error(t('waste_pick_recipe')); return; }

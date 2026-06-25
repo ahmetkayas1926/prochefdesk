@@ -149,6 +149,7 @@
               [L('account_perk_exports', 'Unlimited PDF / Excel exports'), !lim.exportFirstFree],
               [L('account_perk_roster_export', 'Roster export (print / Excel / image)'), !!lim.rosterExport],
               [L('account_perk_nowatermark', 'Clean exports — no watermark'), lim.watermark === false],
+              [L('account_perk_share', 'Share links & QR codes'), lim.publicShare],
               [L('gate_feat_costview', 'Cost-view sharing'), lim.costViewShare],
             ];
             const perksHtml = perks.map(function (p) { const on = !!p[1]; return '<li style="display:flex;align-items:center;gap:8px;padding:3px 0;font-size:13px;color:' + (on ? 'var(--text-1)' : 'var(--text-3)') + ';"><span style="color:' + (on ? 'var(--brand-600)' : 'var(--text-3)') + ';flex:0 0 auto;">' + (on ? PCD.icon('check', 14) : PCD.icon('lock', 14)) + '</span>' + PCD.escapeHtml(p[0]) + '</li>'; }).join('');

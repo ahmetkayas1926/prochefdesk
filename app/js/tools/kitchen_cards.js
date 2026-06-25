@@ -758,6 +758,7 @@
           PCD.toast.error(t('qr_share_error'));
           return;
         }
+        if (PCD.gate && !PCD.gate.requireShare()) return;
 
         // Auto-save if needed so we always have a canvas ID to share.
         const id = persistCanvas();
@@ -1514,6 +1515,7 @@
       title: opts.title,
       interactive: false,
     });
+    if (PCD.gate && !PCD.gate.requireExport('kitchen_cards')) return;
     PCD.print(html, (PCD.i18n.t('kc_print_title') || 'Kitchen Cards') + ' — ' + layoutRecipes.length + ' ' + (PCD.i18n.t('kc_print_recipes_label') || 'recipes'));
   }
 

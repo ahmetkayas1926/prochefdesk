@@ -516,6 +516,8 @@
   // Boot performance: 500KB removed from initial page load (LCP -1.0s).
   let _xlsxPromise = null;
   PCD.loadXLSX = function () {
+    // Misafir Excel çıktısı alamaz → giriş duvarı (merkezi net).
+    if (PCD.gate && PCD.gate.isGuest && PCD.gate.isGuest()) { if (PCD.gate.requireAuth) PCD.gate.requireAuth(); return Promise.reject(new Error('guest')); }
     if (window.XLSX) return Promise.resolve(window.XLSX);
     if (_xlsxPromise) return _xlsxPromise;
     _xlsxPromise = new Promise(function (resolve, reject) {
@@ -702,6 +704,8 @@
   };
 
   PCD.print = function (htmlOrContent, title) {
+    // Misafir HİÇBİR çıktı/print alamaz → merkezi giriş duvarı (monetization).
+    if (PCD.gate && PCD.gate.isGuest && PCD.gate.isGuest()) { if (PCD.gate.requireAuth) PCD.gate.requireAuth(); return; }
     title = title || 'Print';
 
     // v2.8.54 — STANDART FOOTER. Tüm print + share + QR akışlarında

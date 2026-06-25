@@ -1749,6 +1749,7 @@
         '<div class="hdr"><h1>' + PCD.escapeHtml(buffet.name || (t('buffet_untitled') || 'Buffet')) + ' — ' + PCD.escapeHtml(t('buffet_order_list') || 'Order list') + '</h1>' +
         '<div class="meta">' + PCD.escapeHtml(metaStr) + ' · ' + dateStr + '</div></div>' +
         orderListHtml(groups, true);
+      if (PCD.gate && !PCD.gate.requireExport('buffets')) return;
       PCD.print(html, (buffet.name || 'Buffet') + ' — ' + (t('buffet_order_list') || 'Order list'));
     });
     closeBtn.addEventListener('click', function () { m.close(); });
@@ -1806,6 +1807,7 @@
         '<tbody>' + rowsHtml + '</tbody>' +
       '</table>';
 
+    if (PCD.gate && !PCD.gate.requireExport('buffets')) return;
     PCD.print(html, (buffet.name || (t('buffet_untitled') || 'Buffet')) + ' — ' + (t('buffet_print_prep') || 'Prep'));
   }
 
@@ -1910,6 +1912,7 @@
 
   function printCostReport(buffet, detailed) {
     const t = PCD.i18n.t;
+    if (PCD.gate && !PCD.gate.requireExport('buffets')) return;
     PCD.print(buffetCostReportHtml(buffet, detailed), (buffet.name || (t('buffet_untitled') || 'Buffet')) + ' — ' + (t('buffet_print_report') || 'Cost Report'));
   }
 
@@ -1996,6 +1999,7 @@
       });
       return;
     }
+    if (PCD.gate && !PCD.gate.requireExport('buffets')) return;
     // v2.8.86 — Try/catch sargı (recipes.js paritesi)
     try {
       _doExportBuffetXLSX(buffet, detailed);

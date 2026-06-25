@@ -427,6 +427,7 @@
 
     const approveBtn = PCD.$('#approvePendingBtn', view);
     if (approveBtn) approveBtn.addEventListener('click', function () {
+      if (PCD.gate && !PCD.gate.requireAuth()) return;
       const p = getPendingForCurrentWs();
       if (!p) return;
       PCD.modal.confirm({
@@ -545,6 +546,7 @@
       });
     });
     approveBtn.addEventListener('click', function () {
+      if (PCD.gate && !PCD.gate.requireAuth()) return;
       applyCountsToInventory(edited);
       setPendingForCurrentWs(null);
       PCD.toast.success(PCD.i18n.t('toast_count_approved_n_items', { n: Object.keys(edited).length }));
@@ -725,6 +727,7 @@
         ' · ' + snap.itemCount + ' ' + PCD.escapeHtml(PCD.i18n.t('inv_print_items_label') || 'items') + '</div>' +
       body;
 
+    if (PCD.gate && !PCD.gate.requireExport('inventory')) return;
     PCD.print(html, (PCD.i18n.t('inv_print_title') || 'Stock Count') + ' ' + date.toISOString().slice(0, 10));
   }
 
@@ -1306,6 +1309,7 @@
         html += '</table>';
       });
       html += '</div>';
+      if (PCD.gate && !PCD.gate.requireExport('inventory')) return;
       PCD.print(html, 'Purchase Order');
     });
 
