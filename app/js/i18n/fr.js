@@ -399,6 +399,7 @@ window.PCD.i18n.register('fr', {
   section_sourcing: "Approvisionnement",
   section_catering: "Traiteur",
   section_haccp_forms: "Formulaires HACCP",
+  section_haccp_labour: "HACCP & main-d'œuvre",
   menus_title: "Menus",
   new_menu: "Nouveau Menu",
   menu_name: "Nom du menu",

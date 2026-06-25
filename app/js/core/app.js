@@ -364,11 +364,30 @@
       { title: null, items: [
         { key: 'dashboard', icon: 'home', route: 'dashboard' },
       ]},
+      // v2.44.x — HACCP (uyum) + Roster (işçilik maliyeti) tek kategori, dashboard'ın
+      // hemen altında (operatör kararı). Roster Kitchen'dan buraya taşındı.
+      // v2.8.70 — 4 ayrı HACCP item, tek "HACCP" hub'a konsolide edildi (hub içinden açılır).
+      { title: t('section_haccp_labour'), items: [
+        { key: 'haccp',  icon: 'thermometer', route: 'haccp' },
+        { key: 'roster', icon: 'clock', route: 'roster' },
+      ]},
       { title: t('section_library'), items: [
         { key: 'recipes',     icon: 'book-open', route: 'recipes' },
         { key: 'ingredients', icon: 'carrot', route: 'ingredients' },
         { key: 'menus',       icon: 'menu', route: 'menus' },
         // v2.44.30 — nutrition Recipes sub-nav'a taşındı (route duruyor; recipes sayfasından sekme ile erişilir).
+      ]},
+      // v2.44.x — Catering, Library'nin hemen altına taşındı.
+      { title: t('section_catering'), items: [
+        { key: 'events',  icon: 'calendar', route: 'events' },
+        // v2.8.73 — Buffet Planner
+        { key: 'buffet',  icon: 'grid',     route: 'buffet' },
+      ]},
+      // v2.44.x — Sourcing, Catering'in altına taşındı.
+      { title: t('section_sourcing'), items: [
+        { key: 'inventory', icon: 'package', route: 'inventory' },
+        { key: 'suppliers', icon: 'truck', route: 'suppliers' },
+        // v2.44.30 — waste + variance Inventory sub-nav'a taşındı (Stok · Varyans · Fire).
       ]},
       { title: t('section_kitchen'), items: [
         { key: 'kitchen_cards', icon: 'id-card', route: 'kitchen_cards' },
@@ -377,23 +396,7 @@
         // v2.11.16 — 'mise' sidenav item kaldırıldı (Mise en Place Planner tool kaldırıldı).
         // v2.44.30 — portion Recipes sub-nav'a taşındı.
         { key: 'checklist',     icon: 'check-square', route: 'checklist' },
-        { key: 'roster',        icon: 'clock', route: 'roster' },
-        // v2.44.30 — prep Checklist sub-nav'a taşındı (Listeler · Prep Föyü).
-      ]},
-      { title: t('section_sourcing'), items: [
-        { key: 'inventory', icon: 'package', route: 'inventory' },
-        { key: 'suppliers', icon: 'truck', route: 'suppliers' },
-        // v2.44.30 — waste + variance Inventory sub-nav'a taşındı (Stok · Varyans · Fire).
-      ]},
-      { title: t('section_catering'), items: [
-        { key: 'events',  icon: 'calendar', route: 'events' },
-        // v2.8.73 — Buffet Planner
-        { key: 'buffet',  icon: 'grid',     route: 'buffet' },
-      ]},
-      // v2.8.70 — 4 ayrı HACCP item, tek "HACCP" hub'a konsolide edildi.
-      // Form sayfaları silinmedi; hub içinden tıklanarak açılır.
-      { title: t('section_haccp_forms'), items: [
-        { key: 'haccp', icon: 'thermometer', route: 'haccp' },
+        // v2.44.x — roster "HACCP & Labour" kategorisine taşındı.
       ]},
       { title: t('section_discover'), items: [
         { key: 'discover', icon: 'grid', route: 'discover' },

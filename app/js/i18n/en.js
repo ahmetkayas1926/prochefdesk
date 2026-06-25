@@ -887,6 +887,7 @@ window.PCD.i18n.register('en', {
   section_sourcing: "Sourcing",
   section_catering: "Catering",
   section_haccp_forms: "HACCP Forms",
+  section_haccp_labour: "HACCP & Labour",
   ws_switcher_title: "Workspaces",
   ws_active_section: "Active workspaces",
   ws_archived_section: "Archived",

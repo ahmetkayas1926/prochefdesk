@@ -399,6 +399,7 @@ window.PCD.i18n.register('ar', {
   section_sourcing: "التوريد",
   section_catering: "التموين",
   section_haccp_forms: "نماذج HACCP",
+  section_haccp_labour: "HACCP والعمالة",
   menus_title: "القوائم",
   new_menu: "قائمة جديدة",
   menu_name: "اسم القائمة",

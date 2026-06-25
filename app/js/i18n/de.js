@@ -399,6 +399,7 @@ window.PCD.i18n.register('de', {
   section_sourcing: "Beschaffung",
   section_catering: "Catering",
   section_haccp_forms: "HACCP-Formulare",
+  section_haccp_labour: "HACCP & Personal",
   menus_title: "Menüs",
   new_menu: "Neues Menü",
   menu_name: "Menüname",

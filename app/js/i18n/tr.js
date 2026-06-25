@@ -884,6 +884,7 @@ window.PCD.i18n.register('tr', {
   section_sourcing: "Tedarik",
   section_catering: "Catering",
   section_haccp_forms: "HACCP Formları",
+  section_haccp_labour: "HACCP ve İşçilik",
   ws_switcher_title: "Çalışma Alanları",
   ws_active_section: "Aktif çalışma alanları",
   ws_archived_section: "Arşivlenmiş",
