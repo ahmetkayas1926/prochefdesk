@@ -3158,4 +3158,12 @@ window.PCD.i18n.register('es', {
   sup_new_ing_ph: "Nombre del nuevo ingrediente",
   sup_no_more_ings: "No hay más ingredientes para añadir.",
   sup_to_create: "Se creará",
+  gate_guest_title: "Inicia sesión para continuar",
+  gate_guest_msg: "Estás navegando como invitado. Crea una cuenta gratis para guardar tus recetas, menús y más — solo toma un momento.",
+  gate_guest_signup: "Iniciar sesión / Crear cuenta",
+  gate_guest_later: "Seguir explorando",
+  gate_create_limit: "Has alcanzado el límite del plan gratis. Pásate a Pro para uso ilimitado.",
+  gate_export_limit: "Plan gratis: 1 exportación por herramienta al día. Pásate a Pro para exportaciones ilimitadas.",
+  sup_add_stock_q_title: "¿Añadir este pedido al stock?",
+  sup_add_stock_q: "¿Llevas el inventario? Añade estos artículos a tu stock ahora. Si solo usas la hoja de pedido, omítelo.",
 });

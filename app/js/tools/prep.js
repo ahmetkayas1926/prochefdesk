@@ -532,6 +532,10 @@
     // New
     const newBtn = view.querySelector('#prepNewBtn');
     if (newBtn) newBtn.addEventListener('click', function () {
+      if (PCD.gate) {
+        if (!PCD.gate.requireAuth()) return;
+        if (!PCD.gate.canCreate('prepSheets', (PCD.store.listTable(TABLE) || []).length)) { PCD.gate.showUpgradeModal({ feature: 'prepSheets', message: PCD.i18n.t('gate_create_limit') }); return; }
+      }
       const created = PCD.store.upsertInTable(TABLE, defaultSheet(), 'ps');
       setActiveId(created.id);
       render(view);

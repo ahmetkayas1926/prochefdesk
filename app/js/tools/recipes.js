@@ -1440,6 +1440,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
       '</div>' : '') +
       ((!PCD.gate || PCD.gate.showWatermark()) ? '<div class="cr-foot">' + t('cr_made_with') + '</div>' : '');
 
+    if (PCD.gate && !PCD.gate.requireExport('recipes')) return;
     PCD.print(html, t('cr_title') + ' ' + new Date().toISOString().slice(0, 10));
   }
 
@@ -2404,6 +2405,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
     });
 
     deleteBtn.addEventListener('click', function () {
+      if (PCD.gate && !PCD.gate.requireAuth()) return;
       // Soft delete with undo
       const original = PCD.store.getRecipe(rid);
       if (!original) return;
@@ -2587,6 +2589,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
         (r.steps ? '<h3 style="margin-top:16px">' + tt('recipe_steps') + '</h3><pre>' + PCD.escapeHtml(r.steps) + '</pre>' : '') +
         (r.plating ? '<h3 style="margin-top:16px">' + tt('recipe_plating') + '</h3><pre>' + PCD.escapeHtml(r.plating) + '</pre>' : '') +
         '</div>';
+      if (PCD.gate && !PCD.gate.requireExport('recipes')) return;
       PCD.print(html, r.name);
       m.close();
     });
@@ -2685,6 +2688,8 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
     const t = PCD.i18n.t;
     const existing = rid ? PCD.store.getRecipe(rid) : null;
 
+    // Misafir yeni oluşturamaz → giriş duvarı (mevcut tarifi görüntüleme açık).
+    if (!existing && PCD.gate && !PCD.gate.requireAuth()) return;
     // v2.17 — Free plan tarif limiti. Merkezi gate (plans.js) + yumuşak duvar.
     if (!existing && PCD.gate && !PCD.gate.canCreateRecipe(PCD.store.listRecipes().length)) {
       const limit = PCD.gate.limits().maxRecipes;
@@ -3730,6 +3735,7 @@ function renderAllergenChips() {
       });
     });
     saveBtn.addEventListener('click', function () {
+      if (PCD.gate && !PCD.gate.requireAuth()) return;
       // v2.9.40 — Photo race fix: if a photo upload is still in flight,
       // wait for it before saving so cloud sync gets the URL, not null.
       if (data._pendingPhotoUpload) {

@@ -656,7 +656,16 @@
     // v2.8.89 — "+ New Buffet" tıklayınca preset chooser modal aç (4 seçenek:
     // Continental / Mediterranean / Sunday Brunch / Start blank). Eski direkt
     // openEditor() yerine. Boş empty-state'teki buton da aynı chooser'a gider.
-    PCD.$('#newBuffetBtn', view).addEventListener('click', function () { openPresetChooser(view); });
+    PCD.$('#newBuffetBtn', view).addEventListener('click', function () {
+      if (PCD.gate) {
+        if (!PCD.gate.requireAuth()) return;
+        var _ws = PCD.store.getActiveWorkspaceId();
+        var _arr = (PCD.store._read('buffets') || {})[_ws] || [];
+        var _n = _arr.filter(function (b) { return b && !b._deletedAt; }).length;
+        if (!PCD.gate.canCreate('buffets', _n)) { PCD.gate.showUpgradeModal({ feature: 'buffets', message: PCD.i18n.t('gate_create_limit') }); return; }
+      }
+      openPresetChooser(view);
+    });
     // v2.8.88 — Liste search (case-insensitive substring filter, name + type + date)
     const bufSearch = PCD.$('#bufSearch', view);
     if (bufSearch) {
@@ -1478,6 +1487,7 @@
     });
 
     saveBtn.addEventListener('click', function () {
+      if (PCD.gate && !PCD.gate.requireAuth()) return;
       data.name = (PCD.$('#bufName', body).value || '').trim();
       if (!data.name) { PCD.toast.error((t('buffet_name_label') || 'Buffet name') + ' ' + (t('required') || 'required')); return; }
       if (existing) data.id = existing.id;

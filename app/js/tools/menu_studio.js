@@ -1085,6 +1085,10 @@
 
   // ---- Şablon galerisi ---- (forNew=true → home'dan yeni menü olarak oluştur)
   function openTemplates(forNew) {
+    if (forNew && PCD.gate) {
+      if (!PCD.gate.requireAuth()) return;
+      if (!PCD.gate.canCreate('menus', (PCD.store.listTable('menus') || []).length)) { PCD.gate.showUpgradeModal({ feature: 'menus', message: t('gate_create_limit') }); return; }
+    }
     const body = PCD.el('div');
     body.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' + TEMPLATES.map(function (tpl) {
       return '<button type="button" class="ms-tplcard" data-tpl="' + tpl.id + '"><div class="ms-tplcard-prev" id="mstp-' + tpl.id + '"></div><div class="ms-tplcard-label">' + esc(tpl.label) + '</div></button>';

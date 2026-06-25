@@ -283,7 +283,13 @@
     }
 
     // v2.15.6 — Yeni/duplicate → editör; satır tıkla → önizleme; Edit → editör.
-    function openNew() { const saved = PCD.store.upsertInTable('rosters', newRoster(), 'rost'); PCD.router.go('roster', { editId: saved.id }); }
+    function openNew() {
+      if (PCD.gate) {
+        if (!PCD.gate.requireAuth()) return;
+        if (!PCD.gate.canCreate('rosters', (PCD.store.listTable('rosters') || []).length)) { PCD.gate.showUpgradeModal({ feature: 'rosters', message: PCD.i18n.t('gate_create_limit') }); return; }
+      }
+      const saved = PCD.store.upsertInTable('rosters', newRoster(), 'rost'); PCD.router.go('roster', { editId: saved.id });
+    }
     const nb = PCD.$('#newRosterBtn', view); if (nb) nb.addEventListener('click', openNew);
     const en = PCD.$('#emptyNewRoster', view); if (en) en.addEventListener('click', openNew);
     wireGuide(view);
@@ -299,6 +305,10 @@
       e.stopPropagation();
       const src = PCD.store.getFromTable('rosters', this.getAttribute('data-dup'));
       if (!src) return;
+      if (PCD.gate) {
+        if (!PCD.gate.requireAuth()) return;
+        if (!PCD.gate.canCreate('rosters', (PCD.store.listTable('rosters') || []).length)) { PCD.gate.showUpgradeModal({ feature: 'rosters', message: PCD.i18n.t('gate_create_limit') }); return; }
+      }
       const saved = PCD.store.upsertInTable('rosters', newRoster(src), 'rost');
       PCD.router.go('roster', { editId: saved.id });
     });
@@ -764,6 +774,7 @@
   // v2.15.6 — Print = renkli tablo + A4 yatay. print-color-adjust:exact →
   // "Background graphics" kapalıyken bile renkler basar. table-layout fixed → tek sayfa.
   function printRoster(data, showCost) {
+    if (PCD.gate && !PCD.gate.requireExport('roster')) return;
     const css = '<style>@page{size:A4 landscape;margin:0;}body{font-family:"Inter",-apple-system,Segoe UI,Roboto,sans-serif;color:#1c1917;padding:10mm;-webkit-print-color-adjust:exact;print-color-adjust:exact;}</style>';
     PCD.print(css + buildRosterTable(data, showCost), (data.venue || t('roster_title') || 'Roster') + ' ' + data.weekStart);
   }
@@ -771,6 +782,7 @@
   // v2.15.6 — JPEG gönder/indir: tabloyu html2canvas ile görsele çevir, mobilde
   // navigator.share(files) ile native paylaş (WhatsApp vb.), masaüstünde indir.
   function sendRosterImage(data, showCost) {
+    if (PCD.gate && !PCD.gate.requireExport('roster')) return;
     const run = function (h2c) {
       const wrap = document.createElement('div');
       wrap.style.cssText = 'position:fixed;left:-99999px;top:0;width:1180px;background:#fff;padding:22px;font-family:"Inter",-apple-system,Segoe UI,Roboto,sans-serif;color:#1c1917;';

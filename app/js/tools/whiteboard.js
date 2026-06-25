@@ -1554,6 +1554,10 @@
     // Yeni — boş whiteboard çalışma alanı (otomatik kaydedilir).
     const nw = root.querySelector('#wbNewCanvasBtn');
     if (nw) nw.addEventListener('click', function () {
+      if (PCD.gate) {
+        if (!PCD.gate.requireAuth()) return;
+        if (!PCD.gate.canCreate('whiteboards', readAllVisible().length)) { PCD.gate.showUpgradeModal({ feature: 'whiteboards', message: t('gate_create_limit') }); return; }
+      }
       const fresh = defaultCanvas(t('whiteboard_untitled', 'Untitled'));
       const arr = readAllVisible().slice();
       arr.push(fresh);

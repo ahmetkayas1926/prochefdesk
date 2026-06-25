@@ -20,10 +20,91 @@
   function isPro() { return (PCD.plans && PCD.plans.getUserPlan && PCD.plans.getUserPlan() === 'pro'); }
   function t(k) { return (PCD.i18n && PCD.i18n.t) ? PCD.i18n.t(k) : k; }
 
+  // ---------- MİSAFİR (giriş yok) GATE ----------
+  // Misafir = oturum açmamış kullanıcı (user.id yok). Misafir TÜM araçları +
+  // demo seed'leri GÖRÜR ama yeni oluşturamaz / kaydedemez / silemez.
+  // requireAuth() yazma eyleminin başında çağrılır: misafirse giriş duvarı
+  // gösterir + false döner (eylem iptal); üyeyse true döner (devam).
+  function isGuest() {
+    try { const u = PCD.store && PCD.store.get && PCD.store.get('user'); return !(u && u.id); }
+    catch (e) { return true; }
+  }
+  function requireAuth() {
+    if (!isGuest()) return true;
+    showSignupGate();
+    return false;
+  }
+  function showSignupGate() {
+    if (!PCD.modal || !PCD.modal.open) { if (PCD.router && PCD.router.go) PCD.router.go('account'); return; }
+    const body =
+      '<div style="text-align:center;margin-bottom:6px;">' +
+        '<div style="display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;border-radius:50%;background:var(--brand-50,#f0fdf4);color:var(--brand-600,#16a34a);margin-bottom:10px;">' +
+          (PCD.icon ? PCD.icon('lock', 26) : '🔒') + '</div>' +
+        '<div style="font-size:13px;color:var(--text-2,#555);line-height:1.55;">' + PCD.escapeHtml(t('gate_guest_msg')) + '</div>' +
+      '</div>';
+    const footer = PCD.el('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' } });
+    const signupBtn = PCD.el('button', { type: 'button', class: 'btn btn-primary', style: { width: '100%' } });
+    signupBtn.textContent = t('gate_guest_signup');
+    const laterBtn = PCD.el('button', { type: 'button', class: 'btn btn-ghost', style: { width: '100%' } });
+    laterBtn.textContent = t('gate_guest_later');
+    footer.appendChild(signupBtn);
+    footer.appendChild(laterBtn);
+    const m = PCD.modal.open({ title: t('gate_guest_title'), body: body, footer: footer, size: 'sm', closable: true });
+    signupBtn.addEventListener('click', function () { m.close(); if (PCD.router && PCD.router.go) PCD.router.go('account'); });
+    laterBtn.addEventListener('click', function () { m.close(); });
+    return m;
+  }
+
   // ---------- COUNT-BASED GATES (mevcut sayıyı çağıran verir) ----------
   function canCreateRecipe(count)     { return (count || 0) < (limits().maxRecipes || Infinity); }
   function canCreateIngredient(count) { return (count || 0) < (limits().maxIngredients || Infinity); }
   function canAddWorkspace(count)     { return (count || 0) < (limits().maxWorkspaces || Infinity); }
+
+  // ---------- GENEL SAYI GATE'i (her araç) ----------
+  // toolKey → plan limit anahtarı. Bilinmeyen araç = sınırsız.
+  function _maxFor(toolKey) {
+    const lim = limits();
+    const map = {
+      recipes: lim.maxRecipes, ingredients: lim.maxIngredients, workspaces: lim.maxWorkspaces,
+      menus: lim.maxMenus, events: lim.maxEvents, buffets: lim.maxBuffets,
+      rosters: lim.maxRosters, whiteboards: lim.maxWhiteboards,
+      checklists: lim.maxChecklists, prepSheets: lim.maxPrepSheets,
+    };
+    return (map[toolKey] != null) ? map[toolKey] : Infinity;
+  }
+  function canCreate(toolKey, count) { return (count || 0) < _maxFor(toolKey); }
+  function maxFor(toolKey) { return _maxFor(toolKey); }
+
+  // ---------- ÇIKTI GATE'i (Faz 3) ----------
+  // Free: araç başına GÜNDE 1 ücretsiz çıktı (pazarlama kancası), 2.'den Pro.
+  // Roster: free'de tamamen kapalı. Pro: sınırsız.
+  function canExport(toolKey) {
+    const lim = limits();
+    if (toolKey === 'roster' && lim.rosterExport === false) return false;
+    if (!lim.exportFirstFree) return true; // pro / sınırsız
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const log = JSON.parse(localStorage.getItem('pcd_export_log') || '{}');
+      return log[toolKey] !== today; // bugün bu araçtan çıktı alınmadıysa serbest
+    } catch (e) { return true; }
+  }
+  function _markExport(toolKey) {
+    const lim = limits();
+    if (!lim.exportFirstFree) return; // pro → işaretleme
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const log = JSON.parse(localStorage.getItem('pcd_export_log') || '{}');
+      log[toolKey] = today;
+      localStorage.setItem('pcd_export_log', JSON.stringify(log));
+    } catch (e) {}
+  }
+  // Çıktı tetikleyicisinin başında çağrılır: izin varsa işaretle + true; yoksa
+  // upgrade duvarı + false.
+  function requireExport(toolKey) {
+    if (canExport(toolKey)) { _markExport(toolKey); return true; }
+    showUpgradeModal({ feature: 'exports', message: t('gate_export_limit') });
+    return false;
+  }
 
   // ---------- BOOLEAN FEATURE GATES ----------
   function canSync()        { return !!limits().cloudSync; }
@@ -149,6 +230,12 @@
   PCD.gate = {
     limits: limits,
     isPro: isPro,
+    isGuest: isGuest,
+    requireAuth: requireAuth,
+    canCreate: canCreate,
+    maxFor: maxFor,
+    canExport: canExport,
+    requireExport: requireExport,
     canCreateRecipe: canCreateRecipe,
     canCreateIngredient: canCreateIngredient,
     canAddWorkspace: canAddWorkspace,

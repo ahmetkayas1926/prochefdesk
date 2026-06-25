@@ -9,6 +9,7 @@
 
   function render(view) {
     const t = PCD.i18n.t;
+    const L = function (k, fb) { try { const v = t(k); return (v == null || v === k) ? fb : v; } catch (e) { return fb; } };
     const user = PCD.store.get('user');
     const prefs = PCD.store.get('prefs') || {};
     const meta = PCD.store.get('_meta') || {};
@@ -121,6 +122,43 @@
                 : '<button class="btn btn-primary btn-sm" id="upgradeProBtn">' + PCD.icon('star', 14) + ' ' + PCD.escapeHtml(t('upgrade_to_pro')) + '</button>'}
             </div>
           </div></div>
+          ${(function () {
+            if (!PCD.plans) return '';
+            const lim = PCD.plans.getPlanLimits();
+            const cnt = function (tbl) { try { return (PCD.store.listTable(tbl) || []).length; } catch (e) { return 0; } };
+            const arr = function (key) { try { const ws = PCD.store.getActiveWorkspaceId(); return ((PCD.store._read(key) || {})[ws] || []).filter(function (x) { return x && !x._deletedAt; }).length; } catch (e) { return 0; } };
+            const rows = [
+              [L('ingredients_title', 'Ingredients'), (PCD.store.listIngredients() || []).length, lim.maxIngredients],
+              [L('recipes_title', 'Recipes'), (PCD.store.listRecipes() || []).length, lim.maxRecipes],
+              [L('account_usage_menus', 'Menus'), cnt('menus'), lim.maxMenus],
+              [L('account_usage_events', 'Events'), cnt('events'), lim.maxEvents],
+              [L('account_usage_buffets', 'Buffets'), arr('buffets'), lim.maxBuffets],
+              [L('account_usage_rosters', 'Rosters'), cnt('rosters'), lim.maxRosters],
+            ];
+            const bar = function (used, max) {
+              if (max === Infinity || max == null) return '<span style="font-size:12px;font-weight:700;color:var(--brand-600);">' + PCD.escapeHtml(L('unlimited', 'Unlimited')) + '</span>';
+              const pct = Math.min(100, Math.round(used / Math.max(1, max) * 100));
+              const col = pct >= 100 ? '#dc2626' : (pct >= 80 ? '#d97706' : 'var(--brand-600)');
+              return '<div style="display:flex;align-items:center;gap:8px;"><div style="flex:1;height:6px;background:var(--surface-2);border-radius:3px;overflow:hidden;"><div style="width:' + pct + '%;height:100%;background:' + col + ';"></div></div><span style="font-size:12px;font-weight:700;color:' + col + ';white-space:nowrap;">' + used + ' / ' + max + '</span></div>';
+            };
+            const usage = rows.map(function (r) { return '<div style="display:flex;align-items:center;gap:10px;padding:5px 0;"><div style="width:96px;font-size:13px;color:var(--text-2);">' + PCD.escapeHtml(r[0]) + '</div><div style="flex:1;">' + bar(r[1], r[2]) + '</div></div>'; }).join('');
+            const perks = [
+              [L('gate_feat_sync', 'Cloud sync across devices'), lim.cloudSync],
+              [L('gate_feat_haccp', 'HACCP food-safety logs'), lim.haccp],
+              [L('gate_feat_labor', 'Labour cost tools'), lim.laborCost],
+              [L('account_perk_exports', 'Unlimited PDF / Excel exports'), !lim.exportFirstFree],
+              [L('account_perk_roster_export', 'Roster export (print / Excel / image)'), !!lim.rosterExport],
+              [L('account_perk_nowatermark', 'Clean exports — no watermark'), lim.watermark === false],
+              [L('gate_feat_costview', 'Cost-view sharing'), lim.costViewShare],
+            ];
+            const perksHtml = perks.map(function (p) { const on = !!p[1]; return '<li style="display:flex;align-items:center;gap:8px;padding:3px 0;font-size:13px;color:' + (on ? 'var(--text-1)' : 'var(--text-3)') + ';"><span style="color:' + (on ? 'var(--brand-600)' : 'var(--text-3)') + ';flex:0 0 auto;">' + (on ? PCD.icon('check', 14) : PCD.icon('lock', 14)) + '</span>' + PCD.escapeHtml(p[0]) + '</li>'; }).join('');
+            return '<div class="card mt-2"><div class="card-body" style="padding:14px;">' +
+              '<div style="font-weight:700;font-size:13px;margin-bottom:8px;">' + PCD.escapeHtml(L('account_usage_title', 'Your usage')) + '</div>' + usage +
+              '<div style="border-top:1px solid var(--border);margin:10px 0;"></div>' +
+              '<div style="font-weight:700;font-size:13px;margin-bottom:6px;">' + PCD.escapeHtml(isPro ? L('account_pro_active', 'Pro — everything unlocked') : L('account_pro_perks', 'Pro unlocks')) + '</div>' +
+              '<ul style="list-style:none;padding:0;margin:0;">' + perksHtml + '</ul>' +
+            '</div></div>';
+          })()}
         </div>
 
         <!-- CHEF PROFILE -->

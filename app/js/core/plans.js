@@ -22,27 +22,47 @@
   // ==============================================================
   const PLAN_LIMITS = {
     free: {
-      maxRecipes:       15,
-      maxIngredients:   50,
+      // İçerik limitleri (sayısal; Infinity = sınırsız)
+      maxRecipes:       4,
+      maxIngredients:   20,
       maxWorkspaces:    1,
+      // Diğer araçlar: her birinden 1'er (free = "bir tane dene")
+      maxMenus:         1,
+      maxEvents:        1,
+      maxBuffets:       1,
+      maxRosters:       1,
+      maxWhiteboards:   1,
+      maxChecklists:    1,
+      maxPrepSheets:    1,
+      // Özellik gate'leri
       cloudSync:        false,
       haccp:            false,
       laborCost:        false,
       costViewShare:    false,
       watermark:        true,   // free çıktı/paylaşımda footer KALIR (pazarlama)
-      exports:          true,   // print/excel free'de de açık (bağımlılık = satış)
+      // Çıktı: araç başına İLK çıktı ücretsiz (kanca), sonrası Pro duvarı.
+      exportFirstFree:  true,
+      rosterExport:     false,  // roster çıktısı free'de TAMAMEN kapalı (Pro)
       discoverPublish:  true,
     },
     pro: {
       maxRecipes:       Infinity,
       maxIngredients:   Infinity,
       maxWorkspaces:    Infinity,
+      maxMenus:         Infinity,
+      maxEvents:        Infinity,
+      maxBuffets:       Infinity,
+      maxRosters:       Infinity,
+      maxWhiteboards:   Infinity,
+      maxChecklists:    Infinity,
+      maxPrepSheets:    Infinity,
       cloudSync:        true,
       haccp:            true,
       laborCost:        true,
       costViewShare:    true,
       watermark:        false,  // pro çıktı/URL/QR paylaşım TEMİZ — marka yok
-      exports:          true,
+      exportFirstFree:  false,  // sınırsız çıktı
+      rosterExport:     true,
       discoverPublish:  true,
     },
   };

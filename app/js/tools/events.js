@@ -191,6 +191,10 @@
   function openEditor(eid) {
     const t = PCD.i18n.t;
     const existing = eid ? PCD.store.getFromTable('events', eid) : null;
+    if (!existing && PCD.gate) {
+      if (!PCD.gate.requireAuth()) return;
+      if (!PCD.gate.canCreate('events', (PCD.store.listTable('events') || []).length)) { PCD.gate.showUpgradeModal({ feature: 'events', message: t('gate_create_limit') }); return; }
+    }
     const data = existing ? PCD.clone(existing) : {
       name: '', date: '', time: '', guestCount: 50, venue: '',
       pricePerHead: null, budget: null, status: 'draft', notes: '',
@@ -516,6 +520,7 @@
       });
     });
     saveBtn.addEventListener('click', function () {
+      if (PCD.gate && !PCD.gate.requireAuth()) return;
       if (!data.name || !data.name.trim()) { PCD.toast.error(t('event_name') + ' ' + t('required')); return; }
       if (existing) data.id = existing.id;
       PCD.store.upsertInTable('events', data, 'ev');
@@ -569,7 +574,7 @@
     return lines.join('\n');
   }
 
-  function printEvent(event, detailed) { PCD.print(eventPrintHtml(event, detailed), event.name || (PCD.i18n.t('ev_print_default_title') || 'Event')); }
+  function printEvent(event, detailed) { if (PCD.gate && !PCD.gate.requireExport('events')) return; PCD.print(eventPrintHtml(event, detailed), event.name || (PCD.i18n.t('ev_print_default_title') || 'Event')); }
   function eventPrintHtml(event, detailed) {
     const t = PCD.i18n.t;
     const ingMap = {}, recipeMap = {};

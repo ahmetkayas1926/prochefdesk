@@ -445,11 +445,30 @@
     // Clear quantities for this supplier — they were sent
     delete draftQty[supplier.id];
     PCD.toast.success(PCD.i18n.t('toast_order_sent_to', { name: supplier.name }));
-    // Re-render so the badge clears
-    setTimeout(function () {
-      const v = PCD.$('#view');
-      if (v && PCD.router.currentView() === 'suppliers') render(v);
-    }, 600);
+    function rerender() {
+      setTimeout(function () {
+        const v = PCD.$('#view');
+        if (v && PCD.router.currentView() === 'suppliers') render(v);
+      }, 400);
+    }
+    // Sipariş gönderildi → "stoğa ekle?" sor. Envanteri takip eden şef ekler;
+    // sadece sipariş cetveli kullanan atlar. Kalemler ingredient'e bağlı (tek kaynak).
+    const fresh = PCD.store.getFromTable('suppliers', supplier.id);
+    const lastOrder = fresh && Array.isArray(fresh.orderHistory) ? fresh.orderHistory[0] : null;
+    if (lastOrder && !lastOrder.receivedAt && orderItemsOf(lastOrder).length > 0 && PCD.modal && PCD.modal.confirm) {
+      PCD.modal.confirm({
+        icon: '📦',
+        title: tt('sup_add_stock_q_title', 'Add this order to stock?'),
+        text: tt('sup_add_stock_q', 'Tracking inventory? Add these items to your stock now. If you only use the order sheet, skip this.'),
+        okText: tt('sup_receive_add', 'Add to stock'),
+        cancelText: tt('not_now', 'Not now'),
+      }).then(function (ok) {
+        if (ok) openReceiveStock(fresh, lastOrder, function () {});
+        rerender();
+      });
+    } else {
+      rerender();
+    }
   }
 
   // ============ ORDER HISTORY (v2.15.0) ============
@@ -745,6 +764,7 @@
 
     cancelBtn.addEventListener('click', function () { m.close(); });
     if (deleteBtn) deleteBtn.addEventListener('click', function () {
+      if (PCD.gate && !PCD.gate.requireAuth()) return;
       PCD.modal.confirm({
         icon: '🗑', iconKind: 'danger', danger: true,
         title: t('confirm_delete'), text: t('confirm_delete_desc'), okText: t('delete')
@@ -760,6 +780,7 @@
       });
     });
     saveBtn.addEventListener('click', function () {
+      if (PCD.gate && !PCD.gate.requireAuth()) return;
       data.name = (PCD.$('#sName', body).value || '').trim();
       if (!data.name) { PCD.toast.error(PCD.i18n.t('toast_name_required')); return; }
       data.category = PCD.$('#sCat', body).value;

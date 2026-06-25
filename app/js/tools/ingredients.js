@@ -97,6 +97,7 @@
     const m = PCD.modal.open({ title: L('sup_pick_title', 'Assign supplier'), body: body, footer: footer, size: 'sm', closable: true });
     cancelBtn.addEventListener('click', function () { m.close(); });
     saveBtn.addEventListener('click', function () {
+      if (PCD.gate && !PCD.gate.requireAuth()) return;
       const sup = (picker.get() || '').trim();
       let n = 0;
       ids.forEach(function (id) { const ing = PCD.store.getIngredient(id); if (ing) { ing.supplier = sup; PCD.store.upsertIngredient(ing); n++; } });
@@ -109,6 +110,10 @@
 
   function renderList(view) {
     const t = PCD.i18n.t;
+    // Navigasyonda select modu açık kalmasın (recipes.js ile aynı düzeltme):
+    // selectMode/selectedIds modül-seviyesi → tool remount'unda sıfırla.
+    selectMode = false;
+    selectedIds = new Set();
     const ings = PCD.store.listIngredients().sort(function (a, b) {
       return (a.name || '').localeCompare(b.name || '');
     });
@@ -360,6 +365,7 @@
     });
     PCD.$('#bulkDeleteI', view).addEventListener('click', function () {
       if (selectedIds.size === 0) return;
+      if (PCD.gate && !PCD.gate.requireAuth()) return;
       PCD.modal.confirm({
         icon: '🗑', iconKind: 'danger', danger: true,
         title: PCD.i18n.t('confirm_delete_n').replace('{n}', selectedIds.size),
@@ -408,6 +414,7 @@
     // "priced Nd ago" aging badge. Flow: filter aging → select all → Confirm prices.
     PCD.$('#bulkConfirmPriceI', view).addEventListener('click', function () {
       if (selectedIds.size === 0) return;
+      if (PCD.gate && !PCD.gate.requireAuth()) return;
       let n = 0;
       Array.from(selectedIds).forEach(function (id) {
         const ing = PCD.store.getIngredient(id);
@@ -509,6 +516,8 @@
   function openEditor(iid, callback, opts) {
     const t = PCD.i18n.t;
     const existing = iid ? PCD.store.getIngredient(iid) : null;
+    // Misafir yeni oluşturamaz → giriş duvarı (mevcut kaydı görüntüleme açık).
+    if (!existing && PCD.gate && !PCD.gate.requireAuth()) return;
     // v2.17 — Free plan malzeme limiti. Merkezi gate + yumuşak duvar.
     if (!existing && PCD.gate && !PCD.gate.canCreateIngredient(PCD.store.listIngredients().length)) {
       const limit = PCD.gate.limits().maxIngredients;
@@ -681,6 +690,7 @@ ${existing ? (function () {
       });
     });
     saveBtn.addEventListener('click', function () {
+      if (PCD.gate && !PCD.gate.requireAuth()) return;
       data.name = PCD.$('#ingName', body).value.trim();
       data.category = PCD.$('#ingCategory', body).value;
       data.unit = PCD.$('#ingUnit', body).value;
@@ -1081,6 +1091,7 @@ Pasta,3,kg,cat_dry_goods,,</code></pre>
 
     cancelBtn.addEventListener('click', function () { m.close(); });
     importGoBtn.addEventListener('click', function () {
+      if (PCD.gate && !PCD.gate.requireAuth()) return;
       if (!parsed || !parsed.length) { PCD.toast.error(PCD.i18n.t('toast_nothing_to_import')); return; }
       let added = 0, updated = 0;
       const existing = {};

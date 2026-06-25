@@ -1033,6 +1033,10 @@
   // ============ TEMPLATE EDITOR ============
   function openEditor(tid, kindHint) {
     const existing = tid ? PCD.store.getFromTable('checklistTemplates', tid) : null;
+    if (!existing && PCD.gate) {
+      if (!PCD.gate.requireAuth()) return;
+      if (!PCD.gate.canCreate('checklists', (PCD.store.listTable('checklistTemplates') || []).length)) { PCD.gate.showUpgradeModal({ feature: 'checklists', message: PCD.i18n.t('gate_create_limit') }); return; }
+    }
     if (existing) normalizeTemplate(existing);
     const data = existing ? PCD.clone(existing) : {
       name: '', kind: (kindHint === 'prep' ? 'prep' : 'control'),

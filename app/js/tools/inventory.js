@@ -914,6 +914,7 @@
 
     cancelBtn.addEventListener('click', function () { m.close(); });
     saveBtn.addEventListener('click', function () {
+      if (PCD.gate && !PCD.gate.requireAuth()) return;
       // If caller provided onSave, hand them the raw draft object (for reconcile flow)
       if (options.onSave) {
         m.close();
@@ -1111,6 +1112,7 @@
     rsFilter();
 
     deductBtn.addEventListener('click', function () {
+      if (PCD.gate && !PCD.gate.requireAuth()) return;
       const sales = {};
       PCD.$$('.rs-qty', body).forEach(function (inp) { const q = Number(inp.value) || 0; if (q > 0) sales[inp.getAttribute('data-rid')] = q; });
       if (!Object.keys(sales).length) { PCD.toast.info(t('inv_no_sales_entered')); return; }
@@ -1489,6 +1491,7 @@
 
     cancelBtn.addEventListener('click', function () { m.close(); });
     saveBtn.addEventListener('click', function () {
+      if (PCD.gate && !PCD.gate.requireAuth()) return;
       const stock = PCD.$('#invStock', body).value;
       const par = PCD.$('#invPar', body).value;
       const min = PCD.$('#invMin', body).value;
