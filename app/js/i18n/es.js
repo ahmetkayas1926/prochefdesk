@@ -3180,3 +3180,18 @@ window.PCD.i18n.register('es', {
   inv_sales_save_note: "El stock se actualiza según las ventas de este día. Si ya existe un registro para esta fecha, solo se aplica la diferencia.",
   inv_sales_saved: "Ventas guardadas · {n} artículo(s) actualizados",
 });
+
+// v2.44.76 — Panel "Plan y uso" (account_*) — antes en fallback inglés, ahora completo.
+window.PCD.i18n.register('es', {
+  account_usage_title: "Tu uso",
+  account_usage_menus: "Menús",
+  account_usage_events: "Eventos",
+  account_usage_buffets: "Bufés",
+  account_usage_rosters: "Turnos",
+  unlimited: "Ilimitado",
+  account_perk_exports: "Exportaciones PDF / Excel ilimitadas",
+  account_perk_roster_export: "Exportar turnos (impresión / Excel / imagen)",
+  account_perk_nowatermark: "Exportaciones limpias — sin marca de agua",
+  account_pro_active: "Pro — todo desbloqueado",
+  account_pro_perks: "Pro desbloquea",
+});

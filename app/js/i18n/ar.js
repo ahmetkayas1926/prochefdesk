@@ -3180,3 +3180,18 @@ window.PCD.i18n.register('ar', {
   inv_sales_save_note: "يُحدَّث المخزون ليطابق مبيعات هذا اليوم. إذا كان هناك سجل لهذا التاريخ، يُطبَّق الفرق فقط.",
   inv_sales_saved: "تم حفظ المبيعات · تحديث {n} عنصر",
 });
+
+// v2.44.76 — لوحة "الخطة والاستخدام" (account_*) — كانت سابقًا تعود للإنجليزية، اكتملت الآن.
+window.PCD.i18n.register('ar', {
+  account_usage_title: "استخدامك",
+  account_usage_menus: "القوائم",
+  account_usage_events: "الفعاليات",
+  account_usage_buffets: "البوفيهات",
+  account_usage_rosters: "الجداول",
+  unlimited: "غير محدود",
+  account_perk_exports: "تصدير PDF / Excel غير محدود",
+  account_perk_roster_export: "تصدير الجدول (طباعة / Excel / صورة)",
+  account_perk_nowatermark: "مخرجات نظيفة — دون علامة مائية",
+  account_pro_active: "Pro — كل شيء مفتوح",
+  account_pro_perks: "ما تفتحه Pro",
+});

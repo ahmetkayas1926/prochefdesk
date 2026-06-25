@@ -92,19 +92,25 @@
     }
   }
 
-  // v2.44 — A1: batch-deduct stock for tracked ingredients (event → inventory).
+  // v2.44 — A1: batch-deduct stock for ingredients (event/buffet/sales → inventory).
   // deductions: { ingredientId: amountInBaseUnit }. Reads once, applies, writes once.
-  // Untracked items (no inventory row / null stock) are skipped (reported tracked:false).
+  // v2.44.76 — SİMETRİ (kök-neden düzeltmesi): mal kabul (applyStockAdditions) satır
+  // yoksa OLUŞTURUYORDU; tüketim ise hiç sayılmamış malzemeyi (satır yok / stock=null)
+  // SESSİZCE ATLIYORDU → satın alınan/kullanılan bir malzemenin tüketimi kaybolurdu.
+  // Artık tüketim de satır oluşturur ve stok NEGATİFE düşebilir = "bunu say/sipariş et"
+  // sinyali. computeStatus negatifte 'out' (kırmızı) döner, liste en üste taşır. Hiçbir
+  // malzeme artık sessizce atlanmaz; her tüketim envantere yansır.
   function applyStockDeductions(deductions) {
     const inv = readInventory();
     const report = [];
     Object.keys(deductions || {}).forEach(function (iid) {
       const amt = Number(deductions[iid]) || 0;
+      if (!(amt > 0)) return;
       const row = inv[iid];
-      if (!row || row.stock == null) { report.push({ id: iid, tracked: false, deducted: amt }); return; }
-      const cur = Number(row.stock) || 0;
-      const to = Math.max(0, cur - amt);
-      inv[iid] = Object.assign({}, row, { stock: to, updatedAt: Date.now() });
+      const cur = row && row.stock != null ? (Number(row.stock) || 0) : 0;
+      const base = row || { stock: null, parLevel: null, minLevel: null };
+      const to = cur - amt;   // negatife izin ver — fazla-tüketim/oversold görünür kalsın
+      inv[iid] = Object.assign({}, base, { stock: to, updatedAt: Date.now() });
       report.push({ id: iid, tracked: true, from: cur, deducted: amt, to: to, status: computeStatus(inv[iid]) });
     });
     writeInventory(inv);
@@ -207,7 +213,13 @@
   }
 
   function computeStatus(invRow) {
-    if (!invRow || invRow.parLevel == null) return 'untracked';
+    if (!invRow || invRow.parLevel == null) {
+      // Par yok = normalde 'untracked'. Ama stok NEGATİFE düştüyse (fazla-tüketim:
+      // hiç sayılmamış/sipariş edilmemiş malzeme tüketildi) bunu 'out' (kırmızı) göster —
+      // tüketim sessizce kaybolmasın, "say/sipariş et" sinyali olsun.
+      if (invRow && invRow.stock != null && Number(invRow.stock) < 0) return 'out';
+      return 'untracked';
+    }
     const stock = Number(invRow.stock) || 0;
     const par = Number(invRow.parLevel) || 0;
     const min = Number(invRow.minLevel) || 0;

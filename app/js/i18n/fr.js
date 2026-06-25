@@ -3180,3 +3180,18 @@ window.PCD.i18n.register('fr', {
   inv_sales_save_note: "Le stock est mis à jour selon les ventes de ce jour. Si un enregistrement existe déjà pour cette date, seule la différence est appliquée.",
   inv_sales_saved: "Ventes enregistrées · {n} article(s) mis à jour",
 });
+
+// v2.44.76 — Panneau « Forfait et utilisation » (account_*) — auparavant en repli anglais, complété.
+window.PCD.i18n.register('fr', {
+  account_usage_title: "Votre utilisation",
+  account_usage_menus: "Menus",
+  account_usage_events: "Événements",
+  account_usage_buffets: "Buffets",
+  account_usage_rosters: "Plannings",
+  unlimited: "Illimité",
+  account_perk_exports: "Exports PDF / Excel illimités",
+  account_perk_roster_export: "Export du planning (impression / Excel / image)",
+  account_perk_nowatermark: "Exports propres — sans filigrane",
+  account_pro_active: "Pro — tout débloqué",
+  account_pro_perks: "Pro débloque",
+});

@@ -3180,3 +3180,18 @@ window.PCD.i18n.register('de', {
   inv_sales_save_note: "Der Bestand wird an die Verkäufe dieses Tages angepasst. Wenn für dieses Datum bereits ein Eintrag besteht, wird nur die Differenz angewendet.",
   inv_sales_saved: "Verkäufe gespeichert · {n} Artikel aktualisiert",
 });
+
+// v2.44.76 — Panel „Tarif & Nutzung" (account_*) — zuvor englischer Fallback, jetzt vollständig.
+window.PCD.i18n.register('de', {
+  account_usage_title: "Deine Nutzung",
+  account_usage_menus: "Menüs",
+  account_usage_events: "Events",
+  account_usage_buffets: "Buffets",
+  account_usage_rosters: "Dienstpläne",
+  unlimited: "Unbegrenzt",
+  account_perk_exports: "Unbegrenzte PDF-/Excel-Exporte",
+  account_perk_roster_export: "Dienstplan-Export (Druck / Excel / Bild)",
+  account_perk_nowatermark: "Saubere Exporte — kein Wasserzeichen",
+  account_pro_active: "Pro — alles freigeschaltet",
+  account_pro_perks: "Pro schaltet frei",
+});
