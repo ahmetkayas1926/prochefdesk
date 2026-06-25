@@ -47,30 +47,49 @@
     if (keys.length > 0) {
       const sample = all[keys[0]];
       if (sample && (sample.stock !== undefined || sample.parLevel !== undefined)) {
-        return all; // legacy flat
+        return PCD.clone(all); // legacy flat
       }
     }
-    return all[wsId] || {};
+    // KLON — _read canlı referans döndürür; caller mutate edince state bozulur ve
+    // writeInventory eski↔yeni diff'i yapamaz (sync push tetiklenmez). Klon ile
+    // caller kopyayı değiştirir, writeInventory state ile karşılaştırıp push eder.
+    return PCD.clone(all[wsId] || {});
+  }
+  function _invRowChanged(a, b) {
+    if (!a || !b) return true;
+    return a.stock !== b.stock || a.parLevel !== b.parLevel || a.minLevel !== b.minLevel ||
+      a.lastReceivedAt !== b.lastReceivedAt || a.lastCountedAt !== b.lastCountedAt || a.lastOrderedAt !== b.lastOrderedAt;
   }
   function writeInventory(invMap) {
     const wsId = PCD.store.getActiveWorkspaceId();
     const root = PCD.store._read('inventory') || {};
     // Detect legacy flat
     const keys = Object.keys(root);
-    let next;
-    if (keys.length > 0) {
-      const sample = root[keys[0]];
-      if (sample && (sample.stock !== undefined || sample.parLevel !== undefined)) {
-        // Legacy → migrate now
-        next = { [wsId]: invMap };
+    const legacy = keys.length > 0 && root[keys[0]] && (root[keys[0]].stock !== undefined || root[keys[0]].parLevel !== undefined);
+    const oldWs = legacy ? root : (root[wsId] || {});
+    // Değişen satırlara updatedAt damgala (newest-wins merge + sync için) ve topla.
+    const outMap = {};
+    const changedIds = [];
+    Object.keys(invMap || {}).forEach(function (ingId) {
+      const r = invMap[ingId];
+      if (!r) { outMap[ingId] = r; return; }
+      if (_invRowChanged(oldWs[ingId], r)) {
+        outMap[ingId] = Object.assign({}, r, { updatedAt: Date.now() });
+        changedIds.push(ingId);
       } else {
-        next = Object.assign({}, root);
-        next[wsId] = invMap;
+        outMap[ingId] = r;
       }
-    } else {
-      next = { [wsId]: invMap };
-    }
+    });
+    const next = legacy ? {} : Object.assign({}, root);
+    next[wsId] = outMap;
     PCD.store.set('inventory', next);
+    // KRİTİK — değişen stok satırlarını buluta push et. Yoksa reload'da cloud pull
+    // (newest-wins) yereli ezerdi → stok kaybı. Misafirde queueUpsert sessizce döner.
+    if (PCD.cloudPerTable && PCD.cloudPerTable.queueUpsert && changedIds.length) {
+      changedIds.forEach(function (ingId) {
+        try { PCD.cloudPerTable.queueUpsert('inventory', ingId, wsId, Object.assign({ ingredient_id: ingId }, outMap[ingId])); } catch (e) {}
+      });
+    }
   }
 
   // v2.44 — A1: batch-deduct stock for tracked ingredients (event → inventory).

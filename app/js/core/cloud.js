@@ -374,7 +374,12 @@
                 // v2.15.3 — Roster: user-edited, per-record updatedAt merge
                 'rosters',
                 // v2.16 — Prep Sheet: user-edited, per-record updatedAt merge
-                'prepSheets'
+                'prepSheets',
+                // v2.44.73 — KRİTİK FIX: inventory artık kullanıcı tarafından düzenleniyor
+                // (stok kaydet / sayım / siparişten stoğa ekle) ve writeInventory her
+                // değişen satıra updatedAt damgalayıp buluta push ediyor. Remote-wins
+                // taze yerel stoğu eziyordu → veri kaybı. Per-record en-yeni-kazanır merge.
+                'inventory'
               ];
               // Tables that are arrays under wsId (append-only logs):
               // v2.19 — BUG FIX: whiteboards/buffets/misePlans/team de array-tablo;
@@ -385,7 +390,7 @@
               // these (existing behavior). Inventory levels change via
               // counts not edits, so cloud is generally authoritative.
               const REMOTE_WINS_TABLES = [
-                'inventory', 'pendingStockCount',
+                'pendingStockCount',
                 'haccpLogs', 'haccpUnits', 'haccpReadings', 'haccpCookCool'
               ];
 
