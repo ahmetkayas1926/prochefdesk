@@ -3149,4 +3149,13 @@ window.PCD.i18n.register('fr', {
   sup_assign_hint: "Sélectionnez des ingrédients, puis appuyez sur Attribuer un fournisseur.",
   sup_select_first: "Sélectionnez d'abord au moins un ingrédient.",
   sup_pick_title: "Attribuer un fournisseur",
+  sup_products: "Produits",
+  sup_products_hint: "Ingrédients que vous achetez à ce fournisseur — liés à votre bibliothèque. Ajoutez des existants ou créez-en de nouveaux ; ils restent synchronisés avec Ingrédients et Inventaire.",
+  sup_add_ingredients: "Ajouter des ingrédients",
+  sup_will_create: "nouveau",
+  sup_new_ingredients: "nouvel(s) ingrédient(s)",
+  sup_new_ing_hint: "Pas dans votre bibliothèque ? Créez-le ici — il va aussi dans Ingrédients et Inventaire.",
+  sup_new_ing_ph: "Nom du nouvel ingrédient",
+  sup_no_more_ings: "Aucun autre ingrédient à ajouter.",
+  sup_to_create: "Sera créé",
 });

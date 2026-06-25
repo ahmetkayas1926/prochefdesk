@@ -3149,4 +3149,13 @@ window.PCD.i18n.register('es', {
   sup_assign_hint: "Selecciona ingredientes y pulsa Asignar proveedor.",
   sup_select_first: "Selecciona al menos un ingrediente primero.",
   sup_pick_title: "Asignar proveedor",
+  sup_products: "Productos",
+  sup_products_hint: "Ingredientes que compras a este proveedor — vinculados a tu biblioteca. Añade existentes o crea nuevos; se sincronizan con Ingredientes e Inventario.",
+  sup_add_ingredients: "Añadir ingredientes",
+  sup_will_create: "nuevo",
+  sup_new_ingredients: "ingrediente(s) nuevo(s)",
+  sup_new_ing_hint: "¿No está en tu biblioteca? Créalo aquí — también va a Ingredientes e Inventario.",
+  sup_new_ing_ph: "Nombre del nuevo ingrediente",
+  sup_no_more_ings: "No hay más ingredientes para añadir.",
+  sup_to_create: "Se creará",
 });

@@ -3328,4 +3328,13 @@ window.PCD.i18n.register('en', {
   sup_assign_hint: "Select ingredients, then tap Assign supplier.",
   sup_select_first: "Select at least one ingredient first.",
   sup_pick_title: "Assign supplier",
+  sup_products: "Products",
+  sup_products_hint: "Ingredients you buy from this supplier — linked to your library. Add existing or create new; they stay in sync with Ingredients & Inventory.",
+  sup_add_ingredients: "Add ingredients",
+  sup_will_create: "new",
+  sup_new_ingredients: "new ingredient(s)",
+  sup_new_ing_hint: "Not in your library? Create it here — it goes to Ingredients & Inventory too.",
+  sup_new_ing_ph: "New ingredient name",
+  sup_no_more_ings: "No more ingredients to add.",
+  sup_to_create: "Will create",
 });

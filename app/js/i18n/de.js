@@ -3149,4 +3149,13 @@ window.PCD.i18n.register('de', {
   sup_assign_hint: "Zutaten auswählen, dann auf Lieferant zuweisen tippen.",
   sup_select_first: "Wähle zuerst mindestens eine Zutat.",
   sup_pick_title: "Lieferant zuweisen",
+  sup_products: "Produkte",
+  sup_products_hint: "Zutaten, die du bei diesem Lieferanten kaufst — mit deiner Bibliothek verknüpft. Vorhandene hinzufügen oder neue erstellen; bleiben mit Zutaten & Inventar synchron.",
+  sup_add_ingredients: "Zutaten hinzufügen",
+  sup_will_create: "neu",
+  sup_new_ingredients: "neue Zutat(en)",
+  sup_new_ing_hint: "Nicht in deiner Bibliothek? Hier erstellen — geht auch zu Zutaten & Inventar.",
+  sup_new_ing_ph: "Name der neuen Zutat",
+  sup_no_more_ings: "Keine weiteren Zutaten zum Hinzufügen.",
+  sup_to_create: "Wird erstellt",
 });

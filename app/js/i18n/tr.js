@@ -3380,4 +3380,13 @@ window.PCD.i18n.register('tr', {
   sup_assign_hint: "Malzemeleri seç, sonra Tedarikçi ata'ya bas.",
   sup_select_first: "Önce en az bir malzeme seç.",
   sup_pick_title: "Tedarikçi ata",
+  sup_products: "Ürünler",
+  sup_products_hint: "Bu tedarikçiden aldığın malzemeler — kütüphanene bağlı. Mevcut ekle veya yeni oluştur; Malzemeler & Envanter ile senkron kalır.",
+  sup_add_ingredients: "Malzeme ekle",
+  sup_will_create: "yeni",
+  sup_new_ingredients: "yeni malzeme",
+  sup_new_ing_hint: "Kütüphanende yok mu? Buradan oluştur — Malzemeler & Envanter'e de eklenir.",
+  sup_new_ing_ph: "Yeni malzeme adı",
+  sup_no_more_ings: "Eklenecek başka malzeme yok.",
+  sup_to_create: "Oluşturulacak",
 });

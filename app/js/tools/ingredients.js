@@ -32,6 +32,19 @@
     return Object.keys(set).sort(function (a, b) { return a.localeCompare(b); });
   }
 
+  // Tek kaynak: bir ingredient'e tedarikçi atandığında Suppliers aracında o tedarikçi
+  // kaydı yoksa otomatik oluştur (isimle eşleşir). Böylece tedarikçi her yerde canlı.
+  function ensureSupplierRecord(name) {
+    name = (name || '').trim();
+    if (!name) return;
+    try {
+      const exists = (PCD.store.listTable('suppliers') || []).some(function (s) {
+        return (s.name || '').trim().toLowerCase() === name.toLowerCase();
+      });
+      if (!exists) PCD.store.upsertInTable('suppliers', { name: name, category: 'Other', products: [] }, 'sup');
+    } catch (e) { /* suppliers tablosu yoksa sorun değil */ }
+  }
+
   // Ortak tedarikçi seçici: mevcut tedarikçiler chip olarak + "yeni tedarikçi" alanı.
   // Edit modal'ı ve toplu atama modal'ı ikisi de kullanır. { get() } döndürür.
   function mountSupplierPicker(container, initial) {
@@ -87,6 +100,7 @@
       const sup = (picker.get() || '').trim();
       let n = 0;
       ids.forEach(function (id) { const ing = PCD.store.getIngredient(id); if (ing) { ing.supplier = sup; PCD.store.upsertIngredient(ing); n++; } });
+      if (sup) ensureSupplierRecord(sup);
       PCD.toast.success(L('sup_assign_done', 'Supplier assigned to {n} ingredient(s).').replace('{n}', n));
       m.close();
       if (onDone) onDone();
@@ -685,6 +699,7 @@ ${existing ? (function () {
 
       if (existing) data.id = existing.id;
       const saved = PCD.store.upsertIngredient(data);
+      if (data.supplier) ensureSupplierRecord(data.supplier);
       PCD.toast.success(t('ingredient_saved'));
       m.close();
       // FIX: Force re-render so new item appears immediately

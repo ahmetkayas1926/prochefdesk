@@ -16,13 +16,46 @@
   const PCD = window.PCD;
   const CATS = ['Produce', 'Meat & Poultry', 'Seafood', 'Dairy', 'Dry Goods', 'Beverages', 'Cleaning', 'Other'];
   const UNITS = ['kg', 'g', 'l', 'ml', 'pcs', 'box', 'case', 'bag', 'bunch', 'tray'];
+  // Eksik i18n anahtarı için İngilizce fallback (t() eksikte key döndürebilir).
+  function tt(key, fb) { try { const v = PCD.i18n.t(key); return (v == null || v === key) ? fb : v; } catch (e) { return fb; } }
 
   // In-memory quantities — keyed by supplierId then productId
   // Persists during the session, reset on page reload (intentional)
   const draftQty = {};
 
+  // ---- Tek kaynak: tedarikçinin ürünleri = ona bağlı CANLI ingredient'ler ----
+  // Bağ anahtarı = isim (ingredient.supplier === supplier.name, harf duyarsız).
+  // Ingredients / Inventory / Suppliers hepsi aynı ingredient verisini paylaşır.
+  function ingredientsForSupplier(name) {
+    const key = (name || '').trim().toLowerCase();
+    if (!key) return [];
+    return (PCD.store.listIngredients() || []).filter(function (i) {
+      return (i.supplier || '').trim().toLowerCase() === key;
+    }).sort(function (a, b) { return (a.name || '').localeCompare(b.name || ''); });
+  }
+  function productsOf(s) {
+    return ingredientsForSupplier(s && s.name).map(function (i) {
+      return { id: i.id, name: i.name, unit: i.unit || 'kg' };
+    });
+  }
+
+  // Tek kaynak: her ingredient.supplier için bir tedarikçi kaydı garanti et
+  // (ingredient'lere atanmış ama henüz kaydı olmayan tedarikçiler de kart olur).
+  function backfillSupplierRecords() {
+    const have = {};
+    (PCD.store.listTable('suppliers') || []).forEach(function (s) { have[(s.name || '').trim().toLowerCase()] = true; });
+    const names = {};
+    (PCD.store.listIngredients() || []).forEach(function (i) { const n = (i.supplier || '').trim(); if (n) names[n] = true; });
+    Object.keys(names).forEach(function (n) {
+      if (!have[n.toLowerCase()]) {
+        try { PCD.store.upsertInTable('suppliers', { name: n, category: 'Other', products: [] }, 'sup'); } catch (e) {}
+      }
+    });
+  }
+
   function render(view) {
     const t = PCD.i18n.t;
+    backfillSupplierRecords();
     const suppliers = PCD.store.listTable('suppliers').slice().sort(function (a, b) {
       return (a.name || '').localeCompare(b.name || '');
     });
@@ -121,7 +154,7 @@
       'data-sid-card': s.id,
       style: { padding: '14px', overflow: 'hidden' }
     });
-    const products = s.products || [];
+    const products = productsOf(s);
 
     // Header — name + edit + send
     const filled = countFilled(s.id, products);
@@ -189,8 +222,9 @@
   function updateFilledCount(card, sid) {
     const supplier = PCD.store.getFromTable('suppliers', sid);
     if (!supplier) return;
-    const filled = countFilled(sid, supplier.products || []);
-    const total = (supplier.products || []).length;
+    const prods = productsOf(supplier);
+    const filled = countFilled(sid, prods);
+    const total = prods.length;
     const countEl = card.querySelector('[data-filled-count]');
     if (countEl) {
       countEl.innerHTML = total + ' ' + (total === 1 ? 'product' : 'products') +
@@ -206,7 +240,7 @@
   function sendOrderFlow(sid) {
     const supplier = PCD.store.getFromTable('suppliers', sid);
     if (!supplier) return;
-    const products = supplier.products || [];
+    const products = productsOf(supplier);
     const dq = draftQty[sid] || {};
     const filled = products.filter(function (p) {
       const v = dq[p.id];
@@ -596,6 +630,22 @@
     };
     if (!data.products) data.products = [];
 
+    // Çalışma listesi: ürünler = bu tedarikçiye bağlı CANLI ingredient'ler.
+    // {ingredientId?, name, unit}. Eski serbest-metin products (henüz ingredient
+    // olmamış) migration için sona eklenir (kaydederken ingredient'e dönüşür).
+    let prods = [];
+    (function () {
+      const seen = {};
+      ingredientsForSupplier(existing ? existing.name : data.name).forEach(function (i) {
+        prods.push({ ingredientId: i.id, name: i.name, unit: i.unit || 'kg' });
+        seen[(i.name || '').toLowerCase()] = true;
+      });
+      (data.products || []).forEach(function (p) {
+        const nm = (p.name || '').trim();
+        if (nm && !seen[nm.toLowerCase()]) { prods.push({ name: nm, unit: p.unit || 'kg' }); seen[nm.toLowerCase()] = true; }
+      });
+    })();
+
     const body = PCD.el('div');
 
     function renderEditor() {
@@ -629,26 +679,34 @@
           <textarea class="textarea" id="sNotes" rows="2" placeholder="${PCD.escapeHtml(t('supplier_notes_placeholder'))}">${PCD.escapeHtml(data.notes || '')}</textarea>
         </div>
 
-        <div class="section-title mt-4 mb-2" style="font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;">Products (${data.products.length})</div>
-        <div class="text-muted text-sm mb-2">List the products you buy from this supplier. They will appear in the Order sheet for quick ordering.</div>
+        <div class="section-title mt-4 mb-2" style="font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;">${PCD.escapeHtml(tt('sup_products', 'Products'))} (${prods.length})</div>
+        <div class="text-muted text-sm mb-2">${PCD.escapeHtml(tt('sup_products_hint', 'Ingredients you buy from this supplier — linked to your library. Add existing or create new; they stay in sync with Ingredients & Inventory.'))}</div>
         <div id="productsList" class="flex flex-col gap-1"></div>
-        <button class="btn btn-ghost btn-sm mt-2" id="addProdBtn" style="width:100%;">${PCD.icon('plus', 14)} Add product</button>
+        <button class="btn btn-outline btn-sm mt-2" id="addProdBtn" style="width:100%;">${PCD.icon('plus', 14)} ${PCD.escapeHtml(tt('sup_add_ingredients', 'Add ingredients'))}</button>
       `;
 
       const listEl = PCD.$('#productsList', body);
-      data.products.forEach(function (p, idx) {
-        const row = PCD.el('div', { style: { display: 'flex', gap: '6px', alignItems: 'center' } });
-        row.innerHTML = `
-          <input type="text" class="input" data-pname="${idx}" value="${PCD.escapeHtml(p.name || '')}" placeholder="${PCD.escapeHtml(t('suppliers_product_name_placeholder'))}" style="flex:1;">
-          <select class="select" data-punit="${idx}" style="width:75px;">
-            ${UNITS.map(function (u) { return '<option value="' + u + '"' + (p.unit === u ? ' selected' : '') + '>' + u + '</option>'; }).join('')}
-          </select>
-          <button class="icon-btn" data-pdel="${idx}">${PCD.icon('x', 16)}</button>
-        `;
+      if (!prods.length) {
+        listEl.innerHTML = '<div class="text-muted text-sm" style="padding:6px 2px;font-style:italic;">' + PCD.escapeHtml(tt('suppliers_no_products', 'No products yet.')) + '</div>';
+      }
+      prods.forEach(function (p, idx) {
+        const row = PCD.el('div', { style: { display: 'flex', gap: '8px', alignItems: 'center', padding: '7px 10px', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)' } });
+        row.innerHTML =
+          '<span style="flex:1;min-width:0;font-weight:500;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + PCD.escapeHtml(p.name) +
+            (p.ingredientId ? '' : ' <span class="text-muted" style="font-size:11px;font-style:italic;">· ' + PCD.escapeHtml(tt('sup_will_create', 'new')) + '</span>') +
+          '</span>' +
+          '<span class="text-muted" style="font-size:12px;">' + PCD.escapeHtml(p.unit || '') + '</span>' +
+          '<button class="icon-btn" data-pdel="' + idx + '" title="' + PCD.escapeHtml(tt('remove', 'Remove')) + '">' + PCD.icon('x', 16) + '</button>';
         listEl.appendChild(row);
       });
+      listEl.querySelectorAll('[data-pdel]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          prods.splice(parseInt(btn.getAttribute('data-pdel'), 10), 1);
+          renderEditor();
+        });
+      });
 
-      // Direct event handlers (no debounce - save on every keystroke)
+      // Direct field handlers (innerHTML reset her render'da eskileri temizler)
       PCD.$('#sName', body).addEventListener('input', function () { data.name = this.value; });
       PCD.$('#sCat', body).addEventListener('change', function () { data.category = this.value; });
       PCD.$('#sPhone', body).addEventListener('input', function () { data.phone = this.value; });
@@ -656,25 +714,16 @@
       PCD.$('#sEmail', body).addEventListener('input', function () { data.email = this.value; });
       PCD.$('#sNotes', body).addEventListener('input', function () { data.notes = this.value; });
       PCD.$('#addProdBtn', body).addEventListener('click', function () {
-        data.products.push({ id: PCD.uid('p'), name: '', unit: 'kg' });
-        renderEditor();
-        setTimeout(function () {
-          const inputs = body.querySelectorAll('[data-pname]');
-          if (inputs.length) inputs[inputs.length - 1].focus();
-        }, 30);
-      });
-      PCD.on(body, 'input', '[data-pname]', function () {
-        const idx = parseInt(this.getAttribute('data-pname'), 10);
-        if (data.products[idx]) data.products[idx].name = this.value;
-      });
-      PCD.on(body, 'change', '[data-punit]', function () {
-        const idx = parseInt(this.getAttribute('data-punit'), 10);
-        if (data.products[idx]) data.products[idx].unit = this.value;
-      });
-      PCD.on(body, 'click', '[data-pdel]', function () {
-        const idx = parseInt(this.getAttribute('data-pdel'), 10);
-        data.products.splice(idx, 1);
-        renderEditor();
+        const excl = {};
+        prods.forEach(function (p) { excl[(p.name || '').toLowerCase()] = true; });
+        openIngredientPicker(excl, function (picked) {
+          picked.forEach(function (pk) {
+            const k = (pk.name || '').toLowerCase();
+            if (!k || excl[k]) return;
+            prods.push(pk); excl[k] = true;
+          });
+          renderEditor();
+        });
       });
     }
 
@@ -711,7 +760,6 @@
       });
     });
     saveBtn.addEventListener('click', function () {
-      // Read fresh from DOM (safety net)
       data.name = (PCD.$('#sName', body).value || '').trim();
       if (!data.name) { PCD.toast.error(PCD.i18n.t('toast_name_required')); return; }
       data.category = PCD.$('#sCat', body).value;
@@ -719,26 +767,36 @@
       data.whatsapp = (PCD.$('#sWa', body).value || '').trim();
       data.email = (PCD.$('#sEmail', body).value || '').trim();
       data.notes = (PCD.$('#sNotes', body).value || '').trim();
-      // Read products from DOM
-      const newProducts = [];
-      body.querySelectorAll('[data-pname]').forEach(function (inp, idx) {
-        const name = (inp.value || '').trim();
-        if (!name) return;
-        const unitSel = body.querySelector('[data-punit="' + idx + '"]');
-        const unit = unitSel ? unitSel.value : 'kg';
-        const orig = data.products[idx];
-        newProducts.push({ id: orig && orig.id || PCD.uid('p'), name: name, unit: unit });
-      });
-      data.products = newProducts;
 
-      if (existing) data.id = existing.id;
-      const saved = PCD.store.upsertInTable('suppliers', data, 'sup');
-      // Sync products to Ingredients table (auto-create with price=0)
-      let synced = 0;
-      data.products.forEach(function (p) {
-        if (syncProductToIngredients(p.name, p.unit)) synced++;
+      const supName = data.name;
+      // Tek kaynak reconcile: listedeki ingredient'leri bu tedarikçiye bağla,
+      // çıkarılanların bağını kaldır, yeni isimleri ingredient olarak oluştur
+      // (ingredients + inventory'ye otomatik düşer).
+      const prevLinked = ingredientsForSupplier(existing ? existing.name : supName);
+      const keep = {};
+      let created = 0;
+      prods.forEach(function (p) {
+        const nm = (p.name || '').trim();
+        if (!nm) return;
+        let ing = p.ingredientId ? PCD.store.getIngredient(p.ingredientId) : null;
+        if (!ing) ing = (PCD.store.listIngredients() || []).find(function (i) { return (i.name || '').toLowerCase() === nm.toLowerCase(); });
+        if (ing) {
+          keep[ing.id] = true;
+          if ((ing.supplier || '') !== supName) { ing.supplier = supName; PCD.store.upsertIngredient(ing); }
+        } else {
+          const ni = PCD.store.upsertIngredient({ name: nm, unit: p.unit || 'kg', pricePerUnit: 0, category: 'cat_other', supplier: supName });
+          if (ni && ni.id) { keep[ni.id] = true; created++; }
+        }
       });
-      PCD.toast.success(t('saved') + (synced > 0 ? ' · ' + synced + ' new ingredient(s)' : ''));
+      prevLinked.forEach(function (i) {
+        if (!keep[i.id]) { i.supplier = ''; PCD.store.upsertIngredient(i); }
+      });
+
+      // cache snapshot (geri uyumluluk; gerçek gösterim canlı ingredient'ten)
+      data.products = prods.map(function (p) { return { id: p.ingredientId || PCD.uid('p'), name: p.name, unit: p.unit || 'kg' }; });
+      if (existing) data.id = existing.id;
+      PCD.store.upsertInTable('suppliers', data, 'sup');
+      PCD.toast.success(t('saved') + (created > 0 ? ' · ' + created + ' ' + tt('sup_new_ingredients', 'new ingredient(s)') : ''));
       m.close();
       setTimeout(function () {
         const v = PCD.$('#view');
@@ -747,16 +805,72 @@
     });
   }
 
-  function syncProductToIngredients(name, unit) {
-    if (!name) return false;
-    const existing = PCD.store.listIngredients().find(function (i) {
-      return (i.name || '').toLowerCase() === name.toLowerCase();
+  // ---- Ingredient çoklu-seçici: mevcut kütüphaneden seç veya yeni oluştur ----
+  function openIngredientPicker(excludeNames, onConfirm) {
+    const t = PCD.i18n.t;
+    const all = (PCD.store.listIngredients() || []).slice().sort(function (a, b) { return (a.name || '').localeCompare(b.name || ''); });
+    const available = all.filter(function (i) { return !excludeNames[(i.name || '').toLowerCase()]; });
+    const selected = {};
+    const newOnes = [];
+    const body = PCD.el('div');
+    body.innerHTML =
+      '<input type="search" class="input" id="ipq" placeholder="' + PCD.escapeHtml(tt('search_ingredients_placeholder', 'Search ingredients')) + '" style="width:100%;margin-bottom:8px;">' +
+      '<div id="ipl" style="max-height:42vh;overflow:auto;"></div>' +
+      '<div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px;">' +
+        '<div class="text-muted text-sm mb-2">' + PCD.escapeHtml(tt('sup_new_ing_hint', 'Not in your library? Create it here — it goes to Ingredients & Inventory too.')) + '</div>' +
+        '<div class="flex gap-2" style="align-items:center;">' +
+          '<input type="text" class="input" id="ipNewName" placeholder="' + PCD.escapeHtml(tt('sup_new_ing_ph', 'New ingredient name')) + '" style="flex:1;">' +
+          '<select class="select" id="ipNewUnit" style="width:80px;">' + UNITS.map(function (u) { return '<option value="' + u + '"' + (u === 'kg' ? ' selected' : '') + '>' + u + '</option>'; }).join('') + '</select>' +
+          '<button type="button" class="btn btn-outline btn-sm" id="ipNewAdd">' + PCD.escapeHtml(tt('add', 'Add')) + '</button>' +
+        '</div>' +
+        '<div id="ipNewList" class="text-muted text-sm" style="margin-top:6px;"></div>' +
+      '</div>';
+    function paintList(q) {
+      const list = PCD.$('#ipl', body); const ql = (q || '').toLowerCase();
+      const rows = available.filter(function (i) { return !ql || (i.name || '').toLowerCase().indexOf(ql) >= 0; });
+      if (!rows.length) { list.innerHTML = '<div class="text-muted text-sm" style="padding:8px;">' + PCD.escapeHtml(tt('sup_no_more_ings', 'No more ingredients to add.')) + '</div>'; return; }
+      list.innerHTML = rows.map(function (i) {
+        const on = !!selected[i.id];
+        const supHint = (i.supplier || '').trim() ? ' <span class="text-muted" style="font-size:11px;">· ' + PCD.escapeHtml(i.supplier) + '</span>' : '';
+        return '<label style="display:flex;align-items:center;gap:10px;padding:7px 9px;border:1px solid var(--border);border-radius:var(--r-sm,8px);margin-bottom:4px;cursor:pointer;">' +
+          '<input type="checkbox" class="ip-cb" data-id="' + i.id + '"' + (on ? ' checked' : '') + ' style="width:17px;height:17px;flex-shrink:0;accent-color:var(--brand-600);">' +
+          '<span style="flex:1;min-width:0;">' + PCD.escapeHtml(i.name) + ' <span class="text-muted" style="font-size:11px;">' + PCD.escapeHtml(i.unit || '') + '</span>' + supHint + '</span></label>';
+      }).join('');
+      list.querySelectorAll('.ip-cb').forEach(function (cb) {
+        cb.addEventListener('change', function () {
+          const id = cb.getAttribute('data-id');
+          if (cb.checked) { const ing = PCD.store.getIngredient(id); if (ing) selected[id] = { ingredientId: id, name: ing.name, unit: ing.unit || 'kg' }; }
+          else delete selected[id];
+        });
+      });
+    }
+    paintList('');
+    function paintNew() {
+      PCD.$('#ipNewList', body).innerHTML = newOnes.length ? (PCD.escapeHtml(tt('sup_to_create', 'Will create')) + ': ' + newOnes.map(function (n) { return PCD.escapeHtml(n.name); }).join(', ')) : '';
+    }
+    function addNew() {
+      const nm = (PCD.$('#ipNewName', body).value || '').trim(); if (!nm) return;
+      const un = PCD.$('#ipNewUnit', body).value || 'kg';
+      if (!excludeNames[nm.toLowerCase()] && !newOnes.some(function (n) { return n.name.toLowerCase() === nm.toLowerCase(); })) {
+        newOnes.push({ name: nm, unit: un });
+      }
+      PCD.$('#ipNewName', body).value = ''; paintNew();
+    }
+    PCD.$('#ipNewAdd', body).addEventListener('click', addNew);
+    PCD.$('#ipNewName', body).addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); addNew(); } });
+    setTimeout(function () { const s = PCD.$('#ipq', body); if (s) { s.focus(); s.addEventListener('input', function () { paintList(s.value); }); } }, 80);
+    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') });
+    const addBtn = PCD.el('button', { class: 'btn btn-primary', style: { flex: '1' } });
+    addBtn.textContent = tt('add', 'Add');
+    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
+    footer.appendChild(cancelBtn); footer.appendChild(addBtn);
+    const m = PCD.modal.open({ title: tt('sup_add_ingredients', 'Add ingredients'), body: body, footer: footer, size: 'sm', closable: true });
+    cancelBtn.addEventListener('click', function () { m.close(); });
+    addBtn.addEventListener('click', function () {
+      const out = Object.keys(selected).map(function (id) { return selected[id]; }).concat(newOnes.map(function (n) { return { name: n.name, unit: n.unit }; }));
+      m.close();
+      if (out.length && onConfirm) onConfirm(out);
     });
-    if (existing) return false;
-    PCD.store.upsertIngredient({
-      name: name, unit: unit || 'kg', pricePerUnit: 0, category: 'cat_other',
-    });
-    return true;
   }
 
   PCD.tools = PCD.tools || {};
