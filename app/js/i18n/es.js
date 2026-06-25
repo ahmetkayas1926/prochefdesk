@@ -3174,4 +3174,9 @@ window.PCD.i18n.register('es', {
   inv_to_add: "A añadir",
   inv_to_deduct: "A descontar",
   items: "artículos",
+  inv_sales_date: "Fecha de ventas",
+  inv_sales_editing: "Editando esta fecha",
+  inv_sales_history: "Registros de ventas anteriores",
+  inv_sales_save_note: "El stock se actualiza según las ventas de este día. Si ya existe un registro para esta fecha, solo se aplica la diferencia.",
+  inv_sales_saved: "Ventas guardadas · {n} artículo(s) actualizados",
 });

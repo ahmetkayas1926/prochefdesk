@@ -469,6 +469,7 @@
         '<span style="color:#16433a;">' + PCD.fmtMoney(totalCost) + ' (' + PCD.fmtMoney(totalPortions > 0 ? totalCost / totalPortions : 0) + ' / ' + PCD.escapeHtml(PCD.i18n.t('portion_per_portion_short') || 'portion') + ')</span>' +
       '</div>';
 
+    if (PCD.gate && !PCD.gate.requireExport('portion')) return;
     PCD.print(html, (PCD.i18n.t('portion_print_title') || 'Scaled recipes') + ' — ' + totalPortions + ' ' + (PCD.i18n.t('portion_total_portions_label') || 'portions'));
   }
 
@@ -638,6 +639,7 @@
       '</div>' +
       groupsHtml +
       '<div class="tot"><span>' + PCD.escapeHtml(t('label_total_food_cost') || 'Total food cost') + '</span><span style="color:#16433a;">' + PCD.fmtMoney(res.total) + '</span></div>';
+    if (PCD.gate && !PCD.gate.requireExport('portion')) return;
     PCD.print(html, title);
   }
 
@@ -656,6 +658,7 @@
       }).catch(function () { PCD.toast.error(t('cr_xlsx_unavailable') || 'Excel library failed to load.'); });
       return;
     }
+    if (PCD.gate && !PCD.gate.requireExport('portion')) return;
     try {
       _doExportPortionXLSX(selectedRecipes, portionsMap, defaultPortions, ingMap, recipeMap, viewMode);
     } catch (err) {

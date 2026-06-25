@@ -3364,4 +3364,9 @@ window.PCD.i18n.register('en', {
   inv_to_add: "To add",
   inv_to_deduct: "To deduct",
   items: "items",
+  inv_sales_date: "Sales date",
+  inv_sales_editing: "Editing this date",
+  inv_sales_history: "Past sales records",
+  inv_sales_save_note: "Stock is updated to match this day's sales. If a record already exists for this date, only the difference is applied.",
+  inv_sales_saved: "Sales saved · {n} item(s) updated",
 });

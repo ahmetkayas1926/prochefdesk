@@ -983,6 +983,7 @@
 
   function printChecklist(tpl, session) {
     const name = (tpl && tpl.name) || (session && session.templateName) || L('chk_print_default', 'Checklist');
+    if (PCD.gate && !PCD.gate.requireExport('checklists')) return;
     PCD.print(buildChecklistHtml(tpl, session), name + (session ? ' — ' + PCD.fmtDate(session.completedAt || session.startedAt, { month: 'short', day: 'numeric' }) : ' — ' + L('chk_blank', 'blank')));
   }
 

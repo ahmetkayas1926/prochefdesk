@@ -3174,4 +3174,9 @@ window.PCD.i18n.register('fr', {
   inv_to_add: "À ajouter",
   inv_to_deduct: "À déduire",
   items: "articles",
+  inv_sales_date: "Date des ventes",
+  inv_sales_editing: "Modification de cette date",
+  inv_sales_history: "Historique des ventes",
+  inv_sales_save_note: "Le stock est mis à jour selon les ventes de ce jour. Si un enregistrement existe déjà pour cette date, seule la différence est appliquée.",
+  inv_sales_saved: "Ventes enregistrées · {n} article(s) mis à jour",
 });

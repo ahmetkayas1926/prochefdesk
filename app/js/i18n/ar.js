@@ -3174,4 +3174,9 @@ window.PCD.i18n.register('ar', {
   inv_to_add: "للإضافة",
   inv_to_deduct: "للخصم",
   items: "عنصر",
+  inv_sales_date: "تاريخ المبيعات",
+  inv_sales_editing: "تعديل هذا التاريخ",
+  inv_sales_history: "سجلات المبيعات السابقة",
+  inv_sales_save_note: "يُحدَّث المخزون ليطابق مبيعات هذا اليوم. إذا كان هناك سجل لهذا التاريخ، يُطبَّق الفرق فقط.",
+  inv_sales_saved: "تم حفظ المبيعات · تحديث {n} عنصر",
 });

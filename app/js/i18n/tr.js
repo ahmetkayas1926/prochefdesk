@@ -3416,4 +3416,9 @@ window.PCD.i18n.register('tr', {
   inv_to_add: "Eklenecekler",
   inv_to_deduct: "Düşülecekler",
   items: "kalem",
+  inv_sales_date: "Satış tarihi",
+  inv_sales_editing: "Bu tarih düzenleniyor",
+  inv_sales_history: "Geçmiş satış kayıtları",
+  inv_sales_save_note: "Stok bu günün satışlarına göre güncellenir. Bu tarihe ait kayıt varsa yalnızca fark uygulanır.",
+  inv_sales_saved: "Satışlar kaydedildi · {n} kalem güncellendi",
 });

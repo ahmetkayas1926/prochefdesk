@@ -2444,6 +2444,7 @@
         '<div class="wb-print-body">' + blocksHtml + '</div>' +
       '</div>';
 
+    if (PCD.gate && !PCD.gate.requireExport('whiteboards')) return;
     PCD.print(html, canvas.title || (t('whiteboard_title', 'Kitchen Whiteboard')));
   }
 

@@ -1110,117 +1110,137 @@
   // v2.44.45 — Satış kaydet: dishes (recipe) listesi + satılan adet → otomatik
   // tüketim (computeSalesDeductions → applyStockDeductions). Event/buffet ile aynı
   // onaylı düşüş akışı + aynı i18n anahtarları.
+  // v2.44.75 — Tarihli satış günlüğü: önce GÜN seç, o günün satışlarını gir/düzenle,
+  // geçmiş kayıtları gez. salesLog'ta tarih bazlı; tekrar girince ÇİFT-DÜŞME YOK
+  // (net fark uygulanır) + cihazlar-arası senkron. Variance/Menü Müh./Dashboard besler.
   function openRecordSales() {
     const t = PCD.i18n.t;
+    const esc = PCD.escapeHtml;
     const recipes = (PCD.store.listRecipes() || []).slice().sort(function (a, b) { return (a.name || '').localeCompare(b.name || ''); });
     if (!recipes.length) { PCD.toast.info(t('inv_no_recipes_for_sales')); return; }
-    const body = PCD.el('div');
-    let html = '<div class="mb-3" style="padding:12px;background:var(--brand-50);border-radius:var(--r-md);">' +
-      '<div style="font-weight:700;">' + PCD.escapeHtml(t('inv_record_sales')) + '</div>' +
-      '<div class="text-muted text-sm">' + PCD.escapeHtml(t('inv_record_sales_help')) + '</div>' +
-      '</div>';
+    const wsId = PCD.store.getActiveWorkspaceId();
+    const today = new Date().toISOString().slice(0, 10);
+    function logArr() { const root = PCD.store._read('salesLog') || {}; return (root[wsId] || []).filter(function (s) { return s && !s._deletedAt; }); }
+    function salesForDate(date) { const mp = {}; logArr().forEach(function (s) { if (s.date === date && s.recipeId) mp[s.recipeId] = (mp[s.recipeId] || 0) + (Number(s.qty) || 0); }); return mp; }
+    function salesDates() { const b = {}; logArr().forEach(function (s) { if (s.date) b[s.date] = (b[s.date] || 0) + (Number(s.qty) || 0); }); return Object.keys(b).sort().reverse().map(function (d) { return { date: d, total: b[d] }; }); }
     const _isPrep = function (r) { return (PCD.recipes && PCD.recipes.isPrep) ? PCD.recipes.isPrep(r) : !!(r.yieldAmount && r.yieldUnit); };
     const _hasDishes = recipes.some(function (r) { return !_isPrep(r); });
+    let selectedDate = today;
     let rsCat = _hasDishes ? 'dishes' : 'all';
-    const _catBtn = function (cat, label) {
-      const on = cat === rsCat;
-      return '<button type="button" class="btn btn-sm rs-cat-btn ' + (on ? 'btn-primary' : 'btn-outline') + '" data-cat="' + cat + '">' + PCD.escapeHtml(label) + '</button>';
-    };
-    html += '<div id="rsCat" style="display:flex;gap:6px;margin-bottom:8px;">' +
-      _catBtn('dishes', t('inv_cat_dishes')) + _catBtn('preps', t('inv_cat_preps')) + _catBtn('all', t('all')) + '</div>';
-    html += '<input type="search" id="rsSearch" placeholder="' + PCD.escapeHtml(t('inv_filter_placeholder')) + '" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);font-size:13px;margin-bottom:8px;box-sizing:border-box;">';
-    html += '<div id="rsList">';
-    recipes.forEach(function (r) {
-      html += '<label class="rs-row" data-prep="' + (_isPrep(r) ? '1' : '0') + '" data-name="' + PCD.escapeHtml((r.name || '').toLowerCase()) + '" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:4px;">' +
-        '<div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:14px;">' + PCD.escapeHtml(r.name || '') + '</div>' +
-        '<div class="text-muted" style="font-size:11px;">' + PCD.escapeHtml(t('inv_servings')) + ': ' + PCD.fmtNumber(r.servings || 1) + '</div></div>' +
-        '<input type="number" class="input rs-qty" data-rid="' + r.id + '" value="0" min="0" step="1" style="width:72px;text-align:center;font-weight:600;">' +
-        '<span class="text-muted" style="font-size:11px;">' + PCD.escapeHtml(t('inv_sold')) + '</span>' +
-        '</label>';
-    });
-    html += '</div>';
-    body.innerHTML = html;
+
+    const body = PCD.el('div');
+    function buildBody() {
+      const existing = salesForDate(selectedDate);
+      const isEditing = Object.keys(existing).length > 0;
+      const dates = salesDates();
+      const catBtn = function (cat, label) { return '<button type="button" class="btn btn-sm rs-cat-btn ' + (cat === rsCat ? 'btn-primary' : 'btn-outline') + '" data-cat="' + cat + '">' + esc(label) + '</button>'; };
+      let html =
+        '<div class="mb-3" style="padding:10px 12px;background:var(--brand-50);border-radius:var(--r-md);display:flex;align-items:center;gap:10px;flex-wrap:wrap;">' +
+          '<span style="font-weight:700;font-size:13px;">' + esc(t('inv_sales_date') || 'Sales date') + '</span>' +
+          '<input type="date" id="rsDate" value="' + selectedDate + '" max="' + today + '" style="padding:6px 8px;border:1px solid var(--border);border-radius:var(--r-sm);font-size:13px;">' +
+          (isEditing ? '<span style="font-size:11px;font-weight:700;color:#b45309;background:#fff7ed;border:1px solid #fed7aa;border-radius:999px;padding:2px 9px;">' + esc(t('inv_sales_editing') || 'Editing this date') + '</span>' : '') +
+        '</div>';
+      if (dates.length) {
+        html += '<details style="border:1px solid var(--border);border-radius:var(--r-md);margin-bottom:10px;overflow:hidden;">' +
+          '<summary style="cursor:pointer;padding:9px 12px;font-weight:700;font-size:13px;background:var(--surface-2);">' + esc(t('inv_sales_history') || 'Past sales records') + ' · ' + dates.length + '</summary>' +
+          '<div style="max-height:200px;overflow:auto;">' +
+            dates.map(function (d) { return '<button type="button" class="rs-date-pick" data-date="' + d.date + '" style="display:flex;justify-content:space-between;width:100%;padding:8px 12px;border:0;border-bottom:1px solid var(--border);background:' + (d.date === selectedDate ? 'var(--brand-50)' : 'transparent') + ';cursor:pointer;font-size:13px;text-align:left;"><span>' + esc(PCD.fmtDate(new Date(d.date + 'T00:00:00').getTime())) + '</span><span style="font-weight:700;color:var(--brand-700);">' + d.total + ' ' + esc(t('inv_sold') || 'sold') + '</span></button>'; }).join('') +
+          '</div></details>';
+      }
+      html += '<div id="rsCat" style="display:flex;gap:6px;margin-bottom:8px;">' + catBtn('dishes', t('inv_cat_dishes')) + catBtn('preps', t('inv_cat_preps')) + catBtn('all', t('all')) + '</div>';
+      html += '<input type="search" id="rsSearch" placeholder="' + esc(t('inv_filter_placeholder')) + '" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);font-size:13px;margin-bottom:8px;box-sizing:border-box;">';
+      html += '<div id="rsList">';
+      recipes.forEach(function (r) {
+        const pre = existing[r.id] || 0;
+        html += '<label class="rs-row" data-prep="' + (_isPrep(r) ? '1' : '0') + '" data-name="' + esc((r.name || '').toLowerCase()) + '" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:4px;">' +
+          '<div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:14px;">' + esc(r.name || '') + '</div>' +
+          '<div class="text-muted" style="font-size:11px;">' + esc(t('inv_servings')) + ': ' + PCD.fmtNumber(r.servings || 1) + '</div></div>' +
+          '<input type="number" class="input rs-qty" data-rid="' + r.id + '" value="' + pre + '" min="0" step="1" style="width:72px;text-align:center;font-weight:600;">' +
+          '<span class="text-muted" style="font-size:11px;">' + esc(t('inv_sold')) + '</span>' +
+          '</label>';
+      });
+      html += '</div>';
+      body.innerHTML = html;
+      const dateInp = PCD.$('#rsDate', body);
+      if (dateInp) dateInp.addEventListener('change', function () { selectedDate = this.value || today; buildBody(); });
+      PCD.$$('.rs-date-pick', body).forEach(function (b) { b.addEventListener('click', function () { selectedDate = b.getAttribute('data-date'); buildBody(); }); });
+      const search = PCD.$('#rsSearch', body);
+      function rsFilter() {
+        const q = (search && search.value || '').toLowerCase();
+        PCD.$$('.rs-row', body).forEach(function (row) {
+          const isP = row.getAttribute('data-prep') === '1';
+          const catOk = rsCat === 'all' || (rsCat === 'preps' ? isP : !isP);
+          const textOk = !q || (row.getAttribute('data-name') || '').indexOf(q) >= 0;
+          row.style.display = (catOk && textOk) ? '' : 'none';
+        });
+      }
+      if (search) search.addEventListener('input', rsFilter);
+      PCD.$$('.rs-cat-btn', body).forEach(function (b) {
+        b.addEventListener('click', function () {
+          rsCat = b.getAttribute('data-cat');
+          PCD.$$('.rs-cat-btn', body).forEach(function (x) { const on = x.getAttribute('data-cat') === rsCat; x.classList.toggle('btn-primary', on); x.classList.toggle('btn-outline', !on); });
+          rsFilter();
+        });
+      });
+      rsFilter();
+    }
+    buildBody();
 
     const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') });
-    const deductBtn = PCD.el('button', { class: 'btn btn-primary', style: { flex: '1' } });
-    deductBtn.innerHTML = PCD.icon('check', 14) + ' <span>' + (t('event_apply_inventory') || 'Deduct stock') + '</span>';
+    const saveBtn = PCD.el('button', { class: 'btn btn-primary', style: { flex: '1' } });
+    saveBtn.innerHTML = PCD.icon('check', 14) + ' <span>' + (t('save') || 'Save') + '</span>';
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
     footer.appendChild(cancelBtn);
-    footer.appendChild(deductBtn);
+    footer.appendChild(saveBtn);
     const m = PCD.modal.open({ title: t('inv_record_sales'), body: body, footer: footer, size: 'md', closable: true });
     cancelBtn.addEventListener('click', function () { m.close(); });
 
-    const search = PCD.$('#rsSearch', body);
-    function rsFilter() {
-      const q = (search && search.value || '').toLowerCase();
-      PCD.$$('.rs-row', body).forEach(function (row) {
-        const isP = row.getAttribute('data-prep') === '1';
-        const catOk = rsCat === 'all' || (rsCat === 'preps' ? isP : !isP);
-        const textOk = !q || (row.getAttribute('data-name') || '').indexOf(q) >= 0;
-        row.style.display = (catOk && textOk) ? '' : 'none';
-      });
-    }
-    if (search) search.addEventListener('input', rsFilter);
-    PCD.$$('.rs-cat-btn', body).forEach(function (b) {
-      b.addEventListener('click', function () {
-        rsCat = b.getAttribute('data-cat');
-        PCD.$$('.rs-cat-btn', body).forEach(function (x) {
-          const on = x.getAttribute('data-cat') === rsCat;
-          x.classList.toggle('btn-primary', on);
-          x.classList.toggle('btn-outline', !on);
-        });
-        rsFilter();
-      });
-    });
-    rsFilter();
-
-    deductBtn.addEventListener('click', function () {
+    saveBtn.addEventListener('click', function () {
       if (PCD.gate && !PCD.gate.requireAuth()) return;
-      const sales = {};
-      PCD.$$('.rs-qty', body).forEach(function (inp) { const q = Number(inp.value) || 0; if (q > 0) sales[inp.getAttribute('data-rid')] = q; });
-      if (!Object.keys(sales).length) { PCD.toast.info(t('inv_no_sales_entered')); return; }
+      const newSales = {};
+      PCD.$$('.rs-qty', body).forEach(function (inp) { const q = Number(inp.value) || 0; if (q > 0) newSales[inp.getAttribute('data-rid')] = q; });
+      const oldSales = salesForDate(selectedDate);
+      if (!Object.keys(newSales).length && !Object.keys(oldSales).length) { PCD.toast.info(t('inv_no_sales_entered')); return; }
       const ingMap = {}, recipeMap = {};
       PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
       PCD.store.listRecipes().forEach(function (r) { recipeMap[r.id] = r; });
-      const dd = computeSalesDeductions(sales, ingMap, recipeMap);
-      const ids = Object.keys(dd.deductions);
-      if (!ids.length) { PCD.toast.info((t('event_apply_inv_done') || '{n} item(s) deducted from stock').replace('{n}', 0)); return; }
+      const ddNew = computeSalesDeductions(newSales, ingMap, recipeMap);
+      const newIds = Object.keys(ddNew.deductions);
       confirmStockChange({
-        title: t('inv_record_sales') || 'Record sales',
-        verb: t('event_apply_inventory') || 'Deduct stock',
+        title: (t('inv_record_sales') || 'Record sales') + ' · ' + PCD.fmtDate(new Date(selectedDate + 'T00:00:00').getTime()),
+        verb: t('save') || 'Save',
         kind: 'deduct',
-        note: dd.skipped.length ? ('⚠ ' + dd.skipped.length + ': ' + dd.skipped.slice(0, 5).join(', ')) : null,
-        items: ids.map(function (iid) { const ing = ingMap[iid]; return { name: ing ? ing.name : iid, amount: dd.deductions[iid], unit: ing ? ing.unit : '' }; }),
+        note: t('inv_sales_save_note') || 'Stock is updated to match this day’s sales. If a record already exists for this date, only the difference is applied.',
+        items: newIds.map(function (iid) { const ing = ingMap[iid]; return { name: ing ? ing.name : iid, amount: ddNew.deductions[iid], unit: ing ? ing.unit : '' }; }),
       }).then(function (ok) {
         if (!ok) return;
-        const report = PCD.tools.inventory.applyStockDeductions(dd.deductions);
-        // v2.44.46 — Satışı recipe.salesCount'a akıt → Menü Mühendisliği popülerlik ekseni.
-        Object.keys(sales).forEach(function (rid) {
+        const inv = PCD.tools.inventory;
+        // 1) Inventory net-fark: önce eski kaydın düşüşünü GERİ ekle, sonra yeniyi düş.
+        //    Re-save aynı değerlerle → +X / −X = net 0 (çift-düşme yok / idempotent).
+        const ddOld = computeSalesDeductions(oldSales, ingMap, recipeMap);
+        if (Object.keys(ddOld.deductions).length && inv.applyStockAdditions) inv.applyStockAdditions(ddOld.deductions);
+        const report = inv.applyStockDeductions ? inv.applyStockDeductions(ddNew.deductions) : [];
+        // 2) recipe.salesCount: fark kadar güncelle (popülerlik ekseni).
+        const rids = {}; Object.keys(newSales).forEach(function (k) { rids[k] = 1; }); Object.keys(oldSales).forEach(function (k) { rids[k] = 1; });
+        Object.keys(rids).forEach(function (rid) {
+          const delta = (Number(newSales[rid]) || 0) - (Number(oldSales[rid]) || 0);
+          if (!delta) return;
           const rr = PCD.store.getRecipe(rid);
-          if (rr) { rr.salesCount = (Number(rr.salesCount) || 0) + (Number(sales[rid]) || 0); PCD.store.upsertRecipe(rr); }
+          if (rr) { rr.salesCount = Math.max(0, (Number(rr.salesCount) || 0) + delta); PCD.store.upsertRecipe(rr); }
         });
-        // v2.44.x — Tarihli satış kaydı (salesLog): Variance / Menü Müh. / Dashboard
-        // tek satış gerçeğinden beslenir → çift giriş biter. Yerel; bulut senkronu ayrı faz.
+        // 3) salesLog: bu TARİHİN kayıtlarını değiştir (eski satırları çıkar + yeni ekle) → senkron.
         try {
-          const slWs = PCD.store.getActiveWorkspaceId();
-          const slRoot = PCD.store._read('salesLog') || {};
-          const slOld = (slRoot[slWs] || []);
-          const slArr = slOld.slice();
-          const slToday = new Date().toISOString().slice(0, 10);
-          Object.keys(sales).forEach(function (rid) {
-            const q = Number(sales[rid]) || 0;
-            if (q > 0) slArr.push({ id: PCD.uid('sl'), date: slToday, recipeId: rid, qty: q });
-          });
-          const slNext = Object.assign({}, slRoot); slNext[slWs] = slArr;
-          PCD.store.set('salesLog', slNext);
-          // v2.44.67 — cihazlar-arası senkron (array tablo, waste pattern)
-          if (PCD.cloudPerTable && PCD.cloudPerTable.queueArraySync) {
-            try { PCD.cloudPerTable.queueArraySync('sales_log', slWs, slOld, slArr); } catch (e) { /* offline ok */ }
-          }
+          const root = PCD.store._read('salesLog') || {};
+          const oldArr = (root[wsId] || []);
+          const newArr = oldArr.filter(function (s) { return !s || s.date !== selectedDate; });
+          Object.keys(newSales).forEach(function (rid) { const q = Number(newSales[rid]) || 0; if (q > 0) newArr.push({ id: PCD.uid('sl'), date: selectedDate, recipeId: rid, qty: q }); });
+          const next = Object.assign({}, root); next[wsId] = newArr;
+          PCD.store.set('salesLog', next);
+          if (PCD.cloudPerTable && PCD.cloudPerTable.queueArraySync) { try { PCD.cloudPerTable.queueArraySync('sales_log', wsId, oldArr, newArr); } catch (e) { /* offline ok */ } }
         } catch (e) { PCD.warn && PCD.warn('salesLog write failed', e); }
         const deducted = report.filter(function (r) { return r.tracked; }).length;
         const lowNow = report.filter(function (r) { return r.tracked && (r.status === 'low' || r.status === 'critical' || r.status === 'out'); }).length;
-        PCD.toast.success((t('event_apply_inv_done') || '{n} item(s) deducted from stock').replace('{n}', deducted) + (lowNow ? ' · ' + lowNow + ' ⚠' : ''));
+        PCD.toast.success((t('inv_sales_saved') || 'Sales saved · {n} item(s) updated').replace('{n}', deducted) + (lowNow ? ' · ' + lowNow + ' ⚠' : ''));
         m.close();
         setTimeout(function () { const v = PCD.$('#view'); if (v && PCD.router.currentView() === 'inventory') render(v); }, 200);
       });

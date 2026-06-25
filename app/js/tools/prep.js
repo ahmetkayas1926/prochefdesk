@@ -935,6 +935,7 @@
   function printSheet(sheet) {
     const pageData = paginate(sheet);
     if (!pageData.pages.length) { PCD.toast.warning(t('prep_nothing_to_print', 'Add at least one dish first')); return; }
+    if (PCD.gate && !PCD.gate.requireExport('prepSheets')) return;
     PCD.print(renderPages(sheet, pageData, 'print'), sheet.name || t('prep_title', 'Prep Sheet'));
   }
 
