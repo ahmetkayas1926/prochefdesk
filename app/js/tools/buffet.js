@@ -1438,7 +1438,18 @@
     orderBtn.innerHTML = PCD.icon('truck', 16) + ' <span>' + (t('buffet_order_list') || 'Order List') + '</span>';
     // v2.44.44 — Buffet → envanter düşüşü (event ile aynı: manuel buton + onay)
     const deductBtn = PCD.el('button', { class: 'btn btn-outline' });
-    deductBtn.innerHTML = '📦 <span>' + (t('event_apply_inventory') || 'Deduct stock') + '</span>';
+    function _renderBufDeductState() {
+      if (data._stockDeductedAt) {
+        deductBtn.disabled = true;
+        deductBtn.innerHTML = PCD.icon('check', 14) + ' <span>' + (t('inv_already_deducted') || 'Stock deducted') + '</span>';
+        deductBtn.style.color = '#15803d'; deductBtn.style.borderColor = '#bbf7d0'; deductBtn.style.background = '#f0fdf4';
+      } else {
+        deductBtn.disabled = false;
+        deductBtn.innerHTML = '📦 <span>' + (t('event_apply_inventory') || 'Deduct stock') + '</span>';
+        deductBtn.style.color = ''; deductBtn.style.borderColor = ''; deductBtn.style.background = '';
+      }
+    }
+    _renderBufDeductState();
     const reportBtn = PCD.el('button', { class: 'btn btn-outline' });
     reportBtn.innerHTML = PCD.icon('print', 16) + ' <span>' + (t('buffet_print_report') || 'Cost Report') + '</span>';
     // v2.44.35 — Share (metin + "PDF olarak gönder" → cost report yazdır)
@@ -1511,33 +1522,35 @@
       openBuffetOrderList(data);
     });
     deductBtn.addEventListener('click', function () {
+      if (data._stockDeductedAt) return; // KİLİT — zaten düşüldü
+      if (PCD.gate && !PCD.gate.requireAuth()) return;
       const ingMap = {}, recipeMap = {};
       PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
       PCD.store.listRecipes().forEach(function (r) { recipeMap[r.id] = r; });
       const dd = computeBuffetDeductions(data, ingMap, recipeMap);
       const ids = Object.keys(dd.deductions);
       if (!ids.length) { PCD.toast.info((t('event_apply_inv_done') || '{n} item(s) deducted from stock').replace('{n}', 0)); return; }
-      const preview = ids.slice(0, 6).map(function (iid) {
-        const ing = ingMap[iid];
-        return '• ' + (ing ? ing.name : iid) + ': ' + (Math.round(dd.deductions[iid] * 10) / 10) + (ing ? ing.unit : '');
-      }).join('\n');
-      const more = ids.length - 6;
-      const text = (t('event_apply_inv_msg') || '{n} ingredient(s) will be deducted from inventory. Continue?').replace('{n}', ids.length) +
-        '\n\n' + preview + (more > 0 ? '\n• … +' + more : '') +
-        (dd.skipped.length ? '\n\n⚠ ' + dd.skipped.length + ': ' + dd.skipped.slice(0, 5).join(', ') : '');
-      PCD.modal.confirm({
-        icon: '📦', iconKind: 'warning',
-        title: t('event_apply_inventory') || 'Deduct stock',
-        text: text,
-        okText: t('event_apply_inventory') || 'Deduct stock'
-      }).then(function (ok) {
-        if (!ok) return;
-        const report = (PCD.tools.inventory && PCD.tools.inventory.applyStockDeductions)
-          ? PCD.tools.inventory.applyStockDeductions(dd.deductions) : [];
+      const inv = PCD.tools.inventory;
+      const confirmFn = (inv && inv.confirmStockChange) ? inv.confirmStockChange : null;
+      const proceed = function () {
+        const report = (inv && inv.applyStockDeductions) ? inv.applyStockDeductions(dd.deductions) : [];
         const deducted = report.filter(function (r) { return r.tracked; }).length;
         const lowNow = report.filter(function (r) { return r.tracked && (r.status === 'low' || r.status === 'critical' || r.status === 'out'); }).length;
+        // KİLİT — bir daha düşülemesin: flag + kaydet + buton rozete dön.
+        data.name = (PCD.$('#bufName', body).value || '').trim() || t('untitled');
+        data._stockDeductedAt = new Date().toISOString();
+        upsertBuffet(existing ? Object.assign({}, existing, data) : data);
+        _renderBufDeductState();
         PCD.toast.success((t('event_apply_inv_done') || '{n} item(s) deducted from stock').replace('{n}', deducted) + (lowNow ? ' · ' + lowNow + ' ⚠' : ''));
-      });
+      };
+      if (!confirmFn) { proceed(); return; }
+      confirmFn({
+        title: t('event_apply_inventory') || 'Deduct stock',
+        verb: t('event_apply_inventory') || 'Deduct stock',
+        kind: 'deduct',
+        note: dd.skipped.length ? ('⚠ ' + dd.skipped.length + ': ' + dd.skipped.slice(0, 5).join(', ')) : null,
+        items: ids.map(function (iid) { const ing = ingMap[iid]; return { name: ing ? ing.name : iid, amount: dd.deductions[iid], unit: ing ? ing.unit : '' }; }),
+      }).then(function (ok) { if (ok) proceed(); });
     });
     reportBtn.addEventListener('click', function () {
       data.name = (PCD.$('#bufName', body).value || '').trim() || t('untitled');

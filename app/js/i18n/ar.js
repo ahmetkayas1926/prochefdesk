@@ -3168,4 +3168,10 @@ window.PCD.i18n.register('ar', {
   account_perk_share: "مشاركة الروابط ورموز QR",
   sup_add_stock_q_title: "إضافة هذا الطلب إلى المخزون؟",
   sup_add_stock_q: "هل تتابع المخزون؟ أضف هذه العناصر إلى مخزونك الآن. إذا كنت تستخدم ورقة الطلب فقط، تجاوز.",
+  inv_already_deducted: "تم خصم المخزون",
+  inv_confirm_add_note: "ستُضاف هذه العناصر إلى مخزونك. لا يمكن التراجع.",
+  inv_confirm_deduct_note: "ستُخصم هذه العناصر من مخزونك. لا يمكن التراجع.",
+  inv_to_add: "للإضافة",
+  inv_to_deduct: "للخصم",
+  items: "عنصر",
 });

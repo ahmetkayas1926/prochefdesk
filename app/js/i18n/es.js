@@ -3168,4 +3168,10 @@ window.PCD.i18n.register('es', {
   account_perk_share: "Compartir enlaces y QR",
   sup_add_stock_q_title: "¿Añadir este pedido al stock?",
   sup_add_stock_q: "¿Llevas el inventario? Añade estos artículos a tu stock ahora. Si solo usas la hoja de pedido, omítelo.",
+  inv_already_deducted: "Stock descontado",
+  inv_confirm_add_note: "Estos artículos se AÑADIRÁN a tu stock. No se puede deshacer.",
+  inv_confirm_deduct_note: "Estos artículos se DESCONTARÁN de tu stock. No se puede deshacer.",
+  inv_to_add: "A añadir",
+  inv_to_deduct: "A descontar",
+  items: "artículos",
 });

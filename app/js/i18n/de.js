@@ -3168,4 +3168,10 @@ window.PCD.i18n.register('de', {
   account_perk_share: "Teilen per Link & QR-Code",
   sup_add_stock_q_title: "Diese Bestellung zum Bestand hinzufügen?",
   sup_add_stock_q: "Führst du Inventar? Füge diese Artikel jetzt deinem Bestand hinzu. Wenn du nur die Bestellliste nutzt, überspringe.",
+  inv_already_deducted: "Bestand abgezogen",
+  inv_confirm_add_note: "Diese Artikel werden deinem Bestand HINZUGEFÜGT. Nicht rückgängig machbar.",
+  inv_confirm_deduct_note: "Diese Artikel werden von deinem Bestand ABGEZOGEN. Nicht rückgängig machbar.",
+  inv_to_add: "Hinzuzufügen",
+  inv_to_deduct: "Abzuziehen",
+  items: "Artikel",
 });

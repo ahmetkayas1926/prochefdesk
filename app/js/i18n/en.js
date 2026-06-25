@@ -3358,4 +3358,10 @@ window.PCD.i18n.register('en', {
   account_perk_nowatermark: "Clean exports — no watermark",
   account_pro_active: "Pro — everything unlocked",
   account_pro_perks: "Pro unlocks",
+  inv_already_deducted: "Stock deducted",
+  inv_confirm_add_note: "These items will be ADDED to your stock. This cannot be undone.",
+  inv_confirm_deduct_note: "These items will be DEDUCTED from your stock. This cannot be undone.",
+  inv_to_add: "To add",
+  inv_to_deduct: "To deduct",
+  items: "items",
 });

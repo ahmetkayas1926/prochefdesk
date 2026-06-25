@@ -443,9 +443,21 @@
     shopBtn.innerHTML = '🛒 ' + PCD.escapeHtml(t('event_shopping_list') || 'Shopping list');
     // v2.44 — A1: opt-in "deduct stock from inventory" (only when menu has items)
     let applyInvBtn = null;
+    function _renderDeductBtnState() {
+      if (!applyInvBtn) return;
+      if (data._stockDeductedAt) {
+        applyInvBtn.disabled = true;
+        applyInvBtn.innerHTML = PCD.icon('check', 14) + ' ' + PCD.escapeHtml(t('inv_already_deducted') || 'Stock deducted');
+        applyInvBtn.style.color = '#15803d'; applyInvBtn.style.borderColor = '#bbf7d0'; applyInvBtn.style.background = '#f0fdf4';
+      } else {
+        applyInvBtn.disabled = false;
+        applyInvBtn.innerHTML = '📦 ' + PCD.escapeHtml(t('event_apply_inventory') || 'Deduct stock');
+        applyInvBtn.style.color = ''; applyInvBtn.style.borderColor = ''; applyInvBtn.style.background = '';
+      }
+    }
     if (data.menu && data.menu.length) {
       applyInvBtn = PCD.el('button', { class: 'btn btn-outline' });
-      applyInvBtn.innerHTML = '📦 ' + PCD.escapeHtml(t('event_apply_inventory') || 'Deduct stock');
+      _renderDeductBtnState();
     }
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
     if (deleteBtn) footer.appendChild(deleteBtn);
@@ -491,33 +503,35 @@
     });
     shopBtn.addEventListener('click', function () { openShoppingList(data); });
     if (applyInvBtn) applyInvBtn.addEventListener('click', function () {
+      if (data._stockDeductedAt) return; // KİLİT — zaten düşüldü
+      if (PCD.gate && !PCD.gate.requireAuth()) return;
       const ingMap = {}, recipeMap = {};
       PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
       PCD.store.listRecipes().forEach(function (r) { recipeMap[r.id] = r; });
       const dd = PCD.tools.events.computeEventDeductions(data, ingMap, recipeMap);
       const ids = Object.keys(dd.deductions);
       if (!ids.length) { PCD.toast.info(t('event_apply_inv_done').replace('{n}', 0)); return; }
-      const preview = ids.slice(0, 6).map(function (iid) {
-        const ing = ingMap[iid];
-        return '• ' + (ing ? ing.name : iid) + ': ' + (Math.round(dd.deductions[iid] * 10) / 10) + (ing ? ing.unit : '');
-      }).join('\n');
-      const more = ids.length - 6;
-      const text = (t('event_apply_inv_msg') || '{n} ingredient(s) will be deducted from inventory. Continue?').replace('{n}', ids.length) +
-        '\n\n' + preview + (more > 0 ? '\n• … +' + more : '') +
-        (dd.skipped.length ? '\n\n⚠ ' + dd.skipped.length + ': ' + dd.skipped.slice(0, 5).join(', ') : '');
-      PCD.modal.confirm({
-        icon: '📦', iconKind: 'warning',
-        title: t('event_apply_inventory') || 'Deduct stock',
-        text: text,
-        okText: t('event_apply_inventory') || 'Deduct stock'
-      }).then(function (ok) {
-        if (!ok) return;
-        const report = (PCD.tools.inventory && PCD.tools.inventory.applyStockDeductions)
-          ? PCD.tools.inventory.applyStockDeductions(dd.deductions) : [];
+      const inv = PCD.tools.inventory;
+      const confirmFn = (inv && inv.confirmStockChange) ? inv.confirmStockChange : null;
+      const proceed = function () {
+        const report = (inv && inv.applyStockDeductions) ? inv.applyStockDeductions(dd.deductions) : [];
         const deducted = report.filter(function (r) { return r.tracked; }).length;
         const lowNow = report.filter(function (r) { return r.tracked && (r.status === 'low' || r.status === 'critical' || r.status === 'out'); }).length;
+        // KİLİT — bir daha düşülemesin: flag + kaydet + buton rozete dön.
+        data._stockDeductedAt = new Date().toISOString();
+        const saved = PCD.store.upsertInTable('events', data, 'ev');
+        if (saved && saved.id) data.id = saved.id;
+        _renderDeductBtnState();
         PCD.toast.success((t('event_apply_inv_done') || '{n} item(s) deducted from stock').replace('{n}', deducted) + (lowNow ? ' · ' + lowNow + ' ⚠' : ''));
-      });
+      };
+      if (!confirmFn) { proceed(); return; }
+      confirmFn({
+        title: t('event_apply_inventory') || 'Deduct stock',
+        verb: t('event_apply_inventory') || 'Deduct stock',
+        kind: 'deduct',
+        note: dd.skipped.length ? ('⚠ ' + dd.skipped.length + ': ' + dd.skipped.slice(0, 5).join(', ')) : null,
+        items: ids.map(function (iid) { const ing = ingMap[iid]; return { name: ing ? ing.name : iid, amount: dd.deductions[iid], unit: ing ? ing.unit : '' }; }),
+      }).then(function (ok) { if (ok) proceed(); });
     });
     saveBtn.addEventListener('click', function () {
       if (PCD.gate && !PCD.gate.requireAuth()) return;

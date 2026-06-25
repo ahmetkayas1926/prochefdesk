@@ -3168,4 +3168,10 @@ window.PCD.i18n.register('fr', {
   account_perk_share: "Partage par lien et QR",
   sup_add_stock_q_title: "Ajouter cette commande au stock ?",
   sup_add_stock_q: "Vous suivez l'inventaire ? Ajoutez ces articles à votre stock maintenant. Si vous n'utilisez que la feuille de commande, ignorez.",
+  inv_already_deducted: "Stock déduit",
+  inv_confirm_add_note: "Ces articles seront AJOUTÉS à votre stock. Action irréversible.",
+  inv_confirm_deduct_note: "Ces articles seront DÉDUITS de votre stock. Action irréversible.",
+  inv_to_add: "À ajouter",
+  inv_to_deduct: "À déduire",
+  items: "articles",
 });

@@ -3410,4 +3410,10 @@ window.PCD.i18n.register('tr', {
   account_perk_nowatermark: "Temiz çıktı — filigran yok",
   account_pro_active: "Pro — her şey açık",
   account_pro_perks: "Pro neleri açar",
+  inv_already_deducted: "Stok düşüldü",
+  inv_confirm_add_note: "Bu kalemler stoğuna EKLENECEK. Bu işlem geri alınamaz.",
+  inv_confirm_deduct_note: "Bu kalemler stoğundan DÜŞÜLECEK. Bu işlem geri alınamaz.",
+  inv_to_add: "Eklenecekler",
+  inv_to_deduct: "Düşülecekler",
+  items: "kalem",
 });

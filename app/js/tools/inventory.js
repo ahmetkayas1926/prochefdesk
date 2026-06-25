@@ -132,6 +132,47 @@
     return report;
   }
 
+  // Ortak stok-değişim onay modalı: ciddi onay + AÇILIR-KAPANIR kalem listesi (uzun
+  // olabilir). opts: { title, verb, kind:'add'|'deduct', note, items:[{name,amount,unit}] }
+  // → Promise<bool> (onaylandı mı). event/buffet/sales/mark-received hepsi kullanır.
+  function confirmStockChange(opts) {
+    opts = opts || {};
+    const t = PCD.i18n.t;
+    const items = opts.items || [];
+    const isAdd = opts.kind === 'add';
+    return new Promise(function (resolve) {
+      const body = PCD.el('div');
+      const rows = items.map(function (it) {
+        const sign = isAdd ? '+' : '−';
+        const col = isAdd ? '#15803d' : '#b45309';
+        return '<div style="display:flex;justify-content:space-between;gap:10px;padding:6px 10px;border-bottom:1px solid var(--border);font-size:13px;">' +
+          '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;">' + PCD.escapeHtml(it.name || '?') + '</span>' +
+          '<span style="font-weight:700;color:' + col + ';white-space:nowrap;flex:0 0 auto;">' + sign + ' ' + PCD.fmtNumber(it.amount) + ' ' + PCD.escapeHtml(it.unit || '') + '</span>' +
+        '</div>';
+      }).join('');
+      body.innerHTML =
+        '<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:' + (isAdd ? '#f0fdf4' : '#fff7ed') + ';border:1px solid ' + (isAdd ? '#bbf7d0' : '#fed7aa') + ';border-radius:var(--r-md);margin-bottom:12px;">' +
+          '<span style="font-size:18px;flex:0 0 auto;">' + (isAdd ? '📥' : '📦') + '</span>' +
+          '<div style="font-size:13px;line-height:1.5;color:var(--text-2);">' + PCD.escapeHtml(opts.note || (isAdd ? (t('inv_confirm_add_note') || 'These items will be ADDED to your stock. This cannot be undone.') : (t('inv_confirm_deduct_note') || 'These items will be DEDUCTED from your stock. This cannot be undone.'))) + '</div>' +
+        '</div>' +
+        '<details style="border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;">' +
+          '<summary style="cursor:pointer;padding:10px 12px;font-weight:700;font-size:13px;background:var(--surface-2);">' +
+            PCD.escapeHtml(isAdd ? (t('inv_to_add') || 'To add') : (t('inv_to_deduct') || 'To deduct')) + ' · ' + items.length + ' ' + PCD.escapeHtml(t('items') || 'items') +
+          '</summary>' +
+          '<div style="max-height:300px;overflow:auto;">' + (rows || '<div style="padding:10px;color:var(--text-3);font-size:13px;">—</div>') + '</div>' +
+        '</details>';
+      const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') });
+      const okBtn = PCD.el('button', { class: 'btn btn-primary', style: { flex: '1' } });
+      okBtn.textContent = opts.verb || (isAdd ? (t('inv_mark_received') || 'Add to stock') : (t('event_apply_inventory') || 'Deduct stock'));
+      const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
+      footer.appendChild(cancelBtn); footer.appendChild(okBtn);
+      const m = PCD.modal.open({ title: opts.title || okBtn.textContent, body: body, footer: footer, size: 'md', closable: true });
+      let done = false;
+      cancelBtn.addEventListener('click', function () { if (done) return; done = true; m.close(); resolve(false); });
+      okBtn.addEventListener('click', function () { if (done) return; done = true; m.close(); resolve(true); });
+    });
+  }
+
   // v2.44.45 — Satış → tüketim. sales = { recipeId: qtySold }. Her satılan dish =
   // 1 porsiyon; recipe.servings porsiyon verir → scale = qty / servings. Recipe
   // flattenIngredients ile gerçek malzemeye iner (alt-tarifler dahil), stok birimine
@@ -1144,19 +1185,12 @@
       const dd = computeSalesDeductions(sales, ingMap, recipeMap);
       const ids = Object.keys(dd.deductions);
       if (!ids.length) { PCD.toast.info((t('event_apply_inv_done') || '{n} item(s) deducted from stock').replace('{n}', 0)); return; }
-      const preview = ids.slice(0, 6).map(function (iid) {
-        const ing = ingMap[iid];
-        return '• ' + (ing ? ing.name : iid) + ': ' + (Math.round(dd.deductions[iid] * 10) / 10) + (ing ? ing.unit : '');
-      }).join('\n');
-      const more = ids.length - 6;
-      const text = (t('event_apply_inv_msg') || '{n} ingredient(s) will be deducted from inventory. Continue?').replace('{n}', ids.length) +
-        '\n\n' + preview + (more > 0 ? '\n• … +' + more : '') +
-        (dd.skipped.length ? '\n\n⚠ ' + dd.skipped.length + ': ' + dd.skipped.slice(0, 5).join(', ') : '');
-      PCD.modal.confirm({
-        icon: '📦', iconKind: 'warning',
-        title: t('event_apply_inventory') || 'Deduct stock',
-        text: text,
-        okText: t('event_apply_inventory') || 'Deduct stock'
+      confirmStockChange({
+        title: t('inv_record_sales') || 'Record sales',
+        verb: t('event_apply_inventory') || 'Deduct stock',
+        kind: 'deduct',
+        note: dd.skipped.length ? ('⚠ ' + dd.skipped.length + ': ' + dd.skipped.slice(0, 5).join(', ')) : null,
+        items: ids.map(function (iid) { const ing = ingMap[iid]; return { name: ing ? ing.name : iid, amount: dd.deductions[iid], unit: ing ? ing.unit : '' }; }),
       }).then(function (ok) {
         if (!ok) return;
         const report = PCD.tools.inventory.applyStockDeductions(dd.deductions);
@@ -1394,18 +1428,11 @@
           items.push(it);
         });
       });
-      const n = items.length;
-      const preview = items.slice(0, 6).map(function (it) {
-        return '• ' + it.ing.name + ': +' + PCD.fmtNumber(it.qty) + ' ' + (it.ing.unit || '');
-      }).join('\n');
-      const more = n - 6;
-      const text = (PCD.i18n.t('inv_receive_msg') || '{n} item(s) will be added to stock. Continue?').replace('{n}', n) +
-        '\n\n' + preview + (more > 0 ? '\n• … +' + more : '');
-      PCD.modal.confirm({
-        icon: '📥', iconKind: 'info',
+      confirmStockChange({
         title: PCD.i18n.t('inv_mark_received'),
-        text: text,
-        okText: PCD.i18n.t('inv_mark_received')
+        verb: PCD.i18n.t('inv_mark_received'),
+        kind: 'add',
+        items: items.map(function (it) { return { name: it.ing.name, amount: it.qty, unit: it.ing.unit || '' }; }),
       }).then(function (ok) {
         if (!ok) return;
         const report = (PCD.tools.inventory && PCD.tools.inventory.applyStockAdditions)
@@ -1538,5 +1565,5 @@
   }
 
   PCD.tools = PCD.tools || {};
-  PCD.tools.inventory = { render: render, openEditor: openEditor, computeStatus: computeStatus, applyStockDeductions: applyStockDeductions, applyStockAdditions: applyStockAdditions, computeSalesDeductions: computeSalesDeductions };
+  PCD.tools.inventory = { render: render, openEditor: openEditor, computeStatus: computeStatus, applyStockDeductions: applyStockDeductions, applyStockAdditions: applyStockAdditions, computeSalesDeductions: computeSalesDeductions, confirmStockChange: confirmStockChange };
 })();
