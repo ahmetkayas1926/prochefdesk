@@ -59,6 +59,8 @@
     team:                 { stateKey: 'team',                 wsScoped: true, isArray: true },
     // v2.9.42 — Kitchen Whiteboard cloud sync
     whiteboards:          { stateKey: 'whiteboards',          wsScoped: true, isArray: true },
+    // v2.44.67 — Sales Log cloud sync (Record sales → tarihli satış kaydı)
+    sales_log:            { stateKey: 'salesLog',             wsScoped: true, isArray: true },
   };
 
   // Pending changes queue. Her item: { table, op, id, wsId?, data?, updated_at? }
@@ -528,6 +530,8 @@
       supabase.from('buffets').select('*').eq('user_id', user.id),
       supabase.from('mise_plans').select('*').eq('user_id', user.id),
       supabase.from('team').select('*').eq('user_id', user.id),
+      // v2.44.67 — Sales Log cloud sync
+      supabase.from('sales_log').select('*').eq('user_id', user.id),
     ];
 
     return Promise.all(fetches).then(function (results) {
@@ -544,7 +548,7 @@
              rostersRes,
              prepSheetsRes,
              tombsRes,
-             wbRes, bufRes, miseRes, teamRes] = results;
+             wbRes, bufRes, miseRes, teamRes, salesLogRes] = results;
 
       // Build state in the format store.js expects:
       // workspaces: { wsId: ws }
@@ -662,6 +666,8 @@
       state.buffets = packArrayByWs(bufRes.data);
       state.misePlans = packArrayByWs(miseRes.data);
       state.team = packArrayByWs(teamRes.data);
+      // v2.44.67 — Sales Log cloud sync
+      state.salesLog = packArrayByWs(salesLogRes.data);
 
       // v2.6.74 — Workspace tombstones: { wsId: deletedAt }
       state._deletedWorkspaces = {};
@@ -712,6 +718,8 @@
       'rosters',
       // v2.16 — Prep Sheet cloud sync
       'prep_sheets',
+      // v2.44.67 — Sales Log cloud sync
+      'sales_log',
       'workspace_tombstones', 'workspaces', 'user_prefs',
     ];
 
@@ -813,6 +821,7 @@
       ['misePlans',     'mise_plans'],
       ['team',          'team'],
       ['whiteboards',   'whiteboards'],
+      ['salesLog',      'sales_log'],
     ];
     arrayTables.forEach(function (pair) {
       const stateKey = pair[0];

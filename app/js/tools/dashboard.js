@@ -597,6 +597,31 @@
         if (n > 0) avgFc = { pct: sum / n, n: n };
       })();
 
+      // 6.2b — Bugün P&L: salesLog'tan bugünün satışları → ciro · food cost % · kâr.
+      // Günlük "kokpit" — Record sales'e girilen tarihli satışları besler.
+      let todayPL = null;
+      (function () {
+        try {
+          const ws = PCD.store.getActiveWorkspaceId && PCD.store.getActiveWorkspaceId();
+          const root = (PCD.store._read && PCD.store._read('salesLog')) || {};
+          const today = new Date().toISOString().slice(0, 10);
+          const recById = {}; recipes.forEach(function (r) { recById[r.id] = r; });
+          let rev = 0, cost = 0, units = 0;
+          (root[ws] || []).forEach(function (s) {
+            if (!s || s._deletedAt || s.date !== today || !s.recipeId) return;
+            const r = recById[s.recipeId]; if (!r) return;
+            const qty = Number(s.qty) || 0; if (qty <= 0) return;
+            units += qty;
+            const price = Number(r.salePrice) || 0;
+            if (price <= 0) return;
+            const c = PCD.recipes.computeFoodCost(r, ingMap, recipeMapForCost) || 0;
+            const costPer = (Number(r.servings) > 0) ? c / Number(r.servings) : c;
+            rev += price * qty; cost += costPer * qty;
+          });
+          if (units > 0) todayPL = { units: units, rev: rev, cost: cost, profit: rev - cost, fcPct: rev > 0 ? (cost / rev * 100) : null };
+        } catch (e) {}
+      })();
+
       // 6.2b — Bu haftanın işçilik maliyeti (rosters). Pro-gated.
       let labour = null;
       (function () {
@@ -748,8 +773,33 @@
           }).join('') +
           '</div>';
       }
+      // Bugün P&L kartı — günlük kokpit (en üstte)
+      let todayCard = '';
+      {
+        const tile = function (lbl, val, color) {
+          return '<div style="flex:1;min-width:88px;"><div style="font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em;">' + PCD.escapeHtml(lbl) + '</div>' +
+            '<div style="font-size:22px;font-weight:800;color:' + (color || 'var(--text)') + ';margin-top:2px;">' + val + '</div></div>';
+        };
+        if (todayPL) {
+          const fcCol = todayPL.fcPct == null ? 'var(--text-3)' : (todayPL.fcPct <= 35 ? '#1f9d6b' : (todayPL.fcPct <= 40 ? '#d97706' : '#dc2626'));
+          const pCol = todayPL.profit >= 0 ? '#1f9d6b' : '#dc2626';
+          todayCard = '<div class="cc-today" data-action="view-inventory" style="cursor:pointer;border:1px solid var(--border);border-radius:var(--r-md);padding:14px 16px;margin-bottom:14px;background:linear-gradient(135deg,var(--brand-50),var(--surface));">' +
+            '<div style="font-weight:800;font-size:14px;margin-bottom:10px;">' + PCD.escapeHtml(t('cc_today_pl') || "Today's P&L") + '</div>' +
+            '<div style="display:flex;gap:14px;flex-wrap:wrap;">' +
+              tile(t('cc_today_sold') || 'Sold', String(Math.round(todayPL.units))) +
+              tile(t('cc_today_revenue') || 'Revenue', PCD.fmtMoney(todayPL.rev)) +
+              tile(t('cc_today_fcpct') || 'Food cost %', todayPL.fcPct == null ? '—' : Math.round(todayPL.fcPct) + '%', fcCol) +
+              tile(t('cc_today_profit') || 'Profit', PCD.fmtMoney(todayPL.profit), pCol) +
+            '</div></div>';
+        } else {
+          todayCard = '<div class="cc-today" data-action="view-inventory" style="cursor:pointer;border:1px dashed var(--border-strong);border-radius:var(--r-md);padding:14px 16px;margin-bottom:14px;">' +
+            '<div style="font-weight:800;font-size:14px;color:var(--text-2);margin-bottom:2px;">' + PCD.escapeHtml(t('cc_today_pl') || "Today's P&L") + '</div>' +
+            '<div style="font-size:13px;color:var(--text-3);">' + PCD.escapeHtml(t('cc_today_empty') || 'Record today’s sales (Inventory → Record sales) to see revenue, food cost % and profit.') + '</div></div>';
+        }
+      }
       commandCenterHtml =
         '<div class="cc-wrap">' +
+          todayCard +
           '<div class="cc-metrics">' + fcCard + labourCard + stockCard + incCard + '</div>' +
           '<div class="cc-charts">' + marginChart + freshChart + upcomingChart + '</div>' +
         '</div>';

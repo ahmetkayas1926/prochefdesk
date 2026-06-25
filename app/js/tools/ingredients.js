@@ -16,6 +16,82 @@
 
   let selectMode = false;
   let selectedIds = new Set();
+  let groupMode = (function () { try { return localStorage.getItem('pcd_ing_group') || 'category'; } catch (e) { return 'category'; } })();
+
+  // Eksik i18n anahtarı için İngilizce fallback (t() eksik anahtarda key string döndürür).
+  function L(key, fb) { try { const v = PCD.i18n.t(key); return (v == null || v === key) ? fb : v; } catch (e) { return fb; } }
+
+  // Tedarikçi listesi = malzemelerin .supplier alanından TÜRETİLİR (ayrı tablo yok →
+  // otomatik senkron, sync/RLS gerektirmez). Boş olmayan benzersiz isimler, alfabetik.
+  function distinctSuppliers() {
+    const set = {};
+    (PCD.store.listIngredients() || []).forEach(function (i) {
+      const s = (i.supplier || '').trim();
+      if (s) set[s] = true;
+    });
+    return Object.keys(set).sort(function (a, b) { return a.localeCompare(b); });
+  }
+
+  // Ortak tedarikçi seçici: mevcut tedarikçiler chip olarak + "yeni tedarikçi" alanı.
+  // Edit modal'ı ve toplu atama modal'ı ikisi de kullanır. { get() } döndürür.
+  function mountSupplierPicker(container, initial) {
+    let selected = (initial || '').trim();
+    const suppliers = distinctSuppliers();
+    function chip(val, label) {
+      const on = (val === selected);
+      return '<button type="button" class="sup-chip" data-sup="' + PCD.escapeHtml(val) + '" style="padding:6px 12px;border-radius:999px;border:1px solid ' + (on ? 'var(--brand-600)' : 'var(--border)') + ';background:' + (on ? 'var(--brand-50)' : 'var(--surface)') + ';color:' + (on ? 'var(--brand-700)' : 'var(--text-2)') + ';font-weight:' + (on ? '700' : '500') + ';font-size:13px;cursor:pointer;">' + PCD.escapeHtml(label) + '</button>';
+    }
+    function paintPicker() {
+      let html = '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">';
+      html += chip('', L('sup_none', 'No supplier'));
+      suppliers.forEach(function (s) { html += chip(s, s); });
+      html += '<button type="button" class="sup-new-btn" style="padding:6px 12px;border-radius:999px;border:1px dashed var(--brand-600);background:transparent;color:var(--brand-700);font-weight:600;font-size:13px;cursor:pointer;">+ ' + PCD.escapeHtml(L('sup_new', 'New supplier')) + '</button>';
+      html += '</div>';
+      html += '<div class="sup-new-row" style="display:none;margin-top:8px;gap:6px;">' +
+        '<input type="text" class="input sup-new-input" placeholder="' + PCD.escapeHtml(L('sup_new_ph', 'Supplier name')) + '" style="flex:1;">' +
+        '<button type="button" class="btn btn-outline btn-sm sup-new-add">' + PCD.escapeHtml(L('add', 'Add')) + '</button></div>';
+      container.innerHTML = html;
+      container.querySelectorAll('.sup-chip').forEach(function (b) {
+        b.addEventListener('click', function () { selected = b.getAttribute('data-sup'); paintPicker(); });
+      });
+      const newBtn = container.querySelector('.sup-new-btn');
+      const newRow = container.querySelector('.sup-new-row');
+      if (newBtn) newBtn.addEventListener('click', function () { newRow.style.display = 'flex'; const i = newRow.querySelector('.sup-new-input'); if (i) i.focus(); });
+      const addBtn = container.querySelector('.sup-new-add');
+      const inp = container.querySelector('.sup-new-input');
+      function addNew() {
+        const v = (inp.value || '').trim(); if (!v) return;
+        if (suppliers.indexOf(v) < 0) { suppliers.push(v); suppliers.sort(function (a, b) { return a.localeCompare(b); }); }
+        selected = v; paintPicker();
+      }
+      if (addBtn) addBtn.addEventListener('click', addNew);
+      if (inp) inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); addNew(); } });
+    }
+    paintPicker();
+    return { get: function () { return selected; } };
+  }
+
+  // Toplu tedarikçi atama: seçili malzemelere tek seferde tedarikçi ata (mevcut veya yeni).
+  function openBulkSupplierAssign(ids, onDone) {
+    const t = PCD.i18n.t;
+    const body = PCD.el('div');
+    body.innerHTML = '<div class="text-muted text-sm" style="margin-bottom:10px;">' + PCD.escapeHtml(L('sup_assign_n', 'Assign a supplier to {n} ingredient(s).').replace('{n}', ids.length)) + '</div><div id="bulkSupPicker"></div>';
+    const picker = mountSupplierPicker(body.querySelector('#bulkSupPicker'), '');
+    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') });
+    const saveBtn = PCD.el('button', { class: 'btn btn-primary', text: t('save'), style: { flex: '1' } });
+    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
+    footer.appendChild(cancelBtn); footer.appendChild(saveBtn);
+    const m = PCD.modal.open({ title: L('sup_pick_title', 'Assign supplier'), body: body, footer: footer, size: 'sm', closable: true });
+    cancelBtn.addEventListener('click', function () { m.close(); });
+    saveBtn.addEventListener('click', function () {
+      const sup = (picker.get() || '').trim();
+      let n = 0;
+      ids.forEach(function (id) { const ing = PCD.store.getIngredient(id); if (ing) { ing.supplier = sup; PCD.store.upsertIngredient(ing); n++; } });
+      PCD.toast.success(L('sup_assign_done', 'Supplier assigned to {n} ingredient(s).').replace('{n}', n));
+      m.close();
+      if (onDone) onDone();
+    });
+  }
 
   function renderList(view) {
     const t = PCD.i18n.t;
@@ -30,6 +106,7 @@
           <div class="page-subtitle">${ings.length} items</div>
         </div>
         <div class="page-header-actions">
+          ${ings.length > 0 ? `<button class="btn btn-outline btn-sm" id="assignSupBtn" title="${PCD.escapeHtml(L('assign_supplier','Assign supplier'))}">${PCD.icon('truck',14)} ${PCD.escapeHtml(L('assign_supplier','Assign supplier'))}</button>` : ''}
           ${ings.length > 0 ? `<button class="btn btn-outline btn-sm" id="toggleSelIng">${PCD.icon('check-square',14)} ${t('select_mode')}</button>` : ''}
           <button class="btn btn-outline btn-sm" id="importBtn" title="${t('ingredients_import_title') || 'Bulk import'}">${PCD.icon('upload',14)} ${t('ingredients_import') || 'Import'}</button>
           ${ings.length > 0 ? `<button class="btn btn-outline btn-sm" id="exportBtn" title="${PCD.escapeHtml(t('ingredients_export_title') || 'Export to CSV / Excel for bulk edit or backup')}">${PCD.icon('download',14)} ${PCD.escapeHtml(t('ingredients_export') || 'Export')}</button>` : ''}
@@ -43,12 +120,20 @@
         <input type="search" id="ingSearch" placeholder="${t('search_ingredients_placeholder')}" autocomplete="off">
       </div>
 
+      ${ings.length > 0 ? `<div class="ing-groupbar" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
+        <span class="text-muted" style="font-size:12px;font-weight:600;">${PCD.escapeHtml(L('group_by','Group by'))}:</span>
+        <button class="btn btn-sm gb-btn" data-group="category">${PCD.escapeHtml(L('group_category','Category'))}</button>
+        <button class="btn btn-sm gb-btn" data-group="supplier">${PCD.escapeHtml(L('group_supplier','Supplier'))}</button>
+        <button class="btn btn-sm gb-btn" data-group="name">${PCD.escapeHtml(L('group_name','Name'))}</button>
+      </div>` : ''}
+
       <div id="bulkBarI" class="card" style="display:none;padding:10px 12px;margin-bottom:12px;background:var(--brand-50);border-color:var(--brand-300);position:sticky;top:0;z-index:5;">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-3">
             <label class="checkbox" style="min-height:auto;"><input type="checkbox" id="selAllI"><span class="text-sm font-semibold"><span id="selCountI">0</span> ${t('selected')}</span></label>
           </div>
           <div class="flex gap-2">
+            <button class="btn btn-outline btn-sm" id="bulkAssignSupI">${PCD.icon('truck',14)} ${PCD.escapeHtml(L('assign_supplier','Assign supplier'))}</button>
             <button class="btn btn-outline btn-sm" id="bulkConfirmPriceI">${PCD.icon('check',14)} ${t('bulk_confirm_price')}</button>
             <button class="btn btn-danger btn-sm" id="bulkDeleteI">${PCD.icon('trash',14)} ${t('delete')}</button>
             <button class="btn btn-ghost btn-sm" id="exitSelectI">${t('cancel')}</button>
@@ -76,7 +161,7 @@
       if (agingFilter) visible = visible.filter(function (i) { const a = priceAgeDays(i); return a != null && a > 30; });
       if (filter) {
         const q = filter.toLowerCase();
-        visible = visible.filter(function (i) { return (i.name || '').toLowerCase().indexOf(q) >= 0; });
+        visible = visible.filter(function (i) { return (i.name || '').toLowerCase().indexOf(q) >= 0 || (i.supplier || '').toLowerCase().indexOf(q) >= 0; });
       }
       if (visible.length === 0 && !filter && !agingFilter) {
         listEl.innerHTML = `
@@ -105,76 +190,98 @@
         return;
       }
 
-      // Group by category
-      const groups = {};
-      visible.forEach(function (i) {
-        const cat = i.category || 'cat_other';
-        if (!groups[cat]) groups[cat] = [];
-        groups[cat].push(i);
-      });
+      // Ortak satır yapıcı — tüm gruplama modları (kategori/tedarikçi/isim) kullanır.
+      function ingRow(i) {
+        const row = PCD.el('div', { class: 'list-item', 'data-iid': i.id });
+        const thumb = PCD.el('div', { class: 'list-item-thumb' });
+        thumb.textContent = (i.name || '?').charAt(0).toUpperCase();
+        const bodyDiv = PCD.el('div', { class: 'list-item-body' });
+        const hist = (i.priceHistory || []).slice();
+        let trendHtml = '';
+        if (hist.length >= 1) {
+          const last = hist[hist.length - 1];
+          const cur = Number(i.pricePerUnit) || 0;
+          const prev = Number(last.price) || 0;
+          if (prev && cur && prev !== cur) {
+            const up = cur > prev;
+            trendHtml = '<span data-hist="' + i.id + '" style="color:' + (up ? 'var(--danger)' : 'var(--success)') + ';font-weight:700;cursor:pointer;font-size:11px;" title="' + PCD.escapeHtml(t('price_history_tooltip')) + '">' +
+              (up ? '▲' : '▼') + ' ' + Math.abs(((cur - prev) / prev) * 100).toFixed(0) + '%</span>';
+          }
+        }
+        let ageHtml = '';
+        const _pa = priceAgeDays(i);
+        if (_pa != null && _pa > 30) {
+          ageHtml = '<span style="color:' + (_pa > 60 ? 'var(--danger)' : 'var(--warning)') + ';font-weight:600;font-size:11px;white-space:nowrap;">' + PCD.icon('clock', 11) + ' ' + PCD.escapeHtml(t('fresh_last_priced').replace('{n}', _pa)) + '</span>';
+        }
+        // Tedarikçi modunda başlıkta zaten var → satırda tekrar gösterme.
+        const showSup = (groupMode !== 'supplier') && i.supplier;
+        bodyDiv.innerHTML =
+          '<div class="list-item-title">' + PCD.escapeHtml(i.name) + '</div>' +
+          '<div class="list-item-meta">' +
+            '<span>' + PCD.fmtMoney(i.pricePerUnit) + ' / ' + i.unit + '</span>' +
+            (trendHtml ? '<span>·</span>' + trendHtml : '') +
+            (ageHtml ? '<span>·</span>' + ageHtml : '') +
+            (showSup ? '<span>·</span><span>' + PCD.escapeHtml(i.supplier) + '</span>' : '') +
+          '</div>';
+        row.appendChild(thumb);
+        row.appendChild(bodyDiv);
+        if (selectMode) {
+          const cb = PCD.el('input', { type: 'checkbox', class: 'select-cb-i' });
+          cb.style.width = '20px'; cb.style.height = '20px'; cb.style.flexShrink = '0';
+          cb.checked = selectedIds.has(i.id);
+          cb.addEventListener('click', function (e) { e.stopPropagation(); });
+          cb.addEventListener('change', function () {
+            if (cb.checked) selectedIds.add(i.id); else selectedIds.delete(i.id);
+            updateBulkBar();
+          });
+          row.insertBefore(cb, row.firstChild);
+        }
+        return row;
+      }
 
-      Object.keys(groups).forEach(function (cat) {
-        const section = PCD.el('div', { class: 'section' });
-        section.appendChild(PCD.el('div', {
+      function section(label) {
+        const sec = PCD.el('div', { class: 'section' });
+        sec.appendChild(PCD.el('div', {
           class: 'section-title',
           style: { fontSize: '13px', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' },
-          text: t(cat)
+          text: label
         }));
         const inner = PCD.el('div', { class: 'flex flex-col gap-2' });
-        groups[cat].sort(function (a, b) { return (a.name || '').localeCompare(b.name || ''); }); // E3: consistent alpha order within category
-        groups[cat].forEach(function (i) {
-          const row = PCD.el('div', { class: 'list-item', 'data-iid': i.id });
-          const thumb = PCD.el('div', { class: 'list-item-thumb' });
-          thumb.textContent = (i.name || '?').charAt(0).toUpperCase();
-          const bodyDiv = PCD.el('div', { class: 'list-item-body' });
-          // Compute price trend indicator if priceHistory exists
-          const hist = (i.priceHistory || []).slice();
-          let trendHtml = '';
-          if (hist.length >= 1) {
-            // Latest history entry's price vs current
-            const last = hist[hist.length - 1];
-            const cur = Number(i.pricePerUnit) || 0;
-            const prev = Number(last.price) || 0;
-            if (prev && cur && prev !== cur) {
-              const up = cur > prev;
-              trendHtml = '<span data-hist="' + i.id + '" style="color:' + (up ? 'var(--danger)' : 'var(--success)') + ';font-weight:700;cursor:pointer;font-size:11px;" title="' + PCD.escapeHtml(t('price_history_tooltip')) + '">' +
-                (up ? '▲' : '▼') + ' ' + Math.abs(((cur-prev)/prev)*100).toFixed(0) + '%</span>';
-            }
-          }
-          // v2.44 — price-age badge: surface ingredients whose price is going stale (>30d)
-          let ageHtml = '';
-          const _pa = priceAgeDays(i);
-          if (_pa != null && _pa > 30) {
-            ageHtml = '<span style="color:' + (_pa > 60 ? 'var(--danger)' : 'var(--warning)') + ';font-weight:600;font-size:11px;white-space:nowrap;">' + PCD.icon('clock', 11) + ' ' + PCD.escapeHtml(t('fresh_last_priced').replace('{n}', _pa)) + '</span>';
-          }
-          bodyDiv.innerHTML = `
-            <div class="list-item-title">${PCD.escapeHtml(i.name)}</div>
-            <div class="list-item-meta">
-              <span>${PCD.fmtMoney(i.pricePerUnit)} / ${i.unit}</span>
-              ${trendHtml ? '<span>·</span>' + trendHtml : ''}
-              ${ageHtml ? '<span>·</span>' + ageHtml : ''}
-              ${i.supplier ? '<span>·</span><span>' + PCD.escapeHtml(i.supplier) + '</span>' : ''}
-            </div>
-          `;
-          row.appendChild(thumb);
-          row.appendChild(bodyDiv);
+        sec.appendChild(inner);
+        return { sec: sec, inner: inner };
+      }
 
-          if (selectMode) {
-            const cb = PCD.el('input', { type: 'checkbox', class: 'select-cb-i' });
-            cb.style.width = '20px'; cb.style.height = '20px'; cb.style.flexShrink = '0';
-            cb.checked = selectedIds.has(i.id);
-            cb.addEventListener('click', function (e) { e.stopPropagation(); });
-            cb.addEventListener('change', function () {
-              if (cb.checked) selectedIds.add(i.id); else selectedIds.delete(i.id);
-              updateBulkBar();
-            });
-            row.insertBefore(cb, row.firstChild);
+      if (groupMode === 'name') {
+        // Düz alfabetik liste, başlıksız
+        const inner = PCD.el('div', { class: 'flex flex-col gap-2' });
+        visible.slice().sort(function (a, b) { return (a.name || '').localeCompare(b.name || ''); }).forEach(function (i) { inner.appendChild(ingRow(i)); });
+        listEl.appendChild(inner);
+      } else {
+        const groups = {};
+        visible.forEach(function (i) {
+          let key, label;
+          if (groupMode === 'supplier') {
+            const s = (i.supplier || '').trim();
+            key = s ? ('s:' + s) : '￿'; // tedarikçisizler '￿' → en sona
+            label = s || L('sup_none', 'No supplier');
+          } else {
+            key = i.category || 'cat_other';
+            label = t(key);
           }
-          inner.appendChild(row);
+          if (!groups[key]) groups[key] = { label: label, items: [] };
+          groups[key].items.push(i);
         });
-        section.appendChild(inner);
-        listEl.appendChild(section);
-      });
+        let keys = Object.keys(groups);
+        if (groupMode === 'supplier') keys.sort(function (a, b) { return a.localeCompare(b); });
+        else keys.sort(function (a, b) { return ING_CATEGORIES.indexOf(a) - ING_CATEGORIES.indexOf(b); });
+        keys.forEach(function (key) {
+          const g = groups[key];
+          const sx = section(g.label);
+          g.items.sort(function (a, b) { return (a.name || '').localeCompare(b.name || ''); });
+          g.items.forEach(function (i) { sx.inner.appendChild(ingRow(i)); });
+          listEl.appendChild(sx.sec);
+        });
+      }
     }
 
     function updateBulkBar() {
@@ -188,6 +295,40 @@
     function exitSelect() { selectMode = false; selectedIds = new Set(); paint(); updateBulkBar(); }
 
     PCD.$('#newIngBtn', view).addEventListener('click', function () { openEditor(); });
+
+    // Gruplama modu çubuğu (Kategori / Tedarikçi / İsim)
+    function paintGroupBar() {
+      PCD.$$('.gb-btn', view).forEach(function (b) {
+        const on = b.getAttribute('data-group') === groupMode;
+        b.className = 'btn btn-sm gb-btn ' + (on ? 'btn-primary' : 'btn-outline');
+      });
+    }
+    PCD.$$('.gb-btn', view).forEach(function (b) {
+      b.addEventListener('click', function () {
+        groupMode = b.getAttribute('data-group');
+        try { localStorage.setItem('pcd_ing_group', groupMode); } catch (e) {}
+        paintGroupBar(); paint();
+      });
+    });
+    paintGroupBar();
+
+    // "Tedarikçi ata" (header) → seç moduna gir, ipucu göster.
+    const assignSupBtn = PCD.$('#assignSupBtn', view);
+    if (assignSupBtn) assignSupBtn.addEventListener('click', function () {
+      if (!selectMode) enterSelect();
+      if (PCD.toast) PCD.toast.info(L('sup_assign_hint', 'Select ingredients, then tap Assign supplier.'));
+    });
+    // Bulk bar "Tedarikçi ata" → seçili malzemelere ata.
+    const bulkAssignSup = PCD.$('#bulkAssignSupI', view);
+    if (bulkAssignSup) bulkAssignSup.addEventListener('click', function () {
+      if (selectedIds.size === 0) { PCD.toast.info(L('sup_select_first', 'Select at least one ingredient first.')); return; }
+      openBulkSupplierAssign(Array.from(selectedIds), function () {
+        selectedIds = new Set(); selectMode = false;
+        const v = PCD.$('#view');
+        if (PCD.router.currentView() === 'ingredients') renderList(v);
+      });
+    });
+
     const importBtn = PCD.$('#importBtn', view);
     if (importBtn) importBtn.addEventListener('click', function () { openImportDialog(); });
     // v2.9.20 — Export current list (CSV + Excel) for bulk edit / backup workflow
@@ -399,7 +540,7 @@
       </div>
       <div class="field">
         <label class="field-label">${t('ingredient_supplier')}</label>
-        <input type="text" class="input" id="ingSupplier" value="${PCD.escapeHtml(data.supplier || '')}">
+        <div id="ingSupplierPicker"></div>
       </div>
       <div class="field">
         <label class="field-label">${t('ing_yield_label')}</label>
@@ -453,6 +594,7 @@ ${existing ? (function () {
     const curCode = PCD.store.get('prefs.currency') || 'USD';
     const curCfg = (window.PCD_CONFIG.CURRENCIES || []).find(function (c) { return c.code === curCode; });
     PCD.$('#priceSymbol', body).textContent = curCfg ? curCfg.symbol : '$';
+    const supPicker = mountSupplierPicker(PCD.$('#ingSupplierPicker', body), data.supplier);
 
     const saveBtn = PCD.el('button', { class: 'btn btn-primary', text: t('save'), style: { flex: '1' } });
     const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') });
@@ -529,7 +671,7 @@ ${existing ? (function () {
       data.category = PCD.$('#ingCategory', body).value;
       data.unit = PCD.$('#ingUnit', body).value;
       data.pricePerUnit = parseFloat(PCD.$('#ingPrice', body).value) || 0;
-      data.supplier = PCD.$('#ingSupplier', body).value.trim();
+      data.supplier = (supPicker.get() || '').trim();
       const yld = PCD.$('#ingYield', body);
       if (yld) {
         const v = parseFloat(yld.value);

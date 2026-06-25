@@ -33,7 +33,26 @@
     return (PCD.recipes && PCD.recipes.isPrep) ? PCD.recipes.isPrep(r) : !!(r && r.yieldAmount && r.yieldUnit);
   }
 
-  function buildRows() {
+  // Faz 2 — dönem-bazlı popülerlik: aralık aktifse "satılan" salesLog'tan o döneme
+  // göre; null → recipe.salesCount (tüm zaman, mevcut davranış korunur).
+  let mePeriod = null;
+  function salesByRecipe(from, to) {
+    const map = {};
+    try {
+      const ws = PCD.store.getActiveWorkspaceId && PCD.store.getActiveWorkspaceId();
+      const root = (PCD.store._read && PCD.store._read('salesLog')) || {};
+      (root[ws] || []).forEach(function (s) {
+        if (!s || !s.recipeId || s._deletedAt) return;
+        const d = s.date || '';
+        if (from && d < from) return;
+        if (to && d > to) return;
+        map[s.recipeId] = (map[s.recipeId] || 0) + (Number(s.qty) || 0);
+      });
+    } catch (e) {}
+    return map;
+  }
+
+  function buildRows(soldMap) {
     const ingMap = {}, recipeMap = {};
     PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
     const allRecipes = PCD.store.listRecipes() || [];
@@ -47,7 +66,7 @@
       const servings = Number(r.servings) || 1;
       const costPer = totalCost / servings;
       const price = Number(r.salePrice) || 0;
-      const sold = Number(r.salesCount) || 0;
+      const sold = soldMap ? (Number(soldMap[r.id]) || 0) : (Number(r.salesCount) || 0);
       const margin = price > 0 ? (price - costPer) : null;
       const profit = margin != null ? margin * sold : 0;
       const fcPct = price > 0 ? (costPer / price) * 100 : null;
@@ -66,7 +85,8 @@
   }
 
   function render(view) {
-    const rows = buildRows().rows;
+    const soldMap = mePeriod ? salesByRecipe(mePeriod.from, mePeriod.to) : null;
+    const rows = buildRows(soldMap).rows;
     function money(n) { return PCD.fmtMoney ? PCD.fmtMoney(n) : ('$' + (Number(n) || 0).toFixed(2)); }
 
     let html = '<div class="page-header"><div class="page-header-text">' +
@@ -84,6 +104,17 @@
       html += '<div class="card" style="padding:24px;text-align:center;color:var(--text-3);">' + PCD.escapeHtml(L('me_no_recipes', 'No dishes yet — add recipes first.')) + '</div>';
       view.innerHTML = html; return;
     }
+
+    // Dönem seçici — aralık seçilince popülerlik + mini P&L o döneme göre (salesLog'tan).
+    html += '<div class="card mb-3" style="padding:10px 14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">' +
+      '<span style="font-weight:600;font-size:13px;">' + PCD.escapeHtml(L('me_period', 'Period')) + '</span>' +
+      '<input type="date" class="input" id="mePerFrom" value="' + (mePeriod ? mePeriod.from : '') + '" style="flex:1;min-width:130px;">' +
+      '<span class="text-muted">→</span>' +
+      '<input type="date" class="input" id="mePerTo" value="' + (mePeriod ? mePeriod.to : '') + '" style="flex:1;min-width:130px;">' +
+      '<button class="btn btn-outline btn-sm" id="mePerApply">' + PCD.escapeHtml(L('me_period_apply', 'Apply')) + '</button>' +
+      (mePeriod ? '<button class="btn btn-ghost btn-sm" id="mePerClear">' + PCD.escapeHtml(L('me_period_all', 'All time')) + '</button>' : '') +
+      '<span class="text-muted" style="font-size:11px;flex-basis:100%;">' + PCD.escapeHtml(mePeriod ? L('me_period_hint_on', 'Popularity = units sold in the selected dates, pulled from Record sales.') : L('me_period_hint_off', 'Showing all-time sales. Pick a date range to rank dishes for a specific period.')) + '</span>' +
+      '</div>';
 
     // v2.44.56 — Menünün mini P&L özeti: satılan adet · ciro · yemek maliyeti ·
     // food cost % · toplam kâr (tek bakışta "kazanıyor muyum?").
@@ -153,7 +184,7 @@
           '<div style="font-size:11px;color:' + meta.color + ';font-weight:700;">' + meta.emoji + ' ' + PCD.escapeHtml(x.quad === 'unpriced' ? L('me_no_price', 'No price') : L('me_' + x.quad, meta.label)) + '</div></td>' +
         '<td style="padding:6px 6px;text-align:right;white-space:nowrap;">' + money(x.costPer) + '</td>' +
         '<td style="padding:6px 6px;text-align:right;"><input type="number" class="input me-price" data-rid="' + x.r.id + '" value="' + (x.price || '') + '" step="0.01" min="0" placeholder="—" style="width:74px;text-align:right;padding:4px 6px;"></td>' +
-        '<td style="padding:6px 6px;text-align:right;"><input type="number" class="input me-sold" data-rid="' + x.r.id + '" value="' + (x.sold || 0) + '" step="1" min="0" style="width:62px;text-align:right;padding:4px 6px;"></td>' +
+        '<td style="padding:6px 6px;text-align:right;"><input type="number" class="input me-sold" data-rid="' + x.r.id + '" value="' + (x.sold || 0) + '" step="1" min="0"' + (mePeriod ? ' readonly title="' + PCD.escapeHtml(L('me_period_readonly', 'From Record sales for the selected period')) + '"' : '') + ' style="width:62px;text-align:right;padding:4px 6px;' + (mePeriod ? 'background:var(--surface-2);' : '') + '"></td>' +
         '<td style="padding:6px 6px;text-align:right;color:' + marginColor + ';white-space:nowrap;">' + marginStr + (x.fcPct != null ? ' <span style="font-size:10px;color:var(--text-3);">(' + Math.round(x.fcPct) + '%)</span>' : '') + '</td>' +
         '<td style="padding:6px 6px;text-align:right;white-space:nowrap;font-weight:600;">' + money(x.profit) + '</td>' +
         '<td style="padding:6px 6px;text-align:right;"><button class="btn btn-ghost btn-sm me-edit" data-rid="' + x.r.id + '" title="' + PCD.escapeHtml(L('me_edit', 'Edit recipe')) + '">' + PCD.icon('edit', 14) + '</button></td>' +
@@ -162,8 +193,8 @@
     html += '</tbody></table></div>';
 
     html += '<div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">' +
-      '<div class="text-muted" style="font-size:11px;">' + PCD.escapeHtml(L('me_period_note', '"Sold" auto-fills from Record sales (Inventory). Reset it when a new period starts.')) + '</div>' +
-      '<button class="btn btn-outline btn-sm" id="meReset">↺ ' + PCD.escapeHtml(L('me_reset_period', 'Reset period sales')) + '</button>' +
+      '<div class="text-muted" style="font-size:11px;">' + PCD.escapeHtml(mePeriod ? L('me_period_live', 'Sold counts come live from Record sales for the selected dates — nothing to reset.') : L('me_period_note', '"Sold" auto-fills from Record sales (Inventory). Reset it when a new period starts.')) + '</div>' +
+      (mePeriod ? '' : '<button class="btn btn-outline btn-sm" id="meReset">↺ ' + PCD.escapeHtml(L('me_reset_period', 'Reset period sales')) + '</button>') +
       '</div>';
 
     view.innerHTML = html;
@@ -200,6 +231,15 @@
         render(view);
       });
     });
+
+    const perApply = PCD.$('#mePerApply', view);
+    if (perApply) perApply.addEventListener('click', function () {
+      const f = PCD.$('#mePerFrom', view).value, tt = PCD.$('#mePerTo', view).value;
+      mePeriod = (!f && !tt) ? null : { from: f || '', to: tt || '' };
+      render(view);
+    });
+    const perClear = PCD.$('#mePerClear', view);
+    if (perClear) perClear.addEventListener('click', function () { mePeriod = null; render(view); });
   }
 
   PCD.tools = PCD.tools || {};

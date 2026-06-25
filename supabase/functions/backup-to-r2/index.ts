@@ -96,6 +96,8 @@ const BACKUP_TABLES = [
   'rosters',
   // v2.16 — Prep Sheet cloud sync
   'prep_sheets',
+  // v2.44.67 — Sales Log cloud sync
+  'sales_log',
 ]
 
 Deno.serve(async (req) => {

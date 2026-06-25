@@ -288,7 +288,7 @@
                 if (ws.name !== 'My Kitchen') return false;
                 if (ws.concept || ws.role || ws.city) return false;
                 if (ws.archived) return false;
-                const wsTables = ['recipes','ingredients','menus','events','suppliers','inventory','waste','checklistTemplates','checklistSessions','canvases','shoppingLists','stockCountHistory','haccpLogs','haccpUnits','haccpReadings','haccpCookCool','haccpReceiving','haccpHolding','buffets','misePlans','team','whiteboards','rosters','prepSheets'];
+                const wsTables = ['recipes','ingredients','menus','events','suppliers','inventory','waste','salesLog','checklistTemplates','checklistSessions','canvases','shoppingLists','stockCountHistory','haccpLogs','haccpUnits','haccpReadings','haccpCookCool','haccpReceiving','haccpHolding','buffets','misePlans','team','whiteboards','rosters','prepSheets'];
                 for (let i = 0; i < wsTables.length; i++) {
                   const t = sourceState && sourceState[wsTables[i]];
                   if (t && t[ws.id] && Object.keys(t[ws.id]).length > 0) return false;
@@ -380,7 +380,7 @@
               // v2.19 — BUG FIX: whiteboards/buffets/misePlans/team de array-tablo;
               // pull edilmeye başlandı (cloud-pertable) → merge'e de eklendi ki
               // local∪remote birleşsin (tombstone + en-yeni-kazanır), ezme olmasın.
-              const ARRAY_WS_TABLES = ['waste', 'checklistSessions', 'whiteboards', 'buffets', 'misePlans', 'team'];
+              const ARRAY_WS_TABLES = ['waste', 'checklistSessions', 'whiteboards', 'buffets', 'misePlans', 'team', 'salesLog'];
               // Tables without per-record timestamps — keep remote-wins for
               // these (existing behavior). Inventory levels change via
               // counts not edits, so cloud is generally authoritative.

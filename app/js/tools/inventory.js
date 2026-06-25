@@ -1115,7 +1115,8 @@
         try {
           const slWs = PCD.store.getActiveWorkspaceId();
           const slRoot = PCD.store._read('salesLog') || {};
-          const slArr = (slRoot[slWs] || []).slice();
+          const slOld = (slRoot[slWs] || []);
+          const slArr = slOld.slice();
           const slToday = new Date().toISOString().slice(0, 10);
           Object.keys(sales).forEach(function (rid) {
             const q = Number(sales[rid]) || 0;
@@ -1123,6 +1124,10 @@
           });
           const slNext = Object.assign({}, slRoot); slNext[slWs] = slArr;
           PCD.store.set('salesLog', slNext);
+          // v2.44.67 — cihazlar-arası senkron (array tablo, waste pattern)
+          if (PCD.cloudPerTable && PCD.cloudPerTable.queueArraySync) {
+            try { PCD.cloudPerTable.queueArraySync('sales_log', slWs, slOld, slArr); } catch (e) { /* offline ok */ }
+          }
         } catch (e) { PCD.warn && PCD.warn('salesLog write failed', e); }
         const deducted = report.filter(function (r) { return r.tracked; }).length;
         const lowNow = report.filter(function (r) { return r.tracked && (r.status === 'low' || r.status === 'critical' || r.status === 'out'); }).length;

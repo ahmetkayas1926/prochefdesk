@@ -98,6 +98,8 @@
         case 'team': return applyToArrayWsTable('team', eventType, newRow, oldRow);
         // v2.9.42 — Whiteboard cloud sync
         case 'whiteboards': return applyToArrayWsTable('whiteboards', eventType, newRow, oldRow);
+        // v2.44.67 — Sales Log cloud sync (array tablo)
+        case 'sales_log': return applyToArrayWsTable('salesLog', eventType, newRow, oldRow);
         // v2.6.81 — workspace silindi → diğer cihazlarda lokal cascade wipe
         case 'workspace_tombstones': return applyToTombstones(eventType, newRow, oldRow);
       }
@@ -198,7 +200,9 @@
     // v2.15.3 — Roster workspace cascade wipe
     'rosters',
     // v2.16 — Prep Sheet workspace cascade wipe
-    'prepSheets'
+    'prepSheets',
+    // v2.44.67 — Sales Log workspace cascade wipe
+    'salesLog'
   ];
   function applyToTombstones(eventType, newRow, oldRow) {
     const row = newRow || oldRow;
@@ -436,6 +440,8 @@
       'rosters',
       // v2.16 — Prep Sheet realtime
       'prep_sheets',
+      // v2.44.67 — Sales Log realtime
+      'sales_log',
       // v2.6.81 — workspace_tombstones (cross-device cascade wipe trigger)
       'workspace_tombstones',
     ];
