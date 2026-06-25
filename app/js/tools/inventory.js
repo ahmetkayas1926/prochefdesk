@@ -184,6 +184,7 @@
     const invAll = readInventory();
     const pending = getPendingForCurrentWs();
     let filter = 'all';
+    let groupMode = (function () { try { return localStorage.getItem('pcd_inv_group') || 'category'; } catch (e) { return 'category'; } })();
 
     // Aggregate stats
     function getRow(id) { return invAll[id] || null; }
@@ -227,6 +228,11 @@
         <button class="btn btn-secondary btn-sm active" data-filter="all">${t('inv_filter_all')}</button>
         <button class="btn btn-secondary btn-sm" data-filter="low">${t('inv_filter_low')}</button>
         <button class="btn btn-secondary btn-sm" data-filter="ok">${t('inv_filter_ok')}</button>
+      </div>
+      <div class="flex gap-2 mb-3" style="align-items:center;flex-wrap:wrap;">
+        <span class="text-muted" style="font-size:12px;font-weight:600;">${PCD.escapeHtml(t('group_by') || 'Group by')}:</span>
+        <button class="btn btn-sm gb-btn" data-group="category">${PCD.escapeHtml(t('group_category') || 'Category')}</button>
+        <button class="btn btn-sm gb-btn" data-group="supplier">${PCD.escapeHtml(t('group_supplier') || 'Supplier')}</button>
       </div>
       <div id="invList"></div>
     `;
@@ -312,18 +318,27 @@
         return (a.ing.name || '').localeCompare(b.ing.name || '');
       });
 
-      // Group by category — same as Bulk Count for consistency
-      const byCat = {};
+      // Group by category or supplier (kullanıcı seçimi — pcd_inv_group)
+      const groups = {};
       filtered.forEach(function (x) {
-        const cat = x.ing.category || 'cat_other';
-        if (!byCat[cat]) byCat[cat] = [];
-        byCat[cat].push(x);
+        let key, label;
+        if (groupMode === 'supplier') {
+          const s = (x.ing.supplier || '').trim();
+          key = s ? ('s:' + s) : '￿'; // tedarikçisizler en sona
+          label = s || (t('sup_none') || 'No supplier');
+        } else {
+          key = x.ing.category || 'cat_other';
+          label = t(key) || key;
+        }
+        if (!groups[key]) groups[key] = { label: label, items: [] };
+        groups[key].items.push(x);
       });
 
       const cont = PCD.el('div');
-      Object.keys(byCat).sort().forEach(function (cat) {
-        const items = byCat[cat];
-        // Category counter — how many need attention?
+      Object.keys(groups).sort().forEach(function (key) {
+        const items = groups[key].items;
+        const groupLabel = groups[key].label;
+        // Group counter — how many need attention?
         const needAttention = items.filter(function (x) {
           return x.status === 'out' || x.status === 'critical' || x.status === 'low';
         }).length;
@@ -332,7 +347,7 @@
         sec.innerHTML =
           '<div style="display:flex;align-items:baseline;justify-content:space-between;margin:8px 0 6px;padding:4px 2px;border-bottom:1px solid var(--border);">' +
             '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;">' +
-              PCD.escapeHtml(t(cat) || cat) + ' (' + items.length + ')' +
+              PCD.escapeHtml(groupLabel) + ' (' + items.length + ')' +
             '</div>' +
             (needAttention > 0
               ? '<div style="font-size:11px;font-weight:700;color:var(--danger);">' + t('inv_need_order', { n: needAttention }) + '</div>'
@@ -378,6 +393,22 @@
       filter = this.getAttribute('data-filter');
       renderList();
     });
+
+    // Gruplama modu (Kategori / Tedarikçi)
+    function paintInvGroupBar() {
+      PCD.$$('.gb-btn', view).forEach(function (b) {
+        const on = b.getAttribute('data-group') === groupMode;
+        b.className = 'btn btn-sm gb-btn ' + (on ? 'btn-primary' : 'btn-outline');
+      });
+    }
+    PCD.$$('.gb-btn', view).forEach(function (b) {
+      b.addEventListener('click', function () {
+        groupMode = b.getAttribute('data-group');
+        try { localStorage.setItem('pcd_inv_group', groupMode); } catch (e) {}
+        paintInvGroupBar(); renderList();
+      });
+    });
+    paintInvGroupBar();
 
     PCD.on(listEl, 'click', '[data-iid]', function () {
       openEditor(this.getAttribute('data-iid'));
@@ -1379,7 +1410,7 @@
         <div class="flex items-center justify-between">
           <div>
             <div style="font-weight:700;font-size:16px;">${PCD.escapeHtml(ing.name)}</div>
-            <div class="text-muted text-sm">${PCD.fmtMoney(ing.pricePerUnit)} / ${ing.unit}</div>
+            <div class="text-muted text-sm">${PCD.fmtMoney(ing.pricePerUnit)} / ${ing.unit}${ing.supplier ? ' · ' + PCD.icon('truck', 12) + ' ' + PCD.escapeHtml(ing.supplier) : ''}</div>
           </div>
           <span class="chip" style="background:${statusColor(status)}20;color:${statusColor(status)};font-weight:700;">${statusLabel(status)}</span>
         </div>
