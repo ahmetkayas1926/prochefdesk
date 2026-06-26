@@ -373,7 +373,6 @@
       ]},
       { title: t('section_library'), items: [
         { key: 'recipes',     icon: 'book-open', route: 'recipes' },
-        { key: 'ingredients', icon: 'carrot', route: 'ingredients' },
         { key: 'menus',       icon: 'menu', route: 'menus' },
         // v2.44.30 — nutrition Recipes sub-nav'a taşındı (route duruyor; recipes sayfasından sekme ile erişilir).
       ]},
@@ -385,6 +384,7 @@
       ]},
       // v2.44.x — Sourcing, Catering'in altına taşındı.
       { title: t('section_sourcing'), items: [
+        { key: 'ingredients', icon: 'carrot', route: 'ingredients' },
         { key: 'inventory', icon: 'package', route: 'inventory' },
         { key: 'suppliers', icon: 'truck', route: 'suppliers' },
         // v2.44.30 — waste + variance Inventory sub-nav'a taşındı (Stok · Varyans · Fire).
