@@ -241,10 +241,17 @@
     const totalRevenue = subtotal + serviceCharge;
     const deposit = Number(event.deposit) || 0;
     const balanceDue = totalRevenue - deposit;
-    const profit = totalRevenue > 0 ? totalRevenue - totalCost : null;
-    const margin = totalRevenue > 0 ? ((totalRevenue - totalCost) / totalRevenue) * 100 : null;
+    // v2.44.90 — Faz 4: işçilik. totalCost = YEMEK maliyeti (etiketler korunur); grandTotal =
+    // yemek + işçilik. Kâr/marj grandTotal'a göre → gerçek P&L. Staffing yoksa eskisi gibi.
+    const laborCost = (event.staffing || []).reduce(function (s, l) {
+      return s + ((Number(l.count) || 0) * (Number(l.hours) || 0) * (Number(l.rate) || 0));
+    }, 0);
+    const grandTotal = totalCost + laborCost;
+    const profit = totalRevenue > 0 ? totalRevenue - grandTotal : null;
+    const margin = totalRevenue > 0 ? ((totalRevenue - grandTotal) / totalRevenue) * 100 : null;
     return {
-      totalCost: totalCost, attendees: attendees, billed: billed,
+      totalCost: totalCost, foodCost: totalCost, laborCost: laborCost, grandTotal: grandTotal,
+      attendees: attendees, billed: billed,
       subtotal: subtotal, svcPct: svcPct, serviceCharge: serviceCharge,
       totalRevenue: totalRevenue, deposit: deposit, balanceDue: balanceDue,
       profit: profit, margin: margin
@@ -392,6 +399,13 @@
           </div>
         </div>
 
+        <details id="staffWrap" ${(data.staffing && data.staffing.length) ? 'open' : ''} style="margin:0 0 14px;border:1px solid var(--border);border-radius:10px;padding:10px 12px;">
+          <summary style="cursor:pointer;font-weight:700;font-size:13px;color:var(--brand-700);user-select:none;list-style:none;">🧑‍🍳 ${PCD.escapeHtml(t('event_staffing') || 'Staffing & labor')}${stats.laborCost > 0 ? ' · ' + PCD.fmtMoney(stats.laborCost) : ''}</summary>
+          <div class="text-muted text-sm" style="margin:6px 0 8px;">${PCD.escapeHtml(t('event_staffing_hint') || 'Crew × hours × rate → true profit includes labor, not just food.')}</div>
+          <div id="staffList"></div>
+          <button type="button" class="btn btn-outline btn-sm" id="addStaffBtn" style="margin-top:8px;">+ ${PCD.escapeHtml(t('event_add_role') || 'Add role')}</button>
+        </details>
+
         <div class="stat mb-3" style="background:var(--brand-50);border-color:var(--brand-300);">
           <div class="flex items-center justify-between" style="flex-wrap:wrap;gap:8px;">
             <div>
@@ -399,6 +413,8 @@
               <div style="font-size:18px;font-weight:800;">${PCD.fmtMoney(stats.totalCost)}</div>
             </div>
             ${(attendees > 0) ? '<div><div class="stat-label">' + (t('event_cost_per_head') || 'Food cost / guest') + '</div><div style="font-size:18px;font-weight:800;">' + PCD.fmtMoney(stats.totalCost / attendees) + '</div></div>' : ''}
+            ${stats.laborCost > 0 ? '<div><div class="stat-label">' + (t('event_labor_cost') || 'Labor') + '</div><div style="font-size:18px;font-weight:800;">' + PCD.fmtMoney(stats.laborCost) + '</div></div>' : ''}
+            ${stats.laborCost > 0 ? '<div><div class="stat-label">' + (t('event_grand_total') || 'Total cost') + '</div><div style="font-size:18px;font-weight:800;">' + PCD.fmtMoney(stats.grandTotal) + '</div></div>' : ''}
             ${data.budget > 0 ? (function () {
               const remaining = (data.budget || 0) - stats.totalCost;
               const usedPct = data.budget > 0 ? (stats.totalCost / data.budget) * 100 : 0;
@@ -537,6 +553,27 @@
         fnListEl.appendChild(card);
       });
 
+      // v2.44.90 — Staffing satırları: rol × kişi × saat × ücret = işçilik.
+      const staffListEl = PCD.$('#staffList', body);
+      if (staffListEl) {
+        (data.staffing || []).forEach(function (st, si) {
+          const lineCost = (Number(st.count) || 0) * (Number(st.hours) || 0) * (Number(st.rate) || 0);
+          const row = PCD.el('div', { class: 'flex items-center gap-2', style: { marginBottom: '6px' } });
+          row.innerHTML =
+            '<input type="text" class="input st-role" data-st="' + si + '" value="' + PCD.escapeHtml(st.role || '') + '" placeholder="' + PCD.escapeHtml(t('event_role_ph') || 'Role (e.g. Waiter)') + '" style="flex:2;min-width:0;">' +
+            '<input type="number" class="input st-count" data-st="' + si + '" value="' + (st.count || '') + '" min="0" placeholder="#" title="' + PCD.escapeHtml(t('event_st_count') || 'Count') + '" style="width:48px;">' +
+            '<span class="text-muted">×</span>' +
+            '<input type="number" class="input st-hours" data-st="' + si + '" value="' + (st.hours || '') + '" min="0" step="0.5" placeholder="h" title="' + PCD.escapeHtml(t('event_st_hours') || 'Hours') + '" style="width:52px;">' +
+            '<span class="text-muted">×</span>' +
+            '<input type="number" class="input st-rate" data-st="' + si + '" value="' + (st.rate || '') + '" min="0" step="0.01" placeholder="' + PCD.escapeHtml(t('event_st_rate') || 'Rate') + '" title="' + PCD.escapeHtml(t('event_st_rate') || 'Rate/h') + '" style="width:66px;">' +
+            '<span style="font-weight:700;color:var(--brand-700);white-space:nowrap;flex:1;text-align:end;min-width:56px;">' + PCD.fmtMoney(lineCost) + '</span>';
+          const rm = PCD.el('button', { class: 'icon-btn st-rm', 'data-st': si });
+          rm.innerHTML = PCD.icon('x', 16);
+          row.appendChild(rm);
+          staffListEl.appendChild(row);
+        });
+      }
+
       wire();
     }
 
@@ -552,6 +589,19 @@
       $('eBudget').addEventListener('input', PCD.debounce(function () { data.budget = parseFloat(this.value) || null; render(); }, 400));
       $('eSvc').addEventListener('input', PCD.debounce(function () { data.serviceChargePct = parseFloat(this.value) || null; render(); }, 400));
       $('eDeposit').addEventListener('input', PCD.debounce(function () { data.deposit = parseFloat(this.value) || null; render(); }, 400));
+
+      const addStaffBtn = $('addStaffBtn');
+      if (addStaffBtn) addStaffBtn.addEventListener('click', function () {
+        if (!data.staffing) data.staffing = [];
+        data.staffing.push({ role: '', count: 1, hours: 6, rate: 25 });
+        render();
+      });
+      const stOf = function (el) { return (data.staffing || [])[parseInt(el.getAttribute('data-st'), 10)]; };
+      PCD.on(body, 'input', '.st-role', function () { const s = stOf(this); if (s) s.role = this.value; });
+      PCD.on(body, 'input', '.st-count', PCD.debounce(function () { const s = stOf(this); if (s) { s.count = parseFloat(this.value) || 0; render(); } }, 400));
+      PCD.on(body, 'input', '.st-hours', PCD.debounce(function () { const s = stOf(this); if (s) { s.hours = parseFloat(this.value) || 0; render(); } }, 400));
+      PCD.on(body, 'input', '.st-rate', PCD.debounce(function () { const s = stOf(this); if (s) { s.rate = parseFloat(this.value) || 0; render(); } }, 400));
+      PCD.on(body, 'click', '.st-rm', function () { const i = parseInt(this.getAttribute('data-st'), 10); if (data.staffing) { data.staffing.splice(i, 1); render(); } });
 
       $('addFnBtn').addEventListener('click', function () {
         const last = data.functions[data.functions.length - 1] || {};
@@ -832,6 +882,10 @@
     });
     lines.push('— ' + (t('event_cost_summary') || 'Cost summary') + ' —');
     lines.push((t('ev_print_total_food_cost') || 'Total food cost') + ': ' + PCD.fmtMoney(stats.totalCost));
+    if (stats.laborCost > 0) {
+      lines.push((t('event_labor_cost') || 'Labor cost') + ': ' + PCD.fmtMoney(stats.laborCost));
+      lines.push((t('event_grand_total') || 'Total cost') + ': ' + PCD.fmtMoney(stats.grandTotal));
+    }
     if (stats.totalRevenue > 0) {
       if (stats.serviceCharge > 0) lines.push((t('event_subtotal') || 'Subtotal') + ': ' + PCD.fmtMoney(stats.subtotal) + ' · ' + (t('event_service_label') || 'Service charge') + ' (' + stats.svcPct + '%): +' + PCD.fmtMoney(stats.serviceCharge));
       lines.push((t('ev_print_total_revenue') || 'Total revenue') + ': ' + PCD.fmtMoney(stats.totalRevenue));
@@ -960,6 +1014,17 @@
       });
     }
 
+    let staffingHtml = '';
+    if (event.staffing && event.staffing.length) {
+      const stRows = event.staffing.filter(function (l) { return (l.role || '').trim() || Number(l.count) || Number(l.rate); }).map(function (l) {
+        const lc = (Number(l.count) || 0) * (Number(l.hours) || 0) * (Number(l.rate) || 0);
+        return '<tr><td>' + PCD.escapeHtml(l.role || '—') + '</td><td style="text-align:center;">' + (l.count || 0) + ' × ' + (l.hours || 0) + 'h × ' + PCD.fmtMoney(l.rate || 0) + '</td><td style="text-align:right;font-weight:600;">' + PCD.fmtMoney(lc) + '</td></tr>';
+      }).join('');
+      if (stRows) staffingHtml =
+        '<div class="ev-section-title">' + PCD.escapeHtml(t('event_staffing') || 'Staffing & labor') + '</div>' +
+        '<table class="ev-table"><thead><tr><th>' + PCD.escapeHtml(t('event_role') || 'Role') + '</th><th style="text-align:center;">' + PCD.escapeHtml(t('event_staffing_calc') || 'Crew × hours × rate') + '</th><th style="text-align:right;">' + PCD.escapeHtml(t('cr_cost') || 'Cost') + '</th></tr></thead><tbody>' + stRows + '</tbody></table>';
+    }
+
     const html =
       '<style>' +
         '@page { size: A4; margin: 0; }' +
@@ -997,8 +1062,11 @@
         '<span class="ev-status ' + (event.status || 'draft') + '">' + PCD.escapeHtml(t('ev_status_' + (event.status || 'draft')) || event.status || 'draft') + '</span>' +
       '</div>' +
       bodyHtml +
+      staffingHtml +
       '<div class="ev-summary">' +
         '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('ev_print_total_food_cost') || 'Total food cost') + '</span><span>' + PCD.fmtMoney(stats.totalCost) + '</span></div>' +
+        (stats.laborCost > 0 ? '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('event_labor_cost') || 'Labor cost') + '</span><span>' + PCD.fmtMoney(stats.laborCost) + '</span></div>' : '') +
+        (stats.laborCost > 0 ? '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('event_grand_total') || 'Total cost') + '</span><span>' + PCD.fmtMoney(stats.grandTotal) + '</span></div>' : '') +
         (event.budget > 0 ? '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('ev_print_customer_budget') || 'Customer budget') + '</span><span>' + PCD.fmtMoney(event.budget) + '</span></div>' : '') +
         (stats.subtotal > 0 && stats.serviceCharge > 0 ? '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('event_subtotal') || 'Subtotal') + ' (' + stats.billed + ')' + '</span><span>' + PCD.fmtMoney(stats.subtotal) + '</span></div>' : '') +
         (stats.serviceCharge > 0 ? '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('event_service_label') || 'Service charge') + ' (' + stats.svcPct + '%)</span><span>+' + PCD.fmtMoney(stats.serviceCharge) + '</span></div>' : '') +

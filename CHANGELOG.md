@@ -4,6 +4,11 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.90 — Events Faz 4: işçilik maliyeti + dashboard zaman çizelgesi · 2026-06-26
+- **YENİ — Etkinlik işçilik maliyeti (gerçek P&L = yemek + işçilik).** Editörde katlanır "Personel & işçilik" bölümü: rol satırları (rol × kişi × saat × ücret). `computeStats` artık `laborCost` + `grandTotal` (yemek+işçilik) döndürüyor; **kâr/marj grandTotal'a göre** — catering kârının yarısı işçilik, eskiden hiç hesaba katılmıyordu. Özet kutusu (Labor cost · Total cost), BEO çıktısı (Staffing tablosu + Labor/Total satırları) ve paylaşım metni güncellendi. **Geriye-uyumlu:** staffing yoksa profit eskisi gibi (yemek). Preview'da doğrulandı: Waiter 4×6h×$25=$600 · food $979.51 + labor $600 = $1.579,51 · kâr %80→%67.
+- **YENİ — Dashboard sonraki-etkinlik fonksiyon zaman çizelgesi.** Çok-fonksiyonlu etkinlik kartı artık fonksiyon saatlerini gösteriyor: "🕐 Reception 18:00 · Dinner 20:00". Tek fonksiyonlu/düz etkinlikler değişmedi. (Dashboard↔Events bağlantısı zaten vardı — kart + yaklaşan-widget; bu sadece çok-fonksiyon timeline'ını ekledi.)
+- **Tarafsız not:** Faz 4'ün diğer iki kalemi (Buffet büfe-fonksiyon · HACCP banquet) düşük değer/yüksek efor görüldü ve **bilerek yapılmadı** — büfe-tipi kalem zaten ingredient/recipe olarak fonksiyona eklenebiliyor, HACCP ayrı loglanıyor. 11 yeni i18n anahtarı 6 dile.
+
 ## v2.44.89 — Events Faz 3: garanti kişi + fiyat kırılımı · 2026-06-26
 - **YENİ — Fonksiyon-başı garanti kişi sayısı.** Her fonksiyonda "Garanti" alanı (beklenenin yanında). Faturalama bazı = **max(garanti, beklenen)** — garanti minimumdur, daha çok gelirse fazlası faturalanır. Üretim/maliyet hâlâ beklenen kişiye göre (pişirilen sayı).
 - **YENİ — Fiyat kırılımı.** Etkinlik seviyesinde **Servis ücreti %** + **Depozito** alanları. Özet: ara toplam (faturalanan × kişi-başı) · servis ücreti (+%) · toplam ciro · depozito (−) · **kalan bakiye**. Editörde tek satır özet + BEO çıktısında tam satırlar + paylaşım metni.

@@ -436,6 +436,11 @@
       const dayLabel = isToday ? t('dash_today') : (nextEvent.date === new Date(today.getTime() + 86400000).toISOString().slice(0, 10) ? t('dash_tomorrow') : evDate.toLocaleDateString(_locale, { weekday: 'short', month: 'short', day: 'numeric' }));
       const guestStr = nextEvent.guestCount ? t('dash_guests_suffix', { n: nextEvent.guestCount }) : '';
       const venueStr = nextEvent.venue ? t('dash_venue_suffix', { venue: PCD.escapeHtml(nextEvent.venue) }) : '';
+      // v2.44.90 — çok-fonksiyonlu etkinlikte fonksiyon zaman çizelgesi (saatler/adlar)
+      const _fns = (nextEvent.functions || []).filter(function (f) { return f && f.time; });
+      const timeStr = (_fns.length > 1)
+        ? '<div class="dash-card-desc" style="margin-top:2px;">🕐 ' + _fns.map(function (f) { return (f.name ? PCD.escapeHtml(f.name) + ' ' : '') + PCD.escapeHtml(f.time); }).join('  ·  ') + '</div>'
+        : '';
       cards.push({
         priority: isToday ? 1 : 3,
         html:
@@ -444,6 +449,7 @@
             '<div class="dash-card-body">' +
               '<div class="dash-card-title">' + PCD.escapeHtml(nextEvent.name) + '</div>' +
               '<div class="dash-card-desc">' + dayLabel + guestStr + venueStr + '</div>' +
+              timeStr +
             '</div>' +
             '<div class="dash-card-cta">' + t('dash_open_cta') + '</div>' +
           '</div>'

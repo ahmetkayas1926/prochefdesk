@@ -3458,3 +3458,18 @@ window.PCD.i18n.register('en', {
   event_balance_due: "Balance due",
   event_billed_guests: "Billed guests",
 });
+
+// v2.44.90 — Events Phase 4: staffing / labor cost.
+window.PCD.i18n.register('en', {
+  event_staffing: "Staffing & labor",
+  event_staffing_hint: "Crew × hours × rate → real profit includes labor, not just food.",
+  event_add_role: "Add role",
+  event_role: "Role",
+  event_role_ph: "Role (e.g. Waiter)",
+  event_st_count: "Count",
+  event_st_hours: "Hours",
+  event_st_rate: "Rate/h",
+  event_labor_cost: "Labor cost",
+  event_grand_total: "Total cost",
+  event_staffing_calc: "Crew × hours × rate",
+});

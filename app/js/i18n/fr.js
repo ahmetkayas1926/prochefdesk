@@ -3353,3 +3353,18 @@ window.PCD.i18n.register('fr', {
   event_balance_due: "Solde dû",
   event_billed_guests: "Convives facturés",
 });
+
+// v2.44.90 — Events Phase 4 : personnel / coût de main-d'œuvre.
+window.PCD.i18n.register('fr', {
+  event_staffing: "Personnel et main-d'œuvre",
+  event_staffing_hint: "Équipe × heures × taux → le bénéfice réel inclut la main-d'œuvre, pas seulement la nourriture.",
+  event_add_role: "Ajouter un rôle",
+  event_role: "Rôle",
+  event_role_ph: "Rôle (ex. Serveur)",
+  event_st_count: "Nombre",
+  event_st_hours: "Heures",
+  event_st_rate: "Taux/h",
+  event_labor_cost: "Coût de main-d'œuvre",
+  event_grand_total: "Coût total",
+  event_staffing_calc: "Équipe × heures × taux",
+});

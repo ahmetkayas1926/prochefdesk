@@ -3353,3 +3353,18 @@ window.PCD.i18n.register('ar', {
   event_balance_due: "الرصيد المستحق",
   event_billed_guests: "الضيوف المحاسَبون",
 });
+
+// v2.44.90 — Events Phase 4: الطاقم / تكلفة العمالة.
+window.PCD.i18n.register('ar', {
+  event_staffing: "الطاقم والعمالة",
+  event_staffing_hint: "الطاقم × الساعات × الأجر ← الربح الحقيقي يشمل العمالة وليس الطعام فقط.",
+  event_add_role: "إضافة دور",
+  event_role: "الدور",
+  event_role_ph: "الدور (مثل: نادل)",
+  event_st_count: "العدد",
+  event_st_hours: "الساعات",
+  event_st_rate: "الأجر/س",
+  event_labor_cost: "تكلفة العمالة",
+  event_grand_total: "التكلفة الإجمالية",
+  event_staffing_calc: "الطاقم × الساعات × الأجر",
+});

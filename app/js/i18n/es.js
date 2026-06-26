@@ -3353,3 +3353,18 @@ window.PCD.i18n.register('es', {
   event_balance_due: "Saldo pendiente",
   event_billed_guests: "Invitados facturados",
 });
+
+// v2.44.90 — Events Fase 4: personal / coste de mano de obra.
+window.PCD.i18n.register('es', {
+  event_staffing: "Personal y mano de obra",
+  event_staffing_hint: "Equipo × horas × tarifa → el beneficio real incluye mano de obra, no solo comida.",
+  event_add_role: "Añadir rol",
+  event_role: "Rol",
+  event_role_ph: "Rol (p. ej. Camarero)",
+  event_st_count: "Cantidad",
+  event_st_hours: "Horas",
+  event_st_rate: "Tarifa/h",
+  event_labor_cost: "Coste de mano de obra",
+  event_grand_total: "Coste total",
+  event_staffing_calc: "Equipo × horas × tarifa",
+});

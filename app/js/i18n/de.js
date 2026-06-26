@@ -3353,3 +3353,18 @@ window.PCD.i18n.register('de', {
   event_balance_due: "Restbetrag",
   event_billed_guests: "Berechnete Gäste",
 });
+
+// v2.44.90 — Events Phase 4: Personal / Arbeitskosten.
+window.PCD.i18n.register('de', {
+  event_staffing: "Personal & Arbeit",
+  event_staffing_hint: "Team × Stunden × Satz → echter Gewinn umfasst Arbeit, nicht nur Lebensmittel.",
+  event_add_role: "Rolle hinzufügen",
+  event_role: "Rolle",
+  event_role_ph: "Rolle (z. B. Kellner)",
+  event_st_count: "Anzahl",
+  event_st_hours: "Stunden",
+  event_st_rate: "Satz/h",
+  event_labor_cost: "Arbeitskosten",
+  event_grand_total: "Gesamtkosten",
+  event_staffing_calc: "Team × Stunden × Satz",
+});

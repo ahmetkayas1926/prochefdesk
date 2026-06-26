@@ -3510,3 +3510,18 @@ window.PCD.i18n.register('tr', {
   event_balance_due: "Kalan bakiye",
   event_billed_guests: "Faturalanan kişi",
 });
+
+// v2.44.90 — Events Faz 4: personel / işçilik maliyeti.
+window.PCD.i18n.register('tr', {
+  event_staffing: "Personel & işçilik",
+  event_staffing_hint: "Ekip × saat × ücret → gerçek kâr sadece yemeği değil işçiliği de içerir.",
+  event_add_role: "Rol ekle",
+  event_role: "Rol",
+  event_role_ph: "Rol (örn. Garson)",
+  event_st_count: "Kişi",
+  event_st_hours: "Saat",
+  event_st_rate: "Ücret/sa",
+  event_labor_cost: "İşçilik maliyeti",
+  event_grand_total: "Toplam maliyet",
+  event_staffing_calc: "Ekip × saat × ücret",
+});
