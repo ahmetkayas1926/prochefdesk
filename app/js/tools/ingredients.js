@@ -117,6 +117,9 @@
     const ings = PCD.store.listIngredients().sort(function (a, b) {
       return (a.name || '').localeCompare(b.name || '');
     });
+    // v2.44.79 — Tedarikçisiz malzeme sayısı (butonda kırmızı bildirim rozeti). "Not
+    // purchased" işaretli (su/buz gibi satın alınmayan) malzemeler bu sayıma DAHİL DEĞİL.
+    const noSupCount = ings.filter(function (i) { return !(i.supplier || '').trim() && !i.noSupplierNeeded; }).length;
 
     view.innerHTML = `
       <div class="page-header">
@@ -125,7 +128,7 @@
           <div class="page-subtitle">${ings.length} items</div>
         </div>
         <div class="page-header-actions">
-          ${ings.length > 0 ? `<button class="btn btn-outline btn-sm" id="assignSupBtn" title="${PCD.escapeHtml(L('assign_supplier','Assign supplier'))}">${PCD.icon('truck',14)} ${PCD.escapeHtml(L('assign_supplier','Assign supplier'))}</button>` : ''}
+          ${ings.length > 0 ? `<button class="btn btn-outline btn-sm" id="assignSupBtn" title="${PCD.escapeHtml(L('assign_supplier','Assign supplier'))}" style="position:relative;${noSupCount > 0 ? 'border-color:var(--warning);background:#fff7ed;color:#b45309;font-weight:700;' : ''}">${PCD.icon('truck',14)} ${PCD.escapeHtml(L('assign_supplier','Assign supplier'))}${noSupCount > 0 ? `<span style="position:absolute;top:-7px;right:-8px;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:var(--danger);color:#fff;font-size:11px;font-weight:800;line-height:19px;text-align:center;box-shadow:0 0 0 2px var(--bg);">${noSupCount}</span>` : ''}</button>` : ''}
           ${ings.length > 0 ? `<button class="btn btn-outline btn-sm" id="toggleSelIng">${PCD.icon('check-square',14)} ${t('select_mode')}</button>` : ''}
           <button class="btn btn-outline btn-sm" id="importBtn" title="${t('ingredients_import_title') || 'Bulk import'}">${PCD.icon('upload',14)} ${t('ingredients_import') || 'Import'}</button>
           ${ings.length > 0 ? `<button class="btn btn-outline btn-sm" id="exportBtn" title="${PCD.escapeHtml(t('ingredients_export_title') || 'Export to CSV / Excel for bulk edit or backup')}">${PCD.icon('download',14)} ${PCD.escapeHtml(t('ingredients_export') || 'Export')}</button>` : ''}

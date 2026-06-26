@@ -3278,3 +3278,13 @@ window.PCD.i18n.register('ar', {
   sup_not_found: "المورّد غير موجود",
   toast_error: "حدث خطأ ما",
 });
+
+// v2.44.80 — جهة اتصال المورّد + قالب رسالة الطلب.
+window.PCD.i18n.register('ar', {
+  supplier_contact_name: "جهة الاتصال",
+  supplier_contact_ph: "مثال: John — يُستخدم بعد ”Hi“ في الطلبات",
+  supplier_msg_template: "قالب الرسالة",
+  supplier_msg_tpl_hint: "خصّص رسالة الطلب المُرسلة إلى الموردين. تملأ كل طلب مسبقًا — ويمكنك تعديل أي رسالة قبل إرسالها.",
+  supplier_msg_tpl_insert: "انقر لإدراج عنصر نائب:",
+  reset_default: "إعادة للافتراضي",
+});

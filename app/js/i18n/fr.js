@@ -3278,3 +3278,13 @@ window.PCD.i18n.register('fr', {
   sup_not_found: "Fournisseur introuvable",
   toast_error: "Une erreur s'est produite",
 });
+
+// v2.44.80 — Personne à contacter du fournisseur + modèle de message de commande.
+window.PCD.i18n.register('fr', {
+  supplier_contact_name: "Personne à contacter",
+  supplier_contact_ph: "ex. John — utilisé après « Hi » dans les commandes",
+  supplier_msg_template: "Modèle de message",
+  supplier_msg_tpl_hint: "Personnalisez le message de commande envoyé aux fournisseurs. Il pré-remplit chaque commande — vous pouvez toujours modifier un message avant l'envoi.",
+  supplier_msg_tpl_insert: "Touchez pour insérer un espace réservé :",
+  reset_default: "Réinitialiser par défaut",
+});

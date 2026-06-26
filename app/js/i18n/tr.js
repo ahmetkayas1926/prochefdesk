@@ -3435,3 +3435,13 @@ window.PCD.i18n.register('tr', {
   sup_not_found: "Tedarikçi bulunamadı",
   toast_error: "Bir şeyler ters gitti",
 });
+
+// v2.44.80 — Tedarikçi iletişim adı + sipariş mesajı şablonu.
+window.PCD.i18n.register('tr', {
+  supplier_contact_name: "İletişim kişisi",
+  supplier_contact_ph: "örn. John — siparişlerde “Hi”den sonra kullanılır",
+  supplier_msg_template: "Mesaj şablonu",
+  supplier_msg_tpl_hint: "Tedarikçilere giden sipariş mesajını özelleştir. Her siparişi ön-doldurur — göndermeden önce her mesajı yine de düzenleyebilirsin.",
+  supplier_msg_tpl_insert: "Yer-tutucu eklemek için dokun:",
+  reset_default: "Varsayılana sıfırla",
+});

@@ -92,6 +92,7 @@
           <div class="page-subtitle">${t('suppliers_subtitle') || 'Quick order from your vendor directory'}</div>
         </div>
         <div class="page-header-actions">
+          <button class="btn btn-outline" id="msgTplBtn" title="${PCD.escapeHtml(tt('supplier_msg_template', 'Message template'))}">${PCD.icon('mail',16)} ${PCD.escapeHtml(tt('supplier_msg_template', 'Message template'))}</button>
           <button class="btn btn-primary" id="newSupBtn">${PCD.icon('plus',16)} ${t('supplier_new') || 'New Supplier'}</button>
         </div>
       </div>
@@ -137,6 +138,7 @@
     }
 
     PCD.$('#newSupBtn', view).addEventListener('click', function () { openEditor(); });
+    var _tplBtn = PCD.$('#msgTplBtn', view); if (_tplBtn) _tplBtn.addEventListener('click', function () { openMessageTemplate(); });
 
     // Wire actions via delegation
     PCD.on(listEl, 'click', '[data-edit-sup]', function (e) {
@@ -339,30 +341,33 @@
     });
   }
 
+  // v2.44.80 — Özelleştirilebilir sipariş mesajı. Hitap = supplier.contactName (yoksa
+  // tedarikçi adı). Gövde = prefs.orderMsgTemplate (yer-tutucular {contact} {date} {items}
+  // {me}); şablon boşsa varsayılan. Notlar her zaman sona eklenir. Inventory + Suppliers
+  // siparişleri AYNI bu fonksiyonu kullanır → değişiklik ikisine de yansır.
+  const DEFAULT_ORDER_TPL = 'Hi {contact},\n\nI would like to order the following for delivery on {date}:\n{items}\n\nThanks,\n{me}';
   function buildMessage(supplier, items, deliveryDate, notes) {
     const dq = draftQty[supplier.id] || {};
     const dateStr = new Date(deliveryDate).toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || "en", { weekday: 'long', month: 'long', day: 'numeric' });
     const user = PCD.store.get('user') || {};
     const userName = user.name || user.email || '';
-
-    const lines = [];
-    lines.push('Hi ' + (supplier.name || 'team') + ',');
-    lines.push('');
-    lines.push('I would like to order the following for delivery on ' + dateStr + ':');
-    lines.push('');
-    items.forEach(function (it) {
+    const greet = (supplier.contactName || '').trim() || supplier.name || 'team';
+    const itemLines = items.map(function (it) {
       const qty = dq[it.id];
       const unit = dq['_unit_' + it.id] || it.unit || '';
-      lines.push('• ' + it.name + ' — ' + qty + ' ' + unit);
-    });
-    if (notes) {
-      lines.push('');
-      lines.push('Notes: ' + notes);
-    }
-    lines.push('');
-    lines.push('Thanks,');
-    if (userName) lines.push(userName);
-    return lines.join('\n');
+      return '• ' + it.name + ' — ' + qty + ' ' + unit;
+    }).join('\n');
+
+    let tpl = '';
+    try { tpl = ((PCD.store.get('prefs') || {}).orderMsgTemplate || '').trim(); } catch (e) {}
+    let out = (tpl || DEFAULT_ORDER_TPL)
+      .replace(/\{contact\}/g, greet)
+      .replace(/\{date\}/g, dateStr)
+      .replace(/\{items\}/g, itemLines)
+      .replace(/\{me\}/g, userName);
+    if (userName === '') out = out.replace(/\n\{me\}|\{me\}/g, '').replace(/[ \t]+$/gm, '');
+    if (notes) out += '\n\nNotes: ' + notes;
+    return out;
   }
 
   function openShareSheet(supplier, items, deliveryDate, notes) {
@@ -699,6 +704,10 @@
           <input type="text" class="input" id="sName" value="${PCD.escapeHtml(data.name || '')}" placeholder="e.g. Fresh Produce Co">
         </div>
         <div class="field">
+          <label class="field-label">${PCD.escapeHtml(tt('supplier_contact_name', 'Contact person'))} <span class="text-muted" style="font-weight:400;">(${PCD.escapeHtml(tt('optional', 'optional'))})</span></label>
+          <input type="text" class="input" id="sContact" value="${PCD.escapeHtml(data.contactName || '')}" placeholder="${PCD.escapeHtml(tt('supplier_contact_ph', 'e.g. John — used after “Hi” in orders'))}">
+        </div>
+        <div class="field">
           <label class="field-label">Category</label>
           <select class="select" id="sCat">
             ${CATS.map(function (c) { return '<option value="' + c + '"' + (data.category === c ? ' selected' : '') + '>' + c + '</option>'; }).join('')}
@@ -752,6 +761,7 @@
 
       // Direct field handlers (innerHTML reset her render'da eskileri temizler)
       PCD.$('#sName', body).addEventListener('input', function () { data.name = this.value; });
+      var _scInp = PCD.$('#sContact', body); if (_scInp) _scInp.addEventListener('input', function () { data.contactName = this.value; });
       PCD.$('#sCat', body).addEventListener('change', function () { data.category = this.value; });
       PCD.$('#sPhone', body).addEventListener('input', function () { data.phone = this.value; });
       PCD.$('#sWa', body).addEventListener('input', function () { data.whatsapp = this.value; });
@@ -807,6 +817,7 @@
     saveBtn.addEventListener('click', function () {
       if (PCD.gate && !PCD.gate.requireAuth()) return;
       data.name = (PCD.$('#sName', body).value || '').trim();
+      var _scSave = PCD.$('#sContact', body); data.contactName = _scSave ? (_scSave.value || '').trim() : (data.contactName || '');
       if (!data.name) { PCD.toast.error(PCD.i18n.t('toast_name_required')); return; }
       data.category = PCD.$('#sCat', body).value;
       data.phone = (PCD.$('#sPhone', body).value || '').trim();
@@ -916,6 +927,57 @@
       const out = Object.keys(selected).map(function (id) { return selected[id]; }).concat(newOnes.map(function (n) { return { name: n.name, unit: n.unit }; }));
       m.close();
       if (out.length && onConfirm) onConfirm(out);
+    });
+  }
+
+  // v2.44.80 — Genel sipariş-mesajı şablonu (prefs.orderMsgTemplate, cihazlar-arası senkron).
+  // Yer-tutucular: {contact} {date} {items} {me}. Boş ya da default = varsayılan kullanılır.
+  function openMessageTemplate() {
+    const t = PCD.i18n.t;
+    const cur = ((PCD.store.get('prefs') || {}).orderMsgTemplate || '').trim();
+    const body = PCD.el('div');
+    body.innerHTML =
+      '<div class="text-muted text-sm" style="margin-bottom:8px;line-height:1.5;">' + PCD.escapeHtml(tt('supplier_msg_tpl_hint', 'Customize the order message sent to suppliers. This pre-fills every order — you can still edit any message before sending.')) + '</div>' +
+      '<textarea class="textarea" id="msgTpl" rows="10" style="font-family:var(--font-mono);font-size:12px;">' + PCD.escapeHtml(cur || DEFAULT_ORDER_TPL) + '</textarea>' +
+      '<div class="text-muted" style="font-size:11px;margin:8px 0 4px;">' + PCD.escapeHtml(tt('supplier_msg_tpl_insert', 'Tap to insert a placeholder:')) + '</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:6px;">' +
+        ['{contact}', '{date}', '{items}', '{me}'].map(function (p) { return '<button type="button" class="tpl-ins" data-p="' + p + '" style="padding:4px 9px;border-radius:6px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:12px;font-family:var(--font-mono);">' + p + '</button>'; }).join('') +
+      '</div>';
+    const resetBtn = PCD.el('button', { class: 'btn btn-ghost btn-sm', text: tt('reset_default', 'Reset to default') });
+    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') });
+    const saveBtn = PCD.el('button', { class: 'btn btn-primary', style: { flex: '1' }, text: t('save') });
+    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
+    footer.appendChild(resetBtn); footer.appendChild(cancelBtn); footer.appendChild(saveBtn);
+    const m = PCD.modal.open({ title: tt('supplier_msg_template', 'Message template'), body: body, footer: footer, size: 'md', closable: true });
+    const ta = PCD.$('#msgTpl', body);
+    body.addEventListener('click', function (e) {
+      const b = e.target.closest && e.target.closest('.tpl-ins');
+      if (!b) return;
+      const p = b.getAttribute('data-p');
+      const s = ta.selectionStart != null ? ta.selectionStart : ta.value.length;
+      const eN = ta.selectionEnd != null ? ta.selectionEnd : s;
+      ta.value = ta.value.slice(0, s) + p + ta.value.slice(eN);
+      ta.focus(); ta.selectionStart = ta.selectionEnd = s + p.length;
+    });
+    resetBtn.addEventListener('click', function () { ta.value = DEFAULT_ORDER_TPL; });
+    cancelBtn.addEventListener('click', function () { m.close(); });
+    saveBtn.addEventListener('click', function () {
+      const v = (ta.value || '').trim();
+      PCD.store.set('prefs.orderMsgTemplate', (v && v !== DEFAULT_ORDER_TPL) ? v : '');
+      if (PCD.store.flush) PCD.store.flush();
+      if (PCD.cloudPerTable && PCD.cloudPerTable.queueUpsert) {
+        try {
+          PCD.cloudPerTable.queueUpsert('user_prefs', null, null, {
+            activeWorkspaceId: PCD.store.getActiveWorkspaceId(),
+            prefs: PCD.store.get('prefs'),
+            plan: PCD.store.get('plan'),
+            onboarding: PCD.store.get('onboarding'),
+            costHistory: PCD.store.get('costHistory') || [],
+          });
+        } catch (e) {}
+      }
+      if (PCD.toast) PCD.toast.success(t('saved'));
+      m.close();
     });
   }
 

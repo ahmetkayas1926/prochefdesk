@@ -259,7 +259,14 @@
     let filter = 'all';
     let groupMode = (function () { try { return localStorage.getItem('pcd_inv_group') || 'category'; } catch (e) { return 'category'; } })();
     // v2.44.78 — Kalıcı hatırlatıcı: tedarikçisi olmayan malzeme sayısı (amber rozet).
-    const _noSupCount = ings.filter(function (i) { return !(i.supplier || '').trim(); }).length;
+    const _noSupCount = ings.filter(function (i) { return !(i.supplier || '').trim() && !i.noSupplierNeeded; }).length;
+    // v2.44.79 — "Generate Order" butonunda kırmızı rozet: par-altı (sipariş edilecek) kalem sayısı.
+    const _belowParCount = ings.filter(function (i) {
+      const row = invAll[i.id];
+      if (!row || row.parLevel == null) return false;
+      const s = computeStatus(row);
+      return s === 'out' || s === 'critical' || s === 'low';
+    }).length;
 
     // Aggregate stats
     function getRow(id) { return invAll[id] || null; }
@@ -273,7 +280,7 @@
         <div class="page-header-actions">
           <button class="btn btn-outline btn-sm" id="historyHeaderBtn" title="${PCD.escapeHtml(t('inv_view_past_counts_tooltip'))}">${PCD.icon('clock',14)} ${t('inv_history')}</button>
           <button class="btn btn-outline btn-sm" id="bulkCountBtn">${PCD.icon('list',14)} ${t('inv_count_stock')}</button>
-          <button class="btn btn-outline btn-sm" id="genOrderBtn">${PCD.icon('send',14)} ${t('inv_generate_order')}</button>
+          <button class="btn btn-outline btn-sm" id="genOrderBtn" style="position:relative;">${PCD.icon('send',14)} ${t('inv_generate_order')}${_belowParCount > 0 ? `<span style="position:absolute;top:-7px;right:-8px;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:var(--danger);color:#fff;font-size:11px;font-weight:800;line-height:19px;text-align:center;box-shadow:0 0 0 2px var(--bg);">${_belowParCount}</span>` : ''}</button>
           ${_noSupCount > 0 ? `<button class="btn btn-sm" id="noSupBadge" title="${PCD.escapeHtml(L('inv_no_supplier_count', '{n} ingredient(s) have no supplier — assign one to order them.').replace('{n}', _noSupCount))}" style="background:#fff7ed;border:1px solid var(--warning);color:#b45309;font-weight:700;">⚠ ${_noSupCount}</button>` : ''}
           <button class="btn btn-outline btn-sm" id="recordSalesBtn">${PCD.icon('edit',14)} ${t('inv_record_sales')}</button>
         </div>

@@ -3383,3 +3383,13 @@ window.PCD.i18n.register('en', {
   sup_not_found: "Supplier not found",
   toast_error: "Something went wrong",
 });
+
+// v2.44.80 — Supplier contact name + order message template.
+window.PCD.i18n.register('en', {
+  supplier_contact_name: "Contact person",
+  supplier_contact_ph: "e.g. John — used after “Hi” in orders",
+  supplier_msg_template: "Message template",
+  supplier_msg_tpl_hint: "Customize the order message sent to suppliers. This pre-fills every order — you can still edit any message before sending.",
+  supplier_msg_tpl_insert: "Tap to insert a placeholder:",
+  reset_default: "Reset to default",
+});

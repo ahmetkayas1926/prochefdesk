@@ -3278,3 +3278,13 @@ window.PCD.i18n.register('es', {
   sup_not_found: "Proveedor no encontrado",
   toast_error: "Algo salió mal",
 });
+
+// v2.44.80 — Persona de contacto del proveedor + plantilla de mensaje de pedido.
+window.PCD.i18n.register('es', {
+  supplier_contact_name: "Persona de contacto",
+  supplier_contact_ph: "p. ej. John — se usa tras «Hi» en los pedidos",
+  supplier_msg_template: "Plantilla de mensaje",
+  supplier_msg_tpl_hint: "Personaliza el mensaje de pedido enviado a los proveedores. Rellena cada pedido — aún puedes editar cualquier mensaje antes de enviarlo.",
+  supplier_msg_tpl_insert: "Toca para insertar un marcador:",
+  reset_default: "Restablecer predeterminado",
+});

@@ -3278,3 +3278,13 @@ window.PCD.i18n.register('de', {
   sup_not_found: "Lieferant nicht gefunden",
   toast_error: "Etwas ist schiefgelaufen",
 });
+
+// v2.44.80 — Lieferanten-Ansprechpartner + Bestellnachrichtenvorlage.
+window.PCD.i18n.register('de', {
+  supplier_contact_name: "Ansprechpartner",
+  supplier_contact_ph: "z. B. John — wird nach „Hi“ in Bestellungen verwendet",
+  supplier_msg_template: "Nachrichtenvorlage",
+  supplier_msg_tpl_hint: "Passe die an Lieferanten gesendete Bestellnachricht an. Sie füllt jede Bestellung vor — du kannst jede Nachricht vor dem Senden noch bearbeiten.",
+  supplier_msg_tpl_insert: "Zum Einfügen eines Platzhalters tippen:",
+  reset_default: "Auf Standard zurücksetzen",
+});
