@@ -4,6 +4,22 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.92 — FIX: par=0 malzeme "untracked" sayılır (yanlış kırmızı/sipariş) · 2026-06-26
+- **Bug:** Bir malzemenin **par seviyesi 0** yazılınca (girilmemiş `null` değil), `computeStatus` "takip ediliyor" dalına girip stok 0'da **'out' (kırmızı)** döndürüyordu → kullanıcı par+min'i sıfırlasa bile kalem kırmızı kalıyor, "Generate Order" rozetinde ve "Need reorder" listesinde sayılıyordu.
+- **Kök neden:** `if (invRow.parLevel == null)` yalnız `null`'ı untracked sayıyordu; elle yazılan `0` sayı olduğu için tracked dalına düşüp `if (stock <= 0) return 'out'` tetikliyordu.
+- **Çözüm:** **par VE min ikisi de ≤0 = eşik yok = takip edilmiyor → 'untracked'** (gri "—", uyarı/sipariş YOK). Negatif stok yine 'out' (fazla-tüketim sinyali korunur). `min>0` ayrı eşik olarak çalışmaya devam eder (par=0, min=20 → stok 0'da hâlâ kritik — kasıtlı). Preview'da 5 senaryo doğrulandı (par0/min0/stok0→untracked · par10/stok0→out · min20/stok5→critical · negatif→out · normal→ok). Not: "⚠ 129" rozeti AYRI bir şey = tedarikçisi atanmamış malzeme sayısı (bu bug'la ilgisiz).
+
+## v2.44.91 — Events PRO: tam kapasite etkinlik aracı · 2026-06-26
+Sektör araştırması (Tripleseat · Caterease · Total Party Planner · CaterCamp · Planning Pod + BEO standardı: Amadeus/Cvent/Mews + gerçek kullanıcı eksik-özellik talepleri) referans alınarak eksik pro katmanlar eklendi.
+- **YENİ — Kalemli ek ücretler (içecek/kiralama/AV/diğer):** her kalem **maliyet** (sen ödersin) + **fiyat** (müşteri öder). P&L'e tam yansır (yemek + işçilik + ek-kalem maliyeti; ciro + ek-kalem fiyatı).
+- **YENİ — Ödeme planı:** depozito + taksitler, vade tarihleri + "ödendi" işareti → **ödenen / kalan bakiye** otomatik. Eski tek-depozito buna göç eder.
+- **YENİ — Run-of-show (zaman çizelgesi):** kurulum → servis → toplama; BEO'da kronolojik basılır.
+- **YENİ — Görev/checklist:** geri sayım listesi (tadım, son sayı, kiralama) + done oranı; liste kartında rozet.
+- **YENİ — Müşteri teklifi (client-facing):** ayrı yazdırılır — kalemli fiyat + ödeme planı + şartlar + **imza satırları**. İç maliyet/kâr GÖSTERMEZ (rakiplerin "proposal" çekirdeği).
+- **YENİ — Satış hattı + liste:** durum +`tentative` (opsiyon) · liste **durum filtre çipleri** (sayılı) + **Yaklaşan/Geçmiş** gruplama + bakiye/görev çipleri.
+- **BEO zenginleşti:** run-of-show + ek ücretler bölümleri + gelir kalemlendirme (yemek/extras/servis) + ödenen/bakiye satırları.
+- **ProChefDesk avantajı:** kullanıcıların pro araçlarda "eksik" dediği gerçek tarif/maliyet/envanter/dietary/HACCP ZATEN var. Preview'da uçtan uca doğrulandı (Food $4.800 + Extras +$200 = $5.000 · Paid −$500 · Balance $4.500 · BEO + breakdown + filtre/gruplama · 0 console hatası). 36 yeni i18n anahtarı 6 dile. **Not:** save guest modunda auth ister (üyede çalışır; yeni alanlar functions/staffing ile aynı kanaldan kalıcı/sync).
+
 ## v2.44.90 — Events Faz 4: işçilik maliyeti + dashboard zaman çizelgesi · 2026-06-26
 - **YENİ — Etkinlik işçilik maliyeti (gerçek P&L = yemek + işçilik).** Editörde katlanır "Personel & işçilik" bölümü: rol satırları (rol × kişi × saat × ücret). `computeStats` artık `laborCost` + `grandTotal` (yemek+işçilik) döndürüyor; **kâr/marj grandTotal'a göre** — catering kârının yarısı işçilik, eskiden hiç hesaba katılmıyordu. Özet kutusu (Labor cost · Total cost), BEO çıktısı (Staffing tablosu + Labor/Total satırları) ve paylaşım metni güncellendi. **Geriye-uyumlu:** staffing yoksa profit eskisi gibi (yemek). Preview'da doğrulandı: Waiter 4×6h×$25=$600 · food $979.51 + labor $600 = $1.579,51 · kâr %80→%67.
 - **YENİ — Dashboard sonraki-etkinlik fonksiyon zaman çizelgesi.** Çok-fonksiyonlu etkinlik kartı artık fonksiyon saatlerini gösteriyor: "🕐 Reception 18:00 · Dinner 20:00". Tek fonksiyonlu/düz etkinlikler değişmedi. (Dashboard↔Events bağlantısı zaten vardı — kart + yaklaşan-widget; bu sadece çok-fonksiyon timeline'ını ekledi.)

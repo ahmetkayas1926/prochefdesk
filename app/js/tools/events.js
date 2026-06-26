@@ -17,7 +17,9 @@
   'use strict';
   const PCD = window.PCD;
 
-  const STATUSES = ['draft', 'confirmed', 'done', 'cancelled'];
+  // v2.44.91 — satış hattı: draft(talep) → tentative(teklif/opsiyon) → confirmed → done → cancelled.
+  const STATUSES = ['draft', 'tentative', 'confirmed', 'done', 'cancelled'];
+  let _evFilter = 'all';   // liste durum filtresi (oturum içi)
 
   // v2.44.87 — Faz 2: diyet/alerjen. Client'tan gelen kişi-bazlı diyet sayıları (manuel)
   // + fonksiyon menüsündeki alerjenlerin otomatik özeti (tariflerdeki manuel etiketlerden,
@@ -76,6 +78,7 @@
   function statusColor(s) {
     return {
       draft: 'var(--text-3)',
+      tentative: '#b45309',
       confirmed: 'var(--brand-600)',
       done: 'var(--success)',
       cancelled: 'var(--danger)',
@@ -84,7 +87,7 @@
 
   function render(view) {
     const t = PCD.i18n.t;
-    const events = PCD.store.listTable('events').slice().sort(function (a, b) {
+    const allEvents = PCD.store.listTable('events').slice().sort(function (a, b) {
       // Upcoming first, then past
       const da = a.date || '', db = b.date || '';
       if (da && db) return da.localeCompare(db);
@@ -92,6 +95,15 @@
       if (db) return 1;
       return (b.updatedAt || '').localeCompare(a.updatedAt || '');
     });
+
+    // v2.44.91 — durum filtresi çipleri (yalnız mevcut durumlar + All)
+    const counts = { all: allEvents.length };
+    allEvents.forEach(function (e) { const s = e.status || 'draft'; counts[s] = (counts[s] || 0) + 1; });
+    if (_evFilter !== 'all' && !counts[_evFilter]) _evFilter = 'all';
+    const chipDefs = [{ k: 'all', label: t('event_filter_all') || 'All' }].concat(STATUSES.filter(function (s) { return counts[s]; }).map(function (s) { return { k: s, label: t('event_status_' + s) }; }));
+    const chipsHtml = chipDefs.map(function (c) {
+      return '<button class="btn btn-sm ' + (_evFilter === c.k ? 'btn-primary' : 'btn-outline') + '" data-evf="' + c.k + '" style="min-height:30px;">' + PCD.escapeHtml(c.label) + ' (' + (counts[c.k] || 0) + ')</button>';
+    }).join('');
 
     view.innerHTML = `
       <div class="page-header">
@@ -104,11 +116,12 @@
         </div>
       </div>
       ${PCD.guideCard('events', t('events_g_t'), [t('events_g1'), t('events_g2'), t('events_g3')])}
+      ${allEvents.length ? '<div id="evFilters" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">' + chipsHtml + '</div>' : ''}
       <div id="eventList"></div>
     `;
 
     const listEl = PCD.$('#eventList', view);
-    if (events.length === 0) {
+    if (allEvents.length === 0) {
       listEl.innerHTML = `
         <div class="empty">
           <div class="empty-icon">🎉</div>
@@ -123,10 +136,16 @@
       PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
       PCD.store.listRecipes().forEach(function (r) { recipeMap[r.id] = r; });
 
-      const cont = PCD.el('div', { class: 'flex flex-col gap-2' });
-      events.forEach(function (e) {
+      const events = allEvents.filter(function (e) { return _evFilter === 'all' || (e.status || 'draft') === _evFilter; });
+      const today = (function () { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); })();
+      const upcoming = events.filter(function (e) { return !e.date || e.date >= today; });
+      const past = events.filter(function (e) { return e.date && e.date < today; });
+
+      const buildRow = function (e) {
         const stats = computeStats(e, ingMap, recipeMap);
         const dateStr = e.date ? PCD.fmtDate(e.date, { weekday: 'short', month: 'short', day: 'numeric' }) : '—';
+        const taskDone = (e.tasks || []).filter(function (x) { return x.done; }).length;
+        const taskTot = (e.tasks || []).length;
         const row = PCD.el('div', { class: 'card card-hover', 'data-eid': e.id, style: { padding: '12px' } });
         row.innerHTML = `
           <div class="flex items-center justify-between mb-2">
@@ -151,13 +170,33 @@
             <span class="chip">${t('event_total_cost')}: <strong>${PCD.fmtMoney(stats.totalCost)}</strong></span>
             ${stats.totalRevenue > 0 ? '<span class="chip chip-brand">' + t('event_total_revenue') + ': <strong>' + PCD.fmtMoney(stats.totalRevenue) + '</strong></span>' : ''}
             ${stats.profit !== null ? '<span class="chip chip-' + (stats.profit >= 0 ? 'success' : 'danger') + '">' + t('event_profit') + ': <strong>' + PCD.fmtMoney(stats.profit) + '</strong></span>' : ''}
+            ${(stats.totalRevenue > 0 && stats.balanceDue > 0.005) ? '<span class="chip" style="background:#fef3c7;color:#92400e;">' + (t('event_balance_due') || 'Balance') + ': <strong>' + PCD.fmtMoney(stats.balanceDue) + '</strong></span>' : ''}
+            ${taskTot ? '<span class="chip">✅ ' + taskDone + '/' + taskTot + '</span>' : ''}
           </div>
         `;
-        cont.appendChild(row);
-      });
+        return row;
+      };
+
+      const cont = PCD.el('div', { class: 'flex flex-col gap-2' });
+      const both = upcoming.length && past.length;
+      const section = function (label, arr) {
+        if (!arr.length) return;
+        if (both) {
+          const h = PCD.el('div', { class: 'text-muted text-sm', style: { fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em', margin: '8px 0 2px' } });
+          h.textContent = label;
+          cont.appendChild(h);
+        }
+        arr.forEach(function (e) { cont.appendChild(buildRow(e)); });
+      };
+      section(t('event_upcoming') || 'Upcoming', upcoming);
+      section(t('event_past') || 'Past', past);
+      if (!cont.children.length) {
+        cont.innerHTML = '<div class="text-muted" style="padding:24px;text-align:center;">' + PCD.escapeHtml(t('event_filter_none') || 'No events in this status.') + '</div>';
+      }
       listEl.appendChild(cont);
     }
 
+    PCD.on(view, 'click', '[data-evf]', function () { _evFilter = this.getAttribute('data-evf'); render(view); });
     PCD.$('#newEventBtn', view).addEventListener('click', function () { openEditor(); });
     PCD.on(listEl, 'click', '[data-eid]', function (e) {
       if (e.target.closest('button')) return;  // any quick-access action button
@@ -235,25 +274,41 @@
     const attendees = eventGuests(event);
     const billed = eventBilledGuests(event);
     const pph = Number(event.pricePerHead) || 0;
-    const subtotal = billed * pph;
+    const foodRevenue = billed * pph;
+    // v2.44.91 — kalemli ek ücretler (içecek/kiralama/diğer): maliyet (sen ödersin) + fiyat (müşteri öder).
+    let chargesCost = 0, chargesRevenue = 0;
+    (event.charges || []).forEach(function (c) {
+      chargesCost += Number(c.cost) || 0;
+      chargesRevenue += Number(c.price) || 0;
+    });
+    const subtotal = foodRevenue + chargesRevenue;   // servis ücreti öncesi müşteri tutarı
     const svcPct = Number(event.serviceChargePct) || 0;
     const serviceCharge = subtotal * (svcPct / 100);
     const totalRevenue = subtotal + serviceCharge;
-    const deposit = Number(event.deposit) || 0;
-    const balanceDue = totalRevenue - deposit;
-    // v2.44.90 — Faz 4: işçilik. totalCost = YEMEK maliyeti (etiketler korunur); grandTotal =
-    // yemek + işçilik. Kâr/marj grandTotal'a göre → gerçek P&L. Staffing yoksa eskisi gibi.
+    // v2.44.90 — işçilik. totalCost = YEMEK maliyeti (etiketler korunur); grandTotal = yemek +
+    // işçilik + ek-kalem maliyeti. Kâr/marj grandTotal'a göre → gerçek P&L.
     const laborCost = (event.staffing || []).reduce(function (s, l) {
       return s + ((Number(l.count) || 0) * (Number(l.hours) || 0) * (Number(l.rate) || 0));
     }, 0);
-    const grandTotal = totalCost + laborCost;
+    const grandTotal = totalCost + laborCost + chargesCost;
+    // v2.44.91 — ödeme planı varsa ödenmişlerin toplamı; yoksa eski tek depozito.
+    let paidToDate;
+    if (event.payments && event.payments.length) {
+      paidToDate = event.payments.reduce(function (s, p) { return s + (p.paid ? (Number(p.amount) || 0) : 0); }, 0);
+    } else {
+      paidToDate = Number(event.deposit) || 0;
+    }
+    const scheduledTotal = (event.payments || []).reduce(function (s, p) { return s + (Number(p.amount) || 0); }, 0);
+    const balanceDue = totalRevenue - paidToDate;
     const profit = totalRevenue > 0 ? totalRevenue - grandTotal : null;
     const margin = totalRevenue > 0 ? ((totalRevenue - grandTotal) / totalRevenue) * 100 : null;
     return {
-      totalCost: totalCost, foodCost: totalCost, laborCost: laborCost, grandTotal: grandTotal,
+      totalCost: totalCost, foodCost: totalCost, laborCost: laborCost, chargesCost: chargesCost, grandTotal: grandTotal,
       attendees: attendees, billed: billed,
+      foodRevenue: foodRevenue, chargesRevenue: chargesRevenue,
       subtotal: subtotal, svcPct: svcPct, serviceCharge: serviceCharge,
-      totalRevenue: totalRevenue, deposit: deposit, balanceDue: balanceDue,
+      totalRevenue: totalRevenue, deposit: Number(event.deposit) || 0,
+      paidToDate: paidToDate, scheduledTotal: scheduledTotal, balanceDue: balanceDue,
       profit: profit, margin: margin
     };
   }
@@ -326,6 +381,14 @@
         room: data.venue || '', guestCount: Number(data.guestCount) || 50, menu: data.menu || [], notes: ''
       }];
     }
+    // v2.44.91 — Pro alanları + eski tek-depozito → ödeme planına göç.
+    if (!data.charges) data.charges = [];
+    if (!data.timeline) data.timeline = [];
+    if (!data.tasks) data.tasks = [];
+    if (!data.payments) data.payments = [];
+    if (data.deposit && !data.payments.length) {
+      data.payments.push({ label: t('event_deposit') || 'Deposit', due: '', amount: data.deposit, paid: true });
+    }
 
     const body = PCD.el('div');
     let previewOpen = false; // v2.37 — canlı A4 önizleme açık/kapalı durumu (render'lar arası korunur)
@@ -388,15 +451,9 @@
           </div>
         </div>
 
-        <div class="field-row">
-          <div class="field">
-            <label class="field-label">${PCD.escapeHtml(t('event_service_charge') || 'Service charge %')}</label>
-            <input type="number" class="input" id="eSvc" value="${data.serviceChargePct || ''}" step="0.5" min="0" placeholder="0">
-          </div>
-          <div class="field">
-            <label class="field-label">${PCD.escapeHtml(t('event_deposit') || 'Deposit paid')}</label>
-            <input type="number" class="input" id="eDeposit" value="${data.deposit || ''}" step="0.01" min="0" placeholder="0">
-          </div>
+        <div class="field">
+          <label class="field-label">${PCD.escapeHtml(t('event_service_charge') || 'Service charge %')}</label>
+          <input type="number" class="input" id="eSvc" value="${data.serviceChargePct || ''}" step="0.5" min="0" placeholder="0" style="max-width:160px;">
         </div>
 
         <details id="staffWrap" ${(data.staffing && data.staffing.length) ? 'open' : ''} style="margin:0 0 14px;border:1px solid var(--border);border-radius:10px;padding:10px 12px;">
@@ -404,6 +461,34 @@
           <div class="text-muted text-sm" style="margin:6px 0 8px;">${PCD.escapeHtml(t('event_staffing_hint') || 'Crew × hours × rate → true profit includes labor, not just food.')}</div>
           <div id="staffList"></div>
           <button type="button" class="btn btn-outline btn-sm" id="addStaffBtn" style="margin-top:8px;">+ ${PCD.escapeHtml(t('event_add_role') || 'Add role')}</button>
+        </details>
+
+        <details id="chargesWrap" ${(data.charges && data.charges.length) ? 'open' : ''} style="margin:0 0 14px;border:1px solid var(--border);border-radius:10px;padding:10px 12px;">
+          <summary style="cursor:pointer;font-weight:700;font-size:13px;color:var(--brand-700);user-select:none;list-style:none;">💰 ${PCD.escapeHtml(t('event_charges') || 'Charges & extras')}${stats.chargesRevenue > 0 ? ' · ' + PCD.fmtMoney(stats.chargesRevenue) : ''}</summary>
+          <div class="text-muted text-sm" style="margin:6px 0 8px;">${PCD.escapeHtml(t('event_charges_hint') || 'Beverage, rentals, AV, other — your cost + what the client pays.')}</div>
+          <div id="chargesList"></div>
+          <button type="button" class="btn btn-outline btn-sm" id="addChargeBtn" style="margin-top:8px;">+ ${PCD.escapeHtml(t('event_add_charge') || 'Add charge')}</button>
+        </details>
+
+        <details id="payWrap" ${(data.payments && data.payments.length) ? 'open' : ''} style="margin:0 0 14px;border:1px solid var(--border);border-radius:10px;padding:10px 12px;">
+          <summary style="cursor:pointer;font-weight:700;font-size:13px;color:var(--brand-700);user-select:none;list-style:none;">🧾 ${PCD.escapeHtml(t('event_payments') || 'Payment schedule')}${stats.paidToDate > 0 ? ' · ' + PCD.fmtMoney(stats.paidToDate) + ' ' + PCD.escapeHtml(t('event_paid') || 'paid') : ''}</summary>
+          <div class="text-muted text-sm" style="margin:6px 0 8px;">${PCD.escapeHtml(t('event_payments_hint') || 'Deposit + installments with due dates. Tick when paid → balance updates.')}</div>
+          <div id="payList"></div>
+          <button type="button" class="btn btn-outline btn-sm" id="addPayBtn" style="margin-top:8px;">+ ${PCD.escapeHtml(t('event_add_payment') || 'Add payment')}</button>
+        </details>
+
+        <details id="tlWrap" ${(data.timeline && data.timeline.length) ? 'open' : ''} style="margin:0 0 14px;border:1px solid var(--border);border-radius:10px;padding:10px 12px;">
+          <summary style="cursor:pointer;font-weight:700;font-size:13px;color:var(--brand-700);user-select:none;list-style:none;">🕐 ${PCD.escapeHtml(t('event_timeline') || 'Run-of-show')}${(data.timeline && data.timeline.length) ? ' · ' + data.timeline.length : ''}</summary>
+          <div class="text-muted text-sm" style="margin:6px 0 8px;">${PCD.escapeHtml(t('event_timeline_hint') || 'Chronological schedule: load-in → service → breakdown.')}</div>
+          <div id="tlList"></div>
+          <button type="button" class="btn btn-outline btn-sm" id="addTlBtn" style="margin-top:8px;">+ ${PCD.escapeHtml(t('event_add_timeline') || 'Add step')}</button>
+        </details>
+
+        <details id="taskWrap" ${(data.tasks && data.tasks.length) ? 'open' : ''} style="margin:0 0 14px;border:1px solid var(--border);border-radius:10px;padding:10px 12px;">
+          <summary style="cursor:pointer;font-weight:700;font-size:13px;color:var(--brand-700);user-select:none;list-style:none;">✅ ${PCD.escapeHtml(t('event_tasks') || 'Tasks & checklist')}${(data.tasks && data.tasks.length) ? ' · ' + (data.tasks.filter(function (x) { return x.done; }).length) + '/' + data.tasks.length : ''}</summary>
+          <div class="text-muted text-sm" style="margin:6px 0 8px;">${PCD.escapeHtml(t('event_tasks_hint') || 'Countdown checklist: tasting, final count, order rentals…')}</div>
+          <div id="taskList"></div>
+          <button type="button" class="btn btn-outline btn-sm" id="addTaskBtn" style="margin-top:8px;">+ ${PCD.escapeHtml(t('event_add_task') || 'Add task')}</button>
         </details>
 
         <div class="stat mb-3" style="background:var(--brand-50);border-color:var(--brand-300);">
@@ -414,7 +499,8 @@
             </div>
             ${(attendees > 0) ? '<div><div class="stat-label">' + (t('event_cost_per_head') || 'Food cost / guest') + '</div><div style="font-size:18px;font-weight:800;">' + PCD.fmtMoney(stats.totalCost / attendees) + '</div></div>' : ''}
             ${stats.laborCost > 0 ? '<div><div class="stat-label">' + (t('event_labor_cost') || 'Labor') + '</div><div style="font-size:18px;font-weight:800;">' + PCD.fmtMoney(stats.laborCost) + '</div></div>' : ''}
-            ${stats.laborCost > 0 ? '<div><div class="stat-label">' + (t('event_grand_total') || 'Total cost') + '</div><div style="font-size:18px;font-weight:800;">' + PCD.fmtMoney(stats.grandTotal) + '</div></div>' : ''}
+            ${stats.chargesCost > 0 ? '<div><div class="stat-label">' + (t('event_charges_cost') || 'Extras cost') + '</div><div style="font-size:18px;font-weight:800;">' + PCD.fmtMoney(stats.chargesCost) + '</div></div>' : ''}
+            ${(stats.laborCost > 0 || stats.chargesCost > 0) ? '<div><div class="stat-label">' + (t('event_grand_total') || 'Total cost') + '</div><div style="font-size:18px;font-weight:800;">' + PCD.fmtMoney(stats.grandTotal) + '</div></div>' : ''}
             ${data.budget > 0 ? (function () {
               const remaining = (data.budget || 0) - stats.totalCost;
               const usedPct = data.budget > 0 ? (stats.totalCost / data.budget) * 100 : 0;
@@ -433,12 +519,13 @@
           </div>
         </div>
 
-        ${(stats.subtotal > 0 && (stats.svcPct > 0 || stats.deposit > 0 || stats.billed !== stats.attendees)) ? '<div class="text-muted text-sm" style="margin:0 0 14px;line-height:1.9;padding:8px 12px;background:var(--surface-2);border-radius:8px;">' +
+        ${(stats.subtotal > 0 && (stats.svcPct > 0 || stats.paidToDate > 0 || stats.chargesRevenue > 0 || stats.billed !== stats.attendees)) ? '<div class="text-muted text-sm" style="margin:0 0 14px;line-height:1.9;padding:8px 12px;background:var(--surface-2);border-radius:8px;">' +
           '<strong>' + PCD.escapeHtml(t('event_billed_guests') || 'Billed guests') + ':</strong> ' + stats.billed +
-          ' · ' + PCD.escapeHtml(t('event_subtotal') || 'Subtotal') + ' ' + PCD.fmtMoney(stats.subtotal) +
+          ' · ' + PCD.escapeHtml(t('event_food_revenue') || 'Food') + ' ' + PCD.fmtMoney(stats.foodRevenue) +
+          (stats.chargesRevenue > 0 ? ' · ' + PCD.escapeHtml(t('event_charges') || 'Extras') + ' +' + PCD.fmtMoney(stats.chargesRevenue) : '') +
           (stats.serviceCharge > 0 ? ' · ' + PCD.escapeHtml(t('event_service_label') || 'Service charge') + ' (' + stats.svcPct + '%) +' + PCD.fmtMoney(stats.serviceCharge) : '') +
           ' · <strong>' + PCD.escapeHtml(t('event_total_revenue') || 'Total') + ' ' + PCD.fmtMoney(stats.totalRevenue) + '</strong>' +
-          (stats.deposit > 0 ? ' · ' + PCD.escapeHtml(t('event_deposit') || 'Deposit') + ' −' + PCD.fmtMoney(stats.deposit) + ' · <strong>' + PCD.escapeHtml(t('event_balance_due') || 'Balance due') + ' ' + PCD.fmtMoney(stats.balanceDue) + '</strong>' : '') +
+          (stats.paidToDate > 0 ? ' · ' + PCD.escapeHtml(t('event_paid') || 'Paid') + ' −' + PCD.fmtMoney(stats.paidToDate) + ' · <strong>' + PCD.escapeHtml(t('event_balance_due') || 'Balance due') + ' ' + PCD.fmtMoney(stats.balanceDue) + '</strong>' : '') +
         '</div>' : ''}
 
         <div class="field">
@@ -574,6 +661,70 @@
         });
       }
 
+      // v2.44.91 — Charges & extras (içecek/kiralama/diğer): maliyet + müşteri fiyatı
+      const chargesListEl = PCD.$('#chargesList', body);
+      if (chargesListEl) {
+        (data.charges || []).forEach(function (c, ci) {
+          const row = PCD.el('div', { class: 'flex items-center gap-2', style: { marginBottom: '6px' } });
+          row.innerHTML =
+            '<input type="text" class="input ch-label" data-ch="' + ci + '" value="' + PCD.escapeHtml(c.label || '') + '" placeholder="' + PCD.escapeHtml(t('event_charge_ph') || 'e.g. Open bar package') + '" style="flex:2;min-width:0;">' +
+            '<input type="number" class="input ch-cost" data-ch="' + ci + '" value="' + (c.cost != null ? c.cost : '') + '" min="0" step="0.01" placeholder="' + PCD.escapeHtml(t('event_charge_cost') || 'Cost') + '" title="' + PCD.escapeHtml(t('event_charge_cost') || 'Your cost') + '" style="width:74px;">' +
+            '<input type="number" class="input ch-price" data-ch="' + ci + '" value="' + (c.price != null ? c.price : '') + '" min="0" step="0.01" placeholder="' + PCD.escapeHtml(t('event_charge_price') || 'Price') + '" title="' + PCD.escapeHtml(t('event_charge_price') || 'Client price') + '" style="width:74px;">';
+          const rm = PCD.el('button', { class: 'icon-btn ch-rm', 'data-ch': ci });
+          rm.innerHTML = PCD.icon('x', 16);
+          row.appendChild(rm);
+          chargesListEl.appendChild(row);
+        });
+      }
+
+      // v2.44.91 — Payment schedule: etiket + vade + tutar + ödendi
+      const payListEl = PCD.$('#payList', body);
+      if (payListEl) {
+        (data.payments || []).forEach(function (p, pi) {
+          const row = PCD.el('div', { class: 'flex items-center gap-2', style: { marginBottom: '6px', flexWrap: 'wrap' } });
+          row.innerHTML =
+            '<input type="text" class="input pay-label" data-pay="' + pi + '" value="' + PCD.escapeHtml(p.label || '') + '" placeholder="' + PCD.escapeHtml(t('event_pay_label') || 'e.g. Deposit') + '" style="flex:2;min-width:90px;">' +
+            '<input type="date" class="input pay-due" data-pay="' + pi + '" value="' + (p.due || '') + '" title="' + PCD.escapeHtml(t('event_pay_due') || 'Due date') + '" style="width:148px;">' +
+            '<input type="number" class="input pay-amount" data-pay="' + pi + '" value="' + (p.amount != null ? p.amount : '') + '" min="0" step="0.01" placeholder="' + PCD.escapeHtml(t('event_pay_amount') || 'Amount') + '" style="width:90px;">' +
+            '<label style="display:flex;align-items:center;gap:4px;font-size:12px;white-space:nowrap;cursor:pointer;"><input type="checkbox" class="pay-paid" data-pay="' + pi + '"' + (p.paid ? ' checked' : '') + '> ' + PCD.escapeHtml(t('event_paid') || 'Paid') + '</label>';
+          const rm = PCD.el('button', { class: 'icon-btn pay-rm', 'data-pay': pi });
+          rm.innerHTML = PCD.icon('x', 16);
+          row.appendChild(rm);
+          payListEl.appendChild(row);
+        });
+      }
+
+      // v2.44.91 — Run-of-show: saat + adım
+      const tlListEl = PCD.$('#tlList', body);
+      if (tlListEl) {
+        (data.timeline || []).forEach(function (tl, ti) {
+          const row = PCD.el('div', { class: 'flex items-center gap-2', style: { marginBottom: '6px' } });
+          row.innerHTML =
+            '<input type="time" class="input tl-time" data-tl="' + ti + '" value="' + (tl.time || '') + '" style="width:108px;">' +
+            '<input type="text" class="input tl-label" data-tl="' + ti + '" value="' + PCD.escapeHtml(tl.label || '') + '" placeholder="' + PCD.escapeHtml(t('event_tl_ph') || 'e.g. Doors open / Dinner service') + '" style="flex:2;min-width:0;">';
+          const rm = PCD.el('button', { class: 'icon-btn tl-rm', 'data-tl': ti });
+          rm.innerHTML = PCD.icon('x', 16);
+          row.appendChild(rm);
+          tlListEl.appendChild(row);
+        });
+      }
+
+      // v2.44.91 — Tasks & checklist: tamamlandı + görev + vade
+      const taskListEl = PCD.$('#taskList', body);
+      if (taskListEl) {
+        (data.tasks || []).forEach(function (tk, ki) {
+          const row = PCD.el('div', { class: 'flex items-center gap-2', style: { marginBottom: '6px' } });
+          row.innerHTML =
+            '<input type="checkbox" class="task-done" data-task="' + ki + '"' + (tk.done ? ' checked' : '') + ' style="width:18px;height:18px;flex-shrink:0;cursor:pointer;">' +
+            '<input type="text" class="input task-label" data-task="' + ki + '" value="' + PCD.escapeHtml(tk.label || '') + '" placeholder="' + PCD.escapeHtml(t('event_task_ph') || 'e.g. Confirm final guest count') + '" style="flex:2;min-width:0;' + (tk.done ? 'text-decoration:line-through;opacity:0.6;' : '') + '">' +
+            '<input type="date" class="input task-due" data-task="' + ki + '" value="' + (tk.due || '') + '" style="width:140px;">';
+          const rm = PCD.el('button', { class: 'icon-btn task-rm', 'data-task': ki });
+          rm.innerHTML = PCD.icon('x', 16);
+          row.appendChild(rm);
+          taskListEl.appendChild(row);
+        });
+      }
+
       wire();
     }
 
@@ -588,7 +739,6 @@
       $('ePrice').addEventListener('input', PCD.debounce(function () { data.pricePerHead = parseFloat(this.value) || null; render(); }, 400));
       $('eBudget').addEventListener('input', PCD.debounce(function () { data.budget = parseFloat(this.value) || null; render(); }, 400));
       $('eSvc').addEventListener('input', PCD.debounce(function () { data.serviceChargePct = parseFloat(this.value) || null; render(); }, 400));
-      $('eDeposit').addEventListener('input', PCD.debounce(function () { data.deposit = parseFloat(this.value) || null; render(); }, 400));
 
       const addStaffBtn = $('addStaffBtn');
       if (addStaffBtn) addStaffBtn.addEventListener('click', function () {
@@ -602,6 +752,42 @@
       PCD.on(body, 'input', '.st-hours', PCD.debounce(function () { const s = stOf(this); if (s) { s.hours = parseFloat(this.value) || 0; render(); } }, 400));
       PCD.on(body, 'input', '.st-rate', PCD.debounce(function () { const s = stOf(this); if (s) { s.rate = parseFloat(this.value) || 0; render(); } }, 400));
       PCD.on(body, 'click', '.st-rm', function () { const i = parseInt(this.getAttribute('data-st'), 10); if (data.staffing) { data.staffing.splice(i, 1); render(); } });
+
+      // Charges & extras
+      const addChargeBtn = $('addChargeBtn');
+      if (addChargeBtn) addChargeBtn.addEventListener('click', function () { if (!data.charges) data.charges = []; data.charges.push({ label: '', cost: null, price: null }); render(); });
+      const chOf = function (el) { return (data.charges || [])[parseInt(el.getAttribute('data-ch'), 10)]; };
+      PCD.on(body, 'input', '.ch-label', function () { const c = chOf(this); if (c) c.label = this.value; });
+      PCD.on(body, 'input', '.ch-cost', PCD.debounce(function () { const c = chOf(this); if (c) { c.cost = parseFloat(this.value) || 0; render(); } }, 400));
+      PCD.on(body, 'input', '.ch-price', PCD.debounce(function () { const c = chOf(this); if (c) { c.price = parseFloat(this.value) || 0; render(); } }, 400));
+      PCD.on(body, 'click', '.ch-rm', function () { const i = parseInt(this.getAttribute('data-ch'), 10); if (data.charges) { data.charges.splice(i, 1); render(); } });
+
+      // Payment schedule
+      const addPayBtn = $('addPayBtn');
+      if (addPayBtn) addPayBtn.addEventListener('click', function () { if (!data.payments) data.payments = []; data.payments.push({ label: '', due: '', amount: null, paid: false }); render(); });
+      const payOf = function (el) { return (data.payments || [])[parseInt(el.getAttribute('data-pay'), 10)]; };
+      PCD.on(body, 'input', '.pay-label', function () { const p = payOf(this); if (p) p.label = this.value; });
+      PCD.on(body, 'input', '.pay-due', function () { const p = payOf(this); if (p) p.due = this.value; });
+      PCD.on(body, 'input', '.pay-amount', PCD.debounce(function () { const p = payOf(this); if (p) { p.amount = parseFloat(this.value) || 0; render(); } }, 400));
+      PCD.on(body, 'change', '.pay-paid', function () { const p = payOf(this); if (p) { p.paid = this.checked; render(); } });
+      PCD.on(body, 'click', '.pay-rm', function () { const i = parseInt(this.getAttribute('data-pay'), 10); if (data.payments) { data.payments.splice(i, 1); render(); } });
+
+      // Run-of-show
+      const addTlBtn = $('addTlBtn');
+      if (addTlBtn) addTlBtn.addEventListener('click', function () { if (!data.timeline) data.timeline = []; data.timeline.push({ time: '', label: '' }); render(); });
+      const tlOf = function (el) { return (data.timeline || [])[parseInt(el.getAttribute('data-tl'), 10)]; };
+      PCD.on(body, 'input', '.tl-time', function () { const x = tlOf(this); if (x) x.time = this.value; });
+      PCD.on(body, 'input', '.tl-label', function () { const x = tlOf(this); if (x) x.label = this.value; });
+      PCD.on(body, 'click', '.tl-rm', function () { const i = parseInt(this.getAttribute('data-tl'), 10); if (data.timeline) { data.timeline.splice(i, 1); render(); } });
+
+      // Tasks & checklist
+      const addTaskBtn = $('addTaskBtn');
+      if (addTaskBtn) addTaskBtn.addEventListener('click', function () { if (!data.tasks) data.tasks = []; data.tasks.push({ label: '', due: '', done: false }); render(); });
+      const taskOf = function (el) { return (data.tasks || [])[parseInt(el.getAttribute('data-task'), 10)]; };
+      PCD.on(body, 'input', '.task-label', function () { const x = taskOf(this); if (x) x.label = this.value; });
+      PCD.on(body, 'input', '.task-due', function () { const x = taskOf(this); if (x) x.due = this.value; });
+      PCD.on(body, 'change', '.task-done', function () { const x = taskOf(this); if (x) { x.done = this.checked; render(); } });
+      PCD.on(body, 'click', '.task-rm', function () { const i = parseInt(this.getAttribute('data-task'), 10); if (data.tasks) { data.tasks.splice(i, 1); render(); } });
 
       $('addFnBtn').addEventListener('click', function () {
         const last = data.functions[data.functions.length - 1] || {};
@@ -709,10 +895,12 @@
     const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') });
     let deleteBtn = null;
     if (existing) deleteBtn = PCD.el('button', { class: 'btn btn-ghost', text: t('delete'), style: { color: 'var(--danger)' } });
-    let printBtn = null, shareBtn = null;
+    let printBtn = null, shareBtn = null, proposalBtn = null;
     if (existing) {
-      printBtn = PCD.el('button', { class: 'btn btn-outline', title: t('print_pdf') });
+      printBtn = PCD.el('button', { class: 'btn btn-outline', title: t('event_beo') || 'BEO sheet' });
       printBtn.innerHTML = PCD.icon('print', 16);
+      proposalBtn = PCD.el('button', { class: 'btn btn-outline', title: t('event_proposal') || 'Client proposal' });
+      proposalBtn.innerHTML = '📄 ' + PCD.escapeHtml(t('event_proposal_short') || 'Proposal');
       shareBtn = PCD.el('button', { class: 'btn btn-outline', title: t('btn_share') });
       shareBtn.innerHTML = PCD.icon('share', 16);
     }
@@ -742,6 +930,7 @@
     footer.appendChild(shopBtn);
     if (applyInvBtn) footer.appendChild(applyInvBtn);
     if (printBtn) footer.appendChild(printBtn);
+    if (proposalBtn) footer.appendChild(proposalBtn);
     if (shareBtn) footer.appendChild(shareBtn);
     footer.appendChild(cancelBtn);
     footer.appendChild(saveBtn);
@@ -775,6 +964,10 @@
         buildHtml: function (detailed) { return eventPrintHtml(existing, detailed); },
         onPrint: function (detailed) { printEvent(existing, detailed); },
       });
+    });
+    if (proposalBtn) proposalBtn.addEventListener('click', function () {
+      if (PCD.gate && !PCD.gate.requireExport('events')) return;
+      PCD.print(eventProposalHtml(existing), (existing.name || 'Event') + ' — ' + (t('event_proposal') || 'Proposal'));
     });
     if (shareBtn) shareBtn.addEventListener('click', function () {
       shareEvent(existing);
@@ -882,15 +1075,14 @@
     });
     lines.push('— ' + (t('event_cost_summary') || 'Cost summary') + ' —');
     lines.push((t('ev_print_total_food_cost') || 'Total food cost') + ': ' + PCD.fmtMoney(stats.totalCost));
-    if (stats.laborCost > 0) {
-      lines.push((t('event_labor_cost') || 'Labor cost') + ': ' + PCD.fmtMoney(stats.laborCost));
-      lines.push((t('event_grand_total') || 'Total cost') + ': ' + PCD.fmtMoney(stats.grandTotal));
-    }
+    if (stats.laborCost > 0) lines.push((t('event_labor_cost') || 'Labor cost') + ': ' + PCD.fmtMoney(stats.laborCost));
+    if (stats.chargesCost > 0) lines.push((t('event_charges_cost') || 'Extras cost') + ': ' + PCD.fmtMoney(stats.chargesCost));
+    if (stats.laborCost > 0 || stats.chargesCost > 0) lines.push((t('event_grand_total') || 'Total cost') + ': ' + PCD.fmtMoney(stats.grandTotal));
     if (stats.totalRevenue > 0) {
       if (stats.serviceCharge > 0) lines.push((t('event_subtotal') || 'Subtotal') + ': ' + PCD.fmtMoney(stats.subtotal) + ' · ' + (t('event_service_label') || 'Service charge') + ' (' + stats.svcPct + '%): +' + PCD.fmtMoney(stats.serviceCharge));
       lines.push((t('ev_print_total_revenue') || 'Total revenue') + ': ' + PCD.fmtMoney(stats.totalRevenue));
-      if (stats.deposit > 0) {
-        lines.push((t('event_deposit') || 'Deposit') + ': −' + PCD.fmtMoney(stats.deposit));
+      if (stats.paidToDate > 0) {
+        lines.push((t('event_paid') || 'Paid') + ': −' + PCD.fmtMoney(stats.paidToDate));
         lines.push((t('event_balance_due') || 'Balance due') + ': ' + PCD.fmtMoney(stats.balanceDue));
       }
       lines.push((t('ev_print_profit') || 'Profit') + ': ' + PCD.fmtMoney(stats.profit) + (stats.margin !== null ? ' (' + PCD.fmtPercent(stats.margin, 0) + ')' : ''));
@@ -1025,6 +1217,21 @@
         '<table class="ev-table"><thead><tr><th>' + PCD.escapeHtml(t('event_role') || 'Role') + '</th><th style="text-align:center;">' + PCD.escapeHtml(t('event_staffing_calc') || 'Crew × hours × rate') + '</th><th style="text-align:right;">' + PCD.escapeHtml(t('cr_cost') || 'Cost') + '</th></tr></thead><tbody>' + stRows + '</tbody></table>';
     }
 
+    // v2.44.91 — Run-of-show + Charges bölümleri (BEO)
+    let timelineHtml = '';
+    if (event.timeline && event.timeline.length) {
+      const tlRows = event.timeline.slice().filter(function (x) { return (x.label || '').trim() || x.time; })
+        .sort(function (a, b) { return (a.time || '').localeCompare(b.time || ''); })
+        .map(function (x) { return '<tr><td style="width:90px;font-weight:700;white-space:nowrap;color:#16433a;">' + PCD.escapeHtml(x.time || '') + '</td><td>' + PCD.escapeHtml(x.label || '') + '</td></tr>'; }).join('');
+      if (tlRows) timelineHtml = '<div class="ev-section-title">' + PCD.escapeHtml(t('event_timeline') || 'Run-of-show') + '</div><table class="ev-table"><tbody>' + tlRows + '</tbody></table>';
+    }
+    let chargesHtml = '';
+    if (event.charges && event.charges.length) {
+      const cRows = event.charges.filter(function (c) { return (c.label || '').trim() || Number(c.cost) || Number(c.price); })
+        .map(function (c) { return '<tr><td>' + PCD.escapeHtml(c.label || '—') + '</td><td style="text-align:right;font-weight:600;">' + PCD.fmtMoney(Number(c.price) || 0) + '</td></tr>'; }).join('');
+      if (cRows) chargesHtml = '<div class="ev-section-title">' + PCD.escapeHtml(t('event_charges') || 'Charges & extras') + '</div><table class="ev-table"><thead><tr><th>' + PCD.escapeHtml(t('event_charge_item') || 'Item') + '</th><th style="text-align:right;">' + PCD.escapeHtml(t('event_charge_price') || 'Price') + '</th></tr></thead><tbody>' + cRows + '</tbody></table>';
+    }
+
     const html =
       '<style>' +
         '@page { size: A4; margin: 0; }' +
@@ -1034,6 +1241,7 @@
         '.ev-status { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 9pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }' +
         '.ev-status.confirmed { background: #dcfce7; color: #166534; }' +
         '.ev-status.draft { background: #f1f5f9; color: #475569; }' +
+        '.ev-status.tentative { background: #fef9c3; color: #854d0e; }' +
         '.ev-status.done { background: #dbeafe; color: #1e40af; }' +
         '.ev-status.cancelled { background: #fee2e2; color: #991b1b; }' +
         '.ev-meta { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px 24px; margin-bottom: 20px; }' +
@@ -1062,23 +1270,121 @@
         '<span class="ev-status ' + (event.status || 'draft') + '">' + PCD.escapeHtml(t('ev_status_' + (event.status || 'draft')) || event.status || 'draft') + '</span>' +
       '</div>' +
       bodyHtml +
+      timelineHtml +
+      chargesHtml +
       staffingHtml +
       '<div class="ev-summary">' +
         '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('ev_print_total_food_cost') || 'Total food cost') + '</span><span>' + PCD.fmtMoney(stats.totalCost) + '</span></div>' +
         (stats.laborCost > 0 ? '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('event_labor_cost') || 'Labor cost') + '</span><span>' + PCD.fmtMoney(stats.laborCost) + '</span></div>' : '') +
-        (stats.laborCost > 0 ? '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('event_grand_total') || 'Total cost') + '</span><span>' + PCD.fmtMoney(stats.grandTotal) + '</span></div>' : '') +
+        (stats.chargesCost > 0 ? '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('event_charges_cost') || 'Extras cost') + '</span><span>' + PCD.fmtMoney(stats.chargesCost) + '</span></div>' : '') +
+        ((stats.laborCost > 0 || stats.chargesCost > 0) ? '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('event_grand_total') || 'Total cost') + '</span><span>' + PCD.fmtMoney(stats.grandTotal) + '</span></div>' : '') +
         (event.budget > 0 ? '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('ev_print_customer_budget') || 'Customer budget') + '</span><span>' + PCD.fmtMoney(event.budget) + '</span></div>' : '') +
-        (stats.subtotal > 0 && stats.serviceCharge > 0 ? '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('event_subtotal') || 'Subtotal') + ' (' + stats.billed + ')' + '</span><span>' + PCD.fmtMoney(stats.subtotal) + '</span></div>' : '') +
+        ((stats.totalRevenue > 0 && (stats.chargesRevenue > 0 || stats.serviceCharge > 0)) ? '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('event_food_revenue') || 'Food') + ' (' + stats.billed + ')</span><span>' + PCD.fmtMoney(stats.foodRevenue) + '</span></div>' : '') +
+        (stats.chargesRevenue > 0 ? '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('event_charges') || 'Charges & extras') + '</span><span>+' + PCD.fmtMoney(stats.chargesRevenue) + '</span></div>' : '') +
         (stats.serviceCharge > 0 ? '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('event_service_label') || 'Service charge') + ' (' + stats.svcPct + '%)</span><span>+' + PCD.fmtMoney(stats.serviceCharge) + '</span></div>' : '') +
         (stats.totalRevenue > 0 ? '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('ev_print_total_revenue') || 'Total revenue') + '</span><span>' + PCD.fmtMoney(stats.totalRevenue) + '</span></div>' : '') +
-        (stats.deposit > 0 ? '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('event_deposit') || 'Deposit') + '</span><span>−' + PCD.fmtMoney(stats.deposit) + '</span></div>' : '') +
-        (stats.deposit > 0 ? '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('event_balance_due') || 'Balance due') + '</span><span>' + PCD.fmtMoney(stats.balanceDue) + '</span></div>' : '') +
+        (stats.paidToDate > 0 ? '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('event_paid') || 'Paid') + '</span><span>−' + PCD.fmtMoney(stats.paidToDate) + '</span></div>' : '') +
+        (stats.paidToDate > 0 ? '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('event_balance_due') || 'Balance due') + '</span><span>' + PCD.fmtMoney(stats.balanceDue) + '</span></div>' : '') +
         (stats.profit !== null ? '<div class="ev-summary-row total"><span>' + PCD.escapeHtml(t('ev_print_profit') || 'Profit') + (stats.margin !== null ? ' (' + PCD.fmtPercent(stats.margin, 0) + ')' : '') + '</span><span>' + PCD.fmtMoney(stats.profit) + '</span></div>' : '') +
       '</div>' +
       (event.notes ?
         '<div class="ev-notes"><div class="ev-notes-label">' + PCD.escapeHtml(t('ev_print_notes') || 'Notes') + '</div>' + PCD.escapeHtml(event.notes) + '</div>'
       : '');
 
+    return html;
+  }
+
+  // v2.44.91 — Müşteri teklifi (client-facing). İç maliyet/kâr GÖSTERMEZ; sadece
+  // müşteri fiyatları + ödeme planı + şartlar + imza. Pro araçların "proposal" karşılığı.
+  function eventProposalHtml(event) {
+    const t = PCD.i18n.t;
+    const ingMap = {}, recipeMap = {};
+    PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
+    PCD.store.listRecipes().forEach(function (r) { recipeMap[r.id] = r; });
+    const stats = computeStats(event, ingMap, recipeMap);
+    const locale = (PCD.i18n && PCD.i18n.currentLocale) || 'en';
+    const fmtD = function (d) { return d ? new Date(d).toLocaleDateString(locale, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : ''; };
+    const guestsLabel = (t('ev_print_guests') || 'Guests').toLowerCase();
+
+    let fnHtml = '';
+    eventFunctions(event).forEach(function (fn, fi) {
+      const when = [fmtD(fn.date), [fn.time, fn.endTime].filter(Boolean).join('–')].filter(Boolean).join(' · ');
+      const sub = [when, fn.room, (Number(fn.guestCount) ? fn.guestCount + ' ' + guestsLabel : '')].filter(Boolean).join('  ·  ');
+      const title = (fn.name || '').trim() || ((t('event_function') || 'Function') + ' ' + (fi + 1));
+      let dishes = '';
+      (fn.menu || []).forEach(function (item) {
+        let nm = '';
+        if (item.recipeId) { const r = recipeMap[item.recipeId]; if (r) nm = r.name; }
+        else if (item.ingredientId) { const ing = ingMap[item.ingredientId]; if (ing) nm = ing.name; }
+        if (nm) dishes += '<li>' + PCD.escapeHtml(nm) + '</li>';
+      });
+      const alg = fnMenuAllergens(fn, ingMap, recipeMap);
+      fnHtml += '<div class="pr-fn"><div class="pr-fn-h">' + PCD.escapeHtml(title) + '</div>' +
+        (sub ? '<div class="pr-fn-sub">' + PCD.escapeHtml(sub) + '</div>' : '') +
+        (dishes ? '<ul class="pr-menu">' + dishes + '</ul>' : '') +
+        (alg.length ? '<div class="pr-alg">' + PCD.escapeHtml(t('ev_menu_contains') || 'Menu contains') + ': ' + alg.map(function (k) { return PCD.escapeHtml(allergenLabel(k)); }).join('  ') + '</div>' : '') +
+        '</div>';
+    });
+
+    let priceRows = '';
+    if (stats.foodRevenue > 0) priceRows += '<tr><td>' + PCD.escapeHtml(t('event_food_revenue') || 'Catering') + ' (' + stats.billed + ' × ' + PCD.fmtMoney(event.pricePerHead || 0) + ')</td><td class="r">' + PCD.fmtMoney(stats.foodRevenue) + '</td></tr>';
+    (event.charges || []).forEach(function (c) {
+      if (!((c.label || '').trim() || Number(c.price))) return;
+      priceRows += '<tr><td>' + PCD.escapeHtml(c.label || '—') + '</td><td class="r">' + PCD.fmtMoney(Number(c.price) || 0) + '</td></tr>';
+    });
+    if (stats.serviceCharge > 0) priceRows += '<tr><td>' + PCD.escapeHtml(t('event_service_label') || 'Service charge') + ' (' + stats.svcPct + '%)</td><td class="r">' + PCD.fmtMoney(stats.serviceCharge) + '</td></tr>';
+
+    let payHtml = '';
+    if (event.payments && event.payments.length) {
+      const pr = event.payments.filter(function (p) { return (p.label || '').trim() || Number(p.amount); }).map(function (p) {
+        return '<tr><td>' + PCD.escapeHtml(p.label || '—') + '</td><td>' + PCD.escapeHtml(p.due ? fmtD(p.due) : '—') + '</td><td class="r">' + PCD.fmtMoney(Number(p.amount) || 0) + '</td><td class="r">' + (p.paid ? '✓ ' + PCD.escapeHtml(t('event_paid') || 'Paid') : '—') + '</td></tr>';
+      }).join('');
+      if (pr) payHtml = '<div class="pr-h2">' + PCD.escapeHtml(t('event_payments') || 'Payment schedule') + '</div><table class="pr-tbl"><thead><tr><th>' + PCD.escapeHtml(t('event_pay_label') || 'Payment') + '</th><th>' + PCD.escapeHtml(t('event_pay_due') || 'Due') + '</th><th class="r">' + PCD.escapeHtml(t('event_pay_amount') || 'Amount') + '</th><th class="r">' + PCD.escapeHtml(t('event_paid') || 'Paid') + '</th></tr></thead><tbody>' + pr + '</tbody></table>';
+    }
+
+    const html =
+      '<style>' +
+        '@page { size: A4; margin: 0; }' +
+        'body { font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif; color: #1c1917; max-width: 800px; margin: 0 auto; padding: 18mm; font-variant-numeric: tabular-nums; }' +
+        '.pr-head { border-bottom: 3px solid #16433a; padding-bottom: 14px; margin-bottom: 18px; }' +
+        '.pr-badge { display: inline-block; background: #16433a; color: #fff; font-size: 9pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; padding: 3px 10px; border-radius: 5px; margin-bottom: 8px; }' +
+        '.pr-head h1 { margin: 0 0 4px; font-family: "Fraunces","Georgia",serif; font-size: 24pt; font-weight: 600; color: #16433a; }' +
+        '.pr-client { font-size: 11pt; color: #555; }' +
+        '.pr-fn { margin: 12px 0; page-break-inside: avoid; }' +
+        '.pr-fn-h { font-family: "Fraunces","Georgia",serif; font-size: 13pt; font-weight: 600; color: #16433a; }' +
+        '.pr-fn-sub { font-size: 10pt; color: #666; margin-bottom: 4px; }' +
+        '.pr-menu { margin: 4px 0 4px 0; padding-left: 20px; font-size: 11pt; line-height: 1.6; }' +
+        '.pr-alg { font-size: 9.5pt; color: #777; margin-top: 2px; }' +
+        '.pr-h2 { font-family: "Fraunces","Georgia",serif; font-size: 13pt; font-weight: 600; color: #16433a; margin: 20px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #e7e5e4; }' +
+        '.pr-tbl { width: 100%; border-collapse: collapse; font-size: 11pt; }' +
+        '.pr-tbl th { text-align: left; padding: 7px 10px; background: #eaf6f0; font-size: 9pt; text-transform: uppercase; color: #16433a; letter-spacing: 0.04em; }' +
+        '.pr-tbl td { padding: 7px 10px; border-bottom: 1px solid #eee; }' +
+        '.pr-tbl .r { text-align: right; }' +
+        '.pr-tbl .pr-total td { font-weight: 700; font-size: 12.5pt; color: #16433a; border-top: 2px solid #16433a; border-bottom: none; }' +
+        '.pr-terms { background: #f8f8f8; padding: 12px 14px; border-radius: 8px; font-size: 10.5pt; line-height: 1.6; white-space: pre-wrap; }' +
+        '.pr-sign { display: flex; gap: 40px; margin-top: 40px; }' +
+        '.pr-sig { flex: 1; font-size: 10pt; color: #555; }' +
+        '.pr-sig-line { border-top: 1px solid #1c1917; margin-bottom: 6px; height: 36px; }' +
+      '</style>' +
+      '<div class="pr-head">' +
+        '<div class="pr-badge">' + PCD.escapeHtml(t('event_proposal') || 'Event Proposal') + '</div>' +
+        '<h1>' + PCD.escapeHtml(event.name || (t('ev_print_default_title') || 'Event')) + '</h1>' +
+        (event.client || event.contactName ? '<div class="pr-client">' + [event.client, event.contactName, event.contactPhone].filter(Boolean).map(function (x) { return PCD.escapeHtml(x); }).join(' · ') + '</div>' : '') +
+      '</div>' +
+      fnHtml +
+      (priceRows ?
+        '<div class="pr-h2">' + PCD.escapeHtml(t('event_pricing') || 'Pricing') + '</div>' +
+        '<table class="pr-tbl"><tbody>' + priceRows +
+          '<tr class="pr-total"><td>' + PCD.escapeHtml(t('ev_print_total_revenue') || 'Total') + '</td><td class="r">' + PCD.fmtMoney(stats.totalRevenue) + '</td></tr>' +
+          (stats.paidToDate > 0 ? '<tr><td>' + PCD.escapeHtml(t('event_paid') || 'Paid') + '</td><td class="r">−' + PCD.fmtMoney(stats.paidToDate) + '</td></tr><tr class="pr-total"><td>' + PCD.escapeHtml(t('event_balance_due') || 'Balance due') + '</td><td class="r">' + PCD.fmtMoney(stats.balanceDue) + '</td></tr>' : '') +
+        '</tbody></table>'
+      : '') +
+      payHtml +
+      (event.notes ? '<div class="pr-h2">' + PCD.escapeHtml(t('event_terms') || 'Terms & notes') + '</div><div class="pr-terms">' + PCD.escapeHtml(event.notes) + '</div>' : '') +
+      '<div class="pr-sign">' +
+        '<div class="pr-sig"><div class="pr-sig-line"></div>' + PCD.escapeHtml(t('event_sign_client') || 'Client signature & date') + '</div>' +
+        '<div class="pr-sig"><div class="pr-sig-line"></div>' + PCD.escapeHtml(t('event_sign_provider') || 'Caterer signature & date') + '</div>' +
+      '</div>';
     return html;
   }
 

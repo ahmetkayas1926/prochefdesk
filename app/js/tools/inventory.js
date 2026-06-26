@@ -213,19 +213,21 @@
   }
 
   function computeStatus(invRow) {
-    if (!invRow || invRow.parLevel == null) {
-      // Par yok = normalde 'untracked'. Ama stok NEGATİFE düştüyse (fazla-tüketim:
-      // hiç sayılmamış/sipariş edilmemiş malzeme tüketildi) bunu 'out' (kırmızı) göster —
-      // tüketim sessizce kaybolmasın, "say/sipariş et" sinyali olsun.
-      if (invRow && invRow.stock != null && Number(invRow.stock) < 0) return 'out';
+    if (!invRow) return 'untracked';
+    const par = Number(invRow.parLevel) || 0;   // null/0/'' → 0
+    const min = Number(invRow.minLevel) || 0;
+    // v2.44.92 — EŞİK YOK (par ve min ikisi de ≤0) = takip edilmiyor → kırmızı/sipariş YOK.
+    // "par=0" artık "par girilmemiş" ile AYNI ele alınır (önceden par=0 takip dalına girip
+    // stok 0'da 'out' dönüyordu — kullanıcı par'ı sıfırlasa bile kırmızı kalıyordu). Negatif
+    // stok yine 'out' (fazla-tüketim: hiç sayılmamış malzeme tüketildi → "say/sipariş et").
+    if (par <= 0 && min <= 0) {
+      if (invRow.stock != null && Number(invRow.stock) < 0) return 'out';
       return 'untracked';
     }
     const stock = Number(invRow.stock) || 0;
-    const par = Number(invRow.parLevel) || 0;
-    const min = Number(invRow.minLevel) || 0;
     if (stock <= 0) return 'out';
     if (min > 0 && stock < min) return 'critical';
-    if (stock < par) return 'low';
+    if (par > 0 && stock < par) return 'low';
     return 'ok';
   }
 
