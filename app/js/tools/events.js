@@ -83,6 +83,7 @@
                 ${e.time ? ' · ' + PCD.escapeHtml(e.time) : ''}
                 ${e.guestCount ? ' · ' + e.guestCount + ' ' + t('event_guests').toLowerCase() : ''}
                 ${e.venue ? ' · ' + PCD.escapeHtml(e.venue) : ''}
+                ${(e.functions && e.functions.length > 1) ? ' · ' + e.functions.length + ' ' + (t('event_functions') || 'functions').toLowerCase() : ''}
               </div>
             </div>
             <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
@@ -140,18 +141,43 @@
     });
   }
 
+  // v2.44.86 — Faz 1: ÇOK-FONKSİYON. Bir etkinlik = bir gün içinde birden çok fonksiyon
+  // (karşılama 18:00 · yemek 20:00 · gece 23:00) — her biri kendi saat/kişi/menü/salon.
+  // GERİYE-UYUMLU: eski düz etkinlik (date/time/guestCount/menu) → tek örtük fonksiyona
+  // normalize edilir; eski etkinlikler birebir aynı hesaplanır.
+  function eventFunctions(ev) {
+    if (ev && ev.functions && ev.functions.length) return ev.functions;
+    return [{
+      _legacy: true, name: '', date: (ev && ev.date) || '', time: (ev && ev.time) || '', endTime: '',
+      room: (ev && ev.venue) || '', guestCount: Number(ev && ev.guestCount) || 0,
+      menu: (ev && ev.menu) || [], notes: ''
+    }];
+  }
+  // Katılımcı (ciro için) = fonksiyonların EN BÜYÜĞÜ (≈ benzersiz kişi); TOPLANMAZ — aynı
+  // 100 kişi 3 fonksiyona katılır, ciro 300 değil 100×fiyat olmalı. Maliyet ise toplanır
+  // (her fonksiyon için ayrı üretim yapılır).
+  function eventGuests(ev) {
+    if (ev && ev.functions && ev.functions.length) {
+      return ev.functions.reduce(function (mx, f) { return Math.max(mx, Number(f.guestCount) || 0); }, 0);
+    }
+    return Number(ev && ev.guestCount) || 0;
+  }
+
   function computeStats(event, ingMap, recipeMap) {
     let totalCost = 0;
-    const guests = Number(event.guestCount) || 0;
-    (event.menu || []).forEach(function (item) {
-      const r = recipeMap[item.recipeId];
-      if (!r) return;
-      const portionsTotal = guests * (Number(item.portionsPerGuest) || 1);
-      const factor = portionsTotal / (r.servings || 1);
-      const recipeCost = PCD.recipes.computeFoodCost(r, ingMap);
-      totalCost += recipeCost * factor;
+    eventFunctions(event).forEach(function (fn) {
+      const guests = Number(fn.guestCount) || 0;
+      (fn.menu || []).forEach(function (item) {
+        const r = recipeMap[item.recipeId];
+        if (!r) return;
+        const portionsTotal = guests * (Number(item.portionsPerGuest) || 1);
+        const factor = portionsTotal / (r.servings || 1);
+        const recipeCost = PCD.recipes.computeFoodCost(r, ingMap);
+        totalCost += recipeCost * factor;
+      });
     });
-    const totalRevenue = guests * (Number(event.pricePerHead) || 0);
+    const attendees = eventGuests(event);
+    const totalRevenue = attendees * (Number(event.pricePerHead) || 0);
     const profit = totalRevenue > 0 ? totalRevenue - totalCost : null;
     const margin = totalRevenue > 0 ? ((totalRevenue - totalCost) / totalRevenue) * 100 : null;
     return { totalCost: totalCost, totalRevenue: totalRevenue, profit: profit, margin: margin };
@@ -162,27 +188,29 @@
   // Returns { deductions: {ingredientId: amountInBaseUnit}, skipped: [name,...] }.
   // Units that can't convert to the ingredient's base unit are SKIPPED (not deducted).
   function computeEventDeductions(event, ingMap, recipeMap) {
-    const guests = Number(event.guestCount) || 0;
     const need = {};
     const skippedSet = {};
-    (event.menu || []).forEach(function (item) {
-      const r = recipeMap[item.recipeId];
-      if (!r) return;
-      const portionsTotal = guests * (Number(item.portionsPerGuest) || 1);
-      if (portionsTotal <= 0) return;
-      const scale = portionsTotal / (r.servings || 1);
-      const flat = PCD.recipes.flattenIngredients(r, ingMap, recipeMap, { scale: scale }) || [];
-      flat.forEach(function (it) {
-        const ing = ingMap[it.ingredientId];
-        if (!ing) return;
-        let amt = Number(it.amount) || 0;
-        if (amt <= 0) return;
-        if (it.unit && ing.unit && it.unit !== ing.unit) {
-          try { amt = PCD.convertUnit(amt, it.unit, ing.unit); }
-          catch (e) { skippedSet[ing.name || it.ingredientId] = true; return; }
-          if (!(amt > 0)) { skippedSet[ing.name || it.ingredientId] = true; return; }
-        }
-        need[it.ingredientId] = (need[it.ingredientId] || 0) + amt;
+    eventFunctions(event).forEach(function (fn) {
+      const guests = Number(fn.guestCount) || 0;
+      (fn.menu || []).forEach(function (item) {
+        const r = recipeMap[item.recipeId];
+        if (!r) return;
+        const portionsTotal = guests * (Number(item.portionsPerGuest) || 1);
+        if (portionsTotal <= 0) return;
+        const scale = portionsTotal / (r.servings || 1);
+        const flat = PCD.recipes.flattenIngredients(r, ingMap, recipeMap, { scale: scale }) || [];
+        flat.forEach(function (it) {
+          const ing = ingMap[it.ingredientId];
+          if (!ing) return;
+          let amt = Number(it.amount) || 0;
+          if (amt <= 0) return;
+          if (it.unit && ing.unit && it.unit !== ing.unit) {
+            try { amt = PCD.convertUnit(amt, it.unit, ing.unit); }
+            catch (e) { skippedSet[ing.name || it.ingredientId] = true; return; }
+            if (!(amt > 0)) { skippedSet[ing.name || it.ingredientId] = true; return; }
+          }
+          need[it.ingredientId] = (need[it.ingredientId] || 0) + amt;
+        });
       });
     });
     return { deductions: need, skipped: Object.keys(skippedSet) };
@@ -196,10 +224,19 @@
       if (!PCD.gate.canCreate('events', (PCD.store.listTable('events') || []).length)) { PCD.gate.showUpgradeModal({ feature: 'events', message: t('gate_create_limit') }); return; }
     }
     const data = existing ? PCD.clone(existing) : {
-      name: '', date: '', time: '', guestCount: 50, venue: '',
-      pricePerHead: null, budget: null, status: 'draft', notes: '',
-      menu: [],
+      name: '', status: 'draft', notes: '',
+      client: '', contactName: '', contactPhone: '',
+      pricePerHead: null, budget: null, functions: [],
     };
+    // v2.44.86 — Faz 1: editör HEP functions[] ile çalışır. Eski düz etkinlik açılışta tek
+    // fonksiyona göç eder (date/time/guestCount/venue/menu → functions[0]); kaydedince
+    // functions[] yazılır + liste/sıralama için temsilî düz alanlar aynalanır.
+    if (!data.functions || !data.functions.length) {
+      data.functions = [{
+        id: PCD.uid('fn'), name: '', date: data.date || '', time: data.time || '', endTime: '',
+        room: data.venue || '', guestCount: Number(data.guestCount) || 50, menu: data.menu || [], notes: ''
+      }];
+    }
 
     const body = PCD.el('div');
     let previewOpen = false; // v2.37 — canlı A4 önizleme açık/kapalı durumu (render'lar arası korunur)
@@ -210,6 +247,7 @@
       PCD.store.listRecipes().forEach(function (r) { recipeMap[r.id] = r; });
       const stats = computeStats(data, ingMap, recipeMap);
 
+      const attendees = eventGuests(data);
       body.innerHTML = `
         <div class="field">
           <label class="field-label">${t('event_name')} *</label>
@@ -218,19 +256,8 @@
 
         <div class="field-row">
           <div class="field">
-            <label class="field-label">${t('event_date')}</label>
-            <input type="date" class="input" id="eDate" value="${data.date || ''}">
-          </div>
-          <div class="field">
-            <label class="field-label">${t('event_time')}</label>
-            <input type="time" class="input" id="eTime" value="${data.time || ''}">
-          </div>
-        </div>
-
-        <div class="field-row">
-          <div class="field">
-            <label class="field-label">${t('event_guests')}</label>
-            <input type="number" class="input" id="eGuests" value="${data.guestCount || ''}" min="1">
+            <label class="field-label">${PCD.escapeHtml(t('event_client') || 'Client / company')}</label>
+            <input type="text" class="input" id="eClient" value="${PCD.escapeHtml(data.client || '')}" placeholder="${PCD.escapeHtml(t('event_client_ph') || 'e.g. Acme Corp')}">
           </div>
           <div class="field">
             <label class="field-label">${t('event_status')}</label>
@@ -240,9 +267,24 @@
           </div>
         </div>
 
-        <div class="field">
-          <label class="field-label">${t('event_venue')}</label>
-          <input type="text" class="input" id="eVenue" value="${PCD.escapeHtml(data.venue || '')}" placeholder="${t('event_venue_ph')}">
+        <div class="field-row">
+          <div class="field">
+            <label class="field-label">${PCD.escapeHtml(t('event_contact_name') || 'Contact person')}</label>
+            <input type="text" class="input" id="eContact" value="${PCD.escapeHtml(data.contactName || '')}" placeholder="${PCD.escapeHtml(t('event_contact_ph') || 'e.g. John')}">
+          </div>
+          <div class="field">
+            <label class="field-label">${PCD.escapeHtml(t('event_contact_phone') || 'Contact phone')}</label>
+            <input type="tel" class="input" id="ePhone" value="${PCD.escapeHtml(data.contactPhone || '')}" placeholder="+61 ...">
+          </div>
+        </div>
+
+        <div class="section" style="margin:8px 0 14px;">
+          <div class="section-header">
+            <div class="section-title">${PCD.escapeHtml(t('event_functions') || 'Functions')} (${data.functions.length})</div>
+            <button class="btn btn-outline btn-sm" id="addFnBtn">+ ${PCD.escapeHtml(t('event_add_function') || 'Add function')}</button>
+          </div>
+          <div class="text-muted text-sm" style="margin:-2px 0 10px;">${PCD.escapeHtml(t('event_functions_hint') || 'One event can have several functions in a day (reception · dinner · supper) — each with its own time, guests and menu.')}</div>
+          <div id="fnList" class="flex flex-col gap-3"></div>
         </div>
 
         <div class="field-row">
@@ -263,7 +305,7 @@
               <div class="stat-label">${t('event_total_cost')}</div>
               <div style="font-size:18px;font-weight:800;">${PCD.fmtMoney(stats.totalCost)}</div>
             </div>
-            ${(Number(data.guestCount) > 0) ? '<div><div class="stat-label">' + (t('event_cost_per_head') || 'Food cost / guest') + '</div><div style="font-size:18px;font-weight:800;">' + PCD.fmtMoney(stats.totalCost / Number(data.guestCount)) + '</div></div>' : ''}
+            ${(attendees > 0) ? '<div><div class="stat-label">' + (t('event_cost_per_head') || 'Food cost / guest') + '</div><div style="font-size:18px;font-weight:800;">' + PCD.fmtMoney(stats.totalCost / attendees) + '</div></div>' : ''}
             ${data.budget > 0 ? (function () {
               const remaining = (data.budget || 0) - stats.totalCost;
               const usedPct = data.budget > 0 ? (stats.totalCost / data.budget) * 100 : 0;
@@ -282,14 +324,6 @@
           </div>
         </div>
 
-        <div class="section" style="margin-bottom:16px;">
-          <div class="section-header">
-            <div class="section-title">${t('event_menu')} (${(data.menu || []).length})</div>
-            <button class="btn btn-outline btn-sm" id="addMenuBtn">+ ${t('event_add_recipes')}</button>
-          </div>
-          <div id="menuList" class="flex flex-col gap-2"></div>
-        </div>
-
         <div class="field">
           <label class="field-label">${t('event_notes')}</label>
           <textarea class="textarea" id="eNotes" rows="2">${PCD.escapeHtml(data.notes || '')}</textarea>
@@ -303,71 +337,113 @@
         </details>
       `;
 
-      // Menu list
-      const menuListEl = PCD.$('#menuList', body);
-      (data.menu || []).forEach(function (item, idx) {
-        const r = recipeMap[item.recipeId];
-        if (!r) return;
-        const guests = Number(data.guestCount) || 0;
-        const portionsTotal = guests * (Number(item.portionsPerGuest) || 1);
-        const factor = portionsTotal / (r.servings || 1);
-        const cost = PCD.recipes.computeFoodCost(r, ingMap) * factor;
-
-        const row = PCD.el('div', { class: 'list-item', style: { minHeight: 'auto', padding: '10px' } });
-        const thumb = PCD.el('div', { class: 'list-item-thumb', style: { width: '44px', height: '44px' } });
-        // v2.6.61 — lazy thumbnail
-        if (r.photo) {
-          const img = PCD.el('img');
-          img.src = r.photo; img.loading = 'lazy'; img.alt = '';
-          img.style.width = '100%'; img.style.height = '100%';
-          img.style.objectFit = 'cover'; img.style.borderRadius = 'inherit'; img.style.display = 'block';
-          thumb.appendChild(img);
-        }
-        else thumb.textContent = '🍽️';
-        const bodyDiv = PCD.el('div', { class: 'list-item-body' });
-        bodyDiv.innerHTML = `
-          <div class="list-item-title" style="font-size:14px;">${PCD.escapeHtml(r.name)}</div>
-          <div class="list-item-meta" style="font-size:12px;">
-            <input type="number" data-pph="${idx}" value="${item.portionsPerGuest || 1}" step="0.1" min="0" class="input" style="width:60px;padding:4px 8px;min-height:26px;font-size:12px;">
-            <span class="text-muted">/ guest</span>
-            <span>·</span>
-            <span style="font-weight:600;">${PCD.fmtNumber(portionsTotal)} total</span>
-            <span>·</span>
-            <span style="font-weight:600;color:var(--brand-700);">${PCD.fmtMoney(cost)}</span>
-          </div>
-        `;
-        row.appendChild(thumb);
-        row.appendChild(bodyDiv);
-        const rm = PCD.el('button', { class: 'icon-btn', 'data-rm-menu': idx });
-        rm.innerHTML = PCD.icon('x', 16);
-        row.appendChild(rm);
-        menuListEl.appendChild(row);
+      // v2.44.86 — Fonksiyon kartları: her fonksiyon kendi tarih/saat/salon/kişi/menü ile.
+      const fnListEl = PCD.$('#fnList', body);
+      data.functions.forEach(function (fn, fi) {
+        const fGuests = Number(fn.guestCount) || 0;
+        let fnCost = 0;
+        (fn.menu || []).forEach(function (item) {
+          const r = recipeMap[item.recipeId]; if (!r) return;
+          fnCost += PCD.recipes.computeFoodCost(r, ingMap) * ((fGuests * (Number(item.portionsPerGuest) || 1)) / (r.servings || 1));
+        });
+        const canRemove = data.functions.length > 1;
+        const card = PCD.el('div', { class: 'card', style: { padding: '12px', border: '1px solid var(--border)', background: 'var(--surface)' } });
+        card.innerHTML =
+          '<div class="flex items-center gap-2" style="margin-bottom:8px;">' +
+            '<span style="font-weight:800;color:var(--brand-700);font-size:13px;white-space:nowrap;">#' + (fi + 1) + '</span>' +
+            '<input type="text" class="input fn-name" data-fn="' + fi + '" value="' + PCD.escapeHtml(fn.name || '') + '" placeholder="' + PCD.escapeHtml((t('event_function') || 'Function') + ' ' + (fi + 1)) + '" style="font-weight:700;flex:1;min-width:0;">' +
+            (canRemove ? '<button type="button" class="icon-btn fn-rm" data-fn="' + fi + '" title="' + PCD.escapeHtml(t('delete') || 'Remove') + '">' + PCD.icon('x', 16) + '</button>' : '') +
+          '</div>' +
+          '<div class="field-row">' +
+            '<div class="field"><label class="field-label">' + t('event_date') + '</label><input type="date" class="input fn-date" data-fn="' + fi + '" value="' + (fn.date || '') + '"></div>' +
+            '<div class="field"><label class="field-label">' + t('event_time') + '</label><input type="time" class="input fn-time" data-fn="' + fi + '" value="' + (fn.time || '') + '"></div>' +
+            '<div class="field"><label class="field-label">' + PCD.escapeHtml(t('event_end_time') || 'End') + '</label><input type="time" class="input fn-end" data-fn="' + fi + '" value="' + (fn.endTime || '') + '"></div>' +
+          '</div>' +
+          '<div class="field-row">' +
+            '<div class="field"><label class="field-label">' + PCD.escapeHtml(t('event_room') || 'Room / area') + '</label><input type="text" class="input fn-room" data-fn="' + fi + '" value="' + PCD.escapeHtml(fn.room || '') + '" placeholder="' + PCD.escapeHtml(t('event_room_ph') || 'e.g. Ballroom A') + '"></div>' +
+            '<div class="field"><label class="field-label">' + t('event_guests') + '</label><input type="number" class="input fn-guests" data-fn="' + fi + '" value="' + (fn.guestCount || '') + '" min="0"></div>' +
+          '</div>' +
+          '<div class="flex items-center justify-between" style="margin:6px 0 6px;">' +
+            '<div style="font-weight:700;font-size:13px;">' + t('event_menu') + ' (' + (fn.menu || []).length + ')</div>' +
+            '<button type="button" class="btn btn-outline btn-sm fn-add-menu" data-fn="' + fi + '">+ ' + t('event_add_recipes') + '</button>' +
+          '</div>' +
+          '<div class="fn-menu flex flex-col gap-2"></div>' +
+          '<div class="text-muted text-sm" style="text-align:end;margin-top:6px;">' + t('event_total_cost') + ': <strong>' + PCD.fmtMoney(fnCost) + '</strong></div>';
+        const menuEl = card.querySelector('.fn-menu');
+        (fn.menu || []).forEach(function (item, mi) {
+          const r = recipeMap[item.recipeId];
+          if (!r) return;
+          const portionsTotal = fGuests * (Number(item.portionsPerGuest) || 1);
+          const cost = PCD.recipes.computeFoodCost(r, ingMap) * (portionsTotal / (r.servings || 1));
+          const row = PCD.el('div', { class: 'list-item', style: { minHeight: 'auto', padding: '8px' } });
+          const thumb = PCD.el('div', { class: 'list-item-thumb', style: { width: '40px', height: '40px' } });
+          if (r.photo) {
+            const img = PCD.el('img');
+            img.src = r.photo; img.loading = 'lazy'; img.alt = '';
+            img.style.width = '100%'; img.style.height = '100%';
+            img.style.objectFit = 'cover'; img.style.borderRadius = 'inherit'; img.style.display = 'block';
+            thumb.appendChild(img);
+          }
+          else thumb.textContent = '🍽️';
+          const bodyDiv = PCD.el('div', { class: 'list-item-body' });
+          bodyDiv.innerHTML =
+            '<div class="list-item-title" style="font-size:14px;">' + PCD.escapeHtml(r.name) + '</div>' +
+            '<div class="list-item-meta" style="font-size:12px;">' +
+              '<input type="number" class="input fn-pph" data-fn="' + fi + '" data-mi="' + mi + '" value="' + (item.portionsPerGuest || 1) + '" step="0.1" min="0" style="width:58px;padding:4px 8px;min-height:26px;font-size:12px;">' +
+              '<span class="text-muted">/ ' + PCD.escapeHtml(t('event_guest_one') || 'guest') + '</span>' +
+              '<span>·</span><span style="font-weight:600;">' + PCD.fmtNumber(portionsTotal) + '</span>' +
+              '<span>·</span><span style="font-weight:600;color:var(--brand-700);">' + PCD.fmtMoney(cost) + '</span>' +
+            '</div>';
+          const rm = PCD.el('button', { class: 'icon-btn fn-rm-menu', 'data-fn': fi, 'data-mi': mi });
+          rm.innerHTML = PCD.icon('x', 16);
+          row.appendChild(thumb); row.appendChild(bodyDiv); row.appendChild(rm);
+          menuEl.appendChild(row);
+        });
+        fnListEl.appendChild(card);
       });
 
       wire();
     }
 
     function wire() {
-      PCD.$('#eName', body).addEventListener('input', function () { data.name = this.value; });
-      PCD.$('#eDate', body).addEventListener('input', function () { data.date = this.value; });
-      PCD.$('#eTime', body).addEventListener('input', function () { data.time = this.value; });
-      PCD.$('#eGuests', body).addEventListener('input', PCD.debounce(function () {
-        data.guestCount = parseInt(this.value, 10) || 0;
-        render();
-      }, 400));
-      PCD.$('#eVenue', body).addEventListener('input', function () { data.venue = this.value; });
-      PCD.$('#ePrice', body).addEventListener('input', PCD.debounce(function () {
-        data.pricePerHead = parseFloat(this.value) || null;
-        render();
-      }, 400));
-      PCD.$('#eBudget', body).addEventListener('input', PCD.debounce(function () {
-        data.budget = parseFloat(this.value) || null;
-        render();
-      }, 400));
-      PCD.$('#eStatus', body).addEventListener('change', function () { data.status = this.value; });
-      PCD.$('#eNotes', body).addEventListener('input', function () { data.notes = this.value; });
+      const $ = function (id) { return PCD.$('#' + id, body); };
+      $('eName').addEventListener('input', function () { data.name = this.value; });
+      $('eClient').addEventListener('input', function () { data.client = this.value; });
+      $('eContact').addEventListener('input', function () { data.contactName = this.value; });
+      $('ePhone').addEventListener('input', function () { data.contactPhone = this.value; });
+      $('eStatus').addEventListener('change', function () { data.status = this.value; });
+      $('eNotes').addEventListener('input', function () { data.notes = this.value; });
+      $('ePrice').addEventListener('input', PCD.debounce(function () { data.pricePerHead = parseFloat(this.value) || null; render(); }, 400));
+      $('eBudget').addEventListener('input', PCD.debounce(function () { data.budget = parseFloat(this.value) || null; render(); }, 400));
 
-      PCD.$('#addMenuBtn', body).addEventListener('click', function () {
+      $('addFnBtn').addEventListener('click', function () {
+        const last = data.functions[data.functions.length - 1] || {};
+        data.functions.push({ id: PCD.uid('fn'), name: '', date: last.date || '', time: '', endTime: '', room: last.room || '', guestCount: Number(last.guestCount) || 50, menu: [], notes: '' });
+        render();
+      });
+
+      // Per-function alanlar (delegasyon; data-fn = fonksiyon index'i)
+      const fnOf = function (el) { return data.functions[parseInt(el.getAttribute('data-fn'), 10)]; };
+      PCD.on(body, 'input', '.fn-name', function () { const f = fnOf(this); if (f) f.name = this.value; });
+      PCD.on(body, 'input', '.fn-date', function () { const f = fnOf(this); if (f) f.date = this.value; });
+      PCD.on(body, 'input', '.fn-time', function () { const f = fnOf(this); if (f) f.time = this.value; });
+      PCD.on(body, 'input', '.fn-end', function () { const f = fnOf(this); if (f) f.endTime = this.value; });
+      PCD.on(body, 'input', '.fn-room', function () { const f = fnOf(this); if (f) f.room = this.value; });
+      PCD.on(body, 'input', '.fn-guests', PCD.debounce(function () { const f = fnOf(this); if (f) { f.guestCount = parseInt(this.value, 10) || 0; render(); } }, 400));
+      PCD.on(body, 'input', '.fn-pph', PCD.debounce(function () {
+        const f = fnOf(this); const mi = parseInt(this.getAttribute('data-mi'), 10);
+        if (f && f.menu && f.menu[mi]) { f.menu[mi].portionsPerGuest = parseFloat(this.value) || 0; render(); }
+      }, 400));
+      PCD.on(body, 'click', '.fn-rm-menu', function () {
+        const f = fnOf(this); const mi = parseInt(this.getAttribute('data-mi'), 10);
+        if (f && f.menu) { f.menu.splice(mi, 1); render(); }
+      });
+      PCD.on(body, 'click', '.fn-rm', function () {
+        const i = parseInt(this.getAttribute('data-fn'), 10);
+        if (data.functions.length > 1) { data.functions.splice(i, 1); render(); }
+      });
+      PCD.on(body, 'click', '.fn-add-menu', function () {
+        const f = fnOf(this); if (!f) return;
         const allRecipes = PCD.store.listRecipes();
         const menuItems = allRecipes.filter(function (r) { return !r.isSubRecipe; });
         const subRecipes = allRecipes.filter(function (r) { return r.isSubRecipe; });
@@ -379,32 +455,14 @@
           return { id: r.id, name: r.name, group: groupLabel2, meta: (r.yieldAmount ? r.yieldAmount + ' ' + (r.yieldUnit || '') : ''), thumb: r.photo || '' };
         }));
         if (items.length === 0) { PCD.toast.warning(t('no_recipes_yet')); return; }
-        const selected = (data.menu || []).map(function (m) { return m.recipeId; });
-        PCD.picker.open({
-          title: t('event_add_recipes'),
-          items: items, multi: true, selected: selected,
-        }).then(function (selIds) {
+        const selected = (f.menu || []).map(function (m) { return m.recipeId; });
+        PCD.picker.open({ title: t('event_add_recipes'), items: items, multi: true, selected: selected }).then(function (selIds) {
           if (!selIds) return;
           const existingMap = {};
-          (data.menu || []).forEach(function (m) { existingMap[m.recipeId] = m; });
-          data.menu = selIds.map(function (id) {
-            if (existingMap[id]) return existingMap[id];
-            return { recipeId: id, portionsPerGuest: 1 };
-          });
+          (f.menu || []).forEach(function (m) { existingMap[m.recipeId] = m; });
+          f.menu = selIds.map(function (id) { return existingMap[id] || { recipeId: id, portionsPerGuest: 1 }; });
           render();
         });
-      });
-
-      PCD.on(body, 'input', '[data-pph]', PCD.debounce(function () {
-        const idx = parseInt(this.getAttribute('data-pph'), 10);
-        data.menu[idx].portionsPerGuest = parseFloat(this.value) || 0;
-        render();
-      }, 400));
-
-      PCD.on(body, 'click', '[data-rm-menu]', function () {
-        const idx = parseInt(this.getAttribute('data-rm-menu'), 10);
-        data.menu.splice(idx, 1);
-        render();
       });
 
       // v2.37 — canlı A4 önizleme (iframe izole; body{} sızıntısı yok)
@@ -455,7 +513,7 @@
         applyInvBtn.style.color = ''; applyInvBtn.style.borderColor = ''; applyInvBtn.style.background = '';
       }
     }
-    if (data.menu && data.menu.length) {
+    if ((data.functions || []).some(function (f) { return f.menu && f.menu.length; })) {
       applyInvBtn = PCD.el('button', { class: 'btn btn-outline' });
       _renderDeductBtnState();
     }
@@ -537,6 +595,14 @@
       if (PCD.gate && !PCD.gate.requireAuth()) return;
       if (!data.name || !data.name.trim()) { PCD.toast.error(t('event_name') + ' ' + t('required')); return; }
       if (existing) data.id = existing.id;
+      // v2.44.86 — liste/sıralama + geriye-uyum için temsilî düz alanları aynala
+      const fns = data.functions || [];
+      const dated = fns.map(function (f) { return f.date; }).filter(Boolean).sort();
+      data.date = dated[0] || (fns[0] && fns[0].date) || '';
+      data.time = (fns[0] && fns[0].time) || '';
+      data.guestCount = eventGuests(data);
+      data.venue = (fns[0] && fns[0].room) || '';
+      data.menu = (fns[0] && fns[0].menu) || [];
       PCD.store.upsertInTable('events', data, 'ev');
       PCD.toast.success(t('event_saved'));
       m.close();
@@ -550,40 +616,46 @@
   function render_list(view) { render(view); }
 
   function buildEventText(event) {
+    const t = PCD.i18n.t;
     const ingMap = {}, recipeMap = {};
     PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
     PCD.store.listRecipes().forEach(function (r) { recipeMap[r.id] = r; });
     const stats = computeStats(event, ingMap, recipeMap);
-    const dateStr = event.date ? new Date(event.date).toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || "en", { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : '';
+    const locale = (PCD.i18n && PCD.i18n.currentLocale) || 'en';
+    const fmtD = function (d) { return d ? new Date(d).toLocaleDateString(locale, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : ''; };
+    const guestWord = (t('event_guests') || 'guests').toLowerCase();
 
     const lines = [];
     lines.push(event.name || 'Event');
-    if (event.status) lines.push('Status: ' + event.status.charAt(0).toUpperCase() + event.status.slice(1));
+    if (event.status) lines.push((t('event_status') || 'Status') + ': ' + (t('event_status_' + event.status) || event.status));
+    if (event.client) lines.push('🏢 ' + event.client);
+    if (event.contactName) lines.push('👤 ' + event.contactName + (event.contactPhone ? ' · ' + event.contactPhone : ''));
+    if (event.pricePerHead) lines.push('💵 ' + PCD.fmtMoney(event.pricePerHead) + ' / ' + (t('event_guest_one') || 'guest'));
     lines.push('');
-    if (dateStr) lines.push('📅 ' + dateStr + (event.time ? ' at ' + event.time : ''));
-    if (event.guestCount) lines.push('👥 ' + event.guestCount + ' guests');
-    if (event.venue) lines.push('📍 ' + event.venue);
-    if (event.pricePerHead) lines.push('💵 ' + PCD.fmtMoney(event.pricePerHead) + ' per person');
-    lines.push('');
-    if (event.menu && event.menu.length > 0) {
-      lines.push('— Menu —');
-      event.menu.forEach(function (item) {
+    eventFunctions(event).forEach(function (fn, fi) {
+      const title = (fn.name || '').trim() || ((t('event_function') || 'Function') + ' ' + (fi + 1));
+      lines.push('▸ ' + title);
+      const when = [fmtD(fn.date), [fn.time, fn.endTime].filter(Boolean).join('–')].filter(Boolean).join(' · ');
+      if (when) lines.push('  📅 ' + when);
+      if (Number(fn.guestCount)) lines.push('  👥 ' + fn.guestCount + ' ' + guestWord);
+      if (fn.room) lines.push('  📍 ' + fn.room);
+      (fn.menu || []).forEach(function (item) {
         const r = recipeMap[item.recipeId];
         if (!r) return;
-        const portions = (event.guestCount || 0) * (item.portionsPerGuest || 1);
-        lines.push('• ' + r.name + ' — ' + portions + ' portions (' + (item.portionsPerGuest || 1) + '/guest)');
+        const portions = (Number(fn.guestCount) || 0) * (item.portionsPerGuest || 1);
+        lines.push('  • ' + r.name + ' — ' + portions + ' (' + (item.portionsPerGuest || 1) + '/' + (t('event_guest_one') || 'guest') + ')');
       });
       lines.push('');
-    }
-    lines.push('— Cost summary —');
-    lines.push('Total food cost: ' + PCD.fmtMoney(stats.totalCost));
+    });
+    lines.push('— ' + (t('event_cost_summary') || 'Cost summary') + ' —');
+    lines.push((t('ev_print_total_food_cost') || 'Total food cost') + ': ' + PCD.fmtMoney(stats.totalCost));
     if (stats.totalRevenue > 0) {
-      lines.push('Total revenue: ' + PCD.fmtMoney(stats.totalRevenue));
-      lines.push('Profit: ' + PCD.fmtMoney(stats.profit) + (stats.margin !== null ? ' (' + PCD.fmtPercent(stats.margin, 0) + ' margin)' : ''));
+      lines.push((t('ev_print_total_revenue') || 'Total revenue') + ': ' + PCD.fmtMoney(stats.totalRevenue));
+      lines.push((t('ev_print_profit') || 'Profit') + ': ' + PCD.fmtMoney(stats.profit) + (stats.margin !== null ? ' (' + PCD.fmtPercent(stats.margin, 0) + ')' : ''));
     }
     if (event.notes) {
       lines.push('');
-      lines.push('Notes: ' + event.notes);
+      lines.push((t('ev_print_notes') || 'Notes') + ': ' + event.notes);
     }
     return lines.join('\n');
   }
@@ -595,43 +667,84 @@
     PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
     PCD.store.listRecipes().forEach(function (r) { recipeMap[r.id] = r; });
     const stats = computeStats(event, ingMap, recipeMap);
-    const dateStr = event.date ? new Date(event.date).toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || "en", { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : '';
+    const locale = (PCD.i18n && PCD.i18n.currentLocale) || 'en';
+    const fmtD = function (d) { return d ? new Date(d).toLocaleDateString(locale, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : ''; };
+    const guestsLabel = (t('ev_print_guests') || 'Guests').toLowerCase();
 
-    let menuRows = '';
-    (event.menu || []).forEach(function (item) {
-      const r = recipeMap[item.recipeId];
-      if (!r) return;
-      const portions = (event.guestCount || 0) * (item.portionsPerGuest || 1);
-      const scale = portions / (r.servings || 1);
-      const fc = PCD.recipes.computeFoodCost(r, ingMap, recipeMap) * scale;
-      menuRows += '<tr>' +
-        '<td>' + PCD.escapeHtml(r.name) + '</td>' +
-        '<td style="text-align:center;">' + (item.portionsPerGuest || 1) + '/guest</td>' +
-        '<td style="text-align:right;">' + portions + '</td>' +
-        '<td style="text-align:right;font-weight:600;">' + PCD.fmtMoney(fc) + '</td>' +
-        '</tr>';
-      // v2.43.18 — detailed sub-recipe breakdown per dish, scaled to event portions.
-      // Child lineCosts × scale sum back to the dish cost (fc), so the report total stays exact.
-      if (detailed) {
-        PCD.recipes.costBreakdownRows(r, ingMap, recipeMap, true).forEach(function (row) {
-          if (row.isSubHeader) {
-            menuRows += '<tr style="font-size:9pt;color:#777;">' +
-              '<td style="padding-left:26px;border-bottom:1px dashed #f0f0f0;">↳ ' + PCD.escapeHtml(row.name) + '</td>' +
-              '<td></td><td></td>' +
-              '<td style="text-align:right;border-bottom:1px dashed #f0f0f0;">' + PCD.fmtMoney(row.lineCost * scale) + '</td>' +
-            '</tr>';
-            return;
-          }
-          const q = (row.qtyInStock != null ? row.qtyInStock : row.amount) * scale;
-          menuRows += '<tr style="font-size:9pt;color:#777;">' +
-            '<td style="padding-left:' + (row.indent ? '42px' : '26px') + ';">' + (row.indent ? '└ ' : '') + PCD.escapeHtml(row.name) + '</td>' +
-            '<td></td>' +
-            '<td style="text-align:right;">' + PCD.fmtNumber(q) + ' ' + PCD.escapeHtml(row.stockUnit || row.qtyUnit || '') + '</td>' +
-            '<td style="text-align:right;">' + PCD.fmtMoney(row.lineCost * scale) + '</td>' +
+    // Bir fonksiyonun menü satırlarını o fonksiyonun kişi sayısına ölçekle.
+    function menuRowsFor(menu, fGuests) {
+      let out = '';
+      (menu || []).forEach(function (item) {
+        const r = recipeMap[item.recipeId];
+        if (!r) return;
+        const portions = (Number(fGuests) || 0) * (item.portionsPerGuest || 1);
+        const scale = portions / (r.servings || 1);
+        const fc = PCD.recipes.computeFoodCost(r, ingMap, recipeMap) * scale;
+        out += '<tr>' +
+          '<td>' + PCD.escapeHtml(r.name) + '</td>' +
+          '<td style="text-align:center;">' + (item.portionsPerGuest || 1) + '/' + PCD.escapeHtml(t('event_guest_one') || 'guest') + '</td>' +
+          '<td style="text-align:right;">' + portions + '</td>' +
+          '<td style="text-align:right;font-weight:600;">' + PCD.fmtMoney(fc) + '</td>' +
           '</tr>';
-        });
-      }
-    });
+        // v2.43.18 — detailed sub-recipe breakdown per dish, scaled to function portions.
+        if (detailed) {
+          PCD.recipes.costBreakdownRows(r, ingMap, recipeMap, true).forEach(function (row) {
+            if (row.isSubHeader) {
+              out += '<tr style="font-size:9pt;color:#777;"><td style="padding-left:26px;border-bottom:1px dashed #f0f0f0;">↳ ' + PCD.escapeHtml(row.name) + '</td><td></td><td></td><td style="text-align:right;border-bottom:1px dashed #f0f0f0;">' + PCD.fmtMoney(row.lineCost * scale) + '</td></tr>';
+              return;
+            }
+            const q = (row.qtyInStock != null ? row.qtyInStock : row.amount) * scale;
+            out += '<tr style="font-size:9pt;color:#777;"><td style="padding-left:' + (row.indent ? '42px' : '26px') + ';">' + (row.indent ? '└ ' : '') + PCD.escapeHtml(row.name) + '</td><td></td><td style="text-align:right;">' + PCD.fmtNumber(q) + ' ' + PCD.escapeHtml(row.stockUnit || row.qtyUnit || '') + '</td><td style="text-align:right;">' + PCD.fmtMoney(row.lineCost * scale) + '</td></tr>';
+          });
+        }
+      });
+      return out;
+    }
+    function menuTable(rowsHtml) {
+      if (!rowsHtml) return '';
+      return '<table class="ev-table"><thead><tr>' +
+        '<th>' + PCD.escapeHtml(t('ev_print_recipe') || 'Recipe') + '</th>' +
+        '<th style="text-align:center;">' + PCD.escapeHtml(t('ev_print_per_guest') || 'Per guest') + '</th>' +
+        '<th style="text-align:right;">' + PCD.escapeHtml(t('ev_print_total_portions') || 'Total portions') + '</th>' +
+        '<th style="text-align:right;">' + PCD.escapeHtml(t('cr_cost') || 'Cost') + '</th>' +
+      '</tr></thead><tbody>' + rowsHtml + '</tbody></table>';
+    }
+
+    const fns = eventFunctions(event);
+    // Tek isimsiz fonksiyon = eski düzen (meta grid + tek tablo); çok/isimli = BEO blokları.
+    const multi = fns.length > 1 || (fns[0] && (fns[0].name || '').trim());
+    let bodyHtml = '';
+    if (!multi) {
+      const fn = fns[0] || {};
+      bodyHtml =
+        '<div class="ev-meta">' +
+          (fn.date ? '<div class="ev-meta-item"><div><div class="ev-meta-label">' + PCD.escapeHtml(t('ev_print_date') || 'Date') + '</div><div class="ev-meta-value">' + PCD.escapeHtml(fmtD(fn.date)) + (fn.time ? ' · ' + PCD.escapeHtml(fn.time) : '') + '</div></div></div>' : '') +
+          (fn.guestCount ? '<div class="ev-meta-item"><div><div class="ev-meta-label">' + PCD.escapeHtml(t('ev_print_guests') || 'Guests') + '</div><div class="ev-meta-value">' + fn.guestCount + '</div></div></div>' : '') +
+          (fn.room ? '<div class="ev-meta-item"><div><div class="ev-meta-label">' + PCD.escapeHtml(t('ev_print_venue') || 'Venue') + '</div><div class="ev-meta-value">' + PCD.escapeHtml(fn.room) + '</div></div></div>' : '') +
+          (event.contactName ? '<div class="ev-meta-item"><div><div class="ev-meta-label">' + PCD.escapeHtml(t('event_contact_name') || 'Contact') + '</div><div class="ev-meta-value">' + PCD.escapeHtml(event.contactName) + (event.contactPhone ? ' · ' + PCD.escapeHtml(event.contactPhone) : '') + '</div></div></div>' : '') +
+          (event.pricePerHead ? '<div class="ev-meta-item"><div><div class="ev-meta-label">' + PCD.escapeHtml(t('ev_print_price_person') || 'Price/person') + '</div><div class="ev-meta-value">' + PCD.fmtMoney(event.pricePerHead) + '</div></div></div>' : '') +
+        '</div>';
+      const rows = menuRowsFor(fn.menu, fn.guestCount);
+      if (rows) bodyHtml += '<div class="ev-section-title">' + PCD.escapeHtml(t('ev_print_menu') || 'Menu') + '</div>' + menuTable(rows);
+    } else {
+      const headBits = [];
+      if (event.client) headBits.push('<div class="ev-meta-item"><div><div class="ev-meta-label">' + PCD.escapeHtml(t('event_client') || 'Client') + '</div><div class="ev-meta-value">' + PCD.escapeHtml(event.client) + '</div></div></div>');
+      if (event.contactName) headBits.push('<div class="ev-meta-item"><div><div class="ev-meta-label">' + PCD.escapeHtml(t('event_contact_name') || 'Contact') + '</div><div class="ev-meta-value">' + PCD.escapeHtml(event.contactName) + (event.contactPhone ? ' · ' + PCD.escapeHtml(event.contactPhone) : '') + '</div></div></div>');
+      if (event.pricePerHead) headBits.push('<div class="ev-meta-item"><div><div class="ev-meta-label">' + PCD.escapeHtml(t('ev_print_price_person') || 'Price/person') + '</div><div class="ev-meta-value">' + PCD.fmtMoney(event.pricePerHead) + '</div></div></div>');
+      if (headBits.length) bodyHtml += '<div class="ev-meta">' + headBits.join('') + '</div>';
+      fns.forEach(function (fn, fi) {
+        const when = [fmtD(fn.date), [fn.time, fn.endTime].filter(Boolean).join('–')].filter(Boolean).join(' · ');
+        const sub = [when, fn.room, (Number(fn.guestCount) ? fn.guestCount + ' ' + guestsLabel : '')].filter(Boolean).join('  ·  ');
+        const title = (fn.name || '').trim() || ((t('event_function') || 'Function') + ' ' + (fi + 1));
+        const rows = menuRowsFor(fn.menu, fn.guestCount);
+        bodyHtml +=
+          '<div class="ev-fn-block">' +
+            '<div class="ev-fn-head"><span class="ev-fn-n">#' + (fi + 1) + '</span>' + PCD.escapeHtml(title) + '</div>' +
+            (sub ? '<div class="ev-fn-sub">' + PCD.escapeHtml(sub) + '</div>' : '') +
+            (rows ? menuTable(rows) : '<div class="ev-fn-empty">—</div>') +
+          '</div>';
+      });
+    }
 
     const html =
       '<style>' +
@@ -652,6 +765,11 @@
         '.ev-table { width: 100%; border-collapse: collapse; font-size: 11pt; }' +
         '.ev-table th { text-align: left; padding: 8px 10px; background: #eaf6f0; font-size: 9pt; text-transform: uppercase; color: #16433a; letter-spacing: 0.04em; }' +
         '.ev-table td { padding: 8px 10px; border-bottom: 1px solid #eee; }' +
+        '.ev-fn-block { margin: 18px 0; page-break-inside: avoid; }' +
+        '.ev-fn-head { font-family: "Fraunces","Georgia",serif; font-size: 14pt; font-weight: 600; color: #16433a; margin-bottom: 2px; }' +
+        '.ev-fn-n { display: inline-block; background: #16433a; color: #fff; font-family: "Inter",sans-serif; font-size: 9pt; font-weight: 700; padding: 1px 7px; border-radius: 5px; margin-right: 8px; vertical-align: middle; }' +
+        '.ev-fn-sub { font-size: 10pt; color: #666; margin-bottom: 8px; }' +
+        '.ev-fn-empty { font-size: 10pt; color: #999; padding: 2px 0 6px; }' +
         '.ev-summary { background: #edf6f0; border: 1px solid #cbe8d8; border-radius: 8px; padding: 14px 18px; margin-top: 16px; }' +
         '.ev-summary-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 12pt; }' +
         '.ev-summary-row.total { font-weight: 700; font-size: 14pt; border-top: 2px solid #16433a; margin-top: 6px; padding-top: 8px; color: #16433a; }' +
@@ -662,22 +780,7 @@
         '<h1>' + PCD.escapeHtml(event.name || (t('ev_print_default_title') || 'Event')) + '</h1>' +
         '<span class="ev-status ' + (event.status || 'draft') + '">' + PCD.escapeHtml(t('ev_status_' + (event.status || 'draft')) || event.status || 'draft') + '</span>' +
       '</div>' +
-      '<div class="ev-meta">' +
-        (dateStr ? '<div class="ev-meta-item"><div><div class="ev-meta-label">' + PCD.escapeHtml(t('ev_print_date') || 'Date') + '</div><div class="ev-meta-value">' + PCD.escapeHtml(dateStr) + (event.time ? ' · ' + PCD.escapeHtml(event.time) : '') + '</div></div></div>' : '') +
-        (event.guestCount ? '<div class="ev-meta-item"><div><div class="ev-meta-label">' + PCD.escapeHtml(t('ev_print_guests') || 'Guests') + '</div><div class="ev-meta-value">' + event.guestCount + '</div></div></div>' : '') +
-        (event.venue ? '<div class="ev-meta-item"><div><div class="ev-meta-label">' + PCD.escapeHtml(t('ev_print_venue') || 'Venue') + '</div><div class="ev-meta-value">' + PCD.escapeHtml(event.venue) + '</div></div></div>' : '') +
-        (event.pricePerHead ? '<div class="ev-meta-item"><div><div class="ev-meta-label">' + PCD.escapeHtml(t('ev_print_price_person') || 'Price/person') + '</div><div class="ev-meta-value">' + PCD.fmtMoney(event.pricePerHead) + '</div></div></div>' : '') +
-      '</div>' +
-      (menuRows ?
-        '<div class="ev-section-title">' + PCD.escapeHtml(t('ev_print_menu') || 'Menu') + '</div>' +
-        '<table class="ev-table"><thead><tr>' +
-          '<th>' + PCD.escapeHtml(t('ev_print_recipe') || 'Recipe') + '</th>' +
-          '<th style="text-align:center;">' + PCD.escapeHtml(t('ev_print_per_guest') || 'Per guest') + '</th>' +
-          '<th style="text-align:right;">' + PCD.escapeHtml(t('ev_print_total_portions') || 'Total portions') + '</th>' +
-          '<th style="text-align:right;">' + PCD.escapeHtml(t('cr_cost') || 'Cost') + '</th>' +
-        '</tr></thead>' +
-        '<tbody>' + menuRows + '</tbody></table>'
-      : '') +
+      bodyHtml +
       '<div class="ev-summary">' +
         '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('ev_print_total_food_cost') || 'Total food cost') + '</span><span>' + PCD.fmtMoney(stats.totalCost) + '</span></div>' +
         (event.budget > 0 ? '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('ev_print_customer_budget') || 'Customer budget') + '</span><span>' + PCD.fmtMoney(event.budget) + '</span></div>' : '') +
@@ -757,21 +860,24 @@
   // malzemeleri kendi grubunda (yarı saydam başlık + belirgin ayraç) → karışmaz.
   function buildEventShopping(event, ingMap, recipeMap) {
     const t = PCD.i18n.t;
-    const guests = Number(event.guestCount) || 0;
     const direct = {};   // tedarikçili direkt malzemeler: key -> row
     const subs = {};     // { subRecipeAdı: { key -> row } }
-    (event.menu || []).forEach(function (item) {
-      const r = recipeMap[item.recipeId]; if (!r) return;
-      const portions = guests * (Number(item.portionsPerGuest) || 1);
-      const scale = portions / (Number(r.servings) || 1);
-      if (!(scale > 0)) return;
-      const flat = PCD.recipes.flattenIngredients(r, ingMap, recipeMap, { scale: scale });
-      flat.forEach(function (f) {
-        if (!f.ingredient) return;
-        const key = f.ingredientId + '|' + (f.unit || '');
-        const bucket = f.viaSubRecipe ? (subs[f.viaSubRecipe] || (subs[f.viaSubRecipe] = {})) : direct;
-        if (!bucket[key]) bucket[key] = { ing: f.ingredient, unit: f.unit || '', amount: 0 };
-        bucket[key].amount += (Number(f.amount) || 0);
+    // v2.44.86 — TÜM fonksiyonların malzemeleri tek konsolide listede toplanır.
+    eventFunctions(event).forEach(function (fn) {
+      const guests = Number(fn.guestCount) || 0;
+      (fn.menu || []).forEach(function (item) {
+        const r = recipeMap[item.recipeId]; if (!r) return;
+        const portions = guests * (Number(item.portionsPerGuest) || 1);
+        const scale = portions / (Number(r.servings) || 1);
+        if (!(scale > 0)) return;
+        const flat = PCD.recipes.flattenIngredients(r, ingMap, recipeMap, { scale: scale });
+        flat.forEach(function (f) {
+          if (!f.ingredient) return;
+          const key = f.ingredientId + '|' + (f.unit || '');
+          const bucket = f.viaSubRecipe ? (subs[f.viaSubRecipe] || (subs[f.viaSubRecipe] = {})) : direct;
+          if (!bucket[key]) bucket[key] = { ing: f.ingredient, unit: f.unit || '', amount: 0 };
+          bucket[key].amount += (Number(f.amount) || 0);
+        });
       });
     });
     function byName(a, b) { return (a.ing.name || '').localeCompare(b.ing.name || ''); }
@@ -825,7 +931,7 @@
     PCD.store.listRecipes().forEach(function (r) { recipeMap[r.id] = r; });
     const groups = buildEventShopping(event, ingMap, recipeMap);
     const body = PCD.el('div');
-    body.innerHTML = '<div class="text-muted text-sm" style="margin-bottom:10px;">' + PCD.escapeHtml((event.guestCount || 0) + ' ' + (t('event_guests') || 'guests')) + '</div>' + shoppingListHtml(groups, false);
+    body.innerHTML = '<div class="text-muted text-sm" style="margin-bottom:10px;">' + PCD.escapeHtml(eventGuests(event) + ' ' + (t('event_guests') || 'guests')) + '</div>' + shoppingListHtml(groups, false);
     const printBtn = PCD.el('button', { class: 'btn btn-outline', text: (t('print') || 'Print') });
     printBtn.innerHTML = PCD.icon('print', 14) + ' ' + PCD.escapeHtml(t('print') || 'Print');
     const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: (t('btn_close') || 'Close'), style: { marginInlineStart: 'auto' } });
@@ -835,7 +941,7 @@
     printBtn.addEventListener('click', function () {
       const html = '<style>@page{size:A4;margin:0;}body{font-family:"Inter",-apple-system,"Segoe UI",Roboto,sans-serif;color:#1c1917;max-width:760px;margin:0 auto;padding:16mm;font-variant-numeric:tabular-nums;}h1{font-family:"Fraunces","Georgia",serif;font-size:20pt;font-weight:600;letter-spacing:-0.01em;color:#16433a;margin:0 0 4px;}.sub{color:#666;font-size:11pt;margin-bottom:16px;}</style>' +
         '<h1>' + PCD.escapeHtml(event.name || (t('event_shopping_list') || 'Shopping list')) + '</h1>' +
-        '<div class="sub">' + PCD.escapeHtml((t('event_shopping_list') || 'Shopping list') + ' · ' + (event.guestCount || 0) + ' ' + (t('event_guests') || 'guests')) + '</div>' +
+        '<div class="sub">' + PCD.escapeHtml((t('event_shopping_list') || 'Shopping list') + ' · ' + eventGuests(event) + ' ' + (t('event_guests') || 'guests')) + '</div>' +
         shoppingListHtml(groups, true);
       PCD.print(html, (event.name || 'Event') + ' — ' + (t('event_shopping_list') || 'Shopping list'));
     });

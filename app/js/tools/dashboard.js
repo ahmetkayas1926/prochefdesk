@@ -629,16 +629,21 @@
 
       // 6.2b — Bugün P&L: salesLog'tan bugünün satışları → ciro · food cost % · kâr.
       // Günlük "kokpit" — Record sales'e girilen tarihli satışları besler.
+      // v2.44.85 — SON 7 GÜN P&L (eski "bugün" yerine). Şef satışı HAFTALIK girer; günlük
+      // kart çoğu gün boş/eski kalıyordu. Tarih YEREL (eski UTC `toISOString` → Perth gibi
+      // UTC+8'de her sabah "yanlış gün" gösteriyordu). salesLog son 7 gün → ciro/fc%/kâr.
       let todayPL = null;
       (function () {
         try {
           const ws = PCD.store.getActiveWorkspaceId && PCD.store.getActiveWorkspaceId();
           const root = (PCD.store._read && PCD.store._read('salesLog')) || {};
-          const today = new Date().toISOString().slice(0, 10);
+          const ymdLocal = function (d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+          const fromYmd = ymdLocal(new Date(Date.now() - 6 * 86400000)); // bugün dahil 7 gün
+          const toYmd = ymdLocal(new Date());
           const recById = {}; recipes.forEach(function (r) { recById[r.id] = r; });
           let rev = 0, cost = 0, units = 0;
           (root[ws] || []).forEach(function (s) {
-            if (!s || s._deletedAt || s.date !== today || !s.recipeId) return;
+            if (!s || s._deletedAt || !s.recipeId || !s.date || s.date < fromYmd || s.date > toYmd) return;
             const r = recById[s.recipeId]; if (!r) return;
             const qty = Number(s.qty) || 0; if (qty <= 0) return;
             units += qty;

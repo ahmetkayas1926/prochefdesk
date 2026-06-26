@@ -3298,3 +3298,27 @@ window.PCD.i18n.register('fr', {
   inv_reset_done: "Stock réinitialisé — {n} article(s) mis à 0.",
   inv_reset_none: "Aucun stock à réinitialiser.",
 });
+
+// v2.44.85 — "Today's P&L" → "7 derniers jours".
+window.PCD.i18n.register('fr', {
+  cc_today_pl: "7 derniers jours",
+  cc_today_empty: "Enregistrez vos ventes (Inventaire → Enregistrer les ventes) pour voir le chiffre d'affaires, le coût matière % et le bénéfice des 7 derniers jours.",
+});
+
+// v2.44.86 — Events Phase 1 : clés multi-prestations (BEO).
+window.PCD.i18n.register('fr', {
+  event_client: "Client / société",
+  event_client_ph: "ex. Hilton, client privé",
+  event_contact_name: "Personne à contacter",
+  event_contact_ph: "ex. Jean",
+  event_contact_phone: "Téléphone du contact",
+  event_functions: "Prestations",
+  event_add_function: "Ajouter une prestation",
+  event_functions_hint: "Un événement peut comporter plusieurs prestations dans la journée (réception · dîner · soirée), chacune avec son horaire, ses convives et son menu.",
+  event_function: "Prestation",
+  event_end_time: "Fin",
+  event_room: "Salle / zone",
+  event_room_ph: "ex. Salle de bal A",
+  event_guest_one: "convive",
+  event_cost_summary: "Récapitulatif des coûts",
+});

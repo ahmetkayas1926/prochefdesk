@@ -3455,3 +3455,27 @@ window.PCD.i18n.register('tr', {
   inv_reset_done: "Stok sıfırlandı — {n} kalem 0 yapıldı.",
   inv_reset_none: "Sıfırlanacak stok yok.",
 });
+
+// v2.44.85 — "Today's P&L" → "Son 7 gün" (şef satışı haftalık girer; günlük kart boş kalıyordu).
+window.PCD.i18n.register('tr', {
+  cc_today_pl: "Son 7 gün",
+  cc_today_empty: "Satışlarını gir (Envanter → Satış kaydet) → son 7 günün cirosunu, food cost %'ini ve kârını gör.",
+});
+
+// v2.44.86 — Events Faz 1: çok-fonksiyon (BEO) anahtarları.
+window.PCD.i18n.register('tr', {
+  event_client: "Müşteri / firma",
+  event_client_ph: "örn. Hilton, özel müşteri",
+  event_contact_name: "İlgili kişi",
+  event_contact_ph: "örn. John",
+  event_contact_phone: "İletişim telefonu",
+  event_functions: "Fonksiyonlar",
+  event_add_function: "Fonksiyon ekle",
+  event_functions_hint: "Bir etkinlik bir gün içinde birden çok fonksiyon içerebilir (karşılama · yemek · gece) — her biri kendi saati, kişi sayısı ve menüsüyle.",
+  event_function: "Fonksiyon",
+  event_end_time: "Bitiş",
+  event_room: "Salon / alan",
+  event_room_ph: "örn. Balo Salonu A",
+  event_guest_one: "kişi",
+  event_cost_summary: "Maliyet özeti",
+});

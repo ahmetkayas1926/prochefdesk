@@ -3298,3 +3298,27 @@ window.PCD.i18n.register('es', {
   inv_reset_done: "Stock restablecido — {n} artículo(s) puestos a 0.",
   inv_reset_none: "No hay stock para restablecer.",
 });
+
+// v2.44.85 — "Today's P&L" → "Últimos 7 días".
+window.PCD.i18n.register('es', {
+  cc_today_pl: "Últimos 7 días",
+  cc_today_empty: "Registra tus ventas (Inventario → Registrar ventas) para ver los ingresos, el coste de alimentos % y el beneficio de los últimos 7 días.",
+});
+
+// v2.44.86 — Events Fase 1: claves multifunción (BEO).
+window.PCD.i18n.register('es', {
+  event_client: "Cliente / empresa",
+  event_client_ph: "p. ej. Hilton, cliente privado",
+  event_contact_name: "Persona de contacto",
+  event_contact_ph: "p. ej. Juan",
+  event_contact_phone: "Teléfono de contacto",
+  event_functions: "Funciones",
+  event_add_function: "Añadir función",
+  event_functions_hint: "Un evento puede tener varias funciones en un día (recepción · cena · noche), cada una con su hora, invitados y menú.",
+  event_function: "Función",
+  event_end_time: "Fin",
+  event_room: "Sala / zona",
+  event_room_ph: "p. ej. Salón A",
+  event_guest_one: "invitado",
+  event_cost_summary: "Resumen de costes",
+});

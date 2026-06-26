@@ -3298,3 +3298,27 @@ window.PCD.i18n.register('de', {
   inv_reset_done: "Bestand zurückgesetzt — {n} Artikel auf 0 gesetzt.",
   inv_reset_none: "Kein Bestand zum Zurücksetzen.",
 });
+
+// v2.44.85 — "Today's P&L" → "Letzte 7 Tage".
+window.PCD.i18n.register('de', {
+  cc_today_pl: "Letzte 7 Tage",
+  cc_today_empty: "Erfasse deine Verkäufe (Inventar → Verkäufe erfassen), um Umsatz, Wareneinsatz % und Gewinn der letzten 7 Tage zu sehen.",
+});
+
+// v2.44.86 — Events Phase 1: Multi-Programmpunkt-Schlüssel (BEO).
+window.PCD.i18n.register('de', {
+  event_client: "Kunde / Firma",
+  event_client_ph: "z. B. Hilton, Privatkunde",
+  event_contact_name: "Ansprechpartner",
+  event_contact_ph: "z. B. Johann",
+  event_contact_phone: "Telefon Kontakt",
+  event_functions: "Programmpunkte",
+  event_add_function: "Programmpunkt hinzufügen",
+  event_functions_hint: "Eine Veranstaltung kann mehrere Programmpunkte an einem Tag haben (Empfang · Dinner · Nacht) — jeder mit eigener Uhrzeit, Gästezahl und Menü.",
+  event_function: "Programmpunkt",
+  event_end_time: "Ende",
+  event_room: "Raum / Bereich",
+  event_room_ph: "z. B. Ballsaal A",
+  event_guest_one: "Gast",
+  event_cost_summary: "Kostenübersicht",
+});

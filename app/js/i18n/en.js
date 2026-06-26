@@ -3403,3 +3403,27 @@ window.PCD.i18n.register('en', {
   inv_reset_done: "Stock reset — {n} item(s) set to 0.",
   inv_reset_none: "No stock to reset.",
 });
+
+// v2.44.85 — "Today's P&L" → "Last 7 days" (chefs enter sales weekly; daily card stayed empty).
+window.PCD.i18n.register('en', {
+  cc_today_pl: "Last 7 days",
+  cc_today_empty: "Record your sales (Inventory → Record sales) to see the last 7 days' revenue, food cost % and profit.",
+});
+
+// v2.44.86 — Events Phase 1: multi-function (BEO) keys.
+window.PCD.i18n.register('en', {
+  event_client: "Client / company",
+  event_client_ph: "e.g. Hilton, private client",
+  event_contact_name: "Contact person",
+  event_contact_ph: "e.g. John",
+  event_contact_phone: "Contact phone",
+  event_functions: "Functions",
+  event_add_function: "Add function",
+  event_functions_hint: "One event can have several functions in a day (reception · dinner · supper) — each with its own time, guests and menu.",
+  event_function: "Function",
+  event_end_time: "End",
+  event_room: "Room / area",
+  event_room_ph: "e.g. Ballroom A",
+  event_guest_one: "guest",
+  event_cost_summary: "Cost summary",
+});

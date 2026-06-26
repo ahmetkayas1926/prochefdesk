@@ -3298,3 +3298,27 @@ window.PCD.i18n.register('ar', {
   inv_reset_done: "تم تصفير المخزون — ضُبط {n} صنف على 0.",
   inv_reset_none: "لا مخزون لتصفيره.",
 });
+
+// v2.44.85 — "Today's P&L" → "آخر 7 أيام".
+window.PCD.i18n.register('ar', {
+  cc_today_pl: "آخر 7 أيام",
+  cc_today_empty: "سجّل مبيعاتك (المخزون → تسجيل المبيعات) لرؤية إيراد آخر 7 أيام ونسبة تكلفة الطعام والربح.",
+});
+
+// v2.44.86 — Events Phase 1: مفاتيح الفعاليات المتعددة (BEO).
+window.PCD.i18n.register('ar', {
+  event_client: "العميل / الشركة",
+  event_client_ph: "مثل: هيلتون، عميل خاص",
+  event_contact_name: "الشخص المسؤول",
+  event_contact_ph: "مثل: جون",
+  event_contact_phone: "هاتف التواصل",
+  event_functions: "الفعاليات",
+  event_add_function: "إضافة فعالية",
+  event_functions_hint: "يمكن أن تضم المناسبة عدة فعاليات في اليوم (استقبال · عشاء · سهرة) — لكل منها وقتها وعدد ضيوفها وقائمتها.",
+  event_function: "فعالية",
+  event_end_time: "النهاية",
+  event_room: "القاعة / المنطقة",
+  event_room_ph: "مثل: القاعة الكبرى أ",
+  event_guest_one: "ضيف",
+  event_cost_summary: "ملخص التكلفة",
+});
