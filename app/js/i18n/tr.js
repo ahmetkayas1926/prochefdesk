@@ -3445,4 +3445,13 @@ window.PCD.i18n.register('tr', {
   supplier_msg_tpl_insert: "Yer-tutucu eklemek için dokun:",
   reset_default: "Varsayılana sıfırla",
   sup_not_purchased: "Satın alınmıyor",
+  dash_haccp_due_title: "Bugünün sıcaklık logu eksik",
+  dash_haccp_due_desc: "{n} birim bugün kaydedilmedi — günlük gıda güvenliği kaydı.",
+  dash_haccp_due_cta: "Şimdi kaydet",
+  inv_reset_stock: "Stoğu sıfırla",
+  inv_reset_stock_title: "Tüm stok sayımlarını sıfırla (par/min eşikleri korunur)",
+  inv_reset_warn: "{n} kalem: tüm stok sayımları 0 yapılacak. Par ve min eşikleri korunur. Bu işlem geri alınamaz.",
+  inv_reset_ack: "Bunun geri alınamayacağını anlıyorum.",
+  inv_reset_done: "Stok sıfırlandı — {n} kalem 0 yapıldı.",
+  inv_reset_none: "Sıfırlanacak stok yok.",
 });

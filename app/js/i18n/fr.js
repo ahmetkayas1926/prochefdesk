@@ -3288,4 +3288,13 @@ window.PCD.i18n.register('fr', {
   supplier_msg_tpl_insert: "Touchez pour insérer un espace réservé :",
   reset_default: "Réinitialiser par défaut",
   sup_not_purchased: "Non acheté",
+  dash_haccp_due_title: "Le relevé de température du jour est dû",
+  dash_haccp_due_desc: "{n} unité(s) non relevée(s) aujourd'hui — relevé quotidien de sécurité alimentaire.",
+  dash_haccp_due_cta: "Enregistrer",
+  inv_reset_stock: "Réinitialiser le stock",
+  inv_reset_stock_title: "Remet à zéro tous les comptages de stock (conserve par/min)",
+  inv_reset_warn: "{n} article(s) : tous les comptages de stock seront mis à 0. Les seuils par et min sont conservés. Cette action est irréversible.",
+  inv_reset_ack: "Je comprends que cette action est irréversible.",
+  inv_reset_done: "Stock réinitialisé — {n} article(s) mis à 0.",
+  inv_reset_none: "Aucun stock à réinitialiser.",
 });

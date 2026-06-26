@@ -3288,4 +3288,13 @@ window.PCD.i18n.register('es', {
   supplier_msg_tpl_insert: "Toca para insertar un marcador:",
   reset_default: "Restablecer predeterminado",
   sup_not_purchased: "No se compra",
+  dash_haccp_due_title: "El registro de temperatura de hoy está pendiente",
+  dash_haccp_due_desc: "{n} unidad(es) sin registrar hoy — registro diario de seguridad alimentaria.",
+  dash_haccp_due_cta: "Registrar ahora",
+  inv_reset_stock: "Restablecer stock",
+  inv_reset_stock_title: "Pone a cero todos los recuentos de stock (mantiene par/mín)",
+  inv_reset_warn: "{n} artículo(s): todos los recuentos de stock se pondrán a 0. Los umbrales par y mín se mantienen. Esto no se puede deshacer.",
+  inv_reset_ack: "Entiendo que esto no se puede deshacer.",
+  inv_reset_done: "Stock restablecido — {n} artículo(s) puestos a 0.",
+  inv_reset_none: "No hay stock para restablecer.",
 });

@@ -3288,4 +3288,13 @@ window.PCD.i18n.register('de', {
   supplier_msg_tpl_insert: "Zum Einfügen eines Platzhalters tippen:",
   reset_default: "Auf Standard zurücksetzen",
   sup_not_purchased: "Nicht gekauft",
+  dash_haccp_due_title: "Heutiges Temperaturprotokoll fällig",
+  dash_haccp_due_desc: "{n} Einheit(en) heute nicht erfasst — tägliche Lebensmittelsicherheits-Aufzeichnung.",
+  dash_haccp_due_cta: "Jetzt erfassen",
+  inv_reset_stock: "Bestand zurücksetzen",
+  inv_reset_stock_title: "Setzt alle Bestandszählungen auf null (Par/Min bleiben erhalten)",
+  inv_reset_warn: "{n} Artikel: Alle Bestandszählungen werden auf 0 gesetzt. Par- und Min-Schwellen bleiben erhalten. Dies kann nicht rückgängig gemacht werden.",
+  inv_reset_ack: "Ich verstehe, dass dies nicht rückgängig gemacht werden kann.",
+  inv_reset_done: "Bestand zurückgesetzt — {n} Artikel auf 0 gesetzt.",
+  inv_reset_none: "Kein Bestand zum Zurücksetzen.",
 });

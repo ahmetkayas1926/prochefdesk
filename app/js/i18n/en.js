@@ -3393,4 +3393,13 @@ window.PCD.i18n.register('en', {
   supplier_msg_tpl_insert: "Tap to insert a placeholder:",
   reset_default: "Reset to default",
   sup_not_purchased: "Not purchased",
+  dash_haccp_due_title: "Today's temperature log is due",
+  dash_haccp_due_desc: "{n} unit(s) not logged today — daily food-safety record.",
+  dash_haccp_due_cta: "Log now",
+  inv_reset_stock: "Reset stock",
+  inv_reset_stock_title: "Reset all stock counts to zero (keeps par/min)",
+  inv_reset_warn: "{n} item(s): all stock counts will be set to 0. Par and min thresholds are kept. This cannot be undone.",
+  inv_reset_ack: "I understand this cannot be undone.",
+  inv_reset_done: "Stock reset — {n} item(s) set to 0.",
+  inv_reset_none: "No stock to reset.",
 });

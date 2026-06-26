@@ -549,6 +549,36 @@
       });
     }
 
+    // v2.44.83 — HACCP günlük sıcaklık logu vadesi (yasal günlük zorunluluk → en güçlü
+    // günlük retention sinyali). Birim kurulu + bugün için kaydı OLMAYAN birimler varsa
+    // "bugünün logu eksik" kartı (CTA → log formu). Birim yoksa / HACCP kapalıysa kart yok.
+    if (!PCD.gate || !PCD.gate.canUseHaccp || PCD.gate.canUseHaccp()) {
+      const haccpUnits = PCD.store.listTable ? (PCD.store.listTable('haccpUnits') || []) : [];
+      if (haccpUnits.length > 0) {
+        const _hd = new Date();
+        const haccpToday = _hd.getFullYear() + '-' + String(_hd.getMonth() + 1).padStart(2, '0') + '-' + String(_hd.getDate()).padStart(2, '0');
+        const loggedTodayUnits = {};
+        (PCD.store.listTable ? (PCD.store.listTable('haccpReadings') || []) : []).forEach(function (r) {
+          if (r && r.date === haccpToday && r.unitId) loggedTodayUnits[r.unitId] = true;
+        });
+        const haccpPending = haccpUnits.filter(function (u) { return !loggedTodayUnits[u.id]; }).length;
+        if (haccpPending > 0) {
+          cards.push({
+            priority: 1,
+            html:
+              '<div class="dash-card priority-warn" data-action="view-haccp" style="cursor:pointer;">' +
+                '<div class="dash-card-icon" style="background:#fee2e2;color:#991b1b;">' + PCD.icon('thermometer', 22) + '</div>' +
+                '<div class="dash-card-body">' +
+                  '<div class="dash-card-title">' + t('dash_haccp_due_title') + '</div>' +
+                  '<div class="dash-card-desc">' + t('dash_haccp_due_desc', { n: haccpPending }) + '</div>' +
+                '</div>' +
+                '<div class="dash-card-cta">' + t('dash_haccp_due_cta') + ' →</div>' +
+              '</div>'
+          });
+        }
+      }
+    }
+
     // Sort by priority
     cards.sort(function (a, b) { return a.priority - b.priority; });
 
@@ -1031,6 +1061,9 @@
     });
     PCD.on(view, 'click', '[data-action="view-inventory"]', function () {
       PCD.router.go('inventory');
+    });
+    PCD.on(view, 'click', '[data-action="view-haccp"]', function () {
+      PCD.router.go('haccp_logs');
     });
     PCD.on(view, 'click', '[data-action="view-checklist"]', function () {
       PCD.router.go('checklist');

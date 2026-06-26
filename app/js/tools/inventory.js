@@ -284,6 +284,7 @@
           <button class="btn btn-outline btn-sm" id="genOrderBtn" style="position:relative;">${PCD.icon('send',14)} ${t('inv_generate_order')}${_belowParCount > 0 ? `<span style="position:absolute;top:-7px;right:-8px;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:var(--danger);color:#fff;font-size:11px;font-weight:800;line-height:19px;text-align:center;box-shadow:0 0 0 2px var(--bg);">${_belowParCount}</span>` : ''}</button>
           ${_noSupCount > 0 ? `<button class="btn btn-sm" id="noSupBadge" title="${PCD.escapeHtml(L('inv_no_supplier_count', '{n} ingredient(s) have no supplier — assign one to order them.').replace('{n}', _noSupCount))}" style="background:#fff7ed;border:1px solid var(--warning);color:#b45309;font-weight:700;">⚠ ${_noSupCount}</button>` : ''}
           <button class="btn btn-outline btn-sm" id="recordSalesBtn">${PCD.icon('edit',14)} ${t('inv_record_sales')}</button>
+          <button class="btn btn-outline btn-sm" id="resetStockBtn" title="${PCD.escapeHtml(L('inv_reset_stock_title', 'Reset all stock counts to zero (keeps par/min)'))}" style="color:var(--text-3);">${PCD.icon('refresh',14)} ${PCD.escapeHtml(L('inv_reset_stock', 'Reset stock'))}</button>
         </div>
       </div>
 
@@ -509,6 +510,8 @@
     if (genBtn) genBtn.addEventListener('click', function () { openGenerateOrder(); });
     const noSupBadge = PCD.$('#noSupBadge', view);
     if (noSupBadge) noSupBadge.addEventListener('click', function () { if (PCD.router && PCD.router.go) PCD.router.go('ingredients'); });
+    const resetStockBtn = PCD.$('#resetStockBtn', view);
+    if (resetStockBtn) resetStockBtn.addEventListener('click', function () { resetAllStock(); });
     const rsBtn = PCD.$('#recordSalesBtn', view);
     if (rsBtn) rsBtn.addEventListener('click', function () { openRecordSales(); });
 
@@ -1277,6 +1280,47 @@
         m.close();
         setTimeout(function () { const v = PCD.$('#view'); if (v && PCD.router.currentView() === 'inventory') render(v); }, 200);
       });
+    });
+  }
+
+  // v2.44.84 — Stok sıfırla (A: tüm stok = 0, par/min eşikleri KORUNUR). Geri alınamaz →
+  // ciddi onay: kırmızı uyarı + "geri alınamaz" checkbox + danger buton (checkbox'sız pasif).
+  function resetAllStock() {
+    const t = PCD.i18n.t;
+    const L = function (k, fb) { try { const v = t(k); return (v == null || v === k) ? fb : v; } catch (e) { return fb; } };
+    if (PCD.gate && !PCD.gate.requireAuth()) return;
+    const inv = readInventory();
+    const total = Object.keys(inv).filter(function (id) { return inv[id]; }).length;
+    if (total === 0) { PCD.toast.info(L('inv_reset_none', 'No stock to reset.')); return; }
+    const body = PCD.el('div');
+    body.innerHTML =
+      '<div style="display:flex;align-items:flex-start;gap:10px;padding:11px 12px;background:#fef2f2;border:1px solid #fecaca;border-radius:var(--r-md);margin-bottom:14px;">' +
+        '<span style="font-size:18px;flex:0 0 auto;">⚠</span>' +
+        '<div style="font-size:13px;line-height:1.55;color:var(--text-2);">' + PCD.escapeHtml(L('inv_reset_warn', '{n} item(s): all stock counts will be set to 0. Par and min thresholds are kept. This cannot be undone.').replace('{n}', total)) + '</div>' +
+      '</div>' +
+      '<label style="display:flex;align-items:center;gap:9px;cursor:pointer;font-size:13px;font-weight:600;">' +
+        '<input type="checkbox" id="resetAck" style="width:18px;height:18px;accent-color:var(--danger);flex:0 0 auto;">' +
+        '<span>' + PCD.escapeHtml(L('inv_reset_ack', 'I understand this cannot be undone.')) + '</span>' +
+      '</label>';
+    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') });
+    const okBtn = PCD.el('button', { class: 'btn btn-danger', style: { flex: '1' } });
+    okBtn.textContent = L('inv_reset_stock', 'Reset stock');
+    okBtn.disabled = true;
+    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
+    footer.appendChild(cancelBtn); footer.appendChild(okBtn);
+    const m = PCD.modal.open({ title: L('inv_reset_stock', 'Reset stock'), body: body, footer: footer, size: 'sm', closable: true });
+    PCD.$('#resetAck', body).addEventListener('change', function () { okBtn.disabled = !this.checked; });
+    let done = false;
+    cancelBtn.addEventListener('click', function () { if (done) return; done = true; m.close(); });
+    okBtn.addEventListener('click', function () {
+      if (okBtn.disabled || done) return;
+      done = true;
+      const cur = readInventory();
+      Object.keys(cur).forEach(function (id) { if (cur[id]) cur[id] = Object.assign({}, cur[id], { stock: 0, updatedAt: Date.now() }); });
+      writeInventory(cur);
+      PCD.toast.success(L('inv_reset_done', 'Stock reset — {n} item(s) set to 0.').replace('{n}', total));
+      m.close();
+      setTimeout(function () { const v = PCD.$('#view'); if (PCD.router.currentView() === 'inventory') render(v); }, 200);
     });
   }
 

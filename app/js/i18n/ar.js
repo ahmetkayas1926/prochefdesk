@@ -3288,4 +3288,13 @@ window.PCD.i18n.register('ar', {
   supplier_msg_tpl_insert: "انقر لإدراج عنصر نائب:",
   reset_default: "إعادة للافتراضي",
   sup_not_purchased: "غير مُشترى",
+  dash_haccp_due_title: "سجل حرارة اليوم مستحق",
+  dash_haccp_due_desc: "{n} وحدة لم تُسجَّل اليوم — سجل سلامة غذائية يومي.",
+  dash_haccp_due_cta: "سجّل الآن",
+  inv_reset_stock: "تصفير المخزون",
+  inv_reset_stock_title: "تصفير كل جرد المخزون (مع الإبقاء على par/min)",
+  inv_reset_warn: "{n} صنف: ستُضبط كل قيم الجرد على 0. تبقى حدود par وmin. لا يمكن التراجع عن هذا.",
+  inv_reset_ack: "أفهم أنه لا يمكن التراجع عن هذا.",
+  inv_reset_done: "تم تصفير المخزون — ضُبط {n} صنف على 0.",
+  inv_reset_none: "لا مخزون لتصفيره.",
 });
