@@ -69,7 +69,7 @@
     function paintPicker() {
       let html = '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">';
       html += chip('', L('sup_none', 'No supplier'));
-      html += chip(NOT_PURCHASED, '🚫 ' + L('sup_not_purchased', 'Not purchased'));
+      html += chip(NOT_PURCHASED, '🏠 ' + L('sup_not_purchased', 'Not purchased'));
       suppliers.forEach(function (s) { html += chip(s, s); });
       html += '<button type="button" class="sup-new-btn" style="padding:6px 12px;border-radius:999px;border:1px dashed var(--brand-600);background:transparent;color:var(--brand-700);font-weight:600;font-size:13px;cursor:pointer;">+ ' + PCD.escapeHtml(L('sup_new', 'New supplier')) + '</button>';
       html += '</div>';
@@ -254,7 +254,7 @@
           ((i.supplier || '').trim()
             ? '<span style="display:inline-flex;align-items:center;gap:3px;color:var(--success);font-weight:600;">' + PCD.icon('check', 11) + PCD.escapeHtml(i.supplier) + '</span>'
             : (i.noSupplierNeeded
-                ? '<span style="display:inline-flex;align-items:center;gap:3px;color:var(--text-3);font-weight:600;">🚫 ' + PCD.escapeHtml(L('sup_not_purchased', 'Not purchased')) + '</span>'
+                ? '<span style="display:inline-flex;align-items:center;gap:3px;color:var(--text-3);font-weight:600;">🏠 ' + PCD.escapeHtml(L('sup_not_purchased', 'Not purchased')) + '</span>'
                 : '<span style="display:inline-flex;align-items:center;gap:3px;color:var(--warning);font-weight:700;">⚠ ' + PCD.escapeHtml(L('sup_none', 'No supplier')) + '</span>'));
         bodyDiv.innerHTML =
           '<div class="list-item-title">' + PCD.escapeHtml(i.name) + '</div>' +

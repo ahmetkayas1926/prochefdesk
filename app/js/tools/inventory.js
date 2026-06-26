@@ -453,7 +453,7 @@
             ((x.ing.supplier || '').trim()
               ? '<span style="display:inline-flex;align-items:center;gap:3px;color:var(--success);font-weight:600;">' + PCD.icon('check', 11) + PCD.escapeHtml(x.ing.supplier) + '</span>'
               : (x.ing.noSupplierNeeded
-                  ? '<span style="display:inline-flex;align-items:center;gap:3px;color:var(--text-3);font-weight:600;">🚫 ' + PCD.escapeHtml(L('sup_not_purchased', 'Not purchased')) + '</span>'
+                  ? '<span style="display:inline-flex;align-items:center;gap:3px;color:var(--text-3);font-weight:600;">🏠 ' + PCD.escapeHtml(L('sup_not_purchased', 'Not purchased')) + '</span>'
                   : '<span style="display:inline-flex;align-items:center;gap:3px;color:var(--warning);font-weight:700;">⚠ ' + PCD.escapeHtml(L('sup_none', 'No supplier')) + '</span>'));
           row.innerHTML = `
             <div class="list-item-thumb" style="background:${color};color:white;font-weight:700;">${statusLabel(x.status).charAt(0)}</div>
@@ -1409,7 +1409,7 @@
         list.forEach(function (n) { h += '<button type="button" class="as-pick" data-n="' + PCD.escapeHtml(n) + '" style="padding:6px 12px;border-radius:999px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:13px;font-weight:600;">' + PCD.escapeHtml(n) + '</button>'; });
         h += '</div>';
       }
-      h += '<div style="margin-bottom:12px;"><button type="button" class="as-notpurch" style="padding:6px 12px;border-radius:999px;border:1px solid var(--border);background:var(--surface);color:var(--text-3);cursor:pointer;font-size:13px;font-weight:600;">🚫 ' + PCD.escapeHtml(L('sup_not_purchased', 'Not purchased')) + '</button></div>';
+      h += '<div style="margin-bottom:12px;"><button type="button" class="as-notpurch" style="padding:6px 12px;border-radius:999px;border:1px solid var(--border);background:var(--surface);color:var(--text-3);cursor:pointer;font-size:13px;font-weight:600;">🏠 ' + PCD.escapeHtml(L('sup_not_purchased', 'Not purchased')) + '</button></div>';
       h += '<div class="field"><label class="field-label">' + PCD.escapeHtml(L('sup_new', 'New supplier')) + '</label><div style="display:flex;gap:6px;"><input type="text" class="input" id="asNew" placeholder="' + PCD.escapeHtml(L('sup_new', 'New supplier')) + '"><button type="button" class="btn btn-primary" id="asNewBtn">' + PCD.escapeHtml(L('add', 'Add')) + '</button></div></div>';
       ab.innerHTML = h;
       const cancel = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') });
