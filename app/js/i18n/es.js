@@ -3322,3 +3322,34 @@ window.PCD.i18n.register('es', {
   event_guest_one: "invitado",
   event_cost_summary: "Resumen de costes",
 });
+
+// v2.44.87 — Events Fase 2: claves dietéticas / alérgenos.
+window.PCD.i18n.register('es', {
+  diet_section: "Necesidades dietéticas",
+  diet_vegetarian: "Vegetariano",
+  diet_vegan: "Vegano",
+  diet_gluten_free: "Sin gluten",
+  diet_dairy_free: "Sin lácteos",
+  diet_nut_allergy: "Alergia a frutos secos",
+  diet_note_ph: "Otros (p. ej. 2 alergia a mariscos, 1 halal)",
+  ev_menu_contains: "El menú contiene",
+});
+
+// v2.44.88 — Events: elementos ingrediente + selector de 3 pestañas.
+window.PCD.i18n.register('es', {
+  event_add_item: "Añadir elemento",
+  event_tab_dish: "Platos",
+  event_tab_sub: "Subrecetas",
+  event_tab_ingredient: "Ingredientes",
+});
+
+// v2.44.89 — Events Fase 3: garantía + desglose de precios.
+window.PCD.i18n.register('es', {
+  event_guaranteed: "Garantizado",
+  event_service_charge: "Cargo por servicio %",
+  event_service_label: "Cargo por servicio",
+  event_deposit: "Depósito",
+  event_subtotal: "Subtotal",
+  event_balance_due: "Saldo pendiente",
+  event_billed_guests: "Invitados facturados",
+});

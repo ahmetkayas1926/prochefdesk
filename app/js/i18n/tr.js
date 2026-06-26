@@ -3479,3 +3479,34 @@ window.PCD.i18n.register('tr', {
   event_guest_one: "kişi",
   event_cost_summary: "Maliyet özeti",
 });
+
+// v2.44.87 — Events Faz 2: diyet / alerjen anahtarları.
+window.PCD.i18n.register('tr', {
+  diet_section: "Diyet ihtiyaçları",
+  diet_vegetarian: "Vejetaryen",
+  diet_vegan: "Vegan",
+  diet_gluten_free: "Glutensiz",
+  diet_dairy_free: "Sütsüz",
+  diet_nut_allergy: "Kuruyemiş alerjisi",
+  diet_note_ph: "Diğer (örn. 2 kabuklu deniz alerjisi, 1 helal)",
+  ev_menu_contains: "Menü içeriği",
+});
+
+// v2.44.88 — Events: ingredient öğeleri + 3 sekmeli seçici.
+window.PCD.i18n.register('tr', {
+  event_add_item: "Öğe ekle",
+  event_tab_dish: "Menü öğeleri",
+  event_tab_sub: "Alt tarifler",
+  event_tab_ingredient: "Malzemeler",
+});
+
+// v2.44.89 — Events Faz 3: garanti + fiyat kırılımı.
+window.PCD.i18n.register('tr', {
+  event_guaranteed: "Garanti",
+  event_service_charge: "Servis ücreti %",
+  event_service_label: "Servis ücreti",
+  event_deposit: "Depozito",
+  event_subtotal: "Ara toplam",
+  event_balance_due: "Kalan bakiye",
+  event_billed_guests: "Faturalanan kişi",
+});

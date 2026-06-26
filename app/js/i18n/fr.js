@@ -3322,3 +3322,34 @@ window.PCD.i18n.register('fr', {
   event_guest_one: "convive",
   event_cost_summary: "Récapitulatif des coûts",
 });
+
+// v2.44.87 — Events Phase 2 : clés régimes / allergènes.
+window.PCD.i18n.register('fr', {
+  diet_section: "Régimes alimentaires",
+  diet_vegetarian: "Végétarien",
+  diet_vegan: "Végan",
+  diet_gluten_free: "Sans gluten",
+  diet_dairy_free: "Sans lactose",
+  diet_nut_allergy: "Allergie aux fruits à coque",
+  diet_note_ph: "Autres (ex. 2 allergies aux fruits de mer, 1 halal)",
+  ev_menu_contains: "Le menu contient",
+});
+
+// v2.44.88 — Events : éléments ingrédient + sélecteur à 3 onglets.
+window.PCD.i18n.register('fr', {
+  event_add_item: "Ajouter un élément",
+  event_tab_dish: "Plats",
+  event_tab_sub: "Sous-recettes",
+  event_tab_ingredient: "Ingrédients",
+});
+
+// v2.44.89 — Events Phase 3 : garantie + détail des prix.
+window.PCD.i18n.register('fr', {
+  event_guaranteed: "Garanti",
+  event_service_charge: "Frais de service %",
+  event_service_label: "Frais de service",
+  event_deposit: "Acompte",
+  event_subtotal: "Sous-total",
+  event_balance_due: "Solde dû",
+  event_billed_guests: "Convives facturés",
+});

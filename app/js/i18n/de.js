@@ -3322,3 +3322,34 @@ window.PCD.i18n.register('de', {
   event_guest_one: "Gast",
   event_cost_summary: "Kostenübersicht",
 });
+
+// v2.44.87 — Events Phase 2: Ernährungs- / Allergen-Schlüssel.
+window.PCD.i18n.register('de', {
+  diet_section: "Ernährungswünsche",
+  diet_vegetarian: "Vegetarisch",
+  diet_vegan: "Vegan",
+  diet_gluten_free: "Glutenfrei",
+  diet_dairy_free: "Laktosefrei",
+  diet_nut_allergy: "Nussallergie",
+  diet_note_ph: "Sonstiges (z. B. 2 Meeresfrüchte-Allergie, 1 Halal)",
+  ev_menu_contains: "Menü enthält",
+});
+
+// v2.44.88 — Events: Zutaten-Elemente + 3-Tab-Auswahl.
+window.PCD.i18n.register('de', {
+  event_add_item: "Element hinzufügen",
+  event_tab_dish: "Gerichte",
+  event_tab_sub: "Unterrezepte",
+  event_tab_ingredient: "Zutaten",
+});
+
+// v2.44.89 — Events Phase 3: Garantie + Preisaufschlüsselung.
+window.PCD.i18n.register('de', {
+  event_guaranteed: "Garantiert",
+  event_service_charge: "Servicegebühr %",
+  event_service_label: "Servicegebühr",
+  event_deposit: "Anzahlung",
+  event_subtotal: "Zwischensumme",
+  event_balance_due: "Restbetrag",
+  event_billed_guests: "Berechnete Gäste",
+});

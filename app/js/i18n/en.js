@@ -3427,3 +3427,34 @@ window.PCD.i18n.register('en', {
   event_guest_one: "guest",
   event_cost_summary: "Cost summary",
 });
+
+// v2.44.87 — Events Phase 2: dietary / allergen keys.
+window.PCD.i18n.register('en', {
+  diet_section: "Dietary requirements",
+  diet_vegetarian: "Vegetarian",
+  diet_vegan: "Vegan",
+  diet_gluten_free: "Gluten-free",
+  diet_dairy_free: "Dairy-free",
+  diet_nut_allergy: "Nut allergy",
+  diet_note_ph: "Other (e.g. 2 shellfish allergy, 1 halal)",
+  ev_menu_contains: "Menu contains",
+});
+
+// v2.44.88 — Events: ingredient items + 3-tab picker.
+window.PCD.i18n.register('en', {
+  event_add_item: "Add item",
+  event_tab_dish: "Menu items",
+  event_tab_sub: "Sub-recipes",
+  event_tab_ingredient: "Ingredients",
+});
+
+// v2.44.89 — Events Phase 3: guarantee + pricing breakdown.
+window.PCD.i18n.register('en', {
+  event_guaranteed: "Guaranteed",
+  event_service_charge: "Service charge %",
+  event_service_label: "Service charge",
+  event_deposit: "Deposit",
+  event_subtotal: "Subtotal",
+  event_balance_due: "Balance due",
+  event_billed_guests: "Billed guests",
+});

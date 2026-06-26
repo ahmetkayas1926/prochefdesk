@@ -3322,3 +3322,34 @@ window.PCD.i18n.register('ar', {
   event_guest_one: "ضيف",
   event_cost_summary: "ملخص التكلفة",
 });
+
+// v2.44.87 — Events Phase 2: مفاتيح الأنظمة الغذائية / مسببات الحساسية.
+window.PCD.i18n.register('ar', {
+  diet_section: "المتطلبات الغذائية",
+  diet_vegetarian: "نباتي",
+  diet_vegan: "نباتي صرف",
+  diet_gluten_free: "خالٍ من الغلوتين",
+  diet_dairy_free: "خالٍ من الألبان",
+  diet_nut_allergy: "حساسية المكسرات",
+  diet_note_ph: "أخرى (مثل: 2 حساسية محار، 1 حلال)",
+  ev_menu_contains: "تحتوي القائمة على",
+});
+
+// v2.44.88 — Events: عناصر المكونات + منتقي ثلاثي التبويبات.
+window.PCD.i18n.register('ar', {
+  event_add_item: "إضافة عنصر",
+  event_tab_dish: "أطباق",
+  event_tab_sub: "وصفات فرعية",
+  event_tab_ingredient: "مكونات",
+});
+
+// v2.44.89 — Events Phase 3: الضمان + تفصيل الأسعار.
+window.PCD.i18n.register('ar', {
+  event_guaranteed: "مضمون",
+  event_service_charge: "رسوم الخدمة %",
+  event_service_label: "رسوم الخدمة",
+  event_deposit: "عربون",
+  event_subtotal: "المجموع الفرعي",
+  event_balance_due: "الرصيد المستحق",
+  event_billed_guests: "الضيوف المحاسَبون",
+});

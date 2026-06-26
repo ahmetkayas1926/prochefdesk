@@ -19,6 +19,60 @@
 
   const STATUSES = ['draft', 'confirmed', 'done', 'cancelled'];
 
+  // v2.44.87 — Faz 2: diyet/alerjen. Client'tan gelen kişi-bazlı diyet sayıları (manuel)
+  // + fonksiyon menüsündeki alerjenlerin otomatik özeti (tariflerdeki manuel etiketlerden,
+  // sub-recipe cascade'li). Alerjen adı = ikon + İngilizce key (uygulama geneliyle tutarlı).
+  const DIET_TYPES = [
+    { key: 'vegetarian', labelKey: 'diet_vegetarian' },
+    { key: 'vegan',      labelKey: 'diet_vegan' },
+    { key: 'glutenFree', labelKey: 'diet_gluten_free' },
+    { key: 'dairyFree',  labelKey: 'diet_dairy_free' },
+    { key: 'nutAllergy', labelKey: 'diet_nut_allergy' },
+  ];
+  function fnMenuAllergens(fn, ingMap, recipeMap) {
+    if (!PCD.allergensDB) return [];
+    const set = {};
+    ((fn && fn.menu) || []).forEach(function (item) {
+      if (item.recipeId) {
+        const r = recipeMap[item.recipeId]; if (!r) return;
+        (PCD.allergensDB.recipeAllergens ? (PCD.allergensDB.recipeAllergens(r, ingMap) || []) : []).forEach(function (k) { set[k] = true; });
+      } else if (item.ingredientId) {
+        const ing = ingMap[item.ingredientId];
+        if (ing && ing.allergens) ing.allergens.forEach(function (k) { set[k] = true; });
+      }
+    });
+    return Object.keys(set);
+  }
+  function allergenLabel(k) {
+    const a = PCD.allergensDB && PCD.allergensDB.getByKey(k);
+    return a ? (a.icon + ' ' + k.charAt(0).toUpperCase() + k.slice(1)) : k;
+  }
+  // v2.44.88 — fn.menu öğesi recipe VEYA ingredient olabilir. Maliyet tek noktadan.
+  // Recipe: tarif maliyeti × (toplam porsiyon / servings). Ingredient: birim fiyat (yield'li)
+  // × kişi-başı miktar (ingredient birimine çevrili) × kişi. (Buffet ingredient-path ile aynı.)
+  function itemFoodCost(item, guests, ingMap, recipeMap) {
+    guests = Number(guests) || 0;
+    if (item.recipeId) {
+      const r = recipeMap[item.recipeId]; if (!r) return 0;
+      const portionsTotal = guests * (Number(item.portionsPerGuest) || 1);
+      return PCD.recipes.computeFoodCost(r, ingMap) * (portionsTotal / (r.servings || 1));
+    }
+    if (item.ingredientId) {
+      const ing = ingMap[item.ingredientId]; if (!ing) return 0;
+      const totalAmt = guests * (Number(item.amountPerGuest) || 0);
+      if (totalAmt <= 0) return 0;
+      const price = Number(ing.pricePerUnit) || 0;
+      const yld = Number(ing.yieldPercent);
+      const eff = (yld && yld > 0 && yld < 100) ? price / (yld / 100) : price;
+      let amtInBase = totalAmt;
+      if (item.unit && ing.unit && item.unit !== ing.unit) {
+        try { amtInBase = PCD.convertUnit(totalAmt, item.unit, ing.unit); } catch (e) { amtInBase = totalAmt; }
+      }
+      return eff * amtInBase;
+    }
+    return 0;
+  }
+
   function statusColor(s) {
     return {
       draft: 'var(--text-3)',
@@ -162,25 +216,39 @@
     }
     return Number(ev && ev.guestCount) || 0;
   }
+  // v2.44.89 — Faz 3: faturalanan kişi = max(garanti, beklenen) — garanti minimumdur, daha
+  // fazla gelirse fazlası faturalanır. Fonksiyonların en büyüğü (≈ benzersiz kişi).
+  function eventBilledGuests(ev) {
+    return eventFunctions(ev).reduce(function (mx, f) {
+      return Math.max(mx, Math.max(Number(f.guaranteedCount) || 0, Number(f.guestCount) || 0));
+    }, 0);
+  }
 
   function computeStats(event, ingMap, recipeMap) {
     let totalCost = 0;
     eventFunctions(event).forEach(function (fn) {
       const guests = Number(fn.guestCount) || 0;
       (fn.menu || []).forEach(function (item) {
-        const r = recipeMap[item.recipeId];
-        if (!r) return;
-        const portionsTotal = guests * (Number(item.portionsPerGuest) || 1);
-        const factor = portionsTotal / (r.servings || 1);
-        const recipeCost = PCD.recipes.computeFoodCost(r, ingMap);
-        totalCost += recipeCost * factor;
+        totalCost += itemFoodCost(item, guests, ingMap, recipeMap);
       });
     });
     const attendees = eventGuests(event);
-    const totalRevenue = attendees * (Number(event.pricePerHead) || 0);
+    const billed = eventBilledGuests(event);
+    const pph = Number(event.pricePerHead) || 0;
+    const subtotal = billed * pph;
+    const svcPct = Number(event.serviceChargePct) || 0;
+    const serviceCharge = subtotal * (svcPct / 100);
+    const totalRevenue = subtotal + serviceCharge;
+    const deposit = Number(event.deposit) || 0;
+    const balanceDue = totalRevenue - deposit;
     const profit = totalRevenue > 0 ? totalRevenue - totalCost : null;
     const margin = totalRevenue > 0 ? ((totalRevenue - totalCost) / totalRevenue) * 100 : null;
-    return { totalCost: totalCost, totalRevenue: totalRevenue, profit: profit, margin: margin };
+    return {
+      totalCost: totalCost, attendees: attendees, billed: billed,
+      subtotal: subtotal, svcPct: svcPct, serviceCharge: serviceCharge,
+      totalRevenue: totalRevenue, deposit: deposit, balanceDue: balanceDue,
+      profit: profit, margin: margin
+    };
   }
 
   // v2.44 — A1 Step 2: compute total ingredient needs for an event, in each
@@ -193,6 +261,20 @@
     eventFunctions(event).forEach(function (fn) {
       const guests = Number(fn.guestCount) || 0;
       (fn.menu || []).forEach(function (item) {
+        // Ingredient öğesi → doğrudan düş (tarif gibi flatten gerekmez).
+        if (item.ingredientId) {
+          const ing = ingMap[item.ingredientId]; if (!ing) return;
+          const totalAmt = guests * (Number(item.amountPerGuest) || 0);
+          if (totalAmt <= 0) return;
+          let amt = totalAmt;
+          if (item.unit && ing.unit && item.unit !== ing.unit) {
+            try { amt = PCD.convertUnit(totalAmt, item.unit, ing.unit); }
+            catch (e) { skippedSet[ing.name || item.ingredientId] = true; return; }
+            if (!(amt > 0)) { skippedSet[ing.name || item.ingredientId] = true; return; }
+          }
+          need[item.ingredientId] = (need[item.ingredientId] || 0) + amt;
+          return;
+        }
         const r = recipeMap[item.recipeId];
         if (!r) return;
         const portionsTotal = guests * (Number(item.portionsPerGuest) || 1);
@@ -299,6 +381,17 @@
           </div>
         </div>
 
+        <div class="field-row">
+          <div class="field">
+            <label class="field-label">${PCD.escapeHtml(t('event_service_charge') || 'Service charge %')}</label>
+            <input type="number" class="input" id="eSvc" value="${data.serviceChargePct || ''}" step="0.5" min="0" placeholder="0">
+          </div>
+          <div class="field">
+            <label class="field-label">${PCD.escapeHtml(t('event_deposit') || 'Deposit paid')}</label>
+            <input type="number" class="input" id="eDeposit" value="${data.deposit || ''}" step="0.01" min="0" placeholder="0">
+          </div>
+        </div>
+
         <div class="stat mb-3" style="background:var(--brand-50);border-color:var(--brand-300);">
           <div class="flex items-center justify-between" style="flex-wrap:wrap;gap:8px;">
             <div>
@@ -324,6 +417,14 @@
           </div>
         </div>
 
+        ${(stats.subtotal > 0 && (stats.svcPct > 0 || stats.deposit > 0 || stats.billed !== stats.attendees)) ? '<div class="text-muted text-sm" style="margin:0 0 14px;line-height:1.9;padding:8px 12px;background:var(--surface-2);border-radius:8px;">' +
+          '<strong>' + PCD.escapeHtml(t('event_billed_guests') || 'Billed guests') + ':</strong> ' + stats.billed +
+          ' · ' + PCD.escapeHtml(t('event_subtotal') || 'Subtotal') + ' ' + PCD.fmtMoney(stats.subtotal) +
+          (stats.serviceCharge > 0 ? ' · ' + PCD.escapeHtml(t('event_service_label') || 'Service charge') + ' (' + stats.svcPct + '%) +' + PCD.fmtMoney(stats.serviceCharge) : '') +
+          ' · <strong>' + PCD.escapeHtml(t('event_total_revenue') || 'Total') + ' ' + PCD.fmtMoney(stats.totalRevenue) + '</strong>' +
+          (stats.deposit > 0 ? ' · ' + PCD.escapeHtml(t('event_deposit') || 'Deposit') + ' −' + PCD.fmtMoney(stats.deposit) + ' · <strong>' + PCD.escapeHtml(t('event_balance_due') || 'Balance due') + ' ' + PCD.fmtMoney(stats.balanceDue) + '</strong>' : '') +
+        '</div>' : ''}
+
         <div class="field">
           <label class="field-label">${t('event_notes')}</label>
           <textarea class="textarea" id="eNotes" rows="2">${PCD.escapeHtml(data.notes || '')}</textarea>
@@ -343,10 +444,12 @@
         const fGuests = Number(fn.guestCount) || 0;
         let fnCost = 0;
         (fn.menu || []).forEach(function (item) {
-          const r = recipeMap[item.recipeId]; if (!r) return;
-          fnCost += PCD.recipes.computeFoodCost(r, ingMap) * ((fGuests * (Number(item.portionsPerGuest) || 1)) / (r.servings || 1));
+          fnCost += itemFoodCost(item, fGuests, ingMap, recipeMap);
         });
         const canRemove = data.functions.length > 1;
+        const fnAlg = fnMenuAllergens(fn, ingMap, recipeMap);
+        const fnDiet = fn.dietary || {};
+        const dietTotal = DIET_TYPES.reduce(function (s, d) { return s + (Number(fnDiet[d.key]) || 0); }, 0);
         const card = PCD.el('div', { class: 'card', style: { padding: '12px', border: '1px solid var(--border)', background: 'var(--surface)' } });
         card.innerHTML =
           '<div class="flex items-center gap-2" style="margin-bottom:8px;">' +
@@ -362,15 +465,47 @@
           '<div class="field-row">' +
             '<div class="field"><label class="field-label">' + PCD.escapeHtml(t('event_room') || 'Room / area') + '</label><input type="text" class="input fn-room" data-fn="' + fi + '" value="' + PCD.escapeHtml(fn.room || '') + '" placeholder="' + PCD.escapeHtml(t('event_room_ph') || 'e.g. Ballroom A') + '"></div>' +
             '<div class="field"><label class="field-label">' + t('event_guests') + '</label><input type="number" class="input fn-guests" data-fn="' + fi + '" value="' + (fn.guestCount || '') + '" min="0"></div>' +
+            '<div class="field"><label class="field-label">' + PCD.escapeHtml(t('event_guaranteed') || 'Guaranteed') + '</label><input type="number" class="input fn-guar" data-fn="' + fi + '" value="' + (fn.guaranteedCount || '') + '" min="0" placeholder="—"></div>' +
           '</div>' +
           '<div class="flex items-center justify-between" style="margin:6px 0 6px;">' +
             '<div style="font-weight:700;font-size:13px;">' + t('event_menu') + ' (' + (fn.menu || []).length + ')</div>' +
-            '<button type="button" class="btn btn-outline btn-sm fn-add-menu" data-fn="' + fi + '">+ ' + t('event_add_recipes') + '</button>' +
+            '<button type="button" class="btn btn-outline btn-sm fn-add-menu" data-fn="' + fi + '">+ ' + t('event_add_item') + '</button>' +
           '</div>' +
           '<div class="fn-menu flex flex-col gap-2"></div>' +
-          '<div class="text-muted text-sm" style="text-align:end;margin-top:6px;">' + t('event_total_cost') + ': <strong>' + PCD.fmtMoney(fnCost) + '</strong></div>';
+          '<div class="text-muted text-sm" style="text-align:end;margin-top:6px;">' + t('event_total_cost') + ': <strong>' + PCD.fmtMoney(fnCost) + '</strong></div>' +
+          (fnAlg.length ? '<div style="font-size:12px;color:var(--text-2);margin-top:6px;line-height:1.5;"><span style="font-weight:700;color:var(--brand-700);">' + PCD.escapeHtml(t('ev_menu_contains') || 'Menu contains') + ':</span> ' + fnAlg.map(function (k) { return PCD.escapeHtml(allergenLabel(k)); }).join('  ') + '</div>' : '') +
+          '<details class="fn-diet-wrap" style="margin-top:8px;"' + ((dietTotal || fn.dietaryNote) ? ' open' : '') + '>' +
+            '<summary style="cursor:pointer;font-size:12px;font-weight:700;color:var(--brand-700);user-select:none;list-style:none;">🍽 ' + PCD.escapeHtml(t('diet_section') || 'Dietary requirements') + (dietTotal ? ' · ' + dietTotal : '') + '</summary>' +
+            '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:8px;">' +
+              DIET_TYPES.map(function (d) { return '<label style="display:flex;flex-direction:column;gap:3px;font-size:10px;color:var(--text-2);text-align:center;line-height:1.2;">' + PCD.escapeHtml(t(d.labelKey) || d.key) + '<input type="number" class="input fn-diet" data-fn="' + fi + '" data-diet="' + d.key + '" value="' + (fnDiet[d.key] || '') + '" min="0" placeholder="0" style="padding:4px 4px;min-height:30px;font-size:12px;text-align:center;"></label>'; }).join('') +
+            '</div>' +
+            '<input type="text" class="input fn-diet-note" data-fn="' + fi + '" value="' + PCD.escapeHtml(fn.dietaryNote || '') + '" placeholder="' + PCD.escapeHtml(t('diet_note_ph') || 'Other (e.g. 2 shellfish allergy, 1 halal)') + '" style="margin-top:6px;font-size:12px;">' +
+          '</details>';
         const menuEl = card.querySelector('.fn-menu');
         (fn.menu || []).forEach(function (item, mi) {
+          if (item.ingredientId) {
+            const ing = ingMap[item.ingredientId]; if (!ing) return;
+            const u = item.unit || ing.unit || '';
+            const totAmt = fGuests * (Number(item.amountPerGuest) || 0);
+            const icost = itemFoodCost(item, fGuests, ingMap, recipeMap);
+            const irow = PCD.el('div', { class: 'list-item', style: { minHeight: 'auto', padding: '8px' } });
+            const ithumb = PCD.el('div', { class: 'list-item-thumb', style: { width: '40px', height: '40px' } });
+            ithumb.textContent = '🧂';
+            const ibody = PCD.el('div', { class: 'list-item-body' });
+            ibody.innerHTML =
+              '<div class="list-item-title" style="font-size:14px;">' + PCD.escapeHtml(ing.name) + '</div>' +
+              '<div class="list-item-meta" style="font-size:12px;">' +
+                '<input type="number" class="input fn-amt" data-fn="' + fi + '" data-mi="' + mi + '" value="' + (item.amountPerGuest || '') + '" step="0.1" min="0" style="width:64px;padding:4px 8px;min-height:26px;font-size:12px;">' +
+                '<span class="text-muted">' + PCD.escapeHtml(u) + ' / ' + PCD.escapeHtml(t('event_guest_one') || 'guest') + '</span>' +
+                '<span>·</span><span style="font-weight:600;">' + PCD.fmtNumber(totAmt) + ' ' + PCD.escapeHtml(u) + '</span>' +
+                '<span>·</span><span style="font-weight:600;color:var(--brand-700);">' + PCD.fmtMoney(icost) + '</span>' +
+              '</div>';
+            const irm = PCD.el('button', { class: 'icon-btn fn-rm-menu', 'data-fn': fi, 'data-mi': mi });
+            irm.innerHTML = PCD.icon('x', 16);
+            irow.appendChild(ithumb); irow.appendChild(ibody); irow.appendChild(irm);
+            menuEl.appendChild(irow);
+            return;
+          }
           const r = recipeMap[item.recipeId];
           if (!r) return;
           const portionsTotal = fGuests * (Number(item.portionsPerGuest) || 1);
@@ -415,6 +550,8 @@
       $('eNotes').addEventListener('input', function () { data.notes = this.value; });
       $('ePrice').addEventListener('input', PCD.debounce(function () { data.pricePerHead = parseFloat(this.value) || null; render(); }, 400));
       $('eBudget').addEventListener('input', PCD.debounce(function () { data.budget = parseFloat(this.value) || null; render(); }, 400));
+      $('eSvc').addEventListener('input', PCD.debounce(function () { data.serviceChargePct = parseFloat(this.value) || null; render(); }, 400));
+      $('eDeposit').addEventListener('input', PCD.debounce(function () { data.deposit = parseFloat(this.value) || null; render(); }, 400));
 
       $('addFnBtn').addEventListener('click', function () {
         const last = data.functions[data.functions.length - 1] || {};
@@ -430,9 +567,17 @@
       PCD.on(body, 'input', '.fn-end', function () { const f = fnOf(this); if (f) f.endTime = this.value; });
       PCD.on(body, 'input', '.fn-room', function () { const f = fnOf(this); if (f) f.room = this.value; });
       PCD.on(body, 'input', '.fn-guests', PCD.debounce(function () { const f = fnOf(this); if (f) { f.guestCount = parseInt(this.value, 10) || 0; render(); } }, 400));
+      PCD.on(body, 'input', '.fn-guar', PCD.debounce(function () { const f = fnOf(this); if (f) { f.guaranteedCount = parseInt(this.value, 10) || 0; render(); } }, 400));
+      // Diyet sayıları + not: render YOK (details açık + odak korunur; maliyeti etkilemez).
+      PCD.on(body, 'input', '.fn-diet', function () { const f = fnOf(this); if (f) { if (!f.dietary) f.dietary = {}; f.dietary[this.getAttribute('data-diet')] = parseInt(this.value, 10) || 0; } });
+      PCD.on(body, 'input', '.fn-diet-note', function () { const f = fnOf(this); if (f) f.dietaryNote = this.value; });
       PCD.on(body, 'input', '.fn-pph', PCD.debounce(function () {
         const f = fnOf(this); const mi = parseInt(this.getAttribute('data-mi'), 10);
         if (f && f.menu && f.menu[mi]) { f.menu[mi].portionsPerGuest = parseFloat(this.value) || 0; render(); }
+      }, 400));
+      PCD.on(body, 'input', '.fn-amt', PCD.debounce(function () {
+        const f = fnOf(this); const mi = parseInt(this.getAttribute('data-mi'), 10);
+        if (f && f.menu && f.menu[mi]) { f.menu[mi].amountPerGuest = parseFloat(this.value) || 0; render(); }
       }, 400));
       PCD.on(body, 'click', '.fn-rm-menu', function () {
         const f = fnOf(this); const mi = parseInt(this.getAttribute('data-mi'), 10);
@@ -445,22 +590,47 @@
       PCD.on(body, 'click', '.fn-add-menu', function () {
         const f = fnOf(this); if (!f) return;
         const allRecipes = PCD.store.listRecipes();
-        const menuItems = allRecipes.filter(function (r) { return !r.isSubRecipe; });
-        const subRecipes = allRecipes.filter(function (r) { return r.isSubRecipe; });
-        const groupLabel1 = t('menu_group_dishes') || 'Menu Items';
-        const groupLabel2 = t('menu_group_subrecipes') || 'Sub-recipes & Preparations';
-        const items = menuItems.map(function (r) {
-          return { id: r.id, name: r.name, group: groupLabel1, meta: t(r.category || 'cat_main') + ' · ' + (r.servings || 1) + 'p', thumb: r.photo || '' };
-        }).concat(subRecipes.map(function (r) {
-          return { id: r.id, name: r.name, group: groupLabel2, meta: (r.yieldAmount ? r.yieldAmount + ' ' + (r.yieldUnit || '') : ''), thumb: r.photo || '' };
-        }));
+        const allIngredients = PCD.store.listIngredients();
+        const idType = {};   // id -> 'recipe' | 'ingredient'
+        const items = [];
+        allRecipes.filter(function (r) { return !r.isSubRecipe; }).forEach(function (r) {
+          idType[r.id] = 'recipe';
+          items.push({ id: r.id, name: r.name, tab: 'dishes', meta: t(r.category || 'cat_main') + ' · ' + (r.servings || 1) + 'p', thumb: r.photo || '' });
+        });
+        allRecipes.filter(function (r) { return r.isSubRecipe; }).forEach(function (r) {
+          idType[r.id] = 'recipe';
+          items.push({ id: r.id, name: r.name, tab: 'subs', meta: (r.yieldAmount ? r.yieldAmount + ' ' + (r.yieldUnit || '') : ''), thumb: r.photo || '' });
+        });
+        allIngredients.forEach(function (ing) {
+          idType[ing.id] = 'ingredient';
+          items.push({ id: ing.id, name: ing.name, tab: 'ingredients', meta: (ing.pricePerUnit ? PCD.fmtMoney(ing.pricePerUnit) + '/' + (ing.unit || '') : (ing.unit || '')), icon: '🧂' });
+        });
         if (items.length === 0) { PCD.toast.warning(t('no_recipes_yet')); return; }
-        const selected = (f.menu || []).map(function (m) { return m.recipeId; });
-        PCD.picker.open({ title: t('event_add_recipes'), items: items, multi: true, selected: selected }).then(function (selIds) {
+        const selectedIds = (f.menu || []).map(function (m) { return m.recipeId || m.ingredientId; });
+        PCD.picker.open({
+          title: t('event_add_item'),
+          items: items, multi: true, selected: selectedIds,
+          tabs: [
+            { key: 'dishes', label: t('event_tab_dish') },
+            { key: 'subs', label: t('event_tab_sub') },
+            { key: 'ingredients', label: t('event_tab_ingredient') },
+          ],
+        }).then(function (selIds) {
           if (!selIds) return;
+          const ingById = {};
+          allIngredients.forEach(function (i) { ingById[i.id] = i; });
           const existingMap = {};
-          (f.menu || []).forEach(function (m) { existingMap[m.recipeId] = m; });
-          f.menu = selIds.map(function (id) { return existingMap[id] || { recipeId: id, portionsPerGuest: 1 }; });
+          (f.menu || []).forEach(function (m) { existingMap[m.recipeId || m.ingredientId] = m; });
+          f.menu = selIds.map(function (id) {
+            if (existingMap[id]) return existingMap[id];
+            if (idType[id] === 'ingredient') {
+              const ing = ingById[id];
+              const u = (ing && ing.unit) || 'g';
+              const dflt = (u === 'g' || u === 'ml') ? 100 : 1;   // makul başlangıç (gram/ml=100, adet=1)
+              return { ingredientId: id, amountPerGuest: dflt, unit: u };
+            }
+            return { recipeId: id, portionsPerGuest: 1 };
+          });
           render();
         });
       });
@@ -637,20 +807,38 @@
       lines.push('▸ ' + title);
       const when = [fmtD(fn.date), [fn.time, fn.endTime].filter(Boolean).join('–')].filter(Boolean).join(' · ');
       if (when) lines.push('  📅 ' + when);
-      if (Number(fn.guestCount)) lines.push('  👥 ' + fn.guestCount + ' ' + guestWord);
+      if (Number(fn.guestCount)) lines.push('  👥 ' + fn.guestCount + ' ' + guestWord + (Number(fn.guaranteedCount) ? ' (' + (t('event_guaranteed') || 'guar.') + ' ' + fn.guaranteedCount + ')' : ''));
       if (fn.room) lines.push('  📍 ' + fn.room);
       (fn.menu || []).forEach(function (item) {
+        if (item.ingredientId) {
+          const ing = ingMap[item.ingredientId]; if (!ing) return;
+          const u = item.unit || ing.unit || '';
+          const totalAmt = (Number(fn.guestCount) || 0) * (Number(item.amountPerGuest) || 0);
+          lines.push('  • ' + ing.name + ' — ' + PCD.fmtNumber(totalAmt) + ' ' + u + ' (' + (item.amountPerGuest || 0) + ' ' + u + '/' + (t('event_guest_one') || 'guest') + ')');
+          return;
+        }
         const r = recipeMap[item.recipeId];
         if (!r) return;
         const portions = (Number(fn.guestCount) || 0) * (item.portionsPerGuest || 1);
         lines.push('  • ' + r.name + ' — ' + portions + ' (' + (item.portionsPerGuest || 1) + '/' + (t('event_guest_one') || 'guest') + ')');
       });
+      const alg = fnMenuAllergens(fn, ingMap, recipeMap);
+      if (alg.length) lines.push('  ⚠ ' + alg.map(function (k) { return allergenLabel(k); }).join('  '));
+      const diet = fn.dietary || {};
+      const dparts = DIET_TYPES.filter(function (d) { return Number(diet[d.key]) > 0; }).map(function (d) { return diet[d.key] + ' ' + (t(d.labelKey) || d.key); });
+      if (fn.dietaryNote) dparts.push(fn.dietaryNote);
+      if (dparts.length) lines.push('  🍽 ' + dparts.join(' · '));
       lines.push('');
     });
     lines.push('— ' + (t('event_cost_summary') || 'Cost summary') + ' —');
     lines.push((t('ev_print_total_food_cost') || 'Total food cost') + ': ' + PCD.fmtMoney(stats.totalCost));
     if (stats.totalRevenue > 0) {
+      if (stats.serviceCharge > 0) lines.push((t('event_subtotal') || 'Subtotal') + ': ' + PCD.fmtMoney(stats.subtotal) + ' · ' + (t('event_service_label') || 'Service charge') + ' (' + stats.svcPct + '%): +' + PCD.fmtMoney(stats.serviceCharge));
       lines.push((t('ev_print_total_revenue') || 'Total revenue') + ': ' + PCD.fmtMoney(stats.totalRevenue));
+      if (stats.deposit > 0) {
+        lines.push((t('event_deposit') || 'Deposit') + ': −' + PCD.fmtMoney(stats.deposit));
+        lines.push((t('event_balance_due') || 'Balance due') + ': ' + PCD.fmtMoney(stats.balanceDue));
+      }
       lines.push((t('ev_print_profit') || 'Profit') + ': ' + PCD.fmtMoney(stats.profit) + (stats.margin !== null ? ' (' + PCD.fmtPercent(stats.margin, 0) + ')' : ''));
     }
     if (event.notes) {
@@ -675,6 +863,18 @@
     function menuRowsFor(menu, fGuests) {
       let out = '';
       (menu || []).forEach(function (item) {
+        if (item.ingredientId) {
+          const ing = ingMap[item.ingredientId]; if (!ing) return;
+          const u = item.unit || ing.unit || '';
+          const totalAmt = (Number(fGuests) || 0) * (Number(item.amountPerGuest) || 0);
+          out += '<tr>' +
+            '<td>' + PCD.escapeHtml(ing.name) + '</td>' +
+            '<td style="text-align:center;">' + (item.amountPerGuest || 0) + ' ' + PCD.escapeHtml(u) + '/' + PCD.escapeHtml(t('event_guest_one') || 'guest') + '</td>' +
+            '<td style="text-align:right;">' + PCD.fmtNumber(totalAmt) + ' ' + PCD.escapeHtml(u) + '</td>' +
+            '<td style="text-align:right;font-weight:600;">' + PCD.fmtMoney(itemFoodCost(item, fGuests, ingMap, recipeMap)) + '</td>' +
+            '</tr>';
+          return;
+        }
         const r = recipeMap[item.recipeId];
         if (!r) return;
         const portions = (Number(fGuests) || 0) * (item.portionsPerGuest || 1);
@@ -709,6 +909,17 @@
         '<th style="text-align:right;">' + PCD.escapeHtml(t('cr_cost') || 'Cost') + '</th>' +
       '</tr></thead><tbody>' + rowsHtml + '</tbody></table>';
     }
+    // v2.44.87 — fonksiyon ek satırları: menü alerjenleri (oto) + diyet sayıları (manuel).
+    function fnExtrasPrint(fn) {
+      let out = '';
+      const alg = fnMenuAllergens(fn, ingMap, recipeMap);
+      if (alg.length) out += '<div class="ev-fn-tag"><span class="ev-fn-lbl">' + PCD.escapeHtml(t('ev_menu_contains') || 'Menu contains') + ':</span> ' + alg.map(function (k) { return PCD.escapeHtml(allergenLabel(k)); }).join('  ') + '</div>';
+      const diet = fn.dietary || {};
+      const parts = DIET_TYPES.filter(function (d) { return Number(diet[d.key]) > 0; }).map(function (d) { return diet[d.key] + ' ' + PCD.escapeHtml(t(d.labelKey) || d.key); });
+      if (fn.dietaryNote) parts.push(PCD.escapeHtml(fn.dietaryNote));
+      if (parts.length) out += '<div class="ev-fn-tag"><span class="ev-fn-lbl">' + PCD.escapeHtml(t('diet_section') || 'Dietary') + ':</span> ' + parts.join(' · ') + '</div>';
+      return out;
+    }
 
     const fns = eventFunctions(event);
     // Tek isimsiz fonksiyon = eski düzen (meta grid + tek tablo); çok/isimli = BEO blokları.
@@ -726,6 +937,7 @@
         '</div>';
       const rows = menuRowsFor(fn.menu, fn.guestCount);
       if (rows) bodyHtml += '<div class="ev-section-title">' + PCD.escapeHtml(t('ev_print_menu') || 'Menu') + '</div>' + menuTable(rows);
+      bodyHtml += fnExtrasPrint(fn);
     } else {
       const headBits = [];
       if (event.client) headBits.push('<div class="ev-meta-item"><div><div class="ev-meta-label">' + PCD.escapeHtml(t('event_client') || 'Client') + '</div><div class="ev-meta-value">' + PCD.escapeHtml(event.client) + '</div></div></div>');
@@ -734,7 +946,8 @@
       if (headBits.length) bodyHtml += '<div class="ev-meta">' + headBits.join('') + '</div>';
       fns.forEach(function (fn, fi) {
         const when = [fmtD(fn.date), [fn.time, fn.endTime].filter(Boolean).join('–')].filter(Boolean).join(' · ');
-        const sub = [when, fn.room, (Number(fn.guestCount) ? fn.guestCount + ' ' + guestsLabel : '')].filter(Boolean).join('  ·  ');
+        const guestsBit = Number(fn.guestCount) ? (fn.guestCount + ' ' + guestsLabel + (Number(fn.guaranteedCount) ? ' (' + PCD.escapeHtml(t('event_guaranteed') || 'guar.') + ' ' + fn.guaranteedCount + ')' : '')) : '';
+        const sub = [when, fn.room, guestsBit].filter(Boolean).join('  ·  ');
         const title = (fn.name || '').trim() || ((t('event_function') || 'Function') + ' ' + (fi + 1));
         const rows = menuRowsFor(fn.menu, fn.guestCount);
         bodyHtml +=
@@ -742,6 +955,7 @@
             '<div class="ev-fn-head"><span class="ev-fn-n">#' + (fi + 1) + '</span>' + PCD.escapeHtml(title) + '</div>' +
             (sub ? '<div class="ev-fn-sub">' + PCD.escapeHtml(sub) + '</div>' : '') +
             (rows ? menuTable(rows) : '<div class="ev-fn-empty">—</div>') +
+            fnExtrasPrint(fn) +
           '</div>';
       });
     }
@@ -770,6 +984,8 @@
         '.ev-fn-n { display: inline-block; background: #16433a; color: #fff; font-family: "Inter",sans-serif; font-size: 9pt; font-weight: 700; padding: 1px 7px; border-radius: 5px; margin-right: 8px; vertical-align: middle; }' +
         '.ev-fn-sub { font-size: 10pt; color: #666; margin-bottom: 8px; }' +
         '.ev-fn-empty { font-size: 10pt; color: #999; padding: 2px 0 6px; }' +
+        '.ev-fn-tag { font-size: 10pt; color: #444; margin: 5px 0; line-height: 1.5; }' +
+        '.ev-fn-lbl { font-weight: 700; color: #16433a; }' +
         '.ev-summary { background: #edf6f0; border: 1px solid #cbe8d8; border-radius: 8px; padding: 14px 18px; margin-top: 16px; }' +
         '.ev-summary-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 12pt; }' +
         '.ev-summary-row.total { font-weight: 700; font-size: 14pt; border-top: 2px solid #16433a; margin-top: 6px; padding-top: 8px; color: #16433a; }' +
@@ -784,7 +1000,11 @@
       '<div class="ev-summary">' +
         '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('ev_print_total_food_cost') || 'Total food cost') + '</span><span>' + PCD.fmtMoney(stats.totalCost) + '</span></div>' +
         (event.budget > 0 ? '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('ev_print_customer_budget') || 'Customer budget') + '</span><span>' + PCD.fmtMoney(event.budget) + '</span></div>' : '') +
+        (stats.subtotal > 0 && stats.serviceCharge > 0 ? '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('event_subtotal') || 'Subtotal') + ' (' + stats.billed + ')' + '</span><span>' + PCD.fmtMoney(stats.subtotal) + '</span></div>' : '') +
+        (stats.serviceCharge > 0 ? '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('event_service_label') || 'Service charge') + ' (' + stats.svcPct + '%)</span><span>+' + PCD.fmtMoney(stats.serviceCharge) + '</span></div>' : '') +
         (stats.totalRevenue > 0 ? '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('ev_print_total_revenue') || 'Total revenue') + '</span><span>' + PCD.fmtMoney(stats.totalRevenue) + '</span></div>' : '') +
+        (stats.deposit > 0 ? '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('event_deposit') || 'Deposit') + '</span><span>−' + PCD.fmtMoney(stats.deposit) + '</span></div>' : '') +
+        (stats.deposit > 0 ? '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('event_balance_due') || 'Balance due') + '</span><span>' + PCD.fmtMoney(stats.balanceDue) + '</span></div>' : '') +
         (stats.profit !== null ? '<div class="ev-summary-row total"><span>' + PCD.escapeHtml(t('ev_print_profit') || 'Profit') + (stats.margin !== null ? ' (' + PCD.fmtPercent(stats.margin, 0) + ')' : '') + '</span><span>' + PCD.fmtMoney(stats.profit) + '</span></div>' : '') +
       '</div>' +
       (event.notes ?
@@ -866,6 +1086,17 @@
     eventFunctions(event).forEach(function (fn) {
       const guests = Number(fn.guestCount) || 0;
       (fn.menu || []).forEach(function (item) {
+        // Ingredient öğesi → doğrudan alışveriş listesine (direct grubu).
+        if (item.ingredientId) {
+          const ing = ingMap[item.ingredientId]; if (!ing) return;
+          const totalAmt = guests * (Number(item.amountPerGuest) || 0);
+          if (!(totalAmt > 0)) return;
+          const u = item.unit || ing.unit || '';
+          const key = item.ingredientId + '|' + u;
+          if (!direct[key]) direct[key] = { ing: ing, unit: u, amount: 0 };
+          direct[key].amount += totalAmt;
+          return;
+        }
         const r = recipeMap[item.recipeId]; if (!r) return;
         const portions = guests * (Number(item.portionsPerGuest) || 1);
         const scale = portions / (Number(r.servings) || 1);

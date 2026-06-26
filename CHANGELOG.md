@@ -4,6 +4,21 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.89 — Events Faz 3: garanti kişi + fiyat kırılımı · 2026-06-26
+- **YENİ — Fonksiyon-başı garanti kişi sayısı.** Her fonksiyonda "Garanti" alanı (beklenenin yanında). Faturalama bazı = **max(garanti, beklenen)** — garanti minimumdur, daha çok gelirse fazlası faturalanır. Üretim/maliyet hâlâ beklenen kişiye göre (pişirilen sayı).
+- **YENİ — Fiyat kırılımı.** Etkinlik seviyesinde **Servis ücreti %** + **Depozito** alanları. Özet: ara toplam (faturalanan × kişi-başı) · servis ücreti (+%) · toplam ciro · depozito (−) · **kalan bakiye**. Editörde tek satır özet + BEO çıktısında tam satırlar + paylaşım metni.
+- Preview'da doğrulandı: garanti 45 (beklenen 40 → faturalanan 45) · ara toplam $5.400 · servis %10 +$540 · toplam $5.940 · depozito −$1.000 · bakiye $4.940 · 0 console hatası. 7 yeni i18n anahtarı 6 dile.
+
+## v2.44.88 — Events: ingredient öğeleri + 3 sekmeli seçici · 2026-06-26
+- **YENİ — Picker'a opsiyonel sekme desteği (paylaşılan bileşen, geriye-uyumlu).** `picker.js` artık `tabs` seçeneği alıyor → segmented sekme barı + sekmeye göre filtre. Sekme verilmezse eski grup davranışı (recipes/buffet/prep etkilenmedi — doğrulandı).
+- **YENİ — Etkinliğe doğrudan malzeme (ingredient) ekleme.** "Add dishes" → **"Add item"**; seçici 3 sekme: **Menu items · Sub-recipes · Ingredients**. Fonksiyon menüsü artık tarif `{recipeId,portionsPerGuest}` VEYA malzeme `{ingredientId,amountPerGuest,unit}` tutuyor (su/ekmek/şişe su gibi tarif olmayan kalemler için). Malzeme maliyeti Buffet ile aynı model (birim fiyat × yield × kişi-başı miktar, birim çevrili). Varsayılan kişi-başı: gram/ml=100, adet=1.
+- **Tüm yollar iki tipi işler:** maliyet (`itemFoodCost` tek nokta) · stok düşümü · konsolide alışveriş listesi · menü alerjen özeti · editör kartı · BEO/print · paylaşım. Preview'da doğrulandı: 3 sekme (17 dish · 59 ingredient) · Brown onion 100g/kişi × 40 = 4000g = $12 hem ekranda hem print'te · düşüm 50×200=10000g · 0 console hatası. 4 yeni i18n anahtarı 6 dile.
+
+## v2.44.87 — Events Faz 2: diyet & alerjen katmanı · 2026-06-26
+- **YENİ — Fonksiyon-başı diyet sayıları (client'tan, manuel).** Her fonksiyonda 5 sayaç: Vejetaryen · Vegan · Glutensiz · Sütsüz · Kuruyemiş alerjisi + serbest not ("2 kabuklu deniz alerjisi, 1 helal"). Mutfak üretimi için kritik bilgi — BEO standardının çekirdek parçası. Editörde katlanır bölüm (veri varsa açık + rozet).
+- **YENİ — Menü alerjenleri otomatik özeti.** Her fonksiyonun menüsündeki alerjenler (tariflerdeki manuel etiketlerden, sub-recipe cascade'li) "Menü içeriği: 🥛 Dairy 🥚 Eggs" olarak otomatik gösterilir — editörde + çıktıda. Alerjen adı = ikon + İngilizce key (uygulama geneliyle tutarlı). Güvenlik amaçlı, salt-okunur.
+- **Çıktı:** diyet + alerjen satırları hem BEO bloklarında (fonksiyon-başı) hem eski tek-fonksiyon düzeninde basılır + paylaşım metnine eklendi. Diyet düzenlemesi maliyeti etkilemediği için re-render tetiklemez (bölüm açık + odak korunur). 8 yeni i18n anahtarı 6 dile. Preview'da doğrulandı (oto-alerjen Dairy/Eggs · diyet 5 Vegetarian + not · 0 console hatası).
+
 ## v2.44.86 — Events Faz 1: çok-fonksiyon (BEO) · 2026-06-26
 - **YENİ — Bir etkinlik artık birden çok fonksiyon içerebilir (karşılama 18:00 · yemek 20:00 · gece 23:00).** Her fonksiyon kendi adı, tarihi, başlangıç/bitiş saati, salonu, kişi sayısı ve menüsüyle. Otel/banquet sektöründeki **BEO (Banquet Event Order)** mantığı — eski araç tek set-menü/tek saatti. Editör: müşteri/firma + ilgili kişi + telefon alanları (üst seviye) + "Fonksiyon ekle" ile sınırsız fonksiyon; her fonksiyonda ayrı tarif seçici + maliyet.
 - **Hesaplama:** maliyet fonksiyonlar boyunca **toplanır** (her fonksiyon için ayrı üretim); ciro = kişi-başı × **katılımcı** (fonksiyonların en büyüğü ≈ benzersiz kişi, TOPLANMAZ). Stok düşümü + alışveriş listesi tüm fonksiyonları konsolide eder.

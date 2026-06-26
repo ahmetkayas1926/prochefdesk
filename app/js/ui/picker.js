@@ -22,6 +22,10 @@
     const items = opts.items || [];
     const multi = opts.multi !== false;
     const selected = new Set(opts.selected || []);
+    // v2.44.88 — opsiyonel sekmeler. opts.tabs=[{key,label}] verilirse segmented sekme barı
+    // çizilir + it.tab ile filtrelenir. Verilmezse eski grup davranışı (geriye-uyumlu).
+    const tabs = (Array.isArray(opts.tabs) && opts.tabs.length) ? opts.tabs : null;
+    let activeTab = tabs ? tabs[0].key : null;
 
     return new Promise(function (resolve) {
       const searchInput = PCD.el('input', { type: 'text', class: 'input', placeholder: t('search_placeholder') });
@@ -32,6 +36,32 @@
       const list = PCD.el('div', { class: 'flex flex-col gap-2' });
 
       const container = PCD.el('div');
+
+      let tabBar = null;
+      function paintTabs() {
+        if (!tabBar) return;
+        Array.prototype.forEach.call(tabBar.children, function (btn) {
+          const on = btn.getAttribute('data-ptab') === activeTab;
+          btn.style.background = on ? 'var(--surface)' : 'transparent';
+          btn.style.color = on ? 'var(--brand-700)' : 'var(--text-2)';
+          btn.style.boxShadow = on ? '0 1px 2px rgba(0,0,0,0.08)' : 'none';
+        });
+      }
+      if (tabs) {
+        tabBar = PCD.el('div', { style: { display: 'flex', gap: '4px', marginBottom: '12px', background: 'var(--surface-2)', padding: '4px', borderRadius: '10px' } });
+        tabs.forEach(function (tb) {
+          const btn = PCD.el('button', { class: 'btn btn-ghost btn-sm', 'data-ptab': tb.key, text: tb.label, style: { flex: '1', minHeight: '34px', fontWeight: '700', fontSize: '13px' } });
+          tabBar.appendChild(btn);
+        });
+        tabBar.addEventListener('click', function (e) {
+          const btn = e.target.closest('[data-ptab]');
+          if (!btn) return;
+          activeTab = btn.getAttribute('data-ptab');
+          paintTabs();
+          render(searchInput.value);
+        });
+        container.appendChild(tabBar);
+      }
       container.appendChild(search);
       container.appendChild(list);
 
@@ -39,6 +69,7 @@
         PCD.clear(list);
         const q = (filter || '').toLowerCase();
         const visible = items.filter(function (it) {
+          if (tabs && it.tab !== activeTab) return false;
           if (!q) return true;
           return (it.name || '').toLowerCase().indexOf(q) >= 0 ||
                  (it.meta || '').toLowerCase().indexOf(q) >= 0;
@@ -133,6 +164,7 @@
         onClose: function () { resolve(null); }
       });
 
+      paintTabs();
       render('');
       updateFooter();
     });
