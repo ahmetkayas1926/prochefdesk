@@ -3287,4 +3287,5 @@ window.PCD.i18n.register('de', {
   supplier_msg_tpl_hint: "Passe die an Lieferanten gesendete Bestellnachricht an. Sie füllt jede Bestellung vor — du kannst jede Nachricht vor dem Senden noch bearbeiten.",
   supplier_msg_tpl_insert: "Zum Einfügen eines Platzhalters tippen:",
   reset_default: "Auf Standard zurücksetzen",
+  sup_not_purchased: "Nicht gekauft",
 });

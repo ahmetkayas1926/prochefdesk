@@ -262,6 +262,7 @@
     const _noSupCount = ings.filter(function (i) { return !(i.supplier || '').trim() && !i.noSupplierNeeded; }).length;
     // v2.44.79 — "Generate Order" butonunda kırmızı rozet: par-altı (sipariş edilecek) kalem sayısı.
     const _belowParCount = ings.filter(function (i) {
+      if (i.noSupplierNeeded) return false;
       const row = invAll[i.id];
       if (!row || row.parLevel == null) return false;
       const s = computeStatus(row);
@@ -451,7 +452,9 @@
           const supBadge = (groupMode === 'supplier') ? '' :
             ((x.ing.supplier || '').trim()
               ? '<span style="display:inline-flex;align-items:center;gap:3px;color:var(--success);font-weight:600;">' + PCD.icon('check', 11) + PCD.escapeHtml(x.ing.supplier) + '</span>'
-              : '<span style="display:inline-flex;align-items:center;gap:3px;color:var(--warning);font-weight:700;">⚠ ' + PCD.escapeHtml(L('sup_none', 'No supplier')) + '</span>');
+              : (x.ing.noSupplierNeeded
+                  ? '<span style="display:inline-flex;align-items:center;gap:3px;color:var(--text-3);font-weight:600;">🚫 ' + PCD.escapeHtml(L('sup_not_purchased', 'Not purchased')) + '</span>'
+                  : '<span style="display:inline-flex;align-items:center;gap:3px;color:var(--warning);font-weight:700;">⚠ ' + PCD.escapeHtml(L('sup_none', 'No supplier')) + '</span>'));
           row.innerHTML = `
             <div class="list-item-thumb" style="background:${color};color:white;font-weight:700;">${statusLabel(x.status).charAt(0)}</div>
             <div class="list-item-body">
@@ -1285,6 +1288,7 @@
     // Par-altı kalemler (out / critical / low)
     const below = [];
     ings.forEach(function (i) {
+      if (i.noSupplierNeeded) return; // "Satın alınmıyor" — sipariş listesinde çıkmaz
       const row = invAll[i.id];
       if (!row || row.parLevel == null) return;
       const stock = Number(row.stock) || 0;
@@ -1405,6 +1409,7 @@
         list.forEach(function (n) { h += '<button type="button" class="as-pick" data-n="' + PCD.escapeHtml(n) + '" style="padding:6px 12px;border-radius:999px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:13px;font-weight:600;">' + PCD.escapeHtml(n) + '</button>'; });
         h += '</div>';
       }
+      h += '<div style="margin-bottom:12px;"><button type="button" class="as-notpurch" style="padding:6px 12px;border-radius:999px;border:1px solid var(--border);background:var(--surface);color:var(--text-3);cursor:pointer;font-size:13px;font-weight:600;">🚫 ' + PCD.escapeHtml(L('sup_not_purchased', 'Not purchased')) + '</button></div>';
       h += '<div class="field"><label class="field-label">' + PCD.escapeHtml(L('sup_new', 'New supplier')) + '</label><div style="display:flex;gap:6px;"><input type="text" class="input" id="asNew" placeholder="' + PCD.escapeHtml(L('sup_new', 'New supplier')) + '"><button type="button" class="btn btn-primary" id="asNewBtn">' + PCD.escapeHtml(L('add', 'Add')) + '</button></div></div>';
       ab.innerHTML = h;
       const cancel = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') });
@@ -1416,6 +1421,7 @@
         n = (n || '').trim();
         if (!n) return;
         ing.supplier = n;
+        ing.noSupplierNeeded = false;
         PCD.store.upsertIngredient(ing);
         try {
           const have = (PCD.store.listTable('suppliers') || []).some(function (s) { return (s.name || '').trim().toLowerCase() === n.toLowerCase(); });
@@ -1426,6 +1432,8 @@
       }
       ab.addEventListener('click', function (e) { const p = e.target.closest && e.target.closest('.as-pick'); if (p) apply(p.getAttribute('data-n')); });
       PCD.$('#asNewBtn', ab).addEventListener('click', function () { apply(PCD.$('#asNew', ab).value); });
+      var _npBtn = ab.querySelector('.as-notpurch');
+      if (_npBtn) _npBtn.addEventListener('click', function () { ing.supplier = ''; ing.noSupplierNeeded = true; PCD.store.upsertIngredient(ing); am.close(); if (onDone) onDone(); });
     }
 
     cancelBtn.addEventListener('click', function () { m.close(); });

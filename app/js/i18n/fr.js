@@ -3287,4 +3287,5 @@ window.PCD.i18n.register('fr', {
   supplier_msg_tpl_hint: "Personnalisez le message de commande envoyé aux fournisseurs. Il pré-remplit chaque commande — vous pouvez toujours modifier un message avant l'envoi.",
   supplier_msg_tpl_insert: "Touchez pour insérer un espace réservé :",
   reset_default: "Réinitialiser par défaut",
+  sup_not_purchased: "Non acheté",
 });

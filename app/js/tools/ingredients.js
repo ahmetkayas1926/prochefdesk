@@ -45,6 +45,18 @@
     } catch (e) { /* suppliers tablosu yoksa sorun değil */ }
   }
 
+  // v2.44.80 — "Satın alınmıyor" (su/buz gibi satın alınmayan malzemeler). Sentinel
+  // değer; seçilince supplier boşalır + noSupplierNeeded=true. Bu malzeme tedarikçisiz
+  // sayaca/uyarıya GİRMEZ, sipariş listesinde ÇIKMAZ, yanında gri "Satın alınmıyor" çıkar.
+  const NOT_PURCHASED = '__not_purchased__';
+  function applySupplierChoice(target, choice) {
+    if (choice === NOT_PURCHASED) { target.supplier = ''; target.noSupplierNeeded = true; }
+    else { target.supplier = (choice || '').trim(); target.noSupplierNeeded = false; }
+  }
+  function supplierInitial(obj) {
+    return (obj && obj.noSupplierNeeded) ? NOT_PURCHASED : ((obj && obj.supplier) || '');
+  }
+
   // Ortak tedarikçi seçici: mevcut tedarikçiler chip olarak + "yeni tedarikçi" alanı.
   // Edit modal'ı ve toplu atama modal'ı ikisi de kullanır. { get() } döndürür.
   function mountSupplierPicker(container, initial) {
@@ -57,6 +69,7 @@
     function paintPicker() {
       let html = '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">';
       html += chip('', L('sup_none', 'No supplier'));
+      html += chip(NOT_PURCHASED, '🚫 ' + L('sup_not_purchased', 'Not purchased'));
       suppliers.forEach(function (s) { html += chip(s, s); });
       html += '<button type="button" class="sup-new-btn" style="padding:6px 12px;border-radius:999px;border:1px dashed var(--brand-600);background:transparent;color:var(--brand-700);font-weight:600;font-size:13px;cursor:pointer;">+ ' + PCD.escapeHtml(L('sup_new', 'New supplier')) + '</button>';
       html += '</div>';
@@ -98,10 +111,10 @@
     cancelBtn.addEventListener('click', function () { m.close(); });
     saveBtn.addEventListener('click', function () {
       if (PCD.gate && !PCD.gate.requireAuth()) return;
-      const sup = (picker.get() || '').trim();
+      const choice = picker.get();
       let n = 0;
-      ids.forEach(function (id) { const ing = PCD.store.getIngredient(id); if (ing) { ing.supplier = sup; PCD.store.upsertIngredient(ing); n++; } });
-      if (sup) ensureSupplierRecord(sup);
+      ids.forEach(function (id) { const ing = PCD.store.getIngredient(id); if (ing) { applySupplierChoice(ing, choice); PCD.store.upsertIngredient(ing); n++; } });
+      if (choice && choice !== NOT_PURCHASED) ensureSupplierRecord((choice || '').trim());
       PCD.toast.success(L('sup_assign_done', 'Supplier assigned to {n} ingredient(s).').replace('{n}', n));
       m.close();
       if (onDone) onDone();
@@ -240,7 +253,9 @@
         const supBadge = (groupMode === 'supplier') ? '' :
           ((i.supplier || '').trim()
             ? '<span style="display:inline-flex;align-items:center;gap:3px;color:var(--success);font-weight:600;">' + PCD.icon('check', 11) + PCD.escapeHtml(i.supplier) + '</span>'
-            : '<span style="display:inline-flex;align-items:center;gap:3px;color:var(--warning);font-weight:700;">⚠ ' + PCD.escapeHtml(L('sup_none', 'No supplier')) + '</span>');
+            : (i.noSupplierNeeded
+                ? '<span style="display:inline-flex;align-items:center;gap:3px;color:var(--text-3);font-weight:600;">🚫 ' + PCD.escapeHtml(L('sup_not_purchased', 'Not purchased')) + '</span>'
+                : '<span style="display:inline-flex;align-items:center;gap:3px;color:var(--warning);font-weight:700;">⚠ ' + PCD.escapeHtml(L('sup_none', 'No supplier')) + '</span>'));
         bodyDiv.innerHTML =
           '<div class="list-item-title">' + PCD.escapeHtml(i.name) + '</div>' +
           '<div class="list-item-meta">' +
@@ -624,7 +639,7 @@ ${existing ? (function () {
     const curCode = PCD.store.get('prefs.currency') || 'USD';
     const curCfg = (window.PCD_CONFIG.CURRENCIES || []).find(function (c) { return c.code === curCode; });
     PCD.$('#priceSymbol', body).textContent = curCfg ? curCfg.symbol : '$';
-    const supPicker = mountSupplierPicker(PCD.$('#ingSupplierPicker', body), data.supplier);
+    const supPicker = mountSupplierPicker(PCD.$('#ingSupplierPicker', body), supplierInitial(data));
 
     const saveBtn = PCD.el('button', { class: 'btn btn-primary', text: t('save'), style: { flex: '1' } });
     const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') });
@@ -702,7 +717,7 @@ ${existing ? (function () {
       data.category = PCD.$('#ingCategory', body).value;
       data.unit = PCD.$('#ingUnit', body).value;
       data.pricePerUnit = parseFloat(PCD.$('#ingPrice', body).value) || 0;
-      data.supplier = (supPicker.get() || '').trim();
+      applySupplierChoice(data, supPicker.get());
       const yld = PCD.$('#ingYield', body);
       if (yld) {
         const v = parseFloat(yld.value);

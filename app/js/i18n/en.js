@@ -3392,4 +3392,5 @@ window.PCD.i18n.register('en', {
   supplier_msg_tpl_hint: "Customize the order message sent to suppliers. This pre-fills every order — you can still edit any message before sending.",
   supplier_msg_tpl_insert: "Tap to insert a placeholder:",
   reset_default: "Reset to default",
+  sup_not_purchased: "Not purchased",
 });

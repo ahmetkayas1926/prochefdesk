@@ -3287,4 +3287,5 @@ window.PCD.i18n.register('ar', {
   supplier_msg_tpl_hint: "خصّص رسالة الطلب المُرسلة إلى الموردين. تملأ كل طلب مسبقًا — ويمكنك تعديل أي رسالة قبل إرسالها.",
   supplier_msg_tpl_insert: "انقر لإدراج عنصر نائب:",
   reset_default: "إعادة للافتراضي",
+  sup_not_purchased: "غير مُشترى",
 });

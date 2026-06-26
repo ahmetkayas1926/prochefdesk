@@ -3444,4 +3444,5 @@ window.PCD.i18n.register('tr', {
   supplier_msg_tpl_hint: "Tedarikçilere giden sipariş mesajını özelleştir. Her siparişi ön-doldurur — göndermeden önce her mesajı yine de düzenleyebilirsin.",
   supplier_msg_tpl_insert: "Yer-tutucu eklemek için dokun:",
   reset_default: "Varsayılana sıfırla",
+  sup_not_purchased: "Satın alınmıyor",
 });
