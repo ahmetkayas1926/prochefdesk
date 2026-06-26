@@ -3265,3 +3265,16 @@ window.PCD.i18n.register('ar', {
   nut_ings_missing: "مكونات بلا بيانات",
   nut_partial_warning: "بعض المكونات بلا بيانات غذائية. النتائج جزئية.",
 });
+
+// v2.44.78 — Inventory طلبات لكل مورّد + تذكيرات بلا مورّد.
+window.PCD.i18n.register('ar', {
+  inv_items_below_par: "صنف تحت الحد",
+  inv_order_hint: "كل مورّد يحصل على طلبه الخاص. عيّن مورّدًا للأصناف المعلّمة أولًا.",
+  inv_order_no_supplier: "لا مورّد معيّن",
+  inv_order_send_to: "أرسل إلى {name}",
+  inv_assign_to: "عيّن مورّدًا لـ",
+  inv_order_remaining_nosup: "{n} صنف لا يزال بلا مورّد — عيّن مورّدًا لطلبها.",
+  inv_no_supplier_count: "{n} مكوّن بلا مورّد — عيّن مورّدًا لطلبها.",
+  sup_not_found: "المورّد غير موجود",
+  toast_error: "حدث خطأ ما",
+});

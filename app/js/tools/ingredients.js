@@ -232,15 +232,19 @@
         if (_pa != null && _pa > 30) {
           ageHtml = '<span style="color:' + (_pa > 60 ? 'var(--danger)' : 'var(--warning)') + ';font-weight:600;font-size:11px;white-space:nowrap;">' + PCD.icon('clock', 11) + ' ' + PCD.escapeHtml(t('fresh_last_priced').replace('{n}', _pa)) + '</span>';
         }
-        // Tedarikçi modunda başlıkta zaten var → satırda tekrar gösterme.
-        const showSup = (groupMode !== 'supplier') && i.supplier;
+        // Tedarikçi durum işareti — tedarikçi modunda başlıkta zaten var, satırda gizle.
+        // Tedarikçili → yeşil ✓ (ad) · tedarikçisiz → amber ⚠ (her zaman görünür hatırlatıcı).
+        const supBadge = (groupMode === 'supplier') ? '' :
+          ((i.supplier || '').trim()
+            ? '<span style="display:inline-flex;align-items:center;gap:3px;color:var(--success);font-weight:600;">' + PCD.icon('check', 11) + PCD.escapeHtml(i.supplier) + '</span>'
+            : '<span style="display:inline-flex;align-items:center;gap:3px;color:var(--warning);font-weight:700;">⚠ ' + PCD.escapeHtml(L('sup_none', 'No supplier')) + '</span>');
         bodyDiv.innerHTML =
           '<div class="list-item-title">' + PCD.escapeHtml(i.name) + '</div>' +
           '<div class="list-item-meta">' +
             '<span>' + PCD.fmtMoney(i.pricePerUnit) + ' / ' + i.unit + '</span>' +
             (trendHtml ? '<span>·</span>' + trendHtml : '') +
             (ageHtml ? '<span>·</span>' + ageHtml : '') +
-            (showSup ? '<span>·</span><span>' + PCD.escapeHtml(i.supplier) + '</span>' : '') +
+            (supBadge ? '<span>·</span>' + supBadge : '') +
           '</div>';
         row.appendChild(thumb);
         row.appendChild(bodyDiv);

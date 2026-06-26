@@ -3422,3 +3422,16 @@ window.PCD.i18n.register('tr', {
   inv_sales_save_note: "Stok bu günün satışlarına göre güncellenir. Bu tarihe ait kayıt varsa yalnızca fark uygulanır.",
   inv_sales_saved: "Satışlar kaydedildi · {n} kalem güncellendi",
 });
+
+// v2.44.78 — Inventory tedarikçi-başı sipariş + tedarikçisiz hatırlatıcılar.
+window.PCD.i18n.register('tr', {
+  inv_items_below_par: "kalem par altında",
+  inv_order_hint: "Her tedarikçi kendi siparişini alır. Önce işaretli kalemlere tedarikçi ata.",
+  inv_order_no_supplier: "Tedarikçi atanmamış",
+  inv_order_send_to: "{name}'e gönder",
+  inv_assign_to: "Tedarikçi ata:",
+  inv_order_remaining_nosup: "{n} kalemin hâlâ tedarikçisi yok — sipariş için tedarikçi ata.",
+  inv_no_supplier_count: "{n} malzemenin tedarikçisi yok — sipariş için tedarikçi ata.",
+  sup_not_found: "Tedarikçi bulunamadı",
+  toast_error: "Bir şeyler ters gitti",
+});

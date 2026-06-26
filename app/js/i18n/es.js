@@ -3265,3 +3265,16 @@ window.PCD.i18n.register('es', {
   nut_ings_missing: "Ingredientes sin datos",
   nut_partial_warning: "Algunos ingredientes no tienen datos nutricionales. Los resultados son parciales.",
 });
+
+// v2.44.78 — Inventory pedidos por proveedor + recordatorios sin proveedor.
+window.PCD.i18n.register('es', {
+  inv_items_below_par: "artículos por debajo del par",
+  inv_order_hint: "Cada proveedor recibe su propio pedido. Asigna primero un proveedor a los artículos marcados.",
+  inv_order_no_supplier: "Sin proveedor asignado",
+  inv_order_send_to: "Enviar a {name}",
+  inv_assign_to: "Asignar un proveedor a",
+  inv_order_remaining_nosup: "{n} artículo(s) aún sin proveedor — asígnalo para pedirlos.",
+  inv_no_supplier_count: "{n} ingrediente(s) sin proveedor — asigna uno para pedirlos.",
+  sup_not_found: "Proveedor no encontrado",
+  toast_error: "Algo salió mal",
+});

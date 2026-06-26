@@ -110,6 +110,10 @@
       lazyRoutes[name] = { script: scriptPath, tool: toolName || name };
     },
 
+    // v2.44.78 — Public: bir aracı navigasyon yapmadan yükle (peer-tool çağrısı için,
+    // örn. inventory → suppliers.startOrder). Promise<tool> döner.
+    loadLazyTool: loadLazyTool,
+
     start: function () {
       history.replaceState({ type: 'view', name: currentView || 'dashboard' }, '', window.location.pathname + window.location.hash);
 

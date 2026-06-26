@@ -82,11 +82,13 @@ Tüm limit + gate'ler tek dosyada: `plans.js` (`PLAN_LIMITS`) — özelliği aç
 
 | Özellik | Free | Pro |
 |---------|------|-----|
-| Tarif / Malzeme / Workspace | 15 / 50 / 1 | sınırsız |
-| Bulut sync | kapalı (yalnız yerel) | açık |
+| Tarif / Malzeme / Workspace | 4 / 20 / 1 | sınırsız |
+| Menü/Event/Büfe/Roster/Whiteboard/Checklist/Prep | her birinden 1 | sınırsız |
+| Bulut sync · Link/QR paylaşım | kapalı (yalnız yerel) | açık |
 | HACCP · Roster işçilik · Cost-view paylaşım | kapalı | açık |
 | Çıktı footer (watermark) | var | yok |
-| Print/Excel export · Discover yayın | açık | açık |
+| Print/Excel çıktı (araç başına 1; roster Free'de tamamen kapalı) | 1/araç | sınırsız |
+| Discover yayın | açık | açık |
 
 - **Plan kaynağı = sunucu.** `user_prefs`'in AYRI kolonlarında (`plan`, `plan_source`, `plan_status`, `plan_expires_at`, `stripe_customer_id`); frontend kolon-seviyesi yetki kilidiyle **yazamaz**, yalnız okur (`cloud.fetchPlan`, data blob'undan değil) → kullanıcı kendini pro yapamaz.
 - **Manuel pro:** SQL'de `plan='pro', plan_source='manual'` → kalıcı pro (Stripe'sız); webhook `plan_source='manual'` satırlarını ASLA ezmez.

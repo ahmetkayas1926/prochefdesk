@@ -39,6 +39,31 @@
     });
   }
 
+  // v2.44.78 — INVENTORY KÖPRÜSÜ. Inventory "Sipariş Oluştur" bir tedarikçinin par-altı
+  // kalemlerini buraya geçirir; o tedarikçinin GERÇEK gönderim hattı yeniden kullanılır
+  // (teslim tarihi → WhatsApp/SMS/Email gerçek kişi → sipariş geçmişi → "stoğa ekle").
+  // items: [{ ingId, qty, unit? }]. İsim → tedarikçi kaydı (backfill garanti eder).
+  function supplierByName(name) {
+    const key = (name || '').trim().toLowerCase();
+    if (!key) return null;
+    return (PCD.store.listTable('suppliers') || []).find(function (s) {
+      return (s.name || '').trim().toLowerCase() === key;
+    }) || null;
+  }
+  function startOrder(supplierName, items) {
+    backfillSupplierRecords();
+    const sup = supplierByName(supplierName);
+    if (!sup) { if (PCD.toast) PCD.toast.warning(tt('sup_not_found', 'Supplier not found')); return false; }
+    draftQty[sup.id] = draftQty[sup.id] || {};
+    (items || []).forEach(function (it) {
+      if (!it || !it.ingId) return;
+      draftQty[sup.id][it.ingId] = it.qty;
+      if (it.unit) draftQty[sup.id]['_unit_' + it.ingId] = it.unit;
+    });
+    sendOrderFlow(sup.id);
+    return true;
+  }
+
   // Tek kaynak: her ingredient.supplier için bir tedarikçi kaydı garanti et
   // (ingredient'lere atanmış ama henüz kaydı olmayan tedarikçiler de kart olur).
   function backfillSupplierRecords() {
@@ -895,5 +920,5 @@
   }
 
   PCD.tools = PCD.tools || {};
-  PCD.tools.suppliers = { render: render, openEditor: openEditor };
+  PCD.tools.suppliers = { render: render, openEditor: openEditor, startOrder: startOrder };
 })();

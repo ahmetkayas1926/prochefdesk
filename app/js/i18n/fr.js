@@ -3265,3 +3265,16 @@ window.PCD.i18n.register('fr', {
   nut_ings_missing: "Ingrédients sans données",
   nut_partial_warning: "Certains ingrédients n'ont pas de données nutritionnelles. Les résultats sont partiels.",
 });
+
+// v2.44.78 — Inventory commandes par fournisseur + rappels sans fournisseur.
+window.PCD.i18n.register('fr', {
+  inv_items_below_par: "articles sous le par",
+  inv_order_hint: "Chaque fournisseur reçoit sa propre commande. Affectez d'abord un fournisseur aux articles signalés.",
+  inv_order_no_supplier: "Aucun fournisseur affecté",
+  inv_order_send_to: "Envoyer à {name}",
+  inv_assign_to: "Affecter un fournisseur à",
+  inv_order_remaining_nosup: "{n} article(s) sans fournisseur — affectez-en un pour les commander.",
+  inv_no_supplier_count: "{n} ingrédient(s) sans fournisseur — affectez-en un pour les commander.",
+  sup_not_found: "Fournisseur introuvable",
+  toast_error: "Une erreur s'est produite",
+});

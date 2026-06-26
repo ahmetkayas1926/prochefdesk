@@ -3370,3 +3370,16 @@ window.PCD.i18n.register('en', {
   inv_sales_save_note: "Stock is updated to match this day's sales. If a record already exists for this date, only the difference is applied.",
   inv_sales_saved: "Sales saved · {n} item(s) updated",
 });
+
+// v2.44.78 — Inventory per-supplier purchase orders + no-supplier reminders.
+window.PCD.i18n.register('en', {
+  inv_items_below_par: "items below par",
+  inv_order_hint: "Each supplier gets its own order. Assign a supplier to the flagged items first.",
+  inv_order_no_supplier: "No supplier assigned",
+  inv_order_send_to: "Send to {name}",
+  inv_assign_to: "Assign a supplier to",
+  inv_order_remaining_nosup: "{n} item(s) still have no supplier — assign to order them.",
+  inv_no_supplier_count: "{n} ingredient(s) have no supplier — assign one to order them.",
+  sup_not_found: "Supplier not found",
+  toast_error: "Something went wrong",
+});

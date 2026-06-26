@@ -3265,3 +3265,16 @@ window.PCD.i18n.register('de', {
   nut_ings_missing: "Zutaten ohne Daten",
   nut_partial_warning: "Einige Zutaten haben keine Nährwertdaten. Die Ergebnisse sind unvollständig.",
 });
+
+// v2.44.78 — Inventory Bestellungen pro Lieferant + Erinnerungen ohne Lieferant.
+window.PCD.i18n.register('de', {
+  inv_items_below_par: "Artikel unter Par",
+  inv_order_hint: "Jeder Lieferant erhält seine eigene Bestellung. Weise den markierten Artikeln zuerst einen Lieferanten zu.",
+  inv_order_no_supplier: "Kein Lieferant zugewiesen",
+  inv_order_send_to: "An {name} senden",
+  inv_assign_to: "Lieferant zuweisen für",
+  inv_order_remaining_nosup: "{n} Artikel haben noch keinen Lieferanten — zum Bestellen zuweisen.",
+  inv_no_supplier_count: "{n} Zutat(en) ohne Lieferant — zum Bestellen einen zuweisen.",
+  sup_not_found: "Lieferant nicht gefunden",
+  toast_error: "Etwas ist schiefgelaufen",
+});

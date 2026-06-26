@@ -252,11 +252,14 @@
 
   function render(view) {
     const t = PCD.i18n.t;
+    const L = function (k, fb) { try { const v = t(k); return (v == null || v === k) ? fb : v; } catch (e) { return fb; } };
     const ings = PCD.store.listIngredients();
     const invAll = readInventory();
     const pending = getPendingForCurrentWs();
     let filter = 'all';
     let groupMode = (function () { try { return localStorage.getItem('pcd_inv_group') || 'category'; } catch (e) { return 'category'; } })();
+    // v2.44.78 — Kalıcı hatırlatıcı: tedarikçisi olmayan malzeme sayısı (amber rozet).
+    const _noSupCount = ings.filter(function (i) { return !(i.supplier || '').trim(); }).length;
 
     // Aggregate stats
     function getRow(id) { return invAll[id] || null; }
@@ -271,6 +274,7 @@
           <button class="btn btn-outline btn-sm" id="historyHeaderBtn" title="${PCD.escapeHtml(t('inv_view_past_counts_tooltip'))}">${PCD.icon('clock',14)} ${t('inv_history')}</button>
           <button class="btn btn-outline btn-sm" id="bulkCountBtn">${PCD.icon('list',14)} ${t('inv_count_stock')}</button>
           <button class="btn btn-outline btn-sm" id="genOrderBtn">${PCD.icon('send',14)} ${t('inv_generate_order')}</button>
+          ${_noSupCount > 0 ? `<button class="btn btn-sm" id="noSupBadge" title="${PCD.escapeHtml(L('inv_no_supplier_count', '{n} ingredient(s) have no supplier — assign one to order them.').replace('{n}', _noSupCount))}" style="background:#fff7ed;border:1px solid var(--warning);color:#b45309;font-weight:700;">⚠ ${_noSupCount}</button>` : ''}
           <button class="btn btn-outline btn-sm" id="recordSalesBtn">${PCD.icon('edit',14)} ${t('inv_record_sales')}</button>
         </div>
       </div>
@@ -437,12 +441,17 @@
           const parText = x.row && x.row.parLevel != null
             ? PCD.fmtNumber(x.row.parLevel) + ' ' + x.ing.unit
             : '—';
+          const supBadge = (groupMode === 'supplier') ? '' :
+            ((x.ing.supplier || '').trim()
+              ? '<span style="display:inline-flex;align-items:center;gap:3px;color:var(--success);font-weight:600;">' + PCD.icon('check', 11) + PCD.escapeHtml(x.ing.supplier) + '</span>'
+              : '<span style="display:inline-flex;align-items:center;gap:3px;color:var(--warning);font-weight:700;">⚠ ' + PCD.escapeHtml(L('sup_none', 'No supplier')) + '</span>');
           row.innerHTML = `
             <div class="list-item-thumb" style="background:${color};color:white;font-weight:700;">${statusLabel(x.status).charAt(0)}</div>
             <div class="list-item-body">
               <div class="list-item-title">${PCD.escapeHtml(x.ing.name)}</div>
               <div class="list-item-meta">
                 <span><strong>${stockText}</strong> / ${parText}</span>
+                ${supBadge ? '<span>·</span>' + supBadge : ''}
                 ${x.row && x.row.lastOrderedAt ? '<span>·</span><span>' + t('inv_last_ordered') + ': ' + PCD.fmtRelTime(x.row.lastOrderedAt) + '</span>' : ''}
               </div>
             </div>
@@ -488,6 +497,8 @@
 
     const genBtn = PCD.$('#genOrderBtn', view);
     if (genBtn) genBtn.addEventListener('click', function () { openGenerateOrder(); });
+    const noSupBadge = PCD.$('#noSupBadge', view);
+    if (noSupBadge) noSupBadge.addEventListener('click', function () { if (PCD.router && PCD.router.go) PCD.router.go('ingredients'); });
     const rsBtn = PCD.$('#recordSalesBtn', view);
     if (rsBtn) rsBtn.addEventListener('click', function () { openRecordSales(); });
 
@@ -1260,221 +1271,231 @@
   }
 
   function openGenerateOrder() {
+    const t = PCD.i18n.t;
+    const L = function (k, fb) { try { const v = t(k); return (v == null || v === k) ? fb : v; } catch (e) { return fb; } };
     const ings = PCD.store.listIngredients();
     const invAll = readInventory();
-    // Collect all items that need ordering: status critical, low, or out
+    // Par-altı kalemler (out / critical / low)
     const below = [];
     ings.forEach(function (i) {
       const row = invAll[i.id];
       if (!row || row.parLevel == null) return;
       const stock = Number(row.stock) || 0;
       const par = Number(row.parLevel) || 0;
-      const min = Number(row.minLevel) || 0;
       const status = computeStatus(row);
-      // Order if: out, critical, or low
       if (status === 'out' || status === 'critical' || status === 'low') {
-        // Need = enough to bring back up to par level
         const need = Math.max(0, par - stock);
-        below.push({
-          ing: i,
-          stock: stock,
-          par: par,
-          need: need || par,  // if par > stock then top up; if min > par (weird), at least order par amount
-          status: status,
-          supplier: i.supplier || '(no supplier)',
-        });
+        below.push({ ing: i, stock: stock, par: par, need: need || par, status: status, supplier: (i.supplier || '').trim() });
       }
     });
 
     if (below.length === 0) {
-      PCD.toast.info(PCD.i18n.t('toast_inventory_all_above_par'));
+      PCD.toast.info(t('toast_inventory_all_above_par'));
       return;
     }
 
-    // Group by supplier
+    // v2.44.78 — Tedarikçi-başı sipariş. Tedarikçisiz kalemler EN ÜSTTE, atanmadan
+    // gönderilemez (sessiz atlama YOK). Her tedarikçi grubu kendi GERÇEK gönderim
+    // hattına gider (suppliers.startOrder → teslim tarihi + WhatsApp/SMS/Email + geçmiş).
+    const noSup = below.filter(function (b) { return !b.supplier; });
     const bySupplier = {};
-    below.forEach(function (b) {
-      if (!bySupplier[b.supplier]) bySupplier[b.supplier] = [];
-      bySupplier[b.supplier].push(b);
-    });
-
-    const body = PCD.el('div');
+    below.forEach(function (b) { if (b.supplier) { (bySupplier[b.supplier] = bySupplier[b.supplier] || []).push(b); } });
     const supplierNames = Object.keys(bySupplier).sort();
 
+    const body = PCD.el('div');
+
+    function rowHtml(b, assignable) {
+      const tag = assignable ? 'div' : 'label';
+      return '<' + tag + ' style="display:flex;align-items:center;gap:9px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:4px;background:var(--surface);' + (assignable ? '' : 'cursor:pointer;') + '">' +
+        (assignable ? '' : '<input type="checkbox" class="po-item" data-iid="' + b.ing.id + '" data-sup="' + PCD.escapeHtml(b.supplier) + '" checked style="accent-color:var(--brand-600);width:18px;height:18px;flex-shrink:0;">') +
+        '<div style="flex:1;min-width:0;">' +
+          '<div style="font-weight:600;font-size:14px;">' + PCD.escapeHtml(b.ing.name) + '</div>' +
+          '<div class="text-muted" style="font-size:11px;">' + PCD.escapeHtml(L('inv_current_stock', 'Stock')) + ': ' + PCD.fmtNumber(b.stock) + ' · Par: ' + PCD.fmtNumber(b.par) + ' ' + (b.ing.unit || '') + '</div>' +
+        '</div>' +
+        '<input type="number" class="input po-qty" data-iid="' + b.ing.id + '" value="' + b.need.toFixed(2) + '" step="0.01" min="0" style="width:74px;text-align:center;font-weight:600;">' +
+        '<span class="text-muted" style="font-size:11px;flex-shrink:0;">' + (b.ing.unit || '') + '</span>' +
+        (assignable ? '<button type="button" class="btn btn-sm btn-outline po-assign" data-iid="' + b.ing.id + '" style="flex-shrink:0;white-space:nowrap;">' + PCD.icon('truck', 13) + ' ' + PCD.escapeHtml(L('assign_supplier', 'Assign')) + '</button>' : '') +
+      '</' + tag + '>';
+    }
+
     let html = '<div class="mb-3" style="padding:12px;background:var(--brand-50);border-radius:var(--r-md);">' +
-      '<div style="font-weight:700;">' + below.length + ' items below par</div>' +
-      '<div class="text-muted text-sm">Grouped by supplier. Tap an item to include/exclude.</div>' +
+      '<div style="font-weight:700;">' + below.length + ' ' + PCD.escapeHtml(L('inv_items_below_par', 'items below par')) + '</div>' +
+      '<div class="text-muted text-sm">' + PCD.escapeHtml(L('inv_order_hint', 'Each supplier gets its own order. Assign a supplier to the flagged items first.')) + '</div>' +
       '</div>';
 
+    if (noSup.length) {
+      html += '<div class="mb-3" style="border:1px solid var(--warning);border-radius:var(--r-md);overflow:hidden;">' +
+        '<div style="padding:9px 12px;background:#fff7ed;color:#b45309;font-weight:700;font-size:13px;">⚠ ' + PCD.escapeHtml(L('inv_order_no_supplier', 'No supplier assigned')) + ' · ' + noSup.length + '</div>' +
+        '<div style="padding:8px 9px;">';
+      noSup.forEach(function (b) { html += rowHtml(b, true); });
+      html += '</div></div>';
+    }
+
     supplierNames.forEach(function (sup) {
-      html += '<div class="mb-3">';
-      html += '<div style="font-size:12px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">' + PCD.escapeHtml(sup) + '</div>';
-      bySupplier[sup].forEach(function (b) {
-        html += '<label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:4px;cursor:pointer;background:var(--surface);">' +
-          '<input type="checkbox" class="po-item" data-iid="' + b.ing.id + '" checked style="accent-color:var(--brand-600);width:18px;height:18px;flex-shrink:0;">' +
-          '<div style="flex:1;min-width:0;">' +
-            '<div style="font-weight:600;font-size:14px;">' + PCD.escapeHtml(b.ing.name) + '</div>' +
-            '<div class="text-muted" style="font-size:11px;">Stock: ' + PCD.fmtNumber(b.stock) + ' · Par: ' + PCD.fmtNumber(b.par) + ' ' + (b.ing.unit || '') + '</div>' +
-          '</div>' +
-          '<input type="number" class="input po-qty" data-iid="' + b.ing.id + '" value="' + b.need.toFixed(2) + '" step="0.01" min="0" style="width:80px;text-align:center;font-weight:600;">' +
-          '<span class="text-muted" style="font-size:11px;">' + (b.ing.unit || '') + '</span>' +
-          '</label>';
-      });
-      html += '</div>';
+      html += '<div class="mb-3">' +
+        '<div style="font-size:12px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">' + PCD.escapeHtml(sup) + '</div>';
+      bySupplier[sup].forEach(function (b) { html += rowHtml(b, false); });
+      html += '<button type="button" class="btn btn-primary btn-sm po-send" data-sup="' + PCD.escapeHtml(sup) + '" style="margin-top:2px;">' + PCD.icon('send', 13) + ' ' + PCD.escapeHtml(L('inv_order_send_to', 'Send to {name}').replace('{name}', sup)) + '</button>' +
+      '</div>';
     });
     body.innerHTML = html;
 
-    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('cancel') });
+    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') });
     const printBtn = PCD.el('button', { class: 'btn btn-outline' });
-    printBtn.innerHTML = PCD.icon('print', 14) + ' <span>' + PCD.i18n.t('print') + '</span>';
+    printBtn.innerHTML = PCD.icon('print', 14) + ' <span>' + t('print') + '</span>';
     const receivedBtn = PCD.el('button', { class: 'btn btn-outline' });
-    receivedBtn.innerHTML = '📥 <span>' + PCD.i18n.t('inv_mark_received') + '</span>';
-    const shareBtn = PCD.el('button', { class: 'btn btn-primary', style: { flex: '1' } });
-    shareBtn.innerHTML = PCD.icon('send', 14) + ' <span>' + PCD.i18n.t('btn_share_order') + '</span>';
+    receivedBtn.innerHTML = '📥 <span>' + t('inv_mark_received') + '</span>';
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
     footer.appendChild(cancelBtn);
     footer.appendChild(printBtn);
     footer.appendChild(receivedBtn);
-    footer.appendChild(shareBtn);
 
-    const m = PCD.modal.open({
-      title: PCD.i18n.t('modal_purchase_order_title'), body: body, footer: footer, size: 'md', closable: true
-    });
+    const m = PCD.modal.open({ title: t('modal_purchase_order_title'), body: body, footer: footer, size: 'md', closable: true });
 
-    function collectSelected() {
-      const user = PCD.store.get('user') || {};
-      const date = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-      const selectedBySupplier = {};
+    // Bir tedarikçinin SEÇİLİ kalemleri → startOrder formatı ([{ingId, qty, unit}]).
+    function collectForSupplier(sup) {
+      const items = [];
       body.querySelectorAll('.po-item:checked').forEach(function (cb) {
+        if (cb.getAttribute('data-sup') !== sup) return;
         const iid = cb.getAttribute('data-iid');
-        const qtyInp = body.querySelector('.po-qty[data-iid="' + iid + '"]');
-        const qty = qtyInp ? parseFloat(qtyInp.value) : 0;
+        const qi = body.querySelector('.po-qty[data-iid="' + iid + '"]');
+        const qty = qi ? parseFloat(qi.value) : 0;
         if (!qty || qty <= 0) return;
         const b = below.find(function (x) { return x.ing.id === iid; });
         if (!b) return;
-        if (!selectedBySupplier[b.supplier]) selectedBySupplier[b.supplier] = [];
-        selectedBySupplier[b.supplier].push({ ing: b.ing, qty: qty });
+        items.push({ ingId: iid, qty: qty, unit: b.ing.unit || '' });
       });
-      return { selectedBySupplier: selectedBySupplier, date: date, userName: user.name || user.email || '' };
+      return items;
+    }
+    // Print + Mark received için: tüm seçili/atanmış kalemler, tedarikçiye göre grup.
+    function collectAll() {
+      const grouped = {};
+      body.querySelectorAll('.po-qty').forEach(function (qi) {
+        const iid = qi.getAttribute('data-iid');
+        const cb = body.querySelector('.po-item[data-iid="' + iid + '"]');
+        if (cb && !cb.checked) return;
+        const qty = parseFloat(qi.value);
+        if (!qty || qty <= 0) return;
+        const b = below.find(function (x) { return x.ing.id === iid; });
+        if (!b) return;
+        const key = b.supplier || L('sup_none', 'No supplier');
+        (grouped[key] = grouped[key] || []).push({ ing: b.ing, qty: qty });
+      });
+      return grouped;
     }
 
-    function buildMessage() {
-      const d = collectSelected();
-      const supKeys = Object.keys(d.selectedBySupplier);
-      if (supKeys.length === 0) return null;
-
-      const lines = ['Purchase Order — ' + d.date, ''];
-      supKeys.forEach(function (sup) {
-        lines.push('— ' + sup + ' —');
-        d.selectedBySupplier[sup].forEach(function (it) {
-          lines.push('• ' + it.ing.name + ' — ' + PCD.fmtNumber(it.qty) + ' ' + (it.ing.unit || ''));
-        });
-        lines.push('');
-      });
-      lines.push('Best regards,');
-      if (d.userName) lines.push(d.userName);
-      return lines.join('\n');
+    // Tedarikçisiz bir kaleme tedarikçi ata (mevcutlardan seç veya yeni oluştur).
+    function assignSupplier(ingId, onDone) {
+      const ing = PCD.store.getIngredient(ingId);
+      if (!ing) return;
+      const names = {};
+      (PCD.store.listIngredients() || []).forEach(function (i) { const n = (i.supplier || '').trim(); if (n) names[n] = true; });
+      const list = Object.keys(names).sort();
+      const ab = PCD.el('div');
+      let h = '<div class="text-muted text-sm" style="margin-bottom:10px;">' + PCD.escapeHtml(L('inv_assign_to', 'Assign a supplier to') + ' ' + ing.name) + '</div>';
+      if (list.length) {
+        h += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">';
+        list.forEach(function (n) { h += '<button type="button" class="as-pick" data-n="' + PCD.escapeHtml(n) + '" style="padding:6px 12px;border-radius:999px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:13px;font-weight:600;">' + PCD.escapeHtml(n) + '</button>'; });
+        h += '</div>';
+      }
+      h += '<div class="field"><label class="field-label">' + PCD.escapeHtml(L('sup_new', 'New supplier')) + '</label><div style="display:flex;gap:6px;"><input type="text" class="input" id="asNew" placeholder="' + PCD.escapeHtml(L('sup_new', 'New supplier')) + '"><button type="button" class="btn btn-primary" id="asNewBtn">' + PCD.escapeHtml(L('add', 'Add')) + '</button></div></div>';
+      ab.innerHTML = h;
+      const cancel = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') });
+      const f = PCD.el('div', { style: { display: 'flex', width: '100%' } });
+      f.appendChild(cancel);
+      const am = PCD.modal.open({ title: L('assign_supplier', 'Assign supplier'), body: ab, footer: f, size: 'sm', closable: true });
+      cancel.addEventListener('click', function () { am.close(); });
+      function apply(n) {
+        n = (n || '').trim();
+        if (!n) return;
+        ing.supplier = n;
+        PCD.store.upsertIngredient(ing);
+        try {
+          const have = (PCD.store.listTable('suppliers') || []).some(function (s) { return (s.name || '').trim().toLowerCase() === n.toLowerCase(); });
+          if (!have && PCD.store.upsertInTable) PCD.store.upsertInTable('suppliers', { name: n, category: 'Other', products: [] }, 'sup');
+        } catch (e) {}
+        am.close();
+        if (onDone) onDone();
+      }
+      ab.addEventListener('click', function (e) { const p = e.target.closest && e.target.closest('.as-pick'); if (p) apply(p.getAttribute('data-n')); });
+      PCD.$('#asNewBtn', ab).addEventListener('click', function () { apply(PCD.$('#asNew', ab).value); });
     }
 
     cancelBtn.addEventListener('click', function () { m.close(); });
 
+    // Body delegasyonu (modal-scoped, sızıntısız): grup "Gönder" + kalem "Ata".
+    body.addEventListener('click', function (e) {
+      const sendBtn = e.target.closest && e.target.closest('.po-send');
+      if (sendBtn) {
+        const sup = sendBtn.getAttribute('data-sup');
+        const items = collectForSupplier(sup);
+        if (!items.length) { PCD.toast.warning(t('toast_no_items_selected')); return; }
+        const fire = function () {
+          m.close();
+          PCD.tools.suppliers.startOrder(sup, items);
+          if (noSup.length) PCD.toast.warning(L('inv_order_remaining_nosup', '{n} item(s) still have no supplier — assign to order them.').replace('{n}', noSup.length));
+        };
+        if (PCD.tools.suppliers && PCD.tools.suppliers.startOrder) { fire(); return; }
+        if (PCD.router && PCD.router.loadLazyTool) {
+          PCD.router.loadLazyTool('suppliers').then(function () {
+            if (PCD.tools.suppliers && PCD.tools.suppliers.startOrder) fire();
+          }).catch(function () { PCD.toast.error(L('toast_error', 'Something went wrong')); });
+        }
+        return;
+      }
+      const asgBtn = e.target.closest && e.target.closest('.po-assign');
+      if (asgBtn) {
+        const iid = asgBtn.getAttribute('data-iid');
+        assignSupplier(iid, function () { m.close(); setTimeout(openGenerateOrder, 150); });
+      }
+    });
+
     printBtn.addEventListener('click', function () {
-      const d = collectSelected();
-      const supKeys = Object.keys(d.selectedBySupplier);
-      if (supKeys.length === 0) { PCD.toast.warning(PCD.i18n.t('toast_no_items_selected')); return; }
+      const grouped = collectAll();
+      const keys = Object.keys(grouped);
+      if (keys.length === 0) { PCD.toast.warning(t('toast_no_items_selected')); return; }
+      if (PCD.gate && !PCD.gate.requireExport('inventory')) return;
+      const user = PCD.store.get('user') || {};
+      const userName = user.name || user.email || '';
+      const date = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
       let html = '<div style="max-width:680px;margin:0 auto">';
       html += '<h1>Purchase Order</h1>';
-      html += '<div style="color:#666;font-size:12px;margin-bottom:16px;">' + d.date + (d.userName ? ' · ' + PCD.escapeHtml(d.userName) : '') + '</div>';
-      supKeys.forEach(function (sup) {
-        html += '<h3 style="margin-top:16px;padding-bottom:4px;border-bottom:1px solid #ddd;">' + PCD.escapeHtml(sup) + '</h3>';
-        html += '<table>';
-        d.selectedBySupplier[sup].forEach(function (it) {
+      html += '<div style="color:#666;font-size:12px;margin-bottom:16px;">' + date + (userName ? ' · ' + PCD.escapeHtml(userName) : '') + '</div>';
+      keys.forEach(function (sup) {
+        html += '<h3 style="margin-top:16px;padding-bottom:4px;border-bottom:1px solid #ddd;">' + PCD.escapeHtml(sup) + '</h3><table>';
+        grouped[sup].forEach(function (it) {
           html += '<tr><td style="width:24px;">☐</td><td>' + PCD.escapeHtml(it.ing.name) + '</td><td style="text-align:right;font-family:monospace;">' + PCD.fmtNumber(it.qty) + ' ' + PCD.escapeHtml(it.ing.unit || '') + '</td></tr>';
         });
         html += '</table>';
       });
       html += '</div>';
-      if (PCD.gate && !PCD.gate.requireExport('inventory')) return;
       PCD.print(html, 'Purchase Order');
     });
 
-    shareBtn.addEventListener('click', function () {
-      const msg = buildMessage();
-      if (!msg) { PCD.toast.warning(PCD.i18n.t('toast_no_items_selected')); return; }
-      // Open a simple share sheet: WA/SMS/Email/Copy
-      const shareBody = PCD.el('div');
-      shareBody.innerHTML =
-        '<div class="field"><label class="field-label">Message (editable)</label>' +
-        '<textarea class="textarea" id="poMsg" rows="12" style="font-family:var(--font-mono);font-size:12px;white-space:pre;">' + PCD.escapeHtml(msg) + '</textarea></div>' +
-        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-top:12px;">' +
-          '<button class="btn btn-outline" id="poWa" style="flex-direction:column;height:auto;padding:12px 4px;gap:4px;">' +
-            '<div style="color:#25D366;">' + PCD.icon('message-circle', 22) + '</div>' +
-            '<div style="font-weight:600;font-size:12px;">WhatsApp</div></button>' +
-          '<button class="btn btn-outline" id="poSms" style="flex-direction:column;height:auto;padding:12px 4px;gap:4px;">' +
-            '<div style="color:var(--brand-600);">' + PCD.icon('phone', 22) + '</div>' +
-            '<div style="font-weight:600;font-size:12px;">SMS</div></button>' +
-          '<button class="btn btn-outline" id="poEmail" style="flex-direction:column;height:auto;padding:12px 4px;gap:4px;">' +
-            '<div style="color:#EA4335;">' + PCD.icon('mail', 22) + '</div>' +
-            '<div style="font-weight:600;font-size:12px;">Email</div></button>' +
-          '<button class="btn btn-outline" id="poCopy" style="flex-direction:column;height:auto;padding:12px 4px;gap:4px;">' +
-            '<div style="color:var(--text-2);">' + PCD.icon('copy', 22) + '</div>' +
-            '<div style="font-weight:600;font-size:12px;">Copy</div></button>' +
-        '</div>';
-      const closeShBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('btn_close') });
-      const shFooter = PCD.el('div', { style: { display: 'flex', width: '100%' } });
-      shFooter.appendChild(closeShBtn);
-      const sm = PCD.modal.open({ title: PCD.i18n.t('modal_share_po_title'), body: shareBody, footer: shFooter, size: 'md', closable: true });
-      function getMsg() { return PCD.$('#poMsg', shareBody).value; }
-      closeShBtn.addEventListener('click', function () { sm.close(); });
-      PCD.$('#poWa', shareBody).addEventListener('click', function () {
-        window.open('https://wa.me/?text=' + encodeURIComponent(getMsg()), '_blank');
-        sm.close();
-      });
-      PCD.$('#poSms', shareBody).addEventListener('click', function () {
-        window.location.href = 'sms:?&body=' + encodeURIComponent(getMsg());
-        sm.close();
-      });
-      PCD.$('#poEmail', shareBody).addEventListener('click', function () {
-        window.location.href = 'mailto:?subject=' + encodeURIComponent('Purchase Order') + '&body=' + encodeURIComponent(getMsg());
-        sm.close();
-      });
-      PCD.$('#poCopy', shareBody).addEventListener('click', function () {
-        if (navigator.clipboard) {
-          navigator.clipboard.writeText(getMsg()).then(function () {
-            PCD.toast.success(PCD.i18n.t('toast_copied'));
-            sm.close();
-          });
-        }
-      });
-    });
-
     receivedBtn.addEventListener('click', function () {
-      const d = collectSelected();
-      const supKeys = Object.keys(d.selectedBySupplier);
-      if (supKeys.length === 0) { PCD.toast.warning(PCD.i18n.t('toast_no_items_selected')); return; }
+      const grouped = collectAll();
+      const keys = Object.keys(grouped);
+      if (keys.length === 0) { PCD.toast.warning(t('toast_no_items_selected')); return; }
       const additions = {};
       const items = [];
-      supKeys.forEach(function (sup) {
-        d.selectedBySupplier[sup].forEach(function (it) {
+      keys.forEach(function (sup) {
+        grouped[sup].forEach(function (it) {
           additions[it.ing.id] = (additions[it.ing.id] || 0) + it.qty;
           items.push(it);
         });
       });
       confirmStockChange({
-        title: PCD.i18n.t('inv_mark_received'),
-        verb: PCD.i18n.t('inv_mark_received'),
+        title: t('inv_mark_received'),
+        verb: t('inv_mark_received'),
         kind: 'add',
         items: items.map(function (it) { return { name: it.ing.name, amount: it.qty, unit: it.ing.unit || '' }; }),
       }).then(function (ok) {
         if (!ok) return;
         const report = (PCD.tools.inventory && PCD.tools.inventory.applyStockAdditions)
           ? PCD.tools.inventory.applyStockAdditions(additions) : [];
-        PCD.toast.success((PCD.i18n.t('inv_receive_done') || '{n} item(s) added to stock').replace('{n}', report.length));
+        PCD.toast.success((t('inv_receive_done') || '{n} item(s) added to stock').replace('{n}', report.length));
         m.close();
-        setTimeout(function () {
-          const v = PCD.$('#view');
-          if (PCD.router.currentView() === 'inventory') render(v);
-        }, 200);
+        setTimeout(function () { const v = PCD.$('#view'); if (PCD.router.currentView() === 'inventory') render(v); }, 200);
       });
     });
   }
