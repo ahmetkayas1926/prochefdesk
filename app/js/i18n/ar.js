@@ -3409,3 +3409,17 @@ window.PCD.i18n.register('ar', {
   event_past: "السابقة",
   event_filter_none: "لا فعاليات بهذه الحالة.",
 });
+
+// v2.44.93 — Events: عرض التقويم + التوقيع الإلكتروني.
+window.PCD.i18n.register('ar', {
+  event_view_list: "قائمة",
+  event_view_calendar: "تقويم",
+  event_today: "اليوم",
+  event_signoff: "اعتماد العميل",
+  event_signoff_hint: "التقط توقيع العميل على جهاز لوحي — يُدرج في العرض.",
+  event_sign_capture: "التقاط التوقيع",
+  event_sign_clear: "مسح التوقيع",
+  event_signed_by: "وقّع بواسطة",
+  event_sign_here: "وقّع أدناه",
+  event_sign_empty: "يرجى التوقيع أولاً.",
+});

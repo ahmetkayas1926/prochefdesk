@@ -3409,3 +3409,17 @@ window.PCD.i18n.register('es', {
   event_past: "Pasados",
   event_filter_none: "No hay eventos en este estado.",
 });
+
+// v2.44.93 — Events: vista de calendario + firma electrónica.
+window.PCD.i18n.register('es', {
+  event_view_list: "Lista",
+  event_view_calendar: "Calendario",
+  event_today: "Hoy",
+  event_signoff: "Firma del cliente",
+  event_signoff_hint: "Captura la firma del cliente en una tableta — se incrusta en la propuesta.",
+  event_sign_capture: "Capturar firma",
+  event_sign_clear: "Borrar firma",
+  event_signed_by: "Firmado por",
+  event_sign_here: "Firma abajo",
+  event_sign_empty: "Firma primero, por favor.",
+});

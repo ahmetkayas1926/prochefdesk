@@ -3409,3 +3409,17 @@ window.PCD.i18n.register('de', {
   event_past: "Vergangen",
   event_filter_none: "Keine Veranstaltungen in diesem Status.",
 });
+
+// v2.44.93 — Events: Kalenderansicht + E-Signatur.
+window.PCD.i18n.register('de', {
+  event_view_list: "Liste",
+  event_view_calendar: "Kalender",
+  event_today: "Heute",
+  event_signoff: "Kundenfreigabe",
+  event_signoff_hint: "Erfasse die Kundenunterschrift auf einem Tablet — sie wird ins Angebot eingebettet.",
+  event_sign_capture: "Unterschrift erfassen",
+  event_sign_clear: "Unterschrift löschen",
+  event_signed_by: "Unterschrieben von",
+  event_sign_here: "Unten unterschreiben",
+  event_sign_empty: "Bitte zuerst unterschreiben.",
+});

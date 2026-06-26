@@ -3409,3 +3409,17 @@ window.PCD.i18n.register('fr', {
   event_past: "Passés",
   event_filter_none: "Aucun événement dans ce statut.",
 });
+
+// v2.44.93 — Events : vue calendrier + signature électronique.
+window.PCD.i18n.register('fr', {
+  event_view_list: "Liste",
+  event_view_calendar: "Calendrier",
+  event_today: "Aujourd'hui",
+  event_signoff: "Validation client",
+  event_signoff_hint: "Capturez la signature du client sur une tablette — elle s'intègre à la proposition.",
+  event_sign_capture: "Capturer la signature",
+  event_sign_clear: "Effacer la signature",
+  event_signed_by: "Signé par",
+  event_sign_here: "Signez ci-dessous",
+  event_sign_empty: "Veuillez d'abord signer.",
+});

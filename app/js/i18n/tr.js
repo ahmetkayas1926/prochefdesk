@@ -3566,3 +3566,17 @@ window.PCD.i18n.register('tr', {
   event_past: "Geçmiş",
   event_filter_none: "Bu durumda etkinlik yok.",
 });
+
+// v2.44.93 — Events: takvim görünümü + e-imza.
+window.PCD.i18n.register('tr', {
+  event_view_list: "Liste",
+  event_view_calendar: "Takvim",
+  event_today: "Bugün",
+  event_signoff: "Müşteri onayı",
+  event_signoff_hint: "Müşteri imzasını tablette al — teklife gömülür.",
+  event_sign_capture: "İmza al",
+  event_sign_clear: "İmzayı temizle",
+  event_signed_by: "İmzalayan",
+  event_sign_here: "Aşağıya imzala",
+  event_sign_empty: "Önce imzala.",
+});

@@ -3514,3 +3514,17 @@ window.PCD.i18n.register('en', {
   event_past: "Past",
   event_filter_none: "No events in this status.",
 });
+
+// v2.44.93 — Events: calendar view + e-signature.
+window.PCD.i18n.register('en', {
+  event_view_list: "List",
+  event_view_calendar: "Calendar",
+  event_today: "Today",
+  event_signoff: "Client sign-off",
+  event_signoff_hint: "Capture the client signature on a tablet — it embeds in the proposal.",
+  event_sign_capture: "Capture signature",
+  event_sign_clear: "Clear signature",
+  event_signed_by: "Signed by",
+  event_sign_here: "Sign below",
+  event_sign_empty: "Please sign first.",
+});

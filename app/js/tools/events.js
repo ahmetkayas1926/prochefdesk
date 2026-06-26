@@ -20,6 +20,8 @@
   // v2.44.91 — satış hattı: draft(talep) → tentative(teklif/opsiyon) → confirmed → done → cancelled.
   const STATUSES = ['draft', 'tentative', 'confirmed', 'done', 'cancelled'];
   let _evFilter = 'all';   // liste durum filtresi (oturum içi)
+  let _evView = 'list';    // v2.44.93 — liste / takvim görünümü
+  let _calCursor = null;   // takvimde gösterilen ay (Date); null = bu ay
 
   // v2.44.87 — Faz 2: diyet/alerjen. Client'tan gelen kişi-bazlı diyet sayıları (manuel)
   // + fonksiyon menüsündeki alerjenlerin otomatik özeti (tariflerdeki manuel etiketlerden,
@@ -85,6 +87,49 @@
     }[s] || 'var(--text-3)';
   }
 
+  // v2.44.93 — Aylık takvim görünümü. Etkinlikleri (mirror'lanmış) date'lerine göre ay
+  // ızgarasına yerleştirir; durum rengiyle çip, tıklayınca editör. Pazartesi-başlangıç.
+  function renderCalendar(container, events) {
+    const t = PCD.i18n.t;
+    const locale = (PCD.i18n && PCD.i18n.currentLocale) || 'en';
+    const cur = _calCursor || new Date();
+    const year = cur.getFullYear(), month = cur.getMonth();
+    const monthName = new Date(year, month, 1).toLocaleDateString(locale, { month: 'long', year: 'numeric' });
+    const byDate = {};
+    events.forEach(function (e) { if (e.date) { (byDate[e.date] = byDate[e.date] || []).push(e); } });
+    let startDow = new Date(year, month, 1).getDay();   // 0=Paz..6=Cmt
+    startDow = (startDow + 6) % 7;                        // Pazartesi-başlangıç: 0=Pzt
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const todayStr = (function () { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); })();
+    const weekdays = [];
+    for (let i = 0; i < 7; i++) { weekdays.push(new Date(2024, 0, 1 + i).toLocaleDateString(locale, { weekday: 'short' })); }  // 2024-01-01 = Pzt
+
+    let html = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">' +
+      '<button class="btn btn-outline btn-sm" data-calnav="-1" style="min-width:38px;">‹</button>' +
+      '<div style="font-weight:800;font-size:16px;">' + PCD.escapeHtml(monthName) + '</div>' +
+      '<div style="display:flex;gap:6px;"><button class="btn btn-outline btn-sm" data-calnav="0">' + PCD.escapeHtml(t('event_today') || 'Today') + '</button><button class="btn btn-outline btn-sm" data-calnav="1" style="min-width:38px;">›</button></div>' +
+    '</div>';
+    html += '<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;">';
+    weekdays.forEach(function (w) { html += '<div style="text-align:center;font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;padding-bottom:2px;">' + PCD.escapeHtml(w) + '</div>'; });
+    for (let i = 0; i < startDow; i++) { html += '<div></div>'; }
+    for (let d = 1; d <= daysInMonth; d++) {
+      const ds = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+      const evs = byDate[ds] || [];
+      const isToday = ds === todayStr;
+      let cell = '<div style="min-height:84px;border:1px solid var(--border);border-radius:8px;padding:5px 6px;background:' + (isToday ? 'var(--brand-50)' : 'var(--surface)') + ';overflow:hidden;">';
+      cell += '<div style="font-size:12px;font-weight:' + (isToday ? '800' : '600') + ';color:' + (isToday ? 'var(--brand-700)' : 'var(--text-2)') + ';margin-bottom:3px;">' + d + '</div>';
+      evs.slice(0, 3).forEach(function (e) {
+        const col = statusColor(e.status || 'draft');
+        cell += '<div data-cal-eid="' + e.id + '" title="' + PCD.escapeHtml(e.name || '') + '" style="cursor:pointer;font-size:11px;line-height:1.4;margin-bottom:2px;padding:1px 5px;border-radius:4px;background:' + col + '1f;color:' + col + ';font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (e.time ? PCD.escapeHtml(e.time) + ' ' : '') + PCD.escapeHtml(e.name || t('untitled')) + '</div>';
+      });
+      if (evs.length > 3) cell += '<div style="font-size:10px;color:var(--text-3);">+' + (evs.length - 3) + '</div>';
+      cell += '</div>';
+      html += cell;
+    }
+    html += '</div>';
+    container.innerHTML = html;
+  }
+
   function render(view) {
     const t = PCD.i18n.t;
     const allEvents = PCD.store.listTable('events').slice().sort(function (a, b) {
@@ -112,6 +157,10 @@
           <div class="page-subtitle">${t('events_subtitle')}</div>
         </div>
         <div class="page-header-actions">
+          ${allEvents.length ? '<div style="display:inline-flex;gap:3px;background:var(--surface-2);padding:3px;border-radius:9px;margin-right:6px;">' +
+            '<button class="btn btn-sm ' + (_evView === 'list' ? 'btn-primary' : 'btn-ghost') + '" data-evview="list" style="min-height:32px;">' + PCD.icon('list', 14) + ' ' + PCD.escapeHtml(t('event_view_list') || 'List') + '</button>' +
+            '<button class="btn btn-sm ' + (_evView === 'calendar' ? 'btn-primary' : 'btn-ghost') + '" data-evview="calendar" style="min-height:32px;">' + PCD.icon('calendar', 14) + ' ' + PCD.escapeHtml(t('event_view_calendar') || 'Calendar') + '</button>' +
+          '</div>' : ''}
           <button class="btn btn-primary" id="newEventBtn">+ ${t('new_event')}</button>
         </div>
       </div>
@@ -137,6 +186,9 @@
       PCD.store.listRecipes().forEach(function (r) { recipeMap[r.id] = r; });
 
       const events = allEvents.filter(function (e) { return _evFilter === 'all' || (e.status || 'draft') === _evFilter; });
+      if (_evView === 'calendar') {
+        renderCalendar(listEl, events);
+      } else {
       const today = (function () { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); })();
       const upcoming = events.filter(function (e) { return !e.date || e.date >= today; });
       const past = events.filter(function (e) { return e.date && e.date < today; });
@@ -194,9 +246,13 @@
         cont.innerHTML = '<div class="text-muted" style="padding:24px;text-align:center;">' + PCD.escapeHtml(t('event_filter_none') || 'No events in this status.') + '</div>';
       }
       listEl.appendChild(cont);
+      }
     }
 
     PCD.on(view, 'click', '[data-evf]', function () { _evFilter = this.getAttribute('data-evf'); render(view); });
+    PCD.on(view, 'click', '[data-evview]', function () { _evView = this.getAttribute('data-evview'); render(view); });
+    PCD.on(view, 'click', '[data-calnav]', function () { const dir = parseInt(this.getAttribute('data-calnav'), 10); const cur = _calCursor || new Date(); _calCursor = dir === 0 ? new Date() : new Date(cur.getFullYear(), cur.getMonth() + dir, 1); render(view); });
+    PCD.on(view, 'click', '[data-cal-eid]', function () { openEditor(this.getAttribute('data-cal-eid')); });
     PCD.$('#newEventBtn', view).addEventListener('click', function () { openEditor(); });
     PCD.on(listEl, 'click', '[data-eid]', function (e) {
       if (e.target.closest('button')) return;  // any quick-access action button
@@ -360,6 +416,55 @@
     return { deductions: need, skipped: Object.keys(skippedSet) };
   }
 
+  // v2.44.93 — İmza yakalama modalı (client-side canvas; fare + dokunma). data.signature =
+  // { dataUrl, signedBy, signedAt } olarak kaydeder; teklif çıktısına gömülür.
+  function openSignaturePad(data, onDone) {
+    const t = PCD.i18n.t;
+    const body = PCD.el('div');
+    body.innerHTML =
+      '<div class="field"><label class="field-label">' + PCD.escapeHtml(t('event_signed_by') || 'Signed by') + '</label>' +
+      '<input type="text" class="input" id="sigName" value="' + PCD.escapeHtml((data.signature && data.signature.signedBy) || data.contactName || data.client || '') + '" placeholder="' + PCD.escapeHtml(t('event_contact_name') || 'Name') + '"></div>' +
+      '<div class="field-label" style="margin-top:10px;">' + PCD.escapeHtml(t('event_sign_here') || 'Sign below') + '</div>' +
+      '<canvas id="sigCanvas" width="520" height="200" style="width:100%;height:200px;border:2px dashed var(--border-strong);border-radius:10px;background:#fff;touch-action:none;cursor:crosshair;display:block;"></canvas>';
+    const clearBtn = PCD.el('button', { class: 'btn btn-outline', text: t('event_sign_clear') || 'Clear' });
+    const cancelBtn = PCD.el('button', { class: 'btn btn-ghost', text: t('cancel') || 'Cancel' });
+    const saveBtn = PCD.el('button', { class: 'btn btn-primary', text: t('save') || 'Save' });
+    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', alignItems: 'center' } });
+    footer.appendChild(clearBtn);
+    footer.appendChild(PCD.el('div', { style: { flex: '1' } }));
+    footer.appendChild(cancelBtn);
+    footer.appendChild(saveBtn);
+    const m = PCD.modal.open({ title: t('event_signoff') || 'Client sign-off', body: body, footer: footer, size: 'md', closable: true });
+    const canvas = PCD.$('#sigCanvas', body);
+    const ctx = canvas.getContext('2d');
+    ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#1c1917';
+    let drawing = false, hasInk = false, lastX = 0, lastY = 0;
+    const pos = function (ev) {
+      const r = canvas.getBoundingClientRect();
+      const cx = (ev.touches && ev.touches[0] ? ev.touches[0].clientX : ev.clientX) - r.left;
+      const cy = (ev.touches && ev.touches[0] ? ev.touches[0].clientY : ev.clientY) - r.top;
+      return { x: cx * (canvas.width / r.width), y: cy * (canvas.height / r.height) };
+    };
+    const start = function (ev) { ev.preventDefault(); drawing = true; const p = pos(ev); lastX = p.x; lastY = p.y; };
+    const move = function (ev) { if (!drawing) return; ev.preventDefault(); const p = pos(ev); ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(p.x, p.y); ctx.stroke(); lastX = p.x; lastY = p.y; hasInk = true; };
+    const end = function () { drawing = false; };
+    canvas.addEventListener('mousedown', start);
+    canvas.addEventListener('mousemove', move);
+    canvas.addEventListener('mouseup', end);
+    canvas.addEventListener('mouseleave', end);
+    canvas.addEventListener('touchstart', start, { passive: false });
+    canvas.addEventListener('touchmove', move, { passive: false });
+    canvas.addEventListener('touchend', end);
+    clearBtn.addEventListener('click', function () { ctx.clearRect(0, 0, canvas.width, canvas.height); hasInk = false; });
+    cancelBtn.addEventListener('click', function () { m.close(); });
+    saveBtn.addEventListener('click', function () {
+      if (!hasInk) { PCD.toast.warning(t('event_sign_empty') || 'Please sign first.'); return; }
+      data.signature = { dataUrl: canvas.toDataURL('image/png'), signedBy: (PCD.$('#sigName', body).value || '').trim(), signedAt: new Date().toISOString() };
+      m.close();
+      if (onDone) onDone();
+    });
+  }
+
   function openEditor(eid) {
     const t = PCD.i18n.t;
     const existing = eid ? PCD.store.getFromTable('events', eid) : null;
@@ -490,6 +595,11 @@
           <div id="taskList"></div>
           <button type="button" class="btn btn-outline btn-sm" id="addTaskBtn" style="margin-top:8px;">+ ${PCD.escapeHtml(t('event_add_task') || 'Add task')}</button>
         </details>
+
+        <div style="margin:0 0 14px;border:1px solid var(--border);border-radius:10px;padding:10px 12px;">
+          <div style="font-weight:700;font-size:13px;color:var(--brand-700);margin-bottom:8px;">✍ ${PCD.escapeHtml(t('event_signoff') || 'Client sign-off')}</div>
+          <div id="signoffArea"></div>
+        </div>
 
         <div class="stat mb-3" style="background:var(--brand-50);border-color:var(--brand-300);">
           <div class="flex items-center justify-between" style="flex-wrap:wrap;gap:8px;">
@@ -725,6 +835,21 @@
         });
       }
 
+      // v2.44.93 — Sign-off: yakalanmış imza varsa göster, yoksa "yakala" butonu.
+      const signoffEl = PCD.$('#signoffArea', body);
+      if (signoffEl) {
+        if (data.signature && data.signature.dataUrl) {
+          signoffEl.innerHTML =
+            '<img src="' + data.signature.dataUrl + '" alt="" style="max-height:80px;max-width:100%;border:1px solid var(--border);border-radius:8px;background:#fff;padding:4px;display:block;">' +
+            '<div class="text-muted text-sm" style="margin-top:6px;">' + PCD.escapeHtml(t('event_signed_by') || 'Signed by') + ': <strong>' + PCD.escapeHtml(data.signature.signedBy || '—') + '</strong>' + (data.signature.signedAt ? ' · ' + PCD.escapeHtml(PCD.fmtDate(data.signature.signedAt)) : '') + '</div>' +
+            '<button type="button" class="btn btn-outline btn-sm" id="sigClearBtn" style="margin-top:8px;">' + PCD.escapeHtml(t('event_sign_clear') || 'Clear signature') + '</button>';
+        } else {
+          signoffEl.innerHTML =
+            '<div class="text-muted text-sm" style="margin-bottom:8px;">' + PCD.escapeHtml(t('event_signoff_hint') || 'Capture the client signature on a tablet — it embeds in the proposal.') + '</div>' +
+            '<button type="button" class="btn btn-outline btn-sm" id="sigCaptureBtn">✍ ' + PCD.escapeHtml(t('event_sign_capture') || 'Capture signature') + '</button>';
+        }
+      }
+
       wire();
     }
 
@@ -788,6 +913,11 @@
       PCD.on(body, 'input', '.task-due', function () { const x = taskOf(this); if (x) x.due = this.value; });
       PCD.on(body, 'change', '.task-done', function () { const x = taskOf(this); if (x) { x.done = this.checked; render(); } });
       PCD.on(body, 'click', '.task-rm', function () { const i = parseInt(this.getAttribute('data-task'), 10); if (data.tasks) { data.tasks.splice(i, 1); render(); } });
+
+      const sigCap = $('sigCaptureBtn');
+      if (sigCap) sigCap.addEventListener('click', function () { openSignaturePad(data, render); });
+      const sigClr = $('sigClearBtn');
+      if (sigClr) sigClr.addEventListener('click', function () { delete data.signature; render(); });
 
       $('addFnBtn').addEventListener('click', function () {
         const last = data.functions[data.functions.length - 1] || {};
@@ -1382,7 +1512,11 @@
       payHtml +
       (event.notes ? '<div class="pr-h2">' + PCD.escapeHtml(t('event_terms') || 'Terms & notes') + '</div><div class="pr-terms">' + PCD.escapeHtml(event.notes) + '</div>' : '') +
       '<div class="pr-sign">' +
-        '<div class="pr-sig"><div class="pr-sig-line"></div>' + PCD.escapeHtml(t('event_sign_client') || 'Client signature & date') + '</div>' +
+        '<div class="pr-sig">' +
+          ((event.signature && event.signature.dataUrl)
+            ? '<img src="' + event.signature.dataUrl + '" style="max-height:54px;display:block;margin-bottom:2px;"><div class="pr-sig-line" style="margin-bottom:6px;"></div>' + PCD.escapeHtml((event.signature.signedBy || '') + (event.signature.signedAt ? ' · ' + fmtD(event.signature.signedAt) : ''))
+            : '<div class="pr-sig-line"></div>' + PCD.escapeHtml(t('event_sign_client') || 'Client signature & date')) +
+        '</div>' +
         '<div class="pr-sig"><div class="pr-sig-line"></div>' + PCD.escapeHtml(t('event_sign_provider') || 'Caterer signature & date') + '</div>' +
       '</div>';
     return html;

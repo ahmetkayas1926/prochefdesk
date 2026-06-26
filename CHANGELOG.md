@@ -4,6 +4,12 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.93 — Events: takvim görünümü + e-imza · 2026-06-26
+- **YENİ — Aylık takvim görünümü.** Events başlığında **Liste / Takvim** geçişi. Takvim: Pazartesi-başlangıç ay ızgarası · etkinlik çipleri (saat + ad, durum rengiyle) · bugün vurgulu · ‹ › ay gezinme + "Bugün" · çipe tıkla → editör açılır. Durum filtresi çipleri takvime de uygulanır. (Araştırmadaki "haftalık görünüm yetersiz" şikayetini kapatır.) Tam frontend, backend yok.
+- **YENİ — E-imza (client-side).** Editörde "Müşteri onayı" bölümü → **İmza al**: canvas imza pad'i (fare + dokunma/tablet) + imzalayan adı + temizle. Kaydedince `signature` (PNG data-URL + imzalayan + tarih) etkinliğe yazılır, editörde gösterilir ve **müşteri teklifi çıktısına gömülür** (boş imza satırı yerine gerçek imza + ad + tarih). Toplantıda tablette onay → CaterCamp/Tripleseat'in "online approve" karşılığının yerel/offline versiyonu.
+- **Kat planı (floor-plan) bilerek YAPILMADI:** görsel sürükle-bırak CAD editörü = devasa efor + front-of-house odaklı (mutfak ICP'sine en uzak özellik); fonksiyon "salon" + notlar kurulum referansını zaten veriyor. Yanlış yatırım — atlandı.
+- Preview'da doğrulandı: takvim (June 2026 · Pzt-Paz · "19:00 Degustation Dinner" çipi · ay nav · çip→editör) · imza (çizim→PNG→"Signed by: Jane Client · Jun 26") · 0 console hatası. 10 yeni i18n anahtarı 6 dile.
+
 ## v2.44.92 — FIX: par=0 malzeme "untracked" sayılır (yanlış kırmızı/sipariş) · 2026-06-26
 - **Bug:** Bir malzemenin **par seviyesi 0** yazılınca (girilmemiş `null` değil), `computeStatus` "takip ediliyor" dalına girip stok 0'da **'out' (kırmızı)** döndürüyordu → kullanıcı par+min'i sıfırlasa bile kalem kırmızı kalıyor, "Generate Order" rozetinde ve "Need reorder" listesinde sayılıyordu.
 - **Kök neden:** `if (invRow.parLevel == null)` yalnız `null`'ı untracked sayıyordu; elle yazılan `0` sayı olduğu için tracked dalına düşüp `if (stock <= 0) return 'out'` tetikliyordu.
