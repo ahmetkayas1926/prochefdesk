@@ -1877,6 +1877,16 @@
         '<h1>' + PCD.escapeHtml(buffet.name || (t('buffet_untitled') || 'Buffet')) + ' — ' + PCD.escapeHtml(t('buffet_print_prep') || 'Prep List') + '</h1>' +
         '<div class="meta">' + (buffet.coverCount || 0) + ' ' + PCD.escapeHtml(t('buffet_covers') || 'covers') + ' · ' + dateStr + ' · ' + PCD.escapeHtml(t('buffet_refill_label') || 'Refill') + ' ' + refillX + '×</div>' +
       '</div>' +
+      (function () {
+        const pf = prepFactorOf(buffet);
+        const dur = Number(buffet.durationHours) || 0;
+        const batches = dur > 0 ? Math.max(1, Math.ceil(dur / 0.75)) : 0;
+        const il = [];
+        if (pf < 1) il.push('🔮 ' + L('buffet_forecast_line', 'Prepping for {p} of {c} covers — make the rest fresh for walk-ins.').replace('{p}', Math.round((Number(buffet.coverCount) || 0) * pf)).replace('{c}', buffet.coverCount || 0));
+        if (batches > 0) il.push('🔁 ' + L('buffet_batch_line', '{n} smaller batches over {h}h → fresher line + shorter holding (HACCP).').replace('{n}', batches).replace('{h}', dur));
+        if (!il.length) return '';
+        return '<div style="margin:0 0 12px;padding:8px 12px;background:#f0f7f3;border-left:3px solid #16433a;border-radius:5px;font-size:9.5pt;line-height:1.8;color:#3f4a45;">' + il.map(function (l) { return PCD.escapeHtml(l); }).join('<br>') + '</div>';
+      })() +
       '<table>' +
         '<thead><tr><th>' + (t('buffet_print_item') || 'Item') + '</th><th style="text-align:right;">' + (t('buffet_print_prep_amt') || 'Prep') + '</th><th style="text-align:center;width:40px;">' + (t('buffet_print_done') || 'Done') + '</th></tr></thead>' +
         '<tbody>' + rowsHtml + '</tbody>' +
@@ -1969,8 +1979,17 @@
         '<div class="stat"><div class="lbl">' + PCD.escapeHtml(t('buffet_stat_food_cost_pct') || 'Food cost %') + '</div><div class="val ' + totals.status + '">' + totals.foodCostPct.toFixed(1) + '%</div></div>' +
         '<div class="stat"><div class="lbl">' + PCD.escapeHtml(t('buffet_stat_per_cover') || 'Per cover') + '</div><div class="val">' + PCD.fmtMoney(totals.perGuestCost) + '</div></div>' +
         '<div class="stat"><div class="lbl">' + PCD.escapeHtml(t('buffet_stat_profit') || 'Profit / cover') + '</div><div class="val ' + (totals.profitPerCover > 0 ? 'good' : 'bad') + '">' + PCD.fmtMoney(totals.profitPerCover) + '</div></div>' +
-        '<div class="stat"><div class="lbl">' + PCD.escapeHtml(t('buffet_stat_waste') || 'Expected waste') + '</div><div class="val">' + PCD.fmtMoney(totals.totalExpectedWaste) + '</div></div>' +
+        '<div class="stat"><div class="lbl">' + PCD.escapeHtml(t('buffet_stat_waste') || 'Expected waste') + '</div><div class="val ' + totals.wasteStatus + '">' + PCD.fmtMoney(totals.totalExpectedWaste) + ' <span style="font-size:10pt;">· ' + totals.totalWastePct.toFixed(0) + '%</span></div></div>' +
       '</div>' +
+      (function () {
+        const dur = Number(buffet.durationHours) || 0;
+        const batches = dur > 0 ? Math.max(1, Math.ceil(dur / 0.75)) : 0;
+        const il = [];
+        if (totals.prepFactor < 1) il.push('🔮 ' + L('buffet_forecast_line', 'Prepping for {p} of {c} covers — make the rest fresh for walk-ins.').replace('{p}', totals.prepCovers).replace('{c}', totals.coverCount));
+        il.push('♻️ ' + L('buffet_waste_bench', 'Waste {w}% — buffet benchmark 15–25% ({s}).').replace('{w}', totals.totalWastePct.toFixed(0)).replace('{s}', statusLabel(totals.wasteStatus)));
+        if (batches > 0) il.push('🔁 ' + L('buffet_batch_line', '{n} smaller batches over {h}h → fresher line + shorter holding (HACCP).').replace('{n}', batches).replace('{h}', dur));
+        return '<div style="margin:0 0 14px;padding:9px 13px;background:#f0f7f3;border-left:3px solid #16433a;border-radius:5px;font-size:9.5pt;line-height:1.8;color:#3f4a45;">' + il.map(function (l) { return PCD.escapeHtml(l); }).join('<br>') + '</div>';
+      })() +
       '<table>' +
         '<thead><tr>' +
           '<th>' + PCD.escapeHtml(t('buffet_print_item') || 'Item') + '</th>' +
@@ -2128,6 +2147,10 @@
     aoa.push([
       { v: t('buffet_stat_profit') || 'Profit / cover', s: labelStyle }, { v: totals.profitPerCover, s: moneyStyle },
       { v: t('buffet_stat_waste') || 'Expected waste', s: labelStyle }, { v: totals.totalExpectedWaste, s: moneyStyle },
+    ]);
+    aoa.push([
+      { v: (t('buffet_stat_waste') || 'Waste') + ' %', s: labelStyle }, { v: totals.totalWastePct / 100, s: pctStyle },
+      { v: t('buffet_forecast_label') || 'Forecast prep %', s: labelStyle }, { v: totals.prepFactor, s: pctStyle },
     ]);
     aoa.push([]);
     aoa.push([

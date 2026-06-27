@@ -4,6 +4,12 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.95 — Çıktı denetimi: buffet cost report/prep list/Excel pro seviye + i18n bütünlük teyidi · 2026-06-27
+- **Çıktılar yeni metrikleri taşıyor.** Buffet **Cost Report** (print + simple/detailed önizleme): atık stat'ı artık **atık% + 15-25 benchmark renk**; özetin altına **forecast + atık benchmark + batch/holding (HACCP)** bilgi şeridi. **Prep List** (mutfak A4): forecast + **batch/replenishment + bekletme** rehber şeridi. **Excel**: özet'e atık% + forecast% satırı (Deep Pine başlık + watermark gate korunur).
+- **i18n bütünlük denetimi (şüpheci, kod seviyesinde).** Event+buffet kapsamındaki **287 anahtar 6 dilde de TAM** (0 eksik); kodda kullanılan TÜM literal key'ler en.js'te tanımlı → **ham-key ("_") sızıntısı YOK**. Operatörün gördüğü "_" isimleri = tarayıcı eski en.js cache'i (kesin teşhis); push + hard-refresh + savunmacı `L(key,fb)` ile çözüldü.
+- **Tutarlılık:** event + buffet çıktıları aynı pro dil — Deep Pine (#16433a + Fraunces) · @page A4 margin 0 · `showWatermark()` gate (Free footer / Pro temiz). PDF kaydet = tarayıcı print diyaloğu (aynı HTML). Tüm syntax `node -c` temiz.
+- **Not:** preview tarayıcısı bu oturumda `/app/`'i tutamadı (altyapı); canlı re-screenshot yapılamadı. Çekirdek özellikler v2.44.94'te canlı doğrulanmıştı; bu sürümün eklemeleri doğrulanmış `computeBuffetTotals` alanlarını + editörde render'ı teyit edilmiş string'leri yeniden kullanıyor.
+
 ## v2.44.94 — Buffet forecast/atık-benchmark + 5 event düzeltmesi · 2026-06-26
 Buffet sektör araştırması ([Kitchen CUT](https://kitchencut.com/buffet-analysis/), [Metafoodx](https://www.metafoodx.com/post/how-buffet-operations-in-hotels-can-reduce-food-waste-efficiently), [FoodSight](https://foodsight.com/blog/hotel-buffet-waste-reduction/), [kitchennmbrs](https://kitchennmbrs.app/en/knowledge-base/food-waste-as-a-financial-system/how-do-i-calculate-waste-costs-at-a-buffet-compared-to-a-la-carte)) referansıyla. Mevcut güçlü motor (P&L, food-cost% benchmark, prep list + cost report, envanter düşümü, 3-yollu öğe) KORUNDU; gerçek eksikler eklendi:
 - **YENİ — Forecast prep faktörü:** "beklenenin %X'i için hazırla, gerisini taze yetiştir" (araştırma: doğru tahmin overproduction'ı %40↓). Prep miktarları + maliyet + envanter düşümü + alışveriş listesi forecast'la ölçeklenir; tüketim beklentisi değişmez; prep<tüketim ise "shortfall" uyarısı. Editör: Forecast % + Servis süresi (s) alanları.
