@@ -3580,3 +3580,15 @@ window.PCD.i18n.register('tr', {
   event_sign_here: "Aşağıya imzala",
   event_sign_empty: "Önce imzala.",
 });
+
+// v2.44.94 — Buffet: tahmin hazırlık + atık benchmark + parti planı.
+window.PCD.i18n.register('tr', {
+  buffet_forecast_label: "Tahmin hazırlık %",
+  buffet_forecast_help: "Beklenen kişinin bu %'i kadar hazırla — gerisini yürüyüşe gelene taze yap. Düşük = az fazla-üretim/atık.",
+  buffet_duration_label: "Servis süresi (s)",
+  buffet_duration_help: "Parti/replenishment planı + bekletme süresi rehberini sürer.",
+  buffet_forecast_line: "{c} kişinin {p}'i için hazırlanıyor — gerisini taze yap.",
+  buffet_waste_bench: "Atık %{w} — buffet benchmark %15–25 ({s}).",
+  buffet_batch_line: "{h} saatte {n} küçük parti → taze hat + kısa bekletme (HACCP).",
+  buffet_shortfall_line: "{n} kalem beklenen tüketimin altında hazırlandı — serviste taze takviye et.",
+});

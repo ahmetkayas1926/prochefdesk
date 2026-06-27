@@ -3423,3 +3423,15 @@ window.PCD.i18n.register('ar', {
   event_sign_here: "وقّع أدناه",
   event_sign_empty: "يرجى التوقيع أولاً.",
 });
+
+// v2.44.94 — Buffet: التوقع + معيار الهدر + خطة الدفعات.
+window.PCD.i18n.register('ar', {
+  buffet_forecast_label: "نسبة التحضير المتوقعة %",
+  buffet_forecast_help: "حضّر هذه النسبة من الضيوف المتوقعين — واصنع الباقي طازجًا للقادمين. أقل = إنتاج زائد/هدر أقل.",
+  buffet_duration_label: "مدة الخدمة (س)",
+  buffet_duration_help: "يحدد خطة الدفعات/التزويد + إرشادات مدة الحفظ.",
+  buffet_forecast_line: "يتم التحضير لـ {p} من {c} ضيف — اصنع الباقي طازجًا.",
+  buffet_waste_bench: "الهدر {w}% — معيار البوفيه 15–25% ({s}).",
+  buffet_batch_line: "{n} دفعات أصغر خلال {h} ساعة → خط أطزج + حفظ أقصر (HACCP).",
+  buffet_shortfall_line: "{n} صنف حُضّر دون الاستهلاك المتوقع — جدّد طازجًا أثناء الخدمة.",
+});

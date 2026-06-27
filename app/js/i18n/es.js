@@ -3423,3 +3423,15 @@ window.PCD.i18n.register('es', {
   event_sign_here: "Firma abajo",
   event_sign_empty: "Firma primero, por favor.",
 });
+
+// v2.44.94 — Buffet: previsión + referencia de desperdicio + plan de lotes.
+window.PCD.i18n.register('es', {
+  buffet_forecast_label: "Previsión preparación %",
+  buffet_forecast_help: "Prepara este % de los comensales previstos — haz el resto fresco para los que lleguen. Menor = menos sobreproducción/desperdicio.",
+  buffet_duration_label: "Duración del servicio (h)",
+  buffet_duration_help: "Determina el plan de lotes/reposición + la guía de tiempo de retención.",
+  buffet_forecast_line: "Preparando para {p} de {c} comensales — haz el resto fresco.",
+  buffet_waste_bench: "Desperdicio {w}% — referencia bufé 15–25% ({s}).",
+  buffet_batch_line: "{n} lotes más pequeños en {h}h → línea más fresca + menor retención (HACCP).",
+  buffet_shortfall_line: "{n} artículo(s) preparados por debajo del consumo previsto — repón fresco durante el servicio.",
+});

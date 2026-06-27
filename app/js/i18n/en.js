@@ -3528,3 +3528,15 @@ window.PCD.i18n.register('en', {
   event_sign_here: "Sign below",
   event_sign_empty: "Please sign first.",
 });
+
+// v2.44.94 — Buffet: forecast prep + waste benchmark + batch plan.
+window.PCD.i18n.register('en', {
+  buffet_forecast_label: "Forecast prep %",
+  buffet_forecast_help: "Prep for this % of expected covers — make the rest fresh for walk-ins. Lower = less overproduction/waste.",
+  buffet_duration_label: "Service duration (h)",
+  buffet_duration_help: "Drives the batch/replenishment plan + holding-time guidance.",
+  buffet_forecast_line: "Prepping for {p} of {c} covers — make the rest fresh for walk-ins.",
+  buffet_waste_bench: "Waste {w}% — buffet benchmark 15–25% ({s}).",
+  buffet_batch_line: "{n} smaller batches over {h}h → fresher line + shorter holding (HACCP).",
+  buffet_shortfall_line: "{n} item(s) prepped below expected consumption — top up fresh during service.",
+});

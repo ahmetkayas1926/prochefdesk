@@ -3423,3 +3423,15 @@ window.PCD.i18n.register('de', {
   event_sign_here: "Unten unterschreiben",
   event_sign_empty: "Bitte zuerst unterschreiben.",
 });
+
+// v2.44.94 — Buffet: Prognose + Abfall-Benchmark + Chargenplan.
+window.PCD.i18n.register('de', {
+  buffet_forecast_label: "Prognose-Zubereitung %",
+  buffet_forecast_help: "Bereite diesen % der erwarteten Gäste vor — den Rest frisch für Laufkundschaft. Weniger = weniger Überproduktion/Abfall.",
+  buffet_duration_label: "Servicedauer (h)",
+  buffet_duration_help: "Bestimmt den Chargen-/Nachfüllplan + Hinweise zur Standzeit.",
+  buffet_forecast_line: "Vorbereitung für {p} von {c} Gästen — den Rest frisch machen.",
+  buffet_waste_bench: "Abfall {w}% — Buffet-Benchmark 15–25% ({s}).",
+  buffet_batch_line: "{n} kleinere Chargen über {h}h → frischere Linie + kürzere Standzeit (HACCP).",
+  buffet_shortfall_line: "{n} Artikel unter dem erwarteten Verbrauch vorbereitet — während des Service frisch nachfüllen.",
+});

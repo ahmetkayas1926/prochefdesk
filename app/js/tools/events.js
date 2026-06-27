@@ -22,6 +22,12 @@
   let _evFilter = 'all';   // liste durum filtresi (oturum içi)
   let _evView = 'list';    // v2.44.93 — liste / takvim görünümü
   let _calCursor = null;   // takvimde gösterilen ay (Date); null = bu ay
+  // v2.44.94 — Güvenli i18n: t(key) eksik key'de key'in KENDİSİNİ döndürür (truthy) →
+  // 't(k) || fb' deseni bozuk (stale cache'te ham key sızar). L(k, fb) eksikte fb verir.
+  function L(key, fb) {
+    const v = (PCD.i18n && PCD.i18n.t) ? PCD.i18n.t(key) : null;
+    return (v == null || v === key) ? (fb != null ? fb : key) : v;
+  }
 
   // v2.44.87 — Faz 2: diyet/alerjen. Client'tan gelen kişi-bazlı diyet sayıları (manuel)
   // + fonksiyon menüsündeki alerjenlerin otomatik özeti (tariflerdeki manuel etiketlerden,
@@ -107,7 +113,7 @@
     let html = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">' +
       '<button class="btn btn-outline btn-sm" data-calnav="-1" style="min-width:38px;">‹</button>' +
       '<div style="font-weight:800;font-size:16px;">' + PCD.escapeHtml(monthName) + '</div>' +
-      '<div style="display:flex;gap:6px;"><button class="btn btn-outline btn-sm" data-calnav="0">' + PCD.escapeHtml(t('event_today') || 'Today') + '</button><button class="btn btn-outline btn-sm" data-calnav="1" style="min-width:38px;">›</button></div>' +
+      '<div style="display:flex;gap:6px;"><button class="btn btn-outline btn-sm" data-calnav="0">' + PCD.escapeHtml(L('event_today', 'Today')) + '</button><button class="btn btn-outline btn-sm" data-calnav="1" style="min-width:38px;">›</button></div>' +
     '</div>';
     html += '<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;">';
     weekdays.forEach(function (w) { html += '<div style="text-align:center;font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;padding-bottom:2px;">' + PCD.escapeHtml(w) + '</div>'; });
@@ -145,7 +151,8 @@
     const counts = { all: allEvents.length };
     allEvents.forEach(function (e) { const s = e.status || 'draft'; counts[s] = (counts[s] || 0) + 1; });
     if (_evFilter !== 'all' && !counts[_evFilter]) _evFilter = 'all';
-    const chipDefs = [{ k: 'all', label: t('event_filter_all') || 'All' }].concat(STATUSES.filter(function (s) { return counts[s]; }).map(function (s) { return { k: s, label: t('event_status_' + s) }; }));
+    // v2.44.94 — FIX E: TÜM durumları göster (0 olsa bile), yalnız mevcutlar değil.
+    const chipDefs = [{ k: 'all', label: L('event_filter_all', 'All') }].concat(STATUSES.map(function (s) { return { k: s, label: t('event_status_' + s) }; }));
     const chipsHtml = chipDefs.map(function (c) {
       return '<button class="btn btn-sm ' + (_evFilter === c.k ? 'btn-primary' : 'btn-outline') + '" data-evf="' + c.k + '" style="min-height:30px;">' + PCD.escapeHtml(c.label) + ' (' + (counts[c.k] || 0) + ')</button>';
     }).join('');
@@ -158,8 +165,8 @@
         </div>
         <div class="page-header-actions">
           ${allEvents.length ? '<div style="display:inline-flex;gap:3px;background:var(--surface-2);padding:3px;border-radius:9px;margin-right:6px;">' +
-            '<button class="btn btn-sm ' + (_evView === 'list' ? 'btn-primary' : 'btn-ghost') + '" data-evview="list" style="min-height:32px;">' + PCD.icon('list', 14) + ' ' + PCD.escapeHtml(t('event_view_list') || 'List') + '</button>' +
-            '<button class="btn btn-sm ' + (_evView === 'calendar' ? 'btn-primary' : 'btn-ghost') + '" data-evview="calendar" style="min-height:32px;">' + PCD.icon('calendar', 14) + ' ' + PCD.escapeHtml(t('event_view_calendar') || 'Calendar') + '</button>' +
+            '<button class="btn btn-sm ' + (_evView === 'list' ? 'btn-primary' : 'btn-ghost') + '" data-evview="list" style="min-height:32px;">' + PCD.icon('list', 14) + ' ' + PCD.escapeHtml(L('event_view_list', 'List')) + '</button>' +
+            '<button class="btn btn-sm ' + (_evView === 'calendar' ? 'btn-primary' : 'btn-ghost') + '" data-evview="calendar" style="min-height:32px;">' + PCD.icon('calendar', 14) + ' ' + PCD.escapeHtml(L('event_view_calendar', 'Calendar')) + '</button>' +
           '</div>' : ''}
           <button class="btn btn-primary" id="newEventBtn">+ ${t('new_event')}</button>
         </div>
@@ -243,7 +250,7 @@
       section(t('event_upcoming') || 'Upcoming', upcoming);
       section(t('event_past') || 'Past', past);
       if (!cont.children.length) {
-        cont.innerHTML = '<div class="text-muted" style="padding:24px;text-align:center;">' + PCD.escapeHtml(t('event_filter_none') || 'No events in this status.') + '</div>';
+        cont.innerHTML = '<div class="text-muted" style="padding:24px;text-align:center;">' + PCD.escapeHtml(L('event_filter_none', 'No events in this status.')) + '</div>';
       }
       listEl.appendChild(cont);
       }
@@ -434,7 +441,7 @@
     footer.appendChild(PCD.el('div', { style: { flex: '1' } }));
     footer.appendChild(cancelBtn);
     footer.appendChild(saveBtn);
-    const m = PCD.modal.open({ title: t('event_signoff') || 'Client sign-off', body: body, footer: footer, size: 'md', closable: true });
+    const m = PCD.modal.open({ title: L('event_signoff', 'Client sign-off'), body: body, footer: footer, size: 'md', closable: true });
     const canvas = PCD.$('#sigCanvas', body);
     const ctx = canvas.getContext('2d');
     ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#1c1917';
@@ -496,7 +503,6 @@
     }
 
     const body = PCD.el('div');
-    let previewOpen = false; // v2.37 — canlı A4 önizleme açık/kapalı durumu (render'lar arası korunur)
 
     function render() {
       const ingMap = {}, recipeMap = {};
@@ -538,7 +544,7 @@
         <div class="section" style="margin:8px 0 14px;">
           <div class="section-header">
             <div class="section-title">${PCD.escapeHtml(t('event_functions') || 'Functions')} (${data.functions.length})</div>
-            <button class="btn btn-outline btn-sm" id="addFnBtn">+ ${PCD.escapeHtml(t('event_add_function') || 'Add function')}</button>
+            <button class="btn btn-outline btn-sm" id="addFnBtn">+ ${PCD.escapeHtml(L('event_add_function', 'Add function'))}</button>
           </div>
           <div class="text-muted text-sm" style="margin:-2px 0 10px;">${PCD.escapeHtml(t('event_functions_hint') || 'One event can have several functions in a day (reception · dinner · supper) — each with its own time, guests and menu.')}</div>
           <div id="fnList" class="flex flex-col gap-3"></div>
@@ -562,42 +568,42 @@
         </div>
 
         <details id="staffWrap" ${(data.staffing && data.staffing.length) ? 'open' : ''} style="margin:0 0 14px;border:1px solid var(--border);border-radius:10px;padding:10px 12px;">
-          <summary style="cursor:pointer;font-weight:700;font-size:13px;color:var(--brand-700);user-select:none;list-style:none;">🧑‍🍳 ${PCD.escapeHtml(t('event_staffing') || 'Staffing & labor')}${stats.laborCost > 0 ? ' · ' + PCD.fmtMoney(stats.laborCost) : ''}</summary>
+          <summary style="cursor:pointer;font-weight:700;font-size:13px;color:var(--brand-700);user-select:none;list-style:none;">🧑‍🍳 ${PCD.escapeHtml(L('event_staffing', 'Staffing & labor'))}${stats.laborCost > 0 ? ' · ' + PCD.fmtMoney(stats.laborCost) : ''}</summary>
           <div class="text-muted text-sm" style="margin:6px 0 8px;">${PCD.escapeHtml(t('event_staffing_hint') || 'Crew × hours × rate → true profit includes labor, not just food.')}</div>
           <div id="staffList"></div>
-          <button type="button" class="btn btn-outline btn-sm" id="addStaffBtn" style="margin-top:8px;">+ ${PCD.escapeHtml(t('event_add_role') || 'Add role')}</button>
+          <button type="button" class="btn btn-outline btn-sm" id="addStaffBtn" style="margin-top:8px;">+ ${PCD.escapeHtml(L('event_add_role', 'Add role'))}</button>
         </details>
 
         <details id="chargesWrap" ${(data.charges && data.charges.length) ? 'open' : ''} style="margin:0 0 14px;border:1px solid var(--border);border-radius:10px;padding:10px 12px;">
-          <summary style="cursor:pointer;font-weight:700;font-size:13px;color:var(--brand-700);user-select:none;list-style:none;">💰 ${PCD.escapeHtml(t('event_charges') || 'Charges & extras')}${stats.chargesRevenue > 0 ? ' · ' + PCD.fmtMoney(stats.chargesRevenue) : ''}</summary>
+          <summary style="cursor:pointer;font-weight:700;font-size:13px;color:var(--brand-700);user-select:none;list-style:none;">💰 ${PCD.escapeHtml(L('event_charges', 'Charges & extras'))}${stats.chargesRevenue > 0 ? ' · ' + PCD.fmtMoney(stats.chargesRevenue) : ''}</summary>
           <div class="text-muted text-sm" style="margin:6px 0 8px;">${PCD.escapeHtml(t('event_charges_hint') || 'Beverage, rentals, AV, other — your cost + what the client pays.')}</div>
           <div id="chargesList"></div>
-          <button type="button" class="btn btn-outline btn-sm" id="addChargeBtn" style="margin-top:8px;">+ ${PCD.escapeHtml(t('event_add_charge') || 'Add charge')}</button>
+          <button type="button" class="btn btn-outline btn-sm" id="addChargeBtn" style="margin-top:8px;">+ ${PCD.escapeHtml(L('event_add_charge', 'Add charge'))}</button>
         </details>
 
         <details id="payWrap" ${(data.payments && data.payments.length) ? 'open' : ''} style="margin:0 0 14px;border:1px solid var(--border);border-radius:10px;padding:10px 12px;">
-          <summary style="cursor:pointer;font-weight:700;font-size:13px;color:var(--brand-700);user-select:none;list-style:none;">🧾 ${PCD.escapeHtml(t('event_payments') || 'Payment schedule')}${stats.paidToDate > 0 ? ' · ' + PCD.fmtMoney(stats.paidToDate) + ' ' + PCD.escapeHtml(t('event_paid') || 'paid') : ''}</summary>
+          <summary style="cursor:pointer;font-weight:700;font-size:13px;color:var(--brand-700);user-select:none;list-style:none;">🧾 ${PCD.escapeHtml(L('event_payments', 'Payment schedule'))}${stats.paidToDate > 0 ? ' · ' + PCD.fmtMoney(stats.paidToDate) + ' ' + PCD.escapeHtml(t('event_paid') || 'paid') : ''}</summary>
           <div class="text-muted text-sm" style="margin:6px 0 8px;">${PCD.escapeHtml(t('event_payments_hint') || 'Deposit + installments with due dates. Tick when paid → balance updates.')}</div>
           <div id="payList"></div>
-          <button type="button" class="btn btn-outline btn-sm" id="addPayBtn" style="margin-top:8px;">+ ${PCD.escapeHtml(t('event_add_payment') || 'Add payment')}</button>
+          <button type="button" class="btn btn-outline btn-sm" id="addPayBtn" style="margin-top:8px;">+ ${PCD.escapeHtml(L('event_add_payment', 'Add payment'))}</button>
         </details>
 
         <details id="tlWrap" ${(data.timeline && data.timeline.length) ? 'open' : ''} style="margin:0 0 14px;border:1px solid var(--border);border-radius:10px;padding:10px 12px;">
-          <summary style="cursor:pointer;font-weight:700;font-size:13px;color:var(--brand-700);user-select:none;list-style:none;">🕐 ${PCD.escapeHtml(t('event_timeline') || 'Run-of-show')}${(data.timeline && data.timeline.length) ? ' · ' + data.timeline.length : ''}</summary>
+          <summary style="cursor:pointer;font-weight:700;font-size:13px;color:var(--brand-700);user-select:none;list-style:none;">🕐 ${PCD.escapeHtml(L('event_timeline', 'Run-of-show'))}${(data.timeline && data.timeline.length) ? ' · ' + data.timeline.length : ''}</summary>
           <div class="text-muted text-sm" style="margin:6px 0 8px;">${PCD.escapeHtml(t('event_timeline_hint') || 'Chronological schedule: load-in → service → breakdown.')}</div>
           <div id="tlList"></div>
-          <button type="button" class="btn btn-outline btn-sm" id="addTlBtn" style="margin-top:8px;">+ ${PCD.escapeHtml(t('event_add_timeline') || 'Add step')}</button>
+          <button type="button" class="btn btn-outline btn-sm" id="addTlBtn" style="margin-top:8px;">+ ${PCD.escapeHtml(L('event_add_timeline', 'Add step'))}</button>
         </details>
 
         <details id="taskWrap" ${(data.tasks && data.tasks.length) ? 'open' : ''} style="margin:0 0 14px;border:1px solid var(--border);border-radius:10px;padding:10px 12px;">
-          <summary style="cursor:pointer;font-weight:700;font-size:13px;color:var(--brand-700);user-select:none;list-style:none;">✅ ${PCD.escapeHtml(t('event_tasks') || 'Tasks & checklist')}${(data.tasks && data.tasks.length) ? ' · ' + (data.tasks.filter(function (x) { return x.done; }).length) + '/' + data.tasks.length : ''}</summary>
+          <summary style="cursor:pointer;font-weight:700;font-size:13px;color:var(--brand-700);user-select:none;list-style:none;">✅ ${PCD.escapeHtml(L('event_tasks', 'Tasks & checklist'))}${(data.tasks && data.tasks.length) ? ' · ' + (data.tasks.filter(function (x) { return x.done; }).length) + '/' + data.tasks.length : ''}</summary>
           <div class="text-muted text-sm" style="margin:6px 0 8px;">${PCD.escapeHtml(t('event_tasks_hint') || 'Countdown checklist: tasting, final count, order rentals…')}</div>
           <div id="taskList"></div>
-          <button type="button" class="btn btn-outline btn-sm" id="addTaskBtn" style="margin-top:8px;">+ ${PCD.escapeHtml(t('event_add_task') || 'Add task')}</button>
+          <button type="button" class="btn btn-outline btn-sm" id="addTaskBtn" style="margin-top:8px;">+ ${PCD.escapeHtml(L('event_add_task', 'Add task'))}</button>
         </details>
 
         <div style="margin:0 0 14px;border:1px solid var(--border);border-radius:10px;padding:10px 12px;">
-          <div style="font-weight:700;font-size:13px;color:var(--brand-700);margin-bottom:8px;">✍ ${PCD.escapeHtml(t('event_signoff') || 'Client sign-off')}</div>
+          <div style="font-weight:700;font-size:13px;color:var(--brand-700);margin-bottom:8px;">✍ ${PCD.escapeHtml(L('event_signoff', 'Client sign-off'))}</div>
           <div id="signoffArea"></div>
         </div>
 
@@ -642,13 +648,6 @@
           <label class="field-label">${t('event_notes')}</label>
           <textarea class="textarea" id="eNotes" rows="2">${PCD.escapeHtml(data.notes || '')}</textarea>
         </div>
-
-        <details id="evPreviewWrap" ${previewOpen ? 'open' : ''} style="margin-top:4px;">
-          <summary style="cursor:pointer;font-weight:700;font-size:13px;color:var(--brand-700);user-select:none;list-style:none;">${PCD.icon('print', 14)} ${t('event_preview') || 'Print preview'}</summary>
-          <div style="margin-top:10px;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:#e9edf0;">
-            <iframe id="evPreview" title="${t('event_preview') || 'Print preview'}" style="width:100%;height:440px;border:0;display:block;background:#fff;"></iframe>
-          </div>
-        </details>
       `;
 
       // v2.44.86 — Fonksiyon kartları: her fonksiyon kendi tarih/saat/salon/kişi/menü ile.
@@ -663,10 +662,10 @@
         const fnAlg = fnMenuAllergens(fn, ingMap, recipeMap);
         const fnDiet = fn.dietary || {};
         const dietTotal = DIET_TYPES.reduce(function (s, d) { return s + (Number(fnDiet[d.key]) || 0); }, 0);
-        const card = PCD.el('div', { class: 'card', style: { padding: '12px', border: '1px solid var(--border)', background: 'var(--surface)' } });
+        const card = PCD.el('div', { class: 'card', style: { padding: '14px', border: '2px solid var(--brand-300)', borderRadius: '12px', background: 'var(--surface)', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' } });
         card.innerHTML =
-          '<div class="flex items-center gap-2" style="margin-bottom:8px;">' +
-            '<span style="font-weight:800;color:var(--brand-700);font-size:13px;white-space:nowrap;">#' + (fi + 1) + '</span>' +
+          '<div class="flex items-center gap-2" style="margin:-2px 0 10px;padding-bottom:9px;border-bottom:1px solid var(--brand-200);">' +
+            '<span style="display:inline-block;background:var(--brand-600);color:#fff;font-weight:800;font-size:12px;padding:2px 9px;border-radius:6px;white-space:nowrap;">#' + (fi + 1) + '</span>' +
             '<input type="text" class="input fn-name" data-fn="' + fi + '" value="' + PCD.escapeHtml(fn.name || '') + '" placeholder="' + PCD.escapeHtml((t('event_function') || 'Function') + ' ' + (fi + 1)) + '" style="font-weight:700;flex:1;min-width:0;">' +
             (canRemove ? '<button type="button" class="icon-btn fn-rm" data-fn="' + fi + '" title="' + PCD.escapeHtml(t('delete') || 'Remove') + '">' + PCD.icon('x', 16) + '</button>' : '') +
           '</div>' +
@@ -682,7 +681,7 @@
           '</div>' +
           '<div class="flex items-center justify-between" style="margin:6px 0 6px;">' +
             '<div style="font-weight:700;font-size:13px;">' + t('event_menu') + ' (' + (fn.menu || []).length + ')</div>' +
-            '<button type="button" class="btn btn-outline btn-sm fn-add-menu" data-fn="' + fi + '">+ ' + t('event_add_item') + '</button>' +
+            '<button type="button" class="btn btn-outline btn-sm fn-add-menu" data-fn="' + fi + '">+ ' + L('event_add_item', 'Add item') + '</button>' +
           '</div>' +
           '<div class="fn-menu flex flex-col gap-2"></div>' +
           '<div class="text-muted text-sm" style="text-align:end;margin-top:6px;">' + t('event_total_cost') + ': <strong>' + PCD.fmtMoney(fnCost) + '</strong></div>' +
@@ -755,15 +754,15 @@
       if (staffListEl) {
         (data.staffing || []).forEach(function (st, si) {
           const lineCost = (Number(st.count) || 0) * (Number(st.hours) || 0) * (Number(st.rate) || 0);
-          const row = PCD.el('div', { class: 'flex items-center gap-2', style: { marginBottom: '6px' } });
+          const row = PCD.el('div', { class: 'flex items-center gap-2', style: { marginBottom: '8px', flexWrap: 'wrap' } });
           row.innerHTML =
-            '<input type="text" class="input st-role" data-st="' + si + '" value="' + PCD.escapeHtml(st.role || '') + '" placeholder="' + PCD.escapeHtml(t('event_role_ph') || 'Role (e.g. Waiter)') + '" style="flex:2;min-width:0;">' +
-            '<input type="number" class="input st-count" data-st="' + si + '" value="' + (st.count || '') + '" min="0" placeholder="#" title="' + PCD.escapeHtml(t('event_st_count') || 'Count') + '" style="width:48px;">' +
+            '<input type="text" class="input st-role" data-st="' + si + '" value="' + PCD.escapeHtml(st.role || '') + '" placeholder="' + PCD.escapeHtml(t('event_role_ph') || 'Role (e.g. Waiter)') + '" style="flex:1 1 140px;min-width:120px;">' +
+            '<input type="number" class="input st-count" data-st="' + si + '" value="' + (st.count || '') + '" min="0" placeholder="#" title="' + PCD.escapeHtml(t('event_st_count') || 'Count') + '" style="width:66px;text-align:center;">' +
             '<span class="text-muted">×</span>' +
-            '<input type="number" class="input st-hours" data-st="' + si + '" value="' + (st.hours || '') + '" min="0" step="0.5" placeholder="h" title="' + PCD.escapeHtml(t('event_st_hours') || 'Hours') + '" style="width:52px;">' +
+            '<input type="number" class="input st-hours" data-st="' + si + '" value="' + (st.hours || '') + '" min="0" step="0.5" placeholder="h" title="' + PCD.escapeHtml(t('event_st_hours') || 'Hours') + '" style="width:66px;text-align:center;">' +
             '<span class="text-muted">×</span>' +
-            '<input type="number" class="input st-rate" data-st="' + si + '" value="' + (st.rate || '') + '" min="0" step="0.01" placeholder="' + PCD.escapeHtml(t('event_st_rate') || 'Rate') + '" title="' + PCD.escapeHtml(t('event_st_rate') || 'Rate/h') + '" style="width:66px;">' +
-            '<span style="font-weight:700;color:var(--brand-700);white-space:nowrap;flex:1;text-align:end;min-width:56px;">' + PCD.fmtMoney(lineCost) + '</span>';
+            '<input type="number" class="input st-rate" data-st="' + si + '" value="' + (st.rate || '') + '" min="0" step="0.01" placeholder="' + PCD.escapeHtml(t('event_st_rate') || 'Rate') + '" title="' + PCD.escapeHtml(t('event_st_rate') || 'Rate/h') + '" style="width:84px;text-align:center;">' +
+            '<span style="font-weight:700;color:var(--brand-700);white-space:nowrap;margin-left:auto;">' + PCD.fmtMoney(lineCost) + '</span>';
           const rm = PCD.el('button', { class: 'icon-btn st-rm', 'data-st': si });
           rm.innerHTML = PCD.icon('x', 16);
           row.appendChild(rm);
@@ -775,11 +774,11 @@
       const chargesListEl = PCD.$('#chargesList', body);
       if (chargesListEl) {
         (data.charges || []).forEach(function (c, ci) {
-          const row = PCD.el('div', { class: 'flex items-center gap-2', style: { marginBottom: '6px' } });
+          const row = PCD.el('div', { class: 'flex items-center gap-2', style: { marginBottom: '8px', flexWrap: 'wrap' } });
           row.innerHTML =
-            '<input type="text" class="input ch-label" data-ch="' + ci + '" value="' + PCD.escapeHtml(c.label || '') + '" placeholder="' + PCD.escapeHtml(t('event_charge_ph') || 'e.g. Open bar package') + '" style="flex:2;min-width:0;">' +
-            '<input type="number" class="input ch-cost" data-ch="' + ci + '" value="' + (c.cost != null ? c.cost : '') + '" min="0" step="0.01" placeholder="' + PCD.escapeHtml(t('event_charge_cost') || 'Cost') + '" title="' + PCD.escapeHtml(t('event_charge_cost') || 'Your cost') + '" style="width:74px;">' +
-            '<input type="number" class="input ch-price" data-ch="' + ci + '" value="' + (c.price != null ? c.price : '') + '" min="0" step="0.01" placeholder="' + PCD.escapeHtml(t('event_charge_price') || 'Price') + '" title="' + PCD.escapeHtml(t('event_charge_price') || 'Client price') + '" style="width:74px;">';
+            '<input type="text" class="input ch-label" data-ch="' + ci + '" value="' + PCD.escapeHtml(c.label || '') + '" placeholder="' + PCD.escapeHtml(t('event_charge_ph') || 'e.g. Open bar package') + '" style="flex:1 1 150px;min-width:130px;">' +
+            '<input type="number" class="input ch-cost" data-ch="' + ci + '" value="' + (c.cost != null ? c.cost : '') + '" min="0" step="0.01" placeholder="' + PCD.escapeHtml(t('event_charge_cost') || 'Cost') + '" title="' + PCD.escapeHtml(t('event_charge_cost') || 'Your cost') + '" style="width:92px;text-align:right;">' +
+            '<input type="number" class="input ch-price" data-ch="' + ci + '" value="' + (c.price != null ? c.price : '') + '" min="0" step="0.01" placeholder="' + PCD.escapeHtml(t('event_charge_price') || 'Price') + '" title="' + PCD.escapeHtml(t('event_charge_price') || 'Client price') + '" style="width:92px;text-align:right;">';
           const rm = PCD.el('button', { class: 'icon-btn ch-rm', 'data-ch': ci });
           rm.innerHTML = PCD.icon('x', 16);
           row.appendChild(rm);
@@ -974,7 +973,7 @@
         if (items.length === 0) { PCD.toast.warning(t('no_recipes_yet')); return; }
         const selectedIds = (f.menu || []).map(function (m) { return m.recipeId || m.ingredientId; });
         PCD.picker.open({
-          title: t('event_add_item'),
+          title: L('event_add_item', 'Add item'),
           items: items, multi: true, selected: selectedIds,
           tabs: [
             { key: 'dishes', label: t('event_tab_dish') },
@@ -1001,22 +1000,6 @@
         });
       });
 
-      // v2.37 — canlı A4 önizleme (iframe izole; body{} sızıntısı yok)
-      const prevWrap = PCD.$('#evPreviewWrap', body);
-      if (prevWrap) {
-        const paintPreview = function () {
-          const fr = PCD.$('#evPreview', body);
-          if (fr && prevWrap.open) {
-            fr.srcdoc = '<!doctype html><html><head><meta charset="utf-8"></head><body>' + eventPrintHtml(data) + '</body></html>';
-          }
-        };
-        prevWrap.addEventListener('toggle', function () {
-          previewOpen = prevWrap.open;
-          paintPreview();
-        });
-        if (prevWrap.open) paintPreview();
-      }
-
     }
 
     render();
@@ -1029,8 +1012,8 @@
     if (existing) {
       printBtn = PCD.el('button', { class: 'btn btn-outline', title: t('event_beo') || 'BEO sheet' });
       printBtn.innerHTML = PCD.icon('print', 16);
-      proposalBtn = PCD.el('button', { class: 'btn btn-outline', title: t('event_proposal') || 'Client proposal' });
-      proposalBtn.innerHTML = '📄 ' + PCD.escapeHtml(t('event_proposal_short') || 'Proposal');
+      proposalBtn = PCD.el('button', { class: 'btn btn-outline', title: L('event_proposal', 'Client proposal') });
+      proposalBtn.innerHTML = '📄 ' + PCD.escapeHtml(L('event_proposal_short', 'Proposal'));
       shareBtn = PCD.el('button', { class: 'btn btn-outline', title: t('btn_share') });
       shareBtn.innerHTML = PCD.icon('share', 16);
     }
@@ -1343,7 +1326,7 @@
         return '<tr><td>' + PCD.escapeHtml(l.role || '—') + '</td><td style="text-align:center;">' + (l.count || 0) + ' × ' + (l.hours || 0) + 'h × ' + PCD.fmtMoney(l.rate || 0) + '</td><td style="text-align:right;font-weight:600;">' + PCD.fmtMoney(lc) + '</td></tr>';
       }).join('');
       if (stRows) staffingHtml =
-        '<div class="ev-section-title">' + PCD.escapeHtml(t('event_staffing') || 'Staffing & labor') + '</div>' +
+        '<div class="ev-section-title">' + PCD.escapeHtml(L('event_staffing', 'Staffing & labor')) + '</div>' +
         '<table class="ev-table"><thead><tr><th>' + PCD.escapeHtml(t('event_role') || 'Role') + '</th><th style="text-align:center;">' + PCD.escapeHtml(t('event_staffing_calc') || 'Crew × hours × rate') + '</th><th style="text-align:right;">' + PCD.escapeHtml(t('cr_cost') || 'Cost') + '</th></tr></thead><tbody>' + stRows + '</tbody></table>';
     }
 
@@ -1353,13 +1336,13 @@
       const tlRows = event.timeline.slice().filter(function (x) { return (x.label || '').trim() || x.time; })
         .sort(function (a, b) { return (a.time || '').localeCompare(b.time || ''); })
         .map(function (x) { return '<tr><td style="width:90px;font-weight:700;white-space:nowrap;color:#16433a;">' + PCD.escapeHtml(x.time || '') + '</td><td>' + PCD.escapeHtml(x.label || '') + '</td></tr>'; }).join('');
-      if (tlRows) timelineHtml = '<div class="ev-section-title">' + PCD.escapeHtml(t('event_timeline') || 'Run-of-show') + '</div><table class="ev-table"><tbody>' + tlRows + '</tbody></table>';
+      if (tlRows) timelineHtml = '<div class="ev-section-title">' + PCD.escapeHtml(L('event_timeline', 'Run-of-show')) + '</div><table class="ev-table"><tbody>' + tlRows + '</tbody></table>';
     }
     let chargesHtml = '';
     if (event.charges && event.charges.length) {
       const cRows = event.charges.filter(function (c) { return (c.label || '').trim() || Number(c.cost) || Number(c.price); })
         .map(function (c) { return '<tr><td>' + PCD.escapeHtml(c.label || '—') + '</td><td style="text-align:right;font-weight:600;">' + PCD.fmtMoney(Number(c.price) || 0) + '</td></tr>'; }).join('');
-      if (cRows) chargesHtml = '<div class="ev-section-title">' + PCD.escapeHtml(t('event_charges') || 'Charges & extras') + '</div><table class="ev-table"><thead><tr><th>' + PCD.escapeHtml(t('event_charge_item') || 'Item') + '</th><th style="text-align:right;">' + PCD.escapeHtml(t('event_charge_price') || 'Price') + '</th></tr></thead><tbody>' + cRows + '</tbody></table>';
+      if (cRows) chargesHtml = '<div class="ev-section-title">' + PCD.escapeHtml(L('event_charges', 'Charges & extras')) + '</div><table class="ev-table"><thead><tr><th>' + PCD.escapeHtml(t('event_charge_item') || 'Item') + '</th><th style="text-align:right;">' + PCD.escapeHtml(t('event_charge_price') || 'Price') + '</th></tr></thead><tbody>' + cRows + '</tbody></table>';
     }
 
     const html =
@@ -1410,7 +1393,7 @@
         ((stats.laborCost > 0 || stats.chargesCost > 0) ? '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('event_grand_total') || 'Total cost') + '</span><span>' + PCD.fmtMoney(stats.grandTotal) + '</span></div>' : '') +
         (event.budget > 0 ? '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('ev_print_customer_budget') || 'Customer budget') + '</span><span>' + PCD.fmtMoney(event.budget) + '</span></div>' : '') +
         ((stats.totalRevenue > 0 && (stats.chargesRevenue > 0 || stats.serviceCharge > 0)) ? '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('event_food_revenue') || 'Food') + ' (' + stats.billed + ')</span><span>' + PCD.fmtMoney(stats.foodRevenue) + '</span></div>' : '') +
-        (stats.chargesRevenue > 0 ? '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('event_charges') || 'Charges & extras') + '</span><span>+' + PCD.fmtMoney(stats.chargesRevenue) + '</span></div>' : '') +
+        (stats.chargesRevenue > 0 ? '<div class="ev-summary-row"><span>' + PCD.escapeHtml(L('event_charges', 'Charges & extras')) + '</span><span>+' + PCD.fmtMoney(stats.chargesRevenue) + '</span></div>' : '') +
         (stats.serviceCharge > 0 ? '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('event_service_label') || 'Service charge') + ' (' + stats.svcPct + '%)</span><span>+' + PCD.fmtMoney(stats.serviceCharge) + '</span></div>' : '') +
         (stats.totalRevenue > 0 ? '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('ev_print_total_revenue') || 'Total revenue') + '</span><span>' + PCD.fmtMoney(stats.totalRevenue) + '</span></div>' : '') +
         (stats.paidToDate > 0 ? '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('event_paid') || 'Paid') + '</span><span>−' + PCD.fmtMoney(stats.paidToDate) + '</span></div>' : '') +
@@ -1469,7 +1452,7 @@
       const pr = event.payments.filter(function (p) { return (p.label || '').trim() || Number(p.amount); }).map(function (p) {
         return '<tr><td>' + PCD.escapeHtml(p.label || '—') + '</td><td>' + PCD.escapeHtml(p.due ? fmtD(p.due) : '—') + '</td><td class="r">' + PCD.fmtMoney(Number(p.amount) || 0) + '</td><td class="r">' + (p.paid ? '✓ ' + PCD.escapeHtml(t('event_paid') || 'Paid') : '—') + '</td></tr>';
       }).join('');
-      if (pr) payHtml = '<div class="pr-h2">' + PCD.escapeHtml(t('event_payments') || 'Payment schedule') + '</div><table class="pr-tbl"><thead><tr><th>' + PCD.escapeHtml(t('event_pay_label') || 'Payment') + '</th><th>' + PCD.escapeHtml(t('event_pay_due') || 'Due') + '</th><th class="r">' + PCD.escapeHtml(t('event_pay_amount') || 'Amount') + '</th><th class="r">' + PCD.escapeHtml(t('event_paid') || 'Paid') + '</th></tr></thead><tbody>' + pr + '</tbody></table>';
+      if (pr) payHtml = '<div class="pr-h2">' + PCD.escapeHtml(L('event_payments', 'Payment schedule')) + '</div><table class="pr-tbl"><thead><tr><th>' + PCD.escapeHtml(t('event_pay_label') || 'Payment') + '</th><th>' + PCD.escapeHtml(t('event_pay_due') || 'Due') + '</th><th class="r">' + PCD.escapeHtml(t('event_pay_amount') || 'Amount') + '</th><th class="r">' + PCD.escapeHtml(t('event_paid') || 'Paid') + '</th></tr></thead><tbody>' + pr + '</tbody></table>';
     }
 
     const html =

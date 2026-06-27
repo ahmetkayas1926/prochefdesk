@@ -446,14 +446,18 @@
   // v2.8.79 — 3 item tipi: (1) recipe-bound, (2) ingredient-bound, (3) custom name only.
   // ingredient-bound: ing.pricePerUnit × prep amount (sub-recipe cost cascade yok).
   // custom name only: cost = 0 (chef sadece "label" eklemiş, fiyat girmemiş).
-  function computeItemCost(item, recipe, ingMap, recipeMap, coverCount, refillX, ingredient) {
-    if (!item) return { prepAmount: 0, prepCost: 0, expectedConsume: 0, expectedWaste: 0, wastePct: 0 };
+  function computeItemCost(item, recipe, ingMap, recipeMap, coverCount, refillX, ingredient, prepFactor) {
+    if (!item) return { prepAmount: 0, prepCost: 0, expectedConsume: 0, expectedWaste: 0, wastePct: 0, shortfall: false };
     const perGuest = Number(item.amountPerGuest) || 0;
     const pickup = item.pickupRatio != null ? Number(item.pickupRatio) : 0.6;
     const itemRefill = item.refillX != null ? Number(item.refillX) : refillX;
-    // Total preparation: covers × per_guest × refill_multiplier
-    const prepAmount = coverCount * perGuest * itemRefill;
+    // v2.44.94 — Forecast prep faktörü (araştırma: ~%50 hazırla, yürüyüşe gelene taze yetiştir
+    // → overproduction %40↓). prepAmount forecast'la ölçeklenir; expectedConsume (gerçek tüketim
+    // beklentisi) ölçeklenmez. prep < tüketim ise 'shortfall' (tükenebilir → taze yap).
+    const pf = (prepFactor != null && Number(prepFactor) > 0) ? Number(prepFactor) : 1;
+    const prepAmount = coverCount * pf * perGuest * itemRefill;
     const expectedConsume = coverCount * perGuest * pickup;
+    const shortfall = prepAmount < expectedConsume - 1e-9;
 
     // === Path A: ingredient-bound item ===
     if (item.ingredientId && ingredient) {
@@ -475,6 +479,7 @@
         expectedConsume: expectedConsume, expectedConsumeCost: consumeCost,
         expectedWaste: expectedWaste,
         wastePct: prepCost > 0 ? (expectedWaste / prepCost) * 100 : 0,
+        shortfall: shortfall,
       };
     }
 
@@ -501,6 +506,7 @@
         expectedConsume: expectedConsume, expectedConsumeCost: consumeCost,
         expectedWaste: expectedWaste,
         wastePct: prepCost > 0 ? (expectedWaste / prepCost) * 100 : 0,
+        shortfall: shortfall,
       };
     }
 
@@ -508,29 +514,39 @@
     return {
       prepAmount: prepAmount, prepCost: 0,
       expectedConsume: expectedConsume, expectedConsumeCost: 0,
-      expectedWaste: 0, wastePct: 0,
+      expectedWaste: 0, wastePct: 0, shortfall: shortfall,
     };
   }
 
   // Buffet-bütünü totals.
+  // v2.44.94 — Güvenli i18n: eksik key'de fb döndürür (stale cache'te ham key sızmasın).
+  function L(key, fb) {
+    const v = (PCD.i18n && PCD.i18n.t) ? PCD.i18n.t(key) : null;
+    return (v == null || v === key) ? (fb != null ? fb : key) : v;
+  }
+  function prepFactorOf(b) { return (b && Number(b.prepFactor) > 0) ? Number(b.prepFactor) : 1; }
+
   function computeBuffetTotals(buffet, ingMap, recipeMap) {
     const coverCount = Number(buffet.coverCount) || 0;
     const ticketPrice = Number(buffet.ticketPrice) || 0;
     const refillX = buffet.refillMultiplier != null
       ? Number(buffet.refillMultiplier)
       : (INDUSTRY_REFILL[buffet.type] || INDUSTRY_REFILL.custom);
+    const prepFactor = (Number(buffet.prepFactor) > 0) ? Number(buffet.prepFactor) : 1;
     let totalPrepCost = 0;
     let totalExpectedWaste = 0;
     let itemCount = 0;
+    let shortfallCount = 0;
     (buffet.stations || []).forEach(function (st) {
       (st.items || []).forEach(function (it) {
         const r = it.recipeId ? recipeMap[it.recipeId] : null;
         const ing = it.ingredientId ? ingMap[it.ingredientId] : null;
         // v2.8.79 — 3 path: recipe, ingredient, or custom (no cost)
         if (!r && !ing && !it.customName) return;
-        const c = computeItemCost(it, r, ingMap, recipeMap, coverCount, refillX, ing);
+        const c = computeItemCost(it, r, ingMap, recipeMap, coverCount, refillX, ing, prepFactor);
         totalPrepCost += c.prepCost;
         totalExpectedWaste += c.expectedWaste;
+        if (c.shortfall) shortfallCount++;
         itemCount++;
       });
     });
@@ -539,16 +555,25 @@
     const foodCostPct = revenue > 0 ? (totalPrepCost / revenue) * 100 : 0;
     const profitPerCover = ticketPrice - perGuestCost;
     const targets = INDUSTRY_TARGETS[buffet.type] || INDUSTRY_TARGETS.custom;
+    // v2.44.94 — Atık% benchmark (sektör: buffette üretimin %15-25'i atık; <%15 mükemmel,
+    // >%25 kârı vurur). foodCostPct'ten AYRI bir buffet-spesifik metrik.
+    const totalWastePct = totalPrepCost > 0 ? (totalExpectedWaste / totalPrepCost) * 100 : 0;
+    const wasteStatus = totalWastePct <= 15 ? 'good' : (totalWastePct <= 25 ? 'warn' : 'bad');
     return {
       coverCount: coverCount,
       ticketPrice: ticketPrice,
       revenue: revenue,
       totalPrepCost: totalPrepCost,
       totalExpectedWaste: totalExpectedWaste,
+      totalWastePct: totalWastePct,
+      wasteStatus: wasteStatus,
       perGuestCost: perGuestCost,
       foodCostPct: foodCostPct,
       profitPerCover: profitPerCover,
       itemCount: itemCount,
+      prepFactor: prepFactor,
+      prepCovers: Math.round(coverCount * prepFactor),
+      shortfallCount: shortfallCount,
       refillX: refillX,
       targets: targets,
       // status: 'good' | 'warn' | 'bad'
@@ -830,12 +855,15 @@
       serviceDate: new Date().toISOString().slice(0, 10),
       durationHours: 2.5,
       refillMultiplier: null,  // null = use industry default for type
+      prepFactor: 1,           // v2.44.94 — forecast: hazırlanacak kişi oranı (1 = %100)
       notes: '',
       stations: STATION_TYPES.slice(0, 3).map(function (st) {  // cold, hot, bakery by default
         return { id: PCD.uid('bst'), name: PCD.i18n.t(st.labelKey) || st.id, type: st.id, items: [] };
       }),
     };
     // Defansif: eski buffet'lerde eksik field'lar
+    if (data.prepFactor == null) data.prepFactor = 1;
+    if (data.durationHours == null) data.durationHours = 2.5;
     if (!Array.isArray(data.stations)) data.stations = [];
     data.stations.forEach(function (st) {
       if (!st.id) st.id = PCD.uid('bst');
@@ -953,6 +981,19 @@
           </div>
         </div>
 
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div class="field">
+            <label class="field-label">${PCD.escapeHtml(t('buffet_forecast_label') || 'Forecast prep %')}</label>
+            <input type="number" class="input" id="bufForecast" value="${Math.round((Number(data.prepFactor) || 1) * 100)}" min="10" max="100" step="5">
+            <div class="text-muted text-sm" style="font-size:11px;margin-top:2px;">${PCD.escapeHtml(t('buffet_forecast_help') || 'Prep for this % of expected covers — make the rest fresh for walk-ins. Lower = less overproduction/waste.')}</div>
+          </div>
+          <div class="field">
+            <label class="field-label">${PCD.escapeHtml(t('buffet_duration_label') || 'Service duration (h)')}</label>
+            <input type="number" class="input" id="bufDuration" value="${data.durationHours}" min="0.5" max="12" step="0.5">
+            <div class="text-muted text-sm" style="font-size:11px;margin-top:2px;">${PCD.escapeHtml(t('buffet_duration_help') || 'Drives the batch/replenishment plan + holding-time guidance.')}</div>
+          </div>
+        </div>
+
         <!-- v2.8.88 — Stats hero refactor: primary metric (Food cost %) hero,
              secondary 5 metric grid altında. Apple Health / Stripe dashboard
              hissi. Eski 6 metric tek grid çok yassı görünüyordu. -->
@@ -995,9 +1036,20 @@
             </div>
             <div>
               <div class="stat-label">${t('buffet_stat_waste') || 'Expected waste'}</div>
-              <div style="font-size:16px;font-weight:700;color:var(--text-3);">${PCD.fmtMoney(totals.totalExpectedWaste)}</div>
+              <div style="font-size:16px;font-weight:700;color:${statusColor(totals.wasteStatus)};">${PCD.fmtMoney(totals.totalExpectedWaste)} <span style="font-size:12px;">· ${totals.totalWastePct.toFixed(0)}%</span></div>
             </div>
           </div>
+
+          ${(function () {
+            const dur = Number(data.durationHours) || 0;
+            const batches = dur > 0 ? Math.max(1, Math.ceil(dur / 0.75)) : 0;   // ~her 45 dk taze parti
+            const lines = [];
+            if (totals.prepFactor < 1) lines.push('🔮 ' + L('buffet_forecast_line', 'Prepping for {p} of {c} covers — make the rest fresh for walk-ins.').replace('{p}', totals.prepCovers).replace('{c}', totals.coverCount));
+            lines.push((totals.wasteStatus === 'good' ? '✅' : (totals.wasteStatus === 'warn' ? '⚠️' : '🛑')) + ' ' + L('buffet_waste_bench', 'Waste {w}% — buffet benchmark 15–25% ({s}).').replace('{w}', totals.totalWastePct.toFixed(0)).replace('{s}', statusLabel(totals.wasteStatus)));
+            if (batches > 0) lines.push('🔁 ' + L('buffet_batch_line', '{n} smaller batches over {h}h → fresher line + shorter holding (HACCP).').replace('{n}', batches).replace('{h}', dur));
+            if (totals.shortfallCount > 0) lines.push('⏱ ' + L('buffet_shortfall_line', '{n} item(s) prepped below expected consumption — top up fresh during service.').replace('{n}', totals.shortfallCount));
+            return '<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px;font-size:12px;line-height:1.85;color:var(--text-2);">' + lines.map(function (l) { return '<div>' + PCD.escapeHtml(l) + '</div>'; }).join('') + '</div>';
+          })()}
         </div>
 
         <!-- Stations -->
@@ -1027,7 +1079,7 @@
       }
       data.stations.forEach(function (st, sIdx) {
         const stTypeMeta = STATION_TYPES.find(function (x) { return x.id === st.type; }) || STATION_TYPES[5];
-        const secEl = PCD.el('div', { class: 'card', 'data-st-id': st.id, style: { padding: '12px', borderLeft: '4px solid ' + stTypeMeta.color } });
+        const secEl = PCD.el('div', { class: 'card', 'data-st-id': st.id, style: { padding: '14px', border: '2px solid var(--border-strong)', borderLeft: '5px solid ' + stTypeMeta.color, borderRadius: '12px', background: 'var(--surface)', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' } });
 
         let itemsHtml = '';
         st.items.forEach(function (it, iIdx) {
@@ -1047,7 +1099,7 @@
           const nameCell = isCustom
             ? '<input type="text" class="input" data-it-custom-name="' + sIdx + ':' + iIdx + '" value="' + PCD.escapeHtml(displayName) + '" placeholder="' + PCD.escapeHtml(t('buffet_custom_name_ph') || 'Item name (e.g. Sliced cucumber)') + '" style="flex:1;min-width:140px;font-weight:600;font-size:14px;padding:4px 8px;">' + typeChip
             : '<div style="flex:1;min-width:140px;font-weight:600;font-size:14px;">' + PCD.escapeHtml(displayName) + typeChip + '</div>';
-          const c = (r || ing) ? computeItemCost(it, r, ingMap, recipeMap, data.coverCount, refillEffective, ing) : null;
+          const c = (r || ing) ? computeItemCost(it, r, ingMap, recipeMap, data.coverCount, refillEffective, ing, prepFactorOf(data)) : null;
           const pickup = it.pickupRatio != null ? it.pickupRatio : (INDUSTRY_RATIOS[st.type === 'cold' ? 'cold_protein' : (st.type === 'hot' ? 'hot_protein' : (st.type === 'bakery' ? 'bakery' : (st.type === 'dessert' ? 'dessert' : (st.type === 'beverage' ? 'beverage_cold' : 'other'))))]);
           // v2.8.79 — Unit dropdown HTML
           const unitOptions = UNITS.map(function (u) {
@@ -1174,6 +1226,14 @@
           data.refillMultiplier = v;
           renderEditor();
         }
+      }, 700));
+      PCD.$('#bufForecast', body).addEventListener('input', PCD.debounce(function () {
+        let v = parseInt(this.value, 10);
+        if (!isNaN(v)) { v = Math.max(10, Math.min(100, v)); data.prepFactor = v / 100; renderEditor(); }
+      }, 700));
+      PCD.$('#bufDuration', body).addEventListener('input', PCD.debounce(function () {
+        const v = parseFloat(this.value);
+        if (!isNaN(v) && v > 0) { data.durationHours = v; renderEditor(); }
       }, 700));
       PCD.$('#bufNotes', body).addEventListener('input', function () { data.notes = this.value; });
 
@@ -1593,6 +1653,7 @@
   // events.computeEventDeductions ile AYNI sözleşme → inventory.applyStockDeductions.
   function computeBuffetDeductions(buffet, ingMap, recipeMap) {
     const coverCount = Number(buffet.coverCount) || 0;
+    const prepFactor = prepFactorOf(buffet);   // v2.44.94 — forecast: yalnız hazırlanan kadar düş
     const refillX = buffet.refillMultiplier != null
       ? Number(buffet.refillMultiplier)
       : (INDUSTRY_REFILL[buffet.type] || INDUSTRY_REFILL.custom);
@@ -1613,7 +1674,7 @@
       (st.items || []).forEach(function (it) {
         const perGuest = Number(it.amountPerGuest) || 0;
         const itemRefill = it.refillX != null ? Number(it.refillX) : refillX;
-        const prepAmount = coverCount * perGuest * itemRefill;
+        const prepAmount = coverCount * prepFactor * perGuest * itemRefill;
         if (!(prepAmount > 0)) return;
         const r = it.recipeId ? recipeMap[it.recipeId] : null;
         const ing = it.ingredientId ? ingMap[it.ingredientId] : null;
@@ -1638,6 +1699,7 @@
   function buildBuffetOrder(buffet, ingMap, recipeMap) {
     const t = PCD.i18n.t;
     const coverCount = Number(buffet.coverCount) || 0;
+    const prepFactor = prepFactorOf(buffet);   // v2.44.94 — forecast: yalnız hazırlanan kadar
     const refillX = buffet.refillMultiplier != null
       ? Number(buffet.refillMultiplier)
       : (INDUSTRY_REFILL[buffet.type] || INDUSTRY_REFILL.custom);
@@ -1663,7 +1725,7 @@
       (st.items || []).forEach(function (it) {
         const perGuest = Number(it.amountPerGuest) || 0;
         const itemRefill = it.refillX != null ? Number(it.refillX) : refillX;
-        const prepAmount = coverCount * perGuest * itemRefill;
+        const prepAmount = coverCount * prepFactor * perGuest * itemRefill;
         if (!(prepAmount > 0)) return;
         const r = it.recipeId ? recipeMap[it.recipeId] : null;
         const ing = it.ingredientId ? ingMap[it.ingredientId] : null;
@@ -1788,7 +1850,7 @@
         const ing = it.ingredientId ? ingMap[it.ingredientId] : null;
         const name = r ? r.name : (ing ? ing.name : (it.customName || ''));
         if (!name) return;
-        const c = computeItemCost(it, r, ingMap, recipeMap, buffet.coverCount, refillX, ing);
+        const c = computeItemCost(it, r, ingMap, recipeMap, buffet.coverCount, refillX, ing, prepFactorOf(buffet));
         rowsHtml +=
           '<tr>' +
             '<td>' + PCD.escapeHtml(name) + '</td>' +
@@ -1846,7 +1908,7 @@
         const ing = it.ingredientId ? ingMap[it.ingredientId] : null;
         const name = r ? r.name : (ing ? ing.name : (it.customName || ''));
         if (!name) return;
-        const c = computeItemCost(it, r, ingMap, recipeMap, buffet.coverCount, refillX, ing);
+        const c = computeItemCost(it, r, ingMap, recipeMap, buffet.coverCount, refillX, ing, prepFactorOf(buffet));
         stSubtotal += c.prepCost;
         const wasteStyle = c.wastePct > 25 ? 'color:#dc2626;font-weight:700;' : 'color:#666;';
         itemRows +=
@@ -2085,7 +2147,7 @@
         const ing = it.ingredientId ? ingMap[it.ingredientId] : null;
         const name = r ? r.name : (ing ? ing.name : (it.customName || ''));
         if (!name) return;
-        const c = computeItemCost(it, r, ingMap, recipeMap, buffet.coverCount, refillX, ing);
+        const c = computeItemCost(it, r, ingMap, recipeMap, buffet.coverCount, refillX, ing, prepFactorOf(buffet));
         aoa.push([
           { v: st.name || '', s: labelStyle },
           { v: name, s: { alignment: { vertical: 'center' }, border: thinBorder } },

@@ -3423,3 +3423,15 @@ window.PCD.i18n.register('fr', {
   event_sign_here: "Signez ci-dessous",
   event_sign_empty: "Veuillez d'abord signer.",
 });
+
+// v2.44.94 — Buffet : prévision + référence gaspillage + plan de lots.
+window.PCD.i18n.register('fr', {
+  buffet_forecast_label: "Prévision préparation %",
+  buffet_forecast_help: "Préparez ce % des convives prévus — faites le reste frais pour les arrivants. Moins = moins de surproduction/gaspillage.",
+  buffet_duration_label: "Durée du service (h)",
+  buffet_duration_help: "Détermine le plan de lots/réassort + les conseils de durée de maintien.",
+  buffet_forecast_line: "Préparation pour {p} sur {c} convives — faites le reste frais.",
+  buffet_waste_bench: "Gaspillage {w}% — référence buffet 15–25% ({s}).",
+  buffet_batch_line: "{n} petits lots sur {h}h → ligne plus fraîche + maintien plus court (HACCP).",
+  buffet_shortfall_line: "{n} article(s) préparés sous la consommation prévue — réapprovisionnez frais pendant le service.",
+});
