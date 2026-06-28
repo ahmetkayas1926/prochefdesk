@@ -3550,3 +3550,16 @@ window.PCD.i18n.register('de', {
   haccp_audit_sum_coverage: "{d}/{n} Tage erfasst",
   haccp_audit_no_exceptions: "Keine Messwerte außerhalb des Bereichs unter den erfassten Kontrollen.",
 });
+
+// v2.44.101 — Mehrmonatiger Druck (jedes HACCP-Formular + Audit-Paket)
+window.PCD.i18n.register('de', {
+  haccp_range_intro: "Wähle einen Monatsbereich — jeder Monat wird in eine PDF gedruckt, fertig für den Audit-Ordner.",
+  haccp_range_from: "Von",
+  haccp_range_to: "Bis",
+  haccp_range_print: "Bereich drucken",
+  haccp_range_title: "Monatsbereich drucken",
+  haccp_range_none: "Keine Einträge in den gewählten Monaten.",
+  haccp_range_tip: "Mehrere Monate in eine PDF drucken",
+  haccp_range_tip_days: "Jeden erfassten Tag über mehrere Monate in eine PDF drucken",
+  haccp_range_btn: "Monate…",
+});

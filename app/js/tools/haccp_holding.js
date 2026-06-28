@@ -107,6 +107,7 @@
           '<button class="btn btn-outline btn-sm" id="hhdPrintMonthBtn" title="' + PCD.escapeHtml(t('hhd_print_month_tip') || '31 satırlık aylık form, ay başında bir kez yazdır') + '">' + PCD.icon('calendar', 14) + ' <span>' + PCD.escapeHtml(t('hhd_print_month') || 'Aylık boş') + '</span></button>' +
           '<button class="btn btn-outline btn-sm" id="hhdPrintBlankBtn" title="' + PCD.escapeHtml(t('hhd_print_blank_tip') || 'Boş formu yazdır, elle doldur') + '">' + PCD.icon('print', 14) + ' <span>' + PCD.escapeHtml(t('hhd_print_blank') || 'Boş yazdır') + '</span></button>' +
           '<button class="btn btn-primary btn-sm" id="hhdPrintDayBtn">' + PCD.icon('print', 14) + ' <span>' + PCD.escapeHtml(t('hhd_print_day') || 'Bu günü yazdır') + '</span></button>' +
+          '<button class="btn btn-outline btn-sm" id="hhdPrintRangeBtn" title="' + PCD.escapeHtml((t('haccp_range_tip_days') !== 'haccp_range_tip_days' ? t('haccp_range_tip_days') : '') || 'Print every recorded day across several months into one PDF') + '">' + PCD.icon('print', 14) + ' <span>' + PCD.escapeHtml((t('haccp_range_btn') !== 'haccp_range_btn' ? t('haccp_range_btn') : '') || 'Months…') + '</span></button>' +
         '</div>' +
       '</div>';
 
@@ -230,6 +231,17 @@
     });
     PCD.$('#hhdPrintBlankBtn', view).addEventListener('click', function () { printDay(_viewDate, true); });
     PCD.$('#hhdPrintDayBtn', view).addEventListener('click', function () { printDay(_viewDate, false); });
+    PCD.$('#hhdPrintRangeBtn', view).addEventListener('click', function () {
+      const curYM = (_viewDate || todayYmd()).slice(0, 7);
+      PCD.haccp.pickMonthRange(curYM, function (from, to) {
+        const months = {};
+        PCD.haccp.monthsInRange(from, to).forEach(function (m) { months[m] = true; });
+        // Holding is per-day → print every recorded day whose month is in range.
+        const days = listDatesWithRecords().filter(function (d) { return months[d.slice(0, 7)]; }).sort();
+        const sheets = days.map(function (d) { return printDay(d, false, true); });
+        PCD.haccp.printSheets(sheets, 'HACCP Hot/Cold Holding · ' + from + ' – ' + to);
+      });
+    });
     PCD.$('#hhdPrintMonthBtn', view).addEventListener('click', function () { openMonthPickerModal(); });
 
     PCD.on(view, 'click', '[data-jump]', function () {
@@ -382,7 +394,7 @@
   }
 
   // ============ PRINT (DAY) ============
-  function printDay(dateStr, blank) {
+  function printDay(dateStr, blank, returnHtml) {
     const t = PCD.i18n.t;
     const u = getTempUnit();
     const ws = PCD.store.getActiveWorkspace ? PCD.store.getActiveWorkspace() : null;
@@ -398,6 +410,7 @@
       buildPrintTable(t, u, false, byRow) +
       printFooter(t, u);
 
+    if (returnHtml) return html;
     PCD.print(html, 'HACCP Hot/Cold Holding · ' + (dateStr || 'Blank'));
   }
 

@@ -143,6 +143,7 @@
         '<div class="page-header-actions">' +
           '<button class="btn btn-outline btn-sm" id="hcrPrintMonthBtn" title="' + PCD.escapeHtml(t('hcr_print_month_tip') || '31 satırlık aylık form, ay başında bir kez yazdır') + '">' + PCD.icon('calendar', 14) + ' <span>' + PCD.escapeHtml(t('hcr_print_month') || 'Aylık boş') + '</span></button>' +
           '<button class="btn btn-primary btn-sm" id="hcrPrintFilledBtn">' + PCD.icon('print', 14) + ' <span>' + PCD.escapeHtml(t('hcr_print_filled_month') || 'Bu ayı yazdır') + '</span></button>' +
+          '<button class="btn btn-outline btn-sm" id="hcrPrintRangeBtn" title="' + PCD.escapeHtml((t('haccp_range_tip') !== 'haccp_range_tip' ? t('haccp_range_tip') : '') || 'Print several months into one PDF') + '">' + PCD.icon('print', 14) + ' <span>' + PCD.escapeHtml((t('haccp_range_btn') !== 'haccp_range_btn' ? t('haccp_range_btn') : '') || 'Months…') + '</span></button>' +
         '</div>' +
       '</div>';
 
@@ -245,6 +246,12 @@
       render(view);
     });
     PCD.$('#hcrPrintFilledBtn', view).addEventListener('click', function () { printMonthFilled(_viewMonth); });
+    PCD.$('#hcrPrintRangeBtn', view).addEventListener('click', function () {
+      PCD.haccp.pickMonthRange(_viewMonth, function (from, to) {
+        const sheets = PCD.haccp.monthsInRange(from, to).map(function (m) { return printMonthFilled(m, true); });
+        PCD.haccp.printSheets(sheets, 'HACCP Receiving · ' + from + ' – ' + to);
+      });
+    });
     PCD.$('#hcrPrintMonthBtn', view).addEventListener('click', function () { openMonthPickerModal(); });
 
     PCD.on(view, 'click', '[data-jump-month]', function () {
@@ -590,7 +597,7 @@
 
   // v2.9.40 — Aylık dolu yazdırma: aydaki tüm kayıtları 31 satırlık template'e
   // yerleştirir (Cook & Cool printMonth pattern). Boş satırlar empty kalır.
-  function printMonthFilled(monthYM) {
+  function printMonthFilled(monthYM, returnHtml) {
     const t = PCD.i18n.t;
     const u = getTempUnit();
     const ws = PCD.store.getActiveWorkspace ? PCD.store.getActiveWorkspace() : null;
@@ -649,6 +656,7 @@
     }
 
     html += '</tbody></table>' + printFooter(t, u);
+    if (returnHtml) return html;
     PCD.print(html, 'HACCP Receiving · ' + monthLbl);
   }
 

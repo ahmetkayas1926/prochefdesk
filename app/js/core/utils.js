@@ -1055,4 +1055,69 @@
     return t || { labelKey: 'haccp_region_international', hotMinC: 63, coldMaxC: 5, frozenMaxC: -18, coolingStartC: 63, cooling2hC: 21, cooling6hC: 5 };
   };
 
+  // v2.44.101 — Multi-month printing shared across every HACCP form + the Audit
+  // Pack. Auditors review a period (a quarter), not one month — so each form can
+  // export several months into ONE PDF, ready for the binder.
+  PCD.haccp.currentMonthYM = function () {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  };
+  // Inclusive list of 'YYYY-MM' from a→b (auto-swaps if reversed; capped 36).
+  PCD.haccp.monthsInRange = function (a, b) {
+    if (!a) a = PCD.haccp.currentMonthYM();
+    if (!b) b = a;
+    if (a > b) { const tmp = a; a = b; b = tmp; }
+    const out = [];
+    const pa = a.split('-');
+    let y = Number(pa[0]), m = Number(pa[1]);
+    for (let i = 0; i < 36; i++) {
+      const ym = y + '-' + String(m).padStart(2, '0');
+      out.push(ym);
+      if (ym === b) break;
+      m++; if (m > 12) { m = 1; y++; }
+    }
+    return out;
+  };
+  // Stitch already-built single-page sheets into ONE landscape PDF. Each sheet
+  // is the form's existing print HTML (unchanged) wrapped so it lands on its own
+  // page; the inner sheet's body{} rules are inert once nested, so single-month
+  // output is never affected.
+  PCD.haccp.printSheets = function (sheets, title, orientation) {
+    const arr = (sheets || []).filter(Boolean);
+    if (!arr.length) { if (PCD.toast) PCD.toast.info((PCD.i18n && PCD.i18n.t('haccp_range_none')) || 'No records in the selected months.'); return; }
+    const size = (orientation === 'portrait') ? 'A4' : 'A4 landscape';
+    const html = '<style>@page{size:' + size + ';margin:0} body{padding:0 !important;margin:0 !important}</style>' +
+      arr.map(function (s, i) {
+        return '<div style="' + (i < arr.length - 1 ? 'page-break-after:always;' : '') + '">' + s + '</div>';
+      }).join('');
+    PCD.print(html, title || 'HACCP');
+  };
+  // Month-range picker modal → onConfirm(fromYm, toYm).
+  PCD.haccp.pickMonthRange = function (defaultYm, onConfirm) {
+    const t = PCD.i18n.t;
+    const L = function (k, fb) { try { const v = t(k); return (v == null || v === k) ? fb : v; } catch (e) { return fb; } };
+    defaultYm = defaultYm || PCD.haccp.currentMonthYM();
+    const max = PCD.haccp.currentMonthYM();
+    const body = PCD.el('div');
+    body.innerHTML =
+      '<div class="text-muted text-sm" style="margin-bottom:12px;">' + PCD.escapeHtml(L('haccp_range_intro', 'Select a month range — every month in it prints into one PDF, ready for the audit binder.')) + '</div>' +
+      '<div style="display:flex;gap:12px;flex-wrap:wrap;">' +
+        '<div style="flex:1;min-width:130px;"><label style="display:block;font-weight:600;font-size:12px;margin-bottom:4px;">' + PCD.escapeHtml(L('haccp_range_from', 'From')) + '</label><input type="month" id="hrFrom" value="' + defaultYm + '" max="' + max + '" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-1);font-size:13px;box-sizing:border-box;"></div>' +
+        '<div style="flex:1;min-width:130px;"><label style="display:block;font-weight:600;font-size:12px;margin-bottom:4px;">' + PCD.escapeHtml(L('haccp_range_to', 'To')) + '</label><input type="month" id="hrTo" value="' + defaultYm + '" max="' + max + '" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-1);font-size:13px;box-sizing:border-box;"></div>' +
+      '</div>';
+    const cancel = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') });
+    const go = PCD.el('button', { class: 'btn btn-primary' });
+    go.innerHTML = PCD.icon('print', 14) + ' ' + PCD.escapeHtml(L('haccp_range_print', 'Print range'));
+    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
+    footer.appendChild(cancel); footer.appendChild(go);
+    const m = PCD.modal.open({ title: L('haccp_range_title', 'Print month range'), body: body, footer: footer, size: 'sm', closable: true });
+    cancel.addEventListener('click', function () { m.close(); });
+    go.addEventListener('click', function () {
+      const from = (PCD.$('#hrFrom', body) || {}).value || defaultYm;
+      const to = (PCD.$('#hrTo', body) || {}).value || from;
+      m.close();
+      onConfirm(from, to);
+    });
+  };
+
 })();

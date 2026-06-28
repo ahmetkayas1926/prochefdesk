@@ -3550,3 +3550,16 @@ window.PCD.i18n.register('es', {
   haccp_audit_sum_coverage: "{d}/{n} días registrados",
   haccp_audit_no_exceptions: "Sin lecturas fuera de rango entre los controles registrados.",
 });
+
+// v2.44.101 — Impresión de varios meses (cada formulario HACCP + Audit Pack)
+window.PCD.i18n.register('es', {
+  haccp_range_intro: "Selecciona un rango de meses — cada mes se imprime en un solo PDF, listo para la carpeta de auditoría.",
+  haccp_range_from: "Desde",
+  haccp_range_to: "Hasta",
+  haccp_range_print: "Imprimir rango",
+  haccp_range_title: "Imprimir rango de meses",
+  haccp_range_none: "No hay registros en los meses seleccionados.",
+  haccp_range_tip: "Imprime varios meses en un solo PDF",
+  haccp_range_tip_days: "Imprime cada día registrado de varios meses en un solo PDF",
+  haccp_range_btn: "Meses…",
+});

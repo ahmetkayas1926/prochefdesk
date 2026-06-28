@@ -3550,3 +3550,16 @@ window.PCD.i18n.register('ar', {
   haccp_audit_sum_coverage: "{d}/{n} يوم مسجّل",
   haccp_audit_no_exceptions: "لا قراءات خارج النطاق ضمن الفحوصات المسجّلة.",
 });
+
+// v2.44.101 — طباعة عدة أشهر (كل نموذج HACCP + حزمة التدقيق)
+window.PCD.i18n.register('ar', {
+  haccp_range_intro: "اختر نطاق أشهر — كل شهر يُطبع في ملف PDF واحد، جاهز لمجلد التدقيق.",
+  haccp_range_from: "من",
+  haccp_range_to: "إلى",
+  haccp_range_print: "طباعة النطاق",
+  haccp_range_title: "طباعة نطاق الأشهر",
+  haccp_range_none: "لا توجد سجلات في الأشهر المحددة.",
+  haccp_range_tip: "اطبع عدة أشهر في ملف PDF واحد",
+  haccp_range_tip_days: "اطبع كل يوم مُسجّل عبر عدة أشهر في ملف PDF واحد",
+  haccp_range_btn: "أشهر…",
+});

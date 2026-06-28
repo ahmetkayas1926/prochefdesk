@@ -227,7 +227,8 @@
 
   // Build the Deep Pine A4 audit report HTML (PCD.print injects the gated
   // watermark footer automatically). esc = escape helper.
-  function buildAuditPackHtml(ym) {
+  function buildAuditPackHtml(ym, opts) {
+    opts = opts || {};
     const data = collectAuditData(ym);
     const esc = PCD.escapeHtml;
     const user = (PCD.store.get && PCD.store.get('user')) || {};
@@ -369,13 +370,26 @@
       '</div>';
   }
 
-  function printAuditPack(ym) {
-    const data = collectAuditData(ym);
-    if (data.totals.checks === 0) {
+  // Print one month, or a whole month range into ONE PDF (each month its own
+  // page-set). Empty months are skipped so a quarter export stays tight.
+  function printAuditPack(from, to) {
+    to = to || from;
+    const months = (PCD.haccp && PCD.haccp.monthsInRange) ? PCD.haccp.monthsInRange(from, to) : [from];
+    const sheets = months.map(function (m) {
+      const d = collectAuditData(m);
+      if (d.totals.checks === 0 && d.coverage.daysCovered === 0) return null;  // skip empty month
+      return buildAuditPackHtml(m);
+    }).filter(Boolean);
+    const title = L('haccp_audit_report_title', 'HACCP Audit Pack');
+    if (!sheets.length) {
       PCD.toast.error(L('haccp_audit_empty', 'No HACCP records found for this month. Log entries in the four forms first.'));
       return;
     }
-    PCD.print(buildAuditPackHtml(ym), L('haccp_audit_report_title', 'HACCP Audit Pack') + ' — ' + ym);
+    if (sheets.length === 1) {
+      PCD.print(sheets[0], title + ' — ' + months[0]);
+      return;
+    }
+    PCD.haccp.printSheets(sheets, title + ' · ' + from + ' – ' + to, 'portrait');
   }
 
   // Live one-line summary for the hub Audit Pack card (recomputed on month
@@ -587,8 +601,10 @@
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;">
-          <label for="haccpAuditMonth" style="font-size:12px;font-weight:600;color:var(--text-2);">${L('haccp_audit_month', 'Month')}</label>
-          <input type="month" id="haccpAuditMonth" value="${auditYm}" max="${auditYm}" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-1);font-size:13px;">
+          <label for="haccpAuditFrom" style="font-size:12px;font-weight:600;color:var(--text-2);">${L('haccp_range_from', 'From')}</label>
+          <input type="month" id="haccpAuditFrom" value="${auditYm}" max="${auditYm}" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-1);font-size:13px;">
+          <label for="haccpAuditTo" style="font-size:12px;font-weight:600;color:var(--text-2);">${L('haccp_range_to', 'To')}</label>
+          <input type="month" id="haccpAuditTo" value="${auditYm}" max="${auditYm}" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-1);font-size:13px;">
           <button type="button" class="btn btn-primary" id="haccpAuditBtn" style="font-size:13px;">${PCD.icon('print', 15)} ${L('haccp_audit_btn', 'Generate audit report')}</button>
         </div>
         <div id="haccpAuditSummary" style="margin-top:10px;font-size:12px;color:var(--text-2);">${auditSummaryInner(auditData)}</div>
@@ -614,21 +630,25 @@
       if (r && PCD.router && PCD.router.go) PCD.router.go(r);
     });
 
-    // Audit Pack — generate combined monthly report; live summary on month change.
+    // Audit Pack — generate report for a month or a whole range into one PDF.
+    const auditFromEl = PCD.$('#haccpAuditFrom', view);
+    const auditToEl = PCD.$('#haccpAuditTo', view);
     const auditBtn = PCD.$('#haccpAuditBtn', view);
     if (auditBtn) {
       auditBtn.addEventListener('click', function () {
-        const mEl = PCD.$('#haccpAuditMonth', view);
-        printAuditPack((mEl && mEl.value) || currentMonthYM());
+        const from = (auditFromEl && auditFromEl.value) || currentMonthYM();
+        const to = (auditToEl && auditToEl.value) || from;
+        printAuditPack(from, to);
       });
     }
-    const auditMonthEl = PCD.$('#haccpAuditMonth', view);
-    if (auditMonthEl) {
-      auditMonthEl.addEventListener('change', function () {
-        const sEl = PCD.$('#haccpAuditSummary', view);
-        if (sEl) sEl.innerHTML = auditSummaryInner(collectAuditData(this.value || currentMonthYM()));
-      });
+    // Live summary tracks the "from" month (the range's first); recomputed on
+    // either input change so the chef sees coverage before printing.
+    function _refreshAuditSummary() {
+      const sEl = PCD.$('#haccpAuditSummary', view);
+      if (sEl) sEl.innerHTML = auditSummaryInner(collectAuditData((auditFromEl && auditFromEl.value) || currentMonthYM()));
     }
+    if (auditFromEl) auditFromEl.addEventListener('change', _refreshAuditSummary);
+    if (auditToEl) auditToEl.addEventListener('change', _refreshAuditSummary);
 
     // v2.9.37 — HACCP region change handler. Four-layer persist guarantee:
     // (1) in-memory state set, (2) flushSync to LS/IDB, (3) cloud queue

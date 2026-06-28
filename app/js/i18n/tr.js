@@ -3707,3 +3707,16 @@ window.PCD.i18n.register('tr', {
   haccp_audit_sum_coverage: "{n} günün {d}'i loglandı",
   haccp_audit_no_exceptions: "Kayıtlı okumalarda aralık-dışı yok.",
 });
+
+// v2.44.101 — Çok-aylık yazdırma (her HACCP formu + Audit Pack)
+window.PCD.i18n.register('tr', {
+  haccp_range_intro: "Bir ay aralığı seç — içindeki her ay tek PDF'te basılır, denetim klasörüne hazır.",
+  haccp_range_from: "Başlangıç",
+  haccp_range_to: "Bitiş",
+  haccp_range_print: "Aralığı yazdır",
+  haccp_range_title: "Ay aralığı yazdır",
+  haccp_range_none: "Seçili aylarda kayıt yok.",
+  haccp_range_tip: "Birden çok ayı tek PDF'te yazdır",
+  haccp_range_tip_days: "Birden çok aydaki tüm kayıtlı günleri tek PDF'te yazdır",
+  haccp_range_btn: "Aylar…",
+});

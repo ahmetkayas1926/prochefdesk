@@ -4,6 +4,13 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.101 — HACCP çok-aylık yazdırma: her form + Audit Pack tek PDF'te ay aralığı · 2026-06-28
+Şimdiye dek her HACCP formu yalnız TEK ay basıyordu. Denetim çeyreklik/dönemsel olur (kayıt saklama 90+ gün) — operatör "Nisan→Haziran seç, tek PDF al" istedi. **5 yerin hepsine** eklendi: Daily Temperature, Cook & Cool, Receiving, Hot/Cold Holding + Audit Pack.
+- **YENİ — Ortak ay-aralığı altyapısı** (`PCD.haccp` · utils.js): `pickMonthRange` (Başlangıç/Bitiş modalı), `monthsInRange`, `printSheets` (her ayın sayfasını tek landscape PDF'e page-break ile dizer). Tek noktadan, her form aynı akışı kullanır.
+- **Her formda "Aylar…" butonu** mevcut tek-ay yazdırmanın yanında. Aylık formlar (logs/cooling/receiving) → her ay bir sayfa; **Holding günlük** → aralıktaki tüm kayıtlı günler ayrı sayfalar. Audit Pack → her ay kendi tam raporu (portrait), aralarında page-break.
+- **Tek-ay çıktısı DEĞİŞMEDİ.** Yaklaşım: her formun mevcut print fonksiyonuna `returnHtml` parametresi (tek satır) — tek-ay HTML'i birebir aynı, sadece artık döndürülebiliyor; iç sheet'in `body{}` kuralı sarmalanınca etkisiz kalır, tek-sayfa layout korunur.
+- **Preview'da uçtan uca doğrulandı:** Cook&Cool May+June → 2 landscape sayfa + page-break + her ayın dolu verisi; Receiving aynı; **Audit Pack 2026-05→2026-06 → tek PDF, 2 ay başlığı (her ay tam rapor), portrait, page-break, corrective notu render**; butonlar "Months…" + From/To i18n çözülü; 0 console hatası. 9 yeni i18n anahtarı **6 dilde TAM**. Tüm syntax `node -c` temiz.
+
 ## v2.44.100 — HACCP Audit Pack dürüstlük düzeltmesi: tamlık (coverage) + "in range" ≠ "compliance" · 2026-06-28
 Operatör gerçek bir kusur yakaladı: Haziran'da 1 log girilince rapor "%100 compliance · full compliance" diyordu. Dış-kaynak araştırması ([envigilance](https://envigilance.com/temperature-monitoring/temperature-compliance/), [securvo](https://securvo.com/resources/haccp-temperature-logging-guide), [paddl](https://paddl-ai.co/haccp/monitoring/temperature-logs), [FDA](https://www.fda.gov/food/hazard-analysis-critical-control-point-haccp/haccp-principles-application-guidelines)) bunu doğruladı: denetçinin baktığı **tamlık** (kayıt boşluğu), kayıtlı-okumaların geçme oranı değil — *"kayıtlardaki boşluklar, belgelenmiş düzeltici-eylemli aralık-dışı okumalardan HACCP güvenilirliğine DAHA çok zarar verir."* Üç defekt giderildi:
 - **"Compliance" → "Readings in range".** Metrik artık dürüst: *kayıtlı* okumaların geçme oranı (uyum DEĞİL). Yeşil "full compliance" bandı → "Kayıtlı okumalarda aralık-dışı yok."

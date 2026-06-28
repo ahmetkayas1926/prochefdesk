@@ -3550,3 +3550,16 @@ window.PCD.i18n.register('fr', {
   haccp_audit_sum_coverage: "{d}/{n} jours enregistrés",
   haccp_audit_no_exceptions: "Aucun relevé hors plage parmi les contrôles enregistrés.",
 });
+
+// v2.44.101 — Impression sur plusieurs mois (chaque formulaire HACCP + dossier d'audit)
+window.PCD.i18n.register('fr', {
+  haccp_range_intro: "Sélectionnez une plage de mois — chaque mois s'imprime dans un seul PDF, prêt pour le classeur d'audit.",
+  haccp_range_from: "Du",
+  haccp_range_to: "Au",
+  haccp_range_print: "Imprimer la plage",
+  haccp_range_title: "Imprimer une plage de mois",
+  haccp_range_none: "Aucun enregistrement pour les mois sélectionnés.",
+  haccp_range_tip: "Imprimer plusieurs mois dans un seul PDF",
+  haccp_range_tip_days: "Imprimer chaque jour enregistré sur plusieurs mois dans un seul PDF",
+  haccp_range_btn: "Mois…",
+});

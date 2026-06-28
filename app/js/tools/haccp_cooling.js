@@ -139,6 +139,7 @@
         '<div class="page-header-actions">' +
           '<button class="btn btn-outline btn-sm" id="hccPrintBlankBtn" title="' + PCD.escapeHtml(t('hcc_print_month_tip') || '31 satırlık aylık boş form yazdır') + '">' + PCD.icon('print', 14) + ' <span>' + PCD.escapeHtml(t('hcc_print_blank') || 'Boş yazdır') + '</span></button>' +
           '<button class="btn btn-primary btn-sm" id="hccPrintMonthBtn" title="' + PCD.escapeHtml(t('hcc_print_filled_month_tip') || 'Bu ayın doldurulmuş satırlarını yazdır') + '">' + PCD.icon('print', 14) + ' <span>' + PCD.escapeHtml(t('hcc_print_filled_month') || 'Bu ayı yazdır') + '</span></button>' +
+          '<button class="btn btn-outline btn-sm" id="hccPrintRangeBtn" title="' + PCD.escapeHtml((PCD.i18n.t('haccp_range_tip') !== 'haccp_range_tip' ? PCD.i18n.t('haccp_range_tip') : '') || 'Print several months into one PDF') + '">' + PCD.icon('print', 14) + ' <span>' + PCD.escapeHtml((PCD.i18n.t('haccp_range_btn') !== 'haccp_range_btn' ? PCD.i18n.t('haccp_range_btn') : '') || 'Months…') + '</span></button>' +
         '</div>' +
       '</div>';
 
@@ -263,6 +264,12 @@
     });
     PCD.$('#hccPrintBlankBtn', view).addEventListener('click', function () { openMonthPickerModal(true); });
     PCD.$('#hccPrintMonthBtn', view).addEventListener('click', function () { printMonth(_viewMonth, false); });
+    PCD.$('#hccPrintRangeBtn', view).addEventListener('click', function () {
+      PCD.haccp.pickMonthRange(_viewMonth, function (from, to) {
+        const sheets = PCD.haccp.monthsInRange(from, to).map(function (m) { return printMonth(m, false, true); });
+        PCD.haccp.printSheets(sheets, 'HACCP Cook & Cool · ' + from + ' – ' + to);
+      });
+    });
 
     PCD.on(view, 'click', '[data-jump-month]', function () {
       _viewMonth = this.getAttribute('data-jump-month');
@@ -449,7 +456,7 @@
   // ============ PRINT (MONTH) ============
   // Tek fonksiyon: blank=true ise satırlar boş, blank=false ise mevcut data ile dolu.
   // 31 satır sabit, sol kolonda gün numarası (kullanıcı verdiği day veya satır no).
-  function printMonth(monthYM, blank) {
+  function printMonth(monthYM, blank, returnHtml) {
     const t = PCD.i18n.t;
     const u = getTempUnit();
     const target2h = targetForUI(cooling2hC());
@@ -592,6 +599,7 @@
       '</div>' +
       '</div>';  // /.h-sheet (v2.9.32) — PCD.print injects footer right after as flex sibling
 
+    if (returnHtml) return html;
     PCD.print(html, 'HACCP Cook & Cool · ' + label);
   }
 

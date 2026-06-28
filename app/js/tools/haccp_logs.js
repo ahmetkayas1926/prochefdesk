@@ -210,6 +210,7 @@
         '<div class="page-header-actions">' +
           '<button class="btn btn-outline btn-sm" id="haccpAddUnitBtn">' + PCD.icon('plus', 16) + ' <span>' + (t('haccp_add_unit') || 'Add unit') + '</span></button>' +
           (units.length > 0 ? '<button class="btn btn-outline btn-sm" id="haccpPrintBtn">' + PCD.icon('print', 16) + ' <span>' + (t('print') || 'Print/PDF') + '</span></button>' : '') +
+          (units.length > 0 ? '<button class="btn btn-outline btn-sm" id="haccpPrintRangeBtn" title="' + PCD.escapeHtml((t('haccp_range_tip') !== 'haccp_range_tip' ? t('haccp_range_tip') : '') || 'Print several months into one PDF') + '">' + PCD.icon('print', 16) + ' <span>' + PCD.escapeHtml((t('haccp_range_btn') !== 'haccp_range_btn' ? t('haccp_range_btn') : '') || 'Months…') + '</span></button>' : '') +
         '</div>' +
       '</div>';
 
@@ -447,6 +448,21 @@
         }
       }
       printMonth(_viewYear, _viewMonth, activeLog);
+    });
+    const printRangeBtn = PCD.$('#haccpPrintRangeBtn', view);
+    if (printRangeBtn) printRangeBtn.addEventListener('click', function () {
+      const sel = view.querySelector('#haccpLogSelect');
+      const liveLogId = sel && sel.value;
+      let activeLog = currentLog;
+      if (liveLogId) { const live = PCD.store.getFromTable(TABLE_LOGS, liveLogId); if (live) activeLog = live; }
+      const curYM = _viewYear + '-' + String(_viewMonth + 1).padStart(2, '0');
+      PCD.haccp.pickMonthRange(curYM, function (from, to) {
+        const sheets = PCD.haccp.monthsInRange(from, to).map(function (ym) {
+          const p = ym.split('-');
+          return printMonth(Number(p[0]), Number(p[1]) - 1, activeLog, true);
+        });
+        PCD.haccp.printSheets(sheets, 'HACCP Fridge Log — ' + from + ' – ' + to);
+      });
     });
     PCD.$('#haccpPrevMonth', view).addEventListener('click', function () {
       _viewMonth--;
@@ -752,7 +768,7 @@
   }
 
   // ============ PRINT MONTH ============
-  function printMonth(year, monthIdx0, currentLogOverride) {
+  function printMonth(year, monthIdx0, currentLogOverride, returnHtml) {
     const t = PCD.i18n.t;
     // v2.11.8 — currentLogOverride: render scope'undaki güncel log explicitly
     // pass edilir → store race veya stale state bypass. listUnits da bu logId'ye
@@ -898,6 +914,7 @@
 
     html += '<div class="h-sign"><div>' + PCD.escapeHtml(t('reviewed_by') || 'Reviewed by') + ': ____________________________</div><div>' + PCD.escapeHtml(t('haccp_print_date') || 'Date') + ': ____________________</div></div>' +
       '</div>';  // /.h-sheet
+    if (returnHtml) return html;
     PCD.print(html, 'HACCP Fridge Log — ' + monthLabel(year, monthIdx0));
   }
 

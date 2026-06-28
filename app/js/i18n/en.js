@@ -3655,3 +3655,16 @@ window.PCD.i18n.register('en', {
   haccp_audit_sum_coverage: "{d}/{n} days logged",
   haccp_audit_no_exceptions: "No out-of-range readings among the recorded checks.",
 });
+
+// v2.44.101 — Multi-month printing (every HACCP form + Audit Pack)
+window.PCD.i18n.register('en', {
+  haccp_range_intro: "Select a month range — every month in it prints into one PDF, ready for the audit binder.",
+  haccp_range_from: "From",
+  haccp_range_to: "To",
+  haccp_range_print: "Print range",
+  haccp_range_title: "Print month range",
+  haccp_range_none: "No records in the selected months.",
+  haccp_range_tip: "Print several months into one PDF",
+  haccp_range_tip_days: "Print every recorded day across several months into one PDF",
+  haccp_range_btn: "Months…",
+});
