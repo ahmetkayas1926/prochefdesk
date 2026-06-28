@@ -600,6 +600,14 @@
           </div>
         ` : ''}
       </div>
+      <div class="field">
+        <label class="field-label">${L('ing_shelf_life', 'Shelf life (days)')}</label>
+        <div class="input-group">
+          <input type="number" class="input" id="ingShelfLife" value="${data.shelfLifeDays || ''}" step="1" min="1" placeholder="—">
+          <span class="input-group-addon">${L('ing_days', 'days')}</span>
+        </div>
+        <div class="field-hint">${L('ing_shelf_hint', 'Optional. Sets a best-before date automatically when you receive stock — flags items to use before they spoil.')}</div>
+      </div>
 
 ${existing && existing.priceHistory && existing.priceHistory.length > 0 ? `
         <div class="section">
@@ -722,6 +730,11 @@ ${existing ? (function () {
       if (yld) {
         const v = parseFloat(yld.value);
         data.yieldPercent = (!isNaN(v) && v > 0 && v <= 100) ? v : null;
+      }
+      const sl = PCD.$('#ingShelfLife', body);
+      if (sl) {
+        const sv = parseInt(sl.value, 10);
+        data.shelfLifeDays = (!isNaN(sv) && sv > 0) ? sv : null;
       }
 
       if (!data.name) {

@@ -3516,3 +3516,37 @@ window.PCD.i18n.register('de', {
   shop_col_stock: "Bestand",
   shop_col_est: "Gesch. Kosten",
 });
+
+// v2.44.99 — Haltbarkeit / MHD (FIFO-Ablaufwarnungen → Abfall-Brücke)
+window.PCD.i18n.register('de', {
+  inv_expired: "Abgelaufen",
+  inv_exp_today: "Heute verbrauchen",
+  inv_exp_in: "In {n}T verbrauchen",
+  inv_expiring_soon: "Läuft ab",
+  inv_best_before: "Mindesthaltbarkeitsdatum",
+  inv_shelf_auto: "Automatisch aus {n} Tagen Haltbarkeit beim Wareneingang",
+  inv_days_ago: "T überfällig",
+  inv_log_waste: "Als Abfall buchen & abziehen",
+  inv_nothing_to_waste: "Kein Bestand zum Buchen.",
+  inv_wasted_logged: "{n} als Abfall gebucht · {c}",
+  ing_shelf_life: "Haltbarkeit (Tage)",
+  ing_days: "Tage",
+  ing_shelf_hint: "Optional. Setzt beim Wareneingang automatisch ein Mindesthaltbarkeitsdatum — markiert Artikel, die vor dem Verderb zu verbrauchen sind.",
+  dash_expiry_title_expired: "{n} Artikel abgelaufen",
+  dash_expiry_title_soon: "{n} Artikel laufen bald ab",
+  dash_expiry_cta: "Bestand prüfen",
+});
+
+// v2.44.100 — Audit-Pack-Ehrlichkeit: Abdeckung + "im Bereich" statt "Konformität"
+window.PCD.i18n.register('de', {
+  haccp_audit_stat_coverage: "Abdeckung Tagesprotokoll",
+  haccp_audit_stat_inrange: "Messwerte im Bereich",
+  haccp_audit_inrange_col: "Im Bereich",
+  haccp_audit_no_activity: "Keine Aktivität erfasst",
+  haccp_audit_coverage_full: "Tägliches Temperaturprotokoll vollständig — {d} von {n} Tagen erfasst.",
+  haccp_audit_coverage_gap: "Tagesprotokoll hat Lücken: {d} von {n} Tagen erfasst. Fehlende Aufzeichnungen sind das größte Audit-Risiko — vor dem Audit nachtragen.",
+  haccp_audit_event_note: "Wareneingang, Garen & Kühlen und Warmhaltung sind aktivitätsbasiert — nur bei Lieferung, Garen oder Halten erfasst. Ein leeres Formular bedeutet keine erfasste Aktivität, keine Nichtkonformität.",
+  haccp_audit_sum_inrange: "im Bereich",
+  haccp_audit_sum_coverage: "{d}/{n} Tage erfasst",
+  haccp_audit_no_exceptions: "Keine Messwerte außerhalb des Bereichs unter den erfassten Kontrollen.",
+});

@@ -58,7 +58,8 @@
   function _invRowChanged(a, b) {
     if (!a || !b) return true;
     return a.stock !== b.stock || a.parLevel !== b.parLevel || a.minLevel !== b.minLevel ||
-      a.lastReceivedAt !== b.lastReceivedAt || a.lastCountedAt !== b.lastCountedAt || a.lastOrderedAt !== b.lastOrderedAt;
+      a.lastReceivedAt !== b.lastReceivedAt || a.lastCountedAt !== b.lastCountedAt || a.lastOrderedAt !== b.lastOrderedAt ||
+      a.expiryDate !== b.expiryDate;
   }
   function writeInventory(invMap) {
     const wsId = PCD.store.getActiveWorkspaceId();
@@ -131,7 +132,14 @@
       const cur = row && row.stock != null ? (Number(row.stock) || 0) : 0;
       const to = cur + amt;
       const base = row || { stock: null, parLevel: null, minLevel: null };
-      inv[iid] = Object.assign({}, base, { stock: to, lastReceivedAt: new Date().toISOString(), updatedAt: Date.now() });
+      const extra = { stock: to, lastReceivedAt: new Date().toISOString(), updatedAt: Date.now() };
+      // Receiving fresh stock → reset best-before from the ingredient's shelf life.
+      const ingRow = PCD.store.getIngredient ? PCD.store.getIngredient(iid) : null;
+      if (ingRow && Number(ingRow.shelfLifeDays) > 0) {
+        const ed = new Date(); ed.setDate(ed.getDate() + Number(ingRow.shelfLifeDays));
+        extra.expiryDate = ed.toISOString().slice(0, 10);
+      }
+      inv[iid] = Object.assign({}, base, extra);
       report.push({ id: iid, from: cur, added: amt, to: to, status: computeStatus(inv[iid]) });
     });
     writeInventory(inv);
@@ -231,6 +239,34 @@
     return 'ok';
   }
 
+  // v2.44.99 — Shelf-life / best-before. Spoilage is 8–15% of a small kitchen's
+  // food budget; an expiry alert that prompts "use this first" is the fastest
+  // inventory win (FoodReady/Supy/Your Food App all lead with it). One best-
+  // before per item (lot-level FIFO is enterprise overkill for the solo
+  // caterer/private chef niche). expiryDate is explicit on the inv row, or
+  // auto-derived from ingredient.shelfLifeDays + lastReceivedAt.
+  const EXPIRY_SOON_DAYS = 3;
+  function _expiryOf(invRow, ing) {
+    if (invRow && invRow.expiryDate) return invRow.expiryDate;
+    if (ing && Number(ing.shelfLifeDays) > 0 && invRow && invRow.lastReceivedAt) {
+      const d = new Date(invRow.lastReceivedAt);
+      if (!isNaN(d.getTime())) { d.setDate(d.getDate() + Number(ing.shelfLifeDays)); return d.toISOString().slice(0, 10); }
+    }
+    return null;
+  }
+  function expiryInfo(invRow, ing) {
+    const stock = invRow && invRow.stock != null ? Number(invRow.stock) : 0;
+    if (!(stock > 0)) return null;            // no stock on hand → nothing to spoil
+    const ds = _expiryOf(invRow, ing);
+    if (!ds) return null;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const exp = new Date(ds + 'T00:00:00');
+    if (isNaN(exp.getTime())) return null;
+    const daysLeft = Math.floor((exp - today) / 86400000);
+    const state = daysLeft < 0 ? 'expired' : (daysLeft <= EXPIRY_SOON_DAYS ? 'soon' : 'ok');
+    return { date: ds, daysLeft: daysLeft, state: state };
+  }
+
   function statusColor(s) {
     return {
       out: 'var(--danger)',
@@ -250,6 +286,17 @@
       ok: t('inv_status_ok'),
       untracked: '—',
     }[s];
+  }
+
+  function expiryBadgeHtml(exp) {
+    const t = PCD.i18n.t;
+    const L = function (k, fb) { try { const v = t(k); return (v == null || v === k) ? fb : v; } catch (e) { return fb; } };
+    if (!exp || exp.state === 'ok') return '';
+    if (exp.state === 'expired') {
+      return '<span style="display:inline-flex;align-items:center;gap:3px;color:#dc2626;font-weight:800;">⚠ ' + PCD.escapeHtml(L('inv_expired', 'Expired')) + '</span>';
+    }
+    const lbl = exp.daysLeft <= 0 ? L('inv_exp_today', 'Use today') : L('inv_exp_in', 'Use in {n}d').replace('{n}', exp.daysLeft);
+    return '<span style="display:inline-flex;align-items:center;gap:3px;color:#b45309;font-weight:700;">⏳ ' + PCD.escapeHtml(lbl) + '</span>';
   }
 
   function render(view) {
@@ -329,7 +376,7 @@
     const listEl = PCD.$('#invList', view);
 
     function computeStats() {
-      let ok = 0, low = 0, crit = 0, untracked = 0, value = 0;
+      let ok = 0, low = 0, crit = 0, untracked = 0, value = 0, expiring = 0;
       ings.forEach(function (i) {
         const row = getRow(i.id);
         const s = computeStatus(row);
@@ -340,8 +387,10 @@
         if (row && row.stock != null) {
           value += (Number(row.stock) || 0) * (Number(i.pricePerUnit) || 0);
         }
+        const e = expiryInfo(row, i);
+        if (e && e.state !== 'ok') expiring++;
       });
-      return { ok: ok, low: low, crit: crit, untracked: untracked, value: value };
+      return { ok: ok, low: low, crit: crit, untracked: untracked, value: value, expiring: expiring };
     }
 
     function renderStats() {
@@ -359,6 +408,11 @@
           <div class="stat-label">${t('inv_status_critical')}</div>
           <div class="stat-value" style="color:var(--danger);">${s.crit}</div>
         </div>
+        ${s.expiring > 0 ? `
+        <div class="stat" style="border-color:#fbbf24;">
+          <div class="stat-label">${L('inv_expiring_soon', 'Expiring')}</div>
+          <div class="stat-value" style="color:#b45309;">${s.expiring}</div>
+        </div>` : ''}
         <div class="stat">
           <div class="stat-label">${t('inv_stock_value')}</div>
           <div class="stat-value">${PCD.fmtMoney(s.value)}</div>
@@ -447,6 +501,8 @@
         items.forEach(function (x) {
           const row = PCD.el('div', { class: 'list-item', 'data-iid': x.ing.id });
           const color = statusColor(x.status);
+          const exp = expiryInfo(x.row, x.ing);
+          const expBadge = expiryBadgeHtml(exp);
           const stockText = x.row && x.row.stock != null
             ? PCD.fmtNumber(x.row.stock) + ' ' + x.ing.unit
             : '—';
@@ -465,6 +521,7 @@
               <div class="list-item-title">${PCD.escapeHtml(x.ing.name)}</div>
               <div class="list-item-meta">
                 <span><strong>${stockText}</strong> / ${parText}</span>
+                ${expBadge ? '<span>·</span>' + expBadge : ''}
                 ${supBadge ? '<span>·</span>' + supBadge : ''}
                 ${x.row && x.row.lastOrderedAt ? '<span>·</span><span>' + t('inv_last_ordered') + ': ' + PCD.fmtRelTime(x.row.lastOrderedAt) + '</span>' : ''}
               </div>
@@ -1574,6 +1631,11 @@
     const invAll = readInventory();
     const row = invAll[ingId] ? PCD.clone(invAll[ingId]) : { stock: null, parLevel: null, minLevel: null, lastCountedAt: null, lastOrderedAt: null };
     const status = computeStatus(row);
+    const L = function (k, fb) { try { const v = t(k); return (v == null || v === k) ? fb : v; } catch (e) { return fb; } };
+    const exp = expiryInfo(row, ing);
+    const shelfHint = (Number(ing.shelfLifeDays) > 0 && !row.expiryDate)
+      ? L('inv_shelf_auto', 'Auto from {n}-day shelf life on receiving').replace('{n}', Number(ing.shelfLifeDays))
+      : '';
 
     const body = PCD.el('div');
     body.innerHTML = `
@@ -1621,6 +1683,21 @@
         </div>
       </div>
 
+      <div class="field">
+        <label class="field-label">${L('inv_best_before', 'Best-before date')}</label>
+        <input type="date" class="input" id="invExpiry" value="${row.expiryDate || ''}">
+        ${exp && exp.state === 'expired'
+          ? '<div class="field-hint" style="color:#dc2626;font-weight:700;">⚠ ' + PCD.escapeHtml(L('inv_expired', 'Expired')) + (exp.daysLeft < 0 ? ' · ' + Math.abs(exp.daysLeft) + L('inv_days_ago', 'd ago') : '') + '</div>'
+          : (exp && exp.state === 'soon'
+            ? '<div class="field-hint" style="color:#b45309;font-weight:700;">⏳ ' + PCD.escapeHtml(exp.daysLeft <= 0 ? L('inv_exp_today', 'Use today') : L('inv_exp_in', 'Use in {n}d').replace('{n}', exp.daysLeft)) + '</div>'
+            : (shelfHint ? '<div class="field-hint">' + PCD.escapeHtml(shelfHint) + '</div>' : ''))}
+      </div>
+
+      ${exp && exp.state !== 'ok' ? `
+        <div class="flex gap-2 mt-2">
+          <button class="btn btn-outline btn-block" id="logWasteBtn" style="border-color:#f59e0b;color:#b45309;font-weight:700;">🗑 ${PCD.escapeHtml(L('inv_log_waste', 'Log as waste & deduct'))}</button>
+        </div>` : ''}
+
       <div class="flex gap-2 mt-3">
         <button class="btn btn-outline btn-block" id="markOrdered">${t('inv_mark_ordered')}</button>
       </div>
@@ -1634,6 +1711,30 @@
     }
     updateValue();
     PCD.$('#invStock', body).addEventListener('input', updateValue);
+
+    // Waste bridge — log the on-hand stock as spoilage waste + deduct it.
+    const logWasteBtn = PCD.$('#logWasteBtn', body);
+    if (logWasteBtn) {
+      logWasteBtn.addEventListener('click', function () {
+        if (PCD.gate && !PCD.gate.requireAuth()) return;
+        const onHand = Number(row.stock) || 0;
+        if (!(onHand > 0)) { PCD.toast.info(L('inv_nothing_to_waste', 'No stock on hand to log.')); return; }
+        // 1) record waste entry (same shape the Waste tool writes)
+        try {
+          PCD.store.upsertInTable('waste', {
+            itemType: 'ingredient', ingredientId: ingId, recipeId: '', customName: '',
+            amount: onHand, unit: ing.unit || '', reason: 'spoilage',
+            costValue: '', date: new Date().toISOString(),
+          }, 'wst');
+        } catch (e) { /* non-fatal */ }
+        // 2) deduct from stock via the shared contract
+        applyStockDeductions({ [ingId]: onHand });
+        const lossTxt = PCD.fmtMoney(onHand * (Number(ing.pricePerUnit) || 0));
+        PCD.toast.success(L('inv_wasted_logged', '{n} logged as waste · {c}').replace('{n}', PCD.fmtNumber(onHand) + ' ' + (ing.unit || '')).replace('{c}', lossTxt));
+        m.close();
+        setTimeout(function () { const v = PCD.$('#view'); if (PCD.router.currentView() === 'inventory') render(v); }, 200);
+      });
+    }
 
     PCD.$('#markOrdered', body).addEventListener('click', function () {
       row.lastOrderedAt = new Date().toISOString();
@@ -1668,6 +1769,8 @@
       row.stock = stock === '' ? null : parseFloat(stock);
       row.parLevel = par === '' ? null : parseFloat(par);
       row.minLevel = min === '' ? null : parseFloat(min);
+      const expEl = PCD.$('#invExpiry', body);
+      if (expEl) row.expiryDate = expEl.value || null;
       if (row.stock !== oldStock) row.lastCountedAt = new Date().toISOString();
 
       const allCurrent = readInventory();
@@ -1976,6 +2079,23 @@
     '</div>';
   }
 
+  // Public: which on-hand items are expired / expiring soon (for the dashboard
+  // alert card). Keeps the spoilage logic in one place — dashboard never
+  // duplicates the date math.
+  function expiringSummary() {
+    const inv = readInventory();
+    const ings = PCD.store.listIngredients() || [];
+    let soon = 0, expired = 0; const items = [];
+    ings.forEach(function (i) {
+      const e = expiryInfo(inv[i.id], i);
+      if (!e || e.state === 'ok') return;
+      if (e.state === 'expired') expired++; else soon++;
+      items.push({ id: i.id, name: i.name, state: e.state, daysLeft: e.daysLeft });
+    });
+    items.sort(function (a, b) { return a.daysLeft - b.daysLeft; });
+    return { soon: soon, expired: expired, total: soon + expired, items: items };
+  }
+
   PCD.tools = PCD.tools || {};
-  PCD.tools.inventory = { render: render, openEditor: openEditor, computeStatus: computeStatus, applyStockDeductions: applyStockDeductions, applyStockAdditions: applyStockAdditions, computeSalesDeductions: computeSalesDeductions, confirmStockChange: confirmStockChange };
+  PCD.tools.inventory = { render: render, openEditor: openEditor, computeStatus: computeStatus, applyStockDeductions: applyStockDeductions, applyStockAdditions: applyStockAdditions, computeSalesDeductions: computeSalesDeductions, confirmStockChange: confirmStockChange, expiringSummary: expiringSummary };
 })();

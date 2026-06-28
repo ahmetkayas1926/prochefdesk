@@ -3516,3 +3516,37 @@ window.PCD.i18n.register('fr', {
   shop_col_stock: "En stock",
   shop_col_est: "Coût est.",
 });
+
+// v2.44.99 — Durée de conservation / DLC (alertes FIFO → pont vers les pertes)
+window.PCD.i18n.register('fr', {
+  inv_expired: "Périmé",
+  inv_exp_today: "À utiliser aujourd'hui",
+  inv_exp_in: "À utiliser dans {n}j",
+  inv_expiring_soon: "Bientôt périmé",
+  inv_best_before: "Date limite (DLC)",
+  inv_shelf_auto: "Auto. depuis {n} jours de conservation à la réception",
+  inv_days_ago: "j de retard",
+  inv_log_waste: "Enregistrer la perte et déduire",
+  inv_nothing_to_waste: "Aucun stock à enregistrer.",
+  inv_wasted_logged: "{n} enregistré comme perte · {c}",
+  ing_shelf_life: "Durée de conservation (jours)",
+  ing_days: "jours",
+  ing_shelf_hint: "Facultatif. Définit automatiquement une date limite à la réception du stock — signale les articles à utiliser avant qu'ils ne se gâtent.",
+  dash_expiry_title_expired: "{n} article(s) périmé(s)",
+  dash_expiry_title_soon: "{n} article(s) bientôt périmé(s)",
+  dash_expiry_cta: "Vérifier le stock",
+});
+
+// v2.44.100 — Honnêteté du dossier d'audit : couverture + « dans la plage » pas « conformité »
+window.PCD.i18n.register('fr', {
+  haccp_audit_stat_coverage: "Couverture du relevé quotidien",
+  haccp_audit_stat_inrange: "Relevés dans la plage",
+  haccp_audit_inrange_col: "Dans la plage",
+  haccp_audit_no_activity: "Aucune activité enregistrée",
+  haccp_audit_coverage_full: "Relevé quotidien de température complet — {d} jours sur {n} enregistrés.",
+  haccp_audit_coverage_gap: "Le relevé quotidien a des lacunes : {d} jours sur {n} enregistrés. Les enregistrements manquants sont le plus grand risque d'audit — complétez-les avant l'audit.",
+  haccp_audit_event_note: "Réception, Cuisson et refroidissement et Maintien sont basés sur l'activité — enregistrés uniquement en cas de livraison, cuisson ou maintien. Un formulaire vide signifie aucune activité enregistrée, pas une non-conformité.",
+  haccp_audit_sum_inrange: "dans la plage",
+  haccp_audit_sum_coverage: "{d}/{n} jours enregistrés",
+  haccp_audit_no_exceptions: "Aucun relevé hors plage parmi les contrôles enregistrés.",
+});

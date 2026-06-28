@@ -3673,3 +3673,37 @@ window.PCD.i18n.register('tr', {
   shop_col_stock: "Stokta",
   shop_col_est: "Tah. maliyet",
 });
+
+// v2.44.99 — Raf-ömrü / son-kullanma takibi (FIFO uyarıları → fire köprüsü)
+window.PCD.i18n.register('tr', {
+  inv_expired: "Süresi geçti",
+  inv_exp_today: "Bugün kullan",
+  inv_exp_in: "{n}g içinde kullan",
+  inv_expiring_soon: "Bozulacak",
+  inv_best_before: "Son kullanma tarihi",
+  inv_shelf_auto: "Mal kabulde {n} günlük raf ömründen otomatik",
+  inv_days_ago: "g önce",
+  inv_log_waste: "Fire yaz & stoktan düş",
+  inv_nothing_to_waste: "Stokta düşülecek miktar yok.",
+  inv_wasted_logged: "{n} fire yazıldı · {c}",
+  ing_shelf_life: "Raf ömrü (gün)",
+  ing_days: "gün",
+  ing_shelf_hint: "Opsiyonel. Mal kabulde otomatik son-kullanma tarihi koyar — bozulmadan önce kullanılacakları işaretler.",
+  dash_expiry_title_expired: "{n} ürünün süresi geçti",
+  dash_expiry_title_soon: "{n} ürün yakında bozulacak",
+  dash_expiry_cta: "Stoğu gözden geçir",
+});
+
+// v2.44.100 — Audit Pack dürüstlük: tamlık/kapsama + "uyum" değil "aralıkta"
+window.PCD.i18n.register('tr', {
+  haccp_audit_stat_coverage: "Günlük log kapsaması",
+  haccp_audit_stat_inrange: "Aralıktaki okumalar",
+  haccp_audit_inrange_col: "Aralıkta",
+  haccp_audit_no_activity: "İşlem kaydı yok",
+  haccp_audit_coverage_full: "Günlük sıcaklık logu tam — {n} günün {d} günü kayıtlı.",
+  haccp_audit_coverage_gap: "Günlük logda boşluk var: {n} günün {d} günü kayıtlı. Eksik kayıt en büyük denetim riskidir — denetimden önce tamamlayın.",
+  haccp_audit_event_note: "Mal kabul, Pişir & Soğut ve Bekletme işlem-bazlıdır — yalnız teslimat, pişirme veya bekletme olduğunda kaydedilir. Boş form 'işlem kaydı yok' demektir, uygunsuzluk değil.",
+  haccp_audit_sum_inrange: "aralıkta",
+  haccp_audit_sum_coverage: "{n} günün {d}'i loglandı",
+  haccp_audit_no_exceptions: "Kayıtlı okumalarda aralık-dışı yok.",
+});

@@ -179,11 +179,36 @@
     Object.keys(byForm).forEach(function (k) { checks += byForm[k].checks; fails += byForm[k].fails; });
     exceptions.forEach(function (x) { if (x.open) openCapa++; });
     exceptions.sort(function (a, b) { return (a.date || '').localeCompare(b.date || ''); });
-    const compliancePct = checks > 0 ? Math.round(((checks - fails) / checks) * 1000) / 10 : 100;
+    // "In range" = pass rate of the readings that WERE recorded. NOT compliance:
+    // auditors weigh record completeness (gaps) above pass rate, so this is
+    // reported alongside coverage, never as a standalone "compliance" figure.
+    const inRangePct = checks > 0 ? Math.round(((checks - fails) / checks) * 1000) / 10 : null;
+
+    // Daily-log coverage (completeness) — the metric auditors weigh most. Only
+    // the daily temperature log is a per-day obligation; receiving / cook-cool /
+    // holding are activity-based (logged only when there's a delivery, cook or
+    // hold), so a blank one is "no activity", not a gap.
+    const parts2 = ym.split('-');
+    const yy = Number(parts2[0]), mm = Number(parts2[1]);
+    const daysInMonth = new Date(yy, mm, 0).getDate();
+    const now = new Date();
+    const isCurrentMonth = (now.getFullYear() === yy && (now.getMonth() + 1) === mm);
+    const isFuture = (yy > now.getFullYear()) || (yy === now.getFullYear() && mm > (now.getMonth() + 1));
+    const daysElapsed = isFuture ? 0 : (isCurrentMonth ? Math.min(now.getDate(), daysInMonth) : daysInMonth);
+    const hasUnits = (PCD.store.listTable('haccpUnits') || []).length > 0;
+    const loggedDays = {};
+    (PCD.store.listTable('haccpReadings') || []).forEach(function (r) {
+      if (!r || r._deletedAt || !inMonth(r.date, ym)) return;
+      const has = ['morning', 'evening'].some(function (s) { return r[s] && r[s].value != null && r[s].value !== ''; });
+      if (has) loggedDays[r.date] = true;
+    });
+    const daysCovered = Object.keys(loggedDays).length;
+    const coveragePct = (hasUnits && daysElapsed > 0) ? Math.round((daysCovered / daysElapsed) * 100) : null;
 
     return {
       ym: ym, byForm: byForm, exceptions: exceptions,
-      totals: { checks: checks, fails: fails, openCapa: openCapa, compliancePct: compliancePct },
+      totals: { checks: checks, fails: fails, openCapa: openCapa, inRangePct: inRangePct },
+      coverage: { hasUnits: hasUnits, daysCovered: daysCovered, daysElapsed: daysElapsed, daysInMonth: daysInMonth, pct: coveragePct },
     };
   }
 
@@ -211,9 +236,24 @@
     const regionId = (PCD.haccp && PCD.haccp.getRegion) ? PCD.haccp.getRegion() : 'international';
     const regionLabel = L((regions[regionId] && regions[regionId].labelKey) || 'haccp_region_international', regionId);
     const genDate = new Date().toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || 'en', { year: 'numeric', month: 'short', day: 'numeric' });
-    const c = complianceColor(data.totals.compliancePct);
+    const inRange = data.totals.inRangePct;
+    const c = (inRange == null) ? '#a8a29e' : complianceColor(inRange);
+    const cov = data.coverage;
+    const covColor = (cov.pct == null) ? '#a8a29e' : (cov.pct >= 90 ? '#1f9d6b' : (cov.pct >= 50 ? '#b45309' : '#dc2626'));
 
     const PINE = '#16433a', ACC = '#1f9d6b', INK = '#1c1917', BD = '#e7e5e4', THBG = '#eaf6f0';
+
+    // Completeness banner — auditors weigh record gaps above pass rate.
+    let coverageBanner = '';
+    if (cov.hasUnits && cov.pct != null) {
+      if (cov.pct >= 90) {
+        coverageBanner = '<div style="padding:10px 14px;border-radius:8px;background:#f0fdf4;color:#166534;font-weight:600;font-size:12px;margin-bottom:16px;">✓ ' +
+          PCD.escapeHtml(L('haccp_audit_coverage_full', 'Daily temperature log complete — {d} of {n} days recorded.').replace('{d}', cov.daysCovered).replace('{n}', cov.daysElapsed)) + '</div>';
+      } else {
+        coverageBanner = '<div style="padding:10px 14px;border-radius:8px;background:#fff7ed;color:#b45309;font-weight:700;font-size:12px;margin-bottom:16px;border:1px solid #fbbf24;">⚠ ' +
+          PCD.escapeHtml(L('haccp_audit_coverage_gap', 'Daily log has gaps: {d} of {n} days recorded. Missing records are the biggest audit risk — fill them before the audit.').replace('{d}', cov.daysCovered).replace('{n}', cov.daysElapsed)) + '</div>';
+      }
+    }
 
     function stat(label, value, color) {
       return '<div style="flex:1;min-width:120px;border:1px solid ' + BD + ';border-radius:10px;padding:12px 14px;background:#fff;">' +
@@ -222,18 +262,26 @@
       '</div>';
     }
 
-    // Per-form summary rows
+    // Per-form summary rows. Forms with no records show a neutral "no activity"
+    // line — receiving/cook-cool/holding are activity-based, so blank ≠ a gap.
     let formRows = '';
     ['logs', 'cooling', 'receiving', 'holding'].forEach(function (k) {
       const f = data.byForm[k];
+      if (f.checks === 0) {
+        formRows += '<tr>' +
+          '<td style="padding:7px 10px;border:1px solid ' + BD + ';font-weight:600;color:' + INK + ';">' + esc(f.label) + '</td>' +
+          '<td colspan="4" style="padding:7px 10px;border:1px solid ' + BD + ';text-align:center;color:#a8a29e;font-style:italic;">' + esc(L('haccp_audit_no_activity', 'No activity logged')) + '</td>' +
+        '</tr>';
+        return;
+      }
       const pass = f.checks - f.fails;
-      const pct = f.checks > 0 ? Math.round(((f.checks - f.fails) / f.checks) * 1000) / 10 : null;
+      const pct = Math.round(((f.checks - f.fails) / f.checks) * 1000) / 10;
       formRows += '<tr>' +
         '<td style="padding:7px 10px;border:1px solid ' + BD + ';font-weight:600;color:' + INK + ';">' + esc(f.label) + '</td>' +
         '<td style="padding:7px 10px;border:1px solid ' + BD + ';text-align:center;">' + f.checks + '</td>' +
         '<td style="padding:7px 10px;border:1px solid ' + BD + ';text-align:center;color:#166534;">' + pass + '</td>' +
         '<td style="padding:7px 10px;border:1px solid ' + BD + ';text-align:center;color:' + (f.fails ? '#991b1b' : '#78716c') + ';font-weight:' + (f.fails ? '700' : '400') + ';">' + (f.fails || '—') + '</td>' +
-        '<td style="padding:7px 10px;border:1px solid ' + BD + ';text-align:center;font-weight:700;color:' + (pct == null ? '#a8a29e' : complianceColor(pct)) + ';">' + (pct == null ? '—' : pct + '%') + '</td>' +
+        '<td style="padding:7px 10px;border:1px solid ' + BD + ';text-align:center;font-weight:700;color:' + complianceColor(pct) + ';">' + pct + '%</td>' +
       '</tr>';
     });
 
@@ -241,7 +289,7 @@
     let exHtml;
     if (data.exceptions.length === 0) {
       exHtml = '<div style="padding:18px;border:1px solid ' + BD + ';border-radius:10px;background:#f0fdf4;color:#166534;font-weight:600;text-align:center;">✓ ' +
-        esc(L('haccp_audit_no_exceptions', 'No out-of-range events recorded for this period — full compliance.')) + '</div>';
+        esc(L('haccp_audit_no_exceptions', 'No out-of-range readings among the recorded checks.')) + '</div>';
     } else {
       let rows = '';
       data.exceptions.forEach(function (x) {
@@ -285,21 +333,25 @@
           '</div>' +
         '</div>' +
 
-        '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;">' +
+        '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">' +
           stat(L('haccp_audit_stat_checks', 'Temperature checks'), data.totals.checks, PINE) +
-          stat(L('haccp_audit_stat_compliance', 'Compliance'), data.totals.compliancePct + '%', c) +
+          (cov.hasUnits ? stat(L('haccp_audit_stat_coverage', 'Daily-log coverage'), cov.daysCovered + ' / ' + cov.daysElapsed, covColor) : '') +
+          stat(L('haccp_audit_stat_inrange', 'Readings in range'), (inRange == null ? '—' : inRange + '%'), c) +
           stat(L('haccp_audit_stat_fails', 'Out-of-range'), data.totals.fails || '0', data.totals.fails ? '#dc2626' : INK) +
           stat(L('haccp_audit_stat_open', 'Open corrective actions'), data.totals.openCapa || '0', data.totals.openCapa ? '#dc2626' : ACC) +
         '</div>' +
 
+        coverageBanner +
+
         '<div style="font-family:Fraunces,Georgia,serif;font-size:16px;font-weight:700;color:' + PINE + ';margin:0 0 8px;">' + esc(L('haccp_audit_by_form', 'Records by form')) + '</div>' +
-        '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:22px;">' +
+        '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:6px;">' +
           '<thead><tr style="background:' + THBG + ';">' +
-            ['haccp_audit_form_col|Form', 'haccp_audit_checks_col|Checks', 'haccp_audit_pass_col|Pass', 'haccp_audit_fail_col|Out-of-range', 'haccp_audit_compliance_col|Compliance'].map(function (p, i) {
+            ['haccp_audit_form_col|Form', 'haccp_audit_checks_col|Checks', 'haccp_audit_pass_col|Pass', 'haccp_audit_fail_col|Out-of-range', 'haccp_audit_inrange_col|In range'].map(function (p, i) {
               const kv = p.split('|');
               return '<th style="padding:8px 10px;border:1px solid ' + BD + ';text-align:' + (i === 0 ? 'start' : 'center') + ';font-size:10px;text-transform:uppercase;letter-spacing:0.04em;color:' + PINE + ';">' + esc(L(kv[0], kv[1])) + '</th>';
             }).join('') +
           '</tr></thead><tbody>' + formRows + '</tbody></table>' +
+        '<div style="margin:0 0 22px;font-size:10.5px;color:#78716c;font-style:italic;">' + esc(L('haccp_audit_event_note', 'Receiving, Cook & Cool and Holding are activity-based — logged only when there is a delivery, cook or hold. A blank form means no logged activity, not non-compliance.')) + '</div>' +
 
         '<div style="font-family:Fraunces,Georgia,serif;font-size:16px;font-weight:700;color:' + PINE + ';margin:0 0 8px;">' + esc(L('haccp_audit_exceptions_title', 'Corrective-action log (out-of-range events)')) + '</div>' +
         exHtml +
@@ -332,10 +384,14 @@
     if (!d || d.totals.checks === 0) {
       return '<span style="color:var(--text-3);">' + PCD.escapeHtml(L('haccp_audit_none_yet', 'No records logged for this month yet.')) + '</span>';
     }
-    const col = complianceColor(d.totals.compliancePct);
+    const inRange = d.totals.inRangePct;
+    const col = (inRange == null) ? 'var(--text-3)' : complianceColor(inRange);
+    const cov = d.coverage;
+    const covCol = (cov.pct == null) ? 'var(--text-3)' : (cov.pct >= 90 ? '#15803d' : (cov.pct >= 50 ? '#b45309' : '#dc2626'));
     return '<strong>' + PCD.escapeHtml(L('haccp_audit_summary_label', 'Selected month')) + ':</strong> ' +
       d.totals.checks + ' ' + PCD.escapeHtml(L('haccp_audit_sum_checks', 'checks')) +
-      ' · <span style="color:' + col + ';font-weight:700;">' + d.totals.compliancePct + '% ' + PCD.escapeHtml(L('haccp_audit_sum_compliant', 'compliant')) + '</span>' +
+      (cov.hasUnits && cov.pct != null ? ' · <span style="color:' + covCol + ';font-weight:700;">' + PCD.escapeHtml(L('haccp_audit_sum_coverage', '{d}/{n} days logged').replace('{d}', cov.daysCovered).replace('{n}', cov.daysElapsed)) + '</span>' : '') +
+      ' · <span style="color:' + col + ';font-weight:700;">' + (inRange == null ? '—' : inRange + '%') + ' ' + PCD.escapeHtml(L('haccp_audit_sum_inrange', 'in range')) + '</span>' +
       (d.totals.openCapa ? ' · <span style="color:#dc2626;font-weight:700;">' + d.totals.openCapa + ' ' + PCD.escapeHtml(L('haccp_audit_sum_open', 'open actions')) + '</span>' : '');
   }
 

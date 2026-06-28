@@ -3516,3 +3516,37 @@ window.PCD.i18n.register('es', {
   shop_col_stock: "En stock",
   shop_col_est: "Coste est.",
 });
+
+// v2.44.99 — Vida útil / caducidad (alertas FIFO → puente a mermas)
+window.PCD.i18n.register('es', {
+  inv_expired: "Caducado",
+  inv_exp_today: "Usar hoy",
+  inv_exp_in: "Usar en {n}d",
+  inv_expiring_soon: "Por caducar",
+  inv_best_before: "Fecha de caducidad",
+  inv_shelf_auto: "Automático desde {n} días de vida útil al recibir",
+  inv_days_ago: "d atrás",
+  inv_log_waste: "Registrar merma y descontar",
+  inv_nothing_to_waste: "No hay stock para registrar.",
+  inv_wasted_logged: "{n} registrado como merma · {c}",
+  ing_shelf_life: "Vida útil (días)",
+  ing_days: "días",
+  ing_shelf_hint: "Opcional. Establece una fecha de caducidad automáticamente al recibir stock — marca los artículos para usarlos antes de que se echen a perder.",
+  dash_expiry_title_expired: "{n} artículo(s) caducado(s)",
+  dash_expiry_title_soon: "{n} artículo(s) por caducar",
+  dash_expiry_cta: "Revisar stock",
+});
+
+// v2.44.100 — Honestidad del Audit Pack: cobertura + "en rango" no "cumplimiento"
+window.PCD.i18n.register('es', {
+  haccp_audit_stat_coverage: "Cobertura del registro diario",
+  haccp_audit_stat_inrange: "Lecturas en rango",
+  haccp_audit_inrange_col: "En rango",
+  haccp_audit_no_activity: "Sin actividad registrada",
+  haccp_audit_coverage_full: "Registro diario de temperatura completo — {d} de {n} días registrados.",
+  haccp_audit_coverage_gap: "El registro diario tiene huecos: {d} de {n} días registrados. Los registros faltantes son el mayor riesgo de auditoría — complétalos antes de la auditoría.",
+  haccp_audit_event_note: "Recepción, Cocción y enfriamiento y Mantenimiento son por actividad — se registran solo cuando hay una entrega, cocción o mantenimiento. Un formulario en blanco significa sin actividad registrada, no incumplimiento.",
+  haccp_audit_sum_inrange: "en rango",
+  haccp_audit_sum_coverage: "{d}/{n} días registrados",
+  haccp_audit_no_exceptions: "Sin lecturas fuera de rango entre los controles registrados.",
+});

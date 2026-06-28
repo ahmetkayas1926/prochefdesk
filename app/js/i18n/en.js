@@ -3621,3 +3621,37 @@ window.PCD.i18n.register('en', {
   shop_col_stock: "In stock",
   shop_col_est: "Est. cost",
 });
+
+// v2.44.99 — Shelf-life / best-before tracking (FIFO expiry alerts → waste bridge)
+window.PCD.i18n.register('en', {
+  inv_expired: "Expired",
+  inv_exp_today: "Use today",
+  inv_exp_in: "Use in {n}d",
+  inv_expiring_soon: "Expiring",
+  inv_best_before: "Best-before date",
+  inv_shelf_auto: "Auto from {n}-day shelf life on receiving",
+  inv_days_ago: "d ago",
+  inv_log_waste: "Log as waste & deduct",
+  inv_nothing_to_waste: "No stock on hand to log.",
+  inv_wasted_logged: "{n} logged as waste · {c}",
+  ing_shelf_life: "Shelf life (days)",
+  ing_days: "days",
+  ing_shelf_hint: "Optional. Sets a best-before date automatically when you receive stock — flags items to use before they spoil.",
+  dash_expiry_title_expired: "{n} item(s) expired",
+  dash_expiry_title_soon: "{n} item(s) expiring soon",
+  dash_expiry_cta: "Review stock",
+});
+
+// v2.44.100 — Audit Pack honesty: completeness/coverage + "in range" not "compliance"
+window.PCD.i18n.register('en', {
+  haccp_audit_stat_coverage: "Daily-log coverage",
+  haccp_audit_stat_inrange: "Readings in range",
+  haccp_audit_inrange_col: "In range",
+  haccp_audit_no_activity: "No activity logged",
+  haccp_audit_coverage_full: "Daily temperature log complete — {d} of {n} days recorded.",
+  haccp_audit_coverage_gap: "Daily log has gaps: {d} of {n} days recorded. Missing records are the biggest audit risk — fill them before the audit.",
+  haccp_audit_event_note: "Receiving, Cook & Cool and Holding are activity-based — logged only when there is a delivery, cook or hold. A blank form means no logged activity, not non-compliance.",
+  haccp_audit_sum_inrange: "in range",
+  haccp_audit_sum_coverage: "{d}/{n} days logged",
+  haccp_audit_no_exceptions: "No out-of-range readings among the recorded checks.",
+});

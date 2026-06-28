@@ -3516,3 +3516,37 @@ window.PCD.i18n.register('ar', {
   shop_col_stock: "بالمخزون",
   shop_col_est: "التكلفة التقديرية",
 });
+
+// v2.44.99 — مدة الصلاحية / تاريخ الانتهاء (تنبيهات FIFO → جسر الهدر)
+window.PCD.i18n.register('ar', {
+  inv_expired: "منتهي الصلاحية",
+  inv_exp_today: "استخدمه اليوم",
+  inv_exp_in: "استخدمه خلال {n}ي",
+  inv_expiring_soon: "قارب الانتهاء",
+  inv_best_before: "تاريخ انتهاء الصلاحية",
+  inv_shelf_auto: "تلقائيًا من مدة صلاحية {n} يوم عند الاستلام",
+  inv_days_ago: "ي مضت",
+  inv_log_waste: "سجّل كهدر واخصم",
+  inv_nothing_to_waste: "لا يوجد مخزون لتسجيله.",
+  inv_wasted_logged: "{n} سُجّل كهدر · {c}",
+  ing_shelf_life: "مدة الصلاحية (أيام)",
+  ing_days: "أيام",
+  ing_shelf_hint: "اختياري. يضبط تاريخ انتهاء الصلاحية تلقائيًا عند استلام المخزون — يميّز الأصناف لاستخدامها قبل أن تفسد.",
+  dash_expiry_title_expired: "{n} صنف منتهي الصلاحية",
+  dash_expiry_title_soon: "{n} صنف قارب الانتهاء",
+  dash_expiry_cta: "راجع المخزون",
+});
+
+// v2.44.100 — مصداقية حزمة التدقيق: التغطية + "ضمن النطاق" بدل "الامتثال"
+window.PCD.i18n.register('ar', {
+  haccp_audit_stat_coverage: "تغطية السجل اليومي",
+  haccp_audit_stat_inrange: "قراءات ضمن النطاق",
+  haccp_audit_inrange_col: "ضمن النطاق",
+  haccp_audit_no_activity: "لا يوجد نشاط مسجّل",
+  haccp_audit_coverage_full: "سجل الحرارة اليومي مكتمل — {d} من {n} يوم مسجّلة.",
+  haccp_audit_coverage_gap: "السجل اليومي به فجوات: {d} من {n} يوم مسجّلة. السجلات الناقصة أكبر خطر في التدقيق — أكملها قبل التدقيق.",
+  haccp_audit_event_note: "الاستلام والطهي والتبريد والحفظ أنشطة حسب الحدث — تُسجّل فقط عند وجود استلام أو طهي أو حفظ. النموذج الفارغ يعني لا نشاط مسجّل، وليس عدم امتثال.",
+  haccp_audit_sum_inrange: "ضمن النطاق",
+  haccp_audit_sum_coverage: "{d}/{n} يوم مسجّل",
+  haccp_audit_no_exceptions: "لا قراءات خارج النطاق ضمن الفحوصات المسجّلة.",
+});
