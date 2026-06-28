@@ -195,7 +195,7 @@
     try {
       const parts = ym.split('-');
       const d = new Date(Number(parts[0]), Number(parts[1]) - 1, 1);
-      const loc = (PCD.i18n && PCD.i18n.getLocale && PCD.i18n.getLocale()) || 'en';
+      const loc = (PCD.i18n && PCD.i18n.currentLocale) || 'en';
       return d.toLocaleDateString(loc, { year: 'numeric', month: 'long' });
     } catch (e) { return ym; }
   }
@@ -210,7 +210,7 @@
     const regions = (window.PCD_CONFIG && window.PCD_CONFIG.HACCP_REGIONS) || {};
     const regionId = (PCD.haccp && PCD.haccp.getRegion) ? PCD.haccp.getRegion() : 'international';
     const regionLabel = L((regions[regionId] && regions[regionId].labelKey) || 'haccp_region_international', regionId);
-    const genDate = new Date().toLocaleDateString((PCD.i18n && PCD.i18n.getLocale && PCD.i18n.getLocale()) || 'en', { year: 'numeric', month: 'short', day: 'numeric' });
+    const genDate = new Date().toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || 'en', { year: 'numeric', month: 'short', day: 'numeric' });
     const c = complianceColor(data.totals.compliancePct);
 
     const PINE = '#16433a', ACC = '#1f9d6b', INK = '#1c1917', BD = '#e7e5e4', THBG = '#eaf6f0';

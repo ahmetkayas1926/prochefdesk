@@ -283,6 +283,7 @@
         <div class="page-header-actions">
           <button class="btn btn-outline btn-sm" id="historyHeaderBtn" title="${PCD.escapeHtml(t('inv_view_past_counts_tooltip'))}">${PCD.icon('clock',14)} ${t('inv_history')}</button>
           <button class="btn btn-outline btn-sm" id="bulkCountBtn">${PCD.icon('list',14)} ${t('inv_count_stock')}</button>
+          <button class="btn btn-outline btn-sm" id="shopListBtn" title="${PCD.escapeHtml(L('shop_btn_title', 'Build a shopping list from your upcoming events & buffets'))}">${PCD.icon('shopping-cart',14)} ${PCD.escapeHtml(L('shop_btn', 'Shopping list'))}</button>
           <button class="btn btn-outline btn-sm" id="genOrderBtn" style="position:relative;">${PCD.icon('send',14)} ${t('inv_generate_order')}${_belowParCount > 0 ? `<span style="position:absolute;top:-7px;right:-8px;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:var(--danger);color:#fff;font-size:11px;font-weight:800;line-height:19px;text-align:center;box-shadow:0 0 0 2px var(--bg);">${_belowParCount}</span>` : ''}</button>
           ${_noSupCount > 0 ? `<button class="btn btn-sm" id="noSupBadge" title="${PCD.escapeHtml(L('inv_no_supplier_count', '{n} ingredient(s) have no supplier — assign one to order them.').replace('{n}', _noSupCount))}" style="background:#fff7ed;border:1px solid var(--warning);color:#b45309;font-weight:700;">⚠ ${_noSupCount}</button>` : ''}
           <button class="btn btn-outline btn-sm" id="recordSalesBtn">${PCD.icon('edit',14)} ${t('inv_record_sales')}</button>
@@ -510,6 +511,8 @@
 
     const genBtn = PCD.$('#genOrderBtn', view);
     if (genBtn) genBtn.addEventListener('click', function () { openGenerateOrder(); });
+    const shopBtn = PCD.$('#shopListBtn', view);
+    if (shopBtn) shopBtn.addEventListener('click', function () { openShoppingList(); });
     const noSupBadge = PCD.$('#noSupBadge', view);
     if (noSupBadge) noSupBadge.addEventListener('click', function () { if (PCD.router && PCD.router.go) PCD.router.go('ingredients'); });
     const resetStockBtn = PCD.$('#resetStockBtn', view);
@@ -1678,6 +1681,299 @@
         if (PCD.router.currentView() === 'inventory') render(v);
       }, 250);
     });
+  }
+
+  // ================================================================
+  //  SHOPPING LIST — demand-based grocery run from upcoming events +
+  //  selected buffets. Consolidates ingredient needs (reusing each
+  //  tool's OWN deduction engine — no duplicated logic), subtracts
+  //  current stock, groups by aisle/supplier, prints. Does NOT deduct
+  //  stock (that stays with the "Deduct stock" buttons).
+  // ================================================================
+  function _shopToday() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  function openShoppingList() {
+    const t = PCD.i18n.t;
+    const L = function (k, fb) { try { const v = t(k); return (v == null || v === k) ? fb : v; } catch (e) { return fb; } };
+    const ings = PCD.store.listIngredients();
+    const ingMap = {}; ings.forEach(function (i) { ingMap[i.id] = i; });
+    const recipeMap = {}; PCD.store.listRecipes().forEach(function (r) { recipeMap[r.id] = r; });
+    const wsId = PCD.store.getActiveWorkspaceId();
+    const today = _shopToday();
+    const horizon = (function () { const d = new Date(); d.setDate(d.getDate() + 14); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); })();
+
+    const upcoming = (PCD.store.listTable('events') || [])
+      .filter(function (e) { return e && e.status !== 'cancelled' && e.date && e.date >= today; })
+      .sort(function (a, b) { return (a.date || '').localeCompare(b.date || ''); });
+    const buffets = (PCD.store._read('buffets') || {})[wsId] || [];
+
+    if (upcoming.length === 0 && buffets.length === 0) {
+      PCD.toast.info(L('shop_empty_sources', 'Add upcoming events or buffets first — the shopping list is built from them.'));
+      return;
+    }
+
+    function evGuests(e) { return (e.functions || []).reduce(function (m, f) { return Math.max(m, Number(f.guestCount) || 0); }, 0); }
+    function evName(e) { return e.name || (e.functions && e.functions[0] && e.functions[0].name) || L('shop_untitled_event', 'Untitled event'); }
+
+    // ---- Modal body ----
+    const body = PCD.el('div');
+    let html = '<div class="text-muted text-sm" style="margin-bottom:12px;">' + PCD.escapeHtml(L('shop_intro', 'Pick the jobs to shop for. We total every ingredient, subtract what you already have, and group the rest for the run.')) + '</div>';
+
+    if (upcoming.length) {
+      html += '<div style="font-size:12px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin:4px 0 6px;">' + PCD.escapeHtml(L('shop_events', 'Upcoming events')) + '</div>';
+      upcoming.forEach(function (e) {
+        const within = e.date <= horizon;
+        html += '<label style="display:flex;align-items:center;gap:9px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:4px;cursor:pointer;">' +
+          '<input type="checkbox" class="shop-ev" data-eid="' + PCD.escapeHtml(e.id) + '"' + (within ? ' checked' : '') + ' style="width:18px;height:18px;flex-shrink:0;accent-color:var(--brand-600);">' +
+          '<div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + PCD.escapeHtml(evName(e)) + '</div>' +
+          '<div class="text-muted" style="font-size:11px;">' + PCD.escapeHtml(PCD.fmtDate(e.date, { weekday: 'short', month: 'short', day: 'numeric' })) + ' · ' + evGuests(e) + ' ' + PCD.escapeHtml(L('shop_guests', 'guests')) + '</div></div>' +
+        '</label>';
+      });
+    }
+    if (buffets.length) {
+      html += '<div style="font-size:12px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin:12px 0 6px;">' + PCD.escapeHtml(L('shop_buffets', 'Buffets')) + '</div>';
+      buffets.forEach(function (b) {
+        if (b._deletedAt) return;
+        html += '<label style="display:flex;align-items:center;gap:9px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:4px;cursor:pointer;">' +
+          '<input type="checkbox" class="shop-bf" data-bid="' + PCD.escapeHtml(b.id) + '" style="width:18px;height:18px;flex-shrink:0;accent-color:var(--brand-600);">' +
+          '<div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + PCD.escapeHtml(b.name || L('shop_untitled_buffet', 'Untitled buffet')) + '</div>' +
+          '<div class="text-muted" style="font-size:11px;">' + (Number(b.coverCount) || 0) + ' ' + PCD.escapeHtml(L('shop_covers', 'covers')) + '</div></div>' +
+        '</label>';
+      });
+    }
+
+    html += '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border);">' +
+      '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;"><input type="checkbox" id="shopSubtract" checked style="width:18px;height:18px;accent-color:var(--brand-600);"> ' + PCD.escapeHtml(L('shop_subtract_stock', 'Subtract current stock')) + '</label>' +
+      '<div style="display:flex;align-items:center;gap:6px;"><span class="text-muted" style="font-size:12px;font-weight:600;">' + PCD.escapeHtml(L('group_by', 'Group by')) + ':</span>' +
+        '<button type="button" class="btn btn-sm shop-grp active" data-grp="category">' + PCD.escapeHtml(L('group_category', 'Category')) + '</button>' +
+        '<button type="button" class="btn btn-sm shop-grp" data-grp="supplier">' + PCD.escapeHtml(L('group_supplier', 'Supplier')) + '</button>' +
+      '</div>' +
+    '</div>';
+
+    html += '<div id="shopResults" style="margin-top:14px;"></div>';
+    body.innerHTML = html;
+
+    let groupBy = 'category';
+    let lastData = null;
+
+    PCD.on(body, 'click', '.shop-grp', function () {
+      groupBy = this.getAttribute('data-grp') || 'category';
+      Array.prototype.forEach.call(body.querySelectorAll('.shop-grp'), function (b) { b.classList.toggle('active', b.getAttribute('data-grp') === groupBy); });
+      if (lastData) renderResults();
+    });
+
+    function selectedEvents() {
+      const ids = {}; Array.prototype.forEach.call(body.querySelectorAll('.shop-ev:checked'), function (c) { ids[c.getAttribute('data-eid')] = true; });
+      return upcoming.filter(function (e) { return ids[e.id]; });
+    }
+    function selectedBuffets() {
+      const ids = {}; Array.prototype.forEach.call(body.querySelectorAll('.shop-bf:checked'), function (c) { ids[c.getAttribute('data-bid')] = true; });
+      return buffets.filter(function (b) { return ids[b.id]; });
+    }
+
+    function ensureEngines() {
+      const jobs = [];
+      jobs.push((PCD.tools.events && PCD.tools.events.computeEventDeductions) ? Promise.resolve() : PCD.router.loadLazyTool('events'));
+      jobs.push((PCD.tools.buffet && PCD.tools.buffet.computeBuffetDeductions) ? Promise.resolve() : PCD.router.loadLazyTool('buffet'));
+      return Promise.all(jobs);
+    }
+
+    function buildData() {
+      const evs = selectedEvents();
+      const bfs = selectedBuffets();
+      const subtract = !!(body.querySelector('#shopSubtract') && body.querySelector('#shopSubtract').checked);
+      const need = {};
+      const skipped = {};
+      const sources = [];
+      evs.forEach(function (e) {
+        const r = PCD.tools.events.computeEventDeductions(e, ingMap, recipeMap) || { deductions: {}, skipped: [] };
+        Object.keys(r.deductions || {}).forEach(function (iid) { need[iid] = (need[iid] || 0) + r.deductions[iid]; });
+        (r.skipped || []).forEach(function (n) { skipped[n] = true; });
+        sources.push({ kind: 'event', name: evName(e), date: e.date });
+      });
+      bfs.forEach(function (b) {
+        const r = PCD.tools.buffet.computeBuffetDeductions(b, ingMap, recipeMap) || { deductions: {}, skipped: [] };
+        Object.keys(r.deductions || {}).forEach(function (iid) { need[iid] = (need[iid] || 0) + r.deductions[iid]; });
+        (r.skipped || []).forEach(function (n) { skipped[n] = true; });
+        sources.push({ kind: 'buffet', name: b.name || L('shop_untitled_buffet', 'Untitled buffet') });
+      });
+      const inv = readInventory();
+      const rows = [];
+      let coveredCount = 0, totalCost = 0;
+      Object.keys(need).forEach(function (iid) {
+        const ing = ingMap[iid]; if (!ing) return;
+        const needed = need[iid];
+        const row = inv[iid];
+        const stock = row && row.stock != null ? (Number(row.stock) || 0) : 0;
+        const toBuy = subtract ? Math.max(0, needed - stock) : needed;
+        if (subtract && toBuy <= 0) { coveredCount++; return; }
+        const cost = toBuy * (Number(ing.pricePerUnit) || 0);
+        totalCost += cost;
+        rows.push({ id: iid, name: ing.name, unit: ing.unit || '', needed: needed, stock: stock, toBuy: toBuy, cost: cost,
+          supplier: (ing.supplier || '').trim(), category: ing.category || 'cat_other', noSupplierNeeded: !!ing.noSupplierNeeded });
+      });
+      rows.sort(function (a, b) { return (a.name || '').localeCompare(b.name || ''); });
+      return { rows: rows, coveredCount: coveredCount, totalCost: totalCost, skipped: Object.keys(skipped), sources: sources, subtract: subtract };
+    }
+
+    function groupRows(rows) {
+      const groups = {};
+      rows.forEach(function (r) {
+        const key = groupBy === 'supplier' ? (r.supplier || ' ') : (r.category || 'cat_other');
+        (groups[key] = groups[key] || []).push(r);
+      });
+      return groups;
+    }
+    function groupLabel(key) {
+      if (groupBy === 'supplier') return key === ' ' ? L('shop_no_supplier', 'No supplier') : key;
+      return L(key, key);
+    }
+
+    function renderResults() {
+      const cont = body.querySelector('#shopResults');
+      if (!cont) return;
+      const data = lastData;
+      if (!data) return;
+      if (data.rows.length === 0 && data.coveredCount === 0) {
+        cont.innerHTML = '<div class="text-muted" style="padding:14px;text-align:center;border:1px dashed var(--border);border-radius:var(--r-md);">' + PCD.escapeHtml(L('shop_no_items', 'No ingredients found for the selected jobs. Make sure their menus have recipes or ingredients.')) + '</div>';
+        return;
+      }
+      const groups = groupRows(data.rows);
+      const keys = Object.keys(groups).sort(function (a, b) { return groupLabel(a).localeCompare(groupLabel(b)); });
+      let h = '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px;">' +
+        '<div style="font-weight:800;font-size:14px;">' + data.rows.length + ' ' + PCD.escapeHtml(L('shop_to_buy', 'to buy')) +
+          (data.coveredCount ? ' <span class="text-muted" style="font-weight:600;font-size:12px;">· ' + data.coveredCount + ' ' + PCD.escapeHtml(L('shop_covered', 'already in stock')) + '</span>' : '') + '</div>' +
+        (data.totalCost > 0 ? '<div style="font-weight:800;font-size:14px;color:var(--brand-700);">≈ ' + PCD.fmtMoney(data.totalCost) + '</div>' : '') +
+      '</div>';
+      keys.forEach(function (k) {
+        h += '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin:10px 0 4px;">' + PCD.escapeHtml(groupLabel(k)) + '</div>';
+        groups[k].forEach(function (r) {
+          h += '<div style="display:flex;align-items:center;gap:10px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:3px;">' +
+            '<div style="flex:1;min-width:0;font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + PCD.escapeHtml(r.name) + '</div>' +
+            (r.stock ? '<span class="text-muted" style="font-size:11px;white-space:nowrap;">' + PCD.escapeHtml(L('shop_have', 'have')) + ' ' + PCD.fmtNumber(r.stock) + '</span>' : '') +
+            '<span style="font-weight:800;font-family:var(--font-mono);color:var(--brand-700);white-space:nowrap;">' + PCD.fmtNumber(r.toBuy) + ' ' + PCD.escapeHtml(r.unit) + '</span>' +
+          '</div>';
+        });
+      });
+      if (data.skipped.length) {
+        h += '<div style="margin-top:10px;padding:8px 10px;background:#fff7ed;border:1px solid var(--warning);border-radius:var(--r-sm);font-size:11px;color:#b45309;">⚠ ' +
+          PCD.escapeHtml(L('shop_skipped', 'Could not convert units for: {n} — check these manually.').replace('{n}', data.skipped.slice(0, 8).join(', ') + (data.skipped.length > 8 ? '…' : ''))) + '</div>';
+      }
+      cont.innerHTML = h;
+    }
+
+    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') });
+    const genBtn = PCD.el('button', { class: 'btn btn-primary' });
+    genBtn.innerHTML = PCD.icon('shopping-cart', 14) + ' <span>' + PCD.escapeHtml(L('shop_generate', 'Build list')) + '</span>';
+    const printBtn = PCD.el('button', { class: 'btn btn-outline' });
+    printBtn.innerHTML = PCD.icon('print', 14) + ' <span>' + t('print') + '</span>';
+    printBtn.style.display = 'none';
+    const shareBtn = PCD.el('button', { class: 'btn btn-outline' });
+    shareBtn.innerHTML = PCD.icon('share', 14) + ' <span>' + PCD.escapeHtml(L('shop_share', 'Share')) + '</span>';
+    shareBtn.style.display = 'none';
+
+    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
+    footer.appendChild(cancelBtn);
+    const spacer = PCD.el('div', { style: { flex: '1' } });
+    footer.appendChild(spacer);
+    footer.appendChild(shareBtn);
+    footer.appendChild(printBtn);
+    footer.appendChild(genBtn);
+
+    const m = PCD.modal.open({ title: L('shop_title', 'Shopping list'), body: body, footer: footer, size: 'md', closable: true });
+    cancelBtn.addEventListener('click', function () { m.close(); });
+
+    genBtn.addEventListener('click', function () {
+      genBtn.disabled = true;
+      ensureEngines().then(function () {
+        lastData = buildData();
+        renderResults();
+        printBtn.style.display = (lastData.rows.length || lastData.coveredCount) ? '' : 'none';
+        shareBtn.style.display = lastData.rows.length ? '' : 'none';
+        genBtn.disabled = false;
+        genBtn.innerHTML = PCD.icon('refresh', 14) + ' <span>' + PCD.escapeHtml(L('shop_rebuild', 'Rebuild')) + '</span>';
+      }).catch(function () {
+        genBtn.disabled = false;
+        PCD.toast.error(L('shop_engine_fail', 'Could not load the event/buffet engine. Try again.'));
+      });
+    });
+
+    printBtn.addEventListener('click', function () {
+      if (!lastData) return;
+      PCD.print(shopListPrintHtml(lastData, groupBy, groupRows, groupLabel), L('shop_title', 'Shopping list'));
+    });
+    shareBtn.addEventListener('click', function () {
+      if (!lastData) return;
+      const txt = shopListText(lastData, groupBy, groupRows, groupLabel);
+      if (navigator.share) { navigator.share({ title: L('shop_title', 'Shopping list'), text: txt }).catch(function () {}); }
+      else if (navigator.clipboard) { navigator.clipboard.writeText(txt).then(function () { PCD.toast.success(L('shop_copied', 'Copied to clipboard')); }).catch(function () {}); }
+    });
+  }
+
+  // Plain-text shopping list (WhatsApp/notes share).
+  function shopListText(data, groupBy, groupRows, groupLabel) {
+    const t = PCD.i18n.t;
+    const L = function (k, fb) { try { const v = t(k); return (v == null || v === k) ? fb : v; } catch (e) { return fb; } };
+    let out = L('shop_title', 'Shopping list') + '\n';
+    const groups = groupRows(data.rows);
+    Object.keys(groups).sort(function (a, b) { return groupLabel(a).localeCompare(groupLabel(b)); }).forEach(function (k) {
+      out += '\n— ' + groupLabel(k) + ' —\n';
+      groups[k].forEach(function (r) { out += '• ' + r.name + ': ' + PCD.fmtNumber(r.toBuy) + ' ' + r.unit + '\n'; });
+    });
+    if (data.totalCost > 0) out += '\n≈ ' + PCD.fmtMoney(data.totalCost);
+    return out;
+  }
+
+  // Deep Pine A4 printable shopping list (PCD.print adds the gated footer).
+  function shopListPrintHtml(data, groupBy, groupRows, groupLabel) {
+    const t = PCD.i18n.t;
+    const L = function (k, fb) { try { const v = t(k); return (v == null || v === k) ? fb : v; } catch (e) { return fb; } };
+    const esc = PCD.escapeHtml;
+    const PINE = '#16433a', INK = '#1c1917', BD = '#e7e5e4', THBG = '#eaf6f0';
+    const gen = new Date().toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || 'en', { year: 'numeric', month: 'short', day: 'numeric' });
+    const srcNames = data.sources.map(function (s) { return s.name; }).join(' · ');
+    const groups = groupRows(data.rows);
+    const keys = Object.keys(groups).sort(function (a, b) { return groupLabel(a).localeCompare(groupLabel(b)); });
+
+    let sections = '';
+    keys.forEach(function (k) {
+      let rows = '';
+      groups[k].forEach(function (r) {
+        rows += '<tr>' +
+          '<td style="padding:6px 10px;border:1px solid ' + BD + ';width:26px;text-align:center;color:#a8a29e;">☐</td>' +
+          '<td style="padding:6px 10px;border:1px solid ' + BD + ';font-weight:600;">' + esc(r.name) + '</td>' +
+          '<td style="padding:6px 10px;border:1px solid ' + BD + ';text-align:right;font-weight:700;white-space:nowrap;">' + PCD.fmtNumber(r.toBuy) + ' ' + esc(r.unit) + '</td>' +
+          '<td style="padding:6px 10px;border:1px solid ' + BD + ';text-align:right;color:#78716c;white-space:nowrap;">' + (r.stock ? esc(L('shop_have', 'have') + ' ' + PCD.fmtNumber(r.stock)) : '—') + '</td>' +
+          (data.totalCost > 0 ? '<td style="padding:6px 10px;border:1px solid ' + BD + ';text-align:right;color:#78716c;white-space:nowrap;">' + (r.cost > 0 ? PCD.fmtMoney(r.cost) : '—') + '</td>' : '') +
+        '</tr>';
+      });
+      sections += '<div style="font-family:Fraunces,Georgia,serif;font-size:14px;font-weight:700;color:' + PINE + ';margin:14px 0 5px;">' + esc(groupLabel(k)) + '</div>' +
+        '<table style="width:100%;border-collapse:collapse;font-size:12px;">' +
+          '<thead><tr style="background:' + THBG + ';">' +
+            '<th style="padding:6px 10px;border:1px solid ' + BD + ';"></th>' +
+            '<th style="padding:6px 10px;border:1px solid ' + BD + ';text-align:start;font-size:10px;text-transform:uppercase;letter-spacing:0.04em;color:' + PINE + ';">' + esc(L('shop_col_item', 'Item')) + '</th>' +
+            '<th style="padding:6px 10px;border:1px solid ' + BD + ';text-align:end;font-size:10px;text-transform:uppercase;letter-spacing:0.04em;color:' + PINE + ';">' + esc(L('shop_col_buy', 'Buy')) + '</th>' +
+            '<th style="padding:6px 10px;border:1px solid ' + BD + ';text-align:end;font-size:10px;text-transform:uppercase;letter-spacing:0.04em;color:' + PINE + ';">' + esc(L('shop_col_stock', 'In stock')) + '</th>' +
+            (data.totalCost > 0 ? '<th style="padding:6px 10px;border:1px solid ' + BD + ';text-align:end;font-size:10px;text-transform:uppercase;letter-spacing:0.04em;color:' + PINE + ';">' + esc(L('shop_col_est', 'Est. cost')) + '</th>' : '') +
+          '</tr></thead><tbody>' + rows + '</tbody></table>';
+    });
+
+    return '<div style="font-family:Inter,system-ui,sans-serif;color:' + INK + ';max-width:720px;margin:0 auto;">' +
+      '<div style="border-bottom:3px solid ' + PINE + ';padding-bottom:10px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;">' +
+        '<div><div style="font-family:Fraunces,Georgia,serif;font-size:24px;font-weight:800;color:' + PINE + ';line-height:1.05;">' + esc(L('shop_title', 'Shopping list')) + '</div>' +
+          (srcNames ? '<div style="font-size:12px;color:#57534e;margin-top:3px;">' + esc(srcNames) + '</div>' : '') + '</div>' +
+        '<div style="text-align:end;font-size:11px;color:#57534e;line-height:1.6;">' +
+          '<div><strong style="color:' + PINE + ';">' + esc(L('shop_to_buy', 'to buy')) + ':</strong> ' + data.rows.length + '</div>' +
+          (data.totalCost > 0 ? '<div><strong style="color:' + PINE + ';">' + esc(L('shop_col_est', 'Est. cost')) + ':</strong> ' + PCD.fmtMoney(data.totalCost) + '</div>' : '') +
+          '<div>' + esc(gen) + '</div>' +
+        '</div>' +
+      '</div>' +
+      sections +
+      (data.skipped.length ? '<div style="margin-top:12px;font-size:10.5px;color:#b45309;font-style:italic;">⚠ ' + esc(L('shop_skipped', 'Could not convert units for: {n} — check these manually.').replace('{n}', data.skipped.join(', '))) + '</div>' : '') +
+    '</div>';
   }
 
   PCD.tools = PCD.tools || {};
