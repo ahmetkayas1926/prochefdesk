@@ -1046,6 +1046,46 @@
   </div>
 </section>
 
+<!-- ============ ŞEF REFERANSLARI (ŞU AN GİZLİ) ============
+     Canlıda GÖRÜNMEZ (display:none). Sahte yorum yok.
+     Gerçek 1-3 referans toplayınca AÇMAK için:
+       1) Aşağıdaki section'da  style="display:none;"  →  style=""  yap.
+       2) Her .t-card içinde "[...]" kısımlarını gerçek alıntı + isim + rol/şehir ile değiştir.
+       3) Foto eklemek istersen gri yuvarlağı  <img src="...">  ile değiştir.
+       4) Boş kalan kartı sil (3 yerine 1-2 olabilir).
+     En etkili alıntı = SOMUT sonuç: "teklif hazırlamam 2 saatten 15 dk'ya düştü." -->
+<section class="proof" id="testimonials" style="display:none;">
+  <div class="container">
+    <div class="section-head">
+      <div class="section-label">From the kitchen</div>
+      <h2>Chefs who run on ProChefDesk</h2>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;max-width:1000px;margin:30px auto 0;">
+      <div class="t-card" style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px;box-shadow:var(--shadow-sm);">
+        <blockquote style="margin:0 0 16px;font-size:16px;line-height:1.6;color:var(--text-1);font-weight:500;">"[Gerçek alıntı — somut sonuç]"</blockquote>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:42px;height:42px;border-radius:50%;background:var(--surface-2);flex:0 0 auto;"></div>
+          <div><b style="display:block;font-size:14px;">[İsim]</b><span style="font-size:13px;color:var(--text-3);">[Rol · Şehir]</span></div>
+        </div>
+      </div>
+      <div class="t-card" style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px;box-shadow:var(--shadow-sm);">
+        <blockquote style="margin:0 0 16px;font-size:16px;line-height:1.6;color:var(--text-1);font-weight:500;">"[Gerçek alıntı — somut sonuç]"</blockquote>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:42px;height:42px;border-radius:50%;background:var(--surface-2);flex:0 0 auto;"></div>
+          <div><b style="display:block;font-size:14px;">[İsim]</b><span style="font-size:13px;color:var(--text-3);">[Rol · Şehir]</span></div>
+        </div>
+      </div>
+      <div class="t-card" style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px;box-shadow:var(--shadow-sm);">
+        <blockquote style="margin:0 0 16px;font-size:16px;line-height:1.6;color:var(--text-1);font-weight:500;">"[Gerçek alıntı — somut sonuç]"</blockquote>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:42px;height:42px;border-radius:50%;background:var(--surface-2);flex:0 0 auto;"></div>
+          <div><b style="display:block;font-size:14px;">[İsim]</b><span style="font-size:13px;color:var(--text-3);">[Rol · Şehir]</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ============ TOOLS ============ -->
 <section class="tools" id="tools">
   <div class="container">
@@ -1199,6 +1239,16 @@
         <a href="/app/?upgrade=1" class="price-btn primary" id="proCta" data-i18n="cta_pro">Go Pro</a>
       </div>
     </div>
+    <div class="roi-card" style="max-width:680px;margin:30px auto 0;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px 24px;box-shadow:var(--shadow-sm);">
+      <div style="font-weight:800;font-size:15px;color:var(--text-1);margin-bottom:14px;" data-i18n="roi_title">One tool instead of three</div>
+      <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;">
+        <div style="flex:1;min-width:220px;">
+          <div style="color:var(--text-3);font-size:14px;line-height:1.7;" data-i18n="roi_stack">HACCP software ~$84 · recipe costing ~$30 · event &amp; catering ~$65</div>
+          <div style="font-weight:700;color:var(--text-2);text-decoration:line-through;margin-top:4px;font-size:15px;" data-i18n="roi_equals">≈ $179 / month</div>
+        </div>
+        <div style="background:var(--brand);color:#fff;border-radius:12px;padding:12px 18px;font-weight:800;font-size:15px;white-space:nowrap;" data-i18n="roi_pcd">ProChefDesk — all of it, $19/mo</div>
+      </div>
+    </div>
     <div class="price-note" data-i18n="price_note">Cancel anytime from the app. No lock-in, no surprises.</div>
   </section>
 </div>
@@ -1261,6 +1311,10 @@
         proof3_tag: "HACCP · Pro", proof3_h3: "Denetime hazır, gerçek zamanlı kaydedildi", proof3_p: "Sıcaklık, soğutma, mal kabul ve bekletme kayıtları telefonundan — ihtiyaç olduğunda aylık dosyaya derlenir.",
         proof4_tag: "Mutfak Kartları", proof4_h3: "Mutfak için büyük, net kartlar", proof4_p: "Her kişi sayısına ölçeklenir, alerjenler vurgulu, A4'e hazır — yoğun bir mutfakta kolay okunur.",
         founder_label: "Kurucudan",
+        roi_title: "Üç araç yerine bir",
+        roi_stack: "HACCP yazılımı ~$84 · tarif maliyeti ~$30 · event & catering ~$65",
+        roi_equals: "≈ $179 / ay",
+        roi_pcd: "ProChefDesk — hepsi, $19/ay",
         founder_quote: "Ben Ahmet — fine-dining'den yüksek hacimli ziyafetlere uzanan bir head chef'im; İstanbul'dan Körfez otellerine, 2022 Katar Dünya Kupası'ndaki Marriott catering'ine kadar. Bir mutfağın işletme tarafı — maliyet, marj, uyum — hiçbir zaman mutfağın gerçekte çalıştığı gibi çalışan bir yazılıma sahip olmadı. Bu yüzden onu ben yaptım, kendi mutfağımı yönettiğim standartta: tarifler, maliyetleme, menüler, prep ve HACCP tek yerde, her cihazda senkron. Her serviste kullanıyorum.",
         founder_name: "Ahmet Kaya", founder_role: "Head Chef",
         trust_live: "Aktif bir profesyonel mutfakta her gün kullanılıyor.",
@@ -1331,6 +1385,10 @@
         proof3_tag: "HACCP · Pro", proof3_h3: "Listo para auditoría, registrado en tiempo real", proof3_p: "Registros de temperatura, enfriamiento, recepción y mantenimiento desde el móvil — recopilados en un archivador mensual cuando lo necesites.",
         proof4_tag: "Fichas de cocina", proof4_h3: "Fichas grandes y claras para la cocina", proof4_p: "Escaladas a cualquier número de comensales, alérgenos resaltados, listas para A4 — fáciles de leer en una cocina con mucho trabajo.",
         founder_label: "Del fundador",
+        roi_title: "Una herramienta en vez de tres",
+        roi_stack: "Software HACCP ~$84 · costeo de recetas ~$30 · eventos y catering ~$65",
+        roi_equals: "≈ $179 / mes",
+        roi_pcd: "ProChefDesk — todo, $19/mes",
         founder_quote: "Soy Ahmet — head chef en alta cocina y banquetes de gran volumen, desde Estambul hasta hoteles del Golfo, incluyendo el catering de Marriott durante el Mundial de Catar 2022. La parte de negocio de una cocina — coste, margen, cumplimiento — nunca tuvo un software que funcionara como funciona de verdad una cocina. Así que lo construí yo, al nivel con el que dirijo mi propia cocina: recetas, costeo, menús, preparación y HACCP en un solo lugar, sincronizados en todos los dispositivos. Lo uso en cada servicio.",
         founder_name: "Ahmet Kaya", founder_role: "Head Chef",
         trust_live: "En uso cada día en una cocina profesional en activo.",
@@ -1400,6 +1458,10 @@
         proof3_tag: "HACCP · Pro", proof3_h3: "Prêt pour l'audit, enregistré en temps réel", proof3_p: "Relevés de température, refroidissement, réception et maintien depuis votre téléphone — compilés dans un classeur mensuel au besoin.",
         proof4_tag: "Fiches cuisine", proof4_h3: "Des fiches grandes et claires pour la cuisine", proof4_p: "Mises à l'échelle pour n'importe quel nombre de couverts, allergènes mis en évidence, prêtes en A4 — faciles à lire dans une cuisine en plein rush.",
         founder_label: "Du fondateur",
+        roi_title: "Un seul outil au lieu de trois",
+        roi_stack: "Logiciel HACCP ~$84 · chiffrage recettes ~$30 · événementiel & traiteur ~$65",
+        roi_equals: "≈ $179 / mois",
+        roi_pcd: "ProChefDesk — tout, $19/mois",
         founder_quote: "Je suis Ahmet — chef de cuisine en gastronomie et en banquets de grand volume, d'Istanbul aux hôtels du Golfe, dont le traiteur Marriott pendant la Coupe du monde 2022 au Qatar. La partie gestion d'une cuisine — coût, marge, conformité — n'a jamais eu de logiciel qui fonctionne comme une cuisine fonctionne vraiment. Alors je l'ai créé, au niveau d'exigence avec lequel je dirige ma propre cuisine : recettes, chiffrage, menus, préparation et HACCP au même endroit, synchronisés sur chaque appareil. Je l'utilise à chaque service.",
         founder_name: "Ahmet Kaya", founder_role: "Head Chef",
         trust_live: "Utilisé chaque jour dans une cuisine professionnelle en activité.",
@@ -1469,6 +1531,10 @@
         proof3_tag: "HACCP · Pro", proof3_h3: "Prüfungsbereit, in Echtzeit erfasst", proof3_p: "Temperatur-, Abkühl-, Wareneingangs- und Haltungsprotokolle von deinem Telefon — bei Bedarf zu einem Monatsordner zusammengestellt.",
         proof4_tag: "Küchenkarten", proof4_h3: "Große, klare Karten für die Küche", proof4_p: "Auf jede Gästezahl skaliert, Allergene hervorgehoben, A4-fertig — gut lesbar in einer hektischen Küche.",
         founder_label: "Vom Gründer",
+        roi_title: "Ein Tool statt drei",
+        roi_stack: "HACCP-Software ~$84 · Rezeptkalkulation ~$30 · Events & Catering ~$65",
+        roi_equals: "≈ $179 / Monat",
+        roi_pcd: "ProChefDesk — alles, $19/Monat",
         founder_quote: "Ich bin Ahmet — Küchenchef in Fine Dining und Großbanketten, von Istanbul bis zu Hotels am Golf, einschließlich Marriott-Catering während der WM 2022 in Katar. Die betriebswirtschaftliche Seite einer Küche — Kosten, Marge, Compliance — hatte nie eine Software, die so funktioniert, wie eine Küche wirklich arbeitet. Also habe ich sie gebaut, nach dem Standard, mit dem ich meine eigene Küche führe: Rezepte, Kalkulation, Menüs, Vorbereitung und HACCP an einem Ort, synchron auf jedem Gerät. Ich nutze sie in jedem Service.",
         founder_name: "Ahmet Kaya", founder_role: "Head Chef",
         trust_live: "Täglich im Einsatz in einer aktiven Profiküche.",
@@ -1538,6 +1604,10 @@
         proof3_tag: "HACCP · Pro", proof3_h3: "جاهز للتدقيق، مُسجّل لحظيًا", proof3_p: "سجلات الحرارة والتبريد والاستلام والحفظ من هاتفك — تُجمَّع في ملف شهري عند الحاجة.",
         proof4_tag: "بطاقات المطبخ", proof4_h3: "بطاقات كبيرة وواضحة للمطبخ", proof4_p: "مُقاسة لأي عدد من الضيوف، مسببات حساسية مميّزة، جاهزة لـA4 — سهلة القراءة في مطبخ مزدحم.",
         founder_label: "من المؤسّس",
+        roi_title: "أداة واحدة بدل ثلاث",
+        roi_stack: "برنامج HACCP ~$84 · تسعير الوصفات ~$30 · المناسبات والتموين ~$65",
+        roi_equals: "≈ $179 / شهر",
+        roi_pcd: "ProChefDesk — كل ذلك، $19/شهر",
         founder_quote: "أنا أحمد — رئيس طهاة في الطهي الراقي والولائم الكبيرة، من إسطنبول إلى فنادق الخليج، بما في ذلك تموين ماريوت خلال كأس العالم 2022 في قطر. الجانب الإداري للمطبخ — التكلفة والهامش والامتثال — لم يحظَ يومًا ببرنامج يعمل كما يعمل المطبخ فعليًا. لذا بنيتُه بنفسي، بالمعيار الذي أدير به مطبخي: الوصفات والتكلفة والقوائم والتحضير وHACCP في مكان واحد، متزامنة على كل جهاز. أستخدمه في كل خدمة.",
         founder_name: "Ahmet Kaya", founder_role: "Head Chef",
         trust_live: "تُستخدم يوميًا في مطبخ احترافي عامل.",
