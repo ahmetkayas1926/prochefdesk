@@ -1864,7 +1864,7 @@
     const html =
       '<style>' +
         '@page { size: A4; margin: 0; }' +
-        'body { font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif; color: #1c1917; padding: 12mm; font-variant-numeric: tabular-nums; }' +
+        'body { font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif; color: #1c1917; padding: 10mm; font-variant-numeric: tabular-nums; }' +
         '.hdr { border-bottom: 3px solid #16433a; padding-bottom: 8px; margin-bottom: 12px; }' +
         '.hdr h1 { margin: 0; font-family: "Fraunces","Georgia",serif; font-size: 18pt; font-weight: 600; letter-spacing: -0.01em; color: #16433a; }' +
         '.hdr .meta { font-size: 10pt; color: #666; margin-top: 2px; }' +
@@ -1956,7 +1956,7 @@
     const html =
       '<style>' +
         '@page { size: A4; margin: 0; }' +
-        'body { font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif; color: #1c1917; padding: 12mm; font-variant-numeric: tabular-nums; }' +
+        'body { font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif; color: #1c1917; padding: 10mm; font-variant-numeric: tabular-nums; }' +
         '.hdr { border-bottom: 3px solid #16433a; padding-bottom: 8px; margin-bottom: 12px; }' +
         '.hdr h1 { margin: 0; font-family: "Fraunces","Georgia",serif; font-size: 18pt; font-weight: 600; letter-spacing: -0.01em; color: #16433a; }' +
         '.hdr .meta { font-size: 10pt; color: #666; margin-top: 2px; }' +

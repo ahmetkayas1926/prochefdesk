@@ -1348,7 +1348,7 @@
     const html =
       '<style>' +
         '@page { size: A4; margin: 0; }' +
-        'body { font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif; color: #1c1917; max-width: 800px; margin: 0 auto; padding: 18mm; font-variant-numeric: tabular-nums; }' +
+        'body { font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif; color: #1c1917; max-width: 800px; margin: 0 auto; padding: 10mm; font-variant-numeric: tabular-nums; }' +
         '.ev-header { border-bottom: 3px solid #16433a; padding-bottom: 14px; margin-bottom: 20px; }' +
         '.ev-header h1 { margin: 0 0 6px; font-family: "Fraunces","Georgia",serif; font-size: 24pt; font-weight: 600; letter-spacing: -0.01em; color: #16433a; }' +
         '.ev-status { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 9pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }' +
@@ -1458,7 +1458,7 @@
     const html =
       '<style>' +
         '@page { size: A4; margin: 0; }' +
-        'body { font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif; color: #1c1917; max-width: 800px; margin: 0 auto; padding: 18mm; font-variant-numeric: tabular-nums; }' +
+        'body { font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif; color: #1c1917; max-width: 800px; margin: 0 auto; padding: 10mm; font-variant-numeric: tabular-nums; }' +
         '.pr-head { border-bottom: 3px solid #16433a; padding-bottom: 14px; margin-bottom: 18px; }' +
         '.pr-badge { display: inline-block; background: #16433a; color: #fff; font-size: 9pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; padding: 3px 10px; border-radius: 5px; margin-bottom: 8px; }' +
         '.pr-head h1 { margin: 0 0 4px; font-family: "Fraunces","Georgia",serif; font-size: 24pt; font-weight: 600; color: #16433a; }' +

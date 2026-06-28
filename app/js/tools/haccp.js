@@ -40,6 +40,305 @@
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
   }
 
+  // i18n with safe fallback (stale-cache proof: a missing key returns the key
+  // itself, which is truthy — so `t(k) || fb` leaks the raw key. L() guards.)
+  function L(key, fb) {
+    const v = (PCD.i18n && PCD.i18n.t) ? PCD.i18n.t(key) : null;
+    return (v == null || v === key) ? (fb != null ? fb : key) : v;
+  }
+
+  // ================================================================
+  //  AUDIT PACK — one combined, auditor-ready report aggregating all
+  //  four HACCP forms for a given month. Reuses each form's stored
+  //  records (read-only) + the same region thresholds the forms use,
+  //  so pass/fail never diverges from what the chef sees in the grid.
+  // ================================================================
+  function tUnit() {
+    const p = PCD.store && PCD.store.get && PCD.store.get('prefs.haccpTempUnit');
+    return p === 'F' ? 'F' : 'C';
+  }
+  function ctoF(c) { return Math.round((c * 9 / 5 + 32) * 10) / 10; }
+  function showTemp(c) {
+    if (c === null || c === undefined || c === '') return '—';
+    const u = tUnit();
+    return (u === 'F' ? ctoF(Number(c)) : Number(c)) + '°' + u;
+  }
+  function showLimit(c) {
+    const u = tUnit();
+    return (u === 'F' ? ctoF(Number(c)) : Number(c)) + '°' + u;
+  }
+  function padDay(n) { return String(n).padStart(2, '0'); }
+  function inMonth(d, ym) { return typeof d === 'string' && d.slice(0, 7) === ym; }
+
+  // Aggregate every temperature check across the four forms for one month.
+  // Returns per-form rollups, an exception log (out-of-range events) and
+  // totals incl. open corrective actions (a fail with no note = OPEN CAPA).
+  function collectAuditData(ym) {
+    const th = (PCD.haccp && PCD.haccp.getThresholds) ? PCD.haccp.getThresholds()
+      : { hotMinC: 63, coldMaxC: 5, frozenMaxC: -18, cooling2hC: 21, cooling6hC: 5 };
+    const exceptions = [];
+    const byForm = {
+      logs:      { key: 'logs',      label: L('haccp_audit_form_logs', 'Daily Temperature'),  checks: 0, fails: 0 },
+      cooling:   { key: 'cooling',   label: L('haccp_audit_form_cooling', 'Cook & Cool'),       checks: 0, fails: 0 },
+      receiving: { key: 'receiving', label: L('haccp_audit_form_receiving', 'Receiving'),       checks: 0, fails: 0 },
+      holding:   { key: 'holding',   label: L('haccp_audit_form_holding', 'Hot/Cold Holding'),  checks: 0, fails: 0 },
+    };
+
+    function pushCheck(form, fail, ex) {
+      form.checks++;
+      if (fail) {
+        form.fails++;
+        const open = !(ex.corrective && String(ex.corrective).trim());
+        exceptions.push({
+          date: ex.date || '', area: form.label, item: ex.item || '—',
+          reading: ex.reading, limit: ex.limit,
+          corrective: (ex.corrective && String(ex.corrective).trim()) || '',
+          chef: ex.chef || '', open: open,
+        });
+      }
+    }
+
+    // --- 1. Daily temperature log (per-unit min/max) ---
+    try {
+      const units = PCD.store.listTable('haccpUnits') || [];
+      const unitById = {};
+      units.forEach(function (u) { if (u && u.id) unitById[u.id] = u; });
+      (PCD.store.listTable('haccpReadings') || []).forEach(function (r) {
+        if (!r || r._deletedAt || !inMonth(r.date, ym)) return;
+        const u = unitById[r.unitId];
+        if (!u) return;
+        ['morning', 'evening'].forEach(function (shift) {
+          const s = r[shift];
+          if (!s || s.value == null || s.value === '') return;
+          const v = Number(s.value);
+          const fail = (typeof u.min === 'number' && v < u.min) || (typeof u.max === 'number' && v > u.max);
+          pushCheck(byForm.logs, fail, {
+            date: r.date, item: u.name, reading: showTemp(v),
+            limit: showLimit(u.min) + '–' + showLimit(u.max),
+            corrective: s.note, chef: s.chef,
+          });
+        });
+      });
+    } catch (e) { /* defensive */ }
+
+    // --- 2. Cook & Cool (2-stage: ≤cooling2h in 2h, ≤cooling6h in 6h) ---
+    try {
+      (PCD.store.listTable('haccpCookCool') || []).forEach(function (r) {
+        if (!r || r._deletedAt) return;
+        const rym = r.monthYM || (r.date ? r.date.slice(0, 7) : '');
+        if (rym !== ym) return;
+        const dateStr = r.date || (r.day ? ym + '-' + padDay(r.day) : ym);
+        if (r.cp2hTemp != null) {
+          pushCheck(byForm.cooling, r.cp2hTemp > th.cooling2hC, {
+            date: dateStr, item: r.foodName, reading: showTemp(r.cp2hTemp),
+            limit: '≤' + showLimit(th.cooling2hC) + ' / 2h', corrective: r.note, chef: r.chef,
+          });
+        }
+        if (r.endedTemp != null) {
+          pushCheck(byForm.cooling, r.endedTemp > th.cooling6hC, {
+            date: dateStr, item: r.foodName, reading: showTemp(r.endedTemp),
+            limit: '≤' + showLimit(th.cooling6hC) + ' / 6h', corrective: r.note, chef: r.chef,
+          });
+        }
+      });
+    } catch (e) { /* defensive */ }
+
+    // --- 3. Receiving (condition pass/fail flag) ---
+    try {
+      (PCD.store.listTable('haccpReceiving') || []).forEach(function (r) {
+        if (!r || r._deletedAt || !inMonth(r.date, ym)) return;
+        const filled = r.supplier || r.productName || r.conditionOK != null || r.deliveryTemp != null;
+        if (!filled) return;
+        pushCheck(byForm.receiving, r.conditionOK === false, {
+          date: r.date, item: r.productName || r.supplier,
+          reading: r.deliveryTemp != null ? showTemp(r.deliveryTemp) : '—',
+          limit: L('haccp_audit_cond_ok', 'Condition OK'), corrective: r.note, chef: r.chef,
+        });
+      });
+    } catch (e) { /* defensive */ }
+
+    // --- 4. Hot / Cold holding (3 checks, hot≥hotMin / cold≤coldMax) ---
+    try {
+      (PCD.store.listTable('haccpHolding') || []).forEach(function (r) {
+        if (!r || r._deletedAt || !inMonth(r.date, ym)) return;
+        ['check1Temp', 'check2Temp', 'check3Temp'].forEach(function (k) {
+          const v = r[k];
+          if (v == null || v === '') return;
+          const cold = r.holdType === 'cold';
+          const pass = cold ? Number(v) <= th.coldMaxC : Number(v) >= th.hotMinC;
+          pushCheck(byForm.holding, !pass, {
+            date: r.date, item: r.foodName, reading: showTemp(v),
+            limit: (cold ? '≤' + showLimit(th.coldMaxC) : '≥' + showLimit(th.hotMinC)),
+            corrective: r.correctiveAction, chef: r.chef,
+          });
+        });
+      });
+    } catch (e) { /* defensive */ }
+
+    let checks = 0, fails = 0, openCapa = 0;
+    Object.keys(byForm).forEach(function (k) { checks += byForm[k].checks; fails += byForm[k].fails; });
+    exceptions.forEach(function (x) { if (x.open) openCapa++; });
+    exceptions.sort(function (a, b) { return (a.date || '').localeCompare(b.date || ''); });
+    const compliancePct = checks > 0 ? Math.round(((checks - fails) / checks) * 1000) / 10 : 100;
+
+    return {
+      ym: ym, byForm: byForm, exceptions: exceptions,
+      totals: { checks: checks, fails: fails, openCapa: openCapa, compliancePct: compliancePct },
+    };
+  }
+
+  function complianceColor(pct) {
+    return pct >= 95 ? '#1f9d6b' : (pct >= 80 ? '#b45309' : '#dc2626');
+  }
+
+  function monthLabelLong(ym) {
+    try {
+      const parts = ym.split('-');
+      const d = new Date(Number(parts[0]), Number(parts[1]) - 1, 1);
+      const loc = (PCD.i18n && PCD.i18n.getLocale && PCD.i18n.getLocale()) || 'en';
+      return d.toLocaleDateString(loc, { year: 'numeric', month: 'long' });
+    } catch (e) { return ym; }
+  }
+
+  // Build the Deep Pine A4 audit report HTML (PCD.print injects the gated
+  // watermark footer automatically). esc = escape helper.
+  function buildAuditPackHtml(ym) {
+    const data = collectAuditData(ym);
+    const esc = PCD.escapeHtml;
+    const user = (PCD.store.get && PCD.store.get('user')) || {};
+    const business = user.workplace || user.company || user.name || '';
+    const regions = (window.PCD_CONFIG && window.PCD_CONFIG.HACCP_REGIONS) || {};
+    const regionId = (PCD.haccp && PCD.haccp.getRegion) ? PCD.haccp.getRegion() : 'international';
+    const regionLabel = L((regions[regionId] && regions[regionId].labelKey) || 'haccp_region_international', regionId);
+    const genDate = new Date().toLocaleDateString((PCD.i18n && PCD.i18n.getLocale && PCD.i18n.getLocale()) || 'en', { year: 'numeric', month: 'short', day: 'numeric' });
+    const c = complianceColor(data.totals.compliancePct);
+
+    const PINE = '#16433a', ACC = '#1f9d6b', INK = '#1c1917', BD = '#e7e5e4', THBG = '#eaf6f0';
+
+    function stat(label, value, color) {
+      return '<div style="flex:1;min-width:120px;border:1px solid ' + BD + ';border-radius:10px;padding:12px 14px;background:#fff;">' +
+        '<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:#78716c;font-weight:700;margin-bottom:4px;">' + esc(label) + '</div>' +
+        '<div style="font-size:26px;font-weight:800;color:' + (color || INK) + ';line-height:1;font-family:Fraunces,Georgia,serif;">' + value + '</div>' +
+      '</div>';
+    }
+
+    // Per-form summary rows
+    let formRows = '';
+    ['logs', 'cooling', 'receiving', 'holding'].forEach(function (k) {
+      const f = data.byForm[k];
+      const pass = f.checks - f.fails;
+      const pct = f.checks > 0 ? Math.round(((f.checks - f.fails) / f.checks) * 1000) / 10 : null;
+      formRows += '<tr>' +
+        '<td style="padding:7px 10px;border:1px solid ' + BD + ';font-weight:600;color:' + INK + ';">' + esc(f.label) + '</td>' +
+        '<td style="padding:7px 10px;border:1px solid ' + BD + ';text-align:center;">' + f.checks + '</td>' +
+        '<td style="padding:7px 10px;border:1px solid ' + BD + ';text-align:center;color:#166534;">' + pass + '</td>' +
+        '<td style="padding:7px 10px;border:1px solid ' + BD + ';text-align:center;color:' + (f.fails ? '#991b1b' : '#78716c') + ';font-weight:' + (f.fails ? '700' : '400') + ';">' + (f.fails || '—') + '</td>' +
+        '<td style="padding:7px 10px;border:1px solid ' + BD + ';text-align:center;font-weight:700;color:' + (pct == null ? '#a8a29e' : complianceColor(pct)) + ';">' + (pct == null ? '—' : pct + '%') + '</td>' +
+      '</tr>';
+    });
+
+    // Exception log
+    let exHtml;
+    if (data.exceptions.length === 0) {
+      exHtml = '<div style="padding:18px;border:1px solid ' + BD + ';border-radius:10px;background:#f0fdf4;color:#166534;font-weight:600;text-align:center;">✓ ' +
+        esc(L('haccp_audit_no_exceptions', 'No out-of-range events recorded for this period — full compliance.')) + '</div>';
+    } else {
+      let rows = '';
+      data.exceptions.forEach(function (x) {
+        const statusChip = x.open
+          ? '<span style="display:inline-block;padding:2px 7px;border-radius:999px;background:#fee2e2;color:#991b1b;font-weight:700;font-size:10px;">' + esc(L('haccp_audit_status_open', 'OPEN')) + '</span>'
+          : '<span style="display:inline-block;padding:2px 7px;border-radius:999px;background:#dcfce7;color:#166534;font-weight:700;font-size:10px;">' + esc(L('haccp_audit_status_closed', 'Documented')) + '</span>';
+        rows += '<tr>' +
+          '<td style="padding:6px 8px;border:1px solid ' + BD + ';white-space:nowrap;">' + esc(x.date) + '</td>' +
+          '<td style="padding:6px 8px;border:1px solid ' + BD + ';">' + esc(x.area) + '</td>' +
+          '<td style="padding:6px 8px;border:1px solid ' + BD + ';font-weight:600;">' + esc(x.item) + '</td>' +
+          '<td style="padding:6px 8px;border:1px solid ' + BD + ';text-align:center;color:#991b1b;font-weight:700;">⚠ ' + esc(x.reading) + '</td>' +
+          '<td style="padding:6px 8px;border:1px solid ' + BD + ';text-align:center;color:#78716c;">' + esc(x.limit) + '</td>' +
+          '<td style="padding:6px 8px;border:1px solid ' + BD + ';">' + (x.corrective ? esc(x.corrective) : '<span style="color:#dc2626;font-style:italic;">' + esc(L('haccp_audit_no_action', 'No action recorded')) + '</span>') + '</td>' +
+          '<td style="padding:6px 8px;border:1px solid ' + BD + ';text-align:center;">' + statusChip + '</td>' +
+          '<td style="padding:6px 8px;border:1px solid ' + BD + ';text-align:center;color:#78716c;">' + esc(x.chef || '—') + '</td>' +
+        '</tr>';
+      });
+      exHtml = '<table style="width:100%;border-collapse:collapse;font-size:11px;">' +
+        '<thead><tr style="background:' + THBG + ';">' +
+          ['haccp_audit_col_date|Date', 'haccp_audit_col_area|Area', 'haccp_audit_col_item|Item', 'haccp_audit_col_reading|Reading', 'haccp_audit_col_limit|Limit', 'haccp_audit_col_action|Corrective action', 'haccp_audit_col_status|Status', 'haccp_audit_col_by|By'].map(function (p) {
+            const kv = p.split('|');
+            return '<th style="padding:7px 8px;border:1px solid ' + BD + ';text-align:start;font-size:10px;text-transform:uppercase;letter-spacing:0.04em;color:' + PINE + ';">' + esc(L(kv[0], kv[1])) + '</th>';
+          }).join('') +
+        '</tr></thead><tbody>' + rows + '</tbody></table>' +
+        '<div style="margin-top:8px;font-size:10.5px;color:#78716c;font-style:italic;">' + esc(L('haccp_audit_open_note', 'Open = an out-of-range event with no corrective action recorded. Close these before the audit.')) + '</div>';
+    }
+
+    return '' +
+      '<div style="font-family:Inter,system-ui,sans-serif;color:' + INK + ';max-width:760px;margin:0 auto;">' +
+        '<div style="border-bottom:3px solid ' + PINE + ';padding-bottom:12px;margin-bottom:16px;">' +
+          '<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;">' +
+            '<div>' +
+              '<div style="font-family:Fraunces,Georgia,serif;font-size:26px;font-weight:800;color:' + PINE + ';line-height:1.05;">' + esc(L('haccp_audit_report_title', 'HACCP Audit Pack')) + '</div>' +
+              (business ? '<div style="font-size:14px;font-weight:600;color:' + INK + ';margin-top:3px;">' + esc(business) + '</div>' : '') +
+            '</div>' +
+            '<div style="text-align:end;font-size:11px;color:#57534e;line-height:1.6;">' +
+              '<div><strong style="color:' + PINE + ';">' + esc(L('haccp_audit_period', 'Period')) + ':</strong> ' + esc(monthLabelLong(ym)) + '</div>' +
+              '<div><strong style="color:' + PINE + ';">' + esc(L('haccp_audit_region_label', 'Region standard')) + ':</strong> ' + esc(regionLabel) + '</div>' +
+              '<div><strong style="color:' + PINE + ';">' + esc(L('haccp_audit_generated', 'Generated')) + ':</strong> ' + esc(genDate) + '</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+
+        '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;">' +
+          stat(L('haccp_audit_stat_checks', 'Temperature checks'), data.totals.checks, PINE) +
+          stat(L('haccp_audit_stat_compliance', 'Compliance'), data.totals.compliancePct + '%', c) +
+          stat(L('haccp_audit_stat_fails', 'Out-of-range'), data.totals.fails || '0', data.totals.fails ? '#dc2626' : INK) +
+          stat(L('haccp_audit_stat_open', 'Open corrective actions'), data.totals.openCapa || '0', data.totals.openCapa ? '#dc2626' : ACC) +
+        '</div>' +
+
+        '<div style="font-family:Fraunces,Georgia,serif;font-size:16px;font-weight:700;color:' + PINE + ';margin:0 0 8px;">' + esc(L('haccp_audit_by_form', 'Records by form')) + '</div>' +
+        '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:22px;">' +
+          '<thead><tr style="background:' + THBG + ';">' +
+            ['haccp_audit_form_col|Form', 'haccp_audit_checks_col|Checks', 'haccp_audit_pass_col|Pass', 'haccp_audit_fail_col|Out-of-range', 'haccp_audit_compliance_col|Compliance'].map(function (p, i) {
+              const kv = p.split('|');
+              return '<th style="padding:8px 10px;border:1px solid ' + BD + ';text-align:' + (i === 0 ? 'start' : 'center') + ';font-size:10px;text-transform:uppercase;letter-spacing:0.04em;color:' + PINE + ';">' + esc(L(kv[0], kv[1])) + '</th>';
+            }).join('') +
+          '</tr></thead><tbody>' + formRows + '</tbody></table>' +
+
+        '<div style="font-family:Fraunces,Georgia,serif;font-size:16px;font-weight:700;color:' + PINE + ';margin:0 0 8px;">' + esc(L('haccp_audit_exceptions_title', 'Corrective-action log (out-of-range events)')) + '</div>' +
+        exHtml +
+
+        '<div style="margin-top:34px;display:flex;gap:40px;flex-wrap:wrap;">' +
+          '<div style="flex:1;min-width:220px;">' +
+            '<div style="border-bottom:1px solid ' + INK + ';height:30px;"></div>' +
+            '<div style="font-size:11px;color:#57534e;margin-top:4px;">' + esc(L('haccp_audit_signoff', 'Reviewed & verified by')) + ' &nbsp;·&nbsp; ' + esc(L('haccp_audit_signature', 'Signature')) + '</div>' +
+          '</div>' +
+          '<div style="width:160px;">' +
+            '<div style="border-bottom:1px solid ' + INK + ';height:30px;"></div>' +
+            '<div style="font-size:11px;color:#57534e;margin-top:4px;">' + esc(L('haccp_audit_date_label', 'Date')) + '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function printAuditPack(ym) {
+    const data = collectAuditData(ym);
+    if (data.totals.checks === 0) {
+      PCD.toast.error(L('haccp_audit_empty', 'No HACCP records found for this month. Log entries in the four forms first.'));
+      return;
+    }
+    PCD.print(buildAuditPackHtml(ym), L('haccp_audit_report_title', 'HACCP Audit Pack') + ' — ' + ym);
+  }
+
+  // Live one-line summary for the hub Audit Pack card (recomputed on month
+  // change). Empty month → friendly "no records yet" line.
+  function auditSummaryInner(d) {
+    if (!d || d.totals.checks === 0) {
+      return '<span style="color:var(--text-3);">' + PCD.escapeHtml(L('haccp_audit_none_yet', 'No records logged for this month yet.')) + '</span>';
+    }
+    const col = complianceColor(d.totals.compliancePct);
+    return '<strong>' + PCD.escapeHtml(L('haccp_audit_summary_label', 'Selected month')) + ':</strong> ' +
+      d.totals.checks + ' ' + PCD.escapeHtml(L('haccp_audit_sum_checks', 'checks')) +
+      ' · <span style="color:' + col + ';font-weight:700;">' + d.totals.compliancePct + '% ' + PCD.escapeHtml(L('haccp_audit_sum_compliant', 'compliant')) + '</span>' +
+      (d.totals.openCapa ? ' · <span style="color:#dc2626;font-weight:700;">' + d.totals.openCapa + ' ' + PCD.escapeHtml(L('haccp_audit_sum_open', 'open actions')) + '</span>' : '');
+  }
+
   // Count today's records across the various HACCP tables.
   // Each form stores under a different state key — we touch each
   // gently and return a count. Errors silently → 0 (defensive).
@@ -79,7 +378,9 @@
         title: t('haccp_hub_card_logs_title') || 'Daily Temperature Log',
         desc: t('haccp_hub_card_logs_desc') || 'Fridge & freezer readings — twice daily',
         accent: '#ef4444',
-        todayCount: countTodayEntries('haccpLogs', 'recordedAt'),
+        // Daily readings live in haccpReadings (per unit/date); haccpLogs only
+        // holds log definitions. Top-level reading.date drives the today match.
+        todayCount: countTodayEntries('haccpReadings', 'recordedAt'),
       },
       {
         route: 'haccp_cooling',
@@ -87,7 +388,8 @@
         title: t('haccp_hub_card_cooling_title') || 'Cook & Cool Log',
         desc: t('haccp_hub_card_cooling_desc') || 'Cooked food cooling — 2-stage verification',
         accent: '#3b82f6',
-        todayCount: countTodayEntries('haccpCooling', 'monthYM'),
+        // Cook & Cool records are stored under haccpCookCool (not haccpCooling).
+        todayCount: countTodayEntries('haccpCookCool', 'monthYM'),
       },
       {
         route: 'haccp_receiving',
@@ -130,6 +432,8 @@
     }
 
     const cards = getCards();
+    const auditYm = currentMonthYM();
+    const auditData = collectAuditData(auditYm);
     const totalToday = cards.reduce(function (a, c) { return a + c.todayCount; }, 0);
     const touchedCount = cards.filter(function (c) { return c.todayCount > 0; }).length;
     const allTouched = touchedCount === cards.length;
@@ -218,14 +522,20 @@
 
       <div id="haccpCards" class="flex flex-col gap-2"></div>
 
-      <div class="card mb-3" style="padding:14px 18px;background:var(--surface-2);margin-top:16px;border:1px dashed var(--border-strong);">
-        <div style="display:flex;align-items:flex-start;gap:10px;">
-          <div style="font-size:18px;">📋</div>
-          <div style="font-size:13px;color:var(--text-2);line-height:1.55;">
-            <strong>${t('haccp_hub_audit_hint_title') || 'Preparing for an audit?'}</strong>
-            ${t('haccp_hub_audit_hint_body') || 'Open each form and use its print button to generate a 30-day or monthly record. Keep printouts in a binder organised by form type — that’s what auditors expect to flip through.'}
+      <div class="card mb-3" style="padding:16px 18px;margin-top:16px;border:1px solid var(--brand-300);background:linear-gradient(135deg,var(--brand-50),var(--surface));">
+        <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+          <div style="font-size:22px;line-height:1;">📋</div>
+          <div style="flex:1;min-width:220px;">
+            <div style="font-weight:800;font-size:15px;color:var(--text-1);margin-bottom:3px;">${L('haccp_audit_card_title', 'Audit-ready report')}</div>
+            <div style="font-size:12.5px;color:var(--text-2);line-height:1.5;">${L('haccp_audit_card_desc', 'Combine all four forms into one auditor-ready PDF for any month — summary, compliance %, and a corrective-action log.')}</div>
           </div>
         </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;">
+          <label for="haccpAuditMonth" style="font-size:12px;font-weight:600;color:var(--text-2);">${L('haccp_audit_month', 'Month')}</label>
+          <input type="month" id="haccpAuditMonth" value="${auditYm}" max="${auditYm}" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-1);font-size:13px;">
+          <button type="button" class="btn btn-primary" id="haccpAuditBtn" style="font-size:13px;">${PCD.icon('print', 15)} ${L('haccp_audit_btn', 'Generate audit report')}</button>
+        </div>
+        <div id="haccpAuditSummary" style="margin-top:10px;font-size:12px;color:var(--text-2);">${auditSummaryInner(auditData)}</div>
       </div>
     `;
 
@@ -247,6 +557,22 @@
       const r = this.getAttribute('data-haccp-route');
       if (r && PCD.router && PCD.router.go) PCD.router.go(r);
     });
+
+    // Audit Pack — generate combined monthly report; live summary on month change.
+    const auditBtn = PCD.$('#haccpAuditBtn', view);
+    if (auditBtn) {
+      auditBtn.addEventListener('click', function () {
+        const mEl = PCD.$('#haccpAuditMonth', view);
+        printAuditPack((mEl && mEl.value) || currentMonthYM());
+      });
+    }
+    const auditMonthEl = PCD.$('#haccpAuditMonth', view);
+    if (auditMonthEl) {
+      auditMonthEl.addEventListener('change', function () {
+        const sEl = PCD.$('#haccpAuditSummary', view);
+        if (sEl) sEl.innerHTML = auditSummaryInner(collectAuditData(this.value || currentMonthYM()));
+      });
+    }
 
     // v2.9.37 — HACCP region change handler. Four-layer persist guarantee:
     // (1) in-memory state set, (2) flushSync to LS/IDB, (3) cloud queue
