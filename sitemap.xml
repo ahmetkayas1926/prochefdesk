@@ -48,7 +48,57 @@
        v2.8.95 — +2 (buffet-food-cost + iftar). v2.8.96 — +2 (cook-cool + yield).
        v2.8.97 — +2 (prep-list + recipe-scaling). v2.8.98 — +2 (kitchen-cards + par-levels).
        v2.8.99 — +2 (waste-tracking + allergen-menu). v2.44.26 — +1 (catering-cost-per-head).
-       +2 (labour-cost-percentage + kitchen-cleaning-schedule). Total 16 posts published. -->
+       +2 (labour-cost-percentage + kitchen-cleaning-schedule). v2.44.102 — +8 catering/HACCP niche
+       (BEO, food-quantity, price-catering-menu, haccp-temp-log, buffet-quantity, personal-chef-pricing,
+       wedding-catering-cost, event-staffing). Total 24 posts published. -->
+  <url>
+    <loc>https://prochefdesk.com/blog/banquet-event-order-beo-template.html</loc>
+    <lastmod>2026-06-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/catering-food-quantity-per-person.html</loc>
+    <lastmod>2026-06-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/how-to-price-catering-menu.html</loc>
+    <lastmod>2026-06-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/haccp-temperature-log-template.html</loc>
+    <lastmod>2026-06-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/buffet-quantity-per-person.html</loc>
+    <lastmod>2026-06-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/personal-chef-pricing.html</loc>
+    <lastmod>2026-06-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/wedding-catering-cost.html</loc>
+    <lastmod>2026-06-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/event-staffing-ratios.html</loc>
+    <lastmod>2026-06-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
   <url>
     <loc>https://prochefdesk.com/blog/labour-cost-percentage-restaurant.html</loc>
     <lastmod>2026-06-16</lastmod>
