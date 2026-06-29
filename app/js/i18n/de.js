@@ -3563,3 +3563,14 @@ window.PCD.i18n.register('de', {
   haccp_range_tip_days: "Jeden erfassten Tag über mehrere Monate in eine PDF drucken",
   haccp_range_btn: "Monate…",
 });
+
+window.PCD.i18n.register('de', {
+  // v2.44.103 — On-order lifecycle
+  inv_on_order: "Bestellt",
+  inv_already_ordered: "Bereits bestellt",
+  inv_order_again: "Erneut bestellen",
+  inv_order_sent: "Gesendet",
+  inv_items_to_order: "Artikel zu bestellen",
+  inv_all_on_order: "Alle markierten Artikel sind bereits bestellt.",
+  inv_need_short: "Bedarf",
+});

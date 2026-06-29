@@ -50,7 +50,10 @@
       return (s.name || '').trim().toLowerCase() === key;
     }) || null;
   }
-  function startOrder(supplierName, items) {
+  // v2.44.103 — onSent: GERÇEK gönderim sonrası tetiklenen opsiyonel geri-çağrı
+  // (Sipariş Oluştur modalı "Gönderildi ✓" işaretlemek için kullanır). Tedarikçiler
+  // ekranından çağrıda yok (undefined) — davranış değişmez.
+  function startOrder(supplierName, items, onSent) {
     backfillSupplierRecords();
     const sup = supplierByName(supplierName);
     if (!sup) { if (PCD.toast) PCD.toast.warning(tt('sup_not_found', 'Supplier not found')); return false; }
@@ -60,7 +63,7 @@
       draftQty[sup.id][it.ingId] = it.qty;
       if (it.unit) draftQty[sup.id]['_unit_' + it.ingId] = it.unit;
     });
-    sendOrderFlow(sup.id);
+    sendOrderFlow(sup.id, onSent);
     return true;
   }
 
@@ -264,7 +267,7 @@
   }
 
   // ============ SEND ORDER FLOW ============
-  function sendOrderFlow(sid) {
+  function sendOrderFlow(sid, onSent) {
     const supplier = PCD.store.getFromTable('suppliers', sid);
     if (!supplier) return;
     const products = productsOf(supplier);
@@ -278,10 +281,10 @@
       return;
     }
     // Pick delivery date first, then build message + open share sheet
-    openDeliveryDate(supplier, filled);
+    openDeliveryDate(supplier, filled, onSent);
   }
 
-  function openDeliveryDate(supplier, items) {
+  function openDeliveryDate(supplier, items, onSent) {
     const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
     const dayAfter = new Date(); dayAfter.setDate(dayAfter.getDate() + 2);
     function iso(d) { return d.toISOString().slice(0, 10); }
@@ -337,7 +340,7 @@
     nextBtn.addEventListener('click', function () {
       const notes = (PCD.$('#dlvNotes', body).value || '').trim();
       m.close();
-      setTimeout(function () { openShareSheet(supplier, items, selected, notes); }, 200);
+      setTimeout(function () { openShareSheet(supplier, items, selected, notes, onSent); }, 200);
     });
   }
 
@@ -370,7 +373,7 @@
     return out;
   }
 
-  function openShareSheet(supplier, items, deliveryDate, notes) {
+  function openShareSheet(supplier, items, deliveryDate, notes, onSent) {
     const message = buildMessage(supplier, items, deliveryDate, notes);
     const phoneClean = (supplier.phone || '').replace(/\D/g, '');
     const waNumber = (supplier.whatsapp || supplier.phone || '').replace(/\D/g, '');
@@ -415,9 +418,11 @@
     // v2.44.63 — gönderim anındaki kalemleri yapısal yakala (draftQty send sonrası
     // temizlenir) → history'e gömülür → "Geldi → stoğa ekle" köprüsü bunu kullanır.
     const _dq = draftQty[supplier.id] || {};
+    // v2.44.103 — id (ingredient id) korunur → recordOrder envanteri "yolda" işaretler.
     const orderItems = items.map(function (it) {
-      return { name: it.name, qty: Number(_dq[it.id]) || 0, unit: _dq['_unit_' + it.id] || it.unit || '' };
+      return { id: it.id, name: it.name, qty: Number(_dq[it.id]) || 0, unit: _dq['_unit_' + it.id] || it.unit || '' };
     });
+    const _fireSent = function () { if (typeof onSent === 'function') { try { onSent(orderItems); } catch (e) {} } };
     cancelBtn.addEventListener('click', function () { m.close(); });
 
     PCD.$('#shWa', body).addEventListener('click', function () {
@@ -426,6 +431,7 @@
         : 'https://wa.me/?text=' + encodeURIComponent(getMsg());
       window.open(url, '_blank');
       recordOrder(supplier.id, 'whatsapp', waNumber, getMsg(), orderItems, deliveryDate);
+      _fireSent();
       onSentSuccess(supplier);
       m.close();
     });
@@ -435,6 +441,7 @@
         : 'sms:?&body=' + encodeURIComponent(getMsg());
       window.location.href = url;
       recordOrder(supplier.id, 'sms', (supplier.phone || ''), getMsg(), orderItems, deliveryDate);
+      _fireSent();
       onSentSuccess(supplier);
       m.close();
     });
@@ -445,6 +452,7 @@
         : 'mailto:?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(getMsg());
       window.location.href = url;
       recordOrder(supplier.id, 'email', email, getMsg(), orderItems, deliveryDate);
+      _fireSent();
       onSentSuccess(supplier);
       m.close();
     });
@@ -457,6 +465,7 @@
           text: txt
         }).then(function () {
           recordOrder(supplier.id, 'share', '', txt, orderItems, deliveryDate);
+          _fireSent();
           onSentSuccess(supplier);
           m.close();
         }).catch(function () {
@@ -465,6 +474,7 @@
       } else if (navigator.clipboard) {
         navigator.clipboard.writeText(txt).then(function () {
           recordOrder(supplier.id, 'copy', '', txt, orderItems, deliveryDate);
+          _fireSent();
           PCD.toast.success(PCD.i18n.t('toast_copied_to_clipboard'));
         });
       }
@@ -524,6 +534,14 @@
     });
     sup.orderHistory = hist.slice(0, 50); // son 50 sipariş
     PCD.store.upsertInTable('suppliers', sup, 'sup');
+    // v2.44.103 — Envanteri "yolda" işaretle (lastOrderedAt) → kalem kırmızı sayaçtan +
+    // Sipariş Oluştur aktif listesinden düşer (çift-sipariş önleme); teslim alınınca temizlenir.
+    try {
+      if (PCD.tools.inventory && PCD.tools.inventory.markOrdered) {
+        const ids = arr.map(function (x) { return x.id; }).filter(Boolean);
+        if (ids.length) PCD.tools.inventory.markOrdered(ids);
+      }
+    } catch (e) {}
   }
 
   function openOrderHistory(sid) {

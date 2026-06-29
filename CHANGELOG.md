@@ -4,6 +4,13 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.103 — Sipariş "yolda" yaşam döngüsü: send → stok senkron · 2026-06-29
+Generate Order zaten eksikleri tedarikçiye göre gruplayıp her tedarikçiye ayrı gönderim hattına (teslim tarihi + WhatsApp/SMS/Email + sipariş geçmişi + "stoğa ekle") bağlıyordu. Gözden kaçan 3 eksik kapatıldı:
+- **Sipariş gönderince envanter "yolda" (on-order) işaretlenir.** Gerçek gönderim (`suppliers.recordOrder`) artık envantere `lastOrderedAt` damgalar (`PCD.tools.inventory.markOrdered`) — hem Sipariş Oluştur hem Tedarikçiler ekranından. Yolda kalemler kırmızı "sipariş et" rozetinden + Sipariş Oluştur AKTİF listesinden düşer → **çift-sipariş önlenir.** Teslim alınınca (`lastReceivedAt ≥ lastOrderedAt`) veya stok par üstüne çıkınca veya 21 gün sonra otomatik temizlenir (`isOnOrder`).
+- **Ayrı ayrı gönderim tek pasoda.** Bir tedarikçiye "Send" → modal AÇIK kalır, o grup "Gönderildi ✓" olur (kalemler kilitlenir, tekrar saymaz), kalan tedarikçilere sırayla gönderilir. `suppliers.startOrder(name, items, onSent)` opsiyonel geri-çağrı eklendi (Tedarikçiler ekranı davranışı değişmez).
+- **Görsel netlik:** her satırda stok÷par karşılaştırmalı çubuğu + "gerek N" + envanter listesinde "Yolda" rozeti. Yolda kalemler için soluk "Sipariş verildi" bölümü + "Tekrar sipariş" (flag'i temizler).
+- 7 yeni i18n anahtarı **6 dilde TAM**. Tüm `node -c` temiz. Preview'da doğrulandı.
+
 ## v2.44.102 — Demo seed tam-kapasite + doküman optimizasyonu + go-to-market · 2026-06-29
 Lansman temizliği — kod cilası değil, satışa hazırlık.
 - **Demo seed yeni özellikleri yansıtıyor** (`app/js/seed/demo-recipes.js`): misafir/onboarding verisi artık her aracın güncel kapasitesini gösterir. **Event → tam BEO** (2 fonksiyon Reception+Dinner · garanti-kişi · diyet notu · itemized charges cost↔price · deposit/balance ödeme planı · run-of-show timeline · görev checklist · staffing işçilik P&L · servis %10). **Buffet → forecast** (`prepFactor 0.9`). **Inventory → son-kullanma** (3 kalem yakında bozulacak SKT → badge + dashboard kartı). **Ingredients → raf-ömrü** (5 perishable shelfLifeDays). **Fix:** seed ingredient-map `shelfLifeDays`'i düşürüyordu → eklendi. Preview'da re-seed ile uçtan uca doğrulandı (event 2 fn/charges/payments/timeline/tasks/staffing · buffet prepFactor · inventory expiry · ingredient shelf-life) · 0 console hatası.

@@ -3720,3 +3720,14 @@ window.PCD.i18n.register('tr', {
   haccp_range_tip_days: "Birden çok aydaki tüm kayıtlı günleri tek PDF'te yazdır",
   haccp_range_btn: "Aylar…",
 });
+
+window.PCD.i18n.register('tr', {
+  // v2.44.103 — Yolda (on-order) yaşam döngüsü
+  inv_on_order: "Yolda",
+  inv_already_ordered: "Sipariş verildi",
+  inv_order_again: "Tekrar sipariş",
+  inv_order_sent: "Gönderildi",
+  inv_items_to_order: "kalem sipariş edilecek",
+  inv_all_on_order: "İşaretli tüm kalemler zaten yolda.",
+  inv_need_short: "gerek",
+});

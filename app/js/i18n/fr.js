@@ -3563,3 +3563,14 @@ window.PCD.i18n.register('fr', {
   haccp_range_tip_days: "Imprimer chaque jour enregistré sur plusieurs mois dans un seul PDF",
   haccp_range_btn: "Mois…",
 });
+
+window.PCD.i18n.register('fr', {
+  // v2.44.103 — On-order lifecycle
+  inv_on_order: "En commande",
+  inv_already_ordered: "Déjà commandé",
+  inv_order_again: "Commander à nouveau",
+  inv_order_sent: "Envoyé",
+  inv_items_to_order: "articles à commander",
+  inv_all_on_order: "Tous les articles signalés sont déjà commandés.",
+  inv_need_short: "besoin",
+});

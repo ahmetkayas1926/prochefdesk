@@ -146,6 +146,40 @@
     return report;
   }
 
+  // v2.44.103 — Sipariş gönderildiğinde envanteri "yolda" işaretle (lastOrderedAt).
+  // ids: ingredient id dizisi VEYA {ingId:qty} map. Yalnız MEVCUT izlenen satırları
+  // işaretler (yeni satır yaratmaz — par'sız kalem zaten sipariş listesine girmez).
+  // suppliers.recordOrder buradan çağırır → hem Sipariş Oluştur hem Tedarikçiler
+  // ekranından gönderilen siparişler aynı şekilde "yolda" olur.
+  function markOrdered(ids) {
+    let list = [];
+    if (Array.isArray(ids)) list = ids.slice();
+    else if (ids && typeof ids === 'object') list = Object.keys(ids);
+    if (!list.length) return 0;
+    const inv = readInventory();
+    const now = new Date().toISOString();
+    let n = 0;
+    list.forEach(function (iid) {
+      if (!iid) return;
+      const row = inv[iid];
+      if (!row) return; // izlenmeyen kalem → atla
+      inv[iid] = Object.assign({}, row, { lastOrderedAt: now });
+      n++;
+    });
+    if (n) writeInventory(inv);
+    return n;
+  }
+  // Yolda işaretini kaldır (Sipariş Oluştur'da "Tekrar sipariş" için).
+  function clearOrdered(iid) {
+    if (!iid) return;
+    const inv = readInventory();
+    const row = inv[iid];
+    if (!row || !row.lastOrderedAt) return;
+    const next = Object.assign({}, row); delete next.lastOrderedAt;
+    inv[iid] = next;
+    writeInventory(inv);
+  }
+
   // Ortak stok-değişim onay modalı: ciddi onay + AÇILIR-KAPANIR kalem listesi (uzun
   // olabilir). opts: { title, verb, kind:'add'|'deduct', note, items:[{name,amount,unit}] }
   // → Promise<bool> (onaylandı mı). event/buffet/sales/mark-received hepsi kullanır.
@@ -239,6 +273,27 @@
     return 'ok';
   }
 
+  // v2.44.103 — "On order" (yolda) durumu. Bir kalemin GERÇEK siparişi gönderilince
+  // (suppliers.recordOrder → markOrdered) lastOrderedAt damgalanır. Yolda = sipariş
+  // edildi + henüz teslim alınmadı + hâlâ par-altı + ON_ORDER_DAYS'ten yeni. Bu kalemler
+  // kırmızı "sipariş et" sayacından ve Sipariş Oluştur AKTİF listesinden düşer (çift-
+  // sipariş önleme). Teslim alınınca (lastReceivedAt ≥ lastOrderedAt) veya stok par
+  // üstüne çıkınca (status 'ok') ya da süre dolunca otomatik temizlenir — flag silinmez.
+  const ON_ORDER_DAYS = 21;
+  function isOnOrder(invRow) {
+    if (!invRow || !invRow.lastOrderedAt) return false;
+    const st = computeStatus(invRow);
+    if (st !== 'out' && st !== 'critical' && st !== 'low') return false; // par üstü → çözüldü
+    const ord = new Date(invRow.lastOrderedAt).getTime();
+    if (isNaN(ord)) return false;
+    if (invRow.lastReceivedAt) {
+      const rec = new Date(invRow.lastReceivedAt).getTime();
+      if (!isNaN(rec) && rec >= ord) return false; // sipariş sonrası teslim alındı
+    }
+    if ((Date.now() - ord) > ON_ORDER_DAYS * 86400000) return false; // bayat → tekrar uyar
+    return true;
+  }
+
   // v2.44.99 — Shelf-life / best-before. Spoilage is 8–15% of a small kitchen's
   // food budget; an expiry alert that prompts "use this first" is the fastest
   // inventory win (FoodReady/Supy/Your Food App all lead with it). One best-
@@ -315,7 +370,9 @@
       const row = invAll[i.id];
       if (!row || row.parLevel == null) return false;
       const s = computeStatus(row);
-      return s === 'out' || s === 'critical' || s === 'low';
+      if (!(s === 'out' || s === 'critical' || s === 'low')) return false;
+      if (isOnOrder(row)) return false; // zaten yolda → tekrar sipariş için uyarma
+      return true;
     }).length;
 
     // Aggregate stats
@@ -526,7 +583,8 @@
                 ${x.row && x.row.lastOrderedAt ? '<span>·</span><span>' + t('inv_last_ordered') + ': ' + PCD.fmtRelTime(x.row.lastOrderedAt) + '</span>' : ''}
               </div>
             </div>
-            <div style="flex-shrink:0;">
+            <div style="flex-shrink:0;display:flex;align-items:center;gap:4px;">
+              ${isOnOrder(x.row) ? '<span class="chip" style="background:var(--brand-50);color:var(--brand-700);font-weight:700;font-size:10px;">' + PCD.icon('truck', 10) + ' ' + PCD.escapeHtml(L('inv_on_order', 'On order')) + '</span>' : ''}
               <span class="chip" style="background:${color}20;color:${color};font-weight:700;">${statusLabel(x.status)}</span>
             </div>
           `;
@@ -1186,10 +1244,13 @@
     // Count tracked items needing reorder (out / critical / low)
     let belowCount = 0;
     ings.forEach(function (i) {
+      if (i.noSupplierNeeded) return;
       const row = invAll[i.id];
       if (!row || row.parLevel == null) return;
       const status = computeStatus(row);
-      if (status === 'out' || status === 'critical' || status === 'low') belowCount++;
+      if (!(status === 'out' || status === 'critical' || status === 'low')) return;
+      if (isOnOrder(row)) return; // yolda → tekrar uyarma
+      belowCount++;
     });
     if (belowCount === 0) return;
     const titleKey = belowCount === 1 ? 'inv_x_items_need_ordering_singular' : 'inv_x_items_need_ordering_plural';
@@ -1404,7 +1465,7 @@
       const status = computeStatus(row);
       if (status === 'out' || status === 'critical' || status === 'low') {
         const need = Math.max(0, par - stock);
-        below.push({ ing: i, stock: stock, par: par, need: need || par, status: status, supplier: (i.supplier || '').trim() });
+        below.push({ ing: i, stock: stock, par: par, need: need || par, status: status, supplier: (i.supplier || '').trim(), onOrder: isOnOrder(row) });
       }
     });
 
@@ -1416,12 +1477,24 @@
     // v2.44.78 — Tedarikçi-başı sipariş. Tedarikçisiz kalemler EN ÜSTTE, atanmadan
     // gönderilemez (sessiz atlama YOK). Her tedarikçi grubu kendi GERÇEK gönderim
     // hattına gider (suppliers.startOrder → teslim tarihi + WhatsApp/SMS/Email + geçmiş).
-    const noSup = below.filter(function (b) { return !b.supplier; });
+    // v2.44.103 — Yolda (on-order) kalemler aktif gruplardan AYRILIR (çift-sipariş yok),
+    // altta soluk "Sipariş verildi" bölümünde gösterilir ("Tekrar sipariş" ile geri alınır).
+    const active = below.filter(function (b) { return !b.onOrder; });
+    const onOrderList = below.filter(function (b) { return b.onOrder; });
+    const noSup = active.filter(function (b) { return !b.supplier; });
     const bySupplier = {};
-    below.forEach(function (b) { if (b.supplier) { (bySupplier[b.supplier] = bySupplier[b.supplier] || []).push(b); } });
+    active.forEach(function (b) { if (b.supplier) { (bySupplier[b.supplier] = bySupplier[b.supplier] || []).push(b); } });
     const supplierNames = Object.keys(bySupplier).sort();
 
     const body = PCD.el('div');
+
+    // Karşılaştırmalı görsel: stok ÷ par dolu çubuğu (durum rengi).
+    function barHtml(b) {
+      const par = b.par > 0 ? b.par : 0;
+      const pct = par > 0 ? Math.max(0, Math.min(100, Math.round((b.stock / par) * 100))) : 0;
+      return '<div style="height:5px;background:var(--surface-2);border-radius:3px;overflow:hidden;margin-top:5px;">' +
+        '<div style="height:100%;width:' + pct + '%;background:' + statusColor(b.status) + ';border-radius:3px;"></div></div>';
+    }
 
     function rowHtml(b, assignable) {
       const tag = assignable ? 'div' : 'label';
@@ -1429,7 +1502,9 @@
         (assignable ? '' : '<input type="checkbox" class="po-item" data-iid="' + b.ing.id + '" data-sup="' + PCD.escapeHtml(b.supplier) + '" checked style="accent-color:var(--brand-600);width:18px;height:18px;flex-shrink:0;">') +
         '<div style="flex:1;min-width:0;">' +
           '<div style="font-weight:600;font-size:14px;">' + PCD.escapeHtml(b.ing.name) + '</div>' +
-          '<div class="text-muted" style="font-size:11px;">' + PCD.escapeHtml(L('inv_current_stock', 'Stock')) + ': ' + PCD.fmtNumber(b.stock) + ' · Par: ' + PCD.fmtNumber(b.par) + ' ' + (b.ing.unit || '') + '</div>' +
+          '<div class="text-muted" style="font-size:11px;">' + PCD.escapeHtml(L('inv_current_stock', 'Stock')) + ': ' + PCD.fmtNumber(b.stock) + ' · Par: ' + PCD.fmtNumber(b.par) + ' ' + (b.ing.unit || '') +
+            ' · <span style="color:' + statusColor(b.status) + ';font-weight:700;">' + PCD.escapeHtml(L('inv_need_short', 'need')) + ' ' + PCD.fmtNumber(b.need) + '</span></div>' +
+          barHtml(b) +
         '</div>' +
         '<input type="number" class="input po-qty" data-iid="' + b.ing.id + '" value="' + b.need.toFixed(2) + '" step="0.01" min="0" style="width:74px;text-align:center;font-weight:600;">' +
         '<span class="text-muted" style="font-size:11px;flex-shrink:0;">' + (b.ing.unit || '') + '</span>' +
@@ -1438,9 +1513,13 @@
     }
 
     let html = '<div class="mb-3" style="padding:12px;background:var(--brand-50);border-radius:var(--r-md);">' +
-      '<div style="font-weight:700;">' + below.length + ' ' + PCD.escapeHtml(L('inv_items_below_par', 'items below par')) + '</div>' +
+      '<div style="font-weight:700;">' + active.length + ' ' + PCD.escapeHtml(L('inv_items_to_order', 'items to order')) + (onOrderList.length ? ' · <span style="color:var(--brand-700);">' + onOrderList.length + ' ' + PCD.escapeHtml(L('inv_on_order', 'On order')) + '</span>' : '') + '</div>' +
       '<div class="text-muted text-sm">' + PCD.escapeHtml(L('inv_order_hint', 'Each supplier gets its own order. Assign a supplier to the flagged items first.')) + '</div>' +
       '</div>';
+
+    if (!active.length) {
+      html += '<div class="text-muted text-sm" style="text-align:center;padding:6px 0;">' + PCD.escapeHtml(L('inv_all_on_order', 'Every flagged item is already on order.')) + '</div>';
+    }
 
     if (noSup.length) {
       html += '<div class="mb-3" style="border:1px solid var(--warning);border-radius:var(--r-md);overflow:hidden;">' +
@@ -1451,12 +1530,28 @@
     }
 
     supplierNames.forEach(function (sup) {
-      html += '<div class="mb-3">' +
+      html += '<div class="mb-3" data-sup-group="' + PCD.escapeHtml(sup) + '">' +
         '<div style="font-size:12px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">' + PCD.escapeHtml(sup) + '</div>';
       bySupplier[sup].forEach(function (b) { html += rowHtml(b, false); });
       html += '<button type="button" class="btn btn-primary btn-sm po-send" data-sup="' + PCD.escapeHtml(sup) + '" style="margin-top:2px;">' + PCD.icon('send', 13) + ' ' + PCD.escapeHtml(L('inv_order_send_to', 'Send to {name}').replace('{name}', sup)) + '</button>' +
       '</div>';
     });
+
+    // Yolda (on-order) — soluk, salt-bilgi + "Tekrar sipariş".
+    if (onOrderList.length) {
+      html += '<div class="mb-2" style="opacity:0.8;border-top:1px dashed var(--border);padding-top:10px;margin-top:4px;">' +
+        '<div style="font-size:12px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">' + PCD.icon('truck', 12) + ' ' + PCD.escapeHtml(L('inv_already_ordered', 'Already ordered')) + ' (' + onOrderList.length + ')</div>';
+      onOrderList.forEach(function (b) {
+        html += '<div style="display:flex;align-items:center;gap:9px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:4px;background:var(--surface);">' +
+          '<div style="flex:1;min-width:0;">' +
+            '<div style="font-weight:600;font-size:14px;">' + PCD.escapeHtml(b.ing.name) + '</div>' +
+            '<div class="text-muted" style="font-size:11px;">' + PCD.escapeHtml(L('inv_current_stock', 'Stock')) + ': ' + PCD.fmtNumber(b.stock) + ' · Par: ' + PCD.fmtNumber(b.par) + ' ' + (b.ing.unit || '') + '</div>' +
+          '</div>' +
+          '<button type="button" class="btn btn-sm btn-outline po-reorder" data-iid="' + b.ing.id + '" style="flex-shrink:0;white-space:nowrap;">' + PCD.icon('refresh', 13) + ' ' + PCD.escapeHtml(L('inv_order_again', 'Order again')) + '</button>' +
+        '</div>';
+      });
+      html += '</div>';
+    }
     body.innerHTML = html;
 
     const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') });
@@ -1546,17 +1641,38 @@
 
     cancelBtn.addEventListener('click', function () { m.close(); });
 
-    // Body delegasyonu (modal-scoped, sızıntısız): grup "Gönder" + kalem "Ata".
+    // Arkadaki envanteri tazele (rozet/sayaç güncellensin) — modal AÇIK kalır.
+    function refreshBehind() {
+      const v = PCD.$('#view');
+      if (v && PCD.router.currentView() === 'inventory') render(v);
+    }
+    // Gönderilen tedarikçi grubunu "Gönderildi ✓" yap: kalemler kilitlenir/seçimi
+    // kalkar (Print/Mark received tekrar saymasın), buton yeşil rozetle değişir.
+    function markGroupSent(sup) {
+      let grp = null;
+      body.querySelectorAll('[data-sup-group]').forEach(function (g) { if (g.getAttribute('data-sup-group') === sup) grp = g; });
+      if (grp) {
+        grp.style.opacity = '0.6';
+        grp.querySelectorAll('.po-item').forEach(function (cb) { cb.checked = false; cb.disabled = true; });
+        grp.querySelectorAll('.po-qty').forEach(function (q) { q.disabled = true; });
+        const sb = grp.querySelector('.po-send');
+        if (sb) sb.outerHTML = '<div style="margin-top:2px;font-size:12px;font-weight:800;color:#15803d;display:inline-flex;align-items:center;gap:5px;">' + PCD.icon('check', 13) + ' ' + PCD.escapeHtml(L('inv_order_sent', 'Sent')) + '</div>';
+      }
+      refreshBehind();
+    }
+
+    // Body delegasyonu (modal-scoped, sızıntısız): grup "Gönder" + kalem "Ata" + "Tekrar sipariş".
     body.addEventListener('click', function (e) {
       const sendBtn = e.target.closest && e.target.closest('.po-send');
       if (sendBtn) {
         const sup = sendBtn.getAttribute('data-sup');
         const items = collectForSupplier(sup);
         if (!items.length) { PCD.toast.warning(t('toast_no_items_selected')); return; }
+        // Modal AÇIK kalır → her tedarikçiye ayrı ayrı gönderilir. Gerçekten
+        // gönderilince (onSent) grup "Gönderildi ✓" olur; kalemler suppliers
+        // tarafında "yolda" işaretlenir (recordOrder → markOrdered).
         const fire = function () {
-          m.close();
-          PCD.tools.suppliers.startOrder(sup, items);
-          if (noSup.length) PCD.toast.warning(L('inv_order_remaining_nosup', '{n} item(s) still have no supplier — assign to order them.').replace('{n}', noSup.length));
+          PCD.tools.suppliers.startOrder(sup, items, function () { markGroupSent(sup); });
         };
         if (PCD.tools.suppliers && PCD.tools.suppliers.startOrder) { fire(); return; }
         if (PCD.router && PCD.router.loadLazyTool) {
@@ -1570,6 +1686,14 @@
       if (asgBtn) {
         const iid = asgBtn.getAttribute('data-iid');
         assignSupplier(iid, function () { m.close(); setTimeout(openGenerateOrder, 150); });
+        return;
+      }
+      const reBtn = e.target.closest && e.target.closest('.po-reorder');
+      if (reBtn) {
+        clearOrdered(reBtn.getAttribute('data-iid'));
+        refreshBehind();
+        m.close();
+        setTimeout(openGenerateOrder, 120);
       }
     });
 
@@ -2097,5 +2221,5 @@
   }
 
   PCD.tools = PCD.tools || {};
-  PCD.tools.inventory = { render: render, openEditor: openEditor, computeStatus: computeStatus, applyStockDeductions: applyStockDeductions, applyStockAdditions: applyStockAdditions, computeSalesDeductions: computeSalesDeductions, confirmStockChange: confirmStockChange, expiringSummary: expiringSummary };
+  PCD.tools.inventory = { render: render, openEditor: openEditor, computeStatus: computeStatus, applyStockDeductions: applyStockDeductions, applyStockAdditions: applyStockAdditions, computeSalesDeductions: computeSalesDeductions, confirmStockChange: confirmStockChange, expiringSummary: expiringSummary, markOrdered: markOrdered };
 })();
