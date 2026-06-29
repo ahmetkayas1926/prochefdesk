@@ -3573,4 +3573,5 @@ window.PCD.i18n.register('fr', {
   inv_items_to_order: "articles à commander",
   inv_all_on_order: "Tous les articles signalés sont déjà commandés.",
   inv_need_short: "besoin",
+  shop_ordered: "Commandé",
 });

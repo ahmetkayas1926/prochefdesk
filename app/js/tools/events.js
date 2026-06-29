@@ -1604,15 +1604,18 @@
     });
     function byName(a, b) { return (a.ing.name || '').localeCompare(b.ing.name || ''); }
     const out = [];
-    // 1) Direkt malzemeler — tedarikçiye göre grupla (eski davranış korunur)
+    // 1) Direkt malzemeler — tedarikçiye göre grupla (eski davranış korunur).
+    //    v2.44.104 — gerçek tedarikçiyi grupta sakla (supplier) → o gruba sipariş gönderme.
+    const otherLabel = t('event_shop_other') || 'Other';
     const supGroups = {};
     Object.keys(direct).forEach(function (k) {
       const row = direct[k];
-      const sup = (row.ing.supplier || '').trim() || (t('event_shop_other') || 'Other');
+      const realSup = (row.ing.supplier || '').trim();
+      const sup = realSup || otherLabel;
       (supGroups[sup] = supGroups[sup] || []).push(row);
     });
     Object.keys(supGroups).sort().forEach(function (sup) {
-      out.push({ label: sup, isSub: false, rows: supGroups[sup].sort(byName) });
+      out.push({ label: sup, supplier: (sup === otherLabel ? '' : sup), isSub: false, rows: supGroups[sup].sort(byName) });
     });
     // 2) Her sub-recipe — kendi grubu (yarı saydam başlık + ayraç)
     Object.keys(subs).sort().forEach(function (name) {
@@ -1621,9 +1624,12 @@
     return out;
   }
 
-  function shoppingListHtml(groups, forPrint) {
+  function shoppingListHtml(groups, forPrint, opts) {
     const t = PCD.i18n.t;
+    const L = function (k, fb) { try { const v = t(k); return (v == null || v === k) ? fb : v; } catch (e) { return fb; } };
     if (!groups.length) return '<div class="text-muted" style="padding:16px;text-align:center;">' + PCD.escapeHtml(t('event_shop_empty') || 'Add menu items with recipes to generate a shopping list.') + '</div>';
+    opts = opts || {};
+    const ordered = opts.ordered || {};
     const fmtAmt = function (n) { return (Math.round(n * 100) / 100).toString(); };
     const titleColor = forPrint ? '#16433a' : 'var(--brand-700)';
     const lineColor = forPrint ? '#e7e5e4' : 'var(--border)';
@@ -1634,6 +1640,17 @@
       const header = g.isSub
         ? '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:' + subColor + ';background:' + subBg + ';border-radius:6px;padding:3px 9px;margin-bottom:6px;opacity:0.8;">↳ ' + PCD.escapeHtml(g.label) + '</div>'
         : '<div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:' + titleColor + ';border-bottom:1px solid ' + lineColor + ';padding-bottom:4px;margin-bottom:6px;">' + PCD.escapeHtml(g.label) + '</div>';
+      // v2.44.104 — interaktif: gerçek tedarikçili gruba "Sipariş gönder" / "Sipariş verildi ✓".
+      let ctrl = '';
+      if (opts.interactive && !forPrint && !g.isSub && g.supplier) {
+        const ts = ordered[g.supplier];
+        ctrl = ts
+          ? '<div style="display:flex;align-items:center;gap:8px;margin-top:6px;">' +
+              '<span style="font-size:11px;font-weight:800;color:#15803d;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:3px 9px;">' + PCD.icon('check', 12) + ' ' + PCD.escapeHtml(L('shop_ordered', 'Ordered')) + ' · ' + PCD.escapeHtml(PCD.fmtRelTime(ts)) + '</span>' +
+              '<button type="button" class="btn btn-ghost btn-sm shop-send" data-sup="' + PCD.escapeHtml(g.supplier) + '" style="color:var(--text-3);">' + PCD.escapeHtml(L('inv_order_again', 'Order again')) + '</button>' +
+            '</div>'
+          : '<button type="button" class="btn btn-primary btn-sm shop-send" data-sup="' + PCD.escapeHtml(g.supplier) + '" style="margin-top:6px;">' + PCD.icon('send', 13) + ' ' + PCD.escapeHtml(L('inv_order_send_to', 'Send to {name}').replace('{name}', g.supplier)) + '</button>';
+      }
       return '<div style="margin-bottom:14px;' + (g.isSub ? 'border-top:2px dashed ' + lineColor + ';padding-top:12px;' : '') + '">' +
         header +
         g.rows.map(function (r) {
@@ -1642,18 +1659,56 @@
             '<span style="font-weight:600;white-space:nowrap;">' + fmtAmt(r.amount) + ' ' + PCD.escapeHtml(r.unit) + '</span>' +
           '</div>';
         }).join('') +
+        ctrl +
       '</div>';
     }).join('');
   }
 
   function openShoppingList(event) {
     const t = PCD.i18n.t;
+    const L = function (k, fb) { try { const v = t(k); return (v == null || v === k) ? fb : v; } catch (e) { return fb; } };
     const ingMap = {}, recipeMap = {};
     PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
     PCD.store.listRecipes().forEach(function (r) { recipeMap[r.id] = r; });
     const groups = buildEventShopping(event, ingMap, recipeMap);
+    // v2.44.104 — tedarikçiye göre sipariş gönderme + kalıcı "sipariş verildi" rozeti.
+    // Rozet bu event kaydında saklanır (_supplierOrders) → tekrar açınca o tedarikçi
+    // "✓ Ordered" görünür; aynı yerden iki kez sipariş önlenir (deduct-stock guard gibi).
+    if (!event._supplierOrders) event._supplierOrders = {};
     const body = PCD.el('div');
-    body.innerHTML = '<div class="text-muted text-sm" style="margin-bottom:10px;">' + PCD.escapeHtml(eventGuests(event) + ' ' + (t('event_guests') || 'guests')) + '</div>' + shoppingListHtml(groups, false);
+    function paint() {
+      body.querySelector('#evShopBody').innerHTML = shoppingListHtml(groups, false, { interactive: true, ordered: event._supplierOrders });
+    }
+    body.innerHTML = '<div class="text-muted text-sm" style="margin-bottom:10px;">' + PCD.escapeHtml(eventGuests(event) + ' ' + (t('event_guests') || 'guests')) + '</div>' +
+      '<div id="evShopBody">' + shoppingListHtml(groups, false, { interactive: true, ordered: event._supplierOrders }) + '</div>';
+    function persistOrdered(sup) {
+      const e = PCD.store.getFromTable('events', event.id) || event;
+      e._supplierOrders = Object.assign({}, e._supplierOrders || {}, {}); e._supplierOrders[sup] = new Date().toISOString();
+      PCD.store.upsertInTable('events', e, 'e');
+      event._supplierOrders = e._supplierOrders;
+    }
+    body.addEventListener('click', function (ev) {
+      const sb = ev.target.closest && ev.target.closest('.shop-send');
+      if (!sb) return;
+      const sup = sb.getAttribute('data-sup');
+      const g = groups.filter(function (x) { return x.supplier === sup; })[0];
+      if (!g) return;
+      const items = g.rows.filter(function (r) { return r.ing && r.ing.id; }).map(function (r) {
+        return { ingId: r.ing.id, qty: Math.round(r.amount * 100) / 100, unit: r.unit || r.ing.unit || '' };
+      });
+      if (!items.length) { PCD.toast.warning(t('toast_no_items_selected') || 'No items'); return; }
+      const fire = function () {
+        PCD.tools.suppliers.startOrder(sup, items, function () {
+          persistOrdered(sup);
+          try { if (PCD.tools.inventory && PCD.tools.inventory.markOrdered) PCD.tools.inventory.markOrdered(items.map(function (i) { return i.ingId; })); } catch (e) {}
+          paint();
+        });
+      };
+      if (PCD.tools.suppliers && PCD.tools.suppliers.startOrder) { fire(); return; }
+      if (PCD.router && PCD.router.loadLazyTool) {
+        PCD.router.loadLazyTool('suppliers').then(function () { if (PCD.tools.suppliers && PCD.tools.suppliers.startOrder) fire(); }).catch(function () { PCD.toast.error(L('toast_error', 'Something went wrong')); });
+      }
+    });
     const printBtn = PCD.el('button', { class: 'btn btn-outline', text: (t('print') || 'Print') });
     printBtn.innerHTML = PCD.icon('print', 14) + ' ' + PCD.escapeHtml(t('print') || 'Print');
     const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: (t('btn_close') || 'Close'), style: { marginInlineStart: 'auto' } });

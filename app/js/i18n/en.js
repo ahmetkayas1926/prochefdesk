@@ -3678,4 +3678,5 @@ window.PCD.i18n.register('en', {
   inv_items_to_order: "items to order",
   inv_all_on_order: "Every flagged item is already on order.",
   inv_need_short: "need",
+  shop_ordered: "Ordered",
 });

@@ -1718,7 +1718,7 @@
       }
       const bucket = via ? (subs[via] || (subs[via] = {})) : direct;
       const key = 'i:' + ing.id + '|' + u;
-      if (!bucket[key]) bucket[key] = { name: ing.name || '', unit: u, amount: 0, supplier: (ing.supplier || '').trim(), custom: false };
+      if (!bucket[key]) bucket[key] = { id: ing.id, name: ing.name || '', unit: u, amount: 0, supplier: (ing.supplier || '').trim(), custom: false };
       bucket[key].amount += amt;
     }
     (buffet.stations || []).forEach(function (st) {
@@ -1764,7 +1764,8 @@
       if (b === unlinkedLabel) return -1;
       return a.localeCompare(b);
     }).forEach(function (sup) {
-      out.push({ supplier: sup, isSub: false, rows: supGroups[sup].sort(byName) });
+      // v2.44.104 — supplierKey: gerçek tedarikçi ('' = bağlanmamış) → o gruba sipariş gönderme.
+      out.push({ supplier: sup, supplierKey: (sup === unlinkedLabel ? '' : sup), isSub: false, rows: supGroups[sup].sort(byName) });
     });
     // 2) Her sub-recipe — kendi grubu (yarı saydam başlık + ayraç)
     Object.keys(subs).sort().forEach(function (name) {
@@ -1773,11 +1774,14 @@
     return out;
   }
 
-  function orderListHtml(groups, forPrint) {
+  function orderListHtml(groups, forPrint, opts) {
     const t = PCD.i18n.t;
+    const L = function (k, fb) { try { const v = t(k); return (v == null || v === k) ? fb : v; } catch (e) { return fb; } };
     if (!groups.length) {
       return '<div class="text-muted" style="padding:16px;text-align:center;">' + PCD.escapeHtml(t('buffet_order_empty') || 'Link items to recipes or ingredients to generate a supplier order list.') + '</div>';
     }
+    opts = opts || {};
+    const ordered = opts.ordered || {};
     const fmt = function (n) { return (Math.round(n * 100) / 100).toString(); };
     const titleColor = forPrint ? '#16433a' : 'var(--brand-700)';
     const lineColor = forPrint ? '#e5e5e5' : 'var(--border)';
@@ -1788,6 +1792,17 @@
       const header = g.isSub
         ? '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:' + subColor + ';background:' + subBg + ';border-radius:6px;padding:3px 9px;margin-bottom:6px;opacity:0.8;">↳ ' + PCD.escapeHtml(g.supplier) + '</div>'
         : '<div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:' + titleColor + ';border-bottom:1px solid ' + lineColor + ';padding-bottom:4px;margin-bottom:6px;">' + PCD.escapeHtml(g.supplier) + '</div>';
+      // v2.44.104 — interaktif: gerçek tedarikçili gruba "Sipariş gönder" / "Sipariş verildi ✓".
+      let ctrl = '';
+      if (opts.interactive && !forPrint && !g.isSub && g.supplierKey) {
+        const ts = ordered[g.supplierKey];
+        ctrl = ts
+          ? '<div style="display:flex;align-items:center;gap:8px;margin-top:6px;">' +
+              '<span style="font-size:11px;font-weight:800;color:#15803d;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:3px 9px;">' + PCD.icon('check', 12) + ' ' + PCD.escapeHtml(L('shop_ordered', 'Ordered')) + ' · ' + PCD.escapeHtml(PCD.fmtRelTime(ts)) + '</span>' +
+              '<button type="button" class="btn btn-ghost btn-sm buf-send" data-sup="' + PCD.escapeHtml(g.supplierKey) + '" style="color:var(--text-3);">' + PCD.escapeHtml(L('inv_order_again', 'Order again')) + '</button>' +
+            '</div>'
+          : '<button type="button" class="btn btn-primary btn-sm buf-send" data-sup="' + PCD.escapeHtml(g.supplierKey) + '" style="margin-top:6px;">' + PCD.icon('send', 13) + ' ' + PCD.escapeHtml(L('inv_order_send_to', 'Send to {name}').replace('{name}', g.supplierKey)) + '</button>';
+      }
       return '<div style="margin-bottom:14px;' + (g.isSub ? 'border-top:2px dashed ' + lineColor + ';padding-top:12px;' : '') + '">' +
         header +
         g.rows.map(function (r) {
@@ -1796,6 +1811,7 @@
             '<span style="font-weight:600;white-space:nowrap;">' + fmt(r.amount) + ' ' + PCD.escapeHtml(r.unit) + '</span>' +
           '</div>';
         }).join('') +
+        ctrl +
       '</div>';
     }).join('');
   }
@@ -1808,8 +1824,51 @@
     const groups = buildBuffetOrder(buffet, ingMap, recipeMap);
     const refillX = buffet.refillMultiplier != null ? Number(buffet.refillMultiplier) : (INDUSTRY_REFILL[buffet.type] || INDUSTRY_REFILL.custom);
     const metaStr = (buffet.coverCount || 0) + ' ' + (t('buffet_covers') || 'covers') + ' · ' + (t('buffet_refill_label') || 'Refill') + ' ' + refillX + '×';
+    const L = function (k, fb) { try { const v = t(k); return (v == null || v === k) ? fb : v; } catch (e) { return fb; } };
+    // v2.44.104 — tedarikçiye göre sipariş gönderme + kalıcı "sipariş verildi" rozeti
+    // (bu büfe kaydında _supplierOrders) → tekrar açınca o tedarikçi "✓ Ordered"; çift-sipariş önlenir.
+    if (!buffet._supplierOrders) buffet._supplierOrders = {};
     const body = PCD.el('div');
-    body.innerHTML = '<div class="text-muted text-sm" style="margin-bottom:10px;">' + PCD.escapeHtml(metaStr) + '</div>' + orderListHtml(groups, false);
+    function paint() {
+      body.querySelector('#bufOrderBody').innerHTML = orderListHtml(groups, false, { interactive: true, ordered: buffet._supplierOrders });
+    }
+    body.innerHTML = '<div class="text-muted text-sm" style="margin-bottom:10px;">' + PCD.escapeHtml(metaStr) + '</div>' +
+      '<div id="bufOrderBody">' + orderListHtml(groups, false, { interactive: true, ordered: buffet._supplierOrders }) + '</div>';
+    function persistOrdered(sup) {
+      const all = readBuffetsAll();
+      let idx = -1; for (let i = 0; i < all.length; i++) { if (all[i].id === buffet.id) { idx = i; break; } }
+      const nowIso = new Date().toISOString();
+      if (idx >= 0) {
+        const b = Object.assign({}, all[idx]);
+        b._supplierOrders = Object.assign({}, b._supplierOrders || {}); b._supplierOrders[sup] = nowIso; b.updatedAt = nowIso;
+        const arr = all.slice(); arr[idx] = b; writeBuffets(arr);
+        buffet._supplierOrders = b._supplierOrders;
+      } else {
+        buffet._supplierOrders = Object.assign({}, buffet._supplierOrders || {}); buffet._supplierOrders[sup] = nowIso;
+      }
+    }
+    body.addEventListener('click', function (ev) {
+      const sb = ev.target.closest && ev.target.closest('.buf-send');
+      if (!sb) return;
+      const sup = sb.getAttribute('data-sup');
+      const g = groups.filter(function (x) { return x.supplierKey === sup; })[0];
+      if (!g) return;
+      const items = g.rows.filter(function (r) { return r.id && !r.custom; }).map(function (r) {
+        return { ingId: r.id, qty: Math.round(r.amount * 100) / 100, unit: r.unit || '' };
+      });
+      if (!items.length) { PCD.toast.warning(t('toast_no_items_selected') || 'No items'); return; }
+      const fire = function () {
+        PCD.tools.suppliers.startOrder(sup, items, function () {
+          persistOrdered(sup);
+          try { if (PCD.tools.inventory && PCD.tools.inventory.markOrdered) PCD.tools.inventory.markOrdered(items.map(function (i) { return i.ingId; })); } catch (e) {}
+          paint();
+        });
+      };
+      if (PCD.tools.suppliers && PCD.tools.suppliers.startOrder) { fire(); return; }
+      if (PCD.router && PCD.router.loadLazyTool) {
+        PCD.router.loadLazyTool('suppliers').then(function () { if (PCD.tools.suppliers && PCD.tools.suppliers.startOrder) fire(); }).catch(function () { PCD.toast.error(L('toast_error', 'Something went wrong')); });
+      }
+    });
     const printBtn = PCD.el('button', { class: 'btn btn-outline' });
     printBtn.innerHTML = PCD.icon('print', 14) + ' ' + PCD.escapeHtml(t('print') || 'Print');
     const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: (t('btn_close') || 'Close'), style: { marginInlineStart: 'auto' } });

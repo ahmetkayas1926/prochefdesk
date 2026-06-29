@@ -3573,4 +3573,5 @@ window.PCD.i18n.register('ar', {
   inv_items_to_order: "أصناف للطلب",
   inv_all_on_order: "جميع الأصناف المحددة قيد الطلب بالفعل.",
   inv_need_short: "ينقص",
+  shop_ordered: "تم الطلب",
 });

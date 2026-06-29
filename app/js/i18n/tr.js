@@ -3730,4 +3730,5 @@ window.PCD.i18n.register('tr', {
   inv_items_to_order: "kalem sipariş edilecek",
   inv_all_on_order: "İşaretli tüm kalemler zaten yolda.",
   inv_need_short: "gerek",
+  shop_ordered: "Sipariş verildi",
 });

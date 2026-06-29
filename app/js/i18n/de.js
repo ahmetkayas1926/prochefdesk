@@ -3573,4 +3573,5 @@ window.PCD.i18n.register('de', {
   inv_items_to_order: "Artikel zu bestellen",
   inv_all_on_order: "Alle markierten Artikel sind bereits bestellt.",
   inv_need_short: "Bedarf",
+  shop_ordered: "Bestellt",
 });

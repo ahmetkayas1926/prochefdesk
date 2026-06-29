@@ -4,6 +4,13 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.104 — Event/Buffet listeleri → tedarikçiye sipariş + "sipariş verildi" rozeti + demo seed kâr düzeltmesi · 2026-06-29
+Event "Shopping list" ve Buffet "Order list" tedarikçiye göre gruplu ama DÜZ/işlevsizdi (yalnız yazdır). Artık envanterdeki sipariş altyapısına bağlı:
+- **Her gerçek tedarikçi grubuna "Sipariş gönder" butonu** → `suppliers.startOrder` (teslim tarihi + WhatsApp/SMS/Email + sipariş geçmişi). Listeyi yazdırma da duruyor.
+- **Kalıcı "✓ Sipariş verildi" rozeti.** Gönderince o tedarikçi event/buffet kaydında işaretlenir (`_supplierOrders`); listeyi tekrar açınca rozet + "Order again" görünür → **aynı yerden çift-sipariş önlenir** (deduct-stock guard mantığı). Ayrıca envanter de "yolda" işaretlenir (`inventory.markOrdered`) → çapraz tutarlılık. Bağlanmamış/manuel kalemler ve sub-recipe grupları sipariş butonu almaz.
+- **Demo seed kâr düzeltmesi (kritik — satışı baltalıyordu):** Laurent Wedding event'inde `pricePerHead` YOKTU → gelir sadece ek ücretlerden ($1.749) → −$3.979 zarar. `pricePerHead: 80` eklendi → ~$8.800 gelir, ~$3.000 kâr (~%35 marj). Buffet "Wedding Reception" atığı %47'di (düşük pickup × yüksek refill) → pickup oranları gerçekçi yükseltildi (0.80-0.92) + refill 1.30→1.10 → ~%14 atık (yeşil).
+- 1 yeni i18n anahtarı (`shop_ordered`) **6 dilde TAM**; gönderim/again butonları mevcut anahtarları yeniden kullanır. Tüm `node -c` temiz. Preview'da doğrulandı.
+
 ## v2.44.103 — Sipariş "yolda" yaşam döngüsü: send → stok senkron · 2026-06-29
 Generate Order zaten eksikleri tedarikçiye göre gruplayıp her tedarikçiye ayrı gönderim hattına (teslim tarihi + WhatsApp/SMS/Email + sipariş geçmişi + "stoğa ekle") bağlıyordu. Gözden kaçan 3 eksik kapatıldı:
 - **Sipariş gönderince envanter "yolda" (on-order) işaretlenir.** Gerçek gönderim (`suppliers.recordOrder`) artık envantere `lastOrderedAt` damgalar (`PCD.tools.inventory.markOrdered`) — hem Sipariş Oluştur hem Tedarikçiler ekranından. Yolda kalemler kırmızı "sipariş et" rozetinden + Sipariş Oluştur AKTİF listesinden düşer → **çift-sipariş önlenir.** Teslim alınınca (`lastReceivedAt ≥ lastOrderedAt`) veya stok par üstüne çıkınca veya 21 gün sonra otomatik temizlenir (`isOnOrder`).
