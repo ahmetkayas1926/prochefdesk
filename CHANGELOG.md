@@ -4,6 +4,12 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.115 — Cook & Cool Log baskısı tek sayfaya sığar (Fridge/Freezer referansıyla hizalandı) · 2026-06-29
+Cook & Cool Log çok-aylık baskıda her ay küçük bir taşmayla 2. sayfaya geçiyordu (6 ay → 12 sayfa). Taşan kısım alt bilgiydi (HACCP gates + Reviewed by). Kusursuz çalışan **Fridge & Freezer Log (haccp_logs)** baskısı referans alınıp Cook & Cool'un print metrikleri birebir hizalandı:
+- Satır yüksekliği 22px → **21px**, hücre dolgusu `3px 4px` → **`2px 3px`**, satır-içi yükseklik 1.3 → **1.25**, alt-bilgi (`.h-foot`) üst boşluğu 2px → 1px, ve PCD.print enjekte footer'ı `1mm/1.2` → **`0.5mm/1.1`** (logs ile aynı).
+- Sonuç: her ay sayfası 794px (A4 yatay) içine **773px** ile sığar → 6 ay = 6 sayfa. Cook & Cool başlığı logs'tan zaten daha kompakt (tek-satır sütun başlıkları) → eşit-veya-fazla pay.
+- Tek çıktı yolu `printMonth` (tek-ay direkt + çok-aylık `printSheets`'in ikisi de bunu kullanır; Excel yok, Audit Pack ayrı aggregator — etkilenmez). `node -c` temiz; preview'da ÖLÇÜLEREK doğrulandı (6 ayın 6'sı da ≤794px, 0 console hatası).
+
 ## v2.44.114 — Tedarikçiye ayrı sipariş + onay rozeti: Event / Buffet / Inventory listeleri tutarlı · 2026-06-29
 Shopping/order listelerinden sipariş gönderimi düzeltildi + 3 yerde tutarlı hale getirildi. **Teşhis (kod + canlı test):** Event/Buffet'te per-supplier gönder kodda vardı AMA alt-tarif içindeki malzemeler tedarikçiye değil alt-tarif adına gruplanıp **öksüz kalıyordu** (sipariş edilemiyordu — caterer'da "işlevsiz" hissinin asıl nedeni); Inventory shopping list'te ise per-supplier gönder **hiç yoktu** (yalnız düz metin paylaşım + print).
 - **Tüm malzemeler (alt-tarif içindekiler dahil) tek seviyede toplanıp YALNIZ tedarikçiye göre gruplanır** → her tedarikçinin tam siparişi tek grupta, hepsi sipariş edilebilir. Aynı malzeme (direkt + alt-tarif) birleşir.

@@ -492,9 +492,9 @@
         '.h-head .sub{font-size:10px;color:#555;margin-top:2px;}' +
         '.h-head .right{font-size:10px;color:#555;text-align:end;}' +
         'table.h-grid{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed;flex:0 0 auto;}' +
-        'table.h-grid th, table.h-grid td{border:1px solid #999;padding:3px 4px;vertical-align:middle;line-height:1.3;}' +
+        'table.h-grid th, table.h-grid td{border:1px solid #999;padding:2px 3px;vertical-align:middle;line-height:1.25;}' +
         'table.h-grid th{background:#eaf6f0;color:#16433a;font-weight:700;font-size:9px;text-align:center;text-transform:uppercase;letter-spacing:0.03em;}' +
-        'table.h-grid tr{height:22px;page-break-inside:avoid;}' +
+        'table.h-grid tr{height:21px;page-break-inside:avoid;}' +
         'table.h-grid td.day{text-align:center;width:3%;font-weight:700;color:#444;}' +
         'table.h-grid td.food{width:32%;font-weight:600;}' +
         'table.h-grid td.qty{width:6%;text-align:center;}' +
@@ -503,14 +503,16 @@
         'table.h-grid td.note{width:20%;font-size:10px;}' +
         'table.h-grid td.chef{width:9%;text-align:center;}' +
         'table.h-grid td.fail{background:#fee2e2;color:#991b1b;font-weight:700;}' +
-        '.h-foot{margin-top:2px;display:flex;justify-content:space-between;font-size:9px;flex:0 0 auto;}' +
+        '.h-foot{margin-top:1px;display:flex;justify-content:space-between;font-size:9px;flex:0 0 auto;}' +
         '.h-foot .legend{color:#666;}' +
         // v2.9.32 — PCD.print auto-injects a footer (.pcd-print-footer) at the
         // bottom of body. Without this compact override its default margins
         // push content past A4 landscape and force a 3rd page.
-        '.pcd-print-footer{margin:0 !important;padding:1mm 4mm !important;' +
+        // v2.44.115 — Fridge/Freezer (haccp_logs) referansıyla birebir hizalandı
+        // (0.5mm padding + 1.1 line-height) → çok-aylık baskıda her ay tek sayfaya sığar.
+        '.pcd-print-footer{margin:0 !important;padding:0.5mm 4mm !important;' +
           'border-top:none !important;flex:0 0 auto;' +
-          'font-size:7pt !important;line-height:1.2 !important;}' +
+          'font-size:7pt !important;line-height:1.1 !important;}' +
         '@page{size:A4 landscape;margin:0;}' +
       '</style>' +
       '<div class="h-sheet">' +
