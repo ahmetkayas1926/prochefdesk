@@ -3574,4 +3574,19 @@ window.PCD.i18n.register('es', {
   inv_all_on_order: "Todos los artículos marcados ya están pedidos.",
   inv_need_short: "falta",
   shop_ordered: "Pedido",
+  // v2.44.106 — Roster labour % KPI (Step 1)
+  roster_week_sales: "Ventas semanales",
+  roster_labor_target: "Objetivo %",
+  roster_labor_pct: "Mano de obra %",
+  roster_labor_pct_empty: "Introduce las ventas semanales para ver el % de mano de obra",
+  roster_labor_pct_hint: "Mano de obra como % de ventas — la cifra que controlan los chefs. Apunta al 25–35%.",
+  roster_labor_on_target: "En objetivo",
+  roster_labor_watch: "Atención",
+  roster_labor_over: "Alto",
+  // v2.44.107 — Roster daily totals + department subtotal (Step 2)
+  roster_daily_hours: "Horas diarias",
+  roster_subtotal: "Subtotal",
+  // v2.44.108 — Roster ← events weekly sales auto-fill (Step 3)
+  roster_use_events: "Usar los eventos de esta semana ({amt})",
+  roster_events_filled: "Ventas semanales actualizadas desde los eventos de esta semana",
 });

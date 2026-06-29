@@ -3574,4 +3574,19 @@ window.PCD.i18n.register('ar', {
   inv_all_on_order: "جميع الأصناف المحددة قيد الطلب بالفعل.",
   inv_need_short: "ينقص",
   shop_ordered: "تم الطلب",
+  // v2.44.106 — Roster labour % KPI (Step 1)
+  roster_week_sales: "المبيعات الأسبوعية",
+  roster_labor_target: "الهدف %",
+  roster_labor_pct: "نسبة العمالة %",
+  roster_labor_pct_empty: "أدخل المبيعات الأسبوعية لعرض نسبة العمالة",
+  roster_labor_pct_hint: "العمالة كنسبة من المبيعات — الرقم الذي يديره الطهاة. استهدف 25–35٪.",
+  roster_labor_on_target: "ضمن الهدف",
+  roster_labor_watch: "انتبه",
+  roster_labor_over: "مرتفع",
+  // v2.44.107 — Roster daily totals + department subtotal (Step 2)
+  roster_daily_hours: "ساعات يومية",
+  roster_subtotal: "المجموع الفرعي",
+  // v2.44.108 — Roster ← events weekly sales auto-fill (Step 3)
+  roster_use_events: "استخدم فعاليات هذا الأسبوع ({amt})",
+  roster_events_filled: "تم تحديث المبيعات الأسبوعية من فعاليات هذا الأسبوع",
 });

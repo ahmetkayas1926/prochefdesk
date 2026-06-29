@@ -3574,4 +3574,19 @@ window.PCD.i18n.register('de', {
   inv_all_on_order: "Alle markierten Artikel sind bereits bestellt.",
   inv_need_short: "Bedarf",
   shop_ordered: "Bestellt",
+  // v2.44.106 — Roster labour % KPI (Step 1)
+  roster_week_sales: "Wochenumsatz",
+  roster_labor_target: "Ziel %",
+  roster_labor_pct: "Personalkosten %",
+  roster_labor_pct_empty: "Wochenumsatz eingeben, um den Personalkosten-% zu sehen",
+  roster_labor_pct_hint: "Personalkosten als % vom Umsatz — die Kennzahl, die Küchenchefs steuern. Ziel 25–35 %.",
+  roster_labor_on_target: "Im Ziel",
+  roster_labor_watch: "Achtung",
+  roster_labor_over: "Hoch",
+  // v2.44.107 — Roster daily totals + department subtotal (Step 2)
+  roster_daily_hours: "Stunden pro Tag",
+  roster_subtotal: "Zwischensumme",
+  // v2.44.108 — Roster ← events weekly sales auto-fill (Step 3)
+  roster_use_events: "Events dieser Woche verwenden ({amt})",
+  roster_events_filled: "Wochenumsatz aus den Events dieser Woche aktualisiert",
 });

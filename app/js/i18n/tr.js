@@ -3731,4 +3731,19 @@ window.PCD.i18n.register('tr', {
   inv_all_on_order: "İşaretli tüm kalemler zaten yolda.",
   inv_need_short: "gerek",
   shop_ordered: "Sipariş verildi",
+  // v2.44.106 — Roster işçilik % KPI (Adım 1)
+  roster_week_sales: "Haftalık ciro",
+  roster_labor_target: "Hedef %",
+  roster_labor_pct: "İşçilik %",
+  roster_labor_pct_empty: "İşçilik %'sini görmek için haftalık ciroyu gir",
+  roster_labor_pct_hint: "İşçilik / satış oranı — şeflerin yönettiği sayı. Hedef %25–35.",
+  roster_labor_on_target: "Hedefte",
+  roster_labor_watch: "Dikkat",
+  roster_labor_over: "Yüksek",
+  // v2.44.107 — Roster günlük toplam + departman alt-toplamı (Adım 2)
+  roster_daily_hours: "Günlük saat",
+  roster_subtotal: "Ara toplam",
+  // v2.44.108 — Roster ← event'lerden haftalık ciro otomatik doldurma (Adım 3)
+  roster_use_events: "Bu haftanın event'lerini kullan ({amt})",
+  roster_events_filled: "Haftalık ciro bu haftanın event'lerinden güncellendi",
 });

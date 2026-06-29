@@ -4,6 +4,26 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.108 — Roster ↔ Events bağı (Adım 3/3): haftalık ciroyu o haftanın event'lerinden doldur · 2026-06-29
+İşçilik % için haftalık ciro elle giriliyordu. Artık tek tıkla o haftanın **onaylı + tamamlanmış** event'lerinin müşteri cirosundan otomatik dolar — Events'teki P&L ile Roster'ın işçilik KPI'ı arasındaki tek mantıklı, zorlama-olmayan bağ.
+- **"Bu haftanın event'lerini kullan ({tutar})" butonu** haftalık ciro alanının altında — yalnız o hafta aralığında (`weekStart`..+gün) tarihli **confirmed/done** event varsa görünür (draft/tentative/cancelled hariç). Tıkla → ciro o event'lerin toplam gelirine set + KPI anında yeniden hesaplanır. Kullanıcı sonra elle düzeltebilir (değer otoriter değil).
+- **Gelir hesabı events.js ile birebir** (faturalanan kişi = tüm fonksiyonlarda max(garanti, beklenen) × kişi-fiyatı + kalemli ücretler + servis %; food cost gerekmez). events modülü lazy olduğundan roster bağımsız hesaplar (dashboard.js'in roster mantığını aynaladığı gibi) — yorum "events değişirse güncelle" uyarısı taşır.
+- **Zorlama bağ KURULMADI (bilinçli):** event staffing satırları (isimsiz rol-sayıları) Roster'a kopyalanmaz — granülerlik uyuşmaz, çöp satır üretirdi. Bağ yalnız ciro→işçilik % üzerinden.
+- 2 yeni i18n anahtarı **6 dilde TAM**. `node -c` temiz; preview'da uçtan uca doğrulandı (Corporate Lunch $6.000 + Private Dinner $3.190 + demo Laurent Wedding $8.789 = $17.979 birebir; draft event hariç; tıkla→18.0% On target; 0 console hatası).
+
+## v2.44.107 — Roster dağılım görünürlüğü (Adım 2/3): günlük toplam + departman alt-toplamı · 2026-06-29
+Roster yalnız kişi-başı ve genel toplam gösteriyordu; "hangi gün ağır / hangi departman ne kadar" görünmüyordu. Çıktı tablosuna (Print/PDF · Excel · JPEG/önizleme — tek motor) iki özet satırı eklendi:
+- **Departman alt-toplamı:** her adlandırılmış grubun (Hot Kitchen, Pastry…) altında saat + maliyet (maliyet açıkken) — italik, açık tonlu bant. Grupsuz roster'da çıkmaz (genel toplamla aynı olurdu).
+- **Günlük toplam satırı:** her gün sütunu için toplam saat → aşırı/zayıf personelli günler bir bakışta görünür (caterer'da Cumartesi-ağır hafta tipik). Pine-yeşil özet bandı.
+- Print/share (HTML) + Excel birebir aynı (HANDOVER tek-çıktı sözleşmesi); ücret sütunları yalnız "maliyeti göster" açıkken. 2 yeni i18n anahtarı (`roster_daily_hours`, `roster_subtotal`) **6 dilde TAM**. `node -c` temiz; preview'da doğrulandı (günlük 23/23/16/15/23/15/0=115 birebir · Hot Kitchen 75h/$2120 · Pastry 40h/$1120 · 0 console hatası).
+
+## v2.44.106 — Roster işçilik % KPI (Adım 1/3): işçilik/satış oranı + hedef bandı · 2026-06-29
+Roster işçiliği şimdiye dek yalnız ham $ + saat gösteriyordu; her şefin/caterer'ın yönettiği **tek sayı — işçilik / satış %** yoktu (araştırma: hedef bant %25-35, haftalık takip ilk ayda 1-3 puanlık açığı kapatır). Roster "genel vardiya çizelgesi"nden şef aracına çıkarıldı.
+- **Haftalık ciro + hedef % girişleri** (özet kartında, yalnız Pro — işçilik maliyetiyle AYNI kapı `canUseLaborCost`; free'de işçilik zaten kilitli, KPI satırı hiç render edilmez). Canlı **işçilik %** çipi: yeşil ≤ hedef / amber ≤ hedef+5 / kırmızı üstü (Buffet food-cost % deseniyle birebir renk standardı). Hedef varsayılan %30.
+- **Çıktılara yansır** (Print/PDF · Excel · JPEG/önizleme): "maliyeti göster" açıkken alt-toplam satırına `Haftalık ciro · İşçilik %: X% (Hedef Y%)` eklenir (renkli, HTML çıktılarda). Maliyet gizliyken görünmez (personel kopyası temiz kalır).
+- Veri JSON blob'unda (`weekSales` / `laborTargetPct`) — şema değişikliği yok, cloud sync otomatik. 8 yeni i18n anahtarı **6 dilde TAM**. Tüm `node -c` temiz; preview'da uçtan uca doğrulandı (Pro hesap: 34.1% hesabı birebir, canlı renk geçişi, çıktı footer'ı, free'de gizli, mobil sarma, 0 console hatası).
+- **Sıradaki adımlar (operatör onaylı):** Adım 2 — günlük toplam satırı + departman alt-toplamı. Adım 3 — haftalık ciroyu o haftanın onaylı event'lerinden otomatik doldur (Events↔Roster bağı).
+
 ## v2.44.105 — Plan-limit tutarlılık denetimi: Kitchen Cards gate + gate.js yorum fix · 2026-06-29
 Visitor/Free/Pro gating'in HER araçta tutarlı olup olmadığı hem kod seviyesinde hem canlı preview'da (21/21 araç gezildi, 3 katman test edildi) denetlendi. Gate mantığı 3 katmanda kusursuz çıktı; 3 nokta düzeltildi:
 - **Kitchen Cards Free'de artık 1 (eskiden limitsiz).** `maxCanvases` plans.js'te tanımsızdı → free'de sınırsız kanvas (oysa Whiteboard/Menü/Event vs. = 1). `maxCanvases` eklendi (free 1 / pro ∞) + gate `_maxFor` map'ine `canvases` + kitchen_cards.js 3 oluşturma noktasına `canCreate('canvases')` (New canvas · Save-yeni · Duplicate). Diğer deliverable araçlarla hizalandı.

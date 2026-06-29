@@ -3679,4 +3679,19 @@ window.PCD.i18n.register('en', {
   inv_all_on_order: "Every flagged item is already on order.",
   inv_need_short: "need",
   shop_ordered: "Ordered",
+  // v2.44.106 — Roster labour % KPI (Step 1)
+  roster_week_sales: "Weekly sales",
+  roster_labor_target: "Target %",
+  roster_labor_pct: "Labour %",
+  roster_labor_pct_empty: "Enter weekly sales to see labour %",
+  roster_labor_pct_hint: "Labour as a % of sales — the number chefs manage by. Aim for 25–35%.",
+  roster_labor_on_target: "On target",
+  roster_labor_watch: "Watch",
+  roster_labor_over: "Over",
+  // v2.44.107 — Roster daily totals + department subtotal (Step 2)
+  roster_daily_hours: "Daily hours",
+  roster_subtotal: "Subtotal",
+  // v2.44.108 — Roster ← events weekly sales auto-fill (Step 3)
+  roster_use_events: "Use this week's events ({amt})",
+  roster_events_filled: "Weekly sales updated from this week's events",
 });

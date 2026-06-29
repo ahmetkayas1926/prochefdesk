@@ -150,6 +150,102 @@
     return { hours: hours, cost: cost };
   }
 
+  // v2.44.106 — İşçilik / satış % = mutfağın 1 numaralı KPI'ı (hedef bandı %25-35).
+  // data.weekSales = haftalık ciro/hedef ($); data.laborTargetPct = hedef % (vars. 30).
+  // Pro özelliği — işçilik maliyetiyle AYNI kapı (canUseLaborCost). Renk durumu
+  // Buffet food-cost % deseniyle birebir (good/warn/bad → yeşil/amber/kırmızı).
+  const LABOR_TARGET_DEFAULT = 30;
+  function laborTargetPct(data) { const v = Number(data && data.laborTargetPct); return v > 0 ? v : LABOR_TARGET_DEFAULT; }
+  function laborPct(data) {
+    const sales = Number(data && data.weekSales) || 0;
+    if (sales <= 0) return null;
+    const cost = rosterTotals(data).cost;
+    if (cost <= 0) return null;
+    return (cost / sales) * 100;
+  }
+  function laborStatus(pct, target) {
+    if (pct == null) return null;
+    if (pct <= target) return 'good';
+    if (pct <= target + 5) return 'warn';
+    return 'bad';
+  }
+  function laborStatusColor(s) { return s === 'good' ? '#16a34a' : (s === 'warn' ? '#f59e0b' : '#dc2626'); }
+  function laborStatusLabel(s) { return s === 'good' ? (t('roster_labor_on_target') || 'On target') : (s === 'warn' ? (t('roster_labor_watch') || 'Watch') : (t('roster_labor_over') || 'Over')); }
+  function laborChipHtml(data) {
+    const pct = laborPct(data);
+    if (pct == null) return '<span class="text-muted" style="font-size:13px;">' + PCD.escapeHtml(t('roster_labor_pct_empty') || 'Enter weekly sales to see labour %') + '</span>';
+    const st = laborStatus(pct, laborTargetPct(data)), col = laborStatusColor(st);
+    return '<span style="font-weight:800;font-size:20px;color:' + col + ';">' + pct.toFixed(1) + '%</span>' +
+      '<span style="margin-inline-start:6px;font-size:12px;font-weight:700;color:' + col + ';">' + PCD.escapeHtml(laborStatusLabel(st)) + '</span>';
+  }
+  // v2.44.106 — Editör özet kartındaki KPI satırı (yalnız Pro). Haftalık ciro +
+  // hedef % girişleri + canlı işçilik % çipi.
+  function laborKpiRowHtml(data) {
+    const sym = (PCD.currencySymbol && PCD.currencySymbol()) || '$';
+    const wer = weekEventsRevenue(data);
+    return '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;">' +
+      '<div class="field" style="margin:0;min-width:150px;flex:1;"><label class="field-label">' + PCD.escapeHtml(t('roster_week_sales') || 'Weekly sales') + '</label>' +
+        '<input type="number" class="input" id="rWeekSales" min="0" step="0.01" value="' + PCD.escapeHtml(data.weekSales != null && data.weekSales !== '' ? String(data.weekSales) : '') + '" placeholder="' + PCD.escapeHtml(sym) + '">' +
+        // v2.44.108 — O hafta onaylı/tamamlanmış event varsa: tek tıkla ciroyu doldur (Events↔Roster bağı)
+        ((wer && wer.count > 0) ? '<button type="button" class="btn btn-ghost btn-sm" id="rUseEvents" style="margin-top:5px;padding:3px 8px;font-size:11px;color:var(--brand-700);">' + PCD.icon('calendar', 12) + ' ' + PCD.escapeHtml((t('roster_use_events') || "Use this week's events ({amt})").replace('{amt}', PCD.fmtMoney(wer.revenue))) + '</button>' : '') +
+      '</div>' +
+      '<div class="field" style="margin:0;width:96px;"><label class="field-label">' + PCD.escapeHtml(t('roster_labor_target') || 'Target %') + '</label>' +
+        '<input type="number" class="input" id="rLaborTarget" min="0" step="1" value="' + laborTargetPct(data) + '"></div>' +
+      '<div style="margin-inline-start:auto;text-align:right;min-width:120px;"><div class="stat-label" style="font-size:11px;">' + PCD.escapeHtml(t('roster_labor_pct') || 'Labour %') + '</div>' +
+        '<div id="rLaborPct">' + laborChipHtml(data) + '</div></div>' +
+      '<div class="field-hint" style="flex-basis:100%;margin-top:2px;">' + PCD.escapeHtml(t('roster_labor_pct_hint') || 'Labour as a % of sales — the number chefs manage by. Aim for 25–35%.') + '</div>' +
+    '</div>';
+  }
+  function refreshLaborKpi(view, data) {
+    const el = PCD.$('#rLaborPct', view); if (el) el.innerHTML = laborChipHtml(data);
+    const pv = PCD.$('#rPreview', view); if (pv) mountRosterPv(pv, data, _showCost);
+  }
+
+  // v2.44.107 — Gün-bazlı toplamlar (hangi gün aşırı/zayıf personelli görünür).
+  // Her gün sütunu için saat + (ücret varsa) maliyet; ayrıca genel toplamlar.
+  function dayTotals(data) {
+    const dayCount = data.dayCount || 7;
+    const hours = new Array(dayCount).fill(0), cost = new Array(dayCount).fill(0);
+    let totalHours = 0, totalCost = 0;
+    (data.staff || []).forEach(function (st) {
+      const rate = Number(st.rate) || 0;
+      const cells = (data.cells && data.cells[st.id]) || {};
+      for (let d = 0; d < dayCount; d++) { const hh = shiftHours(cells[d]); hours[d] += hh; if (rate > 0) cost[d] += hh * rate; }
+    });
+    for (let d = 0; d < dayCount; d++) { totalHours += hours[d]; totalCost += cost[d]; }
+    return { hours: hours, cost: cost, totalHours: totalHours, totalCost: totalCost };
+  }
+
+  // v2.44.108 — Adım 3: haftalık ciroyu o haftanın onaylı event'lerinden çek.
+  // events.js computeStats GELİR kısmının aynası (food cost gerekmez → ingMap'siz;
+  // events modülü lazy, yüklü olmasa da çalışsın diye burada bağımsız — dashboard.js
+  // de roster mantığını böyle aynalar). events.js'te pph/charges/service mantığı
+  // değişirse BURAYI da güncelle (billed = max(garanti, beklenen) tüm fonksiyonlarda).
+  function _evFns(e) { return (e && e.functions && e.functions.length) ? e.functions : [{ date: (e && e.date) || '', guestCount: Number(e && e.guestCount) || 0, guaranteedCount: 0 }]; }
+  function _evBilled(e) { return _evFns(e).reduce(function (mx, f) { return Math.max(mx, Math.max(Number(f.guaranteedCount) || 0, Number(f.guestCount) || 0)); }, 0); }
+  function eventRevenue(e) {
+    if (!e) return 0;
+    const billed = _evBilled(e), pph = Number(e.pricePerHead) || 0;
+    let chg = 0; (e.charges || []).forEach(function (c) { chg += Number(c.price) || 0; });
+    const subtotal = billed * pph + chg, svc = Number(e.serviceChargePct) || 0;
+    return subtotal + subtotal * (svc / 100);
+  }
+  function _evInWeek(e, start, end) {
+    return _evFns(e).some(function (f) { return f.date && f.date >= start && f.date <= end; }) || (!!(e && e.date) && e.date >= start && e.date <= end);
+  }
+  function weekEventsRevenue(data) {
+    const events = PCD.store.listTable('events') || [];
+    const start = data.weekStart, end = addDays(data.weekStart, (data.dayCount || 7) - 1).toISOString().slice(0, 10);
+    let revenue = 0, count = 0;
+    events.forEach(function (e) {
+      if (!e || e._deletedAt) return;
+      if (e.status !== 'confirmed' && e.status !== 'done') return;  // yalnız onaylı + tamamlanmış
+      if (!_evInWeek(e, start, end)) return;
+      revenue += Number(eventRevenue(e)) || 0; count++;
+    });
+    return { revenue: revenue, count: count };
+  }
+
   // v2.15.4 — Personeli departman/gruba göre böl (BANQUET, COLD KITCHEN…).
   // Hiç grup tanımlı değilse tek grupta toplar (başlıksız) — eski rosterler
   // aynen çalışır. Grup sırası ilk-görünen sıraya göre.
@@ -386,6 +482,8 @@
           ? '<label class="checkbox" id="rShowCostLocked" style="margin-inline-start:auto;cursor:pointer;opacity:0.7;"><span>' + PCD.icon('lock', 12) + ' ' + PCD.escapeHtml(t('roster_show_cost') || 'Show labour cost in print / share / Excel') + '</span></label>'
           : '<label class="checkbox" style="margin-inline-start:auto;"><input type="checkbox" id="rShowCost"' + (_showCost ? ' checked' : '') + '><span>' + PCD.escapeHtml(t('roster_show_cost') || 'Show labour cost in print / share / Excel') + '</span></label>') +
       '</div>' +
+      // v2.44.106 — İşçilik % KPI satırı (yalnız Pro; free'de işçilik maliyeti zaten kilitli)
+      ((PCD.gate && PCD.gate.canUseLaborCost()) ? laborKpiRowHtml(data) : '') +
       '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">' + fontControlsHtml(data) + '</div>' +
       '</div>';
 
@@ -477,6 +575,20 @@
     // v2.17 — Pro'da gerçek toggle; free'de kilitli label → upgrade modal.
     const _showCostEl = PCD.$('#rShowCost', view);
     if (_showCostEl) _showCostEl.addEventListener('change', function () { _showCost = this.checked; mountRosterPv(PCD.$('#rPreview', view), data, _showCost); });
+    // v2.44.106 — Haftalık ciro + hedef % → canlı işçilik % çipi + önizleme (focus kaybetmeden in-place güncelle)
+    const _wsEl = PCD.$('#rWeekSales', view);
+    if (_wsEl) _wsEl.addEventListener('input', function () { data.weekSales = this.value === '' ? '' : (Number(this.value) || 0); persist(data); refreshLaborKpi(view, data); });
+    const _ltEl = PCD.$('#rLaborTarget', view);
+    if (_ltEl) _ltEl.addEventListener('input', function () { data.laborTargetPct = this.value === '' ? '' : (Number(this.value) || 0); persist(data); refreshLaborKpi(view, data); });
+    // v2.44.108 — "Bu haftanın event'lerini kullan" → ciroyu onaylı event gelirinden doldur
+    const _useEv = PCD.$('#rUseEvents', view);
+    if (_useEv) _useEv.addEventListener('click', function () {
+      const wer = weekEventsRevenue(data);
+      if (!wer || wer.count === 0) return;
+      data.weekSales = Math.round(wer.revenue * 100) / 100;
+      persist(data); render(view);
+      PCD.toast.success(t('roster_events_filled') || "Weekly sales updated from this week's events");
+    });
     // v2.40 — Önizlemeyi scale-to-fit mount et; details açılınca/yeniden boyutlanınca yeniden ölçekle.
     mountRosterPv(PCD.$('#rPreview', view), data, _showCost);
     const _rpWrap = PCD.$('#rPreviewWrap', view);
@@ -725,7 +837,24 @@
         if (showCost) h += '<td align="center" valign="middle" style="' + cb + '">' + cw(row.cost > 0 ? PCD.fmtMoney(row.cost) : '—') + '</td>';
         h += '</tr>';
       });
+      // v2.44.107 — Departman alt-toplamı (yalnız adlandırılmış grupta; saat + maliyet)
+      if (g.name) {
+        let gh = 0, gc = 0; g.rows.forEach(function (row) { gh += row.hours; gc += row.cost; });
+        h += '<tr><td colspan="' + (2 + ndays) + '" align="right" valign="middle" style="' + cb + 'text-align:right;background:#f3faf6;color:#16433a;font-weight:700;font-style:italic;">' + cw(esc(g.name + ' — ' + (t('roster_subtotal') || 'Subtotal'))) + '</td>'
+          + '<td align="center" valign="middle" style="' + cb + 'background:#f3faf6;font-weight:800;">' + cw(PCD.fmtNumber(gh)) + '</td>';
+        if (showCost) h += '<td align="center" valign="middle" style="' + cb + 'background:#f3faf6;font-weight:800;">' + cw(gc > 0 ? PCD.fmtMoney(gc) : '—') + '</td>';
+        h += '</tr>';
+      }
     });
+    // v2.44.107 — Günlük toplam satırı (her gün sütunu için saat; hangi gün ağır görünür)
+    if ((data.staff || []).length) {
+      const dt = dayTotals(data);
+      h += '<tr><td colspan="2" align="left" valign="middle" style="' + cb + 'text-align:left;background:#eaf6f0;color:#16433a;font-weight:800;">' + cw(esc(t('roster_daily_hours') || 'Daily hours'), 'flex-start') + '</td>';
+      for (let d = 0; d < ndays; d++) h += '<td align="center" valign="middle" style="' + cb + 'background:#eaf6f0;font-weight:700;">' + cw(PCD.fmtNumber(dt.hours[d])) + '</td>';
+      h += '<td align="center" valign="middle" style="' + cb + 'background:#eaf6f0;font-weight:800;">' + cw(PCD.fmtNumber(dt.totalHours)) + '</td>';
+      if (showCost) h += '<td align="center" valign="middle" style="' + cb + 'background:#eaf6f0;font-weight:800;">' + cw(dt.totalCost > 0 ? PCD.fmtMoney(dt.totalCost) : '—') + '</td>';
+      h += '</tr>';
+    }
     h += '</table>';
     const usedStatus = {};
     mx.groups.forEach(function (g) { g.rows.forEach(function (row) { row.cells.forEach(function (c) { if (c.status) usedStatus[c.status] = true; }); }); });
@@ -734,7 +863,12 @@
       h += '<div style="margin-top:11px;font-size:' + (fp - 1) + 'px;">' + legendItems.map(function (s) { return '<span style="display:inline-block;margin-right:14px;white-space:nowrap;"><b style="display:inline-block;min-width:26px;text-align:center;padding:1px 6px;border-radius:4px;background:' + s.fill + ';color:' + s.color + ';border:1px solid ' + s.color + ';">' + esc(s.id) + '</b> ' + esc(t(s.labelKey) || s.id) + '</span>'; }).join('') + '</div>';
     }
     const tot = rosterTotals(data);
-    h += '<div style="margin-top:9px;font-size:' + (fp + 1) + 'px;font-weight:700;">' + esc(t('roster_total_hours') || 'Total hours') + ': ' + PCD.fmtNumber(tot.hours) + (showCost && tot.cost > 0 ? '  ·  ' + esc(t('roster_labour_cost') || 'Labour cost') + ': ' + PCD.fmtMoney(tot.cost) : '') + '</div>';
+    // v2.44.106 — Maliyet gösteriliyorsa ve haftalık ciro girilmişse işçilik % (renkli) ekle.
+    const lpct = laborPct(data), lstat = laborStatus(lpct, laborTargetPct(data));
+    h += '<div style="margin-top:9px;font-size:' + (fp + 1) + 'px;font-weight:700;">' + esc(t('roster_total_hours') || 'Total hours') + ': ' + PCD.fmtNumber(tot.hours)
+      + (showCost && tot.cost > 0 ? '  ·  ' + esc(t('roster_labour_cost') || 'Labour cost') + ': ' + PCD.fmtMoney(tot.cost) : '')
+      + (showCost && lpct != null ? '  ·  ' + esc(t('roster_week_sales') || 'Weekly sales') + ': ' + PCD.fmtMoney(Number(data.weekSales) || 0) + '  ·  <span style="color:' + laborStatusColor(lstat) + ';">' + esc(t('roster_labor_pct') || 'Labour %') + ': ' + lpct.toFixed(1) + '% (' + esc((t('roster_labor_target') || 'Target').replace('%', '').trim()) + ' ' + laborTargetPct(data) + '%)</span>' : '')
+      + '</div>';
     return h;
   }
 
@@ -869,11 +1003,38 @@
           if (showCost) put(r, 2 + ndays + 1, row.cost > 0 ? PCD.fmtMoney(row.cost) : '—', { font: { name: 'Calibri', sz: esz }, alignment: { vertical: 'center', horizontal: 'right' }, border: allB });
           r++;
         });
+        // v2.44.107 — Departman alt-toplamı (Excel)
+        if (g.name) {
+          let gh = 0, gc = 0; g.rows.forEach(function (row) { gh += row.hours; gc += row.cost; });
+          for (let c = 0; c < ncol; c++) put(r, c, '', { fill: { fgColor: { rgb: 'F3FAF6' } }, border: allB });
+          put(r, 0, g.name + ' — ' + (t('roster_subtotal') || 'Subtotal'), { font: { name: 'Calibri', sz: esz, bold: true, italic: true, color: { rgb: '16433A' } }, fill: { fgColor: { rgb: 'F3FAF6' } }, alignment: { vertical: 'center', horizontal: 'right' }, border: allB });
+          merges.push({ s: { r: r, c: 0 }, e: { r: r, c: 1 + ndays } });
+          put(r, 2 + ndays, gh, { font: { name: 'Calibri', sz: esz, bold: true }, fill: { fgColor: { rgb: 'F3FAF6' } }, alignment: { vertical: 'center', horizontal: 'right' }, border: allB });
+          if (showCost) put(r, 2 + ndays + 1, gc > 0 ? PCD.fmtMoney(gc) : '—', { font: { name: 'Calibri', sz: esz, bold: true }, fill: { fgColor: { rgb: 'F3FAF6' } }, alignment: { vertical: 'center', horizontal: 'right' }, border: allB });
+          r++;
+        }
       });
 
+      // v2.44.107 — Günlük toplam satırı (Excel; her gün sütunu için saat)
+      if ((data.staff || []).length) {
+        const dt = dayTotals(data);
+        put(r, 0, t('roster_daily_hours') || 'Daily hours', { font: { name: 'Calibri', sz: esz, bold: true, color: { rgb: '16433A' } }, fill: { fgColor: { rgb: 'EAF6F0' } }, alignment: { vertical: 'center', horizontal: 'left' }, border: allB });
+        put(r, 1, '', { fill: { fgColor: { rgb: 'EAF6F0' } }, border: allB });
+        merges.push({ s: { r: r, c: 0 }, e: { r: r, c: 1 } });
+        for (let d = 0; d < ndays; d++) put(r, 2 + d, dt.hours[d], { font: { name: 'Calibri', sz: esz, bold: true }, fill: { fgColor: { rgb: 'EAF6F0' } }, alignment: { vertical: 'center', horizontal: 'center' }, border: allB });
+        put(r, 2 + ndays, dt.totalHours, { font: { name: 'Calibri', sz: esz, bold: true }, fill: { fgColor: { rgb: 'EAF6F0' } }, alignment: { vertical: 'center', horizontal: 'right' }, border: allB });
+        if (showCost) put(r, 2 + ndays + 1, dt.totalCost > 0 ? PCD.fmtMoney(dt.totalCost) : '—', { font: { name: 'Calibri', sz: esz, bold: true }, fill: { fgColor: { rgb: 'EAF6F0' } }, alignment: { vertical: 'center', horizontal: 'right' }, border: allB });
+        r++;
+      }
+
       const tot = rosterTotals(data);
+      // v2.44.106 — Excel alt-toplam satırına da işçilik % (maliyet açıkken + ciro girilince)
+      const xlpct = laborPct(data);
+      let totLine = (t('roster_total_hours') || 'Total hours') + ': ' + PCD.fmtNumber(tot.hours)
+        + (showCost && tot.cost > 0 ? '   ·   ' + (t('roster_labour_cost') || 'Labour cost') + ': ' + PCD.fmtMoney(tot.cost) : '')
+        + (showCost && xlpct != null ? '   ·   ' + (t('roster_week_sales') || 'Weekly sales') + ': ' + PCD.fmtMoney(Number(data.weekSales) || 0) + '   ·   ' + (t('roster_labor_pct') || 'Labour %') + ': ' + xlpct.toFixed(1) + '% (' + (t('roster_labor_target') || 'Target').replace('%', '').trim() + ' ' + laborTargetPct(data) + '%)' : '');
       r++;
-      put(r, 0, (t('roster_total_hours') || 'Total hours') + ': ' + PCD.fmtNumber(tot.hours) + (showCost && tot.cost > 0 ? '   ·   ' + (t('roster_labour_cost') || 'Labour cost') + ': ' + PCD.fmtMoney(tot.cost) : ''), { font: { name: 'Calibri', sz: esz + 1, bold: true } });
+      put(r, 0, totLine, { font: { name: 'Calibri', sz: esz + 1, bold: true } });
       merges.push({ s: { r: r, c: 0 }, e: { r: r, c: lastC } }); r++;
 
       const usedStatus = {};
