@@ -4,6 +4,12 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.102 — Demo seed tam-kapasite + doküman optimizasyonu + go-to-market · 2026-06-29
+Lansman temizliği — kod cilası değil, satışa hazırlık.
+- **Demo seed yeni özellikleri yansıtıyor** (`app/js/seed/demo-recipes.js`): misafir/onboarding verisi artık her aracın güncel kapasitesini gösterir. **Event → tam BEO** (2 fonksiyon Reception+Dinner · garanti-kişi · diyet notu · itemized charges cost↔price · deposit/balance ödeme planı · run-of-show timeline · görev checklist · staffing işçilik P&L · servis %10). **Buffet → forecast** (`prepFactor 0.9`). **Inventory → son-kullanma** (3 kalem yakında bozulacak SKT → badge + dashboard kartı). **Ingredients → raf-ömrü** (5 perishable shelfLifeDays). **Fix:** seed ingredient-map `shelfLifeDays`'i düşürüyordu → eklendi. Preview'da re-seed ile uçtan uca doğrulandı (event 2 fn/charges/payments/timeline/tasks/staffing · buffet prepFactor · inventory expiry · ingredient shelf-life) · 0 console hatası.
+- **Doküman optimizasyonu:** CLAUDE.md launch bölümü sıkıştırıldı + **tek net go-to-market hedefi** eklendi (şüpheci, araştırma-temelli: $19 viable-band altı → sıfıra-yakın-CAC + founder-led warm outreach + HACCP-zorunlu caterer/event niş + retention-metriği). HANDOVER.md araç açıklamaları güncel duruma çekildi (Events BEO · Buffet forecast · Inventory market+SKT · HACCP Audit Pack). CHANGELOG eski tarih (v2.6-v2.39) özetlendi (−52 satır).
+- **Temizlik:** eskiden kalma `RETENTION-NOTU.md` · `PAZARLAMA-REELS.md` · `PAZARLAMA-STRATEJI.md` silindi (içgörüleri CLAUDE.md go-to-market hedefine taşındı). og-image güncel markaya yenilendi; 16 blogun önizlemesi `og-image.png`'ye yönlendirildi.
+
 ## v2.44.101 — HACCP çok-aylık yazdırma: her form + Audit Pack tek PDF'te ay aralığı · 2026-06-28
 Şimdiye dek her HACCP formu yalnız TEK ay basıyordu. Denetim çeyreklik/dönemsel olur (kayıt saklama 90+ gün) — operatör "Nisan→Haziran seç, tek PDF al" istedi. **5 yerin hepsine** eklendi: Daily Temperature, Cook & Cool, Receiving, Hot/Cold Holding + Audit Pack.
 - **YENİ — Ortak ay-aralığı altyapısı** (`PCD.haccp` · utils.js): `pickMonthRange` (Başlangıç/Bitiş modalı), `monthsInRange`, `printSheets` (her ayın sayfasını tek landscape PDF'e page-break ile dizer). Tek noktadan, her form aynı akışı kullanır.
@@ -208,62 +214,10 @@ Denetim bulgusu: envanter tüketimi yarımdı — yalnız Event "Deduct stock" +
 - **Roster:** mobil scale-to-fit + tıkla-zoom, önizleme stay-open, editör kompakt. **Buffet:** mobil kart squish fix. **Ingredients/Inventory:** header wrap fix.
 - Desen notu: clientWidth=0 ilk-paint yarışı = bounded rAF self-retry (menü thumb, kitchen cards, roster, whiteboard).
 
-## v2.16–v2.39 — 8-araç profesyonel revizyon programı + Menu Studio · 2026-06-07…08
-Her araç: kod-önce analiz → gerçek değer katan geliştirme → tarayıcı doğrulaması (köklü rewrite zorlanmadı). Çekirdek değişiklikler:
-- **v2.39** Portion Calculator: stilize Excel export (PCD.xlsx; tarif/kategori/tedarikçi görünümüne uygun). → 8-araç programı tamam.
-- **v2.38** Buffet Planner: tedarikçiye göre sipariş/satın-alma listesi (`flattenIngredients` + stok birimine normalize + grupla).
-- **v2.37** Event Planner: alışveriş listesi + etkinliği çoğalt + canlı A4 önizleme + kişi-başı maliyet.
-- **v2.36** Roster: ⚡ haftayı doldur + önceki haftayı kopyala (isimle eşleştir) + canlı önizleme.
-- **v2.35** Menu Studio: +10 profesyonel şablon (toplam 20).
-- **v2.34** Menu Studio: "Page & theme" + "Theme accent" etiket netleştirme.
-- **v2.33** Whiteboard cook-sheet satır ekle/sil; HANDOVER güncellendi.
-- **v2.32** Menu Studio: popup düzenleme + Page settings ayrı popup + kanvas çerçeve + home şablon butonu.
-- **v2.31** Fix: Kitchen Cards dark mode'da site yüzeyi beyaz (sızan `body{background:#fff}` `.kc-preview-frame`'e scope'landı).
-- **v2.30** Prep Sheet: kartta sil ikonu + "Extra tight" boşluk + 5 sütun.
-- **v2.29** Prep Sheet: Whiteboard-stili pointer sürükle (üst/alt gösterge) + ~sıfır kenar.
-- **v2.28** Prep Sheet print: `@page margin:0` (Chrome damgaları kalktı) + dar kenar.
-- **v2.27** Whiteboard: popup editör + kanvas blok araç çubuğu (sürükle/düzenle/çoğalt/sil).
-- **v2.26** Prep Sheet: kanvas-merkezli redesign (sol liste kalktı, modal düzenleme).
-- **v2.25** Prep Sheet: kanvasta sürükle-bırak + kart-arası boşluk kontrolü.
-- **v2.24** Prep Sheet: önizleme = baskı (gerçek A4 sayfalama motoru) + yazı boyutu/Bold/çerçeve.
-- **v2.23** Checklist: editörde canlı A4 önizleme (tek `buildChecklistHtml` motoru).
-- **v2.22** Prep Sheet: canlı önizleme + vurgu rengi/yön/preset + sürükle + istasyon gruplama + library.
-- **v2.20.3–.21** Kitchen Cards: presets + accent renk + özel/not kartları + library galerisi.
-- **v2.20.0–.2** Menu Studio ANA menü aracı (`menus` route; klasik import) + library + sürükle + 10 şablon + i18n (`ms_*` 6 dil) + Paylaş/QR/cost-view.
-- **v2.19.0/.2** Menu Studio Faz 1 (gerçek ürün: çoklu menü + bulut + reçete zekâsı/canlı marj + import + şablon/marka kiti) — `menu.studio` blob; **v2.19.2** kritik stil fix (font çift-tırnağı inline `style`'ı kesiyordu) + sayfa boyut/sütun/ayraç kütüphanesi.
-- **v2.19.1** Sync fix: array tablo pull (whiteboard/buffet/team/mise 2. cihaza inmiyordu) + `user_prefs` UPDATE grant (42501).
-- **v2.18** Menu Studio beta prototip (localStorage).
-- **v2.17.0/.1** **Monetization (Free/Pro + Stripe):** `plans.js` merkezi limit/gate; sunucu-otoriter plan kolonları (frontend yazamaz); 3 Edge Function (19/190 AUD); feature gating + watermark + cost-view share; chef dashboard (gerçek veri); landing fiyatlandırma + Privacy/Terms 6 dil. **.1** kalıcı Cost Report butonu.
-- **v2.16** **YENİ araç:** Prep Sheet + bulut sync (`prepSheets` MAP-tablo).
-
-## v2.15.x — Roster aracı · 2026-05-22
-- **YENİ:** Roster (personel×gün ızgara, vardiya saati/durum kodu, işçilik maliyeti, tarihçe). 6 renkli durum (OFF/AL/PH/SL/RDO/UNP) + departman grupları + renkli çıktı. Bulut sync (`rosters` MAP). Çıktı: print + Excel (yatay tek-sayfa, JSZip) + JPEG paylaşım. Tedarikçi sipariş geçmişi (son 50).
-
-## v2.14.x — Veri I/O + menü kodları + demo · 2026-05-22
-- Ortak styled-Excel motoru (`PCD.xlsx`); malzeme/stok Excel import-export + doldur-geri-yükle şablonu.
-- Menü harf kodları (küçük=diyet, BÜYÜK=alerjen — bilgi amaçlı, filtre değil) + tariften otomatik alerjen.
-- Currency kalıcılık fix; Discover hesap-bazlı public sayaç; demo seed genişletme + maliyet/menü-alanı fix'leri.
-
-## v2.13.x — Whiteboard WYSIWYG + sadeleştirme · 2026-05-21/22
-- Whiteboard WYSIWYG (canvas = print, tek `renderBlockContent`/`blockBoxStyle`) + 6 şablon.
-- Waste Log + Shopping List araçları kaldırıldı (bulut şeması korundu); Portion birleşik malzeme görünümü.
-- `i18n t()` interpolasyon fix; profil flush fix; "Sync now" kaldırıldı (auto-sync aktif).
-
-## v2.12.x — Checklist + profil + legal · 2026-05-20/21
-- Checklist baştan yazıldı (Control + Prep, oturum geçmişi, özelleştirilebilir baskı). Profil alanları her session merge (kaybolmaz). Privacy + Terms 6 dil.
-
-## v2.11.x — Whiteboard Block Composer · 2026-05-20
-- Whiteboard tam yeniden (Notion-tarzı blok besteci, 12 blok tipi, sürükle-sırala, A4/A3 print engine). Mise en Place kaldırıldı (şema korundu). HACCP alt-form geri-tuş hub'a döner; Discover arama + debounce.
-
-## v2.10.x — Whiteboard pro + Kitchen Cards · 2026-05-20
-- Whiteboard pro (tipografi/palet/hücre tipleri/şablon). Diyet uyumluluk sistemi kaldırıldı (şema korundu). Araçlar-arası delegated listener bleed fix.
-
-## v2.9.x — NAKED→RICH sweep + Discover + cloud sync · 2026-05-19
-- NAKED→RICH araç sweep (kapatılabilir guide + stats hero + per-field hint + empty CTA + dark kontrast). Buffets/Mise/Team + Whiteboard bulut sync. Discover tag/allergen filtre + rate-limited view (60dk/IP Edge) + `recipe_likes` RLS sıkılaştırma. hCaptcha `render=explicit` + scroll-lock fix. Blog: 13 yazı (SEO upgrade + Faz B).
-
-## v2.8.x — Altyapı + büyük araçlar · 2025–2026
-- **YENİ araçlar:** Buffet Planner (v2.8.73), Mise en Place (v2.8.74 — v2.11.16'da kaldırıldı). **Discover MVP** (anonim view/like/public recipe). HACCP Receiving+Holding (+sync) + HACCP Hub konsolidasyon (4 form → tek hub).
-- Buffet overhaul (3 item tipi: recipe/ingredient/custom + Excel). Sub-recipe flattening helper (`flattenIngredients`). Menu Builder modernizasyon. Standart tıklanabilir footer (tüm print/share). Modal focus root-cause fix. Recipe etiket + ingredient ayraç. App boot perf (lazy/defer/preload).
-
-## v2.6–v2.8.33 — Çok-cihazlı senkron temeli
-- Per-table sync schema (workspace-scoped + top-level tablolar) + RLS tüm tablolarda + cascade trigger'lar + workspace silme. Push/pull/realtime 3-yön; queue IDB persist (offline yazım korunur); cache-busting.
+## v2.6 – v2.39 — temel + araç programı (özet · 2025–2026-06-08)
+Detay git geçmişinde. Ana kilometre taşları:
+- **Senkron temeli (v2.6–v2.8.33):** per-table sync (workspace-scoped + top-level) + RLS tüm tablolarda + cascade trigger + push/pull/realtime 3-yön + queue IDB persist (offline korunur).
+- **Büyük araçlar:** Buffet Planner (v2.8.73) · Discover MVP (anonim view/like) · HACCP Receiving+Holding + Hub konsolidasyon (4 form→tek hub) · Whiteboard Notion-tarzı blok besteci (v2.11) · Checklist baştan (v2.12, Control+Prep) · Roster (v2.15, personel×gün + durum kodları + Excel/JPEG) · Prep Sheet (v2.16, kanvas A4) · Kitchen Cards · Menu Studio ANA menü aracı (v2.19–.20, çoklu menü + reçete zekâsı + 20 şablon).
+- **Monetization (v2.17):** `plans.js` merkezi limit/gate · sunucu-otoriter plan kolonları (frontend yazamaz) · 3 Stripe Edge Function · watermark + cost-view share · chef dashboard (gerçek veri) · Privacy/Terms 6 dil.
+- **Veri I/O:** ortak styled-Excel (`PCD.xlsx`) · import-export · menü harf kodları (diyet/alerjen, bilgi amaçlı).
+- **8-araç pro revizyon programı (v2.16–v2.39):** her araç kod-önce analiz → değer katan geliştirme → tarayıcı doğrulaması. Çıktı motorları (print `@page margin:0` damgasız · canlı önizleme=baskı · scale-to-fit bounded rAF deseni) standartlaştı.

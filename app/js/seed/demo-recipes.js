@@ -39,22 +39,22 @@
     { name: 'Mixed berries',          unit: 'g',  pricePerUnit: 0.024, category: 'cat_produce', supplier: 'Provencale Produce' },
     // Dairy & eggs
     { name: 'Butter (unsalted)',      unit: 'g',  pricePerUnit: 0.013, category: 'cat_dairy',  supplier: 'Laiterie Dairy' },
-    { name: 'Pouring cream',          unit: 'ml', pricePerUnit: 0.008, category: 'cat_dairy',  supplier: 'Laiterie Dairy' },
+    { name: 'Pouring cream',          unit: 'ml', pricePerUnit: 0.008, category: 'cat_dairy',  supplier: 'Laiterie Dairy', shelfLifeDays: 7 },
     { name: 'Egg yolks',              unit: 'pcs',pricePerUnit: 0.45,  category: 'cat_dairy',  supplier: 'Laiterie Dairy' },
     { name: 'Eggs (free-range)',      unit: 'pcs',pricePerUnit: 0.50,  category: 'cat_dairy',  supplier: 'Laiterie Dairy' },
-    { name: 'Gruyere',                unit: 'g',  pricePerUnit: 0.038, category: 'cat_dairy',  supplier: 'Laiterie Dairy' },
+    { name: 'Gruyere',                unit: 'g',  pricePerUnit: 0.038, category: 'cat_dairy',  supplier: 'Laiterie Dairy', shelfLifeDays: 21 },
     { name: 'Goat cheese (chevre)',   unit: 'g',  pricePerUnit: 0.030, category: 'cat_dairy',  supplier: 'Laiterie Dairy' },
     { name: 'Milk',                   unit: 'ml', pricePerUnit: 0.002, category: 'cat_dairy',  supplier: 'Laiterie Dairy' },
     // Meat & poultry
     { name: 'Beef eye fillet',        unit: 'g',  pricePerUnit: 0.058, category: 'cat_meat',    supplier: 'Boucherie Meats', yieldPercent: 92 },
     { name: 'Beef tenderloin (lean)', unit: 'g',  pricePerUnit: 0.052, category: 'cat_meat',    supplier: 'Boucherie Meats', yieldPercent: 95 },
     { name: 'Free-range chicken',     unit: 'g',  pricePerUnit: 0.013, category: 'cat_poultry', supplier: 'Boucherie Meats' },
-    { name: 'Duck leg',               unit: 'g',  pricePerUnit: 0.024, category: 'cat_poultry', supplier: 'Boucherie Meats' },
+    { name: 'Duck leg',               unit: 'g',  pricePerUnit: 0.024, category: 'cat_poultry', supplier: 'Boucherie Meats', shelfLifeDays: 4 },
     { name: 'Duck fat',               unit: 'g',  pricePerUnit: 0.015, category: 'cat_oils',    supplier: 'Boucherie Meats' },
-    { name: 'Foie gras',              unit: 'g',  pricePerUnit: 0.190, category: 'cat_meat',    supplier: 'Boucherie Meats' },
+    { name: 'Foie gras',              unit: 'g',  pricePerUnit: 0.190, category: 'cat_meat',    supplier: 'Boucherie Meats', shelfLifeDays: 5 },
     { name: 'Bacon lardons',          unit: 'g',  pricePerUnit: 0.026, category: 'cat_meat',    supplier: 'Boucherie Meats' },
     // Seafood
-    { name: 'Scallops',               unit: 'g',  pricePerUnit: 0.095, category: 'cat_seafood', supplier: 'Marseille Seafood', yieldPercent: 90 },
+    { name: 'Scallops',               unit: 'g',  pricePerUnit: 0.095, category: 'cat_seafood', supplier: 'Marseille Seafood', yieldPercent: 90, shelfLifeDays: 3 },
     { name: 'Sole fillet',            unit: 'g',  pricePerUnit: 0.048, category: 'cat_seafood', supplier: 'Marseille Seafood', yieldPercent: 88 },
     { name: 'Mussels',                unit: 'g',  pricePerUnit: 0.012, category: 'cat_seafood', supplier: 'Marseille Seafood', yieldPercent: 40 },
     { name: 'Prawns',                 unit: 'g',  pricePerUnit: 0.042, category: 'cat_seafood', supplier: 'Marseille Seafood', yieldPercent: 55 },
@@ -96,6 +96,7 @@
         category: ing.category, supplier: ing.supplier || '', _demo: true,
       };
       if (ing.yieldPercent != null) obj.yieldPercent = ing.yieldPercent;
+      if (ing.shelfLifeDays != null) obj.shelfLifeDays = ing.shelfLifeDays;
       return PCD.store.upsertIngredient(obj);
     });
     const I = function (n) { return findId(upserted, n); };
@@ -546,12 +547,14 @@
     const wsId = PCD.store.getActiveWorkspaceId();
     const inv = PCD.store.get('inventory') || {};
     inv[wsId] = inv[wsId] || {};
+    // exp = days from today the best-before falls (showcases the shelf-life /
+    //       "expiring soon" badge + dashboard card + waste bridge).
     const invMap = {
       'Butter (unsalted)':  { stock: 6500, parLevel: 4000, minLevel: 1500 },
-      'Pouring cream':      { stock: 3200, parLevel: 2000, minLevel: 600 },
-      'Scallops':           { stock: 2200, parLevel: 1500, minLevel: 800 },
+      'Pouring cream':      { stock: 3200, parLevel: 2000, minLevel: 600,  exp: 4 },
+      'Scallops':           { stock: 2200, parLevel: 1500, minLevel: 800,  exp: 2 },
       'Duck leg':           { stock: 2600, parLevel: 2000, minLevel: 600 },
-      'Foie gras':          { stock: 1100, parLevel: 800,  minLevel: 400 },
+      'Foie gras':          { stock: 1100, parLevel: 800,  minLevel: 400,  exp: 1 },
       'Dark chocolate 70%': { stock: 2600, parLevel: 2000, minLevel: 1000 },
       'Gruyere':            { stock: 2400, parLevel: 2000, minLevel: 600 },
       'Red wine':           { stock: 3800, parLevel: 3000, minLevel: 1200 },
@@ -560,10 +563,15 @@
       const ingId = I(name);
       if (!ingId) return;
       const cfg = invMap[name];
-      inv[wsId][ingId] = {
+      const row = {
         stock: cfg.stock, parLevel: cfg.parLevel, minLevel: cfg.minLevel,
         lastCountedAt: new Date(Date.now() - 86400000).toISOString(), _demo: true,
       };
+      if (cfg.exp != null) {
+        const d = new Date(); d.setDate(d.getDate() + cfg.exp);
+        row.expiryDate = d.toISOString().slice(0, 10);
+      }
+      inv[wsId][ingId] = row;
     });
     PCD.store.set('inventory', inv);
 
@@ -641,21 +649,63 @@
       }, 'cvs');
     }
 
-    // 7) Event (next Saturday)
+    // 7) Event — a two-function wedding at full BEO capacity: multiple functions,
+    //    guaranteed-count billing, dietary, itemised charges (cost vs client price),
+    //    deposit/balance payment schedule, run-of-show timeline, task checklist,
+    //    and staffing as a real labour P&L line. Customize or delete.
     const now = new Date();
     const daysUntilSat = (6 - now.getDay() + 7) % 7 || 7;
     const eventDate = new Date(now.getTime() + daysUntilSat * 86400000);
-    const fr1 = R('Filet de Bœuf au Poivre'), en1 = R('Coquilles Saint-Jacques'), de1 = R('Crème Brûlée');
+    const evDateStr = eventDate.toISOString().slice(0, 10);
+    const fr1 = R('Filet de Bœuf au Poivre'), en1 = R('Coquilles Saint-Jacques'),
+          de1 = R('Crème Brûlée'), sal = R('Salade de Chèvre Chaud');
     if (fr1 && en1) {
       PCD.store.upsertInTable('events', {
-        name: 'Degustation Dinner', date: eventDate.toISOString().slice(0, 10), time: '19:00',
-        guestCount: 40, venue: 'Private Dining Room', pricePerHead: 120, budget: 4000,
-        status: 'confirmed', notes: 'Sample event · customize or delete',
-        menu: [
-          { recipeId: en1.id, portionsPerGuest: 1 },
-          { recipeId: fr1.id, portionsPerGuest: 1 },
-          de1 ? { recipeId: de1.id, portionsPerGuest: 1 } : null,
-        ].filter(Boolean),
+        name: 'Laurent Wedding', status: 'confirmed',
+        client: 'Laurent & Marie', contactName: 'Marie Laurent', contactPhone: '',
+        notes: 'Sample event · full BEO demo — customize or delete',
+        serviceChargePct: 10,
+        functions: [
+          { id: PCD.uid('fn'), name: 'Reception', date: evDateStr, time: '18:00', endTime: '19:30',
+            room: 'Garden Terrace', guestCount: 80, guaranteedCount: 76,
+            menu: [
+              en1 ? { recipeId: en1.id, portionsPerGuest: 0.5 } : null,
+              sal ? { recipeId: sal.id, portionsPerGuest: 0.5 } : null,
+            ].filter(Boolean),
+            dietaryNote: '4 vegetarian · 2 gluten-free · 1 shellfish allergy', notes: 'Canapés, passed' },
+          { id: PCD.uid('fn'), name: 'Dinner', date: evDateStr, time: '20:00', endTime: '22:30',
+            room: 'Main Hall', guestCount: 80, guaranteedCount: 76,
+            menu: [
+              { recipeId: en1.id, portionsPerGuest: 1 },
+              { recipeId: fr1.id, portionsPerGuest: 1 },
+              de1 ? { recipeId: de1.id, portionsPerGuest: 1 } : null,
+            ].filter(Boolean),
+            dietaryNote: '4 vegetarian · 2 gluten-free', notes: 'Plated, synchronised service' },
+        ],
+        staffing: [
+          { role: 'Chefs', count: 3, hours: 10, rate: 35 },
+          { role: 'Servers', count: 6, hours: 6, rate: 28 },
+        ],
+        charges: [
+          { label: 'China & linen hire', cost: 720, price: 950 },
+          { label: 'Bar staff (2)', cost: 480, price: 640 },
+        ],
+        payments: [
+          { label: 'Deposit', due: '', amount: 3000, paid: true },
+          { label: 'Balance', due: evDateStr, amount: null, paid: false },
+        ],
+        timeline: [
+          { time: '14:00', label: 'Load-in & kitchen setup' },
+          { time: '18:00', label: 'Reception — canapés' },
+          { time: '20:00', label: 'Dinner service' },
+          { time: '21:30', label: 'Cake & coffee' },
+          { time: '23:00', label: 'Breakdown' },
+        ],
+        tasks: [
+          { label: 'Confirm final guest count', due: '', done: true },
+          { label: 'Order flowers from supplier', due: '', done: false },
+          { label: 'Brief floor team on dietary table plan', due: '', done: false },
+        ],
         _demo: true,
       }, 'e');
     }
@@ -725,7 +775,8 @@
       const buffet = {
         id: PCD.uid('bf'), createdAt: nowIso, updatedAt: nowIso, _demo: true,
         name: 'Wedding Reception', type: 'dinner', coverCount: 80, ticketPrice: 115, durationHours: 3, refillMultiplier: null,
-        notes: 'Sample buffet · customize or delete',
+        prepFactor: 0.9,
+        notes: 'Sample buffet · forecast prep for 90% of covers · customize or delete',
         stations: [
           { name: 'Hors d\'Œuvres', type: 'cold', items: [
             ritem('Salade de Chèvre Chaud', 0.5, 0.55),

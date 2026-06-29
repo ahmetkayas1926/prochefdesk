@@ -10,23 +10,37 @@ Araç envanteri + mimari → **`HANDOVER.md`** · sürüm geçmişi → **`CHANG
 
 ---
 
-## Launch — yapılacaklar
+## Durum
 
-Operatör'ün launch öncesi açık iş listesi (büyüme roadmap'i burada DEĞİL — o operatörde). Madde bitince işaretle/çıkar.
+**Ürün lansman-hazır.** Stripe canlı: `ProChefDesk, LLC` (Delaware) · **$19/ay `price_1TkaHBPAp6Hx01isprzC026A` · $190/yıl `price_1TkaI8PAp6Hx01isG2HOVwzQ`** · `config.js STRIPE_PK`=pk_live · 3 Edge Fn + webhook (checkout.completed/subscription.updated/.deleted) · Mercury payout · uçtan uca test geçti. Site LLC/USD/Delaware (terms+privacy 6 dil · liability cap US$100 · 131 Continental Dr Newark DE). Reputation temiz (Google Safe Browsing + Norton OK). 24 blog + sitemap canlı. Profil senkronu çalışır (`prefs.profile`).
 
-- [x] **Stripe canlı — TAMAM (2026-06-21).** `ProChefDesk, LLC` (Delaware; acct `acct_1TjLCPPAp6Hx01is`) · ürünler **USD $19/ay (`price_1TkaHBPAp6Hx01isprzC026A`) · $190/yıl (`price_1TkaI8PAp6Hx01isG2HOVwzQ`)** · `config.js STRIPE_PK`=pk_live · 3 Edge Function + webhook (3 olay: checkout.completed / subscription.updated / .deleted) live · Mercury payout bağlı · **uçtan uca test geçti** (upgrade/cancel/refund/portal/realtime). EIN ~Tem 2026 bekliyor (payout'u bloklamadı).
-  - **Kritik notlar:** Atlas kimlik engeli tekrarında → **support.stripe.com specialist** (Ask Atlas değil). Para-çıkış yolu: **Stripe → Mercury (US bank) → Wise → AU/TR** (Treasury ABD-dışı banka için güvenilmez). Mercury 2FA = passkey, operatörün Windows laptopunda (backup code'ları sakla). free→pro fix: `migrations/v2.44.38` signup'ta `user_prefs` satırını trigger ile yaratır — **yeni `.update().eq(user_id)` yazan Edge Function/SQL satırın var olduğunu varsaymalı ya da upsert kullanmalı.**
-  - **Adaptive Pricing → KAPATILDI (2026-06-22).** Settings → Payments → Adaptive Pricing toggle off; checkout artık AU dahil **$19 USD** gösteriyor (butonla tutarlı). Not: Payment Links için adaptive "Always on" (kapatılamaz) ama app **Checkout** kullanıyor, kapsanıyor.
-  - **Açık:** Wise aç (opsiyonel, ucuz çekim).
-- [ ] (Gelecek) Operatör AU PR alınca → **AU Stripe**'a geç (ABN + AU banka, ABD LLC gereksiz) · abonelikleri taşı (kart/müşteri migration + key/webhook — Claude) · ABD LLC feshet → yıllık ABD yükü biter.
-- [ ] **Vergi takvimi (izle):** Delaware LLC ücreti ~$300 (**1 Haz**) + federal **5472 + 1120** (**15 Nis**; gelir 0 olsa bile; 5472 kaçırma cezası **$25k**). Atlas reminder açık · **ilk dosyalama 2027.** Muhasebe servisi (doola/Pilot) opsiyonel, sonraya. C-corp/NY/CA tarihleri bize GEÇERSİZ (LLC'yiz).- [x] **Site → LLC/USD/Delaware — TAMAM (2026-06-21).** terms+privacy (6 dil): işletici → **ProChefDesk, LLC** · governing law → **Delaware** · liability cap → **US$100** · fiyat → USD · consumer-law → genel ifade · Stripe → **Stripe, Inc.** · adres → **131 Continental Dr, Newark DE**. Landing **$0/$19/$190** · `dashboard.js` A$ → `currencySymbol()` · örnek placeholder'lar + kurucu yer-pini "Perth" temizlendi → **üründe Perth/AUD = 0.** Bilerek KALDI: kurucu kimliği + kariyer hikâyesi (İstanbul/Körfez/Katar) · FSANZ / HACCP-region / OAIC / AUD-para-seçeneği · blog yazarlığı. Grep + canlı preview ile doğrulandı.
-- [x] **Site itibarı — TAMAM (2026-06-22).** Google Safe Browsing: "No unsafe content found" ✅ · Norton Safe Web: Safe ✅ · McAfee/Trellix (`trustedsource.org` Real-Time DB): Business/Software olarak gönderildi, 3-5 gün otomatik onay bekliyor. Aksiyon kalmadı.
-- [ ] **Pazarlama/PR** → detay tek kaynağı **`PAZARLAMA-STRATEJI.md`** (ICP = sorumlu şef · IG Reels · AI = editör/kesici, üretici değil). **İlerleme (2026-06-22):** LinkedIn profil kuruldu (Featured/Headline/About/Contact — metinler dosyada) + ilk LinkedIn gönderisi yayınlandı. **Sıradaki = sıcak outreach** (post etkileşenleri + ağ → DM, ücretsiz dene + geri bildirim). Kanal hızları: outreach=haftalar · organik=3-6 ay · paid=sonra. Hedef ilk 10-50 kullanıcı + 2-3 testimonial. **Not:** operatör Claude Code'dan Claude chat free'ye geçiyor — PAZARLAMA-STRATEJI.md self-contained (aç-yapıştır-devam).
-- [ ] **iOS/Safari gerçek cihaz testi** (kamera/share-sheet/PWA-install/hCaptcha) — kod denetimi tamam, cihaz testi kaldı.
-- [x] **Profil senkron — TAMAM (2026-06-22, v2.44.39).** Şef profili (ad/rol/ülke/işyeri/bio) artık `prefs.profile` içinde → `user_prefs.data.prefs` üzerinden cihazlar-arası senkron (currency/haccpRegion ile aynı kanal); `auth._applyProfileFromPrefs` boot pull sonrası + realtime 'prefs' event'inde yerel `user`'a yansıtır. Sync **ilk save'de** aktifleşir. **2 cihazda doğrulandı** (push→bulut→pull→ekran). Önceki sürümlerde profil yalnız yereldi (hiç push edilmiyordu) — ilk kez senkron oldu.
-- [x] **Temizlik — `core/variance.js` ölü dosya SİLİNDİ (2026-06-25).** Dosya hiçbir HTML'de yüklenmiyordu + yarattığı `PCD.variance` global'ini çağıran 0 satır vardı (kesin doğrulandı). Çalışan Variance aracı = `tools/variance.js` (kendi motoru, salesLog'a bakmaz) — etkilenmedi. (Açık kalan ilgili konu: `tools/variance.js` üretimi elle isteniyor; Record sales → tarihli `salesLog` → ön-doldurma geliştirmesi opsiyonel/ayrı.)
-- [ ] **Launch QA** — operatörle son manuel pass (kod/preview denetimi temiz: taşma 0 · console 0 · i18n simetrik · RTL OK).
-- [x] **Bitti:** Blog 2 yazı (Labour cost % · Cleaning schedule) · çıktı paleti Deep Pine (tüm print/Excel/JPEG/share) · Footer `showWatermark()` gate (Free=footer / Pro=temiz) · veri bütünlüğü denetimi (kayıp boşluğu yok).
+**Açık (operatör işi, kod değil):**
+- [ ] **Go-to-market — ASIL İŞ.** Tek hedef ↓.
+- [ ] iOS/Safari gerçek cihaz testi (kamera/share-sheet/PWA/hCaptcha — kod denetimi tamam).
+- [ ] Launch QA — operatörle son manuel pass.
+- [ ] (Gelecek) AU PR alınca → AU Stripe'a geç (ABN+AU banka) + ABD LLC feshet. **Vergi:** DE LLC ~$300/yıl (1 Haz) + federal 5472+1120 (15 Nis; gelir 0 olsa bile; 5472 kaçırma $25k; ilk dosyalama 2027).
+
+**Stripe kritik notlar:** kimlik engeli → support.stripe.com specialist (Ask Atlas değil). Para yolu: Stripe→Mercury→Wise→AU/TR. Adaptive Pricing KAPALI ($19 sabit). free→pro: `migrations/v2.44.38` user_prefs satırını trigger'la yaratır — yeni `.update().eq(user_id)` yazan satır var olduğunu varsaymalı / upsert kullanmalı.
+
+---
+
+## Go-to-market — TEK HEDEF (şüpheci, araştırma-temelli)
+
+> Bu strateji kelimeyle değişmez. Ekonomi + gerçeklere dayalı. Yeni özellik/cila DEĞİL — ürünü satma zamanı.
+
+**Rahatsız edici gerçek:** $19/ay, solo-kurucu B2B SaaS'ın viable bandının ALTINDA ($50-500). Sonuç: paid reklam matematiği tutmaz (CAC $200-500 » $19 ARPU), düşük ARPU churn-hassas, anlamlı MRR için YÜZLERCE kullanıcı gerek (~260 = $5K MRR). Tek çıkış: **sıfıra-yakın-CAC + hacim + retention.**
+
+**Kaldıraç avantajı:** kurucu = ICP (çalışan baş şef + şef ağı). Founder-led satışta derin ürün bilgisi > cilalı pitch.
+
+**Asıl risk acquisition değil RETENTION:** uygulama pasif (bildirim/tetik sistemi YOK) → yalnız iş akışı günlük kullanımı ZORUNLU kılan kullanıcıda tutar. O yüzden niş = **HACCP-zorunlu bölgede bağımsız caterer / event chef / private chef** (HACCP günlük log yasal + per-event iş = dış tetik; bildirim gerekmez).
+
+**HEDEF (90 gün):** Bu nişten **10 retained, ödeyen kullanıcı** — founder-led warm outreach + nişin toplandığı yerlerde varlık (şef subreddit / catering FB grup / LinkedIn). **Tek metrik = 2. ay retention** (hâlâ kullanıyor + ödüyor), signup DEĞİL. Paid / yeni özellik / geniş içerik → bu kohort $19 modelin tuttuğunu kanıtlayana kadar BEKLER.
+
+**Yol (sıra):** (1) 30-50 gerçek şef listele (ağın: AU/Körfez/Katar/İstanbul). (2) Her birine kişisel DM — "sat" değil: "güvendiğim yargı, ücretsiz, dürüst söyle". (3) İlkleri SEN onboard et → GERÇEK sıradaki event/haftalarında kullansınlar (demo değil; ürün gerçek iş akışına girmezse tutmaz). (4) Nişin yerlerinde gerçek soru cevapla (pitch değil) = sıfır-CAC inbound. (5) 2. ay retention ölç + churn edenlerle konuş — gerçek eksiği onlar söyler. (6) 2-3 retained → testimonial (en büyük eksik = sosyal kanıt). (7) 10 retained SONRA → fiyat testi / kanıtlanmış içeriği boost / ölçek.
+
+**Fiyat:** $19 bilinçli erişilebilirlik bahsi ama bandın altı. App ~$179/ay araç yerine geçiyor (ROI bloğu) → yukarı test yeri VAR (yıllık vurgu / $29-39) — ama retained kullanıcıya SORDUKTAN sonra, körlemesine değil.
+
+**Gerçekçi beklenti:** medyan micro-SaaS = 6 ayda $1-3K MRR. Viralite değil, tutarlılık. Outreach=haftalar · organik blog=3-6 ay+ · paid=sonra.
 
 ---
 
@@ -145,7 +159,7 @@ CREATE POLICY <table>_owner_all ON <table>
 
 **Ortak styled-Excel = `PCD.xlsx`.** Yeni export'lar `PCD.loadXLSX().then(XLSX => PCD.xlsx.save(...))` (kalın yeşil başlık + çerçeve + alt-satır gölgesi + autofit + **Free'de otomatik gate'li footer satırı**). Roster kendi inline worksheet'ini kullanır (hücre rengi `PCD.xlsx`'te yok; footer'ı da kendi gate'leyerek ekler) — dokunma.
 
-**Demo seed (demo-recipes.js) — 5 kural.** (1) Tek seferlik `onboarding.demoSeeded` flag; sürüm değişince yeniden yüklenmez (görmek için incognito). (2) Event menü alanı `menu` ('recipes' değil — `events.js` `event.menu` okur). (3) Inventory seed `findId(upserted, name)`. (4) Supplier `category` görünen ad (Produce / Meat & Poultry / Seafood / Dairy / Dry Goods…), i18n key değil. (5) Büfe ayrı kayıt yolu (`_read('buffets')` ws-keyed dizi, `upsertInTable` değil).
+**Demo seed (`app/js/seed/demo-recipes.js`) — 5 kural.** (1) Tek seferlik `onboarding.demoSeeded` flag; sürüm değişince yeniden yüklenmez (görmek için incognito). (2) Event menü alanı `menu` ('recipes' değil — `events.js` `event.menu` okur). (3) Inventory seed `findId(upserted, name)`. (4) Supplier `category` görünen ad (Produce / Meat & Poultry / Seafood / Dairy / Dry Goods…), i18n key değil. (5) Büfe ayrı kayıt yolu (`_read('buffets')` ws-keyed dizi, `upsertInTable` değil).
 
 **Discover skorları hesap bazlı.** "My public recipes" = `_read('recipes')` ile TÜM workspace'lerdeki `isPublic` tarifler (aktif ws'in `listRecipes()` değil), yoksa boş ws'te 0 görünür.
 

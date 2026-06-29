@@ -28,7 +28,7 @@ Sidebar bölümleri. İkincil araçlar (Nutrition / Portion / Variance / Waste /
 - alt-sekme **Nutrition** — porsiyon başı tahmini kalori/protein/karb/yağ (recipe malzemelerinden, USDA/FSANZ; tahmin, sertifikalı etiket değil).
 - alt-sekme **Portion** (Portion Calculator) — çoklu tarifi kişi sayısına ölçekle → konsolide malzeme + maliyet; tarif/kategori/tedarikçi görünümü, alt-tarifler ingredient'e flatten. Print + stilize Excel + metin paylaşımı.
 
-**Ingredients** — birim fiyat, 11 kategori, tedarikçi bağı, yield %, fiyat geçmişi grafiği. CSV/Excel import-export + Lists sekmeli şablon · Sync ✓.
+**Ingredients** — birim fiyat, 11 kategori, tedarikçi bağı, yield %, **raf-ömrü (gün, opsiyonel)**, fiyat geçmişi grafiği. CSV/Excel import-export + Lists sekmeli şablon · Sync ✓.
 
 **Menus** (Menu Builder = Menu Studio) — blok-kanvas menü tasarımcı (başlık/metin/bölüm[yemek listesi, tariften otomatik]/görsel/ayraç/boşluk); A4–A3–A5–Letter, dikey/yatay, 1–4 sütun, sayfa çerçevesi, accent/metin/bg rengi, marka kiti. Blok tıkla → düzenleme popup (sağda "Blocks" katman listesi); sayfa ayarları ayrı 🎨 popup. Diyet + alerjen harf kodları (bilgi amaçlı). 10 hazır şablon. WYSIWYG (kanvas = baskı = paylaşım). Print · QR/Link + cost-view (Pro) · Sync ✓ (`menus`, `studio` blob).
 
@@ -45,7 +45,7 @@ Sidebar bölümleri. İkincil araçlar (Nutrition / Portion / Variance / Waste /
 
 ### Sourcing
 
-**Inventory** — par (ideal) / min (kritik) eşik, 4 durum (OUT / CRITICAL / LOW / OK), sayım modu + geçmiş, dashboard düşük-stok badge. Print + Excel · Sync ✓ (top-level tablo).
+**Inventory** — par (ideal) / min (kritik) eşik, durum (out/critical/low/ok/untracked), sayım modu + geçmiş, dashboard düşük-stok badge. **Son-kullanma/raf-ömrü:** mal kabulde otomatik SKT (ingredient shelf-life'tan) + "bozulacak/geçti" badge + stat + dashboard kartı + **fire köprüsü** (expired → fire yaz & stoktan düş). **Market/alışveriş listesi:** yaklaşan event + seçili buffet → ingredient konsolide → stok düş → kategori/tedarikçiye grupla → Deep Pine print + paylaş. **Paylaşılan stok sözleşmesi:** `applyStockDeductions/Additions` (event/buffet/waste/sales/receiving hepsi buradan). Print + Excel · Sync ✓ (top-level tablo).
 - alt-sekme **Variance** — teorik kullanım (satılan → reçete) vs gerçek kullanım; malzeme başına $ varyans, en büyük sızıntı önce (POS/sayım gerekmez; geçici, kaydetmez).
 - alt-sekme **Waste** — fire/bozulma/fazla-üretim kaydı → $ kayıp + opsiyonel stok düşümü + koşan toplam. Sync ✓ (`waste`).
 
@@ -53,13 +53,13 @@ Sidebar bölümleri. İkincil araçlar (Nutrition / Portion / Variance / Waste /
 
 ### Catering
 
-**Events** (Event Planner) — tarih/konuk/menü/bütçe vs maliyet; 4 durum (draft/confirmed/done/cancelled), otomatik ölçek + kişi-başı maliyet, 🛒 alışveriş listesi (menüyü ölçekle → flatten → tedarikçi grupla → yazdır), çoğalt, canlı A4 önizleme (izole iframe). Print · metin paylaşımı · Sync ✓ (`events`).
+**Events** (Event Planner) — BEO-seviye çok-fonksiyonlu etkinlik. **5 durum** (draft/tentative/confirmed/done/cancelled) + liste/takvim görünümü. Her event = çok fonksiyon (reception/dinner…), her fonksiyonda menü (tarif+malzeme öğeleri) + diyet/alerjen + kişi/garanti-kişi. **Gerçek P&L:** food cost + işçilik (rol/saat/rate) + itemized charges + servis% → kişi-başı maliyet/fiyat/marj + ödeme planı (deposit/balance). Run-of-show timeline + görev checklist + **e-imza** (müşteri onayı). Stok düş (`computeEventDeductions`). Çıktı: müşteri **teklifi** (maliyet gizli) + iç **BEO/mutfak üretim** sayfası. Print · metin paylaşımı · Sync ✓ (`events`).
 
-**Buffet** (Buffet Planner) — istasyon bazlı; 3-yol maliyet (tarif/malzeme/custom), kişi-başı tüketim oranı, refill çarpanı, yield%, israf projeksiyonu, food cost % hedef durumu (yeşil/sarı/kırmızı), 7 preset + boş başlangıç, çoğalt. 🚚 tedarikçi sipariş listesi (flatten → stok birimine normalize → grupla → yazdır). Print (prep + sipariş + maliyet raporu) + Excel · Sync ✓ (`buffets`).
+**Buffet** (Buffet Planner) — istasyon bazlı; 3-yol maliyet (tarif/malzeme/custom), kişi-başı tüketim + **forecast prep faktörü** + **refill çarpanı + pickup oranı**, yield%, **atık% benchmark (15-25)** + food cost % hedef durumu, batch/replenishment planı, 7 preset + boş başlangıç, çoğalt. 🚚 tedarikçi sipariş listesi (flatten → stok birimine normalize → grupla → yazdır). Print (prep + sipariş + maliyet raporu) + Excel · Sync ✓ (`buffets`).
 
 ### HACCP Forms
 
-Hub + 4 bağımsız form (her biri kendi URL'i, bookmark korunur). Print (30 günlük / aylık) · Sync ✓.
+Hub + 4 bağımsız form (her biri kendi URL'i, bookmark korunur). Bölge eşikleri (`PCD.haccp.getThresholds`). Print + her form/Audit Pack **ay-aralığı seçip tek PDF** (`PCD.haccp.pickMonthRange/printSheets`) · Sync ✓.
 
 | Route | Form | İçerik |
 |-------|------|--------|
@@ -67,6 +67,8 @@ Hub + 4 bağımsız form (her biri kendi URL'i, bookmark korunur). Print (30 gü
 | `haccp_cooling` | Cook & Cool Log | Pişirme sonrası 2 aşamalı soğutma |
 | `haccp_receiving` | Receiving Inspection | Teslimat sıcaklığı / tedarikçi / ambalaj |
 | `haccp_holding` | Hot / Cold Holding | Bain-marie + soğuk servis takibi |
+
+**Audit Pack** (hub): ay/aralık seç → 4 formu tek denetim PDF'inde topla — özet (sıcaklık kontrolü · **günlük-log kapsaması** · in-range% · açık-CAPA) + forma-göre tablo + düzeltici-eylem (exception) günlüğü + imza satırı. Salt-okunur aggregator; "compliance" değil "readings in range" + coverage gösterir (dürüstlük modeli).
 
 ### Discover
 
@@ -117,4 +119,4 @@ v2.43'te 10 ölü tool dosyası silindi (route'lanmıyor, yüklenmiyordu). **8 h
 
 ## Açık adımlar / roadmap
 
-Launch checklist → `CLAUDE.md` → "Launch — yapılacaklar". Büyüme roadmap'i (yeni özellikler) **operatörde** (doküman dışı).
+Durum + go-to-market hedefi → `CLAUDE.md` ("Durum" + "Go-to-market — TEK HEDEF"). Büyüme roadmap'i (yeni özellikler) **operatörde** (doküman dışı). **Uygulama lansman-hazır; öncelik artık kod değil satış/büyüme.**

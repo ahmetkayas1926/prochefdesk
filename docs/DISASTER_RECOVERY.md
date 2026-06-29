@@ -218,7 +218,7 @@ WHERE user_id = '<USER_ID>'
 ORDER BY deleted_at DESC;
 ```
 
-Tables to check (one at a time): `recipes`, `ingredients`, `menus`, `events`, `suppliers`, `canvases`, `shopping_lists`, `checklist_templates`, `inventory`, `waste`, `checklist_sessions`, `stock_count_history`, `haccp_logs`, `haccp_units`, `haccp_readings`, `haccp_cook_cool`.
+Tables to check (one at a time): `recipes`, `ingredients`, `menus`, `events`, `suppliers`, `canvases`, `shopping_lists`, `checklist_templates`, `checklist_sessions`, `inventory`, `waste`, `stock_count_history`, `rosters`, `prep_sheets`, `buffets`, `whiteboards`, `haccp_logs`, `haccp_units`, `haccp_readings`, `haccp_cook_cool`, `haccp_receiving`, `haccp_holding`. (Full list of synced user tables as of v2.44 — `rosters`/`prep_sheets`/`buffets`/`whiteboards`/`haccp_receiving`/`haccp_holding` added since the 2026-05 verify.)
 
 To get the user's UUID: ask them their email, then in Supabase Dashboard → Authentication → Users → search by email → copy the user's UUID.
 
