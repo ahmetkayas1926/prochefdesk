@@ -2270,5 +2270,5 @@
   }
 
   PCD.tools = PCD.tools || {};
-  PCD.tools.inventory = { render: render, openEditor: openEditor, computeStatus: computeStatus, applyStockDeductions: applyStockDeductions, applyStockAdditions: applyStockAdditions, computeSalesDeductions: computeSalesDeductions, confirmStockChange: confirmStockChange, expiringSummary: expiringSummary, markOrdered: markOrdered };
+  PCD.tools.inventory = { render: render, openEditor: openEditor, computeStatus: computeStatus, applyStockDeductions: applyStockDeductions, applyStockAdditions: applyStockAdditions, computeSalesDeductions: computeSalesDeductions, confirmStockChange: confirmStockChange, expiringSummary: expiringSummary, markOrdered: markOrdered, openRecordSales: openRecordSales };
 })();

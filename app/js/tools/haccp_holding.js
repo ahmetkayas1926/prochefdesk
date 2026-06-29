@@ -83,6 +83,12 @@
     });
     return Object.keys(dates).sort().reverse();
   }
+  // v2.44.117 — Bir aydaki TÜM kayıtlar (gün gün), aylık baskı için.
+  function listForMonth(monthYM) {
+    return (PCD.store.listTable(TABLE) || []).filter(function (r) {
+      return r.date && r.date.slice(0, 7) === monthYM;
+    });
+  }
 
   let _viewDate = todayYmd();
 
@@ -104,10 +110,9 @@
           '<div class="page-subtitle">' + (t('hhd_subtitle') || 'Yemek bazlı saatlik kontrol · Sıcak ≥' + targetHot + ', Soğuk ≤' + targetCold) + '</div>' +
         '</div>' +
         '<div class="page-header-actions">' +
-          '<button class="btn btn-outline btn-sm" id="hhdPrintMonthBtn" title="' + PCD.escapeHtml(t('hhd_print_month_tip') || '31 satırlık aylık form, ay başında bir kez yazdır') + '">' + PCD.icon('calendar', 14) + ' <span>' + PCD.escapeHtml(t('hhd_print_month') || 'Aylık boş') + '</span></button>' +
           '<button class="btn btn-outline btn-sm" id="hhdPrintBlankBtn" title="' + PCD.escapeHtml(t('hhd_print_blank_tip') || 'Boş formu yazdır, elle doldur') + '">' + PCD.icon('print', 14) + ' <span>' + PCD.escapeHtml(t('hhd_print_blank') || 'Boş yazdır') + '</span></button>' +
           '<button class="btn btn-primary btn-sm" id="hhdPrintDayBtn">' + PCD.icon('print', 14) + ' <span>' + PCD.escapeHtml(t('hhd_print_day') || 'Bu günü yazdır') + '</span></button>' +
-          '<button class="btn btn-outline btn-sm" id="hhdPrintRangeBtn" title="' + PCD.escapeHtml((t('haccp_range_tip_days') !== 'haccp_range_tip_days' ? t('haccp_range_tip_days') : '') || 'Print every recorded day across several months into one PDF') + '">' + PCD.icon('print', 14) + ' <span>' + PCD.escapeHtml((t('haccp_range_btn') !== 'haccp_range_btn' ? t('haccp_range_btn') : '') || 'Months…') + '</span></button>' +
+          '<button class="btn btn-outline btn-sm" id="hhdPrintRangeBtn" title="' + PCD.escapeHtml((t('haccp_range_tip') !== 'haccp_range_tip' ? t('haccp_range_tip') : '') || 'Print several months into one PDF') + '">' + PCD.icon('print', 14) + ' <span>' + PCD.escapeHtml((t('haccp_range_btn') !== 'haccp_range_btn' ? t('haccp_range_btn') : '') || 'Months…') + '</span></button>' +
         '</div>' +
       '</div>';
 
@@ -234,15 +239,12 @@
     PCD.$('#hhdPrintRangeBtn', view).addEventListener('click', function () {
       const curYM = (_viewDate || todayYmd()).slice(0, 7);
       PCD.haccp.pickMonthRange(curYM, function (from, to) {
-        const months = {};
-        PCD.haccp.monthsInRange(from, to).forEach(function (m) { months[m] = true; });
-        // Holding is per-day → print every recorded day whose month is in range.
-        const days = listDatesWithRecords().filter(function (d) { return months[d.slice(0, 7)]; }).sort();
-        const sheets = days.map(function (d) { return printDay(d, false, true); });
+        // v2.44.117 — Her ay için BİR aylık sayfa (o ayın tüm kayıtları satır satır,
+        // boşsa boş şablon) → Fridge/Cook&Cool/Receiving ile birebir aynı. Toast yok.
+        const sheets = PCD.haccp.monthsInRange(from, to).map(function (m) { return printMonthFilled(m, true); });
         PCD.haccp.printSheets(sheets, 'HACCP Hot/Cold Holding · ' + from + ' – ' + to);
       });
     });
-    PCD.$('#hhdPrintMonthBtn', view).addEventListener('click', function () { openMonthPickerModal(); });
 
     PCD.on(view, 'click', '[data-jump]', function () {
       _viewDate = this.getAttribute('data-jump');
@@ -414,60 +416,32 @@
     PCD.print(html, 'HACCP Hot/Cold Holding · ' + (dateStr || 'Blank'));
   }
 
-  // ============ PRINT (MONTHLY BLANK) ============
-  function openMonthPickerModal() {
-    const t = PCD.i18n.t;
-    const today = new Date();
-    const defaultYM = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
-
-    const body = PCD.el('div');
-    body.innerHTML =
-      '<div style="font-size:13px;color:var(--text-2);line-height:1.5;margin-bottom:12px;">' +
-        PCD.escapeHtml(t('hhd_month_picker_intro') || 'Ay seçin. Yazdırılan form 31 satırlık — ay boyunca elle doldurun.') +
-      '</div>' +
-      '<input id="hhdMonthIn" type="month" value="' + defaultYM + '" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-1);color:var(--text-1);font-size:14px;box-sizing:border-box;">';
-
-    const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') || 'İptal', style: { flex: '1' } });
-    const printBtn = PCD.el('button', { class: 'btn btn-primary', text: t('hhd_print_month_btn') || 'Yazdır', style: { flex: '2' } });
-    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%' } });
-    footer.appendChild(cancelBtn);
-    footer.appendChild(printBtn);
-
-    const m = PCD.modal.open({
-      title: '📄 ' + (t('hhd_month_picker_title') || 'Aylık boş form yazdır'),
-      body: body, footer: footer, size: 'sm', closable: true,
-    });
-    cancelBtn.addEventListener('click', function () { m.close(); });
-    printBtn.addEventListener('click', function () {
-      const ymVal = body.querySelector('#hhdMonthIn').value;
-      if (!ymVal) { PCD.toast.error(t('hhd_month_picker_required') || 'Lütfen bir ay seçin'); return; }
-      const parts = ymVal.split('-');
-      const y = parseInt(parts[0], 10);
-      const mo = parseInt(parts[1], 10);
-      if (isNaN(y) || isNaN(mo) || mo < 1 || mo > 12) {
-        PCD.toast.error(t('hhd_month_picker_required') || 'Lütfen bir ay seçin');
-        return;
-      }
-      m.close();
-      printMonthBlank(y, mo);
-    });
-  }
-
-  function printMonthBlank(year, month) {
+  // ============ PRINT (MONTHLY — range) ============
+  // v2.44.117 — Ayın TÜM kayıtlarını tek aylık sayfada basar (her kayıt bir satır,
+  // 31'e kadar boş satırla doldurulur; boş ay = boş şablon). "Months…" her ay için
+  // bunu çağırır → Fridge/Cook&Cool/Receiving ile aynı "ay-ay, boşsa boş" davranışı.
+  function printMonthFilled(monthYM, returnHtml) {
     const t = PCD.i18n.t;
     const u = getTempUnit();
     const ws = PCD.store.getActiveWorkspace ? PCD.store.getActiveWorkspace() : null;
     const wsName = (ws && ws.name) || 'Kitchen';
-    const monthLabel = new Date(year, month - 1, 1).toLocaleDateString(locale(), { month: 'long', year: 'numeric' });
-
-    let html = printStylesAndHeader(wsName, monthLabel, u, t) +
-      buildPrintTable(t, u, true, null) +
+    const monthLbl = new Date(monthYM + '-01T00:00:00').toLocaleDateString(locale(), { month: 'long', year: 'numeric' });
+    const records = listForMonth(monthYM).slice().sort(function (a, b) {
+      const ad = a.date || '', bd = b.date || '';
+      if (ad !== bd) return ad.localeCompare(bd);
+      return (Number(a.rowIndex) || 0) - (Number(b.rowIndex) || 0);
+    });
+    const html = printStylesAndHeader(wsName, monthLbl, u, t) +
+      buildPrintTable(t, u, true, null, records) +
       printFooter(t, u);
-
-    PCD.print(html, 'HACCP Hot/Cold Holding · ' + monthLabel);
+    if (returnHtml) return html;
+    PCD.print(html, 'HACCP Hot/Cold Holding · ' + monthLbl);
   }
 
-  function buildPrintTable(t, u, isMonthly, byRow) {
+  // v2.44.117 — isMonthly modu artık ayın TÜM kayıtlarını satır satır basar (her kayıt
+  // bir satır, gün sütunuyla), 31'e kadar boş satırla doldurulur → diğer 3 form gibi
+  // "ay-ay sayfa, boşsa boş şablon". monthRecords verilmezse boş aylık şablon (31 boş satır).
+  function buildPrintTable(t, u, isMonthly, byRow, monthRecords) {
     let html = '<table class="h-grid">' +
       // v2.9.40 — colgroup zorunlu (table-layout:fixed modunda td width'leri ignore edilir).
       '<colgroup>' +
@@ -503,10 +477,11 @@
       '</tr>' +
     '</thead><tbody>';
 
-    const rowCount = isMonthly ? 31 : ROWS_PER_PAGE;
+    const recs = monthRecords || [];
+    const rowCount = isMonthly ? Math.max(31, recs.length) : ROWS_PER_PAGE;
 
     for (let i = 0; i < rowCount; i++) {
-      const r = isMonthly ? null : (byRow && byRow[i]);
+      const r = isMonthly ? (recs[i] || null) : (byRow && byRow[i]);
       const c1T = r && r.check1Temp != null ? (u === 'F' ? ctoF(r.check1Temp) : r.check1Temp) + '°' : '';
       const c1H = r && r.check1Time ? r.check1Time : '';
       const c2T = r && r.check2Temp != null ? (u === 'F' ? ctoF(r.check2Temp) : r.check2Temp) + '°' : '';
@@ -517,9 +492,12 @@
       const c2Fail = r && isPass(r.holdType, r.check2Temp) === false;
       const c3Fail = r && isPass(r.holdType, r.check3Temp) === false;
       const typeMark = r ? (r.holdType === 'cold' ? '❄' : '🔥') : '';
+      // v2.44.117 — aylık modda gün sütunu kaydın günü (dolu satır) / boş (doldurma satırı);
+      // gün-sayfasında sıra no.
+      const dayCol = isMonthly ? (r && r.date && r.date.length >= 10 ? parseInt(r.date.slice(8, 10), 10) : '') : (i + 1);
 
       html += '<tr>' +
-        '<td class="idx">' + (isMonthly ? (i + 1) : (i + 1)) + '</td>' +
+        '<td class="idx">' + dayCol + '</td>' +
         '<td class="type">' + typeMark + '</td>' +
         '<td class="food">' + (r ? PCD.escapeHtml(r.foodName || '') : '') + '</td>' +
         '<td class="loc">' + (r ? PCD.escapeHtml(r.location || '') : '') + '</td>' +
@@ -556,9 +534,9 @@
       '.h-head .sub{font-size:10px;color:#555;margin-top:2px;}' +
       '.h-head .right{font-size:10px;color:#555;text-align:end;}' +
       'table.h-grid{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed;flex:0 0 auto;}' +
-      'table.h-grid th, table.h-grid td{border:1px solid #999;padding:3px 4px;vertical-align:middle;line-height:1.3;}' +
+      'table.h-grid th, table.h-grid td{border:1px solid #999;padding:2px 3px;vertical-align:middle;line-height:1.25;}' +
       'table.h-grid th{background:#eaf6f0;color:#16433a;font-weight:700;font-size:9px;text-align:center;text-transform:uppercase;letter-spacing:0.03em;}' +
-      'table.h-grid tr{height:22px;page-break-inside:avoid;}' +
+      'table.h-grid tr{height:21px;page-break-inside:avoid;}' +
       'table.h-grid td.idx{text-align:center;font-weight:700;color:#444;}' +
       'table.h-grid td.type{text-align:center;font-size:11px;}' +
       'table.h-grid td.food{font-weight:600;}' +
@@ -567,9 +545,10 @@
       'table.h-grid td.corr{font-size:10px;}' +
       'table.h-grid td.chef{text-align:center;}' +
       'table.h-grid td.fail{background:#fee2e2;color:#991b1b;font-weight:700;}' +
-      '.h-foot{margin-top:2px;display:flex;justify-content:space-between;font-size:9px;flex:0 0 auto;}' +
+      '.h-foot{margin-top:1px;display:flex;justify-content:space-between;font-size:9px;flex:0 0 auto;}' +
       '.h-foot .legend{color:#666;}' +
-      '.pcd-print-footer{margin:0 !important;padding:1mm 4mm !important;border-top:none !important;flex:0 0 auto;font-size:7pt !important;line-height:1.2 !important;}' +
+      // v2.44.116 — Fridge/Freezer referansıyla hizalandı (0.5mm/1.1) → aylık-blank (31 satır) tek sayfa.
+      '.pcd-print-footer{margin:0 !important;padding:0.5mm 4mm !important;border-top:none !important;flex:0 0 auto;font-size:7pt !important;line-height:1.1 !important;}' +
       '@page{size:A4 landscape;margin:0;}' +
     '</style>' +
     '<div class="h-sheet">' +

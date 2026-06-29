@@ -52,6 +52,23 @@
     return map;
   }
 
+  // v2.44.118 — Hiç satış kaydı var mı? (görünürlük boş-durumu için)
+  function anySalesLogged() {
+    try {
+      const ws = PCD.store.getActiveWorkspaceId && PCD.store.getActiveWorkspaceId();
+      const root = (PCD.store._read && PCD.store._read('salesLog')) || {};
+      return (root[ws] || []).some(function (s) { return s && !s._deletedAt && s.recipeId; });
+    } catch (e) { return false; }
+  }
+  // v2.44.118 — Menu Engineering → Inventory "Record sales" köprüsü. Period'un satış
+  // verisinin Inventory'den geldiğini yeni kullanıcıya görünür kılar (tek tık).
+  function goRecordSales() {
+    try { PCD.router.go('inventory'); } catch (e) {}
+    setTimeout(function () {
+      if (PCD.tools.inventory && PCD.tools.inventory.openRecordSales) PCD.tools.inventory.openRecordSales();
+    }, 60);
+  }
+
   function buildRows(soldMap) {
     const ingMap = {}, recipeMap = {};
     PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
@@ -113,6 +130,8 @@
       '<input type="date" class="input" id="mePerTo" value="' + (mePeriod ? mePeriod.to : '') + '" style="flex:1;min-width:130px;">' +
       '<button class="btn btn-outline btn-sm" id="mePerApply">' + PCD.escapeHtml(L('me_period_apply', 'Apply')) + '</button>' +
       (mePeriod ? '<button class="btn btn-ghost btn-sm" id="mePerClear">' + PCD.escapeHtml(L('me_period_all', 'All time')) + '</button>' : '') +
+      // v2.44.118 — Record sales köprüsü (Period verisinin Inventory'den geldiğini görünür kılar)
+      '<button class="btn btn-ghost btn-sm" id="meGoSales" title="' + PCD.escapeHtml(L('me_go_sales_tip', 'Record daily/weekly sales in Inventory — they feed this period.')) + '">' + PCD.icon('edit', 13) + ' ' + PCD.escapeHtml(L('me_go_sales', 'Record sales →')) + '</button>' +
       '<span class="text-muted" style="font-size:11px;flex-basis:100%;">' + PCD.escapeHtml(mePeriod ? L('me_period_hint_on', 'Popularity = units sold in the selected dates, pulled from Record sales.') : L('me_period_hint_off', 'Showing all-time sales. Pick a date range to rank dishes for a specific period.')) + '</span>' +
       '</div>';
 
@@ -139,8 +158,15 @@
         meMetric(L('me_sum_fcpct', 'Food cost %'), (fcPct == null ? '—' : Math.round(fcPct) + '%'), fcColor) +
         meMetric(L('me_sum_profit', 'Profit'), money(totProfit), profitColor) +
         '</div>';
+    } else if (mePeriod) {
+      // v2.44.118 — Dönem seçili ama o aralıkta hiç satış kaydı yok → net yönlendirme.
+      html += '<div class="card mb-3" style="padding:12px 14px;background:#fff7ed;border-color:var(--warning);color:#b45309;font-size:13px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">' +
+        '<span style="flex:1;min-width:180px;">' + PCD.escapeHtml(L('me_no_period_sales', 'No sales recorded for these dates. Record them in Inventory → Record sales to rank dishes for this period.')) + '</span>' +
+        '<button class="btn btn-outline btn-sm" id="meGoSales2" style="white-space:nowrap;">' + PCD.icon('edit', 13) + ' ' + PCD.escapeHtml(L('me_go_sales', 'Record sales →')) + '</button>' +
+        '</div>';
     } else {
-      html += '<div class="card mb-3" style="padding:12px 14px;color:var(--text-3);font-size:13px;">' + PCD.escapeHtml(L('me_sum_hint', 'Enter how many of each dish you sold (in the table below) to see total revenue, food cost % and profit.')) + '</div>';
+      html += '<div class="card mb-3" style="padding:12px 14px;color:var(--text-3);font-size:13px;">' + PCD.escapeHtml(L('me_sum_hint', 'Enter how many of each dish you sold (in the table below) to see total revenue, food cost % and profit.')) +
+        (anySalesLogged() ? '' : ' ' + PCD.escapeHtml(L('me_sum_hint_sales', 'Tip: record sales in Inventory → Record sales, then pick a Period above to rank dishes by what actually sold.'))) + '</div>';
     }
 
     const losing = rows.filter(function (x) { return x.margin != null && x.margin < 0; });
@@ -198,6 +224,10 @@
       '</div>';
 
     view.innerHTML = html;
+
+    // v2.44.118 — Record sales köprüsü butonları → Inventory'ye git + Record Sales'i aç.
+    const _goS1 = PCD.$('#meGoSales', view); if (_goS1) _goS1.addEventListener('click', goRecordSales);
+    const _goS2 = PCD.$('#meGoSales2', view); if (_goS2) _goS2.addEventListener('click', goRecordSales);
 
     PCD.$$('.me-price', view).forEach(function (inp) {
       inp.addEventListener('change', function () {

@@ -577,7 +577,7 @@
       '</thead><tbody>';
 
     for (let d = 1; d <= 31; d++) {
-      html += '<tr style="height:22px;">' +
+      html += '<tr style="height:21px;">' +
         '<td class="idx">' + d + '</td>' +
         '<td class="sup"></td>' +
         '<td class="prod"></td>' +
@@ -684,9 +684,9 @@
       '.h-head .right{font-size:10px;color:#555;text-align:end;}' +
       'table.h-grid{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed;flex:0 0 auto;}' +
       // v2.11.7 revert preserved + row height increased to 22px for better handwriting space
-      'table.h-grid th, table.h-grid td{border:1px solid #999;padding:2px 4px;vertical-align:middle;line-height:1.25;}' +
+      'table.h-grid th, table.h-grid td{border:1px solid #999;padding:2px 3px;vertical-align:middle;line-height:1.25;}' +
       'table.h-grid th{background:#eaf6f0;color:#16433a;font-weight:700;font-size:9px;text-align:center;text-transform:uppercase;letter-spacing:0.03em;}' +
-      'table.h-grid tr{height:22px;page-break-inside:avoid;}' +
+      'table.h-grid tr{height:21px;page-break-inside:avoid;}' +
       'table.h-grid td.idx{text-align:center;font-weight:700;color:#444;}' +
       'table.h-grid td.sup{font-weight:600;}' +
       'table.h-grid td.prod{font-weight:600;}' +
@@ -697,9 +697,10 @@
       'table.h-grid td.note{font-size:10px;}' +
       'table.h-grid td.chef{text-align:center;}' +
       'table.h-grid td.fail{background:#fee2e2;color:#991b1b;}' +
-      '.h-foot{margin-top:2px;display:flex;justify-content:space-between;font-size:9px;flex:0 0 auto;}' +
+      '.h-foot{margin-top:1px;display:flex;justify-content:space-between;font-size:9px;flex:0 0 auto;}' +
       '.h-foot .legend{color:#666;}' +
-      '.pcd-print-footer{margin:0 !important;padding:1mm 4mm !important;border-top:none !important;flex:0 0 auto;font-size:7pt !important;line-height:1.2 !important;}' +
+      // v2.44.116 — Fridge/Freezer (haccp_logs) referansıyla hizalandı (0.5mm/1.1) → çok-aylık tek sayfa/ay.
+      '.pcd-print-footer{margin:0 !important;padding:0.5mm 4mm !important;border-top:none !important;flex:0 0 auto;font-size:7pt !important;line-height:1.1 !important;}' +
       '@page{size:A4 landscape;margin:0;}' +
     '</style>' +
     '<div class="h-sheet">' +

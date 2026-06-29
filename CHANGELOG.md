@@ -4,6 +4,25 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.118 — Menu Engineering ↔ Record Sales görünürlük köprüsü · 2026-06-29
+Yeni kullanıcı, Menu Engineering "Period"unun satış verisini **Inventory → Record sales**'ten çektiğini anlamıyordu (bağ yalnız küçük ipucu metnindeydi). Yerleşim doğru (Record Sales stok düşürür + `salesLog` Menu Eng/Variance/Dashboard'u besleyen merkezi kaynak) — değiştirmedik, **bağı görünür kıldık:**
+- **Period satırında "Record sales →" kısayolu** (her zaman) → tek tıkla Inventory'ye gidip Record Sales modalını açar.
+- **Dönem seçili ama o aralıkta satış yoksa** → belirgin amber uyarı: "No sales recorded for these dates — Record them in Inventory → Record sales" + buton.
+- **Hiç satış kaydı yoksa** → "enter how many sold" ipucuna "Inventory → Record sales'e gir, sonra Period seç" eklenir.
+- `PCD.tools.inventory.openRecordSales` dışa açıldı (köprü için). 4 yeni i18n anahtarı **6 dilde TAM**. Veri modeli değişmedi. `node -c` temiz; preview'da doğrulandı (buton → Inventory + Record Sales modalı açılır; dönem+satış-yok → amber+buton; 0 console hatası).
+
+## v2.44.117 — Hot/Cold Holding çok-aylık baskı: artık ay-ay (boşsa boş şablon), diğer 3 formla tutarlı · 2026-06-29
+Holding "Months…" diğer 3 HACCP formundan farklı davranıyordu: aralıktaki her KAYITLI GÜN için ayrı sayfa basıyor, hiç kayıt yoksa toast veriyordu (operatör: "boş aylar bile ay-ay liste vermeli; tek kayıtta sadece o günü veriyor"). Kök neden: holding per-gün modellenmiş (gün-içi çok kontrol), diğerleri per-ay.
+- **"Months…" artık her ay için BİR aylık sayfa** üretir: o ayın TÜM kayıtları gün gün satır olarak (gün-içi çoklu kayıt korunur — her kontrol bir satır), 31'e kadar boş satırla doldurulur; **boş ay = boş şablon, toast YOK.** 4 HACCP formu artık birebir aynı davranır (seç → her ay bir sayfa).
+- `buildPrintTable` isMonthly modu yeniden yazıldı (kayıtları satır satır, gün sütunlu); `printMonthFilled` + `listForMonth` eklendi. Redundant **"Aylık boş" butonu + month-picker + printMonthBlank kaldırıldı** (range tek ayla aynısını verir; ölü kod temizlendi). Çok yoğun ay (>31 kayıt) o ay için 2. sayfaya akar (doğru).
+- `node -c` temiz; preview'da ÖLÇÜLEREK doğrulandı: boş aralık → 6 ay = 6 sayfa (773px ≤ 794px, toast yok); Mart'a 3 kayıt (15. güne 2 + 22. güne 1) → Mart sayfasında 3 satır (gün 15 iki kez, gün 22), Ocak boş; 0 console hatası.
+
+## v2.44.116 — Receiving Log baskısı tek sayfaya sığar (Cook & Cool ile aynı düzeltme) · 2026-06-29
+Receiving Log çok-aylık baskıda da her ay 2. sayfaya taşıyordu (6 ay → 12 sayfa). v2.44.115 (cooling) ile aynı kök neden: print metrikleri Fridge/Freezer referansından daha "şişman"dı.
+- Ortak `printStylesAndHeader`: satır 22→**21px**, hücre dolgusu `2px 4px`→**`2px 3px`**, `.h-foot` üst boşluğu 2→1px, PCD.print footer `1mm/1.2`→**`0.5mm/1.1`**. Ayrıca `printMonthBlank`'taki inline `height:22px`→**21px** (tek-ay boş şablon da düzeldi).
+- Tek `printStylesAndHeader` hem aylık-dolu (range) hem aylık-blank çıktısını besler → tek düzeltme tüm Receiving çıktılarını kapsar. `node -c` temiz; preview'da ÖLÇÜLEREK doğrulandı (6 ayın 6'sı da 771px ≤ 794px, 0 console hatası).
+- **Hot/Cold Holding** print metrikleri de aynı şekilde Fridge/Freezer referansına hizalandı (latent aynı taşma: "Aylık boş" 31-satır şablonu). 4 HACCP formunun hepsi artık aynı kompakt baskı metriğini paylaşır (21px/2px3px/0.5mm — CLAUDE.md notu). Holding aylık-blank ölçüldü: 437px ≤ 794px.
+
 ## v2.44.115 — Cook & Cool Log baskısı tek sayfaya sığar (Fridge/Freezer referansıyla hizalandı) · 2026-06-29
 Cook & Cool Log çok-aylık baskıda her ay küçük bir taşmayla 2. sayfaya geçiyordu (6 ay → 12 sayfa). Taşan kısım alt bilgiydi (HACCP gates + Reviewed by). Kusursuz çalışan **Fridge & Freezer Log (haccp_logs)** baskısı referans alınıp Cook & Cool'un print metrikleri birebir hizalandı:
 - Satır yüksekliği 22px → **21px**, hücre dolgusu `3px 4px` → **`2px 3px`**, satır-içi yükseklik 1.3 → **1.25**, alt-bilgi (`.h-foot`) üst boşluğu 2px → 1px, ve PCD.print enjekte footer'ı `1mm/1.2` → **`0.5mm/1.1`** (logs ile aynı).
