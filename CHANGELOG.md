@@ -4,6 +4,24 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.111 — Menu Studio manuel alerjen kontrolü (Adım 3/3) · 2026-06-29
+Alerjen yalnız tariften otomatik geliyordu → tarife bağlı OLMAYAN (manuel) kalemde hiç görünmüyordu, çapraz-bulaşma için şef ekleyemiyordu (yasal sorumluluk şefte).
+- **Yemek-başı manuel alerjen:** kalem editöründe 14 EU alerjen chip'i. Tariften gelen otomatikler **kilitli-açık** (tarifin doğrusu korunur), diğerleri **eklenebilir** (çapraz-bulaşma + manuel kalem). Efektif küme = otomatik ∪ manuel (`it.allergens`).
+- Manuel kalem (tarifsiz) artık alerjen gösterebiliyor; reçeteli kaleme ekstra alerjen (ör. servis sesame'i) eklenebiliyor. Legend + inline efektif kümeyi yansıtır; tek motor (kanvas=baskı=paylaşım).
+- Mevcut `ms_allergen_codes` + `ms_allergen_auto` i18n yeniden kullanıldı → **yeni anahtar yok**. `node -c` temiz; preview'da doğrulandı (reçeteli "v gf (SE D G N)" otomatik∪manuel; manuel kalem "Market Bread Basket (G SE)"; editörde 7 otomatik kilitli + 49 toggle; 0 console hatası).
+
+## v2.44.110 — Menu Studio diyet etiketleri (Adım 2/3): yemek-başı V/VG/GF… · 2026-06-29
+Menüde yalnız "içerir" alerjeni vardı, "uygundur" diyet işareti yoktu. Müşteri menüsünün caterer/event için en çok sorulan bilgisi.
+- **Yemek-başı diyet etiketi** (V / VG / GF / DF / NF / H) — şef kalem editöründe toggle'lar; menüde yemek adının yanında **küçük-harf accent rozet** (uygunluk), alerjenden (BÜYÜK, içerir) görsel olarak ayrı — standart menü konvansiyonu. Legend'e diyet grubu eklendi (kod + okunur etiket).
+- Etiketler mevcut `menu_code_*` i18n'inden (6 dilde tam) → 3 küçük UI anahtarı yeni. Sayfa ayarlarında "Diyet etiketleri" toggle (varsayılan AÇIK — şef-girişli, işaretlenen görünür; alerjen otomatik olduğu için KAPALI kalır, bilinçli asimetri).
+- Tek motor (renderPageInner) → kanvas = baskı = paylaşım. `node -c` temiz; preview'da doğrulandı (inline "v gf (D G N)", legend diyet+alerjen iki grup, item editör 18 toggle doğru aktif, 0 console hatası). **Sıradaki:** Adım 3 — manuel alerjen kontrolü.
+
+## v2.44.109 — Menu Studio okunur alerjen legend (Adım 1/3) · 2026-06-29
+Menü tariften otomatik alerjen kodu çıkarıyordu ("G D N") ama alttaki açıklama satırı sadece kodları (`G · D · N`) listeliyordu — harflerin ne olduğu yoktu, müşteri/denetçi çözemiyordu. Niş yasal çekirdeği (UK Natasha's Law · FSANZ/Perth · FSA Mart 2025 "menüde yazılı alerjen").
+- **Legend artık kod + okunur açıklama:** "G Cereals with gluten · E Eggs · D Milk/Dairy …", allergens-db sırasıyla, "Key" başlığıyla. Mevcut `allerg_*` i18n (14 alerjen, **6 dilde zaten tam**) yeniden kullanıldı → yeni çeviri yok.
+- Inline kodlar (yemek adı yanındaki "D G N") DEĞİŞMEDİ; tek motor (renderPageInner) → kanvas = baskı = paylaşım birebir. `itemAllergenKeys` eklendi (anahtar kaynağı), `itemAllergenCodes` onun üstüne kuruldu. `soybeans` kodu 'SO' fallback'inden 'S'ye düzeltildi.
+- `node -c` temiz; preview'da doğrulandı (3 alerjenli demo tarifle legend "G/E/F/D/N + etiket", konsol 0 hata). **Sıradaki:** Adım 2 — yemek-başı diyet etiketi (V/VG/GF…); Adım 3 — manuel alerjen kontrolü.
+
 ## v2.44.108 — Roster ↔ Events bağı (Adım 3/3): haftalık ciroyu o haftanın event'lerinden doldur · 2026-06-29
 İşçilik % için haftalık ciro elle giriliyordu. Artık tek tıkla o haftanın **onaylı + tamamlanmış** event'lerinin müşteri cirosundan otomatik dolar — Events'teki P&L ile Roster'ın işçilik KPI'ı arasındaki tek mantıklı, zorlama-olmayan bağ.
 - **"Bu haftanın event'lerini kullan ({tutar})" butonu** haftalık ciro alanının altında — yalnız o hafta aralığında (`weekStart`..+gün) tarihli **confirmed/done** event varsa görünür (draft/tentative/cancelled hariç). Tıkla → ciro o event'lerin toplam gelirine set + KPI anında yeniden hesaplanır. Kullanıcı sonra elle düzeltebilir (değer otoriter değil).

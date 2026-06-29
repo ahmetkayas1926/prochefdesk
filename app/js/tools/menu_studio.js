@@ -69,6 +69,9 @@
     if (!p.paper) p.paper = 'A4';
     if (p.columns == null) p.columns = 1;
     if (p.showPrices == null) p.showPrices = true;
+    // v2.44.110 — Diyet etiketleri varsayılan AÇIK (şef-girişli → işaretlenen görünsün);
+    // alerjen otomatik olduğu için varsayılan KAPALI (kalabalık yapmasın) — bilinçli asimetri.
+    if (p.showDiet == null) p.showDiet = true;
     return d;
   }
   function uid() { return PCD.uid ? PCD.uid('b') : 'b' + Math.random().toString(36).slice(2); }
@@ -81,9 +84,19 @@
   const ALLERGEN_CODE = {
     gluten: 'G', wheat: 'G', dairy: 'D', milk: 'D', egg: 'E', eggs: 'E',
     fish: 'F', shellfish: 'SF', crustaceans: 'SF', molluscs: 'M',
-    nuts: 'N', treenuts: 'N', peanuts: 'P', soy: 'S', soya: 'S',
+    nuts: 'N', treenuts: 'N', peanuts: 'P', soy: 'S', soya: 'S', soybeans: 'S',
     sesame: 'SE', mustard: 'MU', celery: 'C', lupin: 'L', sulphites: 'SU', sulfites: 'SU',
   };
+  // v2.44.109 — Alerjen anahtarı → kısa kod (inline) + okunur etiket (legend).
+  // recipeAllergens allergens-db anahtarlarını döndürür → allerg_* i18n ile birebir.
+  function allergenCodeFor(k) { return ALLERGEN_CODE[String(k).toLowerCase()] || String(k).slice(0, 2).toUpperCase(); }
+  function allergenLabelFor(k) { const key = 'allerg_' + String(k).toLowerCase(); const v = t(key); return (v && v !== key) ? v : String(k); }
+
+  // v2.44.110 — Diyet/uygunluk etiketleri (şef-kontrollü, kalem-başı it.diet[]).
+  // Konvansiyon: KÜÇÜK harf = diyet/uygunluk (yeşil/accent), BÜYÜK = içerir alerjen.
+  // Etiketler mevcut menu_code_* i18n'inden (6 dilde tam) gelir.
+  const DIET_CODES = ['v', 'vg', 'gf', 'df', 'nf', 'h'];
+  function dietLabelFor(c) { const key = 'menu_code_' + String(c).toLowerCase(); const v = t(key); return (v && v !== key) ? v : String(c).toUpperCase(); }
 
   // ---- Ayraç kütüphanesi (çizgi + süs + kombinasyon) ----
   const DIV_STYLES = [
@@ -642,13 +655,25 @@
     const c = itemCost(it); if (c == null) return null;
     return ((price - c) / price) * 100;
   }
-  function itemAllergenCodes(it) {
+  // v2.44.109 — Bir kalemin alerjen ANAHTARLARI. Legend okunur etiketleri buradan
+  // üretir; itemAllergenCodes inline kısa kodları buradan map'ler.
+  // v2.44.111 — EFEKTİF küme = tariften OTOMATİK ∪ şefin MANUEL eklediği (it.allergens).
+  // Manuel: tarife bağlı olmayan kalemler + çapraz-bulaşma; otomatik silinemez (tariften gelir).
+  function itemAutoAllergenKeys(it) {
     if (!it.recipeId || !PCD.allergensDB || !PCD.allergensDB.recipeAllergens) return [];
     const r = PCD.store.getRecipe(it.recipeId); if (!r) return [];
-    const keys = PCD.allergensDB.recipeAllergens(r, PCD.store.listIngredients()) || [];
+    return (PCD.allergensDB.recipeAllergens(r, PCD.store.listIngredients()) || []).map(function (k) { return String(k).toLowerCase(); });
+  }
+  function itemAllergenKeys(it) {
+    const set = {};
+    (it.allergens || []).forEach(function (k) { set[String(k).toLowerCase()] = true; });
+    itemAutoAllergenKeys(it).forEach(function (k) { set[k] = true; });
+    return Object.keys(set);
+  }
+  function itemAllergenCodes(it) {
     const codes = [];
-    keys.forEach(function (k) {
-      const code = ALLERGEN_CODE[String(k).toLowerCase()] || String(k).slice(0, 2).toUpperCase();
+    itemAllergenKeys(it).forEach(function (k) {
+      const code = allergenCodeFor(k);
       if (codes.indexOf(code) < 0) codes.push(code);
     });
     return codes;
@@ -688,6 +713,8 @@
         if (it.photo) h += '<img src="' + it.photo + '" style="width:56px;height:56px;object-fit:cover;border-radius:8px;flex-shrink:0;">';
         h += '<div style="flex:1;min-width:0;"><div style="display:flex;align-items:baseline;gap:8px;">';
         let nm = esc(it.name);
+        // v2.44.110 — Diyet etiketi (küçük, accent) → uygunluk; sonra alerjen (içerir)
+        if (page.showDiet && (it.diet || []).length) nm += ' <span style="font-size:9px;font-weight:700;color:' + accent + ';letter-spacing:0.5px;">' + (it.diet || []).map(function (c) { return esc(c); }).join(' ') + '</span>';
         if (page.showAllergens) { const codes = itemAllergenCodes(it); if (codes.length) nm += ' <span style="font-size:9px;font-weight:700;color:' + (page.ink || ink) + '99;letter-spacing:0.5px;">(' + codes.join(' ') + ')</span>'; }
         h += '<span style="font-family:' + fontCss(b.itemFont || page.baseFont) + ';font-size:' + (b.itemSize || 15) + 'px;font-weight:600;color:' + (page.ink || ink) + ';">' + nm + '</span>';
         h += '<span style="flex:1;border-bottom:1px dotted ' + (page.ink || ink) + '40;margin:0 4px;transform:translateY(-3px);"></span>';
@@ -701,12 +728,26 @@
     if (b.type === 'spacer') return '<div style="height:' + (b.height || 24) + 'px;"></div>';
     return '';
   }
+  // v2.44.109 — Okunur alerjen legend: kod + açıklama (G — Gluten…), allergens-db
+  // sırasıyla, uyum/müşteri netliği için. "G · D · N" yerine çözülebilir liste.
   function legendHtml(d, page) {
-    if (!page.showAllergens) return '';
-    const used = {};
-    (d.blocks || []).forEach(function (b) { if (b.type === 'section') (b.items || []).forEach(function (it) { itemAllergenCodes(it).forEach(function (c) { used[c] = true; }); }); });
-    const codes = Object.keys(used); if (!codes.length) return '';
-    return '<div style="margin-top:20px;font-family:' + fontCss(page.baseFont) + ';font-size:10px;color:' + (page.ink || '#111') + '99;text-align:center;">' + codes.map(function (c) { return '<b>' + c + '</b>'; }).join(' · ') + '</div>';
+    const blocks = d.blocks || [];
+    // v2.44.110 — Diyet kodları (şef-girişli) + alerjen anahtarları (otomatik) ayrı toplanır.
+    const dietUsed = {};
+    if (page.showDiet) blocks.forEach(function (b) { if (b.type === 'section') (b.items || []).forEach(function (it) { (it.diet || []).forEach(function (c) { dietUsed[c] = true; }); }); });
+    const algUsed = {};
+    if (page.showAllergens) blocks.forEach(function (b) { if (b.type === 'section') (b.items || []).forEach(function (it) { itemAllergenKeys(it).forEach(function (k) { algUsed[String(k).toLowerCase()] = true; }); }); });
+    const order = (PCD.allergensDB && PCD.allergensDB.list) ? PCD.allergensDB.list.map(function (a) { return a.key; }) : [];
+    const algKeys = order.filter(function (k) { return algUsed[k]; });
+    Object.keys(algUsed).forEach(function (k) { if (algKeys.indexOf(k) < 0) algKeys.push(k); }); // fallback anahtarlar
+    const dietKeys = DIET_CODES.filter(function (c) { return dietUsed[c]; });
+    if (!algKeys.length && !dietKeys.length) return '';
+    const ink = page.ink || '#111';
+    const accent = page.accent || '#c5a572';
+    const parts = [];
+    dietKeys.forEach(function (c) { parts.push('<span style="white-space:nowrap;margin:0 7px;"><b style="color:' + accent + ';">' + esc(c) + '</b> ' + esc(dietLabelFor(c)) + '</span>'); });
+    algKeys.forEach(function (k) { parts.push('<span style="white-space:nowrap;margin:0 7px;"><b>' + esc(allergenCodeFor(k)) + '</b> ' + esc(allergenLabelFor(k)) + '</span>'); });
+    return '<div style="margin-top:20px;font-family:' + fontCss(page.baseFont) + ';font-size:10px;color:' + ink + '99;text-align:center;line-height:1.8;"><span style="text-transform:uppercase;letter-spacing:0.08em;font-weight:700;margin-inline-end:4px;">' + esc(t('menu_allergen_legend')) + '</span>' + parts.join('') + '</div>';
   }
   function blockIsFullWidth(b, cols) {
     if (cols <= 1) return false;
@@ -813,6 +854,7 @@
     h += sRow(t('ms_frame'), pill('data-frame', design.page.frame ? (design.page.frameStyle || 'thin') : 'off', [{ v: 'off', l: esc(t('ms_frame_off')) }, { v: 'thin', l: esc(t('ms_frame_thin')) }, { v: 'double', l: esc(t('ms_frame_double')) }]) + (design.page.frame ? ' ' + colIn('page.frameColor', design.page.frameColor, design.page.accent) : ''));
     h += sRow(t('ms_show_prices'), '<button type="button" class="btn btn-sm ' + (design.page.showPrices !== false ? 'btn-primary' : 'btn-outline') + '" data-toggle-page="showPrices">' + (design.page.showPrices !== false ? ON : OFF) + '</button>');
     h += sRow(t('ms_allergen_codes'), '<button type="button" class="btn btn-sm ' + (design.page.showAllergens ? 'btn-primary' : 'btn-outline') + '" data-toggle-page="showAllergens">' + (design.page.showAllergens ? ON : OFF) + '</button> <span style="font-size:11px;color:var(--text-3);">' + esc(t('ms_allergen_auto')) + '</span>');
+    h += sRow(t('ms_show_diet'), '<button type="button" class="btn btn-sm ' + (design.page.showDiet ? 'btn-primary' : 'btn-outline') + '" data-toggle-page="showDiet">' + (design.page.showDiet ? ON : OFF) + '</button> <span style="font-size:11px;color:var(--text-3);">' + esc(t('ms_diet_per_dish')) + '</span>');
     h += '<div style="display:flex;gap:6px;margin-top:8px;"><button type="button" class="btn btn-ghost btn-sm" id="msBrandSave" style="flex:1;">' + esc(t('ms_save_brand')) + '</button><button type="button" class="btn btn-ghost btn-sm" id="msBrandApply" style="flex:1;">' + esc(t('ms_apply')) + '</button></div>';
     return h;
   }
@@ -844,6 +886,18 @@
         h += '<input type="text" class="input" data-itf="desc" value="' + esc(it.desc) + '" placeholder="' + esc(t('ms_desc_ph')) + '" style="width:100%;margin-bottom:4px;">';
         h += '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">' + (it.photo ? '<img src="' + it.photo + '" style="width:30px;height:30px;object-fit:cover;border-radius:5px;">' : '') + '<button type="button" class="btn btn-outline btn-sm" data-itphoto>' + (it.photo ? esc(t('ms_photo')) : esc(t('ms_add_photo'))) + '</button>' + (it.photo ? '<button type="button" class="btn btn-ghost btn-sm" data-itphotodel>' + esc(t('ms_remove')) + '</button>' : '') +
           (m != null ? '<span style="margin-inline-start:auto;font-size:11px;font-weight:700;color:' + (m >= 65 ? '#16a34a' : m >= 55 ? '#d97706' : '#dc2626') + ';">' + esc(t('ms_margin_pct', { n: m.toFixed(0) })) + '</span>' : (it.recipeId ? '' : '<span style="margin-inline-start:auto;font-size:10px;color:var(--text-3);">' + esc(t('ms_manual_tag')) + '</span>')) + '</div>';
+        // v2.44.110 — Diyet etiketi toggle'ları (kalem-başı; menüde küçük-harf rozet)
+        h += '<div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;margin-top:6px;"><span style="font-size:10px;color:var(--text-3);margin-inline-end:2px;">' + esc(t('ms_diet_tags')) + '</span>' +
+          DIET_CODES.map(function (code) { const on = (it.diet || []).indexOf(code) >= 0; return '<button type="button" class="btn btn-sm ' + (on ? 'btn-primary' : 'btn-outline') + '" data-itdiet="' + code + '" title="' + esc(dietLabelFor(code)) + '" style="padding:1px 7px;font-size:10px;">' + esc(code.toUpperCase()) + '</button>'; }).join('') + '</div>';
+        // v2.44.111 — Manuel alerjen: otomatik (tariften) kilitli-açık; diğerleri eklenebilir (çapraz-bulaşma + manuel kalem)
+        const _autoAlg = itemAutoAllergenKeys(it);
+        const _algList = (PCD.allergensDB && PCD.allergensDB.list) ? PCD.allergensDB.list : [];
+        h += '<div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;margin-top:5px;"><span style="font-size:10px;color:var(--text-3);margin-inline-end:2px;">' + esc(t('ms_allergen_codes')) + '</span>' +
+          _algList.map(function (a) {
+            const auto = _autoAlg.indexOf(a.key) >= 0;
+            const on = auto || (it.allergens || []).indexOf(a.key) >= 0;
+            return '<button type="button" class="btn btn-sm ' + (on ? 'btn-primary' : 'btn-outline') + '"' + (auto ? ' disabled title="' + esc(t('ms_allergen_auto')) + '"' : ' data-italg="' + a.key + '" title="' + esc(allergenLabelFor(a.key)) + '"') + ' style="padding:1px 6px;font-size:10px;' + (auto ? 'opacity:0.65;cursor:default;' : '') + '">' + esc(allergenCodeFor(a.key)) + '</button>';
+          }).join('') + '</div>';
         h += '</div>';
       });
       h += '<div style="display:flex;gap:6px;"><button type="button" class="btn btn-ghost btn-sm" data-additem-recipe style="flex:1;">' + esc(t('ms_add_from_recipe')) + '</button><button type="button" class="btn btn-ghost btn-sm" data-additem-manual style="flex:1;">' + esc(t('ms_add_manual')) + '</button></div>';
@@ -960,6 +1014,10 @@
         const dl = row.querySelector('[data-itdel]'); if (dl) dl.addEventListener('click', function () { b.items = b.items.filter(function (x) { return x.id !== iid; }); refreshPage(); repaint(); });
         const ph = row.querySelector('[data-itphoto]'); if (ph) ph.addEventListener('click', function () { pickImage(function (src) { it.photo = src; refreshPage(); repaint(); }); });
         const phd = row.querySelector('[data-itphotodel]'); if (phd) phd.addEventListener('click', function () { it.photo = null; refreshPage(); repaint(); });
+        // v2.44.110 — Diyet etiketi aç/kapa (kalem-başı)
+        row.querySelectorAll('[data-itdiet]').forEach(function (btn) { btn.addEventListener('click', function () { const code = btn.getAttribute('data-itdiet'); it.diet = it.diet || []; const i = it.diet.indexOf(code); if (i >= 0) it.diet.splice(i, 1); else it.diet.push(code); refreshPage(); repaint(); }); });
+        // v2.44.111 — Manuel alerjen aç/kapa (yalnız otomatik-olmayan; otomatikler disabled)
+        row.querySelectorAll('[data-italg]').forEach(function (btn) { btn.addEventListener('click', function () { const k = btn.getAttribute('data-italg'); it.allergens = it.allergens || []; const i = it.allergens.indexOf(k); if (i >= 0) it.allergens.splice(i, 1); else it.allergens.push(k); refreshPage(); repaint(); }); });
       });
       const aR = root.querySelector('[data-additem-recipe]'); if (aR) aR.addEventListener('click', function () { openRecipePicker(b); });
       const aM = root.querySelector('[data-additem-manual]'); if (aM) aM.addEventListener('click', function () { b.items = b.items || []; b.items.push({ id: uid(), name: t('ms_new_dish'), price: '', desc: '', photo: null }); refreshPage(); repaint(); });

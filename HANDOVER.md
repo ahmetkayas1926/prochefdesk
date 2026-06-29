@@ -31,7 +31,7 @@ Sidebar bölümleri. İkincil araçlar (Menu engineering / Nutrition / Batch / V
 
 **Ingredients** — birim fiyat, 11 kategori, tedarikçi bağı, yield %, **raf-ömrü (gün, opsiyonel)**, fiyat geçmişi grafiği. CSV/Excel import-export + Lists sekmeli şablon · Sync ✓.
 
-**Menus** (Menu Builder = Menu Studio) — blok-kanvas menü tasarımcı (başlık/metin/bölüm[yemek listesi, tariften otomatik]/görsel/ayraç/boşluk); A4–A3–A5–Letter, dikey/yatay, 1–4 sütun, sayfa çerçevesi, accent/metin/bg rengi, marka kiti. Blok tıkla → düzenleme popup (sağda "Blocks" katman listesi); sayfa ayarları ayrı 🎨 popup. Diyet + alerjen harf kodları (bilgi amaçlı). 10 hazır şablon. WYSIWYG (kanvas = baskı = paylaşım). Print · QR/Link + cost-view (Pro) · Sync ✓ (`menus`, `studio` blob).
+**Menus** (Menu Builder = Menu Studio) — blok-kanvas menü tasarımcı (başlık/metin/bölüm[yemek listesi, tariften otomatik]/görsel/ayraç/boşluk); A4–A3–A5–Letter, dikey/yatay, 1–4 sütun, sayfa çerçevesi, accent/metin/bg rengi, marka kiti. Blok tıkla → düzenleme popup (sağda "Blocks" katman listesi); sayfa ayarları ayrı 🎨 popup. **Alerjen & diyet (uyum):** tariften OTOMATİK alerjen + şefin yemek-başı eklediği MANUEL alerjen (çapraz-bulaşma/tarifsiz kalem; otomatikler kilitli) + yemek-başı diyet etiketi (V/VG/GF/DF/NF/H, küçük-harf accent rozet); **okunur legend** (kod + açıklama, allergens-db sırası). 20 hazır şablon. WYSIWYG (kanvas = baskı = paylaşım). Print · QR/Link + cost-view (Pro) · Sync ✓ (`menus`, `studio` blob).
 
 ### Kitchen
 
