@@ -24,7 +24,7 @@ Sidebar bölümleri. İkincil araçlar (Menu engineering / Nutrition / Batch / V
 
 ### Library
 
-**Recipes** — malzeme / alt-tarif / hazırlık adımı / foto + otomatik maliyet; 9 kategori (Appetizer, Soup, Salad, Main, Side, Dessert, Breakfast, Drink, Other), toplu seçim-silme, "Convert to Prep". Çıktı: maliyet raporu Print + Excel · QR/Link paylaşım + Discover yayın · Sync ✓.
+**Recipes** — malzeme / alt-tarif / hazırlık adımı / foto + otomatik maliyet; 9 kategori (Appetizer, Soup, Salad, Main, Side, Dessert, Breakfast, Drink, Other), toplu seçim-silme, "Convert to Prep". **Fiyatlandırma zekâsı (editörde):** ayarlanabilir hedef food cost % (`targetFoodCostPct`) → önerilen fiyat/porsiyon + brüt kâr/porsiyon + "fiyatı uygula" tek tık; food cost % rengi recipe'nin hedefine göre. Cost Report da aynı per-recipe hedefi kullanır (editör↔report tutarlı). Çıktı: maliyet raporu Print + Excel · QR/Link paylaşım + Discover yayın · Sync ✓.
 - alt-sekme **Menu engineering** — her yemek Star/Plowhorse/Puzzle/Dog (marj × satış); maliyet `computeFoodCost`, satış `recipe.salesCount` (Record sales artırır), fiyat/satış inline düzenlenir; mini P&L özeti; maliyet-altı satılan kırmızı uyarı.
 - alt-sekme **Nutrition** — porsiyon başı tahmini kalori/protein/karb/yağ (recipe malzemelerinden, USDA/FSANZ; tahmin, sertifikalı etiket değil).
 - alt-sekme **Batch** (Batch Calculator; route `portion`) — tarifi/alt-tarifi N adete ölçekle → toplam malzeme + maliyet; tarif/kategori/tedarikçi görünümü, alt-tarifler ingredient'e flatten. Print + stilize Excel + metin paylaşımı.

@@ -4,6 +4,18 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.113 — Recipe fiyatlandırma tutarlılığı (Adım 2/2): Cost Report recipe hedefini kullanır · 2026-06-29
+Cost Report reverse-pricing'i sabit %30 kullanıyordu; editöre az önce eklenen per-recipe hedefle çelişiyordu. Artık ikisi aynı hedefi konuşur.
+- **Cost Report her recipe'nin kendi `targetFoodCostPct`'ini kullanır** (yoksa 30 fallback): önerilen fiyat + food cost % durum rengi (≤hedef yeşil/≤hedef+5 amber/üstü kırmızı) + her kartta "target X%" etiketi. Global başlıktaki sabit "%30" kaldırıldı (hedef artık kart-bazlı).
+- **Çıktılar da tutarlı:** PDF + Excel'de per-kalem önerilen fiyat etiketi + Excel'deki hedef hücresi (formül zaten per-row targetRow'a bakıyordu) recipe'nin hedefini yansıtır. Yeni i18n yok (mevcut `cr_*` kullanıldı).
+- Paylaşılan compute API'sine yine DOKUNULMADI. `node -c` temiz; preview'da doğrulandı (soup hedef %22→önerilen $16.74, Foie Gras varsayılan %30→$33.22, global başlık sayısı yok, **0 console hatası**).
+
+## v2.44.112 — Recipe editör fiyatlandırma zekâsı (Adım 1/2) · 2026-06-29
+Şef satış fiyatını körlemesine giriyordu (sadece food cost % renk geri-bildirimi, sabit eşik). Reverse-pricing yalnız ayrı Cost Report'ta + sabit %30'daydı. Costing yazılımının çekirdek özelliği "maliyet + hedef % → önerilen fiyat" artık fiyatın girildiği yerde.
+- **Editöre fiyatlandırma paneli:** ayarlanabilir **hedef food cost %** (recipe'de `targetFoodCostPct`, vars. 30) + **önerilen fiyat/porsiyon** (maliyet ÷ hedef%) + **brüt kâr/porsiyon ($)** + "**Önerilen fiyatı uygula**" tek tık (mevcut `salePrice`'ı doldurur). Food cost % rengi artık sabit 35/45 yerine **recipe'nin hedefine göre** (≤hedef yeşil / ≤hedef+5 amber / üstü kırmızı). Prep'te panel gizli.
+- **Regresyon güvenliği:** paylaşılan compute API'sine (`computeFoodCost`/`flattenIngredients`/`costBreakdownRows`/`isPrep` — 16 araç tüketir) DOKUNULMADI; `ingredients[]` şekli değişmedi. Yalnız mevcut `salePrice` yazılır + additive `targetFoodCostPct` (kimse okumaz). 5 yeni i18n anahtarı **6 dilde TAM**.
+- `node -c` temiz; preview'da uçtan uca + regresyon doğrulandı: panel (hedef 22→suggested $16.74, "Uygula"→fiyat dolar, GP canlı), persistence+read-back, paylaşılan API 6 tarifte doğru maliyet (sub-recipe dahil), Cost Report çalışır, **0 console hatası**. **Sıradaki:** Adım 2 — Cost Report sabit %30 yerine recipe'nin hedefini kullansın (editör↔report tutarlı).
+
 ## v2.44.111 — Menu Studio manuel alerjen kontrolü (Adım 3/3) · 2026-06-29
 Alerjen yalnız tariften otomatik geliyordu → tarife bağlı OLMAYAN (manuel) kalemde hiç görünmüyordu, çapraz-bulaşma için şef ekleyemiyordu (yasal sorumluluk şefte).
 - **Yemek-başı manuel alerjen:** kalem editöründe 14 EU alerjen chip'i. Tariften gelen otomatikler **kilitli-açık** (tarifin doğrusu korunur), diğerleri **eklenebilir** (çapraz-bulaşma + manuel kalem). Efektif küme = otomatik ∪ manuel (`it.allergens`).

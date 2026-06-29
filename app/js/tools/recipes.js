@@ -1092,7 +1092,10 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
       const servings = r.servings || 1;
       const costPerServing = totalCost / servings;
       const currentPrice = r.salePrice != null ? Number(r.salePrice) : null;
-      const suggestedPrice = costPerServing > 0 ? (costPerServing / (TARGET_FOOD_COST_PCT / 100)) : 0;
+      // v2.44.113 — Recipe'nin KENDİ hedefi (editörde set edilir); yoksa 30 fallback.
+      // Editör ile Cost Report aynı hedefi kullanır → tutarlı.
+      const itemTarget = Number(r.targetFoodCostPct) || TARGET_FOOD_COST_PCT;
+      const suggestedPrice = costPerServing > 0 ? (costPerServing / (itemTarget / 100)) : 0;
       items.push({
         recipe: r,
         totalCost: totalCost,
@@ -1100,6 +1103,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
         costPerServing: costPerServing,
         currentPrice: currentPrice,
         suggestedPrice: suggestedPrice,
+        target: itemTarget,
         // User-editable working price for live testing
         testPrice: currentPrice != null ? currentPrice : suggestedPrice,
       });
@@ -1116,9 +1120,9 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
       let summaryTotalCost = 0;
       let summaryTotalRevenue = 0;
       const recipeKey = items.length === 1 ? 'cr_n_recipes' : 'cr_n_recipes_plural';
+      // v2.44.113 — Hedef artık recipe-bazlı (her kartta gösterilir) → global başlık sayısı kaldırıldı.
       let html = '<div class="text-muted text-sm mb-3">' +
         t(recipeKey, { n: items.length }) +
-        ' · ' + t('cr_target_food_cost') + ': <strong>' + TARGET_FOOD_COST_PCT + '%</strong>' +
         ' · ' + t('cr_tip') +
       '</div>';
 
@@ -1137,7 +1141,9 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
           summaryTotalRevenue += (it.testPrice || 0) * it.servings;
         }
         const fcPct = (it.testPrice && it.testPrice > 0) ? (it.costPerServing / it.testPrice) * 100 : 0;
-        const status = fcPct === 0 ? 'gray' : fcPct < 25 ? 'green' : fcPct < 35 ? 'amber' : 'red';
+        // v2.44.113 — Durum recipe'nin hedefine göre (editörle aynı): ≤hedef yeşil · ≤hedef+5 amber · üstü kırmızı.
+        const _it_tgt = it.target || TARGET_FOOD_COST_PCT;
+        const status = fcPct === 0 ? 'gray' : fcPct <= _it_tgt ? 'green' : fcPct <= _it_tgt + 5 ? 'amber' : 'red';
         const statusColor = status === 'green' ? 'var(--success)' : status === 'amber' ? '#d97706' : status === 'red' ? 'var(--danger)' : 'var(--text-3)';
 
         // Ingredient table — v2.43.18: simple (sub-recipe as 1 line) or detailed
@@ -1176,6 +1182,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
               '<div style="text-align:end;">' +
                 '<div class="text-muted" style="font-size:11px;text-transform:uppercase;letter-spacing:0.04em;font-weight:700;">' + t('cr_food_cost_pct') + '</div>' +
                 '<div style="font-size:22px;font-weight:800;color:' + statusColor + ';">' + fcPct.toFixed(1) + '%</div>' +
+                (PCD.recipes.isPrep(r) ? '' : '<div style="font-size:10px;color:var(--text-3);">' + t('cr_target_food_cost') + ' ' + _it_tgt + '%</div>') +
               '</div>' +
             '</div>' +
 
@@ -1217,7 +1224,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
                 '<div style="font-weight:700;font-size:15px;">' + (it.currentPrice != null ? PCD.fmtMoney(it.currentPrice) : '<span style="color:var(--text-3);">—</span>') + '</div>' +
               '</div>' +
               '<div>' +
-                '<div class="text-muted" style="font-size:10px;text-transform:uppercase;letter-spacing:0.04em;font-weight:700;">' + t('cr_suggested', { n: TARGET_FOOD_COST_PCT }) + '</div>' +
+                '<div class="text-muted" style="font-size:10px;text-transform:uppercase;letter-spacing:0.04em;font-weight:700;">' + t('cr_suggested', { n: it.target || TARGET_FOOD_COST_PCT }) + '</div>' +
                 '<div style="font-weight:700;font-size:15px;color:var(--brand-700);">' + PCD.fmtMoney(it.suggestedPrice) + '</div>' +
               '</div>' +
               '<div>' +
@@ -1374,7 +1381,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
           (PCD.recipes.isPrep(it.recipe) ? '' :
           '<div class="pricing">' +
             '<div><div class="lbl">' + t('cr_current_price') + '</div><div class="val">' + (it.currentPrice != null ? PCD.fmtMoney(it.currentPrice) : '—') + '</div></div>' +
-            '<div><div class="lbl">' + t('cr_suggested', { n: targetPct }) + '</div><div class="val brand">' + PCD.fmtMoney(it.suggestedPrice) + '</div></div>' +
+            '<div><div class="lbl">' + t('cr_suggested', { n: it.target || targetPct }) + '</div><div class="val brand">' + PCD.fmtMoney(it.suggestedPrice) + '</div></div>' +
             '<div><div class="lbl">' + t('cr_test_price') + '</div><div class="val">' + PCD.fmtMoney(it.testPrice || 0) + '</div></div>' +
             '<div><div class="lbl">' + t('cr_margin_serving') + '</div><div class="val">' + PCD.fmtMoney(Math.max(0, (it.testPrice || 0) - it.costPerServing)) + '</div></div>' +
           '</div>'
@@ -1928,7 +1935,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
       setCell(ws, 'C' + row, '', cellStyle);
       setCell(ws, 'D' + row, '', cellStyle);
       setCell(ws, 'E' + row, t('cr_target_pct'), pricingLabelStyle);
-      setCell(ws, 'F' + row, targetPct / 100, Object.assign({}, pricingValStyle, { numFmt: '0%' }));
+      setCell(ws, 'F' + row, (it.target || targetPct) / 100, Object.assign({}, pricingValStyle, { numFmt: '0%' }));
       row++;
 
       suggRow = row;
@@ -2044,7 +2051,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
         detailRows.push(['', '', '', '', t('cr_servings'), String(it.servings)]);
         detailRows.push(['', '', '', '', t('cr_cost_per_serving'), '$' + it.costPerServing.toFixed(2)]);
         detailRows.push(['', '', '', '', t('cr_pricing_section')]);
-        detailRows.push(['', '', '', '', t('cr_target_pct'), targetPct + '%']);
+        detailRows.push(['', '', '', '', t('cr_target_pct'), (it.target || targetPct) + '%']);
         detailRows.push(['', '', '', '', t('cr_suggested_price'), '$' + it.suggestedPrice.toFixed(2)]);
         detailRows.push(['', '', '', '', t('cr_test_price_edit'), '$' + testPriceVal.toFixed(2)]);
         detailRows.push(['', '', '', '', t('cr_food_cost_at_test'), '0.00%']);
@@ -2715,6 +2722,9 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
       // detection active. Now: included = data.allergens (user adds),
       // excluded = data.allergensExcluded (user removes from auto).
       salePrice: null, allergens: [], allergensExcluded: [],
+      // v2.44.112 — Hedef food cost % (reverse-pricing için). Additive alan;
+      // compute API'sine girmez, 16 tüketici okumaz — güvenli. Varsayılan %30.
+      targetFoodCostPct: 30,
       // v2.8.26 — Explicit prep classification (default false = menu item)
       isSubRecipe: false,
       // v2.8.41 — Discover MVP: kullanıcı bu tarifi Discover keşfet ekranında
@@ -2751,6 +2761,11 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
       const cost = PCD.recipes.computeFoodCost(data, ingMap, PCD.recipes.buildRecipeMap());
       const costPerServing = data.servings ? cost / data.servings : cost;
       const pct = (data.salePrice && cost > 0 && data.servings) ? (costPerServing / data.salePrice) * 100 : null;
+      // v2.44.112 — Fiyatlandırma zekâsı (editörde reverse-pricing). Prep'te gizli.
+      const _isPrepEd = (PCD.recipes && PCD.recipes.isPrep) ? PCD.recipes.isPrep(data) : !!(data.yieldAmount && data.yieldUnit);
+      const _targetFc = Number(data.targetFoodCostPct) || 30;
+      const _suggested = (costPerServing > 0 && _targetFc > 0) ? costPerServing / (_targetFc / 100) : 0;
+      const _gpServing = (data.salePrice && costPerServing >= 0) ? (Number(data.salePrice) - costPerServing) : null;
 
       body.innerHTML = `
         <div class="field">
@@ -2867,13 +2882,31 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
               <div class="stat-label">${t('food_cost')}</div>
               <div style="font-size:20px;font-weight:800;letter-spacing:-0.01em;">${PCD.fmtMoney(cost)}</div>
             </div>
-            ${pct !== null ? '<div style="text-align:right;"><div class="stat-label">' + t('food_cost_percent') + '</div><div style="font-size:20px;font-weight:800;color:' + (pct <= 35 ? 'var(--success)' : (pct <= 45 ? 'var(--warning)' : 'var(--danger)')) + ';">' + PCD.fmtPercent(pct, 1) + '</div></div>' : ''}
+            ${pct !== null ? '<div style="text-align:right;"><div class="stat-label">' + t('food_cost_percent') + '</div><div style="font-size:20px;font-weight:800;color:' + (pct <= _targetFc ? 'var(--success)' : (pct <= _targetFc + 5 ? 'var(--warning)' : 'var(--danger)')) + ';">' + PCD.fmtPercent(pct, 1) + '</div></div>' : ''}
           </div>
         </div>
 
         <div class="field">
           <label class="field-label">${t('recipe_sale_price')}</label>
           <input type="number" class="input" id="recipeSalePrice" value="${data.salePrice || ''}" step="0.01" min="0">
+        </div>
+
+        <div id="pricingPanel" class="card" style="padding:12px;margin-bottom:16px;background:var(--surface-2);border-color:var(--brand-200);display:${_isPrepEd ? 'none' : 'block'};">
+          <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+            <div class="field" style="margin:0;width:130px;">
+              <label class="field-label" style="font-size:11px;">${t('cr_target_food_cost')} %</label>
+              <input type="number" class="input" id="recipeTargetFc" value="${_targetFc}" min="1" max="90" step="1">
+            </div>
+            <div style="flex:1;min-width:150px;">
+              <div class="stat-label" style="font-size:11px;">${t('recipe_suggested_price')}</div>
+              <div style="display:flex;align-items:center;gap:8px;"><span id="suggestedPriceVal" style="font-size:18px;font-weight:800;color:var(--brand-700);">${_suggested > 0 ? PCD.fmtMoney(_suggested) : '—'}</span><button type="button" class="btn btn-outline btn-sm" id="useSuggestedPrice">${t('recipe_use_suggested')}</button></div>
+            </div>
+            <div style="min-width:110px;text-align:right;">
+              <div class="stat-label" style="font-size:11px;">${t('recipe_gross_profit')}</div>
+              <div id="grossProfitVal" style="font-size:16px;font-weight:700;color:${_gpServing != null ? (_gpServing >= 0 ? 'var(--success)' : 'var(--danger)') : 'inherit'};">${_gpServing != null ? PCD.fmtMoney(_gpServing) : '—'}</div>
+            </div>
+          </div>
+          <div class="field-hint" style="margin-top:8px;">${t('recipe_pricing_hint')}</div>
         </div>
 
         <div class="field">
@@ -2896,6 +2929,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
       renderAllergenChips();
       renderIngList();
       wireEditor();
+      updatePricingDOM();  // v2.44.112 — önerilen fiyat + brüt kâr ilk değerleri
 
       // v2.8.27 — Live toggle: hide Category + Servings row when
       // "Mark as Prep" is checked. Field values are preserved (untoggling
@@ -3013,6 +3047,8 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
       if (subCb && catRow) {
         subCb.addEventListener('change', function () {
           catRow.style.display = this.checked ? 'none' : '';
+          // v2.44.112 — Prep'te fiyatlandırma paneli anlamsız → gizle/göster
+          const pp = PCD.$('#pricingPanel', body); if (pp) pp.style.display = this.checked ? 'none' : 'block';
         });
       }
     }
@@ -3221,10 +3257,13 @@ function renderAllergenChips() {
       if (!strip) return;
       const t = PCD.i18n.t;
       const c = _computeCostNumbers();
+      // v2.44.112 — food cost % rengi artık recipe'nin HEDEFİNE göre (sabit 35/45 yerine):
+      // ≤ hedef yeşil · ≤ hedef+5 amber · üstü kırmızı.
+      const _tgt = Number(data.targetFoodCostPct) || 30;
       const pctHtml = (c.pct !== null)
         ? '<div style="text-align:right;"><div class="stat-label">' + t('food_cost_percent') +
           '</div><div style="font-size:20px;font-weight:800;color:' +
-          (c.pct <= 35 ? 'var(--success)' : (c.pct <= 45 ? 'var(--warning)' : 'var(--danger)')) +
+          (c.pct <= _tgt ? 'var(--success)' : (c.pct <= _tgt + 5 ? 'var(--warning)' : 'var(--danger)')) +
           ';">' + PCD.fmtPercent(c.pct, 1) + '</div></div>'
         : '';
       strip.innerHTML =
@@ -3235,6 +3274,23 @@ function renderAllergenChips() {
           '</div>' +
           pctHtml +
         '</div>';
+    }
+
+    // v2.44.112 — Fiyatlandırma paneli canlı güncelle (önerilen fiyat + brüt kâr).
+    // Hedef input'una DOKUNMAZ → kullanıcı yazarken focus kaybetmez.
+    function updatePricingDOM() {
+      const panel = body.querySelector('#pricingPanel');
+      if (!panel) return;
+      const c = _computeCostNumbers();
+      const target = Number(data.targetFoodCostPct) || 30;
+      const sugEl = panel.querySelector('#suggestedPriceVal');
+      if (sugEl) { const s = (c.costPerServing > 0 && target > 0) ? c.costPerServing / (target / 100) : 0; sugEl.textContent = s > 0 ? PCD.fmtMoney(s) : '—'; }
+      const gpEl = panel.querySelector('#grossProfitVal');
+      if (gpEl) {
+        const price = Number(data.salePrice) || 0;
+        if (price > 0 && c.costPerServing >= 0) { const gp = price - c.costPerServing; gpEl.textContent = PCD.fmtMoney(gp); gpEl.style.color = gp >= 0 ? 'var(--success)' : 'var(--danger)'; }
+        else { gpEl.textContent = '—'; gpEl.style.color = ''; }
+      }
     }
 
     // Update each ingredient row's "line cost" span without touching
@@ -3528,9 +3584,31 @@ function renderAllergenChips() {
         data.salePrice = parseFloat(this.value) || null;
         clearTimeout(wireEditor._t3);
         wireEditor._t3 = setTimeout(function () {
-          // Sale price only affects the % display in the strip
+          // Sale price affects the % display in the strip + gross profit panel
           updateCostStripDOM();
+          updatePricingDOM();
         }, 150);
+      });
+
+      // v2.44.112 — Hedef food cost % + "önerilen fiyatı uygula"
+      const targetFcEl = PCD.$('#recipeTargetFc', body);
+      if (targetFcEl) targetFcEl.addEventListener('input', function () {
+        const v = Number(this.value);
+        data.targetFoodCostPct = (v > 0 && v <= 90) ? v : (this.value === '' ? null : data.targetFoodCostPct);
+        updatePricingDOM();
+        updateCostStripDOM();
+      });
+      const useSugEl = PCD.$('#useSuggestedPrice', body);
+      if (useSugEl) useSugEl.addEventListener('click', function () {
+        const c = _computeCostNumbers();
+        const target = Number(data.targetFoodCostPct) || 30;
+        if (!(c.costPerServing > 0 && target > 0)) { if (PCD.toast) PCD.toast.info(PCD.i18n.t('recipe_need_cost') || 'Add ingredients first'); return; }
+        const s = c.costPerServing / (target / 100);
+        const rounded = Math.round(s * 100) / 100;
+        data.salePrice = rounded;
+        if (priceEl) priceEl.value = String(rounded);
+        updateCostStripDOM();
+        updatePricingDOM();
       });
 
       // ===== QUICK-ADD AUTOCOMPLETE =====
@@ -3770,6 +3848,9 @@ function renderAllergenChips() {
       // v2.8.58 — Discover paylaş toggle preview modal'a taşındı; data.isPublic
       // mevcut değerinden korunur (data zaten PCD.clone(existing) ile başlıyor).
       data.salePrice = parseFloat(PCD.$('#recipeSalePrice', body).value) || null;
+      // v2.44.112 — Hedef food cost % (panel prep'te yok → guard)
+      const _tfcSave = PCD.$('#recipeTargetFc', body);
+      if (_tfcSave) { const _v = Number(_tfcSave.value); data.targetFoodCostPct = (_v > 0 && _v <= 90) ? _v : 30; }
       data.steps = PCD.$('#recipeSteps', body).value;
       data.plating = PCD.$('#recipePlating', body).value;
 
