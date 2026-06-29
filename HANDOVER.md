@@ -20,13 +20,14 @@ Profesyonel şefler için offline-öncelikli web tabanlı mutfak yönetim sistem
 
 ## Araçlar
 
-Sidebar bölümleri. İkincil araçlar (Nutrition / Portion / Variance / Waste / Prep) sidebar yerine ana aracın **alt-sekmesinde** (`PCD.subNav`; route'lar app.js'te duruyor): stock = Inventory·Variance·Waste · recipes = Recipes·Nutrition·Portion · lists = Checklist·Prep.
+Sidebar bölümleri. İkincil araçlar (Menu engineering / Nutrition / Batch / Variance / Waste / Prep) sidebar yerine ana aracın **alt-sekmesinde** (`PCD.subNav`; route'lar app.js'te duruyor): stock = Inventory·Variance·Waste · recipes = Recipes·Menu engineering·Nutrition·Batch (route `portion`) · lists = Checklist·Prep.
 
 ### Library
 
 **Recipes** — malzeme / alt-tarif / hazırlık adımı / foto + otomatik maliyet; 9 kategori (Appetizer, Soup, Salad, Main, Side, Dessert, Breakfast, Drink, Other), toplu seçim-silme, "Convert to Prep". Çıktı: maliyet raporu Print + Excel · QR/Link paylaşım + Discover yayın · Sync ✓.
+- alt-sekme **Menu engineering** — her yemek Star/Plowhorse/Puzzle/Dog (marj × satış); maliyet `computeFoodCost`, satış `recipe.salesCount` (Record sales artırır), fiyat/satış inline düzenlenir; mini P&L özeti; maliyet-altı satılan kırmızı uyarı.
 - alt-sekme **Nutrition** — porsiyon başı tahmini kalori/protein/karb/yağ (recipe malzemelerinden, USDA/FSANZ; tahmin, sertifikalı etiket değil).
-- alt-sekme **Portion** (Portion Calculator) — çoklu tarifi kişi sayısına ölçekle → konsolide malzeme + maliyet; tarif/kategori/tedarikçi görünümü, alt-tarifler ingredient'e flatten. Print + stilize Excel + metin paylaşımı.
+- alt-sekme **Batch** (Batch Calculator; route `portion`) — tarifi/alt-tarifi N adete ölçekle → toplam malzeme + maliyet; tarif/kategori/tedarikçi görünümü, alt-tarifler ingredient'e flatten. Print + stilize Excel + metin paylaşımı.
 
 **Ingredients** — birim fiyat, 11 kategori, tedarikçi bağı, yield %, **raf-ömrü (gün, opsiyonel)**, fiyat geçmişi grafiği. CSV/Excel import-export + Lists sekmeli şablon · Sync ✓.
 
@@ -45,7 +46,7 @@ Sidebar bölümleri. İkincil araçlar (Nutrition / Portion / Variance / Waste /
 
 ### Sourcing
 
-**Inventory** — par (ideal) / min (kritik) eşik, durum (out/critical/low/ok/untracked), sayım modu + geçmiş, dashboard düşük-stok badge. **Son-kullanma/raf-ömrü:** mal kabulde otomatik SKT (ingredient shelf-life'tan) + "bozulacak/geçti" badge + stat + dashboard kartı + **fire köprüsü** (expired → fire yaz & stoktan düş). **Market/alışveriş listesi:** yaklaşan event + seçili buffet → ingredient konsolide → stok düş → kategori/tedarikçiye grupla → Deep Pine print + paylaş. **Paylaşılan stok sözleşmesi:** `applyStockDeductions/Additions` (event/buffet/waste/sales/receiving hepsi buradan). Print + Excel · Sync ✓ (top-level tablo).
+**Inventory** — par (ideal) / min (kritik) eşik, durum (out/critical/low/ok/untracked), sayım modu + geçmiş, dashboard düşük-stok badge. **Generate Order (satın-alma):** par-altı kalemler → tedarikçiye göre grup → her tedarikçiye AYRI sipariş gönder (`suppliers.startOrder` → WhatsApp/SMS/Email + geçmiş) → gönderilen kalem "yolda" (on-order) işaretlenir (çift-sipariş önleme, modal açık kalır) → "Geldi → stoğa ekle". **Son-kullanma/raf-ömrü:** mal kabulde otomatik SKT (ingredient shelf-life'tan) + "bozulacak/geçti" badge + stat + dashboard kartı + **fire köprüsü** (expired → fire yaz & stoktan düş). **Market/alışveriş listesi:** yaklaşan event + seçili buffet → ingredient konsolide → stok düş → kategori/tedarikçiye grupla → Deep Pine print + paylaş. **Paylaşılan stok sözleşmesi:** `applyStockDeductions/Additions` (event/buffet/waste/sales/receiving hepsi buradan). Print + Excel · Sync ✓ (top-level tablo).
 - alt-sekme **Variance** — teorik kullanım (satılan → reçete) vs gerçek kullanım; malzeme başına $ varyans, en büyük sızıntı önce (POS/sayım gerekmez; geçici, kaydetmez).
 - alt-sekme **Waste** — fire/bozulma/fazla-üretim kaydı → $ kayıp + opsiyonel stok düşümü + koşan toplam. Sync ✓ (`waste`).
 
@@ -53,9 +54,9 @@ Sidebar bölümleri. İkincil araçlar (Nutrition / Portion / Variance / Waste /
 
 ### Catering
 
-**Events** (Event Planner) — BEO-seviye çok-fonksiyonlu etkinlik. **5 durum** (draft/tentative/confirmed/done/cancelled) + liste/takvim görünümü. Her event = çok fonksiyon (reception/dinner…), her fonksiyonda menü (tarif+malzeme öğeleri) + diyet/alerjen + kişi/garanti-kişi. **Gerçek P&L:** food cost + işçilik (rol/saat/rate) + itemized charges + servis% → kişi-başı maliyet/fiyat/marj + ödeme planı (deposit/balance). Run-of-show timeline + görev checklist + **e-imza** (müşteri onayı). Stok düş (`computeEventDeductions`). Çıktı: müşteri **teklifi** (maliyet gizli) + iç **BEO/mutfak üretim** sayfası. Print · metin paylaşımı · Sync ✓ (`events`).
+**Events** (Event Planner) — BEO-seviye çok-fonksiyonlu etkinlik. **5 durum** (draft/tentative/confirmed/done/cancelled) + liste/takvim görünümü. Her event = çok fonksiyon (reception/dinner…), her fonksiyonda menü (tarif+malzeme öğeleri) + diyet/alerjen + kişi/garanti-kişi. **Gerçek P&L:** food cost + işçilik (rol/saat/rate) + itemized charges + servis% → kişi-başı maliyet/fiyat/marj + ödeme planı (deposit/balance). Run-of-show timeline + görev checklist + **e-imza** (müşteri onayı). Stok düş (`computeEventDeductions`). **Shopping list** tedarikçiye gruplu → her tedarikçiye AYRI sipariş gönder + kalıcı "✓ sipariş verildi" rozeti (`_supplierOrders`, çift-sipariş önler). Çıktı: müşteri **teklifi** (maliyet gizli) + iç **BEO/mutfak üretim** sayfası. Print · metin paylaşımı · Sync ✓ (`events`).
 
-**Buffet** (Buffet Planner) — istasyon bazlı; 3-yol maliyet (tarif/malzeme/custom), kişi-başı tüketim + **forecast prep faktörü** + **refill çarpanı + pickup oranı**, yield%, **atık% benchmark (15-25)** + food cost % hedef durumu, batch/replenishment planı, 7 preset + boş başlangıç, çoğalt. 🚚 tedarikçi sipariş listesi (flatten → stok birimine normalize → grupla → yazdır). Print (prep + sipariş + maliyet raporu) + Excel · Sync ✓ (`buffets`).
+**Buffet** (Buffet Planner) — istasyon bazlı; 3-yol maliyet (tarif/malzeme/custom), kişi-başı tüketim + **forecast prep faktörü** + **refill çarpanı + pickup oranı**, yield%, **atık% benchmark (15-25)** + food cost % hedef durumu, batch/replenishment planı, 7 preset + boş başlangıç, çoğalt. 🚚 tedarikçi sipariş listesi (flatten → stok birimine normalize → grupla) → her tedarikçiye AYRI sipariş gönder + kalıcı "✓ sipariş verildi" rozeti (`_supplierOrders`, çift-sipariş önler) → yazdır. Print (prep + sipariş + maliyet raporu) + Excel · Sync ✓ (`buffets`).
 
 ### HACCP Forms
 
@@ -76,7 +77,7 @@ Herkese açık tarif keşfi: arama, beğeni, görüntülenme sayacı (rate-limit
 
 ### Account (Profile & Settings)
 
-Profil (ad/rol/ülke/işyeri/bio — Discover'da görünür), dil + para + tema, paylaşım yönetimi, gece R2 yedek. Plan: "Pro'ya geç" (Stripe Checkout) / "Aboneliği yönet" (Stripe portal). JSON yedek indir + geri yükle (yan yana karşılaştırma önizlemeli).
+**Giriş (Supabase Auth):** e-posta/şifre (hCaptcha'lı) · **Google OAuth** (Google Cloud Console OAuth kimliği + Supabase redirect) · **misafir modu** (giriş yok → yalnız yerel IDB + demo seed). Profil (ad/rol/ülke/işyeri/bio — Discover'da görünür), dil + para + tema, paylaşım yönetimi, gece R2 yedek. Plan: "Pro'ya geç" (Stripe Checkout) / "Aboneliği yönet" (Stripe portal). JSON yedek indir + geri yükle (yan yana karşılaştırma önizlemeli).
 
 ## Plan modeli (Free / Pro)
 
@@ -97,7 +98,7 @@ Tüm limit + gate'ler tek dosyada: `plans.js` (`PLAN_LIMITS`) — özelliği aç
 - **Stripe (CANLI, 2026-06-21):** Pro **USD $19/ay · $190/yıl**. Tüzel kişi `ProChefDesk, LLC` (Delaware). 3 Edge Function: `create-checkout-session` + `create-portal-session` (verify_jwt AÇIK) · `stripe-webhook` (verify_jwt KAPALI, imza doğrulamalı, plan'ı yazan TEK otorite; olaylar: checkout.completed / subscription.updated / .deleted). **Payout:** Stripe → **Mercury** (US bank) → Wise → AU/TR (TR doğrudan payout desteklemiyor; Treasury ABD-dışı banka için güvenilmez). EIN ~Tem 2026 bekliyor (payout'u bloklamadı). Uçtan uca test geçti (upgrade/cancel/refund/portal). **Gelecek:** operatör AU PR alınca AU Stripe'a geçer (ABN + AU banka, LLC gereksiz), abonelikler taşınır, ABD LLC feshedilir. Güncel durum/notlar: `CLAUDE.md` launch.
 - **Cost-view paylaşım (Pro):** fiyat + food cost % gösteren özel salt-okunur link (`?view=cost`); maliyet yalnız cost-share payload'unda (`public_shares.share_mode='cost'`), normal link sızdırmaz.
 - **Watermark:** footer TÜM çıktılarda (print/PDF · Excel · roster JPEG · paylaşım/URL) `PCD.gate.showWatermark()`'a bağlı — Free'de var, Pro'da temiz; paylaşılan sayfada paylaşanın planına göre snapshot'a gömülür (`payload._wm`). Metin/WhatsApp paylaşımı kapsam dışı.
-- **Çıktı paleti (v2.44 Deep Pine — tek standart):** TÜM print/PDF · Excel · roster JPEG · share aynı dili konuşur — başlık+kenarlık pine `#16433a` · aksan/CTA `#1f9d6b` · metin `#1c1917` · kenarlık `#e7e5e4` · th zemini `#eaf6f0` · Inter+Fraunces; Excel pine `16433A` başlık + `E0DDD5` kenarlık + `F6F3EE` alt-satır (PCD.xlsx + inline roster/buffet/recipes AYNI). Tüm print `@page{margin:0}`+içerik padding → tarayıcı damgası (tarih/about:blank/sayfa no) yok. Yeni çıktıda bu paleti kullan. Bilerek istisna: whiteboard (Oswald/Barlow), menu_studio temalı menüleri, HACCP grid `#999`.
+- **Çıktı paleti (Deep Pine — tek standart):** TÜM print/PDF · Excel · roster JPEG · share aynı dili konuşur — başlık+kenarlık pine `#16433a` · aksan/CTA `#1f9d6b` · metin `#1c1917` · kenarlık `#e7e5e4` · th zemini `#eaf6f0` · Inter+Fraunces; Excel pine `16433A` başlık + `E0DDD5` kenarlık + `F6F3EE` alt-satır (PCD.xlsx + inline roster/buffet/recipes AYNI). Tüm print `@page{margin:0}`+içerik padding → tarayıcı damgası (tarih/about:blank/sayfa no) yok. Yeni çıktıda bu paleti kullan. Bilerek istisna: whiteboard (Oswald/Barlow), menu_studio temalı menüleri, HACCP grid `#999`.
 - **Dashboard:** 4 metrik + 2 grafik, tamamı gerçek veriden (sahte yok); işçilik kartı Pro-gated.
 
 ## Veri tabloları
@@ -110,12 +111,6 @@ Tüm limit + gate'ler tek dosyada: `plans.js` (`PLAN_LIMITS`) — özelliği aç
 **Supabase-only (frontend yazmaz):** `client_errors` · `discover_view_logs` (rate-limit penceresi) · `public_shares` (paylaşım URL'leri + `share_mode` public/cost) · `recipe_likes` (RLS: yalnız kendi beğenileri).
 
 RLS tüm tablolarda aktif; frontend `anon` key kullanır.
-
-## Kaldırılmış araçlar (v2.43 silindi · v2.44.21 kısmen yeniden inşa)
-
-v2.43'te 10 ölü tool dosyası silindi (route'lanmıyor, yüklenmiyordu). **8 hâlâ silik** (gerekirse git geçmişinden): `menu_matrix` · `sales` · `whatif` · `yield` · `team` · `allergens` (**NOT:** `core/allergens-db.js` CANLI) · `menus` (klasik; `'menus'` route'u `menu_studio.js` yükler) · `tools-hub`.
-
-**v2.44.21'de yeniden inşa → CANLI:** `nutrition` · `variance` (`core/variance.js` motorunun UI'ı) · `waste`. Bu 3 + `portion` + `prep` v2.44.30'da sub-nav sekmelerine taşındı (route'lar app.js'te duruyor). Route tek kaynağı: `app/js/core/app.js`.
 
 ## Açık adımlar / roadmap
 
