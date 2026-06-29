@@ -4,6 +4,14 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.114 — Tedarikçiye ayrı sipariş + onay rozeti: Event / Buffet / Inventory listeleri tutarlı · 2026-06-29
+Shopping/order listelerinden sipariş gönderimi düzeltildi + 3 yerde tutarlı hale getirildi. **Teşhis (kod + canlı test):** Event/Buffet'te per-supplier gönder kodda vardı AMA alt-tarif içindeki malzemeler tedarikçiye değil alt-tarif adına gruplanıp **öksüz kalıyordu** (sipariş edilemiyordu — caterer'da "işlevsiz" hissinin asıl nedeni); Inventory shopping list'te ise per-supplier gönder **hiç yoktu** (yalnız düz metin paylaşım + print).
+- **Tüm malzemeler (alt-tarif içindekiler dahil) tek seviyede toplanıp YALNIZ tedarikçiye göre gruplanır** → her tedarikçinin tam siparişi tek grupta, hepsi sipariş edilebilir. Aynı malzeme (direkt + alt-tarif) birleşir.
+- **Her tedarikçi grubu açılır-kapanır (details) + kalem sayısı** rozeti. Tedarikçisiz/manuel kalemler ayrı grupta (gönder butonu yok).
+- **Her gerçek tedarikçiye "Gönder"** → mevcut gerçek sipariş hattı (`startOrder`: teslim tarihi + WhatsApp/SMS/Email + geçmiş). Gönderince **"Sipariş verildi ✓" rozeti + "Order again"** (çift-sipariş engeli) + envanter "yolda" işaretlenir (`markOrdered`). Yazdırma korunur (düz, damgasız).
+- **Inventory → Shopping list'e** per-supplier gönder eklendi (varsayılan tedarikçi gruplaması; rozet oturum-içi + markOrdered ile envantere yansır). Print + metin paylaşım kalır.
+- 3 dosya (events/buffet/inventory), yeni i18n yok (mevcut `inv_order_*` + `shop_ordered` kullanıldı). `node -c` temiz; preview'da uçtan uca doğrulandı: Event (6 grup, alt-tarif öksüzü 0, send 4 kalem→rozet→persist), Buffet (6 grup, send 6 kalem→persist, Unlinked grubu send'siz), Inventory (5 grup, send 5 kalem→rozet); açılır-kapanır + sayı + dedup; **0 console hatası**.
+
 ## v2.44.113 — Recipe fiyatlandırma tutarlılığı (Adım 2/2): Cost Report recipe hedefini kullanır · 2026-06-29
 Cost Report reverse-pricing'i sabit %30 kullanıyordu; editöre az önce eklenen per-recipe hedefle çelişiyordu. Artık ikisi aynı hedefi konuşur.
 - **Cost Report her recipe'nin kendi `targetFoodCostPct`'ini kullanır** (yoksa 30 fallback): önerilen fiyat + food cost % durum rengi (≤hedef yeşil/≤hedef+5 amber/üstü kırmızı) + her kartta "target X%" etiketi. Global başlıktaki sabit "%30" kaldırıldı (hedef artık kart-bazlı).

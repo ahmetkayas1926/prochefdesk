@@ -1975,22 +1975,48 @@
     html += '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border);">' +
       '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;"><input type="checkbox" id="shopSubtract" checked style="width:18px;height:18px;accent-color:var(--brand-600);"> ' + PCD.escapeHtml(L('shop_subtract_stock', 'Subtract current stock')) + '</label>' +
       '<div style="display:flex;align-items:center;gap:6px;"><span class="text-muted" style="font-size:12px;font-weight:600;">' + PCD.escapeHtml(L('group_by', 'Group by')) + ':</span>' +
-        '<button type="button" class="btn btn-sm shop-grp active" data-grp="category">' + PCD.escapeHtml(L('group_category', 'Category')) + '</button>' +
-        '<button type="button" class="btn btn-sm shop-grp" data-grp="supplier">' + PCD.escapeHtml(L('group_supplier', 'Supplier')) + '</button>' +
+        '<button type="button" class="btn btn-sm shop-grp" data-grp="category">' + PCD.escapeHtml(L('group_category', 'Category')) + '</button>' +
+        '<button type="button" class="btn btn-sm shop-grp active" data-grp="supplier">' + PCD.escapeHtml(L('group_supplier', 'Supplier')) + '</button>' +
       '</div>' +
     '</div>';
 
     html += '<div id="shopResults" style="margin-top:14px;"></div>';
     body.innerHTML = html;
 
-    let groupBy = 'category';
+    // v2.44.114 — Varsayılan tedarikçiye göre grupla (per-supplier sipariş ön planda).
+    let groupBy = 'supplier';
     let lastData = null;
+    // v2.44.114 — Bu oturumda tedarikçiye gönderilen siparişler (rozet + çift-sipariş engeli).
+    // Owning record yok (liste event+buffet'ten türetilir) → oturum-içi; ayrıca markOrdered
+    // ingredient'leri "yolda" işaretler (Sipariş Oluştur ile tutarlı, yeniden açışta da görünür).
+    const orderedMap = {};
 
     PCD.on(body, 'click', '.shop-grp', function () {
       groupBy = this.getAttribute('data-grp') || 'category';
       Array.prototype.forEach.call(body.querySelectorAll('.shop-grp'), function (b) { b.classList.toggle('active', b.getAttribute('data-grp') === groupBy); });
       if (lastData) renderResults();
     });
+
+    // v2.44.114 — Tedarikçiye sipariş gönder (gerçek gönderim hattı: startOrder →
+    // teslim tarihi + WhatsApp/SMS/Email + geçmiş). Gönderince rozet + markOrdered.
+    function sendSupplierOrder(sup) {
+      if (!lastData || !sup) return;
+      const items = lastData.rows.filter(function (r) { return r.id && (r.supplier || '') === sup && r.toBuy > 0; })
+        .map(function (r) { return { ingId: r.id, qty: Math.round(r.toBuy * 100) / 100, unit: r.unit || '' }; });
+      if (!items.length) { PCD.toast.warning(L('toast_no_items_selected', 'No items')); return; }
+      const fire = function () {
+        PCD.tools.suppliers.startOrder(sup, items, function () {
+          orderedMap[sup] = new Date().toISOString();
+          try { markOrdered(items.map(function (i) { return i.ingId; })); } catch (e) {}
+          renderResults();
+        });
+      };
+      if (PCD.tools.suppliers && PCD.tools.suppliers.startOrder) { fire(); return; }
+      if (PCD.router && PCD.router.loadLazyTool) {
+        PCD.router.loadLazyTool('suppliers').then(function () { if (PCD.tools.suppliers && PCD.tools.suppliers.startOrder) fire(); }).catch(function () { PCD.toast.error(L('toast_error', 'Something went wrong')); });
+      }
+    }
+    PCD.on(body, 'click', '.inv-shop-send', function () { sendSupplierOrder(this.getAttribute('data-sup')); });
 
     function selectedEvents() {
       const ids = {}; Array.prototype.forEach.call(body.querySelectorAll('.shop-ev:checked'), function (c) { ids[c.getAttribute('data-eid')] = true; });
@@ -2075,15 +2101,38 @@
           (data.coveredCount ? ' <span class="text-muted" style="font-weight:600;font-size:12px;">· ' + data.coveredCount + ' ' + PCD.escapeHtml(L('shop_covered', 'already in stock')) + '</span>' : '') + '</div>' +
         (data.totalCost > 0 ? '<div style="font-weight:800;font-size:14px;color:var(--brand-700);">≈ ' + PCD.fmtMoney(data.totalCost) + '</div>' : '') +
       '</div>';
+      // v2.44.114 — Açılır-kapanır gruplar + kalem sayısı; tedarikçi modunda gerçek
+      // tedarikçi grubuna "Gönder" / "Sipariş verildi ✓" (Event/Buffet ile tutarlı).
       keys.forEach(function (k) {
-        h += '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin:10px 0 4px;">' + PCD.escapeHtml(groupLabel(k)) + '</div>';
-        groups[k].forEach(function (r) {
-          h += '<div style="display:flex;align-items:center;gap:10px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:3px;">' +
+        const rows = groups[k];
+        const count = rows.length;
+        const realSup = (groupBy === 'supplier' && k !== ' ') ? k : '';
+        const ts = realSup ? orderedMap[realSup] : null;
+        const rowsHtml = rows.map(function (r) {
+          return '<div style="display:flex;align-items:center;gap:10px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:3px;">' +
             '<div style="flex:1;min-width:0;font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + PCD.escapeHtml(r.name) + '</div>' +
             (r.stock ? '<span class="text-muted" style="font-size:11px;white-space:nowrap;">' + PCD.escapeHtml(L('shop_have', 'have')) + ' ' + PCD.fmtNumber(r.stock) + '</span>' : '') +
             '<span style="font-weight:800;font-family:var(--font-mono);color:var(--brand-700);white-space:nowrap;">' + PCD.fmtNumber(r.toBuy) + ' ' + PCD.escapeHtml(r.unit) + '</span>' +
           '</div>';
-        });
+        }).join('');
+        let ctrl = '';
+        if (realSup) {
+          ctrl = ts
+            ? '<div style="display:flex;align-items:center;gap:8px;margin-top:8px;">' +
+                '<span style="font-size:11px;font-weight:800;color:#15803d;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:3px 9px;">' + PCD.icon('check', 12) + ' ' + PCD.escapeHtml(L('shop_ordered', 'Ordered')) + ' · ' + PCD.escapeHtml(PCD.fmtRelTime(ts)) + '</span>' +
+                '<button type="button" class="btn btn-ghost btn-sm inv-shop-send" data-sup="' + PCD.escapeHtml(realSup) + '" style="color:var(--text-3);">' + PCD.escapeHtml(L('inv_order_again', 'Order again')) + '</button>' +
+              '</div>'
+            : '<button type="button" class="btn btn-primary btn-sm inv-shop-send" data-sup="' + PCD.escapeHtml(realSup) + '" style="margin-top:8px;">' + PCD.icon('send', 13) + ' ' + PCD.escapeHtml(L('inv_order_send_to', 'Send to {name}').replace('{name}', realSup)) + '</button>';
+        }
+        const countChip = '<span style="font-size:11px;font-weight:700;color:var(--text-3);background:var(--surface-2);border-radius:999px;padding:1px 8px;margin-inline-start:8px;">' + count + '</span>';
+        const okDot = ts ? ' <span style="color:#15803d;font-weight:900;margin-inline-start:6px;">✓</span>' : '';
+        h += '<details open class="card" style="padding:0;margin:8px 0;overflow:hidden;">' +
+          '<summary style="cursor:pointer;list-style:none;padding:8px 11px;display:flex;align-items:center;font-size:11px;font-weight:800;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;background:var(--surface-2);">' +
+            '<span style="flex:1;min-width:0;">' + PCD.escapeHtml(groupLabel(k)) + countChip + okDot + '</span>' +
+            '<span style="font-weight:400;">▾</span>' +
+          '</summary>' +
+          '<div style="padding:8px 11px;">' + rowsHtml + ctrl + '</div>' +
+        '</details>';
       });
       if (data.skipped.length) {
         h += '<div style="margin-top:10px;padding:8px 10px;background:#fff7ed;border:1px solid var(--warning);border-radius:var(--r-sm);font-size:11px;color:#b45309;">⚠ ' +

@@ -1703,11 +1703,11 @@
     const refillX = buffet.refillMultiplier != null
       ? Number(buffet.refillMultiplier)
       : (INDUSTRY_REFILL[buffet.type] || INDUSTRY_REFILL.custom);
-    // v2.44 — DİREKT malzemeler tedarikçiye göre; her SUB-RECIPE'nin malzemeleri
-    // kendi grubunda (yarı saydam başlık + ayraç) → karışmaz (event shopping list ile aynı).
-    const direct = {};   // via=null direkt malzemeler: key -> row
-    const subs = {};     // { subRecipeAdı: { key -> row } }
-    function addIng(ing, amount, unit, via) {
+    // v2.44.114 — TÜM malzemeler (direkt + alt-tarif içindekiler dahil) tek seviyede
+    // toplanıp YALNIZ TEDARİKÇİYE göre gruplanır → her tedarikçinin tam siparişi tek
+    // grupta, hepsi sipariş edilebilir (alt-tarif malzemeleri artık öksüz kalmaz).
+    const bucket = {};
+    function addIng(ing, amount, unit) {
       if (!ing) return;
       let amt = Number(amount) || 0;
       if (!(amt > 0)) return;
@@ -1716,7 +1716,6 @@
       if (ing.unit && u && u !== ing.unit) {
         try { const c = PCD.convertUnit(amt, u, ing.unit); if (c != null && isFinite(c) && c > 0) { amt = c; u = ing.unit; } } catch (e) {}
       }
-      const bucket = via ? (subs[via] || (subs[via] = {})) : direct;
       const key = 'i:' + ing.id + '|' + u;
       if (!bucket[key]) bucket[key] = { id: ing.id, name: ing.name || '', unit: u, amount: 0, supplier: (ing.supplier || '').trim(), custom: false };
       bucket[key].amount += amt;
@@ -1738,42 +1737,38 @@
           const scale = (recipeYield > 0) ? (prepInRecipeUnit / recipeYield) : 0;
           if (!(scale > 0)) return;
           const flat = PCD.recipes.flattenIngredients(r, ingMap, recipeMap, { scale: scale });
-          flat.forEach(function (f) { if (f.ingredient) addIng(f.ingredient, f.amount, f.unit, f.viaSubRecipe); });
+          flat.forEach(function (f) { if (f.ingredient) addIng(f.ingredient, f.amount, f.unit); });
         } else if (ing) {
           addIng(ing, prepAmount, it.unit);
         } else if (it.customName) {
           const u = it.unit || '';
           const key = 'c:' + it.customName.toLowerCase() + '|' + u;
-          if (!direct[key]) direct[key] = { name: it.customName, unit: u, amount: 0, supplier: '', custom: true };
-          direct[key].amount += prepAmount;
+          if (!bucket[key]) bucket[key] = { name: it.customName, unit: u, amount: 0, supplier: '', custom: true };
+          bucket[key].amount += prepAmount;
         }
       });
     });
     const unlinkedLabel = t('buffet_order_unlinked') || 'Unlinked / manual';
     function byName(a, b) { return (a.name || '').localeCompare(b.name || ''); }
-    const out = [];
-    // 1) Direkt malzemeler — tedarikçiye göre (bağlanmamış grup en sona)
+    // Tedarikçiye göre grupla — gerçek tedarikçiler + bağlanmamış/manuel grup en sona.
     const supGroups = {};
-    Object.keys(direct).forEach(function (k) {
-      const row = direct[k];
+    Object.keys(bucket).forEach(function (k) {
+      const row = bucket[k];
       const sup = row.supplier || unlinkedLabel;
       (supGroups[sup] = supGroups[sup] || []).push(row);
     });
-    Object.keys(supGroups).sort(function (a, b) {
+    return Object.keys(supGroups).sort(function (a, b) {
       if (a === unlinkedLabel) return 1;
       if (b === unlinkedLabel) return -1;
       return a.localeCompare(b);
-    }).forEach(function (sup) {
-      // v2.44.104 — supplierKey: gerçek tedarikçi ('' = bağlanmamış) → o gruba sipariş gönderme.
-      out.push({ supplier: sup, supplierKey: (sup === unlinkedLabel ? '' : sup), isSub: false, rows: supGroups[sup].sort(byName) });
+    }).map(function (sup) {
+      // supplierKey: gerçek tedarikçi ('' = bağlanmamış) → o gruba sipariş gönderilmez.
+      return { supplier: sup, supplierKey: (sup === unlinkedLabel ? '' : sup), rows: supGroups[sup].sort(byName) };
     });
-    // 2) Her sub-recipe — kendi grubu (yarı saydam başlık + ayraç)
-    Object.keys(subs).sort().forEach(function (name) {
-      out.push({ supplier: name, isSub: true, rows: Object.keys(subs[name]).map(function (k) { return subs[name][k]; }).sort(byName) });
-    });
-    return out;
   }
 
+  // v2.44.114 — Tedarikçi-grubu render: açılır-kapanır (details) + kalem sayısı +
+  // tedarikçiye "Gönder" / "Sipariş verildi ✓". forPrint = düz, damgasız.
   function orderListHtml(groups, forPrint, opts) {
     const t = PCD.i18n.t;
     const L = function (k, fb) { try { const v = t(k); return (v == null || v === k) ? fb : v; } catch (e) { return fb; } };
@@ -1781,38 +1776,43 @@
       return '<div class="text-muted" style="padding:16px;text-align:center;">' + PCD.escapeHtml(t('buffet_order_empty') || 'Link items to recipes or ingredients to generate a supplier order list.') + '</div>';
     }
     opts = opts || {};
+    const interactive = !!opts.interactive && !forPrint;
     const ordered = opts.ordered || {};
     const fmt = function (n) { return (Math.round(n * 100) / 100).toString(); };
     const titleColor = forPrint ? '#16433a' : 'var(--brand-700)';
     const lineColor = forPrint ? '#e5e5e5' : 'var(--border)';
-    const subColor = forPrint ? '#9a9a9a' : 'var(--text-3)';
-    const subBg = forPrint ? '#f6f6f6' : 'var(--surface-2)';
     return groups.map(function (g) {
-      // Sub-recipe grubu: yarı saydam başlık + üstte belirgin (dashed) ayraç.
-      const header = g.isSub
-        ? '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:' + subColor + ';background:' + subBg + ';border-radius:6px;padding:3px 9px;margin-bottom:6px;opacity:0.8;">↳ ' + PCD.escapeHtml(g.supplier) + '</div>'
-        : '<div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:' + titleColor + ';border-bottom:1px solid ' + lineColor + ';padding-bottom:4px;margin-bottom:6px;">' + PCD.escapeHtml(g.supplier) + '</div>';
-      // v2.44.104 — interaktif: gerçek tedarikçili gruba "Sipariş gönder" / "Sipariş verildi ✓".
+      const count = g.rows.length;
+      const rowsHtml = g.rows.map(function (r) {
+        return '<div style="display:flex;justify-content:space-between;gap:12px;padding:3px 0;font-size:13px;">' +
+          '<span>' + PCD.escapeHtml(r.name || '') + (r.custom ? ' <span style="color:#999;font-size:11px;">(' + PCD.escapeHtml(t('buffet_order_manual_tag') || 'manual') + ')</span>' : '') + '</span>' +
+          '<span style="font-weight:600;white-space:nowrap;">' + fmt(r.amount) + ' ' + PCD.escapeHtml(r.unit) + '</span>' +
+        '</div>';
+      }).join('');
+      if (forPrint) {
+        return '<div style="margin-bottom:12px;">' +
+          '<div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:' + titleColor + ';border-bottom:1px solid ' + lineColor + ';padding-bottom:4px;margin-bottom:6px;">' + PCD.escapeHtml(g.supplier) + ' (' + count + ')</div>' +
+          rowsHtml + '</div>';
+      }
+      const ts = (interactive && g.supplierKey) ? ordered[g.supplierKey] : null;
       let ctrl = '';
-      if (opts.interactive && !forPrint && !g.isSub && g.supplierKey) {
-        const ts = ordered[g.supplierKey];
+      if (interactive && g.supplierKey) {
         ctrl = ts
-          ? '<div style="display:flex;align-items:center;gap:8px;margin-top:6px;">' +
+          ? '<div style="display:flex;align-items:center;gap:8px;margin-top:8px;">' +
               '<span style="font-size:11px;font-weight:800;color:#15803d;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:3px 9px;">' + PCD.icon('check', 12) + ' ' + PCD.escapeHtml(L('shop_ordered', 'Ordered')) + ' · ' + PCD.escapeHtml(PCD.fmtRelTime(ts)) + '</span>' +
               '<button type="button" class="btn btn-ghost btn-sm buf-send" data-sup="' + PCD.escapeHtml(g.supplierKey) + '" style="color:var(--text-3);">' + PCD.escapeHtml(L('inv_order_again', 'Order again')) + '</button>' +
             '</div>'
-          : '<button type="button" class="btn btn-primary btn-sm buf-send" data-sup="' + PCD.escapeHtml(g.supplierKey) + '" style="margin-top:6px;">' + PCD.icon('send', 13) + ' ' + PCD.escapeHtml(L('inv_order_send_to', 'Send to {name}').replace('{name}', g.supplierKey)) + '</button>';
+          : '<button type="button" class="btn btn-primary btn-sm buf-send" data-sup="' + PCD.escapeHtml(g.supplierKey) + '" style="margin-top:8px;">' + PCD.icon('send', 13) + ' ' + PCD.escapeHtml(L('inv_order_send_to', 'Send to {name}').replace('{name}', g.supplierKey)) + '</button>';
       }
-      return '<div style="margin-bottom:14px;' + (g.isSub ? 'border-top:2px dashed ' + lineColor + ';padding-top:12px;' : '') + '">' +
-        header +
-        g.rows.map(function (r) {
-          return '<div style="display:flex;justify-content:space-between;gap:12px;padding:3px 0;font-size:13px;' + (g.isSub ? 'opacity:0.9;' : '') + '">' +
-            '<span>' + PCD.escapeHtml(r.name || '') + (r.custom ? ' <span style="color:#999;font-size:11px;">(' + PCD.escapeHtml(t('buffet_order_manual_tag') || 'manual') + ')</span>' : '') + '</span>' +
-            '<span style="font-weight:600;white-space:nowrap;">' + fmt(r.amount) + ' ' + PCD.escapeHtml(r.unit) + '</span>' +
-          '</div>';
-        }).join('') +
-        ctrl +
-      '</div>';
+      const countChip = '<span style="font-size:11px;font-weight:700;color:var(--text-3);background:var(--surface-2);border-radius:999px;padding:1px 8px;margin-inline-start:8px;">' + count + '</span>';
+      const okDot = ts ? ' <span style="color:#15803d;font-weight:900;margin-inline-start:6px;">✓</span>' : '';
+      return '<details open class="card" style="padding:0;margin-bottom:8px;overflow:hidden;border-color:' + lineColor + ';">' +
+        '<summary style="cursor:pointer;list-style:none;padding:9px 12px;display:flex;align-items:center;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;color:' + titleColor + ';background:var(--surface-2);">' +
+          '<span style="flex:1;min-width:0;">' + PCD.escapeHtml(g.supplier) + countChip + okDot + '</span>' +
+          '<span style="color:var(--text-3);font-weight:400;">▾</span>' +
+        '</summary>' +
+        '<div style="padding:8px 12px;">' + rowsHtml + ctrl + '</div>' +
+      '</details>';
     }).join('');
   }
 

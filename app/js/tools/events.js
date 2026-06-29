@@ -1571,97 +1571,110 @@
   // malzemeleri kendi grubunda (yarı saydam başlık + belirgin ayraç) → karışmaz.
   function buildEventShopping(event, ingMap, recipeMap) {
     const t = PCD.i18n.t;
-    const direct = {};   // tedarikçili direkt malzemeler: key -> row
-    const subs = {};     // { subRecipeAdı: { key -> row } }
-    // v2.44.86 — TÜM fonksiyonların malzemeleri tek konsolide listede toplanır.
+    // v2.44.114 — TÜM malzemeler (direkt + alt-tarif içindekiler dahil) tek seviyede
+    // toplanıp YALNIZ TEDARİKÇİYE göre gruplanır → her tedarikçinin tam siparişi tek
+    // grupta, hepsi sipariş edilebilir. (Eski sürümde alt-tarif malzemeleri ayrı grupta
+    // kalıp sipariş edilemiyordu — caterer için "işlevsiz" hissinin asıl nedeni.)
+    const bucket = {};
+    function addRow(ing, unit, amt) {
+      if (!ing || !(amt > 0)) return;
+      const u = unit || ing.unit || '';
+      const key = ing.id + '|' + u;
+      if (!bucket[key]) bucket[key] = { ing: ing, unit: u, amount: 0 };
+      bucket[key].amount += amt;
+    }
     eventFunctions(event).forEach(function (fn) {
       const guests = Number(fn.guestCount) || 0;
       (fn.menu || []).forEach(function (item) {
-        // Ingredient öğesi → doğrudan alışveriş listesine (direct grubu).
         if (item.ingredientId) {
           const ing = ingMap[item.ingredientId]; if (!ing) return;
-          const totalAmt = guests * (Number(item.amountPerGuest) || 0);
-          if (!(totalAmt > 0)) return;
-          const u = item.unit || ing.unit || '';
-          const key = item.ingredientId + '|' + u;
-          if (!direct[key]) direct[key] = { ing: ing, unit: u, amount: 0 };
-          direct[key].amount += totalAmt;
+          addRow(ing, item.unit || ing.unit || '', guests * (Number(item.amountPerGuest) || 0));
           return;
         }
         const r = recipeMap[item.recipeId]; if (!r) return;
         const portions = guests * (Number(item.portionsPerGuest) || 1);
         const scale = portions / (Number(r.servings) || 1);
         if (!(scale > 0)) return;
-        const flat = PCD.recipes.flattenIngredients(r, ingMap, recipeMap, { scale: scale });
-        flat.forEach(function (f) {
-          if (!f.ingredient) return;
-          const key = f.ingredientId + '|' + (f.unit || '');
-          const bucket = f.viaSubRecipe ? (subs[f.viaSubRecipe] || (subs[f.viaSubRecipe] = {})) : direct;
-          if (!bucket[key]) bucket[key] = { ing: f.ingredient, unit: f.unit || '', amount: 0 };
-          bucket[key].amount += (Number(f.amount) || 0);
+        PCD.recipes.flattenIngredients(r, ingMap, recipeMap, { scale: scale }).forEach(function (f) {
+          addRow(f.ingredient, f.unit || '', Number(f.amount) || 0);
         });
       });
     });
-    function byName(a, b) { return (a.ing.name || '').localeCompare(b.ing.name || ''); }
-    const out = [];
-    // 1) Direkt malzemeler — tedarikçiye göre grupla (eski davranış korunur).
-    //    v2.44.104 — gerçek tedarikçiyi grupta sakla (supplier) → o gruba sipariş gönderme.
-    const otherLabel = t('event_shop_other') || 'Other';
+    return groupRowsBySupplier(Object.keys(bucket).map(function (k) { return bucket[k]; }), t('event_shop_other') || 'Other');
+  }
+
+  // v2.44.114 — Satırları tedarikçiye göre grupla (tedarikçisiz grup en sona; o gruba
+  // sipariş gönderilmez — supplier:'' ). rows: [{ing, unit, amount}].
+  function groupRowsBySupplier(rows, otherLabel) {
     const supGroups = {};
-    Object.keys(direct).forEach(function (k) {
-      const row = direct[k];
-      const realSup = (row.ing.supplier || '').trim();
-      const sup = realSup || otherLabel;
+    rows.forEach(function (row) {
+      const sup = (row.ing.supplier || '').trim() || otherLabel;
       (supGroups[sup] = supGroups[sup] || []).push(row);
     });
-    Object.keys(supGroups).sort().forEach(function (sup) {
-      out.push({ label: sup, supplier: (sup === otherLabel ? '' : sup), isSub: false, rows: supGroups[sup].sort(byName) });
+    function byName(a, b) { return (a.ing.name || '').localeCompare(b.ing.name || ''); }
+    return Object.keys(supGroups).sort(function (a, b) {
+      if (a === otherLabel) return 1; if (b === otherLabel) return -1; return a.localeCompare(b);
+    }).map(function (sup) {
+      return { label: sup, supplier: (sup === otherLabel ? '' : sup), rows: supGroups[sup].sort(byName) };
     });
-    // 2) Her sub-recipe — kendi grubu (yarı saydam başlık + ayraç)
-    Object.keys(subs).sort().forEach(function (name) {
-      out.push({ label: name, isSub: true, rows: Object.keys(subs[name]).map(function (k) { return subs[name][k]; }).sort(byName) });
-    });
-    return out;
+  }
+
+  // v2.44.114 — Ortak tedarikçi-grubu render: açılır-kapanır (details) + kalem sayısı +
+  // tedarikçiye "Gönder" / "Sipariş verildi ✓" (interactive). forPrint = düz, damgasız.
+  // shoppingOrderGroupsHtml(groups, { forPrint, interactive, ordered, sendClass })
+  function shoppingOrderGroupsHtml(groups, opts) {
+    const t = PCD.i18n.t;
+    const L = function (k, fb) { try { const v = t(k); return (v == null || v === k) ? fb : v; } catch (e) { return fb; } };
+    opts = opts || {};
+    const forPrint = !!opts.forPrint;
+    const interactive = !!opts.interactive && !forPrint;
+    const ordered = opts.ordered || {};
+    const sendClass = opts.sendClass || 'shop-send';
+    const fmtAmt = function (n) { return (Math.round(n * 100) / 100).toString(); };
+    const titleColor = forPrint ? '#16433a' : 'var(--brand-700)';
+    const lineColor = forPrint ? '#e7e5e4' : 'var(--border)';
+    return groups.map(function (g) {
+      const count = g.rows.length;
+      const rowsHtml = g.rows.map(function (r) {
+        const nm = r.ing ? (r.ing.name || '') : (r.name || '');
+        return '<div style="display:flex;justify-content:space-between;gap:12px;padding:3px 0;font-size:13px;">' +
+          '<span>' + PCD.escapeHtml(nm) + (r.custom ? ' <span style="color:#999;font-size:11px;">(' + PCD.escapeHtml(L('buffet_order_manual_tag', 'manual')) + ')</span>' : '') + '</span>' +
+          '<span style="font-weight:600;white-space:nowrap;">' + fmtAmt(r.amount) + ' ' + PCD.escapeHtml(r.unit) + '</span>' +
+        '</div>';
+      }).join('');
+      // PRINT: düz başlık + satırlar (tüm gruplar açık, damgasız).
+      if (forPrint) {
+        return '<div style="margin-bottom:12px;">' +
+          '<div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:' + titleColor + ';border-bottom:1px solid ' + lineColor + ';padding-bottom:4px;margin-bottom:6px;">' + PCD.escapeHtml(g.label) + ' (' + count + ')</div>' +
+          rowsHtml + '</div>';
+      }
+      const ts = (interactive && g.supplier) ? ordered[g.supplier] : null;
+      let ctrl = '';
+      if (interactive && g.supplier) {
+        ctrl = ts
+          ? '<div style="display:flex;align-items:center;gap:8px;margin-top:8px;">' +
+              '<span style="font-size:11px;font-weight:800;color:#15803d;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:3px 9px;">' + PCD.icon('check', 12) + ' ' + PCD.escapeHtml(L('shop_ordered', 'Ordered')) + ' · ' + PCD.escapeHtml(PCD.fmtRelTime(ts)) + '</span>' +
+              '<button type="button" class="btn btn-ghost btn-sm ' + sendClass + '" data-sup="' + PCD.escapeHtml(g.supplier) + '" style="color:var(--text-3);">' + PCD.escapeHtml(L('inv_order_again', 'Order again')) + '</button>' +
+            '</div>'
+          : '<button type="button" class="btn btn-primary btn-sm ' + sendClass + '" data-sup="' + PCD.escapeHtml(g.supplier) + '" style="margin-top:8px;">' + PCD.icon('send', 13) + ' ' + PCD.escapeHtml(L('inv_order_send_to', 'Send to {name}').replace('{name}', g.supplier)) + '</button>';
+      }
+      const countChip = '<span style="font-size:11px;font-weight:700;color:var(--text-3);background:var(--surface-2);border-radius:999px;padding:1px 8px;margin-inline-start:8px;">' + count + '</span>';
+      const okDot = ts ? ' <span style="color:#15803d;font-weight:900;margin-inline-start:6px;">✓</span>' : '';
+      return '<details open class="card" style="padding:0;margin-bottom:8px;overflow:hidden;border-color:' + lineColor + ';">' +
+        '<summary style="cursor:pointer;list-style:none;padding:9px 12px;display:flex;align-items:center;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;color:' + titleColor + ';background:var(--surface-2);">' +
+          '<span style="flex:1;min-width:0;">' + PCD.escapeHtml(g.label) + countChip + okDot + '</span>' +
+          '<span style="color:var(--text-3);font-weight:400;">▾</span>' +
+        '</summary>' +
+        '<div style="padding:8px 12px;">' + rowsHtml + ctrl + '</div>' +
+      '</details>';
+    }).join('');
   }
 
   function shoppingListHtml(groups, forPrint, opts) {
     const t = PCD.i18n.t;
-    const L = function (k, fb) { try { const v = t(k); return (v == null || v === k) ? fb : v; } catch (e) { return fb; } };
     if (!groups.length) return '<div class="text-muted" style="padding:16px;text-align:center;">' + PCD.escapeHtml(t('event_shop_empty') || 'Add menu items with recipes to generate a shopping list.') + '</div>';
     opts = opts || {};
-    const ordered = opts.ordered || {};
-    const fmtAmt = function (n) { return (Math.round(n * 100) / 100).toString(); };
-    const titleColor = forPrint ? '#16433a' : 'var(--brand-700)';
-    const lineColor = forPrint ? '#e7e5e4' : 'var(--border)';
-    const subColor = forPrint ? '#9a9a9a' : 'var(--text-3)';
-    const subBg = forPrint ? '#f6f6f6' : 'var(--surface-2)';
-    return groups.map(function (g) {
-      // Sub-recipe grubu: yarı saydam başlık + üstte belirgin (dashed) ayraç.
-      const header = g.isSub
-        ? '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:' + subColor + ';background:' + subBg + ';border-radius:6px;padding:3px 9px;margin-bottom:6px;opacity:0.8;">↳ ' + PCD.escapeHtml(g.label) + '</div>'
-        : '<div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:' + titleColor + ';border-bottom:1px solid ' + lineColor + ';padding-bottom:4px;margin-bottom:6px;">' + PCD.escapeHtml(g.label) + '</div>';
-      // v2.44.104 — interaktif: gerçek tedarikçili gruba "Sipariş gönder" / "Sipariş verildi ✓".
-      let ctrl = '';
-      if (opts.interactive && !forPrint && !g.isSub && g.supplier) {
-        const ts = ordered[g.supplier];
-        ctrl = ts
-          ? '<div style="display:flex;align-items:center;gap:8px;margin-top:6px;">' +
-              '<span style="font-size:11px;font-weight:800;color:#15803d;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:3px 9px;">' + PCD.icon('check', 12) + ' ' + PCD.escapeHtml(L('shop_ordered', 'Ordered')) + ' · ' + PCD.escapeHtml(PCD.fmtRelTime(ts)) + '</span>' +
-              '<button type="button" class="btn btn-ghost btn-sm shop-send" data-sup="' + PCD.escapeHtml(g.supplier) + '" style="color:var(--text-3);">' + PCD.escapeHtml(L('inv_order_again', 'Order again')) + '</button>' +
-            '</div>'
-          : '<button type="button" class="btn btn-primary btn-sm shop-send" data-sup="' + PCD.escapeHtml(g.supplier) + '" style="margin-top:6px;">' + PCD.icon('send', 13) + ' ' + PCD.escapeHtml(L('inv_order_send_to', 'Send to {name}').replace('{name}', g.supplier)) + '</button>';
-      }
-      return '<div style="margin-bottom:14px;' + (g.isSub ? 'border-top:2px dashed ' + lineColor + ';padding-top:12px;' : '') + '">' +
-        header +
-        g.rows.map(function (r) {
-          return '<div style="display:flex;justify-content:space-between;gap:12px;padding:3px 0;font-size:13px;' + (g.isSub ? 'opacity:0.9;' : '') + '">' +
-            '<span>' + PCD.escapeHtml(r.ing.name || '') + '</span>' +
-            '<span style="font-weight:600;white-space:nowrap;">' + fmtAmt(r.amount) + ' ' + PCD.escapeHtml(r.unit) + '</span>' +
-          '</div>';
-        }).join('') +
-        ctrl +
-      '</div>';
-    }).join('');
+    return shoppingOrderGroupsHtml(groups, { forPrint: forPrint, interactive: opts.interactive, ordered: opts.ordered, sendClass: 'shop-send' });
   }
 
   function openShoppingList(event) {
