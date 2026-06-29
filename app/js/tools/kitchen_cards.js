@@ -715,6 +715,10 @@
       // Saved Canvases count badge updates immediately without F5.
       PCD.$('#saveCanvasTopBtn', bodyEl).addEventListener('click', function () {
         if (layout.length === 0) return;
+        // v2.44.105 — Free: yeni kanvas (id yok) + limit dolu → upgrade duvarı (robust chokepoint).
+        if (!canvasId && PCD.gate && !PCD.gate.canCreate('canvases', (PCD.store.listTable('canvases') || []).length)) {
+          PCD.gate.showUpgradeModal({ feature: 'kitchen_cards', message: PCD.i18n.t('gate_create_limit') }); return;
+        }
         const id = persistCanvas();
         if (id) {
           PCD.toast.success(PCD.i18n.t('toast_canvas_saved', { name: ((canvasName || '').trim() || 'Untitled canvas') }));
@@ -789,6 +793,10 @@
 
       // New canvas
       PCD.$('#newCanvasBtn', bodyEl).addEventListener('click', function () {
+        // v2.44.105 — Free: Kitchen Cards limiti (1), diğer deliverable araçlarla tutarlı.
+        if (PCD.gate && !PCD.gate.canCreate('canvases', (PCD.store.listTable('canvases') || []).length)) {
+          PCD.gate.showUpgradeModal({ feature: 'kitchen_cards', message: PCD.i18n.t('gate_create_limit') }); return;
+        }
         canvasId = null;
         canvasName = 'Kitchen Reference';
         columns = 3; orientation = 'landscape'; fontSize = 'medium';
@@ -1610,6 +1618,10 @@
       const id = this.getAttribute('data-dup-cvs');
       const src = PCD.store.getFromTable('canvases', id);
       if (!src) return;
+      // v2.44.105 — Free: kopya da yeni kanvas sayılır → limit kontrolü.
+      if (PCD.gate && !PCD.gate.canCreate('canvases', (PCD.store.listTable('canvases') || []).length)) {
+        PCD.gate.showUpgradeModal({ feature: 'kitchen_cards', message: PCD.i18n.t('gate_create_limit') }); return;
+      }
       const copy = PCD.clone(src); delete copy.id; delete copy.updatedAt;
       copy.name = (src.name || 'Canvas') + ' ' + (PCD.i18n.t('ms_copy_suffix') || '(copy)');
       PCD.store.upsertInTable('canvases', copy, 'cvs');

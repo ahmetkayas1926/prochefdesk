@@ -115,7 +115,7 @@ CREATE POLICY <table>_owner_all ON <table>
   FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 ```
 
-**Misafir vs üye.** Misafir (login yok): yalnız IDB, cloud yazma KAPALI, demo seed yüklenir. Üye: IDB + cloud çift yönlü. Yeni feature'da misafir için cloud push tetikleme.
+**Misafir vs üye (3 katman: misafir/free/pro).** Misafir (login yok, `user.id` yok): yalnız IDB, cloud yazma KAPALI, demo seed yüklenir; tüm araçları GÖRÜR ama oluştur/kaydet (`gate.requireAuth`), çıktı (`gate.requireExport` misafiri keser) ve paylaşım (`gate.requireShare`) duvarla durur. Üye: IDB + cloud çift yönlü, plan limitleri (`plans.js`) geçerli. Yeni yazma/çıktı/paylaşım akışına ilgili `require*` gate'ini ekle; misafir için cloud push tetikleme.
 
 **Root dosyalar app'ten bağımsız.** `/` (landing), `/privacy.html`, `/terms.html`, `/blog/` — kendi inline CSS'leri; app CSS değişikliği etkilemez (tersi de). Blog yazıları standalone HTML (Inter + Fraunces, cream paper, brand green CTA). Landing i18n = `index.html` içinde inline `I18N` objesi (en=HTML default, tr/es/fr/de/ar JS blokları) + `apply(lang)` + `#langSelect`.
 

@@ -79,19 +79,23 @@ Herkese açık tarif keşfi: arama, beğeni, görüntülenme sayacı (rate-limit
 
 **Giriş (Supabase Auth):** e-posta/şifre (hCaptcha'lı) · **Google OAuth** (Google Cloud Console OAuth kimliği + Supabase redirect) · **misafir modu** (giriş yok → yalnız yerel IDB + demo seed). Profil (ad/rol/ülke/işyeri/bio — Discover'da görünür), dil + para + tema, paylaşım yönetimi, gece R2 yedek. Plan: "Pro'ya geç" (Stripe Checkout) / "Aboneliği yönet" (Stripe portal). JSON yedek indir + geri yükle (yan yana karşılaştırma önizlemeli).
 
-## Plan modeli (Free / Pro)
+## Plan modeli (Misafir / Free / Pro)
 
 Tüm limit + gate'ler tek dosyada: `plans.js` (`PLAN_LIMITS`) — özelliği açıp kapamak tek satır. `gate.js` = tüm `can*()` + upgrade modalı + Stripe checkout/portal çağrıları.
+
+**3 katman:** **Misafir** (giriş yok, `user.id` yok) — tüm araçları + demo seed'i GÖRÜR ama oluşturamaz/kaydedemez/silemez (`requireAuth`), **hiç çıktı alamaz** (`requireExport` misafiri keser), paylaşamaz (`requireShare`), buluta yazmaz. Üye olunca aşağıdaki Free/Pro ayrımı geçerli.
 
 | Özellik | Free | Pro |
 |---------|------|-----|
 | Tarif / Malzeme / Workspace | 4 / 20 / 1 | sınırsız |
-| Menü/Event/Büfe/Roster/Whiteboard/Checklist/Prep | her birinden 1 | sınırsız |
+| Menü/Event/Büfe/Roster/Whiteboard/Checklist/Prep/Kitchen Cards | her birinden 1 | sınırsız |
 | Bulut sync · Link/QR paylaşım | kapalı (yalnız yerel) | açık |
 | HACCP · Roster işçilik · Cost-view paylaşım | kapalı | açık |
 | Çıktı footer (watermark) | var | yok |
-| Print/Excel çıktı (araç başına 1; roster Free'de tamamen kapalı) | 1/araç | sınırsız |
+| Print/Excel çıktı (araç başına **ömür-boyu 1**; roster Free'de tamamen kapalı) | 1/araç | sınırsız |
 | Discover yayın | açık | açık |
+
+> **Not (bilinçli gating asimetrileri):** **Suppliers** Free'de limitsiz — sayım-limiti YOK (tedarikçi dizini = referans katmanı, Inventory gibi; içerik limiti zaten Ingredients=20'de). **Event işçilik P&L** Free'de **açık** (gate'siz) — caterer go-to-market'in çekirdek değeri (1 event'i tam P&L ile dene); Roster işçilik ise Pro (`canUseLaborCost` yalnız roster + dashboard). Kitchen Cards Free'de 1'dir (v2.44.105 — diğer deliverable araçlarla hizalandı).
 
 - **Plan kaynağı = sunucu.** `user_prefs`'in AYRI kolonlarında (`plan`, `plan_source`, `plan_status`, `plan_expires_at`, `stripe_customer_id`); frontend kolon-seviyesi yetki kilidiyle **yazamaz**, yalnız okur (`cloud.fetchPlan`, data blob'undan değil) → kullanıcı kendini pro yapamaz.
 - **Manuel pro:** SQL'de `plan='pro', plan_source='manual'` → kalıcı pro (Stripe'sız); webhook `plan_source='manual'` satırlarını ASLA ezmez.

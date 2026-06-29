@@ -4,6 +4,13 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.105 — Plan-limit tutarlılık denetimi: Kitchen Cards gate + gate.js yorum fix · 2026-06-29
+Visitor/Free/Pro gating'in HER araçta tutarlı olup olmadığı hem kod seviyesinde hem canlı preview'da (21/21 araç gezildi, 3 katman test edildi) denetlendi. Gate mantığı 3 katmanda kusursuz çıktı; 3 nokta düzeltildi:
+- **Kitchen Cards Free'de artık 1 (eskiden limitsiz).** `maxCanvases` plans.js'te tanımsızdı → free'de sınırsız kanvas (oysa Whiteboard/Menü/Event vs. = 1). `maxCanvases` eklendi (free 1 / pro ∞) + gate `_maxFor` map'ine `canvases` + kitchen_cards.js 3 oluşturma noktasına `canCreate('canvases')` (New canvas · Save-yeni · Duplicate). Diğer deliverable araçlarla hizalandı.
+- **gate.js yorum düzeltmesi (davranış doğruydu):** çıktı gate'i yorumu "GÜNDE 1 ücretsiz çıktı" diyordu ama kod ömür-boyu 1 (localStorage, tarih sıfırlama yok). Yorum gerçeğe çekildi.
+- **Bilinçli bırakılanlar (operatör onayı):** **Suppliers** limitsiz (tedarikçi dizini = referans katmanı, Inventory gibi; içerik limiti Ingredients=20'de). **Event işçilik P&L** Free'de açık — caterer go-to-market'in çekirdek değeri; Roster işçilik Pro kalır.
+- **Doküman:** HANDOVER plan tablosu "Misafir/Free/Pro" 3 katman + Kitchen Cards eklendi + bilinçli asimetri notu. CLAUDE.md "Misafir vs üye" gotcha'sı `require*` gate'leriyle netleşti. Tüm `node -c` temiz; preview'da KC limiti doğrulandı.
+
 ## v2.44.104 — Event/Buffet listeleri → tedarikçiye sipariş + "sipariş verildi" rozeti + demo seed kâr düzeltmesi · 2026-06-29
 Event "Shopping list" ve Buffet "Order list" tedarikçiye göre gruplu ama DÜZ/işlevsizdi (yalnız yazdır). Artık envanterdeki sipariş altyapısına bağlı:
 - **Her gerçek tedarikçi grubuna "Sipariş gönder" butonu** → `suppliers.startOrder` (teslim tarihi + WhatsApp/SMS/Email + sipariş geçmişi). Listeyi yazdırma da duruyor.

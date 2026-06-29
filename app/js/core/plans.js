@@ -34,6 +34,7 @@
       maxWhiteboards:   1,
       maxChecklists:    1,
       maxPrepSheets:    1,
+      maxCanvases:      1,    // Kitchen Cards — diğer "deliverable" araçlarla tutarlı (1)
       // Özellik gate'leri
       cloudSync:        false,
       haccp:            false,
@@ -57,6 +58,7 @@
       maxWhiteboards:   Infinity,
       maxChecklists:    Infinity,
       maxPrepSheets:    Infinity,
+      maxCanvases:      Infinity,
       cloudSync:        true,
       haccp:            true,
       laborCost:        true,

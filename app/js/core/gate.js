@@ -69,6 +69,7 @@
       menus: lim.maxMenus, events: lim.maxEvents, buffets: lim.maxBuffets,
       rosters: lim.maxRosters, whiteboards: lim.maxWhiteboards,
       checklists: lim.maxChecklists, prepSheets: lim.maxPrepSheets,
+      canvases: lim.maxCanvases,
     };
     return (map[toolKey] != null) ? map[toolKey] : Infinity;
   }
@@ -76,7 +77,8 @@
   function maxFor(toolKey) { return _maxFor(toolKey); }
 
   // ---------- ÇIKTI GATE'i (Faz 3) ----------
-  // Free: araç başına GÜNDE 1 ücretsiz çıktı (pazarlama kancası), 2.'den Pro.
+  // Free: araç başına ÖMÜR-BOYU 1 ücretsiz çıktı (pazarlama kancası), 2.'den Pro.
+  // (localStorage `pcd_export_log` ile cihaz-başı; tarih sıfırlaması YOK.)
   // Roster: free'de tamamen kapalı. Pro: sınırsız.
   function canExport(toolKey) {
     const lim = limits();
