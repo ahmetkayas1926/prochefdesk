@@ -11,7 +11,7 @@
 
 window.PCD.i18n.register('en', {
   app_name: "ProChefDesk",
-  app_tagline: "Kitchen OS for professional chefs",
+  app_tagline: "One system for every kitchen",
   nav_home: "Home",
   nav_recipes: "Recipes",
   nav_ingredients: "Pantry",
@@ -439,7 +439,7 @@ window.PCD.i18n.register('en', {
   faq_q7: "I forgot my password",
   faq_a7: "On the sign-in screen, click \"Forgot password\" — you'll get a reset link by email. If you completely lose your account and have no backup file, data may not be recoverable. We recommend downloading a backup occasionally.",
   faq_q8: "I have a problem / suggestion",
-  faq_a8: "Email hello@prochefdesk.com — every piece of feedback matters. We shape the app around real chef needs.",
+  faq_a8: "Email ahmet@prochefdesk.com — every piece of feedback matters. We shape the app around real chef needs.",
   clear_all_title: "Clear all data?",
   clear_all_text: "ALL workspaces, recipes, ingredients, menus, events — EVERYTHING will be permanently deleted. Cloud data is also wiped, including on other devices. This cannot be undone.",
   clear_all_btn: "Yes, delete everything",

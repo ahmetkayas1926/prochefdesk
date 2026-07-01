@@ -11,7 +11,7 @@
 
 window.PCD.i18n.register('tr', {
   app_name: "ProChefDesk",
-  app_tagline: "Profesyonel şefler için Mutfak OS",
+  app_tagline: "Her mutfak için tek sistem",
   nav_home: "Ana Sayfa",
   nav_recipes: "Tarifler",
   nav_ingredients: "Kiler",
@@ -439,7 +439,7 @@ window.PCD.i18n.register('tr', {
   faq_q7: "Şifremi unuttum",
   faq_a7: "Giriş ekranında \"Forgot password\" tıkla → e-postana sıfırlama linki gelir. Hesabını tamamen kaybedersen ve yedek dosyan da yoksa veriler maalesef geri gelmez. Bu yüzden ara sıra \"Yedek indir\" yapmanı öneririz.",
   faq_q8: "Sorun yaşıyorum / öneri var",
-  faq_a8: "hello@prochefdesk.com adresine e-posta atabilirsin. Her geri bildirim önemli — uygulamayı şefin gerçek ihtiyacına göre şekillendiriyoruz.",
+  faq_a8: "ahmet@prochefdesk.com adresine e-posta atabilirsin. Her geri bildirim önemli — uygulamayı şefin gerçek ihtiyacına göre şekillendiriyoruz.",
   clear_all_title: "Tüm verileri sıfırla?",
   clear_all_text: "TÜM workspace'ler, tarifler, malzemeler, menüler, etkinlikler — HER ŞEY kalıcı olarak silinir. Cloud'dan da silinir, başka cihazlarda da gider. Bu işlem geri alınamaz.",
   clear_all_btn: "Evet, hepsini sil",

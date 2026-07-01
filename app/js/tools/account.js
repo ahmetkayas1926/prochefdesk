@@ -328,7 +328,7 @@
               </div>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
-            <a href="mailto:hello@prochefdesk.com?subject=ProChefDesk Feedback" class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;text-decoration:none;color:inherit;border-bottom:1px solid var(--border);">
+            <a href="mailto:ahmet@prochefdesk.com?subject=ProChefDesk Feedback" class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;text-decoration:none;color:inherit;border-bottom:1px solid var(--border);">
               <div>
                 <div style="font-weight:600;">✉️ ${t('feedback_title')}</div>
                 <div class="text-muted text-sm">${t('feedback_subtitle')}</div>
@@ -1018,7 +1018,7 @@
     closeBtn.addEventListener('click', function () { m.close(); });
   }
 
-  // Public Web3Forms key — submissions land in hello@prochefdesk.com.
+  // Public Web3Forms key — submissions land in ahmet@prochefdesk.com.
   // Safe to ship in client code (this is a public access key, not a secret).
   const WEB3FORMS_KEY = 'f5039b66-3003-485b-9b72-5fdd9c9abaa1';
   // v2.6.82 — hCaptcha (bot protection). Site key is public and safe to commit.

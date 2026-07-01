@@ -2,7 +2,7 @@
 
 > **Version:** 2.0 (R2 automated backup era)  
 > **Last verified:** 2026-05-06 (R2 restore prosedürü prod'da kanıtlandı)  
-> **Owner:** Ahmet Kaya (hello@prochefdesk.com)  
+> **Owner:** Ahmet Kaya (ahmet@prochefdesk.com)  
 > **Stack:** Cloudflare Pages + Supabase Free tier (PostgreSQL 17, project: `prochefdesk`, region: ap-northeast-1) + Cloudflare R2 (nightly backup target)
 
 ---
@@ -20,7 +20,7 @@ Bir şey ciddi şekilde bozulduğunda (site çökme, veri kaybı, yanlış migra
 
 **Kritik gerçek:** Supabase Free tier otomatik backup tutmuyor. Bu yüzden **haftalık manuel `pg_dump` alman gerekiyor** — bu doküman nasılını gösteriyor. Yoksa felaket anında geri dönecek hiçbir şey yok.
 
-**İletişim:** Kullanıcılara duyuru gerekirse `hello@prochefdesk.com` üstünden, aşağıda template'ler var.
+**İletişim:** Kullanıcılara duyuru gerekirse `ahmet@prochefdesk.com` üstünden, aşağıda template'ler var.
 
 ---
 
@@ -39,7 +39,7 @@ Keep this table accurate. Outdated values here means wrong commands during an in
 | DB user (pooler) | `postgres.muuwhrcogikpqylsfvgg` |
 | DB user (direct) | `postgres` |
 | DB password | Stored in operator's password manager. Never commit. |
-| Operator email | `hello@prochefdesk.com` (Cloudflare Email Routing → personal Gmail) |
+| Operator email | `ahmet@prochefdesk.com` (Cloudflare Email Routing → personal Gmail) |
 | Backup location | `C:\prochefdesk-backups\` (operator's Windows machine) |
 
 ---
@@ -430,7 +430,7 @@ A rotated JWT secret invalidates all existing user sessions. They will all need 
 
 ## 7. Scenario 5 — Account / credential compromise
 
-**Symptoms:** unfamiliar deployments in Cloudflare, unexpected SQL queries in Supabase logs, suspicious emails to `hello@prochefdesk.com`, login attempts from unusual locations.
+**Symptoms:** unfamiliar deployments in Cloudflare, unexpected SQL queries in Supabase logs, suspicious emails to `ahmet@prochefdesk.com`, login attempts from unusual locations.
 
 **This is the highest-urgency scenario.** Move fast.
 
@@ -463,7 +463,7 @@ If user data may have been accessed, you have a legal obligation to notify users
 
 ## 8. User communication templates
 
-Send via `hello@prochefdesk.com`. Keep messages short, factual, no excuses.
+Send via `ahmet@prochefdesk.com`. Keep messages short, factual, no excuses.
 
 ### 8.1 — Site outage (in progress)
 
@@ -525,7 +525,7 @@ Send via `hello@prochefdesk.com`. Keep messages short, factual, no excuses.
 > I'm sorry this happened. If you have questions, reply directly.
 >
 > — Ahmet Kaya
-> hello@prochefdesk.com
+> ahmet@prochefdesk.com
 
 ---
 
