@@ -1706,8 +1706,13 @@
       }
 
       // Save the prefs we want to keep
+      // v2.44.119 — prefs.profile eklendi. Chef profili (rol/ülke/işyeri/bio)
+      // prefs.profile'da tutulur; koruma listesinde olmadığı için clearUserData
+      // her çalıştığında (SIGNED_IN demo-cleanup / SIGNED_OUT) siliniyordu →
+      // profil "her girişte default'a dönüyor" bug'ı. İsim Google'dan tazelendiği
+      // için hayatta kalıyordu, diğer alanlar uçuyordu.
       const savedPrefs = {};
-      const prefKeys = ['prefs.theme', 'prefs.locale', 'prefs.currency', 'prefs.haccpTempUnit', 'prefs.haccpCurrentLogId'];
+      const prefKeys = ['prefs.theme', 'prefs.locale', 'prefs.currency', 'prefs.haccpTempUnit', 'prefs.haccpCurrentLogId', 'prefs.profile'];
       prefKeys.forEach(function (k) {
         const v = state.prefs && state.prefs[k.replace('prefs.', '')];
         if (v !== undefined) savedPrefs[k] = v;

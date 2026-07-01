@@ -238,9 +238,15 @@
   // current behaviour). detailed=true → each sub-recipe row becomes a sub-header
   // followed by its underlying ingredients (indented), expanded via
   // flattenIngredients at the exact usage scale and costed via resolveRow.
-  // Σ(lineCost) is IDENTICAL in both modes (== computeFoodCost): cost is linear
-  // in amount, so a sub-recipe's expanded children always sum back to its own
-  // line cost. Shared by recipe/event/buffet cost reports.
+  // COST SUM — do NOT naively Σ(lineCost) in detailed mode: the sub-header row
+  // (isSubHeader:true) carries the sub-recipe's full subtotal for DISPLAY, and
+  // its indented children ALSO carry their own lineCosts → summing both double-
+  // counts the sub-recipe. The children alone sum back to the sub-recipe's line
+  // cost (cost is linear in amount), so the correct total == computeFoodCost.
+  // Consumers handle this: HTML report uses it.totalCost (not a row sum); the
+  // xlsx export blanks the sub-header's cost cell so SUM(range) skips it. Simple
+  // mode (detailed=false) has no sub-header, so Σ(lineCost) == computeFoodCost
+  // directly there. Shared by recipe/event/buffet cost reports.
   // Returns [{ name, isSub, isSubHeader, indent, unitPrice, stockUnit, amount,
   // qtyUnit, lineCost }].
   function costBreakdownRows(recipe, ingMap, recipeMap, detailed) {
