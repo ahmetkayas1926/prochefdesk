@@ -1626,6 +1626,7 @@ window.PCD.i18n.register('fr', {
   tour_chip_haccp: "Registres HACCP",
   haccp_unit_range_required: "Définissez la plage sûre — saisissez min et max ou touchez un préréglage.",
   ing_unit_mismatch: "Unités incompatibles : cet ingrédient est tarifé par {unit}. La quantité ne peut pas être convertie, le coût de cette ligne peut être faux — choisissez une unité compatible.",
+  haccp_audit_summary_range: "Période sélectionnée ({n} mois)",
   tour_chip_receiving: "Réception",
   tour_chip_recipes: "Recettes",
   tour_chip_sign_later: "Inscription plus tard",

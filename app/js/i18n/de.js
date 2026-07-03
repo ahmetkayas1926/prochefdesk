@@ -1626,6 +1626,7 @@ window.PCD.i18n.register('de', {
   tour_chip_haccp: "HACCP-Protokolle",
   haccp_unit_range_required: "Sicheren Bereich festlegen — Min & Max eingeben oder ein Preset antippen.",
   ing_unit_mismatch: "Einheiten passen nicht: Zutat ist pro {unit} bepreist. Menge nicht umrechenbar, Kosten dieser Zeile evtl. falsch — kompatible Einheit wählen.",
+  haccp_audit_summary_range: "Gewählter Zeitraum ({n} Monate)",
   tour_chip_receiving: "Wareneingang",
   tour_chip_recipes: "Rezepte",
   tour_chip_sign_later: "Später registrieren",

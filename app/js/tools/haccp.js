@@ -371,20 +371,18 @@
   }
 
   // Print one month, or a whole month range into ONE PDF (each month its own
-  // page-set). Empty months are skipped so a quarter export stays tight.
+  // page-set).
+  // v2.44.123 — BUG FIX: aralıktaki HER ay artık kendi sayfasını alır. Eski kod
+  // boş ayları atlıyordu → "Nisan–Haziran" seçen kullanıcı yalnız kayıtlı ayı
+  // (ör. Haziran) alıyor, aralığın hiç çalışmadığını sanıyordu. Boş ayın sayfası
+  // zaten dürüst durumu basar ("No activity logged" + kapsama boşluğu uyarısı) —
+  // denetçi için boşluk da bilgidir. 4 HACCP formu da v2.44.117'den beri aynı
+  // davranır (boş ay = boş şablon); Audit Pack artık onlarla tutarlı.
   function printAuditPack(from, to) {
     to = to || from;
     const months = (PCD.haccp && PCD.haccp.monthsInRange) ? PCD.haccp.monthsInRange(from, to) : [from];
-    const sheets = months.map(function (m) {
-      const d = collectAuditData(m);
-      if (d.totals.checks === 0 && d.coverage.daysCovered === 0) return null;  // skip empty month
-      return buildAuditPackHtml(m);
-    }).filter(Boolean);
+    const sheets = months.map(function (m) { return buildAuditPackHtml(m); });
     const title = L('haccp_audit_report_title', 'HACCP Audit Pack');
-    if (!sheets.length) {
-      PCD.toast.error(L('haccp_audit_empty', 'No HACCP records found for this month. Log entries in the four forms first.'));
-      return;
-    }
     if (sheets.length === 1) {
       PCD.print(sheets[0], title + ' — ' + months[0]);
       return;
@@ -394,7 +392,12 @@
 
   // Live one-line summary for the hub Audit Pack card (recomputed on month
   // change). Empty month → friendly "no records yet" line.
-  function auditSummaryInner(d) {
+  // v2.44.123 — İkinci parametre: aralıktaki ay sayısı (etiket "Selected month"
+  // yerine "Selected range (N months)" olur; veri de aralık TOPLAMI gelir).
+  function auditSummaryInner(d, monthCount) {
+    const label = (monthCount && monthCount > 1)
+      ? L('haccp_audit_summary_range', 'Selected range ({n} months)').replace('{n}', monthCount)
+      : L('haccp_audit_summary_label', 'Selected month');
     if (!d || d.totals.checks === 0) {
       return '<span style="color:var(--text-3);">' + PCD.escapeHtml(L('haccp_audit_none_yet', 'No records logged for this month yet.')) + '</span>';
     }
@@ -402,7 +405,7 @@
     const col = (inRange == null) ? 'var(--text-3)' : complianceColor(inRange);
     const cov = d.coverage;
     const covCol = (cov.pct == null) ? 'var(--text-3)' : (cov.pct >= 90 ? '#15803d' : (cov.pct >= 50 ? '#b45309' : '#dc2626'));
-    return '<strong>' + PCD.escapeHtml(L('haccp_audit_summary_label', 'Selected month')) + ':</strong> ' +
+    return '<strong>' + PCD.escapeHtml(label) + ':</strong> ' +
       d.totals.checks + ' ' + PCD.escapeHtml(L('haccp_audit_sum_checks', 'checks')) +
       (cov.hasUnits && cov.pct != null ? ' · <span style="color:' + covCol + ';font-weight:700;">' + PCD.escapeHtml(L('haccp_audit_sum_coverage', '{d}/{n} days logged').replace('{d}', cov.daysCovered).replace('{n}', cov.daysElapsed)) + '</span>' : '') +
       ' · <span style="color:' + col + ';font-weight:700;">' + (inRange == null ? '—' : inRange + '%') + ' ' + PCD.escapeHtml(L('haccp_audit_sum_inrange', 'in range')) + '</span>' +
@@ -645,11 +648,33 @@
         printAuditPack(from, to);
       });
     }
-    // Live summary tracks the "from" month (the range's first); recomputed on
-    // either input change so the chef sees coverage before printing.
+    // v2.44.123 — Canlı özet artık SEÇİLİ ARALIĞIN TOPLAMI (eski: yalnız From ayı
+    // gösteriliyordu → kullanıcı raporu "tek ay veriyor" sanıyordu). Aylar toplanır,
+    // in-range % ve kapsama % toplamlar üzerinden yeniden hesaplanır.
     function _refreshAuditSummary() {
       const sEl = PCD.$('#haccpAuditSummary', view);
-      if (sEl) sEl.innerHTML = auditSummaryInner(collectAuditData((auditFromEl && auditFromEl.value) || currentMonthYM()));
+      if (!sEl) return;
+      const from = (auditFromEl && auditFromEl.value) || currentMonthYM();
+      const to = (auditToEl && auditToEl.value) || from;
+      const months = (PCD.haccp && PCD.haccp.monthsInRange) ? PCD.haccp.monthsInRange(from, to) : [from];
+      if (months.length === 1) {
+        sEl.innerHTML = auditSummaryInner(collectAuditData(months[0]), 1);
+        return;
+      }
+      const agg = { totals: { checks: 0, fails: 0, openCapa: 0, inRangePct: null },
+                    coverage: { hasUnits: false, daysCovered: 0, daysElapsed: 0, pct: null } };
+      months.forEach(function (m) {
+        const d = collectAuditData(m);
+        agg.totals.checks += d.totals.checks;
+        agg.totals.fails += d.totals.fails;
+        agg.totals.openCapa += d.totals.openCapa;
+        agg.coverage.hasUnits = agg.coverage.hasUnits || d.coverage.hasUnits;
+        agg.coverage.daysCovered += d.coverage.daysCovered;
+        agg.coverage.daysElapsed += d.coverage.daysElapsed;
+      });
+      if (agg.totals.checks > 0) agg.totals.inRangePct = Math.round(((agg.totals.checks - agg.totals.fails) / agg.totals.checks) * 1000) / 10;
+      if (agg.coverage.hasUnits && agg.coverage.daysElapsed > 0) agg.coverage.pct = Math.round((agg.coverage.daysCovered / agg.coverage.daysElapsed) * 100);
+      sEl.innerHTML = auditSummaryInner(agg, months.length);
     }
     if (auditFromEl) auditFromEl.addEventListener('change', _refreshAuditSummary);
     if (auditToEl) auditToEl.addEventListener('change', _refreshAuditSummary);

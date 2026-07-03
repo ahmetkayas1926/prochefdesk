@@ -1626,6 +1626,7 @@ window.PCD.i18n.register('es', {
   tour_chip_haccp: "Registros HACCP",
   haccp_unit_range_required: "Define el rango seguro — escribe mín y máx o toca un preajuste.",
   ing_unit_mismatch: "Unidades incompatibles: este ingrediente tiene precio por {unit}. La cantidad no se puede convertir y el coste de esta línea puede ser erróneo — usa una unidad compatible.",
+  haccp_audit_summary_range: "Rango seleccionado ({n} meses)",
   tour_chip_receiving: "Recepción",
   tour_chip_recipes: "Recetas",
   tour_chip_sign_later: "Regístrate después",

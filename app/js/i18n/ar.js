@@ -1626,6 +1626,7 @@ window.PCD.i18n.register('ar', {
   tour_chip_haccp: "سجلات HACCP",
   haccp_unit_range_required: "حدّد النطاق الآمن — أدخل الحد الأدنى والأقصى أو اختر أحد الإعدادات الجاهزة.",
   ing_unit_mismatch: "وحدات غير متوافقة: هذا المكوّن مسعّر بـ {unit}. لا يمكن تحويل الكمية وقد تكون تكلفة هذا السطر خاطئة — اختر وحدة متوافقة.",
+  haccp_audit_summary_range: "النطاق المحدد ({n} أشهر)",
   tour_chip_receiving: "الاستلام",
   tour_chip_recipes: "الوصفات",
   tour_chip_sign_later: "سجّل لاحقًا",

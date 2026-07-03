@@ -389,6 +389,7 @@ window.PCD.i18n.register('tr', {
   // v2.44.122 — HACCP ünite aralığı zorunlu + tarif editörü birim uyuşmazlık uyarısı
   haccp_unit_range_required: "Güvenli aralık gerekli — min & max gir veya üstteki hazır seçeneklerden birine dokun.",
   ing_unit_mismatch: "Birim uyuşmazlığı: bu malzeme {unit} bazında fiyatlı. Miktar dönüştürülemiyor, bu satırın maliyeti yanlış olabilir — uyumlu bir birime geç.",
+  haccp_audit_summary_range: "Seçili aralık ({n} ay)",
   backup_download: "Yedek indir",
   backup_download_desc: "Tüm verilerinin tek dosyalık yedeği — Google Drive veya e-postaya kaydet",
   backup_restore: "Yedekten geri yükle",

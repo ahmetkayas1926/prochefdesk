@@ -4,6 +4,12 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.123 — Audit Pack ay-aralığı düzeldi: her ay kendi sayfası + özet aralık toplamı · 2026-07-03
+Operatör bulgusu: "Nisan–Haziran seçiyorum, yalnız Haziran geliyor." Kök neden: `printAuditPack` boş ayları ATLIYORDU ("quarter stays tight" varsayımı) → aralıkta yalnız kayıtlı ay basılıyor, kullanıcı aralığın hiç çalışmadığını sanıyordu. Ayrıca karttaki canlı özet yalnız From ayının verisini gösteriyordu.
+- **Aralıktaki HER ay artık kendi sayfasını alır** — boş ay dâhil (dürüst boş rapor: "No activity logged" satırları + kapsama boşluğu uyarısı; denetçi için boşluk da bilgidir). 4 HACCP formunun v2.44.117 davranışıyla (boş ay = boş şablon) tutarlı. Boş-ay skip'i ve artık ulaşılamaz "no records" toast'ı kaldırıldı.
+- **Karttaki canlı özet artık SEÇİLİ ARALIĞIN TOPLAMI:** aylar toplanır (checks/fails/open CAPA/kapsanan gün/geçen gün), in-range % ve kapsama % toplam üzerinden yeniden hesaplanır; etiket "Selected month" yerine **"Selected range (N months)"** olur (`haccp_audit_summary_range`, 6 dilde). Tek ay seçiliyken davranış değişmez.
+- `node -c` temiz; preview'da doğrulandı (3 aylık aralık → 3 sayfa, boş aylar dâhil; özet aralık toplamını gösteriyor; 0 console hatası).
+
 ## v2.44.122 — Denetim düzeltme paketi: HACCP sayaç/aralık + birim uyarısı + tur yeniden yazıldı + stale kopya · 2026-07-02
 Bağımsız denetimin kanıtladığı kusurlar tek pakette kapatıldı (operatör onaylı liste):
 - **HACCP hub "bugün" sayacı düzeldi (BUG):** `countTodayEntries` (haccp.js) map-şekilli tabloları (`{wsId:{recordId:obj}}`) dizi sanıp TypeError→catch→0 dönüyordu; "Today's status" HEP 0/4 kalıyordu. Map ise `Object.values` ile diziye çevrilir — 4 formun sayacı da düzeldi.

@@ -389,6 +389,7 @@ window.PCD.i18n.register('en', {
   // v2.44.122 — HACCP ünite aralığı zorunlu + tarif editörü birim uyuşmazlık uyarısı
   haccp_unit_range_required: "Set a safe range — enter min & max or tap a preset above.",
   ing_unit_mismatch: "Unit mismatch: this ingredient is priced per {unit}. The amount can't be converted, so this line's cost may be wrong — switch to a compatible unit.",
+  haccp_audit_summary_range: "Selected range ({n} months)",
   backup_download: "Download backup",
   backup_download_desc: "Save a single-file backup of all your data — to Google Drive or email",
   backup_restore: "Restore from backup",
