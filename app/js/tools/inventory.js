@@ -1278,7 +1278,7 @@
     const recipes = (PCD.store.listRecipes() || []).slice().sort(function (a, b) { return (a.name || '').localeCompare(b.name || ''); });
     if (!recipes.length) { PCD.toast.info(t('inv_no_recipes_for_sales')); return; }
     const wsId = PCD.store.getActiveWorkspaceId();
-    // v2.44.85 — YEREL tarih (eski UTC `toISOString` → Perth UTC+8'de gün kayması; dashboard
+    // v2.44.85 — YEREL tarih (eski UTC `toISOString` → UTC+8 gibi dilimlerde gün kayması; dashboard
     // "son 7 gün" P&L de yerel kullanıyor → tutarlı).
     const today = (function () { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); })();
     function logArr() { const root = PCD.store._read('salesLog') || {}; return (root[wsId] || []).filter(function (s) { return s && !s._deletedAt; }); }

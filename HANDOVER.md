@@ -4,14 +4,14 @@
 
 ## ProChefDesk nedir
 
-Profesyonel şefler için offline-öncelikli web tabanlı mutfak yönetim sistemi: tarif maliyetlendirme, menü tasarımı, vardiya planı, HACCP uyumu ve mutfak operasyonu tek platformda. Aktif çalışan bir şef (Ahmet Kaya) tarafından inşa edilmekte + kullanılmaktadır. **Production:** `prochefdesk.com` (uygulama `/app/`).
+Profesyonel şefler için yerel-öncelikli (IndexedDB) web tabanlı mutfak yönetim sistemi: tarif maliyetlendirme, menü tasarımı, vardiya planı, HACCP uyumu ve mutfak operasyonu tek platformda. Aktif çalışan bir şef (Ahmet Kaya) tarafından inşa edilmekte + kullanılmaktadır. **Production:** `prochefdesk.com` (uygulama `/app/`).
 
 ## Mimari
 
 | Katman | Teknoloji |
 |--------|-----------|
 | Frontend | Vanilla JavaScript (bundler / service worker yok) |
-| Offline storage | IndexedDB — birincil depo; cloud ikincil |
+| Yerel depo | IndexedDB — birincil depo; cloud ikincil |
 | Bulut | Supabase (Postgres 17, Auth, Storage, Realtime, Edge Functions) |
 | Deploy | Cloudflare Pages ← GitHub push (otomatik; build `node build.js`) |
 | Yedek | Cloudflare R2 — gece otomatik JSON |

@@ -70,7 +70,7 @@ BEGIN
 END;
 $$;
 
--- 3) Cron schedule — günde bir kez UTC 03:00 (Perth/Avustralya saatiyle gece-sabah)
+-- 3) Cron schedule — günde bir kez UTC 03:00
 -- Var olan kaydı silip yeniden ekliyoruz ki yeniden çalıştırma idempotent olsun.
 DO $$
 BEGIN

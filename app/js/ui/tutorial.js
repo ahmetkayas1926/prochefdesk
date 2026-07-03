@@ -58,7 +58,7 @@
       titleKey: 'tour_welcome_title',
       taglineKey: 'tour_welcome_tagline',
       bodyKey: 'tour_welcome_body',
-      chipKeys: ['tour_chip_live_cost', 'tour_chip_auto_sync', 'tour_chip_offline'],
+      chipKeys: ['tour_chip_live_cost', 'tour_chip_auto_sync'],
     },
     {
       emoji: '📊',
@@ -68,13 +68,17 @@
       bodyKey: 'tour_cost_body',
       chipKeys: ['tour_chip_recipes', 'tour_chip_kitchen_cards', 'tour_chip_portion'],
     },
+    // v2.44.122 — 3. adım HACCP'ten Events'e çevrildi: hedef kitle (event
+    // caterer / bağımsız mutfak) için "gelme nedeni" teklif/etkinlik akışı;
+    // HACCP welcome gövdesinde + chip'te anılır (free'de Pro-kilitli olduğu
+    // için tura tek başına koymak tutarsızdı).
     {
-      emoji: '🌡️',
-      gradient: 'linear-gradient(135deg, #f59e0b, #d97706)',
-      titleKey: 'tour_haccp_title',
-      taglineKey: 'tour_haccp_tagline',
-      bodyKey: 'tour_haccp_body',
-      chipKeys: ['tour_chip_temp_logs', 'tour_chip_cook_cool', 'tour_chip_receiving'],
+      emoji: '📅',
+      gradient: 'linear-gradient(135deg, #0d9488, #0f766e)',
+      titleKey: 'tour_events_title',
+      taglineKey: 'tour_events_tagline',
+      bodyKey: 'tour_events_body',
+      chipKeys: ['tour_chip_events', 'tour_chip_buffet', 'tour_chip_haccp'],
     },
     {
       emoji: '🚀',

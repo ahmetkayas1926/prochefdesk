@@ -649,6 +649,12 @@
       if (!name) { PCD.toast.error(t('haccp_unit_name_required') || 'Name is required'); return; }
       const min = minStr === '' ? undefined : parseFloat(minStr);
       const max = maxStr === '' ? undefined : parseFloat(maxStr);
+      // v2.44.122 — Güvenli aralık ZORUNLU: aralıksız ünitede isOutOfRange hiçbir
+      // değeri yakalayamaz (yalnız sayı min/max'a bakar) → okuma modalı "?°C–?°C",
+      // Audit Pack yanıltıcı "100% in range" üretiyordu. Preset butonları modalda hazır.
+      if (min === undefined || max === undefined || isNaN(min) || isNaN(max)) {
+        PCD.toast.error(t('haccp_unit_range_required') || 'Set a safe range — enter min & max or tap a preset above.'); return;
+      }
       if (min !== undefined && max !== undefined && min >= max) {
         PCD.toast.error(t('haccp_unit_range_invalid') || 'Min must be less than max'); return;
       }

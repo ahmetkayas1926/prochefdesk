@@ -2,9 +2,9 @@
 
 ## Proje
 
-ProChefDesk — profesyonel şefler için web tabanlı mutfak yönetim sistemi. **Operatör:** Ahmet Kaya, Perth WA, aktif kullanıcı şef. Solo proje. **Production:** `prochefdesk.com`, uygulama `/app/` altında.
+ProChefDesk — profesyonel şefler için web tabanlı mutfak yönetim sistemi. **Operatör:** Ahmet Kaya, aktif kullanıcı şef. Solo proje. **Production:** `prochefdesk.com`, uygulama `/app/` altında.
 
-**Stack:** Vanilla JS (bundler/service worker yok), IndexedDB (offline-first ana storage), Supabase (Postgres 17 + Auth + Storage + Realtime + Edge Functions), Cloudflare Pages (GitHub push'ta auto-deploy), Cloudflare R2 (gece yedek).
+**Stack:** Vanilla JS (bundler/service worker yok), IndexedDB (yerel-öncelikli ana storage), Supabase (Postgres 17 + Auth + Storage + Realtime + Edge Functions), Cloudflare Pages (GitHub push'ta auto-deploy), Cloudflare R2 (gece yedek).
 
 Araç envanteri + mimari → **`HANDOVER.md`** · sürüm geçmişi → **`CHANGELOG.md`**. Launch işleri → aşağıdaki bölüm; büyüme roadmap'i operatörde — yeni özelliği spontan kurma, ne yapılacağını operatör söyler.
 
@@ -18,6 +18,7 @@ Araç envanteri + mimari → **`HANDOVER.md`** · sürüm geçmişi → **`CHANG
 - [ ] **Go-to-market — ASIL İŞ.** Tek hedef ↓.
 - [ ] iOS/Safari gerçek cihaz testi (kamera/share-sheet/PWA/hCaptcha — kod denetimi tamam).
 - [ ] Launch QA — operatörle son manuel pass.
+- [ ] **Web3Forms teslim adresi bozuk.** "Report an issue" formu (account.js `WEB3FORMS_KEY`) hâlâ hello@prochefdesk.com'a teslim ediyor — ama hello@ artık mail almıyor (Cloudflare Email Routing kapatıldı, mailbox Zoho'da `ahmet@prochefdesk.com` olarak kuruldu) → **gönderiler kayboluyor.** Çözüm: web3forms.com'da ahmet@ ile YENİ access key oluştur (eski hello@ hesabı e-posta kilitli olabilir) → `account.js` `WEB3FORMS_KEY`'i yeni key'le değiştir. ("Send feedback" mailto zaten ahmet@'ye güncellendi, o çalışıyor.)
 - [ ] (Gelecek) AU PR alınca → AU Stripe'a geç (ABN+AU banka) + ABD LLC feshet. **Vergi:** DE LLC ~$300/yıl (1 Haz) + federal 5472+1120 (15 Nis; gelir 0 olsa bile; 5472 kaçırma $25k; ilk dosyalama 2027).
 
 **Stripe kritik notlar:** kimlik engeli → support.stripe.com specialist (Ask Atlas değil). Para yolu: Stripe→Mercury→Wise→AU/TR. Adaptive Pricing KAPALI ($19 sabit). free→pro: `migrations/v2.44.38` user_prefs satırını trigger'la yaratır — yeni `.update().eq(user_id)` yazan satır var olduğunu varsaymalı / upsert kullanmalı.

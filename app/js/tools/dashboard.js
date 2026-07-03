@@ -664,8 +664,8 @@
       // 6.2b — Bugün P&L: salesLog'tan bugünün satışları → ciro · food cost % · kâr.
       // Günlük "kokpit" — Record sales'e girilen tarihli satışları besler.
       // v2.44.85 — SON 7 GÜN P&L (eski "bugün" yerine). Şef satışı HAFTALIK girer; günlük
-      // kart çoğu gün boş/eski kalıyordu. Tarih YEREL (eski UTC `toISOString` → Perth gibi
-      // UTC+8'de her sabah "yanlış gün" gösteriyordu). salesLog son 7 gün → ciro/fc%/kâr.
+      // kart çoğu gün boş/eski kalıyordu. Tarih YEREL (eski UTC `toISOString` →
+      // UTC+8 gibi dilimlerde her sabah "yanlış gün" gösteriyordu). salesLog son 7 gün → ciro/fc%/kâr.
       let todayPL = null;
       (function () {
         try {

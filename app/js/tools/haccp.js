@@ -416,7 +416,11 @@
     try {
       const wsId = PCD.store.getActiveWorkspaceId();
       const all = PCD.store._read(stateKey) || {};
-      const arr = Array.isArray(all) ? all : (all[wsId] || []);
+      // v2.44.122 — BUG FIX: haccp tabloları MAP şeklinde ({wsId:{recordId:obj}}).
+      // Eski kod all[wsId]'yi dizi sanıp .filter çağırıyordu → TypeError → catch → hep 0
+      // ("Today's status" hiç güncellenmiyordu). Map ise Object.values ile diziye çevir.
+      const raw = Array.isArray(all) ? all : (all[wsId] || {});
+      const arr = Array.isArray(raw) ? raw : Object.values(raw || {});
       const today = todayStr();
       const month = currentMonthYM();
       return arr.filter(function (r) {

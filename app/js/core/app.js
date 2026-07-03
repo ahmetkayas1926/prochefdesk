@@ -269,7 +269,10 @@
     // Upgrade button
     const upgradeBtn = PCD.$('#btnUpgrade');
     if (upgradeBtn) upgradeBtn.addEventListener('click', function () {
-      PCD.toast.info(PCD.i18n.t('toast_coming_soon'));
+      // v2.44.122 — Stripe canlı; eski "yakında 🚀" toast'ı stale idi. Gate
+      // modalı açılır; misafirse startCheckout girişe yönlendirir (gate.js).
+      if (PCD.gate && PCD.gate.showUpgradeModal) PCD.gate.showUpgradeModal({});
+      else PCD.router.go('account');
     });
 
     // Bottom nav
@@ -489,13 +492,15 @@
     const plan = PCD.store.get('plan') || 'free';
     const badge = PCD.$('#planBadge');
     if (!badge) return;
-    badge.className = 'plan-badge plan-' + plan;
-    badge.textContent = t(plan + '_plan');
+    // v2.44.122 — Monetization canlı (v2.17+): eski "her şey ücretsiz" gizlemesi
+    // stale idi. Badge gerçek planı gösterir; Upgrade yalnız pro OLMAYANA görünür.
+    // 'team' pro muamelesi görür (plans.js getUserPlan ile tutarlı).
+    const isProLike = (plan === 'pro' || plan === 'team');
+    badge.className = 'plan-badge plan-' + (isProLike ? 'pro' : 'free');
+    badge.textContent = t(isProLike ? 'pro_plan' : 'free_plan');
+    badge.style.display = '';
     const upgrade = PCD.$('#btnUpgrade');
-    // v2.6.25: Şu an her şey ücretsiz, "Pro'ya Yükselt" butonu kullanıcıyı
-    // kafa karıştırıyor. Premium tier eklendiğinde bu blok geri açılacak.
-    if (upgrade) upgrade.style.display = 'none';
-    if (badge) badge.style.display = 'none';
+    if (upgrade) upgrade.style.display = isProLike ? 'none' : '';
   }
 
   // ============ WORKSPACE SWITCHER ============

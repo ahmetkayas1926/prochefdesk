@@ -3188,6 +3188,19 @@ function renderAllergenChips() {
         }
 
         const row = PCD.el('div', { class: 'list-item', style: { minHeight: 'auto', padding: '10px' } });
+        // v2.44.122 — Çapraz birim-grubu uyarısı: convertUnit grup bulamazsa değeri
+        // OLDUĞU GİBİ döndürür (utils.js) → per-kg malzemeye "pcs" seçilirse maliyet
+        // sessizce 1:1 hesaplanır. Dönüştürülemeyen birim seçiliyse satıra ⚠ koy.
+        let unitWarn = '';
+        (function () {
+          const effUnit = ri.unit || defaultUnit;
+          if (!effUnit || !defaultUnit) return;
+          if (String(effUnit).toLowerCase() === String(defaultUnit).toLowerCase()) return;
+          const g1 = PCD.unitGroup(effUnit), g2 = PCD.unitGroup(defaultUnit);
+          if (!g1 || !g2 || g1 !== g2) {
+            unitWarn = '<span title="' + PCD.escapeHtml(t('ing_unit_mismatch', { unit: defaultUnit })) + '" style="color:var(--danger);font-weight:800;cursor:help;margin-inline-end:2px;">⚠</span>';
+          }
+        })();
         const subBadge = isSubRecipe ? '<span style="display:inline-block;background:var(--brand-50);color:var(--brand-700);font-size:9px;font-weight:700;padding:2px 6px;border-radius:999px;letter-spacing:0.06em;text-transform:uppercase;margin-inline-start:6px;">SUB</span>' : '';
         const unitOptions = isSubRecipe
           ? ['portion','g','kg','ml','l','batch','tray','pcs']
@@ -3207,7 +3220,7 @@ function renderAllergenChips() {
                 ${unitOptions.map(function (u) { return '<option value="' + u + '"' + ((ri.unit || defaultUnit) === u ? ' selected' : '') + '>' + PCD.unitLabel(u) + '</option>'; }).join('')}
               </select>
               <span class="text-muted">·</span>
-              <span data-line-cost data-idx="${idx}" style="font-weight:600;">${PCD.fmtMoney(lineCost)}</span>
+              ${unitWarn}<span data-line-cost data-idx="${idx}" style="font-weight:600;">${PCD.fmtMoney(lineCost)}</span>
             </div>
           </div>
           <button type="button" class="icon-btn" data-remove="${idx}" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/></svg></button>
@@ -3526,7 +3539,9 @@ function renderAllergenChips() {
         const idx = parseInt(this.getAttribute('data-idx'), 10);
         if (!data.ingredients[idx]) return;
         data.ingredients[idx].unit = this.value;
-        updateLineCostsDOM();
+        // v2.44.122 — Tam re-render: ⚠ birim-uyuşmazlık rozeti de tazelensin
+        // (select değişimi discrete olay, focus kaybı sorun değil).
+        renderIngList();
         updateCostStripDOM();
       });
       // v2.8.52 — Separator label input (debounced, sadece state'i günceller,
