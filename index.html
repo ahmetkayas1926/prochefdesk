@@ -728,6 +728,7 @@
       <span>ProChefDesk</span>
     </a>
     <div class="nav-right">
+      <a class="nav-link" href="#tools" data-i18n="nav_tools">Tools</a>
       <a class="nav-link" href="#pricing" data-i18n="nav_pricing">Pricing</a>
       <a class="nav-link" href="/blog/" data-i18n="nav_blog">Blog</a>
       <select id="langSelect" aria-label="Language" style="font-family:inherit;font-size:13px;font-weight:600;color:var(--text-2);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 8px;cursor:pointer;">
@@ -758,7 +759,7 @@
           <path d="M5 12h14M13 5l7 7-7 7"/>
         </svg>
       </a>
-      <a href="#proof" class="btn-secondary" data-i18n="hero_secondary">See how it works</a>
+      <a href="/app/" class="btn-secondary" data-i18n="hero_secondary">Try the live demo — no signup</a>
     </div>
 
     <div class="hero-meta reveal reveal-4">
@@ -776,7 +777,143 @@
       </span>
     </div>
 
+    <div class="hero-visual reveal reveal-4">
+      <div class="shot">
+        <div class="shot-bar"><i></i><i></i><i></i><span class="shot-url">prochefdesk.com/app</span></div>
+        <div class="shot-body shot-real">
+          <img src="/assets/shots/dashboard.webp" alt="ProChefDesk dashboard — average food cost, weekly labour cost, low stock alerts and cost health at a glance" width="1500" height="950" fetchpriority="high" decoding="async">
+        </div>
+      </div>
+    </div>
+
   </section>
+
+</div>
+
+<!-- ============ TOOLSET GRID ============ -->
+<section class="tools" id="tools">
+  <div class="container">
+    <div class="section-head">
+      <div class="section-label" data-i18n="tools_label">The Toolset</div>
+      <h2 data-i18n="tools_h2">Everything the kitchen runs on.</h2>
+      <p data-i18n="tools_sub">A connected toolset for the back of house — costing, menus, prep, compliance and inventory in one place.</p>
+      <p style="margin-top:10px;font-weight:800;color:var(--brand);font-size:15px;" data-i18n="tools_count">16+ professional tools · one subscription · six languages</p>
+    </div>
+    <style>
+      .tg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;max-width:1080px;margin:28px auto 0;}
+      .tg-item{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 16px 14px;box-shadow:var(--shadow-sm);}
+      .tg-item svg{width:20px;height:20px;color:var(--brand);margin-bottom:8px;}
+      .tg-item h3{margin:0 0 4px;font-size:15px;}
+      .tg-item p{margin:0;font-size:13px;line-height:1.5;color:var(--text-3);}
+    </style>
+    <div class="tg-grid">
+      <div class="tg-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg><h3 data-i18n="tool_recipes_t">Recipes</h3><p data-i18n="tool_recipes_d">Live food cost, allergens, photos, version history — even estimated nutrition. Built the way a chef actually works.</p></div>
+      <div class="tg-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 12 22l-8.59-8.59A2 2 0 0 1 3 12V4a1 1 0 0 1 1-1h8a2 2 0 0 1 1.41.59z"/><circle cx="7.5" cy="7.5" r="1"/></svg><h3 data-i18n="tool_ingredients_t">Ingredients</h3><p data-i18n="tool_ingredients_d">Suppliers, prices, units, yield %. Change one price — every recipe, menu and report updates instantly.</p></div>
+      <div class="tg-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg><h3 data-i18n="tool_menu_t">Menu Studio</h3><p data-i18n="tool_menu_d">Block-canvas menu designer with live food cost, margin and automatic allergens. Pro templates — print or share.</p></div>
+      <div class="tg-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10M18 20V4M6 20v-4"/></svg><h3 data-i18n="tool_engineering_t">Menu Engineering</h3><p data-i18n="tool_engineering_d">Stars, plow-horses, puzzles and dogs — see which dishes earn their place and which just fill the page.</p></div>
+      <div class="tg-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.5-1.6 3-3.2 3-5.5A5.5 5.5 0 0 0 12 5 5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 3.9 3 5.5l7 7z"/></svg><h3 data-i18n="tool_nutrition_t">Nutrition</h3><p data-i18n="tool_nutrition_d">Estimated calories and macros per serving, calculated from the ingredients you already entered.</p></div>
+      <div class="tg-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01"/></svg><h3 data-i18n="tool_batch_t">Batch Calculator</h3><p data-i18n="tool_batch_d">Scale any recipe to any batch size — units convert themselves and the costs follow.</p></div>
+      <div class="tg-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg><h3 data-i18n="tool_cards_t">Kitchen Cards</h3><p data-i18n="tool_cards_d">Printable A4 recipe cards for the line. Big type, scaled portions, highlighted allergens.</p></div>
+      <div class="tg-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><h3 data-i18n="tool_events_t">Events &amp; Catering</h3><p data-i18n="tool_events_d">Plan a wedding, banquet or function. Guest count, recipe scaling, prep list, food cost and profit.</p></div>
+      <div class="tg-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2V2M7 2v20M21 15V2a5 5 0 0 0-5 5v6a2 2 0 0 0 2 2h3zM21 15v7"/></svg><h3 data-i18n="tool_buffet_t">Buffet Planner</h3><p data-i18n="tool_buffet_d">Stations, per-guest portions and realistic pickup rates — with live food-cost % so you produce enough, not double.</p></div>
+      <div class="tg-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><h3 data-i18n="tool_roster_t">Roster &amp; Labour</h3><p data-i18n="tool_roster_d">Weekly roster with leave codes and departments. Labour-cost totals build as you assign; print, Excel or image share.</p></div>
+      <div class="tg-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v8a2 2 0 0 1-1 1.73l-7 4a2 2 0 0 1-2 0l-7-4A2 2 0 0 1 3 16V8a2 2 0 0 1 1-1.73l7-4a2 2 0 0 1 2 0l7 4A2 2 0 0 1 21 8z"/><path d="M3.3 7l8.7 5 8.7-5M12 22V12"/></svg><h3 data-i18n="tool_inventory_t">Inventory &amp; Variance</h3><p data-i18n="tool_inventory_d">Stock counts with low-stock alerts, a costed waste log, and theoretical-vs-actual variance that finds the leaks.</p></div>
+      <div class="tg-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M10 11v6M14 11v6"/></svg><h3 data-i18n="tool_waste_t">Waste Tracking</h3><p data-i18n="tool_waste_d">Log what gets thrown away, costed per entry — so you see exactly where money leaks.</p></div>
+      <div class="tg-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 3h15v13H1zM16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg><h3 data-i18n="tool_suppliers_t">Suppliers</h3><p data-i18n="tool_suppliers_d">Contacts, products, lead times. Send orders by email or WhatsApp; order history at a glance.</p></div>
+      <div class="tg-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg><h3 data-i18n="tool_haccp_t">Checklists &amp; HACCP</h3><p data-i18n="tool_haccp_d">Opening and closing routines, prep sheets, cooling and temperature logs — HACCP-ready templates included.</p></div>
+      <div class="tg-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="m9 15 2 2 4-4"/></svg><h3 data-i18n="tool_audit_t">HACCP Audit Pack</h3><p data-i18n="tool_audit_d">One click compiles the month — every log, exception and signature line in a single inspector-ready PDF.</p></div>
+      <div class="tg-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg><h3 data-i18n="tool_whiteboard_t">Service Whiteboard</h3><p data-i18n="tool_whiteboard_d">Printable A4/A3 service board — covers, dietary counts, the 86 list and today's specials.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ EVENTS & BUFFETS ============ -->
+<section class="proof">
+  <div class="container">
+    <div class="section-head">
+      <div class="section-label" data-i18n="ev_label">Banquets · weddings · buffets</div>
+      <h2 data-i18n="ev_h2">Plan a 200-cover event without the spreadsheet</h2>
+      <p data-i18n="ev_sub">Build the menu, set the head count, and see food cost, revenue and profit in real time — then print a client-ready quote, capture the e-signature, and turn it into shopping lists and prep sheets in one step.</p>
+    </div>
+
+    <div class="proof-grid">
+      <!-- Events list -->
+      <div class="proof-card">
+        <div class="pc-cap">
+          <span class="pc-tag" data-i18n="ev1_tag">Events</span>
+          <h3 data-i18n="ev1_h3">Every function, costed and confirmed</h3>
+          <p data-i18n="ev1_p">Banquets, weddings and caterings in one list, each with guest count, venue, food cost, revenue and profit.</p>
+        </div>
+        <div class="shot">
+          <div class="shot-bar"><i></i><i></i><i></i><span class="shot-url">prochefdesk.com/app</span></div>
+          <div class="shot-body shot-real">
+            <img src="/assets/shots/events.webp" alt="ProChefDesk events list — banquets and weddings with food cost, revenue and profit per event" width="1320" height="825" loading="lazy" decoding="async">
+          </div>
+        </div>
+      </div>
+
+      <!-- Event detail -->
+      <div class="proof-card">
+        <div class="pc-cap">
+          <span class="pc-tag" data-i18n="ev2_tag">Event</span>
+          <h3 data-i18n="ev2_h3">Know the profit before you say yes</h3>
+          <p data-i18n="ev2_p">Per-guest food cost, profit against the client's budget and the full dish list — quote with the numbers in front of you, send a client-ready proposal with the costs hidden, and capture the client's e-signature.</p>
+        </div>
+        <div class="shot">
+          <div class="shot-bar"><i></i><i></i><i></i><span class="shot-url">prochefdesk.com/app</span></div>
+          <div class="shot-body shot-real">
+            <img src="/assets/shots/event_detail.webp" alt="ProChefDesk event detail — total food cost, food cost per guest, profit and event menu" width="1320" height="825" loading="lazy" decoding="async">
+          </div>
+        </div>
+      </div>
+
+      <!-- Buffet planner -->
+      <div class="proof-card">
+        <div class="pc-cap">
+          <span class="pc-tag" data-i18n="ev3_tag">Buffet Planner</span>
+          <h3 data-i18n="ev3_h3">Buffets that hold their margin</h3>
+          <p data-i18n="ev3_p">Covers, ticket price and live food-cost % on every buffet — green when it's on target, amber when it needs a second look.</p>
+        </div>
+        <div class="shot">
+          <div class="shot-bar"><i></i><i></i><i></i><span class="shot-url">prochefdesk.com/app</span></div>
+          <div class="shot-body shot-real">
+            <img src="/assets/shots/buffet.webp" alt="ProChefDesk buffet planner — covers, ticket price and live food cost percentage per buffet" width="1320" height="825" loading="lazy" decoding="async">
+          </div>
+        </div>
+      </div>
+
+      <!-- Buffet detail -->
+      <div class="proof-card">
+        <div class="pc-cap">
+          <span class="pc-tag" data-i18n="ev4_tag">Buffet</span>
+          <h3 data-i18n="ev4_h3">Stations, portions and pickup, calibrated</h3>
+          <p data-i18n="ev4_p">Per-guest amounts, realistic pickup rates and expected waste by station — so you produce enough for the room, not twice as much.</p>
+        </div>
+        <div class="shot">
+          <div class="shot-bar"><i></i><i></i><i></i><span class="shot-url">prochefdesk.com/app</span></div>
+          <div class="shot-body shot-real">
+            <img src="/assets/shots/buffet_detail.webp" alt="ProChefDesk buffet detail — food cost percent, per-cover cost, expected waste and stations" width="1320" height="825" loading="lazy" decoding="async">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Client proposal document -->
+    <div style="max-width:760px;margin:40px auto 0;text-align:center;">
+      <span class="pc-tag" data-i18n="evq_tag">Client quote</span>
+      <h3 style="margin:12px 0 6px;" data-i18n="evq_h3">The proposal your client signs</h3>
+      <p style="margin:0;color:var(--text-3);font-size:14.5px;line-height:1.6;" data-i18n="evq_p">Menus, pricing, payment schedule and signature lines — costs hidden, ready to send. Capture the e-signature right in the app.</p>
+    </div>
+    <div class="shot" style="max-width:820px;margin:20px auto 0;">
+      <div class="shot-bar"><i></i><i></i><i></i><span class="shot-url">prochefdesk.com/app</span></div>
+      <div class="shot-body shot-real">
+        <img src="/assets/shots/event_proposal.png" alt="ProChefDesk event proposal — client-ready quote with menus, pricing, payment schedule and signature lines, costs hidden" width="1000" height="1130" loading="lazy" decoding="async">
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="container">
 
   <!-- ============ COSTS · ANY DEVICE ============ -->
   <section class="costs">
@@ -816,11 +953,11 @@
       </div>
 
       <div class="live-devices">
-        <!-- Desktop: menu with live margin -->
+        <!-- Desktop: recipes with live food cost -->
         <div class="shot desk">
           <div class="shot-bar"><i></i><i></i><i></i><span class="shot-url">prochefdesk.com/app</span></div>
           <div class="shot-body shot-real">
-            <img src="/assets/shots/dashboard.webp" alt="ProChefDesk dashboard — average food cost, weekly labour, low stock and a cost-health alert" width="1500" height="950" loading="lazy" decoding="async">
+            <img src="/assets/shots/recipes.webp" alt="ProChefDesk recipes list showing live food cost percentage on every dish" width="1500" height="1050" loading="lazy" decoding="async">
           </div>
         </div>
         <!-- Phone: editing the recipe price -->
@@ -927,110 +1064,6 @@
   </div>
 </section>
 
-<!-- ============ EVENTS & BUFFETS ============ -->
-<section class="proof">
-  <div class="container">
-    <div class="section-head">
-      <div class="section-label" data-i18n="ev_label">Banquets · weddings · buffets</div>
-      <h2 data-i18n="ev_h2">Plan a 200-cover event without the spreadsheet</h2>
-      <p data-i18n="ev_sub">Build the menu, set the head count, and see food cost, revenue and profit in real time — then generate a shopping list and deduct stock in one step.</p>
-    </div>
-
-    <div class="proof-grid">
-      <!-- Events list -->
-      <div class="proof-card">
-        <div class="pc-cap">
-          <span class="pc-tag" data-i18n="ev1_tag">Events</span>
-          <h3 data-i18n="ev1_h3">Every function, costed and confirmed</h3>
-          <p data-i18n="ev1_p">Banquets, weddings and caterings in one list, each with guest count, venue, food cost, revenue and profit.</p>
-        </div>
-        <div class="shot">
-          <div class="shot-bar"><i></i><i></i><i></i><span class="shot-url">prochefdesk.com/app</span></div>
-          <div class="shot-body shot-real">
-            <img src="/assets/shots/events.webp" alt="ProChefDesk events list — banquets and weddings with food cost, revenue and profit per event" width="1320" height="825" loading="lazy" decoding="async">
-          </div>
-        </div>
-      </div>
-
-      <!-- Event detail -->
-      <div class="proof-card">
-        <div class="pc-cap">
-          <span class="pc-tag" data-i18n="ev2_tag">Event</span>
-          <h3 data-i18n="ev2_h3">Know the profit before you say yes</h3>
-          <p data-i18n="ev2_p">Per-guest food cost, profit against the client's budget and the full dish list — so you quote each function with the numbers in front of you.</p>
-        </div>
-        <div class="shot">
-          <div class="shot-bar"><i></i><i></i><i></i><span class="shot-url">prochefdesk.com/app</span></div>
-          <div class="shot-body shot-real">
-            <img src="/assets/shots/event_detail.webp" alt="ProChefDesk event detail — total food cost, food cost per guest, profit and event menu" width="1320" height="825" loading="lazy" decoding="async">
-          </div>
-        </div>
-      </div>
-
-      <!-- Buffet planner -->
-      <div class="proof-card">
-        <div class="pc-cap">
-          <span class="pc-tag" data-i18n="ev3_tag">Buffet Planner</span>
-          <h3 data-i18n="ev3_h3">Buffets that hold their margin</h3>
-          <p data-i18n="ev3_p">Covers, ticket price and live food-cost % on every buffet — green when it's on target, amber when it needs a second look.</p>
-        </div>
-        <div class="shot">
-          <div class="shot-bar"><i></i><i></i><i></i><span class="shot-url">prochefdesk.com/app</span></div>
-          <div class="shot-body shot-real">
-            <img src="/assets/shots/buffet.webp" alt="ProChefDesk buffet planner — covers, ticket price and live food cost percentage per buffet" width="1320" height="825" loading="lazy" decoding="async">
-          </div>
-        </div>
-      </div>
-
-      <!-- Buffet detail -->
-      <div class="proof-card">
-        <div class="pc-cap">
-          <span class="pc-tag" data-i18n="ev4_tag">Buffet</span>
-          <h3 data-i18n="ev4_h3">Stations, portions and pickup, calibrated</h3>
-          <p data-i18n="ev4_p">Per-guest amounts, realistic pickup rates and expected waste by station — so you produce enough for the room, not twice as much.</p>
-        </div>
-        <div class="shot">
-          <div class="shot-bar"><i></i><i></i><i></i><span class="shot-url">prochefdesk.com/app</span></div>
-          <div class="shot-body shot-real">
-            <img src="/assets/shots/buffet_detail.webp" alt="ProChefDesk buffet detail — food cost percent, per-cover cost, expected waste and stations" width="1320" height="825" loading="lazy" decoding="async">
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ============ RECIPES SHOWCASE (moved from hero) ============ -->
-<section class="proof" style="padding-top:8px;padding-bottom:8px;">
-  <div class="container">
-    <div class="shot" style="max-width:900px;margin:0 auto;">
-      <div class="shot-bar">
-        <i></i><i></i><i></i>
-        <span class="shot-url">prochefdesk.com/app</span>
-      </div>
-      <div class="shot-body shot-real">
-        <img src="/assets/shots/recipes.webp" alt="ProChefDesk recipes list showing live food cost percentage on every dish" width="1500" height="1050" loading="lazy" decoding="async">
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ============ DARK MODE SHOWCASE ============ -->
-<section style="background:var(--pine-ink);padding:72px 0;">
-  <div class="container">
-    <div class="section-head">
-      <div class="section-label" style="color:var(--brass);" data-i18n="dark_label">Dark mode</div>
-      <h2 style="color:#f1ede6;" data-i18n="dark_h2">Made for late-night service</h2>
-      <p style="color:#b9c6bd;" data-i18n="dark_p">Easy on the eyes at midnight and sharp on every screen — the same tools and the same numbers, after dark.</p>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin-top:30px;">
-      <img src="/assets/shots/dashboard_dark.webp" alt="ProChefDesk dashboard in dark mode" loading="lazy" decoding="async" style="width:100%;aspect-ratio:1.5;object-fit:cover;object-position:center top;border-radius:14px;border:1px solid #2a3b34;box-shadow:0 18px 36px -12px rgba(0,0,0,.5);">
-      <img src="/assets/shots/whiteboard_dark.webp" alt="ProChefDesk service whiteboard in dark mode" loading="lazy" decoding="async" style="width:100%;aspect-ratio:1.5;object-fit:cover;object-position:center top;border-radius:14px;border:1px solid #2a3b34;box-shadow:0 18px 36px -12px rgba(0,0,0,.5);">
-      <img src="/assets/shots/menu_dark.webp" alt="ProChefDesk menu studio in dark mode" loading="lazy" decoding="async" style="width:100%;aspect-ratio:1.5;object-fit:cover;object-position:center top;border-radius:14px;border:1px solid #2a3b34;box-shadow:0 18px 36px -12px rgba(0,0,0,.5);">
-    </div>
-  </div>
-</section>
-
 <!-- ============ FOUNDER ============ -->
 <section class="founder">
   <div class="container">
@@ -1048,6 +1081,22 @@
           <span data-i18n="founder_role">Head Chef</span>
         </div>
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ DARK MODE SHOWCASE ============ -->
+<section style="background:var(--pine-ink);padding:72px 0;">
+  <div class="container">
+    <div class="section-head">
+      <div class="section-label" style="color:var(--brass);" data-i18n="dark_label">Dark mode</div>
+      <h2 style="color:#f1ede6;" data-i18n="dark_h2">Made for late-night service</h2>
+      <p style="color:#b9c6bd;" data-i18n="dark_p">Easy on the eyes at midnight and sharp on every screen — the same tools and the same numbers, after dark.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin-top:30px;">
+      <img src="/assets/shots/dashboard_dark.webp" alt="ProChefDesk dashboard in dark mode" loading="lazy" decoding="async" style="width:100%;aspect-ratio:1.5;object-fit:cover;object-position:center top;border-radius:14px;border:1px solid #2a3b34;box-shadow:0 18px 36px -12px rgba(0,0,0,.5);">
+      <img src="/assets/shots/whiteboard_dark.webp" alt="ProChefDesk service whiteboard in dark mode" loading="lazy" decoding="async" style="width:100%;aspect-ratio:1.5;object-fit:cover;object-position:center top;border-radius:14px;border:1px solid #2a3b34;box-shadow:0 18px 36px -12px rgba(0,0,0,.5);">
+      <img src="/assets/shots/menu_dark.webp" alt="ProChefDesk menu studio in dark mode" loading="lazy" decoding="async" style="width:100%;aspect-ratio:1.5;object-fit:cover;object-position:center top;border-radius:14px;border:1px solid #2a3b34;box-shadow:0 18px 36px -12px rgba(0,0,0,.5);">
     </div>
   </div>
 </section>
@@ -1092,32 +1141,6 @@
   </div>
 </section>
 
-<!-- ============ TOOLS ============ -->
-<section class="tools" id="tools">
-  <div class="container">
-    <div class="section-head">
-      <div class="section-label" data-i18n="tools_label">The Toolset</div>
-      <h2 data-i18n="tools_h2">Everything the kitchen runs on.</h2>
-      <p data-i18n="tools_sub">A connected toolset for the back of house — costing, menus, prep, compliance and inventory in one place.</p>
-    </div>
-
-    <style>.tool-pill{display:inline-flex;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:8px 15px;font-size:14px;font-weight:600;color:var(--text-2);box-shadow:var(--shadow-sm);}</style>
-    <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:10px;max-width:820px;margin:10px auto 0;">
-      <span class="tool-pill" data-i18n="tool_recipes_t">Recipes</span>
-      <span class="tool-pill" data-i18n="tool_ingredients_t">Ingredients</span>
-      <span class="tool-pill" data-i18n="tool_menu_t">Menu Studio</span>
-      <span class="tool-pill" data-i18n="tool_cards_t">Kitchen Cards</span>
-      <span class="tool-pill" data-i18n="tool_buffet_t">Buffet Planner</span>
-      <span class="tool-pill" data-i18n="tool_roster_t">Roster &amp; Labour</span>
-      <span class="tool-pill" data-i18n="tool_inventory_t">Inventory &amp; Variance</span>
-      <span class="tool-pill" data-i18n="tool_suppliers_t">Suppliers</span>
-      <span class="tool-pill" data-i18n="tool_events_t">Events &amp; Catering</span>
-      <span class="tool-pill" data-i18n="tool_haccp_t">Checklists &amp; HACCP</span>
-      <span class="tool-pill" data-i18n="tool_whiteboard_t">Service Whiteboard</span>
-    </div>
-  </div>
-</section>
-
 <div class="container">
 
   <!-- ============ WHY ============ -->
@@ -1139,7 +1162,7 @@
       <div class="why-item">
         <span class="why-num" data-i18n="why2_num">02 / Your data</span>
         <h3 data-i18n="why2_h3">Your data, always yours</h3>
-        <p data-i18n="why2_p">Nightly cloud backups, six languages, and a separate workspace per venue. Export anything to Excel or PDF, anytime.</p>
+        <p data-i18n="why2_p">Import your ingredient list from Excel to start fast. Nightly cloud backups, six languages, a separate workspace per venue — and export anything to Excel or PDF, anytime.</p>
       </div>
 
       <div class="why-item">
@@ -1151,10 +1174,14 @@
     </div>
 
     <!-- Honest signal — real, no fabricated social proof (no fake logos/testimonials/badges) -->
-    <div style="text-align:center;margin-top:36px;">
+    <div style="text-align:center;margin-top:36px;display:flex;flex-wrap:wrap;justify-content:center;gap:10px;">
       <span style="display:inline-flex;align-items:center;gap:9px;font-size:14px;font-weight:600;color:var(--text-2);background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:9px 18px;box-shadow:var(--shadow-sm);">
         <span style="width:8px;height:8px;border-radius:50%;background:var(--brand);box-shadow:0 0 0 3px var(--brand-soft);flex:0 0 auto;"></span>
         <span data-i18n="trust_live">Used every day in a working professional kitchen.</span>
+      </span>
+      <span style="display:inline-flex;align-items:center;gap:9px;font-size:14px;font-weight:600;color:var(--text-2);background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:9px 18px;box-shadow:var(--shadow-sm);">
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--brand);box-shadow:0 0 0 3px var(--brand-soft);flex:0 0 auto;"></span>
+        <span data-i18n="trust_support">Support goes straight to the founder — a working head chef.</span>
       </span>
     </div>
 
@@ -1254,6 +1281,7 @@
         </div>
         <div style="background:var(--brand);color:#fff;border-radius:12px;padding:12px 18px;font-weight:800;font-size:15px;white-space:nowrap;" data-i18n="roi_pcd">ProChefDesk — all of it, $19/mo</div>
       </div>
+      <div style="margin-top:12px;font-size:13px;color:var(--text-3);" data-i18n="roi_tools">And that's just three of the 16+ tools included — the full toolset is listed above.</div>
     </div>
     <div class="price-note" data-i18n="price_note">Cancel anytime from the app. No lock-in, no surprises.</div>
   </section>
@@ -1300,11 +1328,11 @@
     var LANGS = ['en', 'tr', 'es', 'fr', 'de', 'ar'];
     var I18N = {
       tr: {
-        nav_pricing: "Fiyatlar", nav_blog: "Blog", nav_cta: "Uygulamayı Aç", cta_open: "Uygulamayı Aç", page_title: "ProChefDesk — Profesyonel mutfaklar için food cost kontrolü",
+        nav_tools: "Araçlar", nav_pricing: "Fiyatlar", nav_blog: "Blog", nav_cta: "Uygulamayı Aç", cta_open: "Uygulamayı Aç", page_title: "ProChefDesk — Profesyonel mutfaklar için food cost kontrolü",
         hero_eyebrow: "Restoran, kafe, caterer ve bağımsız mutfaklar için",
         hero_title: "Her tabağın ardındaki<br><span class=\"accent\">parayı gör.</span>",
         hero_sub: "Etkinlik teklif et, banket ve büfe planla, her tarifi maliyetlendir, HACCP'i yönet — hepsi her cihazda senkron kalan tek mutfak sisteminde.",
-        cta_start: "Ücretsiz başla", hero_secondary: "Nasıl çalıştığını gör",
+        cta_start: "Ücretsiz başla", hero_secondary: "Canlı demoyu gez — kayıt yok",
         live_label: "Her zaman güncel", live_h2: "Tek fiyatı değiştir. Her yemek kendini yeniden fiyatlasın.",
         live_p1: "Bir tedarikçi fiyatı değiştiğinde, her tarifin, menünün ve raporun food cost'u otomatik güncellenir. Hangi tabakların marjın altına düştüğünü çeyrek sonunda değil, servisten önce görürsün.",
         live_p2: "Maliyet raporu çek, patrona salt-okunur maliyet linki gönder ya da menüyü düzenleyip paylaş — mobilde tam araç seti, kırpılmışı değil.",
@@ -1344,9 +1372,18 @@
         tool_haccp_t: "Kontrol Listeleri & HACCP", tool_haccp_d: "Açılış ve kapanış rutinleri, prep föyleri, soğutma ve sıcaklık kayıtları — HACCP'e hazır şablonlar dahil.",
         tool_whiteboard_t: "Servis Beyaz Tahtası", tool_whiteboard_d: "Yazdırılabilir A4/A3 servis panosu — kapak sayısı, diyet sayıları, 86 listesi ve günün spesiyalleri, hepsi bir bakışta.",
         tool_discover_t: "Keşfet", tool_discover_d: "Herkese açık tarif akışı — yemeklerini bir linkle paylaş, çalışan diğer şeflerden fikir al.",
+        tools_count: "Tek abonelikte 16+ profesyonel araç · 6 dil",
+        tool_engineering_t: "Menü Mühendisliği", tool_engineering_d: "Yıldızlar, iş atları, bilmeceler ve zayıflar — hangi yemeğin kazandırdığını, hangisinin sadece sayfayı doldurduğunu gör.",
+        tool_nutrition_t: "Besin Değerleri", tool_nutrition_d: "Porsiyon başına tahmini kalori ve makrolar — zaten girdiğin malzemelerden hesaplanır.",
+        tool_batch_t: "Batch Hesaplayıcı", tool_batch_d: "Her tarifi istediğin parti boyutuna ölçekle — birimler kendiliğinden dönüşür, maliyet takip eder.",
+        tool_waste_t: "Fire Takibi", tool_waste_d: "Çöpe gideni kaydet, her kayıt fiyatlandırılır — paranın tam nereden sızdığını gör.",
+        tool_audit_t: "HACCP Denetim Paketi", tool_audit_d: "Tek tıkla ay derlenir — tüm kayıtlar, istisnalar ve imza satırları denetçiye hazır tek PDF'te.",
+        trust_support: "Destek doğrudan kurucuya gider — aktif çalışan bir head chef.",
+        roi_tools: "Ve bu, dahil olan 16+ aracın yalnızca üçü — tam araç seti yukarıda.",
+        evq_tag: "Müşteri teklifi", evq_h3: "Müşterinin imzaladığı teklif", evq_p: "Menüler, fiyatlandırma, ödeme planı ve imza satırları — maliyetler gizli, göndermeye hazır. E-imzayı uygulamanın içinde al.",
         why_label: "Fark", why_h2: "Onu ayıran ne.", why_sub: "Mutfağını onunla yönetmeye başlayınca önemli olanlar: her cihaz, verin, adil fiyat.",
         why1_num: "01 / Çok cihaz", why1_h3: "Nerede olursan ol çalışır", why1_p: "Serviste telefon, hazırlıkta tablet, kapanıştan sonra laptop — aynı veri her cihazda, hep senkron. Kurulacak bir şey yok.",
-        why2_num: "02 / Verin senin", why2_h3: "Verin, hep senin", why2_p: "Gece bulut yedekleri, altı dil ve mekan başına ayrı bir workspace. Her şeyi istediğin an Excel veya PDF olarak dışa aktar.",
+        why2_num: "02 / Verin senin", why2_h3: "Verin, hep senin", why2_p: "Malzeme listeni Excel'den içe aktar, hızlı başla. Gece bulut yedekleri, altı dil, mekan başına ayrı workspace — ve her şeyi istediğin an Excel veya PDF olarak dışa aktar.",
         why3_num: "03 / Adil fiyat", why3_h3: "Dürüst fiyat, bağlanma yok", why3_p: "Tüm sistemi ücretsiz dene, kart gerekmez. Mutfak birkaç tariften fazlasını istediğinde — bulut senkron, HACCP, işçilik maliyeti ve temiz çıktılar — Pro tek sabit fiyat, istediğin an iptal.",
         vp_label: "Neden kazandırır", vp_h2: "Sadece servisi değil, rakamları da yönet.", vp_sub: "ProChefDesk'in bir defter ve tablodan yapamayacağı üç şey.",
         vp1_h3: "Maliyet & kâr kontrolü", vp1_p: "Her tarif ve menüde canlı food cost %. Bir malzeme fiyatını güncelle, her tabak yeniden hesaplansın — para kaybettiren tabakları çeyrek sonunda değil, servisten önce gör.",
@@ -1364,20 +1401,20 @@
         proof6_tag: "Stok & envanter kontrolü", proof6_h3: "Stoğu say, her sızıntıyı bul", proof6_p: "Stok say, düşük stok uyarısı al ve teorik kullanımı gerçekte kullandığınla karşılaştır — varyans malzeme başına maliyetlenir, böylece sessiz kayıplar ortalamada saklanmaz, yüzeye çıkar.",
         proof7_tag: "Besin değeri", proof7_h3: "Porsiyon başına kalori ve makrolar", proof7_p: "Her tarifin malzemelerinden porsiyon başına tahmin edilen kalori, protein, karbonhidrat ve yağ — spesiyal panoları ve misafir soruları için hızlı bir başvuru; herkese açık USDA ve FSANZ verilerine dayanır.",
         proof8_tag: "Fire kaydı", proof8_h3: "Çöpteki parayı gör", proof8_p: "Bozulma, fire ve fazla üretimi maliyetiyle kaydet — fireyi histen çıkarıp üzerine aksiyon alabileceğin bir sayıya çeviren bir koşan toplam.",
-        ev_label: "Ziyafet · düğün · büfe", ev_h2: "200 kişilik etkinliği Excel'siz planla", ev_sub: "Menüyü kur, kişi sayısını gir; food cost, gelir ve kâr gerçek zamanlı otursun — sonra alışveriş listesi üret ve stoğu tek adımda düş.",
+        ev_label: "Ziyafet · düğün · büfe", ev_h2: "200 kişilik etkinliği Excel'siz planla", ev_sub: "Menüyü kur, kişi sayısını gir; food cost, gelir ve kâr gerçek zamanlı otursun — sonra müşteriye hazır teklifi yazdır, e-imzayı al ve tek adımda alışveriş listesi ile prep föylerine çevir.",
         ev1_tag: "Etkinlikler", ev1_h3: "Her organizasyon, maliyetli ve onaylı", ev1_p: "Ziyafetler, düğünler ve cateringler tek listede; her birinde kişi sayısı, mekan, food cost, gelir ve kâr.",
-        ev2_tag: "Etkinlik", ev2_h3: "Evet demeden önce kârı bil", ev2_p: "Kişi başı food cost, müşterinin bütçesine karşı kâr ve tam yemek listesi — her organizasyonu rakamlar önündeyken fiyatlarsın.",
+        ev2_tag: "Etkinlik", ev2_h3: "Evet demeden önce kârı bil", ev2_p: "Kişi başı food cost, müşterinin bütçesine karşı kâr ve tam yemek listesi — rakamlar önündeyken fiyatla, maliyetleri gizlenmiş müşteri teklifini gönder ve müşterinin e-imzasını al.",
         ev3_tag: "Büfe Planlayıcı", ev3_h3: "Marjını koruyan büfeler", ev3_p: "Her büfede kapak sayısı, bilet fiyatı ve canlı food-cost % — hedefteyse yeşil, ikinci bir bakış gerekiyorsa sarı.",
         ev4_tag: "Büfe", ev4_h3: "İstasyon, porsiyon ve tüketim, ayarlı", ev4_p: "İstasyon bazında kişi başı miktarlar, gerçekçi tüketim oranları ve beklenen fire — salon için yeterince üret, iki katı değil.",
         pocket_label: "Hatta, elinde", pocket_h2: "Tüm yemek — fotoğraf, maliyet ve yöntem — telefonunda", pocket_p: "Herhangi bir tarife dokun, tam künyeyi gör: tabak fotoğrafı, canlı food cost ve marj, ölçeklenmiş malzemeler ve yöntem. Ofis laptopu yok, lamine çıktı yok.",
         dark_label: "Karanlık mod", dark_h2: "Geç servis için yapıldı", dark_p: "Gece yarısı göze rahat, her ekranda net — aynı araçlar, aynı sayılar, karanlıktan sonra."
       },
       es: {
-        nav_pricing: "Precios", nav_blog: "Blog", nav_cta: "Abrir la app", cta_open: "Abrir la app", page_title: "ProChefDesk — Control de coste de alimentos para cocinas profesionales",
+        nav_tools: "Herramientas", nav_pricing: "Precios", nav_blog: "Blog", nav_cta: "Abrir la app", cta_open: "Abrir la app", page_title: "ProChefDesk — Control de coste de alimentos para cocinas profesionales",
         hero_eyebrow: "Para restaurantes, cafés, caterings y cocinas independientes",
         hero_title: "Ve el dinero detrás de<br><span class=\"accent\">cada plato.</span>",
         hero_sub: "Cotiza eventos, planifica banquetes y bufés, calcula el coste de cada receta y gestiona el HACCP — todo en un sistema de cocina que se mantiene sincronizado en todos tus dispositivos.",
-        cta_start: "Empieza gratis", hero_secondary: "Ver cómo funciona",
+        cta_start: "Empieza gratis", hero_secondary: "Prueba la demo en vivo — sin registro",
         hero_meta1: "Empieza gratis — sin tarjeta", hero_meta2: "Funciona en cualquier dispositivo — nada que instalar", hero_meta3: "Cancela cuando quieras",
         live_label: "Siempre al día", live_h2: "Cambia un precio. Cada plato se recalcula solo.",
         live_p1: "Cuando cambia el precio de un proveedor, el coste de alimentos de cada receta, menú e informe se actualiza con él — automáticamente. Ves qué platos han caído por debajo del margen antes del servicio, no al cierre del trimestre.",
@@ -1417,9 +1454,18 @@
         tool_haccp_t: "Listas de control y HACCP", tool_haccp_d: "Rutinas de apertura y cierre, hojas de preparación, registros de enfriamiento y temperatura — plantillas listas para HACCP incluidas.",
         tool_whiteboard_t: "Pizarra de servicio", tool_whiteboard_d: "Una pizarra de servicio imprimible en A4/A3 — comensales, conteos de dietas, la lista de 86 y los especiales de la noche, todo de un vistazo.",
         tool_discover_t: "Descubrir", tool_discover_d: "Un feed público de recetas — comparte tus platos con un enlace y toma ideas de otros chefs en activo.",
+        tools_count: "Más de 16 herramientas profesionales · una suscripción · seis idiomas",
+        tool_engineering_t: "Ingeniería de menús", tool_engineering_d: "Estrellas, caballos de tiro, rompecabezas y perros — ve qué platos ganan su lugar y cuáles solo llenan la página.",
+        tool_nutrition_t: "Nutrición", tool_nutrition_d: "Calorías y macros estimados por ración, calculados con los ingredientes que ya has introducido.",
+        tool_batch_t: "Calculadora de lotes", tool_batch_d: "Escala cualquier receta a cualquier tamaño de lote — las unidades se convierten solas y el coste las sigue.",
+        tool_waste_t: "Control de mermas", tool_waste_d: "Registra lo que se tira, con coste por entrada — ve exactamente por dónde se fuga el dinero.",
+        tool_audit_t: "Paquete de auditoría HACCP", tool_audit_d: "Un clic compila el mes — cada registro, excepción y línea de firma en un solo PDF listo para el inspector.",
+        trust_support: "El soporte va directo al fundador — un head chef en activo.",
+        roi_tools: "Y eso son solo tres de las más de 16 herramientas incluidas — el set completo está arriba.",
+        evq_tag: "Cotización", evq_h3: "La propuesta que tu cliente firma", evq_p: "Menús, precios, calendario de pagos y líneas de firma — costes ocultos, lista para enviar. Captura la firma electrónica en la app.",
         why_label: "La diferencia", why_h2: "Qué lo distingue.", why_sub: "Lo que importa cuando una cocina de verdad funciona con él: cada dispositivo, tus datos, un precio justo.",
         why1_num: "01 / Multidispositivo", why1_h3: "Funciona estés donde estés", why1_p: "Teléfono durante el servicio, tablet en la preparación, portátil tras el cierre — los mismos datos en cada dispositivo, siempre sincronizados. Nada que instalar.",
-        why2_num: "02 / Tus datos", why2_h3: "Tus datos, siempre tuyos", why2_p: "Copias de seguridad nocturnas en la nube, seis idiomas y un espacio de trabajo distinto por local. Exporta lo que quieras a Excel o PDF, cuando quieras.",
+        why2_num: "02 / Tus datos", why2_h3: "Tus datos, siempre tuyos", why2_p: "Importa tu lista de ingredientes desde Excel para empezar rápido. Copias de seguridad nocturnas, seis idiomas, un espacio de trabajo por local — y exporta todo a Excel o PDF, cuando quieras.",
         why3_num: "03 / Precio justo", why3_h3: "Precio honesto, sin permanencia", why3_p: "Prueba todo el sistema gratis, sin tarjeta. Cuando la cocina necesite más que unas pocas recetas — sincronización en la nube, HACCP, coste laboral y exportaciones limpias — Pro es un precio único que puedes cancelar cuando quieras.",
         vp_label: "Por qué compensa", vp_h2: "Gestiona los números, no solo el pase.", vp_sub: "Tres cosas que ProChefDesk hace y que un cuaderno y una hoja de cálculo no pueden.",
         vp1_h3: "Control de coste y beneficio", vp1_p: "Coste de alimentos % en vivo en cada receta y menú. Actualiza el precio de un ingrediente y cada plato se recalcula — así detectas los platos que pierden dinero antes del servicio, no al cierre del trimestre.",
@@ -1437,20 +1483,20 @@
         proof6_tag: "Control de inventario", proof6_h3: "Cuenta el stock, encuentra cada fuga", proof6_p: "Cuenta el inventario, recibe alertas de stock bajo y compara el uso teórico con lo que realmente usaste — con la varianza costeada por ingrediente, para que las pérdidas silenciosas salgan a la luz en vez de esconderse en la media.",
         proof7_tag: "Nutrición", proof7_h3: "Calorías y macros, por ración", proof7_p: "Calorías, proteínas, carbohidratos y grasas, estimadas por ración a partir de los ingredientes de cada receta — una referencia rápida para pizarras de especiales y preguntas de clientes, basada en datos públicos de USDA y FSANZ.",
         proof8_tag: "Registro de desperdicio", proof8_h3: "Ve el dinero en la basura", proof8_p: "Registra mermas, recortes y sobreproducción con su coste — un total acumulado que convierte el desperdicio de una sensación en un número sobre el que actuar.",
-        ev_label: "Banquetes · bodas · bufés", ev_h2: "Planifica un evento de 200 comensales sin la hoja de cálculo", ev_sub: "Crea el menú, fija el número de invitados y ve el coste, los ingresos y el beneficio en tiempo real — luego genera una lista de la compra y descuenta stock en un paso.",
+        ev_label: "Banquetes · bodas · bufés", ev_h2: "Planifica un evento de 200 comensales sin la hoja de cálculo", ev_sub: "Crea el menú, fija el número de invitados y ve el coste, los ingresos y el beneficio en tiempo real — luego imprime un presupuesto listo para el cliente, captura la firma electrónica y conviértelo en listas de compra y hojas de prep en un paso.",
         ev1_tag: "Eventos", ev1_h3: "Cada evento, costeado y confirmado", ev1_p: "Banquetes, bodas y caterings en una sola lista, cada uno con número de invitados, lugar, coste de alimentos, ingresos y beneficio.",
-        ev2_tag: "Evento", ev2_h3: "Conoce el beneficio antes de decir que sí", ev2_p: "Coste de alimentos por invitado, beneficio frente al presupuesto del cliente y la lista completa de platos — para presupuestar cada evento con los números delante.",
+        ev2_tag: "Evento", ev2_h3: "Conoce el beneficio antes de decir que sí", ev2_p: "Coste de alimentos por invitado, beneficio frente al presupuesto del cliente y la lista completa de platos — presupuesta con los números delante, envía una propuesta con los costes ocultos y captura la firma electrónica del cliente.",
         ev3_tag: "Planificador de bufé", ev3_h3: "Bufés que mantienen su margen", ev3_p: "Comensales, precio de entrada y coste de alimentos % en vivo en cada bufé — verde cuando está en objetivo, ámbar cuando necesita una segunda mirada.",
         ev4_tag: "Bufé", ev4_h3: "Estaciones, porciones y consumo, afinados", ev4_p: "Cantidades por invitado, tasas de consumo realistas y desperdicio esperado por estación — para producir lo justo para la sala, no el doble.",
         pocket_label: "En la línea, en tu mano", pocket_h2: "El plato entero — foto, coste y método — en tu móvil", pocket_p: "Toca cualquier receta para ver la ficha completa: la foto del emplatado, el coste de alimentos y el margen en vivo, los ingredientes escalados y el método. Sin portátil de oficina, sin impresión plastificada.",
         dark_label: "Modo oscuro", dark_h2: "Hecho para el servicio nocturno", dark_p: "Suave para la vista a medianoche y nítido en cada pantalla — las mismas herramientas y los mismos números, tras el anochecer."
       },
       fr: {
-        nav_pricing: "Tarifs", nav_blog: "Blog", nav_cta: "Ouvrir l'app", cta_open: "Ouvrir l'app", page_title: "ProChefDesk — Contrôle du coût matière pour les cuisines professionnelles",
+        nav_tools: "Outils", nav_pricing: "Tarifs", nav_blog: "Blog", nav_cta: "Ouvrir l'app", cta_open: "Ouvrir l'app", page_title: "ProChefDesk — Contrôle du coût matière pour les cuisines professionnelles",
         hero_eyebrow: "Pour restaurants, cafés, traiteurs et cuisines indépendantes",
         hero_title: "Voyez l'argent derrière<br><span class=\"accent\">chaque assiette.</span>",
         hero_sub: "Devisez des événements, planifiez banquets et buffets, calculez le coût de chaque recette et gérez le HACCP — le tout dans un système de cuisine synchronisé sur tous vos appareils.",
-        cta_start: "Commencer gratuitement", hero_secondary: "Voir comment ça marche",
+        cta_start: "Commencer gratuitement", hero_secondary: "Essayez la démo en direct — sans inscription",
         hero_meta1: "Gratuit pour démarrer — sans carte", hero_meta2: "Fonctionne sur tout appareil — rien à installer", hero_meta3: "Annulez à tout moment",
         live_label: "Toujours à jour", live_h2: "Changez un prix. Chaque plat se recalcule tout seul.",
         live_p1: "Quand le prix d'un fournisseur change, le coût matière de chaque recette, menu et rapport se met à jour automatiquement. Vous voyez quels plats sont passés sous la marge avant le service, pas à la fin du trimestre.",
@@ -1490,9 +1536,18 @@
         tool_haccp_t: "Check-lists & HACCP", tool_haccp_d: "Routines d'ouverture et de fermeture, fiches de préparation, relevés de refroidissement et de température — modèles prêts pour le HACCP inclus.",
         tool_whiteboard_t: "Tableau de service", tool_whiteboard_d: "Un tableau de service imprimable en A4/A3 — couverts, comptages de régimes, la liste des 86 et les suggestions du soir, le tout en un coup d'œil.",
         tool_discover_t: "Découvrir", tool_discover_d: "Un fil public de recettes — partagez vos plats avec un lien et puisez des idées chez d'autres chefs en activité.",
+        tools_count: "Plus de 16 outils professionnels · un seul abonnement · six langues",
+        tool_engineering_t: "Ingénierie de menu", tool_engineering_d: "Étoiles, chevaux de trait, énigmes et poids morts — voyez quels plats méritent leur place et lesquels ne font que remplir la page.",
+        tool_nutrition_t: "Nutrition", tool_nutrition_d: "Calories et macros estimées par portion, calculées à partir des ingrédients déjà saisis.",
+        tool_batch_t: "Calculateur de lots", tool_batch_d: "Adaptez toute recette à n'importe quelle taille de lot — les unités se convertissent seules, les coûts suivent.",
+        tool_waste_t: "Suivi des pertes", tool_waste_d: "Enregistrez ce qui part à la poubelle, chiffré à chaque entrée — voyez exactement où l'argent fuit.",
+        tool_audit_t: "Dossier d'audit HACCP", tool_audit_d: "Un clic compile le mois — chaque relevé, exception et ligne de signature dans un seul PDF prêt pour l'inspecteur.",
+        trust_support: "Le support va directement au fondateur — un chef de cuisine en activité.",
+        roi_tools: "Et ce ne sont que trois des 16+ outils inclus — la boîte à outils complète est ci-dessus.",
+        evq_tag: "Devis client", evq_h3: "La proposition que votre client signe", evq_p: "Menus, tarifs, échéancier et lignes de signature — coûts masqués, prêt à envoyer. Recueillez la signature électronique dans l'app.",
         why_label: "La différence", why_h2: "Ce qui le distingue.", why_sub: "Ce qui compte une fois qu'une vraie cuisine tourne dessus : chaque appareil, vos données, un tarif équitable.",
         why1_num: "01 / Multi-appareils", why1_h3: "Fonctionne où que vous soyez", why1_p: "Téléphone pendant le service, tablette en préparation, ordinateur après la fermeture — les mêmes données sur chaque appareil, toujours synchronisées. Rien à installer.",
-        why2_num: "02 / Vos données", why2_h3: "Vos données, toujours à vous", why2_p: "Sauvegardes cloud nocturnes, six langues et un espace de travail distinct par établissement. Exportez tout en Excel ou PDF, quand vous voulez.",
+        why2_num: "02 / Vos données", why2_h3: "Vos données, toujours à vous", why2_p: "Importez votre liste d'ingrédients depuis Excel pour démarrer vite. Sauvegardes nocturnes, six langues, un espace de travail par établissement — et exportez tout en Excel ou PDF, quand vous voulez.",
         why3_num: "03 / Tarif équitable", why3_h3: "Tarif honnête, sans engagement", why3_p: "Essayez tout le système gratuitement, sans carte. Quand la cuisine a besoin de plus que quelques recettes — synchronisation cloud, HACCP, coût de main-d'œuvre et exports propres — Pro est un prix unique annulable à tout moment.",
         vp_label: "Pourquoi c'est rentable", vp_h2: "Pilotez les chiffres, pas seulement le service.", vp_sub: "Trois choses que ProChefDesk fait et qu'un carnet et un tableur ne peuvent pas.",
         vp1_h3: "Maîtrise des coûts et marges", vp1_p: "Coût matière % en direct sur chaque recette et menu. Modifiez le prix d'un ingrédient et chaque plat se recalcule — vous repérez les plats qui perdent de l'argent avant le service, pas à la fin du trimestre.",
@@ -1510,20 +1565,20 @@
         proof6_tag: "Contrôle des stocks", proof6_h3: "Comptez le stock, trouvez chaque fuite", proof6_p: "Comptez l'inventaire, recevez des alertes de stock bas et comparez l'usage théorique à ce que vous avez réellement utilisé — avec l'écart chiffré par ingrédient, pour que les pertes silencieuses remontent à la surface au lieu de se cacher dans la moyenne.",
         proof7_tag: "Nutrition", proof7_h3: "Calories et macros, par portion", proof7_p: "Calories, protéines, glucides et lipides, estimés par portion à partir des ingrédients de chaque recette — une référence rapide pour les ardoises de suggestions et les questions des clients, d'après les données publiques USDA et FSANZ.",
         proof8_tag: "Journal de gaspillage", proof8_h3: "Voyez l'argent à la poubelle", proof8_p: "Enregistrez pertes, parures et surproduction avec leur coût — un total cumulé qui transforme le gaspillage d'une impression en un chiffre sur lequel agir.",
-        ev_label: "Banquets · mariages · buffets", ev_h2: "Planifiez un événement de 200 couverts sans le tableur", ev_sub: "Construisez le menu, fixez le nombre de convives et voyez coût matière, recettes et bénéfice en temps réel — puis générez une liste de courses et déduisez le stock en une étape.",
+        ev_label: "Banquets · mariages · buffets", ev_h2: "Planifiez un événement de 200 couverts sans le tableur", ev_sub: "Construisez le menu, fixez le nombre de convives et voyez coût matière, recettes et bénéfice en temps réel — puis imprimez un devis prêt pour le client, recueillez la signature électronique et générez listes de courses et fiches de préparation en une étape.",
         ev1_tag: "Événements", ev1_h3: "Chaque événement, chiffré et confirmé", ev1_p: "Banquets, mariages et traiteurs dans une seule liste, chacun avec nombre de convives, lieu, coût matière, recettes et bénéfice.",
-        ev2_tag: "Événement", ev2_h3: "Connaissez le bénéfice avant de dire oui", ev2_p: "Coût matière par convive, bénéfice face au budget du client et la liste complète des plats — pour chiffrer chaque événement avec les chiffres sous les yeux.",
+        ev2_tag: "Événement", ev2_h3: "Connaissez le bénéfice avant de dire oui", ev2_p: "Coût matière par convive, bénéfice face au budget du client et la liste complète des plats — chiffrez avec les nombres sous les yeux, envoyez une proposition aux coûts masqués et recueillez la signature électronique du client.",
         ev3_tag: "Planificateur de buffet", ev3_h3: "Des buffets qui gardent leur marge", ev3_p: "Couverts, prix du billet et coût matière % en direct sur chaque buffet — vert quand c'est dans la cible, ambre quand il faut y regarder à deux fois.",
         ev4_tag: "Buffet", ev4_h3: "Stations, portions et consommation, réglées", ev4_p: "Quantités par convive, taux de consommation réalistes et gaspillage attendu par station — pour produire juste ce qu'il faut pour la salle, pas le double.",
         pocket_label: "Au piano, dans votre main", pocket_h2: "Le plat entier — photo, coût et méthode — sur votre téléphone", pocket_p: "Touchez n'importe quelle recette pour la fiche complète : la photo dressée, le coût matière et la marge en direct, les ingrédients ajustés et la méthode. Pas d'ordinateur de bureau, pas d'impression plastifiée.",
         dark_label: "Mode sombre", dark_h2: "Conçu pour le service tardif", dark_p: "Doux pour les yeux à minuit et net sur chaque écran — les mêmes outils et les mêmes chiffres, après la tombée de la nuit."
       },
       de: {
-        nav_pricing: "Preise", nav_blog: "Blog", nav_cta: "App öffnen", cta_open: "App öffnen", page_title: "ProChefDesk — Wareneinsatz-Kontrolle für Profiküchen",
+        nav_tools: "Werkzeuge", nav_pricing: "Preise", nav_blog: "Blog", nav_cta: "App öffnen", cta_open: "App öffnen", page_title: "ProChefDesk — Wareneinsatz-Kontrolle für Profiküchen",
         hero_eyebrow: "Für Restaurants, Cafés, Caterer und unabhängige Küchen",
         hero_title: "Sieh das Geld hinter<br><span class=\"accent\">jedem Teller.</span>",
         hero_sub: "Events kalkulieren, Bankette und Buffets planen, jedes Rezept kalkulieren und HACCP führen — alles in einem Küchensystem, das auf allen Geräten synchron bleibt.",
-        cta_start: "Kostenlos starten", hero_secondary: "So funktioniert's",
+        cta_start: "Kostenlos starten", hero_secondary: "Live-Demo testen — ohne Anmeldung",
         hero_meta1: "Kostenlos starten — keine Karte", hero_meta2: "Funktioniert auf jedem Gerät — nichts zu installieren", hero_meta3: "Jederzeit kündbar",
         live_label: "Immer aktuell", live_h2: "Ändere einen Preis. Jedes Gericht kalkuliert sich neu.",
         live_p1: "Wenn sich ein Lieferantenpreis ändert, aktualisiert sich der Wareneinsatz jedes Rezepts, Menüs und Berichts automatisch mit. Du siehst, welche Teller unter die Marge gerutscht sind — vor dem Service, nicht zum Quartalsende.",
@@ -1563,9 +1618,18 @@
         tool_haccp_t: "Checklisten & HACCP", tool_haccp_d: "Öffnungs- und Schließroutinen, Vorbereitungsblätter, Abkühl- und Temperaturprotokolle — HACCP-fertige Vorlagen inklusive.",
         tool_whiteboard_t: "Service-Whiteboard", tool_whiteboard_d: "Ein druckbares A4/A3-Service-Board — Gästezahlen, Diätzählungen, die 86-Liste und die Tagesspecials, alles auf einen Blick.",
         tool_discover_t: "Entdecken", tool_discover_d: "Ein öffentlicher Rezept-Feed — teile deine Gerichte per Link und hol dir Ideen von anderen aktiven Köchen.",
+        tools_count: "Über 16 Profi-Werkzeuge · ein Abo · sechs Sprachen",
+        tool_engineering_t: "Menü-Engineering", tool_engineering_d: "Stars, Zugpferde, Rätsel und Ladenhüter — sieh, welche Gerichte ihren Platz verdienen und welche nur die Karte füllen.",
+        tool_nutrition_t: "Nährwerte", tool_nutrition_d: "Geschätzte Kalorien und Makros pro Portion — berechnet aus den bereits erfassten Zutaten.",
+        tool_batch_t: "Batch-Rechner", tool_batch_d: "Skaliere jedes Rezept auf jede Chargengröße — Einheiten rechnen sich selbst um, die Kosten folgen.",
+        tool_waste_t: "Abfall-Tracking", tool_waste_d: "Erfasse, was weggeworfen wird, mit Kosten pro Eintrag — sieh genau, wo Geld versickert.",
+        tool_audit_t: "HACCP-Audit-Paket", tool_audit_d: "Ein Klick stellt den Monat zusammen — jedes Protokoll, jede Ausnahme und Unterschriftszeile in einem prüfbereiten PDF.",
+        trust_support: "Support geht direkt an den Gründer — einen aktiven Küchenchef.",
+        roi_tools: "Und das sind nur drei der über 16 enthaltenen Werkzeuge — das komplette Set steht oben.",
+        evq_tag: "Kundenangebot", evq_h3: "Das Angebot, das Ihr Kunde unterschreibt", evq_p: "Menüs, Preise, Zahlungsplan und Unterschriftszeilen — Kosten verborgen, versandfertig. E-Signatur direkt in der App einholen.",
         why_label: "Der Unterschied", why_h2: "Was es auszeichnet.", why_sub: "Was zählt, sobald eine echte Küche damit läuft: jedes Gerät, deine Daten, faire Preise.",
         why1_num: "01 / Mehrere Geräte", why1_h3: "Funktioniert, wo immer du bist", why1_p: "Telefon während des Service, Tablet bei der Vorbereitung, Laptop nach Feierabend — dieselben Daten auf jedem Gerät, immer synchron. Nichts zu installieren.",
-        why2_num: "02 / Deine Daten", why2_h3: "Deine Daten, immer deine", why2_p: "Nächtliche Cloud-Backups, sechs Sprachen und ein eigener Arbeitsbereich pro Betrieb. Exportiere alles als Excel oder PDF, jederzeit.",
+        why2_num: "02 / Deine Daten", why2_h3: "Deine Daten, immer deine", why2_p: "Importiere deine Zutatenliste aus Excel für einen schnellen Start. Nächtliche Cloud-Backups, sechs Sprachen, ein eigener Arbeitsbereich pro Betrieb — und exportiere alles jederzeit als Excel oder PDF.",
         why3_num: "03 / Faire Preise", why3_h3: "Ehrliche Preise, keine Bindung", why3_p: "Teste das ganze System kostenlos, ohne Karte. Wenn die Küche mehr als ein paar Rezepte braucht — Cloud-Sync, HACCP, Personalkosten und saubere Exporte — ist Pro ein fester Preis, jederzeit kündbar.",
         vp_label: "Warum es sich lohnt", vp_h2: "Steuere die Zahlen, nicht nur den Pass.", vp_sub: "Drei Dinge, die ProChefDesk kann und ein Notizbuch und eine Tabelle nicht.",
         vp1_h3: "Kosten- & Gewinnkontrolle", vp1_p: "Live-Wareneinsatz % bei jedem Rezept und Menü. Aktualisiere einen Zutatenpreis und jedes Gericht wird neu berechnet — so erkennst du die Verlustbringer vor dem Service, nicht erst zum Quartalsende.",
@@ -1583,20 +1647,20 @@
         proof6_tag: "Bestandskontrolle", proof6_h3: "Zähle den Bestand, finde jedes Leck", proof6_p: "Zähle den Bestand, erhalte Warnungen bei niedrigem Bestand und vergleiche den theoretischen Verbrauch mit dem tatsächlichen — mit der Abweichung pro Zutat beziffert, damit stille Verluste an die Oberfläche kommen, statt sich im Durchschnitt zu verstecken.",
         proof7_tag: "Nährwerte", proof7_h3: "Kalorien & Makros, pro Portion", proof7_p: "Kalorien, Eiweiß, Kohlenhydrate und Fett, pro Portion aus den Zutaten jedes Rezepts geschätzt — ein schneller Anhaltspunkt für Specials-Tafeln und Gästefragen, basierend auf öffentlichen USDA- und FSANZ-Daten.",
         proof8_tag: "Abfallprotokoll", proof8_h3: "Sieh das Geld im Mülleimer", proof8_p: "Erfasse Verderb, Verschnitt und Überproduktion mit ihren Kosten — eine laufende Summe, die Verschwendung von einem Gefühl in eine Zahl verwandelt, auf die du reagieren kannst.",
-        ev_label: "Bankette · Hochzeiten · Buffets", ev_h2: "Plane ein Event für 200 Gäste ohne Tabelle", ev_sub: "Erstelle das Menü, lege die Gästezahl fest und sieh Wareneinsatz, Umsatz und Gewinn in Echtzeit — dann generiere eine Einkaufsliste und buche den Bestand in einem Schritt ab.",
+        ev_label: "Bankette · Hochzeiten · Buffets", ev_h2: "Plane ein Event für 200 Gäste ohne Tabelle", ev_sub: "Erstelle das Menü, lege die Gästezahl fest und sieh Wareneinsatz, Umsatz und Gewinn in Echtzeit — dann drucke ein kundenfertiges Angebot, hol die E-Signatur ein und erzeuge Einkaufslisten und Prep-Bögen in einem Schritt.",
         ev1_tag: "Events", ev1_h3: "Jede Veranstaltung, kalkuliert und bestätigt", ev1_p: "Bankette, Hochzeiten und Caterings in einer Liste, jeweils mit Gästezahl, Location, Wareneinsatz, Umsatz und Gewinn.",
-        ev2_tag: "Event", ev2_h3: "Kenne den Gewinn, bevor du zusagst", ev2_p: "Wareneinsatz pro Gast, Gewinn gegen das Budget des Kunden und die komplette Gerichteliste — damit du jede Veranstaltung mit den Zahlen vor Augen kalkulierst.",
+        ev2_tag: "Event", ev2_h3: "Kenne den Gewinn, bevor du zusagst", ev2_p: "Wareneinsatz pro Gast, Gewinn gegen das Budget des Kunden und die komplette Gerichteliste — kalkuliere mit den Zahlen vor Augen, sende ein Angebot mit verborgenen Kosten und hol die E-Signatur des Kunden ein.",
         ev3_tag: "Buffet-Planer", ev3_h3: "Buffets, die ihre Marge halten", ev3_p: "Gäste, Ticketpreis und Live-Wareneinsatz % bei jedem Buffet — grün, wenn im Ziel, gelb, wenn ein zweiter Blick nötig ist.",
         ev4_tag: "Buffet", ev4_h3: "Stationen, Portionen und Abnahme, justiert", ev4_p: "Mengen pro Gast, realistische Abnahmeraten und erwarteter Abfall pro Station — damit du genug für den Saal produzierst, nicht das Doppelte.",
         pocket_label: "An der Linie, in deiner Hand", pocket_h2: "Das ganze Gericht — Foto, Kosten und Methode — auf deinem Telefon", pocket_p: "Tippe auf ein Rezept für die komplette Spezifikation: das angerichtete Foto, Live-Wareneinsatz und Marge, skalierte Zutaten und Methode. Kein Büro-Laptop, kein laminierter Ausdruck.",
         dark_label: "Dark Mode", dark_h2: "Für den späten Service gemacht", dark_p: "Augenschonend um Mitternacht und gestochen scharf auf jedem Bildschirm — dieselben Werkzeuge und dieselben Zahlen, nach Einbruch der Dunkelheit."
       },
       ar: {
-        nav_pricing: "الأسعار", nav_blog: "المدونة", nav_cta: "افتح التطبيق", cta_open: "افتح التطبيق", page_title: "ProChefDesk — التحكم بتكلفة الطعام للمطابخ الاحترافية",
+        nav_tools: "الأدوات", nav_pricing: "الأسعار", nav_blog: "المدونة", nav_cta: "افتح التطبيق", cta_open: "افتح التطبيق", page_title: "ProChefDesk — التحكم بتكلفة الطعام للمطابخ الاحترافية",
         hero_eyebrow: "للمطاعم والمقاهي ومتعهدي الطعام والمطابخ المستقلة",
         hero_title: "شاهد المال خلف<br><span class=\"accent\">كل طبق.</span>",
         hero_sub: "سعّر المناسبات، خطّط للولائم والبوفيهات، احسب تكلفة كل وصفة، وأدِر HACCP — كل ذلك في نظام مطبخ واحد يتزامن عبر كل أجهزتك.",
-        cta_start: "ابدأ مجانًا", hero_secondary: "شاهد كيف يعمل",
+        cta_start: "ابدأ مجانًا", hero_secondary: "جرّب العرض المباشر — بلا تسجيل",
         hero_meta1: "ابدأ مجانًا — دون بطاقة", hero_meta2: "تعمل على أي جهاز — لا شيء يُثبَّت", hero_meta3: "ألغِ في أي وقت",
         live_label: "محدّث دائمًا", live_h2: "غيّر سعرًا واحدًا. يُعاد تسعير كل طبق تلقائيًا.",
         live_p1: "حين يتغيّر سعر مورّد، تتحدّث معه تكلفة طعام كل وصفة وقائمة وتقرير تلقائيًا. ترى أي الأطباق هبطت تحت الهامش قبل الخدمة، لا في نهاية الربع.",
@@ -1636,9 +1700,18 @@
         tool_haccp_t: "قوائم التحقق وHACCP", tool_haccp_d: "روتين الافتتاح والإغلاق، أوراق التحضير، سجلات التبريد والحرارة — قوالب جاهزة لـHACCP مضمّنة.",
         tool_whiteboard_t: "لوحة الخدمة", tool_whiteboard_d: "لوحة خدمة قابلة للطباعة A4/A3 — عدد الضيوف، أعداد الحميات، قائمة 86، وأطباق الليلة الخاصة، كلها بلمحة.",
         tool_discover_t: "اكتشف", tool_discover_d: "موجز وصفات عام — شارك أطباقك برابط، واستلهم أفكارًا من طهاة ممارسين آخرين.",
+        tools_count: "أكثر من 16 أداة احترافية · اشتراك واحد · ست لغات",
+        tool_engineering_t: "هندسة القائمة", tool_engineering_d: "النجوم وأحصنة الجر والألغاز والأطباق الخاسرة — اعرف أي طبق يستحق مكانه وأيها يملأ الصفحة فقط.",
+        tool_nutrition_t: "القيم الغذائية", tool_nutrition_d: "سعرات وماكروز تقديرية لكل حصة — تُحسب من المكوّنات التي أدخلتها بالفعل.",
+        tool_batch_t: "حاسبة الدُفعات", tool_batch_d: "غيّر حجم أي وصفة إلى أي دفعة — تتحول الوحدات تلقائيًا وتتبعها التكلفة.",
+        tool_waste_t: "تتبع الهدر", tool_waste_d: "سجّل ما يُرمى مع تكلفة كل إدخال — لترى أين يتسرب المال بالضبط.",
+        tool_audit_t: "حزمة تدقيق HACCP", tool_audit_d: "نقرة واحدة تجمع الشهر — كل سجل واستثناء وسطر توقيع في ملف PDF واحد جاهز للمفتش.",
+        trust_support: "الدعم يصل مباشرة إلى المؤسس — شيف تنفيذي يعمل فعليًا.",
+        roi_tools: "وهذه ثلاث فقط من أكثر من 16 أداة مضمّنة — المجموعة الكاملة أعلاه.",
+        evq_tag: "عرض السعر للعميل", evq_h3: "العرض الذي يوقّعه عميلك", evq_p: "القوائم والأسعار وجدول الدفعات وسطور التوقيع — التكاليف مخفية وجاهز للإرسال. والتوقيع الإلكتروني داخل التطبيق.",
         why_label: "الفرق", why_h2: "ما الذي يميّزه.", why_sub: "ما يهمّ بمجرد أن يدير مطبخ حقيقي عمله به: كل جهاز، بياناتك، تسعير عادل.",
         why1_num: "01 / تعدد الأجهزة", why1_h3: "تعمل أينما كنت", why1_p: "هاتف أثناء الخدمة، جهاز لوحي في التحضير، حاسوب بعد الإغلاق — البيانات نفسها على كل جهاز، متزامنة دائمًا. لا شيء يُثبَّت.",
-        why2_num: "02 / بياناتك", why2_h3: "بياناتك، ملكك دائمًا", why2_p: "نسخ احتياطية سحابية ليلية، وست لغات، ومساحة عمل منفصلة لكل منشأة. صدّر أي شيء بصيغة Excel أو PDF، متى شئت.",
+        why2_num: "02 / بياناتك", why2_h3: "بياناتك، ملكك دائمًا", why2_p: "استورد قائمة مكوّناتك من Excel لتبدأ بسرعة. نسخ احتياطي ليلي، ست لغات، مساحة عمل لكل منشأة — وصدّر كل شيء إلى Excel أو PDF متى شئت.",
         why3_num: "03 / تسعير عادل", why3_h3: "تسعير صادق، دون التزام", why3_p: "جرّب النظام كاملًا مجانًا، دون بطاقة. عندما يحتاج المطبخ أكثر من بضع وصفات — مزامنة سحابية وHACCP وتكلفة عمالة ومخرجات نظيفة — فإن Pro سعر ثابت واحد يمكنك إلغاؤه في أي وقت.",
         vp_label: "لماذا يستحق", vp_h2: "أدر الأرقام، لا الخدمة فقط.", vp_sub: "ثلاثة أشياء يفعلها ProChefDesk ولا يستطيعها دفتر وجدول.",
         vp1_h3: "التحكم بالتكلفة والربح", vp1_p: "نسبة تكلفة طعام حية على كل وصفة وقائمة. حدّث سعر مكوّن فيُعاد حساب كل طبق — لتكتشف الأطباق الخاسرة قبل الخدمة، لا بعد نهاية الربع.",
@@ -1656,9 +1729,9 @@
         proof6_tag: "التحكم بالمخزون", proof6_h3: "عُدّ المخزون، واكتشف كل تسرّب", proof6_p: "عُدّ المخزون، واحصل على تنبيهات انخفاض المخزون، وقارن الاستهلاك النظري بما استخدمته فعلًا — مع تكلفة التباين لكل مكوّن، لتظهر الخسائر الصامتة إلى السطح بدل أن تختبئ في المتوسط.",
         proof7_tag: "القيمة الغذائية", proof7_h3: "سعرات وماكروز، لكل حصة", proof7_p: "سعرات وبروتين وكربوهيدرات ودهون، مُقدّرة لكل حصة من مكونات كل وصفة — مرجع سريع للوحات الأطباق الخاصة وأسئلة الضيوف، استنادًا إلى بيانات USDA و FSANZ العامة.",
         proof8_tag: "سجل الهدر", proof8_h3: "شاهد المال في سلة المهملات", proof8_p: "سجّل التلف والقصاصات والإفراط في الإنتاج بتكلفته — إجمالي جارٍ يحوّل الهدر من إحساس إلى رقم يمكنك التصرّف بناءً عليه.",
-        ev_label: "ولائم · أعراس · بوفيهات", ev_h2: "خطّط لفعالية 200 ضيف دون جدول بيانات", ev_sub: "ابنِ القائمة، حدّد عدد الضيوف، وشاهد تكلفة الطعام والإيراد والربح لحظيًا — ثم أنشئ قائمة تسوّق واخصم المخزون في خطوة واحدة.",
+        ev_label: "ولائم · أعراس · بوفيهات", ev_h2: "خطّط لفعالية 200 ضيف دون جدول بيانات", ev_sub: "ابنِ القائمة، حدّد عدد الضيوف، وشاهد تكلفة الطعام والإيراد والربح لحظيًا — ثم اطبع عرض سعر جاهزًا للعميل، واحصل على التوقيع الإلكتروني، وحوّله إلى قوائم شراء وأوراق تحضير في خطوة واحدة.",
         ev1_tag: "الفعاليات", ev1_h3: "كل فعالية، مُكلَّفة ومؤكَّدة", ev1_p: "ولائم وأعراس وتموين في قائمة واحدة، لكل منها عدد الضيوف والمكان وتكلفة الطعام والإيراد والربح.",
-        ev2_tag: "فعالية", ev2_h3: "اعرف الربح قبل أن توافق", ev2_p: "تكلفة طعام لكل ضيف، والربح مقابل ميزانية العميل، وقائمة الأطباق الكاملة — لتسعّر كل فعالية والأرقام أمامك.",
+        ev2_tag: "فعالية", ev2_h3: "اعرف الربح قبل أن توافق", ev2_p: "تكلفة طعام لكل ضيف، والربح مقابل ميزانية العميل، وقائمة الأطباق الكاملة — سعّر والأرقام أمامك، وأرسل عرضًا بتكاليف مخفية، واحصل على توقيع العميل الإلكتروني.",
         ev3_tag: "مخطّط البوفيه", ev3_h3: "بوفيهات تحافظ على هامشها", ev3_p: "عدد الضيوف وسعر التذكرة ونسبة تكلفة طعام حية لكل بوفيه — أخضر عند بلوغ الهدف، وكهرماني عندما يحتاج نظرة ثانية.",
         ev4_tag: "بوفيه", ev4_h3: "محطات وحصص واستهلاك، مضبوطة", ev4_p: "كميات لكل ضيف، ومعدلات استهلاك واقعية، وهدر متوقع لكل محطة — لتنتج ما يكفي القاعة، لا الضعف.",
         pocket_label: "على الخط، في يدك", pocket_h2: "الطبق كامل — صورة وتكلفة وطريقة — على هاتفك", pocket_p: "انقر أي وصفة لرؤية المواصفات الكاملة: صورة التقديم، وتكلفة الطعام والهامش الحيين، والمكونات المُقاسة والطريقة. لا حاسوب مكتب، ولا نسخة مغلّفة.",
