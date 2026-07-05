@@ -3177,17 +3177,15 @@ function renderAllergenChips() {
           // SUB-RECIPE LINE
           const sub = recipeMap[ri.recipeId];
           name = sub ? sub.name : '(removed sub-recipe)';
-          const subYield = sub ? (sub.yieldAmount || sub.servings || 1) : 1;
           defaultUnit = sub ? (sub.yieldUnit || 'portion') : 'portion';
           if (sub) {
             const subTotalCost = PCD.recipes.computeFoodCost(sub, ingMap, recipeMap);
-            const amt = Number(ri.amount) || 0;
-            let scale = amt / (subYield || 1);
-            if (ri.unit && defaultUnit && ri.unit !== defaultUnit) {
-              try { scale = PCD.convertUnit(amt, ri.unit, defaultUnit) / (subYield || 1); }
-              catch (e) {}
-            }
-            lineCost = subTotalCost * scale;
+            // v2.44.120 — güvenilir ölçek; verim tanımsız + kütle/hacim birimi ise
+            // lineCost null → satırda "—" göster (çöp $424 yerine).
+            const _ss = (PCD.recipes && PCD.recipes.subRecipeScale)
+              ? PCD.recipes.subRecipeScale(ri, sub)
+              : { scale: (Number(ri.amount) || 0) / (sub.yieldAmount || sub.servings || 1), reliable: true };
+            lineCost = _ss.reliable ? (subTotalCost * _ss.scale) : null;
           } else {
             lineCost = 0;
           }
@@ -3241,7 +3239,7 @@ function renderAllergenChips() {
                 ${unitOptions.map(function (u) { return '<option value="' + u + '"' + ((ri.unit || defaultUnit) === u ? ' selected' : '') + '>' + PCD.unitLabel(u) + '</option>'; }).join('')}
               </select>
               <span class="text-muted">·</span>
-              ${unitWarn}<span data-line-cost data-idx="${idx}" style="font-weight:600;">${PCD.fmtMoney(lineCost)}</span>
+              ${unitWarn}<span data-line-cost data-idx="${idx}" style="font-weight:600;">${lineCost == null ? '<span style="color:var(--danger);font-weight:700;" title="' + PCD.escapeHtml(t('recipe_sub_no_yield_tip') || 'No yield set — cannot cost by g/ml. Give the prep a yield, or use the portion unit.') + '">—</span>' : PCD.fmtMoney(lineCost)}</span>
             </div>
           </div>
           <button type="button" class="icon-btn" data-remove="${idx}" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/></svg></button>
@@ -3340,19 +3338,16 @@ function renderAllergenChips() {
         const idx = parseInt(span.getAttribute('data-idx'), 10);
         const ri = data.ingredients && data.ingredients[idx];
         if (!ri) { span.textContent = ''; continue; }
-        let lineCost = 0;
+        let lineCost = 0, _unrel = false;
         if (ri.recipeId) {
           const sub = recipeMap[ri.recipeId];
           if (sub) {
-            const subYield = sub.yieldAmount || sub.servings || 1;
-            const defaultUnit = sub.yieldUnit || 'portion';
             const subTotalCost = PCD.recipes.computeFoodCost(sub, ingMap, recipeMap);
-            const amt = Number(ri.amount) || 0;
-            let scale = amt / (subYield || 1);
-            if (ri.unit && defaultUnit && ri.unit !== defaultUnit) {
-              try { scale = PCD.convertUnit(amt, ri.unit, defaultUnit) / (subYield || 1); } catch (e) {}
-            }
-            lineCost = subTotalCost * scale;
+            // v2.44.120 — güvenilir ölçek; verim tanımsız + kütle/hacim birimi → "—".
+            const _ss = (PCD.recipes && PCD.recipes.subRecipeScale)
+              ? PCD.recipes.subRecipeScale(ri, sub)
+              : { scale: (Number(ri.amount) || 0) / (sub.yieldAmount || sub.servings || 1), reliable: true };
+            if (_ss.reliable) lineCost = subTotalCost * _ss.scale; else _unrel = true;
           }
         } else {
           const ing = ingMap[ri.ingredientId];
@@ -3368,7 +3363,8 @@ function renderAllergenChips() {
             }
           }
         }
-        span.textContent = PCD.fmtMoney(lineCost);
+        if (_unrel) span.innerHTML = '<span style="color:var(--danger);font-weight:700;">—</span>';
+        else span.textContent = PCD.fmtMoney(lineCost);
       }
     }
 

@@ -228,8 +228,11 @@
         const amt = Number(ri.amount) || 0;
         if (amt <= 0) return;
         // v2.44.120 — güvenilir ölçek; verim tanımsız + kütle/hacim birimi ise
-        // 0 (satın-alma listesinde 10-ton çöp miktar yerine).
+        // alt-tarifi TAMAMEN atla (satın-alma listesinde 10-ton çöp miktar
+        // yerine hiç dahil etme). (scale 0'ı geçirmiyoruz: recursive
+        // opts.scale||1 onu 1'e resetlerdi.)
         const ss = subRecipeScale(ri, sub);
+        if (!ss.reliable) return;
         const flattened = flattenIngredients(sub, ingMap, recipeMap, {
           scale: scale * ss.scale,
           visited: newVisited,
@@ -302,8 +305,10 @@
         qtyUnit: rr.qtyUnit, qtyInStock: rr.qtyInStock, lineCost: rr.lineCost,
       });
       if (!sub) return;
-      // v2.44.120 — güvenilir ölçek (rr.qtyInStock çöp-geçişini kullanma).
+      // v2.44.120 — güvenilir ölçek (rr.qtyInStock çöp-geçişini kullanma);
+      // verim tanımsızsa alt malzeme kırılımını gösterme (başlık satırı 0'da kalır).
       const ss = subRecipeScale(ri, sub);
+      if (!ss.reliable) return;
       flattenIngredients(sub, ingMap, recipeMap, { scale: ss.scale }).forEach(function (item) {
         const cr = resolveRow({ ingredientId: item.ingredientId, amount: item.amount, unit: item.unit }, ingMap, recipeMap);
         if (!cr || !cr.found) return;
