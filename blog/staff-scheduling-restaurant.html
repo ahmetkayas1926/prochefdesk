@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#FAF7F2">
+  <meta name="robots" content="index, follow">
+  <title>Staff Scheduling: Building a Roster to Demand, Not Habit — ProChefDesk</title>
+  <meta name="description" content="Roster to forecast sales, not to who is free — and watch the labour-cost percentage before the week starts, not after.">
+  <link rel="canonical" href="https://prochefdesk.com/blog/staff-scheduling-restaurant.html">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Staff Scheduling: Building a Roster to Demand, Not Habit">
+  <meta property="og:description" content="Roster to forecast sales, not to who is free — and watch the labour-cost percentage before the week starts, not after.">
+  <meta property="og:url" content="https://prochefdesk.com/blog/staff-scheduling-restaurant.html">
+  <meta property="og:type" content="article">
+  <meta property="og:image" content="https://prochefdesk.com/og-image.png">
+  <meta property="article:published_time" content="2026-07-05">
+  <meta property="article:author" content="Ahmet Kaya">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Staff Scheduling: Building a Roster to Demand, Not Habit">
+  <meta name="twitter:description" content="Roster to forecast sales, not availability — and read the labour-cost % before the week starts, not after.">
+  <meta name="twitter:image" content="https://prochefdesk.com/og-image.png">
+
+  <!-- JSON-LD Article schema (Google rich results) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "Staff Scheduling: Building a Roster to Demand, Not Habit",
+    "description": "Roster to forecast sales, not to who is free — and watch the labour-cost percentage before the week starts, not after.",
+    "image": "https://prochefdesk.com/og-image.png",
+    "datePublished": "2026-07-05",
+    "dateModified": "2026-07-05",
+    "author": {
+      "@type": "Person",
+      "name": "Ahmet Kaya",
+      "jobTitle": "Professional Chef",
+      "worksFor": {
+        "@type": "Organization",
+        "name": "ProChefDesk"
+      }
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "ProChefDesk",
+      "url": "https://prochefdesk.com",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://prochefdesk.com/og-image.png"
+      }
+    },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": "https://prochefdesk.com/blog/staff-scheduling-restaurant.html"
+    },
+    "wordCount": 2430,
+    "keywords": "restaurant staff scheduling, employee scheduling restaurant, roster planning"
+  }
+  </script>
+
+  <link rel="icon" type="image/svg+xml" href="/app/assets/icon.svg">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* Single source of truth for blog post styling. To create a new
+       post, copy this entire file, rename, replace meta tags above
+       and the <article> content below. CSS stays identical. */
+
+    :root {
+      --bg: #FAF7F2;
+      --paper: #FFFEFA;
+      --text-1: #1A1916;
+      --text-2: #3A3631;
+      --text-3: #8A857C;
+      --line: #E5DFD2;
+      --primary: #2D4A3E;
+      --brand: #16a34a;
+      --copper: #B85C3C;
+      --code-bg: #F0EBE0;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 28px 24px 80px;
+      line-height: 1.72;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-size: 17px;
+      background: var(--bg);
+      color: var(--text-1);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    a { color: var(--primary); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+    a:hover { color: var(--text-1); }
+
+    /* ---------- HEADER ---------- */
+    .blog-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 40px;
+      font-family: 'Inter', sans-serif;
+    }
+    .brand {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 600;
+      font-size: 18px;
+      letter-spacing: -0.015em;
+      color: var(--text-1);
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+    .brand:hover { color: var(--primary); }
+    .brand-mark {
+      width: 28px; height: 28px;
+      border-radius: 7px;
+      background: var(--brand);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Inter', sans-serif;
+      font-weight: 700;
+      font-size: 11px;
+    }
+    .crumbs {
+      font-size: 13px;
+      color: var(--text-3);
+    }
+    .crumbs a { color: var(--text-3); text-decoration: none; }
+    .crumbs a:hover { color: var(--text-1); }
+
+    /* ---------- ARTICLE ---------- */
+    article header { margin-bottom: 36px; }
+    .tag {
+      display: inline-block;
+      color: var(--primary);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-size: 11px;
+      margin-bottom: 16px;
+    }
+    h1 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 500;
+      font-size: clamp(32px, 5vw, 44px);
+      line-height: 1.08;
+      letter-spacing: -0.025em;
+      margin: 0 0 18px;
+      color: var(--text-1);
+    }
+    .lede {
+      font-size: 19px;
+      color: var(--text-2);
+      line-height: 1.55;
+      margin: 0 0 24px;
+    }
+    .article-meta {
+      font-size: 13px;
+      color: var(--text-3);
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    article h2 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 500;
+      font-size: 28px;
+      line-height: 1.18;
+      letter-spacing: -0.018em;
+      margin: 56px 0 16px;
+      color: var(--text-1);
+    }
+    article h3 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 500;
+      font-size: 21px;
+      line-height: 1.25;
+      letter-spacing: -0.012em;
+      margin: 36px 0 12px;
+      color: var(--text-1);
+    }
+    article p { color: var(--text-2); margin: 0 0 20px; }
+    article ul, article ol { color: var(--text-2); margin: 0 0 20px; padding-inline-start: 24px; }
+    article li { margin-bottom: 6px; }
+    article strong { color: var(--text-1); font-weight: 600; }
+
+    blockquote {
+      border-left: 3px solid var(--primary);
+      padding: 6px 0 6px 20px;
+      margin: 28px 0;
+      font-family: 'Fraunces', Georgia, serif;
+      font-style: italic;
+      font-size: 19px;
+      color: var(--text-1);
+      line-height: 1.5;
+    }
+
+    .formula {
+      background: var(--code-bg);
+      border-radius: 8px;
+      padding: 18px 22px;
+      margin: 24px 0;
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+      font-size: 16px;
+      text-align: center;
+      color: var(--text-1);
+      border: 1px solid var(--line);
+    }
+    .formula .var { color: var(--primary); font-weight: 600; }
+
+    .callout {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--copper);
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin: 28px 0;
+      font-size: 16px;
+    }
+    .callout strong { color: var(--copper); }
+
+    .tool-mention {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 18px 22px;
+      margin: 28px 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      font-size: 15px;
+    }
+    .tool-mention .icon {
+      width: 36px; height: 36px;
+      flex-shrink: 0;
+      border-radius: 8px;
+      background: var(--brand);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 13px;
+    }
+    .tool-mention p { margin: 0 0 6px; color: var(--text-2); }
+    .tool-mention p:last-child { margin: 0; }
+    .tool-mention .label {
+      font-weight: 600;
+      color: var(--text-1);
+      font-family: 'Inter', sans-serif;
+    }
+    .tool-mention a { color: var(--primary); font-weight: 600; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 24px 0;
+      font-size: 15px;
+    }
+    th, td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--line);
+    }
+    th {
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      color: var(--text-1);
+      background: var(--paper);
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    td { color: var(--text-2); }
+
+    .end-mark {
+      width: 24px; height: 4px;
+      background: var(--primary);
+      margin: 56px auto 32px;
+    }
+
+    /* v2.8.94 — Related posts section (footer'dan önce, cross-link için) */
+    .related-posts {
+      margin: 56px 0 24px;
+      padding: 24px 0;
+      border-top: 1px solid var(--line);
+    }
+    .related-posts h3 {
+      font-family: 'Fraunces', serif;
+      font-size: 22px;
+      font-weight: 600;
+      margin: 0 0 18px;
+      color: var(--primary);
+    }
+    .related-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+    }
+    .related-card {
+      display: block;
+      padding: 16px 18px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      text-decoration: none;
+      color: var(--text-1);
+      transition: border-color .15s ease, transform .15s ease;
+    }
+    .related-card:hover {
+      border-color: var(--brand);
+      transform: translateY(-2px);
+    }
+    .related-card .related-tag {
+      font-size: 11px;
+      color: var(--brand);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+    .related-card .related-title {
+      font-family: 'Fraunces', serif;
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 1.3;
+      margin-bottom: 4px;
+    }
+    .related-card .related-desc {
+      font-size: 13px;
+      color: var(--text-3);
+      line-height: 1.5;
+    }
+
+    /* ---------- FOOTER ---------- */
+    .blog-footer {
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      font-size: 14px;
+      color: var(--text-3);
+    }
+    .blog-footer a { color: var(--text-2); font-weight: 500; text-decoration: none; }
+    .blog-footer a:hover { color: var(--text-1); text-decoration: underline; }
+    .blog-footer .left {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .blog-footer .foot-mark {
+      width: 22px; height: 22px;
+      border-radius: 6px;
+      background: var(--brand);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .blog-footer .right { display: flex; gap: 18px; }
+
+    /* ---------- MOBILE ---------- */
+    @media (max-width: 640px) {
+      body { padding: 20px 18px 60px; font-size: 16px; }
+      .blog-header { margin-bottom: 32px; }
+      .lede { font-size: 17px; }
+      article h2 { font-size: 24px; margin-top: 44px; }
+      article h3 { font-size: 19px; }
+      .formula { font-size: 14px; padding: 14px 16px; }
+      .tool-mention { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="blog-header">
+    <a href="/" class="brand">
+      <span class="brand-mark"><svg viewBox="0 0 24 24" style="width:100%;height:100%;display:block" aria-hidden="true"><g transform="translate(3.6 3.6) scale(0.7)"><path d="M6.5 13.6 C5 13 4.2 11.6 4.5 10 C4.6 9.3 5 8.6 5.7 8.2 C5.4 7 6 6.1 7 5.8 C7 4.6 7.8 3.8 9 3.8 C9.3 2.8 10.5 2.2 12 2.2 C13.5 2.2 14.7 2.8 15 3.8 C16.2 3.8 17 4.6 17 5.8 C18 6.1 18.6 7 18.3 8.2 C19 8.6 19.4 9.3 19.5 10 C19.8 11.6 19 13 17.5 13.6 Z" fill="#fff"/><path d="M6.3 13.6 L17.7 13.6 L17.7 19.3 C17.7 20.2 17 21 16.1 21 L7.9 21 C7 21 6.3 20.2 6.3 19.3 Z" fill="#fff"/><path d="M8 13.4 C7.7 10.4 8 7.4 8.9 5 M10 13.5 C9.9 10 10 6.6 10.5 3.4 M12 13.5 V2.6 M14 13.5 C14.1 10 14 6.6 13.5 3.4 M16 13.4 C16.3 10.4 16 7.4 15.1 5" stroke="#16433a" stroke-width="0.5" stroke-linecap="round" fill="none"/></g></svg></span>
+      <span>ProChefDesk</span>
+    </a>
+    <div class="crumbs">
+      <a href="/blog/">← Blog</a>
+    </div>
+  </header>
+
+  <article>
+    <header>
+      <div class="tag">Labour · Operations</div>
+      <h1>Staff Scheduling: Building a Roster to Demand, Not Habit</h1>
+      <p class="lede">Most rotas get written to who's free and what we did last week. That's how you end up paying four cooks to lean on a bench at 3pm and running one short at 8. Restaurant staff scheduling done right starts from a demand forecast and a labour-cost target — set before the week, not confessed after it.</p>
+      <div class="article-meta">
+        <span>By Ahmet Kaya</span>
+        <span>10 min read</span>
+        <span>July 2026</span>
+      </div>
+    </header>
+
+    <p>Ask a chef how they built next week's rota and the honest answer is usually some version of: "Same as last week, minus whoever asked for a day off." The shape of the schedule is inherited. Nobody sat down and asked what the week actually needs.</p>
+
+    <p>That's the whole problem. A rota built from habit and availability is a rota built backwards. You're solving for "who can I put on" when the only question that matters is "what does the trade require, and what will it cost me to cover it." Get that order right and everything else — overtime, morale, the labour line on your P&L — falls into place. Get it wrong and you'll spend every week firefighting a schedule that was never fit for the demand in the first place.</p>
+
+    <h2>Schedule to demand, not availability</h2>
+
+    <p>The instinct is understandable. Availability is the thing shouting at you — Marco can't do Tuesday, Sara's got an exam, the new commis is still on trial hours. So you build the puzzle around the pieces you have, and demand becomes an afterthought you notice on Saturday night when the pass is drowning.</p>
+
+    <p>Flip it. Start with the demand curve. What are you forecasting to sell, hour by hour, across the week? Only once that's on paper do you lay bodies against it. Availability is a constraint you solve <em>within</em> the demand shape — not the thing that defines the shape.</p>
+
+    <p>Here's a concrete example. A 60-cover bistro, mid-week versus weekend. Written to habit, you'd probably run a flat five-in-the-kitchen most nights because that "feels safe." Written to demand, it looks nothing like that:</p>
+
+    <table>
+      <thead>
+        <tr><th>Service</th><th>Forecast covers</th><th>Kitchen on</th><th>Front on</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Tue lunch</td><td>18</td><td>2</td><td>2</td></tr>
+        <tr><td>Tue dinner</td><td>34</td><td>3</td><td>3</td></tr>
+        <tr><td>Fri dinner</td><td>72</td><td>5</td><td>5</td></tr>
+        <tr><td>Sat dinner</td><td>88</td><td>6</td><td>6</td></tr>
+        <tr><td>Sun lunch</td><td>55</td><td>4</td><td>4</td></tr>
+      </tbody>
+    </table>
+
+    <p>Same restaurant, same team, wildly different daily headcount because the demand is wildly different. The habit rota would have over-staffed Tuesday by two heads and probably under-staffed Saturday by one. Two over-staffed shifts a week at, say, $110 a shift is $220 of pure waste — call it $11,000 a year for one small mistake repeated fifty times.</p>
+
+    <h2>Reading the demand pattern</h2>
+
+    <p>You can't roster to demand if you can't see demand. The good news is you almost certainly already have the data; the bad news is it's sitting unread in your POS.</p>
+
+    <p>Pull the last eight to twelve weeks of sales, broken down by day and — this is the part people skip — by <strong>hour or half-hour</strong>. Daily totals tell you which days are busy. Hourly totals tell you when to bring people in and when to send them home, which is where the real money hides. A day that does the same covers spread evenly needs a different rota from a day that does 70% of its trade in a two-hour spike.</p>
+
+    <p>Layer three things on top of the raw history:</p>
+
+    <ul>
+      <li><strong>The calendar.</strong> Public holidays, local events, school terms, paydays (the last Friday of the month is not an average Friday). A concert down the road can double your pre-show covers.</li>
+      <li><strong>The weather.</strong> If you've got a terrace, a 28°C Saturday and a wet one are two different businesses. Track it for a season and the correlation becomes obvious.</li>
+      <li><strong>Bookings and events on the book.</strong> A 20-top private lunch changes the shape of a quiet Wednesday completely.</li>
+    </ul>
+
+    <p>You don't need a data scientist. A rolling average of "same weekday, last four weeks," nudged up or down for the calendar and anything booked, gets you 90% of the value. Write the forecast number at the top of each day <em>before</em> you place a single name. That number is the brief the rota has to answer to.</p>
+
+    <div class="callout">
+      <strong>Watch this trap:</strong> don't forecast from a single blowout or a single dead night. One freak Saturday during a festival will drag your average up and have you over-staffing for weeks. Use the median of the last four to six matching days, not the peak, and eyeball anything that looks like an outlier before you trust it.
+    </div>
+
+    <h2>The labour-cost target comes first</h2>
+
+    <p>Demand tells you the <em>shape</em> of the week. Your labour-cost target tells you how much of it you can afford to cover. Both belong on the page before you start assigning shifts.</p>
+
+    <p>Labour cost percentage is your total labour cost — wages, plus the on-costs most chefs forget: employer taxes, holiday pay accrual, pension, any agency premium — divided by sales for the same period.</p>
+
+    <div class="formula">
+      Labour Cost % = <span class="var">(Total labour cost incl. on-costs)</span> ÷ <span class="var">(Sales)</span> × 100
+    </div>
+
+    <p>Most full-service kitchens aim for total labour (front and back combined) somewhere in the <strong>28–35%</strong> band; quick service can run leaner, high-touch fine dining higher. The exact target is yours to set — but you set it <em>before</em> the roster, as a ceiling, and then build a schedule that lives under it. That's the whole discipline. A target you only calculate on Monday after the week's already been worked is not a target; it's a post-mortem.</p>
+
+    <p>Here's how it plays out with the numbers. Say Saturday forecasts $6,400 in sales and you've set a 30% labour ceiling. That gives you $1,920 to spend on the whole day's crew, front and back. Six kitchen at an average all-in $22/hour across a nine-hour spread is roughly $1,190. That leaves about $730 for front of house — which, at a similar rate, is another six or seven hours of server coverage than you'd first guess, so you stagger them: two on early for setup, the rest landing before the 7pm push. The point is you're doing this arithmetic <em>against a budget</em>, live, while you build — not discovering on the following Monday that you blew through 38%.</p>
+
+    <h2>Skill mix, not just headcount</h2>
+
+    <p>Five bodies is not five bodies. A section that needs a competent grill cook is not covered by rostering two commis who can both do larder. Headcount that ignores skill is how you end up "fully staffed" and still in the weeds because the one person who can run sauce called in sick and nobody flagged it until service.</p>
+
+    <p>Roster by station and by capability, not by warm bodies. For each shift, the checklist is blunt:</p>
+
+    <ul>
+      <li><strong>Is every section covered by someone who can actually run it?</strong> Grill, sauce, larder, pass, pastry — each needs a named owner competent at that station.</li>
+      <li><strong>Is there a senior on every shift who can step in and call the pass?</strong> Never build a service whose only qualified leader is a single point of failure.</li>
+      <li><strong>Are you building bench for next season?</strong> Deliberately pair a developing cook with a strong one on a medium shift so they learn before you're forced to throw them on solo during a rush.</li>
+    </ul>
+
+    <p>The same logic runs front of house. Three servers where none can run the section, handle a wine list, or close a till confidently is not a covered floor. Balance the experienced and the green across the week so no single shift is carried entirely by rookies — and so no shift is so top-heavy with your best people that you're paying senior rates to polish glasses on a dead Tuesday.</p>
+
+    <h2>Compliance is not optional, and it's not free</h2>
+
+    <p>A roster that ignores the law isn't a cheaper roster — it's a deferred bill with penalties on top. The specifics vary by country and state, so know your own jurisdiction, but the same categories bite everywhere.</p>
+
+    <h3>Breaks and rest periods</h3>
+
+    <p>Most jurisdictions mandate rest breaks tied to shift length and minimum gaps between shifts. A closer who finishes at 1am and opens at 9am the same morning ("clopening") is both a compliance risk in many places and a guaranteed way to burn out your best people. Build the break into the schedule as a real, unpaid, uncovered block — and make sure someone else covers the section while it's taken, or the break exists only on paper.</p>
+
+    <h3>Overtime and penalty rates</h3>
+
+    <p>The moment a schedule pushes someone past the overtime threshold, every extra hour costs you 1.5× (or more). In the US that's a federal Fair Labor Standards Act matter — the <a href="https://www.dol.gov/agencies/whd" target="_blank" rel="noopener">US Department of Labor (Wage and Hour Division)</a> sets the overtime and recordkeeping rules, and the same page is a good starting point for the records you're legally required to keep. Elsewhere you'll have weekend, public-holiday or late-night penalty loadings that can push a Sunday hour to 1.75× or double. A roster that quietly parks your top earner into overtime every week is silently inflating your labour percentage — the antidote is seeing the cost climb as you build, which is exactly what a live labour readout gives you.</p>
+
+    <h3>Publishing lead time</h3>
+
+    <p>Publish the rota with enough notice that people can plan their lives — a week ahead is a sensible floor, and in some places "fair workweek" or predictive-scheduling laws make advance notice a legal requirement with penalties for last-minute changes. Beyond the law, a rota published on Sunday night for a Monday start is how you lose good staff. Notice is a retention tool as much as a compliance one.</p>
+
+    <div class="tool-mention">
+      <span class="icon"><svg viewBox="0 0 24 24" style="width:100%;height:100%;display:block" aria-hidden="true"><g transform="translate(3.6 3.6) scale(0.7)"><path d="M6.5 13.6 C5 13 4.2 11.6 4.5 10 C4.6 9.3 5 8.6 5.7 8.2 C5.4 7 6 6.1 7 5.8 C7 4.6 7.8 3.8 9 3.8 C9.3 2.8 10.5 2.2 12 2.2 C13.5 2.2 14.7 2.8 15 3.8 C16.2 3.8 17 4.6 17 5.8 C18 6.1 18.6 7 18.3 8.2 C19 8.6 19.4 9.3 19.5 10 C19.8 11.6 19 13 17.5 13.6 Z" fill="#fff"/><path d="M6.3 13.6 L17.7 13.6 L17.7 19.3 C17.7 20.2 17 21 16.1 21 L7.9 21 C7 21 6.3 20.2 6.3 19.3 Z" fill="#fff"/><path d="M8 13.4 C7.7 10.4 8 7.4 8.9 5 M10 13.5 C9.9 10 10 6.6 10.5 3.4 M12 13.5 V2.6 M14 13.5 C14.1 10 14 6.6 13.5 3.4 M16 13.4 C16.3 10.4 16 7.4 15.1 5" stroke="#16433a" stroke-width="0.5" stroke-linecap="round" fill="none"/></g></svg></span>
+      <div>
+        <p class="label">In ProChefDesk</p>
+        <p>The <a href="/app/" target="_blank" rel="noopener">Roster</a> tool shows a <strong>live labour-cost percentage</strong> as you drag shifts in. Set your weekly sales forecast and your target %, and the number colours green while you're under target, amber as you approach it, and red once a shift tips you over — before the week is worked, not after. You can see the labour percentage move as you add each shift, so you catch the over-staffed Tuesday while it's still fixable.</p>
+      </div>
+    </div>
+
+    <h2>The live check while you build</h2>
+
+    <p>This is the habit that changes everything, and it's worth stating plainly: <strong>you should know your labour-cost percentage while you're building the roster, not once the week is done.</strong></p>
+
+    <p>A static spreadsheet gives you the number only after you've summed the columns — which in practice means you find out you're over budget on Monday, when the shifts are already worked and paid. A live figure that updates as you assign each shift turns rostering into a steering exercise. Add a body to Saturday's grill, watch the percentage tick from 29% to 31%; decide whether that head is worth two points. Trim the over-staffed Tuesday and watch it drop back. The decisions are the same ones you always made — but now you're making them with the price tag visible, in the moment, instead of guessing and reconciling later.</p>
+
+    <p>Tie it back to the demand forecast and you've closed the loop. Forecast covers set the shape; the labour target sets the ceiling; the live percentage keeps you honest as you fit the two together. Roster planning stops being an inherited ritual and becomes a decision you can defend line by line.</p>
+
+    <h2>Events change the maths</h2>
+
+    <p>If you cater or run functions, your roster isn't just answering to the à la carte covers — it's answering to whatever's on the events book that week. A confirmed 80-guest wedding lunch on Saturday doesn't just add revenue; it adds a labour requirement that has to sit inside the same percentage ceiling.</p>
+
+    <p>The mistake is to plan the à la carte rota and the event staffing in two separate universes, then wonder why the week's labour line came in hot. Fold the event's confirmed revenue into the week's sales figure and fold its staffing into the same headcount plan. If Saturday's function bills $4,000 on top of $6,400 à la carte, your labour budget for the day grows accordingly — but so does the crew you need, and the two have to be reconciled against one target, not two.</p>
+
+    <h2>What to do this week</h2>
+
+    <p>Don't try to rebuild your entire scheduling system on a Sunday. Do one week, properly, and feel the difference:</p>
+
+    <ol>
+      <li><strong>Pull hourly sales</strong> for the last four matching weeks from your POS. Write a forecast cover count at the top of each day for next week.</li>
+      <li><strong>Set a labour-cost ceiling</strong> as a percentage of forecast sales. Write it down before you touch a single name.</li>
+      <li><strong>Build the rota against the forecast shape</strong> — headcount tracking the demand curve, not a flat line — and lay the skill mix over it so every station has a competent owner and every shift a senior.</li>
+      <li><strong>Watch the labour percentage as you go.</strong> When a shift tips you over the ceiling, decide deliberately whether the demand justifies it. Sometimes it does; the point is you chose it.</li>
+      <li><strong>Publish it early.</strong> A week's notice, minimum. Respect the breaks and rest gaps you're legally on the hook for.</li>
+    </ol>
+
+    <p>Do that for a month and the habit rota starts to feel absurd — like driving with your eyes on the rear-view mirror. You'll trim the shifts that were never earning their keep, cover the pushes that used to bury you, and watch the labour line settle into the band you actually chose.</p>
+
+    <blockquote>"We were always 'fully staffed' and always in the weeds. Turned out we were fully staffed for a Tuesday, every single night."</blockquote>
+
+    <p>Rostering to demand doesn't mean cutting people to the bone. It means putting the right number of the right people on at the right hours — and knowing what it costs before the week begins, not after it's already been paid for.</p>
+
+    <div class="end-mark"></div>
+  </article>
+
+  <!-- Related posts cross-link (internal linking for SEO + reader retention) -->
+  <section class="related-posts" aria-label="Related articles">
+    <h3>Related reading</h3>
+    <div class="related-grid">
+      <a href="/blog/labour-cost-percentage-restaurant.html" class="related-card">
+        <div class="related-tag">Cost Control · Labour</div>
+        <div class="related-title">Restaurant Labour Cost Percentage: The Number Behind the Roster</div>
+        <div class="related-desc">The true cost of an hour and rostering to demand.</div>
+      </a>
+      <a href="/blog/event-staffing-ratios.html" class="related-card">
+        <div class="related-tag">Catering · Labour</div>
+        <div class="related-title">Event Staffing Ratios: How Many Chefs and Servers Per Guest</div>
+        <div class="related-desc">Server ratios by service style and kitchen ratios by menu.</div>
+      </a>
+    </div>
+  </section>
+
+  <footer class="blog-footer">
+    <div class="left">
+      <span class="foot-mark"><svg viewBox="0 0 24 24" style="width:100%;height:100%;display:block" aria-hidden="true"><g transform="translate(3.6 3.6) scale(0.7)"><path d="M6.5 13.6 C5 13 4.2 11.6 4.5 10 C4.6 9.3 5 8.6 5.7 8.2 C5.4 7 6 6.1 7 5.8 C7 4.6 7.8 3.8 9 3.8 C9.3 2.8 10.5 2.2 12 2.2 C13.5 2.2 14.7 2.8 15 3.8 C16.2 3.8 17 4.6 17 5.8 C18 6.1 18.6 7 18.3 8.2 C19 8.6 19.4 9.3 19.5 10 C19.8 11.6 19 13 17.5 13.6 Z" fill="#fff"/><path d="M6.3 13.6 L17.7 13.6 L17.7 19.3 C17.7 20.2 17 21 16.1 21 L7.9 21 C7 21 6.3 20.2 6.3 19.3 Z" fill="#fff"/><path d="M8 13.4 C7.7 10.4 8 7.4 8.9 5 M10 13.5 C9.9 10 10 6.6 10.5 3.4 M12 13.5 V2.6 M14 13.5 C14.1 10 14 6.6 13.5 3.4 M16 13.4 C16.3 10.4 16 7.4 15.1 5" stroke="#16433a" stroke-width="0.5" stroke-linecap="round" fill="none"/></g></svg></span>
+      <span>ProChefDesk · written from a working kitchen</span>
+    </div>
+    <div class="right">
+      <a href="/blog/">All posts</a>
+      <a href="/app/">Open app</a>
+      <a href="/privacy.html">Privacy</a>
+    </div>
+  </footer>
+
+</body>
+</html>

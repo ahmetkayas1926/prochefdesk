@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#FAF7F2">
+  <meta name="robots" content="index, follow">
+  <title>Restaurant Inventory Management: A System, Not a Spreadsheet — ProChefDesk</title>
+  <meta name="description" content="The full loop — par, order, receive, store FIFO, count, variance — and the numbers it hands you when you run it weekly.">
+  <link rel="canonical" href="https://prochefdesk.com/blog/restaurant-inventory-management.html">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Restaurant Inventory Management: A System, Not a Spreadsheet">
+  <meta property="og:description" content="The full loop — par, order, receive, store FIFO, count, variance — and the numbers it hands you when you run it weekly.">
+  <meta property="og:url" content="https://prochefdesk.com/blog/restaurant-inventory-management.html">
+  <meta property="og:type" content="article">
+  <meta property="og:image" content="https://prochefdesk.com/og-image.png">
+  <meta property="article:published_time" content="2026-07-05">
+  <meta property="article:author" content="Ahmet Kaya">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Restaurant Inventory Management: A System, Not a Spreadsheet">
+  <meta name="twitter:description" content="Par, order, receive, store FIFO, count, variance — the closed loop and the numbers it hands you weekly.">
+  <meta name="twitter:image" content="https://prochefdesk.com/og-image.png">
+
+  <!-- JSON-LD Article schema (Google rich results, sıralama bonus) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "Restaurant Inventory Management: A System, Not a Spreadsheet",
+    "description": "The full loop — par, order, receive, store FIFO, count, variance — and the numbers it hands you when you run it weekly.",
+    "image": "https://prochefdesk.com/og-image.png",
+    "datePublished": "2026-07-05",
+    "dateModified": "2026-07-05",
+    "author": {
+      "@type": "Person",
+      "name": "Ahmet Kaya",
+      "jobTitle": "Professional Chef",
+      "worksFor": {
+        "@type": "Organization",
+        "name": "ProChefDesk"
+      }
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "ProChefDesk",
+      "url": "https://prochefdesk.com",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://prochefdesk.com/og-image.png"
+      }
+    },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": "https://prochefdesk.com/blog/restaurant-inventory-management.html"
+    },
+    "wordCount": 2480,
+    "keywords": "restaurant inventory management, food inventory system, stock control"
+  }
+  </script>
+
+  <link rel="icon" type="image/svg+xml" href="/app/assets/icon.svg">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* Single source of truth for blog post styling. To create a new
+       post, copy this entire file, rename, replace meta tags above
+       and the <article> content below. CSS stays identical. */
+
+    :root {
+      --bg: #FAF7F2;
+      --paper: #FFFEFA;
+      --text-1: #1A1916;
+      --text-2: #3A3631;
+      --text-3: #8A857C;
+      --line: #E5DFD2;
+      --primary: #2D4A3E;
+      --brand: #16a34a;
+      --copper: #B85C3C;
+      --code-bg: #F0EBE0;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 28px 24px 80px;
+      line-height: 1.72;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-size: 17px;
+      background: var(--bg);
+      color: var(--text-1);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    a { color: var(--primary); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+    a:hover { color: var(--text-1); }
+
+    /* ---------- HEADER ---------- */
+    .blog-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 40px;
+      font-family: 'Inter', sans-serif;
+    }
+    .brand {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 600;
+      font-size: 18px;
+      letter-spacing: -0.015em;
+      color: var(--text-1);
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+    .brand:hover { color: var(--primary); }
+    .brand-mark {
+      width: 28px; height: 28px;
+      border-radius: 7px;
+      background: var(--brand);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Inter', sans-serif;
+      font-weight: 700;
+      font-size: 11px;
+    }
+    .crumbs {
+      font-size: 13px;
+      color: var(--text-3);
+    }
+    .crumbs a { color: var(--text-3); text-decoration: none; }
+    .crumbs a:hover { color: var(--text-1); }
+
+    /* ---------- ARTICLE ---------- */
+    article header { margin-bottom: 36px; }
+    .tag {
+      display: inline-block;
+      color: var(--primary);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-size: 11px;
+      margin-bottom: 16px;
+    }
+    h1 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 500;
+      font-size: clamp(32px, 5vw, 44px);
+      line-height: 1.08;
+      letter-spacing: -0.025em;
+      margin: 0 0 18px;
+      color: var(--text-1);
+    }
+    .lede {
+      font-size: 19px;
+      color: var(--text-2);
+      line-height: 1.55;
+      margin: 0 0 24px;
+    }
+    .article-meta {
+      font-size: 13px;
+      color: var(--text-3);
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    article h2 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 500;
+      font-size: 28px;
+      line-height: 1.18;
+      letter-spacing: -0.018em;
+      margin: 56px 0 16px;
+      color: var(--text-1);
+    }
+    article h3 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 500;
+      font-size: 21px;
+      line-height: 1.25;
+      letter-spacing: -0.012em;
+      margin: 36px 0 12px;
+      color: var(--text-1);
+    }
+    article p { color: var(--text-2); margin: 0 0 20px; }
+    article ul, article ol { color: var(--text-2); margin: 0 0 20px; padding-inline-start: 24px; }
+    article li { margin-bottom: 6px; }
+    article strong { color: var(--text-1); font-weight: 600; }
+
+    blockquote {
+      border-left: 3px solid var(--primary);
+      padding: 6px 0 6px 20px;
+      margin: 28px 0;
+      font-family: 'Fraunces', Georgia, serif;
+      font-style: italic;
+      font-size: 19px;
+      color: var(--text-1);
+      line-height: 1.5;
+    }
+
+    .formula {
+      background: var(--code-bg);
+      border-radius: 8px;
+      padding: 18px 22px;
+      margin: 24px 0;
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+      font-size: 16px;
+      text-align: center;
+      color: var(--text-1);
+      border: 1px solid var(--line);
+    }
+    .formula .var { color: var(--primary); font-weight: 600; }
+
+    .callout {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--copper);
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin: 28px 0;
+      font-size: 16px;
+    }
+    .callout strong { color: var(--copper); }
+
+    .tool-mention {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 18px 22px;
+      margin: 28px 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      font-size: 15px;
+    }
+    .tool-mention .icon {
+      width: 36px; height: 36px;
+      flex-shrink: 0;
+      border-radius: 8px;
+      background: var(--brand);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 13px;
+    }
+    .tool-mention p { margin: 0 0 6px; color: var(--text-2); }
+    .tool-mention p:last-child { margin: 0; }
+    .tool-mention .label {
+      font-weight: 600;
+      color: var(--text-1);
+      font-family: 'Inter', sans-serif;
+    }
+    .tool-mention a { color: var(--primary); font-weight: 600; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 24px 0;
+      font-size: 15px;
+    }
+    th, td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--line);
+    }
+    th {
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      color: var(--text-1);
+      background: var(--paper);
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    td { color: var(--text-2); }
+
+    .end-mark {
+      width: 24px; height: 4px;
+      background: var(--primary);
+      margin: 56px auto 32px;
+    }
+
+    /* v2.8.94 — Related posts section (footer'dan önce, cross-link için) */
+    .related-posts {
+      margin: 56px 0 24px;
+      padding: 24px 0;
+      border-top: 1px solid var(--line);
+    }
+    .related-posts h3 {
+      font-family: 'Fraunces', serif;
+      font-size: 22px;
+      font-weight: 600;
+      margin: 0 0 18px;
+      color: var(--primary);
+    }
+    .related-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+    }
+    .related-card {
+      display: block;
+      padding: 16px 18px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      text-decoration: none;
+      color: var(--text-1);
+      transition: border-color .15s ease, transform .15s ease;
+    }
+    .related-card:hover {
+      border-color: var(--brand);
+      transform: translateY(-2px);
+    }
+    .related-card .related-tag {
+      font-size: 11px;
+      color: var(--brand);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+    .related-card .related-title {
+      font-family: 'Fraunces', serif;
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 1.3;
+      margin-bottom: 4px;
+    }
+    .related-card .related-desc {
+      font-size: 13px;
+      color: var(--text-3);
+      line-height: 1.5;
+    }
+
+    /* ---------- FOOTER ---------- */
+    .blog-footer {
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      font-size: 14px;
+      color: var(--text-3);
+    }
+    .blog-footer a { color: var(--text-2); font-weight: 500; text-decoration: none; }
+    .blog-footer a:hover { color: var(--text-1); text-decoration: underline; }
+    .blog-footer .left {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .blog-footer .foot-mark {
+      width: 22px; height: 22px;
+      border-radius: 6px;
+      background: var(--brand);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .blog-footer .right { display: flex; gap: 18px; }
+
+    /* ---------- MOBILE ---------- */
+    @media (max-width: 640px) {
+      body { padding: 20px 18px 60px; font-size: 16px; }
+      .blog-header { margin-bottom: 32px; }
+      .lede { font-size: 17px; }
+      article h2 { font-size: 24px; margin-top: 44px; }
+      article h3 { font-size: 19px; }
+      .formula { font-size: 14px; padding: 14px 16px; }
+      .tool-mention { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="blog-header">
+    <a href="/" class="brand">
+      <span class="brand-mark"><svg viewBox="0 0 24 24" style="width:100%;height:100%;display:block" aria-hidden="true"><g transform="translate(3.6 3.6) scale(0.7)"><path d="M6.5 13.6 C5 13 4.2 11.6 4.5 10 C4.6 9.3 5 8.6 5.7 8.2 C5.4 7 6 6.1 7 5.8 C7 4.6 7.8 3.8 9 3.8 C9.3 2.8 10.5 2.2 12 2.2 C13.5 2.2 14.7 2.8 15 3.8 C16.2 3.8 17 4.6 17 5.8 C18 6.1 18.6 7 18.3 8.2 C19 8.6 19.4 9.3 19.5 10 C19.8 11.6 19 13 17.5 13.6 Z" fill="#fff"/><path d="M6.3 13.6 L17.7 13.6 L17.7 19.3 C17.7 20.2 17 21 16.1 21 L7.9 21 C7 21 6.3 20.2 6.3 19.3 Z" fill="#fff"/><path d="M8 13.4 C7.7 10.4 8 7.4 8.9 5 M10 13.5 C9.9 10 10 6.6 10.5 3.4 M12 13.5 V2.6 M14 13.5 C14.1 10 14 6.6 13.5 3.4 M16 13.4 C16.3 10.4 16 7.4 15.1 5" stroke="#16433a" stroke-width="0.5" stroke-linecap="round" fill="none"/></g></svg></span>
+      <span>ProChefDesk</span>
+    </a>
+    <div class="crumbs">
+      <a href="/blog/">← Blog</a>
+    </div>
+  </header>
+
+  <article>
+    <header>
+      <div class="tag">Inventory &amp; Stock Control</div>
+      <h1>Restaurant Inventory Management: A System, Not a Spreadsheet</h1>
+      <p class="lede">Most kitchens treat stock as a monthly chore — a spreadsheet someone fills in the day the accountant asks. That's not inventory management. It's bookkeeping after the money's already gone. The system is a loop, and it only pays you back when it runs on a cadence.</p>
+      <div class="article-meta">
+        <span>By Ahmet Kaya</span>
+        <span>11 min read</span>
+        <span>July 2026</span>
+      </div>
+    </header>
+
+    <p>Ask ten chefs how they "do inventory" and nine will describe a spreadsheet. A tab with ingredient names down the left, a column for count, a column for cost, a total at the bottom. Once a month, someone spends a miserable Sunday walking the walk-in with a clipboard and typing numbers in. The total gets emailed to the office. Nothing changes.</p>
+
+    <p>That is not a food inventory system. It is a snapshot of a corpse. Real restaurant inventory management is a <em>loop</em> — six steps that feed each other, run on a fixed cadence, owned by a named person. Set par, order to par, receive and check, store FIFO, count, compute variance, then act on what the variance tells you and reset the pars. Skip any step and the loop breaks silently. Skip the last one — acting — and you've just built a very expensive habit that produces a number nobody uses.</p>
+
+    <h2>The loop, not the list</h2>
+
+    <p>Here's the whole thing in one line, because the shape matters more than any single step:</p>
+
+    <div class="formula">
+      <span class="var">Par</span> → <span class="var">Order</span> → <span class="var">Receive</span> → <span class="var">Store (FIFO)</span> → <span class="var">Count</span> → <span class="var">Variance</span> → back to <span class="var">Par</span>
+    </div>
+
+    <p>A spreadsheet lives at the "Count" step and pretends that's the job. It isn't. Counting is the cheapest, least valuable part — it only earns its keep because it feeds variance, and variance is the only step that hands you money. Everything before the count exists to make the count trustworthy. Everything after it exists to make the count useful. Let's walk it.</p>
+
+    <h3>1. Par — the target you order back to</h3>
+
+    <p>Par is the quantity of an item you want on hand at the start of each order cycle. Not the maximum, not the minimum — the sensible working level that carries you to the next delivery with a small buffer. If you order dairy on Tuesdays and Fridays and you burn through nine litres of cream between deliveries, your cream par is around eleven litres: enough to cover usage plus a cushion for a busy night.</p>
+
+    <p>Par is not a number you invent. It's calculated from usage, delivery frequency, and a safety buffer, and it drifts as your menu and covers change. Sizing par properly is its own discipline — I've written the full method separately — but the headline is that a par set once at opening and never revisited is worse than no par at all, because it looks authoritative while being wrong.</p>
+
+    <h3>2. Order — to par, not to gut feel</h3>
+
+    <p>With pars set, ordering stops being a guess. The order quantity is simply:</p>
+
+    <div class="formula">
+      Order Qty = <span class="var">Par</span> − <span class="var">Current on-hand</span> (rounded to the pack/case size)
+    </div>
+
+    <p>You count what's there, subtract from par, order the gap. This is the single biggest reason to count more often than monthly: a count that only happens once a month means ordering is pure intuition for the other 29 days, and intuition over-orders. Every chef over-orders the things they're scared of running out of and under-orders the boring staples that quietly 86 mid-service.</p>
+
+    <h3>3. Receive — the door is a control point</h3>
+
+    <p>The delivery door is where inventory accuracy is won or lost, and it's the step kitchens rush the hardest. A driver's in a hurry, service is in two hours, someone signs the docket without checking. Now your system believes you received 10 kg of salmon when the box held 8.6 kg, and every downstream number is poisoned.</p>
+
+    <p>Check three things at the door, every time: <strong>quantity</strong> against the invoice, <strong>quality</strong> (temperature on chilled goods, condition, dates), and <strong>price</strong> against what you agreed. Reject what fails. Note substitutions. The count you do next week is only as honest as the receiving you did all week.</p>
+
+    <h3>4. Store — FIFO or the count lies</h3>
+
+    <p>First in, first out. New stock goes behind the old, dated, so the oldest gets used first. This isn't a poster on the wall — it's a shelving habit that decides whether your stock value is real or full of product that's about to hit the bin. If FIFO slips, you count a full shelf of yoghurt and record its full value, but a third of it expires Thursday. Your inventory says $X of usable stock; reality says $0.7X. Spoilage is variance you created at the shelf.</p>
+
+    <h3>5. Count — same time, same units, same order</h3>
+
+    <p>The count is worthless unless it's consistent. Three rules make it trustworthy:</p>
+
+    <ul>
+      <li><strong>Same time.</strong> Always count at the same point in the cycle — end of trading, before the next delivery lands. Count mid-week one time and Sunday night the next and your usage numbers become noise.</li>
+      <li><strong>Same units.</strong> Decide whether flour is counted in kilos or in bags, and never switch. Half a team counting cases and half counting units is how a $400 error walks into your books.</li>
+      <li><strong>Shelf order.</strong> Your count sheet should follow the physical layout of the store, not alphabetical order. You count faster, you skip nothing, and two people counting the same room agree.</li>
+    </ul>
+
+    <p>Two people, one calling and one recording, beats one person doing both — not for speed, but because it kills the "I'll remember that one" errors. A stocktake done well is an hour; done badly it's an hour you have to throw away.</p>
+
+    <h3>6. Variance — the step that pays</h3>
+
+    <p>This is the whole point of the exercise, and it's the step spreadsheets almost never reach. Variance compares what you <em>should</em> have used against what you <em>actually</em> used:</p>
+
+    <div class="formula">
+      Actual usage = <span class="var">Opening stock</span> + <span class="var">Purchases</span> − <span class="var">Closing stock</span>
+    </div>
+
+    <p>Theoretical usage is what your recipes say you should have used, given the dishes you actually sold: every sold plate multiplied by its recipe, summed per ingredient. The gap between the two — per ingredient, in weight and in dollars — is where your margin is leaking.</p>
+
+    <p>A worked example makes it concrete. Say for chicken breast over one week:</p>
+
+    <table>
+      <thead>
+        <tr><th>Line</th><th>Value</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Opening stock</td><td>12.0 kg</td></tr>
+        <tr><td>Purchases (received)</td><td>40.0 kg</td></tr>
+        <tr><td>Closing stock (counted)</td><td>6.5 kg</td></tr>
+        <tr><td><strong>Actual usage</strong></td><td><strong>45.5 kg</strong></td></tr>
+        <tr><td>Theoretical usage (from sold dishes)</td><td>41.0 kg</td></tr>
+        <tr><td><strong>Variance</strong></td><td><strong>4.5 kg over</strong></td></tr>
+      </tbody>
+    </table>
+
+    <p>Four and a half kilos of chicken you paid for and can't account for in what you sold. At $9/kg that's about $40 in one week on one ingredient — call it $2,000 a year if it's chronic. Now the number does something: it points you at over-portioning, trim waste, a mis-scaled prep batch, staff meal that isn't logged, or the uncomfortable one, walking out the back door. Run variance across your top twenty ingredients by spend and you'll find the two or three that are quietly funding somebody's else's habit.</p>
+
+    <div class="tool-mention">
+      <span class="icon"><svg viewBox="0 0 24 24" style="width:100%;height:100%;display:block" aria-hidden="true"><g transform="translate(3.6 3.6) scale(0.7)"><path d="M6.5 13.6 C5 13 4.2 11.6 4.5 10 C4.6 9.3 5 8.6 5.7 8.2 C5.4 7 6 6.1 7 5.8 C7 4.6 7.8 3.8 9 3.8 C9.3 2.8 10.5 2.2 12 2.2 C13.5 2.2 14.7 2.8 15 3.8 C16.2 3.8 17 4.6 17 5.8 C18 6.1 18.6 7 18.3 8.2 C19 8.6 19.4 9.3 19.5 10 C19.8 11.6 19 13 17.5 13.6 Z" fill="#fff"/><path d="M6.3 13.6 L17.7 13.6 L17.7 19.3 C17.7 20.2 17 21 16.1 21 L7.9 21 C7 21 6.3 20.2 6.3 19.3 Z" fill="#fff"/><path d="M8 13.4 C7.7 10.4 8 7.4 8.9 5 M10 13.5 C9.9 10 10 6.6 10.5 3.4 M12 13.5 V2.6 M14 13.5 C14.1 10 14 6.6 13.5 3.4 M16 13.4 C16.3 10.4 16 7.4 15.1 5" stroke="#16433a" stroke-width="0.5" stroke-linecap="round" fill="none"/></g></svg></span>
+      <div>
+        <p class="label">In ProChefDesk</p>
+        <p>The <a href="/app/" target="_blank" rel="noopener">Inventory</a> tool holds your item list, par levels and on-hand counts, and flags anything below par so ordering becomes subtraction, not guesswork. When you enter a count, the Variance view does the opening + purchases − closing math for you and lays theoretical usage (from sold dishes and their recipes) next to actual, per ingredient — so the leak has a name and a dollar figure instead of being buried in one blended food-cost number.</p>
+      </div>
+    </div>
+
+    <h2>Who owns it, and how often</h2>
+
+    <p>A loop with no owner doesn't run. Inventory needs one named person accountable for the count and the order — usually the head chef or a sous, not "whoever's free." Rotating the job guarantees inconsistency, and inconsistency is the one thing the count can't survive.</p>
+
+    <p>On cadence, the honest answer depends on volume and shelf life, but the defaults I'd argue for:</p>
+
+    <table>
+      <thead>
+        <tr><th>What</th><th>How often</th><th>Why</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>High-value / fast-moving (proteins, seafood, dairy)</td><td>Weekly</td><td>Most of your money and most of your variance lives here</td></tr>
+        <tr><td>Full count (everything)</td><td>Monthly, minimum</td><td>Ties to the P&amp;L period; catches slow drift</td></tr>
+        <tr><td>Par review</td><td>Monthly, or on menu change</td><td>Usage moves with covers and season</td></tr>
+        <tr><td>Dry / ambient staples</td><td>Monthly</td><td>Slow to move, low spoilage risk</td></tr>
+      </tbody>
+    </table>
+
+    <p>Weekly on the expensive dozen, monthly on the whole store. A full count every single week is a discipline most kitchens can't sustain, and a burned-out team counts badly — so don't over-engineer the cadence into something that collapses in month two.</p>
+
+    <div class="callout">
+      <strong>The trap:</strong> counting on an irregular schedule is worse than counting less often on a fixed one. If you count Sunday, then the following Thursday, then three weeks later, your usage figures span different lengths of time and can't be compared — so variance is meaningless and you've done the work for nothing. Pick a cadence you can actually hold and hold it.
+    </div>
+
+    <h2>The three numbers the loop hands you</h2>
+
+    <p>Run this properly and you get three outputs no spreadsheet-once-a-month kitchen ever sees clearly.</p>
+
+    <h3>Stock value</h3>
+
+    <p>The dollar figure sitting on your shelves right now. This is working capital tied up in the walk-in — money you've spent that isn't earning until it's sold. A kitchen carrying $18,000 of stock that turns over in ten days is healthier than one carrying $12,000 that turns in thirty. Watch it trend, not just its level.</p>
+
+    <h3>Usage rate</h3>
+
+    <p>How fast each item moves. Usage rate is what makes par calculable and what tells you which items are dead money. If you count a jar of harissa this month and it's the same jar you counted last month, that's not stock — that's a decision you made once and forgot to unmake.</p>
+
+    <h3>Theoretical-vs-actual variance, per ingredient</h3>
+
+    <p>The one that pays the rent, covered above. The per-ingredient breakdown is the difference between "our food cost is running a bit high" (useless) and "we're losing 4.5 kg of chicken a week and it started when we changed the portion scoop" (actionable). Industry bodies like the <a href="https://www.restaurant.org/research-and-media/research/" target="_blank" rel="noopener">National Restaurant Association</a> track food and labour as the two costs that decide whether an operation survives — and variance is the lever that moves food cost without touching your recipes or your prices.</p>
+
+    <h2>Where kitchens actually fail</h2>
+
+    <p>Not from ignorance of the loop — from breaking it in two predictable places.</p>
+
+    <p><strong>Counting inconsistently.</strong> Different day, different units, different person, different level of care. The count becomes noise, variance becomes garbage, and after a few months of garbage everyone quietly stops trusting the number and reverts to gut. The fix isn't more counting — it's the same count, same way, every time. Boring consistency beats heroic effort here every single time.</p>
+
+    <p><strong>Never closing the loop.</strong> This is the big one. Plenty of kitchens count diligently and even calculate variance — and then file it. The number gets looked at, someone says "hmm, that's high," and nothing happens. No portion gets re-checked, no par gets reset, no conversation gets had with the section that's bleeding. A loop you don't close is just accounting. The step that pays is the step <em>after</em> the number: change one thing, then watch next week's variance to see if it worked.</p>
+
+    <div class="callout">
+      <strong>A blunt test:</strong> if last month's variance report didn't cause a single change in the kitchen — a portion adjusted, a par reset, a supplier queried, a conversation had — then you don't have an inventory system. You have a filing system. The two look identical right up until the P&amp;L arrives.
+    </div>
+
+    <h2>What to actually do this month</h2>
+
+    <p>If your current setup is a spreadsheet you dread, don't try to build the whole loop at once. Start where the money is:</p>
+
+    <ol>
+      <li><strong>List your top fifteen items by spend.</strong> Proteins, seafood, dairy, oils, premium produce. Ignore salt and toothpicks for now.</li>
+      <li><strong>Set a rough par for each</strong> from a week of real usage and your delivery days.</li>
+      <li><strong>Count those fifteen weekly</strong>, same night, same units, same count sheet in shelf order.</li>
+      <li><strong>Compute variance on them</strong> against what you sold. Even by hand it's fifteen rows of subtraction.</li>
+      <li><strong>Act on the worst one.</strong> One change a week — a scoop, a scale, a par, a supplier line. Then check next week's number.</li>
+    </ol>
+
+    <p>Fifteen items, weekly, closed loop, beats two hundred items counted once a quarter and filed. Every time. The scope grows itself once the habit's in and the team sees the leaks getting plugged.</p>
+
+    <h2>The point</h2>
+
+    <p>A spreadsheet is a photograph of your stock at one moment. A system is the loop that keeps the photograph honest and does something with it. The math in any single step is trivial — subtraction, mostly. The value is entirely in the cadence and the closing: counting the same way every week, and letting the variance change what happens on the line the following week.</p>
+
+    <p>Do that and food cost stops being a number the accountant reports to you three weeks too late, and becomes a dial you turn yourself, in real time, in your own kitchen. That's the difference between managing inventory and merely recording it.</p>
+
+    <blockquote>"We counted every month for two years. The day we started acting on the variance was the day it started saving us money."</blockquote>
+
+    <div class="end-mark"></div>
+  </article>
+
+  <!-- Related posts cross-link (internal linking for SEO + reader retention) -->
+  <section class="related-posts" aria-label="Related articles">
+    <h3>Related reading</h3>
+    <div class="related-grid">
+      <a href="/blog/restaurant-inventory-par-levels.html" class="related-card">
+        <div class="related-tag">Inventory &amp; Stock Control</div>
+        <div class="related-title">Restaurant Inventory Par Levels: Data-Driven Sizing</div>
+        <div class="related-desc">Par is a calculated quantity from usage, delivery and a buffer — not a number you invent at opening.</div>
+      </a>
+      <a href="/blog/how-to-do-a-stocktake.html" class="related-card">
+        <div class="related-tag">Inventory &amp; Stock Control</div>
+        <div class="related-title">How to Do a Restaurant Stocktake: Fast and Accurate</div>
+        <div class="related-desc">Same time, same units, count-sheet in shelf order, two people — the discipline that makes a count worth the hour.</div>
+      </a>
+    </div>
+  </section>
+
+  <footer class="blog-footer">
+    <div class="left">
+      <span class="foot-mark"><svg viewBox="0 0 24 24" style="width:100%;height:100%;display:block" aria-hidden="true"><g transform="translate(3.6 3.6) scale(0.7)"><path d="M6.5 13.6 C5 13 4.2 11.6 4.5 10 C4.6 9.3 5 8.6 5.7 8.2 C5.4 7 6 6.1 7 5.8 C7 4.6 7.8 3.8 9 3.8 C9.3 2.8 10.5 2.2 12 2.2 C13.5 2.2 14.7 2.8 15 3.8 C16.2 3.8 17 4.6 17 5.8 C18 6.1 18.6 7 18.3 8.2 C19 8.6 19.4 9.3 19.5 10 C19.8 11.6 19 13 17.5 13.6 Z" fill="#fff"/><path d="M6.3 13.6 L17.7 13.6 L17.7 19.3 C17.7 20.2 17 21 16.1 21 L7.9 21 C7 21 6.3 20.2 6.3 19.3 Z" fill="#fff"/><path d="M8 13.4 C7.7 10.4 8 7.4 8.9 5 M10 13.5 C9.9 10 10 6.6 10.5 3.4 M12 13.5 V2.6 M14 13.5 C14.1 10 14 6.6 13.5 3.4 M16 13.4 C16.3 10.4 16 7.4 15.1 5" stroke="#16433a" stroke-width="0.5" stroke-linecap="round" fill="none"/></g></svg></span>
+      <span>ProChefDesk · written from a working kitchen</span>
+    </div>
+    <div class="right">
+      <a href="/blog/">All posts</a>
+      <a href="/app/">Open app</a>
+      <a href="/privacy.html">Privacy</a>
+    </div>
+  </footer>
+
+</body>
+</html>

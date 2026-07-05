@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#FAF7F2">
+  <meta name="robots" content="index, follow">
+  <title>Menu Design: The Layout Decisions That Sell — ProChefDesk</title>
+  <meta name="description" content="Where the eye lands, how price is written and which dish sits in the box — small menu design decisions quietly move the average check.">
+  <link rel="canonical" href="https://prochefdesk.com/blog/menu-design-layout-psychology.html">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Menu Design: The Layout Decisions That Sell">
+  <meta property="og:description" content="Where the eye lands, how price is written and which dish sits in the box — small design choices move the average check.">
+  <meta property="og:url" content="https://prochefdesk.com/blog/menu-design-layout-psychology.html">
+  <meta property="og:type" content="article">
+  <meta property="og:image" content="https://prochefdesk.com/og-image.png">
+  <meta property="article:published_time" content="2026-07-05">
+  <meta property="article:author" content="Ahmet Kaya">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Menu Design: The Layout Decisions That Sell">
+  <meta name="twitter:description" content="Eye path, dropped currency symbols, decoys, the box, descriptions that sell — the layout moves the check.">
+  <meta name="twitter:image" content="https://prochefdesk.com/og-image.png">
+
+  <!-- v2.8.94 — JSON-LD Article schema (Google rich results, sıralama bonus) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "Menu Design: The Layout Decisions That Sell",
+    "description": "Where the eye lands, how price is written and which dish sits in the box — small menu design decisions quietly move the average check.",
+    "image": "https://prochefdesk.com/og-image.png",
+    "datePublished": "2026-07-05",
+    "dateModified": "2026-07-05",
+    "author": {
+      "@type": "Person",
+      "name": "Ahmet Kaya",
+      "jobTitle": "Professional Chef",
+      "worksFor": {
+        "@type": "Organization",
+        "name": "ProChefDesk"
+      }
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "ProChefDesk",
+      "url": "https://prochefdesk.com",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://prochefdesk.com/og-image.png"
+      }
+    },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": "https://prochefdesk.com/blog/menu-design-layout-psychology.html"
+    },
+    "wordCount": 2470,
+    "keywords": "menu design psychology, menu engineering layout, menu design tips"
+  }
+  </script>
+
+  <link rel="icon" type="image/svg+xml" href="/app/assets/icon.svg">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* Single source of truth for blog post styling. To create a new
+       post, copy this entire file, rename, replace meta tags above
+       and the <article> content below. CSS stays identical. */
+
+    :root {
+      --bg: #FAF7F2;
+      --paper: #FFFEFA;
+      --text-1: #1A1916;
+      --text-2: #3A3631;
+      --text-3: #8A857C;
+      --line: #E5DFD2;
+      --primary: #2D4A3E;
+      --brand: #16a34a;
+      --copper: #B85C3C;
+      --code-bg: #F0EBE0;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 28px 24px 80px;
+      line-height: 1.72;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-size: 17px;
+      background: var(--bg);
+      color: var(--text-1);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    a { color: var(--primary); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+    a:hover { color: var(--text-1); }
+
+    /* ---------- HEADER ---------- */
+    .blog-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 40px;
+      font-family: 'Inter', sans-serif;
+    }
+    .brand {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 600;
+      font-size: 18px;
+      letter-spacing: -0.015em;
+      color: var(--text-1);
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+    .brand:hover { color: var(--primary); }
+    .brand-mark {
+      width: 28px; height: 28px;
+      border-radius: 7px;
+      background: var(--brand);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Inter', sans-serif;
+      font-weight: 700;
+      font-size: 11px;
+    }
+    .crumbs {
+      font-size: 13px;
+      color: var(--text-3);
+    }
+    .crumbs a { color: var(--text-3); text-decoration: none; }
+    .crumbs a:hover { color: var(--text-1); }
+
+    /* ---------- ARTICLE ---------- */
+    article header { margin-bottom: 36px; }
+    .tag {
+      display: inline-block;
+      color: var(--primary);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-size: 11px;
+      margin-bottom: 16px;
+    }
+    h1 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 500;
+      font-size: clamp(32px, 5vw, 44px);
+      line-height: 1.08;
+      letter-spacing: -0.025em;
+      margin: 0 0 18px;
+      color: var(--text-1);
+    }
+    .lede {
+      font-size: 19px;
+      color: var(--text-2);
+      line-height: 1.55;
+      margin: 0 0 24px;
+    }
+    .article-meta {
+      font-size: 13px;
+      color: var(--text-3);
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    article h2 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 500;
+      font-size: 28px;
+      line-height: 1.18;
+      letter-spacing: -0.018em;
+      margin: 56px 0 16px;
+      color: var(--text-1);
+    }
+    article h3 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 500;
+      font-size: 21px;
+      line-height: 1.25;
+      letter-spacing: -0.012em;
+      margin: 36px 0 12px;
+      color: var(--text-1);
+    }
+    article p { color: var(--text-2); margin: 0 0 20px; }
+    article ul, article ol { color: var(--text-2); margin: 0 0 20px; padding-inline-start: 24px; }
+    article li { margin-bottom: 6px; }
+    article strong { color: var(--text-1); font-weight: 600; }
+
+    blockquote {
+      border-left: 3px solid var(--primary);
+      padding: 6px 0 6px 20px;
+      margin: 28px 0;
+      font-family: 'Fraunces', Georgia, serif;
+      font-style: italic;
+      font-size: 19px;
+      color: var(--text-1);
+      line-height: 1.5;
+    }
+
+    .formula {
+      background: var(--code-bg);
+      border-radius: 8px;
+      padding: 18px 22px;
+      margin: 24px 0;
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+      font-size: 16px;
+      text-align: center;
+      color: var(--text-1);
+      border: 1px solid var(--line);
+    }
+    .formula .var { color: var(--primary); font-weight: 600; }
+
+    .callout {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--copper);
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin: 28px 0;
+      font-size: 16px;
+    }
+    .callout strong { color: var(--copper); }
+
+    .tool-mention {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 18px 22px;
+      margin: 28px 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      font-size: 15px;
+    }
+    .tool-mention .icon {
+      width: 36px; height: 36px;
+      flex-shrink: 0;
+      border-radius: 8px;
+      background: var(--brand);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 13px;
+    }
+    .tool-mention p { margin: 0 0 6px; color: var(--text-2); }
+    .tool-mention p:last-child { margin: 0; }
+    .tool-mention .label {
+      font-weight: 600;
+      color: var(--text-1);
+      font-family: 'Inter', sans-serif;
+    }
+    .tool-mention a { color: var(--primary); font-weight: 600; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 24px 0;
+      font-size: 15px;
+    }
+    th, td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--line);
+    }
+    th {
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      color: var(--text-1);
+      background: var(--paper);
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    td { color: var(--text-2); }
+
+    .end-mark {
+      width: 24px; height: 4px;
+      background: var(--primary);
+      margin: 56px auto 32px;
+    }
+
+    /* v2.8.94 — Related posts section (footer'dan önce, cross-link için) */
+    .related-posts {
+      margin: 56px 0 24px;
+      padding: 24px 0;
+      border-top: 1px solid var(--line);
+    }
+    .related-posts h3 {
+      font-family: 'Fraunces', serif;
+      font-size: 22px;
+      font-weight: 600;
+      margin: 0 0 18px;
+      color: var(--primary);
+    }
+    .related-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+    }
+    .related-card {
+      display: block;
+      padding: 16px 18px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      text-decoration: none;
+      color: var(--text-1);
+      transition: border-color .15s ease, transform .15s ease;
+    }
+    .related-card:hover {
+      border-color: var(--brand);
+      transform: translateY(-2px);
+    }
+    .related-card .related-tag {
+      font-size: 11px;
+      color: var(--brand);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+    .related-card .related-title {
+      font-family: 'Fraunces', serif;
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 1.3;
+      margin-bottom: 4px;
+    }
+    .related-card .related-desc {
+      font-size: 13px;
+      color: var(--text-3);
+      line-height: 1.5;
+    }
+
+    /* ---------- FOOTER ---------- */
+    .blog-footer {
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      font-size: 14px;
+      color: var(--text-3);
+    }
+    .blog-footer a { color: var(--text-2); font-weight: 500; text-decoration: none; }
+    .blog-footer a:hover { color: var(--text-1); text-decoration: underline; }
+    .blog-footer .left {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .blog-footer .foot-mark {
+      width: 22px; height: 22px;
+      border-radius: 6px;
+      background: var(--brand);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .blog-footer .right { display: flex; gap: 18px; }
+
+    /* ---------- MOBILE ---------- */
+    @media (max-width: 640px) {
+      body { padding: 20px 18px 60px; font-size: 16px; }
+      .blog-header { margin-bottom: 32px; }
+      .lede { font-size: 17px; }
+      article h2 { font-size: 24px; margin-top: 44px; }
+      article h3 { font-size: 19px; }
+      .formula { font-size: 14px; padding: 14px 16px; }
+      .tool-mention { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="blog-header">
+    <a href="/" class="brand">
+      <span class="brand-mark"><svg viewBox="0 0 24 24" style="width:100%;height:100%;display:block" aria-hidden="true"><g transform="translate(3.6 3.6) scale(0.7)"><path d="M6.5 13.6 C5 13 4.2 11.6 4.5 10 C4.6 9.3 5 8.6 5.7 8.2 C5.4 7 6 6.1 7 5.8 C7 4.6 7.8 3.8 9 3.8 C9.3 2.8 10.5 2.2 12 2.2 C13.5 2.2 14.7 2.8 15 3.8 C16.2 3.8 17 4.6 17 5.8 C18 6.1 18.6 7 18.3 8.2 C19 8.6 19.4 9.3 19.5 10 C19.8 11.6 19 13 17.5 13.6 Z" fill="#fff"/><path d="M6.3 13.6 L17.7 13.6 L17.7 19.3 C17.7 20.2 17 21 16.1 21 L7.9 21 C7 21 6.3 20.2 6.3 19.3 Z" fill="#fff"/><path d="M8 13.4 C7.7 10.4 8 7.4 8.9 5 M10 13.5 C9.9 10 10 6.6 10.5 3.4 M12 13.5 V2.6 M14 13.5 C14.1 10 14 6.6 13.5 3.4 M16 13.4 C16.3 10.4 16 7.4 15.1 5" stroke="#16433a" stroke-width="0.5" stroke-linecap="round" fill="none"/></g></svg></span>
+      <span>ProChefDesk</span>
+    </a>
+    <div class="crumbs">
+      <a href="/blog/">← Blog</a>
+    </div>
+  </header>
+
+  <article>
+    <header>
+      <div class="tag">Menu Strategy</div>
+      <h1>Menu Design: The Layout Decisions That Sell</h1>
+      <p class="lede">A menu is not a list. It's a sales document that a guest reads in about ninety seconds and then acts on. Where the eye lands, how you write the price, which dish sits inside the box — menu design psychology moves the average check by real money, and most kitchens never touch it.</p>
+      <div class="article-meta">
+        <span>By Ahmet Kaya</span>
+        <span>10 min</span>
+        <span>July 2026</span>
+      </div>
+    </header>
+
+    <p>I've watched chefs agonise over a two-percent food cost saving on a garnish and then hand the guest a menu that actively steers them toward the lowest-margin dish on the page. The kitchen is where you control cost. The menu is where you control revenue — and it's the cheaper lever of the two, because a layout change costs a reprint and nothing else.</p>
+
+    <p>None of what follows is manipulation in any sinister sense. You're not lying to anyone. You're deciding what to show first, what to describe well, and where to put the dish you're proud of and want to sell. A guest who orders the braised short rib because it was described beautifully and placed where they looked first is not a victim. They're a happy customer who spent a little more and, usually, ate better.</p>
+
+    <h2>Where the eye actually goes</h2>
+
+    <p>The most repeated claim in menu design is the "golden triangle": eyes land in the middle, drift to the top right, then the top left, and that sweet spot is where you park your money-makers. It's tidy, it's on a thousand blog posts, and the honest version is that it's mostly a myth — or at least badly overstated.</p>
+
+    <p>The golden triangle came from studies of how people scan a printed page in the abstract. Real menu-reading research tells a duller, more useful story: most guests read a menu roughly the way they read a book. Top to bottom, left to right, in sequence. The academics who study this at the <a href="https://sha.cornell.edu/" target="_blank" rel="noopener">Cornell School of Hotel Administration</a> ran eye-tracking on real menus and found people mostly move sequentially through categories rather than hunting for a magic corner. There is no reliable hot-spot you can exploit with a single well-placed box.</p>
+
+    <p>So the practical rule is not "put the star in the top-right corner." It's this:</p>
+
+    <div class="callout">
+      <strong>Primacy and recency win.</strong> The first one or two items a guest reads in each category, and the last item before the category ends, get remembered and ordered disproportionately. The three items buried in the middle of a long list are where dishes go to die. Put the dish you want to sell first in its section — not in a corner.</p>
+    </div>
+
+    <p>That single move — reorder within the category so your high-margin, high-appeal dish leads — is worth more than any amount of triangle geometry. It costs nothing. You do it in the menu file before the next print run.</p>
+
+    <h2>The currency symbol you should delete</h2>
+
+    <p>Here's a change you can make this afternoon that has held up across more than one study: drop the currency sign and the trailing zeros.</p>
+
+    <table>
+      <thead>
+        <tr><th>How the price is written</th><th>What it signals</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>$18.00</td><td>A transaction. Reads as "money leaving your account."</td></tr>
+        <tr><td>$18</td><td>Cleaner, but the symbol still cues spending.</td></tr>
+        <tr><td>18</td><td>A number, almost a portion size. The pain-of-paying softens.</td></tr>
+      </tbody>
+    </table>
+
+    <p>Cornell's hospitality researchers tested exactly this and found guests given a menu with numerals only — no dollar sign, no decimals — spent measurably more than those handed a menu with "$" and ".00" on every line. The effect is small per guest but it applies to every cover, every night, forever, at zero cost.</p>
+
+    <p>Two caveats from actually doing it. First, don't right-align your prices in a neat column with leaders (those rows of dots). A tidy price column invites the guest to scan straight down it, compare, and pick the cheapest — you've built a price list, not a menu. Tuck the price at the end of the description in the same font size instead. Second, if you're in a market where "18" is genuinely ambiguous, keep the symbol but kill the decimals. A menu that reads "18" for what turns out to be €180 is a different problem.</p>
+
+    <h2>Anchors and decoys</h2>
+
+    <p>Put one deliberately expensive item near the top of a category and it does quiet work for you. The $58 dry-aged ribeye isn't there because you expect to sell forty of them. It's an <strong>anchor</strong>. Once a guest has seen 58, the $32 short rib underneath it reads as sensible, even generous. Without the anchor, that same $32 was the ceiling and felt like the splurge.</p>
+
+    <p>The decoy is the same idea sharpened. Classic worked example: you sell a small portion at 9 and a large at 12. Most people take the small — the jump to 12 feels steep for "just bigger." Add a medium at 11 that's barely smaller than the large. Suddenly the large at 12 looks like an obvious deal against the medium, and your average portion price climbs. The medium exists to make the large look smart. You may sell almost none of it, and it's still earning its place on the page.</p>
+
+    <div class="formula">
+      Effective anchor = <span class="var">a real, orderable dish</span> priced high enough to reset the guest's sense of "normal" — never a fake you can't actually serve.
+    </div>
+
+    <p>The line I won't cross: the anchor has to be a genuine dish you'd happily send. Sicilian menus full of a phantom lobster nobody orders and the kitchen dreads are how you train staff to hate the menu. Anchor with something real and good.</p>
+
+    <h2>The box, and why it works</h2>
+
+    <p>Draw a box around one dish, or give it a shaded panel, a small icon, a "Chef's" tag — and it sells. Contrast pulls the eye off the sequential read and stops it on the highlighted item. This is the one genuine "hot spot" you can manufacture, because you're not relying on where the eye naturally goes; you're interrupting the scan.</p>
+
+    <p>The discipline is restraint. Box <em>one</em> thing per section. The moment you box three dishes, you've boxed nothing — the guest's eye has no single place to rest and the whole page reads as noise. I've seen catering menus where every second item has a starburst on it; the effect is a supermarket flyer, and it cheapens the food.</p>
+
+    <p>Pick the dish to box using actual menu-engineering data, not affection. You want the item that is <strong>high margin and already reasonably popular</strong> — the "star." Boxing a low-margin favourite just sells more of your worst-earning plate faster. Boxing a high-margin dish nobody understands (the "puzzle") is a fair second choice: the box is your nudge to fix its low popularity.</p>
+
+    <div class="tool-mention">
+      <span class="icon"><svg viewBox="0 0 24 24" style="width:100%;height:100%;display:block" aria-hidden="true"><g transform="translate(3.6 3.6) scale(0.7)"><path d="M6.5 13.6 C5 13 4.2 11.6 4.5 10 C4.6 9.3 5 8.6 5.7 8.2 C5.4 7 6 6.1 7 5.8 C7 4.6 7.8 3.8 9 3.8 C9.3 2.8 10.5 2.2 12 2.2 C13.5 2.2 14.7 2.8 15 3.8 C16.2 3.8 17 4.6 17 5.8 C18 6.1 18.6 7 18.3 8.2 C19 8.6 19.4 9.3 19.5 10 C19.8 11.6 19 13 17.5 13.6 Z" fill="#fff"/><path d="M6.3 13.6 L17.7 13.6 L17.7 19.3 C17.7 20.2 17 21 16.1 21 L7.9 21 C7 21 6.3 20.2 6.3 19.3 Z" fill="#fff"/><path d="M8 13.4 C7.7 10.4 8 7.4 8.9 5 M10 13.5 C9.9 10 10 6.6 10.5 3.4 M12 13.5 V2.6 M14 13.5 C14.1 10 14 6.6 13.5 3.4 M16 13.4 C16.3 10.4 16 7.4 15.1 5" stroke="#16433a" stroke-width="0.5" stroke-linecap="round" fill="none"/></g></svg></span>
+      <div>
+        <p class="label">In ProChefDesk</p>
+        <p>Before you decide what to box or lead with, run the menu through <a href="/app/" target="_blank" rel="noopener">menu engineering</a>: it plots every dish on the star / plowhorse / puzzle / dog matrix from your real cost and sales-mix numbers, so the item you highlight is chosen from data, not a hunch. Then build the printed layout in the <a href="/app/" target="_blank" rel="noopener">Menu builder</a> — reorder within a category, box the star, and control price formatting in one place.</p>
+      </div>
+    </div>
+
+    <h2>Descriptions that do the selling</h2>
+
+    <p>A dish name alone is a missed opportunity. "Chicken" versus "Slow-roasted free-range chicken, thyme butter, burnt-lemon jus" — the second one is worth a couple of dollars more and the guest pays it gladly, because the description has done three things at once.</p>
+
+    <ul>
+      <li><strong>Sensory and provenance words raise perceived value.</strong> "Slow-roasted," "hand-cut," "line-caught," a named farm or region. Restaurants that use descriptive labels see meaningfully higher sales and higher satisfaction on those dishes — guests rate the food better <em>because it was described better</em>, before they've tasted it.</li>
+      <li><strong>Nostalgia and ownership sell.</strong> "Grandma's slow-cooked ragù," "our" anything. It signals a story and a person behind the plate.</li>
+      <li><strong>Length signals care — up to a point.</strong> Two lines of genuine detail reads as craft. Six lines reads as trying too hard and slows the whole menu down.</li>
+    </ul>
+
+    <p>The trade-off is honesty. If you write "line-caught," the fish had better be line-caught. Trading-standards rules in most markets treat menu descriptions as claims you can be held to, and a chef who oversells on paper gets caught by the one guest who knows the difference. Write it lush, keep it true.</p>
+
+    <h2>The paradox of choice</h2>
+
+    <p>The instinct of most owners is to add dishes. More options, more chances to please someone, right? The research and the kitchen both say the opposite. When people face too many choices they get anxious, defer, and default to the safe, cheap, familiar thing — or they don't decide at all and the table slows down.</p>
+
+    <p>There's a rough working number floating around the industry, sometimes called the "magic number seven": about seven items per category before a guest starts to feel overwhelmed. I wouldn't treat seven as gospel, but the direction is right and it matches service reality. A tighter menu is:</p>
+
+    <ul>
+      <li>Faster to read, so the table orders and turns quicker.</li>
+      <li>Cheaper to run — fewer SKUs, less spoilage, tighter <a href="/blog/food-waste-tracking-restaurant.html">waste</a>, less prep.</li>
+      <li>Better executed, because the line isn't spread across forty dishes at 8pm on a Saturday.</li>
+      <li>More profitable per square inch of paper, because every dish that survives the cut is one you chose to keep.</li>
+    </ul>
+
+    <p>Cutting a menu is the hardest sell to an owner and the most reliable improvement I know. Kill the bottom of your dog list — low margin <em>and</em> low popularity — and the guests who used to order those dishes almost always trade up to something better, not out the door.</p>
+
+    <h2>Price formatting, past the currency symbol</h2>
+
+    <p>A few smaller levers that stack:</p>
+
+    <h3>Charm pricing, and when to drop it</h3>
+
+    <p>The .95 and .99 endings ("charm prices") do lift sales in value-driven, high-volume settings — they read as a deal. In a mid-to-upscale room they do the opposite: 24.95 reads as a discount-store price and quietly cheapens the plate. Round, confident numbers — 25, 32, 48 — read as quality and self-assurance. Match the ending to the room.</p>
+
+    <h3>Don't sort by price</h3>
+
+    <p>Never list a category cheapest-to-most-expensive. It teaches the eye to anchor on the lowest number and read up only as far as comfort allows. Sequence by what you want to sell, or by a natural progression (light to rich), and let the anchor sit near the top.</p>
+
+    <h3>Break the price out of the guest's comparison habit</h3>
+
+    <p>Keep the price in the same weight and size as the description, immediately after the last word, with a normal space — not bolded, not in a column, not preceded by leader dots. The harder you make it to line prices up side by side, the more each dish is judged on its merits rather than its cost.</p>
+
+    <div class="callout">
+      <strong>One honest limit:</strong> none of this works on a bad dish or a bad price. Layout psychology moves the margin at the edges — a few points on the average check. It will not rescue a plate that isn't worth its number, and it will not save a menu that hasn't been costed properly in the first place. Get the cost card right, then design the menu around it. In that order.</p>
+    </div>
+
+    <h2>What to do before your next reprint</h2>
+
+    <p>You don't redesign a menu every week, so make the reprint count. A tight sequence:</p>
+
+    <ol>
+      <li><strong>Cost every dish with current prices</strong> and pull your actual sales mix. You can't engineer a menu you haven't measured.</li>
+      <li><strong>Sort each dish into the four boxes</strong> — star, plowhorse, puzzle, dog. This tells you what to lead with, what to box, what to reword, and what to cut.</li>
+      <li><strong>Reorder within each category</strong> so the star leads and a real anchor sits near the top.</li>
+      <li><strong>Box exactly one dish per section</strong> — the star, or a puzzle you're trying to rescue.</li>
+      <li><strong>Rewrite the descriptions</strong> of your top earners with sensory and provenance detail. Keep them true.</li>
+      <li><strong>Fix the price formatting</strong> — drop the symbol and decimals, kill the column and the dots, choose round or charm endings to match the room.</li>
+      <li><strong>Cut the bottom of the dog list.</strong> Fewer, better.</li>
+    </ol>
+
+    <p>Every step above is free or close to it. No new equipment, no new supplier, no new hire. Just decisions about a piece of paper that every single guest holds for a minute and a half before they spend money with you.</p>
+
+    <h2>The point</h2>
+
+    <p>Menu design tips get sold as tricks, and the trick framing is why chefs ignore them — it feels like snake oil next to the honest work of costing a recipe. But strip out the mythology (the golden triangle, the magic corner) and what's left is real and measurable: guests read in sequence, spend more when the number looks less like money, order what's described well and boxed clearly, and freeze when there's too much to choose from.</p>
+
+    <p>Design around that, from a menu you've actually costed and engineered, and the average check moves. Not by magic. By the same discipline you already apply on the line, pointed at the one document the guest reads first.</p>
+
+    <blockquote>"We didn't change a single recipe. We reordered the mains, boxed the short rib, and dropped the dollar signs. Average main check went up about a dollar-forty. That's the whole story."</blockquote>
+
+    <div class="end-mark"></div>
+  </article>
+
+  <!-- v2.8.94 — Related posts cross-link (internal linking for SEO + reader retention) -->
+  <section class="related-posts" aria-label="Related articles">
+    <h3>Related reading</h3>
+    <div class="related-grid">
+      <a href="/blog/menu-engineering-profitable-dishes.html" class="related-card">
+        <div class="related-tag">Menu Strategy</div>
+        <div class="related-title">Menu Engineering: Which Dishes Actually Make You Money</div>
+        <div class="related-desc">The four-box star/plowhorse/puzzle/dog matrix, run on a Sunday.</div>
+      </a>
+      <a href="/blog/menu-pricing-strategy.html" class="related-card">
+        <div class="related-tag">Menu Strategy</div>
+        <div class="related-title">Menu Pricing Strategy: Five Methods Beyond Cost-Plus</div>
+        <div class="related-desc">Cost-plus is only the floor. Contribution-margin, competitive, value and psychological pricing — when each one earns its keep.</div>
+      </a>
+    </div>
+  </section>
+
+  <footer class="blog-footer">
+    <div class="left">
+      <span class="foot-mark"><svg viewBox="0 0 24 24" style="width:100%;height:100%;display:block" aria-hidden="true"><g transform="translate(3.6 3.6) scale(0.7)"><path d="M6.5 13.6 C5 13 4.2 11.6 4.5 10 C4.6 9.3 5 8.6 5.7 8.2 C5.4 7 6 6.1 7 5.8 C7 4.6 7.8 3.8 9 3.8 C9.3 2.8 10.5 2.2 12 2.2 C13.5 2.2 14.7 2.8 15 3.8 C16.2 3.8 17 4.6 17 5.8 C18 6.1 18.6 7 18.3 8.2 C19 8.6 19.4 9.3 19.5 10 C19.8 11.6 19 13 17.5 13.6 Z" fill="#fff"/><path d="M6.3 13.6 L17.7 13.6 L17.7 19.3 C17.7 20.2 17 21 16.1 21 L7.9 21 C7 21 6.3 20.2 6.3 19.3 Z" fill="#fff"/><path d="M8 13.4 C7.7 10.4 8 7.4 8.9 5 M10 13.5 C9.9 10 10 6.6 10.5 3.4 M12 13.5 V2.6 M14 13.5 C14.1 10 14 6.6 13.5 3.4 M16 13.4 C16.3 10.4 16 7.4 15.1 5" stroke="#16433a" stroke-width="0.5" stroke-linecap="round" fill="none"/></g></svg></span>
+      <span>ProChefDesk · written from a working kitchen</span>
+    </div>
+    <div class="right">
+      <a href="/blog/">All posts</a>
+      <a href="/app/">Open app</a>
+      <a href="/privacy.html">Privacy</a>
+    </div>
+  </footer>
+
+</body>
+</html>

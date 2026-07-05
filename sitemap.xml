@@ -39,18 +39,198 @@
   <!-- Blog index -->
   <url>
     <loc>https://prochefdesk.com/blog/</loc>
-    <lastmod>2026-06-16</lastmod>
+    <lastmod>2026-07-05</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
 
-  <!-- Blog posts (newest first). v2.8.94 — 3 SEO-upgraded.
-       v2.8.95 — +2 (buffet-food-cost + iftar). v2.8.96 — +2 (cook-cool + yield).
-       v2.8.97 — +2 (prep-list + recipe-scaling). v2.8.98 — +2 (kitchen-cards + par-levels).
-       v2.8.99 — +2 (waste-tracking + allergen-menu). v2.44.26 — +1 (catering-cost-per-head).
-       +2 (labour-cost-percentage + kitchen-cleaning-schedule). v2.44.102 — +8 catering/HACCP niche
-       (BEO, food-quantity, price-catering-menu, haccp-temp-log, buffet-quantity, personal-chef-pricing,
-       wedding-catering-cost, event-staffing). Total 24 posts published. -->
+  <!-- Blog posts (newest first). 24 earlier posts + a batch of 30 added 2026-07-05:
+       recipe-cost, inventory-management, start-catering, menu-pricing, prime-cost, plate-cost,
+       portion-control, gross-profit, danger-zone, haccp-plan, ccp, receiving, cold-chain,
+       allergen-cross-contact, use-by, stocktake, fifo, staff-scheduling, standardized-recipe,
+       seasonal-menu, menu-design, batch-cooking, cocktail-cost, catering-equipment,
+       catering-contract, corporate-catering, canape-qty, event-timeline, drinks-qty,
+       cocktail-reception. Total 54 posts published. -->
+  <url>
+    <loc>https://prochefdesk.com/blog/how-to-calculate-recipe-cost.html</loc>
+    <lastmod>2026-07-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/restaurant-inventory-management.html</loc>
+    <lastmod>2026-07-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/how-to-start-catering-business.html</loc>
+    <lastmod>2026-07-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/menu-pricing-strategy.html</loc>
+    <lastmod>2026-07-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/restaurant-prime-cost.html</loc>
+    <lastmod>2026-07-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/plate-cost-vs-food-cost.html</loc>
+    <lastmod>2026-07-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/portion-control-food-cost.html</loc>
+    <lastmod>2026-07-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/gross-profit-per-dish.html</loc>
+    <lastmod>2026-07-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/temperature-danger-zone.html</loc>
+    <lastmod>2026-07-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/haccp-plan-small-kitchen.html</loc>
+    <lastmod>2026-07-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/critical-control-points.html</loc>
+    <lastmod>2026-07-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/food-delivery-receiving-checks.html</loc>
+    <lastmod>2026-07-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/cold-chain-catering.html</loc>
+    <lastmod>2026-07-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/allergen-cross-contact-kitchen.html</loc>
+    <lastmod>2026-07-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/use-by-date-labelling.html</loc>
+    <lastmod>2026-07-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/how-to-do-a-stocktake.html</loc>
+    <lastmod>2026-07-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/fifo-stock-rotation.html</loc>
+    <lastmod>2026-07-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/staff-scheduling-restaurant.html</loc>
+    <lastmod>2026-07-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/standardized-recipe-guide.html</loc>
+    <lastmod>2026-07-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/seasonal-menu-planning.html</loc>
+    <lastmod>2026-07-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/menu-design-layout-psychology.html</loc>
+    <lastmod>2026-07-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/batch-cooking-sub-recipes.html</loc>
+    <lastmod>2026-07-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/how-to-cost-a-cocktail.html</loc>
+    <lastmod>2026-07-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/catering-equipment-checklist.html</loc>
+    <lastmod>2026-07-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/catering-contract-terms.html</loc>
+    <lastmod>2026-07-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/corporate-catering-guide.html</loc>
+    <lastmod>2026-07-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/canape-quantity-per-person.html</loc>
+    <lastmod>2026-07-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/event-kitchen-timeline.html</loc>
+    <lastmod>2026-07-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/drinks-quantity-per-person-event.html</loc>
+    <lastmod>2026-07-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prochefdesk.com/blog/cocktail-reception-menu-planning.html</loc>
+    <lastmod>2026-07-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
   <url>
     <loc>https://prochefdesk.com/blog/banquet-event-order-beo-template.html</loc>
     <lastmod>2026-06-28</lastmod>

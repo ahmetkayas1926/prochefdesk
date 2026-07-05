@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#FAF7F2">
+  <meta name="robots" content="index, follow">
+  <title>How to Calculate the Cost of a Recipe, Line by Line — ProChefDesk</title>
+  <meta name="description" content="Build a recipe cost card that survives unit conversions, yield and sub-recipes — then read cost per portion off it.">
+  <link rel="canonical" href="https://prochefdesk.com/blog/how-to-calculate-recipe-cost.html">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="How to Calculate the Cost of a Recipe, Line by Line">
+  <meta property="og:description" content="Build a recipe cost card that survives unit conversions, yield and sub-recipes — then read cost per portion off it.">
+  <meta property="og:url" content="https://prochefdesk.com/blog/how-to-calculate-recipe-cost.html">
+  <meta property="og:type" content="article">
+  <meta property="og:image" content="https://prochefdesk.com/og-image.png">
+  <meta property="article:published_time" content="2026-07-05">
+  <meta property="article:author" content="Ahmet Kaya">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="How to Calculate the Cost of a Recipe, Line by Line">
+  <meta name="twitter:description" content="The line-by-line method: unit conversion, yield, sub-recipes and the cost per portion that feeds your menu price.">
+  <meta name="twitter:image" content="https://prochefdesk.com/og-image.png">
+
+  <!-- JSON-LD Article schema (Google rich results) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "How to Calculate the Cost of a Recipe, Line by Line",
+    "description": "Build a recipe cost card that survives unit conversions, yield and sub-recipes — then read cost per portion off it.",
+    "image": "https://prochefdesk.com/og-image.png",
+    "datePublished": "2026-07-05",
+    "dateModified": "2026-07-05",
+    "author": {
+      "@type": "Person",
+      "name": "Ahmet Kaya",
+      "jobTitle": "Professional Chef",
+      "worksFor": {
+        "@type": "Organization",
+        "name": "ProChefDesk"
+      }
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "ProChefDesk",
+      "url": "https://prochefdesk.com",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://prochefdesk.com/og-image.png"
+      }
+    },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": "https://prochefdesk.com/blog/how-to-calculate-recipe-cost.html"
+    },
+    "wordCount": 2645,
+    "keywords": "recipe cost calculation, how to cost a recipe, cost per portion"
+  }
+  </script>
+
+  <link rel="icon" type="image/svg+xml" href="/app/assets/icon.svg">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* Single source of truth for blog post styling. To create a new
+       post, copy this entire file, rename, replace meta tags above
+       and the <article> content below. CSS stays identical. */
+
+    :root {
+      --bg: #FAF7F2;
+      --paper: #FFFEFA;
+      --text-1: #1A1916;
+      --text-2: #3A3631;
+      --text-3: #8A857C;
+      --line: #E5DFD2;
+      --primary: #2D4A3E;
+      --brand: #16a34a;
+      --copper: #B85C3C;
+      --code-bg: #F0EBE0;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 28px 24px 80px;
+      line-height: 1.72;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-size: 17px;
+      background: var(--bg);
+      color: var(--text-1);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    a { color: var(--primary); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+    a:hover { color: var(--text-1); }
+
+    /* ---------- HEADER ---------- */
+    .blog-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 40px;
+      font-family: 'Inter', sans-serif;
+    }
+    .brand {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 600;
+      font-size: 18px;
+      letter-spacing: -0.015em;
+      color: var(--text-1);
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+    .brand:hover { color: var(--primary); }
+    .brand-mark {
+      width: 28px; height: 28px;
+      border-radius: 7px;
+      background: var(--brand);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Inter', sans-serif;
+      font-weight: 700;
+      font-size: 11px;
+    }
+    .crumbs {
+      font-size: 13px;
+      color: var(--text-3);
+    }
+    .crumbs a { color: var(--text-3); text-decoration: none; }
+    .crumbs a:hover { color: var(--text-1); }
+
+    /* ---------- ARTICLE ---------- */
+    article header { margin-bottom: 36px; }
+    .tag {
+      display: inline-block;
+      color: var(--primary);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-size: 11px;
+      margin-bottom: 16px;
+    }
+    h1 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 500;
+      font-size: clamp(32px, 5vw, 44px);
+      line-height: 1.08;
+      letter-spacing: -0.025em;
+      margin: 0 0 18px;
+      color: var(--text-1);
+    }
+    .lede {
+      font-size: 19px;
+      color: var(--text-2);
+      line-height: 1.55;
+      margin: 0 0 24px;
+    }
+    .article-meta {
+      font-size: 13px;
+      color: var(--text-3);
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    article h2 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 500;
+      font-size: 28px;
+      line-height: 1.18;
+      letter-spacing: -0.018em;
+      margin: 56px 0 16px;
+      color: var(--text-1);
+    }
+    article h3 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 500;
+      font-size: 21px;
+      line-height: 1.25;
+      letter-spacing: -0.012em;
+      margin: 36px 0 12px;
+      color: var(--text-1);
+    }
+    article p { color: var(--text-2); margin: 0 0 20px; }
+    article ul, article ol { color: var(--text-2); margin: 0 0 20px; padding-inline-start: 24px; }
+    article li { margin-bottom: 6px; }
+    article strong { color: var(--text-1); font-weight: 600; }
+
+    blockquote {
+      border-left: 3px solid var(--primary);
+      padding: 6px 0 6px 20px;
+      margin: 28px 0;
+      font-family: 'Fraunces', Georgia, serif;
+      font-style: italic;
+      font-size: 19px;
+      color: var(--text-1);
+      line-height: 1.5;
+    }
+
+    .formula {
+      background: var(--code-bg);
+      border-radius: 8px;
+      padding: 18px 22px;
+      margin: 24px 0;
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+      font-size: 16px;
+      text-align: center;
+      color: var(--text-1);
+      border: 1px solid var(--line);
+    }
+    .formula .var { color: var(--primary); font-weight: 600; }
+
+    .callout {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--copper);
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin: 28px 0;
+      font-size: 16px;
+    }
+    .callout strong { color: var(--copper); }
+
+    .tool-mention {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 18px 22px;
+      margin: 28px 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      font-size: 15px;
+    }
+    .tool-mention .icon {
+      width: 36px; height: 36px;
+      flex-shrink: 0;
+      border-radius: 8px;
+      background: var(--brand);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 13px;
+    }
+    .tool-mention p { margin: 0 0 6px; color: var(--text-2); }
+    .tool-mention p:last-child { margin: 0; }
+    .tool-mention .label {
+      font-weight: 600;
+      color: var(--text-1);
+      font-family: 'Inter', sans-serif;
+    }
+    .tool-mention a { color: var(--primary); font-weight: 600; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 24px 0;
+      font-size: 15px;
+    }
+    th, td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--line);
+    }
+    th {
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      color: var(--text-1);
+      background: var(--paper);
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    td { color: var(--text-2); }
+
+    .end-mark {
+      width: 24px; height: 4px;
+      background: var(--primary);
+      margin: 56px auto 32px;
+    }
+
+    /* v2.8.94 — Related posts section (footer'dan önce, cross-link için) */
+    .related-posts {
+      margin: 56px 0 24px;
+      padding: 24px 0;
+      border-top: 1px solid var(--line);
+    }
+    .related-posts h3 {
+      font-family: 'Fraunces', serif;
+      font-size: 22px;
+      font-weight: 600;
+      margin: 0 0 18px;
+      color: var(--primary);
+    }
+    .related-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+    }
+    .related-card {
+      display: block;
+      padding: 16px 18px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      text-decoration: none;
+      color: var(--text-1);
+      transition: border-color .15s ease, transform .15s ease;
+    }
+    .related-card:hover {
+      border-color: var(--brand);
+      transform: translateY(-2px);
+    }
+    .related-card .related-tag {
+      font-size: 11px;
+      color: var(--brand);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+    .related-card .related-title {
+      font-family: 'Fraunces', serif;
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 1.3;
+      margin-bottom: 4px;
+    }
+    .related-card .related-desc {
+      font-size: 13px;
+      color: var(--text-3);
+      line-height: 1.5;
+    }
+
+    /* ---------- FOOTER ---------- */
+    .blog-footer {
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      font-size: 14px;
+      color: var(--text-3);
+    }
+    .blog-footer a { color: var(--text-2); font-weight: 500; text-decoration: none; }
+    .blog-footer a:hover { color: var(--text-1); text-decoration: underline; }
+    .blog-footer .left {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .blog-footer .foot-mark {
+      width: 22px; height: 22px;
+      border-radius: 6px;
+      background: var(--brand);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .blog-footer .right { display: flex; gap: 18px; }
+
+    /* ---------- MOBILE ---------- */
+    @media (max-width: 640px) {
+      body { padding: 20px 18px 60px; font-size: 16px; }
+      .blog-header { margin-bottom: 32px; }
+      .lede { font-size: 17px; }
+      article h2 { font-size: 24px; margin-top: 44px; }
+      article h3 { font-size: 19px; }
+      .formula { font-size: 14px; padding: 14px 16px; }
+      .tool-mention { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="blog-header">
+    <a href="/" class="brand">
+      <span class="brand-mark"><svg viewBox="0 0 24 24" style="width:100%;height:100%;display:block" aria-hidden="true"><g transform="translate(3.6 3.6) scale(0.7)"><path d="M6.5 13.6 C5 13 4.2 11.6 4.5 10 C4.6 9.3 5 8.6 5.7 8.2 C5.4 7 6 6.1 7 5.8 C7 4.6 7.8 3.8 9 3.8 C9.3 2.8 10.5 2.2 12 2.2 C13.5 2.2 14.7 2.8 15 3.8 C16.2 3.8 17 4.6 17 5.8 C18 6.1 18.6 7 18.3 8.2 C19 8.6 19.4 9.3 19.5 10 C19.8 11.6 19 13 17.5 13.6 Z" fill="#fff"/><path d="M6.3 13.6 L17.7 13.6 L17.7 19.3 C17.7 20.2 17 21 16.1 21 L7.9 21 C7 21 6.3 20.2 6.3 19.3 Z" fill="#fff"/><path d="M8 13.4 C7.7 10.4 8 7.4 8.9 5 M10 13.5 C9.9 10 10 6.6 10.5 3.4 M12 13.5 V2.6 M14 13.5 C14.1 10 14 6.6 13.5 3.4 M16 13.4 C16.3 10.4 16 7.4 15.1 5" stroke="#16433a" stroke-width="0.5" stroke-linecap="round" fill="none"/></g></svg></span>
+      <span>ProChefDesk</span>
+    </a>
+    <div class="crumbs">
+      <a href="/blog/">← Blog</a>
+    </div>
+  </header>
+
+  <article>
+    <header>
+      <div class="tag">Cost Control</div>
+      <h1>How to Calculate the Cost of a Recipe, Line by Line</h1>
+      <p class="lede">A recipe cost card is only as honest as its worst line. Get the unit conversions, the yield and the sub-recipes right and the cost per portion falls out on its own — the one number your menu price is actually built on.</p>
+      <div class="article-meta">
+        <span>By Ahmet Kaya</span>
+        <span>10 min read</span>
+        <span>July 2026</span>
+      </div>
+    </header>
+
+    <p>Ask ten chefs what a dish costs and nine will tell you a number they half-remember from when they wrote the menu. The recipe cost calculation that actually holds up isn't a guess and it isn't an accountant's job — it's a line-by-line card you can rebuild from an invoice in five minutes. This is how to cost a recipe so the number survives contact with reality: real purchase units, real yield, and the preps you drop into other dishes.</p>
+
+    <p>The whole thing rests on one habit: never cost a line at the price on the box. Cost it at the price of the gram you actually put on the plate. Those are different numbers, and the gap between them is where margin quietly leaks.</p>
+
+    <h2>The line: quantity × cost per unit</h2>
+
+    <p>Every ingredient line on a cost card is the same tiny sum. Take the amount the recipe uses, multiply by what that amount costs. The catch is that the two halves are almost never in the same unit.</p>
+
+    <div class="formula">
+      Line cost = <span class="var">recipe quantity</span> × <span class="var">cost per recipe-unit</span>
+    </div>
+
+    <p>You buy butter in 5 kg blocks at $42. The recipe uses 80 g. You can't multiply 80 by 42 and call it done — that's $3,360 of butter in one sauce. First you convert the purchase price into a price per gram: $42 ÷ 5,000 g = $0.0084/g. Now the line is 80 g × $0.0084 = <strong>$0.67</strong>. That conversion step — purchase unit down to recipe unit — is the single most common thing people skip, and it throws the answer off by a factor of a thousand when it goes wrong and by a sneaky 10–15% when it goes half-wrong (buying in imperial, cooking in metric, eyeballing the conversion).</p>
+
+    <p>So the real per-line formula has a conversion baked in:</p>
+
+    <div class="formula">
+      Line cost = <span class="var">recipe qty</span> × ( <span class="var">pack price</span> ÷ <span class="var">pack size in recipe-units</span> )
+    </div>
+
+    <p>Do this for every line, in the same units your recipe is written in. Don't mix. If the recipe reads in grams and millilitres, get every ingredient down to a price per gram or per millilitre before you touch the quantities.</p>
+
+    <h2>Then adjust for yield, because raw weight lies</h2>
+
+    <p>Here's where a lot of otherwise careful cards fall apart. You buy 1 kg of whole carrots at $2.10. You peel and top them and you're left with maybe 800 g of usable carrot. You didn't pay $2.10 for a kilo of <em>usable</em> carrot — you paid it for a kilo of carrot-with-skin-and-tops. Your true cost per usable gram is higher than the shelf price says.</p>
+
+    <div class="formula">
+      True cost/unit = <span class="var">purchase cost/unit</span> ÷ <span class="var">yield %</span>
+    </div>
+
+    <p>Carrots at 80% yield: $2.10/kg ÷ 0.80 = <strong>$2.63/kg</strong> of trimmed carrot. On a whole carrot that's minor. On a whole beef tenderloin at $58/kg trimming down to a 65% yield, your real cost is $89/kg — and if you costed the dish at $58 you've under-priced it by more than a third. Yield loss scales with how expensive and how heavily-trimmed the ingredient is, which is exactly the ingredients that dominate your cost. It is not a rounding error.</p>
+
+    <p>You don't need a lab. Weigh trimmed product against raw a few times, average it, and write the yield percentage on the ingredient once. Published tables give you a sane starting point — professional yield references and datasets like the <a href="https://www.ers.usda.gov/data-products/food-price-outlook" target="_blank" rel="noopener">USDA Economic Research Service Food Price Outlook</a> anchor you to real market prices and typical spreads — but the only yield that's true for your kitchen is the one you measured with your knife and your supplier's product.</p>
+
+    <div class="callout">
+      <strong>Watch the double-count:</strong> apply yield <em>or</em> weigh trimmed and buy trimmed — never both. If your supplier already sells you cleaned, portioned fillet, that price is your true cost/unit; dividing it by a yield percentage again inflates the line. Yield adjustment is only for product you break down yourself.
+    </div>
+
+    <h2>Sum the lines, divide by the yield</h2>
+
+    <p>Add every adjusted line and you have the total recipe cost. That total belongs to the whole batch, not to a plate. To get the number that matters, divide by what the recipe actually yields — servings for a plated dish, or a weight/volume for a prep.</p>
+
+    <div class="formula">
+      Cost per portion = <span class="var">total recipe cost</span> ÷ <span class="var">servings (or yield)</span>
+    </div>
+
+    <p>Say a braise costs $34.80 in ingredients and serves 8. Cost per portion is $4.35. That $4.35 is the figure your menu price hangs off — not the $34.80 batch cost, not the price of any single ingredient. Get it wrong and every downstream calculation, from food cost percentage to a catering quote, inherits the error.</p>
+
+    <h2>Sub-recipes: cost the prep once, drop it in</h2>
+
+    <p>Real menus aren't flat lists of raw ingredients. A plated main is built from preps: a sauce, a purée, a pickle, a spice blend. Each of those is a recipe in its own right — with its own lines, its own total, and its own yield. Cost it once as a sub-recipe and it becomes a single priced, yielded ingredient you can drop into any dish that uses it.</p>
+
+    <p>The mechanic is simple: a sub-recipe has a <strong>cost per unit of its yield</strong>. A pan sauce that costs $6.40 to make and yields 800 ml has a cost of $0.008/ml. When a plated dish uses 60 ml of it, that line is 60 × $0.008 = $0.48. The dish doesn't need to know the sauce has nine ingredients — it just needs the sauce's cost per millilitre.</p>
+
+    <h3>Worked example — a red wine pan sauce (the prep)</h3>
+
+    <table>
+      <thead>
+        <tr><th>Ingredient</th><th>Pack price</th><th>Cost/unit</th><th>Used</th><th>Line cost</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Beef stock (reduced)</td><td>$9.00 / 2 L</td><td>$0.0045/ml</td><td>500 ml</td><td>$2.25</td></tr>
+        <tr><td>Red wine</td><td>$11.00 / 750 ml</td><td>$0.0147/ml</td><td>250 ml</td><td>$3.67</td></tr>
+        <tr><td>Shallot (90% yield)</td><td>$4.20 / kg → $4.67 true</td><td>$0.00467/g</td><td>60 g</td><td>$0.28</td></tr>
+        <tr><td>Butter</td><td>$42.00 / 5 kg</td><td>$0.0084/g</td><td>40 g</td><td>$0.34</td></tr>
+        <tr><td>Thyme, bay, pepper</td><td>—</td><td>—</td><td>—</td><td>$0.15</td></tr>
+        <tr><td><strong>Total (yields ~800 ml after reduction)</strong></td><td></td><td></td><td></td><td><strong>$6.69</strong></td></tr>
+      </tbody>
+    </table>
+
+    <p>Total prep cost $6.69, yield 800 ml → <strong>$0.0084/ml</strong>. Note the reduction: you started with more liquid and boiled it down to 800 ml, so the yield is the finished volume, not the sum of what went in. Cost the yield you actually get.</p>
+
+    <h3>Worked example — the plated main using it</h3>
+
+    <table>
+      <thead>
+        <tr><th>Component</th><th>Cost/unit</th><th>Used</th><th>Line cost</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Beef striploin (65% yield → $89/kg)</td><td>$0.089/g</td><td>180 g plated</td><td>$16.02</td></tr>
+        <tr><td>Red wine pan sauce <em>(sub-recipe)</em></td><td>$0.0084/ml</td><td>60 ml</td><td>$0.50</td></tr>
+        <tr><td>Potato purée <em>(sub-recipe)</em></td><td>$0.0031/g</td><td>150 g</td><td>$0.47</td></tr>
+        <tr><td>Tenderstem broccoli (85% yield)</td><td>$0.0094/g</td><td>90 g</td><td>$0.85</td></tr>
+        <tr><td>Finishing oil, salt, garnish</td><td>—</td><td>—</td><td>$0.30</td></tr>
+        <tr><td><strong>Total — cost per portion</strong></td><td></td><td></td><td><strong>$18.14</strong></td></tr>
+      </tbody>
+    </table>
+
+    <p>The plate costs <strong>$18.14</strong>. Two of its five lines are sub-recipes carrying their own costed detail underneath. If the sauce feeds twelve other dishes, you costed it once and every one of them now reads correctly. That's the whole point of building preps as sub-recipes: the work compounds instead of repeating.</p>
+
+    <div class="tool-mention">
+      <span class="icon"><svg viewBox="0 0 24 24" style="width:100%;height:100%;display:block" aria-hidden="true"><g transform="translate(3.6 3.6) scale(0.7)"><path d="M6.5 13.6 C5 13 4.2 11.6 4.5 10 C4.6 9.3 5 8.6 5.7 8.2 C5.4 7 6 6.1 7 5.8 C7 4.6 7.8 3.8 9 3.8 C9.3 2.8 10.5 2.2 12 2.2 C13.5 2.2 14.7 2.8 15 3.8 C16.2 3.8 17 4.6 17 5.8 C18 6.1 18.6 7 18.3 8.2 C19 8.6 19.4 9.3 19.5 10 C19.8 11.6 19 13 17.5 13.6 Z" fill="#fff"/><path d="M6.3 13.6 L17.7 13.6 L17.7 19.3 C17.7 20.2 17 21 16.1 21 L7.9 21 C7 21 6.3 20.2 6.3 19.3 Z" fill="#fff"/><path d="M8 13.4 C7.7 10.4 8 7.4 8.9 5 M10 13.5 C9.9 10 10 6.6 10.5 3.4 M12 13.5 V2.6 M14 13.5 C14.1 10 14 6.6 13.5 3.4 M16 13.4 C16.3 10.4 16 7.4 15.1 5" stroke="#16433a" stroke-width="0.5" stroke-linecap="round" fill="none"/></g></svg></span>
+      <div>
+        <p class="label">In ProChefDesk</p>
+        <p>Mark a prep as a <strong>sub-recipe</strong> and give it a yield (e.g. "800 ml sauce"). It becomes a costed, yielded item you drop into any dish like an ingredient — the cost cascades and stays in the right units. The <a href="/app/" target="_blank" rel="noopener">recipe Cost Report</a> then prints a full breakdown: every line with its unit price, quantity and line cost, the total, and the cost per portion at the bottom.</p>
+      </div>
+    </div>
+
+    <h2>Cost per portion is the number that feeds pricing</h2>
+
+    <p>Everything above exists to produce one clean figure per dish. Cost per portion is what your menu price is a function of — not batch cost, not ingredient price. The standard move is to set a target food cost percentage and back out the price:</p>
+
+    <div class="formula">
+      Suggested price = <span class="var">cost per portion</span> ÷ <span class="var">target food cost %</span>
+    </div>
+
+    <p>The $18.14 striploin at a 32% food cost target wants a menu price of $18.14 ÷ 0.32 = <strong>$56.70</strong>, which you'd round to $56 or $58 depending on how the menu reads. Change the target to 30% and it's $60.50. The point isn't the exact number — it's that the price is anchored to a cost per portion you can defend, and that moves the moment the cost card moves.</p>
+
+    <h3>Price drift silently rots the card</h3>
+
+    <p>Here's the failure that catches everyone. You build a beautiful card in January. The wine goes from $11 to $13.50 in April. Butter creeps up. Your supplier quietly re-packs the stock at a higher price. Nobody updates the card, so it still reads $18.14 — but the plate now costs $19.60. You're running a 34.6% food cost on a dish you think is at 32%, and you'll keep running it until the month-end numbers don't add up and you go looking.</p>
+
+    <p>A cost card is not a document you write once. It's a living calculation whose inputs decay. The discipline that keeps it honest is boring and it works:</p>
+
+    <ul>
+      <li><strong>Update your five most expensive ingredients every delivery.</strong> Not all 200. The five that move the plate.</li>
+      <li><strong>Re-cost your top sellers monthly.</strong> The dishes that sell most are where drift does the most damage.</li>
+      <li><strong>Store the cost against the recipe, not in your head.</strong> A card you can rebuild from an invoice beats a number you're fairly sure about.</li>
+    </ul>
+
+    <h2>The three mistakes that wreck a cost card</h2>
+
+    <p>Almost every wrong recipe cost calculation traces back to one of these three. Learn to spot them and you'll fix most cards in one pass.</p>
+
+    <table>
+      <thead>
+        <tr><th>Mistake</th><th>What happens</th><th>Fix</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Costing at pack price, not used price</td><td>80 g of butter costed as if you bought a 5 kg block per dish</td><td>Convert pack price to price per recipe-unit first, always</td></tr>
+        <tr><td>Ignoring yield</td><td>Trimmed proteins under-costed 20–40%; card looks fine, P&amp;L doesn't</td><td>Weigh trim once, store a yield % on the ingredient</td></tr>
+        <tr><td>Stale prices</td><td>Card reads January, kitchen runs April; food cost drifts up 2–4 pts unseen</td><td>Update top-spend ingredients every delivery; re-cost sellers monthly</td></tr>
+      </tbody>
+    </table>
+
+    <p>None of these are hard. They're just easy to skip, and every one of them makes the dish look cheaper than it is — which is the dangerous direction to be wrong in. A card that over-states cost annoys you. A card that under-states it costs you money on every cover, quietly, for months.</p>
+
+    <h2>Do this today</h2>
+
+    <p>You don't need to cost the whole menu this afternoon. Take your three best-selling dishes and rebuild their cards from your most recent invoices — real pack prices, real yields on the proteins, sub-recipes for the preps. Divide each total by its servings. Compare the cost per portion you get to whatever you had before.</p>
+
+    <p>The gap will surprise you. It usually does, and it's almost always in the direction of "we're charging too little." That gap, found three dishes at a time, is the most reliable margin you'll ever recover — and it costs nothing but an hour with a calculator and an honest set of prices.</p>
+
+    <blockquote>"The recipe hadn't changed in two years, so I assumed the cost hadn't either. The wine alone had gone up forty percent."</blockquote>
+
+    <p>The recipe stays still. The prices never do. Build the card so it's cheap to rebuild, keep the inputs current, and let the cost per portion tell you the truth — before the accountant does.</p>
+
+    <div class="end-mark"></div>
+  </article>
+
+  <!-- Related posts cross-link (internal linking for SEO + reader retention) -->
+  <section class="related-posts" aria-label="Related articles">
+    <h3>Related reading</h3>
+    <div class="related-grid">
+      <a href="/blog/food-cost-percentage-restaurant.html" class="related-card">
+        <div class="related-tag">Cost Control</div>
+        <div class="related-title">How to Calculate Food Cost Percentage in a Restaurant</div>
+        <div class="related-desc">The real method: sub-recipes, yield loss, supplier drift, theoretical vs actual.</div>
+      </a>
+      <a href="/blog/ingredient-yield-percentage.html" class="related-card">
+        <div class="related-tag">Cost Control</div>
+        <div class="related-title">Ingredient Yield Percentage: Hidden Cost in Raw Weight</div>
+        <div class="related-desc">Why 1 kg raw is not 1 kg plated, and how to cost the gap.</div>
+      </a>
+    </div>
+  </section>
+
+  <footer class="blog-footer">
+    <div class="left">
+      <span class="foot-mark"><svg viewBox="0 0 24 24" style="width:100%;height:100%;display:block" aria-hidden="true"><g transform="translate(3.6 3.6) scale(0.7)"><path d="M6.5 13.6 C5 13 4.2 11.6 4.5 10 C4.6 9.3 5 8.6 5.7 8.2 C5.4 7 6 6.1 7 5.8 C7 4.6 7.8 3.8 9 3.8 C9.3 2.8 10.5 2.2 12 2.2 C13.5 2.2 14.7 2.8 15 3.8 C16.2 3.8 17 4.6 17 5.8 C18 6.1 18.6 7 18.3 8.2 C19 8.6 19.4 9.3 19.5 10 C19.8 11.6 19 13 17.5 13.6 Z" fill="#fff"/><path d="M6.3 13.6 L17.7 13.6 L17.7 19.3 C17.7 20.2 17 21 16.1 21 L7.9 21 C7 21 6.3 20.2 6.3 19.3 Z" fill="#fff"/><path d="M8 13.4 C7.7 10.4 8 7.4 8.9 5 M10 13.5 C9.9 10 10 6.6 10.5 3.4 M12 13.5 V2.6 M14 13.5 C14.1 10 14 6.6 13.5 3.4 M16 13.4 C16.3 10.4 16 7.4 15.1 5" stroke="#16433a" stroke-width="0.5" stroke-linecap="round" fill="none"/></g></svg></span>
+      <span>ProChefDesk · written from a working kitchen</span>
+    </div>
+    <div class="right">
+      <a href="/blog/">All posts</a>
+      <a href="/app/">Open app</a>
+      <a href="/privacy.html">Privacy</a>
+    </div>
+  </footer>
+
+</body>
+</html>

@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#FAF7F2">
+  <meta name="robots" content="index, follow">
+  <title>Prime Cost: The Number That Tells You If You Will Survive — ProChefDesk</title>
+  <meta name="description" content="COGS plus total labour, as a share of sales — the single figure that predicts a restaurant closing better than any other.">
+  <link rel="canonical" href="https://prochefdesk.com/blog/restaurant-prime-cost.html">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Prime Cost: The Number That Tells You If You Will Survive">
+  <meta property="og:description" content="COGS plus total labour, as a share of sales — the single figure that predicts a restaurant closing better than any other.">
+  <meta property="og:url" content="https://prochefdesk.com/blog/restaurant-prime-cost.html">
+  <meta property="og:type" content="article">
+  <meta property="og:image" content="https://prochefdesk.com/og-image.png">
+  <meta property="article:published_time" content="2026-07-05">
+  <meta property="article:author" content="Ahmet Kaya">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Prime Cost: The Number That Tells You If You Will Survive">
+  <meta name="twitter:description" content="COGS plus total labour as a share of sales — the one figure that predicts a restaurant closing better than food cost or labour alone.">
+  <meta name="twitter:image" content="https://prochefdesk.com/og-image.png">
+
+  <!-- JSON-LD Article schema -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "Prime Cost: The Number That Tells You If You Will Survive",
+    "description": "COGS plus total labour, as a share of sales — the single figure that predicts a restaurant closing better than any other.",
+    "image": "https://prochefdesk.com/og-image.png",
+    "datePublished": "2026-07-05",
+    "dateModified": "2026-07-05",
+    "author": {
+      "@type": "Person",
+      "name": "Ahmet Kaya",
+      "jobTitle": "Professional Chef",
+      "worksFor": {
+        "@type": "Organization",
+        "name": "ProChefDesk"
+      }
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "ProChefDesk",
+      "url": "https://prochefdesk.com",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://prochefdesk.com/og-image.png"
+      }
+    },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": "https://prochefdesk.com/blog/restaurant-prime-cost.html"
+    },
+    "wordCount": 2789,
+    "keywords": "restaurant prime cost, prime cost ratio, prime cost formula"
+  }
+  </script>
+
+  <link rel="icon" type="image/svg+xml" href="/app/assets/icon.svg">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* Single source of truth for blog post styling. To create a new
+       post, copy this entire file, rename, replace meta tags above
+       and the <article> content below. CSS stays identical. */
+
+    :root {
+      --bg: #FAF7F2;
+      --paper: #FFFEFA;
+      --text-1: #1A1916;
+      --text-2: #3A3631;
+      --text-3: #8A857C;
+      --line: #E5DFD2;
+      --primary: #2D4A3E;
+      --brand: #16a34a;
+      --copper: #B85C3C;
+      --code-bg: #F0EBE0;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 28px 24px 80px;
+      line-height: 1.72;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-size: 17px;
+      background: var(--bg);
+      color: var(--text-1);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    a { color: var(--primary); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+    a:hover { color: var(--text-1); }
+
+    /* ---------- HEADER ---------- */
+    .blog-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 40px;
+      font-family: 'Inter', sans-serif;
+    }
+    .brand {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 600;
+      font-size: 18px;
+      letter-spacing: -0.015em;
+      color: var(--text-1);
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+    .brand:hover { color: var(--primary); }
+    .brand-mark {
+      width: 28px; height: 28px;
+      border-radius: 7px;
+      background: var(--brand);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Inter', sans-serif;
+      font-weight: 700;
+      font-size: 11px;
+    }
+    .crumbs {
+      font-size: 13px;
+      color: var(--text-3);
+    }
+    .crumbs a { color: var(--text-3); text-decoration: none; }
+    .crumbs a:hover { color: var(--text-1); }
+
+    /* ---------- ARTICLE ---------- */
+    article header { margin-bottom: 36px; }
+    .tag {
+      display: inline-block;
+      color: var(--primary);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-size: 11px;
+      margin-bottom: 16px;
+    }
+    h1 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 500;
+      font-size: clamp(32px, 5vw, 44px);
+      line-height: 1.08;
+      letter-spacing: -0.025em;
+      margin: 0 0 18px;
+      color: var(--text-1);
+    }
+    .lede {
+      font-size: 19px;
+      color: var(--text-2);
+      line-height: 1.55;
+      margin: 0 0 24px;
+    }
+    .article-meta {
+      font-size: 13px;
+      color: var(--text-3);
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    article h2 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 500;
+      font-size: 28px;
+      line-height: 1.18;
+      letter-spacing: -0.018em;
+      margin: 56px 0 16px;
+      color: var(--text-1);
+    }
+    article h3 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 500;
+      font-size: 21px;
+      line-height: 1.25;
+      letter-spacing: -0.012em;
+      margin: 36px 0 12px;
+      color: var(--text-1);
+    }
+    article p { color: var(--text-2); margin: 0 0 20px; }
+    article ul, article ol { color: var(--text-2); margin: 0 0 20px; padding-inline-start: 24px; }
+    article li { margin-bottom: 6px; }
+    article strong { color: var(--text-1); font-weight: 600; }
+
+    blockquote {
+      border-left: 3px solid var(--primary);
+      padding: 6px 0 6px 20px;
+      margin: 28px 0;
+      font-family: 'Fraunces', Georgia, serif;
+      font-style: italic;
+      font-size: 19px;
+      color: var(--text-1);
+      line-height: 1.5;
+    }
+
+    .formula {
+      background: var(--code-bg);
+      border-radius: 8px;
+      padding: 18px 22px;
+      margin: 24px 0;
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+      font-size: 16px;
+      text-align: center;
+      color: var(--text-1);
+      border: 1px solid var(--line);
+    }
+    .formula .var { color: var(--primary); font-weight: 600; }
+
+    .callout {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--copper);
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin: 28px 0;
+      font-size: 16px;
+    }
+    .callout strong { color: var(--copper); }
+
+    .tool-mention {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 18px 22px;
+      margin: 28px 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      font-size: 15px;
+    }
+    .tool-mention .icon {
+      width: 36px; height: 36px;
+      flex-shrink: 0;
+      border-radius: 8px;
+      background: var(--brand);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 13px;
+    }
+    .tool-mention p { margin: 0 0 6px; color: var(--text-2); }
+    .tool-mention p:last-child { margin: 0; }
+    .tool-mention .label {
+      font-weight: 600;
+      color: var(--text-1);
+      font-family: 'Inter', sans-serif;
+    }
+    .tool-mention a { color: var(--primary); font-weight: 600; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 24px 0;
+      font-size: 15px;
+    }
+    th, td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--line);
+    }
+    th {
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      color: var(--text-1);
+      background: var(--paper);
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    td { color: var(--text-2); }
+
+    .end-mark {
+      width: 24px; height: 4px;
+      background: var(--primary);
+      margin: 56px auto 32px;
+    }
+
+    /* v2.8.94 — Related posts section (footer'dan önce, cross-link için) */
+    .related-posts {
+      margin: 56px 0 24px;
+      padding: 24px 0;
+      border-top: 1px solid var(--line);
+    }
+    .related-posts h3 {
+      font-family: 'Fraunces', serif;
+      font-size: 22px;
+      font-weight: 600;
+      margin: 0 0 18px;
+      color: var(--primary);
+    }
+    .related-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+    }
+    .related-card {
+      display: block;
+      padding: 16px 18px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      text-decoration: none;
+      color: var(--text-1);
+      transition: border-color .15s ease, transform .15s ease;
+    }
+    .related-card:hover {
+      border-color: var(--brand);
+      transform: translateY(-2px);
+    }
+    .related-card .related-tag {
+      font-size: 11px;
+      color: var(--brand);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+    .related-card .related-title {
+      font-family: 'Fraunces', serif;
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 1.3;
+      margin-bottom: 4px;
+    }
+    .related-card .related-desc {
+      font-size: 13px;
+      color: var(--text-3);
+      line-height: 1.5;
+    }
+
+    /* ---------- FOOTER ---------- */
+    .blog-footer {
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      font-size: 14px;
+      color: var(--text-3);
+    }
+    .blog-footer a { color: var(--text-2); font-weight: 500; text-decoration: none; }
+    .blog-footer a:hover { color: var(--text-1); text-decoration: underline; }
+    .blog-footer .left {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .blog-footer .foot-mark {
+      width: 22px; height: 22px;
+      border-radius: 6px;
+      background: var(--brand);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .blog-footer .right { display: flex; gap: 18px; }
+
+    /* ---------- MOBILE ---------- */
+    @media (max-width: 640px) {
+      body { padding: 20px 18px 60px; font-size: 16px; }
+      .blog-header { margin-bottom: 32px; }
+      .lede { font-size: 17px; }
+      article h2 { font-size: 24px; margin-top: 44px; }
+      article h3 { font-size: 19px; }
+      .formula { font-size: 14px; padding: 14px 16px; }
+      .tool-mention { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="blog-header">
+    <a href="/" class="brand">
+      <span class="brand-mark"><svg viewBox="0 0 24 24" style="width:100%;height:100%;display:block" aria-hidden="true"><g transform="translate(3.6 3.6) scale(0.7)"><path d="M6.5 13.6 C5 13 4.2 11.6 4.5 10 C4.6 9.3 5 8.6 5.7 8.2 C5.4 7 6 6.1 7 5.8 C7 4.6 7.8 3.8 9 3.8 C9.3 2.8 10.5 2.2 12 2.2 C13.5 2.2 14.7 2.8 15 3.8 C16.2 3.8 17 4.6 17 5.8 C18 6.1 18.6 7 18.3 8.2 C19 8.6 19.4 9.3 19.5 10 C19.8 11.6 19 13 17.5 13.6 Z" fill="#fff"/><path d="M6.3 13.6 L17.7 13.6 L17.7 19.3 C17.7 20.2 17 21 16.1 21 L7.9 21 C7 21 6.3 20.2 6.3 19.3 Z" fill="#fff"/><path d="M8 13.4 C7.7 10.4 8 7.4 8.9 5 M10 13.5 C9.9 10 10 6.6 10.5 3.4 M12 13.5 V2.6 M14 13.5 C14.1 10 14 6.6 13.5 3.4 M16 13.4 C16.3 10.4 16 7.4 15.1 5" stroke="#16433a" stroke-width="0.5" stroke-linecap="round" fill="none"/></g></svg></span>
+      <span>ProChefDesk</span>
+    </a>
+    <div class="crumbs">
+      <a href="/blog/">← Blog</a>
+    </div>
+  </header>
+
+  <article>
+    <header>
+      <div class="tag">Cost Control</div>
+      <h1>Prime Cost: The Number That Tells You If You Will Survive</h1>
+      <p class="lede">Food cost gets all the attention. Labour gets the panic. But the number that actually predicts whether a restaurant is still open next year is the one that adds them together — the restaurant prime cost, read as a share of sales.</p>
+      <div class="article-meta">
+        <span>By Ahmet Kaya</span>
+        <span>10 min read</span>
+        <span>July 2026</span>
+      </div>
+    </header>
+
+    <p>I've watched two restaurants with near-identical food cost close within a year of each other, and a third with a worse food cost quietly print money. The difference wasn't the plate. It was what happened after you added the wage bill on top. One kitchen ran a 34% food cost with a lean, well-rostered team. The other ran 30% food but overstaffed every shift out of habit. Same food number, wildly different fate.</p>
+
+    <p>That's the case for prime cost. It's the one figure that refuses to let you hide a problem in the half of the P&L you weren't looking at.</p>
+
+    <h2>What restaurant prime cost actually is</h2>
+
+    <p>Prime cost is the sum of your two largest, most controllable expenses: everything it costs to make the food, and everything it costs to have people make and serve it.</p>
+
+    <div class="formula">
+      <span class="var">Prime Cost</span> = <span class="var">Cost of Goods Sold</span> + <span class="var">Total Labour</span>
+    </div>
+
+    <p>Cost of goods sold (COGS) is the food and beverage you actually consumed in the period — opening inventory plus purchases minus closing inventory. Not what you bought. What you <em>used</em>. Total labour is where most people undercount. It isn't just the hourly wages on the roster. It's:</p>
+
+    <ul>
+      <li><strong>Gross wages</strong> — kitchen and front of house, salaried and hourly.</li>
+      <li><strong>On-costs</strong> — payroll tax, superannuation or pension contributions, workers' comp, holiday and sick accrual.</li>
+      <li><strong>Management salaries</strong> — the chef and the manager count, even when they're salaried and "don't clock in".</li>
+    </ul>
+
+    <p>Miss the on-costs and you'll understate labour by 15–30% depending on where you trade. In Australia that's super plus payroll tax plus leave loading; in the US it's the employer's share of payroll taxes plus benefits; in the UK it's employer's National Insurance and pension. Whatever the label, the true cost of an hour is never the hourly rate on the timesheet — it's the rate plus the on-cost stack.</p>
+
+    <h2>The prime cost ratio is what you actually watch</h2>
+
+    <p>The raw dollar figure is meaningless on its own — a busy week has a bigger prime cost than a quiet one, and that tells you nothing. What you track is the <strong>prime cost ratio</strong>: prime cost divided by sales, expressed as a percentage.</p>
+
+    <div class="formula">
+      <span class="var">Prime Cost Ratio</span> = (<span class="var">COGS</span> + <span class="var">Total Labour</span>) ÷ <span class="var">Total Sales</span> × 100
+    </div>
+
+    <p>For most full-service restaurants, the target sits between <strong>55% and 65% of sales</strong>. Under 60% and you have real breathing room for rent, utilities, insurance and — the part everyone forgets — profit. Push past 65% and the maths gets unforgiving: rent and overheads eat what's left, and there's nothing at the bottom. Above 70%, you are almost certainly losing money and just haven't seen the statement yet.</p>
+
+    <p>The band moves with your model, and I'll get to the benchmarks. But the principle holds everywhere: prime cost is the biggest lever you control, and the ratio is your early-warning system.</p>
+
+    <h2>Why it beats watching food cost or labour alone</h2>
+
+    <p>Here's the trap. You watch food cost. It creeps to 33%, you tighten portions and renegotiate a supplier, you get it back to 30%. You feel in control. Meanwhile labour drifted from 28% to 33% because you kept a second commis on quiet Tuesdays and nobody re-cut the roster. Your food cost report looks great. Your bank balance doesn't.</p>
+
+    <p>The two costs trade against each other constantly, and looking at either in isolation lets the other one hide.</p>
+
+    <ul>
+      <li><strong>Buy pre-cut, pre-portioned product</strong> and food cost goes up — but prep labour goes down. Watch food cost alone and you'll swear off convenience product that was actually saving you money.</li>
+      <li><strong>Bring everything in-house and butcher your own</strong> and food cost drops — but you've added hours of skilled labour. Watch food cost alone and you'll congratulate yourself while the wage bill quietly overtakes the saving.</li>
+      <li><strong>Cut a shift to save labour</strong> and service slows, waste rises from rushed prep, and food cost climbs.</li>
+    </ul>
+
+    <p>Prime cost is the referee. It doesn't care which side the cost lands on — it catches the total. When you're deciding whether to make your own stock, buy portioned fish, or add a shift, the only honest question is: <em>what does it do to prime cost?</em></p>
+
+    <blockquote>"Every decision in a kitchen is a trade between food and labour. Prime cost is the only number that sees both sides of the trade at once."</blockquote>
+
+    <h2>Calculate it weekly, not monthly</h2>
+
+    <p>This is the part that separates operators who control their business from those who autopsy it. If you calculate prime cost monthly, you find out a bad week happened four weeks after you could have fixed it. By then you've repeated the mistake four more times.</p>
+
+    <p>A weekly prime cost is close enough. You don't need a full stocktake every Sunday — a quick count of your high-value inventory (proteins, seafood, dairy, alcohol) plus the week's purchase invoices gets COGS accurate enough to act on. Labour you already have from the roster and timesheets, and it's exact.</p>
+
+    <div class="callout">
+      <strong>The discipline that matters most:</strong> run the number at the same time every week, the same way, before you build the next roster. A prime cost you calculate <em>after</em> the week is a history lesson. A prime cost you check <em>while</em> you still have a roster to cut and an order to trim is a steering wheel.
+    </div>
+
+    <p>The reason weekly beats monthly isn't precision — it's that labour is a decision you make fresh every single week. You can't un-work Tuesday's overstaffing at month-end. You can absolutely re-cut next Tuesday if you saw this Tuesday coming.</p>
+
+    <h2>A worked slice of the P&L</h2>
+
+    <p>Let's put real numbers on a single week for a mid-sized bistro doing $42,000 in sales. Below is the top of the P&L — the part prime cost lives in.</p>
+
+    <table>
+      <thead>
+        <tr><th>Line</th><th>Amount</th><th>% of sales</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Total sales</td><td>$42,000</td><td>100%</td></tr>
+        <tr><td>Food COGS</td><td>$11,760</td><td>28.0%</td></tr>
+        <tr><td>Beverage COGS</td><td>$2,940</td><td>7.0%</td></tr>
+        <tr><td>Kitchen wages + on-costs</td><td>$8,400</td><td>20.0%</td></tr>
+        <tr><td>FOH wages + on-costs</td><td>$6,300</td><td>15.0%</td></tr>
+        <tr><td><strong>Prime cost</strong></td><td><strong>$29,400</strong></td><td><strong>70.0%</strong></td></tr>
+        <tr><td>Gross profit after prime cost</td><td>$12,600</td><td>30.0%</td></tr>
+      </tbody>
+    </table>
+
+    <p>That's a business in trouble, and here's the thing — no single line looks alarming. Total COGS is 35%, which a lot of chefs would shrug at. Combined labour is 35%, which a lot of operators would also shrug at. Each number, on its own, gets a pass. Added together they're a 70% prime cost, and once rent (say 8%), utilities, insurance and the rest come out of the remaining 30%, there is no profit. This restaurant is drifting toward closure while every individual report says "fine".</p>
+
+    <p>Now pull two levers. Tighten portioning and cut one over-portioned protein spec to bring food COGS to 26%. Re-cut the roster to demand — drop the habitual extra hands on the two quietest shifts — to bring combined labour to 30%.</p>
+
+    <table>
+      <thead>
+        <tr><th>Line</th><th>Before</th><th>After</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Food + beverage COGS</td><td>35.0%</td><td>33.0%</td></tr>
+        <tr><td>Total labour</td><td>35.0%</td><td>30.0%</td></tr>
+        <tr><td><strong>Prime cost</strong></td><td><strong>70.0%</strong></td><td><strong>63.0%</strong></td></tr>
+        <tr><td>Gross profit after prime cost</td><td>30.0%</td><td>37.0%</td></tr>
+      </tbody>
+    </table>
+
+    <p>Seven points of prime cost on $42,000 a week is $2,940 — every week, roughly $153,000 a year. That's the whole difference between the restaurant that closes and the one that pays its owner. None of it required a price rise or a single new customer. It required watching the total, not the halves.</p>
+
+    <h2>The two levers, and how to actually move them</h2>
+
+    <h3>Lever one: cost of goods</h3>
+
+    <p>You move COGS with the same disciplines that move food cost — accurate recipe costing, honest yields, current supplier prices, and portion control on the line. The difference is you're now watching it <em>in the context of what it does to labour</em>. Don't chase a 2-point food cost saving that adds 3 points of prep labour. Cost the whole trade.</p>
+
+    <div class="tool-mention">
+      <span class="icon"><svg viewBox="0 0 24 24" style="width:100%;height:100%;display:block" aria-hidden="true"><g transform="translate(3.6 3.6) scale(0.7)"><path d="M6.5 13.6 C5 13 4.2 11.6 4.5 10 C4.6 9.3 5 8.6 5.7 8.2 C5.4 7 6 6.1 7 5.8 C7 4.6 7.8 3.8 9 3.8 C9.3 2.8 10.5 2.2 12 2.2 C13.5 2.2 14.7 2.8 15 3.8 C16.2 3.8 17 4.6 17 5.8 C18 6.1 18.6 7 18.3 8.2 C19 8.6 19.4 9.3 19.5 10 C19.8 11.6 19 13 17.5 13.6 Z" fill="#fff"/><path d="M6.3 13.6 L17.7 13.6 L17.7 19.3 C17.7 20.2 17 21 16.1 21 L7.9 21 C7 21 6.3 20.2 6.3 19.3 Z" fill="#fff"/><path d="M8 13.4 C7.7 10.4 8 7.4 8.9 5 M10 13.5 C9.9 10 10 6.6 10.5 3.4 M12 13.5 V2.6 M14 13.5 C14.1 10 14 6.6 13.5 3.4 M16 13.4 C16.3 10.4 16 7.4 15.1 5" stroke="#16433a" stroke-width="0.5" stroke-linecap="round" fill="none"/></g></svg></span>
+      <div>
+        <p class="label">In ProChefDesk</p>
+        <p>The <a href="/app/" target="_blank" rel="noopener">Cost Report</a> costs every dish from its recipe — sub-recipes cascading and current supplier prices included — and ranks your menu by food cost %. That gives you the COGS side of prime cost you can act on: which dishes drag the number up, and by how much, before you decide what to reprice, re-spec, or drop.</p>
+      </div>
+    </div>
+
+    <h3>Lever two: labour</h3>
+
+    <p>Labour is the faster-moving lever and, for most struggling kitchens, the bigger opportunity. Not because you underpay people — because you roster to habit instead of to demand. You put three on the pass every Friday because you always have, even the Fridays that don't warrant it.</p>
+
+    <p>The fix is to roster against a sales forecast and check the labour percentage <em>before</em> the week starts, not reconcile it after. If a shift's projected sales won't carry its wage cost at your target percentage, that shift is one head too many. This is unglamorous, unpopular work, and it's where the money is.</p>
+
+    <div class="tool-mention">
+      <span class="icon"><svg viewBox="0 0 24 24" style="width:100%;height:100%;display:block" aria-hidden="true"><g transform="translate(3.6 3.6) scale(0.7)"><path d="M6.5 13.6 C5 13 4.2 11.6 4.5 10 C4.6 9.3 5 8.6 5.7 8.2 C5.4 7 6 6.1 7 5.8 C7 4.6 7.8 3.8 9 3.8 C9.3 2.8 10.5 2.2 12 2.2 C13.5 2.2 14.7 2.8 15 3.8 C16.2 3.8 17 4.6 17 5.8 C18 6.1 18.6 7 18.3 8.2 C19 8.6 19.4 9.3 19.5 10 C19.8 11.6 19 13 17.5 13.6 Z" fill="#fff"/><path d="M6.3 13.6 L17.7 13.6 L17.7 19.3 C17.7 20.2 17 21 16.1 21 L7.9 21 C7 21 6.3 20.2 6.3 19.3 Z" fill="#fff"/><path d="M8 13.4 C7.7 10.4 8 7.4 8.9 5 M10 13.5 C9.9 10 10 6.6 10.5 3.4 M12 13.5 V2.6 M14 13.5 C14.1 10 14 6.6 13.5 3.4 M16 13.4 C16.3 10.4 16 7.4 15.1 5" stroke="#16433a" stroke-width="0.5" stroke-linecap="round" fill="none"/></g></svg></span>
+      <div>
+        <p class="label">In ProChefDesk</p>
+        <p>The Roster tool tracks labour cost as you build the week and shows the labour-cost percentage against your target before you publish — so you catch an over-staffed shift while you can still cut it, not at month-end. Read it alongside the Cost Report and you've got both halves of prime cost in front of you every week.</p>
+      </div>
+    </div>
+
+    <h2>Benchmarks by service style</h2>
+
+    <p>The 55–65% band is the full-service average. Your target depends on how labour-heavy your model is and how much your COGS carries. Rough working ranges I'd hold operators to:</p>
+
+    <table>
+      <thead>
+        <tr><th>Service style</th><th>Target prime cost</th><th>Why</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Quick service / fast casual</td><td>55–60%</td><td>Lower labour skill, simpler menu, tighter food spec</td></tr>
+        <tr><td>Casual full-service</td><td>60–65%</td><td>Balanced food and labour; the classic band</td></tr>
+        <tr><td>Fine dining</td><td>62–67%</td><td>High skilled labour and premium ingredients, offset by high check average</td></tr>
+        <tr><td>Bar / high-beverage</td><td>50–58%</td><td>Beverage COGS is low, so the ratio runs leaner</td></tr>
+        <tr><td>Café / bakery</td><td>58–64%</td><td>Lower food cost, but labour-heavy early prep</td></tr>
+      </tbody>
+    </table>
+
+    <p>Treat these as starting lines, not gospel. A fine-dining room at 66% with a $180 check and a full book is healthy; a suburban bistro at 66% with a $38 check is bleeding. The ratio only means something against your own rent, your own overheads and your own check average. For grounding your targets against the wider industry, the <a href="https://www.restaurant.org/research-and-media/research/" target="_blank" rel="noopener">National Restaurant Association's industry research</a> publishes operating-cost benchmarks worth checking your numbers against — but your weekly figure, tracked against your own trend, is the one that runs the business.</p>
+
+    <h2>What to do this week</h2>
+
+    <p>Don't wait for a system. Do this before Sunday:</p>
+
+    <ol>
+      <li><strong>Pull last week's sales.</strong> One number, from the POS.</li>
+      <li><strong>Get COGS.</strong> Opening inventory value + purchases − closing inventory. Count the expensive stuff properly; estimate the cheap stuff.</li>
+      <li><strong>Add up total labour</strong> — every wage, plus your on-costs, plus salaried management. Don't leave yourself out.</li>
+      <li><strong>Divide (COGS + labour) by sales.</strong> That's your prime cost ratio.</li>
+      <li><strong>Compare it to the band for your model.</strong> If you're over, you now know which lever — and you have a whole week ahead to pull it.</li>
+    </ol>
+
+    <p>Then do it again next week. And the week after. The single act of calculating prime cost weekly, at the same time, before you build the next roster, will do more for your survival than any menu redesign or marketing push. It's not clever. It's just the number that tells the truth about both halves of your business at once — and most kitchens never look at it until the accountant does, which is always too late.</p>
+
+    <div class="end-mark"></div>
+  </article>
+
+  <!-- Related posts cross-link (internal linking for SEO + reader retention) -->
+  <section class="related-posts" aria-label="Related articles">
+    <h3>Related reading</h3>
+    <div class="related-grid">
+      <a href="/blog/labour-cost-percentage-restaurant.html" class="related-card">
+        <div class="related-tag">Cost Control · Labour</div>
+        <div class="related-title">Restaurant Labour Cost Percentage: The Number Behind the Roster</div>
+        <div class="related-desc">The true cost of an hour and rostering to demand.</div>
+      </a>
+      <a href="/blog/food-cost-percentage-restaurant.html" class="related-card">
+        <div class="related-tag">Cost Control</div>
+        <div class="related-title">How to Calculate Food Cost Percentage in a Restaurant</div>
+        <div class="related-desc">The real method: sub-recipes, yield loss, supplier drift, theoretical vs actual.</div>
+      </a>
+    </div>
+  </section>
+
+  <footer class="blog-footer">
+    <div class="left">
+      <span class="foot-mark"><svg viewBox="0 0 24 24" style="width:100%;height:100%;display:block" aria-hidden="true"><g transform="translate(3.6 3.6) scale(0.7)"><path d="M6.5 13.6 C5 13 4.2 11.6 4.5 10 C4.6 9.3 5 8.6 5.7 8.2 C5.4 7 6 6.1 7 5.8 C7 4.6 7.8 3.8 9 3.8 C9.3 2.8 10.5 2.2 12 2.2 C13.5 2.2 14.7 2.8 15 3.8 C16.2 3.8 17 4.6 17 5.8 C18 6.1 18.6 7 18.3 8.2 C19 8.6 19.4 9.3 19.5 10 C19.8 11.6 19 13 17.5 13.6 Z" fill="#fff"/><path d="M6.3 13.6 L17.7 13.6 L17.7 19.3 C17.7 20.2 17 21 16.1 21 L7.9 21 C7 21 6.3 20.2 6.3 19.3 Z" fill="#fff"/><path d="M8 13.4 C7.7 10.4 8 7.4 8.9 5 M10 13.5 C9.9 10 10 6.6 10.5 3.4 M12 13.5 V2.6 M14 13.5 C14.1 10 14 6.6 13.5 3.4 M16 13.4 C16.3 10.4 16 7.4 15.1 5" stroke="#16433a" stroke-width="0.5" stroke-linecap="round" fill="none"/></g></svg></span>
+      <span>ProChefDesk · written from a working kitchen</span>
+    </div>
+    <div class="right">
+      <a href="/blog/">All posts</a>
+      <a href="/app/">Open app</a>
+      <a href="/privacy.html">Privacy</a>
+    </div>
+  </footer>
+
+</body>
+</html>

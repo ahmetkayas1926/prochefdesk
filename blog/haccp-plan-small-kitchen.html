@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#FAF7F2">
+  <meta name="robots" content="index, follow">
+  <title>How to Write a HACCP Plan for a Small Kitchen — ProChefDesk</title>
+  <meta name="description" content="The seven HACCP principles, stripped to what a small operation actually needs — not a binder that gathers dust on a shelf.">
+  <link rel="canonical" href="https://prochefdesk.com/blog/haccp-plan-small-kitchen.html">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="How to Write a HACCP Plan for a Small Kitchen">
+  <meta property="og:description" content="The seven principles, sized for a small operation — hazard analysis to record-keeping — plus the paperwork you genuinely need vs the theatre.">
+  <meta property="og:url" content="https://prochefdesk.com/blog/haccp-plan-small-kitchen.html">
+  <meta property="og:type" content="article">
+  <meta property="og:image" content="https://prochefdesk.com/og-image.png">
+  <meta property="article:published_time" content="2026-07-05">
+  <meta property="article:author" content="Ahmet Kaya">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="How to Write a HACCP Plan for a Small Kitchen">
+  <meta name="twitter:description" content="The seven principles for a small restaurant — what to write down, what to skip, and how to keep it alive.">
+  <meta name="twitter:image" content="https://prochefdesk.com/og-image.png">
+
+  <!-- JSON-LD Article schema (Google rich results) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "How to Write a HACCP Plan for a Small Kitchen",
+    "description": "The seven HACCP principles, stripped to what a small operation actually needs — not a binder that gathers dust on a shelf.",
+    "image": "https://prochefdesk.com/og-image.png",
+    "datePublished": "2026-07-05",
+    "dateModified": "2026-07-05",
+    "author": {
+      "@type": "Person",
+      "name": "Ahmet Kaya",
+      "jobTitle": "Professional Chef",
+      "worksFor": {
+        "@type": "Organization",
+        "name": "ProChefDesk"
+      }
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "ProChefDesk",
+      "url": "https://prochefdesk.com",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://prochefdesk.com/og-image.png"
+      }
+    },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": "https://prochefdesk.com/blog/haccp-plan-small-kitchen.html"
+    },
+    "wordCount": 3270,
+    "keywords": "haccp plan small restaurant, how to write a haccp plan, food safety plan"
+  }
+  </script>
+
+  <link rel="icon" type="image/svg+xml" href="/app/assets/icon.svg">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* Single source of truth for blog post styling. To create a new
+       post, copy this entire file, rename, replace meta tags above
+       and the <article> content below. CSS stays identical. */
+
+    :root {
+      --bg: #FAF7F2;
+      --paper: #FFFEFA;
+      --text-1: #1A1916;
+      --text-2: #3A3631;
+      --text-3: #8A857C;
+      --line: #E5DFD2;
+      --primary: #2D4A3E;
+      --brand: #16a34a;
+      --copper: #B85C3C;
+      --code-bg: #F0EBE0;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 28px 24px 80px;
+      line-height: 1.72;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-size: 17px;
+      background: var(--bg);
+      color: var(--text-1);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    a { color: var(--primary); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+    a:hover { color: var(--text-1); }
+
+    /* ---------- HEADER ---------- */
+    .blog-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 40px;
+      font-family: 'Inter', sans-serif;
+    }
+    .brand {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 600;
+      font-size: 18px;
+      letter-spacing: -0.015em;
+      color: var(--text-1);
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+    .brand:hover { color: var(--primary); }
+    .brand-mark {
+      width: 28px; height: 28px;
+      border-radius: 7px;
+      background: var(--brand);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Inter', sans-serif;
+      font-weight: 700;
+      font-size: 11px;
+    }
+    .crumbs {
+      font-size: 13px;
+      color: var(--text-3);
+    }
+    .crumbs a { color: var(--text-3); text-decoration: none; }
+    .crumbs a:hover { color: var(--text-1); }
+
+    /* ---------- ARTICLE ---------- */
+    article header { margin-bottom: 36px; }
+    .tag {
+      display: inline-block;
+      color: var(--primary);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-size: 11px;
+      margin-bottom: 16px;
+    }
+    h1 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 500;
+      font-size: clamp(32px, 5vw, 44px);
+      line-height: 1.08;
+      letter-spacing: -0.025em;
+      margin: 0 0 18px;
+      color: var(--text-1);
+    }
+    .lede {
+      font-size: 19px;
+      color: var(--text-2);
+      line-height: 1.55;
+      margin: 0 0 24px;
+    }
+    .article-meta {
+      font-size: 13px;
+      color: var(--text-3);
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    article h2 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 500;
+      font-size: 28px;
+      line-height: 1.18;
+      letter-spacing: -0.018em;
+      margin: 56px 0 16px;
+      color: var(--text-1);
+    }
+    article h3 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 500;
+      font-size: 21px;
+      line-height: 1.25;
+      letter-spacing: -0.012em;
+      margin: 36px 0 12px;
+      color: var(--text-1);
+    }
+    article p { color: var(--text-2); margin: 0 0 20px; }
+    article ul, article ol { color: var(--text-2); margin: 0 0 20px; padding-inline-start: 24px; }
+    article li { margin-bottom: 6px; }
+    article strong { color: var(--text-1); font-weight: 600; }
+
+    blockquote {
+      border-left: 3px solid var(--primary);
+      padding: 6px 0 6px 20px;
+      margin: 28px 0;
+      font-family: 'Fraunces', Georgia, serif;
+      font-style: italic;
+      font-size: 19px;
+      color: var(--text-1);
+      line-height: 1.5;
+    }
+
+    .formula {
+      background: var(--code-bg);
+      border-radius: 8px;
+      padding: 18px 22px;
+      margin: 24px 0;
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+      font-size: 16px;
+      text-align: center;
+      color: var(--text-1);
+      border: 1px solid var(--line);
+    }
+    .formula .var { color: var(--primary); font-weight: 600; }
+
+    .callout {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--copper);
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin: 28px 0;
+      font-size: 16px;
+    }
+    .callout strong { color: var(--copper); }
+
+    .tool-mention {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 18px 22px;
+      margin: 28px 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      font-size: 15px;
+    }
+    .tool-mention .icon {
+      width: 36px; height: 36px;
+      flex-shrink: 0;
+      border-radius: 8px;
+      background: var(--brand);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 13px;
+    }
+    .tool-mention p { margin: 0 0 6px; color: var(--text-2); }
+    .tool-mention p:last-child { margin: 0; }
+    .tool-mention .label {
+      font-weight: 600;
+      color: var(--text-1);
+      font-family: 'Inter', sans-serif;
+    }
+    .tool-mention a { color: var(--primary); font-weight: 600; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 24px 0;
+      font-size: 15px;
+    }
+    th, td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--line);
+    }
+    th {
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      color: var(--text-1);
+      background: var(--paper);
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    td { color: var(--text-2); }
+
+    .end-mark {
+      width: 24px; height: 4px;
+      background: var(--primary);
+      margin: 56px auto 32px;
+    }
+
+    /* v2.8.94 — Related posts section (footer'dan önce, cross-link için) */
+    .related-posts {
+      margin: 56px 0 24px;
+      padding: 24px 0;
+      border-top: 1px solid var(--line);
+    }
+    .related-posts h3 {
+      font-family: 'Fraunces', serif;
+      font-size: 22px;
+      font-weight: 600;
+      margin: 0 0 18px;
+      color: var(--primary);
+    }
+    .related-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+    }
+    .related-card {
+      display: block;
+      padding: 16px 18px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      text-decoration: none;
+      color: var(--text-1);
+      transition: border-color .15s ease, transform .15s ease;
+    }
+    .related-card:hover {
+      border-color: var(--brand);
+      transform: translateY(-2px);
+    }
+    .related-card .related-tag {
+      font-size: 11px;
+      color: var(--brand);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+    .related-card .related-title {
+      font-family: 'Fraunces', serif;
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 1.3;
+      margin-bottom: 4px;
+    }
+    .related-card .related-desc {
+      font-size: 13px;
+      color: var(--text-3);
+      line-height: 1.5;
+    }
+
+    /* ---------- FOOTER ---------- */
+    .blog-footer {
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      font-size: 14px;
+      color: var(--text-3);
+    }
+    .blog-footer a { color: var(--text-2); font-weight: 500; text-decoration: none; }
+    .blog-footer a:hover { color: var(--text-1); text-decoration: underline; }
+    .blog-footer .left {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .blog-footer .foot-mark {
+      width: 22px; height: 22px;
+      border-radius: 6px;
+      background: var(--brand);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .blog-footer .right { display: flex; gap: 18px; }
+
+    /* ---------- MOBILE ---------- */
+    @media (max-width: 640px) {
+      body { padding: 20px 18px 60px; font-size: 16px; }
+      .blog-header { margin-bottom: 32px; }
+      .lede { font-size: 17px; }
+      article h2 { font-size: 24px; margin-top: 44px; }
+      article h3 { font-size: 19px; }
+      .formula { font-size: 14px; padding: 14px 16px; }
+      .tool-mention { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="blog-header">
+    <a href="/" class="brand">
+      <span class="brand-mark"><svg viewBox="0 0 24 24" style="width:100%;height:100%;display:block" aria-hidden="true"><g transform="translate(3.6 3.6) scale(0.7)"><path d="M6.5 13.6 C5 13 4.2 11.6 4.5 10 C4.6 9.3 5 8.6 5.7 8.2 C5.4 7 6 6.1 7 5.8 C7 4.6 7.8 3.8 9 3.8 C9.3 2.8 10.5 2.2 12 2.2 C13.5 2.2 14.7 2.8 15 3.8 C16.2 3.8 17 4.6 17 5.8 C18 6.1 18.6 7 18.3 8.2 C19 8.6 19.4 9.3 19.5 10 C19.8 11.6 19 13 17.5 13.6 Z" fill="#fff"/><path d="M6.3 13.6 L17.7 13.6 L17.7 19.3 C17.7 20.2 17 21 16.1 21 L7.9 21 C7 21 6.3 20.2 6.3 19.3 Z" fill="#fff"/><path d="M8 13.4 C7.7 10.4 8 7.4 8.9 5 M10 13.5 C9.9 10 10 6.6 10.5 3.4 M12 13.5 V2.6 M14 13.5 C14.1 10 14 6.6 13.5 3.4 M16 13.4 C16.3 10.4 16 7.4 15.1 5" stroke="#16433a" stroke-width="0.5" stroke-linecap="round" fill="none"/></g></svg></span>
+      <span>ProChefDesk</span>
+    </a>
+    <div class="crumbs">
+      <a href="/blog/">← Blog</a>
+    </div>
+  </header>
+
+  <article>
+    <header>
+      <div class="tag">Food Safety · HACCP</div>
+      <h1>How to Write a HACCP Plan for a Small Kitchen</h1>
+      <p class="lede">A HACCP plan for a small restaurant does not need to be a fifty-page binder that nobody opens after the inspector leaves. It needs to be seven honest answers about where food can hurt someone in your kitchen — and proof you check them. Here's how to write one you'll actually use.</p>
+      <div class="article-meta">
+        <span>By Ahmet Kaya</span>
+        <span>11 min read</span>
+        <span>July 2026</span>
+      </div>
+    </header>
+
+    <p>I've written HACCP plans for a 400-cover banquet operation and for a six-seat private-dining setup run out of a converted domestic kitchen. The banquet plan was thirty pages. The private-dining one was two. Both passed audit. The difference wasn't rigour — it was scope. A small kitchen has fewer processes, fewer hazards, and fewer places to hide a shortcut, which is exactly why writing its plan is simpler than the consultants who sell templates want you to believe.</p>
+
+    <p>The mistake most small operators make is buying a generic plan, printing it, signing it, and shelving it. An auditor spots that in about ninety seconds, because the plan describes equipment you don't own and steps you don't do. A plan you wrote yourself, even a clumsy one, beats a polished template every time — because it matches your kitchen and because you can explain it when someone asks.</p>
+
+    <p>HACCP — Hazard Analysis and Critical Control Points — is seven principles. That's it. Below I'll walk each one in plain language, sized for an operation with one or two cooks and a menu you can hold in your head. The framework is the same one the <a href="https://www.fda.gov/food/hazard-analysis-critical-control-point-haccp/haccp-principles-application-guidelines" target="_blank" rel="noopener">US FDA lays out in its HACCP Principles &amp; Application Guidelines</a>, which itself follows the Codex Alimentarius standard used worldwide. You don't need to read the source document to write your plan, but it's there if an auditor challenges your interpretation.</p>
+
+    <h2>First, the ground you build on: prerequisite programs</h2>
+
+    <p>Before principle one, there's a layer HACCP assumes you already have. These are your <strong>prerequisite programs</strong> — the everyday hygiene disciplines that stop most hazards before they ever become a control point. Skip these and your HACCP plan is a roof with no walls.</p>
+
+    <p>For a small kitchen, three prerequisites carry most of the weight:</p>
+
+    <ul>
+      <li><strong>Cleaning and sanitising.</strong> A written schedule — surface, frequency, chemical, dilution, who signs. Clean removes soil; sanitise kills what's left. They're two steps, not one. If your plan can't say when the slicer was last broken down and sanitised, that's a gap an inspector will find.</li>
+      <li><strong>Pest control.</strong> Proofing, a bait-station map if you use a contractor, and a log of sightings. One mouse dropping near the flour bin turns a good inspection bad.</li>
+      <li><strong>Supplier and delivery control.</strong> Approved suppliers, and a receiving check at the door — temperature, packaging, date codes. Your cold chain is only as strong as the moment goods cross the threshold.</li>
+    </ul>
+
+    <p>Get these running as normal habits and the HACCP plan on top of them stays short, because most of your hazards are already handled by good practice. The plan then only has to control the few steps where good practice alone isn't enough proof.</p>
+
+    <h2>Principle 1 — Conduct a hazard analysis</h2>
+
+    <p>Walk your menu from delivery to plate and, at every step, ask one question: <em>what could make someone ill here, and is it likely enough to matter?</em> Hazards come in three types — biological (bacteria, viruses), chemical (cleaning agents, allergens, toxins), and physical (glass, bone, metal). For most small kitchens, biological hazards from temperature abuse are the giant; the other two are real but rarer.</p>
+
+    <p>The trap here is listing everything. A hazard analysis that flags forty risks is useless, because you can't monitor forty things during a Friday service. The discipline is to separate <strong>significant</strong> hazards — reasonably likely to occur and capable of causing real harm — from the trivial. A splinter of packaging is a hazard; it is not a significant one if you visually check on receiving. Salmonella surviving in undercooked chicken is significant, full stop.</p>
+
+    <div class="callout">
+      <strong>Do this on paper, once, honestly.</strong> Sit down with your actual menu — not a template's menu — and write the process steps for each dish family: cold prep, cooked-and-served-hot, cooked-cooled-reheated. Dishes in the same family share the same hazards, so you're not analysing forty dishes, you're analysing three or four flows. That grouping is what makes a small-kitchen plan manageable.
+    </div>
+
+    <h2>Principle 2 — Determine the critical control points</h2>
+
+    <p>A <strong>critical control point</strong> (CCP) is a step where you can apply control and it's <em>essential</em> to prevent or eliminate a significant hazard — a step where, if you get it wrong, there's no later step to catch it. That last clause is the filter. Chilling is a CCP because nothing downstream fixes food that sat in the danger zone too long. Garnishing is not a CCP, because it controls nothing biological.</p>
+
+    <p>Codex publishes a decision tree for this, and it's worth using once to train your instinct, but for a small hot-and-cold menu the CCPs almost always land on the same handful of steps:</p>
+
+    <table>
+      <thead>
+        <tr><th>Process step</th><th>CCP?</th><th>Why</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Receiving chilled/frozen goods</td><td>Usually a CP, sometimes CCP</td><td>Controlled by prerequisite receiving checks unless it's your only defence</td></tr>
+        <tr><td>Cold storage</td><td>CCP</td><td>Growth is prevented only by holding ≤5 °C; nothing downstream undoes abuse</td></tr>
+        <tr><td>Cooking</td><td>CCP</td><td>The kill step for pathogens in raw protein</td></tr>
+        <tr><td>Cooling cooked food</td><td>CCP</td><td>Danger-zone re-entry; no later step recovers it</td></tr>
+        <tr><td>Hot holding</td><td>CCP</td><td>Holding below 63 °C lets survivors multiply</td></tr>
+        <tr><td>Reheating</td><td>CCP</td><td>Second kill step for cooled food</td></tr>
+      </tbody>
+    </table>
+
+    <p>Notice most of these are temperature steps. That's not an accident — in a small kitchen, temperature is where the real risk lives, and it's also the one thing you can measure with a £15 probe. Keep your CCP list tight. Four to six is normal for a small operation. If you've written twelve, you've mislabelled some prerequisites as CCPs.</p>
+
+    <h2>Principle 3 — Establish critical limits</h2>
+
+    <p>Every CCP needs a number that separates safe from unsafe. Not "hot enough" — a figure, from your local food code. These are the ones most kitchens work to (check your own jurisdiction; the UK, EU, US and Gulf codes differ by a degree or two):</p>
+
+    <div class="formula">
+      Cook: core <span class="var">≥ 75 °C</span> · Cool: 60 → 21 °C in <span class="var">2 h</span>, then to ≤5 °C within <span class="var">6 h total</span> · Hot hold <span class="var">≥ 63 °C</span> · Cold hold <span class="var">≤ 5 °C</span> · Reheat <span class="var">≥ 75 °C</span>
+    </div>
+
+    <p>A critical limit has to be measurable in real time. "Chicken looks done" is not a critical limit; "core temperature ≥ 75 °C held for 30 seconds" is. The whole point is that you can stand at the station, probe the thickest part, read a number, and know instantly whether you passed or failed. If you can't measure it during service, it isn't a usable critical limit — rewrite it until it is.</p>
+
+    <h2>Principle 4 — Establish monitoring</h2>
+
+    <p>Monitoring answers three questions for each CCP: <strong>what</strong> you measure, <strong>how often</strong>, and <strong>who</strong> does it. For temperature CCPs this is a calibrated probe and a log. For a small kitchen the frequency should be realistic — you will not probe every single portion, and a plan that says you will is a plan you'll be caught lying about.</p>
+
+    <p>Set frequencies you can actually keep: fridge and freezer temps twice a day (open and close), cooking probed on the first batch of each protein and spot-checked after, cooling logged at the two checkpoints, hot-holding checked at the start of service and every two hours. Write those frequencies into the plan, then keep to them. Calibrate the probe — ice water should read 0 °C, boiling water 100 °C (adjust for altitude) — and log the calibration, because an auditor will ask when you last did it.</p>
+
+    <div class="tool-mention">
+      <span class="icon"><svg viewBox="0 0 24 24" style="width:100%;height:100%;display:block" aria-hidden="true"><g transform="translate(3.6 3.6) scale(0.7)"><path d="M6.5 13.6 C5 13 4.2 11.6 4.5 10 C4.6 9.3 5 8.6 5.7 8.2 C5.4 7 6 6.1 7 5.8 C7 4.6 7.8 3.8 9 3.8 C9.3 2.8 10.5 2.2 12 2.2 C13.5 2.2 14.7 2.8 15 3.8 C16.2 3.8 17 4.6 17 5.8 C18 6.1 18.6 7 18.3 8.2 C19 8.6 19.4 9.3 19.5 10 C19.8 11.6 19 13 17.5 13.6 Z" fill="#fff"/><path d="M6.3 13.6 L17.7 13.6 L17.7 19.3 C17.7 20.2 17 21 16.1 21 L7.9 21 C7 21 6.3 20.2 6.3 19.3 Z" fill="#fff"/><path d="M8 13.4 C7.7 10.4 8 7.4 8.9 5 M10 13.5 C9.9 10 10 6.6 10.5 3.4 M12 13.5 V2.6 M14 13.5 C14.1 10 14 6.6 13.5 3.4 M16 13.4 C16.3 10.4 16 7.4 15.1 5" stroke="#16433a" stroke-width="0.5" stroke-linecap="round" fill="none"/></g></svg></span>
+      <div>
+        <p class="label">In ProChefDesk</p>
+        <p>The <a href="/app/" target="_blank" rel="noopener">HACCP hub</a> gives you the four logs that cover a small kitchen's CCPs: daily fridge/freezer temperatures, cook &amp; cool records, receiving checks, and hot/cold holding. Each entry stamps the reading, the time, and the chef — so "who monitored" answers itself instead of being a signature you forge at month end. Fail a limit and the corrective-action box is right there on the same row.</p>
+      </div>
+    </div>
+
+    <h2>Principle 5 — Establish corrective actions</h2>
+
+    <p>Monitoring will, eventually, catch a failure. The plan has to say — in advance — what you do when it happens. A CCP without a written corrective action is half a control. Two things always get recorded: what you did to the <em>food</em>, and what you did to stop it <em>recurring</em>.</p>
+
+    <p>Worked example. The walk-in reads 9 °C at morning open. Your critical limit is ≤5 °C. Your corrective action, written before it ever happened, might be:</p>
+
+    <ol>
+      <li>Probe the actual food, not just the air. Product core still ≤5 °C and door was ajar overnight? Move it, close the door, monitor recovery.</li>
+      <li>Food core above 8 °C with unknown duration? Discard it. A £40 loss is cheaper than a food-poisoning claim, every time.</li>
+      <li>Log the reading, the action, the disposal, and — this is the part people skip — the fix: door seal replaced, engineer called, staff retrained on the close-down check.</li>
+    </ol>
+
+    <p>The corrective-action record is the single thing auditors scrutinise hardest, because a range-exceeded reading with a blank action box tells them your monitoring is decorative. A failure caught, acted on, and closed out shows the system working. Auditors would rather see three corrective actions handled well than a suspiciously perfect log with none.</p>
+
+    <h2>Principle 6 — Establish verification</h2>
+
+    <p>Monitoring proves the CCP was in control today. <strong>Verification</strong> proves the whole system is working over time — it's you checking the checker. In a big operation this is a quality manager and third-party labs. In a small kitchen it's you, once a week and once a year, doing three concrete things:</p>
+
+    <ul>
+      <li><strong>Review the logs</strong> weekly. Are they complete? Any gaps? Any pattern of near-misses on one fridge? Sign the review — that signature is your verification record.</li>
+      <li><strong>Re-calibrate probes</strong> on a set schedule and after any drop.</li>
+      <li><strong>Reassess the plan</strong> whenever the menu, equipment, or suppliers change — and at least once a year even if nothing did. New dish with a new cooling step? The plan is out of date the day it goes on the menu.</li>
+    </ul>
+
+    <p>Verification is the principle small operators forget, because monitoring feels like enough. It isn't. Monitoring is the reading; verification is the audit of your own readings. Without it, you can log religiously and still not notice that the same freezer has crept up half a degree a week for two months.</p>
+
+    <h2>Principle 7 — Record-keeping</h2>
+
+    <p>The last principle is the one everyone thinks HACCP <em>is</em>: the paperwork. It's actually the smallest, if you set it up right. Records exist for one reason — to prove, after the fact, that your controls ran. If you can't prove it, in law and in an auditor's eyes, it didn't happen.</p>
+
+    <p>Here's the honest split between paperwork you genuinely need and paperwork that's theatre:</p>
+
+    <table>
+      <thead>
+        <tr><th>Keep — genuinely load-bearing</th><th>Skip — theatre</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>The written HACCP plan itself (hazards, CCPs, limits)</td><td>Colour-coded 50-page binder you never open</td></tr>
+        <tr><td>Daily temperature logs (fridge, freezer, hot hold)</td><td>Duplicate handwritten <em>and</em> typed copies of the same reading</td></tr>
+        <tr><td>Cook / cool / reheat records for high-risk dishes</td><td>Probing and logging low-risk cold salads "to be safe"</td></tr>
+        <tr><td>Receiving log (temp on delivery, rejections)</td><td>A separate form for every supplier when one covers all</td></tr>
+        <tr><td>Corrective-action entries</td><td>Signing tomorrow's log today so it "looks complete"</td></tr>
+        <tr><td>Weekly verification sign-off + probe calibration</td><td>Photographs of every plate "for records"</td></tr>
+      </tbody>
+    </table>
+
+    <p>The theatre column is worse than useless — it eats time you could spend cooking and, when it's obviously copied or back-dated, it actively damages your credibility with an inspector. Keep the records that prove control. Bin the rest.</p>
+
+    <p>How long to keep them? Follow your local rule, but a practical default is the shelf life of the product plus a margin, or a rolling twelve months for daily logs — long enough to cover an investigation into an illness reported weeks after a meal.</p>
+
+    <h2>A worked flow for a small menu</h2>
+
+    <p>Let's make it real. Say your menu is a roast-of-the-day, a soup batch-cooked and reheated to order, and a cold mezze plate. Three flows, and the entire HACCP plan falls out of them:</p>
+
+    <ul>
+      <li><strong>Roast (cook-serve):</strong> receive (CP) → cold store (CCP, ≤5 °C) → cook (CCP, core ≥75 °C) → hot hold or serve (CCP, ≥63 °C). Monitor: first-batch probe, holding every 2 h.</li>
+      <li><strong>Soup (cook-cool-reheat):</strong> cook (CCP, ≥75 °C) → cool (CCP, 60→21 °C in 2 h, →5 °C by 6 h) → cold store (CCP) → reheat to order (CCP, ≥75 °C). This flow has the most CCPs because it re-enters the danger zone twice — it deserves the most attention.</li>
+      <li><strong>Mezze (cold prep):</strong> receive (CP) → cold store (CCP) → prep and cold hold (CCP, ≤5 °C). No cook step, so the whole risk is temperature and cross-contamination; allergen segregation is the chemical hazard here.</li>
+    </ul>
+
+    <p>That's the entire plan in three lines. The soup flow tells you cooling is your highest-risk process — which is exactly why it's the one most likely to fail an audit, and worth its own detailed procedure. Everything else is receiving, storage, and cooking, all handled by habits you should already have.</p>
+
+    <div class="tool-mention">
+      <span class="icon"><svg viewBox="0 0 24 24" style="width:100%;height:100%;display:block" aria-hidden="true"><g transform="translate(3.6 3.6) scale(0.7)"><path d="M6.5 13.6 C5 13 4.2 11.6 4.5 10 C4.6 9.3 5 8.6 5.7 8.2 C5.4 7 6 6.1 7 5.8 C7 4.6 7.8 3.8 9 3.8 C9.3 2.8 10.5 2.2 12 2.2 C13.5 2.2 14.7 2.8 15 3.8 C16.2 3.8 17 4.6 17 5.8 C18 6.1 18.6 7 18.3 8.2 C19 8.6 19.4 9.3 19.5 10 C19.8 11.6 19 13 17.5 13.6 Z" fill="#fff"/><path d="M6.3 13.6 L17.7 13.6 L17.7 19.3 C17.7 20.2 17 21 16.1 21 L7.9 21 C7 21 6.3 20.2 6.3 19.3 Z" fill="#fff"/><path d="M8 13.4 C7.7 10.4 8 7.4 8.9 5 M10 13.5 C9.9 10 10 6.6 10.5 3.4 M12 13.5 V2.6 M14 13.5 C14.1 10 14 6.6 13.5 3.4 M16 13.4 C16.3 10.4 16 7.4 15.1 5" stroke="#16433a" stroke-width="0.5" stroke-linecap="round" fill="none"/></g></svg></span>
+      <div>
+        <p class="label">In ProChefDesk</p>
+        <p>Once your flows are mapped, the <a href="/app/" target="_blank" rel="noopener">HACCP hub</a> turns them into a routine: log the day's readings on the phone by the fridge, and the Audit Pack rolls a month of temperature, cooling, receiving and holding records into one document. It also shows your daily-log coverage — how many days you actually logged versus how many you should have — which is the completeness number an auditor cares about more than your pass rate.</p>
+      </div>
+    </div>
+
+    <h2>What "done" looks like</h2>
+
+    <p>A finished small-kitchen HACCP plan is a few pages: a one-line description of your operation, your prerequisite programs, a hazard analysis grouped by flow, a CCP table with limits and monitoring, your corrective actions, and how you verify. Behind it sit the daily logs. That's a complete, defensible food safety plan for a small restaurant — and it's genuinely writable in an afternoon if you know your own menu.</p>
+
+    <p>Don't let the word HACCP make it bigger than it is. The seven principles are just a structured way of asking where food can hurt someone, deciding how you'll stop it, and keeping proof you did. The kitchens that fail audits rarely fail on the plan's design. They fail because the plan was somebody else's, or because the logs stopped in March.</p>
+
+    <blockquote>"The auditor didn't read my plan front to back. She opened the temperature logs, found a gap in the middle of a busy month, and asked what happened that week."</blockquote>
+
+    <p>Write your own plan, keep it short, and keep the logs alive. A two-page plan you follow beats a fifty-page one you signed and shelved. Every time.</p>
+
+    <div class="end-mark"></div>
+  </article>
+
+  <!-- Related posts cross-link (internal linking for SEO + reader retention) -->
+  <section class="related-posts" aria-label="Related articles">
+    <h3>Related reading</h3>
+    <div class="related-grid">
+      <a href="/blog/haccp-audit-preparation.html" class="related-card">
+        <div class="related-tag">Food Safety</div>
+        <div class="related-title">How to Prepare Your Kitchen for a HACCP Audit</div>
+        <div class="related-desc">The records auditors check first and how to have them ready.</div>
+      </a>
+      <a href="/blog/cook-and-cool-haccp-temperature.html" class="related-card">
+        <div class="related-tag">Food Safety · HACCP</div>
+        <div class="related-title">Cook &amp; Cool HACCP: 60 to 5C in 6 Hours</div>
+        <div class="related-desc">The two-stage cooling rule and the tactics that pass it.</div>
+      </a>
+    </div>
+  </section>
+
+  <footer class="blog-footer">
+    <div class="left">
+      <span class="foot-mark"><svg viewBox="0 0 24 24" style="width:100%;height:100%;display:block" aria-hidden="true"><g transform="translate(3.6 3.6) scale(0.7)"><path d="M6.5 13.6 C5 13 4.2 11.6 4.5 10 C4.6 9.3 5 8.6 5.7 8.2 C5.4 7 6 6.1 7 5.8 C7 4.6 7.8 3.8 9 3.8 C9.3 2.8 10.5 2.2 12 2.2 C13.5 2.2 14.7 2.8 15 3.8 C16.2 3.8 17 4.6 17 5.8 C18 6.1 18.6 7 18.3 8.2 C19 8.6 19.4 9.3 19.5 10 C19.8 11.6 19 13 17.5 13.6 Z" fill="#fff"/><path d="M6.3 13.6 L17.7 13.6 L17.7 19.3 C17.7 20.2 17 21 16.1 21 L7.9 21 C7 21 6.3 20.2 6.3 19.3 Z" fill="#fff"/><path d="M8 13.4 C7.7 10.4 8 7.4 8.9 5 M10 13.5 C9.9 10 10 6.6 10.5 3.4 M12 13.5 V2.6 M14 13.5 C14.1 10 14 6.6 13.5 3.4 M16 13.4 C16.3 10.4 16 7.4 15.1 5" stroke="#16433a" stroke-width="0.5" stroke-linecap="round" fill="none"/></g></svg></span>
+      <span>ProChefDesk · written from a working kitchen</span>
+    </div>
+    <div class="right">
+      <a href="/blog/">All posts</a>
+      <a href="/app/">Open app</a>
+      <a href="/privacy.html">Privacy</a>
+    </div>
+  </footer>
+
+</body>
+</html>

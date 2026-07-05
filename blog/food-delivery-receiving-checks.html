@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#FAF7F2">
+  <meta name="robots" content="index, follow">
+  <title>Receiving Deliveries: The Checks and the Record — ProChefDesk</title>
+  <meta name="description" content="The door is a control point. What to check, what to reject, and the log that proves the cold chain never broke on your watch.">
+  <link rel="canonical" href="https://prochefdesk.com/blog/food-delivery-receiving-checks.html">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Receiving Deliveries: The Checks and the Record">
+  <meta property="og:description" content="The door is a control point. What to check, what to reject, and the log that proves the cold chain never broke on your watch.">
+  <meta property="og:url" content="https://prochefdesk.com/blog/food-delivery-receiving-checks.html">
+  <meta property="og:type" content="article">
+  <meta property="og:image" content="https://prochefdesk.com/og-image.png">
+  <meta property="article:published_time" content="2026-07-05">
+  <meta property="article:author" content="Ahmet Kaya">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Receiving Deliveries: The Checks and the Record">
+  <meta name="twitter:description" content="What to check, what to reject, and the receiving log that proves the cold chain held on your watch.">
+  <meta name="twitter:image" content="https://prochefdesk.com/og-image.png">
+
+  <!-- JSON-LD Article schema (Google rich results) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "Receiving Deliveries: The Checks and the Record",
+    "description": "The door is a control point. What to check, what to reject, and the log that proves the cold chain never broke on your watch.",
+    "image": "https://prochefdesk.com/og-image.png",
+    "datePublished": "2026-07-05",
+    "dateModified": "2026-07-05",
+    "author": {
+      "@type": "Person",
+      "name": "Ahmet Kaya",
+      "jobTitle": "Professional Chef",
+      "worksFor": {
+        "@type": "Organization",
+        "name": "ProChefDesk"
+      }
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "ProChefDesk",
+      "url": "https://prochefdesk.com",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://prochefdesk.com/og-image.png"
+      }
+    },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": "https://prochefdesk.com/blog/food-delivery-receiving-checks.html"
+    },
+    "wordCount": 2500,
+    "keywords": "food delivery temperature check, receiving food safety, goods in check"
+  }
+  </script>
+
+  <link rel="icon" type="image/svg+xml" href="/app/assets/icon.svg">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* Single source of truth for blog post styling. To create a new
+       post, copy this entire file, rename, replace meta tags above
+       and the <article> content below. CSS stays identical. */
+
+    :root {
+      --bg: #FAF7F2;
+      --paper: #FFFEFA;
+      --text-1: #1A1916;
+      --text-2: #3A3631;
+      --text-3: #8A857C;
+      --line: #E5DFD2;
+      --primary: #2D4A3E;
+      --brand: #16a34a;
+      --copper: #B85C3C;
+      --code-bg: #F0EBE0;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 28px 24px 80px;
+      line-height: 1.72;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-size: 17px;
+      background: var(--bg);
+      color: var(--text-1);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    a { color: var(--primary); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+    a:hover { color: var(--text-1); }
+
+    /* ---------- HEADER ---------- */
+    .blog-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 40px;
+      font-family: 'Inter', sans-serif;
+    }
+    .brand {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 600;
+      font-size: 18px;
+      letter-spacing: -0.015em;
+      color: var(--text-1);
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+    .brand:hover { color: var(--primary); }
+    .brand-mark {
+      width: 28px; height: 28px;
+      border-radius: 7px;
+      background: var(--brand);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Inter', sans-serif;
+      font-weight: 700;
+      font-size: 11px;
+    }
+    .crumbs {
+      font-size: 13px;
+      color: var(--text-3);
+    }
+    .crumbs a { color: var(--text-3); text-decoration: none; }
+    .crumbs a:hover { color: var(--text-1); }
+
+    /* ---------- ARTICLE ---------- */
+    article header { margin-bottom: 36px; }
+    .tag {
+      display: inline-block;
+      color: var(--primary);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-size: 11px;
+      margin-bottom: 16px;
+    }
+    h1 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 500;
+      font-size: clamp(32px, 5vw, 44px);
+      line-height: 1.08;
+      letter-spacing: -0.025em;
+      margin: 0 0 18px;
+      color: var(--text-1);
+    }
+    .lede {
+      font-size: 19px;
+      color: var(--text-2);
+      line-height: 1.55;
+      margin: 0 0 24px;
+    }
+    .article-meta {
+      font-size: 13px;
+      color: var(--text-3);
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    article h2 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 500;
+      font-size: 28px;
+      line-height: 1.18;
+      letter-spacing: -0.018em;
+      margin: 56px 0 16px;
+      color: var(--text-1);
+    }
+    article h3 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 500;
+      font-size: 21px;
+      line-height: 1.25;
+      letter-spacing: -0.012em;
+      margin: 36px 0 12px;
+      color: var(--text-1);
+    }
+    article p { color: var(--text-2); margin: 0 0 20px; }
+    article ul, article ol { color: var(--text-2); margin: 0 0 20px; padding-inline-start: 24px; }
+    article li { margin-bottom: 6px; }
+    article strong { color: var(--text-1); font-weight: 600; }
+
+    blockquote {
+      border-left: 3px solid var(--primary);
+      padding: 6px 0 6px 20px;
+      margin: 28px 0;
+      font-family: 'Fraunces', Georgia, serif;
+      font-style: italic;
+      font-size: 19px;
+      color: var(--text-1);
+      line-height: 1.5;
+    }
+
+    .formula {
+      background: var(--code-bg);
+      border-radius: 8px;
+      padding: 18px 22px;
+      margin: 24px 0;
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+      font-size: 16px;
+      text-align: center;
+      color: var(--text-1);
+      border: 1px solid var(--line);
+    }
+    .formula .var { color: var(--primary); font-weight: 600; }
+
+    .callout {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--copper);
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin: 28px 0;
+      font-size: 16px;
+    }
+    .callout strong { color: var(--copper); }
+
+    .tool-mention {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 18px 22px;
+      margin: 28px 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      font-size: 15px;
+    }
+    .tool-mention .icon {
+      width: 36px; height: 36px;
+      flex-shrink: 0;
+      border-radius: 8px;
+      background: var(--brand);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 13px;
+    }
+    .tool-mention p { margin: 0 0 6px; color: var(--text-2); }
+    .tool-mention p:last-child { margin: 0; }
+    .tool-mention .label {
+      font-weight: 600;
+      color: var(--text-1);
+      font-family: 'Inter', sans-serif;
+    }
+    .tool-mention a { color: var(--primary); font-weight: 600; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 24px 0;
+      font-size: 15px;
+    }
+    th, td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--line);
+    }
+    th {
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      color: var(--text-1);
+      background: var(--paper);
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    td { color: var(--text-2); }
+
+    .end-mark {
+      width: 24px; height: 4px;
+      background: var(--primary);
+      margin: 56px auto 32px;
+    }
+
+    /* v2.8.94 — Related posts section (footer'dan önce, cross-link için) */
+    .related-posts {
+      margin: 56px 0 24px;
+      padding: 24px 0;
+      border-top: 1px solid var(--line);
+    }
+    .related-posts h3 {
+      font-family: 'Fraunces', serif;
+      font-size: 22px;
+      font-weight: 600;
+      margin: 0 0 18px;
+      color: var(--primary);
+    }
+    .related-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+    }
+    .related-card {
+      display: block;
+      padding: 16px 18px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      text-decoration: none;
+      color: var(--text-1);
+      transition: border-color .15s ease, transform .15s ease;
+    }
+    .related-card:hover {
+      border-color: var(--brand);
+      transform: translateY(-2px);
+    }
+    .related-card .related-tag {
+      font-size: 11px;
+      color: var(--brand);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+    .related-card .related-title {
+      font-family: 'Fraunces', serif;
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 1.3;
+      margin-bottom: 4px;
+    }
+    .related-card .related-desc {
+      font-size: 13px;
+      color: var(--text-3);
+      line-height: 1.5;
+    }
+
+    /* ---------- FOOTER ---------- */
+    .blog-footer {
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      font-size: 14px;
+      color: var(--text-3);
+    }
+    .blog-footer a { color: var(--text-2); font-weight: 500; text-decoration: none; }
+    .blog-footer a:hover { color: var(--text-1); text-decoration: underline; }
+    .blog-footer .left {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .blog-footer .foot-mark {
+      width: 22px; height: 22px;
+      border-radius: 6px;
+      background: var(--brand);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .blog-footer .right { display: flex; gap: 18px; }
+
+    /* ---------- MOBILE ---------- */
+    @media (max-width: 640px) {
+      body { padding: 20px 18px 60px; font-size: 16px; }
+      .blog-header { margin-bottom: 32px; }
+      .lede { font-size: 17px; }
+      article h2 { font-size: 24px; margin-top: 44px; }
+      article h3 { font-size: 19px; }
+      .formula { font-size: 14px; padding: 14px 16px; }
+      .tool-mention { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="blog-header">
+    <a href="/" class="brand">
+      <span class="brand-mark"><svg viewBox="0 0 24 24" style="width:100%;height:100%;display:block" aria-hidden="true"><g transform="translate(3.6 3.6) scale(0.7)"><path d="M6.5 13.6 C5 13 4.2 11.6 4.5 10 C4.6 9.3 5 8.6 5.7 8.2 C5.4 7 6 6.1 7 5.8 C7 4.6 7.8 3.8 9 3.8 C9.3 2.8 10.5 2.2 12 2.2 C13.5 2.2 14.7 2.8 15 3.8 C16.2 3.8 17 4.6 17 5.8 C18 6.1 18.6 7 18.3 8.2 C19 8.6 19.4 9.3 19.5 10 C19.8 11.6 19 13 17.5 13.6 Z" fill="#fff"/><path d="M6.3 13.6 L17.7 13.6 L17.7 19.3 C17.7 20.2 17 21 16.1 21 L7.9 21 C7 21 6.3 20.2 6.3 19.3 Z" fill="#fff"/><path d="M8 13.4 C7.7 10.4 8 7.4 8.9 5 M10 13.5 C9.9 10 10 6.6 10.5 3.4 M12 13.5 V2.6 M14 13.5 C14.1 10 14 6.6 13.5 3.4 M16 13.4 C16.3 10.4 16 7.4 15.1 5" stroke="#16433a" stroke-width="0.5" stroke-linecap="round" fill="none"/></g></svg></span>
+      <span>ProChefDesk</span>
+    </a>
+    <div class="crumbs">
+      <a href="/blog/">← Blog</a>
+    </div>
+  </header>
+
+  <article>
+    <header>
+      <div class="tag">Food Safety · Records</div>
+      <h1>Receiving Deliveries: The Checks and the Record</h1>
+      <p class="lede">The back door is a control point, whether you treat it like one or not. Every food delivery temperature check you skip is a gap in the cold chain you can't prove was safe. Here's what to check, what to send straight back, and the log that keeps an auditor off your back.</p>
+      <div class="article-meta">
+        <span>By Ahmet Kaya</span>
+        <span>9 min read</span>
+        <span>July 2026</span>
+      </div>
+    </header>
+
+    <p>The delivery lands at 07:40, in the middle of prep, and the driver is already glancing at his watch because he has eleven more drops before lunch. That is exactly the moment food safety quietly falls over. Someone signs the docket, the crates go into the walk-in, and nobody put a probe near the chicken.</p>
+
+    <p>Receiving is the one control point where you can stop a problem before it enters the building. Once that box is on your shelf, its history belongs to you. If the chicken travelled at 9°C for two hours in a van with a dying fridge, you now own that risk — and you have no paper that says otherwise. This piece is about closing the door properly: the checks that take ninety seconds, the reject calls most chefs are too polite to make, and the record that turns "I'm pretty sure it was cold" into something an inspector will accept.</p>
+
+    <h2>Why the door is a control point</h2>
+
+    <p>Cook, chill and reheat get all the attention in HACCP plans because they involve fire and thermometers and drama. Receiving gets a shrug. But think about what's actually happening: product that has been out of your control — packed, loaded, driven, sometimes cross-docked — is crossing your threshold. You have no idea what happened between the supplier's chiller and your door unless you check. The whole cold chain up to this instant is a black box, and the receiving check is the only window you get into it.</p>
+
+    <p>The US FDA Food Code treats time and temperature control for safety (TCS) foods at receipt as an explicit requirement: refrigerated TCS food must arrive at 41°F (5°C) or below, and the operator has to be able to demonstrate it. You can read the model rule and the reasoning behind it in the <a href="https://www.fda.gov/food/retail-food-protection/fda-food-code" target="_blank" rel="noopener">US FDA Food Code</a>, which most state and local codes adopt with minor edits. In the UK and Australia the temperatures are framed slightly differently — the UK FSA works to an 8°C legal maximum for chilled storage but good practice targets 5°C, and the same principle holds everywhere: cold food arrives cold, or it doesn't come in.</p>
+
+    <div class="callout">
+      <strong>The one rule that matters:</strong> a rejected delivery is cheaper than a closed kitchen. The single most common failure I see isn't a chef who doesn't know the temperature — it's a chef who knows it, reads 9°C, and signs anyway because rejecting feels rude and the sub-recipe needs that chicken by service. Learn to send it back. Your supplier will respect you more, not less.</p>
+    </div>
+
+    <h2>The checks, in the order you actually do them</h2>
+
+    <p>You don't have all morning. The trick is a fixed sequence that hits the high-risk stuff first, so if you have to stop after thirty seconds you've already caught the thing most likely to hurt someone.</p>
+
+    <h3>1. Temperature — chilled and frozen, probed properly</h3>
+
+    <p>This is the check people fake. A probe laid on top of a shrink-wrapped tray reads the surface, which warms and cools fast and tells you almost nothing. You want the temperature <em>between</em> two packs, or — for an opened case — the core of the product. A clean, sanitised probe, inserted, given three or four seconds to settle.</p>
+
+    <div class="formula">
+      Chilled TCS food: <span class="var">≤ 5°C (41°F)</span> &nbsp;·&nbsp; Frozen food: <span class="var">≤ −18°C (0°F)</span>
+    </div>
+
+    <p>Frozen product should be hard through and through. Soft edges, a block of what was clearly loose peas now welded into one lump, ice crystals on the inside of the bag — that's a product that thawed and refroze somewhere along the line. It may be at −18°C right now, but it wasn't an hour ago, and refrozen product is both a quality write-off and a safety flag. Reject it.</p>
+
+    <p>Between the sanitising wipes, one probe reading per high-risk line, and writing the number down, a proper temperature check on a mixed chilled and frozen delivery runs about ninety seconds to two minutes. That is the entire cost of the most important thing you'll do all morning.</p>
+
+    <h3>2. Packaging integrity</h3>
+
+    <p>Torn vacuum packs. A swollen pouch (gas from bacterial growth — this is a hard reject, no discussion). Dented cans, especially seam dents or any dent you can catch a fingernail in. Leaking cartons, weeping trays of raw meat that have dripped onto the produce below them in the same crate. Damaged packaging isn't cosmetic; it's a broken barrier between your food and whatever was in the van.</p>
+
+    <h3>3. Dates and rotation</h3>
+
+    <p>Check the use-by and best-before on what's arriving, not just that they exist. A delivery of yoghurt with two days of life left is useless if you use it over a week. This is also where you catch the supplier quietly clearing short-dated stock onto you. If the date won't survive your normal usage cycle, it goes back.</p>
+
+    <h3>4. Pest signs and general condition</h3>
+
+    <p>Gnaw marks on cardboard, droppings in the bottom of a crate, a moth in a flour sack, live or dead insects in produce. Rare, but when you see it you reject the whole affected consignment and you tell the supplier in writing — because if it's in your delivery, it's in their store.</p>
+
+    <h3>5. Vehicle and driver</h3>
+
+    <p>Glance into the van. Is the refrigeration actually running or is it a dry box with a chill blanket over the pallet? Are raw and ready-to-eat stacked together with raw on top? Is the load bay filthy? You're allowed to note this and, in a bad case, refuse. A driver who props the doors open at every drop is undoing the cold chain one stop at a time.</p>
+
+    <table>
+      <thead>
+        <tr><th>What you find</th><th>Call</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Chilled TCS food at 6–8°C</td><td>Borderline — reject or use immediately with a noted corrective action; never store as normal</td></tr>
+        <tr><td>Chilled TCS food above 8°C</td><td>Reject</td></tr>
+        <tr><td>Frozen soft / refrozen / heavy ice crystals</td><td>Reject</td></tr>
+        <tr><td>Swollen pouch or blown can</td><td>Reject, isolate, tell supplier</td></tr>
+        <tr><td>Seam-dented can</td><td>Reject</td></tr>
+        <tr><td>Short date that won't survive usage</td><td>Reject</td></tr>
+        <tr><td>Pest evidence</td><td>Reject whole affected consignment, report in writing</td></tr>
+        <tr><td>Raw dripping onto ready-to-eat in the van</td><td>Reject the contaminated items</td></tr>
+      </tbody>
+    </table>
+
+    <p>The 6–8°C row is where judgement lives. A single line at 6°C on a hot day, when the rest of the load is at 4°C, is often a probe-and-pack quirk you can manage by using it first and logging why. A whole chilled load at 7°C is a failed van, and you send the lot back. The difference is pattern: one warm pack is noise, a warm load is a failure.</p>
+
+    <h2>The receiving log: what goes in it and why an auditor cares</h2>
+
+    <p>Here is the uncomfortable truth about receiving food safety: if you didn't write it down, you didn't do it. An inspector standing in your kitchen next Tuesday cannot see the probe reading you took last Thursday. The receiving log is the only evidence that the goods in check happened at all, and a log with honest gaps and the odd rejection in it is far more credible than a suspiciously perfect one.</p>
+
+    <p>A working receiving log needs these fields:</p>
+
+    <table>
+      <thead>
+        <tr><th>Field</th><th>Why it's there</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Date &amp; time</td><td>Ties the reading to the delivery and to who was on shift</td></tr>
+        <tr><td>Supplier</td><td>Traceability — lets you trace a recall or a repeat offender</td></tr>
+        <tr><td>Delivery / product</td><td>What was checked, so a blanket "all fine" can't hide one bad line</td></tr>
+        <tr><td>Temperature read</td><td>The actual probe number, chilled and frozen — the core evidence</td></tr>
+        <tr><td>Condition OK? (Y/N)</td><td>Packaging, dates, pest, vehicle — the non-temperature checks in one call</td></tr>
+        <tr><td>Accepted / rejected</td><td>Proves you act on what you find, not just record it</td></tr>
+        <tr><td>Corrective action / note</td><td>What you did when something failed — the field auditors read first</td></tr>
+        <tr><td>Checked by (initials)</td><td>Accountability; names a person to the decision</td></tr>
+      </tbody>
+    </table>
+
+    <p>The field auditors care about most is not the temperature — it's the corrective action. A log full of "42°F, accepted, AK" tells them the readings were taken. A single line reading "chicken 7°C, rejected, driver took back, supplier informed, AK" tells them your system <em>works under stress</em>. That one rejection is worth more to your audit than a hundred clean lines, because it's the only proof that when the process found a problem, a human acted on it. Auditors trust systems that visibly catch failures. They're suspicious of systems that never seem to.</p>
+
+    <p>Keep the log for the retention period your local code sets — commonly the shelf life of the product plus a margin, and often a fixed period such as three months or longer for the paperwork itself. When in doubt, keep it longer; the storage is free and the peace of mind isn't.</p>
+
+    <div class="tool-mention">
+      <span class="icon"><svg viewBox="0 0 24 24" style="width:100%;height:100%;display:block" aria-hidden="true"><g transform="translate(3.6 3.6) scale(0.7)"><path d="M6.5 13.6 C5 13 4.2 11.6 4.5 10 C4.6 9.3 5 8.6 5.7 8.2 C5.4 7 6 6.1 7 5.8 C7 4.6 7.8 3.8 9 3.8 C9.3 2.8 10.5 2.2 12 2.2 C13.5 2.2 14.7 2.8 15 3.8 C16.2 3.8 17 4.6 17 5.8 C18 6.1 18.6 7 18.3 8.2 C19 8.6 19.4 9.3 19.5 10 C19.8 11.6 19 13 17.5 13.6 Z" fill="#fff"/><path d="M6.3 13.6 L17.7 13.6 L17.7 19.3 C17.7 20.2 17 21 16.1 21 L7.9 21 C7 21 6.3 20.2 6.3 19.3 Z" fill="#fff"/><path d="M8 13.4 C7.7 10.4 8 7.4 8.9 5 M10 13.5 C9.9 10 10 6.6 10.5 3.4 M12 13.5 V2.6 M14 13.5 C14.1 10 14 6.6 13.5 3.4 M16 13.4 C16.3 10.4 16 7.4 15.1 5" stroke="#16433a" stroke-width="0.5" stroke-linecap="round" fill="none"/></g></svg></span>
+      <div>
+        <p class="label">In ProChefDesk</p>
+        <p>The <a href="/app/" target="_blank" rel="noopener">HACCP receiving log</a> gives you exactly these fields on a phone at the back door — date, supplier, delivery temperature, a condition-OK toggle and a note box for the corrective action. It runs the temperature against your region's threshold and marks the line pass or fail for you, so a delivery over 5°C flags itself. No clipboard, no transcribing a soggy sheet into a folder at the end of the week.</p>
+      </div>
+    </div>
+
+    <h2>A workflow that survives a busy back door</h2>
+
+    <p>The reason receiving checks get skipped is friction. Any system that assumes you have a calm five minutes and a clean pen will fail at 07:40. Design for the real morning instead.</p>
+
+    <ol>
+      <li><strong>Probe in your apron, sanitising wipes by the door.</strong> If the tool isn't within arm's reach, the check doesn't happen. Keep a dedicated receiving probe so you're not hunting for the one from the sauce station.</li>
+      <li><strong>Highest-risk line first.</strong> Poultry, raw meat, seafood, dairy — the TCS foods. Probe those before you even look at the dry goods. If the driver has to leave, you've measured what matters.</li>
+      <li><strong>Log at the door, not later.</strong> "I'll write it up after prep" means it never gets written, or gets written from memory, which is worthless as evidence. Enter the number while the crate is still in front of you.</li>
+      <li><strong>Reject at the door too.</strong> Once it's on your shelf, sending it back becomes a phone call, a credit note and an argument. At the door it's just a crate that goes back on the van. Make the call before you sign.</li>
+      <li><strong>Sign the docket last.</strong> Your signature is you accepting the goods in their current condition. Don't sign until you've decided what you're keeping.</li>
+    </ol>
+
+    <p>One more habit worth building: cross-check the delivery against what you actually ordered before it leaves the van. A short-delivered line or a substituted item you didn't approve is easiest to sort out while the driver is still standing there. It's not strictly a safety check, but it lives in the same ninety seconds and saves the mid-service discovery that you're two cases short.</p>
+
+    <div class="callout">
+      <strong>A quiet cost most kitchens miss:</strong> the goods in check is also your first line of stock accuracy. If you're receiving on autopilot and signing for what the docket claims rather than what's in the crate, your inventory and your food cost are wrong from the moment the delivery lands — before a single portion is served.</p>
+    </div>
+
+    <h2>The honest summary</h2>
+
+    <p>Receiving is ninety seconds of work that most chefs treat as zero seconds of work, and it's the cheapest food safety win in the building. You cannot fix at the pass what walked in broken at the door. Probe the chilled at 5°C, the frozen at −18°C, look at the packaging and the dates and the van, and reject without apology when something's wrong.</p>
+
+    <p>Then write it down. Not because the log makes the food safer — the checking does that — but because the log is the only thing that proves, weeks later, to an inspector or an insurer or your own worried self at 3am, that the cold chain didn't break on your watch. The chef who can put a finger on Thursday's line and say "here, I checked, it was 4°C, I signed" sleeps better than the one who's pretty sure it was fine.</p>
+
+    <blockquote>"The delivery I remember best is the one I sent back. Everyone watched me do it. Nobody argued with a temperature check on that dock again."</blockquote>
+
+    <p>Make the reject once, in front of your team, and the standard sets itself. That's worth more than any policy on the wall.</p>
+
+    <div class="end-mark"></div>
+  </article>
+
+  <!-- Related posts cross-link (internal linking for SEO + reader retention) -->
+  <section class="related-posts" aria-label="Related articles">
+    <h3>Related reading</h3>
+    <div class="related-grid">
+      <a href="/blog/haccp-temperature-log-template.html" class="related-card">
+        <div class="related-tag">HACCP · Records</div>
+        <div class="related-title">HACCP Temperature Log: What to Record and How Often</div>
+        <div class="related-desc">The seven columns and the corrective-action box that passes audit.</div>
+      </a>
+      <a href="/blog/haccp-audit-preparation.html" class="related-card">
+        <div class="related-tag">Food Safety</div>
+        <div class="related-title">How to Prepare Your Kitchen for a HACCP Audit</div>
+        <div class="related-desc">The records auditors check first and how to have them ready.</div>
+      </a>
+    </div>
+  </section>
+
+  <footer class="blog-footer">
+    <div class="left">
+      <span class="foot-mark"><svg viewBox="0 0 24 24" style="width:100%;height:100%;display:block" aria-hidden="true"><g transform="translate(3.6 3.6) scale(0.7)"><path d="M6.5 13.6 C5 13 4.2 11.6 4.5 10 C4.6 9.3 5 8.6 5.7 8.2 C5.4 7 6 6.1 7 5.8 C7 4.6 7.8 3.8 9 3.8 C9.3 2.8 10.5 2.2 12 2.2 C13.5 2.2 14.7 2.8 15 3.8 C16.2 3.8 17 4.6 17 5.8 C18 6.1 18.6 7 18.3 8.2 C19 8.6 19.4 9.3 19.5 10 C19.8 11.6 19 13 17.5 13.6 Z" fill="#fff"/><path d="M6.3 13.6 L17.7 13.6 L17.7 19.3 C17.7 20.2 17 21 16.1 21 L7.9 21 C7 21 6.3 20.2 6.3 19.3 Z" fill="#fff"/><path d="M8 13.4 C7.7 10.4 8 7.4 8.9 5 M10 13.5 C9.9 10 10 6.6 10.5 3.4 M12 13.5 V2.6 M14 13.5 C14.1 10 14 6.6 13.5 3.4 M16 13.4 C16.3 10.4 16 7.4 15.1 5" stroke="#16433a" stroke-width="0.5" stroke-linecap="round" fill="none"/></g></svg></span>
+      <span>ProChefDesk · written from a working kitchen</span>
+    </div>
+    <div class="right">
+      <a href="/blog/">All posts</a>
+      <a href="/app/">Open app</a>
+      <a href="/privacy.html">Privacy</a>
+    </div>
+  </footer>
+
+</body>
+</html>

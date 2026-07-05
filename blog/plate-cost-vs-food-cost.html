@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#FAF7F2">
+  <meta name="robots" content="index, follow">
+  <title>Plate Cost vs Food Cost Percentage: The Difference That Matters — ProChefDesk</title>
+  <meta name="description" content="One is dollars on the plate, the other is a ratio — and optimising the wrong one quietly costs you gross profit.">
+  <link rel="canonical" href="https://prochefdesk.com/blog/plate-cost-vs-food-cost.html">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Plate Cost vs Food Cost Percentage: The Difference That Matters">
+  <meta property="og:description" content="One is dollars on the plate, the other is a ratio — and optimising the wrong one quietly costs you gross profit.">
+  <meta property="og:url" content="https://prochefdesk.com/blog/plate-cost-vs-food-cost.html">
+  <meta property="og:type" content="article">
+  <meta property="og:image" content="https://prochefdesk.com/og-image.png">
+  <meta property="article:published_time" content="2026-07-05">
+  <meta property="article:author" content="Ahmet Kaya">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Plate Cost vs Food Cost Percentage: The Difference That Matters">
+  <meta name="twitter:description" content="One is dollars on the plate, the other is a ratio — and optimising the wrong one quietly costs you gross profit.">
+  <meta name="twitter:image" content="https://prochefdesk.com/og-image.png">
+
+  <!-- JSON-LD Article schema (Google rich results) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "Plate Cost vs Food Cost Percentage: The Difference That Matters",
+    "description": "One is dollars on the plate, the other is a ratio — and optimising the wrong one quietly costs you gross profit.",
+    "image": "https://prochefdesk.com/og-image.png",
+    "datePublished": "2026-07-05",
+    "dateModified": "2026-07-05",
+    "author": {
+      "@type": "Person",
+      "name": "Ahmet Kaya",
+      "jobTitle": "Professional Chef",
+      "worksFor": {
+        "@type": "Organization",
+        "name": "ProChefDesk"
+      }
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "ProChefDesk",
+      "url": "https://prochefdesk.com",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://prochefdesk.com/og-image.png"
+      }
+    },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": "https://prochefdesk.com/blog/plate-cost-vs-food-cost.html"
+    },
+    "wordCount": 2400,
+    "keywords": "plate cost, food cost percentage, contribution margin"
+  }
+  </script>
+
+  <link rel="icon" type="image/svg+xml" href="/app/assets/icon.svg">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* Single source of truth for blog post styling. To create a new
+       post, copy this entire file, rename, replace meta tags above
+       and the <article> content below. CSS stays identical. */
+
+    :root {
+      --bg: #FAF7F2;
+      --paper: #FFFEFA;
+      --text-1: #1A1916;
+      --text-2: #3A3631;
+      --text-3: #8A857C;
+      --line: #E5DFD2;
+      --primary: #2D4A3E;
+      --brand: #16a34a;
+      --copper: #B85C3C;
+      --code-bg: #F0EBE0;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 28px 24px 80px;
+      line-height: 1.72;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-size: 17px;
+      background: var(--bg);
+      color: var(--text-1);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    a { color: var(--primary); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+    a:hover { color: var(--text-1); }
+
+    /* ---------- HEADER ---------- */
+    .blog-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 40px;
+      font-family: 'Inter', sans-serif;
+    }
+    .brand {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 600;
+      font-size: 18px;
+      letter-spacing: -0.015em;
+      color: var(--text-1);
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+    .brand:hover { color: var(--primary); }
+    .brand-mark {
+      width: 28px; height: 28px;
+      border-radius: 7px;
+      background: var(--brand);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Inter', sans-serif;
+      font-weight: 700;
+      font-size: 11px;
+    }
+    .crumbs {
+      font-size: 13px;
+      color: var(--text-3);
+    }
+    .crumbs a { color: var(--text-3); text-decoration: none; }
+    .crumbs a:hover { color: var(--text-1); }
+
+    /* ---------- ARTICLE ---------- */
+    article header { margin-bottom: 36px; }
+    .tag {
+      display: inline-block;
+      color: var(--primary);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-size: 11px;
+      margin-bottom: 16px;
+    }
+    h1 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 500;
+      font-size: clamp(32px, 5vw, 44px);
+      line-height: 1.08;
+      letter-spacing: -0.025em;
+      margin: 0 0 18px;
+      color: var(--text-1);
+    }
+    .lede {
+      font-size: 19px;
+      color: var(--text-2);
+      line-height: 1.55;
+      margin: 0 0 24px;
+    }
+    .article-meta {
+      font-size: 13px;
+      color: var(--text-3);
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    article h2 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 500;
+      font-size: 28px;
+      line-height: 1.18;
+      letter-spacing: -0.018em;
+      margin: 56px 0 16px;
+      color: var(--text-1);
+    }
+    article h3 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 500;
+      font-size: 21px;
+      line-height: 1.25;
+      letter-spacing: -0.012em;
+      margin: 36px 0 12px;
+      color: var(--text-1);
+    }
+    article p { color: var(--text-2); margin: 0 0 20px; }
+    article ul, article ol { color: var(--text-2); margin: 0 0 20px; padding-inline-start: 24px; }
+    article li { margin-bottom: 6px; }
+    article strong { color: var(--text-1); font-weight: 600; }
+
+    blockquote {
+      border-left: 3px solid var(--primary);
+      padding: 6px 0 6px 20px;
+      margin: 28px 0;
+      font-family: 'Fraunces', Georgia, serif;
+      font-style: italic;
+      font-size: 19px;
+      color: var(--text-1);
+      line-height: 1.5;
+    }
+
+    .formula {
+      background: var(--code-bg);
+      border-radius: 8px;
+      padding: 18px 22px;
+      margin: 24px 0;
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+      font-size: 16px;
+      text-align: center;
+      color: var(--text-1);
+      border: 1px solid var(--line);
+    }
+    .formula .var { color: var(--primary); font-weight: 600; }
+
+    .callout {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--copper);
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin: 28px 0;
+      font-size: 16px;
+    }
+    .callout strong { color: var(--copper); }
+
+    .tool-mention {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 18px 22px;
+      margin: 28px 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      font-size: 15px;
+    }
+    .tool-mention .icon {
+      width: 36px; height: 36px;
+      flex-shrink: 0;
+      border-radius: 8px;
+      background: var(--brand);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 13px;
+    }
+    .tool-mention p { margin: 0 0 6px; color: var(--text-2); }
+    .tool-mention p:last-child { margin: 0; }
+    .tool-mention .label {
+      font-weight: 600;
+      color: var(--text-1);
+      font-family: 'Inter', sans-serif;
+    }
+    .tool-mention a { color: var(--primary); font-weight: 600; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 24px 0;
+      font-size: 15px;
+    }
+    th, td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--line);
+    }
+    th {
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      color: var(--text-1);
+      background: var(--paper);
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    td { color: var(--text-2); }
+
+    .end-mark {
+      width: 24px; height: 4px;
+      background: var(--primary);
+      margin: 56px auto 32px;
+    }
+
+    /* v2.8.94 — Related posts section (footer'dan önce, cross-link için) */
+    .related-posts {
+      margin: 56px 0 24px;
+      padding: 24px 0;
+      border-top: 1px solid var(--line);
+    }
+    .related-posts h3 {
+      font-family: 'Fraunces', serif;
+      font-size: 22px;
+      font-weight: 600;
+      margin: 0 0 18px;
+      color: var(--primary);
+    }
+    .related-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+    }
+    .related-card {
+      display: block;
+      padding: 16px 18px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      text-decoration: none;
+      color: var(--text-1);
+      transition: border-color .15s ease, transform .15s ease;
+    }
+    .related-card:hover {
+      border-color: var(--brand);
+      transform: translateY(-2px);
+    }
+    .related-card .related-tag {
+      font-size: 11px;
+      color: var(--brand);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+    .related-card .related-title {
+      font-family: 'Fraunces', serif;
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 1.3;
+      margin-bottom: 4px;
+    }
+    .related-card .related-desc {
+      font-size: 13px;
+      color: var(--text-3);
+      line-height: 1.5;
+    }
+
+    /* ---------- FOOTER ---------- */
+    .blog-footer {
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      font-size: 14px;
+      color: var(--text-3);
+    }
+    .blog-footer a { color: var(--text-2); font-weight: 500; text-decoration: none; }
+    .blog-footer a:hover { color: var(--text-1); text-decoration: underline; }
+    .blog-footer .left {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .blog-footer .foot-mark {
+      width: 22px; height: 22px;
+      border-radius: 6px;
+      background: var(--brand);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .blog-footer .right { display: flex; gap: 18px; }
+
+    /* ---------- MOBILE ---------- */
+    @media (max-width: 640px) {
+      body { padding: 20px 18px 60px; font-size: 16px; }
+      .blog-header { margin-bottom: 32px; }
+      .lede { font-size: 17px; }
+      article h2 { font-size: 24px; margin-top: 44px; }
+      article h3 { font-size: 19px; }
+      .formula { font-size: 14px; padding: 14px 16px; }
+      .tool-mention { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="blog-header">
+    <a href="/" class="brand">
+      <span class="brand-mark"><svg viewBox="0 0 24 24" style="width:100%;height:100%;display:block" aria-hidden="true"><g transform="translate(3.6 3.6) scale(0.7)"><path d="M6.5 13.6 C5 13 4.2 11.6 4.5 10 C4.6 9.3 5 8.6 5.7 8.2 C5.4 7 6 6.1 7 5.8 C7 4.6 7.8 3.8 9 3.8 C9.3 2.8 10.5 2.2 12 2.2 C13.5 2.2 14.7 2.8 15 3.8 C16.2 3.8 17 4.6 17 5.8 C18 6.1 18.6 7 18.3 8.2 C19 8.6 19.4 9.3 19.5 10 C19.8 11.6 19 13 17.5 13.6 Z" fill="#fff"/><path d="M6.3 13.6 L17.7 13.6 L17.7 19.3 C17.7 20.2 17 21 16.1 21 L7.9 21 C7 21 6.3 20.2 6.3 19.3 Z" fill="#fff"/><path d="M8 13.4 C7.7 10.4 8 7.4 8.9 5 M10 13.5 C9.9 10 10 6.6 10.5 3.4 M12 13.5 V2.6 M14 13.5 C14.1 10 14 6.6 13.5 3.4 M16 13.4 C16.3 10.4 16 7.4 15.1 5" stroke="#16433a" stroke-width="0.5" stroke-linecap="round" fill="none"/></g></svg></span>
+      <span>ProChefDesk</span>
+    </a>
+    <div class="crumbs">
+      <a href="/blog/">← Blog</a>
+    </div>
+  </header>
+
+  <article>
+    <header>
+      <div class="tag">Cost Control</div>
+      <h1>Plate Cost vs Food Cost Percentage: The Difference That Matters</h1>
+      <p class="lede">One is dollars sitting on the plate. The other is a ratio. Chase the ratio and you can end up with a beautiful food cost percentage and a till that never fills. Here's why the two numbers pull in different directions — and which one actually pays the rent.</p>
+      <div class="article-meta">
+        <span>By Ahmet Kaya</span>
+        <span>9 min</span>
+        <span>July 2026</span>
+      </div>
+    </header>
+
+    <p>A chef I worked under years ago used to walk the pass every night muttering the same complaint: "Our food cost is bang on 28% and we're still broke." He was right on both counts. The percentage was pretty. The bank balance wasn't. It took me a long time to understand that those two facts weren't a contradiction — they were the whole story.</p>
+
+    <p>Plate cost and food cost percentage measure different things, and most kitchens quietly optimise the wrong one. This is a piece about the difference, why it matters more than any other cost-control idea I know, and how to make sure the number you push down every week is the one that actually grows the business.</p>
+
+    <h2>Three numbers, not one</h2>
+
+    <p>Start by pulling them apart cleanly. There are three figures, and they get muddled constantly.</p>
+
+    <p><strong>Plate cost</strong> is the dollar value of the ingredients on one served portion. Every gram of protein, every spoon of sauce, the garnish, the oil it was cooked in. If a plate of pan-roasted salmon uses $6.10 of ingredients, its plate cost is $6.10. It's cash. It's a real number you could hand someone.</p>
+
+    <p><strong>Food cost percentage</strong> is that plate cost divided by the menu price, expressed as a ratio. Sell the salmon at $27 and its food cost is 22.6%. It's not dollars — it's a proportion. It tells you how much of each sales dollar went back out the door as ingredients.</p>
+
+    <p><strong>Gross profit per plate</strong> is the menu price minus the plate cost. The salmon earns $27 − $6.10 = $20.90 of gross profit every time it sells. This is the number the business actually lives on, and it's the one that gets ignored because it doesn't come with a satisfying percentage sign.</p>
+
+    <div class="formula">
+      <span class="var">Gross Profit per Plate</span> = Menu Price − <span class="var">Plate Cost</span>
+      <br>
+      Food Cost % = <span class="var">Plate Cost</span> ÷ Menu Price × 100
+    </div>
+
+    <p>The trap is that food cost percentage feels like the "professional" number — it's what suppliers, textbooks and franchise manuals talk about — so chefs manage it as if it were the goal. But you can't deposit a percentage. You bank the gross profit dollars.</p>
+
+    <h2>Why a 40% steak beats a 22% salad</h2>
+
+    <p>Here's the example that made it click for me. Put a good ribeye next to a signature salad and cost them both honestly.</p>
+
+    <p>The ribeye: a 300 g portion of striploin at maybe $9.80 landed on the plate, plus $1.40 of accompaniments and butter. Plate cost $11.20. You sell it at $28. That's a food cost of 40% — a number that would make a purist wince. But the gross profit is $28 − $11.20 = <strong>$16.80 per plate</strong>.</p>
+
+    <p>The salad: leaves, a little cheese, some seeds, a vinaigrette you make in-house. Plate cost $2.60. You sell it at $12. Food cost 21.7% — the kind of ratio that looks fantastic on a report. Gross profit: $12 − $2.60 = <strong>$9.40 per plate</strong>.</p>
+
+    <table>
+      <thead>
+        <tr><th>Dish</th><th>Plate cost</th><th>Menu price</th><th>Food cost %</th><th>Gross profit / plate</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Ribeye steak</td><td>$11.20</td><td>$28.00</td><td>40.0%</td><td><strong>$16.80</strong></td></tr>
+        <tr><td>Signature salad</td><td>$2.60</td><td>$12.00</td><td>21.7%</td><td>$9.40</td></tr>
+      </tbody>
+    </table>
+
+    <p>The salad has a food cost percentage almost half the steak's. On paper it's the "better" dish. But every time the steak sells instead of the salad, the business earns an extra $7.40. If a manager, chasing the food cost report, pushes waitstaff to steer guests toward the low-percentage salad, they are actively steering money out of the building. That's not a hypothetical — I've watched it happen, driven by exactly that report.</p>
+
+    <div class="callout">
+      <strong>The percentage is a filter, not a target.</strong> A high food cost percentage is a flag that says "check this dish" — maybe it's underpriced, maybe the portion drifted. But once you've checked it and the gross profit is strong, a high percentage on a high-cash dish is nothing to apologise for. Some of the best-earning plates in any kitchen run 38–45%.</p>
+    </div>
+
+    <h2>When the percentage genuinely misleads</h2>
+
+    <p>Food cost percentage isn't a bad number. It's just answering a different question than the one most chefs think they're asking. It's excellent for a few specific jobs:</p>
+
+    <ul>
+      <li><strong>Spotting drift.</strong> A dish that was 30% last quarter and is 37% now is telling you something — a supplier price moved, a portion crept up, or someone changed a spec. The ratio catches that faster than staring at cash.</li>
+      <li><strong>Blended targets.</strong> Your overall food cost percentage across the whole menu, weighted by what sells, has to line up with your business model or the rent doesn't get paid. As a portfolio number it's essential.</li>
+      <li><strong>Pricing sanity checks.</strong> If a single dish is sitting at 55%, the ratio flags it instantly, whatever the dollars say.</li>
+    </ul>
+
+    <p>Where it misleads is dish-by-dish decision making. "Which dish should I promote?" is a gross profit question, not a percentage one. "Should I keep this on the menu?" is a gross profit question. "Is this special worth prepping?" — gross profit. The moment you're comparing one dish against another to decide where to spend attention, marketing or menu real estate, the percentage will lie to you, because it strips out the one thing you care about: how much cash walks in per sale.</p>
+
+    <p>Cheap food is not the same as profitable food. A kitchen full of low-percentage, low-cash dishes can be immaculate on the cost report and slowly starving. This is not a fringe idea — it's the core of contribution-margin thinking, and it's why serious operators run menu engineering on gross profit, not on food cost ratios.</p>
+
+    <h2>Contribution margin: the same idea, sharpened</h2>
+
+    <p>Gross profit per plate has a more formal cousin: <strong>contribution margin</strong>. In a kitchen context they're close enough to treat as the same thing — it's the money a dish contributes toward covering your fixed costs (rent, insurance, the base wage bill, the loan) after its own ingredients are paid for. Every plate that sells throws its contribution margin into a pot, and once that pot has covered fixed costs for the period, everything after is profit.</p>
+
+    <p>That framing changes how you read the menu. The question stops being "which dish is cheapest to make?" and becomes "which dish contributes the most per sale, and how often does it sell?" A dish's <em>total</em> contribution is its per-plate margin multiplied by units sold — and that product, summed across the menu, is what has to clear your fixed costs before you earn a cent.</p>
+
+    <div class="formula">
+      Total Contribution = Σ (<span class="var">Gross Profit per Plate</span> × <span class="var">Units Sold</span>)
+    </div>
+
+    <p>This is why menu mix matters as much as any individual recipe. A modest per-plate margin on a dish that sells 400 covers a lot more overhead than a fat margin on something that moves twelve times a week.</p>
+
+    <h2>The number to manage day to day</h2>
+
+    <p>So which do you actually watch? The honest answer: watch the percentage at the portfolio level as your early-warning system, and manage <strong>gross profit dollars, weighted by menu mix,</strong> at the dish level where the real decisions live.</p>
+
+    <p>Concretely, once a week or once a month, build a table with one row per dish and these columns: plate cost, menu price, gross profit per plate, units sold, and total gross profit (the last two multiplied). Sort it by total gross profit, descending. The dishes at the top of that list are your business, whatever their food cost percentage says. The dishes at the bottom are candidates for repricing, re-speccing, or removal — again, regardless of percentage.</p>
+
+    <p>Here's a worked slice of such a table for a small à la carte menu:</p>
+
+    <table>
+      <thead>
+        <tr><th>Dish</th><th>Plate cost</th><th>Price</th><th>GP / plate</th><th>Sold / wk</th><th>Total GP</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Ribeye steak</td><td>$11.20</td><td>$28.00</td><td>$16.80</td><td>60</td><td><strong>$1,008</strong></td></tr>
+        <tr><td>Roast chicken</td><td>$4.30</td><td>$19.00</td><td>$14.70</td><td>85</td><td><strong>$1,250</strong></td></tr>
+        <tr><td>Signature salad</td><td>$2.60</td><td>$12.00</td><td>$9.40</td><td>40</td><td>$376</td></tr>
+        <tr><td>Fish special</td><td>$7.90</td><td>$26.00</td><td>$18.10</td><td>18</td><td>$326</td></tr>
+      </tbody>
+    </table>
+
+    <p>Read it slowly. The fish has the highest gross profit <em>per plate</em> ($18.10) and a healthy 30% food cost — but it only sells 18 times, so it contributes the least of the four to the week. The roast chicken has a middling per-plate margin but sells so well it out-earns the prestige ribeye. The salad, with its gorgeous 21.7% food cost, is near the bottom of the earnings pile. Nothing on this list would you learn from the food cost column alone.</p>
+
+    <p>That's the whole argument in one table. If you'd optimised this menu for food cost percentage, you'd have promoted the salad and maybe questioned the ribeye. Optimising for weighted gross profit, you protect the chicken and the steak, look hard at whether the fish special earns its prep time, and treat the salad's low percentage as irrelevant to its ranking.</p>
+
+    <div class="tool-mention">
+      <span class="icon"><svg viewBox="0 0 24 24" style="width:100%;height:100%;display:block" aria-hidden="true"><g transform="translate(3.6 3.6) scale(0.7)"><path d="M6.5 13.6 C5 13 4.2 11.6 4.5 10 C4.6 9.3 5 8.6 5.7 8.2 C5.4 7 6 6.1 7 5.8 C7 4.6 7.8 3.8 9 3.8 C9.3 2.8 10.5 2.2 12 2.2 C13.5 2.2 14.7 2.8 15 3.8 C16.2 3.8 17 4.6 17 5.8 C18 6.1 18.6 7 18.3 8.2 C19 8.6 19.4 9.3 19.5 10 C19.8 11.6 19 13 17.5 13.6 Z" fill="#fff"/><path d="M6.3 13.6 L17.7 13.6 L17.7 19.3 C17.7 20.2 17 21 16.1 21 L7.9 21 C7 21 6.3 20.2 6.3 19.3 Z" fill="#fff"/><path d="M8 13.4 C7.7 10.4 8 7.4 8.9 5 M10 13.5 C9.9 10 10 6.6 10.5 3.4 M12 13.5 V2.6 M14 13.5 C14.1 10 14 6.6 13.5 3.4 M16 13.4 C16.3 10.4 16 7.4 15.1 5" stroke="#16433a" stroke-width="0.5" stroke-linecap="round" fill="none"/></g></svg></span>
+      <div>
+        <p class="label">In ProChefDesk</p>
+        <p>The <a href="/app/" target="_blank" rel="noopener">Cost Report</a> gives you plate cost and food cost percentage side by side for every recipe — and both a per-serving gross profit figure and the food-cost-% colour flag against your target. So you get the ratio as your warning light and the dollars as your decision number in the same view, instead of doing the arithmetic on the back of a docket.</p>
+      </div>
+    </div>
+
+    <h2>Where the plate cost itself comes from</h2>
+
+    <p>All of this rests on one thing: the plate cost has to be real. A gross profit built on a wrong ingredient price is a fiction dressed up as a decision. Two forces quietly corrupt plate cost more than any other.</p>
+
+    <h3>Supplier price drift</h3>
+
+    <p>Ingredient prices move, and they've been moving hard in recent years. The <a href="https://www.ers.usda.gov/data-products/food-price-outlook" target="_blank" rel="noopener">USDA Economic Research Service Food Price Outlook</a> tracks and forecasts retail and wholesale food price changes month by month, and anyone who's placed an order lately has felt it in the invoice. A plate cost computed on last year's beef price isn't a plate cost — it's a guess. Update your high-spend ingredients every delivery; the cheap ones can wait.</p>
+
+    <h3>Yield loss</h3>
+
+    <p>You don't plate what you buy. Buy a whole fish and you serve the fillets; the head, frame and trim don't leave the pass on a plate. If you cost the fillet at the whole-fish price per kilo, your plate cost is fantasy and every gross profit built on it is inflated. Cost trimmed, usable product — not raw purchase weight — or the prettiest gross profit table you build will still lie to you.</p>
+
+    <h2>What to do this week</h2>
+
+    <p>Don't rebuild everything. Do this:</p>
+
+    <ol>
+      <li><strong>Pull your top ten sellers by volume.</strong> These are where your money actually is.</li>
+      <li><strong>For each, write down plate cost and price, then compute gross profit per plate.</strong> Use today's ingredient prices and trimmed yields, not opening-day numbers.</li>
+      <li><strong>Multiply gross profit by weekly units sold.</strong> Now sort that list by total gross profit.</li>
+      <li><strong>Look at the bottom three.</strong> Not the highest food cost percentage — the lowest total gross profit. Those are what's dragging. Reprice, re-portion, feature something better in their place, or cut them.</li>
+    </ol>
+
+    <p>You'll almost certainly find at least one "problem child" on the food cost report that's actually a strong earner, and at least one "star" by percentage that's contributing very little. That inversion is the entire point of separating the two numbers.</p>
+
+    <h2>The point</h2>
+
+    <p>Food cost percentage is a ratio that tells you when to look. Plate cost is the cash going into the dish. Gross profit per plate — price minus plate cost, weighted by how often it sells — is the number the business runs on. Manage the dollars, use the percentage as your warning light, and keep the plate cost honest with current prices and real yields.</p>
+
+    <p>My old chef never made that switch. He optimised the ratio to the bitter end, and the ratio stayed beautiful while the place closed. Don't run a kitchen that looks profitable on a report and isn't profitable in the bank.</p>
+
+    <blockquote>"Our food cost is bang on 28% and we're still broke." The two halves of that sentence were never in conflict. They were the diagnosis.</blockquote>
+
+    <div class="end-mark"></div>
+  </article>
+
+  <!-- Related posts cross-link (internal linking for SEO + reader retention) -->
+  <section class="related-posts" aria-label="Related articles">
+    <h3>Related reading</h3>
+    <div class="related-grid">
+      <a href="/blog/gross-profit-per-dish.html" class="related-card">
+        <div class="related-tag">Cost Control</div>
+        <div class="related-title">Gross Profit Per Dish: Why Percentage Is Not the Whole Story</div>
+        <div class="related-desc">A low food-cost % can still be a low-earning dish. Cash gross profit per plate, weighted by how often it sells, is what fills the till.</div>
+      </a>
+      <a href="/blog/menu-engineering-profitable-dishes.html" class="related-card">
+        <div class="related-tag">Menu Strategy</div>
+        <div class="related-title">Menu Engineering: Which Dishes Actually Make You Money</div>
+        <div class="related-desc">The four-box star/plowhorse/puzzle/dog matrix, run on a Sunday.</div>
+      </a>
+    </div>
+  </section>
+
+  <footer class="blog-footer">
+    <div class="left">
+      <span class="foot-mark"><svg viewBox="0 0 24 24" style="width:100%;height:100%;display:block" aria-hidden="true"><g transform="translate(3.6 3.6) scale(0.7)"><path d="M6.5 13.6 C5 13 4.2 11.6 4.5 10 C4.6 9.3 5 8.6 5.7 8.2 C5.4 7 6 6.1 7 5.8 C7 4.6 7.8 3.8 9 3.8 C9.3 2.8 10.5 2.2 12 2.2 C13.5 2.2 14.7 2.8 15 3.8 C16.2 3.8 17 4.6 17 5.8 C18 6.1 18.6 7 18.3 8.2 C19 8.6 19.4 9.3 19.5 10 C19.8 11.6 19 13 17.5 13.6 Z" fill="#fff"/><path d="M6.3 13.6 L17.7 13.6 L17.7 19.3 C17.7 20.2 17 21 16.1 21 L7.9 21 C7 21 6.3 20.2 6.3 19.3 Z" fill="#fff"/><path d="M8 13.4 C7.7 10.4 8 7.4 8.9 5 M10 13.5 C9.9 10 10 6.6 10.5 3.4 M12 13.5 V2.6 M14 13.5 C14.1 10 14 6.6 13.5 3.4 M16 13.4 C16.3 10.4 16 7.4 15.1 5" stroke="#16433a" stroke-width="0.5" stroke-linecap="round" fill="none"/></g></svg></span>
+      <span>ProChefDesk · written from a working kitchen</span>
+    </div>
+    <div class="right">
+      <a href="/blog/">All posts</a>
+      <a href="/app/">Open app</a>
+      <a href="/privacy.html">Privacy</a>
+    </div>
+  </footer>
+
+</body>
+</html>

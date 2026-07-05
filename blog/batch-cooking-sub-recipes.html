@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#FAF7F2">
+  <meta name="robots" content="index, follow">
+  <title>Batch Cooking with Sub-Recipes: Prep That Scales — ProChefDesk</title>
+  <meta name="description" content="Cost and yield a prep once, drop it into ten dishes, and scaling for an event becomes multiplication instead of guesswork.">
+  <link rel="canonical" href="https://prochefdesk.com/blog/batch-cooking-sub-recipes.html">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Batch Cooking with Sub-Recipes: Prep That Scales">
+  <meta property="og:description" content="Cost and yield a prep once, drop it into ten dishes, and scaling for an event becomes multiplication instead of guesswork.">
+  <meta property="og:url" content="https://prochefdesk.com/blog/batch-cooking-sub-recipes.html">
+  <meta property="og:type" content="article">
+  <meta property="og:image" content="https://prochefdesk.com/og-image.png">
+  <meta property="article:published_time" content="2026-07-05">
+  <meta property="article:author" content="Ahmet Kaya">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Batch Cooking with Sub-Recipes: Prep That Scales">
+  <meta name="twitter:description" content="Cost a prep once, reuse it across ten dishes with automatic cost cascade — and scaling for an event becomes multiplication.">
+  <meta name="twitter:image" content="https://prochefdesk.com/og-image.png">
+
+  <!-- JSON-LD Article schema -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "Batch Cooking with Sub-Recipes: Prep That Scales",
+    "description": "Cost and yield a prep once, drop it into ten dishes, and scaling for an event becomes multiplication instead of guesswork.",
+    "image": "https://prochefdesk.com/og-image.png",
+    "datePublished": "2026-07-05",
+    "dateModified": "2026-07-05",
+    "author": {
+      "@type": "Person",
+      "name": "Ahmet Kaya",
+      "jobTitle": "Professional Chef",
+      "worksFor": {
+        "@type": "Organization",
+        "name": "ProChefDesk"
+      }
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "ProChefDesk",
+      "url": "https://prochefdesk.com",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://prochefdesk.com/og-image.png"
+      }
+    },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": "https://prochefdesk.com/blog/batch-cooking-sub-recipes.html"
+    },
+    "wordCount": 2450,
+    "keywords": "batch cooking, sub recipes, prep batching kitchen"
+  }
+  </script>
+
+  <link rel="icon" type="image/svg+xml" href="/app/assets/icon.svg">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* Single source of truth for blog post styling. To create a new
+       post, copy this entire file, rename, replace meta tags above
+       and the <article> content below. CSS stays identical. */
+
+    :root {
+      --bg: #FAF7F2;
+      --paper: #FFFEFA;
+      --text-1: #1A1916;
+      --text-2: #3A3631;
+      --text-3: #8A857C;
+      --line: #E5DFD2;
+      --primary: #2D4A3E;
+      --brand: #16a34a;
+      --copper: #B85C3C;
+      --code-bg: #F0EBE0;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 28px 24px 80px;
+      line-height: 1.72;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-size: 17px;
+      background: var(--bg);
+      color: var(--text-1);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    a { color: var(--primary); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+    a:hover { color: var(--text-1); }
+
+    /* ---------- HEADER ---------- */
+    .blog-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 40px;
+      font-family: 'Inter', sans-serif;
+    }
+    .brand {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 600;
+      font-size: 18px;
+      letter-spacing: -0.015em;
+      color: var(--text-1);
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+    .brand:hover { color: var(--primary); }
+    .brand-mark {
+      width: 28px; height: 28px;
+      border-radius: 7px;
+      background: var(--brand);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Inter', sans-serif;
+      font-weight: 700;
+      font-size: 11px;
+    }
+    .crumbs {
+      font-size: 13px;
+      color: var(--text-3);
+    }
+    .crumbs a { color: var(--text-3); text-decoration: none; }
+    .crumbs a:hover { color: var(--text-1); }
+
+    /* ---------- ARTICLE ---------- */
+    article header { margin-bottom: 36px; }
+    .tag {
+      display: inline-block;
+      color: var(--primary);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-size: 11px;
+      margin-bottom: 16px;
+    }
+    h1 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 500;
+      font-size: clamp(32px, 5vw, 44px);
+      line-height: 1.08;
+      letter-spacing: -0.025em;
+      margin: 0 0 18px;
+      color: var(--text-1);
+    }
+    .lede {
+      font-size: 19px;
+      color: var(--text-2);
+      line-height: 1.55;
+      margin: 0 0 24px;
+    }
+    .article-meta {
+      font-size: 13px;
+      color: var(--text-3);
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    article h2 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 500;
+      font-size: 28px;
+      line-height: 1.18;
+      letter-spacing: -0.018em;
+      margin: 56px 0 16px;
+      color: var(--text-1);
+    }
+    article h3 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 500;
+      font-size: 21px;
+      line-height: 1.25;
+      letter-spacing: -0.012em;
+      margin: 36px 0 12px;
+      color: var(--text-1);
+    }
+    article p { color: var(--text-2); margin: 0 0 20px; }
+    article ul, article ol { color: var(--text-2); margin: 0 0 20px; padding-inline-start: 24px; }
+    article li { margin-bottom: 6px; }
+    article strong { color: var(--text-1); font-weight: 600; }
+
+    blockquote {
+      border-left: 3px solid var(--primary);
+      padding: 6px 0 6px 20px;
+      margin: 28px 0;
+      font-family: 'Fraunces', Georgia, serif;
+      font-style: italic;
+      font-size: 19px;
+      color: var(--text-1);
+      line-height: 1.5;
+    }
+
+    .formula {
+      background: var(--code-bg);
+      border-radius: 8px;
+      padding: 18px 22px;
+      margin: 24px 0;
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+      font-size: 16px;
+      text-align: center;
+      color: var(--text-1);
+      border: 1px solid var(--line);
+    }
+    .formula .var { color: var(--primary); font-weight: 600; }
+
+    .callout {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--copper);
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin: 28px 0;
+      font-size: 16px;
+    }
+    .callout strong { color: var(--copper); }
+
+    .tool-mention {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 18px 22px;
+      margin: 28px 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      font-size: 15px;
+    }
+    .tool-mention .icon {
+      width: 36px; height: 36px;
+      flex-shrink: 0;
+      border-radius: 8px;
+      background: var(--brand);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 13px;
+    }
+    .tool-mention p { margin: 0 0 6px; color: var(--text-2); }
+    .tool-mention p:last-child { margin: 0; }
+    .tool-mention .label {
+      font-weight: 600;
+      color: var(--text-1);
+      font-family: 'Inter', sans-serif;
+    }
+    .tool-mention a { color: var(--primary); font-weight: 600; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 24px 0;
+      font-size: 15px;
+    }
+    th, td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--line);
+    }
+    th {
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      color: var(--text-1);
+      background: var(--paper);
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    td { color: var(--text-2); }
+
+    .end-mark {
+      width: 24px; height: 4px;
+      background: var(--primary);
+      margin: 56px auto 32px;
+    }
+
+    /* Related posts section (footer'dan önce, cross-link için) */
+    .related-posts {
+      margin: 56px 0 24px;
+      padding: 24px 0;
+      border-top: 1px solid var(--line);
+    }
+    .related-posts h3 {
+      font-family: 'Fraunces', serif;
+      font-size: 22px;
+      font-weight: 600;
+      margin: 0 0 18px;
+      color: var(--primary);
+    }
+    .related-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+    }
+    .related-card {
+      display: block;
+      padding: 16px 18px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      text-decoration: none;
+      color: var(--text-1);
+      transition: border-color .15s ease, transform .15s ease;
+    }
+    .related-card:hover {
+      border-color: var(--brand);
+      transform: translateY(-2px);
+    }
+    .related-card .related-tag {
+      font-size: 11px;
+      color: var(--brand);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+    .related-card .related-title {
+      font-family: 'Fraunces', serif;
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 1.3;
+      margin-bottom: 4px;
+    }
+    .related-card .related-desc {
+      font-size: 13px;
+      color: var(--text-3);
+      line-height: 1.5;
+    }
+
+    /* ---------- FOOTER ---------- */
+    .blog-footer {
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      font-size: 14px;
+      color: var(--text-3);
+    }
+    .blog-footer a { color: var(--text-2); font-weight: 500; text-decoration: none; }
+    .blog-footer a:hover { color: var(--text-1); text-decoration: underline; }
+    .blog-footer .left {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .blog-footer .foot-mark {
+      width: 22px; height: 22px;
+      border-radius: 6px;
+      background: var(--brand);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .blog-footer .right { display: flex; gap: 18px; }
+
+    /* ---------- MOBILE ---------- */
+    @media (max-width: 640px) {
+      body { padding: 20px 18px 60px; font-size: 16px; }
+      .blog-header { margin-bottom: 32px; }
+      .lede { font-size: 17px; }
+      article h2 { font-size: 24px; margin-top: 44px; }
+      article h3 { font-size: 19px; }
+      .formula { font-size: 14px; padding: 14px 16px; }
+      .tool-mention { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="blog-header">
+    <a href="/" class="brand">
+      <span class="brand-mark"><svg viewBox="0 0 24 24" style="width:100%;height:100%;display:block" aria-hidden="true"><g transform="translate(3.6 3.6) scale(0.7)"><path d="M6.5 13.6 C5 13 4.2 11.6 4.5 10 C4.6 9.3 5 8.6 5.7 8.2 C5.4 7 6 6.1 7 5.8 C7 4.6 7.8 3.8 9 3.8 C9.3 2.8 10.5 2.2 12 2.2 C13.5 2.2 14.7 2.8 15 3.8 C16.2 3.8 17 4.6 17 5.8 C18 6.1 18.6 7 18.3 8.2 C19 8.6 19.4 9.3 19.5 10 C19.8 11.6 19 13 17.5 13.6 Z" fill="#fff"/><path d="M6.3 13.6 L17.7 13.6 L17.7 19.3 C17.7 20.2 17 21 16.1 21 L7.9 21 C7 21 6.3 20.2 6.3 19.3 Z" fill="#fff"/><path d="M8 13.4 C7.7 10.4 8 7.4 8.9 5 M10 13.5 C9.9 10 10 6.6 10.5 3.4 M12 13.5 V2.6 M14 13.5 C14.1 10 14 6.6 13.5 3.4 M16 13.4 C16.3 10.4 16 7.4 15.1 5" stroke="#16433a" stroke-width="0.5" stroke-linecap="round" fill="none"/></g></svg></span>
+      <span>ProChefDesk</span>
+    </a>
+    <div class="crumbs">
+      <a href="/blog/">← Blog</a>
+    </div>
+  </header>
+
+  <article>
+    <header>
+      <div class="tag">Kitchen Operations</div>
+      <h1>Batch Cooking with Sub-Recipes: Prep That Scales</h1>
+      <p class="lede">Cost a prep once, yield it once, and drop it into ten dishes. Do it right and scaling for a hundred-cover event stops being guesswork and becomes multiplication. This is how batch cooking and sub-recipes turn prep into a system that scales.</p>
+      <div class="article-meta">
+        <span>By Ahmet Kaya</span>
+        <span>9 min read</span>
+        <span>July 2026</span>
+      </div>
+    </header>
+
+    <p>There are two kinds of prep. The first is the thing you make for one dish — the beurre blanc that goes on tonight's fish and nothing else. The second is the thing that shows up everywhere: the demi-glace, the tomato sauce, the pastry cream, the confit garlic. That second kind is where a kitchen either runs like a machine or drowns in duplicated work.</p>
+
+    <p>A sub-recipe is that second kind, formalised. You cook it once, you cost it once, you write down what it yields, and from then on it behaves like a single ingredient you can drop into any dish. Batch cooking is the physical act of making it in volume. The sub-recipe is the record that keeps the volume honest — so you know what a litre of it costs, how much a dish uses, and what happens to both when you scale up for an event.</p>
+
+    <h2>What a sub-recipe actually is</h2>
+
+    <p>Think of a marinara. It has crushed tomatoes, onion, garlic, olive oil, basil, salt. Six lines. You make 4 litres at a time because making 400 ml is a waste of a burner. That 4-litre batch is your <strong>yield</strong>. Its total ingredient cost, divided by the yield, gives you a cost per litre — say $9.60 for the batch, so <strong>$2.40 a litre</strong>, or 24 cents per 100 ml.</p>
+
+    <p>Now the pizza uses 120 ml. The pasta uses 180 ml. The shakshuka uses 250 ml. You no longer cost onions and garlic three times. You cost the marinara once and each dish just pulls the fraction it needs:</p>
+
+    <div class="formula">
+      Cost in dish = <span class="var">(batch cost ÷ batch yield)</span> × <span class="var">amount used</span>
+    </div>
+
+    <p>The pizza's tomato line is $2.40 × 0.12 = <strong>$0.29</strong>. That's the whole point. The sub-recipe collapses six ingredients into one costed, yielded unit, and every dish that touches it inherits the cost cleanly.</p>
+
+    <p>The part that matters most, and the part spreadsheets get wrong, is the <em>cascade</em>. Tomatoes jump from $1.80 to $2.60 a tin next month. In a real system you change the tomato price in one place, the marinara re-costs itself, and the pizza, the pasta and the shakshuka all move at once. Nobody hunts through eleven tabs. If your costing can't do that, it's already out of date and you don't know by how much.</p>
+
+    <div class="tool-mention">
+      <span class="icon"><svg viewBox="0 0 24 24" style="width:100%;height:100%;display:block" aria-hidden="true"><g transform="translate(3.6 3.6) scale(0.7)"><path d="M6.5 13.6 C5 13 4.2 11.6 4.5 10 C4.6 9.3 5 8.6 5.7 8.2 C5.4 7 6 6.1 7 5.8 C7 4.6 7.8 3.8 9 3.8 C9.3 2.8 10.5 2.2 12 2.2 C13.5 2.2 14.7 2.8 15 3.8 C16.2 3.8 17 4.6 17 5.8 C18 6.1 18.6 7 18.3 8.2 C19 8.6 19.4 9.3 19.5 10 C19.8 11.6 19 13 17.5 13.6 Z" fill="#fff"/><path d="M6.3 13.6 L17.7 13.6 L17.7 19.3 C17.7 20.2 17 21 16.1 21 L7.9 21 C7 21 6.3 20.2 6.3 19.3 Z" fill="#fff"/><path d="M8 13.4 C7.7 10.4 8 7.4 8.9 5 M10 13.5 C9.9 10 10 6.6 10.5 3.4 M12 13.5 V2.6 M14 13.5 C14.1 10 14 6.6 13.5 3.4 M16 13.4 C16.3 10.4 16 7.4 15.1 5" stroke="#16433a" stroke-width="0.5" stroke-linecap="round" fill="none"/></g></svg></span>
+      <div>
+        <p class="label">In ProChefDesk</p>
+        <p>Mark a recipe as a <strong>prep / sub-recipe</strong> and give it a yield amount and unit — "4 L marinara", "1.2 kg confit garlic". Then when you build a dish, drop the prep in like any other ingredient and enter how much it uses. The <a href="/app/" target="_blank" rel="noopener">sub-recipe cost cascade</a> handles the maths: change one tomato price and every dish two or three layers up revalues instantly. It also flattens nested preps, so a sauce inside a braise inside a plate still costs correctly all the way down.</p>
+      </div>
+    </div>
+
+    <h2>The preps worth batching</h2>
+
+    <p>Not everything should be a batch. The rule I use: batch it if it takes real time or real heat, keeps well, and shows up in more than one dish. That's a short, honest list in most kitchens.</p>
+
+    <table>
+      <thead>
+        <tr><th>Prep</th><th>Why batch it</th><th>Typical shelf life</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Stocks &amp; broths</td><td>6–12 hours of simmer; base for everything</td><td>4–5 days chilled, months frozen</td></tr>
+        <tr><td>Mother sauces, demi-glace</td><td>Long reduction; feeds many plates</td><td>3–5 days chilled</td></tr>
+        <tr><td>Braises &amp; confit</td><td>Oven time you pay for once</td><td>4–5 days, or portioned frozen</td></tr>
+        <tr><td>Doughs (pizza, pasta, pastry)</td><td>Rest/proof time; scales cleanly by weight</td><td>1–3 days; freeze portioned</td></tr>
+        <tr><td>Dressings, pestos, spice pastes</td><td>Fiddly mise; used in small amounts across the menu</td><td>3–7 days chilled</td></tr>
+      </tbody>
+    </table>
+
+    <p>Things not to batch: anything that dies fast (cut avocado, dressed leaves), anything used in one dish only, anything where a fresh version is genuinely better and takes two minutes. Batching a garnish you use once a week just means you throw half of it away — which is a cost, not a saving.</p>
+
+    <h3>Batch to a real number, not "a big pot"</h3>
+
+    <p>The discipline that makes batching pay is deciding the batch size from usage, not from the size of the pot you grabbed. If the marinara moves 3 litres a week and holds 4 days, a 4-litre batch twice a week is about right. Batch 12 litres "to be safe" and you'll bin the last three. Tie the batch size to how fast the dishes actually pull it, and you stop cooking your margin into the waste bin.</p>
+
+    <h2>Labelling and cooling: the part that gets you shut down</h2>
+
+    <p>Batch cooking creates a specific hazard that single-portion cooking doesn't: a large, hot, dense mass of food that cools slowly. A 6-litre pot of bolognese left on the side will sit in the danger zone for hours, and the middle of it is a perfect incubator. This is the single most common reason a batching kitchen fails an inspection.</p>
+
+    <p>The rule that governs it is two-stage cooling. Under the <a href="https://www.fda.gov/food/fda-food-code/food-code-2022" target="_blank" rel="noopener">US FDA Food Code (2022)</a>, cooked food has to drop from 57&deg;C (135&deg;F) to 21&deg;C (70&deg;F) within two hours, then down to 5&deg;C (41&deg;F) within a further four — six hours total, with the first two doing most of the work. Many regions phrase it as 60&deg;C to below 10&deg;C in two hours and on to 5&deg;C soon after; the shape is the same. A deep pot will not make that on its own.</p>
+
+    <p>What actually gets a batch through the window:</p>
+
+    <ul>
+      <li><strong>Split it down.</strong> Decant into shallow trays no more than 5–7 cm deep. Surface area is everything — the same volume cools in a third of the time spread thin.</li>
+      <li><strong>Ice baths and blast chillers.</strong> If you batch seriously, a blast chiller isn't a luxury, it's the thing that makes batching legal at volume.</li>
+      <li><strong>Don't stack hot trays.</strong> Airflow between them, or the ones in the middle never cool.</li>
+      <li><strong>Log the temperatures.</strong> A cooling log with the start time, the two-hour check and the final temperature is what proves the batch was safe. No log, no proof.</li>
+    </ul>
+
+    <p>Then the label. Every batch gets one, no exceptions: <strong>what it is, the date and time it was made, and the use-by</strong>. A batch of stock with no date is a batch you have to throw out, because nobody can vouch for it. "Made Tuesday" scrawled on tape isn't a system — a printed day-dot with a real time on it is.</p>
+
+    <div class="callout">
+      <strong>The batching trap:</strong> the bigger the batch, the more food a single mistake spoils. A mislabelled 400 ml jar is a small loss. A mislabelled 8-litre batch of demi-glace that's a day older than you think is a day's work in the bin — and if it goes out, a customer at risk. Scale the discipline with the batch, not just the volume.</p>
+    </div>
+
+    <h2>Scaling batches for an event</h2>
+
+    <p>This is where sub-recipes earn their keep. You've quoted 120 covers, three-course, and the main is a lamb tagine on saffron rice with a chermoula and a chickpea side. Four preps, each a sub-recipe. Because each one is yielded and costed per portion, scaling the event is arithmetic, not a panic.</p>
+
+    <p>Say the tagine sub-recipe yields 10 portions per batch and costs $42 a batch — $4.20 a portion. For 120 covers you need 12 batches. The rice yields 8 portions at $6 a batch; that's 15 batches. You're not re-deriving anything. You're multiplying a known per-portion figure by the guest count and rounding up to whole batches:</p>
+
+    <div class="formula">
+      Batches needed = <span class="var">ceil(</span> covers &times; portions per cover <span class="var">÷ batch yield )</span>
+    </div>
+
+    <p>Two honest warnings, because straight multiplication lies at the edges. First, <strong>seasoning and thickeners don't scale linearly.</strong> Ten times the braising liquid does not need ten times the salt or ten times the flour — taste and adjust at volume. Second, <strong>equipment caps you before the maths does.</strong> Your recipe says 15 batches of rice; your rice cooker does two at a time and you have one oven. The number you can actually produce in the window is set by kit and time, not by the spreadsheet. Scale the plan against the equipment you'll have on the day.</p>
+
+    <p>There's a deeper version of this problem — why multiplying a recipe by fifty breaks in seven specific ways, from cook times to pan geometry — that's worth its own read if you're taking on bigger events. The short version: sub-recipes make the <em>cost and quantity</em> scale cleanly, but the <em>method</em> still needs a chef's eye.</p>
+
+    <h3>The yield maths, worked</h3>
+
+    <p>Here's a full event costing off sub-recipes, so you can see how little arithmetic it really is once the preps are set up:</p>
+
+    <table>
+      <thead>
+        <tr><th>Prep</th><th>Batch yield</th><th>Batch cost</th><th>Per portion</th><th>120 covers</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Lamb tagine</td><td>10 portions</td><td>$42.00</td><td>$4.20</td><td>12 batches · $504</td></tr>
+        <tr><td>Saffron rice</td><td>8 portions</td><td>$6.00</td><td>$0.75</td><td>15 batches · $90</td></tr>
+        <tr><td>Chermoula</td><td>1.5 L (60 &times; 25 ml)</td><td>$18.00</td><td>$0.30</td><td>2 batches · $36</td></tr>
+        <tr><td>Chickpea side</td><td>12 portions</td><td>$9.60</td><td>$0.80</td><td>10 batches · $96</td></tr>
+        <tr><td colspan="4"><strong>Food cost, mains course</strong></td><td><strong>$726 · $6.05/head</strong></td></tr>
+      </tbody>
+    </table>
+
+    <p>Six dollars and five cents a head, in food, for the main — derived in about a minute because every line is a sub-recipe with a per-portion cost already sitting there. Price the course, add the other two, layer labour and overhead, and you have a quote you can defend. Without sub-recipes you'd be re-costing onions and stock from scratch under time pressure, which is exactly when the errors creep in.</p>
+
+    <h2>Closing the loop: did you use what you costed?</h2>
+
+    <p>The sub-recipe tells you what a batch <em>should</em> cost and yield. The event tells you what you <em>planned</em> to use. The one number left is what you <em>actually</em> used — and the gap between planned and actual is where money quietly leaks. You made 12 batches of tagine for 120 covers but 8 came back barely touched at the pass because a batch caught on the bottom and got binned; that's real cost that never reached a plate.</p>
+
+    <p>Batching magnifies this. A 10% overproduction on a single portion is a rounding error. A 10% overproduction across 15 batches of an event side is a tray and a half in the bin. Tracking the difference between theoretical use — sold dishes times the sub-recipe — and actual use from your stock count is how you learn whether your batch sizes are right or whether you're systematically over-cooking.</p>
+
+    <div class="tool-mention">
+      <span class="icon"><svg viewBox="0 0 24 24" style="width:100%;height:100%;display:block" aria-hidden="true"><g transform="translate(3.6 3.6) scale(0.7)"><path d="M6.5 13.6 C5 13 4.2 11.6 4.5 10 C4.6 9.3 5 8.6 5.7 8.2 C5.4 7 6 6.1 7 5.8 C7 4.6 7.8 3.8 9 3.8 C9.3 2.8 10.5 2.2 12 2.2 C13.5 2.2 14.7 2.8 15 3.8 C16.2 3.8 17 4.6 17 5.8 C18 6.1 18.6 7 18.3 8.2 C19 8.6 19.4 9.3 19.5 10 C19.8 11.6 19 13 17.5 13.6 Z" fill="#fff"/><path d="M6.3 13.6 L17.7 13.6 L17.7 19.3 C17.7 20.2 17 21 16.1 21 L7.9 21 C7 21 6.3 20.2 6.3 19.3 Z" fill="#fff"/><path d="M8 13.4 C7.7 10.4 8 7.4 8.9 5 M10 13.5 C9.9 10 10 6.6 10.5 3.4 M12 13.5 V2.6 M14 13.5 C14.1 10 14 6.6 13.5 3.4 M16 13.4 C16.3 10.4 16 7.4 15.1 5" stroke="#16433a" stroke-width="0.5" stroke-linecap="round" fill="none"/></g></svg></span>
+      <div>
+        <p class="label">In ProChefDesk</p>
+        <p>The <a href="/app/" target="_blank" rel="noopener">Variance tool</a> compares theoretical use — dishes sold multiplied through their recipes and sub-recipes — against the actual movement in your inventory count. Because it follows the sub-recipe cascade down to real ingredients, it can tell you a batch prep is being over-produced even when the individual plates look fine. That's the number that tells you to shrink a batch, not a hunch.</p>
+      </div>
+    </div>
+
+    <h2>The point</h2>
+
+    <p>Batch cooking without sub-recipes is just cooking a lot at once and hoping. Batch cooking <em>with</em> sub-recipes is a system: a prep costed and yielded once, cascading its cost into every dish it touches, scaling to any guest count by multiplication, and cooled and labelled to a standard that survives an inspection.</p>
+
+    <p>Set up the ten or fifteen preps that carry your menu as proper sub-recipes — yield, cost, shelf life, cooling method — and the rest of the operation gets quieter. Pricing an event stops being a Sunday-night ordeal. A supplier price rise updates itself everywhere. And the batch you cook on Monday is the same batch, at the same cost, that goes out on Friday.</p>
+
+    <blockquote>"We batched everything for years. It took writing the yields down before I knew whether any of it was actually saving money."</blockquote>
+
+    <p>Most kitchens batch on instinct and never close the loop. The instinct is right — do the arithmetic behind it and it becomes a system you can scale, quote from, and defend.</p>
+
+    <div class="end-mark"></div>
+  </article>
+
+  <!-- Related posts cross-link (internal linking for SEO + reader retention) -->
+  <section class="related-posts" aria-label="Related articles">
+    <h3>Related reading</h3>
+    <div class="related-grid">
+      <a href="/blog/recipe-scaling-for-events.html" class="related-card">
+        <div class="related-tag">Catering · Production</div>
+        <div class="related-title">Recipe Scaling for Events: Portion Math Beyond Multiplication</div>
+        <div class="related-desc">Seven things that break when you multiply a recipe by 50.</div>
+      </a>
+      <a href="/blog/cook-and-cool-haccp-temperature.html" class="related-card">
+        <div class="related-tag">Food Safety · HACCP</div>
+        <div class="related-title">Cook &amp; Cool HACCP: 60 to 5C in 6 Hours</div>
+        <div class="related-desc">The two-stage cooling rule and the tactics that pass it.</div>
+      </a>
+    </div>
+  </section>
+
+  <footer class="blog-footer">
+    <div class="left">
+      <span class="foot-mark"><svg viewBox="0 0 24 24" style="width:100%;height:100%;display:block" aria-hidden="true"><g transform="translate(3.6 3.6) scale(0.7)"><path d="M6.5 13.6 C5 13 4.2 11.6 4.5 10 C4.6 9.3 5 8.6 5.7 8.2 C5.4 7 6 6.1 7 5.8 C7 4.6 7.8 3.8 9 3.8 C9.3 2.8 10.5 2.2 12 2.2 C13.5 2.2 14.7 2.8 15 3.8 C16.2 3.8 17 4.6 17 5.8 C18 6.1 18.6 7 18.3 8.2 C19 8.6 19.4 9.3 19.5 10 C19.8 11.6 19 13 17.5 13.6 Z" fill="#fff"/><path d="M6.3 13.6 L17.7 13.6 L17.7 19.3 C17.7 20.2 17 21 16.1 21 L7.9 21 C7 21 6.3 20.2 6.3 19.3 Z" fill="#fff"/><path d="M8 13.4 C7.7 10.4 8 7.4 8.9 5 M10 13.5 C9.9 10 10 6.6 10.5 3.4 M12 13.5 V2.6 M14 13.5 C14.1 10 14 6.6 13.5 3.4 M16 13.4 C16.3 10.4 16 7.4 15.1 5" stroke="#16433a" stroke-width="0.5" stroke-linecap="round" fill="none"/></g></svg></span>
+      <span>ProChefDesk · written from a working kitchen</span>
+    </div>
+    <div class="right">
+      <a href="/blog/">All posts</a>
+      <a href="/app/">Open app</a>
+      <a href="/privacy.html">Privacy</a>
+    </div>
+  </footer>
+
+</body>
+</html>

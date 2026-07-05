@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#FAF7F2">
+  <meta name="robots" content="index, follow">
+  <title>How to Do a Restaurant Stocktake: Fast and Accurate — ProChefDesk</title>
+  <meta name="description" content="Same time, same units, count-sheet in shelf order, two people — the discipline that makes a restaurant stocktake worth the hour it costs.">
+  <link rel="canonical" href="https://prochefdesk.com/blog/how-to-do-a-stocktake.html">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="How to Do a Restaurant Stocktake: Fast and Accurate">
+  <meta property="og:description" content="Same time, same units, count-sheet in shelf order, two people — the discipline that makes a stocktake worth the hour it costs.">
+  <meta property="og:url" content="https://prochefdesk.com/blog/how-to-do-a-stocktake.html">
+  <meta property="og:type" content="article">
+  <meta property="og:image" content="https://prochefdesk.com/og-image.png">
+  <meta property="article:published_time" content="2026-07-05">
+  <meta property="article:author" content="Ahmet Kaya">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="How to Do a Restaurant Stocktake: Fast and Accurate">
+  <meta name="twitter:description" content="Same time, same units, count-sheet in shelf order, two people — the discipline behind an accurate inventory count.">
+  <meta name="twitter:image" content="https://prochefdesk.com/og-image.png">
+
+  <!-- v2.8.94 — JSON-LD Article schema (Google rich results, sıralama bonus) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "How to Do a Restaurant Stocktake: Fast and Accurate",
+    "description": "Same time, same units, count-sheet in shelf order, two people — the discipline that makes a restaurant stocktake worth the hour it costs.",
+    "image": "https://prochefdesk.com/og-image.png",
+    "datePublished": "2026-07-05",
+    "dateModified": "2026-07-05",
+    "author": {
+      "@type": "Person",
+      "name": "Ahmet Kaya",
+      "jobTitle": "Professional Chef",
+      "worksFor": {
+        "@type": "Organization",
+        "name": "ProChefDesk"
+      }
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "ProChefDesk",
+      "url": "https://prochefdesk.com",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://prochefdesk.com/og-image.png"
+      }
+    },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": "https://prochefdesk.com/blog/how-to-do-a-stocktake.html"
+    },
+    "wordCount": 2600,
+    "keywords": "restaurant stocktake, how to do a stocktake, inventory count"
+  }
+  </script>
+
+  <link rel="icon" type="image/svg+xml" href="/app/assets/icon.svg">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* Single source of truth for blog post styling. To create a new
+       post, copy this entire file, rename, replace meta tags above
+       and the <article> content below. CSS stays identical. */
+
+    :root {
+      --bg: #FAF7F2;
+      --paper: #FFFEFA;
+      --text-1: #1A1916;
+      --text-2: #3A3631;
+      --text-3: #8A857C;
+      --line: #E5DFD2;
+      --primary: #2D4A3E;
+      --brand: #16a34a;
+      --copper: #B85C3C;
+      --code-bg: #F0EBE0;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 28px 24px 80px;
+      line-height: 1.72;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-size: 17px;
+      background: var(--bg);
+      color: var(--text-1);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    a { color: var(--primary); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+    a:hover { color: var(--text-1); }
+
+    /* ---------- HEADER ---------- */
+    .blog-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 40px;
+      font-family: 'Inter', sans-serif;
+    }
+    .brand {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 600;
+      font-size: 18px;
+      letter-spacing: -0.015em;
+      color: var(--text-1);
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+    .brand:hover { color: var(--primary); }
+    .brand-mark {
+      width: 28px; height: 28px;
+      border-radius: 7px;
+      background: var(--brand);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Inter', sans-serif;
+      font-weight: 700;
+      font-size: 11px;
+    }
+    .crumbs {
+      font-size: 13px;
+      color: var(--text-3);
+    }
+    .crumbs a { color: var(--text-3); text-decoration: none; }
+    .crumbs a:hover { color: var(--text-1); }
+
+    /* ---------- ARTICLE ---------- */
+    article header { margin-bottom: 36px; }
+    .tag {
+      display: inline-block;
+      color: var(--primary);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-size: 11px;
+      margin-bottom: 16px;
+    }
+    h1 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 500;
+      font-size: clamp(32px, 5vw, 44px);
+      line-height: 1.08;
+      letter-spacing: -0.025em;
+      margin: 0 0 18px;
+      color: var(--text-1);
+    }
+    .lede {
+      font-size: 19px;
+      color: var(--text-2);
+      line-height: 1.55;
+      margin: 0 0 24px;
+    }
+    .article-meta {
+      font-size: 13px;
+      color: var(--text-3);
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    article h2 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 500;
+      font-size: 28px;
+      line-height: 1.18;
+      letter-spacing: -0.018em;
+      margin: 56px 0 16px;
+      color: var(--text-1);
+    }
+    article h3 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 500;
+      font-size: 21px;
+      line-height: 1.25;
+      letter-spacing: -0.012em;
+      margin: 36px 0 12px;
+      color: var(--text-1);
+    }
+    article p { color: var(--text-2); margin: 0 0 20px; }
+    article ul, article ol { color: var(--text-2); margin: 0 0 20px; padding-inline-start: 24px; }
+    article li { margin-bottom: 6px; }
+    article strong { color: var(--text-1); font-weight: 600; }
+
+    blockquote {
+      border-left: 3px solid var(--primary);
+      padding: 6px 0 6px 20px;
+      margin: 28px 0;
+      font-family: 'Fraunces', Georgia, serif;
+      font-style: italic;
+      font-size: 19px;
+      color: var(--text-1);
+      line-height: 1.5;
+    }
+
+    .formula {
+      background: var(--code-bg);
+      border-radius: 8px;
+      padding: 18px 22px;
+      margin: 24px 0;
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+      font-size: 16px;
+      text-align: center;
+      color: var(--text-1);
+      border: 1px solid var(--line);
+    }
+    .formula .var { color: var(--primary); font-weight: 600; }
+
+    .callout {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--copper);
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin: 28px 0;
+      font-size: 16px;
+    }
+    .callout strong { color: var(--copper); }
+
+    .tool-mention {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 18px 22px;
+      margin: 28px 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      font-size: 15px;
+    }
+    .tool-mention .icon {
+      width: 36px; height: 36px;
+      flex-shrink: 0;
+      border-radius: 8px;
+      background: var(--brand);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 13px;
+    }
+    .tool-mention p { margin: 0 0 6px; color: var(--text-2); }
+    .tool-mention p:last-child { margin: 0; }
+    .tool-mention .label {
+      font-weight: 600;
+      color: var(--text-1);
+      font-family: 'Inter', sans-serif;
+    }
+    .tool-mention a { color: var(--primary); font-weight: 600; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 24px 0;
+      font-size: 15px;
+    }
+    th, td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--line);
+    }
+    th {
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      color: var(--text-1);
+      background: var(--paper);
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    td { color: var(--text-2); }
+
+    .end-mark {
+      width: 24px; height: 4px;
+      background: var(--primary);
+      margin: 56px auto 32px;
+    }
+
+    /* v2.8.94 — Related posts section (footer'dan önce, cross-link için) */
+    .related-posts {
+      margin: 56px 0 24px;
+      padding: 24px 0;
+      border-top: 1px solid var(--line);
+    }
+    .related-posts h3 {
+      font-family: 'Fraunces', serif;
+      font-size: 22px;
+      font-weight: 600;
+      margin: 0 0 18px;
+      color: var(--primary);
+    }
+    .related-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+    }
+    .related-card {
+      display: block;
+      padding: 16px 18px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      text-decoration: none;
+      color: var(--text-1);
+      transition: border-color .15s ease, transform .15s ease;
+    }
+    .related-card:hover {
+      border-color: var(--brand);
+      transform: translateY(-2px);
+    }
+    .related-card .related-tag {
+      font-size: 11px;
+      color: var(--brand);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+    .related-card .related-title {
+      font-family: 'Fraunces', serif;
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 1.3;
+      margin-bottom: 4px;
+    }
+    .related-card .related-desc {
+      font-size: 13px;
+      color: var(--text-3);
+      line-height: 1.5;
+    }
+
+    /* ---------- FOOTER ---------- */
+    .blog-footer {
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      font-size: 14px;
+      color: var(--text-3);
+    }
+    .blog-footer a { color: var(--text-2); font-weight: 500; text-decoration: none; }
+    .blog-footer a:hover { color: var(--text-1); text-decoration: underline; }
+    .blog-footer .left {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .blog-footer .foot-mark {
+      width: 22px; height: 22px;
+      border-radius: 6px;
+      background: var(--brand);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .blog-footer .right { display: flex; gap: 18px; }
+
+    /* ---------- MOBILE ---------- */
+    @media (max-width: 640px) {
+      body { padding: 20px 18px 60px; font-size: 16px; }
+      .blog-header { margin-bottom: 32px; }
+      .lede { font-size: 17px; }
+      article h2 { font-size: 24px; margin-top: 44px; }
+      article h3 { font-size: 19px; }
+      .formula { font-size: 14px; padding: 14px 16px; }
+      .tool-mention { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="blog-header">
+    <a href="/" class="brand">
+      <span class="brand-mark"><svg viewBox="0 0 24 24" style="width:100%;height:100%;display:block" aria-hidden="true"><g transform="translate(3.6 3.6) scale(0.7)"><path d="M6.5 13.6 C5 13 4.2 11.6 4.5 10 C4.6 9.3 5 8.6 5.7 8.2 C5.4 7 6 6.1 7 5.8 C7 4.6 7.8 3.8 9 3.8 C9.3 2.8 10.5 2.2 12 2.2 C13.5 2.2 14.7 2.8 15 3.8 C16.2 3.8 17 4.6 17 5.8 C18 6.1 18.6 7 18.3 8.2 C19 8.6 19.4 9.3 19.5 10 C19.8 11.6 19 13 17.5 13.6 Z" fill="#fff"/><path d="M6.3 13.6 L17.7 13.6 L17.7 19.3 C17.7 20.2 17 21 16.1 21 L7.9 21 C7 21 6.3 20.2 6.3 19.3 Z" fill="#fff"/><path d="M8 13.4 C7.7 10.4 8 7.4 8.9 5 M10 13.5 C9.9 10 10 6.6 10.5 3.4 M12 13.5 V2.6 M14 13.5 C14.1 10 14 6.6 13.5 3.4 M16 13.4 C16.3 10.4 16 7.4 15.1 5" stroke="#16433a" stroke-width="0.5" stroke-linecap="round" fill="none"/></g></svg></span>
+      <span>ProChefDesk</span>
+    </a>
+    <div class="crumbs">
+      <a href="/blog/">← Blog</a>
+    </div>
+  </header>
+
+  <article>
+    <header>
+      <div class="tag">Inventory &amp; Stock Control</div>
+      <h1>How to Do a Restaurant Stocktake: Fast and Accurate</h1>
+      <p class="lede">A stocktake is only worth doing if the number at the bottom is true. Same time, same units, a count-sheet that follows the shelves, two people on the expensive stuff — that discipline is the whole game. Speed is what you earn after you've got it right.</p>
+      <div class="article-meta">
+        <span>By Ahmet Kaya</span>
+        <span>9 min read</span>
+        <span>July 2026</span>
+      </div>
+    </header>
+
+    <p>Most kitchens do a stocktake the way you'd fill in a form you resent. Someone walks the walk-in with a clipboard on a slow Tuesday afternoon, guesses at the half-open cases, scrawls numbers, and hands them over. A week later the food cost report says gross profit fell four points and nobody can say why. The count wasn't wrong on purpose. It was wrong because it wasn't a count — it was a vibe.</p>
+
+    <p>Here is how to do a restaurant stocktake that actually tells you something: fast enough that you'll keep doing it, accurate enough that the variance number it feeds is worth reading. None of this is clever. It's discipline, and the discipline is nearly all in the setup.</p>
+
+    <h2>The four rules that make a count true</h2>
+
+    <p>Before we touch a single shelf, four rules. Break any of them and the count still produces a number — it just produces the wrong one, which is worse than no number at all because you'll trust it.</p>
+
+    <h3>1. Same time, every time</h3>
+
+    <p>A stocktake is a photograph. It captures what you own at one instant. The instant has to be the same instant every period, or you can't compare two counts — and comparison is the entire point.</p>
+
+    <p>The right instant is <strong>after close or before open</strong>, when nothing is moving. No deliveries landing, no line cook pulling a case for prep, no bar restocking mid-count. If you count the dry store at 3pm Tuesday and the walk-in at 9am Wednesday, a delivery arrived in between and your count spans two different realities. Pick one moment — most operators do it last thing on the last night of the trading period, or first thing before the first delivery of the new one — and hold it.</p>
+
+    <div class="callout">
+      <strong>The delivery trap:</strong> the single most common way to blow a count is to receive a delivery mid-stocktake and count some of it, none of it, or it twice. If a delivery is due, either count before it lands or after it's fully put away — never straddle it. Freeze the door for the hour it takes.
+    </div>
+
+    <h3>2. One unit per item, and it never changes</h3>
+
+    <p>Decide how you count each item and write it on the sheet: <strong>tomatoes in kg, wine in bottles, oil in litres, flour in the 25 kg sack plus loose kg.</strong> The unit you count in must match the unit you value in, or you'll multiply a bottle count by a per-litre price and produce nonsense.</p>
+
+    <p>The classic disaster is counting "boxes" when a box means 6 one week and 12 the next because the supplier changed the case pack. Count the sellable/usable unit, not the shipping unit — or if you count cases, record the pack size beside it. And be honest about part-units. A tub that's a third full is 0.33, not 1, and not 0. Eyeballing part-tubs to the nearest whole is where a surprising amount of variance is born.</p>
+
+    <h3>3. The count sheet follows the shelves, not the alphabet</h3>
+
+    <p>This is the rule that buys you speed, and almost nobody does it. Your count sheet should list items <strong>in the physical order you walk past them</strong> — top shelf of the dry store left to right, then the next shelf down, then the floor, then into the walk-in the same way, then the freezer, then the bar.</p>
+
+    <p>An alphabetical sheet forces you to hunt: you read "anchovies," walk to the shelf, then read "apricot jam," walk back across the room. A shelf-ordered sheet lets you stand in one spot, count everything in front of you top to bottom, tick down the page, and move. The difference between an alphabetical sheet and a walk-order sheet is easily 40% of the time. It's also more accurate, because you're never jumping around wondering whether you already did the passata.</p>
+
+    <p>Build the sheet once, in walk order, and only revise it when the layout changes. Group by storage zone: Dry Store, Walk-in Chill, Freezer, Bar/Cellar, Prep Fridge. Print it with a column for the count and a wide column for notes ("2 tubs looked off — check", "case pack now 10 not 12").</p>
+
+    <h3>4. Two people on the high-value zones</h3>
+
+    <p>You don't need two people for the tinned tomatoes. You do need two for the walk-in proteins, the seafood, the spirits, the saffron drawer — anything where a miscount of one unit is a miscount of $20 or more.</p>
+
+    <p>One counts and calls the number, the other writes and confirms. It halves errors on the items where errors cost the most, and it removes the temptation to fudge. It's also faster than it sounds: caller and scribe settle into a rhythm and clear a section quicker than one person doing both jobs and losing their place. Reserve the pairing for the money shelves; let one competent person handle the dry store solo.</p>
+
+    <h2>Valuing the count</h2>
+
+    <p>A count is a list of quantities. To get a stock value — the number that feeds gross profit and variance — you multiply each quantity by its cost price and sum it.</p>
+
+    <div class="formula">
+      Stock Value = Σ ( <span class="var">quantity counted</span> × <span class="var">cost per unit</span> )
+    </div>
+
+    <p>Two things ruin this step. First, <strong>stale cost prices.</strong> If your olive oil is valued at last year's $8.50 and it's now $11.20, every count undervalues your stock and every variance calculation is off. Cost prices need to track your actual invoices. Second, <strong>the unit mismatch from Rule 2</strong> — counting in one unit, pricing in another. Kill both by keeping cost prices current on your highest-spend items and locking the count unit to the price unit.</p>
+
+    <p>Here's a worked slice of a single walk-in shelf so you can see the shape of it:</p>
+
+    <table>
+      <thead>
+        <tr><th>Item</th><th>Unit</th><th>Count</th><th>Cost / unit</th><th>Value</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Lamb shoulder</td><td>kg</td><td>7.4</td><td>$24.00</td><td>$177.60</td></tr>
+        <tr><td>Salmon side</td><td>kg</td><td>3.2</td><td>$31.50</td><td>$100.80</td></tr>
+        <tr><td>Butter (blocks)</td><td>block</td><td>11</td><td>$4.10</td><td>$45.10</td></tr>
+        <tr><td>Double cream</td><td>litre</td><td>4.5</td><td>$3.80</td><td>$17.10</td></tr>
+        <tr><td>Parmesan</td><td>kg</td><td>1.8</td><td>$22.00</td><td>$39.60</td></tr>
+        <tr><td colspan="4"><strong>Shelf total</strong></td><td><strong>$380.20</strong></td></tr>
+      </tbody>
+    </table>
+
+    <p>Do that for every zone and the grand total is your closing stock value for the period. Which brings us to the two numbers people muddle.</p>
+
+    <h2>Opening stock, closing stock, and the number in between</h2>
+
+    <p>Your <strong>closing stock</strong> is what you count at the end of a period. Your <strong>opening stock</strong> for the next period is the exact same number — you don't count twice. Last week's close is this week's open. That's why the "same time, same units" rule matters so much: the two counts have to be the same kind of photograph for the arithmetic between them to mean anything.</p>
+
+    <p>The arithmetic is cost of goods used:</p>
+
+    <div class="formula">
+      Cost of Goods Used = <span class="var">Opening Stock</span> + <span class="var">Purchases</span> − <span class="var">Closing Stock</span>
+    </div>
+
+    <p>Say you opened the week with $6,200 of stock, bought $9,400 across the week's deliveries, and counted $5,900 at close. You used $9,700 of food. Divide that by the week's food sales and you have your <em>actual</em> food cost percentage — the real one, the one the bank sees, not the theoretical one your recipe cards predict. Two honest counts a week apart plus your delivery invoices give you that number without any guesswork. One sloppy count and it's fiction.</p>
+
+    <p>This is also why a stocktake is not really about the value on the day. The value is a checkpoint. The <em>movement between two checkpoints</em> is the insight.</p>
+
+    <h2>How often, and for which items</h2>
+
+    <p>"Full stocktake every week" is the advice you'll read everywhere, and for a lot of kitchens it's overkill that guarantees the count gets skipped. Frequency should follow value and volatility, not a calendar dogma. The National Restaurant Association's operations research consistently puts food and beverage among the largest controllable costs an operator carries, which is the whole reason the count exists — but you get most of that control by watching the items that actually move money. See the <a href="https://www.restaurant.org/research-and-media/research/" target="_blank" rel="noopener">National Restaurant Association's industry research</a> for the cost-structure picture.</p>
+
+    <p>A workable tiered rhythm:</p>
+
+    <table>
+      <thead>
+        <tr><th>Tier</th><th>Examples</th><th>Count how often</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>High value / high volatility</td><td>Proteins, seafood, spirits, wine, saffron</td><td>Weekly</td></tr>
+        <tr><td>Mid value / steady use</td><td>Dairy, oils, cheese, premium dry goods</td><td>Fortnightly</td></tr>
+        <tr><td>Low value / stable</td><td>Salt, flour, tinned goods, dried pasta</td><td>Monthly (full count)</td></tr>
+      </tbody>
+    </table>
+
+    <p>The logic: a 2 kg error on lamb at $24/kg is a $48 hole; a 2 kg error on flour is under a dollar. Spend your counting minutes where the money is. Run the full count monthly for the books, and run a fast <strong>high-value-only count weekly</strong> to catch the leaks that matter while they're still small enough to trace. A weekly protein-and-spirits count takes fifteen minutes and finds the missing $200 before it becomes a mystery $800 at month end.</p>
+
+    <div class="tool-mention">
+      <span class="icon"><svg viewBox="0 0 24 24" style="width:100%;height:100%;display:block" aria-hidden="true"><g transform="translate(3.6 3.6) scale(0.7)"><path d="M6.5 13.6 C5 13 4.2 11.6 4.5 10 C4.6 9.3 5 8.6 5.7 8.2 C5.4 7 6 6.1 7 5.8 C7 4.6 7.8 3.8 9 3.8 C9.3 2.8 10.5 2.2 12 2.2 C13.5 2.2 14.7 2.8 15 3.8 C16.2 3.8 17 4.6 17 5.8 C18 6.1 18.6 7 18.3 8.2 C19 8.6 19.4 9.3 19.5 10 C19.8 11.6 19 13 17.5 13.6 Z" fill="#fff"/><path d="M6.3 13.6 L17.7 13.6 L17.7 19.3 C17.7 20.2 17 21 16.1 21 L7.9 21 C7 21 6.3 20.2 6.3 19.3 Z" fill="#fff"/><path d="M8 13.4 C7.7 10.4 8 7.4 8.9 5 M10 13.5 C9.9 10 10 6.6 10.5 3.4 M12 13.5 V2.6 M14 13.5 C14.1 10 14 6.6 13.5 3.4 M16 13.4 C16.3 10.4 16 7.4 15.1 5" stroke="#16433a" stroke-width="0.5" stroke-linecap="round" fill="none"/></g></svg></span>
+      <div>
+        <p class="label">In ProChefDesk</p>
+        <p>The <a href="/app/" target="_blank" rel="noopener">Inventory count</a> keeps each item's unit and cost price in one place, so the sheet already reads in the unit you count in and values itself as you go. Order the list to match your storage zones once and every future count walks in shelf order. Cost prices you keep current flow straight into the count value — no re-keying into a spreadsheet at 11pm.</p>
+      </div>
+    </div>
+
+    <h2>Feeding theoretical-vs-actual afterwards</h2>
+
+    <p>An accurate count is the raw material for the one report that actually changes behaviour: <strong>variance</strong>. Theoretical usage is what your recipes say you should have used, given what you sold — sell 40 lamb plates at 180 g and you should have used 7.2 kg of trimmed lamb. Actual usage is what the count says you really used: opening + purchases − closing.</p>
+
+    <div class="formula">
+      Variance = <span class="var">Actual usage</span> − <span class="var">Theoretical usage</span>
+    </div>
+
+    <p>If theoretical says 7.2 kg and the count says you got through 8.9 kg, you have 1.7 kg of unexplained lamb — over-portioning, trim waste, a comp you forgot, or something walking out the back door. At $24/kg that's $41 this week, roughly $2,000 a year on one ingredient. Variance is where a stocktake stops being bookkeeping and starts paying for itself: it points a finger at the specific item that's leaking, not just a sad total at the bottom of the P&L.</p>
+
+    <p>But — and this is the whole reason we spent so long on count discipline — <strong>variance is only as good as the count that feeds it.</strong> A sloppy count doesn't just give you a wrong stock value; it manufactures phantom variance. Miscount closing lamb by 1 kg and you've invented 1 kg of "usage" that never happened, and now you're hunting a leak that's actually a clipboard error. Garbage count in, garbage variance out. That's why chefs who don't count carefully eventually stop trusting the variance report and quietly abandon it.</p>
+
+    <div class="tool-mention">
+      <span class="icon"><svg viewBox="0 0 24 24" style="width:100%;height:100%;display:block" aria-hidden="true"><g transform="translate(3.6 3.6) scale(0.7)"><path d="M6.5 13.6 C5 13 4.2 11.6 4.5 10 C4.6 9.3 5 8.6 5.7 8.2 C5.4 7 6 6.1 7 5.8 C7 4.6 7.8 3.8 9 3.8 C9.3 2.8 10.5 2.2 12 2.2 C13.5 2.2 14.7 2.8 15 3.8 C16.2 3.8 17 4.6 17 5.8 C18 6.1 18.6 7 18.3 8.2 C19 8.6 19.4 9.3 19.5 10 C19.8 11.6 19 13 17.5 13.6 Z" fill="#fff"/><path d="M6.3 13.6 L17.7 13.6 L17.7 19.3 C17.7 20.2 17 21 16.1 21 L7.9 21 C7 21 6.3 20.2 6.3 19.3 Z" fill="#fff"/><path d="M8 13.4 C7.7 10.4 8 7.4 8.9 5 M10 13.5 C9.9 10 10 6.6 10.5 3.4 M12 13.5 V2.6 M14 13.5 C14.1 10 14 6.6 13.5 3.4 M16 13.4 C16.3 10.4 16 7.4 15.1 5" stroke="#16433a" stroke-width="0.5" stroke-linecap="round" fill="none"/></g></svg></span>
+      <div>
+        <p class="label">In ProChefDesk</p>
+        <p>The <a href="/app/" target="_blank" rel="noopener">Variance</a> tool takes your count and lines actual usage up against theoretical — dishes sold multiplied through their recipes, sub-recipes included — and shows the gap per ingredient in weight and in dollars. That's how you find the one item leaking money instead of staring at a single unhappy total.</p>
+      </div>
+    </div>
+
+    <h2>Speed tips that don't cost you accuracy</h2>
+
+    <p>Once the discipline is in place, these shave the count down without reintroducing error:</p>
+
+    <ul>
+      <li><strong>Count backwards from full.</strong> If a shelf holds 24 tins and there are two gaps, count the gaps and write 22. Faster than counting 22 tins, and just as exact for anything shelved in a known slot.</li>
+      <li><strong>Pre-weigh the awkward ones.</strong> Know that a full flour sack is 25 kg and a full oil drum is 20 L, and estimate part-fulls against that anchor instead of decanting to weigh.</li>
+      <li><strong>Tare containers once, label the empty weight.</strong> A stock pot of demi-glace: weigh it, subtract the pot's known weight, done — no messy decanting.</li>
+      <li><strong>Don't tidy while you count.</strong> Rotating stock, wiping shelves, and reorganising are separate jobs. Doing them mid-count breaks your rhythm and your place. Count first, then tidy.</li>
+      <li><strong>Two people, one caller.</strong> On the high-value zones, the caller never touches the sheet and the scribe never touches the stock. Roles don't swap mid-section.</li>
+      <li><strong>Note, don't stop.</strong> If something's odd — a case pack changed, a tub looks spoiled — write it in the notes column and keep moving. Investigate after, not during.</li>
+    </ul>
+
+    <p>The goal isn't to count fast. It's to count <em>right</em>, then let good setup make right also be fast. A shelf-ordered sheet, locked units, current prices, and a partner on the money shelves will get a mid-size kitchen through a full count in under an hour and a high-value spot-count in fifteen minutes.</p>
+
+    <h2>The point</h2>
+
+    <p>A stocktake feels like admin, so it gets treated like admin — rushed, guessed, resented. But it's the one measurement that turns your recipe costs from hopeful theory into something the bank account confirms. The hour it costs buys you a true food cost percentage and a variance report that names the leak. Skip the discipline and you get a number that lies to you confidently, which is the most expensive kind of number there is.</p>
+
+    <blockquote>"We counted every week and still lost money. Turned out we were counting boxes, and the boxes weren't always the same size."</blockquote>
+
+    <p>Same time, same units, shelf-order sheet, two on the expensive stuff. Get those four right and everything downstream — cost of goods, variance, the decisions you make off them — is finally standing on solid ground.</p>
+
+    <div class="end-mark"></div>
+  </article>
+
+  <!-- v2.8.94 — Related posts cross-link (internal linking for SEO + reader retention) -->
+  <section class="related-posts" aria-label="Related articles">
+    <h3>Related reading</h3>
+    <div class="related-grid">
+      <a href="/blog/restaurant-inventory-management.html" class="related-card">
+        <div class="related-tag">Inventory &amp; Stock Control</div>
+        <div class="related-title">Restaurant Inventory Management: A System, Not a Spreadsheet</div>
+        <div class="related-desc">The full loop — par, order, receive, store FIFO, count, variance — and the numbers it hands you when you run it weekly.</div>
+      </a>
+      <a href="/blog/restaurant-inventory-par-levels.html" class="related-card">
+        <div class="related-tag">Inventory &amp; Stock Control</div>
+        <div class="related-title">Restaurant Inventory Par Levels: Data-Driven Sizing</div>
+        <div class="related-desc">Par is a calculated quantity from usage, delivery and a buffer — not a guess taped to the shelf.</div>
+      </a>
+    </div>
+  </section>
+
+  <footer class="blog-footer">
+    <div class="left">
+      <span class="foot-mark"><svg viewBox="0 0 24 24" style="width:100%;height:100%;display:block" aria-hidden="true"><g transform="translate(3.6 3.6) scale(0.7)"><path d="M6.5 13.6 C5 13 4.2 11.6 4.5 10 C4.6 9.3 5 8.6 5.7 8.2 C5.4 7 6 6.1 7 5.8 C7 4.6 7.8 3.8 9 3.8 C9.3 2.8 10.5 2.2 12 2.2 C13.5 2.2 14.7 2.8 15 3.8 C16.2 3.8 17 4.6 17 5.8 C18 6.1 18.6 7 18.3 8.2 C19 8.6 19.4 9.3 19.5 10 C19.8 11.6 19 13 17.5 13.6 Z" fill="#fff"/><path d="M6.3 13.6 L17.7 13.6 L17.7 19.3 C17.7 20.2 17 21 16.1 21 L7.9 21 C7 21 6.3 20.2 6.3 19.3 Z" fill="#fff"/><path d="M8 13.4 C7.7 10.4 8 7.4 8.9 5 M10 13.5 C9.9 10 10 6.6 10.5 3.4 M12 13.5 V2.6 M14 13.5 C14.1 10 14 6.6 13.5 3.4 M16 13.4 C16.3 10.4 16 7.4 15.1 5" stroke="#16433a" stroke-width="0.5" stroke-linecap="round" fill="none"/></g></svg></span>
+      <span>ProChefDesk · written from a working kitchen</span>
+    </div>
+    <div class="right">
+      <a href="/blog/">All posts</a>
+      <a href="/app/">Open app</a>
+      <a href="/privacy.html">Privacy</a>
+    </div>
+  </footer>
+
+</body>
+</html>
