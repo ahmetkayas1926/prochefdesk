@@ -209,12 +209,13 @@
       table += '<td style="padding:4px;text-align:center;font-size:11px;color:' + (filled ? 'var(--text-1)' : 'var(--text-3)') + ';border-bottom:1px solid var(--border);font-weight:600;">' + dayLabel + '</td>';
       if (filled) {
         const cond = condBadge(r.conditionOK);
+        const tempFail = rcvTempFail(r);
         const expiry = r.expiryDate ? new Date(r.expiryDate + 'T00:00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }) : '—';
         table +=
           '<td style="padding:4px 8px;font-size:12px;font-weight:600;border-bottom:1px solid var(--border);border-left:1px solid var(--border);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + PCD.escapeHtml(r.supplier || '') + '">' + PCD.escapeHtml(r.supplier || '—') + '</td>' +
           '<td style="padding:4px 8px;font-size:12px;font-weight:600;border-bottom:1px solid var(--border);border-left:1px solid var(--border);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + PCD.escapeHtml(r.productName || '') + '">' + PCD.escapeHtml(r.productName || '—') + '</td>' +
           '<td style="padding:4px 6px;text-align:center;font-size:11px;border-bottom:1px solid var(--border);border-left:1px solid var(--border);">' + (r.quantity ? PCD.escapeHtml(r.quantity) + (r.quantityUnit ? ' ' + PCD.escapeHtml(r.quantityUnit) : '') : '—') + '</td>' +
-          '<td style="padding:4px;text-align:center;font-size:12px;font-weight:600;border-bottom:1px solid var(--border);border-left:1px solid var(--border);">' + fmtTemp(r.deliveryTemp) + '</td>' +
+          '<td style="padding:4px;text-align:center;font-size:12px;font-weight:' + (tempFail ? '800' : '600') + ';border-bottom:1px solid var(--border);border-left:1px solid var(--border);' + (tempFail ? 'color:#fff;background:var(--danger);' : '') + '" title="' + (tempFail ? PCD.escapeHtml(t('hcr_temp_fail') || 'Saklama tipi eşiği ihlal edildi') : '') + '">' + fmtTemp(r.deliveryTemp) + (tempFail ? ' ⚠' : '') + '</td>' +
           '<td style="padding:4px;text-align:center;font-size:11px;color:var(--text-2);border-bottom:1px solid var(--border);border-left:1px solid var(--border);">' + expiry + '</td>' +
           '<td style="padding:4px;text-align:center;font-size:14px;font-weight:700;border-bottom:1px solid var(--border);border-left:1px solid var(--border);color:' + cond.color + ';background:' + cond.bg + ';">' + cond.mark + '</td>' +
           '<td style="padding:4px 6px;font-size:11px;color:var(--text-2);border-bottom:1px solid var(--border);border-left:1px solid var(--border);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + PCD.escapeHtml(r.note || '') + '">' + PCD.escapeHtml(r.note || '—') + '</td>' +
@@ -284,7 +285,7 @@
       date: defaultDate, rowIndex: rowIndex,
       supplier: '', productName: '',
       quantity: '', quantityUnit: '',
-      deliveryTemp: null, expiryDate: null,
+      deliveryTemp: null, expiryDate: null, storageType: null,
       conditionOK: null,
       note: '', chef: '',
     };
@@ -339,6 +340,16 @@
             '<input id="rfTemp" type="number" step="0.1" placeholder="" value="' + (data.deliveryTemp != null ? data.deliveryTemp : '') + '" style="flex:1;padding:8px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface-1);color:var(--text-1);font-size:14px;font-weight:600;text-align:center;box-sizing:border-box;width:0;min-width:0;">' +
             '<span style="display:flex;align-items:center;color:var(--text-3);font-size:13px;">°' + u + '</span>' +
           '</div>' +
+          // v2.44.128 — Saklama tipi: teslim sıcaklığının hangi eşiğe göre kontrol
+          // edileceğini şef seçer (soğuk/donmuş/sıcak). Seçilmezse/kuru = eşik yok
+          // (dry-good yanlış alarm vermez). rcvTempFail bunu kullanır (grid + audit).
+          '<select id="rfStorage" style="width:100%;margin-top:6px;padding:6px;border:1px solid var(--border);border-radius:6px;background:var(--surface-1);color:var(--text-1);font-size:12px;box-sizing:border-box;">' +
+            '<option value="">' + PCD.escapeHtml(t('hcr_storage_pick') || 'Tip (eşik kontrolü)…') + '</option>' +
+            '<option value="cold"' + (data.storageType === 'cold' ? ' selected' : '') + '>' + PCD.escapeHtml(t('hcr_storage_cold') || 'Soğuk') + ' ≤' + rcvColdMaxC() + '°' + u + '</option>' +
+            '<option value="frozen"' + (data.storageType === 'frozen' ? ' selected' : '') + '>' + PCD.escapeHtml(t('hcr_storage_frozen') || 'Donmuş') + ' ≤' + rcvFrozenMaxC() + '°' + u + '</option>' +
+            '<option value="hot"' + (data.storageType === 'hot' ? ' selected' : '') + '>' + PCD.escapeHtml(t('hcr_storage_hot') || 'Sıcak') + ' ≥' + rcvHotMinC() + '°' + u + '</option>' +
+            '<option value="ambient"' + (data.storageType === 'ambient' ? ' selected' : '') + '>' + PCD.escapeHtml(t('hcr_storage_ambient') || 'Kuru / oda (kontrol yok)') + '</option>' +
+          '</select>' +
         '</div>' +
         '<div style="border:1px solid var(--border);border-radius:8px;padding:10px;">' +
           '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">📅 ' + PCD.escapeHtml(t('hcr_col_expiry') || 'SKT') + '</div>' +
@@ -421,6 +432,8 @@
       data.quantityUnit = body.querySelector('#rfQtyU').value.trim();
       const tv = parseFloat(body.querySelector('#rfTemp').value);
       data.deliveryTemp = isNaN(tv) ? null : tv;
+      const stSel = body.querySelector('#rfStorage');
+      data.storageType = (stSel && stSel.value) ? stSel.value : null;
       data.expiryDate = body.querySelector('#rfExpiry').value || null;
       data.note = body.querySelector('#rfNote').value.trim();
       data.chef = body.querySelector('#rfChef').value.trim();
@@ -485,12 +498,13 @@
       const expiry = r && r.expiryDate ? new Date(r.expiryDate + 'T00:00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }) : '';
       const cond = r ? (r.conditionOK === true ? '✓' : r.conditionOK === false ? '✗' : '') : '';
       const condFail = r && r.conditionOK === false;
+      const tempFail = rcvTempFail(r);
       html += '<tr style="height:22px;">' +
         '<td class="idx">' + (i + 1) + '</td>' +
         '<td class="sup">' + (r ? PCD.escapeHtml(r.supplier || '') : '') + '</td>' +
         '<td class="prod">' + (r ? PCD.escapeHtml(r.productName || '') : '') + '</td>' +
         '<td class="qty">' + (r && r.quantity ? PCD.escapeHtml(r.quantity) + (r.quantityUnit ? ' ' + PCD.escapeHtml(r.quantityUnit) : '') : '') + '</td>' +
-        '<td class="t">' + tempVal + '</td>' +
+        '<td class="t"' + (tempFail ? ' style="color:#b00020;font-weight:800;"' : '') + '>' + tempVal + (tempFail ? ' ⚠' : '') + '</td>' +
         '<td class="exp">' + expiry + '</td>' +
         '<td class="cond' + (condFail ? ' fail' : '') + '">' + cond + '</td>' +
         '<td class="note">' + (r ? PCD.escapeHtml(r.note || '') : '') + '</td>' +
@@ -642,12 +656,13 @@
       const expiry = r && r.expiryDate ? new Date(r.expiryDate + 'T00:00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }) : '';
       const cond = r ? (r.conditionOK === true ? '✓' : (r.conditionOK === false ? '✗' : '')) : '';
       const condFail = r && r.conditionOK === false;
+      const tempFail = rcvTempFail(r);
       html += '<tr>' +
         '<td class="idx">' + dayLabel + '</td>' +
         '<td class="sup">' + (r ? PCD.escapeHtml(r.supplier || '') : '') + '</td>' +
         '<td class="prod">' + (r ? PCD.escapeHtml(r.productName || '') : '') + '</td>' +
         '<td class="qty">' + (r && r.quantity ? PCD.escapeHtml(r.quantity) + (r.quantityUnit ? ' ' + PCD.escapeHtml(r.quantityUnit) : '') : '') + '</td>' +
-        '<td class="t">' + tempVal + '</td>' +
+        '<td class="t"' + (tempFail ? ' style="color:#b00020;font-weight:800;"' : '') + '>' + tempVal + (tempFail ? ' ⚠' : '') + '</td>' +
         '<td class="exp">' + expiry + '</td>' +
         '<td class="cond' + (condFail ? ' fail' : '') + '">' + cond + '</td>' +
         '<td class="note">' + (r ? PCD.escapeHtml(r.note || '') : '') + '</td>' +
@@ -664,6 +679,18 @@
   function rcvHotMinC() { return (PCD.haccp && PCD.haccp.getThresholds() && PCD.haccp.getThresholds().hotMinC) || 60; }
   function rcvColdMaxC() { return (PCD.haccp && PCD.haccp.getThresholds() && PCD.haccp.getThresholds().coldMaxC) || 5; }
   function rcvFrozenMaxC() { return (PCD.haccp && PCD.haccp.getThresholds() && PCD.haccp.getThresholds().frozenMaxC) || -18; }
+  // v2.44.128 — Teslim sıcaklığı FAIL: seçilen saklama tipine göre eşik ihlali.
+  // cold: temp > coldMax · frozen: temp > frozenMax · hot: temp < hotMin.
+  // Tip yoksa/kuru → kontrol yok (dry-good yanlış alarm vermez). Grid + print +
+  // Audit Pack (haccp.js) BU mantığı birebir kullanır (aksi halde rapor ≠ grid).
+  function rcvTempFail(r) {
+    if (!r || r.deliveryTemp == null) return false;
+    const t = Number(r.deliveryTemp);
+    if (r.storageType === 'cold')   return t > rcvColdMaxC();
+    if (r.storageType === 'frozen') return t > rcvFrozenMaxC();
+    if (r.storageType === 'hot')    return t < rcvHotMinC();
+    return false;
+  }
 
   function printStylesAndHeader(wsName, dateOrMonthLabel, u, t) {
     const tCold = u === 'F' ? (Math.round((rcvColdMaxC() * 9 / 5 + 32) * 10) / 10) + '°F' : rcvColdMaxC() + '°C';

@@ -143,16 +143,36 @@
       });
     } catch (e) { /* defensive */ }
 
-    // --- 3. Receiving (condition pass/fail flag) ---
+    // --- 3. Receiving (condition flag + delivery-temp vs storageType eşiği) ---
+    // v2.44.128 — Teslim sıcaklığı artık SEÇİLEN SAKLAMA TİPİ eşiğine göre de
+    // kontrol edilir (haccp_receiving.js rcvTempFail ile BİREBİR, aynı getThresholds
+    // kaynağı). Eskiden yalnız manuel Tamam/Sorun bayrağı sayılıyordu → 25°C soğuk
+    // teslim 'Tamam' iken '100% in range' çıkıyordu. Artık eşik ihlali fail'dir.
     try {
+      var _rth = (PCD.haccp.getThresholds && PCD.haccp.getThresholds()) || {};
+      var _coldMax = _rth.coldMaxC != null ? _rth.coldMaxC : 5;
+      var _frozenMax = _rth.frozenMaxC != null ? _rth.frozenMaxC : -18;
+      var _hotMin = _rth.hotMinC != null ? _rth.hotMinC : 60;
+      var rcvTempFail = function (r) {
+        if (!r || r.deliveryTemp == null) return false;
+        var t = Number(r.deliveryTemp);
+        if (r.storageType === 'cold')   return t > _coldMax;
+        if (r.storageType === 'frozen') return t > _frozenMax;
+        if (r.storageType === 'hot')    return t < _hotMin;
+        return false;
+      };
       (PCD.store.listTable('haccpReceiving') || []).forEach(function (r) {
         if (!r || r._deletedAt || !inMonth(r.date, ym)) return;
         const filled = r.supplier || r.productName || r.conditionOK != null || r.deliveryTemp != null;
         if (!filled) return;
-        pushCheck(byForm.receiving, r.conditionOK === false, {
+        var tempFail = rcvTempFail(r);
+        pushCheck(byForm.receiving, (r.conditionOK === false) || tempFail, {
           date: r.date, item: r.productName || r.supplier,
           reading: r.deliveryTemp != null ? showTemp(r.deliveryTemp) : '—',
-          limit: L('haccp_audit_cond_ok', 'Condition OK'), corrective: r.note, chef: r.chef,
+          limit: tempFail
+            ? (r.storageType === 'cold' ? '≤' + showTemp(_coldMax) : (r.storageType === 'frozen' ? '≤' + showTemp(_frozenMax) : '≥' + showTemp(_hotMin)))
+            : L('haccp_audit_cond_ok', 'Condition OK'),
+          corrective: r.note, chef: r.chef,
         });
       });
     } catch (e) { /* defensive */ }
