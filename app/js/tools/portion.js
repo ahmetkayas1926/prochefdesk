@@ -562,9 +562,14 @@
         if (!merged[key]) merged[key] = { ingredient: ing, unit: unit, totalAmount: 0, totalCost: 0 };
         const amt = Number(item.amount) || 0;
         merged[key].totalAmount += amt;
-        let cost = amt * (ing.pricePerUnit || 0);
+        // v2.44.126 — yield% uygula (computeFoodCost ile tutarlı): trim/fire sonrası
+        // gerçek maliyet = fiyat / (yield/100). Aksi halde 'Kategoriye/Tedarikçiye göre'
+        // görünüm + Excel, 'Tarife göre'den DÜŞÜK çıkıyordu (yield sessizce düşüyordu).
+        const _yld = Number(ing.yieldPercent);
+        const _price = (_yld > 0 && _yld < 100) ? (Number(ing.pricePerUnit) || 0) / (_yld / 100) : (Number(ing.pricePerUnit) || 0);
+        let cost = amt * _price;
         if (item.unit && ing.unit && item.unit !== ing.unit) {
-          try { cost = PCD.convertUnit(amt, item.unit, ing.unit) * (ing.pricePerUnit || 0); } catch (e) {}
+          try { cost = PCD.convertUnit(amt, item.unit, ing.unit) * _price; } catch (e) {}
         }
         merged[key].totalCost += cost;
       });
@@ -687,9 +692,12 @@
         flat.forEach(function (item) {
           const ing = item.ingredient; if (!ing) return;
           const amt = Number(item.amount) || 0;
-          let cost = amt * (ing.pricePerUnit || 0);
+          // v2.44.126 — yield% uygula (computeFoodCost + ekran 'Tarife göre' ile tutarlı).
+          const _yld = Number(ing.yieldPercent);
+          const _price = (_yld > 0 && _yld < 100) ? (Number(ing.pricePerUnit) || 0) / (_yld / 100) : (Number(ing.pricePerUnit) || 0);
+          let cost = amt * _price;
           if (item.unit && ing.unit && item.unit !== ing.unit) {
-            try { cost = PCD.convertUnit(amt, item.unit, ing.unit) * (ing.pricePerUnit || 0); } catch (e) {}
+            try { cost = PCD.convertUnit(amt, item.unit, ing.unit) * _price; } catch (e) {}
           }
           total += cost;
           const nm = (ing.name || '') + (item.viaSubRecipe ? ' (via ' + item.viaSubRecipe + ')' : '');
