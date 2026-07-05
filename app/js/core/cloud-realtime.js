@@ -311,7 +311,7 @@
         var exp = newRow.plan_expires_at ? new Date(newRow.plan_expires_at).getTime() : 0;
         if (!(exp && exp > Date.now())) effPlan = 'free';
       }
-      PCD.store.set('plan', effPlan);
+      if (effPlan !== PCD.store.get('plan')) PCD.store.set('plan', effPlan); // yalnız değişince (gereksiz ws-switch emit'i yok)
     }
   }
 
