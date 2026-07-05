@@ -12,13 +12,17 @@ Araç envanteri + mimari → **`HANDOVER.md`** · sürüm geçmişi → **`CHANG
 
 ## Durum
 
-**Ürün lansman-hazır.** Stripe canlı: `ProChefDesk, LLC` (Delaware) · **$19/ay `price_1TkaHBPAp6Hx01isprzC026A` · $190/yıl `price_1TkaI8PAp6Hx01isG2HOVwzQ`** · `config.js STRIPE_PK`=pk_live · 3 Edge Fn + webhook (checkout.completed/subscription.updated/.deleted) · Mercury payout · uçtan uca test geçti. Site LLC/USD/Delaware (terms+privacy 6 dil · liability cap US$100 · 131 Continental Dr Newark DE). Reputation temiz (Google Safe Browsing + Norton OK). 24 blog + sitemap canlı. Profil senkronu çalışır (`prefs.profile`).
+**Ürün lansman-hazır.** Stripe canlı: `ProChefDesk, LLC` (Delaware) · **$19/ay `price_1TkaHBPAp6Hx01isprzC026A` · $190/yıl `price_1TkaI8PAp6Hx01isG2HOVwzQ`** · `config.js STRIPE_PK`=pk_live · 3 Edge Fn + webhook (checkout.completed/subscription.updated/.deleted) · Mercury payout · uçtan uca test geçti. Site LLC/USD/Delaware (terms+privacy 6 dil · liability cap US$100 · 131 Continental Dr Newark DE). Reputation temiz (Google Safe Browsing + Norton OK). 54 blog + sitemap canlı. Profil senkronu çalışır (`prefs.profile`).
 
 **Açık (operatör işi, kod değil):**
 - [ ] **Go-to-market — ASIL İŞ.** Tek hedef ↓.
 - [ ] iOS/Safari gerçek cihaz testi (kamera/share-sheet/PWA/hCaptcha — kod denetimi tamam).
 - [ ] Launch QA — operatörle son manuel pass.
+- [ ] **Google Search Console** — 30 yeni blog (toplam 54) canlı & push edildi (2026-07-05). Yapılacak: GSC'de sitemap'i (`prochefdesk.com/sitemap.xml`) yeniden gönder + yeni URL'lere "Request Indexing" (aramada hızlı görünmesi için). Salt operatör işi.
 - [ ] **Web3Forms teslim adresi bozuk.** "Report an issue" formu (account.js `WEB3FORMS_KEY`) hâlâ hello@prochefdesk.com'a teslim ediyor — ama hello@ artık mail almıyor (Cloudflare Email Routing kapatıldı, mailbox Zoho'da `ahmet@prochefdesk.com` olarak kuruldu) → **gönderiler kayboluyor.** Çözüm: web3forms.com'da ahmet@ ile YENİ access key oluştur (eski hello@ hesabı e-posta kilitli olabilir) → `account.js` `WEB3FORMS_KEY`'i yeni key'le değiştir. ("Send feedback" mailto zaten ahmet@'ye güncellendi, o çalışıyor.)
+- [ ] **Demo tur videosu** (opsiyonel) — operatör 2 dk'lık uygulama-içi demo videosu çekip YouTube'a yükleyince: Claude landing hero'nun altına responsive `<iframe>` ile gömer (1-2 dk'lık iş, YouTube Paylaş→Yerleştir kodu).
+- [ ] **Capacitor mağaza uygulaması** (opsiyonel) — mevcut PWA'yı native app'e sarma (Play Store / App Store). Teknik kurulumu Claude yapar (birkaç saat); **Mac + Xcode + Apple Developer ($99/yıl) + Google Play ($25 tek sefer) hesapları operatörde** (+ App Store inceleme ~1-3 gün). Not: uygulama zaten PWA — "ana ekrana ekle" ile app gibi çalışıyor, mağaza şart değil.
+- [ ] **Testimonial (şef referansı) bölümü** — landing'de kod HAZIR ama gizli (`index.html` `#testimonials` `display:none`, 3 placeholder kart). Gerçek 1-3 şef referansı gelince: `display:none`→`display:` yap + `[İsim]/[Rol]/[alıntı]`'yı somut sonuçla doldur ("teklif 2 saatten 15 dk'ya düştü" gibi). **Sahte yorum YOK, gerçek referans gelmeden AÇMA.**
 - [ ] (Gelecek) AU PR alınca → AU Stripe'a geç (ABN+AU banka) + ABD LLC feshet. **Vergi:** DE LLC ~$300/yıl (1 Haz) + federal 5472+1120 (15 Nis; gelir 0 olsa bile; 5472 kaçırma $25k; ilk dosyalama 2027).
 
 **Stripe kritik notlar:** kimlik engeli → support.stripe.com specialist (Ask Atlas değil). Para yolu: Stripe→Mercury→Wise→AU/TR. Adaptive Pricing KAPALI ($19 sabit). free→pro: `migrations/v2.44.38` user_prefs satırını trigger'la yaratır — yeni `.update().eq(user_id)` yazan satır var olduğunu varsaymalı / upsert kullanmalı.
@@ -42,6 +46,8 @@ Araç envanteri + mimari → **`HANDOVER.md`** · sürüm geçmişi → **`CHANG
 **Fiyat:** $19 bilinçli erişilebilirlik bahsi ama bandın altı. App ~$179/ay araç yerine geçiyor (ROI bloğu) → yukarı test yeri VAR (yıllık vurgu / $29-39) — ama retained kullanıcıya SORDUKTAN sonra, körlemesine değil.
 
 **Gerçekçi beklenti:** medyan micro-SaaS = 6 ayda $1-3K MRR. Viralite değil, tutarlılık. Outreach=haftalar · organik blog=3-6 ay+ · paid=sonra.
+
+**Durum (2026-07-05) — asset'ler HAZIR, sıradaki = uygulama:** Yol adım (1) tamam — go-to-market listesi kurulu: `Desktop/potansiyel müşterilere ulaşma/` → `caterer-listesi.html` **750 aday** (518 doğrudan e-postalı) + hedef v2/v3/v4 (birleşik **696 benzersiz e-posta**, çakışmasız/segmentli) + `prochefdesk-outreach-kiti-FINAL.html` (segment + mail şablonları, food-cost-led) + **54-yazılık SEO blog** canlı. Liste denetim kaydı: `Desktop/prochefdesk-denetim-calisma-notlari.md`. Darboğaz artık liste değil → **adım (2-3): kişisel DM + ilk müşterileri gerçek event'lerinde onboard.**
 
 ---
 
@@ -120,7 +126,7 @@ CREATE POLICY <table>_owner_all ON <table>
 
 **Root dosyalar app'ten bağımsız.** `/` (landing), `/privacy.html`, `/terms.html`, `/blog/` — kendi inline CSS'leri; app CSS değişikliği etkilemez (tersi de). Blog yazıları standalone HTML (Inter + Fraunces, cream paper, brand green CTA). Landing i18n = `index.html` içinde inline `I18N` objesi (en=HTML default, tr/es/fr/de/ar JS blokları) + `apply(lang)` + `#langSelect`.
 
-**Landing'de HAZIR ama GİZLİ: şef referansları (testimonial) bölümü.** `index.html` → `<section id="testimonials" style="display:none;">` (canlıda görünmez — **boş alan yok, sahte yorum yok**) — 3 placeholder kart + kod-içi TR talimat. **Aktive:** `style="display:none;"` → `style=""` + kartlardaki `[İsim]`/`[Rol]`/`[alıntı]`'yı gerçek referansla doldur (somut sonuç: "teklif 2 saatten 15 dk'ya düştü"). Gerçek 1-3 referans gelmeden AÇMA. Canlı olanlar: **ROI bloğu** (pricing altı, ~$179→$19 karşılaştırması, 6 dil, `roi_*` anahtarları) + **kurucu bloğu** (`founder_*`, Marriott/Katar). Hero ICP-konumlu: "caterer, event chefs & professional kitchens".
+**Landing'de HAZIR ama GİZLİ: şef referansları (testimonial) bölümü.** `index.html` → `<section id="testimonials" style="display:none;">` (canlıda görünmez — **boş alan yok, sahte yorum yok**) — 3 placeholder kart + kod-içi TR talimat. **Aktive:** `style="display:none;"` → `style=""` + kartlardaki `[İsim]`/`[Rol]`/`[alıntı]`'yı gerçek referansla doldur (somut sonuç: "teklif 2 saatten 15 dk'ya düştü"). Gerçek 1-3 referans gelmeden AÇMA. Canlı olanlar: **ROI bloğu** (pricing altı, ~$179→$19 karşılaştırması, 6 dil, `roi_*` anahtarları) + **kurucu bloğu** (`founder_*`, Marriott/Katar). **Hero food-cost-led** (2026-07): eyebrow "Food costing for restaurants, cafés & caterers" · H1 "Know the true cost of every plate." (6 dil) — title/description/og/twitter + `og-image.png` + `manifest.webmanifest` + `app/index.html` hepsi bu sloganla hizalı. Proof grid'e HACCP Audit Pack görseli + 6 proof screenshot (events/event_detail/buffet/buffet_detail/roster/variance `.png`, food-cost <%25 tutarlı) eklendi.
 
 **Sub-recipe flattening.** `PCD.recipes.flattenIngredients(recipe, ingMap, recipeMap, opts)` (dashboard.js) tüm sub-recipe satırlarını gerçek ingredient seviyesine recursive düşürür (scale cascade + birim dönüşümü + cycle protection + separator skip); `{ingredient, ingredientId, amount, unit, viaSubRecipe}` döndürür. "Tarif → ingredient listesi" için bunu kullan. `variance.js` kendi recursion'unu kullanır.
 
