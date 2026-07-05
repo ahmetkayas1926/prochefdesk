@@ -1,7 +1,7 @@
 {
   "name": "ProChefDesk — Kitchen Management System",
   "short_name": "ProChefDesk",
-  "description": "Food costing, events, HACCP and inventory for restaurants, cafés, caterers and independent kitchens.",
+  "description": "Know the true cost of every plate — food costing, events, HACCP and inventory in one system for restaurants, cafés and caterers.",
   "start_url": "/app/",
   "scope": "/app/",
   "display": "standalone",
