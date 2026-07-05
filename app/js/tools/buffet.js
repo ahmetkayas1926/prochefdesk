@@ -485,21 +485,21 @@
 
     // === Path B: recipe-bound item ===
     if (item.recipeId && recipe) {
-      const recipeYield = Number(recipe.yieldAmount) || Number(recipe.servings) || 1;
       const totalRecipeCost = PCD.recipes.computeFoodCost(recipe, ingMap, recipeMap);
-      const costPerUnit = totalRecipeCost / (recipeYield || 1);
-      let prepAmountInRecipeUnit = prepAmount;
-      if (item.unit && recipe.yieldUnit && item.unit !== recipe.yieldUnit) {
-        try { prepAmountInRecipeUnit = PCD.convertUnit(prepAmount, item.unit, recipe.yieldUnit); } catch (e) {}
-      }
-      const prepCost = costPerUnit * prepAmountInRecipeUnit;
-      const expectedConsumeInRecipeUnit = (function () {
-        if (item.unit && recipe.yieldUnit && item.unit !== recipe.yieldUnit) {
-          try { return PCD.convertUnit(expectedConsume, item.unit, recipe.yieldUnit); } catch (e) {}
-        }
-        return expectedConsume;
-      })();
-      const consumeCost = costPerUnit * expectedConsumeInRecipeUnit;
+      // v2.44.120 — güvenilir ölçek (ortak subRecipeScale): tarifin verimi
+      // tanımsız + kişi-başı gram/ml girilmişse fraksiyon bilinemez → maliyet
+      // 0 + costReliable:false (18000 g'ı 18000 porsiyon gibi maliyetleyip
+      // $38,180 / %848 üreten çöp yerine). Doğru vakalar (porsiyon, ya da
+      // gerçek yieldAmount + aynı-grup birim) aynen korunur.
+      const _ssFor = function (a) {
+        if (PCD.recipes && PCD.recipes.subRecipeScale) return PCD.recipes.subRecipeScale({ amount: a, unit: item.unit }, recipe);
+        const y = Number(recipe.yieldAmount) || Number(recipe.servings) || 1;
+        return { scale: a / (y || 1), reliable: true };
+      };
+      const ssP = _ssFor(prepAmount);
+      const ssC = _ssFor(expectedConsume);
+      const prepCost = totalRecipeCost * ssP.scale;
+      const consumeCost = totalRecipeCost * ssC.scale;
       const expectedWaste = Math.max(0, prepCost - consumeCost);
       return {
         prepAmount: prepAmount, prepCost: prepCost,
@@ -507,6 +507,7 @@
         expectedWaste: expectedWaste,
         wastePct: prepCost > 0 ? (expectedWaste / prepCost) * 100 : 0,
         shortfall: shortfall,
+        costReliable: ssP.reliable,
       };
     }
 

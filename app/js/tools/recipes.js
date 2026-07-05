@@ -2764,6 +2764,25 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
       // v2.44.112 — Fiyatlandırma zekâsı (editörde reverse-pricing). Prep'te gizli.
       const _isPrepEd = (PCD.recipes && PCD.recipes.isPrep) ? PCD.recipes.isPrep(data) : !!(data.yieldAmount && data.yieldUnit);
       const _targetFc = Number(data.targetFoodCostPct) || 30;
+      // v2.44.120 — Kullanım-noktası guard: verim tanımsız + kütle/hacim birimli
+      // alt-tarif satırları maliyetlenemez (0 katkı). Bu prep adlarını topla ki
+      // cost strip'te kırmızı uyarı gösterelim ("verim gir" — çöp sayı yerine).
+      const _unreliableSubs = (function () {
+        if (!PCD.recipes || !PCD.recipes.subRecipeScale) return [];
+        const _rm = PCD.recipes.buildRecipeMap();
+        const _seen = {}; const _out = [];
+        (data.ingredients || []).forEach(function (ri) {
+          if (!ri || ri.separator || !ri.recipeId) return;
+          if ((Number(ri.amount) || 0) <= 0) return;
+          const _sub = _rm[ri.recipeId];
+          if (!_sub) return;
+          if (!PCD.recipes.subRecipeScale(ri, _sub).reliable) {
+            const _nm = _sub.name || '';
+            if (!_seen[_nm]) { _seen[_nm] = 1; _out.push(_nm); }
+          }
+        });
+        return _out;
+      })();
       const _suggested = (costPerServing > 0 && _targetFc > 0) ? costPerServing / (_targetFc / 100) : 0;
       const _gpServing = (data.salePrice && costPerServing >= 0) ? (Number(data.salePrice) - costPerServing) : null;
 
@@ -2847,6 +2866,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
             <label class="field-label">${t('recipe_yield_amount_label')}</label>
             <input type="number" class="input" id="recipeYieldAmount" value="${data.yieldAmount || ''}" step="0.01" min="0" placeholder="e.g. 800">
             <div class="field-hint">${t('recipe_yield_amount_hint')}</div>
+            ${_isPrepEd ? '<div style="margin-top:6px;padding:7px 9px;background:#fbf3e2;border:1px solid #d9a441;border-radius:6px;color:#8a5a08;font-size:12px;line-height:1.4;">⚠ Important for a prep: set the <strong>total yield</strong> (e.g. "600 g" or "4 portion") if you\'ll use it in other recipes by weight/volume. Mixed units &amp; densities can\'t be auto-summed, so without a yield the app can\'t cost g/ml usage.</div>' : ''}
           </div>
           <div class="field">
             <label class="field-label">${t('recipe_yield_unit_label')}</label>
@@ -2884,6 +2904,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
             </div>
             ${pct !== null ? '<div style="text-align:right;"><div class="stat-label">' + t('food_cost_percent') + '</div><div style="font-size:20px;font-weight:800;color:' + (pct <= _targetFc ? 'var(--success)' : (pct <= _targetFc + 5 ? 'var(--warning)' : 'var(--danger)')) + ';">' + PCD.fmtPercent(pct, 1) + '</div></div>' : ''}
           </div>
+          ${_unreliableSubs.length ? '<div style="margin-top:10px;padding:8px 10px;background:#fdf0ee;border:1px solid #b42318;border-radius:6px;color:#b42318;font-size:12.5px;font-weight:600;line-height:1.4;">⚠ ' + _unreliableSubs.map(function (n) { return PCD.escapeHtml(n); }).join(', ') + ' — no yield set, so this cost is incomplete. Give the prep a total yield (e.g. "600 g"), or use "portion" as the line unit. This line was skipped, not guessed.</div>' : ''}
         </div>
 
         <div class="field">

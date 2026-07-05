@@ -76,7 +76,12 @@
       if (ri.recipeId) {
         const sub = recipeMap[ri.recipeId];
         if (!sub) return;
-        addRecipeUsage(sub, amt / (sub.yieldAmount || sub.servings || 1), recipeMap, ingMap, usage, Object.assign({}, _visited));
+        // v2.44.120 — güvenilir ölçek (ortak subRecipeScale): verim tanımsız +
+        // kütle/hacim birimi ise 0 (teorik kullanımda çöp şişme yerine).
+        const _ss = (PCD.recipes && PCD.recipes.subRecipeScale)
+          ? PCD.recipes.subRecipeScale(ri, sub)
+          : { scale: (Number(ri.amount) || 0) / (sub.yieldAmount || sub.servings || 1) };
+        addRecipeUsage(sub, factor * _ss.scale, recipeMap, ingMap, usage, Object.assign({}, _visited));
         return;
       }
       const ing = ingMap[ri.ingredientId];

@@ -36,18 +36,10 @@
         if (!sub) return;
         // Cost of full sub-recipe
         const subTotalCost = computeFoodCost(sub, ingMap, recipeMap, Object.assign({}, _visited));
-        const subYield = sub.yieldAmount || sub.servings || 1;
-        const subUnit = sub.yieldUnit || 'portion';
-        // Scale: how much of the sub-recipe are we using?
-        let scale = amt / (subYield || 1);
-        if (ri.unit && subUnit && ri.unit !== subUnit) {
-          // Best-effort unit conversion
-          try {
-            const conv = PCD.convertUnit(amt, ri.unit, subUnit);
-            scale = conv / (subYield || 1);
-          } catch (e) {}
-        }
-        total += subTotalCost * scale;
+        // v2.44.120 — güvenilir ölçek; verim tanımsız + kütle/hacim birimi
+        // ise 0 katkı (çöp 200× yerine). Uyarı UI katmanında.
+        const ss = subRecipeScale(ri, sub);
+        total += subTotalCost * ss.scale;
         return;
       }
 
@@ -80,6 +72,41 @@
     return map;
   }
 
+  // v2.44.120 — GÜVENİLİR ALT-TARİF ÖLÇEĞİ (tek kaynak).
+  // Bir alt-tarif satırının ("200 g Labneh") maliyeti YALNIZCA kullanılan
+  // miktarı prep'in TOPLAM veriminin kesri olarak ifade edebiliyorsak
+  // güvenilirdir: ya porsiyon/adet ile (÷ servings), ya da gerçek yieldAmount
+  // + aynı-grup birimle. Aksi halde (prep'in verimi tanımsız + gram/ml
+  // birimi) kesir bilinemez → convertUnit çapraz-grupta değeri değiştirmeden
+  // geçirir + subYield servings=1'e düşer → maliyet ~100-600× şişer. Bu
+  // durumda scale=0 + reliable=false döndürürüz: çağıranlar körlemesine çöp
+  // sayı yerine "verim gir" uyarısı gösterir. Recipe/Buffet/Event/Portion/
+  // Variance hepsi buradan geçer.
+  function _isCountLikeUnit(u) {
+    u = (u || '').toLowerCase();
+    if (!u || u === 'portion' || u === 'portions' || u === 'serving' || u === 'servings') return true;
+    return (PCD.unitGroup && PCD.unitGroup(u) === 'count');
+  }
+  function subRecipeScale(ri, sub) {
+    const amt = Number(ri && ri.amount) || 0;
+    if (!sub || amt <= 0) return { scale: 0, reliable: amt <= 0, reason: amt <= 0 ? 'empty' : 'no-sub' };
+    const lineUnit = (ri.unit || '').toLowerCase();
+    const yUnit = (sub.yieldUnit || '').toLowerCase();
+    const yAmt = Number(sub.yieldAmount) || 0;
+    const servings = Number(sub.servings) || 1;
+    // (1) Porsiyon/adet kullanımı → servings'e böl.
+    if (_isCountLikeUnit(lineUnit) && _isCountLikeUnit(yUnit)) {
+      return { scale: amt / (servings || 1), reliable: true, reason: 'portion' };
+    }
+    // (2) Gerçek yieldAmount + aynı-grup (çevrilebilir) birim.
+    if (yAmt > 0 && PCD.unitGroup && PCD.unitGroup(lineUnit) && PCD.unitGroup(lineUnit) === PCD.unitGroup(yUnit)) {
+      const conv = (lineUnit === yUnit) ? amt : PCD.convertUnit(amt, lineUnit, yUnit);
+      return { scale: conv / yAmt, reliable: true, reason: 'measured' };
+    }
+    // (3) Kesir güvenilir belirlenemiyor.
+    return { scale: 0, reliable: false, reason: 'no-yield' };
+  }
+
   // v2.8.16 — Normalize an ingredient OR sub-recipe row to a single shape
   // for display (cost reports, xlsx exports, etc). Encapsulates the math
   // so all callers stay consistent. Returns null when the referenced
@@ -101,6 +128,8 @@
       const subYield = Number(sub.yieldAmount) || Number(sub.servings) || 1;
       const stockUnit = sub.yieldUnit || 'portion';
       const unitPrice = subTotalCost / (subYield || 1);
+      // v2.44.120 — güvenilir ölçek; verim yoksa lineCost 0 + reliable:false.
+      const ss = subRecipeScale(ri, sub);
       let qtyInStock = amt;
       if (ri.unit && stockUnit && ri.unit !== stockUnit) {
         try { qtyInStock = PCD.convertUnit(amt, ri.unit, stockUnit); } catch (e) {}
@@ -114,7 +143,8 @@
         amount: amt,
         qtyUnit: ri.unit || stockUnit,
         qtyInStock: qtyInStock,
-        lineCost: unitPrice * qtyInStock,
+        lineCost: ss.reliable ? (subTotalCost * ss.scale) : 0,
+        reliable: ss.reliable,
       };
     }
 
@@ -197,15 +227,11 @@
         if (!sub) return;
         const amt = Number(ri.amount) || 0;
         if (amt <= 0) return;
-        const subYield = Number(sub.yieldAmount) || Number(sub.servings) || 1;
-        const stockUnit = sub.yieldUnit || 'portion';
-        let qtyInStock = amt;
-        if (ri.unit && stockUnit && ri.unit !== stockUnit) {
-          try { qtyInStock = PCD.convertUnit(amt, ri.unit, stockUnit); } catch (e) {}
-        }
-        const subScale = qtyInStock / (subYield || 1);
+        // v2.44.120 — güvenilir ölçek; verim tanımsız + kütle/hacim birimi ise
+        // 0 (satın-alma listesinde 10-ton çöp miktar yerine).
+        const ss = subRecipeScale(ri, sub);
         const flattened = flattenIngredients(sub, ingMap, recipeMap, {
-          scale: scale * subScale,
+          scale: scale * ss.scale,
           visited: newVisited,
         });
         flattened.forEach(function (item) {
@@ -276,9 +302,9 @@
         qtyUnit: rr.qtyUnit, qtyInStock: rr.qtyInStock, lineCost: rr.lineCost,
       });
       if (!sub) return;
-      const subYield = Number(sub.yieldAmount) || Number(sub.servings) || 1;
-      const subScale = (Number(rr.qtyInStock) || 0) / (subYield || 1);
-      flattenIngredients(sub, ingMap, recipeMap, { scale: subScale }).forEach(function (item) {
+      // v2.44.120 — güvenilir ölçek (rr.qtyInStock çöp-geçişini kullanma).
+      const ss = subRecipeScale(ri, sub);
+      flattenIngredients(sub, ingMap, recipeMap, { scale: ss.scale }).forEach(function (item) {
         const cr = resolveRow({ ingredientId: item.ingredientId, amount: item.amount, unit: item.unit }, ingMap, recipeMap);
         if (!cr || !cr.found) return;
         rows.push({
@@ -298,6 +324,7 @@
   PCD.recipes.isPrep = isPrep;
   PCD.recipes.flattenIngredients = flattenIngredients;
   PCD.recipes.costBreakdownRows = costBreakdownRows;
+  PCD.recipes.subRecipeScale = subRecipeScale;
 
   // ============ TODAY-FOCUSED DASHBOARD ============
   function render(view) {
