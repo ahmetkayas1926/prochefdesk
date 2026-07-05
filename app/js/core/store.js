@@ -1318,7 +1318,12 @@
       const wsIngs = Object.assign({}, ingredients[wsId] || {});
       const existing = wsIngs[ing.id];
       if (existing && existing.pricePerUnit !== ing.pricePerUnit) {
-        ing.priceHistory = (existing.priceHistory || []).concat({ at: now, price: ing.pricePerUnit });
+        // v2.44.127 — ESKİ fiyatı kaydet (yeni değil). Eski kod yeni fiyatı yazıyordu →
+        // son geçmiş girişi hep güncel fiyata eşitti: (1) ▲/▼ trend rozeti asla çizilemezdi
+        // (prev===cur), (2) grafikte sahte düz kuyruk, (3) orijinal fiyat kaybolurdu. Artık
+        // "değişimden önce yürürlükte olan fiyat" saklanır → ilk değişimde orijinal yakalanır,
+        // son geçmiş ≠ güncel → rozet çalışır, grafik gerçek ilerleme gösterir.
+        ing.priceHistory = (existing.priceHistory || []).concat({ at: now, price: existing.pricePerUnit });
       }
       wsIngs[ing.id] = ing;
       ingredients[wsId] = wsIngs;
