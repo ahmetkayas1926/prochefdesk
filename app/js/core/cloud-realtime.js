@@ -299,7 +299,20 @@
       }
     }
     if (data.prefs) PCD.store.set('prefs', data.prefs);
-    if (data.plan) PCD.store.set('plan', data.plan);
+    // v2.44.125 — Plan SUNUCU-OTORİTER: yetkili KOLONLARDAN oku (jsonb blob'dan
+    // DEĞİL). Stripe webhook 'plan' KOLONUNU yazar (blob'a değil) → eski kod
+    // newRow.data.plan'ı (boş/bayat) okuyup canlı upgrade'i kaçırıyordu; blob'da
+    // eski değer kalırsa yanlış plan da uygulanabiliyordu. Refinement fetchPlan
+    // (cloud.js) ile birebir: manual|active → pro; iptal+süre gelecekte → pro;
+    // aksi halde free. Böylece canlı upgrade/downgrade yenilemeden yansır.
+    if (newRow && newRow.plan !== undefined) {
+      var effPlan = newRow.plan || 'free';
+      if (effPlan !== 'free' && newRow.plan_source !== 'manual' && newRow.plan_status !== 'active') {
+        var exp = newRow.plan_expires_at ? new Date(newRow.plan_expires_at).getTime() : 0;
+        if (!(exp && exp > Date.now())) effPlan = 'free';
+      }
+      PCD.store.set('plan', effPlan);
+    }
   }
 
   // v2.6.77 — Array-shaped workspace-scoped table apply (waste, checklist_sessions)
