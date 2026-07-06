@@ -19,35 +19,12 @@ Araç envanteri + mimari → **`HANDOVER.md`** · sürüm geçmişi → **`CHANG
 - [ ] iOS/Safari gerçek cihaz testi (kamera/share-sheet/PWA/hCaptcha — kod denetimi tamam).
 - [ ] Launch QA — operatörle son manuel pass.
 - [ ] **Google Search Console** — 30 yeni blog (toplam 54) canlı & push edildi (2026-07-05). Yapılacak: GSC'de sitemap'i (`prochefdesk.com/sitemap.xml`) yeniden gönder + yeni URL'lere "Request Indexing" (aramada hızlı görünmesi için). Salt operatör işi.
-- [ ] **Web3Forms teslim adresi bozuk.** "Report an issue" formu (account.js `WEB3FORMS_KEY`) hâlâ hello@prochefdesk.com'a teslim ediyor — ama hello@ artık mail almıyor (Cloudflare Email Routing kapatıldı, mailbox Zoho'da `ahmet@prochefdesk.com` olarak kuruldu) → **gönderiler kayboluyor.** Çözüm: web3forms.com'da ahmet@ ile YENİ access key oluştur (eski hello@ hesabı e-posta kilitli olabilir) → `account.js` `WEB3FORMS_KEY`'i yeni key'le değiştir. ("Send feedback" mailto zaten ahmet@'ye güncellendi, o çalışıyor.)
 - [ ] **Demo tur videosu** (opsiyonel) — operatör 2 dk'lık uygulama-içi demo videosu çekip YouTube'a yükleyince: Claude landing hero'nun altına responsive `<iframe>` ile gömer (1-2 dk'lık iş, YouTube Paylaş→Yerleştir kodu).
 - [ ] **Capacitor mağaza uygulaması** (opsiyonel) — mevcut PWA'yı native app'e sarma (Play Store / App Store). Teknik kurulumu Claude yapar (birkaç saat); **Mac + Xcode + Apple Developer ($99/yıl) + Google Play ($25 tek sefer) hesapları operatörde** (+ App Store inceleme ~1-3 gün). Not: uygulama zaten PWA — "ana ekrana ekle" ile app gibi çalışıyor, mağaza şart değil.
 - [ ] **Testimonial (şef referansı) bölümü** — landing'de kod HAZIR ama gizli (`index.html` `#testimonials` `display:none`, 3 placeholder kart). Gerçek 1-3 şef referansı gelince: `display:none`→`display:` yap + `[İsim]/[Rol]/[alıntı]`'yı somut sonuçla doldur ("teklif 2 saatten 15 dk'ya düştü" gibi). **Sahte yorum YOK, gerçek referans gelmeden AÇMA.**
 - [ ] (Gelecek) AU PR alınca → AU Stripe'a geç (ABN+AU banka) + ABD LLC feshet. **Vergi:** DE LLC ~$300/yıl (1 Haz) + federal 5472+1120 (15 Nis; gelir 0 olsa bile; 5472 kaçırma $25k; ilk dosyalama 2027).
 
 **Stripe kritik notlar:** kimlik engeli → support.stripe.com specialist (Ask Atlas değil). Para yolu: Stripe→Mercury→Wise→AU/TR. Adaptive Pricing KAPALI ($19 sabit). free→pro: `migrations/v2.44.38` user_prefs satırını trigger'la yaratır — yeni `.update().eq(user_id)` yazan satır var olduğunu varsaymalı / upsert kullanmalı.
-
----
-
-## Go-to-market — TEK HEDEF (şüpheci, araştırma-temelli)
-
-> Bu strateji kelimeyle değişmez. Ekonomi + gerçeklere dayalı. Yeni özellik/cila DEĞİL — ürünü satma zamanı.
-
-**Rahatsız edici gerçek:** $19/ay, solo-kurucu B2B SaaS'ın viable bandının ALTINDA ($50-500). Sonuç: paid reklam matematiği tutmaz (CAC $200-500 » $19 ARPU), düşük ARPU churn-hassas, anlamlı MRR için YÜZLERCE kullanıcı gerek (~260 = $5K MRR). Tek çıkış: **sıfıra-yakın-CAC + hacim + retention.**
-
-**Kaldıraç avantajı:** kurucu = ICP (çalışan baş şef + şef ağı). Founder-led satışta derin ürün bilgisi > cilalı pitch.
-
-**Asıl risk acquisition değil RETENTION:** uygulama pasif (bildirim/tetik sistemi YOK) → yalnız iş akışı günlük kullanımı ZORUNLU kılan kullanıcıda tutar. O yüzden niş = **HACCP-zorunlu bölgede bağımsız caterer / event chef / private chef** (HACCP günlük log yasal + per-event iş = dış tetik; bildirim gerekmez).
-
-**HEDEF (90 gün):** Bu nişten **10 retained, ödeyen kullanıcı** — founder-led warm outreach + nişin toplandığı yerlerde varlık (şef subreddit / catering FB grup / LinkedIn). **Tek metrik = 2. ay retention** (hâlâ kullanıyor + ödüyor), signup DEĞİL. Paid / yeni özellik / geniş içerik → bu kohort $19 modelin tuttuğunu kanıtlayana kadar BEKLER.
-
-**Yol (sıra):** (1) 30-50 gerçek şef listele (ağın: AU/Körfez/Katar/İstanbul). (2) Her birine kişisel DM — "sat" değil: "güvendiğim yargı, ücretsiz, dürüst söyle". (3) İlkleri SEN onboard et → GERÇEK sıradaki event/haftalarında kullansınlar (demo değil; ürün gerçek iş akışına girmezse tutmaz). (4) Nişin yerlerinde gerçek soru cevapla (pitch değil) = sıfır-CAC inbound. (5) 2. ay retention ölç + churn edenlerle konuş — gerçek eksiği onlar söyler. (6) 2-3 retained → testimonial (en büyük eksik = sosyal kanıt). (7) 10 retained SONRA → fiyat testi / kanıtlanmış içeriği boost / ölçek.
-
-**Fiyat:** $19 bilinçli erişilebilirlik bahsi ama bandın altı. App ~$179/ay araç yerine geçiyor (ROI bloğu) → yukarı test yeri VAR (yıllık vurgu / $29-39) — ama retained kullanıcıya SORDUKTAN sonra, körlemesine değil.
-
-**Gerçekçi beklenti:** medyan micro-SaaS = 6 ayda $1-3K MRR. Viralite değil, tutarlılık. Outreach=haftalar · organik blog=3-6 ay+ · paid=sonra.
-
-**Durum (2026-07-05) — asset'ler HAZIR, sıradaki = uygulama:** Yol adım (1) tamam — go-to-market listesi kurulu: `Desktop/potansiyel müşterilere ulaşma/` → `caterer-listesi.html` **750 aday** (518 doğrudan e-postalı) + hedef v2/v3/v4 (birleşik **696 benzersiz e-posta**, çakışmasız/segmentli) + `prochefdesk-outreach-kiti-FINAL.html` (segment + mail şablonları, food-cost-led) + **54-yazılık SEO blog** canlı. Liste denetim kaydı: `Desktop/prochefdesk-denetim-calisma-notlari.md`. Darboğaz artık liste değil → **adım (2-3): kişisel DM + ilk müşterileri gerçek event'lerinde onboard.**
 
 ---
 
