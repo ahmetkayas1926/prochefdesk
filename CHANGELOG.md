@@ -4,6 +4,33 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.128 — HACCP Receiving: teslim sıcaklığı eşiğe karşı denetleniyor (food-safety) · 2026-07-06
+Receiving denetimi yalnız manuel Tamam/Sorun bayrağına bakıyordu; `deliveryTemp` bölge eşiğiyle HİÇ karşılaştırılmıyordu → 25°C soğuk teslim "Tamam" işaretlenince grid kırmızısız + Audit Pack "100% in range" (yanıltıcı, gerçek food-safety riski).
+- **Receiving formuna saklama-tipi alanı** (Soğuk / Donmuş / Sıcak / Kuru): teslim sıcaklığı o tipin eşiğine karşı denetlenir (`getThresholds`: cold ≤ coldMaxC · frozen ≤ frozenMaxC · hot ≥ hotMinC). Kuru/seçilmemiş = kontrol yok (dry-good yanlış-alarm vermez — 25°C ancak soğuk/donmuş beyan edilmişse ihlal).
+- **Ortak `rcvTempFail` mantığı** hem ekran grid'i hem iki print grid'i hem **Audit Pack** aggregator'ında birebir aynı (CLAUDE.md: rapor = grid). İhlalde teslim-sıcaklık hücresi kırmızı + ⚠; Audit Pack ihlali fail sayar, aralık-dışı + düzeltici-not boş → açık CAPA.
+- Additive alan (`storageType`); şema/sync değişmedi. **Canlı Pro hesabında doğrulandı:** cold/25°C → grid kırmızı ⚠ + audit "50% in range · 1 open action"; cold/3°C pass. `node -c` temiz.
+
+## v2.44.127 — Fiyat geçmişi YENİ değil ESKİ fiyatı kaydediyor · 2026-07-06
+`upsertIngredient` fiyat değişince geçmişe yeni fiyatı yazıyordu → önceki (prev) hep güncele eşit olduğundan ▲/▼ trend rozeti asla çıkmaz, grafik sahte düz kuyruk, orijinal fiyat kaybolur.
+- Fiyat değişiminde geçmişe artık **bir önceki (eski) fiyat** yazılır → trend rozeti + grafik anlamlı, orijinal fiyat korunur.
+- **Canlı Pro'da doğrulandı** ($10→15 → geçmiş [10]; en yeni ≠ güncel → rozet çizilir). `node -c` temiz.
+
+## v2.44.126 — Batch/Portion "Kategoriye göre" görünüm + Excel yield%'i düşürüyordu · 2026-07-06
+"Tarife göre" görünüm `computeFoodCost` (yield uygular) kullanırken "Kategoriye göre" konsolidasyon + Excel dalı ham `pricePerUnit × miktar` (yield yok) hesaplıyordu → aynı tarif iki farklı toplam; düşük-yield malzemede fark büyür.
+- `consolidateRows` + Excel recipe dalı artık yield% uygular (`pricePerUnit / (yield/100)`, 0<yield<100) → üç görünüm (tarif/kategori/tedarikçi) + Excel tutarlı.
+- Paylaşılan compute API'sine DOKUNULMADI. Yerelde doğrulandı ($100.50 → $106.06; onion %90 yield farkı kapanır). `node -c` temiz.
+
+## v2.44.125 — Canlı plan senkronu yetkili kolonu okuyor (jsonb blob değil) · 2026-07-05
+`cloud-realtime.js` realtime plan güncellemesini `newRow.data.plan` (jsonb blob) üzerinden okuyordu; oysa `stripe-webhook` plan'ı `user_prefs`'in AYRI `plan` kolonuna yazar → canlı Stripe upgrade sayfa yenilenene kadar aktifleşmiyordu.
+- Realtime handler artık yetkili **`plan` kolonunu** okur (+ `plan_source`/`plan_status`/`plan_expires_at` ile manuel/aktif/süre kontrolü) → upgrade anında yansır, yenileme gerekmez.
+- Frontend yalnız OKUR; plan hâlâ sunucu-otoriter (`.neq('plan_source','manual')` guard'ı korunur). Node'da 4/4 senaryo deterministik doğrulandı. `node -c` temiz.
+
+## v2.44.124 — Alt-tarif gram/porsiyon maliyet şişmesi çözüldü (convertUnit ailesi) · 2026-07-05
+`PCD.convertUnit` iki birim farklı gruptaysa (gram↔porsiyon) değeri sessizce DEĞİŞTİRMEDEN döndürür + alt-tarif verimi boşken `servings=1`'e düşer → alt-tarif ana tarifte gram/miktarla kullanılınca maliyet yüzlerce kat şişer (canlı: Recipe $424 · Buffet $38,180 · Event shopping list 10 ton).
+- **Ortak `subRecipeScale(ri, sub)` guard'ı** (dashboard.js, `PCD.recipes`'e açık): verim tanımsız + kütle/hacim birimi → güvenilmez ölçek → maliyet **0 + kırmızı "verim gir" uyarısı**. `computeFoodCost` · `resolveRow` · `flattenIngredients` · `costBreakdownRows` hepsi bu tek guard'ı kullanır; Buffet Path B + variance teorik-kullanım da aynı guard'a bağlandı.
+- Editörde güvenilmez alt-tarif satırı "—" + uyarı bandı gösterir; prep oluştururken **verim (yield) girişi teşviki** (amber). Mevcut compute imzaları + `ingredients[]` şekli DEĞİŞMEDİ (additive guard).
+- Yerelde canlı doğrulandı: Recipe $424→$0/uyarı · Buffet $38,180→düzgün · yield girilince doğru maliyet. `node -c` temiz.
+
 ## v2.44.123 — Audit Pack ay-aralığı düzeldi: her ay kendi sayfası + özet aralık toplamı · 2026-07-03
 Operatör bulgusu: "Nisan–Haziran seçiyorum, yalnız Haziran geliyor." Kök neden: `printAuditPack` boş ayları ATLIYORDU ("quarter stays tight" varsayımı) → aralıkta yalnız kayıtlı ay basılıyor, kullanıcı aralığın hiç çalışmadığını sanıyordu. Ayrıca karttaki canlı özet yalnız From ayının verisini gösteriyordu.
 - **Aralıktaki HER ay artık kendi sayfasını alır** — boş ay dâhil (dürüst boş rapor: "No activity logged" satırları + kapsama boşluğu uyarısı; denetçi için boşluk da bilgidir). 4 HACCP formunun v2.44.117 davranışıyla (boş ay = boş şablon) tutarlı. Boş-ay skip'i ve artık ulaşılamaz "no records" toast'ı kaldırıldı.
