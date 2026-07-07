@@ -4,6 +4,11 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.129 — Alt-tarif verim birimi batch/tray/pcs olunca maliyet 0 veya şişik · 2026-07-07
+Verim birimi sayılabilir (batch/tray/pcs) olan bir prep ana tarifte kendi birimiyle kullanılınca `subRecipeScale` `yieldAmount` yerine `servings`'e bölüyordu → "4 batch veren prep"ten "1 batch" = ölçek 1 (0.25 olmalı) → maliyet **4× şişik, sessiz, uyarısız**. Verim g/kg/ml/l ise doğruydu; kütle-hacim dışı birimlerde tutarsızdı.
+- **Aynı-birim dalı** eklendi: satır birimi = verim birimi + `yieldAmount>0` → net kesir `miktar/yieldAmount` (batch/tray/pcs/portion dahil, tam olarak g/kg/ml/l gibi). Editör satır birimini varsayılan verim birimine ayarladığından **dropdown'daki 8 verim biriminin hepsi artık doğal kullanımda doğru maliyetleniyor**; `resolveRow`'un `unitPrice = cost/yieldAmount` gösterimiyle de tutarlı.
+- Menü-tarifi porsiyon reuse'u (÷servings) + ölçülebilir birim dönüşümü + çapraz-grup (satır g / verim tray) dürüst kırmızı "—" davranışı KORUNDU. Paylaşılan compute imzaları değişmedi (özel `subRecipeScale` iç mantığı). Node doğruluk-tablosuyla 8×8 kombinasyon + menü-reuse doğrulandı. `node -c` temiz.
+
 ## v2.44.128 — HACCP Receiving: teslim sıcaklığı eşiğe karşı denetleniyor (food-safety) · 2026-07-06
 Receiving denetimi yalnız manuel Tamam/Sorun bayrağına bakıyordu; `deliveryTemp` bölge eşiğiyle HİÇ karşılaştırılmıyordu → 25°C soğuk teslim "Tamam" işaretlenince grid kırmızısız + Audit Pack "100% in range" (yanıltıcı, gerçek food-safety riski).
 - **Receiving formuna saklama-tipi alanı** (Soğuk / Donmuş / Sıcak / Kuru): teslim sıcaklığı o tipin eşiğine karşı denetlenir (`getThresholds`: cold ≤ coldMaxC · frozen ≤ frozenMaxC · hot ≥ hotMinC). Kuru/seçilmemiş = kontrol yok (dry-good yanlış-alarm vermez — 25°C ancak soğuk/donmuş beyan edilmişse ihlal).

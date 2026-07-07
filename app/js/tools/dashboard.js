@@ -94,16 +94,26 @@
     const yUnit = (sub.yieldUnit || '').toLowerCase();
     const yAmt = Number(sub.yieldAmount) || 0;
     const servings = Number(sub.servings) || 1;
-    // (1) Porsiyon/adet kullanımı → servings'e böl.
+    // v2.44.129 — (1) Satır birimi = verim birimi + gerçek yieldAmount → net
+    //   kesir (kullanılan ÷ toplam verim). batch/tray/pcs de artık BURADA doğru
+    //   bölünür. Eskiden bu count birimler (2)'ye hiç ulaşmadan (aşağıdaki count
+    //   dalına düşüp) servings'e bölünüyordu → yieldAmount yok sayılıyor, "4 batch
+    //   veren prep'ten 1 batch" = 4× şişiyordu (sessiz, uyarısız). Editör satır
+    //   birimini varsayılan olarak verim birimine ayarladığı için en sık yol budur;
+    //   resolveRow'un unitPrice = cost/yieldAmount gösterimiyle de artık tutarlı.
+    if (lineUnit && lineUnit === yUnit && yAmt > 0) {
+      return { scale: amt / yAmt, reliable: true, reason: 'same-unit' };
+    }
+    // (2) Çevrilebilir ölçülebilir birim (kütle↔kütle, hacim↔hacim) + gerçek yieldAmount.
+    if (yAmt > 0 && PCD.unitGroup && PCD.unitGroup(lineUnit) && PCD.unitGroup(lineUnit) !== 'count' && PCD.unitGroup(lineUnit) === PCD.unitGroup(yUnit)) {
+      return { scale: PCD.convertUnit(amt, lineUnit, yUnit) / yAmt, reliable: true, reason: 'measured' };
+    }
+    // (3) Porsiyon/adet kullanımı → servings'e böl (klasik menü-tarifi reuse'u:
+    //     yieldAmount yok + count birim; farklı count birimleri de burada).
     if (_isCountLikeUnit(lineUnit) && _isCountLikeUnit(yUnit)) {
       return { scale: amt / (servings || 1), reliable: true, reason: 'portion' };
     }
-    // (2) Gerçek yieldAmount + aynı-grup (çevrilebilir) birim.
-    if (yAmt > 0 && PCD.unitGroup && PCD.unitGroup(lineUnit) && PCD.unitGroup(lineUnit) === PCD.unitGroup(yUnit)) {
-      const conv = (lineUnit === yUnit) ? amt : PCD.convertUnit(amt, lineUnit, yUnit);
-      return { scale: conv / yAmt, reliable: true, reason: 'measured' };
-    }
-    // (3) Kesir güvenilir belirlenemiyor.
+    // (4) Çapraz grup (örn. satır g, verim tray) — kesir güvenilir belirlenemiyor.
     return { scale: 0, reliable: false, reason: 'no-yield' };
   }
 
