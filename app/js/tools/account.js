@@ -1526,7 +1526,8 @@
     const kindIcon =
       share.kind === 'recipe'      ? '📖' :
       share.kind === 'menu'        ? '🍽' :
-      share.kind === 'kitchencard' ? '🗂' : '🔗';
+      share.kind === 'kitchencard' ? '🗂' :
+      share.kind === 'event'       ? '✍' : '🔗';
     const kindLabel = t('share_kind_' + share.kind) || share.kind;
     const url = location.origin + location.pathname + '?share=' + share.id;
 

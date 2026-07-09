@@ -423,6 +423,36 @@
     return { deductions: need, skipped: Object.keys(skippedSet) };
   }
 
+  // v2.44.93 — Fare/dokunma ile canvas'a çizim wiring'i. openSignaturePad (şefin
+  // kendi cihazı) VE v2.44.130 renderSignatureView (uzaktan imza linki) aynı çizim
+  // mantığını paylaşır — tek noktadan bakım.
+  function wireSignatureCanvas(canvas) {
+    const ctx = canvas.getContext('2d');
+    ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#1c1917';
+    let drawing = false, hasInk = false, lastX = 0, lastY = 0;
+    const pos = function (ev) {
+      const r = canvas.getBoundingClientRect();
+      const cx = (ev.touches && ev.touches[0] ? ev.touches[0].clientX : ev.clientX) - r.left;
+      const cy = (ev.touches && ev.touches[0] ? ev.touches[0].clientY : ev.clientY) - r.top;
+      return { x: cx * (canvas.width / r.width), y: cy * (canvas.height / r.height) };
+    };
+    const start = function (ev) { ev.preventDefault(); drawing = true; const p = pos(ev); lastX = p.x; lastY = p.y; };
+    const move = function (ev) { if (!drawing) return; ev.preventDefault(); const p = pos(ev); ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(p.x, p.y); ctx.stroke(); lastX = p.x; lastY = p.y; hasInk = true; };
+    const end = function () { drawing = false; };
+    canvas.addEventListener('mousedown', start);
+    canvas.addEventListener('mousemove', move);
+    canvas.addEventListener('mouseup', end);
+    canvas.addEventListener('mouseleave', end);
+    canvas.addEventListener('touchstart', start, { passive: false });
+    canvas.addEventListener('touchmove', move, { passive: false });
+    canvas.addEventListener('touchend', end);
+    return {
+      clear: function () { ctx.clearRect(0, 0, canvas.width, canvas.height); hasInk = false; },
+      isEmpty: function () { return !hasInk; },
+      toDataURL: function () { return canvas.toDataURL('image/png'); },
+    };
+  }
+
   // v2.44.93 — İmza yakalama modalı (client-side canvas; fare + dokunma). data.signature =
   // { dataUrl, signedBy, signedAt } olarak kaydeder; teklif çıktısına gömülür.
   function openSignaturePad(data, onDone) {
@@ -443,30 +473,12 @@
     footer.appendChild(saveBtn);
     const m = PCD.modal.open({ title: L('event_signoff', 'Client sign-off'), body: body, footer: footer, size: 'md', closable: true });
     const canvas = PCD.$('#sigCanvas', body);
-    const ctx = canvas.getContext('2d');
-    ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#1c1917';
-    let drawing = false, hasInk = false, lastX = 0, lastY = 0;
-    const pos = function (ev) {
-      const r = canvas.getBoundingClientRect();
-      const cx = (ev.touches && ev.touches[0] ? ev.touches[0].clientX : ev.clientX) - r.left;
-      const cy = (ev.touches && ev.touches[0] ? ev.touches[0].clientY : ev.clientY) - r.top;
-      return { x: cx * (canvas.width / r.width), y: cy * (canvas.height / r.height) };
-    };
-    const start = function (ev) { ev.preventDefault(); drawing = true; const p = pos(ev); lastX = p.x; lastY = p.y; };
-    const move = function (ev) { if (!drawing) return; ev.preventDefault(); const p = pos(ev); ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(p.x, p.y); ctx.stroke(); lastX = p.x; lastY = p.y; hasInk = true; };
-    const end = function () { drawing = false; };
-    canvas.addEventListener('mousedown', start);
-    canvas.addEventListener('mousemove', move);
-    canvas.addEventListener('mouseup', end);
-    canvas.addEventListener('mouseleave', end);
-    canvas.addEventListener('touchstart', start, { passive: false });
-    canvas.addEventListener('touchmove', move, { passive: false });
-    canvas.addEventListener('touchend', end);
-    clearBtn.addEventListener('click', function () { ctx.clearRect(0, 0, canvas.width, canvas.height); hasInk = false; });
+    const pad = wireSignatureCanvas(canvas);
+    clearBtn.addEventListener('click', function () { pad.clear(); });
     cancelBtn.addEventListener('click', function () { m.close(); });
     saveBtn.addEventListener('click', function () {
-      if (!hasInk) { PCD.toast.warning(t('event_sign_empty') || 'Please sign first.'); return; }
-      data.signature = { dataUrl: canvas.toDataURL('image/png'), signedBy: (PCD.$('#sigName', body).value || '').trim(), signedAt: new Date().toISOString() };
+      if (pad.isEmpty()) { PCD.toast.warning(t('event_sign_empty') || 'Please sign first.'); return; }
+      data.signature = { dataUrl: pad.toDataURL(), signedBy: (PCD.$('#sigName', body).value || '').trim(), signedAt: new Date().toISOString() };
       m.close();
       if (onDone) onDone();
     });
@@ -503,6 +515,58 @@
     }
 
     const body = PCD.el('div');
+
+    // v2.44.130 — Uzaktan e-imza linki durumu. Kalıcı `data`'ya YAZILMAZ (public_shares
+    // zaten kaynak-doğruluk — burada sadece görüntülemek için tutulan geçici state).
+    // null = henüz sorgulanmadı, {loading:true} = sorgulanıyor, {url:null} = link yok,
+    // {url, paused, signed, signedBy} = link var.
+    let signLinkState = null;
+
+    function signLinkAreaHtml() {
+      if (!signLinkState || signLinkState.loading) {
+        return '<div class="text-muted text-sm">' + PCD.escapeHtml(t('loading') || 'Loading…') + '</div>';
+      }
+      if (!signLinkState.url) {
+        return '<div class="text-muted text-sm" style="margin-bottom:8px;">' + PCD.escapeHtml(t('event_signing_link_hint') || 'Send a link so the client can view and sign the proposal remotely.') + '</div>' +
+          '<button type="button" class="btn btn-outline btn-sm" id="signLinkSendBtn">🔗 ' + PCD.escapeHtml(t('event_send_signing_link') || 'Send signing link') + '</button>';
+      }
+      const statusBit = signLinkState.signed
+        ? '<span style="color:#15803d;font-weight:600;">✓ ' + PCD.escapeHtml(t('event_signing_link_signed') || 'Signed') + (signLinkState.signedBy ? ' · ' + PCD.escapeHtml(signLinkState.signedBy) : '') + '</span>'
+        : (signLinkState.paused
+            ? '<span style="color:#b45309;font-weight:600;">⏸ ' + PCD.escapeHtml(t('event_signing_link_paused') || 'Paused') + '</span>'
+            : '<span style="color:#b45309;">' + PCD.escapeHtml(t('event_signing_link_pending') || 'Awaiting signature') + '</span>');
+      return '<div class="text-muted text-sm" style="margin-bottom:8px;word-break:break-all;">' + PCD.escapeHtml(signLinkState.url) + '</div>' +
+        '<div style="margin-bottom:8px;">' + statusBit + '</div>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+          '<button type="button" class="btn btn-outline btn-sm" id="signLinkCopyBtn">' + PCD.escapeHtml(t('event_signing_link_copy') || 'Copy link') + '</button>' +
+          (!signLinkState.signed ? '<button type="button" class="btn btn-ghost btn-sm" id="signLinkRevokeBtn" style="color:var(--danger);">' + PCD.escapeHtml(t('event_signing_link_revoke') || 'Revoke link') + '</button>' : '') +
+        '</div>';
+    }
+
+    function refreshSignLinkState() {
+      if (!existing || !PCD.cloud || !PCD.cloud.ready) { signLinkState = { url: null }; return; }
+      const supabase = window._supabaseClient;
+      const user = PCD.store.get('user');
+      if (!supabase || !user || !user.id) { signLinkState = { url: null }; return; }
+      signLinkState = { loading: true };
+      render();
+      supabase.from('public_shares')
+        .select('id, paused, signed_at, signed_by')
+        .eq('owner_id', user.id).eq('kind', 'event').eq('source_id', existing.id).eq('share_mode', 'sign')
+        .maybeSingle()
+        .then(function (res) {
+          if (res.error || !res.data) { signLinkState = { url: null }; }
+          else {
+            signLinkState = {
+              url: location.origin + location.pathname + '?share=' + res.data.id,
+              paused: !!res.data.paused,
+              signed: !!res.data.signed_at,
+              signedBy: res.data.signed_by || '',
+            };
+          }
+          render();
+        }).catch(function () { signLinkState = { url: null }; render(); });
+    }
 
     function render() {
       const ingMap = {}, recipeMap = {};
@@ -564,7 +628,7 @@
 
         <div class="field">
           <label class="field-label">${PCD.escapeHtml(t('event_service_charge') || 'Service charge %')}</label>
-          <input type="number" class="input" id="eSvc" value="${data.serviceChargePct || ''}" step="0.5" min="0" placeholder="0" style="max-width:160px;">
+          <input type="number" class="input" id="eSvc" value="${data.serviceChargePct || ''}" step="0.5" min="0" max="100" placeholder="0" style="max-width:160px;">
         </div>
 
         <details id="staffWrap" ${(data.staffing && data.staffing.length) ? 'open' : ''} style="margin:0 0 14px;border:1px solid var(--border);border-radius:10px;padding:10px 12px;">
@@ -607,6 +671,8 @@
           <div id="signoffArea"></div>
         </div>
 
+        ${existing ? '<div style="margin:0 0 14px;border:1px solid var(--border);border-radius:10px;padding:10px 12px;"><div style="font-weight:700;font-size:13px;color:var(--brand-700);margin-bottom:8px;">🔗 ' + PCD.escapeHtml(t('event_signing_link') || 'Signing link') + '</div><div id="signLinkArea">' + signLinkAreaHtml() + '</div></div>' : ''}
+
         <div class="stat mb-3" style="background:var(--brand-50);border-color:var(--brand-300);">
           <div class="flex items-center justify-between" style="flex-wrap:wrap;gap:8px;">
             <div>
@@ -618,8 +684,8 @@
             ${stats.chargesCost > 0 ? '<div><div class="stat-label">' + (t('event_charges_cost') || 'Extras cost') + '</div><div style="font-size:18px;font-weight:800;">' + PCD.fmtMoney(stats.chargesCost) + '</div></div>' : ''}
             ${(stats.laborCost > 0 || stats.chargesCost > 0) ? '<div><div class="stat-label">' + (t('event_grand_total') || 'Total cost') + '</div><div style="font-size:18px;font-weight:800;">' + PCD.fmtMoney(stats.grandTotal) + '</div></div>' : ''}
             ${data.budget > 0 ? (function () {
-              const remaining = (data.budget || 0) - stats.totalCost;
-              const usedPct = data.budget > 0 ? (stats.totalCost / data.budget) * 100 : 0;
+              const remaining = (data.budget || 0) - stats.grandTotal;
+              const usedPct = data.budget > 0 ? (stats.grandTotal / data.budget) * 100 : 0;
               const color = usedPct > 90 ? 'var(--danger)' : usedPct > 70 ? '#d97706' : 'var(--success)';
               return '<div style="text-align:end;">' +
                 '<div class="stat-label">' + t('event_customer_budget') + '</div>' +
@@ -641,8 +707,14 @@
           (stats.chargesRevenue > 0 ? ' · ' + PCD.escapeHtml(t('event_charges') || 'Extras') + ' +' + PCD.fmtMoney(stats.chargesRevenue) : '') +
           (stats.serviceCharge > 0 ? ' · ' + PCD.escapeHtml(t('event_service_label') || 'Service charge') + ' (' + stats.svcPct + '%) +' + PCD.fmtMoney(stats.serviceCharge) : '') +
           ' · <strong>' + PCD.escapeHtml(t('event_total_revenue') || 'Total') + ' ' + PCD.fmtMoney(stats.totalRevenue) + '</strong>' +
-          (stats.paidToDate > 0 ? ' · ' + PCD.escapeHtml(t('event_paid') || 'Paid') + ' −' + PCD.fmtMoney(stats.paidToDate) + ' · <strong>' + PCD.escapeHtml(t('event_balance_due') || 'Balance due') + ' ' + PCD.fmtMoney(stats.balanceDue) + '</strong>' : '') +
+          (stats.paidToDate > 0 ? ' · ' + PCD.escapeHtml(t('event_paid') || 'Paid') + ' −' + PCD.fmtMoney(stats.paidToDate) + ' · <strong>' + (stats.balanceDue < 0 ? PCD.escapeHtml(t('event_overpaid') || 'Overpaid') + ' ' + PCD.fmtMoney(Math.abs(stats.balanceDue)) : PCD.escapeHtml(t('event_balance_due') || 'Balance due') + ' ' + PCD.fmtMoney(stats.balanceDue)) + '</strong>' : '') +
         '</div>' : ''}
+
+        <div class="field">
+          <label class="field-label">${PCD.escapeHtml(t('event_cancellation_policy') || 'Cancellation policy')}</label>
+          <div class="field-hint">${PCD.escapeHtml(t('event_cancellation_policy_hint') || 'e.g. Full refund 90+ days out, 50% 30–89 days, non-refundable under 30 days.')}</div>
+          <textarea class="textarea" id="eCancelPolicy" rows="2">${PCD.escapeHtml(data.cancellationPolicy || '')}</textarea>
+        </div>
 
         <div class="field">
           <label class="field-label">${t('event_notes')}</label>
@@ -859,10 +931,11 @@
       $('eContact').addEventListener('input', function () { data.contactName = this.value; });
       $('ePhone').addEventListener('input', function () { data.contactPhone = this.value; });
       $('eStatus').addEventListener('change', function () { data.status = this.value; });
+      $('eCancelPolicy').addEventListener('input', function () { data.cancellationPolicy = this.value; });
       $('eNotes').addEventListener('input', function () { data.notes = this.value; });
       $('ePrice').addEventListener('input', PCD.debounce(function () { data.pricePerHead = parseFloat(this.value) || null; render(); }, 400));
       $('eBudget').addEventListener('input', PCD.debounce(function () { data.budget = parseFloat(this.value) || null; render(); }, 400));
-      $('eSvc').addEventListener('input', PCD.debounce(function () { data.serviceChargePct = parseFloat(this.value) || null; render(); }, 400));
+      $('eSvc').addEventListener('input', PCD.debounce(function () { data.serviceChargePct = Math.min(100, parseFloat(this.value) || 0) || null; render(); }, 400));
 
       const addStaffBtn = $('addStaffBtn');
       if (addStaffBtn) addStaffBtn.addEventListener('click', function () {
@@ -917,6 +990,40 @@
       if (sigCap) sigCap.addEventListener('click', function () { openSignaturePad(data, render); });
       const sigClr = $('sigClearBtn');
       if (sigClr) sigClr.addEventListener('click', function () { delete data.signature; render(); });
+
+      const signLinkSendBtn = $('signLinkSendBtn');
+      if (signLinkSendBtn) signLinkSendBtn.addEventListener('click', function () {
+        if (!PCD.share || !PCD.share.createOrGetShareUrl) return;
+        if (PCD.gate && !PCD.gate.requireShare()) return;
+        signLinkState = { loading: true };
+        render();
+        PCD.share.createOrGetShareUrl('event', existing.id, 'sign').then(function () {
+          refreshSignLinkState();
+        }).catch(function (e) {
+          signLinkState = { url: null };
+          render();
+          PCD.toast.error((e && e.message) || (t('event_signing_link_error') || 'Could not create signing link'));
+        });
+      });
+      const signLinkCopyBtn = $('signLinkCopyBtn');
+      if (signLinkCopyBtn) signLinkCopyBtn.addEventListener('click', function () {
+        if (signLinkState && signLinkState.url && navigator.clipboard) {
+          navigator.clipboard.writeText(signLinkState.url).then(function () { PCD.toast.success(t('toast_copied') || 'Copied'); });
+        }
+      });
+      const signLinkRevokeBtn = $('signLinkRevokeBtn');
+      if (signLinkRevokeBtn) signLinkRevokeBtn.addEventListener('click', function () {
+        PCD.modal.confirm({
+          icon: '🗑', iconKind: 'danger', danger: true,
+          title: t('event_signing_link_revoke') || 'Revoke link', text: t('confirm_delete_desc') || '', okText: t('event_signing_link_revoke') || 'Revoke'
+        }).then(function (ok) {
+          if (!ok || !existing) return;
+          PCD.share.deleteShareBySource('event', existing.id).then(function () {
+            signLinkState = { url: null };
+            render();
+          });
+        });
+      });
 
       $('addFnBtn').addEventListener('click', function () {
         const last = data.functions[data.functions.length - 1] || {};
@@ -1003,6 +1110,7 @@
     }
 
     render();
+    refreshSignLinkState();
 
     const saveBtn = PCD.el('button', { class: 'btn btn-primary', text: t('save'), style: { flex: '1' } });
     const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') });
@@ -1060,6 +1168,8 @@
         title: t('confirm_delete'), text: t('confirm_delete_desc'), okText: t('delete')
       }).then(function (ok) {
         if (!ok) return;
+        // v2.44.130 — Event silinince varsa uzaktan-imza linki de silinsin (yetim link kalmasın).
+        if (PCD.share && PCD.share.deleteShareBySource) { PCD.share.deleteShareBySource('event', existing.id).catch(function () {}); }
         PCD.store.deleteFromTable('events', existing.id);
         PCD.toast.success(t('item_deleted'));
         m.close();
@@ -1163,7 +1273,7 @@
       lines.push('▸ ' + title);
       const when = [fmtD(fn.date), [fn.time, fn.endTime].filter(Boolean).join('–')].filter(Boolean).join(' · ');
       if (when) lines.push('  📅 ' + when);
-      if (Number(fn.guestCount)) lines.push('  👥 ' + fn.guestCount + ' ' + guestWord + (Number(fn.guaranteedCount) ? ' (' + (t('event_guaranteed') || 'guar.') + ' ' + fn.guaranteedCount + ')' : ''));
+      if (Number(fn.guestCount)) lines.push('  👥 ' + fn.guestCount + ' ' + guestWord + (Number(fn.guaranteedCount) ? ' (' + (t('event_guaranteed_short') || 'guar.') + ' ' + fn.guaranteedCount + ')' : ''));
       if (fn.room) lines.push('  📍 ' + fn.room);
       (fn.menu || []).forEach(function (item) {
         if (item.ingredientId) {
@@ -1196,7 +1306,7 @@
       lines.push((t('ev_print_total_revenue') || 'Total revenue') + ': ' + PCD.fmtMoney(stats.totalRevenue));
       if (stats.paidToDate > 0) {
         lines.push((t('event_paid') || 'Paid') + ': −' + PCD.fmtMoney(stats.paidToDate));
-        lines.push((t('event_balance_due') || 'Balance due') + ': ' + PCD.fmtMoney(stats.balanceDue));
+        lines.push(stats.balanceDue < 0 ? (t('event_overpaid') || 'Overpaid') + ': ' + PCD.fmtMoney(Math.abs(stats.balanceDue)) : (t('event_balance_due') || 'Balance due') + ': ' + PCD.fmtMoney(stats.balanceDue));
       }
       lines.push((t('ev_print_profit') || 'Profit') + ': ' + PCD.fmtMoney(stats.profit) + (stats.margin !== null ? ' (' + PCD.fmtPercent(stats.margin, 0) + ')' : ''));
     }
@@ -1305,7 +1415,7 @@
       if (headBits.length) bodyHtml += '<div class="ev-meta">' + headBits.join('') + '</div>';
       fns.forEach(function (fn, fi) {
         const when = [fmtD(fn.date), [fn.time, fn.endTime].filter(Boolean).join('–')].filter(Boolean).join(' · ');
-        const guestsBit = Number(fn.guestCount) ? (fn.guestCount + ' ' + guestsLabel + (Number(fn.guaranteedCount) ? ' (' + PCD.escapeHtml(t('event_guaranteed') || 'guar.') + ' ' + fn.guaranteedCount + ')' : '')) : '';
+        const guestsBit = Number(fn.guestCount) ? (fn.guestCount + ' ' + guestsLabel + (Number(fn.guaranteedCount) ? ' (' + PCD.escapeHtml(t('event_guaranteed_short') || 'guar.') + ' ' + fn.guaranteedCount + ')' : '')) : '';
         const sub = [when, fn.room, guestsBit].filter(Boolean).join('  ·  ');
         const title = (fn.name || '').trim() || ((t('event_function') || 'Function') + ' ' + (fi + 1));
         const rows = menuRowsFor(fn.menu, fn.guestCount);
@@ -1397,7 +1507,7 @@
         (stats.serviceCharge > 0 ? '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('event_service_label') || 'Service charge') + ' (' + stats.svcPct + '%)</span><span>+' + PCD.fmtMoney(stats.serviceCharge) + '</span></div>' : '') +
         (stats.totalRevenue > 0 ? '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('ev_print_total_revenue') || 'Total revenue') + '</span><span>' + PCD.fmtMoney(stats.totalRevenue) + '</span></div>' : '') +
         (stats.paidToDate > 0 ? '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('event_paid') || 'Paid') + '</span><span>−' + PCD.fmtMoney(stats.paidToDate) + '</span></div>' : '') +
-        (stats.paidToDate > 0 ? '<div class="ev-summary-row"><span>' + PCD.escapeHtml(t('event_balance_due') || 'Balance due') + '</span><span>' + PCD.fmtMoney(stats.balanceDue) + '</span></div>' : '') +
+        (stats.paidToDate > 0 ? '<div class="ev-summary-row"><span>' + (stats.balanceDue < 0 ? PCD.escapeHtml(t('event_overpaid') || 'Overpaid') : PCD.escapeHtml(t('event_balance_due') || 'Balance due')) + '</span><span>' + PCD.fmtMoney(Math.abs(stats.balanceDue)) + '</span></div>' : '') +
         (stats.profit !== null ? '<div class="ev-summary-row total"><span>' + PCD.escapeHtml(t('ev_print_profit') || 'Profit') + (stats.margin !== null ? ' (' + PCD.fmtPercent(stats.margin, 0) + ')' : '') + '</span><span>' + PCD.fmtMoney(stats.profit) + '</span></div>' : '') +
       '</div>' +
       (event.notes ?
@@ -1422,7 +1532,8 @@
     let fnHtml = '';
     eventFunctions(event).forEach(function (fn, fi) {
       const when = [fmtD(fn.date), [fn.time, fn.endTime].filter(Boolean).join('–')].filter(Boolean).join(' · ');
-      const sub = [when, fn.room, (Number(fn.guestCount) ? fn.guestCount + ' ' + guestsLabel : '')].filter(Boolean).join('  ·  ');
+      const guestsBit = Number(fn.guestCount) ? (fn.guestCount + ' ' + guestsLabel + (Number(fn.guaranteedCount) ? ' (' + PCD.escapeHtml(t('event_guaranteed_short') || 'guar.') + ' ' + fn.guaranteedCount + ')' : '')) : '';
+      const sub = [when, fn.room, guestsBit].filter(Boolean).join('  ·  ');
       const title = (fn.name || '').trim() || ((t('event_function') || 'Function') + ' ' + (fi + 1));
       let dishes = '';
       (fn.menu || []).forEach(function (item) {
@@ -1489,10 +1600,11 @@
         '<div class="pr-h2">' + PCD.escapeHtml(t('event_pricing') || 'Pricing') + '</div>' +
         '<table class="pr-tbl"><tbody>' + priceRows +
           '<tr class="pr-total"><td>' + PCD.escapeHtml(t('ev_print_total_revenue') || 'Total') + '</td><td class="r">' + PCD.fmtMoney(stats.totalRevenue) + '</td></tr>' +
-          (stats.paidToDate > 0 ? '<tr><td>' + PCD.escapeHtml(t('event_paid') || 'Paid') + '</td><td class="r">−' + PCD.fmtMoney(stats.paidToDate) + '</td></tr><tr class="pr-total"><td>' + PCD.escapeHtml(t('event_balance_due') || 'Balance due') + '</td><td class="r">' + PCD.fmtMoney(stats.balanceDue) + '</td></tr>' : '') +
+          (stats.paidToDate > 0 ? '<tr><td>' + PCD.escapeHtml(t('event_paid') || 'Paid') + '</td><td class="r">−' + PCD.fmtMoney(stats.paidToDate) + '</td></tr><tr class="pr-total"><td>' + (stats.balanceDue < 0 ? PCD.escapeHtml(t('event_overpaid') || 'Overpaid') : PCD.escapeHtml(t('event_balance_due') || 'Balance due')) + '</td><td class="r">' + PCD.fmtMoney(Math.abs(stats.balanceDue)) + '</td></tr>' : '') +
         '</tbody></table>'
       : '') +
       payHtml +
+      (event.cancellationPolicy ? '<div class="pr-h2">' + PCD.escapeHtml(t('event_cancellation_policy') || 'Cancellation policy') + '</div><div class="pr-terms">' + PCD.escapeHtml(event.cancellationPolicy) + '</div>' : '') +
       (event.notes ? '<div class="pr-h2">' + PCD.escapeHtml(t('event_terms') || 'Terms & notes') + '</div><div class="pr-terms">' + PCD.escapeHtml(event.notes) + '</div>' : '') +
       '<div class="pr-sign">' +
         '<div class="pr-sig">' +
@@ -1503,6 +1615,78 @@
         '<div class="pr-sig"><div class="pr-sig-line"></div>' + PCD.escapeHtml(t('event_sign_provider') || 'Caterer signature & date') + '</div>' +
       '</div>';
     return html;
+  }
+
+  // v2.44.130 — Uzaktan e-imza linki için snapshot. eventProposalHtml() zaten
+  // maliyet/kâr sızdırmayacak şekilde tasarlı (bkz yukarıdaki yorum) — aynı HTML
+  // doğrudan payload'a gömülür (menu_studio'nun payload.studioHtml deseniyle aynı
+  // mantık: şefin cihazında bir kez üretilir, public sayfa yeniden hesaplamaz).
+  function snapshotEvent(id) {
+    const event = PCD.store.getFromTable('events', id);
+    if (!event) return null;
+    return {
+      kind: 'event',
+      name: event.name || '',
+      html: eventProposalHtml(event),
+      signature: event.signature || null,
+      sharedAt: new Date().toISOString(),
+    };
+  }
+
+  // v2.44.130 — Uzaktan imza public sayfası. share.js'in renderSharePage'i bunu
+  // 'event' kind'i için çağırır (kitchencard'ın renderFromSnapshot'u gibi, ama
+  // interaktif olduğu için container'ı doğrudan alır ve kendi DOM wiring'ini yapar).
+  // shareId = public_shares.id (imza submit edge function'a bununla gider).
+  // alreadySignedAt = share.signed_at (RPC ile server-side işaretlenmiş imza durumu).
+  function renderSignatureView(container, p, shareId, alreadySignedAt) {
+    const t = (PCD.i18n && PCD.i18n.t) ? PCD.i18n.t : function (k, fb) { return fb || k; };
+    const signable = !(p.signature && p.signature.dataUrl) && !alreadySignedAt;
+    container.innerHTML = p.html +
+      '<div id="evSignBox" style="max-width:800px;margin:0 auto;padding:0 10mm 20mm;">' +
+      (signable
+        ? '<div style="border:1px solid var(--border,#e7e5e4);border-radius:10px;padding:16px;">' +
+            '<div style="font-weight:700;font-size:14px;color:#16433a;margin-bottom:10px;">' + PCD.escapeHtml(t('event_sign_heading') || 'Sign to approve this proposal') + '</div>' +
+            '<div class="field"><label class="field-label">' + PCD.escapeHtml(t('event_signed_by') || 'Signed by') + '</label>' +
+            '<input type="text" class="input" id="evSigName" placeholder="' + PCD.escapeHtml(t('event_contact_name') || 'Name') + '"></div>' +
+            '<div class="field-label" style="margin-top:10px;">' + PCD.escapeHtml(t('event_sign_here') || 'Sign below') + '</div>' +
+            '<canvas id="evSigCanvas" width="520" height="200" style="width:100%;height:200px;border:2px dashed #ccc;border-radius:10px;background:#fff;touch-action:none;cursor:crosshair;display:block;"></canvas>' +
+            '<div style="display:flex;gap:8px;margin-top:10px;">' +
+              '<button type="button" class="btn btn-outline" id="evSigClear">' + PCD.escapeHtml(t('event_sign_clear') || 'Clear') + '</button>' +
+              '<div style="flex:1;"></div>' +
+              '<button type="button" class="btn btn-primary" id="evSigSubmit">' + PCD.escapeHtml(t('event_sign_submit') || 'Sign & Submit') + '</button>' +
+            '</div>' +
+          '</div>'
+        : '<div style="border:1px solid #cbe8d8;background:#eaf6f0;border-radius:10px;padding:16px;color:#16433a;font-weight:600;">✓ ' + PCD.escapeHtml(t('event_sign_already') || 'This proposal has already been signed.') + '</div>') +
+      '</div>';
+
+    if (!signable) return;
+
+    const canvas = PCD.$ ? PCD.$('#evSigCanvas', container) : container.querySelector('#evSigCanvas');
+    const pad = wireSignatureCanvas(canvas);
+    const clearBtn = container.querySelector('#evSigClear');
+    const submitBtn = container.querySelector('#evSigSubmit');
+    const nameInput = container.querySelector('#evSigName');
+    clearBtn.addEventListener('click', function () { pad.clear(); });
+    submitBtn.addEventListener('click', function () {
+      if (pad.isEmpty()) { if (PCD.toast) PCD.toast.warning(t('event_sign_empty') || 'Please sign first.'); return; }
+      const supabase = window._supabaseClient;
+      if (!supabase) return;
+      submitBtn.disabled = true;
+      supabase.functions.invoke('submit-event-signature', {
+        body: { share_id: shareId, signature_data_url: pad.toDataURL(), signed_by: (nameInput.value || '').trim() },
+      }).then(function (res) {
+        if (res && res.data && res.data.signed) {
+          document.getElementById('evSignBox').innerHTML =
+            '<div style="border:1px solid #cbe8d8;background:#eaf6f0;border-radius:10px;padding:16px;color:#16433a;font-weight:600;">✓ ' + PCD.escapeHtml(t('event_sign_thanks') || 'Thank you — your signature has been recorded.') + '</div>';
+        } else {
+          submitBtn.disabled = false;
+          if (PCD.toast) PCD.toast.error(t('event_sign_error') || 'Could not submit signature. Please try again.');
+        }
+      }).catch(function () {
+        submitBtn.disabled = false;
+        if (PCD.toast) PCD.toast.error(t('event_sign_error') || 'Could not submit signature. Please try again.');
+      });
+    });
   }
 
   function shareEvent(event) {
@@ -1739,5 +1923,5 @@
   }
 
   PCD.tools = PCD.tools || {};
-  PCD.tools.events = { render: render, openEditor: openEditor, computeEventDeductions: computeEventDeductions };
+  PCD.tools.events = { render: render, openEditor: openEditor, computeEventDeductions: computeEventDeductions, snapshot: snapshotEvent, renderSignatureView: renderSignatureView };
 })();

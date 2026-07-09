@@ -162,6 +162,16 @@
     return null;
   }
 
+  // v2.44.130 — Forwards to events.js's snapshot (proposal HTML + signature
+  // state). events.js is already loaded when this is called (chef must be
+  // in the event editor to click "Send signing link").
+  function snapshotEvent(eventId) {
+    if (PCD.tools && PCD.tools.events && PCD.tools.events.snapshot) {
+      return PCD.tools.events.snapshot(eventId);
+    }
+    return null;
+  }
+
   // ============ v2.17 — COST-VIEW ENRICHMENT ============
   // Maliyet verisini snapshot payload'una gömer (yalnızca cost-share için).
   // Mevcut PCD.recipes.computeFoodCost yeniden kullanılır → app ile bire bir
@@ -246,7 +256,8 @@
   // Snapshot is refreshed on every call so the public view stays current.
   function createOrGetShareUrl(kind, sourceId, mode) {
     // v2.17 — mode: 'public' (varsayılan) veya 'cost' (patron/muhasebeci görünümü).
-    mode = (mode === 'cost') ? 'cost' : 'public';
+    // v2.44.130 — 'sign': event proposal uzaktan imza linki.
+    mode = (mode === 'cost') ? 'cost' : (mode === 'sign') ? 'sign' : 'public';
     return new Promise(function (resolve, reject) {
       if (!PCD.cloud || !PCD.cloud.ready) {
         return reject(new Error('Cloud not configured'));
@@ -270,6 +281,7 @@
         (kind === 'recipe')      ? snapshotRecipe(sourceId) :
         (kind === 'menu')        ? snapshotMenu(sourceId) :
         (kind === 'kitchencard') ? snapshotKitchenCard(sourceId) :
+        (kind === 'event')       ? snapshotEvent(sourceId) :
         null;
       if (!payload) return reject(new Error('Item not found'));
 
@@ -427,6 +439,24 @@
     });
   }
 
+  // v2.44.130 — Delete a share by (kind, sourceId) rather than share id — used
+  // when the source item itself is deleted (e.g. event deleted → its signing
+  // link must die too). No FK/trigger ties source_id to a parent table (by
+  // design, since kind determines which table it points at), so this cleanup
+  // is done at the call site instead of a DB trigger. Silently no-ops if no
+  // share exists (most events never had a signing link generated).
+  function deleteShareBySource(kind, sourceId) {
+    return new Promise(function (resolve, reject) {
+      const supabase = window._supabaseClient;
+      if (!supabase) return resolve(); // no cloud configured → nothing to clean up
+      supabase.from('public_shares').delete().eq('kind', kind).eq('source_id', sourceId)
+        .then(function (res) {
+          if (res.error) return reject(res.error);
+          resolve();
+        }).catch(reject);
+    });
+  }
+
   // v2.6.56 — Detect viewer's preferred locale for the share page.
   // Order of preference:
   //   1. ?lang=xx URL parameter (explicit override)
@@ -575,6 +605,30 @@
         _kc.onload = _kcRender;
         _kc.onerror = function () { appEl.innerHTML = _kcUnavailable; };
         document.head.appendChild(_kc);
+      }
+      return;
+    }
+
+    // v2.44.130 — Event proposal remote signing page. Interactive (signature
+    // canvas + submit), so it owns the container directly rather than
+    // returning an HTML string like the other kinds.
+    if (p.kind === 'event') {
+      var _evUnavailable = '<div style="padding:40px;text-align:center;color:#666;">Signing page unavailable</div>';
+      var _evRender = function () {
+        if (PCD.tools && PCD.tools.events && PCD.tools.events.renderSignatureView) {
+          PCD.tools.events.renderSignatureView(appEl, p, share.id, share.signed_at);
+        } else {
+          appEl.innerHTML = _evUnavailable;
+        }
+      };
+      if (PCD.tools && PCD.tools.events && PCD.tools.events.renderSignatureView) {
+        _evRender();
+      } else {
+        var _ev = document.createElement('script');
+        _ev.src = 'js/tools/events.js';
+        _ev.onload = _evRender;
+        _ev.onerror = function () { appEl.innerHTML = _evUnavailable; };
+        document.head.appendChild(_ev);
       }
       return;
     }
@@ -912,9 +966,11 @@
     snapshotRecipe: snapshotRecipe,
     snapshotMenu: snapshotMenu,
     snapshotKitchenCard: snapshotKitchenCard,
+    snapshotEvent: snapshotEvent,
     initShareCheck: initShareCheck,
     listMyShares: listMyShares,
     setSharePaused: setSharePaused,
     deleteShare: deleteShare,
+    deleteShareBySource: deleteShareBySource,
   };
 })();
