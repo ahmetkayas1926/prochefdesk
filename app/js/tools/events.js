@@ -259,11 +259,11 @@
     PCD.on(view, 'click', '[data-evf]', function () { _evFilter = this.getAttribute('data-evf'); render(view); });
     PCD.on(view, 'click', '[data-evview]', function () { _evView = this.getAttribute('data-evview'); render(view); });
     PCD.on(view, 'click', '[data-calnav]', function () { const dir = parseInt(this.getAttribute('data-calnav'), 10); const cur = _calCursor || new Date(); _calCursor = dir === 0 ? new Date() : new Date(cur.getFullYear(), cur.getMonth() + dir, 1); render(view); });
-    PCD.on(view, 'click', '[data-cal-eid]', function () { openEditor(this.getAttribute('data-cal-eid')); });
+    PCD.on(view, 'click', '[data-cal-eid]', function () { openPreview(this.getAttribute('data-cal-eid')); });
     PCD.$('#newEventBtn', view).addEventListener('click', function () { openEditor(); });
     PCD.on(listEl, 'click', '[data-eid]', function (e) {
       if (e.target.closest('button')) return;  // any quick-access action button
-      openEditor(this.getAttribute('data-eid'));
+      openPreview(this.getAttribute('data-eid'));
     });
     // v2.43.18 — Quick-access: cost report (Simple/Detailed preview modal)
     PCD.on(listEl, 'click', '[data-ev-cost]', function (e) {
@@ -453,34 +453,291 @@
     };
   }
 
-  // v2.44.93 — İmza yakalama modalı (client-side canvas; fare + dokunma). data.signature =
-  // { dataUrl, signedBy, signedAt } olarak kaydeder; teklif çıktısına gömülür.
-  function openSignaturePad(data, onDone) {
+  // v2.44.132 — Salt-okunur önizleme (recipes.js openPreview deseni). Liste
+  // tıklaması artık buraya gelir; Edit yalnız bu ekrandan açık bir tıklamayla
+  // açılır. BEO/Proposal/Share/Delete/Shopping-list/Deduct-stock hepsi `existing`
+  // (kaydedilmiş veri) üzerinde çalışır — hiçbiri draft-düzenleme durumuna bağlı değil.
+  function openPreview(eid) {
     const t = PCD.i18n.t;
+    const existing = PCD.store.getFromTable('events', eid);
+    if (!existing) { PCD.toast.error(t('toast_event_not_found') || 'Event not found'); return; }
+    const ingMap = {}, recipeMap = {};
+    PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
+    PCD.store.listRecipes().forEach(function (r) { recipeMap[r.id] = r; });
+
     const body = PCD.el('div');
-    body.innerHTML =
-      '<div class="field"><label class="field-label">' + PCD.escapeHtml(t('event_signed_by') || 'Signed by') + '</label>' +
-      '<input type="text" class="input" id="sigName" value="' + PCD.escapeHtml((data.signature && data.signature.signedBy) || data.contactName || data.client || '') + '" placeholder="' + PCD.escapeHtml(t('event_contact_name') || 'Name') + '"></div>' +
-      '<div class="field-label" style="margin-top:10px;">' + PCD.escapeHtml(t('event_sign_here') || 'Sign below') + '</div>' +
-      '<canvas id="sigCanvas" width="520" height="200" style="width:100%;height:200px;border:2px dashed var(--border-strong);border-radius:10px;background:#fff;touch-action:none;cursor:crosshair;display:block;"></canvas>';
-    const clearBtn = PCD.el('button', { class: 'btn btn-outline', text: t('event_sign_clear') || 'Clear' });
-    const cancelBtn = PCD.el('button', { class: 'btn btn-ghost', text: t('cancel') || 'Cancel' });
-    const saveBtn = PCD.el('button', { class: 'btn btn-primary', text: t('save') || 'Save' });
-    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', alignItems: 'center' } });
-    footer.appendChild(clearBtn);
-    footer.appendChild(PCD.el('div', { style: { flex: '1' } }));
-    footer.appendChild(cancelBtn);
-    footer.appendChild(saveBtn);
-    const m = PCD.modal.open({ title: L('event_signoff', 'Client sign-off'), body: body, footer: footer, size: 'md', closable: true });
-    const canvas = PCD.$('#sigCanvas', body);
-    const pad = wireSignatureCanvas(canvas);
-    clearBtn.addEventListener('click', function () { pad.clear(); });
-    cancelBtn.addEventListener('click', function () { m.close(); });
-    saveBtn.addEventListener('click', function () {
-      if (pad.isEmpty()) { PCD.toast.warning(t('event_sign_empty') || 'Please sign first.'); return; }
-      data.signature = { dataUrl: pad.toDataURL(), signedBy: (PCD.$('#sigName', body).value || '').trim(), signedAt: new Date().toISOString() };
+    // Uzaktan e-imza linki durumu — tek imza mekanizması burada yönetilir
+    // (bkz PLAN Faz 1b: editördeki eski in-app canvas kaldırıldı).
+    let signLinkState = null;
+
+    function signLinkAreaHtml() {
+      if (!signLinkState || signLinkState.loading) {
+        return '<div class="text-muted text-sm">' + PCD.escapeHtml(t('loading') || 'Loading…') + '</div>';
+      }
+      if (!signLinkState.url) {
+        return '<div class="text-muted text-sm" style="margin-bottom:8px;">' + PCD.escapeHtml(t('event_signing_link_hint') || 'Send a link so the client can view and sign the proposal remotely — or open it yourself on a tablet for in-person signing.') + '</div>' +
+          '<button type="button" class="btn btn-outline btn-sm" id="pvSignLinkSendBtn">🔗 ' + PCD.escapeHtml(t('event_send_signing_link') || 'Send signing link') + '</button>';
+      }
+      const statusBit = signLinkState.signed
+        ? '<span style="color:#15803d;font-weight:600;">✓ ' + PCD.escapeHtml(t('event_signing_link_signed') || 'Signed') + (signLinkState.signedBy ? ' · ' + PCD.escapeHtml(signLinkState.signedBy) : '') + '</span>'
+        : (signLinkState.paused
+            ? '<span style="color:#b45309;font-weight:600;">⏸ ' + PCD.escapeHtml(t('event_signing_link_paused') || 'Paused') + '</span>'
+            : '<span style="color:#b45309;">' + PCD.escapeHtml(t('event_signing_link_pending') || 'Awaiting signature') + '</span>');
+      return '<div class="text-muted text-sm" style="margin-bottom:8px;word-break:break-all;">' + PCD.escapeHtml(signLinkState.url) + '</div>' +
+        '<div style="margin-bottom:8px;">' + statusBit + '</div>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+          '<button type="button" class="btn btn-outline btn-sm" id="pvSignLinkCopyBtn">' + PCD.escapeHtml(t('event_signing_link_copy') || 'Copy link') + '</button>' +
+          (!signLinkState.signed ? '<button type="button" class="btn btn-ghost btn-sm" id="pvSignLinkRevokeBtn" style="color:var(--danger);">' + PCD.escapeHtml(t('event_signing_link_revoke') || 'Revoke link') + '</button>' : '') +
+        '</div>';
+    }
+
+    function refreshSignLinkState() {
+      if (!PCD.cloud || !PCD.cloud.ready) { signLinkState = { url: null }; return; }
+      const supabase = window._supabaseClient;
+      const user = PCD.store.get('user');
+      if (!supabase || !user || !user.id) { signLinkState = { url: null }; return; }
+      signLinkState = { loading: true };
+      render();
+      supabase.from('public_shares')
+        .select('id, paused, signed_at, signed_by')
+        .eq('owner_id', user.id).eq('kind', 'event').eq('source_id', existing.id).eq('share_mode', 'sign')
+        .maybeSingle()
+        .then(function (res) {
+          if (res.error || !res.data) { signLinkState = { url: null }; }
+          else {
+            signLinkState = {
+              url: location.origin + location.pathname + '?share=' + res.data.id,
+              paused: !!res.data.paused,
+              signed: !!res.data.signed_at,
+              signedBy: res.data.signed_by || '',
+            };
+          }
+          render();
+        }).catch(function () { signLinkState = { url: null }; render(); });
+    }
+
+    function render() {
+      const stats = computeStats(existing, ingMap, recipeMap);
+      const fns = eventFunctions(existing);
+      const guestsLabel = (t('ev_print_guests') || 'Guests').toLowerCase();
+      const locale = (PCD.i18n && PCD.i18n.currentLocale) || 'en';
+      const fmtD = function (d) { return d ? new Date(d).toLocaleDateString(locale, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : ''; };
+
+      let fnHtml = '';
+      fns.forEach(function (fn, fi) {
+        const when = [fmtD(fn.date), [fn.time, fn.endTime].filter(Boolean).join('–')].filter(Boolean).join(' · ');
+        const guestsBit = Number(fn.guestCount) ? (fn.guestCount + ' ' + guestsLabel + (Number(fn.guaranteedCount) ? ' (' + PCD.escapeHtml(t('event_guaranteed_short') || 'guar.') + ' ' + fn.guaranteedCount + ')' : '')) : '';
+        const sub = [when, fn.room, guestsBit].filter(Boolean).join('  ·  ');
+        const title = (fn.name || '').trim() || ((t('event_function') || 'Function') + ' ' + (fi + 1));
+        let dishes = '';
+        (fn.menu || []).forEach(function (item) {
+          let nm = '';
+          if (item.recipeId) { const r = recipeMap[item.recipeId]; if (r) nm = r.name; }
+          else if (item.ingredientId) { const ing = ingMap[item.ingredientId]; if (ing) nm = ing.name; }
+          if (nm) dishes += '<li>' + PCD.escapeHtml(nm) + '</li>';
+        });
+        const alg = fnMenuAllergens(fn, ingMap, recipeMap);
+        const diet = fn.dietary || {};
+        const dietParts = DIET_TYPES.filter(function (d) { return Number(diet[d.key]) > 0; }).map(function (d) { return diet[d.key] + ' ' + PCD.escapeHtml(t(d.labelKey) || d.key); });
+        fnHtml += '<div style="margin:10px 0;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-md);">' +
+          '<div style="font-weight:700;">' + PCD.escapeHtml(title) + '</div>' +
+          (sub ? '<div class="text-muted text-sm" style="margin-top:2px;">' + PCD.escapeHtml(sub) + '</div>' : '') +
+          (dishes ? '<ul style="margin:8px 0 0;padding-left:18px;font-size:14px;">' + dishes + '</ul>' : '') +
+          (alg.length ? '<div class="text-muted text-sm" style="margin-top:4px;">' + PCD.escapeHtml(t('ev_menu_contains') || 'Contains') + ': ' + alg.map(function (k) { return PCD.escapeHtml(allergenLabel(k)); }).join('  ') + '</div>' : '') +
+          (dietParts.length ? '<div class="text-muted text-sm" style="margin-top:2px;">' + PCD.escapeHtml(t('diet_section') || 'Dietary') + ': ' + dietParts.join(' · ') + '</div>' : '') +
+        '</div>';
+      });
+
+      body.innerHTML = `
+        <div class="flex items-center justify-between mb-2" style="flex-wrap:wrap;gap:8px;">
+          <div>
+            <div style="font-weight:800;font-size:18px;">${PCD.escapeHtml(existing.name || t('untitled'))}</div>
+            ${(existing.client || existing.contactName) ? '<div class="text-muted text-sm">' + [existing.client, existing.contactName, existing.contactPhone].filter(Boolean).map(function (x) { return PCD.escapeHtml(x); }).join(' · ') + '</div>' : ''}
+          </div>
+          <span class="chip" style="background:${statusColor(existing.status || 'draft')}20;color:${statusColor(existing.status || 'draft')};font-weight:700;">${PCD.escapeHtml(t('event_status_' + (existing.status || 'draft')))}</span>
+        </div>
+
+        <div class="section-title mt-3 mb-2">${PCD.escapeHtml(t('event_functions') || 'Functions')}</div>
+        ${fnHtml}
+
+        <div class="grid grid-2 mb-3 mt-3" style="gap:8px;">
+          <div class="stat" style="padding:10px;"><div class="stat-label">${t('event_total_cost')}</div><div class="stat-value" style="font-size:18px;">${PCD.fmtMoney(stats.totalCost)}</div></div>
+          ${stats.totalRevenue > 0 ? '<div class="stat" style="padding:10px;"><div class="stat-label">' + t('event_total_revenue') + '</div><div class="stat-value" style="font-size:18px;">' + PCD.fmtMoney(stats.totalRevenue) + '</div></div>' : ''}
+          ${stats.profit !== null ? '<div class="stat" style="padding:10px;"><div class="stat-label">' + t('event_profit') + '</div><div class="stat-value" style="font-size:18px;color:' + (stats.profit >= 0 ? 'var(--success)' : 'var(--danger)') + ';">' + PCD.fmtMoney(stats.profit) + '</div></div>' : ''}
+          ${(stats.totalRevenue > 0 && Math.abs(stats.balanceDue) > 0.005) ? '<div class="stat" style="padding:10px;"><div class="stat-label">' + (stats.balanceDue < 0 ? (t('event_overpaid') || 'Overpaid') : (t('event_balance_due') || 'Balance due')) + '</div><div class="stat-value" style="font-size:18px;color:#b45309;">' + PCD.fmtMoney(Math.abs(stats.balanceDue)) + '</div></div>' : ''}
+        </div>
+
+        ${(existing.staffing && existing.staffing.length) ? '<div class="section-title mb-2">' + PCD.escapeHtml(t('event_staffing') || 'Staffing & labor') + '</div><div class="text-muted text-sm" style="margin-bottom:12px;">' + existing.staffing.map(function (s) { return PCD.escapeHtml(s.role || '—') + ' × ' + (s.count || 0); }).join(' · ') + '</div>' : ''}
+        ${(existing.charges && existing.charges.length) ? '<div class="section-title mb-2">' + PCD.escapeHtml(t('event_charges') || 'Charges & extras') + '</div><div class="text-muted text-sm" style="margin-bottom:12px;">' + existing.charges.map(function (c) { return PCD.escapeHtml(c.label || '—') + ' ' + PCD.fmtMoney(c.price || 0); }).join(' · ') + '</div>' : ''}
+        ${(existing.payments && existing.payments.length) ? '<div class="section-title mb-2">' + PCD.escapeHtml(L('event_payments', 'Payment schedule')) + '</div><div class="text-muted text-sm" style="margin-bottom:12px;">' + existing.payments.map(function (p) { return PCD.escapeHtml(p.label || '—') + ' ' + PCD.fmtMoney(p.amount || 0) + (p.paid ? ' ✓' : ''); }).join(' · ') + '</div>' : ''}
+        ${(existing.timeline && existing.timeline.length) ? '<div class="section-title mb-2">' + PCD.escapeHtml(L('event_timeline', 'Run-of-show')) + '</div><div class="text-muted text-sm" style="margin-bottom:12px;">' + existing.timeline.map(function (x) { return PCD.escapeHtml(x.time || '') + ' ' + PCD.escapeHtml(x.label || ''); }).join(' · ') + '</div>' : ''}
+        ${(existing.tasks && existing.tasks.length) ? '<div class="section-title mb-2">' + PCD.escapeHtml(L('event_tasks', 'Tasks')) + '</div><div class="text-muted text-sm" style="margin-bottom:12px;">' + existing.tasks.filter(function (x) { return x.done; }).length + '/' + existing.tasks.length + ' ' + PCD.escapeHtml(t('event_done') || 'done') + '</div>' : ''}
+        ${existing.cancellationPolicy ? '<div class="section-title mb-2">' + PCD.escapeHtml(t('event_cancellation_policy') || 'Cancellation policy') + '</div><div class="text-muted text-sm" style="margin-bottom:12px;white-space:pre-wrap;">' + PCD.escapeHtml(existing.cancellationPolicy) + '</div>' : ''}
+        ${existing.notes ? '<div class="section-title mb-2">' + PCD.escapeHtml(t('event_notes')) + '</div><div class="text-muted text-sm" style="margin-bottom:12px;white-space:pre-wrap;">' + PCD.escapeHtml(existing.notes) + '</div>' : ''}
+
+        <div style="margin-top:8px;padding:12px 14px;background:var(--surface-2);border-radius:var(--r-md);border:1px solid var(--border);">
+          <div style="font-weight:700;font-size:14px;margin-bottom:8px;">🔗 ${PCD.escapeHtml(t('event_send_proposal') || 'Send Proposal / Signing')}</div>
+          <div id="pvSignLinkArea">${signLinkAreaHtml()}</div>
+        </div>
+      `;
+
+      wireSignLink();
+    }
+
+    function wireSignLink() {
+      const sendBtn = body.querySelector('#pvSignLinkSendBtn');
+      if (sendBtn) sendBtn.addEventListener('click', function () {
+        if (!PCD.share || !PCD.share.createOrGetShareUrl) return;
+        if (PCD.gate && !PCD.gate.requireShare()) return;
+        signLinkState = { loading: true };
+        render();
+        PCD.share.createOrGetShareUrl('event', existing.id, 'sign').then(function () {
+          refreshSignLinkState();
+        }).catch(function (e) {
+          signLinkState = { url: null };
+          render();
+          PCD.toast.error((e && e.message) || (t('event_signing_link_error') || 'Could not create signing link'));
+        });
+      });
+      const copyBtn = body.querySelector('#pvSignLinkCopyBtn');
+      if (copyBtn) copyBtn.addEventListener('click', function () {
+        if (signLinkState && signLinkState.url && navigator.clipboard) {
+          navigator.clipboard.writeText(signLinkState.url).then(function () { PCD.toast.success(t('toast_copied') || 'Copied'); });
+        }
+      });
+      const revokeBtn = body.querySelector('#pvSignLinkRevokeBtn');
+      if (revokeBtn) revokeBtn.addEventListener('click', function () {
+        PCD.modal.confirm({
+          icon: '🗑', iconKind: 'danger', danger: true,
+          title: t('event_signing_link_revoke') || 'Revoke link', text: t('confirm_delete_desc') || '', okText: t('event_signing_link_revoke') || 'Revoke'
+        }).then(function (ok) {
+          if (!ok) return;
+          PCD.share.deleteShareBySource('event', existing.id).then(function () { signLinkState = { url: null }; render(); });
+        });
+      });
+    }
+
+    render();
+    refreshSignLinkState();
+
+    // ---- Footer: Delete | Shopping list | Deduct stock | BEO | Proposal | Share | Duplicate | Edit ----
+    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
+    const deleteBtn = PCD.el('button', { type: 'button', class: 'btn btn-ghost', text: t('delete'), style: { color: 'var(--danger)' } });
+    const shopBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline' });
+    shopBtn.innerHTML = '🛒 ' + PCD.escapeHtml(t('event_shopping_list') || 'Shopping list');
+    let applyInvBtn = null;
+    if ((existing.functions || []).some(function (f) { return f.menu && f.menu.length; })) {
+      applyInvBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline' });
+    }
+    function _renderDeductBtnState() {
+      if (!applyInvBtn) return;
+      if (existing._stockDeductedAt) {
+        applyInvBtn.disabled = true;
+        applyInvBtn.innerHTML = PCD.icon('check', 14) + ' ' + PCD.escapeHtml(t('inv_already_deducted') || 'Stock deducted');
+        applyInvBtn.style.color = '#15803d'; applyInvBtn.style.borderColor = '#bbf7d0'; applyInvBtn.style.background = '#f0fdf4';
+      } else {
+        applyInvBtn.disabled = false;
+        applyInvBtn.innerHTML = '📦 ' + PCD.escapeHtml(t('event_apply_inventory') || 'Deduct stock');
+        applyInvBtn.style.color = ''; applyInvBtn.style.borderColor = ''; applyInvBtn.style.background = '';
+      }
+    }
+    if (applyInvBtn) _renderDeductBtnState();
+    const printBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: t('event_beo') || 'BEO sheet' });
+    printBtn.innerHTML = PCD.icon('print', 16);
+    const proposalBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: L('event_proposal', 'Client proposal') });
+    proposalBtn.innerHTML = '📄 ' + PCD.escapeHtml(L('event_proposal_short', 'Proposal'));
+    const shareBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: t('btn_share') });
+    shareBtn.innerHTML = PCD.icon('share', 16);
+    const dupBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: t('event_duplicate') || 'Duplicate' });
+    dupBtn.innerHTML = PCD.icon('copy', 16);
+    const editBtn = PCD.el('button', { type: 'button', class: 'btn btn-primary', text: t('edit'), style: { flex: '1', minWidth: '90px' } });
+
+    footer.appendChild(deleteBtn);
+    footer.appendChild(shopBtn);
+    if (applyInvBtn) footer.appendChild(applyInvBtn);
+    footer.appendChild(printBtn);
+    footer.appendChild(proposalBtn);
+    footer.appendChild(shareBtn);
+    footer.appendChild(dupBtn);
+    footer.appendChild(editBtn);
+
+    const m = PCD.modal.open({ title: existing.name || t('untitled'), body: body, footer: footer, size: 'lg', closable: true });
+
+    deleteBtn.addEventListener('click', function () {
+      PCD.modal.confirm({
+        icon: '🗑', iconKind: 'danger', danger: true,
+        title: t('confirm_delete'), text: t('confirm_delete_desc'), okText: t('delete')
+      }).then(function (ok) {
+        if (!ok) return;
+        if (PCD.share && PCD.share.deleteShareBySource) { PCD.share.deleteShareBySource('event', existing.id).catch(function () {}); }
+        PCD.store.deleteFromTable('events', existing.id);
+        PCD.toast.success(t('item_deleted'));
+        m.close();
+        setTimeout(function () {
+          const v = PCD.$('#view');
+          if (PCD.router.currentView() === 'events') render_list(v);
+        }, 250);
+      });
+    });
+
+    shopBtn.addEventListener('click', function () { openShoppingList(existing); });
+
+    if (applyInvBtn) applyInvBtn.addEventListener('click', function () {
+      if (existing._stockDeductedAt) return;
+      if (PCD.gate && !PCD.gate.requireAuth()) return;
+      const dd = PCD.tools.events.computeEventDeductions(existing, ingMap, recipeMap);
+      const ids = Object.keys(dd.deductions);
+      if (!ids.length) { PCD.toast.info(t('event_apply_inv_done').replace('{n}', 0)); return; }
+      const inv = PCD.tools.inventory;
+      const confirmFn = (inv && inv.confirmStockChange) ? inv.confirmStockChange : null;
+      const proceed = function () {
+        const report = (inv && inv.applyStockDeductions) ? inv.applyStockDeductions(dd.deductions) : [];
+        const deducted = report.filter(function (r) { return r.tracked; }).length;
+        const lowNow = report.filter(function (r) { return r.tracked && (r.status === 'low' || r.status === 'critical' || r.status === 'out'); }).length;
+        existing._stockDeductedAt = new Date().toISOString();
+        PCD.store.upsertInTable('events', existing, 'ev');
+        _renderDeductBtnState();
+        PCD.toast.success((t('event_apply_inv_done') || '{n} item(s) deducted from stock').replace('{n}', deducted) + (lowNow ? ' · ' + lowNow + ' ⚠' : ''));
+      };
+      if (!confirmFn) { proceed(); return; }
+      confirmFn({
+        title: t('event_apply_inventory') || 'Deduct stock',
+        verb: t('event_apply_inventory') || 'Deduct stock',
+        kind: 'deduct',
+        note: dd.skipped.length ? ('⚠ ' + dd.skipped.length + ': ' + dd.skipped.slice(0, 5).join(', ')) : null,
+        items: ids.map(function (iid) { const ing = ingMap[iid]; return { name: ing ? ing.name : iid, amount: dd.deductions[iid], unit: ing ? ing.unit : '' }; }),
+      }).then(function (ok) { if (ok) proceed(); });
+    });
+
+    printBtn.addEventListener('click', function () {
+      PCD.costReportPreview({
+        title: (existing.name || t('untitled')) + ' · ' + (t('event_beo') || 'BEO sheet'),
+        buildHtml: function (detailed) { return eventPrintHtml(existing, detailed); },
+        onPrint: function (detailed) { printEvent(existing, detailed); },
+      });
+    });
+    proposalBtn.addEventListener('click', function () {
+      if (PCD.gate && !PCD.gate.requireExport('events')) return;
+      PCD.print(eventProposalHtml(existing), (existing.name || 'Event') + ' — ' + (t('event_proposal') || 'Proposal'));
+    });
+    shareBtn.addEventListener('click', function () { shareEvent(existing); });
+    dupBtn.addEventListener('click', function () {
+      const copy = PCD.clone(existing); delete copy.id;
+      copy.name = (existing.name || t('untitled')) + ' ' + (t('event_copy_suffix') || '(copy)');
+      copy.status = 'draft';
+      delete copy._stockDeductedAt;
+      const saved = PCD.store.upsertInTable('events', copy, 'ev');
+      PCD.toast.success(t('event_duplicated') || 'Duplicated');
       m.close();
-      if (onDone) onDone();
+      setTimeout(function () {
+        const v = PCD.$('#view');
+        if (PCD.router.currentView() === 'events') render_list(v);
+        setTimeout(function () { openPreview(saved.id); }, 200);
+      }, 150);
+    });
+    editBtn.addEventListener('click', function () {
+      m.close();
+      setTimeout(function () { openEditor(existing.id); }, 280);
     });
   }
 
@@ -515,58 +772,6 @@
     }
 
     const body = PCD.el('div');
-
-    // v2.44.130 — Uzaktan e-imza linki durumu. Kalıcı `data`'ya YAZILMAZ (public_shares
-    // zaten kaynak-doğruluk — burada sadece görüntülemek için tutulan geçici state).
-    // null = henüz sorgulanmadı, {loading:true} = sorgulanıyor, {url:null} = link yok,
-    // {url, paused, signed, signedBy} = link var.
-    let signLinkState = null;
-
-    function signLinkAreaHtml() {
-      if (!signLinkState || signLinkState.loading) {
-        return '<div class="text-muted text-sm">' + PCD.escapeHtml(t('loading') || 'Loading…') + '</div>';
-      }
-      if (!signLinkState.url) {
-        return '<div class="text-muted text-sm" style="margin-bottom:8px;">' + PCD.escapeHtml(t('event_signing_link_hint') || 'Send a link so the client can view and sign the proposal remotely.') + '</div>' +
-          '<button type="button" class="btn btn-outline btn-sm" id="signLinkSendBtn">🔗 ' + PCD.escapeHtml(t('event_send_signing_link') || 'Send signing link') + '</button>';
-      }
-      const statusBit = signLinkState.signed
-        ? '<span style="color:#15803d;font-weight:600;">✓ ' + PCD.escapeHtml(t('event_signing_link_signed') || 'Signed') + (signLinkState.signedBy ? ' · ' + PCD.escapeHtml(signLinkState.signedBy) : '') + '</span>'
-        : (signLinkState.paused
-            ? '<span style="color:#b45309;font-weight:600;">⏸ ' + PCD.escapeHtml(t('event_signing_link_paused') || 'Paused') + '</span>'
-            : '<span style="color:#b45309;">' + PCD.escapeHtml(t('event_signing_link_pending') || 'Awaiting signature') + '</span>');
-      return '<div class="text-muted text-sm" style="margin-bottom:8px;word-break:break-all;">' + PCD.escapeHtml(signLinkState.url) + '</div>' +
-        '<div style="margin-bottom:8px;">' + statusBit + '</div>' +
-        '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
-          '<button type="button" class="btn btn-outline btn-sm" id="signLinkCopyBtn">' + PCD.escapeHtml(t('event_signing_link_copy') || 'Copy link') + '</button>' +
-          (!signLinkState.signed ? '<button type="button" class="btn btn-ghost btn-sm" id="signLinkRevokeBtn" style="color:var(--danger);">' + PCD.escapeHtml(t('event_signing_link_revoke') || 'Revoke link') + '</button>' : '') +
-        '</div>';
-    }
-
-    function refreshSignLinkState() {
-      if (!existing || !PCD.cloud || !PCD.cloud.ready) { signLinkState = { url: null }; return; }
-      const supabase = window._supabaseClient;
-      const user = PCD.store.get('user');
-      if (!supabase || !user || !user.id) { signLinkState = { url: null }; return; }
-      signLinkState = { loading: true };
-      render();
-      supabase.from('public_shares')
-        .select('id, paused, signed_at, signed_by')
-        .eq('owner_id', user.id).eq('kind', 'event').eq('source_id', existing.id).eq('share_mode', 'sign')
-        .maybeSingle()
-        .then(function (res) {
-          if (res.error || !res.data) { signLinkState = { url: null }; }
-          else {
-            signLinkState = {
-              url: location.origin + location.pathname + '?share=' + res.data.id,
-              paused: !!res.data.paused,
-              signed: !!res.data.signed_at,
-              signedBy: res.data.signed_by || '',
-            };
-          }
-          render();
-        }).catch(function () { signLinkState = { url: null }; render(); });
-    }
 
     function render() {
       const ingMap = {}, recipeMap = {};
@@ -665,13 +870,6 @@
           <div id="taskList"></div>
           <button type="button" class="btn btn-outline btn-sm" id="addTaskBtn" style="margin-top:8px;">+ ${PCD.escapeHtml(L('event_add_task', 'Add task'))}</button>
         </details>
-
-        <div style="margin:0 0 14px;border:1px solid var(--border);border-radius:10px;padding:10px 12px;">
-          <div style="font-weight:700;font-size:13px;color:var(--brand-700);margin-bottom:8px;">✍ ${PCD.escapeHtml(L('event_signoff', 'Client sign-off'))}</div>
-          <div id="signoffArea"></div>
-        </div>
-
-        ${existing ? '<div style="margin:0 0 14px;border:1px solid var(--border);border-radius:10px;padding:10px 12px;"><div style="font-weight:700;font-size:13px;color:var(--brand-700);margin-bottom:8px;">🔗 ' + PCD.escapeHtml(t('event_signing_link') || 'Signing link') + '</div><div id="signLinkArea">' + signLinkAreaHtml() + '</div></div>' : ''}
 
         <div class="stat mb-3" style="background:var(--brand-50);border-color:var(--brand-300);">
           <div class="flex items-center justify-between" style="flex-wrap:wrap;gap:8px;">
@@ -906,20 +1104,8 @@
         });
       }
 
-      // v2.44.93 — Sign-off: yakalanmış imza varsa göster, yoksa "yakala" butonu.
-      const signoffEl = PCD.$('#signoffArea', body);
-      if (signoffEl) {
-        if (data.signature && data.signature.dataUrl) {
-          signoffEl.innerHTML =
-            '<img src="' + data.signature.dataUrl + '" alt="" style="max-height:80px;max-width:100%;border:1px solid var(--border);border-radius:8px;background:#fff;padding:4px;display:block;">' +
-            '<div class="text-muted text-sm" style="margin-top:6px;">' + PCD.escapeHtml(t('event_signed_by') || 'Signed by') + ': <strong>' + PCD.escapeHtml(data.signature.signedBy || '—') + '</strong>' + (data.signature.signedAt ? ' · ' + PCD.escapeHtml(PCD.fmtDate(data.signature.signedAt)) : '') + '</div>' +
-            '<button type="button" class="btn btn-outline btn-sm" id="sigClearBtn" style="margin-top:8px;">' + PCD.escapeHtml(t('event_sign_clear') || 'Clear signature') + '</button>';
-        } else {
-          signoffEl.innerHTML =
-            '<div class="text-muted text-sm" style="margin-bottom:8px;">' + PCD.escapeHtml(t('event_signoff_hint') || 'Capture the client signature on a tablet — it embeds in the proposal.') + '</div>' +
-            '<button type="button" class="btn btn-outline btn-sm" id="sigCaptureBtn">✍ ' + PCD.escapeHtml(t('event_sign_capture') || 'Capture signature') + '</button>';
-        }
-      }
+      // v2.44.132 — İmza/imza-linki bu editörden kaldırıldı; artık yalnız
+      // openPreview()'da yönetiliyor (tek imza mekanizması — bkz. PLAN Faz 1b).
 
       wire();
     }
@@ -985,45 +1171,6 @@
       PCD.on(body, 'input', '.task-due', function () { const x = taskOf(this); if (x) x.due = this.value; });
       PCD.on(body, 'change', '.task-done', function () { const x = taskOf(this); if (x) { x.done = this.checked; render(); } });
       PCD.on(body, 'click', '.task-rm', function () { const i = parseInt(this.getAttribute('data-task'), 10); if (data.tasks) { data.tasks.splice(i, 1); render(); } });
-
-      const sigCap = $('sigCaptureBtn');
-      if (sigCap) sigCap.addEventListener('click', function () { openSignaturePad(data, render); });
-      const sigClr = $('sigClearBtn');
-      if (sigClr) sigClr.addEventListener('click', function () { delete data.signature; render(); });
-
-      const signLinkSendBtn = $('signLinkSendBtn');
-      if (signLinkSendBtn) signLinkSendBtn.addEventListener('click', function () {
-        if (!PCD.share || !PCD.share.createOrGetShareUrl) return;
-        if (PCD.gate && !PCD.gate.requireShare()) return;
-        signLinkState = { loading: true };
-        render();
-        PCD.share.createOrGetShareUrl('event', existing.id, 'sign').then(function () {
-          refreshSignLinkState();
-        }).catch(function (e) {
-          signLinkState = { url: null };
-          render();
-          PCD.toast.error((e && e.message) || (t('event_signing_link_error') || 'Could not create signing link'));
-        });
-      });
-      const signLinkCopyBtn = $('signLinkCopyBtn');
-      if (signLinkCopyBtn) signLinkCopyBtn.addEventListener('click', function () {
-        if (signLinkState && signLinkState.url && navigator.clipboard) {
-          navigator.clipboard.writeText(signLinkState.url).then(function () { PCD.toast.success(t('toast_copied') || 'Copied'); });
-        }
-      });
-      const signLinkRevokeBtn = $('signLinkRevokeBtn');
-      if (signLinkRevokeBtn) signLinkRevokeBtn.addEventListener('click', function () {
-        PCD.modal.confirm({
-          icon: '🗑', iconKind: 'danger', danger: true,
-          title: t('event_signing_link_revoke') || 'Revoke link', text: t('confirm_delete_desc') || '', okText: t('event_signing_link_revoke') || 'Revoke'
-        }).then(function (ok) {
-          if (!ok || !existing) return;
-          PCD.share.deleteShareBySource('event', existing.id).then(function () {
-            signLinkState = { url: null };
-            render();
-          });
-        });
-      });
 
       $('addFnBtn').addEventListener('click', function () {
         const last = data.functions[data.functions.length - 1] || {};
@@ -1110,49 +1257,12 @@
     }
 
     render();
-    refreshSignLinkState();
 
+    // v2.44.132 — Editör artık salt veri düzenleme; Delete/BEO/Proposal/Share/
+    // Shopping-list/Deduct-stock openPreview()'a taşındı (bkz PLAN Faz 1a/1b).
     const saveBtn = PCD.el('button', { class: 'btn btn-primary', text: t('save'), style: { flex: '1' } });
     const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') });
-    let deleteBtn = null;
-    if (existing) deleteBtn = PCD.el('button', { class: 'btn btn-ghost', text: t('delete'), style: { color: 'var(--danger)' } });
-    let printBtn = null, shareBtn = null, proposalBtn = null;
-    if (existing) {
-      printBtn = PCD.el('button', { class: 'btn btn-outline', title: t('event_beo') || 'BEO sheet' });
-      printBtn.innerHTML = PCD.icon('print', 16);
-      proposalBtn = PCD.el('button', { class: 'btn btn-outline', title: L('event_proposal', 'Client proposal') });
-      proposalBtn.innerHTML = '📄 ' + PCD.escapeHtml(L('event_proposal_short', 'Proposal'));
-      shareBtn = PCD.el('button', { class: 'btn btn-outline', title: t('btn_share') });
-      shareBtn.innerHTML = PCD.icon('share', 16);
-    }
-    // v2.37 — Alışveriş listesi (her zaman; data'dan canlı üretir)
-    const shopBtn = PCD.el('button', { class: 'btn btn-outline' });
-    shopBtn.innerHTML = '🛒 ' + PCD.escapeHtml(t('event_shopping_list') || 'Shopping list');
-    // v2.44 — A1: opt-in "deduct stock from inventory" (only when menu has items)
-    let applyInvBtn = null;
-    function _renderDeductBtnState() {
-      if (!applyInvBtn) return;
-      if (data._stockDeductedAt) {
-        applyInvBtn.disabled = true;
-        applyInvBtn.innerHTML = PCD.icon('check', 14) + ' ' + PCD.escapeHtml(t('inv_already_deducted') || 'Stock deducted');
-        applyInvBtn.style.color = '#15803d'; applyInvBtn.style.borderColor = '#bbf7d0'; applyInvBtn.style.background = '#f0fdf4';
-      } else {
-        applyInvBtn.disabled = false;
-        applyInvBtn.innerHTML = '📦 ' + PCD.escapeHtml(t('event_apply_inventory') || 'Deduct stock');
-        applyInvBtn.style.color = ''; applyInvBtn.style.borderColor = ''; applyInvBtn.style.background = '';
-      }
-    }
-    if ((data.functions || []).some(function (f) { return f.menu && f.menu.length; })) {
-      applyInvBtn = PCD.el('button', { class: 'btn btn-outline' });
-      _renderDeductBtnState();
-    }
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
-    if (deleteBtn) footer.appendChild(deleteBtn);
-    footer.appendChild(shopBtn);
-    if (applyInvBtn) footer.appendChild(applyInvBtn);
-    if (printBtn) footer.appendChild(printBtn);
-    if (proposalBtn) footer.appendChild(proposalBtn);
-    if (shareBtn) footer.appendChild(shareBtn);
     footer.appendChild(cancelBtn);
     footer.appendChild(saveBtn);
 
@@ -1162,76 +1272,7 @@
     });
 
     cancelBtn.addEventListener('click', function () { m.close(); });
-    if (deleteBtn) deleteBtn.addEventListener('click', function () {
-      PCD.modal.confirm({
-        icon: '🗑', iconKind: 'danger', danger: true,
-        title: t('confirm_delete'), text: t('confirm_delete_desc'), okText: t('delete')
-      }).then(function (ok) {
-        if (!ok) return;
-        // v2.44.130 — Event silinince varsa uzaktan-imza linki de silinsin (yetim link kalmasın).
-        if (PCD.share && PCD.share.deleteShareBySource) { PCD.share.deleteShareBySource('event', existing.id).catch(function () {}); }
-        PCD.store.deleteFromTable('events', existing.id);
-        PCD.toast.success(t('item_deleted'));
-        m.close();
-        setTimeout(function () {
-          const v = PCD.$('#view');
-          if (PCD.router.currentView() === 'events') render_list(v);
-        }, 250);
-      });
-    });
-    if (printBtn) printBtn.addEventListener('click', function () {
-      // v2.44.35 — Liste kısayoluyla AYNI: Simple/Detailed önizleme chooser
-      // (önce doğrudan Chrome print'e gidiyordu → tutarsızdı).
-      PCD.costReportPreview({
-        title: (existing.name || t('untitled')) + ' · ' + (t('btn_cost_report') || 'Cost Report'),
-        buildHtml: function (detailed) { return eventPrintHtml(existing, detailed); },
-        onPrint: function (detailed) { printEvent(existing, detailed); },
-      });
-    });
-    if (proposalBtn) proposalBtn.addEventListener('click', function () {
-      if (PCD.gate && !PCD.gate.requireExport('events')) return;
-      PCD.print(eventProposalHtml(existing), (existing.name || 'Event') + ' — ' + (t('event_proposal') || 'Proposal'));
-    });
-    if (shareBtn) shareBtn.addEventListener('click', function () {
-      shareEvent(existing);
-    });
-    shopBtn.addEventListener('click', function () { openShoppingList(data); });
-    if (applyInvBtn) applyInvBtn.addEventListener('click', function () {
-      if (data._stockDeductedAt) return; // KİLİT — zaten düşüldü
-      if (PCD.gate && !PCD.gate.requireAuth()) return;
-      const ingMap = {}, recipeMap = {};
-      PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
-      PCD.store.listRecipes().forEach(function (r) { recipeMap[r.id] = r; });
-      const dd = PCD.tools.events.computeEventDeductions(data, ingMap, recipeMap);
-      const ids = Object.keys(dd.deductions);
-      if (!ids.length) { PCD.toast.info(t('event_apply_inv_done').replace('{n}', 0)); return; }
-      const inv = PCD.tools.inventory;
-      const confirmFn = (inv && inv.confirmStockChange) ? inv.confirmStockChange : null;
-      const proceed = function () {
-        const report = (inv && inv.applyStockDeductions) ? inv.applyStockDeductions(dd.deductions) : [];
-        const deducted = report.filter(function (r) { return r.tracked; }).length;
-        const lowNow = report.filter(function (r) { return r.tracked && (r.status === 'low' || r.status === 'critical' || r.status === 'out'); }).length;
-        // KİLİT — bir daha düşülemesin: flag + kaydet + buton rozete dön.
-        data._stockDeductedAt = new Date().toISOString();
-        syncFlatMirrorFields();
-        const saved = PCD.store.upsertInTable('events', data, 'ev');
-        if (saved && saved.id) data.id = saved.id;
-        _renderDeductBtnState();
-        PCD.toast.success((t('event_apply_inv_done') || '{n} item(s) deducted from stock').replace('{n}', deducted) + (lowNow ? ' · ' + lowNow + ' ⚠' : ''));
-      };
-      if (!confirmFn) { proceed(); return; }
-      confirmFn({
-        title: t('event_apply_inventory') || 'Deduct stock',
-        verb: t('event_apply_inventory') || 'Deduct stock',
-        kind: 'deduct',
-        note: dd.skipped.length ? ('⚠ ' + dd.skipped.length + ': ' + dd.skipped.slice(0, 5).join(', ')) : null,
-        items: ids.map(function (iid) { const ing = ingMap[iid]; return { name: ing ? ing.name : iid, amount: dd.deductions[iid], unit: ing ? ing.unit : '' }; }),
-      }).then(function (ok) { if (ok) proceed(); });
-    });
     // v2.44.86 — liste/sıralama + geriye-uyum için temsilî düz alanları aynala.
-    // v2.44.131 fix — önceden yalnız saveBtn'de çağrılıyordu; hiç kaydedilmemiş bir
-    // event'te "Deduct stock" önce tıklanırsa upsert bu alanlar hiç set edilmeden
-    // gidiyordu (event listede tarihsiz/misafirsiz görünebiliyordu).
     function syncFlatMirrorFields() {
       const fns = data.functions || [];
       const dated = fns.map(function (f) { return f.date; }).filter(Boolean).sort();
@@ -1246,13 +1287,11 @@
       if (!data.name || !data.name.trim()) { PCD.toast.error(t('event_name') + ' ' + t('required')); return; }
       if (existing) data.id = existing.id;
       syncFlatMirrorFields();
-      PCD.store.upsertInTable('events', data, 'ev');
+      const saved = PCD.store.upsertInTable('events', data, 'ev');
       PCD.toast.success(t('event_saved'));
       m.close();
-      setTimeout(function () {
-        const v = PCD.$('#view');
-        if (PCD.router.currentView() === 'events') render_list(v);
-      }, 250);
+      // v2.44.132 — Kaydettikten sonra listeye değil Preview'a dönülür (bkz PLAN Faz 1a).
+      setTimeout(function () { openPreview(saved.id); }, 280);
     });
   }
 
@@ -1303,19 +1342,22 @@
       if (dparts.length) lines.push('  🍽 ' + dparts.join(' · '));
       lines.push('');
     });
-    lines.push('— ' + (t('event_cost_summary') || 'Cost summary') + ' —');
-    lines.push((t('ev_print_total_food_cost') || 'Total food cost') + ': ' + PCD.fmtMoney(stats.totalCost));
-    if (stats.laborCost > 0) lines.push((t('event_labor_cost') || 'Labor cost') + ': ' + PCD.fmtMoney(stats.laborCost));
-    if (stats.chargesCost > 0) lines.push((t('event_charges_cost') || 'Extras cost') + ': ' + PCD.fmtMoney(stats.chargesCost));
-    if (stats.laborCost > 0 || stats.chargesCost > 0) lines.push((t('event_grand_total') || 'Total cost') + ': ' + PCD.fmtMoney(stats.grandTotal));
+    // v2.44.133 — Müşteri-güvenli varsayılan: maliyet/işçilik/kâr YOK (bu metin
+    // doğrudan WhatsApp/Email ile müşteriye gidiyor). Yalnız proposal'ın gösterdiği
+    // aynı rakamlar (bkz eventProposalHtml): toplam fiyat + ödeme planı + bakiye.
     if (stats.totalRevenue > 0) {
-      if (stats.serviceCharge > 0) lines.push((t('event_subtotal') || 'Subtotal') + ': ' + PCD.fmtMoney(stats.subtotal) + ' · ' + (t('event_service_label') || 'Service charge') + ' (' + stats.svcPct + '%): +' + PCD.fmtMoney(stats.serviceCharge));
-      lines.push((t('ev_print_total_revenue') || 'Total revenue') + ': ' + PCD.fmtMoney(stats.totalRevenue));
+      lines.push('— ' + (t('event_pricing') || 'Pricing') + ' —');
+      if (stats.foodRevenue > 0) lines.push((t('event_food_revenue') || 'Catering') + ': ' + PCD.fmtMoney(stats.foodRevenue));
+      (event.charges || []).forEach(function (c) {
+        if (!((c.label || '').trim() || Number(c.price))) return;
+        lines.push((c.label || '—') + ': ' + PCD.fmtMoney(Number(c.price) || 0));
+      });
+      if (stats.serviceCharge > 0) lines.push((t('event_service_label') || 'Service charge') + ' (' + stats.svcPct + '%): +' + PCD.fmtMoney(stats.serviceCharge));
+      lines.push((t('ev_print_total_revenue') || 'Total') + ': ' + PCD.fmtMoney(stats.totalRevenue));
       if (stats.paidToDate > 0) {
         lines.push((t('event_paid') || 'Paid') + ': −' + PCD.fmtMoney(stats.paidToDate));
         lines.push(stats.balanceDue < 0 ? (t('event_overpaid') || 'Overpaid') + ': ' + PCD.fmtMoney(Math.abs(stats.balanceDue)) : (t('event_balance_due') || 'Balance due') + ': ' + PCD.fmtMoney(stats.balanceDue));
       }
-      lines.push((t('ev_print_profit') || 'Profit') + ': ' + PCD.fmtMoney(stats.profit) + (stats.margin !== null ? ' (' + PCD.fmtPercent(stats.margin, 0) + ')' : ''));
     }
     if (event.notes) {
       lines.push('');
@@ -1550,12 +1592,24 @@
         if (nm) dishes += '<li>' + PCD.escapeHtml(nm) + '</li>';
       });
       const alg = fnMenuAllergens(fn, ingMap, recipeMap);
+      const diet = fn.dietary || {};
+      const dietParts = DIET_TYPES.filter(function (d) { return Number(diet[d.key]) > 0; }).map(function (d) { return diet[d.key] + ' ' + PCD.escapeHtml(t(d.labelKey) || d.key); });
+      if (fn.dietaryNote) dietParts.push(PCD.escapeHtml(fn.dietaryNote));
       fnHtml += '<div class="pr-fn"><div class="pr-fn-h">' + PCD.escapeHtml(title) + '</div>' +
         (sub ? '<div class="pr-fn-sub">' + PCD.escapeHtml(sub) + '</div>' : '') +
         (dishes ? '<ul class="pr-menu">' + dishes + '</ul>' : '') +
         (alg.length ? '<div class="pr-alg">' + PCD.escapeHtml(t('ev_menu_contains') || 'Menu contains') + ': ' + alg.map(function (k) { return PCD.escapeHtml(allergenLabel(k)); }).join('  ') + '</div>' : '') +
+        (dietParts.length ? '<div class="pr-alg">' + PCD.escapeHtml(t('diet_section') || 'Dietary') + ': ' + dietParts.join(' · ') + '</div>' : '') +
         '</div>';
     });
+
+    let tlHtml = '';
+    if (event.timeline && event.timeline.length) {
+      const tlRows = event.timeline.slice().filter(function (x) { return (x.label || '').trim() || x.time; })
+        .sort(function (a, b) { return (a.time || '').localeCompare(b.time || ''); })
+        .map(function (x) { return '<tr><td style="width:90px;font-weight:700;white-space:nowrap;color:#16433a;">' + PCD.escapeHtml(x.time || '') + '</td><td>' + PCD.escapeHtml(x.label || '') + '</td></tr>'; }).join('');
+      if (tlRows) tlHtml = '<div class="pr-h2">' + PCD.escapeHtml(L('event_timeline', 'Run-of-show')) + '</div><table class="pr-tbl"><tbody>' + tlRows + '</tbody></table>';
+    }
 
     let priceRows = '';
     if (stats.foodRevenue > 0) priceRows += '<tr><td>' + PCD.escapeHtml(t('event_food_revenue') || 'Catering') + ' (' + stats.billed + ' × ' + PCD.fmtMoney(event.pricePerHead || 0) + ')</td><td class="r">' + PCD.fmtMoney(stats.foodRevenue) + '</td></tr>';
@@ -1603,6 +1657,7 @@
         (event.client || event.contactName ? '<div class="pr-client">' + [event.client, event.contactName, event.contactPhone].filter(Boolean).map(function (x) { return PCD.escapeHtml(x); }).join(' · ') + '</div>' : '') +
       '</div>' +
       fnHtml +
+      tlHtml +
       (priceRows ?
         '<div class="pr-h2">' + PCD.escapeHtml(t('event_pricing') || 'Pricing') + '</div>' +
         '<table class="pr-tbl"><tbody>' + priceRows +
@@ -1930,5 +1985,5 @@
   }
 
   PCD.tools = PCD.tools || {};
-  PCD.tools.events = { render: render, openEditor: openEditor, computeEventDeductions: computeEventDeductions, snapshot: snapshotEvent, renderSignatureView: renderSignatureView };
+  PCD.tools.events = { render: render, openEditor: openEditor, openPreview: openPreview, computeEventDeductions: computeEventDeductions, snapshot: snapshotEvent, renderSignatureView: renderSignatureView };
 })();

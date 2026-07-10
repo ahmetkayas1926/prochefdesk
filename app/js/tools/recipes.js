@@ -3026,8 +3026,10 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
             const eid = this.getAttribute('data-go-event');
             if (PCD.modal && PCD.modal.closeTop) PCD.modal.closeTop();
             PCD.router.go('events');
-            if (PCD.tools.events && PCD.tools.events.openEditor) { PCD.tools.events.openEditor(eid); return; }
-            let att = 0; const tr = setInterval(function () { if (PCD.tools.events && PCD.tools.events.openEditor) { clearInterval(tr); PCD.tools.events.openEditor(eid); } else if (++att > 25) clearInterval(tr); }, 120);
+            // v2.44.132 — Var olan bir event'e atlarken artık salt-okunur Preview açılır
+            // (Edit'e geçmek isteyen oradan tıklar) — liste tıklamasıyla tutarlı davranış.
+            if (PCD.tools.events && PCD.tools.events.openPreview) { PCD.tools.events.openPreview(eid); return; }
+            let att = 0; const tr = setInterval(function () { if (PCD.tools.events && PCD.tools.events.openPreview) { clearInterval(tr); PCD.tools.events.openPreview(eid); } else if (++att > 25) clearInterval(tr); }, 120);
           });
         }
       }

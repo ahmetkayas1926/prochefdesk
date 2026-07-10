@@ -1130,7 +1130,8 @@
     PCD.on(view, 'click', '[data-action="view-event"]', function () {
       const eid = this.getAttribute('data-eid');
       PCD.router.go('events');
-      _afterToolLoad('events', function (t) { t.openEditor(eid); });
+      // v2.44.132 — Dashboard'dan var olan bir event'e atlarken Preview açılır (tutarlılık).
+      _afterToolLoad('events', function (t) { (t.openPreview || t.openEditor)(eid); });
     });
     // v2.6.55 — Self-heal: show broken recipes modal with "Fix all" action
     PCD.on(view, 'click', '[data-action="fix-broken-recipes"]', function () {

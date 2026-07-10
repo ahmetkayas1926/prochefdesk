@@ -538,6 +538,10 @@
     let totalExpectedWaste = 0;
     let itemCount = 0;
     let shortfallCount = 0;
+    // v2.44.132 fix — costReliable:false satırları prepCost=0 katkı yapıyor ama bu hiç
+    // izlenmiyordu; toplam maliyet sessizce eksik çıkıp "GOOD %0" gibi yanıltıcı
+    // görünüyordu (chef verim tanımlanmamış tarifi gram-bazlı buffet'e bağlayınca).
+    let unreliableCount = 0;
     (buffet.stations || []).forEach(function (st) {
       (st.items || []).forEach(function (it) {
         const r = it.recipeId ? recipeMap[it.recipeId] : null;
@@ -548,6 +552,7 @@
         totalPrepCost += c.prepCost;
         totalExpectedWaste += c.expectedWaste;
         if (c.shortfall) shortfallCount++;
+        if (c.costReliable === false) unreliableCount++;
         itemCount++;
       });
     });
@@ -575,6 +580,7 @@
       prepFactor: prepFactor,
       prepCovers: Math.round(coverCount * prepFactor),
       shortfallCount: shortfallCount,
+      unreliableCount: unreliableCount,
       refillX: refillX,
       targets: targets,
       // status: 'none' | 'good' | 'warn' | 'bad'. v2.44.130 — ticketPrice=0 →
@@ -1020,6 +1026,7 @@
               <div class="text-muted text-sm" style="font-size:11px;margin-top:5px;line-height:1.4;">
                 ${PCD.escapeHtml(t('buffet_target') || 'Target')}: ≤${totals.targets.good}% ${PCD.escapeHtml(t('buffet_status_good') || 'good')} · ≤${totals.targets.warn}% ${PCD.escapeHtml(t('buffet_status_warn') || 'watch')}
               </div>
+              ${totals.unreliableCount > 0 ? '<div style="font-size:11px;margin-top:5px;color:#b45309;font-weight:600;">⚠ ' + PCD.escapeHtml((t('buffet_cost_unreliable') || '{n} item(s) missing recipe yield — cost not counted, food cost % is understated.').replace('{n}', totals.unreliableCount)) + '</div>' : ''}
             </div>
           </div>
 
