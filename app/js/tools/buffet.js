@@ -442,20 +442,59 @@
 
   // ---------- COST HESAP ----------
 
+  // v2.44.134 — Tek doğru kaynak: item adı çözümleme (5 yerde kopyalanmıştı:
+  // prep list, cost report, share text, Excel export, editör satırı).
+  function resolveItemName(it, r, ing) {
+    return r ? r.name : (ing ? ing.name : (it.customName || ''));
+  }
+
+  // v2.44.134 — Tek doğru kaynak: pickup fallback. Eskiden computeItemCost + cost
+  // report + Excel export flat 0.6 kullanıyordu, editör station tipine göre
+  // INDUSTRY_RATIOS kullanıyordu — 2 farklı varsayılan aynı veriye 2 farklı sonuç
+  // üretiyordu. Artık hepsi station tipine göre aynı sektör-ortalamasını kullanır.
+  function defaultPickupRatio(stationType) {
+    const key = stationType === 'cold' ? 'cold_protein' : (stationType === 'hot' ? 'hot_protein' : (stationType === 'bakery' ? 'bakery' : (stationType === 'dessert' ? 'dessert' : (stationType === 'beverage' ? 'beverage_cold' : 'other'))));
+    return INDUSTRY_RATIOS[key] || INDUSTRY_RATIOS.other;
+  }
+
+  // v2.44.134 — Tek doğru kaynak: prep miktarı formülü (computeBuffetDeductions +
+  // buildBuffetOrder eskiden bunu elle kopyalıyordu, computeItemCost'un aynı
+  // hesabından bağımsız driftebilir hale geliyordu).
+  function prepAmountFor(it, coverCount, prepFactor, refillX) {
+    const perGuest = Number(it.amountPerGuest) || 0;
+    const itemRefill = it.refillX != null ? Number(it.refillX) : refillX;
+    return coverCount * prepFactor * perGuest * itemRefill;
+  }
+
+  // v2.44.134 — Tek doğru kaynak: tarif kalemini gerçek malzemeye indirgeyen scale.
+  // subRecipeScale (cycle-protection + yield-güvenilirlik dahil) — computeItemCost
+  // Path B ile AYNI mantık; eskiden order/deduct kendi elle convertUnit+yield
+  // bölmesini kullanıyordu (subRecipeScale'in güvenlik kontrollerinden habersiz).
+  function recipeScaleFor(prepAmount, it, r) {
+    if (PCD.recipes && PCD.recipes.subRecipeScale) {
+      return PCD.recipes.subRecipeScale({ amount: prepAmount, unit: it.unit }, r).scale;
+    }
+    const recipeYield = Number(r.yieldAmount) || Number(r.servings) || 1;
+    let prepInRecipeUnit = prepAmount;
+    if (it.unit && r.yieldUnit && it.unit !== r.yieldUnit) {
+      try { prepInRecipeUnit = PCD.convertUnit(prepAmount, it.unit, r.yieldUnit); } catch (e) {}
+    }
+    return (recipeYield > 0) ? (prepInRecipeUnit / recipeYield) : 0;
+  }
+
   // Bir buffet item'ının prep miktarı + cost'unu hesaplar.
   // v2.8.79 — 3 item tipi: (1) recipe-bound, (2) ingredient-bound, (3) custom name only.
   // ingredient-bound: ing.pricePerUnit × prep amount (sub-recipe cost cascade yok).
   // custom name only: cost = 0 (chef sadece "label" eklemiş, fiyat girmemiş).
-  function computeItemCost(item, recipe, ingMap, recipeMap, coverCount, refillX, ingredient, prepFactor) {
+  function computeItemCost(item, recipe, ingMap, recipeMap, coverCount, refillX, ingredient, prepFactor, stationType) {
     if (!item) return { prepAmount: 0, prepCost: 0, expectedConsume: 0, expectedWaste: 0, wastePct: 0, shortfall: false };
     const perGuest = Number(item.amountPerGuest) || 0;
-    const pickup = item.pickupRatio != null ? Number(item.pickupRatio) : 0.6;
-    const itemRefill = item.refillX != null ? Number(item.refillX) : refillX;
+    const pickup = item.pickupRatio != null ? Number(item.pickupRatio) : defaultPickupRatio(stationType);
     // v2.44.94 — Forecast prep faktörü (araştırma: ~%50 hazırla, yürüyüşe gelene taze yetiştir
     // → overproduction %40↓). prepAmount forecast'la ölçeklenir; expectedConsume (gerçek tüketim
     // beklentisi) ölçeklenmez. prep < tüketim ise 'shortfall' (tükenebilir → taze yap).
     const pf = (prepFactor != null && Number(prepFactor) > 0) ? Number(prepFactor) : 1;
-    const prepAmount = coverCount * pf * perGuest * itemRefill;
+    const prepAmount = prepAmountFor(item, coverCount, pf, refillX);
     const expectedConsume = coverCount * perGuest * pickup;
     const shortfall = prepAmount < expectedConsume - 1e-9;
 
@@ -548,7 +587,7 @@
         const ing = it.ingredientId ? ingMap[it.ingredientId] : null;
         // v2.8.79 — 3 path: recipe, ingredient, or custom (no cost)
         if (!r && !ing && !it.customName) return;
-        const c = computeItemCost(it, r, ingMap, recipeMap, coverCount, refillX, ing, prepFactor);
+        const c = computeItemCost(it, r, ingMap, recipeMap, coverCount, refillX, ing, prepFactor, st.type);
         totalPrepCost += c.prepCost;
         totalExpectedWaste += c.expectedWaste;
         if (c.shortfall) shortfallCount++;
@@ -674,17 +713,6 @@
               '<span>·</span>' +
               '<span style="font-weight:700;color:' + statusColor(totals.status) + ';">' + PCD.fmtMoney(totals.totalPrepCost) + '</span>' +
             '</div>' +
-          '</div>' +
-          // v2.8.86 — Liste kartında Prep / Order / PDF / Excel / Dup / Edit butonları.
-          // v2.40 — .list-item-actions sarmalı + buf-card → mobilde aksiyonlar alt satıra sarar (squish fix).
-          '<div class="list-item-actions">' +
-          '<button type="button" class="icon-btn" data-buf-prep="' + b.id + '" title="' + PCD.escapeHtml(t('buffet_print_prep') || 'Prep List') + '">' + PCD.icon('list', 18) + '</button>' +
-          '<button type="button" class="icon-btn" data-buf-order="' + b.id + '" title="' + PCD.escapeHtml(t('buffet_order_list') || 'Order List') + '">' + PCD.icon('truck', 18) + '</button>' +
-          '<button type="button" class="icon-btn" data-buf-pdf="' + b.id + '" title="' + PCD.escapeHtml(t('buffet_print_report') || 'Cost Report') + '">' + PCD.icon('print', 18) + '</button>' +
-          '<button type="button" class="icon-btn" data-buf-excel="' + b.id + '" title="Excel">' + PCD.icon('download', 18) + '</button>' +
-          '<button type="button" class="icon-btn" data-buf-share="' + b.id + '" title="' + PCD.escapeHtml(t('btn_share') || 'Share') + '">' + PCD.icon('share', 18) + '</button>' +
-          '<button type="button" class="icon-btn" data-buf-dup="' + b.id + '" title="' + PCD.escapeHtml(t('buffet_duplicate') || 'Duplicate') + '">' + PCD.icon('copy', 18) + '</button>' +
-          '<button type="button" class="icon-btn" data-buf-edit="' + b.id + '" title="' + PCD.escapeHtml(t('edit') || 'Edit') + '">' + PCD.icon('edit', 18) + '</button>' +
           '</div>';
         cont.appendChild(row);
       });
@@ -717,66 +745,11 @@
         });
       });
     }
-    PCD.on(listEl, 'click', '[data-bid]', function (e) {
-      // v2.8.86 — Edit/Dup butonları + yeni Prep/PDF/Excel butonları satır click'i tetiklemesin
-      if (e.target.closest('[data-buf-edit]') || e.target.closest('[data-buf-dup]') ||
-          e.target.closest('[data-buf-prep]') || e.target.closest('[data-buf-pdf]') ||
-          e.target.closest('[data-buf-order]') || e.target.closest('[data-buf-excel]') ||
-          e.target.closest('[data-buf-share]')) return;
-      openEditor(this.getAttribute('data-bid'));
-    });
-    PCD.on(listEl, 'click', '[data-buf-edit]', function (e) {
-      e.stopPropagation();
-      openEditor(this.getAttribute('data-buf-edit'));
-    });
-    // v2.8.86 — Liste kartından direkt print/export (editor açmadan)
-    PCD.on(listEl, 'click', '[data-buf-prep]', function (e) {
-      e.stopPropagation();
-      const b = getBuffet(this.getAttribute('data-buf-prep'));
-      if (b) printPrepList(b);
-    });
-    PCD.on(listEl, 'click', '[data-buf-order]', function (e) {
-      e.stopPropagation();
-      const b = getBuffet(this.getAttribute('data-buf-order'));
-      if (b) openBuffetOrderList(b);
-    });
-    PCD.on(listEl, 'click', '[data-buf-pdf]', function (e) {
-      e.stopPropagation();
-      const b = getBuffet(this.getAttribute('data-buf-pdf'));
-      if (!b) return;
-      // v2.43.18 — cost report preview with Simple/Detailed sub-recipe toggle.
-      PCD.costReportPreview({
-        title: (b.name || (PCD.i18n.t('buffet_untitled') || 'Buffet')) + ' · ' + (PCD.i18n.t('buffet_print_report') || 'Cost Report'),
-        buildHtml: function (detailed) { return buffetCostReportHtml(b, detailed); },
-        onPrint: function (detailed) { printCostReport(b, detailed); },
-        onExcel: function (detailed) { exportBuffetXLSX(b, detailed); },
-      });
-    });
-    PCD.on(listEl, 'click', '[data-buf-excel]', function (e) {
-      e.stopPropagation();
-      const b = getBuffet(this.getAttribute('data-buf-excel'));
-      if (b) exportBuffetXLSX(b);
-    });
-    PCD.on(listEl, 'click', '[data-buf-share]', function (e) {
-      e.stopPropagation();
-      const b = getBuffet(this.getAttribute('data-buf-share'));
-      if (b) shareBuffet(b);
-    });
-    PCD.on(listEl, 'click', '[data-buf-dup]', function (e) {
-      e.stopPropagation();
-      const src = getBuffet(this.getAttribute('data-buf-dup'));
-      if (!src) return;
-      const copy = PCD.clone(src);
-      delete copy.id; delete copy.createdAt; delete copy.updatedAt;
-      copy.name = (copy.name || t('untitled')) + ' (Copy)';
-      (copy.stations || []).forEach(function (st) {
-        st.id = PCD.uid('bst');
-        (st.items || []).forEach(function (it) { it.id = PCD.uid('bit'); });
-      });
-      const saved = upsertBuffet(copy);
-      PCD.toast.success(t('buffet_duplicated') || 'Buffet duplicated');
-      render(view);
-      setTimeout(function () { openEditor(saved.id); }, 200);
+    // v2.44.134 — Faz 2: liste satırındaki 7 ikon-buton kaldırıldı (recipes.js
+    // deseniyle hizalama). Tek giriş noktası: satır tıklaması → salt-okunur Preview
+    // (Edit/Prep/Order/Report/Excel/Share/Duplicate/Delete oradan erişilir).
+    PCD.on(listEl, 'click', '[data-bid]', function () {
+      openPreview(this.getAttribute('data-bid'));
     });
   }
 
@@ -852,6 +825,205 @@
       const saved = upsertBuffet(clone);
       PCD.toast.success(t('buffet_preset_loaded') || 'Template loaded — customize and save');
       setTimeout(function () { openEditor(saved.id); }, 150);
+    });
+  }
+
+  // ---------- PREVIEW (v2.44.134 — Faz 2) ----------
+  // events.js openPreview deseniyle birebir: liste tıklaması artık doğrudan
+  // editöre değil, salt-okunur bu özet ekrana gider. Edit ayrı, açık bir aksiyon.
+  function openPreview(bid) {
+    const t = PCD.i18n.t;
+    const existing = getBuffet(bid);
+    if (!existing) { PCD.toast.error(t('buffet_not_found') || 'Buffet not found'); return; }
+    const ingMap = {};
+    PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
+    const recipeMap = PCD.recipes.buildRecipeMap();
+
+    const body = PCD.el('div');
+
+    function renderBody() {
+      const totals = computeBuffetTotals(existing, ingMap, recipeMap);
+      const typeLabel = (BUFFET_TYPES.find(function (x) { return x.id === existing.type; }) || {});
+      const dateStr = existing.serviceDate ? PCD.fmtDate(existing.serviceDate) : '—';
+
+      let stationsHtml = '';
+      (existing.stations || []).forEach(function (st) {
+        if (!st.items || !st.items.length) return;
+        const stMeta = STATION_TYPES.find(function (x) { return x.id === st.type; }) || STATION_TYPES[5];
+        let itemsHtml = '';
+        st.items.forEach(function (it) {
+          const r = it.recipeId ? recipeMap[it.recipeId] : null;
+          const ing = it.ingredientId ? ingMap[it.ingredientId] : null;
+          const name = resolveItemName(it, r, ing);
+          if (!name) return;
+          const c = computeItemCost(it, r, ingMap, recipeMap, existing.coverCount, totals.refillX, ing, totals.prepFactor, st.type);
+          itemsHtml += '<div style="display:flex;justify-content:space-between;gap:10px;padding:3px 0;font-size:13px;">' +
+            '<span>' + PCD.escapeHtml(name) + '</span>' +
+            '<span style="font-weight:600;white-space:nowrap;color:' + stMeta.color + ';">' + PCD.fmtNumber(c.prepAmount) + ' ' + PCD.escapeHtml(it.unit || '') + '</span>' +
+          '</div>';
+        });
+        if (!itemsHtml) return;
+        stationsHtml += '<div style="margin:10px 0;padding:10px 12px;border:1px solid var(--border);border-left:4px solid ' + stMeta.color + ';border-radius:var(--r-md);">' +
+          '<div style="font-weight:700;color:' + stMeta.color + ';margin-bottom:4px;">' + PCD.escapeHtml(st.name || '') + '</div>' +
+          itemsHtml +
+        '</div>';
+      });
+
+      body.innerHTML = `
+        <div class="flex items-center justify-between mb-2" style="flex-wrap:wrap;gap:8px;">
+          <div>
+            <div style="font-weight:800;font-size:18px;">${PCD.escapeHtml(existing.name || t('untitled'))}</div>
+            <div class="text-muted text-sm">${PCD.escapeHtml(t(typeLabel.labelKey) || existing.type || '—')} · ${totals.coverCount} ${PCD.escapeHtml(t('buffet_covers') || 'covers')} · ${dateStr}</div>
+          </div>
+          <span class="chip" style="background:${statusColor(totals.status)}20;color:${statusColor(totals.status)};font-weight:700;">${PCD.escapeHtml(statusLabel(totals.status))}</span>
+        </div>
+
+        <div class="stat mb-3" style="background:linear-gradient(135deg,${statusColor(totals.status)}18,var(--surface));border-color:${statusColor(totals.status)};padding:16px;">
+          <div style="display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;">
+            <div style="flex-shrink:0;">
+              <div class="stat-label" style="font-size:11px;">${t('buffet_stat_food_cost_pct') || 'Food cost %'}</div>
+              <div style="font-size:36px;font-weight:900;color:${statusColor(totals.status)};line-height:1;letter-spacing:-0.02em;">${totals.foodCostPct.toFixed(1)}<span style="font-size:20px;">%</span></div>
+            </div>
+            <div style="flex:1;min-width:160px;">
+              <div class="text-muted text-sm" style="font-size:11px;line-height:1.4;">${PCD.escapeHtml(t('buffet_target') || 'Target')}: ≤${totals.targets.good}% ${PCD.escapeHtml(t('buffet_status_good') || 'good')} · ≤${totals.targets.warn}% ${PCD.escapeHtml(t('buffet_status_warn') || 'watch')}</div>
+              ${totals.unreliableCount > 0 ? '<div style="font-size:11px;margin-top:5px;color:#b45309;font-weight:600;">⚠ ' + PCD.escapeHtml((t('buffet_cost_unreliable') || '{n} item(s) missing recipe yield — cost not counted, food cost % is understated.').replace('{n}', totals.unreliableCount)) + '</div>' : ''}
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(100px, 1fr));gap:10px;border-top:1px solid var(--border);padding-top:10px;margin-top:12px;">
+            <div><div class="stat-label">${t('buffet_stat_revenue') || 'Revenue'}</div><div style="font-size:15px;font-weight:700;">${PCD.fmtMoney(totals.revenue)}</div></div>
+            <div><div class="stat-label">${t('buffet_stat_total_cost') || 'Spread cost'}</div><div style="font-size:15px;font-weight:700;">${PCD.fmtMoney(totals.totalPrepCost)}</div></div>
+            <div><div class="stat-label">${t('buffet_stat_per_cover') || 'Per cover'}</div><div style="font-size:15px;font-weight:700;">${PCD.fmtMoney(totals.perGuestCost)}</div></div>
+            <div><div class="stat-label">${t('buffet_stat_profit') || 'Profit / cover'}</div><div style="font-size:15px;font-weight:700;color:${totals.profitPerCover > 0 ? 'var(--success)' : 'var(--danger)'};">${PCD.fmtMoney(totals.profitPerCover)}</div></div>
+            <div><div class="stat-label">${t('buffet_stat_waste') || 'Expected waste'}</div><div style="font-size:15px;font-weight:700;color:${statusColor(totals.wasteStatus)};">${PCD.fmtMoney(totals.totalExpectedWaste)} <span style="font-size:11px;">· ${totals.totalWastePct.toFixed(0)}%</span></div></div>
+          </div>
+        </div>
+
+        <div class="section-title mb-2">${t('buffet_stations_title') || 'Stations'}</div>
+        ${stationsHtml || '<div class="text-muted text-sm">' + PCD.escapeHtml(t('buffet_no_stations_title') || 'No stations yet') + '</div>'}
+
+        ${existing.notes ? '<div class="section-title mt-3 mb-2">' + PCD.escapeHtml(t('buffet_notes_label') || 'Notes') + '</div><div class="text-muted text-sm" style="white-space:pre-wrap;">' + PCD.escapeHtml(existing.notes) + '</div>' : ''}
+      `;
+    }
+
+    renderBody();
+
+    // ---- Footer: Delete | Prep List | Order List | Deduct stock | Cost Report | Excel | Share | Duplicate | Edit ----
+    const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
+    const deleteBtn = PCD.el('button', { type: 'button', class: 'btn btn-ghost', text: t('delete') || 'Delete', style: { color: 'var(--danger)' } });
+    const prepBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: t('buffet_print_prep') || 'Prep List' });
+    prepBtn.innerHTML = PCD.icon('list', 16);
+    const orderBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: t('buffet_order_list') || 'Order List' });
+    orderBtn.innerHTML = PCD.icon('truck', 16);
+    const deductBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline' });
+    function _renderDeductState() {
+      if (existing._stockDeductedAt) {
+        deductBtn.disabled = true;
+        deductBtn.innerHTML = PCD.icon('check', 14) + ' <span>' + (t('inv_already_deducted') || 'Stock deducted') + '</span>';
+        deductBtn.style.color = '#15803d'; deductBtn.style.borderColor = '#bbf7d0'; deductBtn.style.background = '#f0fdf4';
+      } else {
+        deductBtn.disabled = false;
+        deductBtn.innerHTML = '📦';
+        deductBtn.style.color = ''; deductBtn.style.borderColor = ''; deductBtn.style.background = '';
+      }
+    }
+    _renderDeductState();
+    deductBtn.title = t('event_apply_inventory') || 'Deduct stock';
+    const reportBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: t('buffet_print_report') || 'Cost Report' });
+    reportBtn.innerHTML = PCD.icon('print', 16);
+    const excelBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: 'Excel' });
+    excelBtn.innerHTML = PCD.icon('download', 16);
+    const shareBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: t('btn_share') || 'Share' });
+    shareBtn.innerHTML = PCD.icon('share', 16);
+    const dupBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline', title: t('buffet_duplicate') || 'Duplicate' });
+    dupBtn.innerHTML = PCD.icon('copy', 16);
+    const editBtn = PCD.el('button', { type: 'button', class: 'btn btn-primary', text: t('edit') || 'Edit', style: { flex: '1', minWidth: '90px' } });
+
+    footer.appendChild(deleteBtn);
+    footer.appendChild(prepBtn);
+    footer.appendChild(orderBtn);
+    footer.appendChild(deductBtn);
+    footer.appendChild(reportBtn);
+    footer.appendChild(excelBtn);
+    footer.appendChild(shareBtn);
+    footer.appendChild(dupBtn);
+    footer.appendChild(editBtn);
+
+    const m = PCD.modal.open({ title: existing.name || t('untitled'), body: body, footer: footer, size: 'lg', closable: true });
+
+    deleteBtn.addEventListener('click', function () {
+      PCD.modal.confirm({
+        icon: '🗑', iconKind: 'danger', danger: true,
+        title: t('buffet_confirm_delete') || 'Delete this buffet?',
+        text: t('buffet_confirm_delete_body') || 'This is permanent.',
+        okText: t('delete'),
+      }).then(function (ok) {
+        if (!ok) return;
+        deleteBuffet(existing.id);
+        PCD.toast.success(t('buffet_deleted') || 'Buffet deleted');
+        m.close();
+        const v = PCD.$('#view');
+        if (v && PCD.router.currentView() === 'buffet') render(v);
+      });
+    });
+
+    prepBtn.addEventListener('click', function () { printPrepList(existing); });
+    orderBtn.addEventListener('click', function () { openBuffetOrderList(existing); });
+    deductBtn.addEventListener('click', function () {
+      if (existing._stockDeductedAt) return;
+      if (PCD.gate && !PCD.gate.requireAuth()) return;
+      const dd = computeBuffetDeductions(existing, ingMap, recipeMap);
+      const ids = Object.keys(dd.deductions);
+      if (!ids.length) { PCD.toast.info((t('event_apply_inv_done') || '{n} item(s) deducted from stock').replace('{n}', 0)); return; }
+      const inv = PCD.tools.inventory;
+      const confirmFn = (inv && inv.confirmStockChange) ? inv.confirmStockChange : null;
+      const proceed = function () {
+        const report = (inv && inv.applyStockDeductions) ? inv.applyStockDeductions(dd.deductions) : [];
+        const deducted = report.filter(function (r) { return r.tracked; }).length;
+        const lowNow = report.filter(function (r) { return r.tracked && (r.status === 'low' || r.status === 'critical' || r.status === 'out'); }).length;
+        existing._stockDeductedAt = new Date().toISOString();
+        upsertBuffet(existing);
+        _renderDeductState();
+        PCD.toast.success((t('event_apply_inv_done') || '{n} item(s) deducted from stock').replace('{n}', deducted) + (lowNow ? ' · ' + lowNow + ' ⚠' : ''));
+      };
+      if (!confirmFn) { proceed(); return; }
+      confirmFn({
+        title: t('event_apply_inventory') || 'Deduct stock',
+        verb: t('event_apply_inventory') || 'Deduct stock',
+        kind: 'deduct',
+        note: dd.skipped.length ? ('⚠ ' + dd.skipped.length + ': ' + dd.skipped.slice(0, 5).join(', ')) : null,
+        items: ids.map(function (iid) { const ing = ingMap[iid]; return { name: ing ? ing.name : iid, amount: dd.deductions[iid], unit: ing ? ing.unit : '' }; }),
+      }).then(function (ok) { if (ok) proceed(); });
+    });
+    reportBtn.addEventListener('click', function () {
+      PCD.costReportPreview({
+        title: (existing.name || (t('buffet_untitled') || 'Buffet')) + ' · ' + (t('buffet_print_report') || 'Cost Report'),
+        buildHtml: function (detailed) { return buffetCostReportHtml(existing, detailed); },
+        onPrint: function (detailed) { printCostReport(existing, detailed); },
+        onExcel: function (detailed) { exportBuffetXLSX(existing, detailed); },
+      });
+    });
+    excelBtn.addEventListener('click', function () { exportBuffetXLSX(existing); });
+    shareBtn.addEventListener('click', function () { shareBuffet(existing); });
+    dupBtn.addEventListener('click', function () {
+      const copy = PCD.clone(existing);
+      delete copy.id; delete copy.createdAt; delete copy.updatedAt; delete copy._stockDeductedAt;
+      copy.name = (copy.name || t('untitled')) + ' (Copy)';
+      (copy.stations || []).forEach(function (st) {
+        st.id = PCD.uid('bst');
+        (st.items || []).forEach(function (it) { it.id = PCD.uid('bit'); });
+      });
+      const saved = upsertBuffet(copy);
+      PCD.toast.success(t('buffet_duplicated') || 'Buffet duplicated');
+      m.close();
+      setTimeout(function () {
+        const v = PCD.$('#view');
+        if (v && PCD.router.currentView() === 'buffet') render(v);
+        setTimeout(function () { openPreview(saved.id); }, 200);
+      }, 150);
+    });
+    editBtn.addEventListener('click', function () {
+      m.close();
+      setTimeout(function () { openEditor(existing.id); }, 280);
     });
   }
 
@@ -1103,18 +1275,19 @@
           //   (c) customName → sadece label (cost=0, manuel kuru kalan)
           const r = it.recipeId ? recipeMap[it.recipeId] : null;
           const ing = it.ingredientId ? ingMap[it.ingredientId] : null;
-          let displayName = '(removed)';
+          let displayName = resolveItemName(it, r, ing);
           let typeChip = '';
           let isCustom = false;
-          if (r) { displayName = r.name; typeChip = '<span style="background:var(--brand-50);color:var(--brand-700);font-size:9px;font-weight:700;padding:1px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:0.04em;margin-inline-start:6px;">' + (t('buffet_chip_recipe') || 'recipe') + '</span>'; }
-          else if (ing) { displayName = ing.name; typeChip = '<span style="background:#fef3c7;color:#92400e;font-size:9px;font-weight:700;padding:1px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:0.04em;margin-inline-start:6px;">' + (t('buffet_chip_ingredient') || 'ingredient') + '</span>'; }
-          else if (it.customName !== undefined) { isCustom = true; displayName = it.customName || ''; typeChip = '<span style="background:var(--surface-2);color:var(--text-3);font-size:9px;font-weight:700;padding:1px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:0.04em;margin-inline-start:6px;">' + (t('buffet_chip_custom') || 'custom') + '</span>'; }
+          if (r) { typeChip = '<span style="background:var(--brand-50);color:var(--brand-700);font-size:9px;font-weight:700;padding:1px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:0.04em;margin-inline-start:6px;">' + (t('buffet_chip_recipe') || 'recipe') + '</span>'; }
+          else if (ing) { typeChip = '<span style="background:#fef3c7;color:#92400e;font-size:9px;font-weight:700;padding:1px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:0.04em;margin-inline-start:6px;">' + (t('buffet_chip_ingredient') || 'ingredient') + '</span>'; }
+          else if (it.customName !== undefined) { isCustom = true; typeChip = '<span style="background:var(--surface-2);color:var(--text-3);font-size:9px;font-weight:700;padding:1px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:0.04em;margin-inline-start:6px;">' + (t('buffet_chip_custom') || 'custom') + '</span>'; }
+          else { displayName = '(removed)'; }
           // v2.8.79 — Custom items: editable name input
           const nameCell = isCustom
             ? '<input type="text" class="input" data-it-custom-name="' + sIdx + ':' + iIdx + '" value="' + PCD.escapeHtml(displayName) + '" placeholder="' + PCD.escapeHtml(t('buffet_custom_name_ph') || 'Item name (e.g. Sliced cucumber)') + '" style="flex:1;min-width:140px;font-weight:600;font-size:14px;padding:4px 8px;">' + typeChip
             : '<div style="flex:1;min-width:140px;font-weight:600;font-size:14px;">' + PCD.escapeHtml(displayName) + typeChip + '</div>';
-          const c = (r || ing) ? computeItemCost(it, r, ingMap, recipeMap, data.coverCount, refillEffective, ing, prepFactorOf(data)) : null;
-          const pickup = it.pickupRatio != null ? it.pickupRatio : (INDUSTRY_RATIOS[st.type === 'cold' ? 'cold_protein' : (st.type === 'hot' ? 'hot_protein' : (st.type === 'bakery' ? 'bakery' : (st.type === 'dessert' ? 'dessert' : (st.type === 'beverage' ? 'beverage_cold' : 'other'))))]);
+          const c = (r || ing) ? computeItemCost(it, r, ingMap, recipeMap, data.coverCount, refillEffective, ing, prepFactorOf(data), st.type) : null;
+          const pickup = it.pickupRatio != null ? it.pickupRatio : defaultPickupRatio(st.type);
           // v2.8.79 — Unit dropdown HTML
           const unitOptions = UNITS.map(function (u) {
             return '<option value="' + u + '"' + ((it.unit || '') === u ? ' selected' : '') + '>' + u + '</option>';
@@ -1293,8 +1466,7 @@
         const sIdx = parseInt(this.getAttribute('data-st-add-item'), 10);
         const sec = data.stations[sIdx];
         if (!sec) return;
-        const defaultPickupKey = sec.type === 'cold' ? 'cold_protein' : (sec.type === 'hot' ? 'hot_protein' : (sec.type === 'bakery' ? 'bakery' : (sec.type === 'dessert' ? 'dessert' : (sec.type === 'beverage' ? 'beverage_cold' : 'other'))));
-        const defaultPickup = INDUSTRY_RATIOS[defaultPickupKey] || 0.6;
+        const defaultPickup = defaultPickupRatio(sec.type);
 
         // 3 buton: Recipe / Ingredient / Custom + "yeni ingredient oluştur" alt-opsiyon
         const chooserBody = PCD.el('div');
@@ -1686,19 +1858,12 @@
     }
     (buffet.stations || []).forEach(function (st) {
       (st.items || []).forEach(function (it) {
-        const perGuest = Number(it.amountPerGuest) || 0;
-        const itemRefill = it.refillX != null ? Number(it.refillX) : refillX;
-        const prepAmount = coverCount * prepFactor * perGuest * itemRefill;
+        const prepAmount = prepAmountFor(it, coverCount, prepFactor, refillX);
         if (!(prepAmount > 0)) return;
         const r = it.recipeId ? recipeMap[it.recipeId] : null;
         const ing = it.ingredientId ? ingMap[it.ingredientId] : null;
         if (r) {
-          const recipeYield = Number(r.yieldAmount) || Number(r.servings) || 1;
-          let prepInRecipeUnit = prepAmount;
-          if (it.unit && r.yieldUnit && it.unit !== r.yieldUnit) {
-            try { prepInRecipeUnit = PCD.convertUnit(prepAmount, it.unit, r.yieldUnit); } catch (e) {}
-          }
-          const scale = (recipeYield > 0) ? (prepInRecipeUnit / recipeYield) : 0;
+          const scale = recipeScaleFor(prepAmount, it, r);
           if (!(scale > 0)) return;
           const flat = PCD.recipes.flattenIngredients(r, ingMap, recipeMap, { scale: scale }) || [];
           flat.forEach(function (f) { add(f.ingredient, f.amount, f.unit); });
@@ -1736,19 +1901,12 @@
     }
     (buffet.stations || []).forEach(function (st) {
       (st.items || []).forEach(function (it) {
-        const perGuest = Number(it.amountPerGuest) || 0;
-        const itemRefill = it.refillX != null ? Number(it.refillX) : refillX;
-        const prepAmount = coverCount * prepFactor * perGuest * itemRefill;
+        const prepAmount = prepAmountFor(it, coverCount, prepFactor, refillX);
         if (!(prepAmount > 0)) return;
         const r = it.recipeId ? recipeMap[it.recipeId] : null;
         const ing = it.ingredientId ? ingMap[it.ingredientId] : null;
         if (r) {
-          const recipeYield = Number(r.yieldAmount) || Number(r.servings) || 1;
-          let prepInRecipeUnit = prepAmount;
-          if (it.unit && r.yieldUnit && it.unit !== r.yieldUnit) {
-            try { prepInRecipeUnit = PCD.convertUnit(prepAmount, it.unit, r.yieldUnit); } catch (e) {}
-          }
-          const scale = (recipeYield > 0) ? (prepInRecipeUnit / recipeYield) : 0;
+          const scale = recipeScaleFor(prepAmount, it, r);
           if (!(scale > 0)) return;
           const flat = PCD.recipes.flattenIngredients(r, ingMap, recipeMap, { scale: scale });
           flat.forEach(function (f) { if (f.ingredient) addIng(f.ingredient, f.amount, f.unit); });
@@ -1910,7 +2068,7 @@
     const ingMap = {};
     PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
     const recipeMap = PCD.recipes.buildRecipeMap();
-    const refillX = buffet.refillMultiplier != null ? Number(buffet.refillMultiplier) : (INDUSTRY_REFILL[buffet.type] || 1.25);
+    const refillX = buffet.refillMultiplier != null ? Number(buffet.refillMultiplier) : (INDUSTRY_REFILL[buffet.type] || INDUSTRY_REFILL.custom);
 
     // v2.8.79 — Print all 3 item types: recipe / ingredient / custom
     let rowsHtml = '';
@@ -1921,9 +2079,9 @@
       st.items.forEach(function (it) {
         const r = it.recipeId ? recipeMap[it.recipeId] : null;
         const ing = it.ingredientId ? ingMap[it.ingredientId] : null;
-        const name = r ? r.name : (ing ? ing.name : (it.customName || ''));
+        const name = resolveItemName(it, r, ing);
         if (!name) return;
-        const c = computeItemCost(it, r, ingMap, recipeMap, buffet.coverCount, refillX, ing, prepFactorOf(buffet));
+        const c = computeItemCost(it, r, ingMap, recipeMap, buffet.coverCount, refillX, ing, prepFactorOf(buffet), st.type);
         rowsHtml +=
           '<tr>' +
             '<td>' + PCD.escapeHtml(name) + '</td>' +
@@ -1989,16 +2147,16 @@
       st.items.forEach(function (it) {
         const r = it.recipeId ? recipeMap[it.recipeId] : null;
         const ing = it.ingredientId ? ingMap[it.ingredientId] : null;
-        const name = r ? r.name : (ing ? ing.name : (it.customName || ''));
+        const name = resolveItemName(it, r, ing);
         if (!name) return;
-        const c = computeItemCost(it, r, ingMap, recipeMap, buffet.coverCount, refillX, ing, prepFactorOf(buffet));
+        const c = computeItemCost(it, r, ingMap, recipeMap, buffet.coverCount, refillX, ing, prepFactorOf(buffet), st.type);
         stSubtotal += c.prepCost;
         const wasteStyle = c.wastePct > 25 ? 'color:#dc2626;font-weight:700;' : 'color:#666;';
         itemRows +=
           '<tr>' +
             '<td>' + PCD.escapeHtml(name) + '</td>' +
             '<td style="text-align:right;">' + PCD.fmtNumber(c.prepAmount) + ' ' + PCD.escapeHtml(it.unit || '') + '</td>' +
-            '<td style="text-align:right;">' + ((it.pickupRatio != null ? it.pickupRatio : 0.6) * 100).toFixed(0) + '%</td>' +
+            '<td style="text-align:right;">' + ((it.pickupRatio != null ? it.pickupRatio : defaultPickupRatio(st.type)) * 100).toFixed(0) + '%</td>' +
             '<td style="text-align:right;font-weight:700;">' + PCD.fmtMoney(c.prepCost) + '</td>' +
             '<td style="text-align:right;' + wasteStyle + '">' + PCD.fmtMoney(c.expectedWaste) + '</td>' +
           '</tr>';
@@ -2108,7 +2266,7 @@
       st.items.forEach(function (it) {
         const r = it.recipeId ? recipeMap[it.recipeId] : null;
         const ing = it.ingredientId ? ingMap[it.ingredientId] : null;
-        const name = r ? r.name : (ing ? ing.name : (it.customName || ''));
+        const name = resolveItemName(it, r, ing);
         if (name) lines.push('• ' + name);
       });
       lines.push('');
@@ -2241,15 +2399,15 @@
       (st.items || []).forEach(function (it) {
         const r = it.recipeId ? recipeMap[it.recipeId] : null;
         const ing = it.ingredientId ? ingMap[it.ingredientId] : null;
-        const name = r ? r.name : (ing ? ing.name : (it.customName || ''));
+        const name = resolveItemName(it, r, ing);
         if (!name) return;
-        const c = computeItemCost(it, r, ingMap, recipeMap, buffet.coverCount, refillX, ing, prepFactorOf(buffet));
+        const c = computeItemCost(it, r, ingMap, recipeMap, buffet.coverCount, refillX, ing, prepFactorOf(buffet), st.type);
         aoa.push([
           { v: st.name || '', s: labelStyle },
           { v: name, s: { alignment: { vertical: 'center' }, border: thinBorder } },
           { v: c.prepAmount, s: numStyle },
           { v: it.unit || '', s: { alignment: { horizontal: 'center' }, border: thinBorder } },
-          { v: (it.pickupRatio != null ? it.pickupRatio : 0.6), s: pctStyle },
+          { v: (it.pickupRatio != null ? it.pickupRatio : defaultPickupRatio(st.type)), s: pctStyle },
           { v: c.prepCost, s: moneyStyle },
           { v: c.expectedWaste, s: moneyStyle },
         ]);
@@ -2306,6 +2464,7 @@
   PCD.tools.buffet = {
     render: render,
     openEditor: openEditor,
+    openPreview: openPreview,
     computeBuffetDeductions: computeBuffetDeductions,
   };
 })();
