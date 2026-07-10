@@ -718,8 +718,14 @@
         m.close(); refreshMain();
       }
       if (remaining > 0) {
+        // v2.44.131 fix — L() sayı interpolasyonu desteklemiyordu; anahtar zaten
+        // varsa (tüm dillerde var) sabit metne düşüp {n}'i hiç doldurmuyordu.
+        const unfinishedTitle = (function () {
+          const v = PCD.i18n.t('chk_complete_unfinished_t', { n: remaining });
+          return (!v || v === 'chk_complete_unfinished_t') ? ('Complete with ' + remaining + ' unfinished?') : v;
+        })();
         PCD.modal.confirm({
-          title: L('chk_complete_unfinished_t', 'Complete with ' + remaining + ' unfinished?'),
+          title: unfinishedTitle,
           text: L('chk_complete_unfinished_m', 'You can still complete and keep a record.'),
           okText: L('checklist_complete', 'Complete'),
         }).then(function (ok) { if (ok) finalize(); });

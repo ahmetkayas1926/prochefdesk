@@ -1000,7 +1000,7 @@
             put(r, 2 + d, cell.text || '', st);
           });
           put(r, 2 + ndays, row.hours, { font: { name: 'Calibri', sz: esz, bold: true }, alignment: { vertical: 'center', horizontal: 'right' }, border: allB });
-          if (showCost) put(r, 2 + ndays + 1, row.cost > 0 ? PCD.fmtMoney(row.cost) : '—', { font: { name: 'Calibri', sz: esz }, alignment: { vertical: 'center', horizontal: 'right' }, border: allB });
+          if (showCost) put(r, 2 + ndays + 1, row.cost > 0 ? row.cost : '—', { font: { name: 'Calibri', sz: esz }, alignment: { vertical: 'center', horizontal: 'right' }, border: allB });
           r++;
         });
         // v2.44.107 — Departman alt-toplamı (Excel)
@@ -1010,7 +1010,7 @@
           put(r, 0, g.name + ' — ' + (t('roster_subtotal') || 'Subtotal'), { font: { name: 'Calibri', sz: esz, bold: true, italic: true, color: { rgb: '16433A' } }, fill: { fgColor: { rgb: 'F3FAF6' } }, alignment: { vertical: 'center', horizontal: 'right' }, border: allB });
           merges.push({ s: { r: r, c: 0 }, e: { r: r, c: 1 + ndays } });
           put(r, 2 + ndays, gh, { font: { name: 'Calibri', sz: esz, bold: true }, fill: { fgColor: { rgb: 'F3FAF6' } }, alignment: { vertical: 'center', horizontal: 'right' }, border: allB });
-          if (showCost) put(r, 2 + ndays + 1, gc > 0 ? PCD.fmtMoney(gc) : '—', { font: { name: 'Calibri', sz: esz, bold: true }, fill: { fgColor: { rgb: 'F3FAF6' } }, alignment: { vertical: 'center', horizontal: 'right' }, border: allB });
+          if (showCost) put(r, 2 + ndays + 1, gc > 0 ? gc : '—', { font: { name: 'Calibri', sz: esz, bold: true }, fill: { fgColor: { rgb: 'F3FAF6' } }, alignment: { vertical: 'center', horizontal: 'right' }, border: allB });
           r++;
         }
       });
@@ -1023,7 +1023,7 @@
         merges.push({ s: { r: r, c: 0 }, e: { r: r, c: 1 } });
         for (let d = 0; d < ndays; d++) put(r, 2 + d, dt.hours[d], { font: { name: 'Calibri', sz: esz, bold: true }, fill: { fgColor: { rgb: 'EAF6F0' } }, alignment: { vertical: 'center', horizontal: 'center' }, border: allB });
         put(r, 2 + ndays, dt.totalHours, { font: { name: 'Calibri', sz: esz, bold: true }, fill: { fgColor: { rgb: 'EAF6F0' } }, alignment: { vertical: 'center', horizontal: 'right' }, border: allB });
-        if (showCost) put(r, 2 + ndays + 1, dt.totalCost > 0 ? PCD.fmtMoney(dt.totalCost) : '—', { font: { name: 'Calibri', sz: esz, bold: true }, fill: { fgColor: { rgb: 'EAF6F0' } }, alignment: { vertical: 'center', horizontal: 'right' }, border: allB });
+        if (showCost) put(r, 2 + ndays + 1, dt.totalCost > 0 ? dt.totalCost : '—', { font: { name: 'Calibri', sz: esz, bold: true }, fill: { fgColor: { rgb: 'EAF6F0' } }, alignment: { vertical: 'center', horizontal: 'right' }, border: allB });
         r++;
       }
 

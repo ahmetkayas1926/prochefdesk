@@ -2450,7 +2450,7 @@ window.PCD.i18n.register('en', {
   chk_comment: "Note",
   chk_add_comment: "Add note",
   chk_notes_ph: "Notes...",
-  chk_complete_unfinished_t: "Complete with unfinished items?",
+  chk_complete_unfinished_t: "Complete with {n} unfinished items?",
   chk_complete_unfinished_m: "You can still complete and keep a record.",
   chk_picker_empty_t: "No recipes yet",
   chk_picker_empty_m: "Add recipes or a menu first, then pull dishes in here.",

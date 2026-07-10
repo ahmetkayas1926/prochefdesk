@@ -441,8 +441,10 @@
       m.close();
     });
     PCD.$('#shSms', body).addEventListener('click', function () {
+      // v2.44.131 fix — ham supplier.phone (boşluk/'+' içerebilir) sms: URI'sini
+      // bozabiliyordu; phoneClean (yalnız rakam) diğer alanlar gibi encode edilir.
       const url = phoneClean
-        ? 'sms:' + supplier.phone + '?&body=' + encodeURIComponent(getMsg())
+        ? 'sms:' + encodeURIComponent(phoneClean) + '?&body=' + encodeURIComponent(getMsg())
         : 'sms:?&body=' + encodeURIComponent(getMsg());
       window.location.href = url;
       recordOrder(supplier.id, 'sms', (supplier.phone || ''), getMsg(), orderItems, deliveryDate);
@@ -481,7 +483,13 @@
           recordOrder(supplier.id, 'copy', '', txt, orderItems, deliveryDate);
           _fireSent();
           PCD.toast.success(PCD.i18n.t('toast_copied_to_clipboard'));
+          onSentSuccess(supplier);
+          m.close();
         });
+      } else {
+        // v2.44.131 fix — ne Web Share API ne clipboard varsa önceden sessizce
+        // hiçbir şey olmuyordu (toast yok, kayıt yok). En azından kullanıcıyı bilgilendir.
+        PCD.toast.error(PCD.i18n.t('toast_share_unavailable') || 'Sharing is not supported on this device.');
       }
     });
   }

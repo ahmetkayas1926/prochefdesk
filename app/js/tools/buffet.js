@@ -1991,7 +1991,7 @@
           '<tr>' +
             '<td>' + PCD.escapeHtml(name) + '</td>' +
             '<td style="text-align:right;">' + PCD.fmtNumber(c.prepAmount) + ' ' + PCD.escapeHtml(it.unit || '') + '</td>' +
-            '<td style="text-align:right;">' + ((it.pickupRatio || 0.6) * 100).toFixed(0) + '%</td>' +
+            '<td style="text-align:right;">' + ((it.pickupRatio != null ? it.pickupRatio : 0.6) * 100).toFixed(0) + '%</td>' +
             '<td style="text-align:right;font-weight:700;">' + PCD.fmtMoney(c.prepCost) + '</td>' +
             '<td style="text-align:right;' + wasteStyle + '">' + PCD.fmtMoney(c.expectedWaste) + '</td>' +
           '</tr>';
@@ -2242,7 +2242,7 @@
           { v: name, s: { alignment: { vertical: 'center' }, border: thinBorder } },
           { v: c.prepAmount, s: numStyle },
           { v: it.unit || '', s: { alignment: { horizontal: 'center' }, border: thinBorder } },
-          { v: (it.pickupRatio || 0.6), s: pctStyle },
+          { v: (it.pickupRatio != null ? it.pickupRatio : 0.6), s: pctStyle },
           { v: c.prepCost, s: moneyStyle },
           { v: c.expectedWaste, s: moneyStyle },
         ]);

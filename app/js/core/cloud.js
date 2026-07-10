@@ -383,7 +383,12 @@
                 // (stok kaydet / sayım / siparişten stoğa ekle) ve writeInventory her
                 // değişen satıra updatedAt damgalayıp buluta push ediyor. Remote-wins
                 // taze yerel stoğu eziyordu → veri kaybı. Per-record en-yeni-kazanır merge.
-                'inventory'
+                'inventory',
+                // v2.44.131 fix — haccpReceiving/haccpHolding hiçbir merge listesinde yoktu,
+                // aşağıdaki genel Object.assign'a düşüp remote'un yerel'i TAMAMEN ezmesine
+                // neden oluyordu (2 cihazda aynı ay formuna eş zamanlı giriş → veri kaybı riski).
+                // Kullanıcı-düzenli HACCP formları (rosters/prepSheets/inventory ile aynı desen).
+                'haccpReceiving', 'haccpHolding'
               ];
               // Tables that are arrays under wsId (append-only logs):
               // v2.19 — BUG FIX: whiteboards/buffets/misePlans/team de array-tablo;

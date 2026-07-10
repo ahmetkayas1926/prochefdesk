@@ -229,7 +229,7 @@
             <span class="chip">${t('event_total_cost')}: <strong>${PCD.fmtMoney(stats.totalCost)}</strong></span>
             ${stats.totalRevenue > 0 ? '<span class="chip chip-brand">' + t('event_total_revenue') + ': <strong>' + PCD.fmtMoney(stats.totalRevenue) + '</strong></span>' : ''}
             ${stats.profit !== null ? '<span class="chip chip-' + (stats.profit >= 0 ? 'success' : 'danger') + '">' + t('event_profit') + ': <strong>' + PCD.fmtMoney(stats.profit) + '</strong></span>' : ''}
-            ${(stats.totalRevenue > 0 && stats.balanceDue > 0.005) ? '<span class="chip" style="background:#fef3c7;color:#92400e;">' + (t('event_balance_due') || 'Balance') + ': <strong>' + PCD.fmtMoney(stats.balanceDue) + '</strong></span>' : ''}
+            ${(stats.totalRevenue > 0 && Math.abs(stats.balanceDue) > 0.005) ? '<span class="chip" style="background:#fef3c7;color:#92400e;">' + (stats.balanceDue < 0 ? (t('event_overpaid') || 'Overpaid') : (t('event_balance_due') || 'Balance')) + ': <strong>' + PCD.fmtMoney(Math.abs(stats.balanceDue)) + '</strong></span>' : ''}
             ${taskTot ? '<span class="chip">✅ ' + taskDone + '/' + taskTot + '</span>' : ''}
           </div>
         `;
@@ -1213,6 +1213,7 @@
         const lowNow = report.filter(function (r) { return r.tracked && (r.status === 'low' || r.status === 'critical' || r.status === 'out'); }).length;
         // KİLİT — bir daha düşülemesin: flag + kaydet + buton rozete dön.
         data._stockDeductedAt = new Date().toISOString();
+        syncFlatMirrorFields();
         const saved = PCD.store.upsertInTable('events', data, 'ev');
         if (saved && saved.id) data.id = saved.id;
         _renderDeductBtnState();
@@ -1227,11 +1228,11 @@
         items: ids.map(function (iid) { const ing = ingMap[iid]; return { name: ing ? ing.name : iid, amount: dd.deductions[iid], unit: ing ? ing.unit : '' }; }),
       }).then(function (ok) { if (ok) proceed(); });
     });
-    saveBtn.addEventListener('click', function () {
-      if (PCD.gate && !PCD.gate.requireAuth()) return;
-      if (!data.name || !data.name.trim()) { PCD.toast.error(t('event_name') + ' ' + t('required')); return; }
-      if (existing) data.id = existing.id;
-      // v2.44.86 — liste/sıralama + geriye-uyum için temsilî düz alanları aynala
+    // v2.44.86 — liste/sıralama + geriye-uyum için temsilî düz alanları aynala.
+    // v2.44.131 fix — önceden yalnız saveBtn'de çağrılıyordu; hiç kaydedilmemiş bir
+    // event'te "Deduct stock" önce tıklanırsa upsert bu alanlar hiç set edilmeden
+    // gidiyordu (event listede tarihsiz/misafirsiz görünebiliyordu).
+    function syncFlatMirrorFields() {
       const fns = data.functions || [];
       const dated = fns.map(function (f) { return f.date; }).filter(Boolean).sort();
       data.date = dated[0] || (fns[0] && fns[0].date) || '';
@@ -1239,6 +1240,12 @@
       data.guestCount = eventGuests(data);
       data.venue = (fns[0] && fns[0].room) || '';
       data.menu = (fns[0] && fns[0].menu) || [];
+    }
+    saveBtn.addEventListener('click', function () {
+      if (PCD.gate && !PCD.gate.requireAuth()) return;
+      if (!data.name || !data.name.trim()) { PCD.toast.error(t('event_name') + ' ' + t('required')); return; }
+      if (existing) data.id = existing.id;
+      syncFlatMirrorFields();
       PCD.store.upsertInTable('events', data, 'ev');
       PCD.toast.success(t('event_saved'));
       m.close();

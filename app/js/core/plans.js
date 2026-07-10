@@ -45,7 +45,6 @@
       // Çıktı: araç başına İLK çıktı ücretsiz (kanca), sonrası Pro duvarı.
       exportFirstFree:  true,
       rosterExport:     false,  // roster çıktısı free'de TAMAMEN kapalı (Pro)
-      discoverPublish:  true,
     },
     pro: {
       maxRecipes:       Infinity,
@@ -67,7 +66,6 @@
       watermark:        false,  // pro çıktı/URL/QR paylaşım TEMİZ — marka yok
       exportFirstFree:  false,  // sınırsız çıktı
       rosterExport:     true,
-      discoverPublish:  true,
     },
   };
 

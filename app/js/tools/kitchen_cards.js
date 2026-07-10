@@ -1129,7 +1129,9 @@
           clearDropMarkers();
           const draggedRid = e.dataTransfer.getData('text/plain') || (frame.querySelector('.dragging') && frame.querySelector('.dragging').getAttribute('data-rid'));
           if (!draggedRid) return;
-          const fromIdx = layout.findIndex(function (l) { return l.recipeId === draggedRid; });
+          // v2.44.131 fix — custom kartların recipeId'si yok (id'leri var); _itemKey
+          // ile ara ki custom kartı boş sheet alanına bırakmak da sessizce no-op olmasın.
+          const fromIdx = layout.findIndex(function (l) { return _itemKey(l) === draggedRid; });
           if (fromIdx < 0) return;
           const moved = layout.splice(fromIdx, 1)[0];
           layout.push(moved);
