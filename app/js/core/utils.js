@@ -344,7 +344,12 @@
         return value * table[fromU] / table[toU];
       }
     }
-    return value; // same group not found
+    // v2.44.130 fix — önceden burada değeri OLDUĞU GİBİ döndürüyordu (örn. "box"
+    // hiçbir grupta yok → "5 box" sessizce "5 kg" olarak stoğa yazılabiliyordu).
+    // Uyumsuz/aynı-grupta-olmayan birimler artık throw eder; her çağıran zaten
+    // try/catch ile korunuyor (ham değeri koru / atla), böylece sessiz veri
+    // bozulması yerine güvenli fallback devreye girer.
+    throw new Error('Incompatible units: ' + fromUnit + ' → ' + toUnit);
   };
 
   PCD.unitGroup = function (u) {

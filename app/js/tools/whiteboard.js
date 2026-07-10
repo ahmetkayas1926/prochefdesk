@@ -2436,7 +2436,11 @@
         'body { margin: 0; padding: 0; font-family: "Barlow", -apple-system, system-ui, sans-serif; font-size: 15px; line-height: 1.5; color: #111827; background: #fff; width: ' + pageW + 'mm; height: ' + pageH + 'mm; display: flex; flex-direction: column; overflow: hidden; }' +
         '.wb-print-sheet { width: ' + pageW + 'mm; flex: 1 1 auto; min-height: 0; padding: 14px; display: flex; flex-direction: column; overflow: hidden; }' +
         '.wb-print-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 14px; }' +
-        '.wb-print-block { break-inside: avoid; page-break-inside: avoid; -webkit-column-break-inside: avoid; }' +
+        // v2.44.130 fix — kanvastaki .wb-block kenarlığı (box-shadow) print CSS'inde
+        // yoktu → açık renkli bloklar önizlemede kenarlıklı, çıktıda kenarsız
+        // görünüyordu (önizleme≠çıktı). renderBlockContent/blockBoxStyle paylaşılan
+        // fonksiyonlar zaten aynı; eksik olan sadece bu print-only CSS katmanıydı.
+        '.wb-print-block { break-inside: avoid; page-break-inside: avoid; -webkit-column-break-inside: avoid; box-shadow: 0 0 0 1px rgba(127,127,127,0.18); }' +
         '@media screen { body { height: auto !important; overflow: visible !important; } }' +
         '@media print { * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }' +
       '</style>' +

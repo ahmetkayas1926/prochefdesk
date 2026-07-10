@@ -223,14 +223,15 @@
         const cookTime = r.cookEndAt ? new Date(r.cookEndAt).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' }) : '';
         const cp2hTime = r.cp2hAt ? new Date(r.cp2hAt).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' }) : '';
         const finalTime = r.endedAt ? new Date(r.endedAt).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' }) : '';
+        const cookFail = r.cookEndTemp != null && r.cookEndTemp < coolingStartC();
         const cp2hFail = r.cp2hTemp != null && r.cp2hTemp > cooling2hC();
         const endFail = r.endedTemp != null && r.endedTemp > cooling6hC();
 
         table +=
           '<td style="padding:4px 8px;font-size:12px;font-weight:600;border-bottom:1px solid var(--border);border-left:1px solid var(--border);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + PCD.escapeHtml(r.foodName || '') + '</td>' +
           '<td style="padding:4px 6px;text-align:center;font-size:11px;border-bottom:1px solid var(--border);border-left:1px solid var(--border);">' + (r.quantity ? PCD.escapeHtml(r.quantity) + (r.quantityUnit ? ' ' + PCD.escapeHtml(r.quantityUnit) : '') : '—') + '</td>' +
-          '<td style="padding:4px;text-align:center;font-size:12px;font-weight:600;border-bottom:1px solid var(--border);border-left:1px solid var(--border);">' + fmtTemp(r.cookEndTemp) + '</td>' +
-          '<td style="padding:4px;text-align:center;font-size:11px;color:var(--text-2);border-bottom:1px solid var(--border);">' + (cookTime || '—') + '</td>' +
+          '<td style="padding:4px;text-align:center;font-size:12px;font-weight:600;border-bottom:1px solid var(--border);border-left:1px solid var(--border);' + (cookFail ? 'background:#fee2e2;color:#991b1b;' : '') + '">' + (r.cookEndTemp != null ? (cookFail ? '⚠ ' : '') + fmtTemp(r.cookEndTemp) : '—') + '</td>' +
+          '<td style="padding:4px;text-align:center;font-size:11px;color:var(--text-2);border-bottom:1px solid var(--border);' + (cookFail ? 'background:#fee2e2;' : '') + '">' + (cookTime || '—') + '</td>' +
           '<td style="padding:4px;text-align:center;font-size:12px;font-weight:600;border-bottom:1px solid var(--border);border-left:1px solid var(--border);' + (cp2hFail ? 'background:#fee2e2;color:#991b1b;' : '') + '">' + (r.cp2hTemp != null ? (cp2hFail ? '⚠ ' : '') + fmtTemp(r.cp2hTemp) : '—') + '</td>' +
           '<td style="padding:4px;text-align:center;font-size:11px;color:var(--text-2);border-bottom:1px solid var(--border);' + (cp2hFail ? 'background:#fee2e2;' : '') + '">' + (cp2hTime || '—') + '</td>' +
           '<td style="padding:4px;text-align:center;font-size:12px;font-weight:600;border-bottom:1px solid var(--border);border-left:1px solid var(--border);' + (endFail ? 'background:#fee2e2;color:#991b1b;' : '') + '">' + (r.endedTemp != null ? (endFail ? '⚠ ' : '') + fmtTemp(r.endedTemp) : '—') + '</td>' +
@@ -571,6 +572,7 @@
       const cp2hH = r && r.cp2hAt ? new Date(r.cp2hAt).toTimeString().slice(0, 5) : '';
       const endT = r && r.endedTemp != null ? (u === 'F' ? ctoF(r.endedTemp) : r.endedTemp) + '°' : '';
       const endH = r && r.endedAt ? new Date(r.endedAt).toTimeString().slice(0, 5) : '';
+      const cookFail = r && r.cookEndTemp != null && r.cookEndTemp < coolingStartC();
       const cp2hFail = r && r.cp2hTemp != null && r.cp2hTemp > cooling2hC();
       const endFail = r && r.endedTemp != null && r.endedTemp > cooling6hC();
 
@@ -578,8 +580,8 @@
         '<td class="day">' + dayLabel + '</td>' +
         '<td class="food">' + (r ? PCD.escapeHtml(r.foodName || '') : '') + '</td>' +
         '<td class="qty">' + (r && r.quantity ? PCD.escapeHtml(r.quantity) + (r.quantityUnit ? ' ' + PCD.escapeHtml(r.quantityUnit) : '') : '') + '</td>' +
-        '<td class="t">' + cookT + '</td>' +
-        '<td class="h">' + cookH + '</td>' +
+        '<td class="t' + (cookFail ? ' fail' : '') + '">' + cookT + '</td>' +
+        '<td class="h' + (cookFail ? ' fail' : '') + '">' + cookH + '</td>' +
         '<td class="t' + (cp2hFail ? ' fail' : '') + '">' + cp2hT + '</td>' +
         '<td class="h' + (cp2hFail ? ' fail' : '') + '">' + cp2hH + '</td>' +
         '<td class="t' + (endFail ? ' fail' : '') + '">' + endT + '</td>' +

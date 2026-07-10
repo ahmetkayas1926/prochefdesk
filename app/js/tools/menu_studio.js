@@ -1418,7 +1418,7 @@
 
     _view.querySelectorAll('[data-add]').forEach(function (el) { el.addEventListener('click', function () { addBlock(el.getAttribute('data-add')); }); });
     PCD.$('#msBack', _view).addEventListener('click', function () { clearTimeout(_saveTimer); if (currentMenu) { currentMenu.studio = design; try { PCD.store.upsertInTable('menus', currentMenu, 'm'); } catch (e) {} } currentId = null; currentMenu = null; renderList(); });
-    PCD.$('#msTemplatesHdr', _view).addEventListener('click', openTemplates);
+    PCD.$('#msTemplatesHdr', _view).addEventListener('click', function () { openTemplates(false); });
     var _pgBtn = PCD.$('#msPageBtn', _view); if (_pgBtn) _pgBtn.addEventListener('click', openPageSettings);
     PCD.$('#msShare', _view).addEventListener('click', openShare);
     PCD.$('#msPrint', _view).addEventListener('click', function () { if (PCD.gate && !PCD.gate.requireExport('menus')) return; PCD.print(buildPrintHtml(), currentMenu.name || 'Menu'); });

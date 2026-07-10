@@ -198,9 +198,13 @@
     // emniyet için kullanılıyordu; artık per-table cloud-pertable.flushNow
     // tarafından sağlanıyor. Backward-compat için promise döndürüyor.
     pushNow: function () {
-      // Per-table flushNow varsa onu tetikle (tüm pending writes gönderilsin).
+      // v2.44.130 fix — önceden flushNow() başlatılıp BEKLENMEDEN Promise.resolve(true)
+      // dönülüyordu; çağıranlar (workspace oluştur/sil/switch → reload) bunun gerçek
+      // push'u beklediğini sanıyordu. Reload, henüz bitmemiş push'u iptal ediyor —
+      // özellikle workspace satırı gibi tek-seferlik yazımlar hiç buluta ulaşmıyordu
+      // (çocuk kayıtlar sonradan ayrı ayrı push olduğu için hayatta kalıyor, sahipsiz kalıyordu).
       if (PCD.cloudPerTable && PCD.cloudPerTable.flushNow) {
-        try { PCD.cloudPerTable.flushNow(); } catch (e) {}
+        return Promise.resolve(PCD.cloudPerTable.flushNow()).catch(function () { return true; });
       }
       return Promise.resolve(true);
     },

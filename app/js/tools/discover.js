@@ -635,6 +635,13 @@
           this.style.color = res.liked ? 'var(--danger)' : 'var(--text-3)';
           this.querySelector('span').textContent = res.liked ? '❤' : '♡';
           countEl.textContent = String(Math.max(0, curCount));
+          // v2.44.130 fix — önceden yalnız DOM geri alınıyordu; myLikes/feed
+          // cache'i optimistic değerde kalıp re-render'da bayat gösteriyordu.
+          if (myLikes) {
+            if (res.liked) myLikes[rid] = true;
+            else delete myLikes[rid];
+          }
+          if (rec) rec.like_count = curCount;
           PCD.toast.error(PCD.i18n.t('discover_like_failed') || 'Beğeni kaydedilemedi');
         }
       }.bind(this));
@@ -736,6 +743,11 @@
           // Rollback
           curLiked = wasLiked;
           recipe.like_count = Math.max(0, (recipe.like_count || 0) + (wasLiked ? 1 : -1));
+          // v2.44.130 fix — myLikes cache önceden geri alınmıyordu.
+          if (myLikes) {
+            if (wasLiked) myLikes[recipe.id] = true;
+            else delete myLikes[recipe.id];
+          }
           likeBtn.className = 'btn ' + (wasLiked ? 'btn-danger' : 'btn-outline');
           likeBtn.innerHTML = (wasLiked ? '❤ ' : '♡ ') + PCD.escapeHtml(wasLiked ? (t('discover_unlike_btn') || 'Beğeniden çıkar') : (t('discover_like_btn') || 'Beğen')) + ' · ' + recipe.like_count;
           PCD.toast.error(PCD.i18n.t('discover_like_failed') || 'Beğeni kaydedilemedi');

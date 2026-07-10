@@ -577,12 +577,15 @@
       shortfallCount: shortfallCount,
       refillX: refillX,
       targets: targets,
-      // status: 'good' | 'warn' | 'bad'
-      status: foodCostPct <= targets.good ? 'good' : (foodCostPct <= targets.warn ? 'warn' : 'bad'),
+      // status: 'none' | 'good' | 'warn' | 'bad'. v2.44.130 — ticketPrice=0 →
+      // revenue=0 → foodCostPct sabit 0 olur (madde 556); bu "mükemmel" değil
+      // "veri eksik" demek, ayrı nötr durum olarak işaretlenir.
+      status: revenue <= 0 ? 'none' : (foodCostPct <= targets.good ? 'good' : (foodCostPct <= targets.warn ? 'warn' : 'bad')),
     };
   }
 
   function statusColor(s) {
+    if (s === 'none') return '#6b7280';
     if (s === 'good') return '#16a34a';
     if (s === 'warn') return '#f59e0b';
     return '#dc2626';
@@ -590,8 +593,11 @@
 
   // v2.8.88 — Status label (i18n) — Stats hero card primary metric'in altında
   // "Good" / "Watch" / "Over budget" chip olarak gösterilir.
+  // v2.44.130 — 'none': bilet fiyatı girilmemiş → foodCostPct anlamsız 0%, veri
+  // eksikliğini "mükemmel kâr marjı" gibi göstermemek için ayrı nötr durum.
   function statusLabel(s) {
     const t = PCD.i18n.t;
+    if (s === 'none') return t('buffet_status_none') || 'No price set';
     if (s === 'good') return t('buffet_status_good') || 'Good';
     if (s === 'warn') return t('buffet_status_warn') || 'Watch';
     return t('buffet_status_over') || 'Over budget';

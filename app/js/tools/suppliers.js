@@ -385,7 +385,12 @@
     const body = PCD.el('div');
     body.innerHTML =
       '<div class="field"><label class="field-label">Message (editable)</label>' +
-      '<textarea class="textarea" id="shareMsg" rows="10" style="font-family:var(--font-mono);font-size:13px;white-space:pre;">' + PCD.escapeHtml(message) + '</textarea></div>' +
+      '<textarea class="textarea" id="shareMsg" rows="10" style="font-family:var(--font-mono);font-size:13px;white-space:pre;">' + PCD.escapeHtml(message) + '</textarea>' +
+      // v2.44.130 — burada elle değiştirilen miktarlar stok takibine (recordOrder/
+      // markOrdered) YANSIMAZ — o, gönderilmeden önceki order ekranındaki miktarları
+      // kullanır. Şef karışmasın diye açıkça belirtiliyor.
+      '<div class="text-muted text-sm" style="margin-top:4px;">Editing quantities here only changes the sent message — stock tracking uses the quantities entered on the order screen.</div>' +
+      '</div>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-top:14px;">' +
         '<button class="btn btn-outline" id="shWa" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;">' +
           '<div style="color:#25D366;">' + PCD.icon('message-circle', 24) + '</div>' +

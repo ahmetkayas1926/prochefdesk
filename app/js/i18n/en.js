@@ -1684,6 +1684,7 @@ window.PCD.i18n.register('en', {
   buffet_target: "Target",
   // v2.8.88 — Status labels (Stats hero chip)
   buffet_status_good: "Good",
+  buffet_status_none: "No price set",
   buffet_status_warn: "Watch",
   buffet_status_over: "Over budget",
   buffet_search_placeholder: "Search by name, type, or date…",

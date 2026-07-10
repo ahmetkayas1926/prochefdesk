@@ -633,28 +633,6 @@
       }
     }
 
-    // v2.44.99 — Expiring stock alert. Spoilage is the fastest preventable
-    // inventory loss; surface items past / near best-before so the chef uses
-    // them first (FIFO) or logs the waste. Inventory is eager-loaded.
-    if (PCD.tools.inventory && PCD.tools.inventory.expiringSummary) {
-      const _exp = PCD.tools.inventory.expiringSummary();
-      if (_exp.total > 0) {
-        const _names = _exp.items.slice(0, 3).map(function (x) { return x.name; }).join(', ') + (_exp.total > 3 ? ' …' : '');
-        cards.push({
-          priority: 2,
-          html:
-            '<div class="dash-card priority-warn" data-action="view-inventory" style="cursor:pointer;">' +
-              '<div class="dash-card-icon" style="background:#fef3c7;color:#b45309;">' + PCD.icon('clock', 22) + '</div>' +
-              '<div class="dash-card-body">' +
-                '<div class="dash-card-title">' + (_exp.expired > 0 ? t('dash_expiry_title_expired', { n: _exp.expired }) : t('dash_expiry_title_soon', { n: _exp.soon })) + '</div>' +
-                '<div class="dash-card-desc">' + PCD.escapeHtml(_names) + '</div>' +
-              '</div>' +
-              '<div class="dash-card-cta">' + t('dash_expiry_cta') + ' →</div>' +
-            '</div>'
-        });
-      }
-    }
-
     // Sort by priority
     cards.sort(function (a, b) { return a.priority - b.priority; });
 

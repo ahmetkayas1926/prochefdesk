@@ -128,6 +128,12 @@
         const rym = r.monthYM || (r.date ? r.date.slice(0, 7) : '');
         if (rym !== ym) return;
         const dateStr = r.date || (r.day ? ym + '-' + padDay(r.day) : ym);
+        if (r.cookEndTemp != null) {
+          pushCheck(byForm.cooling, r.cookEndTemp < th.coolingStartC, {
+            date: dateStr, item: r.foodName, reading: showTemp(r.cookEndTemp),
+            limit: '≥' + showLimit(th.coolingStartC), corrective: r.note, chef: r.chef,
+          });
+        }
         if (r.cp2hTemp != null) {
           pushCheck(byForm.cooling, r.cp2hTemp > th.cooling2hC, {
             date: dateStr, item: r.foodName, reading: showTemp(r.cp2hTemp),

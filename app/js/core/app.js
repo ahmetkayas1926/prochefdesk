@@ -627,15 +627,20 @@
           PCD.store.setActiveWorkspaceId(wsId);
           PCD.toast.success(PCD.i18n.t('toast_workspace_switched', { name: ws.name }));
           m.close();
-          setTimeout(function () { window.location.reload(); }, 400);
+          // v2.44.130 fix — reload artık bekleyen cloud push'u (workspace kaydı dahil)
+          // gerçekten bekliyor; önceden setTimeout ile keyfi bir süre sonra reload
+          // oluyordu, push henüz gitmemişse reload onu iptal ediyordu.
+          const flush = (PCD.cloudPerTable && PCD.cloudPerTable.flushNow) ? PCD.cloudPerTable.flushNow() : Promise.resolve();
+          Promise.resolve(flush).catch(function () {}).then(function () { window.location.reload(); });
         });
         return;
       }
       PCD.store.setActiveWorkspaceId(wsId);
       PCD.toast.success(PCD.i18n.t('toast_workspace_switched', { name: (ws ? ws.name : 'workspace') }));
       m.close();
-      // Reload to refresh all views with new workspace data
-      setTimeout(function () { window.location.reload(); }, 300);
+      // v2.44.130 fix — reload before pending cloud push landed = lost writes.
+      const flushSwitch = (PCD.cloudPerTable && PCD.cloudPerTable.flushNow) ? PCD.cloudPerTable.flushNow() : Promise.resolve();
+      Promise.resolve(flushSwitch).catch(function () {}).then(function () { window.location.reload(); });
     });
 
     PCD.on(body, 'click', '[data-edit-ws]', function (e) {
@@ -826,7 +831,9 @@
         PCD.store.archiveWorkspace(existing.id, willArchive);
         PCD.toast.success(willArchive ? 'Workspace archived' : 'Workspace reactivated');
         m.close();
-        setTimeout(function () { window.location.reload(); }, 400);
+        // v2.44.130 fix — wait for the pending cloud push before reload.
+        const flushArchive = (PCD.cloudPerTable && PCD.cloudPerTable.flushNow) ? PCD.cloudPerTable.flushNow() : Promise.resolve();
+        Promise.resolve(flushArchive).catch(function () {}).then(function () { window.location.reload(); });
       });
     });
     if (deleteBtn) deleteBtn.addEventListener('click', function () {
@@ -869,9 +876,12 @@
         try { m.close(); } catch (e) {}
 
         // Push deletion to cloud BEFORE reload (otherwise reload pulls stale state with the ws back)
+        // v2.44.130 fix — PCD.cloud.pushNow() fires flushNow but doesn't await it and
+        // resolves immediately (see cloud.js), so this never actually waited for the
+        // real push. Awaiting PCD.cloudPerTable.flushNow() directly instead.
         const doReload = function () { window.location.reload(); };
-        if (PCD.cloud && typeof PCD.cloud.pushNow === 'function') {
-          PCD.cloud.pushNow().then(function () { setTimeout(doReload, 100); });
+        if (PCD.cloudPerTable && typeof PCD.cloudPerTable.flushNow === 'function') {
+          Promise.resolve(PCD.cloudPerTable.flushNow()).catch(function () {}).then(function () { setTimeout(doReload, 100); });
         } else {
           setTimeout(doReload, 250);
         }
@@ -931,6 +941,13 @@
       try { m.close(); } catch (e) {}
 
       // STEP 5 — Push to cloud BEFORE reload (so reload doesn't pull stale state)
+      // v2.44.130 fix — root cause of orphaned-workspace data loss: PCD.cloud.pushNow()
+      // fires cloudPerTable.flushNow() without awaiting it and resolves immediately
+      // (see cloud.js), so this never actually waited for the workspace row's push to
+      // land before reloading. A reload mid-flight cancels the pending push — the new
+      // workspace row never reaches Supabase while its later recipes/ingredients (each
+      // pushed independently over a longer session) still do, producing orphaned data
+      // with no parent workspace. Awaiting PCD.cloudPerTable.flushNow() directly fixes this.
       const doReload = function () {
         if (isNew) {
           window.location.reload();
@@ -938,8 +955,8 @@
           try { refreshWorkspaceLabel(); } catch (e) {}
         }
       };
-      if (PCD.cloud && typeof PCD.cloud.pushNow === 'function') {
-        PCD.cloud.pushNow().then(function () {
+      if (PCD.cloudPerTable && typeof PCD.cloudPerTable.flushNow === 'function') {
+        Promise.resolve(PCD.cloudPerTable.flushNow()).catch(function () {}).then(function () {
           setTimeout(doReload, 100);
         });
       } else {

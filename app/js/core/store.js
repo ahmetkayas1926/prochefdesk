@@ -1047,6 +1047,9 @@
       state[table] = next;
       emit(table, next, null);
       persist();
+      // v2.44.130 fix — önceden yalnız yerelde kalıyordu (cloud push yok), ama
+      // 'Copied' toast'ı başarı gibi gösteriyordu. upsertRecipe'deki desenle aynı.
+      if (PCD.cloudPerTable) PCD.cloudPerTable.queueUpsert(table, copy.id, toWsId, copy);
       return copy;
     },
 

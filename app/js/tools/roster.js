@@ -1106,9 +1106,13 @@
         '<button class="btn btn-ghost btn-sm" id="rosterBack" style="margin-bottom:6px;">' + PCD.icon('chevronLeft', 16) + ' ' + esc(t('btn_back') || 'Back') + '</button>' +
         '<div class="page-title" style="font-size:20px;">' + esc(data.venue || data.name || weekRange(data)) + '</div>' +
       '</div></div>';
+    // v2.44.130 fix — bu ayrı önizleme ekranı editördeki gate'i (canUseLaborCost)
+    // uygulamıyordu, free kullanıcı buradan işçilik maliyetini açabiliyordu.
     html += '<div class="card" style="padding:12px;margin-bottom:12px;display:flex;gap:14px;flex-wrap:wrap;align-items:center;">' +
       fontControlsHtml(data) +
-      '<label class="checkbox" style="margin-inline-start:auto;"><input type="checkbox" id="rShowCost"' + (_showCost ? ' checked' : '') + '><span>' + esc(t('roster_show_cost') || 'Show labour cost in print / share / Excel') + '</span></label>' +
+      ((PCD.gate && !PCD.gate.canUseLaborCost())
+        ? '<label class="checkbox" id="rShowCostLocked" style="margin-inline-start:auto;cursor:pointer;opacity:0.7;"><span>' + PCD.icon('lock', 12) + ' ' + esc(t('roster_show_cost') || 'Show labour cost in print / share / Excel') + '</span></label>'
+        : '<label class="checkbox" style="margin-inline-start:auto;"><input type="checkbox" id="rShowCost"' + (_showCost ? ' checked' : '') + '><span>' + esc(t('roster_show_cost') || 'Show labour cost in print / share / Excel') + '</span></label>') +
       '</div>';
     html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">' +
       '<button class="btn btn-primary" id="pvEdit">' + PCD.icon('edit', 14) + ' ' + esc(t('edit') || 'Edit') + '</button>' +
@@ -1118,15 +1122,24 @@
       '</div>';
     html += '<div class="card" style="padding:16px;"><div id="pvTable"></div></div>';
     view.innerHTML = html;
+    // v2.44.130 fix — free'de gate kilitliyken _showCost belleğinde true kalmış
+    // olsa bile (örn. plan düşürülmüş) tabloya/print'e/excel'e sızmasın diye
+    // burada da ikinci bir savunma katmanı.
+    const _pvCost = (PCD.gate && !PCD.gate.canUseLaborCost()) ? false : _showCost;
     // v2.40 — scale-to-fit önizleme + tıkla→zoom (mobilde tablo sıkışmaz, gerçek oran)
-    mountRosterPv(PCD.$('#pvTable', view), data, _showCost);
+    mountRosterPv(PCD.$('#pvTable', view), data, _pvCost);
     let _pvRsz = null; window.addEventListener('resize', function () { clearTimeout(_pvRsz); _pvRsz = setTimeout(function () { const b = view.querySelector('.rost-pvbox'); if (b) fitRosterPv(b); }, 150); });
     PCD.$('#rosterBack', view).addEventListener('click', function () { history.back(); });
     PCD.$('#pvEdit', view).addEventListener('click', function () { PCD.router.go('roster', { editId: data.id }); });
-    PCD.$('#pvImg', view).addEventListener('click', function () { sendRosterImage(data, _showCost); });
-    PCD.$('#pvPrint', view).addEventListener('click', function () { printRoster(data, _showCost); });
-    PCD.$('#pvExcel', view).addEventListener('click', function () { excelRoster(data, _showCost); });
-    PCD.$('#rShowCost', view).addEventListener('change', function () { _showCost = this.checked; render(view); });
+    PCD.$('#pvImg', view).addEventListener('click', function () { sendRosterImage(data, _pvCost); });
+    PCD.$('#pvPrint', view).addEventListener('click', function () { printRoster(data, _pvCost); });
+    PCD.$('#pvExcel', view).addEventListener('click', function () { excelRoster(data, _pvCost); });
+    const _pvShowCostEl = PCD.$('#rShowCost', view);
+    if (_pvShowCostEl) _pvShowCostEl.addEventListener('change', function () { _showCost = this.checked; render(view); });
+    const _pvShowCostLocked = PCD.$('#rShowCostLocked', view);
+    if (_pvShowCostLocked) _pvShowCostLocked.addEventListener('click', function () {
+      if (PCD.gate && PCD.gate.showUpgradeModal) PCD.gate.showUpgradeModal({ feature: 'labor', message: t('labor_cost_locked') });
+    });
     wireFontControls(view, data);
   }
 

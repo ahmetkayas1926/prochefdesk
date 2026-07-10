@@ -20,7 +20,7 @@
 
   function snapshots() {
     return (PCD.store.listTable('stockCountHistory') || []).filter(function (s) { return s && !s._deletedAt; })
-      .slice().sort(function (a, b) { return (b.date || '').localeCompare(a.date || ''); });
+      .slice().sort(function (a, b) { return (b.countedAt || '').localeCompare(a.countedAt || ''); });
   }
   function snapStocks(id) {
     if (!id) return {};

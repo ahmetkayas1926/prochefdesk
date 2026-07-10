@@ -250,8 +250,17 @@
         const q = filter.toLowerCase();
         const ingMap = {};
         PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
+        // v2.44.130 fix — önceden yalnız direkt ingredient satırına bakıyordu,
+        // alt-tarif içindekileri (ri.recipeId) yok sayıyordu. flattenIngredients
+        // ile alt-tarif malzemeleri de gerçek ingredient seviyesine indirgenir.
+        const recipeMap = (PCD.recipes && PCD.recipes.buildRecipeMap) ? PCD.recipes.buildRecipeMap() : null;
         visible = sorted.filter(function (r) {
           if ((r.name || '').toLowerCase().indexOf(q) >= 0) return true;
+          if (PCD.recipes && PCD.recipes.flattenIngredients && recipeMap) {
+            return PCD.recipes.flattenIngredients(r, ingMap, recipeMap).some(function (fi) {
+              return fi.ingredient && (fi.ingredient.name || '').toLowerCase().indexOf(q) >= 0;
+            });
+          }
           // Search by ingredient content too
           return (r.ingredients || []).some(function (ri) {
             const ing = ingMap[ri.ingredientId];
@@ -364,7 +373,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
             ${!isPrep(r) ? '<span>' + t(r.category || 'cat_main') + '</span>' : ''}
             ${yieldOrServings ? (!isPrep(r) ? '<span>·</span>' : '') + yieldOrServings : ''}
             ${cost > 0 ? '<span>·</span><span>' + PCD.fmtMoney(cost) + '</span>' : ''}
-            ${pct !== null ? '<span class="chip chip-' + (pct <= 35 ? 'success' : (pct <= 45 ? 'warning' : 'danger')) + '">' + PCD.fmtPercent(pct, 0) + '</span>' : ''}
+            ${pct !== null ? '<span class="chip chip-' + (pct <= (Number(r.targetFoodCostPct) || 30) ? 'success' : (pct <= (Number(r.targetFoodCostPct) || 30) + 5 ? 'warning' : 'danger')) + '">' + PCD.fmtPercent(pct, 0) + '</span>' : ''}
           </div>
         `;
         row.appendChild(thumb);
@@ -1033,11 +1042,14 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
     const ingArr = PCD.store.listIngredients();
     const recs = (ids || []).map(function (id) { return PCD.store.getRecipe(id); }).filter(Boolean);
     if (!recs.length || !allergens.length) { if (PCD.toast && PCD.toast.info) PCD.toast.info(t('cr_no_recipes') || 'No recipes'); return; }
+    // v2.44.130 fix — recipe objesinde hiç var olmayan 'codes' alanı okunuyordu
+    // (o alan menu-item'a ait, recipe'ye değil) → sütunlar hep boştu. VG/V (vegan/
+    // vejetaryen) recipe şemasında hiçbir yerde işaretlenmiyor (et/hayvansal içerik
+    // bilgisi yok) — güvenilir çıkarım yapılamaz, yanlış ✓ göstermemek için kaldırıldı.
+    // GF/DF/NF ise zaten hesaplanan alerjen listesinden (gluten/dairy/nuts+peanuts
+    // yokluğu) güvenilir şekilde türetilebilir.
     const dietCodes = [
-      {key:'vg', label:'VG',  title:'Vegan'},
-      {key:'v',  label:'V',   title:'Vegetarian'},
       {key:'gf', label:'GF',  title:'Gluten-Free'},
-      {key:'gfo',label:'GFO', title:'GF Option'},
       {key:'df', label:'DF',  title:'Dairy-Free'},
       {key:'nf', label:'NF',  title:'Nut-Free'}
     ];
@@ -1060,9 +1072,10 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
         const has = keys.indexOf(a.key) >= 0;
         return '<td style="text-align:center;border:1px solid #ccc;' + (has ? 'background:#fde2e2;-webkit-print-color-adjust:exact;print-color-adjust:exact;color:#b91c1c;font-weight:800;' : '') + '">' + (has ? '●' : '') + '</td>';
       }).join('');
-      const rcodes = r.codes || [];
       const dietCells = dietCodes.map(function (dc) {
-        const has = rcodes.indexOf(dc.key) >= 0;
+        const has = dc.key === 'gf' ? keys.indexOf('gluten') < 0
+          : dc.key === 'df' ? keys.indexOf('dairy') < 0
+          : keys.indexOf('nuts') < 0 && keys.indexOf('peanuts') < 0;
         return '<td style="text-align:center;border:1px solid #ccc;' + (has ? 'background:#edf6f0;-webkit-print-color-adjust:exact;print-color-adjust:exact;color:#16433a;font-weight:700;' : '') + '">' + (has ? '✓' : '') + '</td>';
       }).join('');
       return '<tr><td style="text-align:left;padding:5px 8px;border:1px solid #ccc;font-weight:600;">' + PCD.escapeHtml(r.name) + '</td>' + allergenCells + SEP_TD + dietCells + '</tr>';
@@ -2209,7 +2222,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
         <div class="stat" style="padding:10px;"><div class="stat-label">${t('food_cost')}</div><div class="stat-value" style="font-size:18px;">${PCD.fmtMoney(cost)}</div></div>
         ${!_isPrepForView ? '<div class="stat" style="padding:10px;"><div class="stat-label">' + t('cost_per_serving') + '</div><div class="stat-value" style="font-size:18px;">' + PCD.fmtMoney(costPerServing) + '</div></div>' : ''}
         ${r.salePrice ? '<div class="stat" style="padding:10px;"><div class="stat-label">' + t('recipe_sale_price') + '</div><div class="stat-value" style="font-size:18px;">' + PCD.fmtMoney(r.salePrice) + '</div></div>' : ''}
-        ${pct !== null ? '<div class="stat" style="padding:10px;"><div class="stat-label">' + t('food_cost_percent') + '</div><div class="stat-value" style="font-size:18px;color:' + (pct <= 35 ? 'var(--success)' : (pct <= 45 ? 'var(--warning)' : 'var(--danger)')) + ';">' + PCD.fmtPercent(pct, 1) + '</div></div>' : ''}
+        ${pct !== null ? '<div class="stat" style="padding:10px;"><div class="stat-label">' + t('food_cost_percent') + '</div><div class="stat-value" style="font-size:18px;color:' + (pct <= (Number(r.targetFoodCostPct) || 30) ? 'var(--success)' : (pct <= (Number(r.targetFoodCostPct) || 30) + 5 ? 'var(--warning)' : 'var(--danger)')) + ';">' + PCD.fmtPercent(pct, 1) + '</div></div>' : ''}
       </div>
 
       ${freshnessBadge}

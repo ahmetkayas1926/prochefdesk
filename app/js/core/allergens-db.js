@@ -103,6 +103,13 @@
       });
     }
 
+    // v2.44.130 fix — editörde şefin manuel kaldırdığı alerjenler (recipe.allergensExcluded)
+    // buraya kadar hiç uygulanmıyordu; matris/prep/Discover hepsi bu paylaşılan fonksiyonu
+    // kullandığından exclusion artık burada, tek noktadan, tüm tüketicilere yansır.
+    if (recipe.allergensExcluded && recipe.allergensExcluded.length) {
+      recipe.allergensExcluded.forEach(function (k) { delete set[k]; });
+    }
+
     return Object.keys(set);
   }
 

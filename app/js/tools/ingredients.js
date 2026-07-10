@@ -260,6 +260,8 @@
           '<div class="list-item-title">' + PCD.escapeHtml(i.name) + '</div>' +
           '<div class="list-item-meta">' +
             '<span>' + PCD.fmtMoney(i.pricePerUnit) + ' / ' + i.unit + '</span>' +
+            // v2.44.130 fix — maliyeti doğrudan çarpan yieldPercent liste satırında hiç görünmüyordu.
+            (i.yieldPercent && i.yieldPercent < 100 ? '<span>·</span><span class="text-muted" title="' + PCD.escapeHtml(t('ing_yield_label') || 'Yield %') + '">' + Math.round(i.yieldPercent) + '% yield</span>' : '') +
             (trendHtml ? '<span>·</span>' + trendHtml : '') +
             (ageHtml ? '<span>·</span>' + ageHtml : '') +
             (supBadge ? '<span>·</span>' + supBadge : '') +
@@ -600,14 +602,6 @@
           </div>
         ` : ''}
       </div>
-      <div class="field">
-        <label class="field-label">${L('ing_shelf_life', 'Shelf life (days)')}</label>
-        <div class="input-group">
-          <input type="number" class="input" id="ingShelfLife" value="${data.shelfLifeDays || ''}" step="1" min="1" placeholder="—">
-          <span class="input-group-addon">${L('ing_days', 'days')}</span>
-        </div>
-        <div class="field-hint">${L('ing_shelf_hint', 'Optional. Sets a best-before date automatically when you receive stock — flags items to use before they spoil.')}</div>
-      </div>
 
 ${existing && existing.priceHistory && existing.priceHistory.length > 0 ? `
         <div class="section">
@@ -642,6 +636,10 @@ ${existing ? (function () {
 // Update symbol on unit change
     PCD.$('#ingUnit', body).addEventListener('change', function () {
       PCD.$('#unitSymbol', body).textContent = this.value;
+      // v2.44.130 fix — alttaki 'Price per {unit}' açıklaması önceden birim
+      // değişince güncellenmiyordu, sadece sağdaki /birim eki güncelleniyordu.
+      const hintEl = PCD.$('#ingPrice', body).closest('.field').querySelector('.field-hint');
+      if (hintEl) hintEl.textContent = t('price_per_unit').replace('{unit}', this.value);
     });
     // Currency symbol
     const curCode = PCD.store.get('prefs.currency') || 'USD';
@@ -731,12 +729,6 @@ ${existing ? (function () {
         const v = parseFloat(yld.value);
         data.yieldPercent = (!isNaN(v) && v > 0 && v <= 100) ? v : null;
       }
-      const sl = PCD.$('#ingShelfLife', body);
-      if (sl) {
-        const sv = parseInt(sl.value, 10);
-        data.shelfLifeDays = (!isNaN(sv) && sv > 0) ? sv : null;
-      }
-
       if (!data.name) {
         PCD.toast.error(t('ingredient_name') + ' ' + t('required'));
         return;
@@ -961,7 +953,7 @@ Pasta,3,kg,cat_dry_goods,,</code></pre>
           <strong>${PCD.escapeHtml(t('import_help_yield_title') || 'Yield %')}</strong> = ${PCD.escapeHtml(t('import_help_yield_desc') || 'optional. Usable portion after trim/peel. Chicken breast ~88%, whole salmon ~58%, tomato ~90%. Leave empty if unknown.')}<br>
           <strong>${PCD.escapeHtml(t('import_help_optional_title') || 'Optional')}</strong>: ${PCD.escapeHtml(t('import_help_optional_desc') || 'Category, Supplier and Yield can be left empty (keep the comma).')}<br>
           <strong>${PCD.escapeHtml(t('import_help_existing_title') || 'Existing items')}</strong>: ${PCD.escapeHtml(t('import_help_existing_desc') || 'If a row name matches an existing ingredient, its price/unit/category/supplier/yield will be UPDATED. New names are added.')}<br>
-          <span style="display:inline-block;margin-top:6px;">${PCD.escapeHtml(t('import_help_units') || 'Supported units')}: <code>g, kg, ml, l, tsp, tbsp, cup, oz, lb, pcs, unit</code></span><br>
+          <span style="display:inline-block;margin-top:6px;">${PCD.escapeHtml(t('import_help_units') || 'Supported units')}: <code>g, kg, ml, l, tsp, tbsp, cup, fl_oz, oz, lb, pcs, each, bottle, jar, bunch, package, unit</code></span><br>
           <span style="display:inline-block;margin-top:2px;">${PCD.escapeHtml(t('import_help_cats') || 'Supported categories')}: <code>cat_meat, cat_poultry, cat_seafood, cat_dairy, cat_produce, cat_dry_goods, cat_spices, cat_oils, cat_beverages, cat_baking, cat_other</code></span>
         </div>
         <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
@@ -1128,9 +1120,12 @@ Pasta,3,kg,cat_dry_goods,,</code></pre>
     importGoBtn.addEventListener('click', function () {
       if (PCD.gate && !PCD.gate.requireAuth()) return;
       if (!parsed || !parsed.length) { PCD.toast.error(PCD.i18n.t('toast_nothing_to_import')); return; }
-      let added = 0, updated = 0;
+      let added = 0, updated = 0, blocked = 0;
       const existing = {};
       PCD.store.listIngredients().forEach(function (i) { existing[i.name.toLowerCase()] = i; });
+      // v2.44.130 fix — tekli ekleme (openEditor) canCreateIngredient ile korunuyordu
+      // ama toplu import hiç kontrol etmiyordu → free limiti aşılabiliyordu.
+      let liveCount = PCD.store.listIngredients().length;
       parsed.forEach(function (row) {
         const key = row.name.toLowerCase();
         if (existing[key]) {
@@ -1144,6 +1139,7 @@ Pasta,3,kg,cat_dry_goods,,</code></pre>
           PCD.store.upsertIngredient(ing);
           updated++;
         } else {
+          if (PCD.gate && !PCD.gate.canCreateIngredient(liveCount)) { blocked++; return; }
           const newIng = {
             name: row.name,
             unit: row.unit || 'g',
@@ -1153,9 +1149,12 @@ Pasta,3,kg,cat_dry_goods,,</code></pre>
           };
           if (row.yieldPercent != null) newIng.yieldPercent = row.yieldPercent;
           PCD.store.upsertIngredient(newIng);
-          added++;
+          added++; liveCount++;
         }
       });
+      if (blocked > 0 && PCD.gate) {
+        PCD.gate.showUpgradeModal({ feature: 'ingredients', message: t('ingredient_limit_reached').replace('{n}', PCD.gate.limits().maxIngredients) });
+      }
       PCD.toast.success(PCD.i18n.t('toast_imported_n_new_m_updated', { new: added, updated: updated }));
       m.close();
       setTimeout(function () {
@@ -1221,6 +1220,20 @@ Pasta,3,kg,cat_dry_goods,,</code></pre>
   // The old splitLine() function is kept as a defensive fallback in case
   // window.XLSX hasn't loaded yet (slow network) — same behaviour as
   // before for the common case.
+  // v2.44.130 fix — önceden ham metin (örn. "Produce") doğrudan category'e
+  // yazılıyordu; elle eklenen "Onion" (category='cat_produce') ile aynı grup
+  // sayılmıyordu, iki ayrı "PRODUCE" bölümü oluşuyordu. Artık ya kanonik
+  // `cat_*` anahtarına ya da çevrilmiş etikete (case-insensitive) eşleşiyor.
+  function normalizeCategory(raw) {
+    const val = String(raw || '').trim();
+    if (!val) return 'cat_other';
+    const lc = val.toLowerCase();
+    if (ING_CATEGORIES.indexOf(lc) >= 0) return lc;
+    const t = PCD.i18n.t;
+    const match = ING_CATEGORIES.find(function (key) { return (t(key) || '').toLowerCase() === lc; });
+    return match || 'cat_other';
+  }
+
   function parseCSV(text) {
     if (!text || !text.trim()) return [];
 
@@ -1283,7 +1296,7 @@ Pasta,3,kg,cat_dry_goods,,</code></pre>
         name: name,
         pricePerUnit: price,
         unit: rawUnit,
-        category: String(cells[3] || '').trim() || 'cat_other',
+        category: normalizeCategory(cells[3]),
         supplier: String(cells[4] || '').trim() || '',
         yieldPercent: yieldPct,
       });
