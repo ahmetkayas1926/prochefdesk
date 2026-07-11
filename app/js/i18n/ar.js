@@ -3610,3 +3610,33 @@ window.PCD.i18n.register('ar', {
   roster_use_events: "استخدم فعاليات هذا الأسبوع ({amt})",
   roster_events_filled: "تم تحديث المبيعات الأسبوعية من فعاليات هذا الأسبوع",
 });
+
+// v2.44.134 — مفاتيح أُضيفت أثناء Event/Buffet المرحلة 1-2 ولم تُترجم بعد.
+window.PCD.i18n.register('ar', {
+  buffet_cost_unreliable: "{n} عنصر بدون مردود وصفة محدد — التكلفة غير محتسبة، نسبة تكلفة الطعام أقل من الواقع.",
+  buffet_not_found: "البوفيه غير موجود",
+  buffet_status_none: "لم يتم تحديد سعر",
+  event_cancellation_policy: "سياسة الإلغاء",
+  event_cancellation_policy_hint: "مثال: استرداد كامل قبل 90+ يومًا، 50% بين 30-89 يومًا، بدون استرداد أقل من 30 يومًا.",
+  event_done: "منجز",
+  event_guaranteed_short: "مضمون",
+  event_overpaid: "مدفوع زيادة",
+  event_send_proposal: "إرسال العرض / التوقيع",
+  event_send_signing_link: "إرسال رابط التوقيع",
+  event_sign_already: "تم توقيع هذا العرض بالفعل.",
+  event_sign_error: "تعذر إرسال التوقيع. يرجى المحاولة مرة أخرى.",
+  event_sign_heading: "وقّع للموافقة على هذا العرض",
+  event_sign_submit: "توقيع وإرسال",
+  event_sign_thanks: "شكرًا — تم تسجيل توقيعك.",
+  event_signing_link_copy: "نسخ الرابط",
+  event_signing_link_error: "تعذر إنشاء رابط التوقيع",
+  event_signing_link_hint: "أرسل رابطًا ليتمكن العميل من الاطلاع على العرض وتوقيعه عن بُعد — أو افتحه بنفسك على جهاز لوحي للتوقيع الحضوري.",
+  event_signing_link_paused: "متوقف مؤقتًا",
+  event_signing_link_pending: "بانتظار التوقيع",
+  event_signing_link_revoke: "إلغاء الرابط",
+  event_signing_link_signed: "تم التوقيع",
+  toast_event_not_found: "الفعالية غير موجودة",
+  ev_status_done: "مكتمل",
+  event_client_email: "بريد العميل الإلكتروني",
+  event_client_email_hint: "يُستخدم لإرسال نسخة تلقائية من العرض الموقّع إلى العميل بعد التوقيع.",
+});

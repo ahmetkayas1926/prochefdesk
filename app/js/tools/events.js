@@ -552,7 +552,7 @@
         <div class="flex items-center justify-between mb-2" style="flex-wrap:wrap;gap:8px;">
           <div>
             <div style="font-weight:800;font-size:18px;">${PCD.escapeHtml(existing.name || t('untitled'))}</div>
-            ${(existing.client || existing.contactName) ? '<div class="text-muted text-sm">' + [existing.client, existing.contactName, existing.contactPhone].filter(Boolean).map(function (x) { return PCD.escapeHtml(x); }).join(' · ') + '</div>' : ''}
+            ${(existing.client || existing.contactName) ? '<div class="text-muted text-sm">' + [existing.client, existing.contactName, existing.contactPhone, existing.clientEmail].filter(Boolean).map(function (x) { return PCD.escapeHtml(x); }).join(' · ') + '</div>' : ''}
           </div>
           <span class="chip" style="background:${statusColor(existing.status || 'draft')}20;color:${statusColor(existing.status || 'draft')};font-weight:700;">${PCD.escapeHtml(t('event_status_' + (existing.status || 'draft')))}</span>
         </div>
@@ -808,6 +808,12 @@
             <label class="field-label">${PCD.escapeHtml(t('event_contact_phone') || 'Contact phone')}</label>
             <input type="tel" class="input" id="ePhone" value="${PCD.escapeHtml(data.contactPhone || '')}" placeholder="+61 ...">
           </div>
+        </div>
+
+        <div class="field">
+          <label class="field-label">${PCD.escapeHtml(L('event_client_email', 'Client email'))}</label>
+          <div class="text-muted text-sm" style="font-size:12px;margin-bottom:4px;">${PCD.escapeHtml(L('event_client_email_hint', 'Used to send the client an automatic copy of the signed proposal once they sign.'))}</div>
+          <input type="email" class="input" id="eClientEmail" value="${PCD.escapeHtml(data.clientEmail || '')}" placeholder="client@example.com">
         </div>
 
         <div class="section" style="margin:8px 0 14px;">
@@ -1116,6 +1122,7 @@
       $('eClient').addEventListener('input', function () { data.client = this.value; });
       $('eContact').addEventListener('input', function () { data.contactName = this.value; });
       $('ePhone').addEventListener('input', function () { data.contactPhone = this.value; });
+      $('eClientEmail').addEventListener('input', function () { data.clientEmail = this.value; });
       $('eStatus').addEventListener('change', function () { data.status = this.value; });
       $('eCancelPolicy').addEventListener('input', function () { data.cancellationPolicy = this.value; });
       $('eNotes').addEventListener('input', function () { data.notes = this.value; });

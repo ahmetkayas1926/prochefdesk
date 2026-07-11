@@ -3610,3 +3610,33 @@ window.PCD.i18n.register('de', {
   roster_use_events: "Events dieser Woche verwenden ({amt})",
   roster_events_filled: "Wochenumsatz aus den Events dieser Woche aktualisiert",
 });
+
+// v2.44.134 — Während Event/Buffet Phase 1-2 hinzugefügte, nie übersetzte Schlüssel.
+window.PCD.i18n.register('de', {
+  buffet_cost_unreliable: "{n} Artikel ohne Rezeptausbeute — Kosten nicht erfasst, Food-Cost-% ist unterschätzt.",
+  buffet_not_found: "Buffet nicht gefunden",
+  buffet_status_none: "Kein Preis festgelegt",
+  event_cancellation_policy: "Stornierungsbedingungen",
+  event_cancellation_policy_hint: "z.B. Volle Rückerstattung 90+ Tage vorher, 50% 30-89 Tage, keine Rückerstattung unter 30 Tagen.",
+  event_done: "erledigt",
+  event_guaranteed_short: "garant.",
+  event_overpaid: "Überzahlt",
+  event_send_proposal: "Angebot senden / Unterschrift",
+  event_send_signing_link: "Unterschrift-Link senden",
+  event_sign_already: "Dieses Angebot wurde bereits unterschrieben.",
+  event_sign_error: "Unterschrift konnte nicht übermittelt werden. Bitte erneut versuchen.",
+  event_sign_heading: "Unterschreiben Sie, um dieses Angebot zu bestätigen",
+  event_sign_submit: "Unterschreiben & Senden",
+  event_sign_thanks: "Danke — Ihre Unterschrift wurde gespeichert.",
+  event_signing_link_copy: "Link kopieren",
+  event_signing_link_error: "Unterschrift-Link konnte nicht erstellt werden",
+  event_signing_link_hint: "Senden Sie einen Link, damit der Kunde das Angebot aus der Ferne einsehen und unterschreiben kann — oder öffnen Sie ihn selbst auf einem Tablet für eine persönliche Unterschrift.",
+  event_signing_link_paused: "Pausiert",
+  event_signing_link_pending: "Unterschrift ausstehend",
+  event_signing_link_revoke: "Link widerrufen",
+  event_signing_link_signed: "Unterschrieben",
+  toast_event_not_found: "Veranstaltung nicht gefunden",
+  ev_status_done: "abgeschlossen",
+  event_client_email: "E-Mail des Kunden",
+  event_client_email_hint: "Wird verwendet, um dem Kunden nach der Unterschrift automatisch eine Kopie des unterschriebenen Angebots zu senden.",
+});

@@ -3769,3 +3769,33 @@ window.PCD.i18n.register('tr', {
   roster_use_events: "Bu haftanın event'lerini kullan ({amt})",
   roster_events_filled: "Haftalık ciro bu haftanın event'lerinden güncellendi",
 });
+
+// v2.44.134 — Event/Buffet Faz 1-2 sırasında eklenen ama çevrilmemiş anahtarlar.
+window.PCD.i18n.register('tr', {
+  buffet_cost_unreliable: "{n} kalemde tarif verimi eksik — maliyet sayılmadı, food cost % olduğundan düşük görünüyor.",
+  buffet_not_found: "Büfe bulunamadı",
+  buffet_status_none: "Fiyat girilmemiş",
+  event_cancellation_policy: "İptal politikası",
+  event_cancellation_policy_hint: "örn. 90+ gün önce tam iade, 30-89 gün %50, 30 günden az iade yok.",
+  event_done: "tamamlandı",
+  event_guaranteed_short: "garanti",
+  event_overpaid: "Fazla ödendi",
+  event_send_proposal: "Teklif Gönder / İmza",
+  event_send_signing_link: "İmza linki gönder",
+  event_sign_already: "Bu teklif zaten imzalandı.",
+  event_sign_error: "İmza gönderilemedi. Lütfen tekrar deneyin.",
+  event_sign_heading: "Bu teklifi onaylamak için imzalayın",
+  event_sign_submit: "İmzala & Gönder",
+  event_sign_thanks: "Teşekkürler — imzanız kaydedildi.",
+  event_signing_link_copy: "Linki kopyala",
+  event_signing_link_error: "İmza linki oluşturulamadı",
+  event_signing_link_hint: "Müşterinin teklifi uzaktan görüp imzalaması için link gönder — ya da yüz yüze imza için kendi tabletinde aç.",
+  event_signing_link_paused: "Duraklatıldı",
+  event_signing_link_pending: "İmza bekleniyor",
+  event_signing_link_revoke: "Linki iptal et",
+  event_signing_link_signed: "İmzalandı",
+  toast_event_not_found: "Etkinlik bulunamadı",
+  ev_status_done: "tamamlandı",
+  event_client_email: "Müşteri e-postası",
+  event_client_email_hint: "Müşteri imzaladığında imzalı teklifin otomatik kopyasını göndermek için kullanılır.",
+});

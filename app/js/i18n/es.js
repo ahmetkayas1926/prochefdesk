@@ -3610,3 +3610,33 @@ window.PCD.i18n.register('es', {
   roster_use_events: "Usar los eventos de esta semana ({amt})",
   roster_events_filled: "Ventas semanales actualizadas desde los eventos de esta semana",
 });
+
+// v2.44.134 — Claves añadidas durante Event/Buffet Fase 1-2 sin traducir.
+window.PCD.i18n.register('es', {
+  buffet_cost_unreliable: "{n} artículo(s) sin rendimiento de receta — coste no contabilizado, el % de food cost está subestimado.",
+  buffet_not_found: "Buffet no encontrado",
+  buffet_status_none: "Sin precio establecido",
+  event_cancellation_policy: "Política de cancelación",
+  event_cancellation_policy_hint: "ej. Reembolso completo 90+ días antes, 50% 30-89 días, sin reembolso menos de 30 días.",
+  event_done: "hecho",
+  event_guaranteed_short: "garant.",
+  event_overpaid: "Pagado en exceso",
+  event_send_proposal: "Enviar propuesta / firma",
+  event_send_signing_link: "Enviar enlace de firma",
+  event_sign_already: "Esta propuesta ya ha sido firmada.",
+  event_sign_error: "No se pudo enviar la firma. Inténtalo de nuevo.",
+  event_sign_heading: "Firme para aprobar esta propuesta",
+  event_sign_submit: "Firmar y enviar",
+  event_sign_thanks: "Gracias — su firma ha sido registrada.",
+  event_signing_link_copy: "Copiar enlace",
+  event_signing_link_error: "No se pudo crear el enlace de firma",
+  event_signing_link_hint: "Envíe un enlace para que el cliente vea y firme la propuesta a distancia — o ábralo usted mismo en una tablet para firmar en persona.",
+  event_signing_link_paused: "Pausado",
+  event_signing_link_pending: "Esperando firma",
+  event_signing_link_revoke: "Revocar enlace",
+  event_signing_link_signed: "Firmado",
+  toast_event_not_found: "Evento no encontrado",
+  ev_status_done: "completado",
+  event_client_email: "Email del cliente",
+  event_client_email_hint: "Se usa para enviar al cliente una copia automática de la propuesta firmada al firmarla.",
+});

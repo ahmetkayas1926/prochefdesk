@@ -3798,3 +3798,15 @@ window.PCD.i18n.register('en', {
   ri_xlsx_subtitle: "One row per ingredient. Write the recipe name + its details ONCE on the first row, then leave them blank for the rest of its ingredients. Type \"prep\" marks a sub-recipe; Yield (e.g. \"4 portion\") = how much a prep makes. A name matching another recipe links as a sub-recipe. See the \"Lists\" tab. Delete the example rows before importing.",
   ri_xlsx_title: "Recipe Template",
 });
+
+// v2.44.134 — Event/Buffet Faz 1-2 sırasında eklenen ama en.js'e hiç
+// girmemiş anahtarlar (missing key → raw key text leak riski).
+window.PCD.i18n.register('en', {
+  buffet_not_found: "Buffet not found",
+  event_done: "done",
+  event_send_proposal: "Send Proposal / Signing",
+  toast_event_not_found: "Event not found",
+  ev_status_done: "completed",
+  event_client_email: "Client email",
+  event_client_email_hint: "Used to send the client an automatic copy of the signed proposal once they sign.",
+});

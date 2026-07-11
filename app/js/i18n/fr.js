@@ -3610,3 +3610,33 @@ window.PCD.i18n.register('fr', {
   roster_use_events: "Utiliser les événements de la semaine ({amt})",
   roster_events_filled: "Ventes hebdo mises à jour depuis les événements de la semaine",
 });
+
+// v2.44.134 — Clés ajoutées pendant Event/Buffet Phase 1-2, jamais traduites.
+window.PCD.i18n.register('fr', {
+  buffet_cost_unreliable: "{n} article(s) sans rendement de recette — coût non comptabilisé, le % food cost est sous-estimé.",
+  buffet_not_found: "Buffet introuvable",
+  buffet_status_none: "Aucun prix défini",
+  event_cancellation_policy: "Politique d'annulation",
+  event_cancellation_policy_hint: "ex. Remboursement complet 90+ jours avant, 50% 30-89 jours, non remboursable sous 30 jours.",
+  event_done: "terminé",
+  event_guaranteed_short: "garant.",
+  event_overpaid: "Trop-perçu",
+  event_send_proposal: "Envoyer la proposition / signature",
+  event_send_signing_link: "Envoyer le lien de signature",
+  event_sign_already: "Cette proposition a déjà été signée.",
+  event_sign_error: "Impossible d'envoyer la signature. Veuillez réessayer.",
+  event_sign_heading: "Signez pour approuver cette proposition",
+  event_sign_submit: "Signer et envoyer",
+  event_sign_thanks: "Merci — votre signature a été enregistrée.",
+  event_signing_link_copy: "Copier le lien",
+  event_signing_link_error: "Impossible de créer le lien de signature",
+  event_signing_link_hint: "Envoyez un lien pour que le client consulte et signe la proposition à distance — ou ouvrez-le vous-même sur une tablette pour une signature en personne.",
+  event_signing_link_paused: "En pause",
+  event_signing_link_pending: "En attente de signature",
+  event_signing_link_revoke: "Révoquer le lien",
+  event_signing_link_signed: "Signé",
+  toast_event_not_found: "Événement introuvable",
+  ev_status_done: "terminé",
+  event_client_email: "Email du client",
+  event_client_email_hint: "Utilisé pour envoyer au client une copie automatique de la proposition signée dès qu'il signe.",
+});
