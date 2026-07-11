@@ -3639,4 +3639,8 @@ window.PCD.i18n.register('es', {
   ev_status_done: "completado",
   event_client_email: "Email del cliente",
   event_client_email_hint: "Se usa para enviar al cliente una copia automática de la propuesta firmada al firmarla.",
+  event_notes_internal: "Notas de cocina (internas — nunca se muestran al cliente)",
+  event_notes_internal_hint: "Solo para tu equipo. Aparece en el BEO y en tu propia Vista previa — nunca en la Propuesta del cliente ni en la página de firma.",
+  event_notes_client: "Términos para el cliente (se muestran en la Propuesta firmada)",
+  event_notes_client_hint: "El cliente verá y firmará esto. Escribe aquí solo información/términos dirigidos a él.",
 });

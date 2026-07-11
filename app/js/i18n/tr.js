@@ -3798,4 +3798,8 @@ window.PCD.i18n.register('tr', {
   ev_status_done: "tamamlandı",
   event_client_email: "Müşteri e-postası",
   event_client_email_hint: "Müşteri imzaladığında imzalı teklifin otomatik kopyasını göndermek için kullanılır.",
+  event_notes_internal: "Mutfak notu (iç — müşteriye asla gösterilmez)",
+  event_notes_internal_hint: "Yalnız senin ekibin için. BEO'da ve kendi Preview ekranında görünür — müşteri teklifinde veya imza sayfasında asla.",
+  event_notes_client: "Müşteriye yönelik şartlar (imzalanan teklifte gösterilir)",
+  event_notes_client_hint: "Müşteri bunu görüp imzalayacak. Yalnız ona yönelik şart/bilgi yaz.",
 });

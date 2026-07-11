@@ -57,6 +57,21 @@
     const a = PCD.allergensDB && PCD.allergensDB.getByKey(k);
     return a ? (a.icon + ' ' + k.charAt(0).toUpperCase() + k.slice(1)) : k;
   }
+  // v2.44.136 — Menüye doğrudan ingredient eklerken kişi-başı makul varsayılan.
+  // Eskiden yalnız 'g'/'ml' özel işlenip her BAŞKA birim (kg, l, oz, lb...) düz
+  // "1" alıyordu — kg'lık bir malzeme "1 kg/kişi" olup 120 kişilik event'te
+  // 120kg/$3,360 gibi saçma bir tutar üretiyordu (buffet.js'te de aynı kusur var,
+  // bu düzeltme yalnız events.js kapsamında — operatör talebi). Ağırlık/hacim
+  // birimlerinde 30g/50ml dengi hedef birime çevrilir; adet-bazlı (pcs, portion,
+  // bottle...) birimlerde 1 kalır.
+  function ingredientDefaultPerGuest(unit) {
+    const grp = PCD.unitGroup ? PCD.unitGroup(unit) : null;
+    try {
+      if (grp === 'mass') return Math.round(PCD.convertUnit(30, 'g', unit) * 1000) / 1000;
+      if (grp === 'volume') return Math.round(PCD.convertUnit(50, 'ml', unit) * 1000) / 1000;
+    } catch (e) {}
+    return 1;
+  }
   // v2.44.88 — fn.menu öğesi recipe VEYA ingredient olabilir. Maliyet tek noktadan.
   // Recipe: tarif maliyeti × (toplam porsiyon / servings). Ingredient: birim fiyat (yield'li)
   // × kişi-başı miktar (ingredient birimine çevrili) × kişi. (Buffet ingredient-path ile aynı.)
@@ -573,7 +588,8 @@
         ${(existing.timeline && existing.timeline.length) ? '<div class="section-title mb-2">' + PCD.escapeHtml(L('event_timeline', 'Run-of-show')) + '</div><div class="text-muted text-sm" style="margin-bottom:12px;">' + existing.timeline.map(function (x) { return PCD.escapeHtml(x.time || '') + ' ' + PCD.escapeHtml(x.label || ''); }).join(' · ') + '</div>' : ''}
         ${(existing.tasks && existing.tasks.length) ? '<div class="section-title mb-2">' + PCD.escapeHtml(L('event_tasks', 'Tasks')) + '</div><div class="text-muted text-sm" style="margin-bottom:12px;">' + existing.tasks.filter(function (x) { return x.done; }).length + '/' + existing.tasks.length + ' ' + PCD.escapeHtml(t('event_done') || 'done') + '</div>' : ''}
         ${existing.cancellationPolicy ? '<div class="section-title mb-2">' + PCD.escapeHtml(t('event_cancellation_policy') || 'Cancellation policy') + '</div><div class="text-muted text-sm" style="margin-bottom:12px;white-space:pre-wrap;">' + PCD.escapeHtml(existing.cancellationPolicy) + '</div>' : ''}
-        ${existing.notes ? '<div class="section-title mb-2">' + PCD.escapeHtml(t('event_notes')) + '</div><div class="text-muted text-sm" style="margin-bottom:12px;white-space:pre-wrap;">' + PCD.escapeHtml(existing.notes) + '</div>' : ''}
+        ${existing.notes ? '<div class="section-title mb-2">🔒 ' + PCD.escapeHtml(L('event_notes_internal', 'Kitchen notes (internal — never shown to client)')) + '</div><div class="text-muted text-sm" style="margin-bottom:12px;white-space:pre-wrap;">' + PCD.escapeHtml(existing.notes) + '</div>' : ''}
+        ${existing.clientNotes ? '<div class="section-title mb-2">🤝 ' + PCD.escapeHtml(L('event_notes_client', 'Client-facing terms (shown on the signed Proposal)')) + '</div><div class="text-muted text-sm" style="margin-bottom:12px;white-space:pre-wrap;">' + PCD.escapeHtml(existing.clientNotes) + '</div>' : ''}
 
         <div style="margin-top:8px;padding:12px 14px;background:var(--surface-2);border-radius:var(--r-md);border:1px solid var(--border);">
           <div style="font-weight:700;font-size:14px;margin-bottom:8px;">🔗 ${PCD.escapeHtml(t('event_send_proposal') || 'Send Proposal / Signing')}</div>
@@ -921,8 +937,15 @@
         </div>
 
         <div class="field">
-          <label class="field-label">${t('event_notes')}</label>
+          <label class="field-label">🔒 ${PCD.escapeHtml(L('event_notes_internal', 'Kitchen notes (internal — never shown to client)'))}</label>
+          <div class="field-hint">${PCD.escapeHtml(L('event_notes_internal_hint', 'For your team only. Appears on the BEO and your own Preview — never on the client Proposal or signing page.'))}</div>
           <textarea class="textarea" id="eNotes" rows="2">${PCD.escapeHtml(data.notes || '')}</textarea>
+        </div>
+
+        <div class="field">
+          <label class="field-label">🤝 ${PCD.escapeHtml(L('event_notes_client', 'Client-facing terms (shown on the signed Proposal)'))}</label>
+          <div class="field-hint">${PCD.escapeHtml(L('event_notes_client_hint', 'The client will see and sign this. Only put terms/info meant for them here.'))}</div>
+          <textarea class="textarea" id="eClientNotes" rows="2">${PCD.escapeHtml(data.clientNotes || '')}</textarea>
         </div>
       `;
 
@@ -1126,6 +1149,7 @@
       $('eStatus').addEventListener('change', function () { data.status = this.value; });
       $('eCancelPolicy').addEventListener('input', function () { data.cancellationPolicy = this.value; });
       $('eNotes').addEventListener('input', function () { data.notes = this.value; });
+      $('eClientNotes').addEventListener('input', function () { data.clientNotes = this.value; });
       $('ePrice').addEventListener('input', PCD.debounce(function () { data.pricePerHead = parseFloat(this.value) || null; render(); }, 400));
       $('eBudget').addEventListener('input', PCD.debounce(function () { data.budget = parseFloat(this.value) || null; render(); }, 400));
       $('eSvc').addEventListener('input', PCD.debounce(function () { data.serviceChargePct = Math.min(100, parseFloat(this.value) || 0) || null; render(); }, 400));
@@ -1252,8 +1276,7 @@
             if (idType[id] === 'ingredient') {
               const ing = ingById[id];
               const u = (ing && ing.unit) || 'g';
-              const dflt = (u === 'g' || u === 'ml') ? 100 : 1;   // makul başlangıç (gram/ml=100, adet=1)
-              return { ingredientId: id, amountPerGuest: dflt, unit: u };
+              return { ingredientId: id, amountPerGuest: ingredientDefaultPerGuest(u), unit: u };
             }
             return { recipeId: id, portionsPerGuest: 1 };
           });
@@ -1366,9 +1389,11 @@
         lines.push(stats.balanceDue < 0 ? (t('event_overpaid') || 'Overpaid') + ': ' + PCD.fmtMoney(Math.abs(stats.balanceDue)) : (t('event_balance_due') || 'Balance due') + ': ' + PCD.fmtMoney(stats.balanceDue));
       }
     }
-    if (event.notes) {
+    // v2.44.137 — YALNIZ clientNotes: bu metin doğrudan müşteriye gidiyor (WhatsApp/Email),
+    // iç mutfak notu (event.notes) buraya asla girmemeli.
+    if (event.clientNotes) {
       lines.push('');
-      lines.push((t('ev_print_notes') || 'Notes') + ': ' + event.notes);
+      lines.push((t('ev_print_notes') || 'Notes') + ': ' + event.clientNotes);
     }
     return lines.join('\n');
   }
@@ -1674,7 +1699,10 @@
       : '') +
       payHtml +
       (event.cancellationPolicy ? '<div class="pr-h2">' + PCD.escapeHtml(t('event_cancellation_policy') || 'Cancellation policy') + '</div><div class="pr-terms">' + PCD.escapeHtml(event.cancellationPolicy) + '</div>' : '') +
-      (event.notes ? '<div class="pr-h2">' + PCD.escapeHtml(t('event_terms') || 'Terms & notes') + '</div><div class="pr-terms">' + PCD.escapeHtml(event.notes) + '</div>' : '') +
+      // v2.44.137 — YALNIZ clientNotes (şefin ayrıca işaretlediği müşteriye-yönelik metin).
+      // event.notes ARTIK BURADA KULLANILMAZ — o iç/mutfak notu, müşteriye asla gitmemeli
+      // (bkz operatör bildirimi: tek "Notes" alanı iç talimatı müşteriye sızdırıyordu).
+      (event.clientNotes ? '<div class="pr-h2">' + PCD.escapeHtml(t('event_terms') || 'Terms & notes') + '</div><div class="pr-terms">' + PCD.escapeHtml(event.clientNotes) + '</div>' : '') +
       '<div class="pr-sign">' +
         '<div class="pr-sig">' +
           ((event.signature && event.signature.dataUrl)

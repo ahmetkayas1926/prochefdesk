@@ -3809,4 +3809,8 @@ window.PCD.i18n.register('en', {
   ev_status_done: "completed",
   event_client_email: "Client email",
   event_client_email_hint: "Used to send the client an automatic copy of the signed proposal once they sign.",
+  event_notes_internal: "Kitchen notes (internal — never shown to client)",
+  event_notes_internal_hint: "For your team only. Appears on the BEO and your own Preview — never on the client Proposal or signing page.",
+  event_notes_client: "Client-facing terms (shown on the signed Proposal)",
+  event_notes_client_hint: "The client will see and sign this. Only put terms/info meant for them here.",
 });

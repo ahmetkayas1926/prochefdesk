@@ -3639,4 +3639,8 @@ window.PCD.i18n.register('de', {
   ev_status_done: "abgeschlossen",
   event_client_email: "E-Mail des Kunden",
   event_client_email_hint: "Wird verwendet, um dem Kunden nach der Unterschrift automatisch eine Kopie des unterschriebenen Angebots zu senden.",
+  event_notes_internal: "Küchennotizen (intern — dem Kunden nie gezeigt)",
+  event_notes_internal_hint: "Nur für Ihr Team. Erscheint im BEO und in Ihrer eigenen Vorschau — nie im Kundenangebot oder auf der Unterschriftsseite.",
+  event_notes_client: "Kundenbedingungen (im unterschriebenen Angebot angezeigt)",
+  event_notes_client_hint: "Der Kunde sieht und unterschreibt dies. Schreiben Sie hier nur für ihn bestimmte Bedingungen/Infos.",
 });

@@ -3639,4 +3639,8 @@ window.PCD.i18n.register('fr', {
   ev_status_done: "terminé",
   event_client_email: "Email du client",
   event_client_email_hint: "Utilisé pour envoyer au client une copie automatique de la proposition signée dès qu'il signe.",
+  event_notes_internal: "Notes de cuisine (internes — jamais montrées au client)",
+  event_notes_internal_hint: "Pour votre équipe uniquement. Apparaît sur le BEO et votre propre Aperçu — jamais sur la Proposition client ni la page de signature.",
+  event_notes_client: "Conditions pour le client (affichées sur la Proposition signée)",
+  event_notes_client_hint: "Le client verra et signera ceci. N'écrivez ici que des conditions/infos destinées à lui.",
 });
