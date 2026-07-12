@@ -486,6 +486,12 @@
   // v2.8.79 — 3 item tipi: (1) recipe-bound, (2) ingredient-bound, (3) custom name only.
   // ingredient-bound: ing.pricePerUnit × prep amount (sub-recipe cost cascade yok).
   // custom name only: cost = 0 (chef sadece "label" eklemiş, fiyat girmemiş).
+  // v2.44.143 — zincirli çarpım/bölmeler (cover×prepFactor×perGuest×refill, birim
+  // dönüşümü, yield% bölmesi) JS float gürültüsü üretir (örn. 21.599999999999998).
+  // Tek kaynak burada round edilir → ekran/Excel/print/shopping-list/deduct-stock
+  // hepsi temiz değer alır (Excel'de numFmt yalnız GÖRÜNÜMÜ yuvarlar, ham hücre
+  // değeri formül çubuğunda/CSV'de/başka hesapta gürültülü kalırdı — kök neden burada).
+  const _r2 = function (n) { return Math.round((Number(n) || 0) * 100) / 100; };
   function computeItemCost(item, recipe, ingMap, recipeMap, coverCount, refillX, ingredient, prepFactor, stationType) {
     if (!item) return { prepAmount: 0, prepCost: 0, expectedConsume: 0, expectedWaste: 0, wastePct: 0, shortfall: false };
     const perGuest = Number(item.amountPerGuest) || 0;
@@ -514,10 +520,10 @@
       const consumeCost = effectivePrice * consumeInIngUnit;
       const expectedWaste = Math.max(0, prepCost - consumeCost);
       return {
-        prepAmount: prepAmount, prepCost: prepCost,
-        expectedConsume: expectedConsume, expectedConsumeCost: consumeCost,
-        expectedWaste: expectedWaste,
-        wastePct: prepCost > 0 ? (expectedWaste / prepCost) * 100 : 0,
+        prepAmount: _r2(prepAmount), prepCost: _r2(prepCost),
+        expectedConsume: _r2(expectedConsume), expectedConsumeCost: _r2(consumeCost),
+        expectedWaste: _r2(expectedWaste),
+        wastePct: prepCost > 0 ? _r2((expectedWaste / prepCost) * 100) : 0,
         shortfall: shortfall,
       };
     }
@@ -541,10 +547,10 @@
       const consumeCost = totalRecipeCost * ssC.scale;
       const expectedWaste = Math.max(0, prepCost - consumeCost);
       return {
-        prepAmount: prepAmount, prepCost: prepCost,
-        expectedConsume: expectedConsume, expectedConsumeCost: consumeCost,
-        expectedWaste: expectedWaste,
-        wastePct: prepCost > 0 ? (expectedWaste / prepCost) * 100 : 0,
+        prepAmount: _r2(prepAmount), prepCost: _r2(prepCost),
+        expectedConsume: _r2(expectedConsume), expectedConsumeCost: _r2(consumeCost),
+        expectedWaste: _r2(expectedWaste),
+        wastePct: prepCost > 0 ? _r2((expectedWaste / prepCost) * 100) : 0,
         shortfall: shortfall,
         costReliable: ssP.reliable,
       };
@@ -552,8 +558,8 @@
 
     // === Path C: custom-name item (no recipe, no ingredient) → 0 cost ===
     return {
-      prepAmount: prepAmount, prepCost: 0,
-      expectedConsume: expectedConsume, expectedConsumeCost: 0,
+      prepAmount: _r2(prepAmount), prepCost: 0,
+      expectedConsume: _r2(expectedConsume), expectedConsumeCost: 0,
       expectedWaste: 0, wastePct: 0, shortfall: shortfall,
     };
   }
@@ -607,14 +613,14 @@
     return {
       coverCount: coverCount,
       ticketPrice: ticketPrice,
-      revenue: revenue,
-      totalPrepCost: totalPrepCost,
-      totalExpectedWaste: totalExpectedWaste,
-      totalWastePct: totalWastePct,
+      revenue: _r2(revenue),
+      totalPrepCost: _r2(totalPrepCost),
+      totalExpectedWaste: _r2(totalExpectedWaste),
+      totalWastePct: _r2(totalWastePct),
       wasteStatus: wasteStatus,
-      perGuestCost: perGuestCost,
-      foodCostPct: foodCostPct,
-      profitPerCover: profitPerCover,
+      perGuestCost: _r2(perGuestCost),
+      foodCostPct: _r2(foodCostPct),
+      profitPerCover: _r2(profitPerCover),
       itemCount: itemCount,
       prepFactor: prepFactor,
       prepCovers: Math.round(coverCount * prepFactor),
