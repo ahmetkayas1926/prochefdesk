@@ -20,6 +20,8 @@
   // v2.44.91 — satış hattı: draft(talep) → tentative(teklif/opsiyon) → confirmed → done → cancelled.
   const STATUSES = ['draft', 'tentative', 'confirmed', 'done', 'cancelled'];
   let _evFilter = 'all';   // liste durum filtresi (oturum içi)
+  let _evSignFilter = 'all';  // v2.44.142 — imza durumu filtresi: all | awaiting | signed
+  let _signMap = null;     // v2.44.142 — {eventId:{signed,paused}} son toplu sorgu cache'i
   let _evView = 'list';    // v2.44.93 — liste / takvim görünümü
   let _calCursor = null;   // takvimde gösterilen ay (Date); null = bu ay
   // v2.44.94 — Güvenli i18n: t(key) eksik key'de key'in KENDİSİNİ döndürür (truthy) →
@@ -153,19 +155,26 @@
 
   // v2.44.141 — Liste ekranı imza-durumu rozeti (event ismi yanında). Tek toplu
   // sorgu (tüm event'ler için N+1 sorgu YAPILMAZ) — sonuç DOM'a doğrudan patch
-  // edilir, tam re-render tetiklenmez (filtre/scroll durumu bozulmaz).
-  function refreshListSignBadges(listEl) {
+  // edilir, tam re-render tetiklenmez (filtre/scroll durumu bozulmaz). v2.44.142 —
+  // sonuç ayrıca _signMap cache'ine yazılır ("İmza bekleniyor"/"İmzalandı" filtre
+  // çipleri bunu okur); cache ilk kez doluyorsa (sayfa yeni açıldıysa) çip sayaçlarının
+  // ve aktif filtrenin güncel veriyle eşleşmesi için TEK SEFERLİK bir render(view) daha
+  // tetiklenir — sonraki her fetch'te tekrar render ETMEZ (sonsuz döngü riski yok).
+  function refreshListSignBadges(listEl, view) {
     if (!PCD.cloud || !PCD.cloud.ready) return;
     const supabase = window._supabaseClient;
     const user = PCD.store.get('user');
     if (!supabase || !user || !user.id) return;
     const t = PCD.i18n.t;
+    const hadMap = !!_signMap;
     supabase.from('public_shares')
       .select('source_id, signed_at, paused')
       .eq('owner_id', user.id).eq('kind', 'event').eq('share_mode', 'sign')
       .then(function (res) {
         if (res.error || !res.data) return;
+        const map = {};
         res.data.forEach(function (r) {
+          map[r.source_id] = { signed: !!r.signed_at, paused: !!r.paused };
           const badge = listEl.querySelector('[data-sign-badge="' + r.source_id + '"]');
           if (!badge) return;
           if (r.signed_at) {
@@ -174,6 +183,8 @@
             badge.innerHTML = '<span class="chip" style="background:#fef3c7;color:#b45309;font-weight:700;font-size:11px;">✉ ' + PCD.escapeHtml(t('event_signing_link_pending') || 'Awaiting signature') + '</span>';
           }
         });
+        _signMap = map;
+        if (!hadMap && view) render(view);
       }).catch(function () {});
   }
 
@@ -198,6 +209,25 @@
       return '<button class="btn btn-sm ' + (_evFilter === c.k ? 'btn-primary' : 'btn-outline') + '" data-evf="' + c.k + '" style="min-height:30px;">' + PCD.escapeHtml(c.label) + ' (' + (counts[c.k] || 0) + ')</button>';
     }).join('');
 
+    // v2.44.142 — imza durumu filtresi: "Awaiting signature" / "Signed" — event
+    // lifecycle status'undan (yukarıdaki chipDefs) BAĞIMSIZ, ayrı bir çip grubu.
+    // _signMap boşsa (henüz hiç signing link oluşturulmamışsa) hiç gösterilmez.
+    const signCounts = { awaiting: 0, signed: 0 };
+    if (_signMap) {
+      Object.keys(_signMap).forEach(function (id) {
+        const s = _signMap[id];
+        if (s.signed) signCounts.signed++; else if (!s.paused) signCounts.awaiting++;
+      });
+    }
+    const hasSignData = !!(_signMap && Object.keys(_signMap).length);
+    const signChipDefs = [
+      { k: 'awaiting', icon: '✉', label: L('event_signing_link_pending', 'Awaiting signature') },
+      { k: 'signed', icon: '✓', label: t('event_signing_link_signed') || 'Signed' },
+    ];
+    const signChipsHtml = signChipDefs.map(function (c) {
+      return '<button class="btn btn-sm ' + (_evSignFilter === c.k ? 'btn-primary' : 'btn-outline') + '" data-evsignf="' + c.k + '" style="min-height:30px;">' + c.icon + ' ' + PCD.escapeHtml(c.label) + ' (' + signCounts[c.k] + ')</button>';
+    }).join('');
+
     view.innerHTML = `
       <div class="page-header">
         <div class="page-header-text">
@@ -213,7 +243,8 @@
         </div>
       </div>
       ${PCD.guideCard('events', t('events_g_t'), [t('events_g1'), t('events_g2'), t('events_g3')])}
-      ${allEvents.length ? '<div id="evFilters" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">' + chipsHtml + '</div>' : ''}
+      ${allEvents.length ? '<div id="evFilters" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:' + (hasSignData ? '6px' : '14px') + ';">' + chipsHtml + '</div>' : ''}
+      ${(allEvents.length && hasSignData) ? '<div id="evSignFilters" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">' + signChipsHtml + '</div>' : ''}
       <div id="eventList"></div>
     `;
 
@@ -233,7 +264,15 @@
       PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
       PCD.store.listRecipes().forEach(function (r) { recipeMap[r.id] = r; });
 
-      const events = allEvents.filter(function (e) { return _evFilter === 'all' || (e.status || 'draft') === _evFilter; });
+      let events = allEvents.filter(function (e) { return _evFilter === 'all' || (e.status || 'draft') === _evFilter; });
+      if (_evSignFilter !== 'all') {
+        events = events.filter(function (e) {
+          const s = _signMap && _signMap[e.id];
+          if (_evSignFilter === 'awaiting') return !!s && !s.signed && !s.paused;
+          if (_evSignFilter === 'signed') return !!s && s.signed;
+          return true;
+        });
+      }
       if (_evView === 'calendar') {
         renderCalendar(listEl, events);
       } else {
@@ -297,11 +336,16 @@
         cont.innerHTML = '<div class="text-muted" style="padding:24px;text-align:center;">' + PCD.escapeHtml(L('event_filter_none', 'No events in this status.')) + '</div>';
       }
       listEl.appendChild(cont);
-      refreshListSignBadges(listEl);
+      refreshListSignBadges(listEl, view);
       }
     }
 
     PCD.on(view, 'click', '[data-evf]', function () { _evFilter = this.getAttribute('data-evf'); render(view); });
+    PCD.on(view, 'click', '[data-evsignf]', function () {
+      const k = this.getAttribute('data-evsignf');
+      _evSignFilter = (_evSignFilter === k) ? 'all' : k;  // aynı çipe tekrar tıklayınca filtre kalkar
+      render(view);
+    });
     PCD.on(view, 'click', '[data-evview]', function () { _evView = this.getAttribute('data-evview'); render(view); });
     PCD.on(view, 'click', '[data-calnav]', function () { const dir = parseInt(this.getAttribute('data-calnav'), 10); const cur = _calCursor || new Date(); _calCursor = dir === 0 ? new Date() : new Date(cur.getFullYear(), cur.getMonth() + dir, 1); render(view); });
     PCD.on(view, 'click', '[data-cal-eid]', function () { openPreview(this.getAttribute('data-cal-eid')); });
