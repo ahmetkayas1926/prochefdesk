@@ -493,11 +493,16 @@
         return '<div class="text-muted text-sm" style="margin-bottom:8px;">' + PCD.escapeHtml(t('event_signing_link_hint') || 'Send a link so the client can view and sign the proposal remotely — or open it yourself on a tablet for in-person signing.') + '</div>' +
           '<button type="button" class="btn btn-outline btn-sm" id="pvSignLinkSendBtn">🔗 ' + PCD.escapeHtml(t('event_send_signing_link') || 'Send signing link') + '</button>';
       }
+      const locale = (PCD.i18n && PCD.i18n.currentLocale) || 'en';
+      const signedDateStr = signLinkState.signedAt ? new Date(signLinkState.signedAt).toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+      // v2.44.139 — İmza durumu, event lifecycle status'undan (draft/confirmed/done)
+      // BAĞIMSIZ, ayrı bir rozet — ikisi asla karıştırılmaz (bir event aynı anda
+      // "Confirmed" hem de "Signed" olabilir).
       const statusBit = signLinkState.signed
-        ? '<span style="color:#15803d;font-weight:600;">✓ ' + PCD.escapeHtml(t('event_signing_link_signed') || 'Signed') + (signLinkState.signedBy ? ' · ' + PCD.escapeHtml(signLinkState.signedBy) : '') + '</span>'
+        ? '<span class="chip" style="background:#dcfce7;color:#15803d;font-weight:700;">✓ ' + PCD.escapeHtml(t('event_signing_link_signed') || 'Signed') + (signLinkState.signedBy ? ' · ' + PCD.escapeHtml(signLinkState.signedBy) : '') + (signedDateStr ? ' · ' + PCD.escapeHtml(signedDateStr) : '') + '</span>'
         : (signLinkState.paused
-            ? '<span style="color:#b45309;font-weight:600;">⏸ ' + PCD.escapeHtml(t('event_signing_link_paused') || 'Paused') + '</span>'
-            : '<span style="color:#b45309;">' + PCD.escapeHtml(t('event_signing_link_pending') || 'Awaiting signature') + '</span>');
+            ? '<span class="chip" style="background:#fef3c7;color:#b45309;font-weight:700;">⏸ ' + PCD.escapeHtml(t('event_signing_link_paused') || 'Paused') + '</span>'
+            : '<span class="chip" style="background:#fef3c7;color:#b45309;font-weight:700;">✉ ' + PCD.escapeHtml(t('event_signing_link_pending') || 'Awaiting signature') + '</span>');
       return '<div class="text-muted text-sm" style="margin-bottom:8px;word-break:break-all;">' + PCD.escapeHtml(signLinkState.url) + '</div>' +
         '<div style="margin-bottom:8px;">' + statusBit + '</div>' +
         '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
@@ -525,6 +530,7 @@
               paused: !!res.data.paused,
               signed: !!res.data.signed_at,
               signedBy: res.data.signed_by || '',
+              signedAt: res.data.signed_at || '',
             };
           }
           render();
@@ -602,17 +608,42 @@
 
     function wireSignLink() {
       const sendBtn = body.querySelector('#pvSignLinkSendBtn');
+      // v2.44.139 — "Send signing link" artık yalnız link üretmiyor, gerçekten
+      // Client email'e gönderiyor (send-proposal-email edge fn). Göndermeden
+      // önce şefe hangi adrese gittiğini gösteren bir onay popup'ı çıkar.
       if (sendBtn) sendBtn.addEventListener('click', function () {
         if (!PCD.share || !PCD.share.createOrGetShareUrl) return;
         if (PCD.gate && !PCD.gate.requireShare()) return;
-        signLinkState = { loading: true };
-        render();
-        PCD.share.createOrGetShareUrl('event', existing.id, 'sign').then(function () {
-          refreshSignLinkState();
-        }).catch(function (e) {
-          signLinkState = { url: null };
+        const clientEmail = (existing.clientEmail || '').trim();
+        if (!clientEmail) {
+          PCD.toast.error(t('event_signing_link_no_email') || 'Add a client email in Edit first');
+          return;
+        }
+        PCD.modal.confirm({
+          icon: '✉', iconKind: 'info',
+          title: t('event_send_proposal_confirm_title') || 'Send proposal?',
+          text: (t('event_send_proposal_confirm_text') || 'This will email the signing link to:') + '\n' + clientEmail,
+          okText: t('event_send_signing_link') || 'Send signing link',
+        }).then(function (ok) {
+          if (!ok) return;
+          signLinkState = { loading: true };
           render();
-          PCD.toast.error((e && e.message) || (t('event_signing_link_error') || 'Could not create signing link'));
+          PCD.share.createOrGetShareUrl('event', existing.id, 'sign').then(function (url) {
+            const shareId = (url.split('share=')[1] || '').split('&')[0];
+            const supabase = window._supabaseClient;
+            return supabase.functions.invoke('send-proposal-email', { body: { share_id: shareId } }).then(function (res) {
+              if (res.error || !res.data || !res.data.sent) {
+                PCD.toast.error((res.data && res.data.error) || t('event_signing_link_send_error') || 'Could not send email');
+              } else {
+                PCD.toast.success((t('event_signing_link_sent') || 'Sent to') + ' ' + clientEmail);
+              }
+              refreshSignLinkState();
+            });
+          }).catch(function (e) {
+            signLinkState = { url: null };
+            render();
+            PCD.toast.error((e && e.message) || (t('event_signing_link_error') || 'Could not create signing link'));
+          });
         });
       });
       const copyBtn = body.querySelector('#pvSignLinkCopyBtn');

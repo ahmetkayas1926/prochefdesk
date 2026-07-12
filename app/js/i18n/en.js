@@ -3499,6 +3499,11 @@ window.PCD.i18n.register('en', {
   event_signing_link_hint: "Send a link so the client can view and sign the proposal remotely.",
   event_signing_link_paused: "Paused",
   event_signing_link_error: "Could not create signing link",
+  event_signing_link_no_email: "Add a client email in Edit first",
+  event_send_proposal_confirm_title: "Send proposal?",
+  event_send_proposal_confirm_text: "This will email the signing link to:",
+  event_signing_link_send_error: "Could not send email",
+  event_signing_link_sent: "Sent to",
   event_billed_guests: "Billed guests",
 });
 
