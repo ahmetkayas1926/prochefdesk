@@ -560,6 +560,7 @@
         const alg = fnMenuAllergens(fn, ingMap, recipeMap);
         const diet = fn.dietary || {};
         const dietParts = DIET_TYPES.filter(function (d) { return Number(diet[d.key]) > 0; }).map(function (d) { return diet[d.key] + ' ' + PCD.escapeHtml(t(d.labelKey) || d.key); });
+        if (fn.dietaryNote) dietParts.push(PCD.escapeHtml(fn.dietaryNote));
         fnHtml += '<div style="margin:10px 0;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-md);">' +
           '<div style="font-weight:700;">' + PCD.escapeHtml(title) + '</div>' +
           (sub ? '<div class="text-muted text-sm" style="margin-top:2px;">' + PCD.escapeHtml(sub) + '</div>' : '') +
@@ -633,10 +634,19 @@
             const supabase = window._supabaseClient;
             return supabase.functions.invoke('send-proposal-email', { body: { share_id: shareId } }).then(function (res) {
               if (res.error || !res.data || !res.data.sent) {
-                PCD.toast.error((res.data && res.data.error) || t('event_signing_link_send_error') || 'Could not send email');
-              } else {
-                PCD.toast.success((t('event_signing_link_sent') || 'Sent to') + ' ' + clientEmail);
+                // v2.44.140 — supabase-js non-2xx yanıtlarda res.data'yı null
+                // bırakabilir; gerçek hata mesajı res.error.context (ham Response)
+                // içinde kalır — okunabilirse onu göster, jenerik mesaja düşme.
+                const rawResp = res.error && res.error.context;
+                const readBody = (rawResp && typeof rawResp.json === 'function') ? rawResp.json().catch(function () { return null; }) : Promise.resolve(null);
+                return readBody.then(function (body) {
+                  const msg = (res.data && res.data.error) || (body && body.error) || (res.error && res.error.message) || '';
+                  PCD.toast.error(msg || t('event_signing_link_send_error') || 'Could not send email');
+                  PCD.err && PCD.err('send-proposal-email failed', res.error, body);
+                });
               }
+              PCD.toast.success((t('event_signing_link_sent') || 'Sent to') + ' ' + clientEmail);
+            }).then(function () {
               refreshSignLinkState();
             });
           }).catch(function (e) {
