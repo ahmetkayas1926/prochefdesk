@@ -151,6 +151,32 @@
     container.innerHTML = html;
   }
 
+  // v2.44.141 — Liste ekranı imza-durumu rozeti (event ismi yanında). Tek toplu
+  // sorgu (tüm event'ler için N+1 sorgu YAPILMAZ) — sonuç DOM'a doğrudan patch
+  // edilir, tam re-render tetiklenmez (filtre/scroll durumu bozulmaz).
+  function refreshListSignBadges(listEl) {
+    if (!PCD.cloud || !PCD.cloud.ready) return;
+    const supabase = window._supabaseClient;
+    const user = PCD.store.get('user');
+    if (!supabase || !user || !user.id) return;
+    const t = PCD.i18n.t;
+    supabase.from('public_shares')
+      .select('source_id, signed_at, paused')
+      .eq('owner_id', user.id).eq('kind', 'event').eq('share_mode', 'sign')
+      .then(function (res) {
+        if (res.error || !res.data) return;
+        res.data.forEach(function (r) {
+          const badge = listEl.querySelector('[data-sign-badge="' + r.source_id + '"]');
+          if (!badge) return;
+          if (r.signed_at) {
+            badge.innerHTML = '<span class="chip" style="background:#dcfce7;color:#15803d;font-weight:700;font-size:11px;">✓ ' + PCD.escapeHtml(t('event_signing_link_signed') || 'Signed') + '</span>';
+          } else if (!r.paused) {
+            badge.innerHTML = '<span class="chip" style="background:#fef3c7;color:#b45309;font-weight:700;font-size:11px;">✉ ' + PCD.escapeHtml(t('event_signing_link_pending') || 'Awaiting signature') + '</span>';
+          }
+        });
+      }).catch(function () {});
+  }
+
   function render(view) {
     const t = PCD.i18n.t;
     const allEvents = PCD.store.listTable('events').slice().sort(function (a, b) {
@@ -224,7 +250,10 @@
         row.innerHTML = `
           <div class="flex items-center justify-between mb-2">
             <div style="flex:1;min-width:0;">
-              <div style="font-weight:700;font-size:16px;letter-spacing:-0.01em;">${PCD.escapeHtml(e.name || t('untitled'))}</div>
+              <div style="font-weight:700;font-size:16px;letter-spacing:-0.01em;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                <span>${PCD.escapeHtml(e.name || t('untitled'))}</span>
+                <span data-sign-badge="${e.id}"></span>
+              </div>
               <div class="text-muted text-sm">
                 ${dateStr}
                 ${e.time ? ' · ' + PCD.escapeHtml(e.time) : ''}
@@ -268,6 +297,7 @@
         cont.innerHTML = '<div class="text-muted" style="padding:24px;text-align:center;">' + PCD.escapeHtml(L('event_filter_none', 'No events in this status.')) + '</div>';
       }
       listEl.appendChild(cont);
+      refreshListSignBadges(listEl);
       }
     }
 
