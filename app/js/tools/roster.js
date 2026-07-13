@@ -31,7 +31,8 @@
   const DAY_OPTIONS = [5, 6, 7];
 
   // v2.15.6 — Çıktı yazı boyutu (S/M/L) + kalınlık. data.fontSize / data.bold.
-  const FONT_SIZES = { s: 11, m: 13, l: 15 };
+  // v2.44.144 — xxs/xs eklendi (operatör talebi: daha kompakt print/çıktı).
+  const FONT_SIZES = { xxs: 7, xs: 9, s: 11, m: 13, l: 15 };
   function fontPx(data) { return FONT_SIZES[(data && data.fontSize) || 'm'] || 13; }
 
   let _jszipPromise = null;     // v2.15.6 — JSZip lazy-load cache (Excel landscape)
@@ -909,7 +910,9 @@
   // "Background graphics" kapalıyken bile renkler basar. table-layout fixed → tek sayfa.
   function printRoster(data, showCost) {
     if (PCD.gate && !PCD.gate.requireExport('roster')) return;
-    const css = '<style>@page{size:A4 landscape;margin:0;}body{font-family:"Inter",-apple-system,Segoe UI,Roboto,sans-serif;color:#1c1917;padding:10mm;-webkit-print-color-adjust:exact;print-color-adjust:exact;}</style>';
+    // v2.44.144 — kenar boşluğu 10mm→3mm (prep.js PAD_MM ile aynı, yazıcı-güvenli
+    // minimum; @page{margin:0} zaten vardı, asıl boşluk body padding'inden geliyordu).
+    const css = '<style>@page{size:A4 landscape;margin:0;}body{font-family:"Inter",-apple-system,Segoe UI,Roboto,sans-serif;color:#1c1917;padding:3mm;-webkit-print-color-adjust:exact;print-color-adjust:exact;}</style>';
     PCD.print(css + buildRosterTable(data, showCost), (data.venue || t('roster_title') || 'Roster') + ' ' + data.weekStart);
   }
 
@@ -953,7 +956,7 @@
     const go = function (XLSX) {
       if (!XLSX || !XLSX.utils) { PCD.toast.error(t('toast_excel_parser_unavailable') || 'Excel unavailable'); return; }
       const hex = function (h) { return (h || '').replace('#', '').toUpperCase(); };
-      const esz = ({ s: 9, m: 10, l: 12 })[(data.fontSize) || 'm'] || 10;
+      const esz = ({ xxs: 6, xs: 7, s: 9, m: 10, l: 12 })[(data.fontSize) || 'm'] || 10;
       const ebold = !!data.bold;
       const mx = rosterMatrix(data);
       const ndays = mx.days.length;
@@ -1081,7 +1084,7 @@
   // v2.15.6 — Yazı boyutu (S/M/L) + kalınlık kontrolleri (editör + önizleme).
   function fontControlsHtml(data) {
     const cur = (data.fontSize || 'm');
-    const seg = ['s', 'm', 'l'].map(function (sz) {
+    const seg = ['xxs', 'xs', 's', 'm', 'l'].map(function (sz) {
       const on = cur === sz;
       return '<button type="button" class="btn btn-sm" data-font="' + sz + '" style="min-width:34px;' + (on ? 'background:var(--brand-600);color:#fff;border-color:var(--brand-600);' : '') + '">' + sz.toUpperCase() + '</button>';
     }).join('');

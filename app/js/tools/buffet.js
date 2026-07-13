@@ -1681,36 +1681,15 @@
     renderEditor();
 
     // Footer buttons
+    // v2.44.144 — Prep List/Order List/Deduct Stock/Cost Report/Excel/Share
+    // BURADAN kaldırıldı (Event mimarisiyle aynı karar): bu butonlar editörde
+    // her tıklandığında Save'e hiç basılmadan taslağı sessizce upsertBuffet()
+    // ile veritabanına yazıyordu (kanıtlandı — coverCount'u değiştirip yalnız
+    // "Cost Report"a bakmak bile kaydı kalıcı olarak bozuyordu). Bu çıktılar
+    // zaten openPreview() footer'ında (kaydedilmiş veri üzerinde) mevcut —
+    // editör artık yalnız Delete/Cancel/Save içerir.
     const saveBtn = PCD.el('button', { class: 'btn btn-primary', text: t('save') || 'Save', style: { flex: '1' } });
     const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('cancel') || 'Cancel' });
-    const prepBtn = PCD.el('button', { class: 'btn btn-outline' });
-    prepBtn.innerHTML = PCD.icon('list', 16) + ' <span>' + (t('buffet_print_prep') || 'Prep List') + '</span>';
-    // v2.38 — Tedarikçiye göre sipariş/satın alma listesi
-    const orderBtn = PCD.el('button', { class: 'btn btn-outline' });
-    orderBtn.innerHTML = PCD.icon('truck', 16) + ' <span>' + (t('buffet_order_list') || 'Order List') + '</span>';
-    // v2.44.44 — Buffet → envanter düşüşü (event ile aynı: manuel buton + onay)
-    const deductBtn = PCD.el('button', { class: 'btn btn-outline' });
-    function _renderBufDeductState() {
-      if (data._stockDeductedAt) {
-        deductBtn.disabled = true;
-        deductBtn.innerHTML = PCD.icon('check', 14) + ' <span>' + (t('inv_already_deducted') || 'Stock deducted') + '</span>';
-        deductBtn.style.color = '#15803d'; deductBtn.style.borderColor = '#bbf7d0'; deductBtn.style.background = '#f0fdf4';
-      } else {
-        deductBtn.disabled = false;
-        deductBtn.innerHTML = '📦 <span>' + (t('event_apply_inventory') || 'Deduct stock') + '</span>';
-        deductBtn.style.color = ''; deductBtn.style.borderColor = ''; deductBtn.style.background = '';
-      }
-    }
-    _renderBufDeductState();
-    const reportBtn = PCD.el('button', { class: 'btn btn-outline' });
-    reportBtn.innerHTML = PCD.icon('print', 16) + ' <span>' + (t('buffet_print_report') || 'Cost Report') + '</span>';
-    // v2.44.35 — Share (metin + "PDF olarak gönder" → cost report yazdır)
-    const shareBtn = PCD.el('button', { class: 'btn btn-outline' });
-    shareBtn.innerHTML = PCD.icon('share', 16) + ' <span>' + (t('btn_share') || 'Share') + '</span>';
-    // v2.8.79 — Excel export butonu (operatör request: "excel cost report
-    // buffet costing'e de ekle"). Aynı pattern: xlsx on-demand load.
-    const excelBtn = PCD.el('button', { class: 'btn btn-outline' });
-    excelBtn.innerHTML = PCD.icon('download', 16) + ' <span>Excel</span>';
     let deleteBtn = null;
     if (existing) {
       deleteBtn = PCD.el('button', { class: 'btn btn-ghost', text: t('delete') || 'Delete', style: { color: 'var(--danger)' } });
@@ -1718,12 +1697,6 @@
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
     if (deleteBtn) footer.appendChild(deleteBtn);
     footer.appendChild(cancelBtn);
-    footer.appendChild(prepBtn);
-    footer.appendChild(orderBtn);
-    footer.appendChild(deductBtn);
-    footer.appendChild(reportBtn);
-    footer.appendChild(excelBtn);
-    footer.appendChild(shareBtn);
     footer.appendChild(saveBtn);
 
     const m = PCD.modal.open({
@@ -1763,70 +1736,6 @@
       }, 200);
     });
 
-    prepBtn.addEventListener('click', function () {
-      data.name = (PCD.$('#bufName', body).value || '').trim() || t('untitled');
-      if (existing) { upsertBuffet(Object.assign({}, existing, data)); }
-      printPrepList(data);
-    });
-    orderBtn.addEventListener('click', function () {
-      data.name = (PCD.$('#bufName', body).value || '').trim() || t('untitled');
-      if (existing) { upsertBuffet(Object.assign({}, existing, data)); }
-      openBuffetOrderList(data);
-    });
-    deductBtn.addEventListener('click', function () {
-      if (data._stockDeductedAt) return; // KİLİT — zaten düşüldü
-      if (PCD.gate && !PCD.gate.requireAuth()) return;
-      const ingMap = {}, recipeMap = {};
-      PCD.store.listIngredients().forEach(function (i) { ingMap[i.id] = i; });
-      PCD.store.listRecipes().forEach(function (r) { recipeMap[r.id] = r; });
-      const dd = computeBuffetDeductions(data, ingMap, recipeMap);
-      const ids = Object.keys(dd.deductions);
-      if (!ids.length) { PCD.toast.info((t('event_apply_inv_done') || '{n} item(s) deducted from stock').replace('{n}', 0)); return; }
-      const inv = PCD.tools.inventory;
-      const confirmFn = (inv && inv.confirmStockChange) ? inv.confirmStockChange : null;
-      const proceed = function () {
-        const report = (inv && inv.applyStockDeductions) ? inv.applyStockDeductions(dd.deductions) : [];
-        const deducted = report.filter(function (r) { return r.tracked; }).length;
-        const lowNow = report.filter(function (r) { return r.tracked && (r.status === 'low' || r.status === 'critical' || r.status === 'out'); }).length;
-        // KİLİT — bir daha düşülemesin: flag + kaydet + buton rozete dön.
-        data.name = (PCD.$('#bufName', body).value || '').trim() || t('untitled');
-        data._stockDeductedAt = new Date().toISOString();
-        upsertBuffet(existing ? Object.assign({}, existing, data) : data);
-        _renderBufDeductState();
-        PCD.toast.success((t('event_apply_inv_done') || '{n} item(s) deducted from stock').replace('{n}', deducted) + (lowNow ? ' · ' + lowNow + ' ⚠' : ''));
-      };
-      if (!confirmFn) { proceed(); return; }
-      confirmFn({
-        title: t('event_apply_inventory') || 'Deduct stock',
-        verb: t('event_apply_inventory') || 'Deduct stock',
-        kind: 'deduct',
-        note: dd.skipped.length ? ('⚠ ' + dd.skipped.length + ': ' + dd.skipped.slice(0, 5).join(', ')) : null,
-        items: ids.map(function (iid) { const ing = ingMap[iid]; return { name: ing ? ing.name : iid, amount: dd.deductions[iid], unit: ing ? ing.unit : '' }; }),
-      }).then(function (ok) { if (ok) proceed(); });
-    });
-    reportBtn.addEventListener('click', function () {
-      data.name = (PCD.$('#bufName', body).value || '').trim() || t('untitled');
-      if (existing) { upsertBuffet(Object.assign({}, existing, data)); }
-      // v2.44.35 — Liste kısayoluyla AYNI davranış: Simple/Detailed önizleme
-      // chooser'ı (önce doğrudan print'e gidiyordu → tutarsızdı + chooser yoktu).
-      PCD.costReportPreview({
-        title: (data.name || (t('buffet_untitled') || 'Buffet')) + ' · ' + (t('buffet_print_report') || 'Cost Report'),
-        buildHtml: function (detailed) { return buffetCostReportHtml(data, detailed); },
-        onPrint: function (detailed) { printCostReport(data, detailed); },
-        onExcel: function (detailed) { exportBuffetXLSX(data, detailed); },
-      });
-    });
-    // v2.8.79 — Excel export click: lazy-load xlsx if needed, then export
-    excelBtn.addEventListener('click', function () {
-      data.name = (PCD.$('#bufName', body).value || '').trim() || t('untitled');
-      if (existing) { upsertBuffet(Object.assign({}, existing, data)); }
-      exportBuffetXLSX(data);
-    });
-    shareBtn.addEventListener('click', function () {
-      data.name = (PCD.$('#bufName', body).value || '').trim() || t('untitled');
-      if (existing) { upsertBuffet(Object.assign({}, existing, data)); }
-      shareBuffet(data);
-    });
   }
 
   // ---------- ORDER / SHOPPING LIST (v2.38) ----------
