@@ -50,12 +50,13 @@ const FROM_ADDRESS = 'ProChefDesk <notifications@prochefdesk.com>'
 // v2.44.134 — En basit/sağlam yöntem: PDF üretmek yerine imzalı sayfanın
 // linkini gönder (DocuSign/HelloSign deseni) — sunucu-taraflı render gerektirmez,
 // link kalıcı kanıt olur (event silinmedikçe).
-async function sendSignedEmail(apiKey: string, to: string, eventName: string, shareUrl: string, signedBy: string) {
+async function sendSignedEmail(apiKey: string, to: string, eventName: string, shareUrl: string, signedBy: string, signatureDataUrl: string) {
   const subject = `Signed: ${eventName}`
   const html = `
     <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#1c1917;">
       <h2 style="color:#16433a;margin:0 0 12px;">✓ Proposal signed</h2>
       <p style="font-size:14px;line-height:1.6;"><strong>${escapeHtml(eventName)}</strong> has been signed${signedBy ? ' by ' + escapeHtml(signedBy) : ''}.</p>
+      <img src="${signatureDataUrl}" alt="Signature" style="max-height:70px;display:block;margin:12px 0;">
       <p style="font-size:14px;line-height:1.6;">View the signed proposal:</p>
       <p><a href="${shareUrl}" style="display:inline-block;background:#16433a;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:600;">View signed proposal</a></p>
       <p style="font-size:12px;color:#888;margin-top:24px;">Sent automatically by ProChefDesk.</p>
@@ -145,7 +146,7 @@ Deno.serve(async (req) => {
           (e: unknown): e is string => typeof e === 'string' && e.includes('@')
         )
         await Promise.all(
-          recipients.map((to: string) => sendSignedEmail(resendKey, to, eventName, shareUrl, signedBy).catch((e) => {
+          recipients.map((to: string) => sendSignedEmail(resendKey, to, eventName, shareUrl, signedBy, signatureDataUrl).catch((e) => {
             console.error('sendSignedEmail failed for', to, (e as Error).message)
           }))
         )

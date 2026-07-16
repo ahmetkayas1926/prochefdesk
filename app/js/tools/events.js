@@ -1853,6 +1853,22 @@
   function renderSignatureView(container, p, shareId, alreadySignedAt) {
     const t = (PCD.i18n && PCD.i18n.t) ? PCD.i18n.t : function (k, fb) { return fb || k; };
     const signable = !(p.signature && p.signature.dataUrl) && !alreadySignedAt;
+
+    // v2.44.146 — imzalı durum artık görsel + isim + tarih + yazdır butonu
+    // gösterir (dataUrl payload'da yoksa — bu migration'dan ÖNCE imzalanmış
+    // eski share'lerde — düz metne düşer, hata vermez).
+    function signedBlockHtml(sig) {
+      const fmtD = function (d) { return d ? new Date(d).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : ''; };
+      const dataUrl = sig && sig.dataUrl;
+      const meta = sig ? PCD.escapeHtml((sig.signedBy || '') + (sig.signedAt ? ' · ' + fmtD(sig.signedAt) : '')) : '';
+      return '<div style="border:1px solid #cbe8d8;background:#eaf6f0;border-radius:10px;padding:16px;color:#16433a;">' +
+        '<div style="font-weight:700;margin-bottom:' + (dataUrl ? '10px' : '0') + ';">✓ ' + PCD.escapeHtml(t('event_sign_already') || 'This proposal has already been signed.') + '</div>' +
+        (dataUrl ? '<img src="' + dataUrl + '" alt="Signature" style="max-height:70px;display:block;margin-bottom:4px;background:#fff;border-radius:4px;">' : '') +
+        (meta ? '<div style="font-size:13px;font-weight:600;">' + meta + '</div>' : '') +
+        '<button type="button" class="btn btn-outline" id="evSigPrint" style="margin-top:12px;">' + PCD.icon('print', 16) + ' ' + PCD.escapeHtml(t('btn_print') || 'Print') + '</button>' +
+      '</div>';
+    }
+
     container.innerHTML = p.html +
       '<div id="evSignBox" style="max-width:800px;margin:0 auto;padding:0 10mm 20mm;">' +
       (signable
@@ -1868,10 +1884,14 @@
               '<button type="button" class="btn btn-primary" id="evSigSubmit">' + PCD.escapeHtml(t('event_sign_submit') || 'Sign & Submit') + '</button>' +
             '</div>' +
           '</div>'
-        : '<div style="border:1px solid #cbe8d8;background:#eaf6f0;border-radius:10px;padding:16px;color:#16433a;font-weight:600;">✓ ' + PCD.escapeHtml(t('event_sign_already') || 'This proposal has already been signed.') + '</div>') +
+        : signedBlockHtml(p.signature)) +
       '</div>';
 
-    if (!signable) return;
+    function wirePrintBtn() {
+      const printBtn = document.getElementById('evSigPrint');
+      if (printBtn) printBtn.addEventListener('click', function () { window.print(); });
+    }
+    if (!signable) { wirePrintBtn(); return; }
 
     const canvas = PCD.$ ? PCD.$('#evSigCanvas', container) : container.querySelector('#evSigCanvas');
     const pad = wireSignatureCanvas(canvas);
@@ -1884,12 +1904,15 @@
       const supabase = window._supabaseClient;
       if (!supabase) return;
       submitBtn.disabled = true;
+      const dataUrl = pad.toDataURL();
+      const signedBy = (nameInput.value || '').trim();
       supabase.functions.invoke('submit-event-signature', {
-        body: { share_id: shareId, signature_data_url: pad.toDataURL(), signed_by: (nameInput.value || '').trim() },
+        body: { share_id: shareId, signature_data_url: dataUrl, signed_by: signedBy },
       }).then(function (res) {
         if (res && res.data && res.data.signed) {
           document.getElementById('evSignBox').innerHTML =
-            '<div style="border:1px solid #cbe8d8;background:#eaf6f0;border-radius:10px;padding:16px;color:#16433a;font-weight:600;">✓ ' + PCD.escapeHtml(t('event_sign_thanks') || 'Thank you — your signature has been recorded.') + '</div>';
+            signedBlockHtml({ dataUrl: dataUrl, signedBy: signedBy, signedAt: new Date().toISOString() });
+          wirePrintBtn();
         } else {
           submitBtn.disabled = false;
           if (PCD.toast) PCD.toast.error(t('event_sign_error') || 'Could not submit signature. Please try again.');
