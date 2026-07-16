@@ -1865,11 +1865,15 @@
         '<div style="font-weight:700;margin-bottom:' + (dataUrl ? '10px' : '0') + ';">✓ ' + PCD.escapeHtml(t('event_sign_already') || 'This proposal has already been signed.') + '</div>' +
         (dataUrl ? '<img src="' + dataUrl + '" alt="Signature" style="max-height:70px;display:block;margin-bottom:4px;background:#fff;border-radius:4px;">' : '') +
         (meta ? '<div style="font-size:13px;font-weight:600;">' + meta + '</div>' : '') +
-        '<button type="button" class="btn btn-outline" id="evSigPrint" style="margin-top:12px;">' + PCD.icon('print', 16) + ' ' + PCD.escapeHtml(t('btn_print') || 'Print') + '</button>' +
+        '<button type="button" class="btn btn-outline" id="evSigPrint" style="margin-top:12px;">' + PCD.icon('print', 16) + ' ' + PCD.escapeHtml(t('btn_print_save_pdf') || 'Print / Save as PDF') + '</button>' +
       '</div>';
     }
 
-    container.innerHTML = p.html +
+    // v2.44.146 — bu ekran PCD.print() üzerinden değil (misafir gate'ine takılmasın
+    // diye) doğrudan window.print() ile basılıyor; genel print.css'teki
+    // `body{padding:0 !important}` kuralı bu yüzden telafi edilmeli — aynı 10mm
+    // değeri eventProposalHtml'in kendi body padding'iyle tutarlı.
+    container.innerHTML = '<style>@media print { body { padding: 10mm !important; } }</style>' + p.html +
       '<div id="evSignBox" style="max-width:800px;margin:0 auto;padding:0 10mm 20mm;">' +
       (signable
         ? '<div style="border:1px solid var(--border,#e7e5e4);border-radius:10px;padding:16px;">' +
