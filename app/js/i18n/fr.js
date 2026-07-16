@@ -1642,8 +1642,8 @@ window.PCD.i18n.register('fr', {
   tour_start_tagline: "Explorez librement — ce sont des données de démo",
   tour_start_title: "Une cuisine d'exemple est chargée",
   tour_step_label: "ÉTAPE",
-  tour_welcome_body: "Calculez le coût de chaque recette, chiffrez un événement en quelques minutes et tenez des registres HACCP prêts pour l'audit — conçu par un chef en activité pour traiteurs, restaurants et cuisines indépendantes.",
-  tour_welcome_tagline: "Coûts, devis et registres — au même endroit",
+  tour_welcome_body: "Le chiffrage alimentaire pour restaurants, cafés et traiteurs — calculez le coût de chaque recette, chiffrez un événement en quelques minutes et tenez des registres HACCP prêts pour l'audit.",
+  tour_welcome_tagline: "Connaissez le coût réel de chaque assiette",
 });
 
 // v2.43 — batch 14: workspace + account + chef. register() MERGE eder.

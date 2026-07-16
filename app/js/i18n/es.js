@@ -1642,8 +1642,8 @@ window.PCD.i18n.register('es', {
   tour_start_tagline: "Explora sin miedo — son datos de demostración",
   tour_start_title: "Hay una cocina de muestra cargada",
   tour_step_label: "PASO",
-  tour_welcome_body: "Calcula el coste de cada receta, presupuesta eventos en minutos y mantén registros HACCP listos para auditoría — hecho por un chef en activo para caterings, restaurantes y cocinas independientes.",
-  tour_welcome_tagline: "Costes, presupuestos y registros — en un solo lugar",
+  tour_welcome_body: "Costeo de alimentos para restaurantes, cafés y caterings — calcula el coste de cada receta, presupuesta eventos en minutos y mantén registros HACCP listos para auditoría.",
+  tour_welcome_tagline: "Conoce el coste real de cada plato",
 });
 
 // v2.43 — batch 14: workspace + account + chef. register() MERGE eder.
