@@ -357,7 +357,7 @@ window.PCD.i18n.register('tr', {
   // v2.8.83 — Modern tour (4 step: welcome + cost + haccp + start)
   tour_step_label: "ADIM",
   tour_back: "Geri",
-  tour_welcome_tagline: "Her tabağın gerçek maliyetini bil",
+  tour_welcome_tagline: "Gıda İşletmeleri Yönetim Sistemi",
   tour_welcome_body: "Restoranlar, kafeler ve catering'ler için yemek maliyeti — her tarifi maliyetle, etkinlikleri dakikalar içinde teklife dönüştür, denetime hazır HACCP kayıtları tut.",
   tour_chip_live_cost: "Canlı maliyet",
   tour_chip_auto_sync: "Otomatik senkron",

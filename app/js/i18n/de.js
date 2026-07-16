@@ -1643,7 +1643,7 @@ window.PCD.i18n.register('de', {
   tour_start_title: "Eine Beispielküche ist geladen",
   tour_step_label: "SCHRITT",
   tour_welcome_body: "Food-Costing für Restaurants, Cafés und Caterer — kalkuliere jedes Rezept, erstelle Event-Angebote in Minuten und führe audit-fertige HACCP-Aufzeichnungen.",
-  tour_welcome_tagline: "Kenne die wahren Kosten jedes Gerichts",
+  tour_welcome_tagline: "Verwaltungssystem für Lebensmittelbetriebe",
 });
 
 // v2.43 — batch 14: workspace + account + chef. register() MERGE eder.

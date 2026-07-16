@@ -1643,7 +1643,7 @@ window.PCD.i18n.register('es', {
   tour_start_title: "Hay una cocina de muestra cargada",
   tour_step_label: "PASO",
   tour_welcome_body: "Costeo de alimentos para restaurantes, cafés y caterings — calcula el coste de cada receta, presupuesta eventos en minutos y mantén registros HACCP listos para auditoría.",
-  tour_welcome_tagline: "Conoce el coste real de cada plato",
+  tour_welcome_tagline: "Sistema de Gestión para Negocios de Alimentación",
 });
 
 // v2.43 — batch 14: workspace + account + chef. register() MERGE eder.

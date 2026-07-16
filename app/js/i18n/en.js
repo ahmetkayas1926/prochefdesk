@@ -357,7 +357,7 @@ window.PCD.i18n.register('en', {
   // v2.8.83 — Modern tour (4 step: welcome + cost + haccp + start)
   tour_step_label: "STEP",
   tour_back: "Back",
-  tour_welcome_tagline: "Know the true cost of every plate",
+  tour_welcome_tagline: "Food Business Management System",
   tour_welcome_body: "Food costing for restaurants, cafés & caterers — cost every recipe, quote events in minutes, and keep audit-ready HACCP records.",
   tour_chip_live_cost: "Live cost",
   tour_chip_auto_sync: "Auto sync",

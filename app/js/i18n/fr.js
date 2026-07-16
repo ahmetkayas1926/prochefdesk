@@ -1643,7 +1643,7 @@ window.PCD.i18n.register('fr', {
   tour_start_title: "Une cuisine d'exemple est chargée",
   tour_step_label: "ÉTAPE",
   tour_welcome_body: "Le chiffrage alimentaire pour restaurants, cafés et traiteurs — calculez le coût de chaque recette, chiffrez un événement en quelques minutes et tenez des registres HACCP prêts pour l'audit.",
-  tour_welcome_tagline: "Connaissez le coût réel de chaque assiette",
+  tour_welcome_tagline: "Système de gestion pour entreprises alimentaires",
 });
 
 // v2.43 — batch 14: workspace + account + chef. register() MERGE eder.
