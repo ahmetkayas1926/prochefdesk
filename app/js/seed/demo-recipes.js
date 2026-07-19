@@ -39,22 +39,22 @@
     { name: 'Mixed berries',          unit: 'g',  pricePerUnit: 0.024, category: 'cat_produce', supplier: 'Provencale Produce' },
     // Dairy & eggs
     { name: 'Butter (unsalted)',      unit: 'g',  pricePerUnit: 0.013, category: 'cat_dairy',  supplier: 'Laiterie Dairy' },
-    { name: 'Pouring cream',          unit: 'ml', pricePerUnit: 0.008, category: 'cat_dairy',  supplier: 'Laiterie Dairy', shelfLifeDays: 7 },
+    { name: 'Pouring cream',          unit: 'ml', pricePerUnit: 0.008, category: 'cat_dairy',  supplier: 'Laiterie Dairy' },
     { name: 'Egg yolks',              unit: 'pcs',pricePerUnit: 0.45,  category: 'cat_dairy',  supplier: 'Laiterie Dairy' },
     { name: 'Eggs (free-range)',      unit: 'pcs',pricePerUnit: 0.50,  category: 'cat_dairy',  supplier: 'Laiterie Dairy' },
-    { name: 'Gruyere',                unit: 'g',  pricePerUnit: 0.038, category: 'cat_dairy',  supplier: 'Laiterie Dairy', shelfLifeDays: 21 },
+    { name: 'Gruyere',                unit: 'g',  pricePerUnit: 0.038, category: 'cat_dairy',  supplier: 'Laiterie Dairy' },
     { name: 'Goat cheese (chevre)',   unit: 'g',  pricePerUnit: 0.030, category: 'cat_dairy',  supplier: 'Laiterie Dairy' },
     { name: 'Milk',                   unit: 'ml', pricePerUnit: 0.002, category: 'cat_dairy',  supplier: 'Laiterie Dairy' },
     // Meat & poultry
     { name: 'Beef eye fillet',        unit: 'g',  pricePerUnit: 0.058, category: 'cat_meat',    supplier: 'Boucherie Meats', yieldPercent: 92 },
     { name: 'Beef tenderloin (lean)', unit: 'g',  pricePerUnit: 0.052, category: 'cat_meat',    supplier: 'Boucherie Meats', yieldPercent: 95 },
     { name: 'Free-range chicken',     unit: 'g',  pricePerUnit: 0.013, category: 'cat_poultry', supplier: 'Boucherie Meats' },
-    { name: 'Duck leg',               unit: 'g',  pricePerUnit: 0.024, category: 'cat_poultry', supplier: 'Boucherie Meats', shelfLifeDays: 4 },
+    { name: 'Duck leg',               unit: 'g',  pricePerUnit: 0.024, category: 'cat_poultry', supplier: 'Boucherie Meats' },
     { name: 'Duck fat',               unit: 'g',  pricePerUnit: 0.015, category: 'cat_oils',    supplier: 'Boucherie Meats' },
-    { name: 'Foie gras',              unit: 'g',  pricePerUnit: 0.190, category: 'cat_meat',    supplier: 'Boucherie Meats', shelfLifeDays: 5 },
+    { name: 'Foie gras',              unit: 'g',  pricePerUnit: 0.190, category: 'cat_meat',    supplier: 'Boucherie Meats' },
     { name: 'Bacon lardons',          unit: 'g',  pricePerUnit: 0.026, category: 'cat_meat',    supplier: 'Boucherie Meats' },
     // Seafood
-    { name: 'Scallops',               unit: 'g',  pricePerUnit: 0.095, category: 'cat_seafood', supplier: 'Marseille Seafood', yieldPercent: 90, shelfLifeDays: 3 },
+    { name: 'Scallops',               unit: 'g',  pricePerUnit: 0.095, category: 'cat_seafood', supplier: 'Marseille Seafood', yieldPercent: 90 },
     { name: 'Sole fillet',            unit: 'g',  pricePerUnit: 0.048, category: 'cat_seafood', supplier: 'Marseille Seafood', yieldPercent: 88 },
     { name: 'Mussels',                unit: 'g',  pricePerUnit: 0.012, category: 'cat_seafood', supplier: 'Marseille Seafood', yieldPercent: 40 },
     { name: 'Prawns',                 unit: 'g',  pricePerUnit: 0.042, category: 'cat_seafood', supplier: 'Marseille Seafood', yieldPercent: 55 },
@@ -96,7 +96,6 @@
         category: ing.category, supplier: ing.supplier || '', _demo: true,
       };
       if (ing.yieldPercent != null) obj.yieldPercent = ing.yieldPercent;
-      if (ing.shelfLifeDays != null) obj.shelfLifeDays = ing.shelfLifeDays;
       return PCD.store.upsertIngredient(obj);
     });
     const I = function (n) { return findId(upserted, n); };
@@ -547,14 +546,12 @@
     const wsId = PCD.store.getActiveWorkspaceId();
     const inv = PCD.store.get('inventory') || {};
     inv[wsId] = inv[wsId] || {};
-    // exp = days from today the best-before falls (showcases the shelf-life /
-    //       "expiring soon" badge + dashboard card + waste bridge).
     const invMap = {
       'Butter (unsalted)':  { stock: 6500, parLevel: 4000, minLevel: 1500 },
-      'Pouring cream':      { stock: 3200, parLevel: 2000, minLevel: 600,  exp: 4 },
-      'Scallops':           { stock: 2200, parLevel: 1500, minLevel: 800,  exp: 2 },
+      'Pouring cream':      { stock: 3200, parLevel: 2000, minLevel: 600 },
+      'Scallops':           { stock: 2200, parLevel: 1500, minLevel: 800 },
       'Duck leg':           { stock: 2600, parLevel: 2000, minLevel: 600 },
-      'Foie gras':          { stock: 1100, parLevel: 800,  minLevel: 400,  exp: 1 },
+      'Foie gras':          { stock: 1100, parLevel: 800,  minLevel: 400 },
       'Dark chocolate 70%': { stock: 2600, parLevel: 2000, minLevel: 1000 },
       'Gruyere':            { stock: 2400, parLevel: 2000, minLevel: 600 },
       'Red wine':           { stock: 3800, parLevel: 3000, minLevel: 1200 },
@@ -567,10 +564,6 @@
         stock: cfg.stock, parLevel: cfg.parLevel, minLevel: cfg.minLevel,
         lastCountedAt: new Date(Date.now() - 86400000).toISOString(), _demo: true,
       };
-      if (cfg.exp != null) {
-        const d = new Date(); d.setDate(d.getDate() + cfg.exp);
-        row.expiryDate = d.toISOString().slice(0, 10);
-      }
       inv[wsId][ingId] = row;
     });
     PCD.store.set('inventory', inv);

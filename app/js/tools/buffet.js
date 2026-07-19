@@ -828,9 +828,12 @@
         st.id = PCD.uid('bst');
         (st.items || []).forEach(function (it) { it.id = PCD.uid('bit'); });
       });
-      const saved = upsertBuffet(clone);
+      // v2.44.139 — Fix: eskiden burada upsertBuffet(clone) anında DB'ye
+      // yazıyordu (Cancel'a basılsa da ham şablon kalıcı kalıyordu). Artık
+      // "Start blank" ile aynı desen: taslak yalnız editöre bellek-içi
+      // geçiriliyor, gerçek DB yazması yalnızca Save'e basılınca oluyor.
       PCD.toast.success(t('buffet_preset_loaded') || 'Template loaded — customize and save');
-      setTimeout(function () { openEditor(saved.id); }, 150);
+      setTimeout(function () { openEditor(null, clone); }, 150);
     });
   }
 
@@ -1035,10 +1038,10 @@
 
   // ---------- EDITOR ----------
 
-  function openEditor(bid) {
+  function openEditor(bid, presetDraft) {
     const t = PCD.i18n.t;
     const existing = bid ? getBuffet(bid) : null;
-    const data = existing ? PCD.clone(existing) : {
+    const data = existing ? PCD.clone(existing) : presetDraft || {
       name: '',
       type: 'breakfast',
       coverCount: 50,

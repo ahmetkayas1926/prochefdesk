@@ -77,7 +77,7 @@
       const r = recipeMap[entry.recipeId];
       if (!r) return 0;
       let cost = 0;
-      try { const fc = PCD.recipes.computeFoodCost(r, ingMap, recipeMap); cost = fc ? (Number(fc.cost) || 0) : 0; } catch (e) { /* */ }
+      try { cost = Number(PCD.recipes.computeFoodCost(r, ingMap, recipeMap)) || 0; } catch (e) { /* */ }
       const perServing = (Number(r.servings) > 0) ? (cost / Number(r.servings)) : cost;
       return perServing * (Number(entry.amount) || 0); // amount = servings wasted
     }

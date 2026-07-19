@@ -235,9 +235,18 @@
       items.forEach(function (it) {
         const r = it.recipeId ? recById[it.recipeId] : null;
         const price = (it.price !== undefined && it.price !== null && it.price !== '') ? Number(it.price) : (r && r.salePrice != null ? Number(r.salePrice) : null);
+        if (price == null) return;
+        // v2.44.139 — Fix: this used to require `r` (a linked recipe) before
+        // counting ANYTHING, so manually-priced items (no recipeId) were
+        // silently dropped from revenue/counted — not just from cost, which
+        // made totalRevenue understate the real menu total. Revenue now
+        // counts every priced item; cost still only sums items with a known
+        // recipe cost (manual items contribute $0 cost, same as before).
+        totRev += price;
+        counted++;
         if (r) {
           const n = recipeCostNumbers(r, ingMap, recipeMap);
-          if (price != null) { totRev += price; totCost += n.perServing; counted++; }
+          totCost += n.perServing;
         }
       });
     });

@@ -1149,6 +1149,68 @@
       return Object.values(PCD.clone(state.recipes[wsId])).filter(function (r) { return !r._deletedAt; });
     },
 
+    // v2.44.139 — Version history (was referenced by recipes.js/dashboard.js
+    // since v2.8-era but never implemented — "Versions" button was dead code).
+    // Captures the recipe's CURRENT (pre-save) state into its own versions[]
+    // array. Capped at last 20 snapshots to bound growth. Returns the updated
+    // versions array so the caller can merge it into an in-flight edit buffer
+    // before its own upsertRecipe() call (which would otherwise overwrite
+    // versions[] with a stale pre-snapshot copy).
+    snapshotRecipeVersion: function (recipeId, label) {
+      const wsId = currentWsId();
+      const r = state.recipes[wsId] ? state.recipes[wsId][recipeId] : null;
+      if (!r) return null;
+      const snapshot = PCD.clone(r);
+      delete snapshot.versions; // don't nest history inside itself
+      const snap = {
+        snapshotId: PCD.uid('rv'),
+        label: label || 'Version',
+        snapshotAt: new Date().toISOString(),
+        snapshot: snapshot,
+      };
+      const versions = (r.versions || []).concat([snap]).slice(-20);
+      const recipes = Object.assign({}, state.recipes);
+      recipes[wsId] = Object.assign({}, recipes[wsId]);
+      recipes[wsId][recipeId] = Object.assign({}, r, { versions: versions });
+      state.recipes = recipes;
+      persist();
+      return versions;
+    },
+    restoreRecipeVersion: function (recipeId, snapshotId) {
+      const wsId = currentWsId();
+      const r = state.recipes[wsId] ? state.recipes[wsId][recipeId] : null;
+      if (!r || !r.versions) return false;
+      const ver = r.versions.find(function (v) { return v.snapshotId === snapshotId; });
+      if (!ver) return false;
+      const restored = Object.assign({}, PCD.clone(ver.snapshot), {
+        id: recipeId,
+        versions: r.versions, // restoring doesn't erase history
+        updatedAt: new Date().toISOString(),
+      });
+      const recipes = Object.assign({}, state.recipes);
+      recipes[wsId] = Object.assign({}, recipes[wsId]);
+      recipes[wsId][recipeId] = restored;
+      state.recipes = recipes;
+      emit('recipes', recipes[wsId], null);
+      emit('recipes.' + recipeId, restored, null);
+      persist();
+      if (PCD.cloudPerTable) PCD.cloudPerTable.queueUpsert('recipes', recipeId, wsId, restored);
+      return true;
+    },
+    deleteRecipeVersion: function (recipeId, snapshotId) {
+      const wsId = currentWsId();
+      const r = state.recipes[wsId] ? state.recipes[wsId][recipeId] : null;
+      if (!r || !r.versions) return false;
+      const versions = r.versions.filter(function (v) { return v.snapshotId !== snapshotId; });
+      const recipes = Object.assign({}, state.recipes);
+      recipes[wsId] = Object.assign({}, recipes[wsId]);
+      recipes[wsId][recipeId] = Object.assign({}, r, { versions: versions });
+      state.recipes = recipes;
+      persist();
+      if (PCD.cloudPerTable) PCD.cloudPerTable.queueUpsert('recipes', recipeId, wsId, recipes[wsId][recipeId]);
+      return true;
+    },
+
     // Returns array of recipe names that reference the given ingredient ID.
     // Used by ingredients.js before deletion (v2.6.36): if an ingredient
     // is used in any recipe, deletion is blocked to prevent broken

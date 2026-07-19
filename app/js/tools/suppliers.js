@@ -689,7 +689,17 @@
         additions[r.ing.id] = (additions[r.ing.id] || 0) + amt;
         n++;
       });
-      if (!n) { PCD.toast.info(t('sup_receive_nothing') || 'Tick at least one product.'); return; }
+      if (!n) {
+        // v2.44.139 — Fix: skipped.length>0 iken de aynı "en az bir ürün
+        // işaretle" mesajı çıkıyordu — ürün işaretliydi ama birim uyumsuzluğu
+        // (örn pcs→kg) yüzünden atlanmıştı, gerçek sebep hiç görünmüyordu.
+        if (skipped.length) {
+          PCD.toast.error((t('sup_receive_unit_mismatch') || 'Could not add — incompatible units: ') + skipped.join(', '));
+        } else {
+          PCD.toast.info(t('sup_receive_nothing') || 'Tick at least one product.');
+        }
+        return;
+      }
       const report = (PCD.tools.inventory && PCD.tools.inventory.applyStockAdditions)
         ? PCD.tools.inventory.applyStockAdditions(additions) : [];
       o.receivedAt = new Date().toISOString();
@@ -802,12 +812,37 @@
         const excl = {};
         prods.forEach(function (p) { excl[(p.name || '').toLowerCase()] = true; });
         openIngredientPicker(excl, function (picked) {
-          picked.forEach(function (pk) {
-            const k = (pk.name || '').toLowerCase();
-            if (!k || excl[k]) return;
-            prods.push(pk); excl[k] = true;
+          function addAll() {
+            picked.forEach(function (pk) {
+              const k = (pk.name || '').toLowerCase();
+              if (!k || excl[k]) return;
+              prods.push(pk); excl[k] = true;
+            });
+            renderEditor();
+          }
+          // v2.44.139 — Fix: eskiden başka tedarikçiye zaten bağlı bir
+          // malzeme buraya eklenip Save'e basılınca hiçbir uyarı olmadan o
+          // tedarikçiden sessizce koparılıyordu (suppliers.js saveBtn,
+          // ing.supplier onaysız üzerine yazılıyordu). Excl listesi bu
+          // tedarikçinin KENDİ ürünlerini zaten hariç tuttuğu için, burada
+          // supplier alanı dolu gelen her seçim başka bir tedarikçiden.
+          const conflicts = picked.filter(function (pk) {
+            if (!pk.ingredientId) return false;
+            const ing = PCD.store.getIngredient(pk.ingredientId);
+            return ing && (ing.supplier || '').trim();
           });
-          renderEditor();
+          if (!conflicts.length) { addAll(); return; }
+          const names = conflicts.map(function (pk) {
+            const ing = PCD.store.getIngredient(pk.ingredientId);
+            return pk.name + ' (' + ing.supplier + ')';
+          }).join(', ');
+          PCD.modal.confirm({
+            icon: '⚠', iconKind: 'warning',
+            title: t('sup_reassign_title') || 'Move ingredient to this supplier?',
+            text: (t('sup_reassign_msg', { items: names }) || ('Already linked to another supplier: ' + names + '. Adding here will unlink them from their current supplier.')),
+            okText: t('sup_reassign_ok') || 'Move anyway',
+            cancelText: t('cancel'),
+          }).then(function (ok) { if (ok) addAll(); });
         });
       });
     }

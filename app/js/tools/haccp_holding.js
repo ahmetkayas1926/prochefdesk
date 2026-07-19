@@ -107,7 +107,7 @@
       '<div class="page-header">' +
         '<div class="page-header-text">' +
           '<div class="page-title">🌡 ' + (t('hhd_title') || 'Sıcak/Soğuk Tutma Kontrolü') + '</div>' +
-          '<div class="page-subtitle">' + (t('hhd_subtitle') || 'Yemek bazlı saatlik kontrol · Sıcak ≥' + targetHot + ', Soğuk ≤' + targetCold) + '</div>' +
+          '<div class="page-subtitle">' + (t('hhd_subtitle', { hot: targetHot, cold: targetCold }) || 'Yemek bazlı saatlik kontrol · Sıcak ≥' + targetHot + ', Soğuk ≤' + targetCold) + '</div>' +
         '</div>' +
         '<div class="page-header-actions">' +
           '<button class="btn btn-outline btn-sm" id="hhdPrintBlankBtn" title="' + PCD.escapeHtml(t('hhd_print_blank_tip') || 'Boş formu yazdır, elle doldur') + '">' + PCD.icon('print', 14) + ' <span>' + PCD.escapeHtml(t('hhd_print_blank') || 'Boş yazdır') + '</span></button>' +

@@ -2709,6 +2709,23 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
     closeBtn.addEventListener('click', function () { m.close(); });
   }
 
+  // v2.44.139 — Does rootId's own sub-recipe tree contain targetId anywhere
+  // (at any depth)? Used to block picking a candidate sub-recipe that would
+  // create an A→B→A cost cycle. _visited guards against pre-existing cycles
+  // in already-saved data so this can't infinite-loop.
+  function recipeTreeContainsId(rootId, targetId, _visited) {
+    _visited = _visited || {};
+    if (_visited[rootId]) return false;
+    _visited[rootId] = true;
+    const r = PCD.store.getRecipe(rootId);
+    if (!r || !r.ingredients) return false;
+    return r.ingredients.some(function (ri) {
+      if (!ri.recipeId) return false;
+      if (ri.recipeId === targetId) return true;
+      return recipeTreeContainsId(ri.recipeId, targetId, _visited);
+    });
+  }
+
   function openEditor(rid) {
     const t = PCD.i18n.t;
     const existing = rid ? PCD.store.getRecipe(rid) : null;
@@ -3676,6 +3693,12 @@ function renderAllergenChips() {
           const recipeMatches = allRecipes.filter(function (r) {
             if (data.id && r.id === data.id) return false; // can't include self
             if (alreadyInRecipe.has(r.id)) return false;
+            // v2.44.139 — Fix: comment said "+ cycles" but no actual check
+            // existed; picking a recipe that already contains this one
+            // (anywhere in ITS OWN sub-recipe tree) silently created an
+            // A→B→A loop, cost cycle-protected at compute time but never
+            // surfaced to the chef. Filter those candidates out entirely.
+            if (data.id && recipeTreeContainsId(r.id, data.id)) return false;
             return (r.name || '').toLowerCase().indexOf(q) >= 0;
           }).slice(0, 6);
 
@@ -3916,7 +3939,13 @@ function renderAllergenChips() {
         if (ingChanged || stepsChanged || servingsChanged) {
           // snapshot the OLD recipe state (before save)
           if (PCD.store.snapshotRecipeVersion) {
-            PCD.store.snapshotRecipeVersion(existing.id, 'Auto · ' + new Date().toLocaleDateString());
+            // v2.44.139 — capture returned versions[] and merge into `data`;
+            // `data` is a clone taken when the editor opened, so its own
+            // `.versions` is stale (predates this snapshot) — without this,
+            // the upsertRecipe() call below would silently overwrite the
+            // just-created snapshot.
+            const _versions = PCD.store.snapshotRecipeVersion(existing.id, 'Auto · ' + new Date().toLocaleDateString());
+            if (_versions) data.versions = _versions;
           }
         }
       }
