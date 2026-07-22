@@ -868,11 +868,23 @@
     cancelBtn.addEventListener('click', function () { m.close(); });
     if (deleteBtn) deleteBtn.addEventListener('click', function () {
       if (PCD.gate && !PCD.gate.requireAuth()) return;
-      PCD.modal.confirm({
-        icon: '🗑', iconKind: 'danger', danger: true,
-        title: t('confirm_delete'), text: t('confirm_delete_desc'), okText: t('delete')
-      }).then(function (ok) {
+      // v2.44.149 — Fix: silme aslında silmiyordu — backfillSupplierRecords()
+      // hâlâ bu ismi taşıyan malzemeler yüzünden anında BOŞ (telefon/email
+      // kaybolmuş) bir tedarikçi kaydı yeniden yaratıyordu. Şimdi: bağlı
+      // malzeme varsa önce uyar, onaylanırsa hem tedarikçiyi hem malzeme
+      // bağlarını birlikte temizle (backfill'in geri yaratacağı bir şey kalmaz).
+      const linked = ingredientsForSupplier(existing.name);
+      const confirmOpts = linked.length
+        ? {
+            icon: '⚠', iconKind: 'warning',
+            title: t('sup_delete_linked_title') || 'Delete supplier with linked ingredients?',
+            text: t('sup_delete_linked_msg', { n: linked.length }) || (linked.length + ' ingredient(s) are linked to this supplier. They will be left without a supplier.'),
+            okText: t('delete'),
+          }
+        : { icon: '🗑', iconKind: 'danger', danger: true, title: t('confirm_delete'), text: t('confirm_delete_desc'), okText: t('delete') };
+      PCD.modal.confirm(confirmOpts).then(function (ok) {
         if (!ok) return;
+        linked.forEach(function (ing) { ing.supplier = ''; PCD.store.upsertIngredient(ing); });
         PCD.store.deleteFromTable('suppliers', existing.id);
         PCD.toast.success(t('item_deleted'));
         m.close();
@@ -887,6 +899,14 @@
       data.name = (PCD.$('#sName', body).value || '').trim();
       var _scSave = PCD.$('#sContact', body); data.contactName = _scSave ? (_scSave.value || '').trim() : (data.contactName || '');
       if (!data.name) { PCD.toast.error(PCD.i18n.t('toast_name_required')); return; }
+      // v2.44.149 — Fix: aynı isimde ikinci tedarikçi kaydetmek, isme-göre
+      // eşleşen mevcut tedarikçinin TÜM malzeme bağlarını sessizce siliyordu
+      // (ingredientsForSupplier isme bakıyor). En basit güvenli çözüm: aynı
+      // isimde başka bir tedarikçi varsa kaydetmeyi engelle.
+      const dupSup = (PCD.store.listTable('suppliers') || []).find(function (s) {
+        return s && !s._deletedAt && (s.id !== (existing && existing.id)) && (s.name || '').trim().toLowerCase() === data.name.toLowerCase();
+      });
+      if (dupSup) { PCD.toast.error(t('sup_dup_name') || ('A supplier named "' + data.name + '" already exists.')); return; }
       data.category = PCD.$('#sCat', body).value;
       data.phone = (PCD.$('#sPhone', body).value || '').trim();
       data.whatsapp = (PCD.$('#sWa', body).value || '').trim();

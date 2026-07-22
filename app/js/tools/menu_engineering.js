@@ -91,7 +91,14 @@
     });
     const priced = rows.filter(function (x) { return x.price > 0; });
     const medMargin = median(priced.map(function (x) { return x.margin; }));
-    const medSold = median(rows.map(function (x) { return x.sold; }));
+    // v2.44.149 — Fix: medyan TÜM tariflerden (sold=0 dahil) hesaplanıyordu —
+    // az/hiç satış girilmemiş işletmelerde çoğunluk sold=0 olunca medyan da 0
+    // oluyor, "sold >= 0" her zaman doğru çıkıp herkes "popüler" (Star/Plowhorse)
+    // sayılıyordu, Puzzle/Dog hiç dolamıyordu. Medyan artık yalnız GERÇEKTEN
+    // satılmış (sold>0) tariflerden hesaplanıyor; hiç satılmamış tarifler bu
+    // gerçek eşiğe göre doğru şekilde düşük-popülerlik tarafına düşer.
+    const soldRows = rows.filter(function (x) { return x.sold > 0; });
+    const medSold = soldRows.length ? median(soldRows.map(function (x) { return x.sold; })) : 0;
     rows.forEach(function (x) {
       if (x.price <= 0) { x.quad = 'unpriced'; return; }
       const hiP = x.margin >= medMargin;

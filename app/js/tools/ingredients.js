@@ -728,27 +728,54 @@ ${existing ? (function () {
       data.unit = PCD.$('#ingUnit', body).value;
       data.pricePerUnit = parseFloat(PCD.$('#ingPrice', body).value) || 0;
       applySupplierChoice(data, supPicker.get());
+      // v2.44.149 — Fix: yield>100 (veya geçersiz metin) girilince önceki
+      // geçerli değer sessizce siliniyordu (null'a düşüyordu), hiç uyarı yoktu.
+      // Artık geçersiz bir değer kaydetmeyi reddediyor, boş bırakma hâlâ serbest.
       const yld = PCD.$('#ingYield', body);
-      if (yld) {
+      if (yld && yld.value !== '') {
         const v = parseFloat(yld.value);
-        data.yieldPercent = (!isNaN(v) && v > 0 && v <= 100) ? v : null;
+        if (isNaN(v) || v <= 0 || v > 100) {
+          PCD.toast.error(t('ing_yield_invalid') || 'Yield % must be between 0 and 100.');
+          return;
+        }
+        data.yieldPercent = v;
+      } else if (yld) {
+        data.yieldPercent = null;
       }
       if (!data.name) {
         PCD.toast.error(t('ingredient_name') + ' ' + t('required'));
         return;
       }
 
-      if (existing) data.id = existing.id;
-      const saved = PCD.store.upsertIngredient(data);
-      if (data.supplier) ensureSupplierRecord(data.supplier);
-      PCD.toast.success(t('ingredient_saved'));
-      m.close();
-      // FIX: Force re-render so new item appears immediately
-      setTimeout(function () {
-        const view = PCD.$('#view');
-        if (PCD.router.currentView() === 'ingredients') renderList(view);
-        if (callback) callback(saved);
-      }, 250);
+      function finishSave() {
+        if (existing) data.id = existing.id;
+        const saved = PCD.store.upsertIngredient(data);
+        if (data.supplier) ensureSupplierRecord(data.supplier);
+        PCD.toast.success(t('ingredient_saved'));
+        m.close();
+        // FIX: Force re-render so new item appears immediately
+        setTimeout(function () {
+          const view = PCD.$('#view');
+          if (PCD.router.currentView() === 'ingredients') renderList(view);
+          if (callback) callback(saved);
+        }, 250);
+      }
+
+      // v2.44.149 — Fix: aynı isimde ikinci malzeme hiç uyarı olmadan
+      // kaydediliyordu, iki ayırt edilemeyen kayıt oluşuyordu. Artık onay ister.
+      const dupIng = (PCD.store.listIngredients() || []).find(function (i) {
+        return i.id !== (existing && existing.id) && (i.name || '').trim().toLowerCase() === data.name.toLowerCase();
+      });
+      if (dupIng) {
+        PCD.modal.confirm({
+          icon: '⚠', iconKind: 'warning',
+          title: t('ing_dup_name_title') || 'Ingredient with this name already exists',
+          text: t('ing_dup_name_msg') || 'Another ingredient is already named that. Save anyway as a separate item?',
+          okText: t('ing_dup_name_ok') || 'Save anyway',
+        }).then(function (ok) { if (ok) finishSave(); });
+        return;
+      }
+      finishSave();
     });
   }
 

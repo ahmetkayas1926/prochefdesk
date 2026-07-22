@@ -1044,11 +1044,18 @@
   function openEditor(bid, presetDraft) {
     const t = PCD.i18n.t;
     const existing = bid ? getBuffet(bid) : null;
+    // v2.44.150 — Fix: blank taslağın coverCount/ticketPrice'ı (50/45) hiçbir
+    // zaman 'breakfast' tipinin BUFFET_TYPES varsayılanıyla (80/35) eşleşmiyordu
+    // — Type-reset düzeltmesindeki "hâlâ eski tipin varsayılanında mı" kontrolü
+    // bu yüzden yepyeni bir büfede bile hep "dokunulmuş" sanıyor, ilk Type
+    // değişiminde doğru varsayılanı hiç uygulamıyordu. Artık gerçek breakfast
+    // varsayılanlarını kullanıyor.
+    const _blankType = BUFFET_TYPES[0];
     const data = existing ? PCD.clone(existing) : presetDraft || {
       name: '',
-      type: 'breakfast',
-      coverCount: 50,
-      ticketPrice: 45,
+      type: _blankType.id,
+      coverCount: _blankType.defaultCovers,
+      ticketPrice: _blankType.defaultPrice,
       serviceDate: new Date().toISOString().slice(0, 10),
       durationHours: 2.5,
       refillMultiplier: null,  // null = use industry default for type
@@ -1388,15 +1395,20 @@
       // Top fields
       PCD.$('#bufName', body).addEventListener('input', function () { data.name = this.value; });
       PCD.$('#bufType', body).addEventListener('change', function () {
+        // v2.44.149 — Fix: Covers/Ticket price eskiden Type her değiştiğinde
+        // şefin elle girdiği değere bakılmaksızın koşulsuz eziliyordu. Artık
+        // yalnız hâlâ ÖNCEKİ tipin varsayılanındaysa (yani şef hiç dokunmamışsa)
+        // yeni tipin varsayılanına güncelleniyor; elle girilmiş bir değer korunur.
+        const oldType = BUFFET_TYPES.find(function (b) { return b.id === data.type; });
         data.type = this.value;
         // Reset refill to industry default for this type
         data.refillMultiplier = null;
-        // v2.8.88 — Smart industry defaults: type change → covers + ticket price
-        // otomatik plausible güncellenir (kullanıcı override edebilir).
         const newType = BUFFET_TYPES.find(function (b) { return b.id === data.type; });
         if (newType) {
-          if (newType.defaultCovers) data.coverCount = newType.defaultCovers;
-          if (newType.defaultPrice) data.ticketPrice = newType.defaultPrice;
+          const coversUntouched = !oldType || data.coverCount === oldType.defaultCovers;
+          const priceUntouched = !oldType || data.ticketPrice === oldType.defaultPrice;
+          if (newType.defaultCovers && coversUntouched) data.coverCount = newType.defaultCovers;
+          if (newType.defaultPrice && priceUntouched) data.ticketPrice = newType.defaultPrice;
         }
         renderEditor();
       });
