@@ -654,9 +654,20 @@
     const m = PCD.modal.open({ title: existing ? (existing.name || t('roster_staff') || 'Staff') : (t('roster_add_staff') || 'Add staff'), body: body, footer: footer, size: 'sm', closable: true });
     cancel.addEventListener('click', function () { m.close(); });
     if (del) del.addEventListener('click', function () {
-      data.staff = (data.staff || []).filter(function (s) { return s.id !== st.id; });
-      if (data.cells) delete data.cells[st.id];
-      persist(data); m.close(); render(view);
+      // v2.44.148 — Fix: eskiden onaysız, tek tıkla anında siliniyordu
+      // (dolu vardiyalarıyla birlikte). Roster'ın kendi silme akışıyla
+      // (satır 630) tutarlı olsun diye aynı onay desenini kullan.
+      PCD.modal.confirm({
+        icon: '🗑', iconKind: 'danger', danger: true,
+        title: t('confirm_delete') || 'Delete?',
+        text: st.name || (t('roster_staff') || 'Staff'),
+        okText: t('delete') || 'Delete',
+      }).then(function (ok) {
+        if (!ok) return;
+        data.staff = (data.staff || []).filter(function (s) { return s.id !== st.id; });
+        if (data.cells) delete data.cells[st.id];
+        persist(data); m.close(); render(view);
+      });
     });
     save.addEventListener('click', function () {
       st.name = (PCD.$('#stName', body).value || '').trim();
@@ -773,8 +784,15 @@
 
   // v2.36 — Önceki haftanın vardiyalarını bu rostera kopyala (isimle eşleştirir).
   function copyPreviousWeek(view, data) {
+    // v2.44.148 — Fix: aynı weekStart'a sahip birden fazla roster varsa hangisinin
+    // seçileceği öngörülemezdi (yalnız weekStart string'ine bakılıyordu, eşitlikte
+    // depolama sırası kazanıyordu). Şimdi weekStart eşitse en son güncellenen kazanır.
     const prev = listRosters().filter(function (r) { return r.id !== data.id && (r.weekStart || '') < (data.weekStart || ''); })
-      .sort(function (a, b) { return (b.weekStart || '').localeCompare(a.weekStart || ''); })[0];
+      .sort(function (a, b) {
+        const ws = (b.weekStart || '').localeCompare(a.weekStart || '');
+        if (ws !== 0) return ws;
+        return (b.updatedAt || '').localeCompare(a.updatedAt || '');
+      })[0];
     if (!prev) { PCD.toast.info(t('roster_copy_none') || 'No earlier roster to copy from'); return; }
     PCD.modal.confirm({
       icon: '⧉', title: t('roster_copy_prev') || 'Copy previous week',

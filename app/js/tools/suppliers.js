@@ -704,7 +704,9 @@
         ? PCD.tools.inventory.applyStockAdditions(additions) : [];
       o.receivedAt = new Date().toISOString();
       PCD.store.upsertInTable('suppliers', sup, 'sup');
-      PCD.toast.success(t('sup_receive_done', { n: report.length }) + (skipped.length ? ' · ⚠ ' + skipped.length : ''));
+      // v2.44.148 — Fix: kısmi başarıda (n>0 ama skipped.length>0 da) sadece
+      // "⚠ N" sayısı gösteriliyordu, hangi ürünün/neden atlandığı belirtilmiyordu.
+      PCD.toast.success(t('sup_receive_done', { n: report.length }) + (skipped.length ? ' · ⚠ ' + skipped.length + ' (' + (t('sup_receive_unit_mismatch') || 'incompatible units: ') + skipped.join(', ') + ')' : ''));
       m.close();
       if (typeof onDone === 'function') onDone();
     });

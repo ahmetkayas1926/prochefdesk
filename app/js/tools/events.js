@@ -380,6 +380,10 @@
       const copy = PCD.clone(src); delete copy.id;
       copy.name = (src.name || t('untitled')) + ' ' + (t('event_copy_suffix') || '(copy)');
       copy.status = 'draft';
+      // v2.44.148 — Fix: Preview'daki Duplicate bunu zaten temizliyordu, liste
+      // kartındaki hızlı-Duplicate unutmuştu — kopya hiç stok düşmediği halde
+      // "✓ Stock deducted" kilitli görünüyordu.
+      delete copy._stockDeductedAt;
       PCD.store.upsertInTable('events', copy, 'ev');
       PCD.toast.success(t('event_duplicated') || 'Event duplicated');
       render(view);
@@ -792,7 +796,17 @@
     footer.appendChild(dupBtn);
     footer.appendChild(editBtn);
 
-    const m = PCD.modal.open({ title: existing.name || t('untitled'), body: body, footer: footer, size: 'lg', closable: true });
+    // v2.44.148 — Fix: Save→Preview akışında liste view'ı hiç yeniden
+    // çağrılmıyordu (yalnız tam sayfa reload veya filtre tıklaması
+    // düzeltiyordu) — Preview kapanınca (X/backdrop/Cancel, hepsi bu
+    // onClose'u tetikler) liste kartları/sayaçları da güncellensin.
+    const m = PCD.modal.open({
+      title: existing.name || t('untitled'), body: body, footer: footer, size: 'lg', closable: true,
+      onClose: function () {
+        const v = PCD.$('#view');
+        if (v && PCD.router.currentView() === 'events') render_list(v);
+      },
+    });
 
     deleteBtn.addEventListener('click', function () {
       PCD.modal.confirm({

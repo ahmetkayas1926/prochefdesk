@@ -1037,14 +1037,16 @@
     if (PCD.store && PCD.store.flushSync) { try { PCD.store.flushSync(); } catch (e) {} }
     if (PCD.cloudPerTable && PCD.cloudPerTable.queueUpsert && PCD.store && PCD.store._read) {
       try {
+        // v2.44.148 — Fix: bu payload eskiden {active_workspace_id, data:{...}}
+        // şeklindeydi; queueFullState()'in (cloud-pertable.js) beklediği düz/
+        // camelCase şekil değildi. Sonuç: DB'deki active_workspace_id kolonu
+        // NULL yazılıyordu, realtime bunu geri okuyup aktif workspace'i
+        // sessizce değiştiriyordu. queueFullState ile AYNI düz şekli kullan.
         PCD.cloudPerTable.queueUpsert('user_prefs', 'user_prefs', null, {
-          active_workspace_id: PCD.store._read('activeWorkspaceId'),
-          data: {
-            prefs: PCD.store._read('prefs') || {},
-            plan: PCD.store._read('plan') || 'free',
-            onboarding: PCD.store._read('onboarding') || {},
-            costHistory: PCD.store._read('costHistory') || [],
-          },
+          activeWorkspaceId: PCD.store._read('activeWorkspaceId') || null,
+          prefs: PCD.store._read('prefs') || {},
+          onboarding: PCD.store._read('onboarding') || {},
+          costHistory: PCD.store._read('costHistory') || [],
         });
       } catch (e) { /* non-fatal */ }
       if (PCD.cloudPerTable.flushNow) {

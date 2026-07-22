@@ -229,7 +229,11 @@
       if (has) loggedDays[r.date] = true;
     });
     const daysCovered = Object.keys(loggedDays).length;
-    const coveragePct = (hasUnits && daysElapsed > 0) ? Math.round((daysCovered / daysElapsed) * 100) : null;
+    // v2.44.148 — Fix: ileri-tarihli/hatalı kayıtlar (daysCovered > daysElapsed)
+    // yüzdeyi %100'ün üzerine taşıyıp "iyi" (yeşil) gösterebiliyordu — dürüstlük
+    // modelini zedeliyordu. Yüzde %100'de sınırlanır; ham daysCovered sayısı
+    // (rapor metninde) olduğu gibi kalır, sadece oran mantıksız şişmez.
+    const coveragePct = (hasUnits && daysElapsed > 0) ? Math.min(100, Math.round((daysCovered / daysElapsed) * 100)) : null;
 
     return {
       ym: ym, byForm: byForm, exceptions: exceptions,
@@ -699,7 +703,10 @@
         agg.coverage.daysElapsed += d.coverage.daysElapsed;
       });
       if (agg.totals.checks > 0) agg.totals.inRangePct = Math.round(((agg.totals.checks - agg.totals.fails) / agg.totals.checks) * 1000) / 10;
-      if (agg.coverage.hasUnits && agg.coverage.daysElapsed > 0) agg.coverage.pct = Math.round((agg.coverage.daysCovered / agg.coverage.daysElapsed) * 100);
+      // v2.44.149 — Fix: collectAuditData() içindeki aynı sorunun ikinci yeri —
+      // çok-aylık aralık seçilince toplam kapsama burada, ham daysCovered/daysElapsed
+      // toplamlarından clamp'siz yeniden hesaplanıyordu, %100'ü aşabiliyordu.
+      if (agg.coverage.hasUnits && agg.coverage.daysElapsed > 0) agg.coverage.pct = Math.min(100, Math.round((agg.coverage.daysCovered / agg.coverage.daysElapsed) * 100));
       sEl.innerHTML = auditSummaryInner(agg, months.length);
     }
     if (auditFromEl) auditFromEl.addEventListener('change', _refreshAuditSummary);

@@ -400,7 +400,11 @@
         // v2.6.36: split selection into "safe to delete" vs "in use".
         // Ingredients that are referenced by any recipe stay alive so
         // recipes don't end up with broken "(removed)" lines.
-        const ingMap = currentIngMap();
+        // v2.44.148 — Fix: currentIngMap() bu dosyada hiç tanımlı değildi
+        // (başka bir dosyadaki closure'a özgüydü) — ReferenceError sessizce
+        // yutuluyor, hiçbir şey silinmiyordu. ings zaten bu closure'da yüklü.
+        const ingMap = {};
+        ings.forEach(function (i) { ingMap[i.id] = i; });
         const safeIds = [];
         const blocked = []; // { name, recipes: [...] }
         Array.from(selectedIds).forEach(function (id) {

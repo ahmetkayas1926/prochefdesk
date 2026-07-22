@@ -1403,13 +1403,21 @@
     ings.forEach(function (i) {
       if (i.noSupplierNeeded) return; // "Satın alınmıyor" — sipariş listesinde çıkmaz
       const row = invAll[i.id];
-      if (!row || row.parLevel == null) return;
+      if (!row) return;
+      // v2.44.148 — Fix: eskiden parLevel girilmemiş (yalnız minLevel girilmiş
+      // veya hiç eşik girilmemeden negatif stoğa düşmüş) kalemler, dashboard
+      // "acil" sayacında görünmesine rağmen bu listeye HİÇ girmiyordu —
+      // computeStatus() zaten minLevel'ı da (hatta eşiksiz negatif stoğu da)
+      // kritik sayıyor, filtre onunla tutarsızdı. Artık computeStatus'un
+      // kendisine güveniyoruz, par varlığını ayrıca şart koşmuyoruz.
       const stock = Number(row.stock) || 0;
       const par = Number(row.parLevel) || 0;
+      const min = Number(row.minLevel) || 0;
       const status = computeStatus(row);
       if (status === 'out' || status === 'critical' || status === 'low') {
-        const need = Math.max(0, par - stock);
-        below.push({ ing: i, stock: stock, par: par, need: need || par, status: status, supplier: (i.supplier || '').trim(), onOrder: isOnOrder(row) });
+        const target = par > 0 ? par : (min > 0 ? min : 0);
+        const need = Math.max(0, target - stock);
+        below.push({ ing: i, stock: stock, par: par, need: need || target || 1, status: status, supplier: (i.supplier || '').trim(), onOrder: isOnOrder(row) });
       }
     });
 

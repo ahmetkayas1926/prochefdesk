@@ -245,7 +245,12 @@
     const rows = buildRows();
     rows.forEach(function (r) {
       if (opening[r.iid] != null) {
-        const used = (Number(opening[r.iid]) || 0) - (Number(closing[r.iid]) || 0);
+        // v2.44.148 — Fix: applyOC (elle Opening−Closing girişi) zaten
+        // Math.max(0,...) ile negatif "kullanım"ı sıfırlıyordu, bu otomatik
+        // doldurma yolu uygulamıyordu — iki sayım arasında büyük bir mal
+        // kabul olduğunda fiziksel olarak imkânsız negatif değerler üretip
+        // toplam varyansı yanıltıcı şişiriyordu.
+        const used = Math.max(0, (Number(opening[r.iid]) || 0) - (Number(closing[r.iid]) || 0));
         actuals[r.iid] = String(Math.round(used * 100) / 100);
       }
     });

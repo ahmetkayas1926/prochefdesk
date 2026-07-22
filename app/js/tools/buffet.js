@@ -1016,6 +1016,9 @@
     dupBtn.addEventListener('click', function () {
       const copy = PCD.clone(existing);
       delete copy.id; delete copy.createdAt; delete copy.updatedAt; delete copy._stockDeductedAt;
+      // v2.44.148 — Fix: _supplierOrders (sipariş-verildi damgası) kopyada
+      // kalıyordu — hiç sipariş verilmemiş kopya büfe sahte "✓ Ordered" gösteriyordu.
+      delete copy._supplierOrders;
       copy.name = (copy.name || t('untitled')) + ' (Copy)';
       (copy.stations || []).forEach(function (st) {
         st.id = PCD.uid('bst');
