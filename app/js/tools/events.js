@@ -835,6 +835,9 @@
       if (!ids.length) { PCD.toast.info(t('event_apply_inv_done').replace('{n}', 0)); return; }
       const inv = PCD.tools.inventory;
       const confirmFn = (inv && inv.confirmStockChange) ? inv.confirmStockChange : null;
+      // v2.44.151 — Fix: hangi kalemin negatife düşeceğini onay ekranından ÖNCE hesapla
+      // (write yapmadan) → confirmStockChange bunu kırmızı "→ sonuç" olarak göstersin.
+      const preview = (inv && inv.previewStockDeductions) ? inv.previewStockDeductions(dd.deductions) : {};
       const proceed = function () {
         const report = (inv && inv.applyStockDeductions) ? inv.applyStockDeductions(dd.deductions) : [];
         const deducted = report.filter(function (r) { return r.tracked; }).length;
@@ -850,7 +853,11 @@
         verb: t('event_apply_inventory') || 'Deduct stock',
         kind: 'deduct',
         note: dd.skipped.length ? ('⚠ ' + dd.skipped.length + ': ' + dd.skipped.slice(0, 5).join(', ')) : null,
-        items: ids.map(function (iid) { const ing = ingMap[iid]; return { name: ing ? ing.name : iid, amount: dd.deductions[iid], unit: ing ? ing.unit : '' }; }),
+        items: ids.map(function (iid) {
+          const ing = ingMap[iid];
+          const pv = preview[iid];
+          return { name: ing ? ing.name : iid, amount: dd.deductions[iid], unit: ing ? ing.unit : '', after: pv ? pv.to : null, willBeNegative: !!(pv && pv.willBeNegative) };
+        }),
       }).then(function (ok) { if (ok) proceed(); });
     });
 

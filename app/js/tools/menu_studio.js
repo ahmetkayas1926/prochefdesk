@@ -937,7 +937,25 @@
       el.addEventListener('dragleave', function () { el.classList.remove('dragover'); });
       el.addEventListener('drop', function (e) { e.preventDefault(); el.classList.remove('dragover'); reorderBlocks(canvasDragId, el.getAttribute('data-layer')); });
     });
-    root.querySelectorAll('[data-layerdel]').forEach(function (el) { el.addEventListener('click', function (e) { e.stopPropagation(); const id = el.getAttribute('data-layerdel'); design.blocks = design.blocks.filter(function (x) { return x.id !== id; }); if (selectedId === id) selectedId = null; refreshPage(); renderInspector(); }); });
+    root.querySelectorAll('[data-layerdel]').forEach(function (el) { el.addEventListener('click', function (e) {
+      e.stopPropagation();
+      const id = el.getAttribute('data-layerdel');
+      // v2.44.151 — Fix: tek tıkla, onaysız, geri alınamaz silme — bir Section'daki
+      // TÜM yemekler (tarif bağı+manuel kalem+etiketler) anında kayboluyordu.
+      const blk = design.blocks.find(function (x) { return x.id === id; });
+      const n = blk && Array.isArray(blk.items) ? blk.items.length : 0;
+      PCD.modal.confirm({
+        icon: '🗑', iconKind: 'danger', danger: true,
+        title: t('ms_delete_block_title') || 'Delete this block?',
+        text: n ? (t('ms_delete_block_items_msg') || '{n} item(s) inside will be deleted too. This cannot be undone.').replace('{n}', n) : (t('confirm_delete_desc') || 'This action cannot be undone.'),
+        okText: t('ms_delete') || 'Delete',
+      }).then(function (ok) {
+        if (!ok) return;
+        design.blocks = design.blocks.filter(function (x) { return x.id !== id; });
+        if (selectedId === id) selectedId = null;
+        refreshPage(); renderInspector();
+      });
+    }); });
   }
 
   function openBlockEditor(id) {
@@ -964,7 +982,19 @@
     footer.appendChild(delBtn); footer.appendChild(dupBtn); footer.appendChild(doneBtn);
     const m = PCD.modal.open({ title: meta.glyph + ' ' + blockTypeLabel(b.type), body: body, footer: footer, size: 'sm', closable: true });
     const close = function () { _blockRepaint = null; m.close(); };
-    delBtn.addEventListener('click', function () { design.blocks = design.blocks.filter(function (x) { return x.id !== id; }); selectedId = null; refreshPage(); renderInspector(); close(); });
+    delBtn.addEventListener('click', function () {
+      const n = Array.isArray(b.items) ? b.items.length : 0;
+      PCD.modal.confirm({
+        icon: '🗑', iconKind: 'danger', danger: true,
+        title: t('ms_delete_block_title') || 'Delete this block?',
+        text: n ? (t('ms_delete_block_items_msg') || '{n} item(s) inside will be deleted too. This cannot be undone.').replace('{n}', n) : (t('confirm_delete_desc') || 'This action cannot be undone.'),
+        okText: t('ms_delete') || 'Delete',
+      }).then(function (ok) {
+        if (!ok) return;
+        design.blocks = design.blocks.filter(function (x) { return x.id !== id; });
+        selectedId = null; refreshPage(); renderInspector(); close();
+      });
+    });
     dupBtn.addEventListener('click', function () { const copy = JSON.parse(JSON.stringify(b)); copy.id = uid(); const i = design.blocks.findIndex(function (x) { return x.id === id; }); design.blocks.splice(i + 1, 0, copy); refreshPage(); renderInspector(); close(); openBlockEditor(copy.id); });
     doneBtn.addEventListener('click', close);
   }

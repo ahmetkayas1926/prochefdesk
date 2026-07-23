@@ -1429,6 +1429,12 @@
         if (!isNaN(v) && v >= 0) {
           data.ticketPrice = v;
           renderEditor();
+        } else if (v < 0) {
+          // v2.44.151 — Fix: negatif değer sessizce reddediliyordu; input
+          // eski (kaydedilmiş) değere geri dönmeden yanlışlıkla "kabul edildi"
+          // görünüyordu çünkü renderEditor() çağrılmıyordu.
+          PCD.toast.error(t('buf_price_negative') || 'Ticket price cannot be negative.');
+          this.value = data.ticketPrice != null ? data.ticketPrice : '';
         }
       }, 700));
       PCD.$('#bufRefill', body).addEventListener('input', PCD.debounce(function () {
@@ -1571,10 +1577,13 @@
               if (!selIds || !selIds.length) return;
               selIds.forEach(function (iid) {
                 const ing = PCD.store.getFromTable('ingredients', iid);
+                // v2.44.151 — Fix: kg/l için g/ml'nin ondalık karşılığı yoktu,
+                // varsayılan 1 kalıyordu (kişi başı 1kg gibi anlamsız şişme).
                 sec.items.push({
                   id: PCD.uid('bit'),
                   ingredientId: iid,
-                  amountPerGuest: ing && ing.unit === 'g' ? 30 : (ing && ing.unit === 'ml' ? 50 : 1),
+                  amountPerGuest: ing && ing.unit === 'g' ? 30 : (ing && ing.unit === 'ml' ? 50 :
+                    (ing && ing.unit === 'kg' ? 0.03 : (ing && ing.unit === 'l' ? 0.05 : 1))),
                   unit: (ing && ing.unit) || 'g',
                   pickupRatio: defaultPickup,
                   refillX: null,

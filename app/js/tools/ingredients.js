@@ -726,7 +726,14 @@ ${existing ? (function () {
       data.name = PCD.$('#ingName', body).value.trim();
       data.category = PCD.$('#ingCategory', body).value;
       data.unit = PCD.$('#ingUnit', body).value;
-      data.pricePerUnit = parseFloat(PCD.$('#ingPrice', body).value) || 0;
+      // v2.44.151 — Fix: negatif fiyat hiç uyarı olmadan kabul ediliyordu, bu
+      // malzemeyi kullanan tariflerin maliyetini yapay olarak düşürebiliyordu.
+      const priceVal = parseFloat(PCD.$('#ingPrice', body).value);
+      if (!isNaN(priceVal) && priceVal < 0) {
+        PCD.toast.error(t('ing_price_negative') || 'Price cannot be negative.');
+        return;
+      }
+      data.pricePerUnit = priceVal || 0;
       applySupplierChoice(data, supPicker.get());
       // v2.44.149 — Fix: yield>100 (veya geçersiz metin) girilince önceki
       // geçerli değer sessizce siliniyordu (null'a düşüyordu), hiç uyarı yoktu.
@@ -1132,6 +1139,11 @@ Pasta,3,kg,cat_dry_goods,,</code></pre>
           <div style="margin-top:6px;font-family:var(--font-mono);font-size:12px;color:var(--text-2);line-height:1.6;">
             ${previewLines}${rows.length > 5 ? '<br><span style="color:var(--text-3);">… +' + (rows.length - 5) + ' ' + PCD.escapeHtml(t('import_more_rows') || 'more') + '</span>' : ''}
           </div>
+          ${(rows.skippedNegativePrice || rows.yieldIgnoredCount) ? '<div style="margin-top:8px;font-size:11.5px;color:#b45309;">⚠ ' +
+            [
+              rows.skippedNegativePrice ? PCD.escapeHtml((t('import_skipped_negative_price') || '{n} row(s) skipped — negative price').replace('{n}', rows.skippedNegativePrice)) : '',
+              rows.yieldIgnoredCount ? PCD.escapeHtml((t('import_yield_ignored') || '{n} row(s) — yield% ignored (must be 1-100)').replace('{n}', rows.yieldIgnoredCount)) : '',
+            ].filter(Boolean).join(' · ') + '</div>' : ''}
         </div>
       `;
     }
@@ -1302,12 +1314,18 @@ Pasta,3,kg,cat_dry_goods,,</code></pre>
     const dataRows = hasHeader ? aoa.slice(1) : aoa;
 
     const rows = [];
+    let skippedNegativePrice = 0;
+    let yieldIgnoredCount = 0;
     dataRows.forEach(function (cells) {
       if (!cells || cells.length < 2) return;
       const name = String(cells[0] || '').trim();
       const priceStr = String(cells[1] || '').replace(/[^0-9.\-]/g, '');
       const price = parseFloat(priceStr);
       if (!name || isNaN(price)) return;
+      // v2.44.151 — Fix: negatif fiyat editördeki manuel kayıtta reddediliyordu,
+      // CSV import'ta ise sessizce kabul edilip tarif maliyetini bozabiliyordu.
+      // Tutarlılık için satır tamamen atlanır (kısmi/yanlış veri import edilmez).
+      if (price < 0) { skippedNegativePrice++; return; }
       // Normalize unit case so 'L'/'KG'/'ML' (common in invoices) match
       // the lowercase canonical units (l, kg, ml). Without this the unit
       // would be saved as 'L', not appear in the dropdown, and break
@@ -1322,6 +1340,10 @@ Pasta,3,kg,cat_dry_goods,,</code></pre>
       if (yieldRaw) {
         const y = parseFloat(yieldRaw);
         if (!isNaN(y) && y > 0 && y <= 100) yieldPct = y;
+        // v2.44.151 — Fix: >100 (veya 0/negatif) önceden sessizce yok sayılıyordu,
+        // hiçbir uyarı yoktu. Satırın geri kalanı hâlâ import edilir (isim/fiyat
+        // geçerliyse), ama görmezden gelinen yield sayısı önizlemede gösterilir.
+        else yieldIgnoredCount++;
       }
       rows.push({
         name: name,
@@ -1332,6 +1354,8 @@ Pasta,3,kg,cat_dry_goods,,</code></pre>
         yieldPercent: yieldPct,
       });
     });
+    rows.skippedNegativePrice = skippedNegativePrice;
+    rows.yieldIgnoredCount = yieldIgnoredCount;
     return rows;
   }
 

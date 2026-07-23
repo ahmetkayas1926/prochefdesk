@@ -613,7 +613,7 @@
   // (eski kayıtlar). Mesaj formatı buildMessage ile: "• AD — MİKTAR BİRİM".
   function orderItemsOf(o) {
     if (Array.isArray(o.items) && o.items.length) {
-      return o.items.map(function (it) { return { name: it.name, qty: Number(it.qty) || 0, unit: it.unit || '' }; })
+      return o.items.map(function (it) { return { id: it.id || '', name: it.name, qty: Number(it.qty) || 0, unit: it.unit || '' }; })
         .filter(function (it) { return it.name && it.qty > 0; });
     }
     const out = [];
@@ -631,12 +631,20 @@
   function openReceiveStock(sup, o, onDone) {
     const t = PCD.i18n.t;
     const items = orderItemsOf(o);
+    const byId = {};
     const byName = {};
-    PCD.store.listIngredients().forEach(function (i) { byName[(i.name || '').toLowerCase()] = i; });
+    PCD.store.listIngredients().forEach(function (i) {
+      byId[i.id] = i;
+      // v2.44.151 — Fix: aynı isimli birden fazla malzeme varsa isimle eşleşme
+      // son taranan kaydı seçip yanlış kayda stok yazıyordu. id varsa ÖNCE id
+      // ile eşleş (recordOrder zaten doğru id'yi gömüyor); isim yalnız eski
+      // kayıtlar (id yok) için fallback.
+      byName[(i.name || '').toLowerCase()] = i;
+    });
     const matched = [];
     const unmatched = [];
     items.forEach(function (it) {
-      const ing = byName[(it.name || '').toLowerCase()];
+      const ing = (it.id && byId[it.id]) || byName[(it.name || '').toLowerCase()];
       if (ing) matched.push({ it: it, ing: ing }); else unmatched.push(it);
     });
     const body = PCD.el('div');

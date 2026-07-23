@@ -117,6 +117,23 @@
     return report;
   }
 
+  // v2.44.151 — Fix: applyStockDeductions'ı ÇAĞIRMADAN (yazmadan) hangi kalemin
+  // negatife düşeceğini önceden hesapla — confirmStockChange onay ekranında şef
+  // "deduct" tıklamadan ÖNCE görsün (negatif stok BİLİNÇLİ tasarım — applyStockDeductions
+  // yorumu, satır 100 — bu fonksiyon engellemiyor, yalnız önceden görünür kılıyor).
+  function previewStockDeductions(deductions) {
+    const inv = readInventory();
+    const out = {};
+    Object.keys(deductions || {}).forEach(function (iid) {
+      const amt = Number(deductions[iid]) || 0;
+      if (!(amt > 0)) return;
+      const row = inv[iid];
+      const cur = row && row.stock != null ? (Number(row.stock) || 0) : 0;
+      out[iid] = { from: cur, to: cur - amt, willBeNegative: (cur - amt) < 0 };
+    });
+    return out;
+  }
+
   // v2.44 — A2: batch-add stock for received goods (PO received → inventory).
   // Inverse of applyStockDeductions. additions: { ingredientId: amountInBaseUnit }.
   // Reads once, applies, writes once. If an item has no inventory row yet, a new
@@ -181,14 +198,21 @@
     const t = PCD.i18n.t;
     const items = opts.items || [];
     const isAdd = opts.kind === 'add';
+    // v2.44.151 — Fix: negatif stoğa düşecek kalemler önceden (onaydan ÖNCE) görünür
+    // olsun — daha önce yalnız işlem BİTTİKTEN SONRA toast'ta "N ⚠" sayısı çıkıyordu,
+    // şef neyin negatife düştüğünü göremeden onaylıyordu. Negatif stok kasıtlı tasarım
+    // (applyStockDeductions yorumu — "sayım/sipariş sinyali"); burada ENGELLEMİYORUZ,
+    // yalnız önceden bilgilendiriyoruz.
+    const negCount = items.filter(function (it) { return it.willBeNegative; }).length;
     return new Promise(function (resolve) {
       const body = PCD.el('div');
       const rows = items.map(function (it) {
         const sign = isAdd ? '+' : '−';
-        const col = isAdd ? '#15803d' : '#b45309';
+        const col = it.willBeNegative ? '#b91c1c' : (isAdd ? '#15803d' : '#b45309');
+        const afterHtml = (it.after != null) ? ' <span style="font-weight:400;color:' + (it.willBeNegative ? '#b91c1c' : 'var(--text-3)') + ';">(→ ' + PCD.fmtNumber(it.after) + ')</span>' : '';
         return '<div style="display:flex;justify-content:space-between;gap:10px;padding:6px 10px;border-bottom:1px solid var(--border);font-size:13px;">' +
-          '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;">' + PCD.escapeHtml(it.name || '?') + '</span>' +
-          '<span style="font-weight:700;color:' + col + ';white-space:nowrap;flex:0 0 auto;">' + sign + ' ' + PCD.fmtNumber(it.amount) + ' ' + PCD.escapeHtml(it.unit || '') + '</span>' +
+          '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;">' + PCD.escapeHtml(it.name || '?') + (it.willBeNegative ? ' ⚠' : '') + '</span>' +
+          '<span style="font-weight:700;color:' + col + ';white-space:nowrap;flex:0 0 auto;">' + sign + ' ' + PCD.fmtNumber(it.amount) + ' ' + PCD.escapeHtml(it.unit || '') + afterHtml + '</span>' +
         '</div>';
       }).join('');
       body.innerHTML =
@@ -196,6 +220,10 @@
           '<span style="font-size:18px;flex:0 0 auto;">' + (isAdd ? '📥' : '📦') + '</span>' +
           '<div style="font-size:13px;line-height:1.5;color:var(--text-2);">' + PCD.escapeHtml(opts.note || (isAdd ? (t('inv_confirm_add_note') || 'These items will be ADDED to your stock. This cannot be undone.') : (t('inv_confirm_deduct_note') || 'These items will be DEDUCTED from your stock. This cannot be undone.'))) + '</div>' +
         '</div>' +
+        (negCount ? '<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:#fef2f2;border:1px solid #fecaca;border-radius:var(--r-md);margin-bottom:12px;">' +
+          '<span style="font-size:18px;flex:0 0 auto;">⚠</span>' +
+          '<div style="font-size:13px;line-height:1.5;color:#b91c1c;font-weight:600;">' + PCD.escapeHtml((t('inv_confirm_will_go_negative') || '{n} item(s) will drop below zero stock.').replace('{n}', negCount)) + '</div>' +
+        '</div>' : '') +
         '<details style="border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;">' +
           '<summary style="cursor:pointer;padding:10px 12px;font-weight:700;font-size:13px;background:var(--surface-2);">' +
             PCD.escapeHtml(isAdd ? (t('inv_to_add') || 'To add') : (t('inv_to_deduct') || 'To deduct')) + ' · ' + items.length + ' ' + PCD.escapeHtml(t('items') || 'items') +
@@ -2160,5 +2188,5 @@
   }
 
   PCD.tools = PCD.tools || {};
-  PCD.tools.inventory = { render: render, openEditor: openEditor, computeStatus: computeStatus, applyStockDeductions: applyStockDeductions, applyStockAdditions: applyStockAdditions, computeSalesDeductions: computeSalesDeductions, confirmStockChange: confirmStockChange, markOrdered: markOrdered, openRecordSales: openRecordSales };
+  PCD.tools.inventory = { render: render, openEditor: openEditor, computeStatus: computeStatus, applyStockDeductions: applyStockDeductions, applyStockAdditions: applyStockAdditions, previewStockDeductions: previewStockDeductions, computeSalesDeductions: computeSalesDeductions, confirmStockChange: confirmStockChange, markOrdered: markOrdered, openRecordSales: openRecordSales };
 })();
