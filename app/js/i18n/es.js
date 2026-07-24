@@ -3652,3 +3652,10 @@ window.PCD.i18n.register('es', {
   event_notes_client: "Términos para el cliente (se muestran en la Propuesta firmada)",
   event_notes_client_hint: "El cliente verá y firmará esto. Escribe aquí solo información/términos dirigidos a él.",
 });
+
+// v2.44.153 — Correcciones de auditoría: bloqueo de conteo negativo + validación de unidad CSV
+window.PCD.i18n.register('es', {
+  inv_count_negative: "El conteo de stock no puede ser negativo — {n} artículo(s) omitido(s).",
+  import_skipped_invalid_unit: "{n} fila(s) — unidad no reconocida, se usó g por defecto",
+  buffet_unit_needs_yield: "Esta receta no tiene un peso de rendimiento definido — añádelo en Recetas antes de usar aquí una unidad de peso/volumen.",
+});

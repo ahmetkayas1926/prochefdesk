@@ -1139,10 +1139,11 @@ Pasta,3,kg,cat_dry_goods,,</code></pre>
           <div style="margin-top:6px;font-family:var(--font-mono);font-size:12px;color:var(--text-2);line-height:1.6;">
             ${previewLines}${rows.length > 5 ? '<br><span style="color:var(--text-3);">… +' + (rows.length - 5) + ' ' + PCD.escapeHtml(t('import_more_rows') || 'more') + '</span>' : ''}
           </div>
-          ${(rows.skippedNegativePrice || rows.yieldIgnoredCount) ? '<div style="margin-top:8px;font-size:11.5px;color:#b45309;">⚠ ' +
+          ${(rows.skippedNegativePrice || rows.yieldIgnoredCount || rows.invalidUnitCount) ? '<div style="margin-top:8px;font-size:11.5px;color:#b45309;">⚠ ' +
             [
               rows.skippedNegativePrice ? PCD.escapeHtml((t('import_skipped_negative_price') || '{n} row(s) skipped — negative price').replace('{n}', rows.skippedNegativePrice)) : '',
               rows.yieldIgnoredCount ? PCD.escapeHtml((t('import_yield_ignored') || '{n} row(s) — yield% ignored (must be 1-100)').replace('{n}', rows.yieldIgnoredCount)) : '',
+              rows.invalidUnitCount ? PCD.escapeHtml((t('import_skipped_invalid_unit') || '{n} row(s) skipped — unsupported unit').replace('{n}', rows.invalidUnitCount)) : '',
             ].filter(Boolean).join(' · ') + '</div>' : ''}
         </div>
       `;
@@ -1316,6 +1317,7 @@ Pasta,3,kg,cat_dry_goods,,</code></pre>
     const rows = [];
     let skippedNegativePrice = 0;
     let yieldIgnoredCount = 0;
+    let invalidUnitCount = 0;
     dataRows.forEach(function (cells) {
       if (!cells || cells.length < 2) return;
       const name = String(cells[0] || '').trim();
@@ -1332,7 +1334,18 @@ Pasta,3,kg,cat_dry_goods,,</code></pre>
       // unit conversion in recipe lines.
       let rawUnit = String(cells[2] || '').trim() || 'g';
       const lcUnit = rawUnit.toLowerCase();
-      if (UNITS.indexOf(lcUnit) >= 0) rawUnit = lcUnit;
+      if (UNITS.indexOf(lcUnit) >= 0) {
+        rawUnit = lcUnit;
+      } else {
+        // v2.44.153 — Fix: desteklenmeyen birim ("box", yazım hatası, vb.)
+        // hiçbir doğrulamadan geçmeden ham metin olarak kaydediliyordu;
+        // dropdown'da "g"ye normalize olurken fiyat etiketi eski birimde
+        // kalıp veri/UI tutarsızlığı yaratıyor ve tarif birim dönüşümünü
+        // bozuyordu. Bilinmeyen birimler 'g'ye düşürülür, satır import
+        // edilmeye devam eder, sayaç önizlemede gösterilir.
+        rawUnit = 'g';
+        invalidUnitCount++;
+      }
       // v2.9.19 — Yield% optional 6th column (cells[5]). Strip non-numeric
       // (handles "88%" → 88). Valid range 1-100, else ignored.
       let yieldPct = null;
@@ -1356,6 +1369,7 @@ Pasta,3,kg,cat_dry_goods,,</code></pre>
     });
     rows.skippedNegativePrice = skippedNegativePrice;
     rows.yieldIgnoredCount = yieldIgnoredCount;
+    rows.invalidUnitCount = invalidUnitCount;
     return rows;
   }
 

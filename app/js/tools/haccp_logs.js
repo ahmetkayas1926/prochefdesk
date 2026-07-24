@@ -94,7 +94,15 @@
     if (logs.length === 0) return null;
     const stored = PCD.store.get(PREF_CURRENT_LOG);
     if (stored && logs.some(function (l) { return l.id === stored; })) return stored;
-    return logs[0].id;
+    // v2.44.153 — Fix: yeni oturumda hep logs[0]'a (ör. boş "Default") düşülüyordu,
+    // gerçek verisi olan başka bir log varken bile. Kayıtlı tercih yoksa,
+    // ünitesi olan İLK log'u seç — boş bir log'a düşüp "kayıtlar kayboldu"
+    // izlenimi vermesin.
+    const allUnits = PCD.store.listTable(TABLE_UNITS) || [];
+    const withUnits = logs.find(function (l) {
+      return allUnits.some(function (u) { return u.logId === l.id; });
+    });
+    return (withUnits || logs[0]).id;
   }
   function setCurrentLogId(logId) {
     PCD.store.set(PREF_CURRENT_LOG, logId);

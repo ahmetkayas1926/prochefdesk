@@ -1671,10 +1671,26 @@
       // v2.8.79 — Unit artık <select>. Tek tıkla seçim → input yerine change.
       PCD.on(body, 'change', '[data-it-unit]', function () {
         const p = pickIdx('data-it-unit', this);
-        if (data.stations[p.sIdx] && data.stations[p.sIdx].items[p.iIdx]) {
-          data.stations[p.sIdx].items[p.iIdx].unit = this.value;
-          renderEditor();
+        const item = data.stations[p.sIdx] && data.stations[p.sIdx].items[p.iIdx];
+        if (!item) return;
+        // v2.44.153 — Fix: tarifte yield (üretim ağırlığı) tanımlı değilken
+        // birim gram/ml gibi ağırlık/hacim birimine çevrilirse maliyet
+        // sessizce $0'a düşüyordu (yalnız toplu bir uyarı banner'ı vardı,
+        // kolayca gözden kaçıyordu). Artık böyle bir tarif-kalemi için
+        // ağırlık/hacim birimi seçilirse engellenir + net uyarı gösterilir.
+        const newGroup = PCD.unitGroup ? PCD.unitGroup(this.value) : null;
+        const isWeightVolume = newGroup === 'mass' || newGroup === 'volume';
+        if (item.recipeId && isWeightVolume) {
+          const recipeMap = PCD.recipes.buildRecipeMap();
+          const recipe = recipeMap[item.recipeId];
+          if (recipe && !recipe.yieldAmount) {
+            this.value = item.unit || 'portion';
+            PCD.toast.error(t('buffet_unit_needs_yield') || 'This recipe has no yield weight set — add one in Recipes before using a weight/volume unit here.');
+            return;
+          }
         }
+        item.unit = this.value;
+        renderEditor();
       });
       PCD.on(body, 'input', '[data-it-pickup]', PCD.debounce(function () {
         const p = pickIdx('data-it-pickup', this);

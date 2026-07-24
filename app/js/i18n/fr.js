@@ -3652,3 +3652,10 @@ window.PCD.i18n.register('fr', {
   event_notes_client: "Conditions pour le client (affichées sur la Proposition signée)",
   event_notes_client_hint: "Le client verra et signera ceci. N'écrivez ici que des conditions/infos destinées à lui.",
 });
+
+// v2.44.153 — Corrections d'audit : blocage du comptage négatif + validation d'unité CSV
+window.PCD.i18n.register('fr', {
+  inv_count_negative: "Le comptage de stock ne peut pas être négatif — {n} article(s) ignoré(s).",
+  import_skipped_invalid_unit: "{n} ligne(s) — unité non reconnue, définie sur g par défaut",
+  buffet_unit_needs_yield: "Cette recette n'a pas de poids de rendement défini — ajoutez-en un dans Recettes avant d'utiliser ici une unité de poids/volume.",
+});

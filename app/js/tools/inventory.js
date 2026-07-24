@@ -1123,14 +1123,22 @@
       const user = PCD.store.get('user') || {};
 
       // Build pending count snapshot (used if approval required)
+      // v2.44.153 — Fix: negatif sayım hiç uyarı olmadan kabul ediliyordu,
+      // Stock Value ve reorder hesaplarını sessizce bozuyordu.
       const countedValues = {};
+      let negativeSkipped = 0;
       Object.keys(draft).forEach(function (iid) {
         const val = draft[iid];
         if (val === '' || val == null) return;
         const num = parseFloat(val);
         if (isNaN(num)) return;
+        if (num < 0) { negativeSkipped++; return; }
         countedValues[iid] = num;
       });
+
+      if (negativeSkipped > 0) {
+        PCD.toast.error(t('inv_count_negative', { n: negativeSkipped }) || ('Stock count cannot be negative — ' + negativeSkipped + ' item(s) skipped.'));
+      }
 
       if (Object.keys(countedValues).length === 0) {
         PCD.toast.warning(PCD.i18n.t('toast_no_counts_entered'));
@@ -1188,7 +1196,7 @@
 
     Object.keys(countedValues).forEach(function (iid) {
       const num = countedValues[iid];
-      if (num == null || num === '' || isNaN(Number(num))) return;
+      if (num == null || num === '' || isNaN(Number(num)) || Number(num) < 0) return;
       const row = next[iid] || { stock: null, parLevel: null, minLevel: null };
       row.stock = Number(num);
       row.lastCountedAt = now;

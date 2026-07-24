@@ -3822,3 +3822,10 @@ window.PCD.i18n.register('en', {
   event_notes_client: "Client-facing terms (shown on the signed Proposal)",
   event_notes_client_hint: "The client will see and sign this. Only put terms/info meant for them here.",
 });
+
+// v2.44.153 — Audit fixes: negative stock count guard + CSV unit validation
+window.PCD.i18n.register('en', {
+  inv_count_negative: "Stock count cannot be negative — {n} item(s) skipped.",
+  import_skipped_invalid_unit: "{n} row(s) — unrecognized unit, defaulted to g",
+  buffet_unit_needs_yield: "This recipe has no yield weight set — add one in Recipes before using a weight/volume unit here.",
+});

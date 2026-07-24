@@ -3652,3 +3652,10 @@ window.PCD.i18n.register('de', {
   event_notes_client: "Kundenbedingungen (im unterschriebenen Angebot angezeigt)",
   event_notes_client_hint: "Der Kunde sieht und unterschreibt dies. Schreiben Sie hier nur für ihn bestimmte Bedingungen/Infos.",
 });
+
+// v2.44.153 — Audit-Korrekturen: Sperre für negative Zählung + CSV-Einheitenprüfung
+window.PCD.i18n.register('de', {
+  inv_count_negative: "Der Lagerbestand kann nicht negativ sein — {n} Artikel übersprungen.",
+  import_skipped_invalid_unit: "{n} Zeile(n) — unbekannte Einheit, auf g gesetzt",
+  buffet_unit_needs_yield: "Für dieses Rezept ist kein Ausbeutegewicht festgelegt — fügen Sie eines in Rezepte hinzu, bevor Sie hier eine Gewichts-/Volumeneinheit verwenden.",
+});

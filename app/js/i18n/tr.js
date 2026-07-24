@@ -3811,3 +3811,10 @@ window.PCD.i18n.register('tr', {
   event_notes_client: "Müşteriye yönelik şartlar (imzalanan teklifte gösterilir)",
   event_notes_client_hint: "Müşteri bunu görüp imzalayacak. Yalnız ona yönelik şart/bilgi yaz.",
 });
+
+// v2.44.153 — Denetim düzeltmeleri: negatif stok sayımı engeli + CSV birim doğrulama
+window.PCD.i18n.register('tr', {
+  inv_count_negative: "Stok sayımı negatif olamaz — {n} kalem atlandı.",
+  import_skipped_invalid_unit: "{n} satırda tanınmayan birim vardı — g olarak ayarlandı",
+  buffet_unit_needs_yield: "Bu tarifte üretim ağırlığı (yield) tanımlı değil — buraya gram/ml birimi girmeden önce Tarifler'de ekleyin.",
+});
