@@ -456,12 +456,17 @@
       });
     });
 
-    PCD.$('#prefCurrency', view).addEventListener('change', function () {
-      PCD.store.set('prefs.currency', this.value);
-      if (PCD.store.flush) PCD.store.flush(); // v2.14.7 — anında IDB (debounce race)
-      // v2.14.7 — prefs'i buluta HEMEN it. Boot pull (cloud-pertable) + realtime
-      // "cloud wins" merge yapıyor; push edilmezse cloud'daki stale USD geri
-      // yazıyordu ("kaydet kalıcı değil"). setActiveWorkspaceId ile aynı user_prefs push.
+    // v2.44.155 — Fix: yalnız #prefCurrency buluta HEMEN push ediyordu (v2.14.7
+    // notu: push edilmezse boot pull/realtime "cloud wins" merge stale değeri
+    // geri yazıyor — "kaydet kalıcı değil"). #prefLocale/[data-theme] AYNI
+    // riski taşıyordu ama push kodu hiç yoktu: dil değiştirilip başka bir
+    // ekrana geçildiğinde araya giren bir cloud pull, prefs.locale'i sessizce
+    // eski (cloud'daki) değere döndürebiliyordu — UI o an hâlâ yeni dilde
+    // görünüyordu (i18n.currentLocale bellek değişkeni etkilenmiyordu) ama
+    // Ayarlar'a dönünce dropdown yanlış dil gösteriyordu. Tek ortak fonksiyona
+    // taşındı, üçü de kullanıyor.
+    function pushPrefsToCloud() {
+      if (PCD.store.flush) PCD.store.flush(); // anında IDB (debounce race)
       if (PCD.cloudPerTable && PCD.cloudPerTable.queueUpsert) {
         PCD.cloudPerTable.queueUpsert('user_prefs', null, null, {
           activeWorkspaceId: PCD.store.getActiveWorkspaceId(),
@@ -472,6 +477,10 @@
         });
         if (PCD.cloudPerTable.flushNow) PCD.cloudPerTable.flushNow();
       }
+    }
+    PCD.$('#prefCurrency', view).addEventListener('change', function () {
+      PCD.store.set('prefs.currency', this.value);
+      pushPrefsToCloud();
       PCD.toast.success(t('saved'));
       render(view);
     });
@@ -484,7 +493,9 @@
     const localeSel = PCD.$('#prefLocale', view);
     if (localeSel) localeSel.value = loc;
     localeSel.addEventListener('change', function () {
-      PCD.i18n.setLocale(this.value);
+      PCD.i18n.setLocale(this.value).then(function () {
+        pushPrefsToCloud();
+      });
       render(view);
     });
     PCD.$$('[data-theme]', view).forEach(function (b) {
@@ -492,11 +503,13 @@
         const val = this.getAttribute('data-theme');
         PCD.store.set('prefs.theme', val);
         document.documentElement.setAttribute('data-theme', val);
+        pushPrefsToCloud();
         render(view);
       });
     });
     PCD.$('#prefHaptic', view).addEventListener('change', function () {
       PCD.store.set('prefs.haptic', this.checked);
+      pushPrefsToCloud();
     });
 
     const saveChefBtn = PCD.$('#saveChefProfileBtn', view);

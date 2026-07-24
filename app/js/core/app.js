@@ -986,7 +986,22 @@
       selected: [PCD.i18n.currentLocale]
     }).then(function (sel) {
       if (!sel || !sel.length) return;
-      PCD.i18n.setLocale(sel[0]);
+      PCD.i18n.setLocale(sel[0]).then(function () {
+        // v2.44.155 — Fix: account.js'teki #prefLocale ile aynı sorun — bu
+        // hızlı seçici de yeni dili buluta hiç push etmiyordu; araya giren
+        // bir cloud pull/realtime "cloud wins" merge'ü prefs.locale'i sessizce
+        // eski değere döndürebiliyordu (bkz. account.js pushPrefsToCloud()).
+        if (PCD.cloudPerTable && PCD.cloudPerTable.queueUpsert) {
+          PCD.cloudPerTable.queueUpsert('user_prefs', null, null, {
+            activeWorkspaceId: PCD.store.getActiveWorkspaceId(),
+            prefs: PCD.store.get('prefs'),
+            plan: PCD.store.get('plan'),
+            onboarding: PCD.store.get('onboarding'),
+            costHistory: PCD.store.get('costHistory') || [],
+          });
+          if (PCD.cloudPerTable.flushNow) PCD.cloudPerTable.flushNow();
+        }
+      });
       // Re-render current view to apply new translations
       const view = PCD.$('#view');
       const cur = PCD.router.currentView() || 'dashboard';
