@@ -475,7 +475,15 @@
       PCD.toast.success(t('saved'));
       render(view);
     });
-    PCD.$('#prefLocale', view).addEventListener('change', function () {
+    // v2.44.154 — Fix: bazı yeniden-yüklemelerde (özellikle henüz önbelleğe
+    // alınmamış bir dil bundle'ının async fetch'i tamamlanmadan bu görünüm
+    // ilk kez render edildiğinde) <option selected> HTML'i doğru üretilse
+    // bile tarayıcı seçili değeri "English"te bırakabiliyordu — dropdown
+    // gerçek aktif dili yanlış gösteriyordu. Render sonrası değeri gerçek
+    // kayıtlı tercihe (`loc`) göre açıkça senkronize et; garanti çözüm.
+    const localeSel = PCD.$('#prefLocale', view);
+    if (localeSel) localeSel.value = loc;
+    localeSel.addEventListener('change', function () {
       PCD.i18n.setLocale(this.value);
       render(view);
     });

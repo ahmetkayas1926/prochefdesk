@@ -49,7 +49,12 @@
     haccp_holding:        { stateKey: 'haccpHolding',         wsScoped: true },
     // v2.15.3 — Roster cloud sync (map-table pattern)
     rosters:              { stateKey: 'rosters',              wsScoped: true },
-    prepSheets:           { stateKey: 'prepSheets',           wsScoped: true },
+    // v2.44.154 — Fix: anahtar 'prepSheets' (camelCase) idi ama
+    // store.js:_stateKeyToSqlTable() gerçek SQL tablo adı olan 'prep_sheets'i
+    // gönderiyor — eşleşme hiç tutmadığı için her Prep Sheet değişikliği
+    // sessizce ("unknown table" uyarısıyla) kuyruğa hiç alınmadan atılıyordu;
+    // pull/realtime çalıştığı için sorun fark edilmiyordu (tek yönlü senkron kopukluğu).
+    prep_sheets:          { stateKey: 'prepSheets',           wsScoped: true },
     // Array tablolar (ayrı queueArraySync API'si ile yazılır)
     waste:                { stateKey: 'waste',                wsScoped: true, isArray: true },
     checklist_sessions:   { stateKey: 'checklistSessions',    wsScoped: true, isArray: true },

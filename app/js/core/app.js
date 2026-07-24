@@ -131,6 +131,12 @@
       try {
         PCD.store.on('inventory', function () { try { populateSidenav(); } catch (e) {} });
         PCD.store.on('ingredients', function () { try { populateSidenav(); } catch (e) {} });
+        // v2.44.154 — Fix: dil değiştirilince sidebar (bölüm başlıkları + araç
+        // adları) boot'ta bir kez render edildiği için eski dilde kalıyordu —
+        // sayfa içeriği doğru çevrilirken menü İngilizce takılı kalıp tam
+        // sayfa yenilemesi gerektiriyordu. i18n.setLocale() locale'i
+        // 'prefs.locale' path'ine yazıyor; o değişince sidebar'ı yeniden çiz.
+        PCD.store.on('prefs.locale', function () { try { populateSidenav(); } catch (e) {} });
       } catch (e) { /* ignore — boot tolerance */ }
 
       // v2.17 — Stripe checkout dönüşü: ?checkout=success → kullanıcıyı
