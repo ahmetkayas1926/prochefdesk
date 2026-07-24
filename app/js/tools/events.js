@@ -1290,9 +1290,12 @@
       $('eCancelPolicy').addEventListener('input', function () { data.cancellationPolicy = this.value; });
       $('eNotes').addEventListener('input', function () { data.notes = this.value; });
       $('eClientNotes').addEventListener('input', function () { data.clientNotes = this.value; });
-      $('ePrice').addEventListener('input', PCD.debounce(function () { data.pricePerHead = parseFloat(this.value) || null; render(); }, 400));
-      $('eBudget').addEventListener('input', PCD.debounce(function () { data.budget = parseFloat(this.value) || null; render(); }, 400));
-      $('eSvc').addEventListener('input', PCD.debounce(function () { data.serviceChargePct = Math.min(100, parseFloat(this.value) || 0) || null; render(); }, 400));
+      // v2.44.156 — Fix: bu alanlar negatif değeri aynen kaydediyordu (ör. -50
+      // kişi başı fiyat) → events.js computeStats gelir/kâr hesaplarına
+      // negatif değer sızıp anlamsız/ters işaretli tutarlar üretebiliyordu.
+      $('ePrice').addEventListener('input', PCD.debounce(function () { const v = parseFloat(this.value); data.pricePerHead = (!isNaN(v) && v > 0) ? v : null; render(); }, 400));
+      $('eBudget').addEventListener('input', PCD.debounce(function () { const v = parseFloat(this.value); data.budget = (!isNaN(v) && v > 0) ? v : null; render(); }, 400));
+      $('eSvc').addEventListener('input', PCD.debounce(function () { const v = Math.max(0, Math.min(100, parseFloat(this.value) || 0)); data.serviceChargePct = v || null; render(); }, 400));
 
       const addStaffBtn = $('addStaffBtn');
       if (addStaffBtn) addStaffBtn.addEventListener('click', function () {
@@ -1302,9 +1305,11 @@
       });
       const stOf = function (el) { return (data.staffing || [])[parseInt(el.getAttribute('data-st'), 10)]; };
       PCD.on(body, 'input', '.st-role', function () { const s = stOf(this); if (s) s.role = this.value; });
-      PCD.on(body, 'input', '.st-count', PCD.debounce(function () { const s = stOf(this); if (s) { s.count = parseFloat(this.value) || 0; render(); } }, 400));
-      PCD.on(body, 'input', '.st-hours', PCD.debounce(function () { const s = stOf(this); if (s) { s.hours = parseFloat(this.value) || 0; render(); } }, 400));
-      PCD.on(body, 'input', '.st-rate', PCD.debounce(function () { const s = stOf(this); if (s) { s.rate = parseFloat(this.value) || 0; render(); } }, 400));
+      // v2.44.156 — Fix: negatif count/hours/rate personel maliyetini negatife
+      // çevirip event kâr hesabını bozabiliyordu; 0'ın altına inmiyor.
+      PCD.on(body, 'input', '.st-count', PCD.debounce(function () { const s = stOf(this); if (s) { const v = parseFloat(this.value); s.count = (!isNaN(v) && v > 0) ? v : 0; render(); } }, 400));
+      PCD.on(body, 'input', '.st-hours', PCD.debounce(function () { const s = stOf(this); if (s) { const v = parseFloat(this.value); s.hours = (!isNaN(v) && v > 0) ? v : 0; render(); } }, 400));
+      PCD.on(body, 'input', '.st-rate', PCD.debounce(function () { const s = stOf(this); if (s) { const v = parseFloat(this.value); s.rate = (!isNaN(v) && v > 0) ? v : 0; render(); } }, 400));
       PCD.on(body, 'click', '.st-rm', function () { const i = parseInt(this.getAttribute('data-st'), 10); if (data.staffing) { data.staffing.splice(i, 1); render(); } });
 
       // Charges & extras
@@ -1312,8 +1317,9 @@
       if (addChargeBtn) addChargeBtn.addEventListener('click', function () { if (!data.charges) data.charges = []; data.charges.push({ label: '', cost: null, price: null }); render(); });
       const chOf = function (el) { return (data.charges || [])[parseInt(el.getAttribute('data-ch'), 10)]; };
       PCD.on(body, 'input', '.ch-label', function () { const c = chOf(this); if (c) c.label = this.value; });
-      PCD.on(body, 'input', '.ch-cost', PCD.debounce(function () { const c = chOf(this); if (c) { c.cost = parseFloat(this.value) || 0; render(); } }, 400));
-      PCD.on(body, 'input', '.ch-price', PCD.debounce(function () { const c = chOf(this); if (c) { c.price = parseFloat(this.value) || 0; render(); } }, 400));
+      // v2.44.156 — Fix: negatif charge cost/price aynen kaydediliyordu.
+      PCD.on(body, 'input', '.ch-cost', PCD.debounce(function () { const c = chOf(this); if (c) { const v = parseFloat(this.value); c.cost = (!isNaN(v) && v > 0) ? v : 0; render(); } }, 400));
+      PCD.on(body, 'input', '.ch-price', PCD.debounce(function () { const c = chOf(this); if (c) { const v = parseFloat(this.value); c.price = (!isNaN(v) && v > 0) ? v : 0; render(); } }, 400));
       PCD.on(body, 'click', '.ch-rm', function () { const i = parseInt(this.getAttribute('data-ch'), 10); if (data.charges) { data.charges.splice(i, 1); render(); } });
 
       // Payment schedule
@@ -1322,7 +1328,8 @@
       const payOf = function (el) { return (data.payments || [])[parseInt(el.getAttribute('data-pay'), 10)]; };
       PCD.on(body, 'input', '.pay-label', function () { const p = payOf(this); if (p) p.label = this.value; });
       PCD.on(body, 'input', '.pay-due', function () { const p = payOf(this); if (p) p.due = this.value; });
-      PCD.on(body, 'input', '.pay-amount', PCD.debounce(function () { const p = payOf(this); if (p) { p.amount = parseFloat(this.value) || 0; render(); } }, 400));
+      // v2.44.156 — Fix: negatif ödeme tutarı aynen kaydediliyordu.
+      PCD.on(body, 'input', '.pay-amount', PCD.debounce(function () { const p = payOf(this); if (p) { const v = parseFloat(this.value); p.amount = (!isNaN(v) && v > 0) ? v : 0; render(); } }, 400));
       PCD.on(body, 'change', '.pay-paid', function () { const p = payOf(this); if (p) { p.paid = this.checked; render(); } });
       PCD.on(body, 'click', '.pay-rm', function () { const i = parseInt(this.getAttribute('data-pay'), 10); if (data.payments) { data.payments.splice(i, 1); render(); } });
 
@@ -1356,18 +1363,21 @@
       PCD.on(body, 'input', '.fn-time', function () { const f = fnOf(this); if (f) f.time = this.value; });
       PCD.on(body, 'input', '.fn-end', function () { const f = fnOf(this); if (f) f.endTime = this.value; });
       PCD.on(body, 'input', '.fn-room', function () { const f = fnOf(this); if (f) f.room = this.value; });
-      PCD.on(body, 'input', '.fn-guests', PCD.debounce(function () { const f = fnOf(this); if (f) { f.guestCount = parseInt(this.value, 10) || 0; render(); } }, 400));
-      PCD.on(body, 'input', '.fn-guar', PCD.debounce(function () { const f = fnOf(this); if (f) { f.guaranteedCount = parseInt(this.value, 10) || 0; render(); } }, 400));
+      // v2.44.156 — Fix: negatif misafir/garanti sayısı aynen kaydediliyordu →
+      // shopping list/roster kişi başı hesaplarına negatif kişi sayısı sızabiliyordu.
+      PCD.on(body, 'input', '.fn-guests', PCD.debounce(function () { const f = fnOf(this); if (f) { const v = parseInt(this.value, 10); f.guestCount = (!isNaN(v) && v > 0) ? v : 0; render(); } }, 400));
+      PCD.on(body, 'input', '.fn-guar', PCD.debounce(function () { const f = fnOf(this); if (f) { const v = parseInt(this.value, 10); f.guaranteedCount = (!isNaN(v) && v > 0) ? v : 0; render(); } }, 400));
       // Diyet sayıları + not: render YOK (details açık + odak korunur; maliyeti etkilemez).
       PCD.on(body, 'input', '.fn-diet', function () { const f = fnOf(this); if (f) { if (!f.dietary) f.dietary = {}; f.dietary[this.getAttribute('data-diet')] = parseInt(this.value, 10) || 0; } });
       PCD.on(body, 'input', '.fn-diet-note', function () { const f = fnOf(this); if (f) f.dietaryNote = this.value; });
+      // v2.44.156 — Fix: negatif portion/amount per guest aynen kaydediliyordu.
       PCD.on(body, 'input', '.fn-pph', PCD.debounce(function () {
         const f = fnOf(this); const mi = parseInt(this.getAttribute('data-mi'), 10);
-        if (f && f.menu && f.menu[mi]) { f.menu[mi].portionsPerGuest = parseFloat(this.value) || 0; render(); }
+        if (f && f.menu && f.menu[mi]) { const v = parseFloat(this.value); f.menu[mi].portionsPerGuest = (!isNaN(v) && v > 0) ? v : 0; render(); }
       }, 400));
       PCD.on(body, 'input', '.fn-amt', PCD.debounce(function () {
         const f = fnOf(this); const mi = parseInt(this.getAttribute('data-mi'), 10);
-        if (f && f.menu && f.menu[mi]) { f.menu[mi].amountPerGuest = parseFloat(this.value) || 0; render(); }
+        if (f && f.menu && f.menu[mi]) { const v = parseFloat(this.value); f.menu[mi].amountPerGuest = (!isNaN(v) && v > 0) ? v : 0; render(); }
       }, 400));
       PCD.on(body, 'click', '.fn-rm-menu', function () {
         const f = fnOf(this); const mi = parseInt(this.getAttribute('data-mi'), 10);

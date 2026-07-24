@@ -126,7 +126,10 @@
       '<summary style="cursor:pointer;padding:12px 14px;font-weight:700;font-size:13px;color:var(--brand-700);display:flex;align-items:center;gap:8px;list-style:none;">' +
         '<span style="font-size:16px;">💡</span>' +
         '<span style="flex:1;">' + PCD.escapeHtml(title) + '</span>' +
-        '<button type="button" data-guide-dismiss="' + PCD.escapeHtml(key) + '" style="background:transparent;border:0;color:var(--text-3);cursor:pointer;font-size:13px;padding:2px 6px;line-height:1;" title="' + PCD.escapeHtml(tt('dash_guide_dismiss') || 'Hide') + '">✕</button>' +
+        // v2.44.156 — Fix: eski dolgu (2px 6px) mobilde ~23x17px'lik dokunma
+        // alanı üretiyordu (önerilen ~44px altı) — min-width/height + flex
+        // ortalama ile görsel boyut aynı kalıp dokunma alanı büyütüldü.
+        '<button type="button" data-guide-dismiss="' + PCD.escapeHtml(key) + '" style="background:transparent;border:0;color:var(--text-3);cursor:pointer;font-size:13px;line-height:1;min-width:32px;min-height:32px;padding:0;display:inline-flex;align-items:center;justify-content:center;" title="' + PCD.escapeHtml(tt('dash_guide_dismiss') || 'Hide') + '">✕</button>' +
       '</summary>' +
       '<div style="padding:0 14px 14px;font-size:13px;color:var(--text-2);line-height:1.65;">' +
         '<ol style="margin:0;padding-inline-start:20px;">' + lis + '</ol>' + tipHtml +

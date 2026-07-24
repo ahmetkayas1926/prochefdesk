@@ -3829,3 +3829,10 @@ window.PCD.i18n.register('en', {
   import_skipped_invalid_unit: "{n} row(s) — unrecognized unit, defaulted to g",
   buffet_unit_needs_yield: "This recipe has no yield weight set — add one in Recipes before using a weight/volume unit here.",
 });
+
+// v2.44.156 — Missing keys found in QA audit (were silently falling back to hardcoded text)
+window.PCD.i18n.register('en', {
+  hcr_temp_fail: "Storage type threshold violated",
+  hcr_month_full: "This month is full, move to the next month",
+  recipe_sub_no_yield_tip: "No yield set — cannot cost by g/ml. Give the prep a yield, or use the portion unit.",
+});

@@ -401,7 +401,13 @@
       if (PCD.idb && PCD.idb.put) {
         PCD.idb.put('state', 'main', state).then(function () {
           if (!_migrationDone) _completeMigration();
-        }).catch(function () {});
+        }).catch(function (e) {
+          // v2.44.156 — Fix: IDB yazma hatası (ör. quota/blocked) sessizce
+          // yutuluyordu — kullanıcı verisinin kaydedilmediğini fark etmeden
+          // kapatıp kaybedebiliyordu. En azından console'a logla (bu tek nokta
+          // — dosyadaki diğer boş catch'ler kapsam dışı).
+          PCD.err && PCD.err('trimAndPersist: IDB write failed', e);
+        });
       }
       return true;
     } catch (e) {

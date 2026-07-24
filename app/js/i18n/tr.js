@@ -3818,3 +3818,10 @@ window.PCD.i18n.register('tr', {
   import_skipped_invalid_unit: "{n} satırda tanınmayan birim vardı — g olarak ayarlandı",
   buffet_unit_needs_yield: "Bu tarifte üretim ağırlığı (yield) tanımlı değil — buraya gram/ml birimi girmeden önce Tarifler'de ekleyin.",
 });
+
+// v2.44.156 — QA denetiminde bulunan eksik anahtarlar (sessizce sabit metne düşüyordu)
+window.PCD.i18n.register('tr', {
+  hcr_temp_fail: "Saklama tipi eşiği ihlal edildi",
+  hcr_month_full: "Bu ay dolu, sonraki aya geç",
+  recipe_sub_no_yield_tip: "Üretim ağırlığı (yield) tanımlı değil — g/ml ile maliyet hesaplanamaz. Prep'e yield ekle veya porsiyon birimini kullan.",
+});

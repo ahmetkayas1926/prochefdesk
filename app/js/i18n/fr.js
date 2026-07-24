@@ -1822,7 +1822,7 @@ window.PCD.i18n.register('fr', {
   t_inventory_desc: "Stock et niveaux minimums",
   t_inventory_title: "Inventaire",
   t_kitchen_cards_desc: "Fiches recette A4 pour la ligne",
-  t_kitchen_cards_title: "Kitchen Cards",
+  t_kitchen_cards_title: "Fiches Cuisine",
   t_menus_desc: "Concevez des menus à partir de recettes",
   t_menus_title: "Créateur de menus",
   t_portion_desc: "Ajustez n'importe quelle recette",
@@ -3658,4 +3658,11 @@ window.PCD.i18n.register('fr', {
   inv_count_negative: "Le comptage de stock ne peut pas être négatif — {n} article(s) ignoré(s).",
   import_skipped_invalid_unit: "{n} ligne(s) — unité non reconnue, définie sur g par défaut",
   buffet_unit_needs_yield: "Cette recette n'a pas de poids de rendement défini — ajoutez-en un dans Recettes avant d'utiliser ici une unité de poids/volume.",
+});
+
+// v2.44.156 — Clés manquantes trouvées lors de l'audit QA
+window.PCD.i18n.register('fr', {
+  hcr_temp_fail: "Seuil du type de stockage dépassé",
+  hcr_month_full: "Ce mois est complet, passez au mois suivant",
+  recipe_sub_no_yield_tip: "Aucun rendement défini — coût par g/ml impossible. Ajoutez un rendement à la préparation, ou utilisez l'unité de portion.",
 });

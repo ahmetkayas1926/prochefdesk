@@ -1664,7 +1664,11 @@
       PCD.on(body, 'input', '[data-it-amt]', PCD.debounce(function () {
         const p = pickIdx('data-it-amt', this);
         if (data.stations[p.sIdx] && data.stations[p.sIdx].items[p.iIdx]) {
-          data.stations[p.sIdx].items[p.iIdx].amountPerGuest = parseFloat(this.value) || 0;
+          // v2.44.156 — Fix: negatif "per guest" miktarı aynen kaydediliyordu
+          // (komşu pickupRatio alanı Math.max(0,...) ile zaten sınırlıyken) →
+          // negatif prep miktarı/maliyet üretebiliyordu. Artık 0'ın altına inmiyor.
+          const amt = parseFloat(this.value);
+          data.stations[p.sIdx].items[p.iIdx].amountPerGuest = (!isNaN(amt) && amt > 0) ? amt : 0;
           renderEditor();
         }
       }, 700));

@@ -2022,13 +2022,16 @@
     function groupRows(rows) {
       const groups = {};
       rows.forEach(function (r) {
-        const key = groupBy === 'supplier' ? (r.supplier || ' ') : (r.category || 'cat_other');
+        // v2.44.156 — Fix: gerçek NUL byte (0x00) "tedarikçisiz" sentinel olarak
+        // kullanılıyordu — okunaksız + tedarikçi adı olarak asla girilemeyecek bir
+        // string ile aynı davranışı veren düz metin sentinel'e çevrildi.
+        const key = groupBy === 'supplier' ? (r.supplier || '__no_supplier__') : (r.category || 'cat_other');
         (groups[key] = groups[key] || []).push(r);
       });
       return groups;
     }
     function groupLabel(key) {
-      if (groupBy === 'supplier') return key === ' ' ? L('shop_no_supplier', 'No supplier') : key;
+      if (groupBy === 'supplier') return key === '__no_supplier__' ? L('shop_no_supplier', 'No supplier') : key;
       return L(key, key);
     }
 

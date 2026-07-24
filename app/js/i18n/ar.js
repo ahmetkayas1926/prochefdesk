@@ -1822,7 +1822,7 @@ window.PCD.i18n.register('ar', {
   t_inventory_desc: "المخزون والحدود الدنيا",
   t_inventory_title: "المخزون",
   t_kitchen_cards_desc: "بطاقات وصفات A4 للخط",
-  t_kitchen_cards_title: "Kitchen Cards",
+  t_kitchen_cards_title: "بطاقات المطبخ",
   t_menus_desc: "صمّم قوائم من الوصفات",
   t_menus_title: "منشئ القوائم",
   t_portion_desc: "حجّم أي وصفة",
@@ -3658,4 +3658,11 @@ window.PCD.i18n.register('ar', {
   inv_count_negative: "لا يمكن أن يكون جرد المخزون سالبًا — تم تخطي {n} عنصر (عناصر).",
   import_skipped_invalid_unit: "{n} صف (صفوف) — وحدة غير معروفة، تم ضبطها على g",
   buffet_unit_needs_yield: "لا يوجد وزن إنتاج (yield) محدد لهذه الوصفة — أضف واحدًا في الوصفات قبل استخدام وحدة وزن/حجم هنا.",
+});
+
+// v2.44.156 — مفاتيح مفقودة وُجدت أثناء تدقيق الجودة
+window.PCD.i18n.register('ar', {
+  hcr_temp_fail: "تم تجاوز حد نوع التخزين",
+  hcr_month_full: "هذا الشهر ممتلئ، انتقل إلى الشهر التالي",
+  recipe_sub_no_yield_tip: "لا يوجد وزن إنتاج محدد — لا يمكن حساب التكلفة بالجرام/المل. أضف وزن إنتاج للتحضير أو استخدم وحدة الحصة.",
 });

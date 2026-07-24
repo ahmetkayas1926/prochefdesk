@@ -1822,7 +1822,7 @@ window.PCD.i18n.register('de', {
   t_inventory_desc: "Bestand & Mindestmengen",
   t_inventory_title: "Inventar",
   t_kitchen_cards_desc: "A4-Rezeptkarten für die Linie",
-  t_kitchen_cards_title: "Kitchen Cards",
+  t_kitchen_cards_title: "Küchenkarten",
   t_menus_desc: "Menüs aus Rezepten gestalten",
   t_menus_title: "Menü-Builder",
   t_portion_desc: "Skaliere jedes Rezept",
@@ -3658,4 +3658,11 @@ window.PCD.i18n.register('de', {
   inv_count_negative: "Der Lagerbestand kann nicht negativ sein — {n} Artikel übersprungen.",
   import_skipped_invalid_unit: "{n} Zeile(n) — unbekannte Einheit, auf g gesetzt",
   buffet_unit_needs_yield: "Für dieses Rezept ist kein Ausbeutegewicht festgelegt — fügen Sie eines in Rezepte hinzu, bevor Sie hier eine Gewichts-/Volumeneinheit verwenden.",
+});
+
+// v2.44.156 — Im QA-Audit gefundene fehlende Schlüssel
+window.PCD.i18n.register('de', {
+  hcr_temp_fail: "Schwellenwert für Lagerungsart überschritten",
+  hcr_month_full: "Dieser Monat ist voll, wechsle zum nächsten Monat",
+  recipe_sub_no_yield_tip: "Keine Ausbeute festgelegt — Kosten pro g/ml nicht berechenbar. Fügen Sie der Vorbereitung eine Ausbeute hinzu oder verwenden Sie die Portionseinheit.",
 });

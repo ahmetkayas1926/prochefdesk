@@ -3905,19 +3905,28 @@ function renderAllergenChips() {
       // Collect latest values from form
       data.name = PCD.$('#recipeName', body).value.trim();
       data.category = PCD.$('#recipeCategory', body).value;
-      data.servings = parseInt(PCD.$('#recipeServings', body).value, 10) || 1;
+      // v2.44.156 — Fix: `parseInt(...) || 1` yalnız 0/NaN'ı 1'e düşürüyordu,
+      // negatif servings (ör. -4) aynen kaydediliyordu → paylaşılan maliyet
+      // fonksiyonlarına (computeFoodCost vb.) negatif porsiyon sayısı sızıp
+      // ters işaretli/anlamsız maliyet üretebiliyordu. Negatif de artık 1'e düşer.
+      const servingsRaw = parseInt(PCD.$('#recipeServings', body).value, 10);
+      data.servings = (!isNaN(servingsRaw) && servingsRaw >= 1) ? servingsRaw : 1;
       data.prepTime = parseInt(PCD.$('#recipePrep', body).value, 10) || null;
       data.cookTime = parseInt(PCD.$('#recipeCook', body).value, 10) || null;
       const yldAmtInp = PCD.$('#recipeYieldAmount', body);
       const yldUnitInp = PCD.$('#recipeYieldUnit', body);
-      data.yieldAmount = (yldAmtInp && yldAmtInp.value) ? parseFloat(yldAmtInp.value) : null;
+      const yieldRaw = (yldAmtInp && yldAmtInp.value) ? parseFloat(yldAmtInp.value) : null;
+      data.yieldAmount = (yieldRaw != null && !isNaN(yieldRaw) && yieldRaw > 0) ? yieldRaw : null;
       data.yieldUnit = (yldUnitInp && yldUnitInp.value) ? yldUnitInp.value : 'portion';
       // v2.8.26 — Explicit prep classification flag, independent of yield
       const isSubInp = PCD.$('#recipeIsSubRecipe', body);
       data.isSubRecipe = isSubInp ? !!isSubInp.checked : false;
       // v2.8.58 — Discover paylaş toggle preview modal'a taşındı; data.isPublic
       // mevcut değerinden korunur (data zaten PCD.clone(existing) ile başlıyor).
-      data.salePrice = parseFloat(PCD.$('#recipeSalePrice', body).value) || null;
+      // v2.44.156 — Fix: negatif satış fiyatı aynen kaydediliyordu (food cost %
+      // negatife dönüp Cost Report'ta anlamsız görünüyordu).
+      const salePriceRaw = parseFloat(PCD.$('#recipeSalePrice', body).value);
+      data.salePrice = (!isNaN(salePriceRaw) && salePriceRaw >= 0) ? salePriceRaw : null;
       // v2.44.112 — Hedef food cost % (panel prep'te yok → guard)
       // v2.44.152 — Fix: geçersiz (0-90 dışı) değer eskiden sessizce 30'a resetliyordu,
       // input sırasındaki guard'ın koruduğu önceki geçerli değeri Save anında eziyordu.
