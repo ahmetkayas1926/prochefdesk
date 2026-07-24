@@ -384,6 +384,8 @@
       // kartındaki hızlı-Duplicate unutmuştu — kopya hiç stok düşmediği halde
       // "✓ Stock deducted" kilitli görünüyordu.
       delete copy._stockDeductedAt;
+      delete copy.signature;
+      delete copy._supplierOrders;
       PCD.store.upsertInTable('events', copy, 'ev');
       PCD.toast.success(t('event_duplicated') || 'Event duplicated');
       render(view);
@@ -878,6 +880,8 @@
       copy.name = (existing.name || t('untitled')) + ' ' + (t('event_copy_suffix') || '(copy)');
       copy.status = 'draft';
       delete copy._stockDeductedAt;
+      delete copy.signature;
+      delete copy._supplierOrders;
       const saved = PCD.store.upsertInTable('events', copy, 'ev');
       PCD.toast.success(t('event_duplicated') || 'Duplicated');
       m.close();

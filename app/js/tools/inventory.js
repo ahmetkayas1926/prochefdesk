@@ -347,10 +347,14 @@
     // v2.44.78 — Kalıcı hatırlatıcı: tedarikçisi olmayan malzeme sayısı (amber rozet).
     const _noSupCount = ings.filter(function (i) { return !(i.supplier || '').trim() && !i.noSupplierNeeded; }).length;
     // v2.44.79 — "Generate Order" butonunda kırmızı rozet: par-altı (sipariş edilecek) kalem sayısı.
+    // v2.44.152 — Fix: openGenerateOrder() (v2.44.148) artık parLevel girilmemiş ama
+    // eşiksiz-negatif/kritik stoklu kalemleri de listeye alıyordu, ama bu rozet hâlâ
+    // eski `parLevel != null` şartını taşıyordu — rozet (9) ile modaldeki gerçek liste
+    // (18) tutarsız olup şefi az kalem varmış sandırıyordu. Aynı computeStatus() mantığına hizalandı.
     const _belowParCount = ings.filter(function (i) {
       if (i.noSupplierNeeded) return false;
       const row = invAll[i.id];
-      if (!row || row.parLevel == null) return false;
+      if (!row) return false;
       const s = computeStatus(row);
       if (!(s === 'out' || s === 'critical' || s === 'low')) return false;
       if (isOnOrder(row)) return false; // zaten yolda → tekrar sipariş için uyarma

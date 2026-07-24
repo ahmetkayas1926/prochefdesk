@@ -1363,13 +1363,21 @@ Pasta,3,kg,cat_dry_goods,,</code></pre>
   // Basic CSV split with simple quote handling. Kept around because the
   // SheetJS bundle could fail to load on a flaky network and we still
   // want imports to work for the common (no-quotes) case.
+  // v2.44.152 — Fix: RFC4180 escaped quote (`""` içinde bir alanın parçası olarak
+  // literal `"` anlamına gelir) eskiden hem toggle'ları birbirini götürüyor hem de
+  // karakterin kendisi hiç `cur`'a eklenmiyordu — export→import round-trip'te
+  // malzeme adındaki tırnaklar sessizce kayboluyordu.
   function splitLine(line, sep) {
     const result = [];
     let cur = '';
     let inQuote = false;
     for (let i = 0; i < line.length; i++) {
       const ch = line[i];
-      if (ch === '"') { inQuote = !inQuote; continue; }
+      if (ch === '"') {
+        if (inQuote && line[i + 1] === '"') { cur += '"'; i++; continue; }
+        inQuote = !inQuote;
+        continue;
+      }
       if (ch === sep && !inQuote) { result.push(cur); cur = ''; continue; }
       cur += ch;
     }

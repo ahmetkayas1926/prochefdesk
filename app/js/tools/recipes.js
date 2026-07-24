@@ -3919,8 +3919,11 @@ function renderAllergenChips() {
       // mevcut değerinden korunur (data zaten PCD.clone(existing) ile başlıyor).
       data.salePrice = parseFloat(PCD.$('#recipeSalePrice', body).value) || null;
       // v2.44.112 — Hedef food cost % (panel prep'te yok → guard)
+      // v2.44.152 — Fix: geçersiz (0-90 dışı) değer eskiden sessizce 30'a resetliyordu,
+      // input sırasındaki guard'ın koruduğu önceki geçerli değeri Save anında eziyordu.
+      // Artık geçersizse mevcut kayıtlı değer korunur (yoksa 30 varsayılan).
       const _tfcSave = PCD.$('#recipeTargetFc', body);
-      if (_tfcSave) { const _v = Number(_tfcSave.value); data.targetFoodCostPct = (_v > 0 && _v <= 90) ? _v : 30; }
+      if (_tfcSave) { const _v = Number(_tfcSave.value); data.targetFoodCostPct = (_v > 0 && _v <= 90) ? _v : ((existing && existing.targetFoodCostPct) || 30); }
       data.steps = PCD.$('#recipeSteps', body).value;
       data.plating = PCD.$('#recipePlating', body).value;
 
