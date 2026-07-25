@@ -718,9 +718,13 @@
   function workspaceStats(wsId) {
     const r = (PCD.store.get('recipes') || {})[wsId];
     const m = (PCD.store.get('menus') || {})[wsId];
+    function liveCount(map) {
+      if (!map) return 0;
+      return Object.values(map).filter(function (it) { return !it._deletedAt; }).length;
+    }
     return {
-      recipes: r ? Object.keys(r).length : 0,
-      menus: m ? Object.keys(m).length : 0,
+      recipes: liveCount(r),
+      menus: liveCount(m),
     };
   }
 
