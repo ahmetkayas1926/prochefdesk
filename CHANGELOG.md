@@ -4,6 +4,25 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.158 — 9-araç QA turunun tam raporu sonrası 6 bulgu tek pakette düzeltildi · 2026-07-25
+Bağımsız, kapsamlı bir uçtan uca fonksiyonel denetim (geniş genel tur + 9-araç derin tur) sonucunda bulunan, kod gerektiren 6 bulgu tek pakette düzeltildi; deploy sonrası canlıda her biri tek tek yeniden doğrulandı.
+- **Recipe "eski sürüme dön" yanlış güvenlik vaadi veriyordu (BUG, kritik — veri kaybı riski):** diyalog "mevcut hali önce otomatik kaydedilir, geri alınabilir" diyordu ama `restoreRecipeVersion()` bunu hiç yapmıyordu — restore sonrası bir önceki (kaydedilmemiş) hal sonsuza dek kayboluyordu. Artık restore öncesi mevcut hal otomatik olarak versions[]'a snapshot'lanıyor — diyalog artık gerçeği söylüyor.
+- **10 gerçek tarifte kategori ham/çevirisiz "cat_starter" gösteriyordu (veri düzeltmesi):** bu değer geçerli 9 kategori listesinde de i18n sözlüğünde de yoktu (muhtemelen eski bir içe-aktarımdan kalma farklı isimlendirme), Recipes listesi dahil her yerde ham metin olarak görünüyordu. 10 kayıt `cat_appetizer`'a düzeltildi (üretim verisi düzeltmesi).
+- **Alerjen bölümü yanlış metin gösteriyordu (2 yerde, 6 dilde):** Recipe editörü ve Menu Builder'da "otomatik tespit yok" yazıyordu ama sistem gerçekte malzemelerden otomatik alerjen tespiti yapıyor — gıda güvenliği bağlamında yanlış-güven riski taşıyordu. Metin artık gerçek davranışı doğru anlatıyor (TR/EN/ES/FR/DE/AR).
+- **Ayarlar → "Tüm veriyi temizle" açıklaması kapsamı yanıltıyordu (6 dilde):** üstteki rehber metni tek-workspace temizleme izlenimi veriyordu, gerçekte TÜM workspace'leri + tüm cihazlardaki bulut verisini siliyor. Metin gerçek kapsamı söyleyecek şekilde düzeltildi.
+- **Events "Run-of-show" sıralaması Preview ile BEO/Teklif arasında tutarsızdı:** saatli program listesi Preview'da girildiği sırada, basılan belgede saate göre gösteriliyordu — şefin gördüğü sıra müşteriye giden resmi belgeden farklı olabiliyordu. Preview artık BEO/Teklif ile aynı saate-göre sıralamayı kullanıyor.
+- **HACCP denetim özetinde mantıksız gün sayısı görünebiliyordu:** ileri-tarihli/hatalı kayıtlar yüzünden geçen günden fazla gün loglanmış gibi görünen bir gösterim mümkündü (yüzde zaten v2.44.148'de sınırlanmıştı, ham sayı çifti sınırlanmamıştı). Artık ham sayı da geçen gün sayısını asla aşmıyor.
+- **Recipe hazırlık/pişirme süresi negatif değer kabul ediyordu:** diğer sayısal alanlarla (porsiyon, satış fiyatı) aynı desen uygulanarak negatif değer artık kaydedilmiyor, önceki geçerli değer korunuyor.
+- **Alt-tarif arama kutusunda döngüsel referans oluşturacak sonuçlar sessizce gizleniyordu:** şef aradığı bir tarifin neden listede çıkmadığını anlayamıyordu. Artık "N eşleşen tarif gizlendi — eklemek döngüsel referans oluşturur" bilgi notu gösteriliyor.
+- Node `-c` syntax check (13 dosya) + canlı üretimde (deploy sonrası) her madde tek tek yeniden doğrulandı; regresyon yok.
+
+## v2.44.157 — Discover'da fiyat/maliyet sızıntısı kapatıldı (KRİTİK güvenlik düzeltmesi) · 2026-07-25
+Kapsamlı bir uçtan uca denetimde bulunan kritik bulgu: "Share publicly in Discover" işaretlenen bir tarifte UI "fiyatlar/tedarikçiler/maliyet asla paylaşılmaz" vaat ediyordu, ama gerçekte RLS policy'leri satır-bazlı izin veriyordu (kolon kısıtı yoktu) — `fetchPublicFeed()` ham `recipes` tablosunu (`data` jsonb kolonu dahil, salePrice/targetFoodCostPct içeren) doğrudan çekiyordu; giriş yapmamış herkes bu veriyi herkese açık anon API key'iyle doğrudan görebiliyordu.
+- `discover.js` → `fetchPublicFeed()` artık ham tabloyu değil, yeni `pcd_discover_feed()` RPC'sini çağırıyor.
+- `migrations/v2.44.157-discover-cost-leak-fix.sql`: `recipes` tablosuna anon/cross-user SELECT'i tamamen kapatıldı; `pcd_discover_feed()` (SECURITY DEFINER) yalnız güvenli alanları (isim, malzemeler, method, foto, yazar, alerjen vb.) whitelist ile döndürüyor — salePrice/targetFoodCostPct/tedarikçi hiçbir zaman dönmüyor.
+- Canlıda tam doğrulama: kendi hesabımızla RPC doğrudan çağrılıp dönen veri objesinde `salePrice` alanının hiç bulunmadığı teyit edildi; ağ isteği artık `rpc/pcd_discover_feed` (eskiden ham `rest/v1/recipes?select=...`).
+- Deploy + SQL migration operatör tarafından uygulandı, sonrasında canlıda uçtan uca yeniden doğrulandı.
+
 ## v2.44.156 — Genel kod+masaüstü+mobil+altyapı taramasında bulunan 7 minör sorun düzeltildi · 2026-07-24
 Kapsamlı 4 fazlı denetimin (kod/masaüstü/mobil/altyapı) 3 kritik bulgusu (v2.44.154/155, aşağıda) sonrası kalan 8 minör bulgunun 7'si tek pakette düzeltildi; canlı üretimde (prochefdesk.com) her biri tek tek yeniden doğrulandı.
 - **Recipes:** negatif servings/yield/salePrice değerleri artık kaydedilmiyor (paylaşılan maliyet fonksiyonlarına negatif değer sızma riski kapatıldı).
