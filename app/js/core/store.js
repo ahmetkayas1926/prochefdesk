@@ -1184,10 +1184,16 @@
     },
     restoreRecipeVersion: function (recipeId, snapshotId) {
       const wsId = currentWsId();
-      const r = state.recipes[wsId] ? state.recipes[wsId][recipeId] : null;
+      let r = state.recipes[wsId] ? state.recipes[wsId][recipeId] : null;
       if (!r || !r.versions) return false;
       const ver = r.versions.find(function (v) { return v.snapshotId === snapshotId; });
       if (!ver) return false;
+      // v2.44.158 — Fix: dialog promises the current state is auto-saved as a
+      // new version before restoring, but this never actually happened — the
+      // pre-restore state was silently overwritten and lost. Snapshot it now
+      // so "Restore" truly is undoable, matching the UI's own promise.
+      PCD.store.snapshotRecipeVersion(recipeId, 'Before restore · ' + new Date().toLocaleDateString());
+      r = state.recipes[wsId][recipeId];
       const restored = Object.assign({}, PCD.clone(ver.snapshot), {
         id: recipeId,
         versions: r.versions, // restoring doesn't erase history

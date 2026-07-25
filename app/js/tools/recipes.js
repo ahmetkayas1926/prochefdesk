@@ -3690,16 +3690,18 @@ function renderAllergenChips() {
 
           // Sub-recipe matches — exclude self + already-added + cycles
           const allRecipes = PCD.store.listRecipes();
+          let cycleHiddenCount = 0;
           const recipeMatches = allRecipes.filter(function (r) {
             if (data.id && r.id === data.id) return false; // can't include self
             if (alreadyInRecipe.has(r.id)) return false;
+            if ((r.name || '').toLowerCase().indexOf(q) < 0) return false;
             // v2.44.139 — Fix: comment said "+ cycles" but no actual check
             // existed; picking a recipe that already contains this one
             // (anywhere in ITS OWN sub-recipe tree) silently created an
             // A→B→A loop, cost cycle-protected at compute time but never
             // surfaced to the chef. Filter those candidates out entirely.
-            if (data.id && recipeTreeContainsId(r.id, data.id)) return false;
-            return (r.name || '').toLowerCase().indexOf(q) >= 0;
+            if (data.id && recipeTreeContainsId(r.id, data.id)) { cycleHiddenCount++; return false; }
+            return true;
           }).slice(0, 6);
 
           let html = '';
@@ -3721,6 +3723,14 @@ function renderAllergenChips() {
                 '<div class="text-muted" style="font-size:11px;">' + (r.servings || 1) + ' ' + (r.yieldUnit || 'portions') + '</div></div>' +
                 '</div>';
             });
+          }
+          // v2.44.158 — Fix: cycle-blocked sub-recipes just silently vanished
+          // from the list with no explanation (confusing — "why isn't my recipe
+          // showing up?"). Say why when a match was hidden for this reason.
+          if (cycleHiddenCount > 0) {
+            html += '<div style="padding:8px 12px;font-size:11px;color:var(--text-3);background:var(--surface-2);">' +
+              PCD.icon('info', 12) + ' ' + cycleHiddenCount + ' matching recipe' + (cycleHiddenCount > 1 ? 's' : '') +
+              ' hidden — adding ' + (cycleHiddenCount > 1 ? 'them' : 'it') + ' would create a circular reference.</div>';
           }
           // Always show "create new" at the bottom
           html += '<div data-pick-ing="__new__" data-name="' + PCD.escapeHtml(query.trim()) + '" style="padding:10px 12px;cursor:pointer;background:var(--brand-50);color:var(--brand-700);font-weight:600;font-size:13px;">' +
@@ -3911,8 +3921,13 @@ function renderAllergenChips() {
       // ters işaretli/anlamsız maliyet üretebiliyordu. Negatif de artık 1'e düşer.
       const servingsRaw = parseInt(PCD.$('#recipeServings', body).value, 10);
       data.servings = (!isNaN(servingsRaw) && servingsRaw >= 1) ? servingsRaw : 1;
-      data.prepTime = parseInt(PCD.$('#recipePrep', body).value, 10) || null;
-      data.cookTime = parseInt(PCD.$('#recipeCook', body).value, 10) || null;
+      // v2.44.158 — Fix: negatif prep/cook time (ör. -5 dk) hiçbir uyarı olmadan
+      // aynen kaydediliyordu. Diğer sayısal alanlarla (servings/salePrice) aynı
+      // desen: negatifse null'a düşer, sıfır/pozitif/boş olduğu gibi kalır.
+      const prepRaw = parseInt(PCD.$('#recipePrep', body).value, 10);
+      data.prepTime = (!isNaN(prepRaw) && prepRaw >= 0) ? prepRaw : null;
+      const cookRaw = parseInt(PCD.$('#recipeCook', body).value, 10);
+      data.cookTime = (!isNaN(cookRaw) && cookRaw >= 0) ? cookRaw : null;
       const yldAmtInp = PCD.$('#recipeYieldAmount', body);
       const yldUnitInp = PCD.$('#recipeYieldUnit', body);
       const yieldRaw = (yldAmtInp && yldAmtInp.value) ? parseFloat(yldAmtInp.value) : null;

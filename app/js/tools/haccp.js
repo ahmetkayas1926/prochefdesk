@@ -228,11 +228,12 @@
       const has = ['morning', 'evening'].some(function (s) { return r[s] && r[s].value != null && r[s].value !== ''; });
       if (has) loggedDays[r.date] = true;
     });
-    const daysCovered = Object.keys(loggedDays).length;
-    // v2.44.148 — Fix: ileri-tarihli/hatalı kayıtlar (daysCovered > daysElapsed)
-    // yüzdeyi %100'ün üzerine taşıyıp "iyi" (yeşil) gösterebiliyordu — dürüstlük
-    // modelini zedeliyordu. Yüzde %100'de sınırlanır; ham daysCovered sayısı
-    // (rapor metninde) olduğu gibi kalır, sadece oran mantıksız şişmez.
+    // v2.44.158 — Fix: ileri-tarihli/hatalı kayıtlar (örn. bulk-seed veya yanlış
+    // tarih girişi) daysCovered'ı daysElapsed'in ÜSTÜNE çıkarabiliyordu — yüzde
+    // v2.44.148'de %100'de sınırlanmıştı ama ham sayı çifti "31/25 days logged"
+    // gibi mantıksız görünüyordu (denetçi önünde güven sarsıcı). Artık ham sayı
+    // da daysElapsed'de sınırlanır — rapor asla geçen günden fazla gün göstermez.
+    const daysCovered = Math.min(daysElapsed, Object.keys(loggedDays).length);
     const coveragePct = (hasUnits && daysElapsed > 0) ? Math.min(100, Math.round((daysCovered / daysElapsed) * 100)) : null;
 
     return {

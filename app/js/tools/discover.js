@@ -108,16 +108,17 @@
 
   // ============ FETCHERS ============
   // Public feed: tüm public recipe'leri view_count DESC ile çek (max 60).
-  // İlk fetch RLS check'ten geçer — anon key + auth token ne olursa olsun
-  // sadece isPublic=true olanlar döner.
+  // v2.44.157 — Artık ham `recipes` tablosu yerine pcd_discover_feed()
+  // RPC'si kullanılıyor. Sebep: ham tablo satır-bazlı RLS ile korunuyordu
+  // (sadece isPublic=true satırlar döner) ama KOLON kısıtı yoktu — dönen
+  // `data` içinde salePrice/targetFoodCostPct de vardı, UI'ın "fiyat asla
+  // paylaşılmaz" vaadiyle çelişiyordu. RPC sadece güvenli alanları
+  // (name/ingredients/steps/photo/tags/...) whitelist ile döndürür.
+  // Bkz. migrations/v2.44.157-discover-cost-leak-fix.sql.
   function fetchPublicFeed() {
     const supabase = getSupabase();
     if (!supabase) return Promise.resolve([]);
-    return supabase.from('recipes')
-      .select('id, user_id, data, view_count, like_count, updated_at')
-      .order('view_count', { ascending: false })
-      .order('updated_at', { ascending: false })
-      .limit(60)
+    return supabase.rpc('pcd_discover_feed')
       .then(function (res) {
         if (res.error) {
           PCD.warn && PCD.warn('discover: fetchPublicFeed error', res.error);
