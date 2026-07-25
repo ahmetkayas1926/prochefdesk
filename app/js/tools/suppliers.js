@@ -159,6 +159,10 @@
     PCD.on(listEl, 'input', '[data-pqty]', function () {
       const sid = this.getAttribute('data-sid');
       const pid = this.getAttribute('data-pqty');
+      // v2.44.156 — Fix: negatif miktar ekranda kalıyordu; gönderim filtresi (qty>0)
+      // zaten sessizce eliyordu ama şef "-3 kg sipariş ettim" sanıp fark etmeyebilirdi
+      // (satır sessizce siparişten düşüyordu, uyarı yoktu). Artık negatifse 0'a döner.
+      if (parseFloat(this.value) < 0) this.value = 0;
       if (!draftQty[sid]) draftQty[sid] = {};
       draftQty[sid][pid] = this.value;
       // Visual feedback

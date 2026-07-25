@@ -4,6 +4,31 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.156 — Genel kod+masaüstü+mobil+altyapı taramasında bulunan 7 minör sorun düzeltildi · 2026-07-24
+Kapsamlı 4 fazlı denetimin (kod/masaüstü/mobil/altyapı) 3 kritik bulgusu (v2.44.154/155, aşağıda) sonrası kalan 8 minör bulgunun 7'si tek pakette düzeltildi; canlı üretimde (prochefdesk.com) her biri tek tek yeniden doğrulandı.
+- **Recipes:** negatif servings/yield/salePrice değerleri artık kaydedilmiyor (paylaşılan maliyet fonksiyonlarına negatif değer sızma riski kapatıldı).
+- **Buffet:** `amountPerGuest` (kişi başı miktar) artık 0'ın altına inmiyor (komşu `pickupRatio` alanı zaten sınırlıyken bu alan sınırsızdı).
+- **Events:** kişi başı fiyat/bütçe/servis %/personel sayısı-saat-ücret/ekstra ücret/ödeme tutarı/misafir-garanti sayısı/porsiyon-miktar alanlarının hepsine negatif-değer engeli eklendi.
+- **i18n:** 3 eksik anahtar (`hcr_temp_fail`, `hcr_month_full`, `recipe_sub_no_yield_tip`) 6 dile eklendi; "Kitchen Cards" sayfa başlığı (`t_kitchen_cards_title`) ES/FR/DE/AR'da İngilizce kalmıştı, çevrildi.
+- **Inventory:** "tedarikçisiz" grup anahtarı olarak kod içinde gerçek bir NUL byte (görünmez kontrol karakteri) kullanılıyordu — okunabilir `__no_supplier__` sabitine çevrildi.
+- **store.js:** yerel veritabanına (IndexedDB) yazma başarısız olursa artık sessizce yutulmuyor, konsola loglanıyor.
+- **Mobil:** Dashboard ipucu kartını kapatan "✕" butonu ~23×17px'ten 32×32px dokunma alanına büyütüldü.
+- **İncelendi, kod değişikliği yapılmadı:** Roster'da mevcut bir vardiya çizelgesini "Edit" ile açmak giriş (auth) kontrolünden geçmiyor — muhtemelen kasıtlı (misafir demo veriyi yerelde düzenleyebiliyor, buluta gitmiyor, çıktı/paylaşım zaten kilitli); gating değişikliği onay gerektirdiği için dokunulmadı.
+- Node `-c` syntax check + canlı üretimde (deploy sonrası) kod-satırı ve i18n-anahtarı doğrulaması yapıldı.
+
+## v2.44.155 — Dil/tema tercihleri buluta hiç push edilmiyordu (sessiz geri-dönüş bug'ı) · 2026-07-24
+v2.44.154'teki dil dropdown düzeltmesinin canlıda (gerçek bulut senkronu açıkken) yeniden test edilmesi sırasında ortaya çıkan daha derin kök neden: yalnız para birimi (`#prefCurrency`) tercihi değiştirilir değiştirilmez buluta push ediliyordu (v2.14.7); dil (`#prefLocale`), tema (`[data-theme]`) ve haptic tercihleri hiç push edilmiyordu. Sonuç: dil değiştirilip başka bir ekrana geçildiğinde araya giren bir cloud pull/realtime "cloud wins" birleştirmesi `prefs.locale`'i sessizce eski (buluttaki) değere döndürebiliyordu — arayüz o an hâlâ yeni dilde görünüyordu ama Ayarlar'a dönünce/F5 sonrası dropdown yanlış dili gösteriyordu.
+- `account.js`'te ortak `pushPrefsToCloud()` fonksiyonuna taşındı; 4 tercih handler'ının (currency/locale/theme/haptic) hepsi artık kullanıyor.
+- Üst çubuktaki hızlı dil seçici (`app.js` → `openLanguagePicker()`, Ayarlar sayfasındaki dropdown'dan AYRI bir kod yolu) aynı eksikliği taşıyordu — aynı fix uygulandı.
+- Canlıda tam reprodüksiyon senaryosuyla doğrulandı: üst çubuktan Türkçe seç → 3 sayfa gez → Ayarlar → dropdown "Türkçe" gösteriyor → F5 sert yenileme → hâlâ "Türkçe" (JS konsolu: `{storedLocale:"tr", i18nCurrent:"tr"}`).
+
+## v2.44.154 — Genel kod+masaüstü+mobil+altyapı taramasında bulunan 3 kritik sorun düzeltildi · 2026-07-24
+4 fazlı bağımsız denetim (kod seviyesi statik + masaüstü gerçek kullanım + mobil gerçek kullanım + altyapı) sonrası bulunan 3 kritik bug düzeltildi.
+- **Prep Sheet bulut senkronu tek yönlü kopuktu (BUG, kritik):** `cloud-pertable.js`'teki `WORKSPACE_TABLES` kaydında anahtar `prepSheets` (camelCase) idi ama `store.js`'in gerçek SQL tablo adı olarak ürettiği `prep_sheets` ile hiç eşleşmiyordu — her Prep Sheet değişikliği sessizce ("unknown table" uyarısıyla) kuyruğa hiç alınmadan atılıyordu. Pull/realtime çalıştığı için sorun fark edilmiyordu. Anahtar `prep_sheets`'e düzeltildi.
+- **Sidebar dil değişikliğinde güncellenmiyordu (BUG):** `populateSidenav()` yalnız boot'ta bir kez render ediliyordu; dil değiştirilince sayfa içeriği doğru çevrilirken menü eski dilde takılı kalıyor, düzelmesi için tam sayfa yenileme gerekiyordu. `prefs.locale` değişimini dinleyen bir `PCD.store.on` eklendi.
+- **Ayarlar'daki dil dropdown'u yanlış seçili değeri gösteriyordu (BUG):** `<option selected>` HTML'i doğru üretilse bile tarayıcı seçili değeri "English"te bırakabiliyordu. Render sonrası değer gerçek kayıtlı tercihe göre elle senkronize edildi (kök nedeni v2.44.155'te tamamlandı, bkz. yukarı).
+- Node `-c` syntax check + canlı üretimde tek tek yeniden doğrulandı.
+
 ## v2.44.153 — Bağımsız 9-araç QA turunda bulunan 4 bug düzeltildi (canlıda tek tek yeniden doğrulandı) · 2026-07-24
 Ingredients/Recipes/Menu Builder/Events/Buffet/Inventory/Suppliers/HACCP/Roster'ın bağımsız uçtan uca dördüncü denetim turunda (gerçek Pro hesap, elle hesaplama doğrulaması) bulunan 4 gerçek bug tek pakette düzeltildi; deploy sonrası canlı üretimde (prochefdesk.com) 4'ü de gerçek reprodüksiyonla tek tek yeniden doğrulandı, regresyon yok.
 - **Inventory "Count Stock" negatif sayımı hiç uyarı olmadan kabul ediyordu (BUG, kritik):** toplu stok sayım ekranına eksi sayı girilip kaydedilince envanterde literal "-5 kg" gibi görünüyor VE toplam Stock Value'dan gerçek tutar düşüyordu (test: -5kg → Stock Value $75 azaldı) — Variance/reorder hesaplarını da sessizce bozabiliyordu. `inventory.js`'te negatif değerler artık hem alan hem kayıt seviyesinde reddediliyor, "Stock count cannot be negative — N item(s) skipped" uyarısı çıkıyor. Canlıda doğrulandı: 10 negatif kalem atlandı, Stock Value $45,443.43 → $45,701.09'a düzeldi.
