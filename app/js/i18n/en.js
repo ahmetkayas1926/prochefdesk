@@ -178,7 +178,7 @@ window.PCD.i18n.register('en', {
   pro_plan: "Pro Plan",
   team_plan: "Team Plan",
   confirm_delete: "Delete this item?",
-  confirm_delete_desc: "This action cannot be undone.",
+  confirm_delete_desc: "This will move the item to Trash — you can restore it within 30 days.",
   confirm_delete_n: "Delete {n} items?",
   item_deleted: "Deleted",
   items_deleted: "{n} items deleted",
@@ -3052,7 +3052,7 @@ window.PCD.i18n.register('en', {
   ms_share_public: "Public menu — link + QR",
   ms_share_cost: "Cost view",
   ms_pro_suffix: "(Pro)",
-  ms_share_note: "The public link never leaks cost or price. The cost link is only for whoever you share it with.",
+  ms_share_note: "The public link shows your menu as designed, prices included — it never shows your internal food cost. The cost-view link adds that breakdown and is only for whoever you share it with.",
   ms_share_signin: "Sign in to share",
   ms_share_unavailable: "Sharing is unavailable right now",
   ms_share_error: "Share error: {msg}",
@@ -3615,7 +3615,7 @@ window.PCD.i18n.register('en', {
 // v2.44.97 — HACCP Audit Pack (combined monthly report)
 window.PCD.i18n.register('en', {
   haccp_audit_card_title: "Audit-ready report",
-  haccp_audit_card_desc: "Combine all four forms into one auditor-ready PDF for any month — summary, compliance %, and a corrective-action log.",
+  haccp_audit_card_desc: "Combine all four forms into one auditor-ready PDF for any month — daily-log coverage, readings in range, and a corrective-action log.",
   haccp_audit_month: "Month",
   haccp_audit_btn: "Generate audit report",
   haccp_audit_summary_label: "Selected month",

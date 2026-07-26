@@ -148,7 +148,7 @@ window.PCD.i18n.register('fr', {
   pro_plan: "Plan Pro",
   team_plan: "Plan Équipe",
   confirm_delete: "Supprimer cet élément ?",
-  confirm_delete_desc: "Action irréversible.",
+  confirm_delete_desc: "Sera déplacé vers la corbeille — restaurable sous 30 jours.",
   confirm_delete_n: "Supprimer {n} éléments ?",
   item_deleted: "Supprimé",
   items_deleted: "{n} éléments supprimés",
@@ -802,7 +802,7 @@ window.PCD.i18n.register('fr', {
   ms_share_public: "Menu public — lien + QR",
   ms_share_cost: "Vue des coûts",
   ms_pro_suffix: "(Pro)",
-  ms_share_note: "Le lien public ne révèle jamais le coût ni le prix. Le lien des coûts est réservé à la personne avec qui vous le partagez.",
+  ms_share_note: "Le lien public montre votre menu tel que conçu, prix inclus — il ne révèle jamais votre coût interne. Le lien des coûts ajoute ce détail et est réservé à la personne avec qui vous le partagez.",
   ms_share_signin: "Connectez-vous pour partager",
   ms_share_unavailable: "Le partage est indisponible pour le moment",
   ms_share_error: "Erreur de partage : {msg}",
@@ -3482,7 +3482,7 @@ window.PCD.i18n.register('fr', {
 // v2.44.97 — Dossier d'audit HACCP (rapport mensuel combiné)
 window.PCD.i18n.register('fr', {
   haccp_audit_card_title: "Rapport prêt pour l'audit",
-  haccp_audit_card_desc: "Combinez les quatre formulaires en un seul PDF mensuel prêt pour l'auditeur — résumé, % de conformité et journal des actions correctives.",
+  haccp_audit_card_desc: "Combinez les quatre formulaires en un seul PDF mensuel prêt pour l'auditeur — couverture du journal quotidien, relevés dans la plage et journal des actions correctives.",
   haccp_audit_month: "Mois",
   haccp_audit_btn: "Générer le rapport d'audit",
   haccp_audit_summary_label: "Mois sélectionné",

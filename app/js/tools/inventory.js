@@ -24,6 +24,12 @@
   'use strict';
   const PCD = window.PCD;
 
+  // v2.44.159 — Tekrarlanan düşüm/ekleme IEEE-754 float hatası biriktirir (örn.
+  // 1.5 - küçük düşümler sonrası 1.4999999999999982 olur) → computeStatus par
+  // seviyesindeki bir kalemi yanlışlıkla "low" sayar. 6 ondalığa yuvarlama gerçek
+  // mutfak ölçümlerini etkilemeden bu gürültüyü temizler.
+  function _r6(n) { return Math.round((Number(n) || 0) * 1e6) / 1e6; }
+
   // Pending stock count is now per-workspace
   function getPendingForCurrentWs() {
     const all = PCD.store.get('pendingStockCount') || {};
@@ -109,7 +115,7 @@
       const row = inv[iid];
       const cur = row && row.stock != null ? (Number(row.stock) || 0) : 0;
       const base = row || { stock: null, parLevel: null, minLevel: null };
-      const to = cur - amt;   // negatife izin ver — fazla-tüketim/oversold görünür kalsın
+      const to = _r6(cur - amt);   // negatife izin ver — fazla-tüketim/oversold görünür kalsın
       inv[iid] = Object.assign({}, base, { stock: to, updatedAt: Date.now() });
       report.push({ id: iid, tracked: true, from: cur, deducted: amt, to: to, status: computeStatus(inv[iid]) });
     });
@@ -146,7 +152,7 @@
       if (amt <= 0) return;
       const row = inv[iid];
       const cur = row && row.stock != null ? (Number(row.stock) || 0) : 0;
-      const to = cur + amt;
+      const to = _r6(cur + amt);
       const base = row || { stock: null, parLevel: null, minLevel: null };
       const extra = { stock: to, lastReceivedAt: new Date().toISOString(), updatedAt: Date.now() };
       inv[iid] = Object.assign({}, base, extra);

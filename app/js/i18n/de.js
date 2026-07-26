@@ -148,7 +148,7 @@ window.PCD.i18n.register('de', {
   pro_plan: "Pro Plan",
   team_plan: "Team Plan",
   confirm_delete: "Element löschen?",
-  confirm_delete_desc: "Kann nicht rückgängig gemacht werden.",
+  confirm_delete_desc: "Wird in den Papierkorb verschoben — innerhalb von 30 Tagen wiederherstellbar.",
   confirm_delete_n: "{n} Elemente löschen?",
   item_deleted: "Gelöscht",
   items_deleted: "{n} Elemente gelöscht",
@@ -802,7 +802,7 @@ window.PCD.i18n.register('de', {
   ms_share_public: "Öffentliches Menü — Link + QR",
   ms_share_cost: "Kostenansicht",
   ms_pro_suffix: "(Pro)",
-  ms_share_note: "Der öffentliche Link verrät niemals Kosten oder Preise. Der Kostenlink ist nur für die Person, mit der du ihn teilst.",
+  ms_share_note: "Der öffentliche Link zeigt dein Menü genau wie gestaltet, Preise inklusive — deine internen Kosten zeigt er nie. Der Kostenlink ergänzt diese Aufschlüsselung und ist nur für die Person, mit der du ihn teilst.",
   ms_share_signin: "Zum Teilen anmelden",
   ms_share_unavailable: "Teilen ist gerade nicht verfügbar",
   ms_share_error: "Fehler beim Teilen: {msg}",
@@ -3482,7 +3482,7 @@ window.PCD.i18n.register('de', {
 // v2.44.97 — HACCP-Audit-Paket (kombinierter Monatsbericht)
 window.PCD.i18n.register('de', {
   haccp_audit_card_title: "Auditfertiger Bericht",
-  haccp_audit_card_desc: "Fasse alle vier Formulare in einer monatlichen, auditfertigen PDF zusammen — Übersicht, Konformität % und Korrekturmaßnahmen-Protokoll.",
+  haccp_audit_card_desc: "Fasse alle vier Formulare in einer monatlichen, auditfertigen PDF zusammen — Abdeckung des Tagesprotokolls, Messwerte im Sollbereich und Korrekturmaßnahmen-Protokoll.",
   haccp_audit_month: "Monat",
   haccp_audit_btn: "Auditbericht erstellen",
   haccp_audit_summary_label: "Ausgewählter Monat",

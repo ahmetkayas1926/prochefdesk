@@ -148,7 +148,7 @@ window.PCD.i18n.register('ar', {
   pro_plan: "خطة Pro",
   team_plan: "خطة الفريق",
   confirm_delete: "حذف هذا العنصر؟",
-  confirm_delete_desc: "لا يمكن التراجع.",
+  confirm_delete_desc: "سيُنقل إلى سلة المهملات — يمكنك استعادته خلال 30 يومًا.",
   confirm_delete_n: "حذف {n} عناصر؟",
   item_deleted: "تم الحذف",
   items_deleted: "تم حذف {n} عناصر",
@@ -802,7 +802,7 @@ window.PCD.i18n.register('ar', {
   ms_share_public: "قائمة عامة — رابط + QR",
   ms_share_cost: "عرض التكلفة",
   ms_pro_suffix: "(Pro)",
-  ms_share_note: "الرابط العام لا يكشف التكلفة أو السعر أبدًا. رابط التكلفة لمن تشاركه معه فقط.",
+  ms_share_note: "الرابط العام يعرض قائمتك كما صممتها، بما في ذلك الأسعار — ولا يعرض تكلفتك الداخلية أبدًا. رابط التكلفة يضيف هذا التفصيل وهو فقط لمن تشاركه معه.",
   ms_share_signin: "سجّل الدخول للمشاركة",
   ms_share_unavailable: "المشاركة غير متاحة حاليًا",
   ms_share_error: "خطأ في المشاركة: {msg}",
@@ -3482,7 +3482,7 @@ window.PCD.i18n.register('ar', {
 // v2.44.97 — حزمة تدقيق HACCP (تقرير شهري موحّد)
 window.PCD.i18n.register('ar', {
   haccp_audit_card_title: "تقرير جاهز للتدقيق",
-  haccp_audit_card_desc: "ادمج النماذج الأربعة في ملف PDF شهري جاهز للمدقق — ملخص، نسبة الامتثال، وسجل الإجراءات التصحيحية.",
+  haccp_audit_card_desc: "ادمج النماذج الأربعة في ملف PDF شهري جاهز للمدقق — تغطية السجل اليومي، نسبة القراءات ضمن النطاق، وسجل الإجراءات التصحيحية.",
   haccp_audit_month: "الشهر",
   haccp_audit_btn: "إنشاء تقرير التدقيق",
   haccp_audit_summary_label: "الشهر المحدد",

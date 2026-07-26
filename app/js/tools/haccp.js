@@ -635,7 +635,7 @@
           <div style="font-size:22px;line-height:1;">📋</div>
           <div style="flex:1;min-width:220px;">
             <div style="font-weight:800;font-size:15px;color:var(--text-1);margin-bottom:3px;">${L('haccp_audit_card_title', 'Audit-ready report')}</div>
-            <div style="font-size:12.5px;color:var(--text-2);line-height:1.5;">${L('haccp_audit_card_desc', 'Combine all four forms into one auditor-ready PDF for any month — summary, compliance %, and a corrective-action log.')}</div>
+            <div style="font-size:12.5px;color:var(--text-2);line-height:1.5;">${L('haccp_audit_card_desc', 'Combine all four forms into one auditor-ready PDF for any month — daily-log coverage, readings in range, and a corrective-action log.')}</div>
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;">

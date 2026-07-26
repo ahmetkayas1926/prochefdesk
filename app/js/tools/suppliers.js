@@ -755,7 +755,7 @@
     function renderEditor() {
       body.innerHTML = `
         <div class="field">
-          <label class="field-label">Name *</label>
+          <label class="field-label">${PCD.escapeHtml(tt('supplier_name', 'Name'))} *</label>
           <input type="text" class="input" id="sName" value="${PCD.escapeHtml(data.name || '')}" placeholder="e.g. Fresh Produce Co">
         </div>
         <div class="field">
@@ -763,14 +763,14 @@
           <input type="text" class="input" id="sContact" value="${PCD.escapeHtml(data.contactName || '')}" placeholder="${PCD.escapeHtml(tt('supplier_contact_ph', 'e.g. John — used after “Hi” in orders'))}">
         </div>
         <div class="field">
-          <label class="field-label">Category</label>
+          <label class="field-label">${PCD.escapeHtml(tt('supplier_category', 'Category'))}</label>
           <select class="select" id="sCat">
             ${CATS.map(function (c) { return '<option value="' + c + '"' + (data.category === c ? ' selected' : '') + '>' + c + '</option>'; }).join('')}
           </select>
         </div>
         <div class="field-row">
           <div class="field">
-            <label class="field-label">Phone</label>
+            <label class="field-label">${PCD.escapeHtml(tt('supplier_phone', 'Phone'))}</label>
             <input type="tel" class="input" id="sPhone" value="${PCD.escapeHtml(data.phone || '')}" placeholder="+61 ...">
           </div>
           <div class="field">
@@ -779,11 +779,11 @@
           </div>
         </div>
         <div class="field">
-          <label class="field-label">Email</label>
+          <label class="field-label">${PCD.escapeHtml(tt('supplier_email', 'Email'))}</label>
           <input type="email" class="input" id="sEmail" value="${PCD.escapeHtml(data.email || '')}" placeholder="orders@supplier.com">
         </div>
         <div class="field">
-          <label class="field-label">Notes</label>
+          <label class="field-label">${PCD.escapeHtml(tt('supplier_notes', 'Notes'))}</label>
           <textarea class="textarea" id="sNotes" rows="2" placeholder="${PCD.escapeHtml(t('supplier_notes_placeholder'))}">${PCD.escapeHtml(data.notes || '')}</textarea>
         </div>
 
@@ -873,7 +873,7 @@
     footer.appendChild(saveBtn);
 
     const m = PCD.modal.open({
-      title: existing ? (existing.name || 'Supplier') : 'New Supplier',
+      title: existing ? (existing.name || tt('supplier_new', 'New Supplier')) : tt('supplier_new', 'New Supplier'),
       body: body, footer: footer, size: 'md', closable: true
     });
 

@@ -148,7 +148,7 @@ window.PCD.i18n.register('es', {
   pro_plan: "Plan Pro",
   team_plan: "Plan Equipo",
   confirm_delete: "¿Eliminar este elemento?",
-  confirm_delete_desc: "Esta acción no se puede deshacer.",
+  confirm_delete_desc: "Se moverá a la papelera — puedes restaurarlo en 30 días.",
   confirm_delete_n: "¿Eliminar {n} elementos?",
   item_deleted: "Eliminado",
   items_deleted: "{n} elementos eliminados",
@@ -802,7 +802,7 @@ window.PCD.i18n.register('es', {
   ms_share_public: "Menú público — enlace + QR",
   ms_share_cost: "Vista de costes",
   ms_pro_suffix: "(Pro)",
-  ms_share_note: "El enlace público nunca revela coste ni precio. El enlace de costes es solo para quien lo compartas.",
+  ms_share_note: "El enlace público muestra tu menú tal como lo diseñaste, precios incluidos — nunca muestra tu coste interno. El enlace de costes añade ese desglose y es solo para quien lo compartas.",
   ms_share_signin: "Inicia sesión para compartir",
   ms_share_unavailable: "Compartir no está disponible ahora",
   ms_share_error: "Error al compartir: {msg}",
@@ -3482,7 +3482,7 @@ window.PCD.i18n.register('es', {
 // v2.44.97 — Paquete de auditoría HACCP (informe mensual combinado)
 window.PCD.i18n.register('es', {
   haccp_audit_card_title: "Informe listo para auditoría",
-  haccp_audit_card_desc: "Combina los cuatro formularios en un PDF mensual listo para el auditor — resumen, % de cumplimiento y registro de acciones correctivas.",
+  haccp_audit_card_desc: "Combina los cuatro formularios en un PDF mensual listo para el auditor — cobertura del registro diario, lecturas dentro de rango y registro de acciones correctivas.",
   haccp_audit_month: "Mes",
   haccp_audit_btn: "Generar informe de auditoría",
   haccp_audit_summary_label: "Mes seleccionado",
