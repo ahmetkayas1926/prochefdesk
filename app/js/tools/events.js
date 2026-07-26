@@ -160,13 +160,18 @@
   // çipleri bunu okur); cache ilk kez doluyorsa (sayfa yeni açıldıysa) çip sayaçlarının
   // ve aktif filtrenin güncel veriyle eşleşmesi için TEK SEFERLİK bir render(view) daha
   // tetiklenir — sonraki her fetch'te tekrar render ETMEZ (sonsuz döngü riski yok).
-  function refreshListSignBadges(listEl, view) {
+  function refreshListSignBadges(listEl, view, validIds) {
     if (!PCD.cloud || !PCD.cloud.ready) return;
     const supabase = window._supabaseClient;
     const user = PCD.store.get('user');
     if (!supabase || !user || !user.id) return;
     const t = PCD.i18n.t;
     const hadMap = !!_signMap;
+    // v2.44.160 — public_shares owner_id sorgusu workspace'e göre filtrelenmiyor
+    // (kullanıcının TÜM workspace'lerindeki imzalı event'leri döner) → aktif
+    // workspace'te yalnız 1 event varken "İmzalandı (10)" gibi başka workspace'ten
+    // sızan rozet sayıları görünüyordu. validIds ile bu workspace'in event id'lerine kesişim al.
+    const idSet = validIds ? new Set(validIds) : null;
     supabase.from('public_shares')
       .select('source_id, signed_at, paused')
       .eq('owner_id', user.id).eq('kind', 'event').eq('share_mode', 'sign')
@@ -174,6 +179,7 @@
         if (res.error || !res.data) return;
         const map = {};
         res.data.forEach(function (r) {
+          if (idSet && !idSet.has(r.source_id)) return;
           map[r.source_id] = { signed: !!r.signed_at, paused: !!r.paused };
           const badge = listEl.querySelector('[data-sign-badge="' + r.source_id + '"]');
           if (!badge) return;
@@ -336,7 +342,7 @@
         cont.innerHTML = '<div class="text-muted" style="padding:24px;text-align:center;">' + PCD.escapeHtml(L('event_filter_none', 'No events in this status.')) + '</div>';
       }
       listEl.appendChild(cont);
-      refreshListSignBadges(listEl, view);
+      refreshListSignBadges(listEl, view, allEvents.map(function (e) { return e.id; }));
       }
     }
 

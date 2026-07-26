@@ -128,7 +128,7 @@
     switch (type) {
       case 'section_header':
         return Object.assign(base, {
-          content: { text: 'SECTION TITLE' },
+          content: { text: PCD.i18n.t('wb_default_section_title') || 'SECTION TITLE' },
           style: { color: 'forest', size: 'lg', align: 'left' },
         });
       case 'big_number':
@@ -542,7 +542,7 @@
     return {
       id: uid('wb'),
       name: name || 'Untitled',
-      title: (name || 'MY WHITEBOARD').toUpperCase(),
+      title: (name || PCD.i18n.t('wb_default_title') || 'MY WHITEBOARD').toUpperCase(),
       paper: 'A4',
       orient: 'landscape',
       format: FORMAT_VERSION,

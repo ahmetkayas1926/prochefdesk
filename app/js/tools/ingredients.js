@@ -138,7 +138,7 @@
       <div class="page-header">
         <div class="page-header-text">
           <div class="page-title">${t('ingredients_title')}</div>
-          <div class="page-subtitle">${ings.length} items</div>
+          <div class="page-subtitle">${PCD.escapeHtml(t('ingredients_count_subtitle', { n: ings.length }))}</div>
         </div>
         <div class="page-header-actions">
           ${ings.length > 0 ? `<button class="btn btn-outline btn-sm" id="assignSupBtn" title="${PCD.escapeHtml(L('assign_supplier','Assign supplier'))}" style="position:relative;${noSupCount > 0 ? 'border-color:var(--warning);background:#fff7ed;color:#b45309;font-weight:700;' : ''}">${PCD.icon('truck',14)} ${PCD.escapeHtml(L('assign_supplier','Assign supplier'))}${noSupCount > 0 ? `<span style="position:absolute;top:-7px;right:-8px;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:var(--danger);color:#fff;font-size:11px;font-weight:800;line-height:19px;text-align:center;box-shadow:0 0 0 2px var(--bg);">${noSupCount}</span>` : ''}</button>` : ''}

@@ -110,8 +110,8 @@
         <div class="empty">
           <div class="empty-icon" style="color:var(--brand-600);">${PCD.icon('truck',48)}</div>
           <div class="empty-title">${t('supplier_empty') || 'No suppliers yet'}</div>
-          <div class="empty-desc">Add your suppliers and the products you buy from each. Quantities, send orders — all from one screen.</div>
-          <div class="empty-action"><button class="btn btn-primary" id="emptyNewBtn">${PCD.icon('plus',16)} Add supplier</button></div>
+          <div class="empty-desc">${PCD.escapeHtml(t('supplier_empty_desc'))}</div>
+          <div class="empty-action"><button class="btn btn-primary" id="emptyNewBtn">${PCD.icon('plus',16)} ${PCD.escapeHtml(t('new_supplier'))}</button></div>
         </div>
       `;
       PCD.$('#emptyNewBtn', listEl).addEventListener('click', function () { openEditor(); });
@@ -198,13 +198,13 @@
       '<div style="flex:1;min-width:0;">' +
         '<div style="font-weight:700;font-size:15px;letter-spacing:-0.01em;">' + PCD.escapeHtml(s.name || 'Untitled') + '</div>' +
         '<div class="text-muted" style="font-size:12px;" data-filled-count="' + s.id + '">' +
-          products.length + ' ' + (products.length === 1 ? 'product' : 'products') +
-          (filled > 0 ? ' · <span style="color:var(--brand-700);font-weight:700;">' + filled + ' to order</span>' : '') +
+          PCD.escapeHtml(t('sup_product_count', { n: products.length })) +
+          (filled > 0 ? ' · <span style="color:var(--brand-700);font-weight:700;">' + PCD.escapeHtml(t('sup_to_order_count', { n: filled })) + '</span>' : '') +
         '</div>' +
       '</div>' +
       '<button class="icon-btn" data-history-sup="' + s.id + '" title="' + PCD.escapeHtml(t('supplier_history_title') || 'Order history') + '" style="flex-shrink:0;">' + PCD.icon('clock', 18) + '</button>' +
-      '<button class="icon-btn" data-edit-sup="' + s.id + '" title="Edit" style="flex-shrink:0;">' + PCD.icon('edit', 18) + '</button>' +
-      (products.length > 0 ? '<button class="btn btn-primary btn-sm" data-send-sup="' + s.id + '" style="flex-shrink:0;">' + PCD.icon('send', 14) + ' Send' + (filled > 0 ? ' (' + filled + ')' : '') + '</button>' : '');
+      '<button class="icon-btn" data-edit-sup="' + s.id + '" title="' + PCD.escapeHtml(t('edit')) + '" style="flex-shrink:0;">' + PCD.icon('edit', 18) + '</button>' +
+      (products.length > 0 ? '<button class="btn btn-primary btn-sm" data-send-sup="' + s.id + '" style="flex-shrink:0;">' + PCD.icon('send', 14) + ' ' + PCD.escapeHtml(t('sup_send_btn')) + (filled > 0 ? ' (' + filled + ')' : '') + '</button>' : '');
     card.appendChild(header);
 
     // Products list inline
@@ -261,8 +261,8 @@
     const total = prods.length;
     const countEl = card.querySelector('[data-filled-count]');
     if (countEl) {
-      countEl.innerHTML = total + ' ' + (total === 1 ? 'product' : 'products') +
-        (filled > 0 ? ' · <span style="color:var(--brand-700);font-weight:700;">' + filled + ' to order</span>' : '');
+      countEl.innerHTML = PCD.escapeHtml(t('sup_product_count', { n: total })) +
+        (filled > 0 ? ' · <span style="color:var(--brand-700);font-weight:700;">' + PCD.escapeHtml(t('sup_to_order_count', { n: filled })) + '</span>' : '');
     }
     const sendBtn = card.querySelector('[data-send-sup]');
     if (sendBtn) {

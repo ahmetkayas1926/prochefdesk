@@ -625,7 +625,7 @@
         // Unarchive on switch
         PCD.modal.confirm({
           title: PCD.i18n.t('modal_reactivate_ws_title'),
-          text: '"' + ws.name + '" is archived. Reactivate and switch to it?',
+          text: PCD.i18n.t('modal_reactivate_ws_switch_text', { name: ws.name }),
           okText: PCD.i18n.t('btn_reactivate')
         }).then(function (ok) {
           if (!ok) return;
@@ -809,11 +809,11 @@
     let archiveBtn = null, deleteBtn = null;
     if (existing) {
       archiveBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline' });
-      archiveBtn.innerHTML = PCD.icon('archive', 14) + ' <span>' + (existing.archived ? 'Unarchive' : 'Archive') + '</span>';
+      archiveBtn.innerHTML = PCD.icon('archive', 14) + ' <span>' + PCD.escapeHtml(existing.archived ? t('ws_btn_unarchive') : t('ws_btn_archive')) + '</span>';
       // Only allow delete if there's another workspace
       const others = PCD.store.listWorkspaces(true).filter(function (w) { return w.id !== existing.id; });
       if (others.length > 0) {
-        deleteBtn = PCD.el('button', { type: 'button', class: 'btn btn-ghost', text: 'Delete', style: { color: 'var(--danger)' } });
+        deleteBtn = PCD.el('button', { type: 'button', class: 'btn btn-ghost', text: t('delete'), style: { color: 'var(--danger)' } });
       }
     }
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
@@ -831,15 +831,15 @@
     if (archiveBtn) archiveBtn.addEventListener('click', function () {
       const willArchive = !existing.archived;
       PCD.modal.confirm({
-        title: willArchive ? 'Archive workspace?' : 'Reactivate workspace?',
+        title: willArchive ? t('modal_archive_ws_title') : t('modal_reactivate_ws_title'),
         text: willArchive
-          ? '"' + existing.name + '" will be hidden but data is preserved. You can reactivate any time.'
-          : '"' + existing.name + '" will appear in the active list again.',
-        okText: willArchive ? 'Archive' : 'Reactivate'
+          ? t('modal_archive_ws_text', { name: existing.name })
+          : t('modal_reactivate_ws_text', { name: existing.name }),
+        okText: willArchive ? t('ws_btn_archive') : t('btn_reactivate')
       }).then(function (ok) {
         if (!ok) return;
         PCD.store.archiveWorkspace(existing.id, willArchive);
-        PCD.toast.success(willArchive ? 'Workspace archived' : 'Workspace reactivated');
+        PCD.toast.success(willArchive ? t('toast_workspace_archived') : t('toast_workspace_reactivated'));
         m.close();
         // v2.44.130 fix — wait for the pending cloud push before reload.
         const flushArchive = (PCD.cloudPerTable && PCD.cloudPerTable.flushNow) ? PCD.cloudPerTable.flushNow() : Promise.resolve();

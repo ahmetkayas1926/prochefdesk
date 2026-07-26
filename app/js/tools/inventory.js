@@ -1789,7 +1789,7 @@
             <input type="number" class="input" id="invPar" value="${row.parLevel != null ? row.parLevel : ''}" step="0.01" min="0" placeholder="0">
             <span class="input-group-addon">${ing.unit}</span>
           </div>
-          <div class="field-hint">Target stock level</div>
+          <div class="field-hint">${PCD.escapeHtml(t('inv_par_hint'))}</div>
         </div>
         <div class="field">
           <label class="field-label">${t('inv_min_level')}</label>
@@ -1797,7 +1797,7 @@
             <input type="number" class="input" id="invMin" value="${row.minLevel != null ? row.minLevel : ''}" step="0.01" min="0" placeholder="0">
             <span class="input-group-addon">${ing.unit}</span>
           </div>
-          <div class="field-hint">Critical threshold</div>
+          <div class="field-hint">${PCD.escapeHtml(t('inv_min_hint'))}</div>
         </div>
       </div>
 

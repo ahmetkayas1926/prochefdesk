@@ -608,7 +608,8 @@
             const type = this.getAttribute('data-preset');
             const p = UNIT_PRESETS.find(function (x) { return x.type === type; });
             if (!p) return;
-            body.querySelector('#huName').value = t(p.nameKey);
+            const nameEl = body.querySelector('#huName');
+            if (!nameEl.value.trim()) nameEl.value = t(p.nameKey);
             body.querySelector('#huMin').value = p.min;
             body.querySelector('#huMax').value = p.max;
           });

@@ -115,7 +115,7 @@
       <div class="page-header">
         <div class="page-header-text">
           <div class="page-title">${t('recipes_title')}</div>
-          <div class="page-subtitle">${recipes.length} ${recipes.length === 1 ? t('stat_recipes').toLowerCase().slice(0,-1) : t('stat_recipes').toLowerCase()}</div>
+          <div class="page-subtitle">${recipes.length} ${recipes.length === 1 ? t('stat_recipe_singular').toLowerCase() : t('stat_recipes').toLowerCase()}</div>
         </div>
         <div class="page-header-actions">
           ${recipes.length > 0 ? `<button class="btn btn-outline btn-sm" id="headerCostReport">${PCD.icon('activity',14)} <span>${t('btn_cost_report')}</span></button>` : ''}
@@ -297,7 +297,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
             <div class="empty-title">${t('no_recipes_yet')}</div>
             <div class="empty-desc">
               ${t('no_recipes_yet_desc')}
-              ${wsLabel ? '<div style="margin-top:8px;font-size:13px;">In workspace <strong>' + wsLabel + '</strong></div>' : ''}
+              ${wsLabel ? '<div style="margin-top:8px;font-size:13px;">' + PCD.escapeHtml(t('recipes_empty_in_workspace', { name: ws.name })) + '</div>' : ''}
             </div>
             <div class="empty-action"><button class="btn btn-primary" id="emptyNewBtn">+ ${t('new_recipe')}</button></div>
           </div>
@@ -2644,11 +2644,11 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
     function renderBody() {
       const cur = PCD.store.getRecipe(recipeId);
       const v = (cur.versions || []).slice().reverse();
-      let html = '<div class="text-muted text-sm mb-3">Each save captures the previous state. Restore to roll back, or delete old snapshots.</div>';
+      let html = '<div class="text-muted text-sm mb-3">' + PCD.escapeHtml(t('recipe_versions_hint')) + '</div>';
       if (v.length === 0) {
         html += '<div class="empty"><div class="empty-icon" style="color:var(--brand-600);">' + PCD.icon('clock', 40) + '</div>' +
-          '<div class="empty-title">No previous versions yet</div>' +
-          '<div class="empty-desc">Versions are auto-captured when you save changes to ingredients, steps, or servings. The current state is always live.</div></div>';
+          '<div class="empty-title">' + PCD.escapeHtml(t('recipe_versions_empty_title')) + '</div>' +
+          '<div class="empty-desc">' + PCD.escapeHtml(t('recipe_versions_empty_desc')) + '</div></div>';
       } else {
         html += '<div class="flex flex-col gap-2">';
         v.forEach(function (ver) {
@@ -2824,8 +2824,8 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
             ${data.photo ? '<button type="button" id="removePhoto" class="icon-btn" style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.6);color:white;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/></svg></button>' : ''}
           </div>
           <div class="flex gap-2 mt-2" id="photoActions" style="display:${data.photo ? 'none' : 'flex'};">
-            <button type="button" class="btn btn-outline btn-sm" id="cameraBtn" style="flex:1;">${PCD.icon('camera', 16)} Camera</button>
-            <button type="button" class="btn btn-outline btn-sm" id="galleryBtn" style="flex:1;">${PCD.icon('image', 16)} Gallery</button>
+            <button type="button" class="btn btn-outline btn-sm" id="cameraBtn" style="flex:1;">${PCD.icon('camera', 16)} ${t('rec_add_camera')}</button>
+            <button type="button" class="btn btn-outline btn-sm" id="galleryBtn" style="flex:1;">${PCD.icon('image', 16)} ${t('rec_add_gallery')}</button>
           </div>
           <input type="file" id="photoCamera" accept="image/*" capture="environment" style="display:none;">
           <input type="file" id="photoGallery" accept="image/*" style="display:none;">
@@ -3864,7 +3864,7 @@ function renderAllergenChips() {
     if (existing && PCD.store.snapshotRecipeVersion) {
       versionsBtn = PCD.el('button', { class: 'btn btn-outline', title: t('recipe_btn_versions') });
       const vCount = (existing.versions || []).length;
-      versionsBtn.innerHTML = PCD.icon('clock', 16) + ' <span>Versions' + (vCount > 0 ? ' (' + vCount + ')' : '') + '</span>';
+      versionsBtn.innerHTML = PCD.icon('clock', 16) + ' <span>' + PCD.escapeHtml(vCount > 0 ? t('btn_versions_n', { n: vCount }) : t('btn_versions')) + '</span>';
     }
     const footer = PCD.el('div', { style: { display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' } });
     footer.appendChild(cancelBtn);

@@ -50,8 +50,8 @@
       bodyEl.innerHTML = `
         <div class="empty">
           <div class="empty-icon" style="color:var(--brand-600);">${PCD.icon('id-card', 48)}</div>
-          <div class="empty-title">No recipes yet</div>
-          <div class="empty-desc">Create some recipes first, then come back here to build a kitchen reference sheet.</div>
+          <div class="empty-title">${PCD.escapeHtml(t('kc_empty_library_title'))}</div>
+          <div class="empty-desc">${PCD.escapeHtml(t('kc_empty_library_desc'))}</div>
         </div>
       `;
       return;
@@ -64,7 +64,7 @@
 
     // State
     let canvasId = (lastCanvas && lastCanvas.id) || null;
-    let canvasName = (lastCanvas && lastCanvas.name) || 'Kitchen Reference';
+    let canvasName = (lastCanvas && lastCanvas.name) || t('kc_default_canvas_name');
     let columns = (lastCanvas && lastCanvas.columns) || 3;
     let orientation = (lastCanvas && lastCanvas.orientation) || 'landscape';
     let fontSize = (lastCanvas && lastCanvas.fontSize) || 'medium';  // xs | small | medium | large
@@ -780,7 +780,7 @@
           shareBtn.disabled = false;
           shareBtn.innerHTML = origHTML;
           PCD.qr.show({
-            title: (canvasName || '').trim() || 'Kitchen Reference',
+            title: (canvasName || '').trim() || t('kc_default_canvas_name'),
             subtitle: t('canvas_share_qr_subtitle'),
             text: url
           });
@@ -798,7 +798,7 @@
           PCD.gate.showUpgradeModal({ feature: 'kitchen_cards', message: PCD.i18n.t('gate_create_limit') }); return;
         }
         canvasId = null;
-        canvasName = 'Kitchen Reference';
+        canvasName = t('kc_default_canvas_name');
         columns = 3; orientation = 'landscape'; fontSize = 'medium';
         accent = '#16a34a';
         showMethod = true; showAmounts = true;
@@ -813,7 +813,7 @@
       if (loadBtn) loadBtn.addEventListener('click', function () {
         openCanvasPicker(function (cvs) {
           canvasId = cvs.id;
-          canvasName = cvs.name || 'Kitchen Reference';
+          canvasName = cvs.name || t('kc_default_canvas_name');
           columns = cvs.columns || 3;
           orientation = cvs.orientation || 'landscape';
           fontSize = cvs.fontSize || 'medium';
@@ -1501,8 +1501,8 @@
       (opts.shareMode ? '<div class="kc-page">' : '') +
       '<div class="kc-sheet">' +
         '<div class="kc-header">' +
-          '<h1>' + PCD.escapeHtml(opts.title || 'Kitchen Reference') + '</h1>' +
-          '<div class="meta">' + (opts.layoutRecipes || []).length + ' recipes · ' + new Date().toLocaleDateString() + '</div>' +
+          '<h1>' + PCD.escapeHtml(opts.title || PCD.i18n.t('kc_default_canvas_name')) + '</h1>' +
+          '<div class="meta">' + PCD.escapeHtml(PCD.i18n.t('kc_sheet_meta_count', { n: (opts.layoutRecipes || []).length })) + ' · ' + new Date().toLocaleDateString() + '</div>' +
         '</div>' +
         blocksHtml +
       '</div>' +
@@ -1637,8 +1637,8 @@
       PCD.modal.confirm({
         icon: '🗑', iconKind: 'danger', danger: true,
         title: PCD.i18n.t('modal_delete_canvas_title'),
-        text: '"' + (cvs && cvs.name ? cvs.name : 'Canvas') + '" will be permanently removed.',
-        okText: 'Delete'
+        text: PCD.i18n.t('modal_delete_canvas_text', { name: (cvs && cvs.name) ? cvs.name : PCD.i18n.t('kc_canvas_fallback_name') }),
+        okText: PCD.i18n.t('delete')
       }).then(function (ok) {
         if (!ok) return;
         PCD.store.deleteFromTable('canvases', id);
@@ -1708,7 +1708,7 @@
 
     return {
       kind: 'kitchencard',
-      name: cvs.name || 'Kitchen Reference',
+      name: cvs.name || PCD.i18n.t('kc_default_canvas_name'),
       columns: cvs.columns,
       orientation: cvs.orientation,
       fontSize: cvs.fontSize,
