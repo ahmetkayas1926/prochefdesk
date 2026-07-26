@@ -597,7 +597,7 @@
       writeAll(canvases);
     }
     if (canvases.length === 0) {
-      const initial = defaultCanvas('My Whiteboard');
+      const initial = defaultCanvas(PCD.i18n.t('wb_default_title') || 'My Whiteboard');
       writeAll([initial]);
       setActiveId(initial.id);
       canvases = [initial];
