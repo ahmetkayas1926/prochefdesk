@@ -396,12 +396,12 @@
           <div class="flex items-center gap-3" style="flex-wrap:wrap;">
             <div style="color:#92400e;flex-shrink:0;">${PCD.icon('clock', 24)}</div>
             <div style="flex:1;min-width:180px;">
-              <div style="font-weight:700;color:#92400e;">Pending stock count awaits approval</div>
-              <div class="text-muted text-sm" style="color:#78350f;">By ${PCD.escapeHtml(pending.countedBy)} · ${PCD.fmtRelTime(pending.countedAt)} · ${Object.keys(pending.counts || {}).length} items counted</div>
+              <div style="font-weight:700;color:#92400e;">${t('inv_pending_banner_title')}</div>
+              <div class="text-muted text-sm" style="color:#78350f;">${PCD.escapeHtml(t('inv_pending_banner_subtitle', { name: pending.countedBy, n: Object.keys(pending.counts || {}).length }))} · ${PCD.fmtRelTime(pending.countedAt)}</div>
             </div>
             <div class="flex gap-2" style="flex-shrink:0;">
-              <button class="btn btn-outline btn-sm" id="reviewPendingBtn">Review</button>
-              <button class="btn btn-primary btn-sm" id="approvePendingBtn" style="background:#f59e0b;border-color:#f59e0b;">Approve</button>
+              <button class="btn btn-outline btn-sm" id="reviewPendingBtn">${t('btn_review')}</button>
+              <button class="btn btn-primary btn-sm" id="approvePendingBtn" style="background:#f59e0b;border-color:#f59e0b;">${t('btn_approve_count')}</button>
             </div>
           </div>
         </div>
@@ -491,7 +491,7 @@
       });
 
       if (filtered.length === 0) {
-        listEl.innerHTML = '<div class="empty"><div class="empty-desc">No items in this filter</div></div>';
+        listEl.innerHTML = '<div class="empty"><div class="empty-desc">' + PCD.escapeHtml(t('inv_no_items_filter')) + '</div></div>';
         return;
       }
 
@@ -631,7 +631,7 @@
       PCD.modal.confirm({
         icon: '✓', iconKind: 'success',
         title: PCD.i18n.t('modal_approve_count_title'),
-        text: Object.keys(p.counts || {}).length + ' items counted by ' + p.countedBy + '. Stock levels will be updated.',
+        text: PCD.i18n.t('modal_approve_count_text', { n: Object.keys(p.counts || {}).length, name: p.countedBy }),
         okText: PCD.i18n.t('btn_approve')
       }).then(function (ok) {
         if (!ok) return;
@@ -667,8 +667,8 @@
     function renderBody() {
       body.innerHTML =
         '<div class="mb-3" style="padding:12px;background:var(--surface-2);border-radius:var(--r-md);">' +
-          '<div style="font-weight:700;">Counted by ' + PCD.escapeHtml(p.countedBy) + '</div>' +
-          '<div class="text-muted text-sm">' + PCD.fmtRelTime(p.countedAt) + ' · ' + Object.keys(edited).length + ' items</div>' +
+          '<div style="font-weight:700;">' + PCD.escapeHtml(PCD.i18n.t('inv_counted_by', { name: p.countedBy })) + '</div>' +
+          '<div class="text-muted text-sm">' + PCD.fmtRelTime(p.countedAt) + ' · ' + PCD.escapeHtml(PCD.i18n.t('inv_n_items', { n: Object.keys(edited).length })) + '</div>' +
         '</div>' +
         '<div class="flex flex-col gap-1" id="reviewList"></div>';
 
@@ -794,7 +794,7 @@
                 (snap.countedBy ? ' · ' + PCD.escapeHtml(snap.countedBy) : '') +
               '</div>' +
             '</div>' +
-            '<button type="button" class="icon-btn" data-del-snap="' + snap.id + '" title="Delete snapshot">' + PCD.icon('trash', 16) + '</button>' +
+            '<button type="button" class="icon-btn" data-del-snap="' + snap.id + '" title="' + PCD.escapeHtml(t('inv_delete_snapshot_tooltip')) + '">' + PCD.icon('trash', 16) + '</button>' +
           '</div>' +
         '</div>';
       });
@@ -849,8 +849,8 @@
     });
 
     let html = '<div class="text-muted mb-3">' + dateStr + ' · ' + timeStr +
-      (snap.countedBy ? ' · by ' + PCD.escapeHtml(snap.countedBy) : '') +
-      ' · ' + snap.itemCount + ' items</div>';
+      (snap.countedBy ? ' · ' + PCD.escapeHtml(t('inv_counted_by', { name: snap.countedBy })) : '') +
+      ' · ' + PCD.escapeHtml(t('inv_n_items', { n: snap.itemCount })) + '</div>';
 
     Object.keys(byCat).sort().forEach(function (cat) {
       html += '<div style="margin-bottom:14px;">' +
@@ -952,10 +952,10 @@
       });
       const rows = list.map(function (c) { return [c.name, c.catLabel, c.amount, c.unit]; });
       PCD.xlsx.save(XLSX, [{
-        name: 'Stock Count',
+        name: t('inv_print_title') || 'Stock Count',
         title: (t('inv_print_title') || 'Stock Count') + ' — ' + dateStr,
-        subtitle: snap.itemCount + ' items' + (snap.countedBy ? ' · by ' + snap.countedBy : ''),
-        headers: ['Ingredient', 'Category', 'Counted', 'Unit'],
+        subtitle: t('inv_xlsx_subtitle', { n: snap.itemCount }) + (snap.countedBy ? ' · ' + t('inv_counted_by', { name: snap.countedBy }) : ''),
+        headers: [t('inv_xlsx_col_ingredient'), t('inv_xlsx_col_category'), t('inv_xlsx_col_counted'), t('inv_xlsx_col_unit')],
         rows: rows,
         align: ['left', 'left', 'right', 'left'],
         widths: [30, 20, 12, 10],
@@ -1021,7 +1021,7 @@
           const filled = val !== '';
           const row = invAll[i.id];
           const lastSeen = (row && row.lastCountedAt)
-            ? '<div class="text-muted" style="font-size:10px;line-height:1;">last: ' + PCD.fmtRelTime(row.lastCountedAt) + '</div>'
+            ? '<div class="text-muted" style="font-size:10px;line-height:1;">' + PCD.escapeHtml(t('inv_last_counted')) + ': ' + PCD.fmtRelTime(row.lastCountedAt) + '</div>'
             : '';
           html += '<div class="count-row" data-iid="' + i.id + '" data-name="' + PCD.escapeHtml((i.name || '').toLowerCase()) + '" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:4px;background:' + (filled ? 'var(--brand-50)' : 'var(--surface)') + ';">' +
             '<div style="flex:1;min-width:0;">' +
@@ -1155,7 +1155,7 @@
         // Save as pending
         const pending = {
           countedAt: new Date().toISOString(),
-          countedBy: user.name || user.email || 'Unknown',
+          countedBy: user.name || user.email || t('inv_unknown_counter'),
           counts: countedValues,
           status: 'pending',
         };
@@ -1192,7 +1192,7 @@
     const now = new Date().toISOString();
     const snapshot = {
       countedAt: now,
-      countedBy: (PCD.store.get('user') && PCD.store.get('user').name) || 'You',
+      countedBy: (PCD.store.get('user') && PCD.store.get('user').name) || PCD.i18n.t('inv_you'),
       counts: {},  // ingredientId → { amount, unit, name }
       itemCount: 0,
     };
@@ -1500,7 +1500,7 @@
         (assignable ? '' : '<input type="checkbox" class="po-item" data-iid="' + b.ing.id + '" data-sup="' + PCD.escapeHtml(b.supplier) + '" checked style="accent-color:var(--brand-600);width:18px;height:18px;flex-shrink:0;">') +
         '<div style="flex:1;min-width:0;">' +
           '<div style="font-weight:600;font-size:14px;">' + PCD.escapeHtml(b.ing.name) + '</div>' +
-          '<div class="text-muted" style="font-size:11px;">' + PCD.escapeHtml(L('inv_current_stock', 'Stock')) + ': ' + PCD.fmtNumber(b.stock) + ' · Par: ' + PCD.fmtNumber(b.par) + ' ' + (b.ing.unit || '') +
+          '<div class="text-muted" style="font-size:11px;">' + PCD.escapeHtml(L('inv_current_stock', 'Stock')) + ': ' + PCD.fmtNumber(b.stock) + ' · ' + PCD.escapeHtml(L('inv_par_short', 'Par')) + ': ' + PCD.fmtNumber(b.par) + ' ' + (b.ing.unit || '') +
             ' · <span style="color:' + statusColor(b.status) + ';font-weight:700;">' + PCD.escapeHtml(L('inv_need_short', 'need')) + ' ' + PCD.fmtNumber(b.need) + '</span></div>' +
           barHtml(b) +
         '</div>' +
@@ -1543,7 +1543,7 @@
         html += '<div style="display:flex;align-items:center;gap:9px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:4px;background:var(--surface);">' +
           '<div style="flex:1;min-width:0;">' +
             '<div style="font-weight:600;font-size:14px;">' + PCD.escapeHtml(b.ing.name) + '</div>' +
-            '<div class="text-muted" style="font-size:11px;">' + PCD.escapeHtml(L('inv_current_stock', 'Stock')) + ': ' + PCD.fmtNumber(b.stock) + ' · Par: ' + PCD.fmtNumber(b.par) + ' ' + (b.ing.unit || '') + '</div>' +
+            '<div class="text-muted" style="font-size:11px;">' + PCD.escapeHtml(L('inv_current_stock', 'Stock')) + ': ' + PCD.fmtNumber(b.stock) + ' · ' + PCD.escapeHtml(L('inv_par_short', 'Par')) + ': ' + PCD.fmtNumber(b.par) + ' ' + (b.ing.unit || '') + '</div>' +
           '</div>' +
           '<button type="button" class="btn btn-sm btn-outline po-reorder" data-iid="' + b.ing.id + '" style="flex-shrink:0;white-space:nowrap;">' + PCD.icon('refresh', 13) + ' ' + PCD.escapeHtml(L('inv_order_again', 'Order again')) + '</button>' +
         '</div>';
@@ -1702,9 +1702,9 @@
       if (PCD.gate && !PCD.gate.requireExport('inventory')) return;
       const user = PCD.store.get('user') || {};
       const userName = user.name || user.email || '';
-      const date = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+      const date = new Date().toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || 'en', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
       let html = '<div style="max-width:680px;margin:0 auto">';
-      html += '<h1>Purchase Order</h1>';
+      html += '<h1>' + PCD.escapeHtml(t('inv_purchase_order_title')) + '</h1>';
       html += '<div style="color:#666;font-size:12px;margin-bottom:16px;">' + date + (userName ? ' · ' + PCD.escapeHtml(userName) : '') + '</div>';
       keys.forEach(function (sup) {
         html += '<h3 style="margin-top:16px;padding-bottom:4px;border-bottom:1px solid #ddd;">' + PCD.escapeHtml(sup) + '</h3><table>';
@@ -1714,7 +1714,7 @@
         html += '</table>';
       });
       html += '</div>';
-      PCD.print(html, 'Purchase Order');
+      PCD.print(html, t('inv_purchase_order_title'));
     });
 
     receivedBtn.addEventListener('click', function () {

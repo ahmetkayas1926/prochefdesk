@@ -878,7 +878,7 @@
     });
     proposalBtn.addEventListener('click', function () {
       if (PCD.gate && !PCD.gate.requireExport('events')) return;
-      PCD.print(eventProposalHtml(existing), (existing.name || 'Event') + ' — ' + (t('event_proposal') || 'Proposal'));
+      PCD.print(eventProposalHtml(existing), (existing.name || t('ev_print_default_title') || 'Event') + ' — ' + (t('event_proposal') || 'Proposal'));
     });
     shareBtn.addEventListener('click', function () { shareEvent(existing); });
     dupBtn.addEventListener('click', function () {
@@ -1494,7 +1494,7 @@
     const guestWord = (t('event_guests') || 'guests').toLowerCase();
 
     const lines = [];
-    lines.push(event.name || 'Event');
+    lines.push(event.name || t('ev_print_default_title') || 'Event');
     if (event.status) lines.push((t('event_status') || 'Status') + ': ' + (t('event_status_' + event.status) || event.status));
     if (event.client) lines.push('🏢 ' + event.client);
     if (event.contactName) lines.push('👤 ' + event.contactName + (event.contactPhone ? ' · ' + event.contactPhone : ''));
@@ -1973,7 +1973,7 @@
     const text = buildEventText(event);
     const body = PCD.el('div');
     body.innerHTML =
-      '<div class="field"><label class="field-label">Message (editable)</label>' +
+      '<div class="field"><label class="field-label">' + PCD.escapeHtml(PCD.i18n.t('share_message_editable_label')) + '</label>' +
       '<textarea class="textarea" id="evShareText" rows="14" style="font-family:var(--font-mono);font-size:13px;">' + PCD.escapeHtml(text) + '</textarea></div>' +
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(72px,1fr));gap:8px;margin-top:14px;">' +
         '<button class="btn btn-outline" id="evShWa" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;">' +
@@ -1981,22 +1981,22 @@
           '<div style="font-weight:600;font-size:12px;">WhatsApp</div></button>' +
         '<button class="btn btn-outline" id="evShEmail" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;">' +
           '<div style="color:#EA4335;">' + PCD.icon('mail', 24) + '</div>' +
-          '<div style="font-weight:600;font-size:12px;">Email</div></button>' +
+          '<div style="font-weight:600;font-size:12px;">' + PCD.escapeHtml(PCD.i18n.t('share_email')) + '</div></button>' +
         '<button class="btn btn-outline" id="evShCopy" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;">' +
           '<div style="color:var(--brand-600);">' + PCD.icon('copy', 24) + '</div>' +
-          '<div style="font-weight:600;font-size:12px;">Copy</div></button>' +
+          '<div style="font-weight:600;font-size:12px;">' + PCD.escapeHtml(PCD.i18n.t('share_copy')) + '</div></button>' +
         '<button class="btn btn-outline" id="evShPdf" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;">' +
           '<div style="color:var(--brand-700);">' + PCD.icon('print', 24) + '</div>' +
-          '<div style="font-weight:600;font-size:12px;">PDF</div></button>' +
+          '<div style="font-weight:600;font-size:12px;">' + PCD.escapeHtml(PCD.i18n.t('share_print_pdf')) + '</div></button>' +
         '<button class="btn btn-outline" id="evShMore" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;">' +
           '<div style="color:var(--text-2);">' + PCD.icon('share', 24) + '</div>' +
-          '<div style="font-weight:600;font-size:12px;">More...</div></button>' +
+          '<div style="font-weight:600;font-size:12px;">' + PCD.escapeHtml(PCD.i18n.t('share_more')) + '</div></button>' +
       '</div>';
 
     const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('btn_close') });
     const footer = PCD.el('div', { style: { display: 'flex', width: '100%' } });
     footer.appendChild(closeBtn);
-    const m = PCD.modal.open({ title: PCD.i18n.t('modal_share_named', { name: (event.name || 'Event') }), body: body, footer: footer, size: 'md', closable: true });
+    const m = PCD.modal.open({ title: PCD.i18n.t('modal_share_named', { name: (event.name || PCD.i18n.t('ev_print_default_title')) }), body: body, footer: footer, size: 'md', closable: true });
     function getMsg() { return PCD.$('#evShareText', body).value; }
     closeBtn.addEventListener('click', function () { m.close(); });
     PCD.$('#evShWa', body).addEventListener('click', function () {
@@ -2004,7 +2004,7 @@
       m.close();
     });
     PCD.$('#evShEmail', body).addEventListener('click', function () {
-      window.location.href = 'mailto:?subject=' + encodeURIComponent(event.name || 'Event') + '&body=' + encodeURIComponent(getMsg());
+      window.location.href = 'mailto:?subject=' + encodeURIComponent(event.name || PCD.i18n.t('ev_print_default_title')) + '&body=' + encodeURIComponent(getMsg());
       m.close();
     });
     PCD.$('#evShCopy', body).addEventListener('click', function () {
@@ -2020,7 +2020,7 @@
     });
     PCD.$('#evShMore', body).addEventListener('click', function () {
       if (navigator.share) {
-        navigator.share({ title: event.name || 'Event', text: getMsg() }).then(function () { m.close(); }).catch(function () {});
+        navigator.share({ title: event.name || PCD.i18n.t('ev_print_default_title'), text: getMsg() }).then(function () { m.close(); }).catch(function () {});
       } else {
         if (navigator.clipboard) {
           navigator.clipboard.writeText(getMsg()).then(function () { PCD.toast.success(PCD.i18n.t('toast_copied')); m.close(); });
@@ -2197,7 +2197,7 @@
         '<h1>' + PCD.escapeHtml(event.name || (t('event_shopping_list') || 'Shopping list')) + '</h1>' +
         '<div class="sub">' + PCD.escapeHtml((t('event_shopping_list') || 'Shopping list') + ' · ' + eventGuests(event) + ' ' + (t('event_guests') || 'guests')) + '</div>' +
         shoppingListHtml(groups, true);
-      PCD.print(html, (event.name || 'Event') + ' — ' + (t('event_shopping_list') || 'Shopping list'));
+      PCD.print(html, (event.name || t('ev_print_default_title') || 'Event') + ' — ' + (t('event_shopping_list') || 'Shopping list'));
     });
     closeBtn.addEventListener('click', function () { m.close(); });
   }

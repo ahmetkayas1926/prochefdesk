@@ -268,7 +268,7 @@
     PCD.$('#hccPrintRangeBtn', view).addEventListener('click', function () {
       PCD.haccp.pickMonthRange(_viewMonth, function (from, to) {
         const sheets = PCD.haccp.monthsInRange(from, to).map(function (m) { return printMonth(m, false, true); });
-        PCD.haccp.printSheets(sheets, 'HACCP Cook & Cool · ' + from + ' – ' + to);
+        PCD.haccp.printSheets(sheets, t('hcc_title') + ' · ' + from + ' – ' + to);
       });
     });
 
@@ -463,7 +463,7 @@
     const target2h = targetForUI(cooling2hC());
     const target6h = targetForUI(cooling6hC());
     const ws = PCD.store.getActiveWorkspace ? PCD.store.getActiveWorkspace() : null;
-    const wsName = (ws && ws.name) || 'Kitchen';
+    const wsName = (ws && ws.name) || t('haccp_workspace_fallback');
     const label = monthLabel(monthYM);
 
     const records = blank ? [] : listForMonth(monthYM);
@@ -604,7 +604,7 @@
       '</div>';  // /.h-sheet (v2.9.32) — PCD.print injects footer right after as flex sibling
 
     if (returnHtml) return html;
-    PCD.print(html, 'HACCP Cook & Cool · ' + label);
+    PCD.print(html, t('hcc_title') + ' · ' + label);
   }
 
   // ============ MONTH PICKER (boş yazdır için ay seç) ============

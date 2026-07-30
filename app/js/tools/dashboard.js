@@ -517,7 +517,7 @@
             '<div class="dash-card-icon" style="background:#dbeafe;color:#1e40af;">' + PCD.icon('check-square', 22) + '</div>' +
             '<div class="dash-card-body">' +
               '<div class="dash-card-title">' + t('dash_active_checklists', { n: activeSessions.length, s: activeSessions.length === 1 ? '' : 's' }) + '</div>' +
-              '<div class="dash-card-desc">' + t('dash_session_progress', { name: PCD.escapeHtml(s.templateName || 'Session'), done: done, total: total, pct: pct }) + '</div>' +
+              '<div class="dash-card-desc">' + t('dash_session_progress', { name: PCD.escapeHtml(s.templateName || t('dash_checklist_default_name')), done: done, total: total, pct: pct }) + '</div>' +
             '</div>' +
             '<div class="dash-card-cta">' + t('dash_continue_cta') + '</div>' +
           '</div>'
@@ -527,7 +527,7 @@
     // CARD: Broken recipes (v2.6.55) — show when there are recipes with
     // orphan ingredient/sub-recipe references. Click → open self-heal modal.
     if (brokenRecipes.length > 0) {
-      const sample = brokenRecipes.slice(0, 3).map(function (b) { return b.recipe.name || '(untitled)'; }).join(', ');
+      const sample = brokenRecipes.slice(0, 3).map(function (b) { return b.recipe.name || ('(' + t('untitled') + ')'); }).join(', ');
       const more = brokenRecipes.length > 3 ? ' +' + (brokenRecipes.length - 3) : '';
       const totalLines = brokenRecipes.reduce(function (sum, b) { return sum + b.brokenLines.length; }, 0);
       cards.push({
@@ -858,7 +858,7 @@
           _upcoming.map(function (e) {
             const _d = e.date ? PCD.fmtDate(new Date(e.date).getTime()) : '';
             const _g = e.guestCount ? (' · ' + e.guestCount + ' ' + (t('event_guests') || 'guests').toLowerCase()) : '';
-            return '<div data-action="view-event" data-eid="' + e.id + '" style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;font-size:13px;"><span style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + PCD.escapeHtml(e.name || '(untitled)') + '</span><span style="color:var(--text-3);white-space:nowrap;">' + _d + _g + '</span></div>';
+            return '<div data-action="view-event" data-eid="' + e.id + '" style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;font-size:13px;"><span style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + PCD.escapeHtml(e.name || ('(' + t('untitled') + ')')) + '</span><span style="color:var(--text-3);white-space:nowrap;">' + _d + _g + '</span></div>';
           }).join('') +
           '</div>';
       }
@@ -1030,9 +1030,9 @@
 
       // Library stats (small footer)
       '<div class="dash-stats">' +
-        '<div class="dash-stat" data-action="open-recipes" role="button" tabindex="0" title="Recipes"><div class="dash-stat-num">' + stats.recipes + '</div><div class="dash-stat-lbl">' + t('dash_recipes_label') + '</div></div>' +
-        '<div class="dash-stat" data-action="open-ingredients" role="button" tabindex="0" title="Ingredients"><div class="dash-stat-num">' + stats.ingredients + '</div><div class="dash-stat-lbl">' + t('dash_ingredients_label') + '</div></div>' +
-        '<div class="dash-stat" data-action="open-menus-stat" role="button" tabindex="0" title="Menus"><div class="dash-stat-num">' + stats.menus + '</div><div class="dash-stat-lbl">' + t('dash_menus_label') + '</div></div>' +
+        '<div class="dash-stat" data-action="open-recipes" role="button" tabindex="0" title="' + PCD.escapeHtml(t('dash_recipes_label')) + '"><div class="dash-stat-num">' + stats.recipes + '</div><div class="dash-stat-lbl">' + t('dash_recipes_label') + '</div></div>' +
+        '<div class="dash-stat" data-action="open-ingredients" role="button" tabindex="0" title="' + PCD.escapeHtml(t('dash_ingredients_label')) + '"><div class="dash-stat-num">' + stats.ingredients + '</div><div class="dash-stat-lbl">' + t('dash_ingredients_label') + '</div></div>' +
+        '<div class="dash-stat" data-action="open-menus-stat" role="button" tabindex="0" title="' + PCD.escapeHtml(t('dash_menus_label')) + '"><div class="dash-stat-num">' + stats.menus + '</div><div class="dash-stat-lbl">' + t('dash_menus_label') + '</div></div>' +
       '</div>';
 
     // v2.8.78 — Lazy tools: poll briefly so editor opens once tool loads
@@ -1213,7 +1213,7 @@
       PCD.modal.confirm({
         icon: '🧹', iconKind: 'info',
         title: t('selfheal_confirm_title', 'Clean broken lines?'),
-        text: t('selfheal_confirm_text', 'Orphan lines will be removed from {n} recipe(s). Each recipe gets an automatic version snapshot first so you can revert.', { n: broken.length }),
+        text: t('selfheal_confirm_text', { n: broken.length }),
         okText: t('selfheal_fix_all', 'Fix all'),
         cancelText: t('cancel'),
       }).then(function (ok) {
@@ -1221,13 +1221,13 @@
         // Snapshot each broken recipe before cleaning
         broken.forEach(function (b) {
           if (PCD.store.snapshotRecipeVersion) {
-            try { PCD.store.snapshotRecipeVersion(b.recipe.id, 'Before self-heal · ' + new Date().toLocaleDateString()); }
+            try { PCD.store.snapshotRecipeVersion(b.recipe.id, t('selfheal_version_label') + ' · ' + new Date().toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || 'en')); }
             catch (e) { /* ignore — best effort */ }
           }
         });
         const result = PCD.store.cleanAllBrokenRecipes();
         m.close();
-        PCD.toast.success(t('selfheal_done', '✓ Fixed {recipes} recipe(s) — {lines} orphan line(s) removed', result));
+        PCD.toast.success(t('selfheal_done', result));
         // Re-render dashboard so the card disappears
         setTimeout(function () { render(view); }, 300);
       });

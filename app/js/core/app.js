@@ -530,7 +530,7 @@
     if (!ws) return;
     const nameEl = document.getElementById('wsName');
     const dotEl = document.getElementById('wsDot');
-    if (nameEl) nameEl.textContent = ws.name || 'My Kitchen';
+    if (nameEl) nameEl.textContent = ws.name || PCD.i18n.t('ws_default_display_name');
     if (dotEl) dotEl.style.background = wsColorHex(ws.color);
   }
 
@@ -642,7 +642,7 @@
         return;
       }
       PCD.store.setActiveWorkspaceId(wsId);
-      PCD.toast.success(PCD.i18n.t('toast_workspace_switched', { name: (ws ? ws.name : 'workspace') }));
+      PCD.toast.success(PCD.i18n.t('toast_workspace_switched', { name: (ws ? ws.name : PCD.i18n.t('ws_generic_label')) }));
       m.close();
       // v2.44.130 fix — reload before pending cloud push landed = lost writes.
       const flushSwitch = (PCD.cloudPerTable && PCD.cloudPerTable.flushNow) ? PCD.cloudPerTable.flushNow() : Promise.resolve();
@@ -767,7 +767,7 @@
           '<div class="field"><label class="field-label">' + t('ws_field_period') + '</label>' +
             '<div style="display:flex;gap:6px;">' +
               '<input type="month" class="input" id="wsStart" value="' + PCD.escapeHtml((data.periodStart || '').slice(0, 7)) + '" style="flex:1;">' +
-              '<input type="month" class="input" id="wsEnd" value="' + PCD.escapeHtml((data.periodEnd || '').slice(0, 7)) + '" placeholder="ongoing" style="flex:1;">' +
+              '<input type="month" class="input" id="wsEnd" value="' + PCD.escapeHtml((data.periodEnd || '').slice(0, 7)) + '" placeholder="' + PCD.escapeHtml(t('ws_field_ongoing_placeholder')) + '" style="flex:1;">' +
             '</div>' +
             '<div class="field-hint">' + t('ws_field_period_hint') + '</div>' +
           '</div>' +
@@ -1043,11 +1043,11 @@
     banner.innerHTML =
       '<div style="width:40px;height:40px;border-radius:var(--r-sm);background:linear-gradient(135deg,var(--brand-500),var(--brand-700));color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg viewBox="0 0 24 24" fill="none" style="width:62%;height:62%" aria-hidden="true"><path d="M6.5 13.6 C5 13 4.2 11.6 4.5 10 C4.6 9.3 5 8.6 5.7 8.2 C5.4 7 6 6.1 7 5.8 C7 4.6 7.8 3.8 9 3.8 C9.3 2.8 10.5 2.2 12 2.2 C13.5 2.2 14.7 2.8 15 3.8 C16.2 3.8 17 4.6 17 5.8 C18 6.1 18.6 7 18.3 8.2 C19 8.6 19.4 9.3 19.5 10 C19.8 11.6 19 13 17.5 13.6 Z" fill="#fff"/><path d="M6.3 13.6 L17.7 13.6 L17.7 19.3 C17.7 20.2 17 21 16.1 21 L7.9 21 C7 21 6.3 20.2 6.3 19.3 Z" fill="#fff"/><path d="M8 13.4 C7.7 10.4 8 7.4 8.9 5 M10 13.5 C9.9 10 10 6.6 10.5 3.4 M12 13.5 V2.6 M14 13.5 C14.1 10 14 6.6 13.5 3.4 M16 13.4 C16.3 10.4 16 7.4 15.1 5" stroke="#16433a" stroke-width="0.5" stroke-linecap="round" fill="none"/></svg></div>' +
       '<div style="flex:1;min-width:0;">' +
-        '<div style="font-weight:700;font-size:14px;">Install ProChefDesk</div>' +
-        '<div class="text-muted" style="font-size:12px;">Add to home screen for faster access</div>' +
+        '<div style="font-weight:700;font-size:14px;">' + PCD.escapeHtml(PCD.i18n.t('pwa_install_title')) + '</div>' +
+        '<div class="text-muted" style="font-size:12px;">' + PCD.escapeHtml(PCD.i18n.t('pwa_install_desc')) + '</div>' +
       '</div>' +
-      '<button id="pcd-install-btn" class="btn btn-primary btn-sm" style="flex-shrink:0;">Install</button>' +
-      '<button id="pcd-install-dismiss" class="icon-btn" style="flex-shrink:0;width:32px;height:32px;" aria-label="Dismiss">' +
+      '<button id="pcd-install-btn" class="btn btn-primary btn-sm" style="flex-shrink:0;">' + PCD.escapeHtml(PCD.i18n.t('pwa_install_btn')) + '</button>' +
+      '<button id="pcd-install-dismiss" class="icon-btn" style="flex-shrink:0;width:32px;height:32px;" aria-label="' + PCD.escapeHtml(PCD.i18n.t('close')) + '">' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/></svg>' +
       '</button>';
     document.body.appendChild(banner);

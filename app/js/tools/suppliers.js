@@ -196,7 +196,7 @@
     header.innerHTML =
       '<div style="width:40px;height:40px;border-radius:8px;background:var(--brand-50);color:var(--brand-700);display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + PCD.icon('truck', 22) + '</div>' +
       '<div style="flex:1;min-width:0;">' +
-        '<div style="font-weight:700;font-size:15px;letter-spacing:-0.01em;">' + PCD.escapeHtml(s.name || 'Untitled') + '</div>' +
+        '<div style="font-weight:700;font-size:15px;letter-spacing:-0.01em;">' + PCD.escapeHtml(s.name || PCD.i18n.t('untitled')) + '</div>' +
         '<div class="text-muted" style="font-size:12px;" data-filled-count="' + s.id + '">' +
           PCD.escapeHtml(t('sup_product_count', { n: products.length })) +
           (filled > 0 ? ' · <span style="color:var(--brand-700);font-weight:700;">' + PCD.escapeHtml(t('sup_to_order_count', { n: filled })) + '</span>' : '') +
@@ -266,7 +266,7 @@
     }
     const sendBtn = card.querySelector('[data-send-sup]');
     if (sendBtn) {
-      sendBtn.innerHTML = PCD.icon('send', 14) + ' Send' + (filled > 0 ? ' (' + filled + ')' : '');
+      sendBtn.innerHTML = PCD.icon('send', 14) + ' ' + PCD.escapeHtml(t('sup_send_btn')) + (filled > 0 ? ' (' + filled + ')' : '');
     }
   }
 
@@ -299,25 +299,25 @@
 
     const body = PCD.el('div');
     body.innerHTML =
-      '<div style="font-weight:600;margin-bottom:12px;">When do you need delivery?</div>' +
+      '<div style="font-weight:600;margin-bottom:12px;">' + PCD.escapeHtml(PCD.i18n.t('sup_delivery_when')) + '</div>' +
       '<div class="flex flex-col gap-2">' +
         '<label class="card card-hover" style="padding:12px;display:flex;align-items:center;gap:10px;cursor:pointer;">' +
           '<input type="radio" name="dlv" value="' + iso(tomorrow) + '" checked style="accent-color:var(--brand-600);">' +
-          '<div style="flex:1;"><div style="font-weight:600;">Tomorrow</div><div class="text-muted text-sm">' + dayName(tomorrow) + '</div></div>' +
+          '<div style="flex:1;"><div style="font-weight:600;">' + PCD.escapeHtml(PCD.i18n.t('sup_delivery_tomorrow')) + '</div><div class="text-muted text-sm">' + dayName(tomorrow) + '</div></div>' +
         '</label>' +
         '<label class="card card-hover" style="padding:12px;display:flex;align-items:center;gap:10px;cursor:pointer;">' +
           '<input type="radio" name="dlv" value="' + iso(dayAfter) + '" style="accent-color:var(--brand-600);">' +
-          '<div style="flex:1;"><div style="font-weight:600;">Day after tomorrow</div><div class="text-muted text-sm">' + dayName(dayAfter) + '</div></div>' +
+          '<div style="flex:1;"><div style="font-weight:600;">' + PCD.escapeHtml(PCD.i18n.t('sup_delivery_day_after')) + '</div><div class="text-muted text-sm">' + dayName(dayAfter) + '</div></div>' +
         '</label>' +
         '<label class="card" style="padding:12px;display:flex;align-items:center;gap:10px;cursor:pointer;">' +
           '<input type="radio" name="dlv" value="custom" style="accent-color:var(--brand-600);">' +
-          '<div style="flex:1;"><div style="font-weight:600;">Custom date</div>' +
+          '<div style="flex:1;"><div style="font-weight:600;">' + PCD.escapeHtml(PCD.i18n.t('sup_delivery_custom')) + '</div>' +
             '<input type="date" id="customDate" min="' + iso(new Date()) + '" class="input mt-1" style="padding:6px 8px;font-size:13px;">' +
           '</div>' +
         '</label>' +
       '</div>' +
-      '<div class="field mt-3"><label class="field-label">Notes (optional)</label>' +
-      '<input type="text" id="dlvNotes" class="input" placeholder="e.g. Before 10am, back entrance"></div>';
+      '<div class="field mt-3"><label class="field-label">' + PCD.escapeHtml(PCD.i18n.t('sup_delivery_notes_label')) + '</label>' +
+      '<input type="text" id="dlvNotes" class="input" placeholder="' + PCD.escapeHtml(PCD.i18n.t('sup_delivery_notes_placeholder')) + '"></div>';
 
     PCD.on(body, 'change', 'input[name=dlv]', function () {
       if (this.value === 'custom') {
@@ -388,35 +388,35 @@
     // otherwise show our 4-button sheet
     const body = PCD.el('div');
     body.innerHTML =
-      '<div class="field"><label class="field-label">Message (editable)</label>' +
+      '<div class="field"><label class="field-label">' + PCD.escapeHtml(PCD.i18n.t('share_message_editable_label')) + '</label>' +
       '<textarea class="textarea" id="shareMsg" rows="10" style="font-family:var(--font-mono);font-size:13px;white-space:pre;">' + PCD.escapeHtml(message) + '</textarea>' +
       // v2.44.130 — burada elle değiştirilen miktarlar stok takibine (recordOrder/
       // markOrdered) YANSIMAZ — o, gönderilmeden önceki order ekranındaki miktarları
       // kullanır. Şef karışmasın diye açıkça belirtiliyor.
-      '<div class="text-muted text-sm" style="margin-top:4px;">Editing quantities here only changes the sent message — stock tracking uses the quantities entered on the order screen.</div>' +
+      '<div class="text-muted text-sm" style="margin-top:4px;">' + PCD.escapeHtml(PCD.i18n.t('sup_qty_hint')) + '</div>' +
       '</div>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-top:14px;">' +
         '<button class="btn btn-outline" id="shWa" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;">' +
           '<div style="color:#25D366;">' + PCD.icon('message-circle', 24) + '</div>' +
           '<div style="font-weight:600;font-size:12px;">WhatsApp</div>' +
-          (!waNumber ? '<div class="text-muted" style="font-size:10px;">No number</div>' : '') +
+          (!waNumber ? '<div class="text-muted" style="font-size:10px;">' + PCD.escapeHtml(PCD.i18n.t('sup_no_number')) + '</div>' : '') +
         '</button>' +
         '<button class="btn btn-outline" id="shSms" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;">' +
           '<div style="color:var(--brand-600);">' + PCD.icon('phone', 24) + '</div>' +
           '<div style="font-weight:600;font-size:12px;">SMS</div>' +
-          (!phoneClean ? '<div class="text-muted" style="font-size:10px;">No number</div>' : '') +
+          (!phoneClean ? '<div class="text-muted" style="font-size:10px;">' + PCD.escapeHtml(PCD.i18n.t('sup_no_number')) + '</div>' : '') +
         '</button>' +
         '<button class="btn btn-outline" id="shEmail" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;">' +
           '<div style="color:#EA4335;">' + PCD.icon('mail', 24) + '</div>' +
-          '<div style="font-weight:600;font-size:12px;">Email</div>' +
-          (!email ? '<div class="text-muted" style="font-size:10px;">No address</div>' : '') +
+          '<div style="font-weight:600;font-size:12px;">' + PCD.escapeHtml(PCD.i18n.t('share_email')) + '</div>' +
+          (!email ? '<div class="text-muted" style="font-size:10px;">' + PCD.escapeHtml(PCD.i18n.t('sup_no_address')) + '</div>' : '') +
         '</button>' +
         '<button class="btn btn-outline" id="shMore" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;">' +
           '<div style="color:var(--text-2);">' + PCD.icon('share', 24) + '</div>' +
-          '<div style="font-weight:600;font-size:12px;">More...</div>' +
+          '<div style="font-weight:600;font-size:12px;">' + PCD.escapeHtml(PCD.i18n.t('share_more')) + '</div>' +
         '</button>' +
       '</div>' +
-      (!hasAnyContact ? '<div class="text-muted text-sm mt-3" style="text-align:center;font-size:12px;">No contact saved for this supplier — choose a channel above to send.</div>' : '');
+      (!hasAnyContact ? '<div class="text-muted text-sm mt-3" style="text-align:center;font-size:12px;">' + PCD.escapeHtml(PCD.i18n.t('sup_no_contact')) + '</div>' : '');
 
     const cancelBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('btn_close') });
     const footer = PCD.el('div', { style: { display: 'flex', width: '100%' } });
@@ -457,7 +457,7 @@
       m.close();
     });
     PCD.$('#shEmail', body).addEventListener('click', function () {
-      const subject = 'Order request — delivery ' + new Date(deliveryDate).toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || "en", { month: 'short', day: 'numeric' });
+      const subject = PCD.i18n.t('sup_order_email_subject', { date: new Date(deliveryDate).toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || "en", { month: 'short', day: 'numeric' }) });
       const url = email
         ? 'mailto:' + email + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(getMsg())
         : 'mailto:?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(getMsg());
@@ -566,7 +566,7 @@
     const sup = PCD.store.getFromTable('suppliers', sid);
     if (!sup) return;
     const hist = Array.isArray(sup.orderHistory) ? sup.orderHistory : [];
-    const chLabel = { whatsapp: 'WhatsApp', sms: 'SMS', email: 'Email', share: (t('supplier_ch_share') || 'Share'), copy: (t('supplier_ch_copy') || 'Copy') };
+    const chLabel = { whatsapp: 'WhatsApp', sms: 'SMS', email: t('share_email'), share: (t('supplier_ch_share') || 'Share'), copy: (t('supplier_ch_copy') || 'Copy') };
     const body = PCD.el('div');
 
     function paint() {
@@ -756,7 +756,7 @@
       body.innerHTML = `
         <div class="field">
           <label class="field-label">${PCD.escapeHtml(tt('supplier_name', 'Name'))} *</label>
-          <input type="text" class="input" id="sName" value="${PCD.escapeHtml(data.name || '')}" placeholder="e.g. Fresh Produce Co">
+          <input type="text" class="input" id="sName" value="${PCD.escapeHtml(data.name || '')}" placeholder="${PCD.escapeHtml(tt('sup_name_placeholder', 'e.g. Fresh Produce Co'))}">
         </div>
         <div class="field">
           <label class="field-label">${PCD.escapeHtml(tt('supplier_contact_name', 'Contact person'))} <span class="text-muted" style="font-weight:400;">(${PCD.escapeHtml(tt('optional', 'optional'))})</span></label>

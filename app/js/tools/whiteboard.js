@@ -809,7 +809,7 @@
         break;
       }
       default:
-        inner = '<div style="font-style:italic;opacity:0.5;">Unknown block type: ' + PCD.escapeHtml(block.type) + '</div>';
+        inner = '<div style="font-style:italic;opacity:0.5;">' + PCD.escapeHtml(t('wb_unknown_block_type', 'Unknown block type: ' + block.type).replace('{type}', block.type)) + '</div>';
     }
 
     return inner;
@@ -1478,7 +1478,7 @@
           return '<div style="border-top:1px dashed var(--border);padding:6px 0 4px;margin-top:6px;">' +
             '<div style="display:flex;gap:6px;align-items:center;margin-bottom:4px;">' +
               '<span style="flex:0 0 42px;font-size:9px;color:var(--text-3);text-transform:uppercase;font-weight:700;">' + PCD.escapeHtml(t('wb_cs_row_label', 'Row')) + '</span>' +
-              '<input type="text" data-ct-cs-rowlabel="' + ri + '" value="' + PCD.escapeHtml(row.label || '') + '" placeholder="Time / Temp / Note" style="flex:1;min-width:0;padding:4px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface-1);color:var(--text);font-size:11px;font-weight:800;text-transform:uppercase;">' +
+              '<input type="text" data-ct-cs-rowlabel="' + ri + '" value="' + PCD.escapeHtml(row.label || '') + '" placeholder="' + PCD.escapeHtml(t('wb_cook_sheet_placeholder', 'Time / Temp / Note')) + '" style="flex:1;min-width:0;padding:4px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface-1);color:var(--text);font-size:11px;font-weight:800;text-transform:uppercase;">' +
               (csRows.length > 1 ? '<button class="wb-icon-btn danger" data-ct-cs-delrow="' + ri + '" title="' + PCD.escapeHtml(t('wb_cs_del_row', 'Delete row')) + '">×</button>' : '<span style="flex:0 0 24px;"></span>') +
             '</div>' +
             cells +
@@ -1595,7 +1595,7 @@
           return '<div class="card" data-wb-pick="' + PCD.escapeHtml(c.id) + '" style="display:flex;align-items:center;gap:12px;padding:12px;cursor:pointer;' + (isActive ? 'border-color:var(--brand-500);' : '') + '">' +
             '<div style="width:36px;height:36px;border-radius:6px;background:var(--brand-50);color:var(--brand-700);display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + PCD.icon('file-text', 18) + '</div>' +
             '<div style="flex:1;min-width:0;">' +
-              '<div style="font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + PCD.escapeHtml(c.name || c.title || 'Untitled') + (isActive ? ' <span style="font-size:10px;color:var(--brand-600);font-weight:700;">(' + PCD.escapeHtml(t('whiteboard_current', 'current')) + ')</span>' : '') + '</div>' +
+              '<div style="font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + PCD.escapeHtml(c.name || c.title || t('whiteboard_untitled', 'Untitled')) + (isActive ? ' <span style="font-size:10px;color:var(--brand-600);font-weight:700;">(' + PCD.escapeHtml(t('whiteboard_current', 'current')) + ')</span>' : '') + '</div>' +
               '<div class="text-muted" style="font-size:12px;">' +
                 blocks + ' ' + PCD.escapeHtml(t('whiteboard_blocks_word', 'blocks')) + ' · ' + PCD.escapeHtml(c.paper || 'A4') + ' · ' + PCD.escapeHtml(c.orient || 'portrait') + ' · ' + PCD.fmtRelTime(c.updatedAt) +
               '</div>' +
@@ -1625,7 +1625,7 @@
       PCD.modal.confirm({
         icon: '🗑', iconKind: 'danger', danger: true,
         title: t('whiteboard_delete_canvas_confirm_title', 'Delete this canvas?'),
-        text: '"' + (target && (target.name || target.title) ? (target.name || target.title) : 'Whiteboard') + '" — ' + t('whiteboard_delete_canvas_confirm_text', 'This canvas will be permanently deleted from this browser. Other saved canvases remain.'),
+        text: '"' + (target && (target.name || target.title) ? (target.name || target.title) : t('whiteboard_untitled', 'Untitled')) + '" — ' + t('whiteboard_delete_canvas_confirm_text', 'This canvas will be permanently deleted from this browser. Other saved canvases remain.'),
         okText: t('delete', 'Delete'),
       }).then(function (ok) {
         if (!ok) return;
@@ -1658,7 +1658,7 @@
     const titleEl = root.querySelector('#wbTitle');
     if (titleEl) titleEl.addEventListener('input', function () {
       canvas.title = this.value;
-      canvas.name = this.value || 'Untitled';
+      canvas.name = this.value || t('whiteboard_untitled', 'Untitled');
       persistCanvas(canvas);
       // Update sheet title preview if visible
       const sheetTitle = root.querySelector('.wb-canvas .wb-canvas-title-preview');
@@ -2277,7 +2277,7 @@
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
       userTpls.forEach(function (tpl) {
         html += '<div style="border:1px solid var(--border);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:6px;">' +
-          '<div style="font-weight:700;font-size:13px;">' + PCD.escapeHtml(tpl.name || 'Untitled') + '</div>' +
+          '<div style="font-weight:700;font-size:13px;">' + PCD.escapeHtml(tpl.name || t('whiteboard_untitled', 'Untitled')) + '</div>' +
           '<div style="font-size:11px;color:var(--text-3);">' + (tpl.blocks || []).length + ' ' + PCD.escapeHtml(t('wb_blocks_count', 'blocks')) + ' · ' + PCD.escapeHtml(tpl.paper || 'A4') + ' ' + PCD.escapeHtml(tpl.orient || 'landscape') + '</div>' +
           '<div style="display:flex;gap:4px;margin-top:4px;">' +
             '<button class="btn btn-primary btn-sm" data-apply-user-tpl="' + PCD.escapeHtml(tpl.id) + '" style="flex:1;font-size:11px;">' + PCD.escapeHtml(t('wb_template_apply', 'Apply')) + '</button>' +

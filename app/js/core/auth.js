@@ -246,7 +246,7 @@
           </button>
           <div class="flex items-center gap-2 mb-3">
             <div style="flex:1;height:1px;background:var(--border);"></div>
-            <span class="text-xs text-muted">or</span>
+            <span class="text-xs text-muted">${t('auth_or')}</span>
             <div style="flex:1;height:1px;background:var(--border);"></div>
           </div>
           <div class="field">

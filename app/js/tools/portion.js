@@ -148,7 +148,7 @@
             const baseAmt = Number(item.amount) || 0;
             const scaledAmt = baseAmt * factor;
             const viaHint = item.viaSubRecipe
-              ? '<div style="font-size:11px;color:var(--text-3);font-style:italic;margin-top:2px;">via ' + PCD.escapeHtml(item.viaSubRecipe) + '</div>'
+              ? '<div style="font-size:11px;color:var(--text-3);font-style:italic;margin-top:2px;">' + PCD.escapeHtml(t('portion_via_subrecipe', { name: item.viaSubRecipe })) + '</div>'
               : '';
             ingsHtml +=
               '<tr>' +
@@ -412,7 +412,7 @@
         const name = item.ingredient && item.ingredient.name || '?';
         const scaled = (Number(item.amount) || 0) * factor;
         const viaHint = item.viaSubRecipe
-          ? ' <span style="font-size:8pt;color:#999;font-style:italic;">(via ' + PCD.escapeHtml(item.viaSubRecipe) + ')</span>'
+          ? ' <span style="font-size:8pt;color:#999;font-style:italic;">(' + PCD.escapeHtml(PCD.i18n.t('portion_via_subrecipe', { name: item.viaSubRecipe })) + ')</span>'
           : '';
         ingRows +=
           '<tr>' +
@@ -495,7 +495,7 @@
       flatShare.forEach(function (item) {
         const name = item.ingredient && item.ingredient.name || '?';
         const scaled = (Number(item.amount) || 0) * factor;
-        const via = item.viaSubRecipe ? ' (via ' + item.viaSubRecipe + ')' : '';
+        const via = item.viaSubRecipe ? ' (' + t('portion_via_subrecipe', { name: item.viaSubRecipe }) + ')' : '';
         lines.push('• ' + name + via + ' — ' + PCD.fmtNumber(scaled) + ' ' + (item.unit || ''));
       });
       lines.push('');
@@ -511,11 +511,11 @@
         '<button class="btn btn-outline" id="shWa" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;">' +
           '<div style="color:#25D366;">' + PCD.icon('message-circle', 24) + '</div><div style="font-weight:600;font-size:12px;">WhatsApp</div></button>' +
         '<button class="btn btn-outline" id="shEmail" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;">' +
-          '<div style="color:#EA4335;">' + PCD.icon('mail', 24) + '</div><div style="font-weight:600;font-size:12px;">Email</div></button>' +
+          '<div style="color:#EA4335;">' + PCD.icon('mail', 24) + '</div><div style="font-weight:600;font-size:12px;">' + PCD.escapeHtml(t('share_email')) + '</div></button>' +
         '<button class="btn btn-outline" id="shCopy" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;">' +
-          '<div style="color:var(--brand-600);">' + PCD.icon('copy', 24) + '</div><div style="font-weight:600;font-size:12px;">Copy</div></button>' +
+          '<div style="color:var(--brand-600);">' + PCD.icon('copy', 24) + '</div><div style="font-weight:600;font-size:12px;">' + PCD.escapeHtml(t('share_copy')) + '</div></button>' +
         '<button class="btn btn-outline" id="shMore" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;">' +
-          '<div style="color:var(--text-2);">' + PCD.icon('share', 24) + '</div><div style="font-weight:600;font-size:12px;">More...</div></button>' +
+          '<div style="color:var(--text-2);">' + PCD.icon('share', 24) + '</div><div style="font-weight:600;font-size:12px;">' + PCD.escapeHtml(t('share_more')) + '</div></button>' +
       '</div>';
 
     const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('btn_close') });
@@ -529,7 +529,7 @@
       window.open('https://wa.me/?text=' + encodeURIComponent(getText()), '_blank'); m.close();
     });
     PCD.$('#shEmail', body).addEventListener('click', function () {
-      window.location.href = 'mailto:?subject=' + encodeURIComponent('Scaled recipes — ' + totalPortions + ' portions') + '&body=' + encodeURIComponent(getText());
+      window.location.href = 'mailto:?subject=' + encodeURIComponent((t('portion_print_title') || 'Scaled recipes') + ' — ' + totalPortions + ' ' + (t('portion_total_portions_label') || 'total portions')) + '&body=' + encodeURIComponent(getText());
       m.close();
     });
     PCD.$('#shCopy', body).addEventListener('click', function () {
@@ -537,7 +537,7 @@
     });
     PCD.$('#shMore', body).addEventListener('click', function () {
       if (navigator.share) {
-        navigator.share({ title: 'Scaled recipes', text: getText() }).then(function () { m.close(); }).catch(function () {});
+        navigator.share({ title: (t('portion_print_title') || 'Scaled recipes'), text: getText() }).then(function () { m.close(); }).catch(function () {});
       } else if (navigator.clipboard) {
         navigator.clipboard.writeText(getText()).then(function () { PCD.toast.success(PCD.i18n.t('toast_copied')); m.close(); });
       }
@@ -700,7 +700,7 @@
             try { cost = PCD.convertUnit(amt, item.unit, ing.unit) * _price; } catch (e) {}
           }
           total += cost;
-          const nm = (ing.name || '') + (item.viaSubRecipe ? ' (via ' + item.viaSubRecipe + ')' : '');
+          const nm = (ing.name || '') + (item.viaSubRecipe ? ' (' + t('portion_via_subrecipe', { name: item.viaSubRecipe }) + ')' : '');
           rows.push([r.name + ' (' + target + 'p)', nm, amt, item.unit || '', cost]);
         });
       });

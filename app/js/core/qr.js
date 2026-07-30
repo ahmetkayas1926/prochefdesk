@@ -59,7 +59,7 @@
   function show(opts) {
     opts = opts || {};
     const text = opts.text || '';
-    const title = opts.title || 'QR Code';
+    const title = opts.title || PCD.i18n.t('qr_default_title');
     const subtitle = opts.subtitle || '';
     if (!text) return;
 
@@ -67,7 +67,7 @@
     body.innerHTML =
       '<div style="text-align:center;padding:12px 0;">' +
         '<div id="qrImgWrap" style="display:inline-flex;align-items:center;justify-content:center;padding:16px;background:white;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.08);min-height:300px;min-width:300px;">' +
-          '<div class="text-muted">Loading QR...</div>' +
+          '<div class="text-muted">' + PCD.escapeHtml(PCD.i18n.t('qr_loading')) + '</div>' +
         '</div>' +
         (subtitle ? '<div style="font-weight:600;margin-top:14px;font-size:15px;">' + PCD.escapeHtml(subtitle) + '</div>' : '') +
         '<div class="text-muted text-sm" style="max-width:340px;margin:8px auto 0;word-break:break-all;font-family:var(--font-mono);font-size:11px;">' + PCD.escapeHtml(text) + '</div>' +
@@ -104,7 +104,7 @@
       toDataURL(text, 500).then(function (d) { dataURL = d; }).catch(function () {});
     };
     img.onerror = function () {
-      imgWrap.innerHTML = '<div class="text-muted" style="padding:40px;text-align:center;"><div>QR could not load</div><div style="font-size:11px;margin-top:8px;">Check your connection</div></div>';
+      imgWrap.innerHTML = '<div class="text-muted" style="padding:40px;text-align:center;"><div>' + PCD.escapeHtml(PCD.i18n.t('qr_load_failed')) + '</div><div style="font-size:11px;margin-top:8px;">' + PCD.escapeHtml(PCD.i18n.t('qr_check_connection')) + '</div></div>';
     };
     img.src = url(text, 400);
 
@@ -137,7 +137,7 @@
         '<div style="text-align:center;padding:40px 20px;">' +
           '<h1 style="margin:0 0 8px;font-size:22px;">' + PCD.escapeHtml(title) + '</h1>' +
           (subtitle ? '<div style="font-weight:600;font-size:15px;margin-bottom:8px;">' + PCD.escapeHtml(subtitle) + '</div>' : '') +
-          '<div style="color:#666;font-size:12px;margin-bottom:24px;">Scan with your phone camera</div>' +
+          '<div style="color:#666;font-size:12px;margin-bottom:24px;">' + PCD.escapeHtml(PCD.i18n.t('qr_scan_hint')) + '</div>' +
           '<img src="' + qrSrc + '" style="width:280px;height:280px;">' +
           '<div style="margin-top:20px;color:#888;font-size:10px;word-break:break-all;max-width:400px;margin-left:auto;margin-right:auto;">' + PCD.escapeHtml(text) + '</div>' +
         '</div>';

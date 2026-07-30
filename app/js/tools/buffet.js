@@ -2245,19 +2245,19 @@
     const text = buildBuffetText(buffet);
     const body = PCD.el('div');
     body.innerHTML =
-      '<div class="field"><label class="field-label">Message (editable)</label>' +
+      '<div class="field"><label class="field-label">' + PCD.escapeHtml(t('share_message_editable_label')) + '</label>' +
       '<textarea class="textarea" id="bufShareText" rows="14" style="font-family:var(--font-mono);font-size:13px;">' + PCD.escapeHtml(text) + '</textarea></div>' +
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(72px,1fr));gap:8px;margin-top:14px;">' +
         '<button class="btn btn-outline" id="bufShWa" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;"><div style="color:#25D366;">' + PCD.icon('message-circle', 24) + '</div><div style="font-weight:600;font-size:12px;">WhatsApp</div></button>' +
-        '<button class="btn btn-outline" id="bufShEmail" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;"><div style="color:#EA4335;">' + PCD.icon('mail', 24) + '</div><div style="font-weight:600;font-size:12px;">Email</div></button>' +
-        '<button class="btn btn-outline" id="bufShCopy" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;"><div style="color:var(--brand-600);">' + PCD.icon('copy', 24) + '</div><div style="font-weight:600;font-size:12px;">Copy</div></button>' +
+        '<button class="btn btn-outline" id="bufShEmail" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;"><div style="color:#EA4335;">' + PCD.icon('mail', 24) + '</div><div style="font-weight:600;font-size:12px;">' + PCD.escapeHtml(t('share_email')) + '</div></button>' +
+        '<button class="btn btn-outline" id="bufShCopy" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;"><div style="color:var(--brand-600);">' + PCD.icon('copy', 24) + '</div><div style="font-weight:600;font-size:12px;">' + PCD.escapeHtml(t('share_copy')) + '</div></button>' +
         '<button class="btn btn-outline" id="bufShPdf" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;"><div style="color:var(--brand-700);">' + PCD.icon('print', 24) + '</div><div style="font-weight:600;font-size:12px;">PDF</div></button>' +
-        '<button class="btn btn-outline" id="bufShMore" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;"><div style="color:var(--text-2);">' + PCD.icon('share', 24) + '</div><div style="font-weight:600;font-size:12px;">More...</div></button>' +
+        '<button class="btn btn-outline" id="bufShMore" style="flex-direction:column;height:auto;padding:14px 6px;gap:6px;"><div style="color:var(--text-2);">' + PCD.icon('share', 24) + '</div><div style="font-weight:600;font-size:12px;">' + PCD.escapeHtml(t('share_more')) + '</div></button>' +
       '</div>';
     const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: t('btn_close') });
     const footer = PCD.el('div', { style: { display: 'flex', width: '100%' } });
     footer.appendChild(closeBtn);
-    const m = PCD.modal.open({ title: t('modal_share_named', { name: (buffet.name || 'Buffet') }), body: body, footer: footer, size: 'md', closable: true });
+    const m = PCD.modal.open({ title: t('modal_share_named', { name: (buffet.name || t('buffet_untitled')) }), body: body, footer: footer, size: 'md', closable: true });
     function getMsg() { return PCD.$('#bufShareText', body).value; }
     closeBtn.addEventListener('click', function () { m.close(); });
     PCD.$('#bufShWa', body).addEventListener('click', function () { window.open('https://wa.me/?text=' + encodeURIComponent(getMsg()), '_blank'); m.close(); });

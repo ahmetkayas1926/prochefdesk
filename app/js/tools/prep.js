@@ -620,10 +620,10 @@
   // ============ PRESETS (düzen/stil) ============
   function openPresets(view, sheet) {
     const presets = [
-      { id: 'standard', label: 'Standard',          s: { columns: 3, orientation: 'portrait',  accent: '#16433a' } },
-      { id: 'compact',  label: 'Compact · 4-col',   s: { columns: 4, orientation: 'portrait',  accent: '#16433a' } },
-      { id: 'large',    label: 'Large · 2-col',     s: { columns: 2, orientation: 'portrait',  accent: '#16a34a' } },
-      { id: 'wide',     label: 'Wide · landscape',  s: { columns: 4, orientation: 'landscape', accent: '#1e3a5f' } },
+      { id: 'standard', label: t('prep_preset_standard', 'Standard'),         s: { columns: 3, orientation: 'portrait',  accent: '#16433a' } },
+      { id: 'compact',  label: t('prep_preset_compact', 'Compact · 4-col'),   s: { columns: 4, orientation: 'portrait',  accent: '#16433a' } },
+      { id: 'large',    label: t('prep_preset_large', 'Large · 2-col'),      s: { columns: 2, orientation: 'portrait',  accent: '#16a34a' } },
+      { id: 'wide',     label: t('prep_preset_wide', 'Wide · landscape'),    s: { columns: 4, orientation: 'landscape', accent: '#1e3a5f' } },
     ];
     const body = PCD.el('div');
     body.innerHTML = '<div style="display:flex;flex-direction:column;gap:8px;">' + presets.map(function (p) {
@@ -744,7 +744,7 @@
       PCD.modal.confirm({
         icon: '🗑', iconKind: 'danger', danger: true,
         title: t('prep_delete_title', 'Delete this prep sheet?'),
-        text: '"' + (target && target.name ? target.name : 'Prep sheet') + '" — ' + t('prep_delete_msg', 'This will be permanently deleted.'),
+        text: '"' + (target && target.name ? target.name : t('prep_untitled', 'Untitled')) + '" — ' + t('prep_delete_msg', 'This will be permanently deleted.'),
         okText: t('delete', 'Delete'),
       }).then(function (ok) {
         if (!ok) return;

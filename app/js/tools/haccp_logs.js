@@ -408,7 +408,7 @@
               '<div style="display:inline-flex;align-items:center;gap:2px;font-weight:600;color:' + (oor ? '#dc2626' : 'var(--text-1)') + ';font-size:12px;">' +
                 (oor ? '⚠' : '') +
                 PCD.escapeHtml(String(r.value)) + '°' +
-                (hasNote ? '<span title="Has note" style="color:var(--brand-600);font-size:9px;">📝</span>' : '') +
+                (hasNote ? '<span title="' + PCD.escapeHtml(t('haccp_has_note')) + '" style="color:var(--brand-600);font-size:9px;">📝</span>' : '') +
               '</div>';
           } else if (!isFuture) {
             cellContent = '<span style="color:var(--text-3);font-size:16px;font-weight:300;">+</span>';
@@ -803,7 +803,7 @@
     const ROWS = 31; // v2.9.40 — operator spec: always 31 rows (months <31 days leave blank rows)
     const tempUnit = getDefaultTempUnit();
     const ws = PCD.store.getActiveWorkspace ? PCD.store.getActiveWorkspace() : null;
-    const wsName = (ws && ws.name) || 'Kitchen';
+    const wsName = (ws && ws.name) || t('haccp_workspace_fallback');
     const logName = (currentLog && currentLog.name) || '';
     // v2.10.1 — Operator-reported bug: showFitWarning was referenced from
     // printMonth but only defined in render()'s inner scope → ReferenceError

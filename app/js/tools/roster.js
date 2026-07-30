@@ -942,7 +942,7 @@
       const wrap = document.createElement('div');
       wrap.style.cssText = 'position:fixed;left:-99999px;top:0;width:1180px;background:#fff;padding:22px;font-family:"Inter",-apple-system,Segoe UI,Roboto,sans-serif;color:#1c1917;';
       wrap.innerHTML = buildRosterTable(data, showCost) +
-        ((!PCD.gate || PCD.gate.showWatermark()) ? '<div style="margin-top:10px;padding-top:6px;border-top:1px solid #e5e5e5;text-align:center;font-size:11px;color:#999;font-family:"Inter",-apple-system,Segoe UI,Roboto,sans-serif;">Made with ProChefDesk · prochefdesk.com</div>' : '');
+        ((!PCD.gate || PCD.gate.showWatermark()) ? '<div style="margin-top:10px;padding-top:6px;border-top:1px solid #e5e5e5;text-align:center;font-size:11px;color:#999;font-family:"Inter",-apple-system,Segoe UI,Roboto,sans-serif;">' + PCD.escapeHtml(t('cr_made_with') || 'Made with ProChefDesk · prochefdesk.com') + '</div>' : '');
       document.body.appendChild(wrap);
       h2c(wrap, { scale: 2, backgroundColor: '#ffffff', logging: false }).then(function (canvas) {
         wrap.remove();
@@ -952,7 +952,7 @@
           let file = null;
           try { file = new File([blob], fname, { type: 'image/jpeg' }); } catch (e) { file = null; }
           if (file && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-            navigator.share({ files: [file], title: data.venue || data.name || 'Roster', text: (data.venue || data.name || 'Roster') + ' — ' + weekRange(data) }).catch(function () {});
+            navigator.share({ files: [file], title: data.venue || data.name || (t('roster_title') || 'Roster'), text: (data.venue || data.name || (t('roster_title') || 'Roster')) + ' — ' + weekRange(data) }).catch(function () {});
           } else {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a'); a.href = url; a.download = fname; document.body.appendChild(a); a.click(); a.remove();

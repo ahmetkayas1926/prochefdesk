@@ -1170,7 +1170,7 @@
       delete snapshot.versions; // don't nest history inside itself
       const snap = {
         snapshotId: PCD.uid('rv'),
-        label: label || 'Version',
+        label: label || ((PCD.i18n && PCD.i18n.t) ? PCD.i18n.t('recipe_version_fallback_label') : 'Version'),
         snapshotAt: new Date().toISOString(),
         snapshot: snapshot,
       };
@@ -1237,7 +1237,7 @@
         if (!r || r._deletedAt) return;
         if (!r.ingredients || !r.ingredients.length) return;
         const used = r.ingredients.some(function (ri) { return ri.ingredientId === ingId; });
-        if (used) out.push(r.name || '(untitled)');
+        if (used) out.push(r.name || ('(' + ((PCD.i18n && PCD.i18n.t) ? PCD.i18n.t('untitled') : 'untitled') + ')'));
       });
       return out;
     },
@@ -1253,7 +1253,7 @@
         if (!r || r._deletedAt) return;
         if (!r.ingredients || !r.ingredients.length) return;
         if (r.ingredients.some(function (ri) { return ri.ingredientId === ingId; })) {
-          out.push({ id: rid, name: r.name || '(untitled)' });
+          out.push({ id: rid, name: r.name || ('(' + ((PCD.i18n && PCD.i18n.t) ? PCD.i18n.t('untitled') : 'untitled') + ')') });
         }
       });
       return out;
@@ -1265,7 +1265,7 @@
       const out = [];
       list.forEach(function (e) {
         if (e && !e._deletedAt && Array.isArray(e.menu) && e.menu.some(function (m) { return m && m.recipeId === recipeId; })) {
-          out.push({ id: e.id, name: e.name || e.title || '(untitled)' });
+          out.push({ id: e.id, name: e.name || e.title || ('(' + ((PCD.i18n && PCD.i18n.t) ? PCD.i18n.t('untitled') : 'untitled') + ')') });
         }
       });
       return out;
@@ -1521,18 +1521,18 @@
       // Recipes
       const recipes = state.recipes[wsId] || {};
       Object.values(recipes).forEach(function (r) {
-        if (r._deletedAt) out.push({ table: 'recipes', id: r.id, item: r, label: r.name || 'Recipe', deletedAt: r._deletedAt });
+        if (r._deletedAt) out.push({ table: 'recipes', id: r.id, item: r, label: r.name || ((PCD.i18n && PCD.i18n.t) ? PCD.i18n.t('stat_recipe_singular') : 'Recipe'), deletedAt: r._deletedAt });
       });
       // Ingredients (workspace-scoped from v2.6.30)
       const wsIngs = (state.ingredients && state.ingredients[wsId]) || {};
       Object.values(wsIngs).forEach(function (i) {
-        if (i._deletedAt) out.push({ table: 'ingredients', id: i.id, item: i, label: i.name || 'Ingredient', deletedAt: i._deletedAt });
+        if (i._deletedAt) out.push({ table: 'ingredients', id: i.id, item: i, label: i.name || ((PCD.i18n && PCD.i18n.t) ? PCD.i18n.t('trash_label_ingredient') : 'Ingredient'), deletedAt: i._deletedAt });
       });
       // Generic ws-bound tables
       ['menus','events','suppliers','canvases','shoppingLists','checklistTemplates'].forEach(function (table) {
         const data = (state[table] && state[table][wsId]) || {};
         Object.values(data).forEach(function (it) {
-          if (it._deletedAt) out.push({ table: table, id: it.id, item: it, label: it.name || it.title || 'Item', deletedAt: it._deletedAt });
+          if (it._deletedAt) out.push({ table: table, id: it.id, item: it, label: it.name || it.title || ((PCD.i18n && PCD.i18n.t) ? PCD.i18n.t('trash_label_item') : 'Item'), deletedAt: it._deletedAt });
         });
       });
       return out.sort(function (a, b) { return (b.deletedAt || '').localeCompare(a.deletedAt || ''); });

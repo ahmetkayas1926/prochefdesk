@@ -455,7 +455,7 @@
     const t = PCD.i18n.t;
     const u = getTempUnit();
     const ws = PCD.store.getActiveWorkspace ? PCD.store.getActiveWorkspace() : null;
-    const wsName = (ws && ws.name) || 'Kitchen';
+    const wsName = (ws && ws.name) || t('haccp_workspace_fallback');
 
     const records = (blank || !dateStr) ? [] : listForDate(dateStr);
     const byRow = {};
@@ -560,7 +560,7 @@
     const t = PCD.i18n.t;
     const u = getTempUnit();
     const ws = PCD.store.getActiveWorkspace ? PCD.store.getActiveWorkspace() : null;
-    const wsName = (ws && ws.name) || 'Kitchen';
+    const wsName = (ws && ws.name) || t('haccp_workspace_fallback');
     const monthLabel = new Date(year, month - 1, 1).toLocaleDateString(locale(), { month: 'long', year: 'numeric' });
 
     let html = printStylesAndHeader(wsName, monthLabel, u, t) +
@@ -615,7 +615,7 @@
     const t = PCD.i18n.t;
     const u = getTempUnit();
     const ws = PCD.store.getActiveWorkspace ? PCD.store.getActiveWorkspace() : null;
-    const wsName = (ws && ws.name) || 'Kitchen';
+    const wsName = (ws && ws.name) || t('haccp_workspace_fallback');
     const monthLbl = monthLabel(monthYM);
 
     const records = listForMonth(monthYM);

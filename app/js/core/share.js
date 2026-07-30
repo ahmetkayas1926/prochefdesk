@@ -594,7 +594,7 @@
     // kitchen_cards.js (so the layout & CSS stay in sync with the live
     // editor's print output). Delegate and return early.
     if (p.kind === 'kitchencard') {
-      var _kcUnavailable = '<div style="padding:40px;text-align:center;color:#666;">Kitchen card renderer unavailable</div>';
+      var _kcUnavailable = '<div style="padding:40px;text-align:center;color:#666;">' + escapeHtml(t('share_kc_unavailable', 'Kitchen card renderer unavailable')) + '</div>';
       var _kcRender = function () {
         if (PCD.tools && PCD.tools.kitchenCards && PCD.tools.kitchenCards.renderFromSnapshot) {
           appEl.innerHTML = PCD.tools.kitchenCards.renderFromSnapshot(p);
@@ -622,7 +622,7 @@
     // canvas + submit), so it owns the container directly rather than
     // returning an HTML string like the other kinds.
     if (p.kind === 'event') {
-      var _evUnavailable = '<div style="padding:40px;text-align:center;color:#666;">Signing page unavailable</div>';
+      var _evUnavailable = '<div style="padding:40px;text-align:center;color:#666;">' + escapeHtml(t('share_ev_unavailable', 'Signing page unavailable')) + '</div>';
       var _evRender = function () {
         if (PCD.tools && PCD.tools.events && PCD.tools.events.renderSignatureView) {
           PCD.tools.events.renderSignatureView(appEl, p, share.id, share.signed_at);
@@ -910,6 +910,7 @@
   // ============ INIT — check for ?share=... in URL on boot ============
   // Returns true if this is a share page (caller should NOT continue normal boot)
   function initShareCheck() {
+    const t = (PCD.i18n && PCD.i18n.t) ? PCD.i18n.t : function (k, fb) { return fb || k; };
     const params = new URLSearchParams(location.search);
     const shareId = params.get('share');
     if (!shareId) return false;
@@ -925,7 +926,7 @@
 
     const appEl = document.getElementById('app');
     if (appEl) {
-      appEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif;color:#666;">Loading shared content...</div>';
+      appEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif;color:#666;">' + escapeHtml(t('share_page_loading', 'Loading shared content...')) + '</div>';
       appEl.classList.remove('hidden');
     }
 
@@ -933,19 +934,19 @@
     function tryFetch(retries) {
       if (!window._supabaseClient) {
         if (retries > 0) return setTimeout(function () { tryFetch(retries - 1); }, 200);
-        return showError('Cloud not available');
+        return showError(t('share_cloud_unavailable', 'Cloud not available'));
       }
       fetchShare(shareId).then(renderSharePage).catch(function (e) {
         if (e && e.code === 'paused') return showPaused();
-        showError(e.message || 'Share not found');
+        showError(e.message || t('share_not_found', 'Share not found'));
       });
     }
     function showError(msg) {
       if (appEl) {
         appEl.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif;color:#666;text-align:center;padding:20px;">' +
-          '<h1 style="font-size:24px;color:#dc2626;">Share not found</h1>' +
+          '<h1 style="font-size:24px;color:#dc2626;">' + escapeHtml(t('share_not_found', 'Share not found')) + '</h1>' +
           '<p>' + escapeHtml(msg) + '</p>' +
-          '<a href="' + location.origin + location.pathname + '" style="color:#1f9d6b;font-weight:700;text-decoration:none;margin-top:14px;">Open ProChefDesk →</a>' +
+          '<a href="' + location.origin + location.pathname + '" style="color:#1f9d6b;font-weight:700;text-decoration:none;margin-top:14px;">' + escapeHtml(t('share_back_to_app', 'Open ProChefDesk →')) + '</a>' +
           '</div>';
       }
     }

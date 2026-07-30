@@ -180,8 +180,20 @@
                   <label class="field-label">${t('chef_title_role')}</label>
                   <select class="select" id="chefRole">
                     <option value="">${t('chef_select')}</option>
-                    ${['Head Chef','Executive Chef','Sous Chef','Chef de Cuisine','Chef de Partie','Pastry Chef','Private Chef','Catering Chef','Culinary Student','Kitchen Owner','Other'].map(function(r){
-                      return '<option value="'+r+'"'+((user.role===r)?' selected':'')+'>'+r+'</option>';
+                    ${[
+                      ['Head Chef', t('chef_role_head_chef')],
+                      ['Executive Chef', t('chef_role_executive_chef')],
+                      ['Sous Chef', t('chef_role_sous_chef')],
+                      ['Chef de Cuisine', t('chef_role_chef_de_cuisine')],
+                      ['Chef de Partie', t('chef_role_chef_de_partie')],
+                      ['Pastry Chef', t('chef_role_pastry_chef')],
+                      ['Private Chef', t('chef_role_private_chef')],
+                      ['Catering Chef', t('chef_role_catering_chef')],
+                      ['Culinary Student', t('chef_role_culinary_student')],
+                      ['Kitchen Owner', t('chef_role_kitchen_owner')],
+                      ['Other', t('chef_role_other')],
+                    ].map(function(r){
+                      return '<option value="'+r[0]+'"'+((user.role===r[0])?' selected':'')+'>'+PCD.escapeHtml(r[1])+'</option>';
                     }).join('')}
                   </select>
                 </div>
@@ -239,7 +251,7 @@
             <div class="flex items-center justify-between" style="padding:14px 16px;">
               <div style="flex:1;">
                 <div style="font-weight:600;">${t('haptic_feedback')}</div>
-                <div class="text-muted text-sm">${PCD.isMobile() ? '' : '(mobile only)'}</div>
+                <div class="text-muted text-sm">${PCD.isMobile() ? '' : t('mobile_only_hint')}</div>
               </div>
               <label class="switch">
                 <input type="checkbox" id="prefHaptic" ${haptic ? 'checked' : ''}>
@@ -817,20 +829,20 @@
     // Checks for at least one expected top-level key + sane shapes.
     function validateBackup(data, raw) {
       if (!data || typeof data !== 'object' || Array.isArray(data)) {
-        return { valid: false, error: 'Top-level must be an object' };
+        return { valid: false, error: t('backup_err_not_object') };
       }
       // Required: at least ONE of the expected keys must be present
       const EXPECTED = ['recipes','ingredients','menus','events','suppliers','inventory','waste','workspaces','prefs','canvases','shoppingLists','checklistTemplates','checklistSessions','stockCountHistory'];
       const hasAny = EXPECTED.some(function (k) { return Object.prototype.hasOwnProperty.call(data, k); });
       if (!hasAny) {
-        return { valid: false, error: 'Missing all expected fields (recipes, ingredients, ...)' };
+        return { valid: false, error: t('backup_err_missing_fields') };
       }
       // Recipes/menus/events should be objects (key-value), not arrays or strings
       if (data.recipes !== undefined && (typeof data.recipes !== 'object' || Array.isArray(data.recipes))) {
-        return { valid: false, error: 'recipes field has wrong shape' };
+        return { valid: false, error: t('backup_err_recipes_shape') };
       }
       if (data.workspaces !== undefined && (typeof data.workspaces !== 'object' || Array.isArray(data.workspaces))) {
-        return { valid: false, error: 'workspaces field has wrong shape' };
+        return { valid: false, error: t('backup_err_workspaces_shape') };
       }
       return { valid: true };
     }
@@ -1543,7 +1555,7 @@
 
   function buildShareCard(share, reload) {
     const t = PCD.i18n.t;
-    const name = (share.payload && share.payload.name) || '(unnamed)';
+    const name = (share.payload && share.payload.name) || ('(' + t('untitled') + ')');
     const kindIcon =
       share.kind === 'recipe'      ? '📖' :
       share.kind === 'menu'        ? '🍽' :

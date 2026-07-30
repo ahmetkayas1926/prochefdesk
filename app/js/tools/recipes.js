@@ -308,7 +308,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
       }
       if (visible.length === 0) {
         const msg = filter
-          ? 'No results for "' + PCD.escapeHtml(filter) + '"'
+          ? t('recipes_search_no_results', { q: PCD.escapeHtml(filter) })
           : (activeTab === 'preps' ? t('recipes_empty_preps') : t('recipes_empty_menu'));
         listEl.innerHTML = '<div class="empty"><div class="empty-desc">' + msg + '</div></div>';
         return;
@@ -685,7 +685,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
       if (!original) return;
       const copy = PCD.clone(original);
       delete copy.id; delete copy.createdAt; delete copy.updatedAt;
-      copy.name = copy.name + ' (Copy)';
+      copy.name = copy.name + ' ' + PCD.i18n.t('ms_copy_suffix');
       const saved = PCD.store.upsertRecipe(copy);
       PCD.toast.success(PCD.i18n.t('toast_recipe_duplicated'));
       setTimeout(function () { openEditor(saved.id); }, 150);
@@ -703,13 +703,13 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
           { icon: 'copy', label: PCD.i18n.t('act_duplicate'), onClick: function () {
             const copy = PCD.clone(r);
             delete copy.id; delete copy.createdAt; delete copy.updatedAt;
-            copy.name = copy.name + ' (Copy)';
+            copy.name = copy.name + ' ' + PCD.i18n.t('ms_copy_suffix');
             const saved = PCD.store.upsertRecipe(copy);
             PCD.toast.success(PCD.i18n.t('toast_duplicated'));
             renderList(view);
             setTimeout(function () { openEditor(saved.id); }, 200);
           }},
-          { icon: 'truck', label: 'Copy to workspace...', onClick: function () {
+          { icon: 'truck', label: PCD.i18n.t('act_copy_workspace'), onClick: function () {
             PCD.openCopyToWorkspace('recipes', rid, r.name);
           }},
           { icon: 'share', label: PCD.i18n.t('act_share'), onClick: function () { openPreview(rid); } },
@@ -743,7 +743,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
             PCD.store.deleteRecipe(rid);
             renderList(view);
             PCD.toast.success(PCD.i18n.t('toast_deleted'), 5000, {
-              action: { label: 'UNDO', onClick: function () {
+              action: { label: PCD.i18n.t('btn_undo'), onClick: function () {
                 PCD.store.upsertRecipe(backup);
                 PCD.toast.success(PCD.i18n.t('toast_restored'));
                 renderList(view);
@@ -2319,7 +2319,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
       delete copy.id;
       delete copy.createdAt;
       delete copy.updatedAt;
-      copy.name = copy.name + ' (Copy)';
+      copy.name = copy.name + ' ' + PCD.i18n.t('ms_copy_suffix');
       const saved = PCD.store.upsertRecipe(copy);
       PCD.toast.success(PCD.i18n.t('toast_recipe_duplicated'));
       m.close();
@@ -2442,7 +2442,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
       else if (PCD.router.currentView() === 'dashboard') PCD.tools.dashboard.render(view);
       PCD.toast.success(t('item_deleted'), 5000, {
         action: {
-          label: 'UNDO',
+          label: PCD.i18n.t('btn_undo'),
           onClick: function () {
             PCD.store.upsertRecipe(backup);
             PCD.toast.success(PCD.i18n.t('toast_restored'));
@@ -2460,8 +2460,8 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
     const body = PCD.el('div');
     body.innerHTML =
       '<div style="padding:14px;background:linear-gradient(135deg,var(--brand-50),var(--surface));border:1px solid var(--brand-300);border-radius:8px;margin-bottom:14px;">' +
-        '<div style="font-weight:700;color:var(--brand-700);margin-bottom:4px;">🔗 Public link · Herkese açık link</div>' +
-        '<div class="text-muted text-sm" style="margin-bottom:10px;">Login olmadan da bu tarifi görebilen kalıcı bir link. WhatsApp, Instagram, e-posta, neye yapıştırırsan oraya yapışır.</div>' +
+        '<div style="font-weight:700;color:var(--brand-700);margin-bottom:4px;">' + PCD.escapeHtml(PCD.i18n.t('share_public_link_heading')) + '</div>' +
+        '<div class="text-muted text-sm" style="margin-bottom:10px;">' + PCD.escapeHtml(PCD.i18n.t('share_public_link_desc')) + '</div>' +
         '<button type="button" class="btn btn-primary btn-sm" id="rShPublicLink" style="width:100%;">' +
           PCD.icon('share', 14) + ' <span>' + PCD.i18n.t('btn_generate_share_link') + '</span>' +
         '</button>' +
@@ -2476,8 +2476,8 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
         '</div>' +
       '</div>' +
 
-      '<div style="font-weight:600;font-size:12px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Or share as text</div>' +
-      '<div class="field"><label class="field-label">Message</label>' +
+      '<div style="font-weight:600;font-size:12px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">' + PCD.escapeHtml(PCD.i18n.t('chk_share_text')) + '</div>' +
+      '<div class="field"><label class="field-label">' + PCD.escapeHtml(PCD.i18n.t('share_message_label')) + '</label>' +
       '<textarea class="textarea" id="rShareText" rows="8" style="font-family:var(--font-mono);font-size:13px;">' + PCD.escapeHtml(opts.text) + '</textarea></div>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-top:12px">' +
         '<button class="btn btn-outline" id="rShWa" style="flex-direction:column;height:auto;padding:12px 4px;gap:4px">' +
@@ -2485,13 +2485,13 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
           '<div style="font-weight:600;font-size:12px">WhatsApp</div></button>' +
         '<button class="btn btn-outline" id="rShEmail" style="flex-direction:column;height:auto;padding:12px 4px;gap:4px">' +
           '<div style="color:#EA4335">' + PCD.icon('mail', 22) + '</div>' +
-          '<div style="font-weight:600;font-size:12px">Email</div></button>' +
+          '<div style="font-weight:600;font-size:12px">' + PCD.escapeHtml(PCD.i18n.t('share_email')) + '</div></button>' +
         '<button class="btn btn-outline" id="rShPrint" style="flex-direction:column;height:auto;padding:12px 4px;gap:4px">' +
           '<div style="color:var(--brand-600)">' + PCD.icon('print', 22) + '</div>' +
-          '<div style="font-weight:600;font-size:12px">Print/PDF</div></button>' +
+          '<div style="font-weight:600;font-size:12px">' + PCD.escapeHtml(PCD.i18n.t('share_print_pdf')) + '</div></button>' +
         '<button class="btn btn-outline" id="rShCopy" style="flex-direction:column;height:auto;padding:12px 4px;gap:4px">' +
           '<div style="color:var(--text-2)">' + PCD.icon('copy', 22) + '</div>' +
-          '<div style="font-weight:600;font-size:12px">Copy</div></button>' +
+          '<div style="font-weight:600;font-size:12px">' + PCD.escapeHtml(PCD.i18n.t('share_copy')) + '</div></button>' +
       '</div>';
 
     const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: PCD.i18n.t('btn_close') });
@@ -2656,11 +2656,11 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
           html += '<div class="card" style="padding:12px;display:flex;align-items:center;gap:12px;">' +
             '<div style="width:32px;height:32px;border-radius:8px;background:var(--brand-50);color:var(--brand-700);display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + PCD.icon('clock', 16) + '</div>' +
             '<div style="flex:1;min-width:0;">' +
-              '<div style="font-weight:600;font-size:14px;">' + PCD.escapeHtml(ver.label || 'Version') + '</div>' +
-              '<div class="text-muted" style="font-size:12px;">' + PCD.fmtRelTime(ver.snapshotAt) + ' · ' + ingCount + ' ingredients · ' + (ver.snapshot.servings || 1) + ' servings</div>' +
+              '<div style="font-weight:600;font-size:14px;">' + PCD.escapeHtml(ver.label || t('recipe_version_fallback_label')) + '</div>' +
+              '<div class="text-muted" style="font-size:12px;">' + PCD.fmtRelTime(ver.snapshotAt) + ' · ' + PCD.escapeHtml(t('recipe_version_meta', { ing: ingCount, srv: (ver.snapshot.servings || 1) })) + '</div>' +
             '</div>' +
-            '<button class="btn btn-outline btn-sm" data-restore="' + ver.snapshotId + '">Restore</button>' +
-            '<button class="icon-btn" data-delv="' + ver.snapshotId + '" title="Delete">' + PCD.icon('trash', 16) + '</button>' +
+            '<button class="btn btn-outline btn-sm" data-restore="' + ver.snapshotId + '">' + PCD.escapeHtml(t('btn_restore')) + '</button>' +
+            '<button class="icon-btn" data-delv="' + ver.snapshotId + '" title="' + PCD.escapeHtml(t('delete')) + '">' + PCD.icon('trash', 16) + '</button>' +
           '</div>';
         });
         html += '</div>';
@@ -2894,9 +2894,9 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
         <div class="field-row">
           <div class="field">
             <label class="field-label">${t('recipe_yield_amount_label')}</label>
-            <input type="number" class="input" id="recipeYieldAmount" value="${data.yieldAmount || ''}" step="0.01" min="0" placeholder="e.g. 800">
+            <input type="number" class="input" id="recipeYieldAmount" value="${data.yieldAmount || ''}" step="0.01" min="0" placeholder="${PCD.escapeHtml(t('recipe_yield_placeholder'))}">
             <div class="field-hint">${t('recipe_yield_amount_hint')}</div>
-            ${_isPrepEd ? '<div style="margin-top:6px;padding:7px 9px;background:#fbf3e2;border:1px solid #d9a441;border-radius:6px;color:#8a5a08;font-size:12px;line-height:1.4;">⚠ Important for a prep: set the <strong>total yield</strong> (e.g. "600 g" or "4 portion") if you\'ll use it in other recipes by weight/volume. Mixed units &amp; densities can\'t be auto-summed, so without a yield the app can\'t cost g/ml usage.</div>' : ''}
+            ${_isPrepEd ? '<div style="margin-top:6px;padding:7px 9px;background:#fbf3e2;border:1px solid #d9a441;border-radius:6px;color:#8a5a08;font-size:12px;line-height:1.4;">' + PCD.escapeHtml(t('recipe_prep_yield_warning')) + '</div>' : ''}
           </div>
           <div class="field">
             <label class="field-label">${t('recipe_yield_unit_label')}</label>
@@ -2934,7 +2934,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
             </div>
             ${pct !== null ? '<div style="text-align:right;"><div class="stat-label">' + t('food_cost_percent') + '</div><div style="font-size:20px;font-weight:800;color:' + (pct <= _targetFc ? 'var(--success)' : (pct <= _targetFc + 5 ? 'var(--warning)' : 'var(--danger)')) + ';">' + PCD.fmtPercent(pct, 1) + '</div></div>' : ''}
           </div>
-          ${_unreliableSubs.length ? '<div style="margin-top:10px;padding:8px 10px;background:#fdf0ee;border:1px solid #b42318;border-radius:6px;color:#b42318;font-size:12.5px;font-weight:600;line-height:1.4;">⚠ ' + _unreliableSubs.map(function (n) { return PCD.escapeHtml(n); }).join(', ') + ' — no yield set, so this cost is incomplete. Give the prep a total yield (e.g. "600 g"), or use "portion" as the line unit. This line was skipped, not guessed.</div>' : ''}
+          ${_unreliableSubs.length ? '<div style="margin-top:10px;padding:8px 10px;background:#fdf0ee;border:1px solid #b42318;border-radius:6px;color:#b42318;font-size:12.5px;font-weight:600;line-height:1.4;">' + PCD.escapeHtml(t('recipe_unreliable_cost_warning', { names: _unreliableSubs.join(', ') })) + '</div>' : ''}
         </div>
 
         <div class="field">
@@ -3197,7 +3197,7 @@ function renderAllergenChips() {
               '<span style="color:var(--text-3);font-size:11px;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;flex-shrink:0;">' + PCD.escapeHtml(t('ing_separator_label')) + '</span>' +
               '<input type="text" class="input" data-sep-label data-idx="' + idx + '" value="' + PCD.escapeHtml(ri.label || '') + '" placeholder="' + PCD.escapeHtml(t('ing_separator_placeholder')) + '" style="flex:1;padding:6px 8px;min-height:32px;font-size:13px;">' +
             '</div>' +
-            '<button type="button" class="icon-btn" data-remove="' + idx + '" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/></svg></button>';
+            '<button type="button" class="icon-btn" data-remove="' + idx + '" aria-label="' + PCD.escapeHtml(t('remove')) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/></svg></button>';
           ingListEl.appendChild(sepRow);
           return;
         }
@@ -3274,7 +3274,7 @@ function renderAllergenChips() {
               ${unitWarn}<span data-line-cost data-idx="${idx}" style="font-weight:600;">${lineCost == null ? '<span style="color:var(--danger);font-weight:700;" title="' + PCD.escapeHtml(t('recipe_sub_no_yield_tip') || 'No yield set — cannot cost by g/ml. Give the prep a yield, or use the portion unit.') + '">—</span>' : PCD.fmtMoney(lineCost)}</span>
             </div>
           </div>
-          <button type="button" class="icon-btn" data-remove="${idx}" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/></svg></button>
+          <button type="button" class="icon-btn" data-remove="${idx}" aria-label="${PCD.escapeHtml(t('remove'))}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/></svg></button>
         `;
         ingListEl.appendChild(row);
       });
@@ -3706,7 +3706,7 @@ function renderAllergenChips() {
 
           let html = '';
           if (matches.length > 0) {
-            html += '<div style="padding:6px 12px;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;background:var(--surface-2);">Ingredients</div>';
+            html += '<div style="padding:6px 12px;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;background:var(--surface-2);">' + PCD.escapeHtml(t('recipe_dd_ingredients_header')) + '</div>';
             matches.forEach(function (i) {
               html += '<div data-pick-ing="' + i.id + '" style="padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
                 '<div style="flex:1;min-width:0;"><div style="font-weight:600;">' + PCD.escapeHtml(i.name) + '</div>' +
@@ -3715,7 +3715,7 @@ function renderAllergenChips() {
             });
           }
           if (recipeMatches.length > 0) {
-            html += '<div style="padding:6px 12px;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;background:var(--surface-2);">Sub-recipes</div>';
+            html += '<div style="padding:6px 12px;font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;background:var(--surface-2);">' + PCD.escapeHtml(t('recipe_dd_subrecipes_header')) + '</div>';
             recipeMatches.forEach(function (r) {
               html += '<div data-pick-recipe="' + r.id + '" style="padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
                 '<div style="flex:1;min-width:0;"><div style="font-weight:600;">' + PCD.escapeHtml(r.name) +
@@ -3729,12 +3729,11 @@ function renderAllergenChips() {
           // showing up?"). Say why when a match was hidden for this reason.
           if (cycleHiddenCount > 0) {
             html += '<div style="padding:8px 12px;font-size:11px;color:var(--text-3);background:var(--surface-2);">' +
-              PCD.icon('info', 12) + ' ' + cycleHiddenCount + ' matching recipe' + (cycleHiddenCount > 1 ? 's' : '') +
-              ' hidden — adding ' + (cycleHiddenCount > 1 ? 'them' : 'it') + ' would create a circular reference.</div>';
+              PCD.icon('info', 12) + ' ' + PCD.escapeHtml(t('recipe_dd_cycle_hidden', { n: cycleHiddenCount })) + '</div>';
           }
           // Always show "create new" at the bottom
           html += '<div data-pick-ing="__new__" data-name="' + PCD.escapeHtml(query.trim()) + '" style="padding:10px 12px;cursor:pointer;background:var(--brand-50);color:var(--brand-700);font-weight:600;font-size:13px;">' +
-            PCD.icon('plus', 14) + ' Create new ingredient "' + PCD.escapeHtml(query.trim()) + '"</div>';
+            PCD.icon('plus', 14) + ' ' + PCD.escapeHtml(t('recipe_dd_create_new_ingredient', { q: query.trim() })) + '</div>';
           qDD.innerHTML = html;
           qDD.style.display = 'block';
         }

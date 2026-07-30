@@ -150,7 +150,7 @@
     return {
       page: { paper: 'A4', orientation: 'portrait', columns: 1, bg: '#ffffff', ink: '#111111', accent: '#c5a572', baseFont: 'Cormorant', pad: 56, showAllergens: false, showPrices: true },
       blocks: [
-        _hd(name || 'Menu', { font: 'Cormorant', size: 42, weight: 500 }),
+        _hd(name || t('ms_default_menu'), { font: 'Cormorant', size: 42, weight: 500 }),
         _dv('linefloral'),
         _sec(t('ms_ph_section'), [], { titleSize: 24, titleAlign: 'center' }),
       ],
@@ -1211,7 +1211,7 @@
   // ---- Klasik menüden içe aktar ----
   function importFromClassic(menu) {
     const blocks = [];
-    blocks.push(_hd(menu.name || 'Menu', { font: 'Cormorant', size: 40, weight: 500 }));
+    blocks.push(_hd(menu.name || t('ms_default_menu'), { font: 'Cormorant', size: 40, weight: 500 }));
     if (menu.subtitle) blocks.push(_tx(menu.subtitle, { font: 'Montserrat', size: 12, tracking: 3, upper: true }));
     blocks.push(_dv('linefloral'));
     (menu.sections || []).forEach(function (sec) {
@@ -1267,7 +1267,7 @@
   }
   function doShare(mode) {
     PCD.share.createOrGetShareUrl('menu', currentId, mode).then(function (urlStr) {
-      if (PCD.qr && PCD.qr.show) PCD.qr.show({ title: (currentMenu && currentMenu.name) || 'Menu', subtitle: mode === 'cost' ? t('ms_sub_cost') : t('ms_sub_menu'), text: urlStr });
+      if (PCD.qr && PCD.qr.show) PCD.qr.show({ title: (currentMenu && currentMenu.name) || t('ms_default_menu'), subtitle: mode === 'cost' ? t('ms_sub_cost') : t('ms_sub_menu'), text: urlStr });
       else if (PCD.toast) PCD.toast.success(urlStr);
     }).catch(function (e) { if (PCD.toast) PCD.toast.error(t('ms_share_error', { msg: ((e && e.message) || e) })); });
   }
@@ -1323,7 +1323,7 @@
       '.ms-libcard-actions button{border:0;background:rgba(255,255,255,.92);color:#333;border-radius:7px;width:30px;height:30px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.15);}' +
       '.ms-libcard-actions button:hover{background:#fff;}' +
       '</style>';
-    h += '<div class="page-header"><div class="page-header-text"><div class="page-title">Menu Studio</div><div class="page-subtitle">' + esc(t('ms_subtitle')) + '</div></div><div class="page-header-actions"><button class="btn btn-outline" id="msTplHome">' + (PCD.icon ? PCD.icon('grid', 14) : '📋') + ' ' + esc(t('ms_templates')) + '</button><button class="btn btn-primary" id="msNew">' + esc(t('ms_new_menu')) + '</button></div></div>';
+    h += '<div class="page-header"><div class="page-header-text"><div class="page-title">' + esc(t('t_menus_title')) + '</div><div class="page-subtitle">' + esc(t('ms_subtitle')) + '</div></div><div class="page-header-actions"><button class="btn btn-outline" id="msTplHome">' + (PCD.icon ? PCD.icon('grid', 14) : '📋') + ' ' + esc(t('ms_templates')) + '</button><button class="btn btn-primary" id="msNew">' + esc(t('ms_new_menu')) + '</button></div></div>';
     h += PCD.guideCard('menu', t('menu_g_t'), [t('menu_g1'), t('menu_g2'), t('menu_g3')]);
     if (!menus.length) {
       h += '<div class="empty"><div class="empty-icon">🎨</div><div class="empty-title">' + esc(t('ms_no_menus_title')) + '</div><div class="empty-desc">' + esc(t('ms_no_menus_desc')) + '</div><div class="empty-action" style="display:flex;gap:8px;justify-content:center;"><button class="btn btn-outline" id="msTpl2">' + (PCD.icon ? PCD.icon('grid', 14) : '📋') + ' ' + esc(t('ms_templates')) + '</button><button class="btn btn-primary" id="msNew2">' + esc(t('ms_new_menu')) + '</button></div></div>';
@@ -1451,7 +1451,7 @@
     PCD.$('#msTemplatesHdr', _view).addEventListener('click', function () { openTemplates(false); });
     var _pgBtn = PCD.$('#msPageBtn', _view); if (_pgBtn) _pgBtn.addEventListener('click', openPageSettings);
     PCD.$('#msShare', _view).addEventListener('click', openShare);
-    PCD.$('#msPrint', _view).addEventListener('click', function () { if (PCD.gate && !PCD.gate.requireExport('menus')) return; PCD.print(buildPrintHtml(), currentMenu.name || 'Menu'); });
+    PCD.$('#msPrint', _view).addEventListener('click', function () { if (PCD.gate && !PCD.gate.requireExport('menus')) return; PCD.print(buildPrintHtml(), currentMenu.name || t('ms_default_menu')); });
     const nm = PCD.$('#msName', _view); if (nm) nm.addEventListener('input', function () { currentMenu.name = nm.value; saveSoon(); });
     let _rsz = null; window.addEventListener('resize', function () { clearTimeout(_rsz); _rsz = setTimeout(applyScale, 120); });
   }

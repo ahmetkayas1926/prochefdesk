@@ -714,7 +714,8 @@
   PCD.print = function (htmlOrContent, title) {
     // Misafir HİÇBİR çıktı/print alamaz → merkezi giriş duvarı (monetization).
     if (PCD.gate && PCD.gate.isGuest && PCD.gate.isGuest()) { if (PCD.gate.requireAuth) PCD.gate.requireAuth(); return; }
-    title = title || 'Print';
+    const tt = (PCD.i18n && PCD.i18n.t) ? PCD.i18n.t : function (k, fb) { return fb || k; };
+    title = title || tt('print', 'Print');
 
     // v2.8.54 — STANDART FOOTER. Tüm print + share + QR akışlarında
     // tek tip görünüm. Tıklanabilir (her iki link de prochefdesk.com'a).
@@ -775,7 +776,6 @@
     // are resolved BEFORE writing to the new window since the new window
     // doesn't have access to PCD.i18n. Footer "Made with ProChefDesk"
     // remains English-only by design (acts as soft attribution).
-    const tt = (PCD.i18n && PCD.i18n.t) ? PCD.i18n.t : function (k, fb) { return fb || k; };
     const labelPrintSavePdf = tt('btn_print_save_pdf', 'Print / Save as PDF');
     const labelClose = tt('btn_close', 'Close');
     const labelTip = tt('print_tip_save_as_pdf', 'Tip: pick "Save as PDF" in the print dialog');
@@ -818,8 +818,8 @@
       '</div>' +
       '<iframe id="pcd-print-frame" style="flex:1;border:none;background:#fff;width:100%"></iframe>' +
       '<div style="padding:10px 14px;display:flex;gap:8px;border-top:1px solid #e5e5e5;flex-shrink:0;background:#fff">' +
-        '<button id="pcd-print-go" style="flex:1;padding:12px;background:#1f9d6b;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">Print / Save as PDF</button>' +
-        '<button id="pcd-print-close2" style="padding:12px 18px;background:#f0f0f0;color:#333;border:1px solid #ddd;border-radius:8px;font-size:13px;cursor:pointer">Close</button>' +
+        '<button id="pcd-print-go" style="flex:1;padding:12px;background:#1f9d6b;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">' + PCD.escapeHtml(labelPrintSavePdf) + '</button>' +
+        '<button id="pcd-print-close2" style="padding:12px 18px;background:#f0f0f0;color:#333;border:1px solid #ddd;border-radius:8px;font-size:13px;cursor:pointer">' + PCD.escapeHtml(labelClose) + '</button>' +
       '</div>';
     document.body.appendChild(modal);
     document.getElementById('pcd-print-close').onclick = function () { modal.remove(); };
@@ -857,7 +857,7 @@
         '</button>';
     });
     html += '<div style="height:6px;"></div>';
-    html += '<button data-idx="cancel" style="display:flex;align-items:center;justify-content:center;width:calc(100% - 24px);margin:0 12px;padding:14px;border:0;background:var(--surface-2);color:var(--text-2);font-size:15px;font-weight:600;border-radius:var(--r-md);cursor:pointer;">Cancel</button>';
+    html += '<button data-idx="cancel" style="display:flex;align-items:center;justify-content:center;width:calc(100% - 24px);margin:0 12px;padding:14px;border:0;background:var(--surface-2);color:var(--text-2);font-size:15px;font-weight:600;border-radius:var(--r-md);cursor:pointer;">' + PCD.escapeHtml((PCD.i18n && PCD.i18n.t) ? PCD.i18n.t('cancel') : 'Cancel') + '</button>';
     panel.innerHTML = html;
     host.appendChild(panel);
     document.body.appendChild(host);
@@ -948,16 +948,16 @@
   // then store.copyToWorkspace clones the item under target ws.
   // table: 'recipes' | 'menus' | 'events' | 'suppliers' etc.
   PCD.openCopyToWorkspace = function (table, itemId, itemName) {
+    const tt = PCD.i18n && PCD.i18n.t ? PCD.i18n.t : function (k, fb) { return fb; };
     const fromWsId = PCD.store.getActiveWorkspaceId();
     const all = PCD.store.listWorkspaces(false);
     const targets = all.filter(function (w) { return w.id !== fromWsId; });
 
     if (targets.length === 0) {
-      const tt = PCD.i18n && PCD.i18n.t ? PCD.i18n.t : function (k, fb) { return fb; };
       PCD.modal.confirm({
         title: tt('ws_only_one_title') || 'No other workspaces',
         text: tt('ws_only_one_msg') || 'You only have one active workspace. Create another from the workspace switcher first, then come back to copy.',
-        okText: 'OK', cancelText: null,
+        okText: tt('ok', 'OK'), cancelText: null,
       });
       return;
     }
@@ -968,7 +968,11 @@
     };
 
     const body = PCD.el('div');
-    let html = '<div class="text-muted text-sm mb-3">Copy <strong>' + PCD.escapeHtml(itemName || 'this item') + '</strong> to another workspace. The original stays untouched. The copy can be edited independently in the target.</div>';
+    const _copyNameHtml = '<strong>' + PCD.escapeHtml(itemName || tt('ws_copy_this_item', 'this item')) + '</strong>';
+    const _copyDesc = (PCD.i18n && PCD.i18n.t)
+      ? PCD.i18n.t('ws_copy_item_desc', { name: _copyNameHtml })
+      : 'Copy ' + _copyNameHtml + ' to another workspace. The original stays untouched. The copy can be edited independently in the target.';
+    let html = '<div class="text-muted text-sm mb-3">' + _copyDesc + '</div>';
     html += '<div class="flex flex-col gap-2">';
     targets.forEach(function (w) {
       html += '<button data-target="' + w.id + '" class="card card-hover" style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--border);cursor:pointer;text-align:start;">' +

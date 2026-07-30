@@ -693,7 +693,7 @@
       // Helper: persist current canvas state. Used by both Save and Share buttons.
       // Returns the canvas ID (newly created or existing).
       function persistCanvas() {
-        const finalName = (canvasName || '').trim() || 'Untitled canvas';
+        const finalName = (canvasName || '').trim() || (t('kc2_untitled') || 'Untitled');
         const payload = {
           name: finalName,
           columns: columns, orientation: orientation, fontSize: fontSize,
@@ -721,7 +721,7 @@
         }
         const id = persistCanvas();
         if (id) {
-          PCD.toast.success(PCD.i18n.t('toast_canvas_saved', { name: ((canvasName || '').trim() || 'Untitled canvas') }));
+          PCD.toast.success(PCD.i18n.t('toast_canvas_saved', { name: ((canvasName || '').trim() || (PCD.i18n.t('kc2_untitled') || 'Untitled')) }));
           renderBody();
         } else {
           PCD.toast.error(PCD.i18n.t('toast_save_failed'));
@@ -912,7 +912,7 @@
       previewEl.innerHTML =
         '<div style="display:flex;gap:6px;padding:6px 6px 4px;justify-content:flex-end;">' +
           '<button id="kcPvZoomOut" style="' + zBtnStyle + '">−</button>' +
-          '<button id="kcPvFit" style="' + zBtnStyle + 'font-size:11px;font-weight:600;padding:4px 8px;">Fit</button>' +
+          '<button id="kcPvFit" style="' + zBtnStyle + 'font-size:11px;font-weight:600;padding:4px 8px;">' + PCD.escapeHtml(t('kc_fit_btn')) + '</button>' +
           '<button id="kcPvZoomIn" style="' + zBtnStyle + '">+</button>' +
         '</div>' +
         '<div id="kcPvOuter" style="position:relative;">' +
@@ -1211,10 +1211,10 @@
     (opts.layoutRecipes || []).forEach(function (item) {
       // v2.21 — Özel/not kartı: reçete dışı serbest metin (mevcut kart CSS'i).
       if (item.custom) {
-        const _ix = opts.interactive ? '<button type="button" class="remove-btn" title="Remove from canvas">×</button>' : '';
+        const _ix = opts.interactive ? '<button type="button" class="remove-btn" title="' + PCD.escapeHtml(PCD.i18n.t('kc_remove_from_canvas')) + '">×</button>' : '';
         blocksHtml +=
           '<div class="kc-block" data-rid="' + PCD.escapeHtml(item.cid || '') + '">' +
-            '<div class="kc-name kc-block-header" title="Drag to reorder">' + PCD.escapeHtml(item.title || '') + '</div>' +
+            '<div class="kc-name kc-block-header" title="' + PCD.escapeHtml(PCD.i18n.t('drag_to_reorder')) + '">' + PCD.escapeHtml(item.title || '') + '</div>' +
             (item.body ? '<div class="kc-ings" style="white-space:pre-wrap;">' + PCD.escapeHtml(item.body) + '</div>' : '') +
             _ix +
           '</div>';
@@ -1270,7 +1270,7 @@
       }
 
       const interactiveExtras = opts.interactive
-        ? '<button type="button" class="remove-btn" title="Remove from canvas">×</button>'
+        ? '<button type="button" class="remove-btn" title="' + PCD.escapeHtml(PCD.i18n.t('kc_remove_from_canvas')) + '">×</button>'
         : '';
 
       // v2.8.20 — Sub-recipe header shows yield ("2 kg") instead of
@@ -1289,7 +1289,7 @@
       }
       blocksHtml +=
         '<div class="kc-block" data-rid="' + r.id + '">' +
-          '<div class="kc-name kc-block-header" title="Drag to reorder">' + PCD.escapeHtml(r.name || '') +
+          '<div class="kc-name kc-block-header" title="' + PCD.escapeHtml(PCD.i18n.t('drag_to_reorder')) + '">' + PCD.escapeHtml(r.name || '') +
             (srvLabel ? '<span class="kc-srv"> · ' + srvLabel + '</span>' : '') +
           '</div>' +
           (ingsHtml ? '<div class="kc-ings">' + ingsHtml + '</div>' : '') +
@@ -1583,13 +1583,13 @@
           }).filter(Boolean).join(' · ');
           return '<div class="card" data-cvs="' + c.id + '" style="cursor:pointer;overflow:hidden;padding:0;">' +
             '<div style="height:82px;background:#fff;border-bottom:1px solid var(--border);padding:8px;overflow:hidden;">' +
-              '<span style="font-size:9px;font-weight:800;color:#fff;background:' + acc + ';padding:2px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:0.03em;">' + PCD.escapeHtml((c.name || 'Untitled').slice(0, 26)) + '</span>' +
+              '<span style="font-size:9px;font-weight:800;color:#fff;background:' + acc + ';padding:2px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:0.03em;">' + PCD.escapeHtml((c.name || PCD.i18n.t('kc2_untitled')).slice(0, 26)) + '</span>' +
               '<div style="margin-top:6px;font-size:8px;color:#555;line-height:1.5;word-break:break-word;">' + PCD.escapeHtml(names) + '</div>' +
             '</div>' +
             '<div style="padding:7px 9px;display:flex;align-items:center;gap:4px;">' +
               '<div style="flex:1;min-width:0;">' +
-                '<div style="font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + PCD.escapeHtml(c.name || 'Untitled') + '</div>' +
-                '<div class="text-muted" style="font-size:11px;">' + recipeCount + ' · ' + (c.columns || 3) + ' cols · ' + PCD.fmtRelTime(c.updatedAt) + '</div>' +
+                '<div style="font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + PCD.escapeHtml(c.name || PCD.i18n.t('kc2_untitled')) + '</div>' +
+                '<div class="text-muted" style="font-size:11px;">' + recipeCount + ' · ' + (c.columns || 3) + ' ' + PCD.escapeHtml(PCD.i18n.t('kc_cols_short')) + ' · ' + PCD.fmtRelTime(c.updatedAt) + '</div>' +
               '</div>' +
               '<button type="button" class="icon-btn" data-dup-cvs="' + c.id + '" title="' + PCD.escapeHtml(PCD.i18n.t('kc2_duplicate') || 'Duplicate') + '">' + PCD.icon('copy', 16) + '</button>' +
               '<button type="button" class="icon-btn" data-del-cvs="' + c.id + '" title="' + PCD.escapeHtml(PCD.i18n.t('ms_delete') || 'Delete') + '">' + PCD.icon('trash', 16) + '</button>' +
@@ -1625,7 +1625,7 @@
         PCD.gate.showUpgradeModal({ feature: 'kitchen_cards', message: PCD.i18n.t('gate_create_limit') }); return;
       }
       const copy = PCD.clone(src); delete copy.id; delete copy.updatedAt;
-      copy.name = (src.name || 'Canvas') + ' ' + (PCD.i18n.t('ms_copy_suffix') || '(copy)');
+      copy.name = (src.name || PCD.i18n.t('kc2_untitled')) + ' ' + (PCD.i18n.t('ms_copy_suffix') || '(copy)');
       PCD.store.upsertInTable('canvases', copy, 'cvs');
       if (PCD.toast) PCD.toast.success(PCD.i18n.t('ms_copied') || 'Copied');
       paintList();
@@ -1728,7 +1728,7 @@
   // Does NOT depend on PCD.store — works on any device, even in incognito.
   function renderFromSnapshot(payload) {
     if (!payload || !payload.layoutResolved) {
-      return '<div style="padding:40px;text-align:center;color:#666;">Canvas data missing</div>';
+      return '<div style="padding:40px;text-align:center;color:#666;">' + PCD.escapeHtml(PCD.i18n.t('kc_canvas_data_missing')) + '</div>';
     }
 
     // Adapt snapshot's layoutResolved into the shape buildSheetHtml expects.

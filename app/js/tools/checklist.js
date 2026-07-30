@@ -466,7 +466,7 @@
           '<div class="flex items-center gap-3">' +
             '<div class="list-item-thumb" style="background:var(--brand-50);color:var(--brand-700);flex-shrink:0;">' + PCD.icon(s.icon || (s.kind === 'prep' ? 'chef-hat' : 'check-square'), 20) + '</div>' +
             '<div style="flex:1;min-width:0;cursor:pointer;" data-resume-sid="' + s.id + '">' +
-              '<div style="font-weight:600;font-size:15px;">' + esc(s.templateName || 'List') + '</div>' +
+              '<div style="font-weight:600;font-size:15px;">' + esc(s.templateName || L('dash_checklist_default_name', 'Checklist')) + '</div>' +
               '<div class="text-muted text-sm">' + p.done + '/' + p.total + ' · ' + esc(PCD.fmtRelTime(s.startedAt)) + '</div>' +
               '<div class="progress mt-1" style="height:4px;"><div class="progress-bar" style="width:' + p.pct + '%;background:var(--brand-600);"></div></div>' +
             '</div>' +
@@ -701,7 +701,7 @@
 
     const tpl = PCD.store.getFromTable('checklistTemplates', first.templateId);
     const m = PCD.modal.open({
-      title: (first.templateName || 'List') + ' · ' + PCD.fmtDate(first.startedAt, { month: 'short', day: 'numeric' }),
+      title: (first.templateName || L('dash_checklist_default_name', 'Checklist')) + ' · ' + PCD.fmtDate(first.startedAt, { month: 'short', day: 'numeric' }),
       body: body, footer: footer, size: 'md', closable: true
     });
     closeBtn.addEventListener('click', function () { m.close(); refreshMain(); });
@@ -995,7 +995,7 @@
 
   // ============ SHARE (light: PDF + text) ============
   function buildShareText(s) {
-    const lines = [s.templateName || 'Checklist', new Date(s.startedAt).toLocaleDateString(), ''];
+    const lines = [s.templateName || L('dash_checklist_default_name', 'Checklist'), new Date(s.startedAt).toLocaleDateString(), ''];
     if (s.kind === 'prep') {
       (s.dishes || []).forEach(function (d) {
         lines.push('— ' + (d.text || ''));
@@ -1009,7 +1009,7 @@
   function shareSession(s) {
     if (!s) return;
     const tpl = PCD.store.getFromTable('checklistTemplates', s.templateId);
-    const title = s.templateName || 'Checklist';
+    const title = s.templateName || L('dash_checklist_default_name', 'Checklist');
     const text = buildShareText(s);
     const body = PCD.el('div');
     body.innerHTML =
@@ -1022,7 +1022,7 @@
       '<textarea class="textarea" id="shTxt" rows="6" style="font-family:var(--font-mono);font-size:13px;">' + esc(text) + '</textarea></div>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px;">' +
         '<button class="btn btn-outline btn-sm" id="shWa" style="flex-direction:column;height:auto;padding:10px 4px;gap:4px;"><div style="color:#25D366;">' + PCD.icon('message-circle', 18) + '</div><div style="font-weight:600;font-size:11px;">WhatsApp</div></button>' +
-        '<button class="btn btn-outline btn-sm" id="shMail" style="flex-direction:column;height:auto;padding:10px 4px;gap:4px;"><div style="color:#EA4335;">' + PCD.icon('mail', 18) + '</div><div style="font-weight:600;font-size:11px;">Email</div></button>' +
+        '<button class="btn btn-outline btn-sm" id="shMail" style="flex-direction:column;height:auto;padding:10px 4px;gap:4px;"><div style="color:#EA4335;">' + PCD.icon('mail', 18) + '</div><div style="font-weight:600;font-size:11px;">' + esc(L('share_email', 'Email')) + '</div></button>' +
         '<button class="btn btn-outline btn-sm" id="shCopy" style="flex-direction:column;height:auto;padding:10px 4px;gap:4px;"><div style="color:var(--brand-600);">' + PCD.icon('copy', 18) + '</div><div style="font-weight:600;font-size:11px;">' + esc(L('copy', 'Copy')) + '</div></button>' +
       '</div>';
     const closeBtn = PCD.el('button', { class: 'btn btn-secondary', text: L('close', 'Close') });

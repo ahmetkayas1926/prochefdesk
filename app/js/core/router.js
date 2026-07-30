@@ -166,7 +166,7 @@
           }
         }).catch(function (err) {
           PCD.error && PCD.error('Lazy load failed for', name, err);
-          if (view) view.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-title">Could not load this tool</div><div class="empty-desc">Check your connection and try again.</div></div>';
+          if (view) view.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-title">' + PCD.escapeHtml((PCD.i18n && PCD.i18n.t) ? PCD.i18n.t('router_load_failed_title') : 'Could not load this tool') + '</div><div class="empty-desc">' + PCD.escapeHtml((PCD.i18n && PCD.i18n.t) ? PCD.i18n.t('router_load_failed_desc') : 'Check your connection and try again.') + '</div></div>';
         });
         return;
       }
@@ -192,7 +192,7 @@
         routes[name](view, params);
       } catch (err) {
         PCD.error && PCD.error('Render error for', name, err);
-        view.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-title">Something went wrong</div><div class="empty-desc">' + PCD.escapeHtml(err.message || 'Unknown error') + '</div></div>';
+        view.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-title">' + PCD.escapeHtml((PCD.i18n && PCD.i18n.t) ? PCD.i18n.t('toast_error') : 'Something went wrong') + '</div><div class="empty-desc">' + PCD.escapeHtml(err.message || ((PCD.i18n && PCD.i18n.t) ? PCD.i18n.t('router_unknown_error') : 'Unknown error')) + '</div></div>';
       }
       const navEls = document.querySelectorAll('[data-route]');
       navEls.forEach(function (el) {

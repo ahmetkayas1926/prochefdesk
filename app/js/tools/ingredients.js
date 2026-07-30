@@ -535,7 +535,7 @@
     const footer = PCD.el('div', { style: { display: 'flex', width: '100%' } });
     footer.appendChild(closeBtn);
     const m = PCD.modal.open({
-      title: ing.name + ' — Price History',
+      title: PCD.i18n.t('ing_price_history_title', { name: ing.name }),
       body: body, footer: footer, size: 'md', closable: true
     });
     closeBtn.addEventListener('click', function () { m.close(); });
