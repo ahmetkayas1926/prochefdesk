@@ -767,7 +767,7 @@
       function citem(name, amt, unit, pickup) { return { customName: name, amountPerGuest: amt, unit: unit, pickupRatio: pickup, refillX: null }; }
       const buffet = {
         id: PCD.uid('bf'), createdAt: nowIso, updatedAt: nowIso, _demo: true,
-        name: 'Wedding Reception', type: 'dinner', coverCount: 80, ticketPrice: 115, durationHours: 3, refillMultiplier: 1.1,
+        name: 'Wedding Reception', type: 'dinner', serviceDate: evDateStr, coverCount: 80, ticketPrice: 115, durationHours: 3, refillMultiplier: 1.1,
         prepFactor: 0.9,
         notes: 'Sample buffet · forecast prep for 90% of covers · customize or delete',
         stations: [

@@ -283,12 +283,21 @@
         renderCalendar(listEl, events);
       } else {
       const today = (function () { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); })();
-      const upcoming = events.filter(function (e) { return !e.date || e.date >= today; });
-      const past = events.filter(function (e) { return e.date && e.date < today; });
+      // v2.44.160 — e.date bazı kayıtlarda (örn. seed veri) hiç set edilmemiş
+      // olabilir; her zaman fonksiyonların en erken tarihine düş (syncFlatMirrorFields
+      // ile aynı mantık) — liste "—" göstermesin, sıralama da yanlış sıraya düşmesin.
+      const effDate = function (e) {
+        if (e.date) return e.date;
+        const dated = (e.functions || []).map(function (f) { return f.date; }).filter(Boolean).sort();
+        return dated[0] || '';
+      };
+      const upcoming = events.filter(function (e) { const d = effDate(e); return !d || d >= today; });
+      const past = events.filter(function (e) { const d = effDate(e); return d && d < today; });
 
       const buildRow = function (e) {
         const stats = computeStats(e, ingMap, recipeMap);
-        const dateStr = e.date ? PCD.fmtDate(e.date, { weekday: 'short', month: 'short', day: 'numeric' }) : '—';
+        const rowDate = effDate(e);
+        const dateStr = rowDate ? PCD.fmtDate(rowDate, { weekday: 'short', month: 'short', day: 'numeric' }) : '—';
         const taskDone = (e.tasks || []).filter(function (x) { return x.done; }).length;
         const taskTot = (e.tasks || []).length;
         const row = PCD.el('div', { class: 'card card-hover', 'data-eid': e.id, style: { padding: '12px' } });
@@ -572,6 +581,10 @@
     let signLinkState = null;
 
     function signLinkAreaHtml() {
+      if (PCD.gate && !PCD.gate.canShare()) {
+        return '<div class="text-muted text-sm" style="margin-bottom:8px;">' + PCD.escapeHtml(t('event_signing_link_hint') || 'Send a link so the client can view and sign the proposal remotely — or open it yourself on a tablet for in-person signing.') + '</div>' +
+          '<button type="button" class="btn btn-outline btn-sm" id="pvSignLinkSendBtn">🔗 ' + PCD.escapeHtml(t('event_send_signing_link') || 'Send signing link') + ' ' + PCD.gate.lockChip(11) + '</button>';
+      }
       if (!signLinkState || signLinkState.loading) {
         return '<div class="text-muted text-sm">' + PCD.escapeHtml(t('loading') || 'Loading…') + '</div>';
       }
@@ -598,6 +611,7 @@
     }
 
     function refreshSignLinkState() {
+      if (PCD.gate && !PCD.gate.canShare()) { signLinkState = { url: null }; return; }
       if (!PCD.cloud || !PCD.cloud.ready) { signLinkState = { url: null }; return; }
       const supabase = window._supabaseClient;
       const user = PCD.store.get('user');
