@@ -973,8 +973,13 @@
           outer.addEventListener('touchmove', function (e) {
             if (e.touches.length === 2) {
               var d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-              pvUserZoom = Math.max(0.2, Math.min(4, ptZoom0 * (d / ptDist0)));
-              applyScale();
+              // v2.44.161 fix — iki dokunma noktası aynı koordinatta başlarsa
+              // ptDist0=0 olur; d/ptDist0 = NaN/Infinity üretip pvUserZoom'u
+              // kalıcı olarak bozuyordu (yalnız "Sığdır" düzeltebiliyordu).
+              if (ptDist0 > 1) {
+                pvUserZoom = Math.max(0.2, Math.min(4, ptZoom0 * (d / ptDist0)));
+                applyScale();
+              }
               e.preventDefault();
             }
           }, { passive: false });

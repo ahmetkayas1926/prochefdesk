@@ -431,9 +431,23 @@
       if (ad !== bd) return ad.localeCompare(bd);
       return (Number(a.rowIndex) || 0) - (Number(b.rowIndex) || 0);
     });
-    const html = printStylesAndHeader(wsName, monthLbl, u, t) +
-      buildPrintTable(t, u, true, null, records) +
-      printFooter(t, u);
+    // v2.44.161 fix — diğer 3 HACCP formu gibi 31 satır sınırı yoktu; bir ayda
+    // 31'den fazla holding kontrolü girilmişse (sık kontrol yapan işletmelerde
+    // olası) tabloya sabit-yükseklikli tek A4 sayfaya sığmayacak kadar satır
+    // basılıyor, taşma oluyordu. Veri KAYBOLMASIN diye kayıt kırpılmıyor —
+    // ayın kayıtları 31'lik gruplara bölünüp (diğer formlarla aynı kanıtlanmış
+    // tek-sayfa metriğiyle) gerekirse aynı ay içinde birden fazla sayfaya basılıyor.
+    const CHUNK = 31;
+    const chunks = [];
+    for (let i = 0; i < records.length; i += CHUNK) chunks.push(records.slice(i, i + CHUNK));
+    if (!chunks.length) chunks.push([]); // boş ay = boş şablon
+    const html = chunks.map(function (chunk, idx) {
+      return '<div style="' + (idx < chunks.length - 1 ? 'page-break-after:always;' : '') + '">' +
+        printStylesAndHeader(wsName, monthLbl, u, t) +
+        buildPrintTable(t, u, true, null, chunk) +
+        printFooter(t, u) +
+      '</div>';
+    }).join('');
     if (returnHtml) return html;
     PCD.print(html, 'HACCP Hot/Cold Holding · ' + monthLbl);
   }

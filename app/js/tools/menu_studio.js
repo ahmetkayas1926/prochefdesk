@@ -881,11 +881,17 @@
       h += '<hr style="border:0;border-top:1px dashed var(--border);margin:12px 0;"><div style="font-size:12px;font-weight:700;margin-bottom:6px;">' + esc(t('ms_dishes')) + '</div>';
       (b.items || []).forEach(function (it) {
         const m = itemMargin(it);
+        // v2.44.161 fix — it.recipeId dolu ama kaynak tarif silinmişse (dangling
+        // reference) önceden buraya hiçbir uyarı düşmüyordu; isim/fiyat/açıklama
+        // donmuş haliyle görünmeye devam ederken tariften gelen alerjen rozeti
+        // sessizce kayboluyordu ve şef bunu fark edemiyordu.
+        const _danglingRecipe = it.recipeId && !PCD.store.getRecipe(it.recipeId);
         h += '<div class="card" style="padding:8px;margin-bottom:8px;" data-iid="' + it.id + '">';
         h += '<div style="display:flex;gap:6px;align-items:center;margin-bottom:4px;"><input type="text" class="input" data-itf="name" value="' + esc(it.name) + '" placeholder="' + esc(t('ms_dish_ph')) + '" style="flex:1;"><input type="text" class="input" data-itf="price" value="' + esc(it.price) + '" placeholder="' + cur() + '" style="width:60px;"><button type="button" class="btn btn-ghost btn-sm" data-itmove="up">↑</button><button type="button" class="btn btn-ghost btn-sm" data-itmove="down">↓</button><button type="button" class="btn btn-ghost btn-sm" data-itdel style="color:var(--danger);">✕</button></div>';
         h += '<input type="text" class="input" data-itf="desc" value="' + esc(it.desc) + '" placeholder="' + esc(t('ms_desc_ph')) + '" style="width:100%;margin-bottom:4px;">';
         h += '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">' + (it.photo ? '<img src="' + it.photo + '" style="width:30px;height:30px;object-fit:cover;border-radius:5px;">' : '') + '<button type="button" class="btn btn-outline btn-sm" data-itphoto>' + (it.photo ? esc(t('ms_photo')) : esc(t('ms_add_photo'))) + '</button>' + (it.photo ? '<button type="button" class="btn btn-ghost btn-sm" data-itphotodel>' + esc(t('ms_remove')) + '</button>' : '') +
-          (m != null ? '<span style="margin-inline-start:auto;font-size:11px;font-weight:700;color:' + (m >= 65 ? '#16a34a' : m >= 55 ? '#d97706' : '#dc2626') + ';">' + esc(t('ms_margin_pct', { n: m.toFixed(0) })) + '</span>' : (it.recipeId ? '' : '<span style="margin-inline-start:auto;font-size:10px;color:var(--text-3);">' + esc(t('ms_manual_tag')) + '</span>')) + '</div>';
+          (_danglingRecipe ? '<span style="margin-inline-start:auto;font-size:10px;font-weight:700;color:var(--danger,#dc2626);">⚠ ' + esc(t('ms_recipe_missing') || 'Linked recipe deleted — allergens may be out of date') + '</span>'
+            : (m != null ? '<span style="margin-inline-start:auto;font-size:11px;font-weight:700;color:' + (m >= 65 ? '#16a34a' : m >= 55 ? '#d97706' : '#dc2626') + ';">' + esc(t('ms_margin_pct', { n: m.toFixed(0) })) + '</span>' : (it.recipeId ? '' : '<span style="margin-inline-start:auto;font-size:10px;color:var(--text-3);">' + esc(t('ms_manual_tag')) + '</span>'))) + '</div>';
         // v2.44.110 — Diyet etiketi toggle'ları (kalem-başı; menüde küçük-harf rozet)
         h += '<div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;margin-top:6px;"><span style="font-size:10px;color:var(--text-3);margin-inline-end:2px;">' + esc(t('ms_diet_tags')) + '</span>' +
           DIET_CODES.map(function (code) { const on = (it.diet || []).indexOf(code) >= 0; return '<button type="button" class="btn btn-sm ' + (on ? 'btn-primary' : 'btn-outline') + '" data-itdiet="' + code + '" title="' + esc(dietLabelFor(code)) + '" style="padding:1px 7px;font-size:10px;">' + esc(code.toUpperCase()) + '</button>'; }).join('') + '</div>';
@@ -1350,6 +1356,10 @@
     PCD.on(_view, 'click', '[data-ms-dup]', function (e) {
       e.stopPropagation(); const id = this.getAttribute('data-ms-dup');
       const src = PCD.store.getFromTable('menus', id); if (!src) return;
+      if (PCD.gate && !PCD.gate.canCreate('menus', (PCD.store.listTable('menus') || []).length)) {
+        PCD.gate.showUpgradeModal({ feature: 'menus', message: t('gate_create_limit') });
+        return;
+      }
       const copy = PCD.clone(src); delete copy.id; delete copy.updatedAt; copy.name = (src.name || t('ms_default_menu')) + ' ' + t('ms_copy_suffix');
       PCD.store.upsertInTable('menus', copy, 'm'); renderList();
       if (PCD.toast) PCD.toast.success(t('ms_copied'));

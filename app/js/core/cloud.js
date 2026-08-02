@@ -388,7 +388,15 @@
                 // aşağıdaki genel Object.assign'a düşüp remote'un yerel'i TAMAMEN ezmesine
                 // neden oluyordu (2 cihazda aynı ay formuna eş zamanlı giriş → veri kaybı riski).
                 // Kullanıcı-düzenli HACCP formları (rosters/prepSheets/inventory ile aynı desen).
-                'haccpReceiving', 'haccpHolding'
+                'haccpReceiving', 'haccpHolding',
+                // v2.44.161 fix — haccpLogs/haccpUnits/haccpReadings/haccpCookCool
+                // aşağıda REMOTE_WINS_TABLES'taydı: bu 4 tablo da (haccpReceiving/
+                // haccpHolding gibi) upsertInTable ile updatedAt damgalı MAP-tablo,
+                // ama remote-wins olduğu için offline girilmiş bir kayıt senkron
+                // sırasında sessizce kayboluyordu — ÜSTELİK aşağıdaki drift-detection
+                // self-heal de bu tablolarda hiç çalışmıyordu, çünkü `merged[tbl]`
+                // zaten remote'a eşitlendiği için "yerel-only kayıt" hiç görünmüyordu.
+                'haccpLogs', 'haccpUnits', 'haccpReadings', 'haccpCookCool'
               ];
               // Tables that are arrays under wsId (append-only logs):
               // v2.19 — BUG FIX: whiteboards/buffets/misePlans/team de array-tablo;
@@ -399,8 +407,7 @@
               // these (existing behavior). Inventory levels change via
               // counts not edits, so cloud is generally authoritative.
               const REMOTE_WINS_TABLES = [
-                'pendingStockCount',
-                'haccpLogs', 'haccpUnits', 'haccpReadings', 'haccpCookCool'
+                'pendingStockCount'
               ];
 
               const mergedTables = {};
@@ -517,6 +524,39 @@
                     if (localItems[ingId] && !remoteItems[ingId]) {
                       PCD.cloudPerTable.queueUpsert('inventory', ingId, wsId, localItems[ingId]);
                       driftedCount++;
+                    }
+                  });
+                });
+                // v2.44.161 fix — drift-detection self-heal yalnız yukarıdaki
+                // map-tablolar (wsTables) + inventory için çalışıyordu;
+                // ARRAY_WS_TABLES (waste/checklistSessions/buffets/misePlans/
+                // team/whiteboards/salesLog) bu korumanın tamamen dışındaydı —
+                // buluta hiç gitmemiş yerel-only bir kayıt kendi kendine
+                // düzelmiyordu. merged[tbl] zaten local∪remote birleşimi
+                // (mergeWsScopedArrayTable) olduğundan, remote'a göre eksik
+                // kalan kayıtları queueArraySync(oldArr=remote, newArr=merged)
+                // ile idempotent şekilde geri iter (merged remote'un supersetiyse
+                // silme tarafı devreye girmez).
+                const arrayWsTables = [
+                  ['waste', 'waste'], ['checklistSessions', 'checklist_sessions'],
+                  ['buffets', 'buffets'], ['misePlans', 'mise_plans'],
+                  ['team', 'team'], ['whiteboards', 'whiteboards'],
+                  ['salesLog', 'sales_log'],
+                ];
+                arrayWsTables.forEach(function (pair) {
+                  const stateKey = pair[0];
+                  const table = pair[1];
+                  const localData = merged[stateKey] || {};
+                  const remoteData = remote[stateKey] || {};
+                  Object.keys(localData).forEach(function (wsId) {
+                    const mergedArr = localData[wsId] || [];
+                    const remoteArr = remoteData[wsId] || [];
+                    const remoteIds = {};
+                    remoteArr.forEach(function (it) { if (it && it.id) remoteIds[it.id] = true; });
+                    const hasLocalOnly = mergedArr.some(function (it) { return it && it.id && !remoteIds[it.id]; });
+                    if (hasLocalOnly) {
+                      PCD.cloudPerTable.queueArraySync(table, wsId, remoteArr, mergedArr);
+                      driftedCount += mergedArr.length;
                     }
                   });
                 });

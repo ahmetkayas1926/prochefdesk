@@ -254,6 +254,7 @@
   }
 
   function updateFilledCount(card, sid) {
+    const t = PCD.i18n.t;
     const supplier = PCD.store.getFromTable('suppliers', sid);
     if (!supplier) return;
     const prods = productsOf(supplier);

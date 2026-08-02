@@ -69,7 +69,12 @@
       if (!ing) return 0;
       let amt = Number(entry.amount) || 0;
       if (entry.unit && ing.unit && entry.unit !== ing.unit) {
-        try { amt = PCD.convertUnit(amt, entry.unit, ing.unit); } catch (e) { /* keep raw */ }
+        // Birim dönüşemezse (ör. "box"/"bag"/"tray" — PCD.UNITS'te karşılığı
+        // yok) ham sayıyı yanlış birim varsayarak kullanmak yerine 0 döneriz —
+        // inventory.js'in satış-düşümü aynı durumda malzemeyi tamamen atlayıp
+        // uyarıyor, burada da aynı ihtiyat uygulanır (missing ing/recipe için
+        // zaten bu fonksiyonun kendi kuralı: güvenilir hesaplanamıyorsa 0).
+        try { amt = PCD.convertUnit(amt, entry.unit, ing.unit); } catch (e) { return 0; }
       }
       return amt * (Number(ing.pricePerUnit) || 0);
     }
@@ -279,10 +284,15 @@
       if (wantDeduct && PCD.tools.inventory && PCD.tools.inventory.applyStockDeductions) {
         const ing = m.ingMap[entry.ingredientId];
         let amt = Number(entry.amount) || 0;
+        let unitOk = true;
         if (entry.unit && ing && ing.unit && entry.unit !== ing.unit) {
-          try { amt = PCD.convertUnit(amt, entry.unit, ing.unit); } catch (e) { /* */ }
+          // inventory.js'in satış-düşümüyle aynı ihtiyat: dönüşemeyen birim
+          // stoktan ham (yanlış birimde) sayı düşmek yerine atlanır + uyarılır.
+          try { amt = PCD.convertUnit(amt, entry.unit, ing.unit); } catch (e) { unitOk = false; }
         }
-        if (amt > 0) {
+        if (!unitOk) {
+          PCD.toast.error((t('waste_unit_mismatch') || 'Could not convert units — adjust stock for {name} manually').replace('{name}', (ing && ing.name) || ''));
+        } else if (amt > 0) {
           const rep = PCD.tools.inventory.applyStockDeductions({ [entry.ingredientId]: amt });
           const tracked = (rep || []).filter(function (r) { return r.tracked; }).length;
           if (tracked) PCD.toast.info((t('waste_deducted') || '{n} deducted from stock').replace('{n}', tracked));

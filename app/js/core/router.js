@@ -205,6 +205,23 @@
     params: function () { return viewParams; },
     pushModal: function () {},
     popModal: function () {},
+
+    // v2.44.161 fix — ilk boot navigasyonu her zaman skipHistory:true ile
+    // gidiyordu (start()'taki replaceState de her zaman 'dashboard' yazıyordu),
+    // bu yüzden bir HACCP alt-formuna doğrudan link/bookmark/F5 ile girilince
+    // history hiç doğru route'u ya da Hub ebeveynini görmüyordu — "Back her
+    // zaman Hub'a düşer" garantisi bu giriş yolunda çalışmıyordu. app.js ilk
+    // navigasyondan hemen sonra bunu çağırıp history'yi gerçek route + varsa
+    // ebeveyniyle düzeltir (yeniden render YOK, salt history bookkeeping).
+    fixInitialHistory: function (name, params) {
+      const parent = ROUTE_PARENTS[name];
+      if (parent) {
+        history.replaceState({ type: 'view', name: parent, params: null }, '', window.location.pathname + '#' + parent);
+        history.pushState({ type: 'view', name: name, params: params || null }, '', window.location.pathname + '#' + name);
+      } else {
+        history.replaceState({ type: 'view', name: name, params: params || null }, '', window.location.pathname + '#' + name);
+      }
+    },
   };
 
   PCD.router = router;

@@ -643,8 +643,11 @@
   // ============ DISH PICKER (recipe seç → otomatik component) ============
   function openDishPicker(view, sheet) {
     const allRecipes = PCD.store.listRecipes();
-    const menuItems = allRecipes.filter(function (r) { return !r.isSubRecipe; });
-    const subRecipes = allRecipes.filter(function (r) { return r.isSubRecipe; });
+    // v2.44.161 fix — ham r.isSubRecipe okuyordu; bayrağı hiç set edilmemiş
+    // eski (legacy) alt-tarifler PCD.recipes.isPrep()'in yieldAmount+yieldUnit
+    // fallback'ini atlayıp yanlışlıkla "Menu Items" grubuna düşüyordu.
+    const menuItems = allRecipes.filter(function (r) { return !PCD.recipes.isPrep(r); });
+    const subRecipes = allRecipes.filter(function (r) { return PCD.recipes.isPrep(r); });
     const g1 = t('menu_group_dishes', 'Menu Items');
     const g2 = t('menu_group_subrecipes', 'Sub-recipes & Preparations');
     const items = menuItems.map(function (r) {
@@ -731,6 +734,10 @@
       const id = this.getAttribute('data-dup-ps');
       const src = PCD.store.getFromTable(TABLE, id);
       if (!src) return;
+      if (PCD.gate && !PCD.gate.canCreate('prepSheets', (PCD.store.listTable(TABLE) || []).length)) {
+        PCD.gate.showUpgradeModal({ feature: 'prepSheets', message: PCD.i18n.t('gate_create_limit') });
+        return;
+      }
       const copy = PCD.clone(src); delete copy.id; delete copy.updatedAt;
       copy.name = (src.name || t('prep_untitled', 'Untitled')) + ' ' + t('ms_copy_suffix', '(copy)');
       PCD.store.upsertInTable(TABLE, copy, 'ps');

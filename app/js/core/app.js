@@ -104,6 +104,12 @@
       PCD.router.start();
       const initial = (PCD.router.initialRoute && PCD.router.initialRoute()) || 'dashboard';
       PCD.router.go(initial, null, { skipHistory: true });
+      // v2.44.161 fix — start() her zaman history.state'i 'dashboard' yazıyordu;
+      // ilk navigasyon da skipHistory:true olduğundan gerçek route (ve varsa
+      // HACCP Hub ebeveyni) history'ye hiç yansımıyordu — bir HACCP alt-formuna
+      // doğrudan link/bookmark/F5 ile girilince "Back her zaman Hub'a düşer"
+      // garantisi bozuluyordu.
+      if (PCD.router.fixInitialHistory) PCD.router.fixInitialHistory(initial, null);
 
       // 8) Seed demos if first run
       // v2.6.93 — Demo seed artık SADECE misafir kullanıcılar için çalışıyor.
@@ -485,7 +491,7 @@
     const avatar = PCD.$('#userAvatar');
     if (!avatar) return;
     if (user) {
-      if (user.avatar) avatar.innerHTML = '<img src="' + user.avatar + '" style="width:28px;height:28px;border-radius:50%;">';
+      if (user.avatar) avatar.innerHTML = '<img src="' + PCD.escapeHtml(user.avatar) + '" style="width:28px;height:28px;border-radius:50%;">';
       else avatar.textContent = (user.name || user.email || '?').charAt(0).toUpperCase();
     } else {
       avatar.textContent = '👤';
@@ -1005,15 +1011,18 @@
           });
           if (PCD.cloudPerTable.flushNow) PCD.cloudPerTable.flushNow();
         }
+        // v2.44.161 fix — re-render burada, setLocale()'in async promise'i
+        // dönmeden ÖNCE (bir sonraki senkron satır olarak) çalışıyordu; ilk kez
+        // seçilen (henüz fetch edilmemiş) bir dilde bu render eski dille
+        // oluyordu. Artık promise çözüldükten sonra çalışır.
+        const view = PCD.$('#view');
+        const cur = PCD.router.currentView() || 'dashboard';
+        if (view && PCD.tools[cur] && typeof PCD.tools[cur].render === 'function') {
+          try { PCD.tools[cur].render(view); } catch (e) { PCD.error && PCD.error(e); }
+        }
+        populateSidenav();
+        refreshWorkspaceLabel();
       });
-      // Re-render current view to apply new translations
-      const view = PCD.$('#view');
-      const cur = PCD.router.currentView() || 'dashboard';
-      if (view && PCD.tools[cur] && typeof PCD.tools[cur].render === 'function') {
-        try { PCD.tools[cur].render(view); } catch (e) { PCD.error && PCD.error(e); }
-      }
-      populateSidenav();
-      refreshWorkspaceLabel();
     });
   }
 

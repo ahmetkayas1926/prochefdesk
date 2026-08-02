@@ -749,7 +749,7 @@
       // so we only emit a fallback @page when the content has none.
       const contentHasPageRule = /@page/.test(htmlOrContent);
       fullHtml = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' +
-        title + '</title>' +
+        PCD.escapeHtml(title) + '</title>' +
         '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
         '<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">' +
         '<style>' +

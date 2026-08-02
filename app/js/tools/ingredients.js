@@ -1278,6 +1278,17 @@ Pasta,3,kg,cat_dry_goods,,</code></pre>
     return match || 'cat_other';
   }
 
+  // v2.44.161 fix — ham "[^0-9.-]" strip'i virgülü ondalık ayracı olarak değil
+  // rastgele karakter olarak siliyordu: "3,50" (TR/DE/FR/ES standardı) → "350"
+  // olup fiyatı sessizce 100 kat şişiriyordu. Tek virgül + virgülden sonra 1-2
+  // hane varsa (klasik ondalık deseni) virgül nokta'ya çevrilir; aksi halde
+  // (çoklu virgül = binlik ayracı, ör. "1,234") eski davranış korunur.
+  function parseLocaleNumber(raw) {
+    const s = String(raw || '').trim();
+    if (/^-?\d+,\d{1,2}$/.test(s)) return s.replace(',', '.');
+    return s.replace(/[^0-9.\-]/g, '');
+  }
+
   function parseCSV(text) {
     if (!text || !text.trim()) return [];
 
@@ -1321,7 +1332,7 @@ Pasta,3,kg,cat_dry_goods,,</code></pre>
     dataRows.forEach(function (cells) {
       if (!cells || cells.length < 2) return;
       const name = String(cells[0] || '').trim();
-      const priceStr = String(cells[1] || '').replace(/[^0-9.\-]/g, '');
+      const priceStr = parseLocaleNumber(cells[1]);
       const price = parseFloat(priceStr);
       if (!name || isNaN(price)) return;
       // v2.44.151 — Fix: negatif fiyat editördeki manuel kayıtta reddediliyordu,
@@ -1349,7 +1360,7 @@ Pasta,3,kg,cat_dry_goods,,</code></pre>
       // v2.9.19 — Yield% optional 6th column (cells[5]). Strip non-numeric
       // (handles "88%" → 88). Valid range 1-100, else ignored.
       let yieldPct = null;
-      const yieldRaw = String(cells[5] || '').replace(/[^0-9.\-]/g, '');
+      const yieldRaw = parseLocaleNumber(cells[5]);
       if (yieldRaw) {
         const y = parseFloat(yieldRaw);
         if (!isNaN(y) && y > 0 && y <= 100) yieldPct = y;

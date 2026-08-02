@@ -558,6 +558,10 @@
           { icon: 'print', label: L('chk_print_blank', 'Print blank'), onClick: function () { printChecklist(tpl, null); } },
           { icon: 'clock', label: L('checklist_history', 'History') + (completed ? ' (' + completed + ')' : ''), onClick: function () { openHistory(tid); } },
           { icon: 'copy', label: L('act_duplicate', 'Duplicate'), onClick: function () {
+            if (PCD.gate && !PCD.gate.canCreate('checklists', (PCD.store.listTable('checklistTemplates') || []).length)) {
+              PCD.gate.showUpgradeModal({ feature: 'checklists', message: PCD.i18n.t('gate_create_limit') });
+              return;
+            }
             const copy = PCD.clone(tpl);
             delete copy.id; delete copy.createdAt; delete copy.updatedAt;
             copy.name = copy.name + ' (' + L('copy', 'Copy') + ')';
@@ -709,6 +713,10 @@
     shareBtn.addEventListener('click', function () { shareSession(getSession(sid)); });
     doneBtn.addEventListener('click', function () {
       const s = getSession(sid);
+      // v2.44.161 fix — oturum arka planda (başka cihazdan realtime ile)
+      // silinmişse getSession undefined dönüyordu; printBtn/shareBtn zaten
+      // bu durumu guard'lıyordu, Complete akışı guard'sızdı.
+      if (!s) { PCD.toast.error(L('checklist_session_gone', 'This session no longer exists.')); m.close(); refreshMain(); return; }
       const p = sessionProgress(s);
       const remaining = p.total - p.done;
       function finalize() {

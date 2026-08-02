@@ -4,6 +4,56 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.161 — 24 araç kod incelemesi + Pro hesapla gerçek kullanım testi sonrası 36 bulgu düzeltildi · 2026-08-02
+Bağımsız bir denetim: 24 araç/çekirdek dosya grubu 51 ajanla paralel kod incelemesinden geçti (her bulgu ayrıca şüpheci bir ikinci gözle doğrulandı) + izole bir test workspace'inde Pro hesapla gerçek kullanım denemesi yapıldı (7 bulgu tarayıcıda birebir yeniden üretilerek doğrulandı). Toplam 36 bulgunun tamamı bu pakette düzeltildi.
+
+**Güvenlik (kod çalıştırma açığı — XSS):**
+- `PCD.print()` yazdırma penceresi başlığı (`<title>`) kaçış işleminden geçirilmeden basılıyordu — tarif/etkinlik/büfe/menü/whiteboard/roster/prep sheet/QR adlarının HERHANGİ birinden tetiklenebilirdi. Artık `PCD.escapeHtml()` ile korunuyor (tek düzeltme, tüm çıktı yollarını kapatıyor — roster "mekan" alanı dahil).
+- Discover'da paylaşılan tarif fotoğrafı, hem kart hem detay görünümünde `url(...)` içine kaçış işlemi olmadan yazılıyordu (herkese açık, giriş gerektirmez). Var olan ama kullanılmayan `safePhotoUrl()` fonksiyonu her iki yerde de yeniden bağlandı.
+- Üst bar profil fotoğrafı (`<img src="...">`) kaçışsız basılıyordu; Profil ekranındaki aynı alan zaten korunuyordu. `PCD.escapeHtml()` eklendi.
+
+**Plan limiti — "Çoğalt" bypass'ı (6 araç, tek örüntü):** Tarif (3 giriş noktası), Etkinlik, Büfe, Menü, Kontrol Listesi ve Prep Sheet'te "Çoğalt" işlemi kendi plan limitini (`plans.js`) hiç kontrol etmiyordu — Free kullanıcı çoğaltarak "her birinden 1" sınırını aşabiliyordu. Hepsine "+ Yeni X" ile aynı `PCD.gate.canCreate*()` kontrolü eklendi.
+
+**Cihazlar-arası senkron (`cloud.js` / `cloud-realtime.js`):**
+- `haccpLogs`/`haccpUnits`/`haccpReadings`/`haccpCookCool` tabloları tam remote-wins ile senkronlanıyordu (offline girilmiş bir kayıt, başka cihaz senkron olduğunda sessizce kaybolabiliyordu) VE bu yüzden pull-sonrası drift-detection self-heal'i de bu 4 tabloda hiç çalışmıyordu. `haccpReceiving`/`haccpHolding` ile aynı en-yeni-kazanır (per-record `updatedAt`) merge'e taşındı.
+- Drift-detection self-heal (pull sonrası yerel-only kayıtları buluta otomatik geri gönderme) yalnızca map-tablolar için çalışıyordu; `waste`/`checklistSessions`/`buffets`/`misePlans`/`team`/`whiteboards`/`salesLog` (array-tablolar) bu korumanın tamamen dışındaydı — artık kapsıyor.
+- Envanter realtime güncellemesi (`applyToInventory`) diğer tüm `apply*` fonksiyonlarındaki en-yeni-kazanır (`updatedAt`) korumasından yoksundu; geç gelen bir event daha yeni bir yerel stok değişikliğini ezebiliyordu.
+
+**Canlı testte birebir doğrulanan 4 bulgu:**
+- Tedarikçiler ekranında bir ürüne miktar yazmak sayfayı hataya düşürüyordu (`updateFilledCount` tanımsız değişkene erişiyordu) — sipariş sayacı/"Gönder" etiketi bir daha güncellenmiyordu.
+- Fire kaydında malzeme birimi ile tarif/giriş birimi uyuşmuyorsa (ör. "kutu"), dönüşüm başarısız olduğunda ham sayı yanlış birimde kullanılıyordu — hem $ kayıp tutarı hem (işaretlenirse) stoktan düşülen miktar sessizce yanlış çıkıyordu. Aynı ihtiyat `variance.js`'e de eklendi (inventory.js'in satış-düşümüyle aynı desen: dönüşemeyen kalem atlanır + uyarılır).
+- Batch Hesaplayıcı'da "Tümünü seç", arama filtresini yok sayıp workspace'teki TÜM tarifleri seçiyordu.
+- Kontrol listesi "eksik maddelerle tamamlansın mı?" onayında TR/FR/ES/DE/AR çevirilerinde `{n}` sayı yer tutucusu eksikti (yalnız İngilizce doğru çalışıyordu).
+
+**Diğer kod bulguları (kod incelemesiyle tespit edildi):**
+- Cost Report/PDF/Excel'de negatif malzeme miktarlı bir satır, ana maliyet ekranının (sıfır sayıp yok saydığı) aksine gerçek negatif bir tutarla görünüyordu — iki çıktı birbirini tutmuyordu (`dashboard.js`). `flattenIngredients()`'te aynı negatif-miktar koruması sub-recipe dalında vardı, düz malzeme dalında eklendi.
+- Menü Oluşturucu'da bağlı tarif silinirse, menü kalemindeki isim/fiyat donmuş haliyle kalırken tariften gelen alerjen rozeti hiçbir uyarı olmadan kayboluyordu — artık "Bağlı tarif silinmiş" uyarısı gösteriliyor.
+- Menü Mühendisliği'nde hiç satış girilmemişken (yeni işletme) medyan hesaplama hatası yüzünden her yemek yanlışlıkla "Yıldız"/"İş Atı" çıkıyordu, "Bilmece"/"Köpek" hiç çıkmıyordu.
+- Malzeme CSV/Excel içe aktarımında virgül-ondalık fiyatlar ("3,50" gibi TR/DE/FR/ES standardı) virgül silinerek "350" okunup fiyatı 100 kat şişirebiliyordu.
+- Kontrol oturumu başka cihazdan silinmişse "Tamamla" butonu sayfa hatası veriyordu (Yazdır/Paylaş zaten bu durumu doğru karşılıyordu).
+- Stok → Alışveriş Listesi'nde "tedarikçisiz" grubun iç sentinel değeri v2.44.156'da değiştirilmiş ama bir karşılaştırma satırı güncellenmemişti — grup gerçek tedarikçiymiş gibi görünüp işlevsiz bir "Gönder" butonu kazanıyordu.
+- Stok sayımı sonrası "sipariş oluştur" uyarısı eski bir `parLevel` kontrolü taşıyordu; yalnız `minLevel` ile takip edilen kalemler için hiç çıkmayabiliyordu.
+- Eski (v2.44.86 öncesi, hiç yeniden kaydedilmemiş) etkinliklerde "Stok düş" butonu, düz-şema menüyü tanımayan bir kontrol yüzünden hiç görünmüyordu.
+- Etkinlikte stok bir kez düşüldükten sonra misafir sayısı/menü değiştirilip kaydedilse bile düşüm damgası hiç sıfırlanmıyordu; artık kayıt anında düşüm-anı izi (fingerprint) karşılaştırılıp değiştiyse damga temizleniyor.
+- Vardiya editöründeki canlı önizleme + büyütme + yazdır/Excel/paylaş tetikleyicileri, işçilik maliyeti gösterimi için Pro kontrolünü (Preview ekranı gibi) tekrar yapmıyordu.
+- HACCP çok-aylık Audit Pack çıktısında kenar boşluğu sıfırdı (tek-aylık çıktı normal 14mm kullanıyordu) — kenar boşluğu artık body yerine içerik bloğuna gömülü, hangi yoldan basılırsa basılsın aynı.
+- HACCP Sıcak/Soğuk Saklama'nın aylık çıktısı diğer 3 formdaki 31-satır sınırını taşımıyordu; bir ayda 31'den fazla kontrol varsa veri kaybetmeden (kırpmadan) birden fazla sayfaya bölünüyor.
+- Bir HACCP alt-formuna doğrudan link/bookmark/F5 ile girilince "Geri her zaman Hub'a döner" garantisi çalışmıyordu (ilk boot navigasyonu history'yi hiç güncellemiyordu).
+- Mobilde Mutfak Kartları önizlemesinde iki-parmak yakınlaştırma, iki dokunuş aynı noktada başlarsa sıfıra bölünüp önizlemeyi bozabiliyordu (yalnız "Sığdır" düzeltebiliyordu).
+- Prep Sheet'in yemek seçicisi tarif/alt-tarif ayrımı için eski bir alanı (`isSubRecipe`) doğrudan okuyordu; bayrağı hiç set edilmemiş eski alt-tarifler yanlış grupta listeleniyordu.
+- Dil değiştirildiğinde ekran, yeni dil dosyası yüklenmeden (async fetch tamamlanmadan) yeniden çiziliyordu — ilk kez seçilen bir dilde bu render eski dille olabiliyordu.
+
+**Metin/UX düzeltmeleri (canlı testte fark edildi):**
+- Tarif düzenleyicide hazırlık/pişirme süresine negatif değer girilip kaydedilince alan önceki geçerli değeri korumak yerine tamamen boşalıyordu — artık negatif giriş önceki değeri korur (alanı kasıtlı boş bırakmak hâlâ temizler).
+- "Otomatik alerjen tespiti" metni (tarif düzenleyici + Menü Oluşturucu rehberi), gerçekte çalışan tek mekanizmayı (şefin tarif için elle işaretlediği liste, menüye otomatik yansır) değil var olmayan bir "malzemeden otomatik tespit" iddiası anlatıyordu — 6 dilde gerçek davranışa göre düzeltildi.
+- Tarif fiyatlandırma panelinde "Brüt kâr/porsiyon" rakamı, yanında durduğu "Önerilen fiyat"tan değil mevcut satış fiyatından hesaplanıyordu — etikete "(mevcut fiyatla)" eklendi.
+- "Örnek veri yükle" onay metni "3 tarif, 30+ malzeme, bir menü, bir etkinlik" diyordu; gerçekte 19 tarif, 55 malzeme, bir menü, bir etkinlik VE haftalık bir vardiya planı yükleniyor — 6 dilde 3 ayrı metin düzeltildi.
+- Çalışma alanı silme onayı "Bu işlem GERİ ALINAMAZ" diyordu; gerçekte 30 gün çöp kutusunda bekleyip geri yüklenebiliyor (bu sınıf metin sorunu tarif/malzeme/etkinlik/tedarikçi/menü/fire silme onaylarında v2.44.159'da düzeltilmişti, çalışma alanı silme o kapsamın dışında kalmış) — 6 dilde gerçek davranışa göre düzeltildi.
+
+Node `-c` syntax check (30 dosya) yapıldı; HACCP Audit Pack kenar boşluğu düzeltmesi hem tek-ay hem çok-ay yolunda yerel önizlemede uçtan uca doğrulandı (yakalanan yazdırma HTML'i beklenen stil kurallarını içeriyor, konsol hatası yok). Diğer bulgular kod okuyarak yüksek güvenle doğrulandı; canlıda henüz operatör tarafından yeniden doğrulanmadı (deploy sonrası kontrol bekliyor).
+
+---
+
 ## v2.44.159 — 19-bölümlü tam uçtan uca denetim sonrası 7 bulgu tek pakette düzeltildi · 2026-07-26
 Bağımsız bir QA denetçisi kimliğiyle yapılan, tüm araçları (Dashboard, Header, Account, Recipes, Ingredients, Menu Builder, Events, Buffet, Inventory/Variance/Waste, Suppliers, HACCP, Roster, Kitchen Cards/Whiteboard, Checklists, Discover, araçlar-arası tutarlılık) kapsayan tam bir fonksiyonel denetimde bulunan 7 bulgu düzeltildi (bir 8. bulgu — workspace switch sırasında tema/tercih senkron yarışı — cross-device sync koduna dokunduğu için ayrı onay bekliyor, henüz düzeltilmedi).
 - **Stokta float birikim hatası (en önemli bulgu):** `applyStockDeductions`/`applyStockAdditions` (`inventory.js`) stok miktarını hiç yuvarlamadan yazıyordu; tekrarlanan satış/tüketim düşümleri IEEE-754 float hatası biriktiriyordu (örn. tam par seviyesindeki bir kalem sistemde `1.4999999999999982` gibi görünüyordu). Sonuç: par seviyesine fiilen ulaşmış kalemler hâlâ "az stok" sayılıp sipariş listesine giriyordu. 6 ondalığa yuvarlama eklendi (`_r6`).

@@ -98,11 +98,16 @@
     // satılmış (sold>0) tariflerden hesaplanıyor; hiç satılmamış tarifler bu
     // gerçek eşiğe göre doğru şekilde düşük-popülerlik tarafına düşer.
     const soldRows = rows.filter(function (x) { return x.sold > 0; });
+    // v2.44.161 fix — soldRows tamamen boşsa (hiç satış girilmemiş) medSold=0
+    // oluyordu ve "sold >= 0" her zaman doğruydu — v2.44.149'un çözmeye
+    // çalıştığı "herkes popüler" hatasına bu edge-case'de geri dönülüyordu.
+    // Gerçek satış verisi hiç yoksa popülerlik ekseni anlamsızdır; hiPop
+    // herkes için false kalır (yalnız marja göre Puzzle/Dog ayrımı yapılır).
     const medSold = soldRows.length ? median(soldRows.map(function (x) { return x.sold; })) : 0;
     rows.forEach(function (x) {
       if (x.price <= 0) { x.quad = 'unpriced'; return; }
       const hiP = x.margin >= medMargin;
-      const hiPop = x.sold >= medSold;
+      const hiPop = soldRows.length ? (x.sold >= medSold) : false;
       x.quad = hiP && hiPop ? 'star' : (!hiP && hiPop ? 'plowhorse' : (hiP && !hiPop ? 'puzzle' : 'dog'));
     });
     return { rows: rows };

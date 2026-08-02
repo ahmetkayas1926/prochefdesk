@@ -349,8 +349,17 @@
         '<div style="margin-top:8px;font-size:10.5px;color:#78716c;font-style:italic;">' + esc(L('haccp_audit_open_note', 'Open = an out-of-range event with no corrective action recorded. Close these before the audit.')) + '</div>';
     }
 
+    // v2.44.161 fix — kenar boşluğu önceden body padding'ine güveniyordu.
+    // Tek-ay yolu PCD.print()'i doğrudan çağırıp varsayılan 14mm body padding
+    // alıyordu; çok-aylık yol PCD.haccp.printSheets() üzerinden geçip onun (4
+    // günlük HACCP formunun kendi tam-sayfa boyutlaması için gerekli)
+    // body{padding:0 !important} kuralına takılıp kenar boşluğunu kaybediyordu.
+    // Artık body padding'i kendi içimizde de 0'a sabitlenip (iki yolda da
+    // tutarlı, printSheets'inkiyle çakışmaz) kenar boşluğu bu içerik div'ine
+    // gömülü — hangi yoldan basılırsa basılsın aynı görünür.
     return '' +
-      '<div style="font-family:Inter,system-ui,sans-serif;color:' + INK + ';max-width:760px;margin:0 auto;">' +
+      '<style>body{padding:0 !important;margin:0 !important}</style>' +
+      '<div style="font-family:Inter,system-ui,sans-serif;color:' + INK + ';max-width:760px;margin:0 auto;padding:14mm;box-sizing:border-box;">' +
         '<div style="border-bottom:3px solid ' + PINE + ';padding-bottom:12px;margin-bottom:16px;">' +
           '<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;">' +
             '<div>' +

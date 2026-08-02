@@ -392,6 +392,12 @@
       const id = this.getAttribute('data-dup-ev');
       const src = PCD.store.getFromTable('events', id);
       if (!src) return;
+      // v2.44.161 — Çoğaltma "+ Yeni Etkinlik" ile aynı plan limitini kontrol
+      // etmiyordu.
+      if (PCD.gate && !PCD.gate.canCreate('events', (PCD.store.listTable('events') || []).length)) {
+        PCD.gate.showUpgradeModal({ feature: 'events', message: t('gate_create_limit') });
+        return;
+      }
       const copy = PCD.clone(src); delete copy.id;
       copy.name = (src.name || t('untitled')) + ' ' + (t('event_copy_suffix') || '(copy)');
       copy.status = 'draft';
@@ -399,6 +405,7 @@
       // kartındaki hızlı-Duplicate unutmuştu — kopya hiç stok düşmediği halde
       // "✓ Stock deducted" kilitli görünüyordu.
       delete copy._stockDeductedAt;
+      delete copy._stockDeductedFingerprint;
       delete copy.signature;
       delete copy._supplierOrders;
       PCD.store.upsertInTable('events', copy, 'ev');
@@ -418,6 +425,22 @@
       room: (ev && ev.venue) || '', guestCount: Number(ev && ev.guestCount) || 0,
       menu: (ev && ev.menu) || [], notes: ''
     }];
+  }
+  // v2.44.161 — "Stok düş" damgasının hâlâ geçerli olup olmadığını anlamak için
+  // damga anındaki kişi-sayısı + menü içeriğinin küçük bir izini alır. Sadece
+  // stok miktarını etkileyen alanlar (misafir sayısı + kalem/miktar) dahil —
+  // isim/not gibi alanlar değişse damga bozulmaz.
+  function deductionFingerprint(ev) {
+    try {
+      return JSON.stringify(eventFunctions(ev).map(function (f) {
+        return {
+          g: Number(f.guestCount) || 0,
+          m: (f.menu || []).map(function (item) {
+            return [item.recipeId || '', item.ingredientId || '', item.amountPerGuest || 0, item.portionsPerGuest || 0, item.unit || ''];
+          }),
+        };
+      }));
+    } catch (e) { return ''; }
   }
   // Katılımcı (ciro için) = fonksiyonların EN BÜYÜĞÜ (≈ benzersiz kişi); TOPLANMAZ — aynı
   // 100 kişi 3 fonksiyona katılır, ciro 300 değil 100×fiyat olmalı. Maliyet ise toplanır
@@ -783,7 +806,11 @@
     const shopBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline' });
     shopBtn.innerHTML = '🛒 ' + PCD.escapeHtml(t('event_shopping_list') || 'Shopping list');
     let applyInvBtn = null;
-    if ((existing.functions || []).some(function (f) { return f.menu && f.menu.length; })) {
+    // v2.44.161 fix — ham existing.functions okuyordu; v2.44.86 öncesi (hiç
+    // yeniden kaydedilmemiş) düz-şema etkinliklerde bu alan hiç yoktu, buton
+    // hiç oluşmuyordu — oysa computeEventDeductions() zaten eventFunctions()
+    // ile bu eski şemayı (existing.menu) doğru okuyup düşebiliyordu.
+    if (eventFunctions(existing).some(function (f) { return f.menu && f.menu.length; })) {
       applyInvBtn = PCD.el('button', { type: 'button', class: 'btn btn-outline' });
     }
     function _renderDeductBtnState() {
@@ -865,6 +892,9 @@
         const deducted = report.filter(function (r) { return r.tracked; }).length;
         const lowNow = report.filter(function (r) { return r.tracked && (r.status === 'low' || r.status === 'critical' || r.status === 'out'); }).length;
         existing._stockDeductedAt = new Date().toISOString();
+        // v2.44.161 — düşüm anındaki kişi-sayısı+menü izini sakla; kayıt sonradan
+        // değişirse (bkz. saveBtn handler) damga otomatik sıfırlanabilsin.
+        existing._stockDeductedFingerprint = deductionFingerprint(existing);
         PCD.store.upsertInTable('events', existing, 'ev');
         _renderDeductBtnState();
         PCD.toast.success((t('event_apply_inv_done') || '{n} item(s) deducted from stock').replace('{n}', deducted) + (lowNow ? ' · ' + lowNow + ' ⚠' : ''));
@@ -896,10 +926,15 @@
     });
     shareBtn.addEventListener('click', function () { shareEvent(existing); });
     dupBtn.addEventListener('click', function () {
+      if (PCD.gate && !PCD.gate.canCreate('events', (PCD.store.listTable('events') || []).length)) {
+        PCD.gate.showUpgradeModal({ feature: 'events', message: t('gate_create_limit') });
+        return;
+      }
       const copy = PCD.clone(existing); delete copy.id;
       copy.name = (existing.name || t('untitled')) + ' ' + (t('event_copy_suffix') || '(copy)');
       copy.status = 'draft';
       delete copy._stockDeductedAt;
+      delete copy._stockDeductedFingerprint;
       delete copy.signature;
       delete copy._supplierOrders;
       const saved = PCD.store.upsertInTable('events', copy, 'ev');
@@ -1487,6 +1522,15 @@
       if (!data.name || !data.name.trim()) { PCD.toast.error(t('event_name') + ' ' + t('required')); return; }
       if (existing) data.id = existing.id;
       syncFlatMirrorFields();
+      // v2.44.161 fix — stok bir kez düşüldükten sonra misafir sayısı/menü
+      // değiştirilip kaydedilse bile _stockDeductedAt hiç sıfırlanmıyordu;
+      // buton kalıcı kilitli kalıp fark asla düşülemiyordu. Kayıt anında
+      // düşüm anındaki izle (fingerprint) karşılaştırılıp değiştiyse damga
+      // temizlenir — buton yeniden aktifleşir.
+      if (data._stockDeductedAt && deductionFingerprint(data) !== data._stockDeductedFingerprint) {
+        delete data._stockDeductedAt;
+        delete data._stockDeductedFingerprint;
+      }
       const saved = PCD.store.upsertInTable('events', data, 'ev');
       PCD.toast.success(t('event_saved'));
       m.close();

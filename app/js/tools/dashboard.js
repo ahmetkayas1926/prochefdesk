@@ -177,7 +177,12 @@
       amount: amt,
       qtyUnit: ri.unit || stockUnit,
       qtyInStock: qtyInStock,
-      lineCost: unitPrice * qtyInStock,
+      // v2.44.161 fix — computeFoodCost() sıfır/negatif miktarlı satırı
+      // toplama hiç katmıyordu (amt<=0 → return), ama burada aynı satır
+      // Cost Report/PDF/Excel'e gerçek (negatif) bir lineCost ile giriyordu —
+      // iki çıktı birbirini tutmuyordu. Sub-recipe dalı subRecipeScale ile
+      // zaten aynı korumaya sahip; düz malzeme satırı da aynı kurala uyar.
+      lineCost: (amt <= 0) ? 0 : unitPrice * qtyInStock,
     };
   }
 
@@ -259,10 +264,16 @@
       if (ri.ingredientId) {
         const ing = ingMap[ri.ingredientId];
         if (!ing) return;
+        // v2.44.161 fix — sub-recipe dalı (yukarıda) sıfır/negatif miktarı
+        // recursion öncesi eliyordu, düz malzeme satırında bu koruma yoktu —
+        // negatif bir miktar portion/nutrition/variance/allergen hesaplarına
+        // sızabiliyordu.
+        const amt = Number(ri.amount) || 0;
+        if (amt <= 0) return;
         out.push({
           ingredient: ing,
           ingredientId: ri.ingredientId,
-          amount: (Number(ri.amount) || 0) * scale,
+          amount: amt * scale,
           unit: ri.unit || ing.unit || '',
           viaSubRecipe: null,
         });

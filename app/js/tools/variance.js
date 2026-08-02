@@ -55,18 +55,18 @@
   }
 
   // Recursive theoretical usage (core/variance.js isn't loaded in index.html — inlined).
-  function computeTheoreticalUsage(entries, recipeMap, ingMap) {
+  function computeTheoreticalUsage(entries, recipeMap, ingMap, skipped) {
     const usage = {};
     (entries || []).forEach(function (s) {
       const recipe = recipeMap[s.recipeId];
       if (!recipe) return;
       const qty = Number(s.qty) || 0;
       if (qty <= 0) return;
-      addRecipeUsage(recipe, qty / (recipe.servings || 1), recipeMap, ingMap, usage, {});
+      addRecipeUsage(recipe, qty / (recipe.servings || 1), recipeMap, ingMap, usage, {}, skipped);
     });
     return usage;
   }
-  function addRecipeUsage(recipe, factor, recipeMap, ingMap, usage, _visited) {
+  function addRecipeUsage(recipe, factor, recipeMap, ingMap, usage, _visited, skipped) {
     if (!recipe || !recipe.ingredients) return;
     if (recipe.id) { if (_visited[recipe.id]) return; _visited[recipe.id] = true; }
     recipe.ingredients.forEach(function (ri) {
@@ -81,14 +81,17 @@
         const _ss = (PCD.recipes && PCD.recipes.subRecipeScale)
           ? PCD.recipes.subRecipeScale(ri, sub)
           : { scale: (Number(ri.amount) || 0) / (sub.yieldAmount || sub.servings || 1) };
-        addRecipeUsage(sub, factor * _ss.scale, recipeMap, ingMap, usage, Object.assign({}, _visited));
+        addRecipeUsage(sub, factor * _ss.scale, recipeMap, ingMap, usage, Object.assign({}, _visited), skipped);
         return;
       }
       const ing = ingMap[ri.ingredientId];
       if (!ing) return;
       let a = amt;
       if (ri.unit && ing.unit && ri.unit !== ing.unit) {
-        try { a = PCD.convertUnit(amt, ri.unit, ing.unit); } catch (e) { /* keep */ }
+        // inventory.js'in satış-düşümüyle aynı ihtiyat: dönüşemeyen birim ham
+        // sayı olarak toplama karışmaz, malzeme adı skipped'e eklenip atlanır.
+        try { a = PCD.convertUnit(amt, ri.unit, ing.unit); }
+        catch (e) { if (skipped) skipped[ing.name || ri.ingredientId] = true; return; }
       }
       usage[ri.ingredientId] = (usage[ri.ingredientId] || 0) + a;
     });
@@ -96,7 +99,8 @@
 
   function buildRows() {
     const m = maps();
-    const theo = computeTheoreticalUsage(production.filter(function (p) { return p.recipeId && Number(p.qty) > 0; }), m.recipeMap, m.ingMap);
+    const skipped = {};
+    const theo = computeTheoreticalUsage(production.filter(function (p) { return p.recipeId && Number(p.qty) > 0; }), m.recipeMap, m.ingMap, skipped);
     const rows = Object.keys(theo).map(function (iid) {
       const ing = m.ingMap[iid];
       if (!ing) return null;
@@ -107,6 +111,7 @@
       return { iid: iid, ing: ing, theo: theoAmt, actual: actual, hasActual: has, price: price, varCost: (actual - theoAmt) * price };
     }).filter(Boolean);
     rows.sort(function (a, b) { return Math.abs(b.varCost) - Math.abs(a.varCost); });
+    rows.skippedUnitNames = Object.keys(skipped);
     return rows;
   }
 
@@ -293,6 +298,14 @@
     if (missingPriceCount > 0) {
       html += '<div class="text-muted text-sm mb-2" style="padding:6px 10px;background:var(--warning-50,#fef9c3);border:1px solid var(--warning-200,#fde68a);border-radius:6px;">⚠ ' +
         PCD.escapeHtml((t('var_no_price') || '{n} ingredient(s) have no price — cost variance shows $0. Add prices in Ingredients.').replace('{n}', missingPriceCount)) +
+      '</div>';
+    }
+
+    // Unit-mismatch warning — tarif biriminden malzeme birimine dönüştürülemeyen
+    // kalemler teorik kullanıma hiç dahil edilmedi (yanlış birimde toplanmadı).
+    if (rows.skippedUnitNames && rows.skippedUnitNames.length) {
+      html += '<div class="text-muted text-sm mb-2" style="padding:6px 10px;background:var(--warning-50,#fef9c3);border:1px solid var(--warning-200,#fde68a);border-radius:6px;">⚠ ' +
+        PCD.escapeHtml((t('var_unit_mismatch') || 'Could not convert units for: {names} — check these manually.').replace('{names}', rows.skippedUnitNames.join(', '))) +
       '</div>';
     }
 

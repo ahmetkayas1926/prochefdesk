@@ -283,7 +283,16 @@
       return;
     }
 
-    all[wsId][ingId] = newRow.data;
+    // v2.44.161 fix — applyToWsTable'daki en-yeni-kazanır korumasının aynısı
+    // burada eksikti: geç/sıra dışı gelen bir realtime event, daha yeni yapılmış
+    // bir yerel stok değişikliğini (ör. az önce girilmiş bir sayım) ezebiliyordu.
+    const incoming = newRow.data || {};
+    const localExisting = all[wsId][ingId];
+    if (localExisting && localExisting.updatedAt && incoming.updatedAt) {
+      if (localExisting.updatedAt >= incoming.updatedAt) return;
+    }
+
+    all[wsId][ingId] = incoming;
     PCD.store.set('inventory', all);
     scheduleViewRefresh();
   }

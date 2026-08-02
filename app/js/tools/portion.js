@@ -81,9 +81,13 @@
     const searchInp = PCD.$('#pcSearch', view);
     const selStatEl = PCD.$('#pcSelStat', view);
 
-    function paintRecipeList() {
+    function getFilteredRecipes() {
       const q = (searchInp.value || '').toLowerCase().trim();
-      const filtered = q ? recipes.filter(function (r) { return (r.name || '').toLowerCase().indexOf(q) >= 0; }) : recipes;
+      return q ? recipes.filter(function (r) { return (r.name || '').toLowerCase().indexOf(q) >= 0; }) : recipes;
+    }
+
+    function paintRecipeList() {
+      const filtered = getFilteredRecipes();
       PCD.clear(recipeListEl);
       filtered.forEach(function (r) {
         const isSel = selected.has(r.id);
@@ -358,7 +362,10 @@
     // seçildiğinde başlangıç portion sayısı.
     searchInp.addEventListener('input', paintRecipeList);
     PCD.$('#pcAll', view).addEventListener('click', function () {
-      recipes.forEach(function (r) {
+      // v2.44.161 — "Tümünü seç" arama filtresini yok sayıp workspace'teki TÜM
+      // tarifleri seçiyordu; artık recipes.js'teki select-all deseniyle aynı,
+      // yalnız o an görünen (filtrelenmiş) tarifleri seçer.
+      getFilteredRecipes().forEach(function (r) {
         selected.add(r.id);
         if (portionsPerRecipe[r.id] == null) portionsPerRecipe[r.id] = guestCount;
       });

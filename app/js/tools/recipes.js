@@ -683,6 +683,12 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
       e.stopPropagation();
       const original = PCD.store.getRecipe(this.getAttribute('data-rec-dup'));
       if (!original) return;
+      // v2.44.161 — Çoğaltma, "+ Yeni Tarif" ile aynı plan limitini kontrol
+      // etmiyordu; Free kullanıcı çoğaltarak sınırsız tarif üretebiliyordu.
+      if (PCD.gate && !PCD.gate.canCreateRecipe(PCD.store.listRecipes().length)) {
+        PCD.gate.showUpgradeModal({ feature: 'recipes', message: PCD.i18n.t('recipe_limit_reached').replace('{n}', PCD.gate.limits().maxRecipes) });
+        return;
+      }
       const copy = PCD.clone(original);
       delete copy.id; delete copy.createdAt; delete copy.updatedAt;
       copy.name = copy.name + ' ' + PCD.i18n.t('ms_copy_suffix');
@@ -701,6 +707,10 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
         actions: [
           { icon: 'edit', label: PCD.i18n.t('act_edit'), onClick: function () { openEditor(rid); } },
           { icon: 'copy', label: PCD.i18n.t('act_duplicate'), onClick: function () {
+            if (PCD.gate && !PCD.gate.canCreateRecipe(PCD.store.listRecipes().length)) {
+              PCD.gate.showUpgradeModal({ feature: 'recipes', message: PCD.i18n.t('recipe_limit_reached').replace('{n}', PCD.gate.limits().maxRecipes) });
+              return;
+            }
             const copy = PCD.clone(r);
             delete copy.id; delete copy.createdAt; delete copy.updatedAt;
             copy.name = copy.name + ' ' + PCD.i18n.t('ms_copy_suffix');
@@ -2315,6 +2325,10 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
     duplicateBtn.addEventListener('click', function () {
       const original = PCD.store.getRecipe(rid);
       if (!original) return;
+      if (PCD.gate && !PCD.gate.canCreateRecipe(PCD.store.listRecipes().length)) {
+        PCD.gate.showUpgradeModal({ feature: 'recipes', message: PCD.i18n.t('recipe_limit_reached').replace('{n}', PCD.gate.limits().maxRecipes) });
+        return;
+      }
       const copy = PCD.clone(original);
       delete copy.id;
       delete copy.createdAt;
@@ -3922,11 +3936,15 @@ function renderAllergenChips() {
       data.servings = (!isNaN(servingsRaw) && servingsRaw >= 1) ? servingsRaw : 1;
       // v2.44.158 — Fix: negatif prep/cook time (ör. -5 dk) hiçbir uyarı olmadan
       // aynen kaydediliyordu. Diğer sayısal alanlarla (servings/salePrice) aynı
-      // desen: negatifse null'a düşer, sıfır/pozitif/boş olduğu gibi kalır.
+      // desen: negatifse reddedilir, sıfır/pozitif/boş olduğu gibi kalır.
+      // v2.44.161 fix — "reddedilir" önceki geçerli değeri KORUMAK yerine alanı
+      // null'a (boş) düşürüyordu — gerçek bir süre girilmiş bir tarifte yanlışlıkla
+      // negatif yazılırsa veri sessizce kayboluyordu. Alan gerçekten boş bırakılırsa
+      // (kasıtlı temizleme) hâlâ null olur; yalnız NEGATİF giriş önceki değeri korur.
       const prepRaw = parseInt(PCD.$('#recipePrep', body).value, 10);
-      data.prepTime = (!isNaN(prepRaw) && prepRaw >= 0) ? prepRaw : null;
+      data.prepTime = isNaN(prepRaw) ? null : (prepRaw >= 0 ? prepRaw : data.prepTime);
       const cookRaw = parseInt(PCD.$('#recipeCook', body).value, 10);
-      data.cookTime = (!isNaN(cookRaw) && cookRaw >= 0) ? cookRaw : null;
+      data.cookTime = isNaN(cookRaw) ? null : (cookRaw >= 0 ? cookRaw : data.cookTime);
       const yldAmtInp = PCD.$('#recipeYieldAmount', body);
       const yldUnitInp = PCD.$('#recipeYieldUnit', body);
       const yieldRaw = (yldAmtInp && yldAmtInp.value) ? parseFloat(yldAmtInp.value) : null;

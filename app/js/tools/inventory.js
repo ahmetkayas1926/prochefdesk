@@ -1236,7 +1236,11 @@
     ings.forEach(function (i) {
       if (i.noSupplierNeeded) return;
       const row = invAll[i.id];
-      if (!row || row.parLevel == null) return;
+      // v2.44.161 fix — v2.44.152 "Generate Order" rozetini `row.parLevel==null`
+      // şartından kurtarıp computeStatus()'a hizalamıştı; bu sayım hâlâ eski
+      // şartı taşıyordu — yalnız minLevel ile takip edilen veya eşiksiz-negatif
+      // stoklu kalemler sayım-sonrası uyarıda hiç görünmüyordu.
+      if (!row) return;
       const status = computeStatus(row);
       if (!(status === 'out' || status === 'critical' || status === 'low')) return;
       if (isOnOrder(row)) return; // yolda → tekrar uyarma
@@ -2062,7 +2066,10 @@
       keys.forEach(function (k) {
         const rows = groups[k];
         const count = rows.length;
-        const realSup = (groupBy === 'supplier' && k !== ' ') ? k : '';
+        // v2.44.161 fix — v2.44.156'da "tedarikçisiz" sentinel ' '→'__no_supplier__'
+        // olarak değişmişti, bu karşılaştırma güncellenmemişti — tedarikçisiz grup
+        // gerçek bir tedarikçiymiş gibi görünüp işlevsiz bir "Gönder" butonu alıyordu.
+        const realSup = (groupBy === 'supplier' && k !== '__no_supplier__') ? k : '';
         const ts = realSup ? orderedMap[realSup] : null;
         const rowsHtml = rows.map(function (r) {
           return '<div style="display:flex;align-items:center;gap:10px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:3px;">' +

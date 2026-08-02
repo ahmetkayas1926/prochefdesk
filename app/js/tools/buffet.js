@@ -1014,6 +1014,12 @@
     excelBtn.addEventListener('click', function () { exportBuffetXLSX(existing); });
     shareBtn.addEventListener('click', function () { shareBuffet(existing); });
     dupBtn.addEventListener('click', function () {
+      if (PCD.gate) {
+        var _ws = PCD.store.getActiveWorkspaceId();
+        var _arr = (PCD.store._read('buffets') || {})[_ws] || [];
+        var _n = _arr.filter(function (b) { return b && !b._deletedAt; }).length;
+        if (!PCD.gate.canCreate('buffets', _n)) { PCD.gate.showUpgradeModal({ feature: 'buffets', message: PCD.i18n.t('gate_create_limit') }); return; }
+      }
       const copy = PCD.clone(existing);
       delete copy.id; delete copy.createdAt; delete copy.updatedAt; delete copy._stockDeductedAt;
       // v2.44.148 — Fix: _supplierOrders (sipariş-verildi damgası) kopyada

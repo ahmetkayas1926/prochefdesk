@@ -25,6 +25,12 @@
   let _editingId = null;        // null = list view; id = editor
   let _previewId = null;        // v2.15.6 — id = read-only preview view
   let _showCost = false;        // include labour cost in print/excel/share
+  // v2.44.161 fix — Preview ekranı (satır ~1149) _showCost'u ham kullanmadan
+  // önce canUseLaborCost() ile tekrar kontrol ediyordu (free'de gate kilitliyken
+  // bellekte true kalmış bayrağı geçersiz kılmak için); editördeki canlı
+  // önizleme + zoom + print/excel/share tetikleyicileri bu tekrar-kontrolü
+  // yapmıyordu. Tüm çağıranlar artık bu ortak getter'ı kullanır.
+  function _effectiveShowCost() { return (PCD.gate && !PCD.gate.canUseLaborCost()) ? false : _showCost; }
   let _rPreviewOpen = true;     // v2.40 — önizleme details açık/kapalı durumu (re-render'lar arası korunur; varsayılan açık)
   let _h2cPromise = null;       // v2.15.6 — html2canvas lazy-load cache
 
@@ -199,7 +205,7 @@
   }
   function refreshLaborKpi(view, data) {
     const el = PCD.$('#rLaborPct', view); if (el) el.innerHTML = laborChipHtml(data);
-    const pv = PCD.$('#rPreview', view); if (pv) mountRosterPv(pv, data, _showCost);
+    const pv = PCD.$('#rPreview', view); if (pv) mountRosterPv(pv, data, _effectiveShowCost());
   }
 
   // v2.44.107 — Gün-bazlı toplamlar (hangi gün aşırı/zayıf personelli görünür).
@@ -575,7 +581,7 @@
     PCD.$('#rDays', view).addEventListener('change', function () { data.dayCount = parseInt(this.value, 10) || 7; persist(data); render(view); });
     // v2.17 — Pro'da gerçek toggle; free'de kilitli label → upgrade modal.
     const _showCostEl = PCD.$('#rShowCost', view);
-    if (_showCostEl) _showCostEl.addEventListener('change', function () { _showCost = this.checked; mountRosterPv(PCD.$('#rPreview', view), data, _showCost); });
+    if (_showCostEl) _showCostEl.addEventListener('change', function () { _showCost = this.checked; mountRosterPv(PCD.$('#rPreview', view), data, _effectiveShowCost()); });
     // v2.44.106 — Haftalık ciro + hedef % → canlı işçilik % çipi + önizleme (focus kaybetmeden in-place güncelle)
     const _wsEl = PCD.$('#rWeekSales', view);
     if (_wsEl) _wsEl.addEventListener('input', function () { data.weekSales = this.value === '' ? '' : (Number(this.value) || 0); persist(data); refreshLaborKpi(view, data); });
@@ -591,7 +597,7 @@
       PCD.toast.success(t('roster_events_filled') || "Weekly sales updated from this week's events");
     });
     // v2.40 — Önizlemeyi scale-to-fit mount et; details açılınca/yeniden boyutlanınca yeniden ölçekle.
-    mountRosterPv(PCD.$('#rPreview', view), data, _showCost);
+    mountRosterPv(PCD.$('#rPreview', view), data, _effectiveShowCost());
     const _rpWrap = PCD.$('#rPreviewWrap', view);
     if (_rpWrap) _rpWrap.addEventListener('toggle', function () { _rPreviewOpen = _rpWrap.open; if (_rpWrap.open) { const b = view.querySelector('#rPreview .rost-pvbox'); if (b) fitRosterPv(b); } });
     let _rpRsz = null; window.addEventListener('resize', function () { clearTimeout(_rpRsz); _rpRsz = setTimeout(function () { const b = view.querySelector('.rost-pvbox'); if (b) fitRosterPv(b); }, 150); });
@@ -623,9 +629,9 @@
     });
 
     // Outputs (v2.15.6 — Share/Send artık görsel JPEG; vasat metin kaldırıldı)
-    PCD.$('#rPrint', view).addEventListener('click', function () { printRoster(data, _showCost); });
-    PCD.$('#rExcel', view).addEventListener('click', function () { excelRoster(data, _showCost); });
-    PCD.$('#rShare', view).addEventListener('click', function () { sendRosterImage(data, _showCost); });
+    PCD.$('#rPrint', view).addEventListener('click', function () { printRoster(data, _effectiveShowCost()); });
+    PCD.$('#rExcel', view).addEventListener('click', function () { excelRoster(data, _effectiveShowCost()); });
+    PCD.$('#rShare', view).addEventListener('click', function () { sendRosterImage(data, _effectiveShowCost()); });
     PCD.$('#rDelete', view).addEventListener('click', function () {
       PCD.modal.confirm({ icon: '🗑', iconKind: 'danger', danger: true, title: t('confirm_delete') || 'Delete?', text: (data.name || weekRange(data)), okText: t('delete') || 'Delete' }).then(function (ok) {
         if (!ok) return; PCD.store.deleteFromTable('rosters', data.id); PCD.router.go('roster');
