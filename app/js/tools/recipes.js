@@ -1189,7 +1189,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
           ingRowsHtml +=
             '<tr>' +
               '<td style="padding:4px 8px;' + namePad + 'border-bottom:1px solid var(--border);' + (row.indent ? 'color:var(--text-2);' : '') + '">' + nameCol + '</td>' +
-              '<td style="padding:4px 8px;border-bottom:1px solid var(--border);text-align:end;font-family:var(--font-mono);font-size:12px;color:var(--text-3);">' + PCD.fmtMoney(row.unitPrice) + '/' + PCD.escapeHtml(row.stockUnit) + '</td>' +
+              '<td style="padding:4px 8px;border-bottom:1px solid var(--border);text-align:end;font-family:var(--font-mono);font-size:12px;color:var(--text-3);">' + PCD.fmtUnitPrice(row.unitPrice) + '/' + PCD.escapeHtml(row.stockUnit) + '</td>' +
               '<td style="padding:4px 8px;border-bottom:1px solid var(--border);text-align:end;font-family:var(--font-mono);font-size:13px;">' + PCD.fmtNumber(row.amount) + ' ' + PCD.escapeHtml(row.qtyUnit) + '</td>' +
               '<td style="padding:4px 8px;border-bottom:1px solid var(--border);text-align:end;font-family:var(--font-mono);font-weight:700;color:var(--brand-700);">' + PCD.fmtMoney(row.lineCost) + '</td>' +
             '</tr>';
@@ -1366,7 +1366,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
         ingRows +=
           '<tr>' +
             '<td style="' + pad + (row.indent ? 'color:#555;' : '') + '">' + nm + '</td>' +
-            '<td class="num">' + PCD.fmtMoney(row.unitPrice) + '/' + PCD.escapeHtml(row.stockUnit) + '</td>' +
+            '<td class="num">' + PCD.fmtUnitPrice(row.unitPrice) + '/' + PCD.escapeHtml(row.stockUnit) + '</td>' +
             '<td class="num">' + PCD.fmtNumber(row.amount) + ' ' + PCD.escapeHtml(row.qtyUnit) + '</td>' +
             '<td class="num bold">' + PCD.fmtMoney(row.lineCost) + '</td>' +
           '</tr>';
@@ -2042,7 +2042,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
         const displayName = (rRow.indent ? '   • ' : '') + (rRow.isSub ? rRow.name + ' (SUB)' : rRow.name);
         detailRows.push([
           displayName,
-          '$' + rRow.unitPrice.toFixed(2),
+          PCD.fmtUnitPrice(rRow.unitPrice),
           rRow.stockUnit,
           String(rRow.qtyInStock),
           rRow.stockUnit,

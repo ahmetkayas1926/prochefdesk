@@ -74,9 +74,9 @@
     { name: 'Sea salt',               unit: 'g',  pricePerUnit: 0.003, category: 'cat_spices',  supplier: 'Maison Dry Goods' },
     { name: 'Honey',                  unit: 'g',  pricePerUnit: 0.014, category: 'cat_produce', supplier: 'Maison Dry Goods' },
     { name: 'Olive oil',              unit: 'ml', pricePerUnit: 0.012, category: 'cat_oils',    supplier: 'Maison Dry Goods' },
-    { name: 'Red wine',               unit: 'ml', pricePerUnit: 0.006, category: 'cat_oils',    supplier: 'Maison Dry Goods' },
-    { name: 'White wine',             unit: 'ml', pricePerUnit: 0.007, category: 'cat_oils',    supplier: 'Maison Dry Goods' },
-    { name: 'Cognac',                 unit: 'ml', pricePerUnit: 0.022, category: 'cat_oils',    supplier: 'Maison Dry Goods' },
+    { name: 'Red wine',               unit: 'ml', pricePerUnit: 0.006, category: 'cat_beverages', supplier: 'Maison Dry Goods' },
+    { name: 'White wine',             unit: 'ml', pricePerUnit: 0.007, category: 'cat_beverages', supplier: 'Maison Dry Goods' },
+    { name: 'Cognac',                 unit: 'ml', pricePerUnit: 0.022, category: 'cat_beverages', supplier: 'Maison Dry Goods' },
     { name: 'Beef stock',             unit: 'ml', pricePerUnit: 0.004, category: 'cat_dry_goods', supplier: 'Maison Dry Goods' },
     { name: 'Fish stock',             unit: 'ml', pricePerUnit: 0.005, category: 'cat_dry_goods', supplier: 'Marseille Seafood' },
   ];
@@ -164,7 +164,7 @@
           'Nap the scallops with sauce; scatter parsley.'
         ].join('\n\n'),
         plating: 'Three scallops on the leek fondue, sauce around, micro-parsley on top.',
-        allergens: ['shellfish', 'dairy'],
+        allergens: ['molluscs', 'dairy'],
       },
       {
         name: 'Tartare de Bœuf', category: 'cat_appetizer', cuisine: 'French',
@@ -315,7 +315,7 @@
           'Serve with rouille and grilled baguette.'
         ].join('\n\n'),
         plating: 'Seafood arranged in a wide bowl, saffron broth poured over, rouille croûte on the rim.',
-        allergens: ['fish', 'shellfish'],
+        allergens: ['fish', 'crustaceans', 'molluscs'],
       },
       // ---------------- DESSERTS ----------------
       {
@@ -685,7 +685,7 @@
         ],
         payments: [
           { label: 'Deposit', due: '', amount: 3000, paid: true },
-          { label: 'Balance', due: evDateStr, amount: null, paid: false },
+          { label: 'Balance', due: evDateStr, amount: 5789, paid: false },
         ],
         timeline: [
           { time: '14:00', label: 'Load-in & kitchen setup' },
@@ -814,7 +814,7 @@
         format: 'v2', updatedAt: new Date().toISOString(),
         blocks: [
           wblk('section_header', 'full', { color: 'forest', size: 'xl', align: 'center' }, { text: "TONIGHT'S SERVICE — FRI" }),
-          wblk('big_number', 'half', { color: 'brand', size: 'xxl', align: 'center' }, { value: '78', label: 'COVERS BOOKED', sub: '2 sittings' }),
+          wblk('big_number', 'half', { color: 'brand', size: 'xxl', align: 'center' }, { value: '78', label: 'COVERS BOOKED', sub: '2 svc' }),
           wblk('big_number', 'half', { color: 'amber', size: 'xxl', align: 'center' }, { value: '12', label: 'WALK-IN ROOM', sub: '' }),
           wblk('big_number', 'third', { color: 'mint', size: 'lg', align: 'center' }, { value: '3', label: 'VEGAN' }),
           wblk('big_number', 'third', { color: 'blue', size: 'lg', align: 'center' }, { value: '6', label: 'GF / DF' }),

@@ -147,6 +147,16 @@
     currentDir: 'ltr',
 
     getLocales: function () { return window.PCD_CONFIG.LOCALES || []; },
+
+    // v2.44.163 — Belirli bir dildeki karşılığı oku (aktif dilden bağımsız).
+    // Kullanım: malzeme içe aktarımında kategori sütunu, dosya hangi dilde
+    // dışa aktarıldıysa o dilin etiketiyle gelebilir; en azından İngilizce
+    // etiketleri her zaman tanıyabilmek için gerekiyor. Yüklü olmayan dil
+    // için null döner (çağıran ham anahtara düşer).
+    tIn: function (locale, key) {
+      const dict = bundles[locale];
+      return (dict && dict[key]) || null;
+    },
   };
 
   PCD.i18n = i18n;

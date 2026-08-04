@@ -587,6 +587,7 @@
     // izlenmiyordu; toplam maliyet sessizce eksik çıkıp "GOOD %0" gibi yanıltıcı
     // görünüyordu (chef verim tanımlanmamış tarifi gram-bazlı buffet'e bağlayınca).
     let unreliableCount = 0;
+    let uncostedCount = 0;
     (buffet.stations || []).forEach(function (st) {
       (st.items || []).forEach(function (it) {
         const r = it.recipeId ? recipeMap[it.recipeId] : null;
@@ -598,6 +599,12 @@
         totalExpectedWaste += c.expectedWaste;
         if (c.shortfall) shortfallCount++;
         if (c.costReliable === false) unreliableCount++;
+        // v2.44.163 — "custom" kalem (tarif/malzeme bağı YOK) maliyet 0 katkı
+        // yapar; bu bilinçli (Path C) ama sayılmıyordu. Sayılmayınca food cost %
+        // eksik hesaplanıp başlıkta güvenli yeşil "İyi" çıkıyordu (demo büfede
+        // 16 kalemin 9'u böyleydi → %19.4 gerçeğin yarısı). Artık sayılıp UI'da
+        // "N kalem fiyatlandırılmamış" olarak gösteriliyor.
+        if (!r && !ing && it.customName) uncostedCount++;
         itemCount++;
       });
     });
@@ -626,6 +633,7 @@
       prepCovers: Math.round(coverCount * prepFactor),
       shortfallCount: shortfallCount,
       unreliableCount: unreliableCount,
+      uncostedCount: uncostedCount,
       refillX: refillX,
       targets: targets,
       // status: 'none' | 'good' | 'warn' | 'bad'. v2.44.130 — ticketPrice=0 →
@@ -896,6 +904,7 @@
             <div style="flex:1;min-width:160px;">
               <div class="text-muted text-sm" style="font-size:11px;line-height:1.4;">${PCD.escapeHtml(t('buffet_target') || 'Target')}: ≤${totals.targets.good}% ${PCD.escapeHtml(t('buffet_status_good') || 'good')} · ≤${totals.targets.warn}% ${PCD.escapeHtml(t('buffet_status_warn') || 'watch')}</div>
               ${totals.unreliableCount > 0 ? '<div style="font-size:11px;margin-top:5px;color:#b45309;font-weight:600;">⚠ ' + PCD.escapeHtml((t('buffet_cost_unreliable') || '{n} item(s) missing recipe yield — cost not counted, food cost % is understated.').replace('{n}', totals.unreliableCount)) + '</div>' : ''}
+              ${totals.uncostedCount > 0 ? '<div style="font-size:11px;margin-top:5px;color:#b45309;font-weight:600;">⚠ ' + PCD.escapeHtml((t('buffet_cost_uncosted') || '{n} item(s) not linked to a recipe or ingredient — they count as $0, so food cost % is understated.').replace('{n}', totals.uncostedCount)) + '</div>' : ''}
             </div>
           </div>
           <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(100px, 1fr));gap:10px;border-top:1px solid var(--border);padding-top:10px;margin-top:12px;">
@@ -1224,6 +1233,7 @@
                 ${PCD.escapeHtml(t('buffet_target') || 'Target')}: ≤${totals.targets.good}% ${PCD.escapeHtml(t('buffet_status_good') || 'good')} · ≤${totals.targets.warn}% ${PCD.escapeHtml(t('buffet_status_warn') || 'watch')}
               </div>
               ${totals.unreliableCount > 0 ? '<div style="font-size:11px;margin-top:5px;color:#b45309;font-weight:600;">⚠ ' + PCD.escapeHtml((t('buffet_cost_unreliable') || '{n} item(s) missing recipe yield — cost not counted, food cost % is understated.').replace('{n}', totals.unreliableCount)) + '</div>' : ''}
+              ${totals.uncostedCount > 0 ? '<div style="font-size:11px;margin-top:5px;color:#b45309;font-weight:600;">⚠ ' + PCD.escapeHtml((t('buffet_cost_uncosted') || '{n} item(s) not linked to a recipe or ingredient — they count as $0, so food cost % is understated.').replace('{n}', totals.uncostedCount)) + '</div>' : ''}
             </div>
           </div>
 

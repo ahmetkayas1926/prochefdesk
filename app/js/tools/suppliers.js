@@ -353,7 +353,17 @@
   // tedarikçi adı). Gövde = prefs.orderMsgTemplate (yer-tutucular {contact} {date} {items}
   // {me}); şablon boşsa varsayılan. Notlar her zaman sona eklenir. Inventory + Suppliers
   // siparişleri AYNI bu fonksiyonu kullanır → değişiklik ikisine de yansır.
-  const DEFAULT_ORDER_TPL = 'Hi {contact},\n\nI would like to order the following for delivery on {date}:\n{items}\n\nThanks,\n{me}';
+  // v2.44.163 — Varsayılan şablon artık ARAYÜZ DİLİNDE. Önceden sabit
+  // İngilizceydi: TR/DE/FR/ES/AR arayüz kullanan şefin tedarikçisine giden
+  // mesaj İngilizce gövde + yerel tarih ("5 Ağustos Çarşamba") karışımı
+  // oluyordu. Şef kendi şablonunu yazdıysa (prefs.orderMsgTemplate) o hep
+  // öncelikli — bu yalnızca varsayılanı düzeltir.
+  function defaultOrderTpl() {
+    const tt = PCD.i18n && PCD.i18n.t;
+    const v = tt && tt('sup_order_tpl_default');
+    return (v && v !== 'sup_order_tpl_default') ? v
+      : 'Hi {contact},\n\nI would like to order the following for delivery on {date}:\n{items}\n\nThanks,\n{me}';
+  }
   function buildMessage(supplier, items, deliveryDate, notes) {
     const dq = draftQty[supplier.id] || {};
     const dateStr = new Date(deliveryDate).toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || "en", { weekday: 'long', month: 'long', day: 'numeric' });
@@ -368,13 +378,15 @@
 
     let tpl = '';
     try { tpl = ((PCD.store.get('prefs') || {}).orderMsgTemplate || '').trim(); } catch (e) {}
-    let out = (tpl || DEFAULT_ORDER_TPL)
+    let out = (tpl || defaultOrderTpl())
       .replace(/\{contact\}/g, greet)
       .replace(/\{date\}/g, dateStr)
       .replace(/\{items\}/g, itemLines)
       .replace(/\{me\}/g, userName);
     if (userName === '') out = out.replace(/\n\{me\}|\{me\}/g, '').replace(/[ \t]+$/gm, '');
-    if (notes) out += '\n\nNotes: ' + notes;
+    // v2.44.163 — "Notes:" öneki şablon dışıydı ve sabit İngilizceydi; özel
+    // şablon yazan şefin mesajında bile İngilizce kalıyordu.
+    if (notes) out += '\n\n' + ((PCD.i18n && PCD.i18n.t && PCD.i18n.t('sup_order_notes_prefix')) || 'Notes') + ': ' + notes;
     return out;
   }
 
@@ -1039,7 +1051,7 @@
     const body = PCD.el('div');
     body.innerHTML =
       '<div class="text-muted text-sm" style="margin-bottom:8px;line-height:1.5;">' + PCD.escapeHtml(tt('supplier_msg_tpl_hint', 'Customize the order message sent to suppliers. This pre-fills every order — you can still edit any message before sending.')) + '</div>' +
-      '<textarea class="textarea" id="msgTpl" rows="10" style="font-family:var(--font-mono);font-size:12px;">' + PCD.escapeHtml(cur || DEFAULT_ORDER_TPL) + '</textarea>' +
+      '<textarea class="textarea" id="msgTpl" rows="10" style="font-family:var(--font-mono);font-size:12px;">' + PCD.escapeHtml(cur || defaultOrderTpl()) + '</textarea>' +
       '<div class="text-muted" style="font-size:11px;margin:8px 0 4px;">' + PCD.escapeHtml(tt('supplier_msg_tpl_insert', 'Tap to insert a placeholder:')) + '</div>' +
       '<div style="display:flex;flex-wrap:wrap;gap:6px;">' +
         ['{contact}', '{date}', '{items}', '{me}'].map(function (p) { return '<button type="button" class="tpl-ins" data-p="' + p + '" style="padding:4px 9px;border-radius:6px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:12px;font-family:var(--font-mono);">' + p + '</button>'; }).join('') +
@@ -1060,11 +1072,11 @@
       ta.value = ta.value.slice(0, s) + p + ta.value.slice(eN);
       ta.focus(); ta.selectionStart = ta.selectionEnd = s + p.length;
     });
-    resetBtn.addEventListener('click', function () { ta.value = DEFAULT_ORDER_TPL; });
+    resetBtn.addEventListener('click', function () { ta.value = defaultOrderTpl(); });
     cancelBtn.addEventListener('click', function () { m.close(); });
     saveBtn.addEventListener('click', function () {
       const v = (ta.value || '').trim();
-      PCD.store.set('prefs.orderMsgTemplate', (v && v !== DEFAULT_ORDER_TPL) ? v : '');
+      PCD.store.set('prefs.orderMsgTemplate', (v && v !== defaultOrderTpl()) ? v : '');
       if (PCD.store.flush) PCD.store.flush();
       if (PCD.cloudPerTable && PCD.cloudPerTable.queueUpsert) {
         try {

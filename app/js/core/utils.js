@@ -227,7 +227,29 @@
     // readable ($0.002/g instead of $0/g).
     let decimals = 2;
     if (abs > 0 && abs < 0.01) decimals = abs < 0.001 ? 4 : 3;
-    return sym + n.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+    // v2.44.163 — eksi işareti simgenin ÖNÜNE: "$-178.76" değil "-$178.76".
+    const sign = n < 0 ? '-' : '';
+    return sign + sym + abs.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  };
+
+  // v2.44.163 — BİRİM FİYAT biçimi (maliyet raporu / kırılım tabloları).
+  // fmtMoney 2 haneye yuvarlıyordu: gram başına 0.013 → "$0.01", 0.0111 → "$0.01".
+  // Sonuçta rapor "$0.01/g × 100 g = $1.30" gibi kâğıt üzerinde DOĞRULANAMAYAN
+  // satırlar basıyordu (şef/denetçi çarpımı tutturamıyor). Küçük değerlerde
+  // hane sayısı artırılır; satır maliyeti gerçekten miktar × birim fiyata eşit
+  // görünür. Toplamlar/başlık rakamları fmtMoney ile 2 hanede kalır.
+  PCD.fmtUnitPrice = function (amount, currency) {
+    if (amount === null || amount === undefined || isNaN(amount)) return '—';
+    currency = currency || (PCD.store && PCD.store.get('prefs.currency')) || 'USD';
+    const cfg = window.PCD_CONFIG.CURRENCIES.find(function (c) { return c.code === currency; });
+    const sym = cfg ? cfg.symbol : currency;
+    const n = Number(amount);
+    const abs = Math.abs(n);
+    let decimals = 2;
+    if (abs > 0 && abs < 0.1) decimals = 4;
+    else if (abs > 0 && abs < 1) decimals = 3;
+    const sign = n < 0 ? '-' : '';
+    return sign + sym + abs.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
   };
 
   // v2.14.7 — Aktif para birimi SİMGESİNİ döndürür (fmtMoney değer döndürür;

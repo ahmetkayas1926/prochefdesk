@@ -719,12 +719,26 @@
       ensureActiveWorkspace();
       return PCD.clone(state.workspaces[state.activeWorkspaceId]) || null;
     },
+    // v2.44.163 — DÖNÜŞ DEĞERİ ARTIK PROMISE-UYUMLU. `flushSync()` IDB put'u
+    // asenkron; kimse beklemediği için büyük state blob'unda (çok workspace ×
+    // yüzlerce tarif) yazma, hemen ardından gelen `location.reload()`'a
+    // yetişemiyordu → yeni workspace oluşturulup AKTİF EDİLİYOR ama reload
+    // sonrası eski workspace'e dönülüyordu (canlı testte birebir yeniden
+    // üretildi). Artık flushSync promise'i `_persisted` olarak döndürülüyor;
+    // app.js reload'dan önce bunu await ediyor. Eski `=== true` / truthy
+    // kontrolleri bozulmasın diye Boolean bir nesne yerine `true`ya iliştirilmiş
+    // ayrı bir alan değil, doğrudan promise döndüren ikinci bir API eklendi.
     setActiveWorkspaceId: function (wsId) {
+      const r = this.setActiveWorkspaceIdAsync(wsId);
+      return r !== false;
+    },
+    // Aynı iş; IDB yazma promise'ini döndürür (false = geçersiz wsId).
+    setActiveWorkspaceIdAsync: function (wsId) {
       if (!state.workspaces[wsId]) return false;
       state.activeWorkspaceId = wsId;
       emit('activeWorkspaceId', wsId, null);
       // Immediate localStorage write (bypass debounce) so a reload right after won't lose this
-      flushSync();
+      const written = flushSync();
       persist();
       // v2.6.67 — Per-table sync (user_prefs holds activeWorkspaceId)
       if (PCD.cloudPerTable) PCD.cloudPerTable.queueUpsert('user_prefs', null, null, {
@@ -734,7 +748,7 @@
         onboarding: state.onboarding,
         costHistory: state.costHistory,
       });
-      return true;
+      return Promise.resolve(written).catch(function () { return false; });
     },
     listWorkspaces: function (includeArchived) {
       ensureActiveWorkspace();

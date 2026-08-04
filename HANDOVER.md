@@ -29,7 +29,7 @@ Sidebar bölümleri. İkincil araçlar (Menu engineering / Nutrition / Batch / V
 - alt-sekme **Nutrition** — porsiyon başı tahmini kalori/protein/karb/yağ (recipe malzemelerinden, USDA/FSANZ; tahmin, sertifikalı etiket değil).
 - alt-sekme **Batch** (Batch Calculator; route `portion`) — tarifi/alt-tarifi N adete ölçekle → toplam malzeme + maliyet; tarif/kategori/tedarikçi görünümü, alt-tarifler ingredient'e flatten. Print + stilize Excel + metin paylaşımı.
 
-**Ingredients** — birim fiyat, 11 kategori, tedarikçi bağı, yield %, **raf-ömrü (gün, opsiyonel)**, fiyat geçmişi grafiği. CSV/Excel import-export + Lists sekmeli şablon · Sync ✓.
+**Ingredients** — birim fiyat, 11 kategori, tedarikçi bağı, yield % (EP maliyeti otomatik), fiyat geçmişi grafiği, "bu malzeme N tarifte kullanılıyor" ters-bağ. CSV/Excel import-export + Lists sekmeli şablon · Sync ✓.
 
 **Menus** (Menu Builder = Menu Studio) — blok-kanvas menü tasarımcı (başlık/metin/bölüm[yemek listesi, tariften otomatik]/görsel/ayraç/boşluk); A4–A3–A5–Letter, dikey/yatay, 1–4 sütun, sayfa çerçevesi, accent/metin/bg rengi, marka kiti. Blok tıkla → düzenleme popup (sağda "Blocks" katman listesi); sayfa ayarları ayrı 🎨 popup. **Alerjen & diyet (uyum):** tariften OTOMATİK alerjen + şefin yemek-başı eklediği MANUEL alerjen (çapraz-bulaşma/tarifsiz kalem; otomatikler kilitli) + yemek-başı diyet etiketi (V/VG/GF/DF/NF/H, küçük-harf accent rozet); **okunur legend** (kod + açıklama, allergens-db sırası). 20 hazır şablon. WYSIWYG (kanvas = baskı = paylaşım). Print · QR/Link + cost-view (Pro) · Sync ✓ (`menus`, `studio` blob).
 
@@ -46,7 +46,7 @@ Sidebar bölümleri. İkincil araçlar (Menu engineering / Nutrition / Batch / V
 
 ### Sourcing
 
-**Inventory** — par (ideal) / min (kritik) eşik, durum (out/critical/low/ok/untracked), sayım modu + geçmiş, dashboard düşük-stok badge. **Generate Order (satın-alma):** par-altı kalemler → tedarikçiye göre grup → her tedarikçiye AYRI sipariş gönder (`suppliers.startOrder` → WhatsApp/SMS/Email + geçmiş) → gönderilen kalem "yolda" (on-order) işaretlenir (çift-sipariş önleme, modal açık kalır) → "Geldi → stoğa ekle". **Son-kullanma/raf-ömrü:** mal kabulde otomatik SKT (ingredient shelf-life'tan) + "bozulacak/geçti" badge + stat + dashboard kartı + **fire köprüsü** (expired → fire yaz & stoktan düş). **Market/alışveriş listesi:** yaklaşan event + seçili buffet → ingredient konsolide → stok düş → kategori/tedarikçiye grupla (açılır-kapanır + sayı) → **her tedarikçiye AYRI sipariş gönder** (`startOrder` + rozet + `markOrdered`; Event/Buffet ile tutarlı) + Deep Pine print + metin paylaş. **Paylaşılan stok sözleşmesi:** `applyStockDeductions/Additions` (event/buffet/waste/sales/receiving hepsi buradan). Print + Excel · Sync ✓ (top-level tablo).
+**Inventory** — par (ideal) / min (kritik) eşik, durum (out/critical/low/ok/untracked), sayım modu + geçmiş, dashboard düşük-stok badge. **Generate Order (satın-alma):** par-altı kalemler → tedarikçiye göre grup → her tedarikçiye AYRI sipariş gönder (`suppliers.startOrder` → WhatsApp/SMS/Email + geçmiş) → gönderilen kalem "yolda" (on-order) işaretlenir (çift-sipariş önleme, modal açık kalır) → "Geldi → stoğa ekle". **Satış kaydet:** günün satılan porsiyonları → tarif üzerinden malzeme düşümü (dashboard 7-gün ciro/food cost %'ini besler). Not: tüketim, sayımı yapılmamış kalemi de düşürür ve stok **negatife inebilir** — bilinçli "bunu say/sipariş et" sinyali (`applyStockDeductions`). **Market/alışveriş listesi:** yaklaşan event + seçili buffet → ingredient konsolide → stok düş → kategori/tedarikçiye grupla (açılır-kapanır + sayı) → **her tedarikçiye AYRI sipariş gönder** (`startOrder` + rozet + `markOrdered`; Event/Buffet ile tutarlı) + Deep Pine print + metin paylaş. **Paylaşılan stok sözleşmesi:** `applyStockDeductions/Additions` (event/buffet/waste/sales/receiving hepsi buradan). Print + Excel · Sync ✓ (top-level tablo).
 - alt-sekme **Variance** — teorik kullanım (satılan → reçete) vs gerçek kullanım; malzeme başına $ varyans, en büyük sızıntı önce (POS/sayım gerekmez; geçici, kaydetmez).
 - alt-sekme **Waste** — fire/bozulma/fazla-üretim kaydı → $ kayıp + opsiyonel stok düşümü + koşan toplam. Sync ✓ (`waste`).
 
@@ -101,7 +101,7 @@ Tüm limit + gate'ler tek dosyada: `plans.js` (`PLAN_LIMITS`) — özelliği aç
 - **Manuel pro:** SQL'de `plan='pro', plan_source='manual'` → kalıcı pro (Stripe'sız); webhook `plan_source='manual'` satırlarını ASLA ezmez.
 - **Stripe (CANLI, 2026-06-21):** Pro **USD $19/ay · $190/yıl**. Tüzel kişi `ProChefDesk, LLC` (Delaware). 3 Edge Function: `create-checkout-session` + `create-portal-session` (verify_jwt AÇIK) · `stripe-webhook` (verify_jwt KAPALI, imza doğrulamalı, plan'ı yazan TEK otorite; olaylar: checkout.completed / subscription.updated / .deleted). **Payout:** Stripe → **Mercury** (US bank) → Wise → AU/TR (TR doğrudan payout desteklemiyor; Treasury ABD-dışı banka için güvenilmez). EIN ~Tem 2026 bekliyor (payout'u bloklamadı). Uçtan uca test geçti (upgrade/cancel/refund/portal). **Gelecek:** operatör AU PR alınca AU Stripe'a geçer (ABN + AU banka, LLC gereksiz), abonelikler taşınır, ABD LLC feshedilir. Güncel durum/notlar: `CLAUDE.md` launch.
 - **Cost-view paylaşım (Pro):** fiyat + food cost % gösteren özel salt-okunur link (`?view=cost`); maliyet yalnız cost-share payload'unda (`public_shares.share_mode='cost'`), normal link sızdırmaz.
-- **Watermark:** footer TÜM çıktılarda (print/PDF · Excel · roster JPEG · paylaşım/URL) `PCD.gate.showWatermark()`'a bağlı — Free'de var, Pro'da temiz; paylaşılan sayfada paylaşanın planına göre snapshot'a gömülür (`payload._wm`). Metin/WhatsApp paylaşımı kapsam dışı.
+- **Watermark:** footer TÜM çıktılarda (print/PDF · Excel · roster JPEG · paylaşım/URL) `PCD.gate.showWatermark()`'a bağlı — Free'de var, Pro'da temiz; paylaşılan sayfada paylaşanın planına göre snapshot'a gömülür (`payload._wm`). Metin/WhatsApp paylaşımı kapsam dışı. Paylaşılan sayfanın üst marka şeridi de aynı karara bağlıdır (v2.44.163) → Pro'nun müşteriye gittiği link tamamen markasız.
 - **Çıktı paleti (Deep Pine — tek standart):** TÜM print/PDF · Excel · roster JPEG · share aynı dili konuşur — başlık+kenarlık pine `#16433a` · aksan/CTA `#1f9d6b` · metin `#1c1917` · kenarlık `#e7e5e4` · th zemini `#eaf6f0` · Inter+Fraunces; Excel pine `16433A` başlık + `E0DDD5` kenarlık + `F6F3EE` alt-satır (PCD.xlsx + inline roster/buffet/recipes AYNI). Tüm print `@page{margin:0}`+içerik padding → tarayıcı damgası (tarih/about:blank/sayfa no) yok. Yeni çıktıda bu paleti kullan. Bilerek istisna: whiteboard (Oswald/Barlow), menu_studio temalı menüleri, HACCP grid `#999`.
 - **Dashboard:** 4 metrik + 2 grafik, tamamı gerçek veriden (sahte yok); işçilik kartı Pro-gated.
 
@@ -116,6 +116,24 @@ Tüm limit + gate'ler tek dosyada: `plans.js` (`PLAN_LIMITS`) — özelliği aç
 
 RLS tüm tablolarda aktif; frontend `anon` key kullanır.
 
+## Edge Functions (9)
+
+Supabase dashboard'dan elle deploy edilir — **git push yalnız frontend'i günceller.** Kaynak: `supabase/functions/`.
+
+| Function | verify_jwt | Ne yapar |
+|----------|-----------|----------|
+| `create-checkout-session` | açık | Stripe Checkout oturumu (Pro'ya geç) |
+| `create-portal-session` | açık | Stripe müşteri portalı (aboneliği yönet) |
+| `stripe-webhook` | **kapalı** (imza doğrulamalı) | plan kolonlarını yazan TEK otorite |
+| `send-proposal-email` | açık | etkinlik teklifi/imza linkini müşteriye e-postalar (**Resend**) |
+| `submit-event-signature` | — (public) | müşterinin imzasını paylaşılan sayfadan alır, snapshot'a işler, onay maili (**Resend**) |
+| `rate-limited-view` | — (public) | Discover görüntülenme sayacı, IP başına 60 dk pencere |
+| `delete-account` | açık | hesabı ve tüm verisini kalıcı siler |
+| `backup-to-r2` | cron | gece JSON yedeği → Cloudflare R2 |
+| `cleanup-photos` | cron | sahipsiz Storage fotoğraflarını temizler |
+
+**Dış servis:** Stripe (ödeme) · **Resend** (giden e-posta) · Cloudflare R2 (yedek) · hCaptcha (kayıt formu) · Google OAuth.
+
 ## Açık adımlar / roadmap
 
-Durum + go-to-market hedefi → `CLAUDE.md` ("Durum" + "Go-to-market — TEK HEDEF"). Büyüme roadmap'i (yeni özellikler) **operatörde** (doküman dışı). **Uygulama lansman-hazır; öncelik artık kod değil satış/büyüme.**
+Durum + açık işler → `CLAUDE.md` ("Durum"). Büyüme roadmap'i (yeni özellikler) **operatörde** (doküman dışı). **Uygulama lansman-hazır; öncelik artık kod değil satış/büyüme.**

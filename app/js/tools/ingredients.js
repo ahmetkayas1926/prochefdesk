@@ -799,7 +799,12 @@ ${existing ? (function () {
         ing.name || '',
         Number(ing.pricePerUnit) || 0,
         ing.unit || '',
-        ing.category || '',
+        // v2.44.163 — Kategori artık ham anahtar ('cat_dry_goods') yerine
+        // OKUNUR ETİKET yazılır. Akış "Excel'de düzenle → yeniden içe aktar";
+        // şef `cat_dry_goods` görünce ne olduğunu anlamıyor ve düzenleyemiyordu.
+        // İçe aktarma zaten hem anahtarı hem etiketi kabul ediyor
+        // (`normalizeCategory`), round-trip bozulmuyor.
+        categoryLabel(ing.category),
         ing.supplier || '',
         ing.yieldPercent != null ? Number(ing.yieldPercent) : '',
       ]);
@@ -1268,6 +1273,13 @@ Pasta,3,kg,cat_dry_goods,,</code></pre>
   // yazılıyordu; elle eklenen "Onion" (category='cat_produce') ile aynı grup
   // sayılmıyordu, iki ayrı "PRODUCE" bölümü oluşuyordu. Artık ya kanonik
   // `cat_*` anahtarına ya da çevrilmiş etikete (case-insensitive) eşleşiyor.
+  // v2.44.163 — Dışa aktarımda kullanılan okunur kategori etiketi.
+  function categoryLabel(key) {
+    if (!key) return '';
+    const lbl = PCD.i18n && PCD.i18n.t ? PCD.i18n.t(key) : '';
+    return lbl && lbl !== key ? lbl : key;
+  }
+
   function normalizeCategory(raw) {
     const val = String(raw || '').trim();
     if (!val) return 'cat_other';
@@ -1275,7 +1287,15 @@ Pasta,3,kg,cat_dry_goods,,</code></pre>
     if (ING_CATEGORIES.indexOf(lc) >= 0) return lc;
     const t = PCD.i18n.t;
     const match = ING_CATEGORIES.find(function (key) { return (t(key) || '').toLowerCase() === lc; });
-    return match || 'cat_other';
+    if (match) return match;
+    // v2.44.163 — Başka bir dilde dışa aktarılmış dosya da tanınsın: İngilizce
+    // etiketlere de bak (en bundle boot'ta her zaman yüklü).
+    const en = (PCD.i18n && PCD.i18n.tIn) ? PCD.i18n.tIn.bind(PCD.i18n, 'en') : null;
+    if (en) {
+      const enMatch = ING_CATEGORIES.find(function (key) { return String(en(key) || '').toLowerCase() === lc; });
+      if (enMatch) return enMatch;
+    }
+    return 'cat_other';
   }
 
   // v2.44.161 fix — ham "[^0-9.-]" strip'i virgülü ondalık ayracı olarak değil

@@ -425,7 +425,7 @@
     const listEl = PCD.$('#invList', view);
 
     function computeStats() {
-      let ok = 0, low = 0, crit = 0, untracked = 0, value = 0;
+      let ok = 0, low = 0, crit = 0, untracked = 0, value = 0, negative = 0;
       ings.forEach(function (i) {
         const row = getRow(i.id);
         const s = computeStatus(row);
@@ -434,10 +434,18 @@
         else if (s === 'critical' || s === 'out') crit++;
         else untracked++;
         if (row && row.stock != null) {
-          value += (Number(row.stock) || 0) * (Number(i.pricePerUnit) || 0);
+          // v2.44.163 — Negatif stok BİLİNÇLİ (fazla-tüketim sinyali, satır 100).
+          // Ama toplam "Stok değeri" bir PARA KPI'ı: eksi bakiyeler toplamı
+          // aşağı çekince kart "-$178.76" gibi anlamsız bir değer gösteriyordu
+          // (yeni kullanıcının doğal ilk akışı: demo veri → satış kaydet).
+          // Değerleme artık yalnız POZİTİF stoğu sayar; negatifler ayrıca
+          // sayılıp "N kalem eksi — sayım gerek" olarak gösterilir.
+          const st = Number(row.stock) || 0;
+          if (st > 0) value += st * (Number(i.pricePerUnit) || 0);
+          else if (st < 0) negative++;
         }
       });
-      return { ok: ok, low: low, crit: crit, untracked: untracked, value: value };
+      return { ok: ok, low: low, crit: crit, untracked: untracked, value: value, negative: negative };
     }
 
     function renderStats() {
@@ -458,6 +466,7 @@
         <div class="stat">
           <div class="stat-label">${t('inv_stock_value')}</div>
           <div class="stat-value">${PCD.fmtMoney(s.value)}</div>
+          ${s.negative > 0 ? `<div class="text-muted" style="font-size:11px;color:var(--danger);font-weight:600;margin-top:2px;">${PCD.escapeHtml((t('inv_negative_hint') || '{n} item(s) below zero — count them').replace('{n}', s.negative))}</div>` : ''}
         </div>
       `;
     }
@@ -1508,7 +1517,11 @@
             ' · <span style="color:' + statusColor(b.status) + ';font-weight:700;">' + PCD.escapeHtml(L('inv_need_short', 'need')) + ' ' + PCD.fmtNumber(b.need) + '</span></div>' +
           barHtml(b) +
         '</div>' +
-        '<input type="number" class="input po-qty" data-iid="' + b.ing.id + '" value="' + b.need.toFixed(2) + '" step="0.01" min="0" style="width:74px;text-align:center;font-weight:600;">' +
+        // v2.44.163 — 74px kutu 4+ haneli miktarı kırpıyordu: 2200 g'lık bir
+        // sipariş ekranda "220" görünüyordu (değer doğruydu, sadece taşıyordu).
+        // Genişlik 96px + min-width; ayrıca tam sayılarda ".00" kuyruğu atıldı
+        // (gram/adet miktarında gereksiz, 3 karakter yer kaplıyordu).
+        '<input type="number" class="input po-qty" data-iid="' + b.ing.id + '" value="' + (Number.isInteger(b.need) ? String(b.need) : b.need.toFixed(2)) + '" step="0.01" min="0" style="width:96px;min-width:96px;text-align:center;font-weight:600;">' +
         '<span class="text-muted" style="font-size:11px;flex-shrink:0;">' + (b.ing.unit || '') + '</span>' +
         (assignable ? '<button type="button" class="btn btn-sm btn-outline po-assign" data-iid="' + b.ing.id + '" style="flex-shrink:0;white-space:nowrap;">' + PCD.icon('truck', 13) + ' ' + PCD.escapeHtml(L('assign_supplier', 'Assign')) + '</button>' : '') +
       '</' + tag + '>';

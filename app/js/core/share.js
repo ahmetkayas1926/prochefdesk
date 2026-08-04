@@ -546,7 +546,11 @@
     const num = function (n) { const x = Number(n) || 0; return (Math.round(x * 100) / 100).toString(); };
     let body = '';
     c.rows.forEach(function (row) {
-      const up = (row.unitPrice != null) ? (cur + (Number(row.unitPrice) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + (row.stockUnit ? '/' + row.stockUnit : '')) : '—';
+      // v2.44.163 - kucuk birim fiyatlarda 2 hane satiri dogrulanamaz kiliyordu
+      // (0.0111 -> $0.01 x 100 g = $1.11 gorunmuyor). Uygulama ici maliyet
+      // raporuyla ayni hassasiyet: <0.1 -> 4 hane, <1 -> 3 hane, aksi 2.
+      const upDec = function (v) { const a = Math.abs(v); return (a > 0 && a < 0.1) ? 4 : ((a > 0 && a < 1) ? 3 : 2); };
+      const up = (row.unitPrice != null) ? (cur + (Number(row.unitPrice) || 0).toLocaleString('en-US', { minimumFractionDigits: upDec(Number(row.unitPrice) || 0), maximumFractionDigits: upDec(Number(row.unitPrice) || 0) }) + (row.stockUnit ? '/' + row.stockUnit : '')) : '—';
       const qty = num(row.amount) + (row.qtyUnit ? ' ' + row.qtyUnit : '');
       const sub = row.isSub ? ' <span class="ct-sub">SUB</span>' : '';
       body += '<tr><td class="ct-name">' + escapeHtml(row.name) + sub + '</td>' +
@@ -576,8 +580,22 @@
     // Recipe content (steps, plating) stays in the owner's original language
     // — that's correct, we don't want to machine-translate user content.
     const viewerLocale = autoDetectShareLocale();
-    if (PCD.i18n && PCD.i18n.setLocale) {
-      try { PCD.i18n.setLocale(viewerLocale); } catch (e) { /* ignore */ }
+    // v2.44.163 — setLocale ASENKRON (en dışındaki diller dinamik fetch ile
+    // gelir) ve dönüşü beklenmiyordu: sayfa `en` bundle'ıyla bir kez çizilip
+    // öyle kalıyordu. Snapshot'tan gelen gövde (paylaşanın dilinde, örn. TR)
+    // ile canlı çizilen bloklar (imza paneli: "Sign to approve this proposal",
+    // "Clear signature", "Sign & Submit") aynı sayfada KARIŞIK DİLDE
+    // görünüyordu — üstelik bu müşteriye giden tek belge. Artık dil yüklenene
+    // kadar beklenip tek seferde doğru dille çizilir.
+    if (PCD.i18n && PCD.i18n.setLocale && !share.__pcdLocaleReady) {
+      share.__pcdLocaleReady = true;
+      let pending = null;
+      try { pending = PCD.i18n.setLocale(viewerLocale); } catch (e) { pending = null; }
+      if (pending && typeof pending.then === 'function') {
+        const again = function () { renderSharePage(share); };
+        pending.then(again, again);
+        return;
+      }
     }
     // Use t() with English fallback for safety
     const t = (PCD.i18n && PCD.i18n.t) ? PCD.i18n.t : function (k, fb) { return fb || k; };
@@ -690,11 +708,17 @@
 
     html += '<div class="share-page">';
     // Subtle top brand line — small unobtrusive promo strip at the top.
-    // Old large green banner and "Try free" CTA removed; footer
-    // already says "Made with ProChefDesk".
-    html += '<div class="share-topbrand">' +
-      '<a href="' + location.origin + location.pathname + '" target="_blank" rel="noopener">ProChefDesk</a>' +
-    '</div>';
+    // v2.44.163 — ARTIK PLANA BAĞLI. Eskiden koşulsuz basılıyordu ve alttaki
+    // yorum "footer zaten 'Made with ProChefDesk' diyor" varsayıyordu — bu
+    // yalnız Free için doğru. Pro'da footer kalkıyor ama şerit kalıyordu, yani
+    // $19/ay ödeyen şefin MÜŞTERİSİNE gönderdiği menü/teklif linkinde marka
+    // görünüyordu; ürün "temiz, filigransız çıktı" sözüyle çelişiyordu.
+    // Artık footer ile aynı `_wm` kararını kullanır: Free'de var, Pro'da yok.
+    if (p._wm !== false) {
+      html += '<div class="share-topbrand">' +
+        '<a href="' + location.origin + location.pathname + '" target="_blank" rel="noopener">ProChefDesk</a>' +
+      '</div>';
+    }
 
     html += '<div class="share-content">';
 

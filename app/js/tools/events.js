@@ -459,6 +459,18 @@
     }, 0);
   }
 
+  // v2.44.163 — Tutarı boş bırakılmış ödeme satırı (editörde "+ ödeme ekle"
+  // varsayılanı `amount:null`) müşteriye giden teklifte "$0.00" basıyordu —
+  // "Kalan bakiye $5,789" yazarken hemen altında "Balance … $0.00" görünüyordu.
+  // Boş tutar artık para değil "—" basar; sıfır GERÇEKTEN girilmişse $0.00 kalır.
+  function payAmountText(p) {
+    const raw = p && p.amount;
+    if (raw === null || raw === undefined || raw === '') return '—';
+    const n = Number(raw);
+    if (!isFinite(n)) return '—';
+    return PCD.fmtMoney(n);
+  }
+
   function computeStats(event, ingMap, recipeMap) {
     let totalCost = 0;
     eventFunctions(event).forEach(function (fn) {
@@ -714,7 +726,7 @@
 
         ${(existing.staffing && existing.staffing.length) ? '<div class="section-title mb-2">' + PCD.escapeHtml(t('event_staffing') || 'Staffing & labor') + '</div><div class="text-muted text-sm" style="margin-bottom:12px;">' + existing.staffing.map(function (s) { return PCD.escapeHtml(s.role || '—') + ' × ' + (s.count || 0); }).join(' · ') + '</div>' : ''}
         ${(existing.charges && existing.charges.length) ? '<div class="section-title mb-2">' + PCD.escapeHtml(t('event_charges') || 'Charges & extras') + '</div><div class="text-muted text-sm" style="margin-bottom:12px;">' + existing.charges.map(function (c) { return PCD.escapeHtml(c.label || '—') + ' ' + PCD.fmtMoney(c.price || 0); }).join(' · ') + '</div>' : ''}
-        ${(existing.payments && existing.payments.length) ? '<div class="section-title mb-2">' + PCD.escapeHtml(L('event_payments', 'Payment schedule')) + '</div><div class="text-muted text-sm" style="margin-bottom:12px;">' + existing.payments.map(function (p) { return PCD.escapeHtml(p.label || '—') + ' ' + PCD.fmtMoney(p.amount || 0) + (p.paid ? ' ✓' : ''); }).join(' · ') + '</div>' : ''}
+        ${(existing.payments && existing.payments.length) ? '<div class="section-title mb-2">' + PCD.escapeHtml(L('event_payments', 'Payment schedule')) + '</div><div class="text-muted text-sm" style="margin-bottom:12px;">' + existing.payments.map(function (p) { return PCD.escapeHtml(p.label || '—') + ' ' + payAmountText(p) + (p.paid ? ' ✓' : ''); }).join(' · ') + '</div>' : ''}
         ${(existing.timeline && existing.timeline.length) ? '<div class="section-title mb-2">' + PCD.escapeHtml(L('event_timeline', 'Run-of-show')) + '</div><div class="text-muted text-sm" style="margin-bottom:12px;">' + existing.timeline.slice().sort(function (a, b) { return (a.time || '').localeCompare(b.time || ''); }).map(function (x) { return PCD.escapeHtml(x.time || '') + ' ' + PCD.escapeHtml(x.label || ''); }).join(' · ') + '</div>' : ''}
         ${(existing.tasks && existing.tasks.length) ? '<div class="section-title mb-2">' + PCD.escapeHtml(L('event_tasks', 'Tasks')) + '</div><div class="text-muted text-sm" style="margin-bottom:12px;">' + existing.tasks.filter(function (x) { return x.done; }).length + '/' + existing.tasks.length + ' ' + PCD.escapeHtml(t('event_done') || 'done') + '</div>' : ''}
         ${existing.cancellationPolicy ? '<div class="section-title mb-2">' + PCD.escapeHtml(t('event_cancellation_policy') || 'Cancellation policy') + '</div><div class="text-muted text-sm" style="margin-bottom:12px;white-space:pre-wrap;">' + PCD.escapeHtml(existing.cancellationPolicy) + '</div>' : ''}
@@ -1384,7 +1396,9 @@
       PCD.on(body, 'input', '.pay-label', function () { const p = payOf(this); if (p) p.label = this.value; });
       PCD.on(body, 'input', '.pay-due', function () { const p = payOf(this); if (p) p.due = this.value; });
       // v2.44.156 — Fix: negatif ödeme tutarı aynen kaydediliyordu.
-      PCD.on(body, 'input', '.pay-amount', PCD.debounce(function () { const p = payOf(this); if (p) { const v = parseFloat(this.value); p.amount = (!isNaN(v) && v > 0) ? v : 0; render(); } }, 400));
+      // v2.44.163 — alan BOŞ bırakılırsa tutar null kalır ("—" basılır); daha
+      // önce 0'a çevriliyordu ve müşteri teklifinde "$0.00" görünüyordu.
+      PCD.on(body, 'input', '.pay-amount', PCD.debounce(function () { const p = payOf(this); if (p) { const raw = (this.value || '').trim(); const v = parseFloat(raw); p.amount = raw === '' ? null : ((!isNaN(v) && v > 0) ? v : 0); render(); } }, 400));
       PCD.on(body, 'change', '.pay-paid', function () { const p = payOf(this); if (p) { p.paid = this.checked; render(); } });
       PCD.on(body, 'click', '.pay-rm', function () { const i = parseInt(this.getAttribute('data-pay'), 10); if (data.payments) { data.payments.splice(i, 1); render(); } });
 
@@ -1868,7 +1882,7 @@
     let payHtml = '';
     if (event.payments && event.payments.length) {
       const pr = event.payments.filter(function (p) { return (p.label || '').trim() || Number(p.amount); }).map(function (p) {
-        return '<tr><td>' + PCD.escapeHtml(p.label || '—') + '</td><td>' + PCD.escapeHtml(p.due ? fmtD(p.due) : '—') + '</td><td class="r">' + PCD.fmtMoney(Number(p.amount) || 0) + '</td><td class="r">' + (p.paid ? '✓ ' + PCD.escapeHtml(t('event_paid') || 'Paid') : '—') + '</td></tr>';
+        return '<tr><td>' + PCD.escapeHtml(p.label || '—') + '</td><td>' + PCD.escapeHtml(p.due ? fmtD(p.due) : '—') + '</td><td class="r">' + payAmountText(p) + '</td><td class="r">' + (p.paid ? '✓ ' + PCD.escapeHtml(t('event_paid') || 'Paid') : '—') + '</td></tr>';
       }).join('');
       if (pr) payHtml = '<div class="pr-h2">' + PCD.escapeHtml(L('event_payments', 'Payment schedule')) + '</div><table class="pr-tbl"><thead><tr><th>' + PCD.escapeHtml(t('event_pay_label') || 'Payment') + '</th><th>' + PCD.escapeHtml(t('event_pay_due') || 'Due') + '</th><th class="r">' + PCD.escapeHtml(t('event_pay_amount') || 'Amount') + '</th><th class="r">' + PCD.escapeHtml(t('event_paid') || 'Paid') + '</th></tr></thead><tbody>' + pr + '</tbody></table>';
     }

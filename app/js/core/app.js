@@ -636,23 +636,29 @@
         }).then(function (ok) {
           if (!ok) return;
           PCD.store.archiveWorkspace(wsId, false);
-          PCD.store.setActiveWorkspaceId(wsId);
+          // v2.44.163 — aktif workspace'in IDB yazımı da beklenir (aşağıda).
+          const wroteActive = PCD.store.setActiveWorkspaceIdAsync(wsId);
           PCD.toast.success(PCD.i18n.t('toast_workspace_switched', { name: ws.name }));
           m.close();
           // v2.44.130 fix — reload artık bekleyen cloud push'u (workspace kaydı dahil)
           // gerçekten bekliyor; önceden setTimeout ile keyfi bir süre sonra reload
           // oluyordu, push henüz gitmemişse reload onu iptal ediyordu.
           const flush = (PCD.cloudPerTable && PCD.cloudPerTable.flushNow) ? PCD.cloudPerTable.flushNow() : Promise.resolve();
-          Promise.resolve(flush).catch(function () {}).then(function () { window.location.reload(); });
+          Promise.all([Promise.resolve(flush).catch(function () {}), Promise.resolve(wroteActive).catch(function () {})])
+            .then(function () { window.location.reload(); });
         });
         return;
       }
-      PCD.store.setActiveWorkspaceId(wsId);
+      const wroteActiveSwitch = PCD.store.setActiveWorkspaceIdAsync(wsId);
       PCD.toast.success(PCD.i18n.t('toast_workspace_switched', { name: (ws ? ws.name : PCD.i18n.t('ws_generic_label')) }));
       m.close();
       // v2.44.130 fix — reload before pending cloud push landed = lost writes.
+      // v2.44.163 fix — aynı yarış IDB tarafında da vardı: aktif workspace
+      // yazımı (asenkron IDB put) reload'a yetişmeyince kullanıcı eski
+      // workspace'te kalıyordu. Artık ikisi birden bekleniyor.
       const flushSwitch = (PCD.cloudPerTable && PCD.cloudPerTable.flushNow) ? PCD.cloudPerTable.flushNow() : Promise.resolve();
-      Promise.resolve(flushSwitch).catch(function () {}).then(function () { window.location.reload(); });
+      Promise.all([Promise.resolve(flushSwitch).catch(function () {}), Promise.resolve(wroteActiveSwitch).catch(function () {})])
+        .then(function () { window.location.reload(); });
     });
 
     PCD.on(body, 'click', '[data-edit-ws]', function (e) {
@@ -946,8 +952,15 @@
       const isNew = !existing;
 
       // STEP 3 — Switch active workspace if new
+      // v2.44.163 fix — v2.44.130 CLOUD push'unu beklemeye başlamıştı ama YEREL
+      // (IDB) yazma hâlâ beklenmiyordu. `setActiveWorkspaceId` içindeki
+      // `flushSync()` asenkron bir IDB put; state blob'u büyükse (çok workspace
+      // × yüzlerce tarif) aşağıdaki reload'a yetişemiyor ve kullanıcı yeni
+      // workspace yerine ESKİSİNDE açılıyordu. Canlı testte birebir üretildi:
+      // dolu bir workspace'ten oluşturunca hata, boş workspace'ten çalışıyor.
+      let activeWritten = Promise.resolve();
       try {
-        if (isNew) PCD.store.setActiveWorkspaceId(saved.id);
+        if (isNew) activeWritten = Promise.resolve(PCD.store.setActiveWorkspaceIdAsync(saved.id));
       } catch (e) {
         PCD.warn && PCD.warn('[Workspace Save] setActive failed (non-fatal):', e);
       }
@@ -971,14 +984,12 @@
           try { refreshWorkspaceLabel(); } catch (e) {}
         }
       };
-      if (PCD.cloudPerTable && typeof PCD.cloudPerTable.flushNow === 'function') {
-        Promise.resolve(PCD.cloudPerTable.flushNow()).catch(function () {}).then(function () {
-          setTimeout(doReload, 100);
-        });
-      } else {
-        // No cloud → just reload after short delay
-        setTimeout(doReload, 250);
-      }
+      const cloudFlushed = (PCD.cloudPerTable && typeof PCD.cloudPerTable.flushNow === 'function')
+        ? Promise.resolve(PCD.cloudPerTable.flushNow()).catch(function () {})
+        : Promise.resolve();
+      Promise.all([cloudFlushed, activeWritten.catch(function () {})]).then(function () {
+        setTimeout(doReload, 100);
+      });
     });
   }
 

@@ -263,7 +263,14 @@
     const data = collectAuditData(ym);
     const esc = PCD.escapeHtml;
     const user = (PCD.store.get && PCD.store.get('user')) || {};
-    const business = user.workplace || user.company || user.name || '';
+    // v2.44.163 — Denetim paketi başlığı DENETLENEN ŞUBEYİ adlandırmalı. Önceden
+    // yalnız hesap profilindeki `workplace` yazılıyordu; çok-workspace (çok-şube)
+    // kullanan operatörde HER workspace'in raporu aynı (ve yanlış) şube adını
+    // taşıyordu — canlı testte aktif workspace "Harbour Grill & Events" iken
+    // rapor "Osteria Aurora" basıyordu. Diğer tüm çıktılar (tarif maliyet raporu,
+    // BEO, büfe) zaten aktif workspace adını kullanıyor; burada da hizalandı.
+    const activeWs = (PCD.store.getActiveWorkspace && PCD.store.getActiveWorkspace()) || {};
+    const business = activeWs.name || user.workplace || user.company || user.name || '';
     const regions = (window.PCD_CONFIG && window.PCD_CONFIG.HACCP_REGIONS) || {};
     const regionId = (PCD.haccp && PCD.haccp.getRegion) ? PCD.haccp.getRegion() : 'international';
     const regionLabel = L((regions[regionId] && regions[regionId].labelKey) || 'haccp_region_international', regionId);

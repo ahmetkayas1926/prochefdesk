@@ -4,6 +4,55 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.163 — Pro hesapla uçtan uca kullanım testi: 17 bulgu düzeltildi · 2026-08-04
+
+Canlı Pro hesapta izole bir test workspace'inde tüm araçlar uçtan uca kullanıldı (demo veri → malzeme/tarif/menü kurma → stok sayımı → sipariş → mal kabul → satış → HACCP → etkinlik → büfe → vardiya → çıktı/paylaşım → yedek). Bulunan 17 sorunun tamamı bu pakette düzeltildi.
+
+**Yanlış sayı üreten hesaplamalar:**
+- **Besin değeri aracı, malzeme adını kelime İÇİNDE eşleştiriyordu.** Türkçe `un` anahtarı "Barram**un**di" ile eşleşip 180 g balığı un olarak sayıyordu — test tarifi porsiyon başına **141 g karbonhidrat** gösteriyordu (gerçek: ~5 g). Aynı çarpışmalar: prunes/bun/mung → un · peach & pear → bezelye · marinara → nar · rice → ice(su). Üstelik araç "%100 malzeme eşleşti" diyerek hiçbir şüphe sinyali vermiyordu. Eşleşme artık kelime sınırına saygılı (tam kelime dizisi); çoğullar için hafif tekilleştirme eklendi ("eggs"→egg, "berries"→berry) ve kelime sınırı zorununca açığa çıkan 12 yaygın kalem (rezene, tarak, mercan/barramundi, foie gras, safran, kapari, turşu, konyak, salata yaprağı, şeftali, armut, kuru erik) referans tablosuna eklendi. Demo veri kapsaması %100.
+- **Büfede tarife/malzemeye bağlanmamış ("custom") kalemler food cost %'yi sessizce düşürüyordu.** Bu kalemler tasarım gereği $0 maliyetli ama hiç sayılmıyordu; demo büfede 16 kalemin 9'u böyleyken başlıkta güvenli yeşil "%19.4 · İyi" yazıyordu. Artık sayılıyor ve hem önizlemede hem maliyet raporunda "N kalem tarife/malzemeye bağlı değil — food cost % olduğundan düşük görünüyor" uyarısı çıkıyor.
+
+**Müşteriye giden belgeler:**
+- Tutarı boş bırakılmış ödeme satırı teklifte **"$0.00"** basıyordu — "Kalan bakiye $5,789" yazarken hemen altında "Balance … $0.00" görünüyordu. Boş tutar artık "—" basar (gerçekten 0 girilmişse $0.00 korunur); editörde alanı boşaltmak da artık 0'a çevirmiyor.
+- **Paylaşılan sayfa artık paylaşanın planına göre tamamen markasız.** Üstteki "ProChefDesk" şeridi plandan bağımsız basılıyordu; Pro'da alt bilgi kalkıyor ama şerit kalıyordu — yani $19/ay ödeyen şefin müşterisine gittiği menü/teklif linkinde marka görünüyordu. Şerit artık alt bilgiyle aynı `_wm` kararına bağlı.
+- **Paylaşılan sayfa karışık dilde açılıyordu.** Dil yükleme asenkron olduğu hâlde beklenmiyordu: gövde paylaşanın dilinde (snapshot), imza paneli İngilizce ("Sign to approve this proposal", "Clear signature") çiziliyordu. Artık dil yüklenene kadar beklenip tek seferde doğru dille çiziliyor.
+- **HACCP Denetim Paketi yanlış şube adını taşıyordu.** Başlığa hesap profilindeki işyeri yazılıyordu; çok-workspace kullanan operatörde her şubenin raporu aynı adı taşıyordu (test: aktif workspace "Harbour Grill & Events" iken rapor "Osteria Aurora"). Artık aktif workspace adı kullanılıyor — diğer tüm çıktılarla aynı davranış.
+- Maliyet raporu/kırılım tablosu birim fiyatı 2 haneye yuvarlayıp satırı doğrulanamaz kılıyordu ("$0.01/g × 100 g = $1.30"). Küçük birim fiyatlar artık gerektiği kadar hane gösterir; toplamlar 2 hanede kalır.
+
+**Veri kaybı / yarış koşulu:**
+- **Yeni workspace oluşturunca eskisinde kalınıyordu.** v2.44.130 bulut push'unu beklemeye başlamıştı ama yerel (IndexedDB) yazma hâlâ beklenmiyordu; state büyükse (çok workspace × yüzlerce tarif) aktif-workspace yazımı reload'a yetişemiyordu. Canlı testte birebir üretildi. Artık workspace oluşturma ve geçiş akışlarında hem bulut hem yerel yazma bekleniyor.
+
+**Envanter / sipariş:**
+- Toplam "Stok değeri" KPI'ı negatife düşebiliyordu ("$-178.76"): sayımı yapılmamış malzemelerle satış girmek doğal ilk akış. Değerleme artık yalnız pozitif stoğu sayar; eksiye düşen kalem sayısı ayrı bir uyarı olarak gösterilir. (Kalem bazında negatif stok bilinçli davranış — değişmedi.)
+- Para biçimlendirmesinde eksi işareti simgeden sonra geliyordu ("$-178.76") → artık "-$178.76" (tüm uygulama).
+- Sipariş miktarı kutusu dardı: 2200 g'lık miktar ekranda "220" görünüyordu (değer doğruydu, kırpılıyordu). Kutu genişletildi, tam sayılarda gereksiz ".00" kaldırıldı.
+
+**Çok dillilik:**
+- Tedarikçi sipariş mesajının varsayılan şablonu sabit İngilizceydi; TR/DE/FR/ES/AR arayüzde İngilizce gövde + yerel tarih karışımı üretiyordu. Şablon artık arayüz dilinde (şefin kendi şablonu her zaman öncelikli); şablon dışında sabit kodlu "Notes:" öneki de çevrildi.
+- TR'de fiyat tazeliği etiketleri "Taze (<30g)" yazıyordu — "gün" kısaltması gıda uygulamasında gram okunuyordu. "Taze (<30 gün)" oldu.
+- Malzeme dışa aktarımında Kategori sütunu ham anahtar (`cat_dry_goods`) yazıyordu; akış "Excel'de düzenle → yeniden içe aktar" olduğu için şef bu sütunu anlayamıyordu. Artık okunur etiket yazılıyor; içe aktarma hem etiketi hem anahtarı, ayrıca başka dilde dışa aktarılmış dosyalar için İngilizce etiketleri de tanıyor.
+
+**Demo veri:**
+- İki deniz ürünü tarifi geçersiz `shellfish` alerjen anahtarı taşıyordu (geçerli set: `crustaceans` / `molluscs`) — anahtar sessizce yok sayılıyordu, yani demo menüde **tarak yemeği hiçbir kabuklu/yumuşakça kodu göstermiyordu** ve karides+midyeli Bouillabaisse yalnız "balık" gösteriyordu. Doğru anahtarlarla düzeltildi.
+- Şaraplar ve konyak "Yağlar" kategorisindeydi → "İçecek".
+- Beyaz tahtadaki büyük rakam eki ("2 sittings") rakama bitişik basılıp "782 sittings" gibi okunuyordu → kısa ek.
+- Örnek etkinlikteki "Balance" ödeme satırının tutarı boştu → gerçek kalan bakiye.
+- Demo veri açıklaması eksik sayıyordu (tedarikçi, stok, büfe, mutfak kartları, prep föyü, beyaz tahta yüklendiği hâlde sayılmıyordu) — 6 dilde güncellendi.
+
+**Doküman:**
+- `HANDOVER.md`: kodda hiç var olmayan "raf-ömrü / SKT / fire köprüsü" özelliği kaldırıldı, yerine gerçek "Satış kaydet" davranışı yazıldı; kırık `CLAUDE.md` referansı düzeltildi; **9 Edge Function tablosu** eklendi (6'sı hiçbir dokümanda yoktu).
+- `CLAUDE.md`: "Şu an test/sandbox" satırı silindi (Stripe canlı — kendi içinde çelişiyordu); Edge Function bölümü 3 → 9.
+- `privacy.html` (6 dil): eksik alt-işleyici **Resend** eklendi (müşterilere e-posta gönderiyor, hiç yazmıyordu) + paylaşım linkleri ve müşteri imzası verisi için yeni bölüm.
+- `terms.html` (6 dil): hizmet tanımına link paylaşımı + e-imza eklendi; "müşterinle yaptığın sözleşmeye taraf değiliz" maddesi eklendi.
+- Landing (6 dil): Free kartındaki "araç başına bir çıktı" ifadesi düzeltildi — vardiya çıktısı Free'de tamamen kapalı.
+
+---
+
+## v2.44.162 — Paylaşılan maliyet sayfasında binlik ayraç · 2026-08-04
+- Cost-view paylaşım sayfasındaki (`share.js`) tüm para değerleri artık binlik ayraçla basılıyor (`toFixed(2)` → `toLocaleString('en-US', …)`). Dört haneli tutarlar "$8789.00" yerine "$8,789.00" görünüyor — uygulama içindeki `PCD.fmtMoney` biçimiyle hizalandı. Özet panel, satır bazlı birim fiyat ve maliyet kırılım tablosu dahil.
+
+---
+
 ## v2.44.161 — 24 araç kod incelemesi + Pro hesapla gerçek kullanım testi sonrası 36 bulgu düzeltildi · 2026-08-02
 Bağımsız bir denetim: 24 araç/çekirdek dosya grubu 51 ajanla paralel kod incelemesinden geçti (her bulgu ayrıca şüpheci bir ikinci gözle doğrulandı) + izole bir test workspace'inde Pro hesapla gerçek kullanım denemesi yapıldı (7 bulgu tarayıcıda birebir yeniden üretilerek doğrulandı). Toplam 36 bulgunun tamamı bu pakette düzeltildi.
 

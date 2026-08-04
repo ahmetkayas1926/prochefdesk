@@ -149,16 +149,60 @@
     { k: ['tofu'], n: [76, 8, 1.9, 4.8] },
     { k: ['coffee', 'espresso', 'kahve'], n: [1, 0.1, 0, 0] },
     { k: ['vanilla', 'vanilya'], n: [288, 0.1, 13, 0.1] },
+    // v2.44.163 — kelime sınırı zorunlu olunca kazara eşleşen isimler açığa
+    // çıktı; mutfakta sık kullanılan bu kalemler artık gerçek değerleriyle var.
+    { k: ['fennel', 'rezene'], n: [31, 1.2, 7.3, 0.2] },
+    { k: ['scallop', 'tarak'], n: [69, 12, 3.2, 0.5] },
+    { k: ['snapper', 'barramundi', 'mercan', 'levrek'], n: [100, 20, 0, 1.3] },
+    { k: ['foie gras'], n: [462, 11, 4.7, 44] },
+    { k: ['saffron', 'safran'], n: [310, 11, 65, 6] },
+    { k: ['caper', 'kapari'], n: [23, 2.4, 4.9, 0.9] },
+    { k: ['cornichon', 'gherkin', 'pickle', 'turşu', 'tursu'], n: [12, 0.3, 2.3, 0.2] },
+    { k: ['cognac', 'brandy', 'konyak'], n: [231, 0, 0, 0] },
+    { k: ['salad leaf', 'salad leaves', 'mixed leaf', 'rocket', 'arugula', 'roka'], n: [25, 2.6, 3.7, 0.7] },
+    { k: ['peach', 'şeftali', 'seftali'], n: [39, 0.9, 10, 0.3] },
+    { k: ['pear', 'armut'], n: [57, 0.4, 15, 0.1] },
+    { k: ['prune', 'kuru erik'], n: [240, 2.2, 64, 0.4] },
   ];
 
+  // v2.44.163 — KELİME SINIRI ZORUNLU. Önceki hali ham `indexOf` idi ve anahtar
+  // kelimeyi kelimenin İÇİNDE de yakalıyordu: 'un' (=flour) "Barram-un-di" ile
+  // eşleşip 180 g balığı un olarak sayıyordu (141 g karbonhidrat/porsiyon).
+  // Aynı çarpışmalar: prunes/bun/mung → un · peach/pear → pea · marinara → nar
+  // (pomegranate) · rice → ice (water). Türkçe 2-3 harfli anahtarlar (un/bal/nar/
+  // muz/tuz/yağ/süt) İngilizce isimlerin içinde sürekli tetikleniyordu.
+  // Artık isim kelimelere ayrılır ve anahtar ancak TAM kelime dizisi olarak
+  // eşleşirse kabul edilir; en-uzun-kazanır davranışı korunur ("olive oil" >
+  // "oil"). Çok kelimeli anahtarlar ('peanut butter') da doğru çalışır.
+  // Hafif tekilleştirme — eski ham indexOf çoğulları kazara yakalıyordu
+  // ("eggs" içinde "egg"). Kelime sınırına geçince bunlar kaybolurdu, o yüzden
+  // her iki taraf da tekilleştirilip karşılaştırılır. Sadece İngilizce ekler;
+  // Türkçe anahtarlar zaten tam yazılıyor.
+  function singular(w) {
+    if (w.length > 4 && /ies$/.test(w)) return w.slice(0, -3) + 'y';   // berries → berry
+    if (w.length > 4 && /ves$/.test(w)) return w.slice(0, -3) + 'f';   // leaves → leaf
+    if (w.length > 4 && /(ses|shes|ches|xes)$/.test(w)) return w.slice(0, -2);
+    if (w.length > 3 && /[^s]s$/.test(w)) return w.slice(0, -1);        // eggs → egg
+    return w;
+  }
+
+  function tokenize(s) {
+    // Harf/rakam dışını ayraç say — "goat cheese (chevre)" → [goat, cheese, chevre]
+    return (s || '').toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean).map(singular);
+  }
+
   function matchNutrition(name) {
-    const n = (name || '').toLowerCase();
-    if (!n) return null;
-    // longest keyword wins (more specific) — e.g. "olive oil" before "oil"
+    const words = tokenize(name);
+    if (!words.length) return null;
+    const hay = ' ' + words.join(' ') + ' ';
     let best = null, bestLen = 0;
     REF.forEach(function (row) {
       row.k.forEach(function (kw) {
-        if (n.indexOf(kw) >= 0 && kw.length > bestLen) { bestLen = kw.length; best = row; }
+        const kwWords = tokenize(kw);
+        if (!kwWords.length) return;
+        // tam kelime dizisi eşleşmesi (boşlukla sarılı arama)
+        if (hay.indexOf(' ' + kwWords.join(' ') + ' ') < 0) return;
+        if (kw.length > bestLen) { bestLen = kw.length; best = row; }
       });
     });
     return best;
