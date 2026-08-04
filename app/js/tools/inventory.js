@@ -1519,9 +1519,11 @@
         '</div>' +
         // v2.44.163 — 74px kutu 4+ haneli miktarı kırpıyordu: 2200 g'lık bir
         // sipariş ekranda "220" görünüyordu (değer doğruydu, sadece taşıyordu).
-        // Genişlik 96px + min-width; ayrıca tam sayılarda ".00" kuyruğu atıldı
-        // (gram/adet miktarında gereksiz, 3 karakter yer kaplıyordu).
-        '<input type="number" class="input po-qty" data-iid="' + b.ing.id + '" value="' + (Number.isInteger(b.need) ? String(b.need) : b.need.toFixed(2)) + '" step="0.01" min="0" style="width:96px;min-width:96px;text-align:center;font-weight:600;">' +
+        // v2.44.165 — 96px de yetmiyordu: negatif stoktan gelen ondalıklı ihtiyaç
+        // ("3712.50", 7 karakter) hâlâ taşıyordu. Artık gereksiz sondaki sıfırlar
+        // atılıyor (3712.50 → 3712.5, 2200.00 → 2200) ve kutu 112px — number
+        // input'un artırma okları da hesaba katılınca 7 karakter rahat sığıyor.
+        '<input type="number" class="input po-qty" data-iid="' + b.ing.id + '" value="' + String(Number(b.need.toFixed(2))) + '" step="0.01" min="0" style="width:112px;min-width:112px;text-align:center;font-weight:600;">' +
         '<span class="text-muted" style="font-size:11px;flex-shrink:0;">' + (b.ing.unit || '') + '</span>' +
         (assignable ? '<button type="button" class="btn btn-sm btn-outline po-assign" data-iid="' + b.ing.id + '" style="flex-shrink:0;white-space:nowrap;">' + PCD.icon('truck', 13) + ' ' + PCD.escapeHtml(L('assign_supplier', 'Assign')) + '</button>' : '') +
       '</' + tag + '>';

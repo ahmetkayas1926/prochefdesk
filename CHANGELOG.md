@@ -4,6 +4,12 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.165 — Sipariş miktarı kutusu: ondalıklı miktar da sığıyor · 2026-08-04
+
+v2.44.164 canlı doğrulamasında çıktı: v2.44.163'te 74px → 96px yapılan sipariş miktarı kutusu 4 haneli **tam sayıları** kurtarmıştı (2200, 4500 ✓) ama negatif stoktan gelen **ondalıklı** ihtiyaç ("3712.50", 7 karakter) hâlâ taşıyordu. Artık sondaki gereksiz sıfırlar atılıyor (3712.50 → 3712.5, 2200.00 → 2200) ve kutu 112px — number input'un artırma okları dahil 7 karakter rahat sığıyor.
+
+---
+
 ## v2.44.164 — v2.44.163 canlı doğrulaması: 2 artık düzeltildi · 2026-08-04
 
 v2.44.163 push edildikten sonra 17 düzeltmenin tamamı canlıda tek tek doğrulandı. İkisi tam kapanmamıştı:
