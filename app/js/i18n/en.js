@@ -3961,3 +3961,9 @@ window.PCD.i18n.register('en', {
   hcr_month_full: "This month is full, move to the next month",
   recipe_sub_no_yield_tip: "No yield set — cannot cost by g/ml. Give the prep a yield, or use the portion unit.",
 });
+
+// v2.44.166 — "My shares" list: cost-view links are now flagged so they are
+// never confused with the plain public link.
+window.PCD.i18n.register('en', {
+  share_mode_cost: "Cost view — private",
+});

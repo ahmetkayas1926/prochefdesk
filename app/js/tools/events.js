@@ -1971,7 +1971,14 @@
     // gösterir (dataUrl payload'da yoksa — bu migration'dan ÖNCE imzalanmış
     // eski share'lerde — düz metne düşer, hata vermez).
     function signedBlockHtml(sig) {
-      const fmtD = function (d) { return d ? new Date(d).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : ''; };
+      // v2.44.166 — Tarih, BELGENİN dilinde biçimlenir. Önceden `undefined`
+      // (izleyicinin tarayıcı dili) kullanılıyordu: Türkçe bir teklifin gövdesi
+      // "8 Ağu 2026 Cmt" derken hemen altındaki imza satırı "Tue, 4 Aug 2026"
+      // çıkıyordu — aynı bilgi şef tarafında zaten `locale` ile "4 Ağu 2026".
+      // Kaynak sırası v2.44.164'teki gövde kuralıyla aynı: paylaşanın gömülü
+      // dili (`payload._lang`) → aktif locale → tarayıcı varsayılanı.
+      const _loc = p._lang || (PCD.i18n && PCD.i18n.currentLocale) || undefined;
+      const fmtD = function (d) { return d ? new Date(d).toLocaleDateString(_loc, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : ''; };
       const dataUrl = sig && sig.dataUrl;
       const meta = sig ? PCD.escapeHtml((sig.signedBy || '') + (sig.signedAt ? ' · ' + fmtD(sig.signedAt) : '')) : '';
       return '<div style="border:1px solid #cbe8d8;background:#eaf6f0;border-radius:10px;padding:16px;color:#16433a;">' +

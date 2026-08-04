@@ -4,6 +4,27 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.166 — İkinci Pro uçtan uca test: 5 bulgu düzeltildi · 2026-08-05
+
+Canlı Pro hesapta tüm araçlar yeniden uçtan uca kullanıldı (malzeme → tarif → menü → etkinlik + **müşteri e-imzası** → büfe → vardiya → stok sayımı → sipariş döngüsü → HACCP + Denetim Paketi → çıktı/paylaşım → dil/tema/workspace). v2.44.163'te yakalanmamış 5 sorun çıktı; hepsi bu pakette.
+
+**Yanlış sayı üretebilen giriş:**
+- **Fire kaydında birim varsayılanı malzemeye uymuyordu.** Birim sabit `kg` başlıyor ve malzeme seçilince değişmiyordu: temel birimi **gram** olan bir malzemede "1200" yazan şef 1200 **kg** kaydediyor, $15.60 yerine **$15.600** kayıp görüyordu (dönüşümün kendisi doğru — yanlış olan varsayılandı). Artık malzeme seçilince birim malzemenin kendi birimine geçer; birimi listede olmayan malzemeler (each/bottle/jar/bunch…) de seçenek olarak görünür, böylece "seçili görünen birim" ile kaydedilen birim ayrışamaz. Tarif editörü zaten böyle davranıyordu — form artık onunla aynı.
+
+**Ekranda güncellenmeyen değer:**
+- **Tarif editöründeki fiyatlandırma paneli bayat kalıyordu.** "Önerilen fiyat / porsiyon" + "brüt kâr" yalnız satış fiyatı ya da hedef % değişince tazeleniyordu; malzeme ekleme-silme, miktar/birim ve **porsiyon** değişimi panele hiç yansımıyordu — yeni bir tarifte malzemeler girildikten sonra panel `—` olarak kalıyor, şef fiyat kutusuna dokunana kadar öneriyi göremiyordu (panelin tek işi bu). Panel artık maliyet şeridiyle aynı noktadan tazeleniyor; hedef input'una dokunmadığı için yazarken focus korunuyor. Hesap zaten doğruydu (Maliyet Raporu aynı rakamı veriyordu) — sorun salt görüntüydü.
+
+**Gizlilik / karışma riski:**
+- **"Paylaşımlarım"da maliyet linki normal linkten ayırt edilemiyordu.** Aynı tarifin public linki ile cost-view linki listede birebir aynı satır olarak görünüyordu ("📖 <tarif> · Tarif") — "URL Kopyala"ya basan şef hangisinin iç maliyet/kâr taşıdığını bilemiyor, müşteriye yanlışını gönderebiliyordu. Kök neden: liste sorgusu `share_mode` alanını hiç çekmiyordu. Artık çekiliyor ve maliyet linkleri **💰 Maliyet görünümü — özel** rozetiyle işaretleniyor (6 dil).
+
+**Dil tutarlılığı:**
+- **İmzalanmış teklif sayfasında tarih belgenin dilinde değildi.** İmza satırı izleyicinin tarayıcı diliyle biçimleniyordu: Türkçe bir teklifin gövdesi "8 Ağu 2026 Cmt" derken hemen altı "Tue, 4 Aug 2026" çıkıyordu (şef tarafındaki aynı bilgi zaten "4 Ağu 2026"). Artık v2.44.164'teki gövde kuralıyla aynı kaynağı kullanıyor: paylaşanın gömülü dili (`payload._lang`) → aktif dil → tarayıcı.
+- **HACCP Denetim Paketi özetinde Türkçe ek hatası.** "{n} günün {d}'i loglandı" kalıbındaki kesme-işareti eki sayının okunuşuna bağlı (2'si · 4'ü · 10'u), değişken sayıda doğru ek seçilemiyordu → ekranda "4 günün 2'i loglandı". Diğer 5 dilin kullandığı nötr "{d}/{n} gün loglandı" desenine hizalandı.
+
+**Temizlik:** `config.js`'teki `FREE_RECIPE_LIMIT` / `FREE_INGREDIENT_LIMIT` sabitleri kaldırıldı — hiçbir yerde okunmuyorlardı ve yorumları hâlâ "şu an her şey ücretsiz" (v2.6.25) diyordu; monetization kurulduktan sonra plan limitlerinin tek kaynağı `plans.js`. `HANDOVER.md`'de tarihi geçmiş "EIN ~Tem 2026 bekliyor" notu, kalıcı olan DE LLC vergi yükümlülükleri özetiyle değiştirildi.
+
+---
+
 ## v2.44.165 — Sipariş miktarı kutusu: ondalıklı miktar da sığıyor · 2026-08-04
 
 v2.44.164 canlı doğrulamasında çıktı: v2.44.163'te 74px → 96px yapılan sipariş miktarı kutusu 4 haneli **tam sayıları** kurtarmıştı (2200, 4500 ✓) ama negatif stoktan gelen **ondalıklı** ihtiyaç ("3712.50", 7 karakter) hâlâ taşıyordu. Artık sondaki gereksiz sıfırlar atılıyor (3712.50 → 3712.5, 2200.00 → 2200) ve kutu 112px — number input'un artırma okları dahil 7 karakter rahat sığıyor.

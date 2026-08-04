@@ -27,7 +27,7 @@ window.PCD_CONFIG = {
   // 3. APP DEFAULTS
   // ==============================================================
   APP_NAME: 'ProChefDesk',
-  APP_VERSION: '2.44.165',
+  APP_VERSION: '2.44.166',
   DEFAULT_CURRENCY: 'USD',
   DEFAULT_LOCALE: 'en',
 
@@ -60,12 +60,11 @@ window.PCD_CONFIG = {
   },
   HACCP_REGION_DEFAULT: 'international',
 
-  // Free tier limits
-  // v2.6.25: Şu an her şey ücretsiz. Premium ileride gelirse bu sayılar
-  // düşürülecek. 999999 = pratik olarak sınırsız, ama limit kontrol kodu
-  // mevcut yapısıyla duruyor (gelecekte tek noktadan açılır).
-  FREE_RECIPE_LIMIT: 999999,
-  FREE_INGREDIENT_LIMIT: 999999,
+  // NOT: Free plan limitleri burada DEĞİL — tek doğruluk kaynağı `plans.js`
+  // (PLAN_LIMITS.free → maxRecipes / maxIngredients / …). Buradaki eski
+  // FREE_RECIPE_LIMIT / FREE_INGREDIENT_LIMIT sabitleri ("şu an her şey
+  // ücretsiz" dönemi, v2.6.25) hiçbir yerde okunmuyordu ve monetization
+  // kurulduktan sonra yanıltıcı hale gelmişti — kaldırıldı.
 
   // Supported currencies
   CURRENCIES: [

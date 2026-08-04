@@ -418,7 +418,11 @@
       if (!user || !user.id) return reject(new Error('Sign in required'));
 
       supabase.from('public_shares')
-        .select('id, kind, source_id, payload, paused, view_count, created_at, updated_at')
+        // v2.44.166 — share_mode de çekilir: "Paylaşımlarım" listesinde maliyet
+        // linki (share_mode='cost') normal public linkten ayırt edilebilsin.
+        // Önceden ikisi de aynı satır olarak görünüyordu ("📖 <tarif> · Tarif")
+        // → şef yanlışlıkla müşteriye iç maliyet/kâr linkini kopyalayabiliyordu.
+        .select('id, kind, source_id, share_mode, payload, paused, view_count, created_at, updated_at')
         .eq('owner_id', user.id)
         .order('updated_at', { ascending: false })
         .then(function (res) {

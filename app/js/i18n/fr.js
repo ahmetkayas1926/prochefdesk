@@ -3791,3 +3791,8 @@ window.PCD.i18n.register('fr', {
   hcr_month_full: "Ce mois est complet, passez au mois suivant",
   recipe_sub_no_yield_tip: "Aucun rendement défini — coût par g/ml impossible. Ajoutez un rendement à la préparation, ou utilisez l'unité de portion.",
 });
+
+// v2.44.166 — « Mes partages » : les liens de coût sont désormais signalés.
+window.PCD.i18n.register('fr', {
+  share_mode_cost: "Vue des coûts — privé",
+});

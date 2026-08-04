@@ -3791,3 +3791,8 @@ window.PCD.i18n.register('de', {
   hcr_month_full: "Dieser Monat ist voll, wechsle zum nächsten Monat",
   recipe_sub_no_yield_tip: "Keine Ausbeute festgelegt — Kosten pro g/ml nicht berechenbar. Fügen Sie der Vorbereitung eine Ausbeute hinzu oder verwenden Sie die Portionseinheit.",
 });
+
+// v2.44.166 — „Meine Freigaben“: Kostenlinks werden jetzt gekennzeichnet.
+window.PCD.i18n.register('de', {
+  share_mode_cost: "Kostenansicht — privat",
+});

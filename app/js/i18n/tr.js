@@ -3851,7 +3851,11 @@ window.PCD.i18n.register('tr', {
   haccp_audit_coverage_gap: "Günlük logda boşluk var: {n} günün {d} günü kayıtlı. Eksik kayıt en büyük denetim riskidir — denetimden önce tamamlayın.",
   haccp_audit_event_note: "Mal kabul, Pişir & Soğut ve Bekletme işlem-bazlıdır — yalnız teslimat, pişirme veya bekletme olduğunda kaydedilir. Boş form 'işlem kaydı yok' demektir, uygunsuzluk değil.",
   haccp_audit_sum_inrange: "aralıkta",
-  haccp_audit_sum_coverage: "{n} günün {d}'i loglandı",
+  // v2.44.166 — "{n} günün {d}'i" kesme-işareti eki sayının okunuşuna bağlı
+  // (2'si · 4'ü · 10'u) — değişken sayıda doğru ek seçilemiyordu, ekranda
+  // "4 günün 2'i loglandı" çıkıyordu. Diğer 5 dilin kullandığı nötr {d}/{n}
+  // desenine hizalandı; her sayıyla dilbilgisel olarak doğru.
+  haccp_audit_sum_coverage: "{d}/{n} gün loglandı",
   haccp_audit_no_exceptions: "Kayıtlı okumalarda aralık-dışı yok.",
 });
 
@@ -3949,4 +3953,10 @@ window.PCD.i18n.register('tr', {
   hcr_temp_fail: "Saklama tipi eşiği ihlal edildi",
   hcr_month_full: "Bu ay dolu, sonraki aya geç",
   recipe_sub_no_yield_tip: "Üretim ağırlığı (yield) tanımlı değil — g/ml ile maliyet hesaplanamaz. Prep'e yield ekle veya porsiyon birimini kullan.",
+});
+
+// v2.44.166 — "Paylaşımlarım" listesi: maliyet linki artık işaretli — normal
+// public linkle karıştırılıp müşteriye gönderilemesin.
+window.PCD.i18n.register('tr', {
+  share_mode_cost: "Maliyet görünümü — özel",
 });

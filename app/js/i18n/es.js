@@ -3791,3 +3791,8 @@ window.PCD.i18n.register('es', {
   hcr_month_full: "Este mes está lleno, pasa al siguiente mes",
   recipe_sub_no_yield_tip: "Sin rendimiento definido — no se puede calcular el coste por g/ml. Añade un rendimiento a la preparación o usa la unidad de porción.",
 });
+
+// v2.44.166 — "Mis enlaces": los enlaces de coste ahora se marcan.
+window.PCD.i18n.register('es', {
+  share_mode_cost: "Vista de costes — privado",
+});

@@ -1564,6 +1564,16 @@
     const kindLabel = t('share_kind_' + share.kind) || share.kind;
     const url = location.origin + location.pathname + '?share=' + share.id;
 
+    // v2.44.166 — Maliyet linki (share_mode='cost') artık açıkça işaretlenir.
+    // Önceden aynı tarifin public linki ile cost linki listede BİREBİR aynı
+    // görünüyordu ("📖 Coq au Vin · Tarif") — "URL Kopyala"ya basan şef hangisinin
+    // iç maliyet/kâr taşıdığını bilemiyor, müşteriye yanlışını gönderebiliyordu.
+    const isCost = share.share_mode === 'cost';
+    const costBadge = isCost
+      ? '<span style="display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;background:var(--warning-bg,#fef3c7);color:var(--warning-text,#b45309);font-size:11px;font-weight:700;white-space:nowrap;">💰 ' +
+        PCD.escapeHtml(t('share_mode_cost') || 'Cost view — private') + '</span>'
+      : '';
+
     const statusColor = share.paused ? 'var(--text-3)' : 'var(--brand-600)';
     const statusText  = share.paused ? '⏸ ' + t('share_paused') : '● ' + t('share_active');
 
@@ -1576,7 +1586,7 @@
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px;">' +
         '<div style="min-width:0;flex:1;">' +
           '<div style="font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + kindIcon + ' ' + PCD.escapeHtml(name) + '</div>' +
-          '<div class="text-muted text-sm" style="margin-top:2px;">' + PCD.escapeHtml(kindLabel) + ' · 👁 ' + share.view_count + ' ' + PCD.escapeHtml(t('share_views')) + '</div>' +
+          '<div class="text-muted text-sm" style="margin-top:2px;">' + PCD.escapeHtml(kindLabel) + ' · 👁 ' + share.view_count + ' ' + PCD.escapeHtml(t('share_views')) + costBadge + '</div>' +
         '</div>' +
         '<div style="font-size:11px;font-weight:700;color:' + statusColor + ';white-space:nowrap;">' + statusText + '</div>' +
       '</div>' +

@@ -204,6 +204,16 @@
       if (data.itemType === 'recipe') data.unit = 'srv';
       const rs = g('wReason'); if (rs !== undefined) data.reason = rs;
     }
+    // v2.44.166 — Birim seçenekleri: sabit UNITS + seçili malzemenin KENDİ
+    // birimi (UNITS'te olmayabilir: each/bottle/jar/bunch/package/tsp…).
+    // Malzemenin birimi listede yoksa seçili görünmüyordu — select ilk
+    // seçeneği (kg) gösterirken data.unit başka bir şey oluyordu.
+    function unitOptions() {
+      const list = UNITS.slice();
+      const ing = (data.itemType === 'ingredient' && data.ingredientId) ? m.ingMap[data.ingredientId] : null;
+      if (ing && ing.unit && list.indexOf(ing.unit) < 0) list.unshift(ing.unit);
+      return list;
+    }
     function updatePrev() {
       const prev = PCD.$('#wCostPrev', body);
       if (!prev) return;
@@ -231,7 +241,7 @@
         '<div class="field-row">' +
           '<div class="field"><label class="field-label">' + PCD.escapeHtml(data.itemType === 'recipe' ? t('waste_servings') : t('waste_amount')) + '</label><input type="number" class="input" id="wAmount" value="' + (data.amount != null && data.amount !== '' ? data.amount : '') + '" step="0.01" min="0" placeholder="0"></div>' +
           (data.itemType === 'recipe' ? '' :
-            '<div class="field"><label class="field-label">' + PCD.escapeHtml(t('waste_unit')) + '</label><select class="select" id="wUnit">' + UNITS.map(function (u) { return '<option value="' + u + '"' + (data.unit === u ? ' selected' : '') + '>' + u + '</option>'; }).join('') + '</select></div>') +
+            '<div class="field"><label class="field-label">' + PCD.escapeHtml(t('waste_unit')) + '</label><select class="select" id="wUnit">' + unitOptions().map(function (u) { return '<option value="' + u + '"' + (data.unit === u ? ' selected' : '') + '>' + u + '</option>'; }).join('') + '</select></div>') +
         '</div>' +
         (data.itemType === 'custom' ?
           '<div class="field"><label class="field-label">' + PCD.escapeHtml(t('waste_cost_value')) + '</label><input type="number" class="input" id="wCost" value="' + (data.costValue != null && data.costValue !== '' ? data.costValue : '') + '" step="0.01" min="0" placeholder="0"></div>' : '') +
@@ -244,7 +254,21 @@
 
       const ty = PCD.$('#wType', body);
       if (ty) ty.addEventListener('change', function () { collect(); data.itemType = this.value; renderForm(); });
-      ['wIng', 'wRec', 'wCustom', 'wAmount', 'wUnit', 'wCost', 'wReason'].forEach(function (idd) {
+      // v2.44.166 — Malzeme seçilince birim, MALZEMENİN kendi birimine geçer.
+      // Önceden varsayılan sabit 'kg' kalıyordu: temel birimi gram olan bir
+      // malzemede "1200" yazan şef 1200 kg kaydediyor, $15.60 yerine $15,600
+      // kayıp görünüyordu (dönüşüm doğru çalışıyor — yanlış olan varsayılandı).
+      // Tarif editörü birimi zaten malzemeden alıyor; bu form da artık aynı.
+      // Kullanıcı birimi elle değiştirirse ona dokunulmaz (yalnız malzeme
+      // değişiminde senkronlanır).
+      const ingSel = PCD.$('#wIng', body);
+      if (ingSel) ingSel.addEventListener('change', function () {
+        collect();
+        const ing = m.ingMap[data.ingredientId];
+        if (ing && ing.unit) data.unit = ing.unit;
+        renderForm();
+      });
+      ['wRec', 'wCustom', 'wAmount', 'wUnit', 'wCost', 'wReason'].forEach(function (idd) {
         const el = PCD.$('#' + idd, body);
         if (!el) return;
         el.addEventListener('input', function () { collect(); updatePrev(); });

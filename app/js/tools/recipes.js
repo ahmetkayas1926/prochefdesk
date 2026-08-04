@@ -3352,6 +3352,15 @@ function renderAllergenChips() {
           '</div>' +
           pctHtml +
         '</div>';
+      // v2.44.166 — Fiyatlandırma paneli de burada tazelenir. Önceden
+      // updatePricingDOM YALNIZ satış fiyatı / hedef % değişiminde çağrılıyordu;
+      // malzeme ekleme-silme, miktar/birim değişimi ve PORSİYON değişimi
+      // panele hiç yansımıyordu → yeni bir tarifte malzemeler girildikten
+      // sonra "Önerilen fiyat" ve "Brüt kâr" '—' olarak kalıyordu (panelin
+      // tek işi bu). Cost strip ile aynı girdilere (maliyet · porsiyon ·
+      // fiyat) dayandığı için tek noktadan güncellenir; panel yalnız iki
+      // <span>'ın metnini yazar, hedef input'una dokunmaz → focus korunur.
+      updatePricingDOM();
     }
 
     // v2.44.112 — Fiyatlandırma paneli canlı güncelle (önerilen fiyat + brüt kâr).
