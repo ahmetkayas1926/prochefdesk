@@ -504,7 +504,7 @@
   function costPanelHtml(p, t) {
     const c = p.cost || {};
     const cur = c.currency || '$';
-    const money = function (n) { return cur + (Number(n) || 0).toFixed(2); };
+    const money = function (n) { return cur + (Number(n) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
     const pctColor = function (pct) {
       if (pct == null) return '#6b7280';
       if (pct < 30) return '#16a34a';
@@ -542,11 +542,11 @@
     const c = p.cost || {};
     if (!c.rows || !c.rows.length) return '';
     const cur = c.currency || '$';
-    const money = function (n) { return cur + (Number(n) || 0).toFixed(2); };
+    const money = function (n) { return cur + (Number(n) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
     const num = function (n) { const x = Number(n) || 0; return (Math.round(x * 100) / 100).toString(); };
     let body = '';
     c.rows.forEach(function (row) {
-      const up = (row.unitPrice != null) ? (cur + (Number(row.unitPrice) || 0).toFixed(2) + (row.stockUnit ? '/' + row.stockUnit : '')) : '—';
+      const up = (row.unitPrice != null) ? (cur + (Number(row.unitPrice) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + (row.stockUnit ? '/' + row.stockUnit : '')) : '—';
       const qty = num(row.amount) + (row.qtyUnit ? ' ' + row.qtyUnit : '');
       const sub = row.isSub ? ' <span class="ct-sub">SUB</span>' : '';
       body += '<tr><td class="ct-name">' + escapeHtml(row.name) + sub + '</td>' +
