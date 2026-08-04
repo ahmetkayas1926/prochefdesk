@@ -309,6 +309,14 @@
       // etkilemez (footer view anında p._wm'den okunur).
       payload._wm = !PCD.gate || PCD.gate.showWatermark();
 
+      // v2.44.163b — BELGENİN DİLİ. Etkinlik teklifi gibi snapshot'ı ÖNCEDEN
+      // render edilmiş paylaşımlarda gövde paylaşanın dilindedir (TR), ama
+      // sayfanın canlı çizilen kısmı (imza paneli) izleyicinin TARAYICI diline
+      // göre çiziliyordu → müşteriye giden tek belge karışık dilde açılıyordu
+      // (gövde Türkçe, "Sign & Submit" İngilizce). Paylaşanın dili payload'a
+      // gömülüyor; renderSharePage önceden-render'lı paylaşımlarda bunu kullanır.
+      try { payload._lang = (PCD.i18n && PCD.i18n.currentLocale) || 'en'; } catch (e) { payload._lang = 'en'; }
+
       // 1) Check if a share already exists for this (owner, kind, source, mode)
       supabase.from('public_shares')
         .select('id, paused')
@@ -481,7 +489,13 @@
       const params = new URLSearchParams(location.search);
       const langParam = params.get('lang');
       if (langParam && supported.indexOf(langParam) >= 0) return langParam;
-      // 2) Existing PCD user preference
+      // 2) Existing PCD user preference (legacy localStorage state).
+      // NOT (v2.44.163b): uygulama v2.6.92'den beri IDB-only çalışıyor, bu
+      // anahtar normalde YOK — yani bu dal pratikte hiç tetiklenmiyor. Zararsız
+      // olduğu için bırakıldı (eski cihazda kalmış state'i hâlâ okur), ama
+      // paylaşılan sayfanın dili gerçekte (1) ?lang= veya (3) tarayıcı dili ile
+      // belirlenir. Belgenin kendi dili gerekiyorsa payload._lang kullanılır
+      // (bkz. renderSharePage).
       try {
         const raw = localStorage.getItem('pcd_state');
         if (raw) {
@@ -549,7 +563,7 @@
       // v2.44.163 - kucuk birim fiyatlarda 2 hane satiri dogrulanamaz kiliyordu
       // (0.0111 -> $0.01 x 100 g = $1.11 gorunmuyor). Uygulama ici maliyet
       // raporuyla ayni hassasiyet: <0.1 -> 4 hane, <1 -> 3 hane, aksi 2.
-      const upDec = function (v) { const a = Math.abs(v); return (a > 0 && a < 0.1) ? 4 : ((a > 0 && a < 1) ? 3 : 2); };
+      const upDec = function (v) { const a = Math.abs(v); return (a > 0 && a < 1) ? 4 : 2; };
       const up = (row.unitPrice != null) ? (cur + (Number(row.unitPrice) || 0).toLocaleString('en-US', { minimumFractionDigits: upDec(Number(row.unitPrice) || 0), maximumFractionDigits: upDec(Number(row.unitPrice) || 0) }) + (row.stockUnit ? '/' + row.stockUnit : '')) : '—';
       const qty = num(row.amount) + (row.qtyUnit ? ' ' + row.qtyUnit : '');
       const sub = row.isSub ? ' <span class="ct-sub">SUB</span>' : '';
@@ -579,7 +593,16 @@
     // ("Ingredients", "Method", "servings", etc.) render in their language.
     // Recipe content (steps, plating) stays in the owner's original language
     // — that's correct, we don't want to machine-translate user content.
-    const viewerLocale = autoDetectShareLocale();
+    //
+    // v2.44.163b — İSTİSNA: gövdesi ÖNCEDEN render edilmiş paylaşımlar
+    // (etkinlik teklifi — `p.html` snapshot'ta hazır HTML olarak durur).
+    // Orada gövde paylaşanın dilindedir; sayfanın canlı çizilen kalanını
+    // (imza paneli) izleyicinin tarayıcı diline göre çizmek TEK BELGEYİ
+    // karışık dile sokuyordu. Böyle paylaşımlarda belgenin kendi dili
+    // (`p._lang`) esas alınır. Eski paylaşımlarda `_lang` yoktur → eski
+    // davranış (tarayıcı dili) korunur; "paylaş"a tekrar basınca tazelenir.
+    const docLocale = (p && p.html && p._lang) ? p._lang : null;
+    const viewerLocale = docLocale || autoDetectShareLocale();
     // v2.44.163 — setLocale ASENKRON (en dışındaki diller dinamik fetch ile
     // gelir) ve dönüşü beklenmiyordu: sayfa `en` bundle'ıyla bir kez çizilip
     // öyle kalıyordu. Snapshot'tan gelen gövde (paylaşanın dilinde, örn. TR)

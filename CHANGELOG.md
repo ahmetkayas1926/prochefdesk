@@ -4,6 +4,16 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.164 — v2.44.163 canlı doğrulaması: 2 artık düzeltildi · 2026-08-04
+
+v2.44.163 push edildikten sonra 17 düzeltmenin tamamı canlıda tek tek doğrulandı. İkisi tam kapanmamıştı:
+
+- **Paylaşılan teklif hâlâ karışık dilde açılıyordu.** v2.44.163 dil yüklemesini beklemeye başlamıştı ama asıl neden farklıydı: gövde snapshot'tan **paylaşanın** dilinde geliyor, sayfanın canlı çizilen kısmı (imza paneli) ise **izleyicinin tarayıcı** diline göre çiziliyordu — TR bir teklif, İngilizce tarayıcıda "Fiyatlandırma … Sign & Submit" olarak açılıyordu. Artık paylaşanın dili snapshot'a gömülüyor (`payload._lang`) ve gövdesi önceden render edilmiş paylaşımlarda (etkinlik teklifi) belgenin kendi dili esas alınıyor. Tarif/menü paylaşımlarında izleyicinin dili davranışı korunuyor. Eski linkler "paylaş"a tekrar basınca tazelenir.
+  - Aynı yerde: `autoDetectShareLocale` içindeki "kullanıcı tercihi" dalı `localStorage['pcd_state']` okuyordu — uygulama v2.6.92'den beri IDB-only, yani bu dal hiç tetiklenmiyordu. Zararsız olduğu için bırakıldı, yanıltmaması için not düşüldü.
+- **Birim fiyat yuvarlaması 0.1–1 aralığında hâlâ satırı tutturmuyordu.** Tarak $0.1055/g → "$0.106/g" basılıp 300 g için $31.80 gösteriyordu, satır maliyeti $31.67'ydi. 1 doların altındaki tüm birim fiyatlar 4 haneye çıkarıldı (uygulama içi maliyet raporu + paylaşılan maliyet sayfası aynı).
+
+---
+
 ## v2.44.163 — Pro hesapla uçtan uca kullanım testi: 17 bulgu düzeltildi · 2026-08-04
 
 Canlı Pro hesapta izole bir test workspace'inde tüm araçlar uçtan uca kullanıldı (demo veri → malzeme/tarif/menü kurma → stok sayımı → sipariş → mal kabul → satış → HACCP → etkinlik → büfe → vardiya → çıktı/paylaşım → yedek). Bulunan 17 sorunun tamamı bu pakette düzeltildi.

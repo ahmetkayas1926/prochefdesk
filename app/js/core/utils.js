@@ -245,9 +245,12 @@
     const sym = cfg ? cfg.symbol : currency;
     const n = Number(amount);
     const abs = Math.abs(n);
+    // v2.44.163b — 1 doların altındaki tüm birim fiyatlar 4 hane. 3 hane
+    // bırakılan 0.1–1 aralığında satır hâlâ tutmuyordu: tarak $0.1055/g
+    // "$0.106/g" basılıp 300 g için $31.80 gösteriyor, satır maliyeti ise
+    // $31.67'ydi (13 kuruş fark). 4 haneyle fark kuruş altına iner.
     let decimals = 2;
-    if (abs > 0 && abs < 0.1) decimals = 4;
-    else if (abs > 0 && abs < 1) decimals = 3;
+    if (abs > 0 && abs < 1) decimals = 4;
     const sign = n < 0 ? '-' : '';
     return sign + sym + abs.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
   };
