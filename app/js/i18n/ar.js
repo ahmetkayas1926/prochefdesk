@@ -3803,3 +3803,13 @@ window.PCD.i18n.register('ar', {
   pc_batch_yield_ingredients: "1 دفعة = {y} · {i} مكوّنات",
   pc_batch_total: "{n} × {y} = {total}",
 });
+
+// v2.44.169 — سلة المحذوفات (الجداول/التحضير/البوفيهات/اللوحات) + تنبيه المزامنة للخطة المجانية
+window.PCD.i18n.register('ar', {
+  trash_section_rosters: "جداول المناوبات",
+  trash_section_prep: "قوائم التحضير",
+  trash_section_buffets: "البوفيهات",
+  trash_section_whiteboards: "اللوحات",
+  cloud_sync_off: "النسخ الاحتياطي السحابي متوقف",
+  cloud_sync_off_desc: "الخطة المجانية — تبقى بياناتك على هذا الجهاز فقط. قم بالترقية إلى Pro للنسخ الاحتياطي والمزامنة بين الأجهزة.",
+});

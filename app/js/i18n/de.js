@@ -3804,3 +3804,13 @@ window.PCD.i18n.register('de', {
   pc_batch_yield_ingredients: "1 Ansatz = {y} · {i} Zutaten",
   pc_batch_total: "{n} × {y} = {total}",
 });
+
+// v2.44.169 — Papierkorb (Dienstpläne/Prep/Buffets/Whiteboards) + Free-Plan Sync-Hinweis
+window.PCD.i18n.register('de', {
+  trash_section_rosters: "Dienstpläne",
+  trash_section_prep: "Prep-Listen",
+  trash_section_buffets: "Buffets",
+  trash_section_whiteboards: "Whiteboards",
+  cloud_sync_off: "Cloud-Backup ist aus",
+  cloud_sync_off_desc: "Free-Plan — deine Daten bleiben nur auf diesem Gerät. Mit Pro sicherst und synchronisierst du über alle Geräte.",
+});

@@ -3975,3 +3975,13 @@ window.PCD.i18n.register('en', {
   pc_batch_yield_ingredients: "1 batch = {y} · {i} ingredients",
   pc_batch_total: "{n} × {y} = {total}",
 });
+
+// v2.44.169 — Trash coverage (rosters/prep/buffets/whiteboards) + free-plan sync notice
+window.PCD.i18n.register('en', {
+  trash_section_rosters: "Rosters",
+  trash_section_prep: "Prep sheets",
+  trash_section_buffets: "Buffets",
+  trash_section_whiteboards: "Whiteboards",
+  cloud_sync_off: "Cloud backup is off",
+  cloud_sync_off_desc: "Free plan — your data stays on this device only. Upgrade to back up and sync across devices.",
+});

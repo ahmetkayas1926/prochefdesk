@@ -589,6 +589,15 @@
     return map[stateKey] || null;
   }
 
+  // v2.44.169 — Trash'te görünen array-tablolar (state şekli: { wsId: [items] }).
+  // MAP tabloların aksine bunlar upsertInTable'dan geçmez; geri yükleme/kalıcı
+  // silme buluta queueArraySync / queueDelete ile bildirilir.
+  const ARRAY_TRASH_TABLES = ['buffets', 'whiteboards'];
+  function _arrayStateKeyToSqlTable(stateKey) {
+    const map = { 'buffets': 'buffets', 'whiteboards': 'whiteboards' };
+    return map[stateKey] || null;
+  }
+
   // v2.6.44 — Photo orphan check: walks ALL recipes (across every
   // workspace, including soft-deleted) and returns true if any recipe
   // OTHER than the excluded one still references this photo URL.
@@ -1543,27 +1552,56 @@
         if (i._deletedAt) out.push({ table: 'ingredients', id: i.id, item: i, label: i.name || ((PCD.i18n && PCD.i18n.t) ? PCD.i18n.t('trash_label_ingredient') : 'Ingredient'), deletedAt: i._deletedAt });
       });
       // Generic ws-bound tables
-      ['menus','events','suppliers','canvases','shoppingLists','checklistTemplates'].forEach(function (table) {
+      // v2.44.169 — rosters + prepSheets eklendi. Denetimde çıktı: bu araçların
+      // silinen kaydı soft-delete ile duruyordu ama Trash'te HİÇ görünmediği için
+      // kullanıcı geri alamıyordu (kurtarma yolu yok = fiilen kalıcı silme).
+      ['menus','events','suppliers','canvases','shoppingLists','checklistTemplates','rosters','prepSheets'].forEach(function (table) {
         const data = (state[table] && state[table][wsId]) || {};
         Object.values(data).forEach(function (it) {
           if (it._deletedAt) out.push({ table: table, id: it.id, item: it, label: it.name || it.title || ((PCD.i18n && PCD.i18n.t) ? PCD.i18n.t('trash_label_item') : 'Item'), deletedAt: it._deletedAt });
         });
       });
+      // v2.44.169 — Array-tablolar (buffets, whiteboards): { wsId: [ ...items ] }
+      // Aynı gerekçe; bu ikisi de "belge" niteliğinde ve yanlışlıkla silinmesi
+      // kullanıcı için pahalı. Log tabloları (waste/salesLog/checklistSessions)
+      // ve HACCP formları bilinçli olarak DIŞARIDA — Trash listesini kalabalık
+      // yapar ve tek tek geri alma ihtiyacı yok.
+      ARRAY_TRASH_TABLES.forEach(function (key) {
+        const arr = (state[key] && state[key][wsId]) || [];
+        if (!Array.isArray(arr)) return;
+        arr.forEach(function (it) {
+          if (it && it._deletedAt) out.push({ table: key, id: it.id, item: it, label: it.name || it.title || ((PCD.i18n && PCD.i18n.t) ? PCD.i18n.t('trash_label_item') : 'Item'), deletedAt: it._deletedAt });
+        });
+      });
       return out.sort(function (a, b) { return (b.deletedAt || '').localeCompare(a.deletedAt || ''); });
     },
 
+    // v2.44.169 — KRİTİK FIX: geri yükleme buluta HİÇ bildirilmiyordu.
+    // Eskiden yalnızca yerel state'teki _deletedAt siliniyordu; sunucudaki
+    // satırın deleted_at damgası olduğu gibi kalıyordu. Bir sonraki pull'da
+    // merge (en-yeni-kazanır) sunucunun silme damgasını tekrar uyguluyor →
+    // kullanıcı kaydı geri yüklüyor, sayfayı yenileyince kayıt yine çöpte,
+    // 30 gün sonra sunucu cron'u KALICI siliyor. Denetimde canlı doğrulandı.
+    // Fix iki parçalı: (1) queueUpsert ile temizlenmiş kaydı buluta yaz,
+    // (2) updatedAt'i tazele ki restore, silme damgasından daha yeni olsun
+    // (başka bir cihazda bekleyen eski kopya restore'u geri ezmesin).
     restoreFromTrash: function (table, id) {
       const wsId = currentWsId();
+      const _now = new Date().toISOString();
+      function _push(sqlTable, rec) {
+        if (sqlTable && PCD.cloudPerTable) PCD.cloudPerTable.queueUpsert(sqlTable, id, wsId, rec);
+      }
       if (table === 'recipes') {
         if (!state.recipes[wsId] || !state.recipes[wsId][id]) return false;
         const recipes = Object.assign({}, state.recipes);
         recipes[wsId] = Object.assign({}, recipes[wsId]);
-        const r = Object.assign({}, recipes[wsId][id]);
+        const r = Object.assign({}, recipes[wsId][id], { updatedAt: _now });
         delete r._deletedAt;
         recipes[wsId][id] = r;
         state.recipes = recipes;
         emit('recipes', recipes[wsId], null);
         persist();
+        _push('recipes', r);
         return true;
       }
       if (table === 'ingredients') {
@@ -1571,31 +1609,80 @@
         if (!wsIngs[id]) return false;
         const ings = Object.assign({}, state.ingredients);
         const newWsIngs = Object.assign({}, wsIngs);
-        const i = Object.assign({}, newWsIngs[id]);
+        const i = Object.assign({}, newWsIngs[id], { updatedAt: _now });
         delete i._deletedAt;
         newWsIngs[id] = i;
         ings[wsId] = newWsIngs;
         state.ingredients = ings;
         emit('ingredients', newWsIngs, null);
         persist();
+        _push('ingredients', i);
+        return true;
+      }
+      // Array-tablolar (buffets, whiteboards): { wsId: [items] }
+      if (ARRAY_TRASH_TABLES.indexOf(table) >= 0) {
+        const arr = (state[table] && state[table][wsId]) || [];
+        if (!Array.isArray(arr)) return false;
+        const idx = arr.findIndex(function (x) { return x && x.id === id; });
+        if (idx < 0) return false;
+        const oldArr = arr.slice();
+        const next = arr.slice();
+        const it = Object.assign({}, next[idx], { updatedAt: _now });
+        delete it._deletedAt;
+        next[idx] = it;
+        const root = Object.assign({}, state[table]);
+        root[wsId] = next;
+        state[table] = root;
+        emit(table, next, null);
+        persist();
+        const sqlTable = _arrayStateKeyToSqlTable(table);
+        if (sqlTable && PCD.cloudPerTable && PCD.cloudPerTable.queueArraySync) {
+          PCD.cloudPerTable.queueArraySync(sqlTable, wsId, oldArr, next);
+        }
         return true;
       }
       if (state[table] && state[table][wsId] && state[table][wsId][id]) {
         const root = Object.assign({}, state[table]);
         root[wsId] = Object.assign({}, root[wsId]);
-        const it = Object.assign({}, root[wsId][id]);
+        const it = Object.assign({}, root[wsId][id], { updatedAt: _now });
         delete it._deletedAt;
         root[wsId][id] = it;
         state[table] = root;
         emit(table, root[wsId], null);
         persist();
+        _push(_stateKeyToSqlTable(table), it);
         return true;
       }
       return false;
     },
 
+    // v2.44.169 — KRİTİK FIX: "kalıcı sil" yalnızca yerelde siliyordu; sunucudaki
+    // satır (soft-deleted halde) duruyordu ve bir sonraki pull kaydı çöp kutusuna
+    // geri getiriyordu. Tarif fotoğrafı ise Storage'dan silindiği için geri gelen
+    // kayıtta ölü link kalıyordu. Artık kalıcı silme buluta da gidiyor.
     purgeFromTrash: function (table, id) {
       const wsId = currentWsId();
+      function _cloudDelete(sqlTable) {
+        if (sqlTable && PCD.cloudPerTable && PCD.cloudPerTable.queueDelete) {
+          PCD.cloudPerTable.queueDelete(sqlTable, id, wsId);
+        }
+      }
+      // Array-tablolar (buffets, whiteboards)
+      if (ARRAY_TRASH_TABLES.indexOf(table) >= 0) {
+        const arr = (state[table] && state[table][wsId]) || [];
+        if (!Array.isArray(arr)) return false;
+        const idx = arr.findIndex(function (x) { return x && x.id === id; });
+        if (idx < 0) return false;
+        const next = arr.slice();
+        next.splice(idx, 1);
+        const root = Object.assign({}, state[table]);
+        root[wsId] = next;
+        state[table] = root;
+        emit(table, next, null);
+        persist();
+        _cloudDelete(_arrayStateKeyToSqlTable(table));
+        return true;
+      }
       if (table === 'recipes') {
         if (!state.recipes[wsId] || !state.recipes[wsId][id]) return false;
         // v2.6.44 — Capture photo URL before deletion so we can clean up
@@ -1607,6 +1694,7 @@
         state.recipes = recipes;
         emit('recipes', recipes[wsId], null);
         persist();
+        _cloudDelete('recipes');
         if (_purgePhoto && PCD.photoStorage && PCD.photoStorage.deleteByUrl) {
           if (!isPhotoStillUsed(_purgePhoto, id)) {
             PCD.photoStorage.deleteByUrl(_purgePhoto);
@@ -1624,6 +1712,7 @@
         state.ingredients = ings;
         emit('ingredients', newWsIngs, null);
         persist();
+        _cloudDelete('ingredients');
         return true;
       }
       if (state[table] && state[table][wsId] && state[table][wsId][id]) {
@@ -1633,6 +1722,7 @@
         state[table] = root;
         emit(table, root[wsId], null);
         persist();
+        _cloudDelete(_stateKeyToSqlTable(table));
         return true;
       }
       return false;

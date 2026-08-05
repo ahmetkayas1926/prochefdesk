@@ -3968,3 +3968,13 @@ window.PCD.i18n.register('tr', {
   pc_batch_yield_ingredients: "1 batch = {y} · {i} malzeme",
   pc_batch_total: "{n} × {y} = {total}",
 });
+
+// v2.44.169 — Çöp kutusu kapsamı (vardiya/prep/büfe/beyaz tahta) + free plan senkron uyarısı
+window.PCD.i18n.register('tr', {
+  trash_section_rosters: "Vardiya çizelgeleri",
+  trash_section_prep: "Prep listeleri",
+  trash_section_buffets: "Büfeler",
+  trash_section_whiteboards: "Beyaz tahtalar",
+  cloud_sync_off: "Bulut yedekleme kapalı",
+  cloud_sync_off_desc: "Free plan — verileriniz yalnızca bu cihazda kalır. Yedekleme ve cihazlar arası senkron için Pro'ya geçin.",
+});

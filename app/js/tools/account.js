@@ -267,14 +267,22 @@
         <div class="section-title" style="font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">${t('data_and_sync')}</div>
         <div class="card">
           <div class="card-body" style="padding:0;">
-            ${user && PCD.cloud.ready ? `
+            ${user && PCD.cloud.ready ? ((PCD.gate && PCD.gate.canSync && !PCD.gate.canSync()) ? `
+              <button class="tappable" id="syncOffBtn" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;border-bottom:1px solid var(--border);">
+                <div style="flex:1;">
+                  <div style="font-weight:600;color:var(--warning,#b45309);">${t('cloud_sync_off')}</div>
+                  <div class="text-muted text-sm">${t('cloud_sync_off_desc')}</div>
+                </div>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            ` : `
               <div class="flex items-center justify-between" style="padding:14px 16px;border-bottom:1px solid var(--border);">
                 <div style="flex:1;">
                   <div style="font-weight:600;">${t('cloud_sync')}</div>
                   <div class="text-muted text-sm">${t('last_synced')}: ${meta.lastSyncAt ? PCD.fmtRelTime(meta.lastSyncAt) : '—'}</div>
                 </div>
               </div>
-            ` : ''}
+            `) : ''}
             <button class="tappable" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:0;background:transparent;text-align:start;border-bottom:1px solid var(--border);" id="trashBtn">
               <div>
                 <div style="font-weight:600;">🗑 ${t('trash_title')}</div>
@@ -629,12 +637,41 @@
       openPublicProfilePreview(u);
     });
 
+    // v2.44.169 — Free planda bulut push kapalı; eskiden bu durum hiçbir yerde
+    // yazmıyordu (denetim bulgusu: kullanıcı verisinin artık yedeklenmediğini
+    // öğrenemiyordu). Uyarı satırına tıklayınca upgrade duvarı açılır.
+    const syncOffBtn = PCD.$('#syncOffBtn', view);
+    if (syncOffBtn) syncOffBtn.addEventListener('click', function () {
+      if (PCD.gate && PCD.gate.showUpgradeModal) PCD.gate.showUpgradeModal({ feature: 'sync' });
+    });
+
     PCD.$('#exportDataBtn', view).addEventListener('click', function () {
       const state = PCD.store.get();
+      // v2.44.169 — Yedek dosyası ham kimlik numaraları içeriyordu
+      // (ör. "ingredientId": "i_msfdfin2_56x2mg") — dosyayı açan şef veya
+      // muhasebeci hiçbir satırı okuyamıyordu. `_names` sözlüğü id → ad
+      // eşlemesini veriyor. Bilerek `data`nın DIŞINDA: geri yükleme akışı
+      // yalnız `parsed.data`yı okur, dolayısıyla state'e sızmaz.
+      const _names = { workspaces: {}, recipes: {}, ingredients: {}, suppliers: {} };
+      try {
+        Object.keys(state.workspaces || {}).forEach(function (id) {
+          const w = state.workspaces[id]; if (w) _names.workspaces[id] = w.name || '';
+        });
+        ['recipes', 'ingredients', 'suppliers'].forEach(function (key) {
+          const byWs = state[key] || {};
+          Object.keys(byWs).forEach(function (wsId) {
+            const rows = byWs[wsId] || {};
+            Object.keys(rows).forEach(function (id) {
+              const r = rows[id]; if (r && r.name) _names[key][id] = r.name;
+            });
+          });
+        });
+      } catch (e) { /* isim sözlüğü best-effort — yedeğin kendisi her hâlükârda iner */ }
       const payload = {
         exportedAt: new Date().toISOString(),
         version: window.PCD_CONFIG.APP_VERSION,
-        data: state
+        data: state,
+        _names: _names
       };
       PCD.download(JSON.stringify(payload, null, 2), 'prochefdesk-backup-' + new Date().toISOString().slice(0, 10) + '.json', 'application/json');
       PCD.toast.success('✓ ' + t('backup_downloaded'));
@@ -1749,6 +1786,11 @@
         canvases: { name: t('trash_section_canvases'), icon: 'id-card' },
         shoppingLists: { name: t('trash_section_shopping'), icon: 'shopping-cart' },
         checklistTemplates: { name: t('trash_section_checklists'), icon: 'check-square' },
+        // v2.44.169 — Trash kapsamına eklenen araçlar (store.listTrash ile birebir)
+        rosters: { name: t('trash_section_rosters'), icon: 'users' },
+        prepSheets: { name: t('trash_section_prep'), icon: 'file-text' },
+        buffets: { name: t('trash_section_buffets'), icon: 'chef-hat' },
+        whiteboards: { name: t('trash_section_whiteboards'), icon: 'grid' },
       };
 
       const grouped = {};

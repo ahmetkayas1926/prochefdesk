@@ -3804,3 +3804,13 @@ window.PCD.i18n.register('fr', {
   pc_batch_yield_ingredients: "1 lot = {y} · {i} ingrédients",
   pc_batch_total: "{n} × {y} = {total}",
 });
+
+// v2.44.169 — Corbeille (plannings/prep/buffets/tableaux) + avis de synchro plan Free
+window.PCD.i18n.register('fr', {
+  trash_section_rosters: "Plannings",
+  trash_section_prep: "Fiches de prep",
+  trash_section_buffets: "Buffets",
+  trash_section_whiteboards: "Tableaux",
+  cloud_sync_off: "Sauvegarde cloud désactivée",
+  cloud_sync_off_desc: "Plan Free — vos données restent uniquement sur cet appareil. Passez à Pro pour sauvegarder et synchroniser sur tous vos appareils.",
+});

@@ -874,6 +874,11 @@
     queueFullState: queueFullState,
     // v2.8.4 — logout / demo cleanup için queue temizleme
     clearQueue: clearQueue,
+    // v2.44.169 — Kuyruğu debounce'u beklemeden HEMEN IDB'ye yaz. Sekme
+    // kapanışında (visibilitychange/pagehide) çağrılır: yazımdan sonraki ilk
+    // 250 ms içinde sekme kapanırsa kuyruk diske hiç ulaşmıyordu → kayıt
+    // buluta da gitmiyordu (denetimde canlı doğrulandı).
+    persistNow: _persistQueueNow,
     // Re-flush queued items when back online
     onOnline: function () {
       if (queue.length) scheduleFlush();

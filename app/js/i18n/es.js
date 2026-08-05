@@ -3804,3 +3804,13 @@ window.PCD.i18n.register('es', {
   pc_batch_yield_ingredients: "1 lote = {y} · {i} ingredientes",
   pc_batch_total: "{n} × {y} = {total}",
 });
+
+// v2.44.169 — Papelera (turnos/prep/bufés/pizarras) + aviso de sincronización plan Free
+window.PCD.i18n.register('es', {
+  trash_section_rosters: "Turnos",
+  trash_section_prep: "Hojas de preparación",
+  trash_section_buffets: "Bufés",
+  trash_section_whiteboards: "Pizarras",
+  cloud_sync_off: "Copia en la nube desactivada",
+  cloud_sync_off_desc: "Plan Free — tus datos se quedan solo en este dispositivo. Pasa a Pro para respaldar y sincronizar entre dispositivos.",
+});

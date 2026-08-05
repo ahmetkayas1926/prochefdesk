@@ -30,6 +30,23 @@
     }
     try { PCD.store.autoPurgeOldTrash && PCD.store.autoPurgeOldTrash(30); } catch (e) {}
 
+    // v2.44.169 — Sekme kapanışında zorunlu flush.
+    // Yerel yazım 400 ms, sync kuyruğunun diske yazımı 250 ms debounce'lu.
+    // Kaydettikten sonraki bu ilk yarım saniye içinde sekme kapanırsa (mobilde
+    // uygulamayı arka plana atıp kapatmak dahil) kayıt ne IndexedDB'ye ne de
+    // buluta ulaşıyordu — denetimde canlı doğrulandı (0,12 sn → kayıp,
+    // 0,7 sn → sağlam). 'visibilitychange: hidden' bilinçli seçim: 'unload'
+    // bfcache'te güvenilmez ve mobilde çoğu zaman hiç tetiklenmez.
+    function _flushBeforeUnload() {
+      try { PCD.store && PCD.store.flush && PCD.store.flush(); } catch (e) {}
+      try { PCD.cloudPerTable && PCD.cloudPerTable.persistNow && PCD.cloudPerTable.persistNow(); } catch (e) {}
+      try { PCD.cloudPerTable && PCD.cloudPerTable.flushNow && PCD.cloudPerTable.flushNow(); } catch (e) {}
+    }
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'hidden') _flushBeforeUnload();
+    });
+    window.addEventListener('pagehide', _flushBeforeUnload);
+
     // 2) Apply saved theme BEFORE showing UI
     const savedTheme = PCD.store.get('prefs.theme') || 'light';
     document.documentElement.setAttribute('data-theme', savedTheme);

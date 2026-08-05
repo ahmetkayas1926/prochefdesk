@@ -4,6 +4,31 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.169 — Altyapı & veri bütünlüğü denetiminin düzeltmeleri · 2026-08-05
+
+Denetim kod okuması + canlı Pro hesapta ölçümle yapıldı; her bulgu iki kez, bağımsız deneyle doğrulandı. **Veri yazma tarafı temizdi** (23 tablonun hepsi buluta tam gidiyor, pull/realtime kapsamı eksiksiz, gece yedeği tüm tabloları içeriyor). Bozuk olan **geri alma, silme ve bir güvenlik ayarıydı**.
+
+**Veri kaybı (bulut):**
+- **Çöp kutusundan geri yükleme kalıcı değildi.** `restoreFromTrash` yalnız yerel `_deletedAt` bayrağını siliyordu; sunucudaki `deleted_at` damgası olduğu gibi kalıyordu. Bir sonraki pull merge'i (en-yeni-kazanır) silmeyi yeniden uyguluyor → kullanıcı kaydı geri yüklüyor, sayfayı yenileyince kayıt yine çöpte, 30 gün sonra sunucu cron'u KALICI siliyor. Canlı doğrulandı (sil → geri yükle → yenile → kayıt yok). Düzeltme iki parçalı: temizlenmiş kayıt `queueUpsert` ile buluta yazılır **ve** `updatedAt` tazelenir (başka cihazda bekleyen eski kopya restore'u geri ezmesin).
+- **"Kalıcı sil" bulutta uygulanmıyordu.** `purgeFromTrash` kaydı yalnız yerelden siliyordu; sunucuda soft-deleted halde duran satır bir sonraki pull'da çöp kutusuna geri geliyordu — üstelik tarif fotoğrafı Storage'dan silindiği için geri gelen kayıtta ölü link kalıyordu. Artık `queueDelete` ile sunucudan da siliniyor.
+- **Kaydettikten sonraki ilk yarım saniyede sekme kapanırsa kayıt tamamen uçuyordu.** Yerel yazım 400 ms, sync kuyruğunun diske yazımı 250 ms debounce'lu; sayfa kapanışında zorla flush eden bir mekanizma yoktu (`beforeunload`/`pagehide`/`visibilitychange` handler'ı repoda hiç yoktu). Ölçüm: 0,12 sn sonra yenileme → kayıt ne IndexedDB'de ne bulutta; 0,7 sn → sağlam. `visibilitychange: hidden` + `pagehide` üzerinde store flush + kuyruk persist + push eklendi (`unload` bilinçli olarak kullanılmadı — bfcache'te güvenilmez, mobilde çoğu zaman hiç tetiklenmez).
+
+**Kurtarma:**
+- **Çöp kutusu araçların yarısını kapsamıyordu.** Vardiya çizelgesi, prep listesi, büfe ve beyaz tahta silindiğinde kayıt soft-delete ile duruyordu ama Trash'te hiç görünmediği için geri alınamıyordu (fiilen kalıcı silme). Dördü de artık listeleniyor; array-tablolar (büfe/beyaz tahta) için geri yükleme `queueArraySync`, kalıcı silme `queueDelete` ile buluta gidiyor. Log tabloları (atık/satış/checklist oturumu) ve HACCP formları bilinçli olarak dışarıda — listeyi kalabalıklaştırır.
+
+**Şeffaflık:**
+- **Free'ye düşen kullanıcı bulut yedeklemesinin kapandığını hiçbir yerde göremiyordu.** Hesap ekranındaki "Bulut senkronu · son senkron" satırı free planda yanıltıcıydı (push kapalı olduğu halde senkron varmış gibi duruyordu). Free'de artık yerine uyarı satırı çıkıyor; tıklayınca Pro duvarı açılıyor. 6 dile eklendi.
+- **Yedek JSON'u ham kimlik numaraları içeriyordu** (`"ingredientId": "i_msfdfin2_56x2mg"`) — dosyayı açan şef/muhasebeci hiçbir satırı okuyamıyordu. Dosyaya `_names` sözlüğü eklendi (workspace/tarif/malzeme/tedarikçi id → ad). Bilerek `data`nın dışında: geri yükleme yalnız `parsed.data`yı okur, state'e sızmaz.
+
+**Fotoğraf temizliği (Edge Function — elle deploy gerekir):**
+- `cleanup-photos` yalnızca `recipes.data.photo` referanslarına bakıyordu. İki koruma eklendi: (a) bulutta hiç tarifi olmayan kullanıcının klasörüne dokunulmaz — free planda tarif satırı buluta hiç gitmediği için o kullanıcının TÜM fotoğrafları "sahipsiz" sayılıp silinebiliyordu; (b) 7 günden yeni dosyalar asla silinmez (yükleme ile kaydın buluta ulaşması arasındaki pencere). Ayrıca `public_shares.payload.photo` artık canlı referans sayılıyor — paylaşılan teklif/tarif sayfasındaki görsel kırılmıyor.
+
+**SQL ayağı — `migrations/v2.44.169-audit-fixes.sql` (Supabase'de elle çalıştırılmalı):**
+- **`public_shares` tablosu herkese açık listeleniyordu.** Oturum açmamış bir ziyaretçi bile, sitenin herkese açık anon anahtarıyla düz bir HTTP isteği atıp TÜM kullanıcıların paylaşım satırlarını dökebiliyordu — cost-share payload'ları (malzeme maliyetleri, ciro, food cost %) dahil. Kök neden kodda değil: `v2.6.39` migration'ı canlıda hiç çalıştırılmamış, v2.5.7'nin `USING (true)` politikası ayakta kalmıştı. Aynı istekle `recipes`/`events` 0 satır dönüyor — sorun bu tabloya özgü.
+- **Workspace silme cascade'i 7 tabloyu atlıyordu** (rosters · prep_sheets · haccp_receiving · haccp_holding · buffets · whiteboards · sales_log): canlı trigger v2.8.44 öncesi sürümde kalmış. 30 gün sonra temizlik cron'u workspace satırını silince bu satırlar sahipsiz kalıyor ve bir daha hiç temizlenmiyor. Denetim hesabında tek bir eski workspace altında **384 erişilemez satır** ölçüldü. Migration trigger'ları günceller, 30-gün temizlik listesini tamamlar ve sahipsiz satırları sayan/silen iki yardımcı fonksiyon ekler.
+
+---
+
 ## v2.44.168 — Üçüncü Pro testinin kalan 6 bulgusu · 2026-08-05
 
 v2.44.167'de metin doğruluğu kapatılmıştı; bu paket aynı testin kalan bulgularını kapatıyor.
