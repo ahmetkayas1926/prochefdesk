@@ -3369,7 +3369,7 @@ window.PCD.i18n.register('tr', {
   sup_g_t: "Tedarikçiler nasıl çalışır",
   sup_g1: "İletişim ve kategoriyle tedarikçi ekle, malzemeleri tedarikçiye bağla.",
   sup_g2: "Sipariş oluştur ve WhatsApp veya e-posta ile gönder.",
-  sup_g3: "Teslim günleri ve minimumları sakla; yeniden sipariş kolay olsun.",
+  sup_g3: "Gönderilen kalemler teslim alınana kadar \"yolda\" işaretlenir; aynı şey iki kez sipariş edilmez.",
   waste_g_t: "Fire kaydı nasıl çalışır",
   waste_g1: "Ne attığını kaydet — malzeme, tarif veya özel kalem — ve sebebini.",
   waste_g2: "Kaybedilen parayı hesaplarız; istersen aynı anda stoktan da düş.",

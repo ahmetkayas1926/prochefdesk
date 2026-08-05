@@ -4,6 +4,21 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.167 — Üçüncü Pro uçtan uca test: metin doğruluğu + 2 küçük düzeltme · 2026-08-05
+
+Canlı Pro hesapta sıfırdan bir workspace kurulup (Nonna Rosa Bistro) tüm araçlar yeniden uçtan uca kullanıldı: alt-tarif + menü tarifi oluşturma → malzeme fiyat değişikliğinin tüm zincire yansıması → menü + etkinlik + büfe → stok sayımı/satış/sipariş/fire döngüsü → varyans → HACCP 4 form + Denetim Paketi → vardiya → mutfak kartları/beyaz tahta/kontrol listeleri → besin/batch/menü mühendisliği → Discover → paylaşım linki. Bu pakette **satılan özelliğin gerçekte var olduğunu doğrulayan metin düzeltmeleri** + 2 küçük hata var.
+
+**Var olmayan özelliği anlatan pazarlama metni (landing, 6 dil):**
+- **Mutfak Kartları "ölçeklenmiş porsiyon, vurgulu alerjenler" diyordu.** `kitchen_cards.js`'te alerjen render'ı hiç yok (0 referans) ve kartta porsiyon ölçekleme kontrolü yok — kart tarifin kendi porsiyonunu basar. Metin aracın gerçekte yaptığı işe çevrildi: büyük yazı, malzeme + yöntem, sürükle-bırak ızgara.
+- **Tedarikçiler "teslim süreleri" diyordu.** Tedarikçi editöründe alanlar: ad, ilgili kişi, kategori, telefon, WhatsApp, e-posta, not — teslim günü/minimum sipariş alanı YOK. Ayrıca ES/FR/DE/AR metinleri "telefonla ara" kanalını sayıyordu; gerçek kanallar WhatsApp/SMS/E-posta/Paylaş. Metin gerçek kanallara + gerçekten var olan "yolda (on-order)" korumasına çevrildi.
+- Aynı iddia uygulama içindeki Tedarikçiler rehber kartında da vardı (`sup_g3`, 6 dil: "Teslim günleri ve minimumları sakla") — o da aracın gerçek davranışıyla değiştirildi.
+
+**Düzeltmeler:**
+- **Tarif editöründe ikinci etiket Enter ile kayboluyordu.** `#recipeTagInput`'ta `data-skip-enter="true"` yoktu: etiket ekleme handler'ı çalışıp input'a focus veriyor, ardından modal'ın genel "Enter → sonraki alan" kuralı focus'u **Hazırlık (dk)** sayı kutusuna atıyordu. Şef ikinci etiketi yazınca metin sayı kutusuna gidip sessizce yok oluyordu (canlı testte birebir üretildi: "italyan" eklendi, "makarna" kayboldu). Hızlı-malzeme-ekle kutusunda zaten olan attribute etiket kutusuna da eklendi; fare ile "+ Ekle" yolu zaten çalışıyordu.
+- **Sipariş sonrası "stoğa ekle?" sorusunda İngilizce buton.** `not_now` anahtarı hiçbir dilde tanımlı değil (yalnız `gate_not_now` var) → Türkçe/İspanyolca/Fransızca/Almanca/Arapça arayüzde buton "Not now" çıkıyordu. Var olan `gate_not_now` anahtarına bağlandı.
+
+---
+
 ## v2.44.166 — İkinci Pro uçtan uca test: 5 bulgu düzeltildi · 2026-08-05
 
 Canlı Pro hesapta tüm araçlar yeniden uçtan uca kullanıldı (malzeme → tarif → menü → etkinlik + **müşteri e-imzası** → büfe → vardiya → stok sayımı → sipariş döngüsü → HACCP + Denetim Paketi → çıktı/paylaşım → dil/tema/workspace). v2.44.163'te yakalanmamış 5 sorun çıktı; hepsi bu pakette.

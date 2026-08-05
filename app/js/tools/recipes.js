@@ -2889,7 +2889,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
           <div class="text-muted text-sm" style="font-size:12px;margin-bottom:6px;">${t('recipe_tags_hint') || 'e.g. italian, summer, gluten-free, brunch. Used for filtering recipes.'}</div>
           <div id="recipeTagsList" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;"></div>
           <div style="position:relative;">
-            <input type="text" class="input" id="recipeTagInput" placeholder="${PCD.escapeHtml(t('recipe_tag_add_ph') || 'Type tag + Enter')}" autocomplete="off">
+            <input type="text" class="input" id="recipeTagInput" placeholder="${PCD.escapeHtml(t('recipe_tag_add_ph') || 'Type tag + Enter')}" autocomplete="off" data-skip-enter="true">
             <div id="recipeTagSuggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);box-shadow:var(--shadow-md);max-height:200px;overflow-y:auto;z-index:10;margin-top:2px;"></div>
           </div>
         </div>

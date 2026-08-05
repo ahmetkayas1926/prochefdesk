@@ -3394,7 +3394,7 @@ window.PCD.i18n.register('en', {
   sup_g_t: "How suppliers work",
   sup_g1: "Add suppliers with contact and category, and link ingredients to a supplier.",
   sup_g2: "Build an order and send it via WhatsApp or email.",
-  sup_g3: "Store delivery days and minimums so reorders are quick.",
+  sup_g3: "Sent items are flagged on-order until they arrive, so nothing gets ordered twice.",
   waste_g_t: "How the waste log works",
   waste_g1: "Log what you threw away — an ingredient, a recipe or a custom item — and why.",
   waste_g2: "We calculate the money lost; optionally deduct it from stock at the same time.",

@@ -3162,7 +3162,7 @@ window.PCD.i18n.register('fr', {
   sup_g_t: "Comment fonctionnent les fournisseurs",
   sup_g1: "Ajoutez des fournisseurs avec contact et catégorie, et liez des ingrédients à un fournisseur.",
   sup_g2: "Créez une commande et envoyez-la par WhatsApp ou email.",
-  sup_g3: "Enregistrez les jours de livraison et les minimums pour accélérer les réapprovisionnements.",
+  sup_g3: "Les articles envoyés restent marqués « commandés » jusqu'à réception, pour ne rien commander deux fois.",
   waste_g_t: "Comment fonctionne le journal de déchets",
   waste_g1: "Enregistrez ce que vous avez jeté — un ingrédient, une recette ou un article personnalisé — et la raison.",
   waste_g2: "Nous calculons l'argent perdu ; déduisez-le optionnellement du stock en même temps.",

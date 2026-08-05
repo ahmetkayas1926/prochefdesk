@@ -3162,7 +3162,7 @@ window.PCD.i18n.register('de', {
   sup_g_t: "So funktionieren Lieferanten",
   sup_g1: "Fügen Sie Lieferanten mit Kontakt und Kategorie hinzu und verknüpfen Sie Zutaten mit einem Lieferanten.",
   sup_g2: "Erstellen Sie eine Bestellung und senden Sie sie per WhatsApp oder E-Mail.",
-  sup_g3: "Speichern Sie Liefertage und Mindestmengen, damit Nachbestellungen schnell gehen.",
+  sup_g3: "Gesendete Positionen bleiben bis zum Wareneingang als bestellt markiert — so wird nichts doppelt bestellt.",
   waste_g_t: "So funktioniert das Abfallprotokoll",
   waste_g1: "Erfassen Sie, was Sie weggeworfen haben — eine Zutat, ein Rezept oder ein benutzerdefinierter Artikel — und warum.",
   waste_g2: "Wir berechnen den Geldverlust; optional gleichzeitig vom Bestand abziehen.",

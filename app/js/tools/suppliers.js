@@ -531,7 +531,7 @@
         title: tt('sup_add_stock_q_title', 'Add this order to stock?'),
         text: tt('sup_add_stock_q', 'Tracking inventory? Add these items to your stock now. If you only use the order sheet, skip this.'),
         okText: tt('sup_receive_add', 'Add to stock'),
-        cancelText: tt('not_now', 'Not now'),
+        cancelText: tt('gate_not_now', 'Not now'),
       }).then(function (ok) {
         if (ok) openReceiveStock(fresh, lastOrder, function () {});
         rerender();

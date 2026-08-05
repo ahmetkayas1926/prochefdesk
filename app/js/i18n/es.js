@@ -3162,7 +3162,7 @@ window.PCD.i18n.register('es', {
   sup_g_t: "Cómo funcionan los proveedores",
   sup_g1: "Añade proveedores con contacto y categoría, y vincula ingredientes a un proveedor.",
   sup_g2: "Crea un pedido y envíalo por WhatsApp o email.",
-  sup_g3: "Guarda días de entrega y mínimos para que los reencargos sean rápidos.",
+  sup_g3: "Los artículos enviados quedan marcados como pedidos hasta que llegan, así nada se pide dos veces.",
   waste_g_t: "Cómo funciona el registro de mermas",
   waste_g1: "Registra lo que tiraste — un ingrediente, una receta o un ítem personalizado — y el motivo.",
   waste_g2: "Calculamos el dinero perdido; opcionalmente lo deducimos del stock al mismo tiempo.",
