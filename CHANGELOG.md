@@ -4,6 +4,18 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.170 — Hesap değişiminde önceki hesabın verisi temizlenmiyordu · 2026-08-05
+
+v2.44.169 denetiminde bulunan "sahipsiz 386 satır"ın kök nedeni. `auth.js`'teki yerel veri temizliği yalnız **"misafir demo → ilk giriş"** durumunu kapsıyordu (`seeded && !hasUser`). Bir hesaptan diğerine geçişte `hasUser` dolu olduğu için temizlik atlanıyor, önceki hesabın workspace'leri ve kayıtları yerelde kalıyordu; ardından pull sonrası drift self-heal bunları **yeni hesabın user_id'siyle** buluta yazıyordu.
+
+Canlı kanıt: `ws_mr7yivc3_sdjmei` workspace kaydı bir hesaba (5 Temmuz'da açılmış, o gün bir kez giriş yapmış), altındaki 386 veri satırı ise BAŞKA bir hesaba ait. Parent bir kullanıcıda, çocuklar diğerinde — ikisi de o veriyi göremiyor, veri erişilemez halde sunucuda duruyor ve her gece yedeğe giriyor.
+
+Artık `SIGNED_IN`/`INITIAL_SESSION`'da yerel `user.id` ile oturumun `user.id`'si karşılaştırılıyor; farklıysa `clearUserData()` çalışıp önceki hesabın verisi (ve bekleyen sync kuyruğu) siliniyor, ardından yeni hesabın verisi buluttan çekiliyor. `TOKEN_REFRESHED` ve aynı hesapla yeniden giriş etkilenmez (id aynı → tetiklenmez).
+
+Not: bu sınıf hatanın kuyruk ayağı v2.8.4'te (logout sonrası kuyruk sızıntısı) kapatılmıştı; açık kalan taraf state'in kendisiydi.
+
+---
+
 ## v2.44.169 — Altyapı & veri bütünlüğü denetiminin düzeltmeleri · 2026-08-05
 
 Denetim kod okuması + canlı Pro hesapta ölçümle yapıldı; her bulgu iki kez, bağımsız deneyle doğrulandı. **Veri yazma tarafı temizdi** (23 tablonun hepsi buluta tam gidiyor, pull/realtime kapsamı eksiksiz, gece yedeği tüm tabloları içeriyor). Bozuk olan **geri alma, silme ve bir güvenlik ayarıydı**.

@@ -41,6 +41,21 @@
           }
 
           if (session && session.user) {
+            // v2.44.170 — HESAP DEĞİŞİMİ: önceki hesabın yerel verisi temizlenmeli.
+            // Yukarıdaki temizlik yalnız "misafir demo → ilk giriş" durumunu
+            // kapsıyordu (seeded && !hasUser). A hesabından B hesabına geçişte
+            // hasUser DOLU olduğu için temizlik atlanıyor, A'nın workspace'leri
+            // ve kayıtları yerelde kalıyordu; ardından pull sonrası drift
+            // self-heal bunları B'nin user_id'siyle buluta yazıyordu.
+            // Gerçek sonuç (denetimde bulundu): bir hesabın workspace'i altında
+            // BAŞKA bir hesabın 386 satırı — parent bir kullanıcıda, çocuklar
+            // diğerinde, ikisi de o veriyi göremiyor.
+            // TOKEN_REFRESHED / INITIAL_SESSION'da id aynı olduğu için tetiklenmez.
+            const _prevUser = PCD.store && PCD.store.get && PCD.store.get('user');
+            if (_prevUser && _prevUser.id && _prevUser.id !== session.user.id) {
+              PCD.log && PCD.log('auth: different account detected (' + _prevUser.id.slice(0, 8) + ' → ' + session.user.id.slice(0, 8) + ') — clearing previous account local data');
+              if (PCD.store.clearUserData) PCD.store.clearUserData();
+            }
             auth._setUser(session.user);
           }
           // BUG FIX (v2.6.9): On a fresh sign-in (history was cleared, etc.)
