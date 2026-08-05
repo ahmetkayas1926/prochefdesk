@@ -3796,3 +3796,11 @@ window.PCD.i18n.register('de', {
 window.PCD.i18n.register('de', {
   share_mode_cost: "Kostenansicht — privat",
 });
+
+// v2.44.168 — Batch-Rechner: Ein Prep/Unterrezept ist keine "1 Portion" — es hat
+// eine Ausbeute. Preps werden jetzt in Ansätzen skaliert.
+window.PCD.i18n.register('de', {
+  pc_batches: "Ansätze",
+  pc_batch_yield_ingredients: "1 Ansatz = {y} · {i} Zutaten",
+  pc_batch_total: "{n} × {y} = {total}",
+});

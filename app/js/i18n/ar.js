@@ -3796,3 +3796,10 @@ window.PCD.i18n.register('ar', {
 window.PCD.i18n.register('ar', {
   share_mode_cost: "عرض التكلفة — خاص",
 });
+
+// v2.44.168 — حاسبة الدفعات: التحضير/الوصفة الفرعية ليست "حصة واحدة" — لها إنتاجية.
+window.PCD.i18n.register('ar', {
+  pc_batches: "دفعات",
+  pc_batch_yield_ingredients: "1 دفعة = {y} · {i} مكوّنات",
+  pc_batch_total: "{n} × {y} = {total}",
+});

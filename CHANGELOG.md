@@ -4,6 +4,29 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.168 — Üçüncü Pro testinin kalan 6 bulgusu · 2026-08-05
+
+v2.44.167'de metin doğruluğu kapatılmıştı; bu paket aynı testin kalan bulgularını kapatıyor.
+
+**Sessiz veri kaybı (bulut):**
+- **Stok satırlarının bir kısmı buluta HİÇ gitmiyordu.** Supabase her denemede `null value in column "ingredient_id" of relation "inventory" violates not-null constraint` (23502) döndürüyordu. `inventory.js` kuyruğa koyarken `ingredient_id`'yi gömüyor, ama iki yol ham satırı geçiyordu: `cloud.js` drift self-heal (buluta gitmemiş yerel satırı yeniden iten koruma) ve `queueFullState` (yedekten geri yükleme). Yani "kendi kendini onaran" mekanizmanın kendisi bozuktu — satır her boot'ta yeniden denenip yeniden düşüyordu ve asla düzelemiyordu. Canlı ölçüm: yerelde 43 satır, bulutta 40 (Foie gras · Dark chocolate 70% · Gruyere — Stok ekranından elle dokunulmamış, demo seed'den gelen kalemler). Sonuç: ikinci cihazda o kalemlerin stoğu boş görünüyordu. Düzeltme tek noktada, satır kurucusunda: kuyruk anahtarı zaten ingredient id'si → `ingredient_id` fallback olarak oradan alınır, böylece mevcut ve gelecek tüm çağıranlar kapsanır.
+
+**Yanlış miktar üretebilen çıktı:**
+- **Batch Hesaplayıcı alt-tarifi "1 porsiyon" sayıyordu.** Verimi 5000 g olan ragù `servings=1` taşıdığı için varsayılan "50 porsiyon" 50 BATCH anlamına geliyor, föy 125 kg kıyma ile basılıyordu. Ölçek matematiği baştan beri doğruydu — yanıltan etiket ve varsayılandı. Artık prep'lerde birim "batch", varsayılan 1, listede "1 batch = 5000 g" ve sonuçta "3 × 5000 g = 15000 g" yazıyor. Ekran, print, Excel ve metin paylaşımı aynı varsayılanı kullanır.
+
+**Gıda güvenliği bilgisi:**
+- **Alt-tarife şefin işaretlediği alerjenler üst tarife çıkmıyordu.** v2.8.69 cascade'i yalnız `ingredient.allergens`'i zincirliyordu; şef bir hazırlığa (ör. ragù → kereviz + sülfit) alerjen işaretlediğinde bu bilgi tarifin kendi alanında durduğu için o hazırlığı kullanan yemekte görünmüyordu. Artık alt-tariflerin kendi işaretleri de toplanıyor (her alt-tarifin kendi `allergensExcluded`'ı kendi seviyesinde uygulanır, döngü koruması var) — matris, prep etiketi, menü kodları ve Discover'ın tamamı bu tek fonksiyondan beslendiği için hepsi birden düzeliyor.
+- **Örnek veride hiçbir malzemede alerjen yoktu (57/57).** Alerjen tespiti v2.8.37'den beri YALNIZ `ingredient.allergens`'e bakıyor; demo kütüphanesiyle yeni bir tarif kuran şef editörde tek bir çipin bile yanmadığını görüp özelliği bozuk sanıyordu. 21 malzemeye gerçek EU alerjenleri eklendi (süt · yumurta · gluten · balık · yumuşakça · kabuklu · sert kabuklu yemiş · kereviz · sülfit · hardal · soya) ve seed bu alanı artık aktarıyor.
+
+**Kendiyle çelişen belge / bayat ekran:**
+- **Maliyet Raporu başlığı sabit %30 basıyordu.** Satırlar tarifin kendi hedefini kullanıyordu (v2.44.113) ama PDF/Excel başlığı modül sabitini yazıyordu: hedefi %28 olan tek tarifin raporunda üstte "Hedef 30%", hemen altında "%28". Başlık artık gerçek hedeflerden türetiliyor (tek hedef → o değer, karışık → "24–30" aralığı; prep'ler hesaba katılmaz).
+- **Etkinlik editöründe yaz → hemen Kaydet, rakamı kaçırıyordu.** Para/sayı alanları 400 ms debounce ile yazılıyor; "Servis ücreti %" kutusuna 10 yazıp beklemeden kaydeden şefin Preview'ı 42 × $68 + %10 = $3.141,60 yerine $2.856,00 gösteriyordu (sayfa yenilenince düzeliyordu — yani müşteriye o ekrandan söylenen fiyat yanlış olabiliyordu). Kaydetmeden önce bekleyen tüm giriş alanları DOM'dan okunuyor; ayrıştırma kuralları ilgili handler'larla birebir aynı.
+
+**Görünüm:**
+- **Vardiya önizlemesi karanlık temada okunmuyordu.** Tablo beyaz A4 kâğıdı taklit ediyor ama hücreler metin rengini miras alıyordu → koyu temada `--text-1` (beyaza yakın) beyaz kâğıda düşüp personel adı, vardiya saatleri ve toplam sütunu görünmez oluyordu (kendi rengini yazan rol/OFF hücreleri okunduğu için gözden kaçmıştı). Hücrelere Deep Pine metin rengi açıkça yazıldı. Print/Excel/JPEG kendi belgesinde zaten siyah basıyordu — **çıktılar değişmedi**, yalnızca önizleme çıktıyla aynı hale geldi.
+
+---
+
 ## v2.44.167 — Üçüncü Pro uçtan uca test: metin doğruluğu + 2 küçük düzeltme · 2026-08-05
 
 Canlı Pro hesapta sıfırdan bir workspace kurulup (Nonna Rosa Bistro) tüm araçlar yeniden uçtan uca kullanıldı: alt-tarif + menü tarifi oluşturma → malzeme fiyat değişikliğinin tüm zincire yansıması → menü + etkinlik + büfe → stok sayımı/satış/sipariş/fire döngüsü → varyans → HACCP 4 form + Denetim Paketi → vardiya → mutfak kartları/beyaz tahta/kontrol listeleri → besin/batch/menü mühendisliği → Discover → paylaşım linki. Bu pakette **satılan özelliğin gerçekte var olduğunu doğrulayan metin düzeltmeleri** + 2 küçük hata var.

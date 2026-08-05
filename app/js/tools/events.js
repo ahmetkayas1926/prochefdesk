@@ -1531,10 +1531,56 @@
       data.venue = (fns[0] && fns[0].room) || '';
       data.menu = (fns[0] && fns[0].menu) || [];
     }
+    // v2.44.168 — DEBOUNCE YARIŞI: yaz → hemen Kaydet.
+    // Editördeki para/sayı alanları 400ms debounce ile `data`ya yazılıyor. Şef
+    // "Servis ücreti %" kutusuna 10 yazıp beklemeden Kaydet'e basınca kayıt (ve
+    // hemen ardından açılan Preview) o rakamı görmüyordu: canlı testte 42 kişi ×
+    // $68 + %10 servis = $3.141,60 olması gerekirken Preview "$2.856,00" gösterdi,
+    // rakam ancak sayfa yenilenince düzeldi — müşteriye o ekrandan fiyat söylenirse
+    // yanlış olur. Kaydetmeden önce bekleyen tüm giriş alanları DOM'dan okunur;
+    // ayrıştırma kuralları ilgili debounce handler'larıyla birebir aynıdır.
+    function flushPendingEdits() {
+      const q = function (sel) { return Array.prototype.slice.call(body.querySelectorAll(sel)); };
+      const num = function (el) { const v = parseFloat(el.value); return (!isNaN(v) && v > 0) ? v : null; };
+      const numOr0 = function (el) { const v = parseFloat(el.value); return (!isNaN(v) && v > 0) ? v : 0; };
+      const intOr0 = function (el) { const v = parseInt(el.value, 10); return (!isNaN(v) && v > 0) ? v : 0; };
+      const idx = function (el, attr) { return parseInt(el.getAttribute(attr), 10); };
+
+      const ePrice = body.querySelector('#ePrice'); if (ePrice) data.pricePerHead = num(ePrice);
+      const eBudget = body.querySelector('#eBudget'); if (eBudget) data.budget = num(eBudget);
+      const eSvc = body.querySelector('#eSvc');
+      if (eSvc) {
+        const v = Math.max(0, Math.min(100, parseFloat(eSvc.value) || 0));
+        data.serviceChargePct = v || null;
+      }
+
+      q('.st-count').forEach(function (el) { const s2 = (data.staffing || [])[idx(el, 'data-st')]; if (s2) s2.count = numOr0(el); });
+      q('.st-hours').forEach(function (el) { const s2 = (data.staffing || [])[idx(el, 'data-st')]; if (s2) s2.hours = numOr0(el); });
+      q('.st-rate').forEach(function (el) { const s2 = (data.staffing || [])[idx(el, 'data-st')]; if (s2) s2.rate = numOr0(el); });
+      q('.ch-cost').forEach(function (el) { const c = (data.charges || [])[idx(el, 'data-ch')]; if (c) c.cost = numOr0(el); });
+      q('.ch-price').forEach(function (el) { const c = (data.charges || [])[idx(el, 'data-ch')]; if (c) c.price = numOr0(el); });
+      q('.pay-amount').forEach(function (el) {
+        const pmt = (data.payments || [])[idx(el, 'data-pay')]; if (!pmt) return;
+        const raw = (el.value || '').trim(); const v = parseFloat(raw);
+        pmt.amount = raw === '' ? null : ((!isNaN(v) && v > 0) ? v : 0);
+      });
+      q('.fn-guests').forEach(function (el) { const f = (data.functions || [])[idx(el, 'data-fn')]; if (f) f.guestCount = intOr0(el); });
+      q('.fn-guar').forEach(function (el) { const f = (data.functions || [])[idx(el, 'data-fn')]; if (f) f.guaranteedCount = intOr0(el); });
+      q('.fn-pph').forEach(function (el) {
+        const f = (data.functions || [])[idx(el, 'data-fn')]; const mi = idx(el, 'data-mi');
+        if (f && f.menu && f.menu[mi]) f.menu[mi].portionsPerGuest = numOr0(el);
+      });
+      q('.fn-amt').forEach(function (el) {
+        const f = (data.functions || [])[idx(el, 'data-fn')]; const mi = idx(el, 'data-mi');
+        if (f && f.menu && f.menu[mi]) f.menu[mi].amountPerGuest = numOr0(el);
+      });
+    }
+
     saveBtn.addEventListener('click', function () {
       if (PCD.gate && !PCD.gate.requireAuth()) return;
       if (!data.name || !data.name.trim()) { PCD.toast.error(t('event_name') + ' ' + t('required')); return; }
       if (existing) data.id = existing.id;
+      flushPendingEdits();
       syncFlatMirrorFields();
       // v2.44.161 fix — stok bir kez düşüldükten sonra misafir sayısı/menü
       // değiştirilip kaydedilse bile _stockDeductedAt hiç sıfırlanmıyordu;

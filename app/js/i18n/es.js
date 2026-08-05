@@ -3796,3 +3796,11 @@ window.PCD.i18n.register('es', {
 window.PCD.i18n.register('es', {
   share_mode_cost: "Vista de costes — privado",
 });
+
+// v2.44.168 — Calculadora de lotes: una prep/sub-receta no es "1 porción", tiene
+// un rendimiento. Las preps ahora se escalan por lotes.
+window.PCD.i18n.register('es', {
+  pc_batches: "lotes",
+  pc_batch_yield_ingredients: "1 lote = {y} · {i} ingredientes",
+  pc_batch_total: "{n} × {y} = {total}",
+});

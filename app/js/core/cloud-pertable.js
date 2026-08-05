@@ -414,7 +414,13 @@
             row.deleted_at = (it.data && it.data._deletedAt) || null;
           } else if (table === 'inventory') {
             row.workspace_id = it.wsId;
-            row.ingredient_id = it.data && it.data.ingredient_id;
+            // v2.44.168 — ingredient_id NOT NULL. inventory.js kuyruğa koyarken
+            // ingredient_id'yi data'ya gömüyor, AMA iki yol ham satırı geçiyordu:
+            // cloud.js drift self-heal ve queueFullState (yedekten geri yükleme).
+            // Bu satırlar 23502 ile HER boot'ta yeniden denenip yeniden düşüyordu
+            // → demo/seed veya elle dokunulmamış stok satırı buluta hiç gitmiyordu.
+            // Kuyruk anahtarı (it.id) zaten ingredient id'si → güvenli fallback.
+            row.ingredient_id = (it.data && it.data.ingredient_id) || it.id;
           } else if (table === 'user_prefs') {
             // user_prefs primary key user_id, id sütunu yok
             return {

@@ -3967,3 +3967,11 @@ window.PCD.i18n.register('en', {
 window.PCD.i18n.register('en', {
   share_mode_cost: "Cost view — private",
 });
+
+// v2.44.168 — Batch Calculator: a prep/sub-recipe is not "1 portion" — it has a
+// yield. Preps are now scaled in batches with the yield spelled out.
+window.PCD.i18n.register('en', {
+  pc_batches: "batches",
+  pc_batch_yield_ingredients: "1 batch = {y} · {i} ingredients",
+  pc_batch_total: "{n} × {y} = {total}",
+});

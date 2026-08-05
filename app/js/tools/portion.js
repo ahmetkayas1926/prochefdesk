@@ -15,6 +15,28 @@
   'use strict';
   const PCD = window.PCD;
 
+  // v2.44.168 — PREP/ALT-TARİF "1 PORSİYON" DEĞİLDİR (modül seviyesi yardımcılar;
+  // hem ekran hem print/Excel/paylaşım yolları aynı varsayılanı kullansın diye).
+  // Ölçek matematiği (factor = hedef / temel porsiyon) her zaman doğruydu; yanıltan
+  // etiket ve varsayılandı: verimi 5000 g olan bir ragù `servings=1` taşıdığı için
+  // "50 porsiyon" varsayılanıyla 50 BATCH'e (125 kg kıyma) ölçekleniyor ve föy
+  // öyle basılıyordu. Prep'te varsayılan artık 1 batch.
+  function isPrepR(r) {
+    return !!(PCD.recipes && PCD.recipes.isPrep
+      ? PCD.recipes.isPrep(r)
+      : (r && r.yieldAmount && r.yieldUnit));
+  }
+  function yieldLabel(r) {
+    if (!r || !r.yieldAmount || !r.yieldUnit) return '';
+    return PCD.fmtNumber(r.yieldAmount) + ' ' + r.yieldUnit;
+  }
+  // Kullanıcı bir değer yazdıysa o; yazmadıysa prep→1 batch, menü tarifi→fallback.
+  function pickTarget(r, portionsMap, fallback) {
+    const v = portionsMap && portionsMap[r.id];
+    if (v != null && v !== '') return v;
+    return isPrepR(r) ? 1 : fallback;
+  }
+
   function render(view) {
     const t = PCD.i18n.t;
     const recipes = PCD.store.listRecipes().sort(function (a, b) { return (a.name||'').localeCompare(b.name||''); });
@@ -45,6 +67,24 @@
     // kafa karıştırıyor." Yeni model: kullanıcı doğrudan her tarif için porsiyon
     // sayısı yazar. Internal default (ilk seçim başlangıç değeri) 50 portion.
     let guestCount = 50;
+
+    // v2.44.168 — prep'ler batch olarak ölçeklenir (yardımcılar modül seviyesinde).
+    function targetOf(r) { return pickTarget(r, portionsPerRecipe, guestCount); }
+    function unitLabel(r) {
+      return isPrepR(r) ? (t('pc_batches') || 'batches') : t('pc_portions');
+    }
+    // Prep'te "50× temel 1 porsiyondan" yerine "3 × 5000 g = 15000 g".
+    function scaleCaption(r, target, factor, baseServings) {
+      if (isPrepR(r) && r.yieldAmount && r.yieldUnit) {
+        return t('pc_batch_total', {
+          n: PCD.fmtNumber(target),
+          y: yieldLabel(r),
+          total: PCD.fmtNumber((Number(r.yieldAmount) || 0) * factor) + ' ' + r.yieldUnit,
+        });
+      }
+      return t('pc_factor_from_base', { factor: factor.toFixed(2), n: baseServings });
+    }
+
     // v2.13.2 — Görünüm modu: 'recipe' (tarif-tarif, varsayılan) | 'category' | 'supplier'
     // (birleştirilmiş malzeme listesi). Eski Shopping List'in konsolide görünümü buraya taşındı.
     let viewMode = 'recipe';
@@ -103,7 +143,11 @@
           '<input type="checkbox" data-rid="' + r.id + '"' + (isSel ? ' checked' : '') + ' style="width:18px;height:18px;accent-color:var(--brand-600);flex-shrink:0;">' +
           '<div style="flex:1;min-width:0;">' +
             '<div style="font-weight:600;font-size:14px;">' + PCD.escapeHtml(r.name) + '</div>' +
-            '<div class="text-muted" style="font-size:12px;">' + t('pc_servings_ingredients', { s: r.servings || 1, i: (r.ingredients || []).length }) + '</div>' +
+            '<div class="text-muted" style="font-size:12px;">' + (
+              (isPrepR(r) && yieldLabel(r))
+                ? t('pc_batch_yield_ingredients', { y: yieldLabel(r), i: (r.ingredients || []).length })
+                : t('pc_servings_ingredients', { s: r.servings || 1, i: (r.ingredients || []).length })
+            ) + '</div>' +
           '</div>';
         recipeListEl.appendChild(row);
       });
@@ -140,7 +184,7 @@
       let bodyHtml = '';
       if (viewMode === 'recipe') {
         selectedRecipes.forEach(function (r) {
-          const targetPortions = portionsPerRecipe[r.id] != null ? portionsPerRecipe[r.id] : guestCount;
+          const targetPortions = targetOf(r);
           const baseServings = r.servings || 1;
           const factor = targetPortions / baseServings;
 
@@ -169,12 +213,12 @@
                 '<div style="font-weight:700;font-size:16px;">' + PCD.escapeHtml(r.name) + '</div>' +
                 '<div class="flex items-center gap-2">' +
                   '<input type="number" class="input" data-rscale="' + r.id + '" value="' + targetPortions + '" min="1" step="1" style="width:80px;text-align:center;font-weight:700;">' +
-                  '<span class="text-muted text-sm">' + t('pc_portions') + '</span>' +
+                  '<span class="text-muted text-sm">' + unitLabel(r) + '</span>' +
                   '<span class="text-muted text-sm">·</span>' +
                   '<span style="font-weight:700;color:var(--brand-700);" data-recipe-cost="' + r.id + '">$0</span>' +
                 '</div>' +
               '</div>' +
-              '<div class="text-muted text-sm mb-2" data-recipe-factor="' + r.id + '">' + t('pc_factor_from_base', { factor: factor.toFixed(2), n: baseServings }) + '</div>' +
+              '<div class="text-muted text-sm mb-2" data-recipe-factor="' + r.id + '">' + scaleCaption(r, targetPortions, factor, baseServings) + '</div>' +
               '<table style="width:100%;border-collapse:collapse;font-size:14px;">' + ingsHtml + '</table>' +
             '</div>';
         });
@@ -184,11 +228,11 @@
           '<div class="card mb-3" style="padding:14px;">' +
             '<div style="font-weight:700;font-size:13px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">' + t('pc_step2') + '</div>' +
             selectedRecipes.map(function (r) {
-              const target = portionsPerRecipe[r.id] != null ? portionsPerRecipe[r.id] : guestCount;
+              const target = targetOf(r);
               return '<div class="flex items-center" style="justify-content:space-between;padding:6px 0;gap:10px;">' +
                 '<div style="flex:1;min-width:0;font-weight:600;font-size:14px;">' + PCD.escapeHtml(r.name) + '</div>' +
                 '<input type="number" class="input" data-rscale="' + r.id + '" value="' + target + '" min="1" step="1" style="width:80px;text-align:center;font-weight:700;">' +
-                '<span class="text-muted text-sm">' + t('pc_portions') + '</span>' +
+                '<span class="text-muted text-sm">' + unitLabel(r) + '</span>' +
               '</div>';
             }).join('') +
           '</div>';
@@ -253,7 +297,7 @@
       // mantığı doğru hesap. Recompute (live, kullanıcı portion input değişebilir).
       function _totalPortionsNow() {
         return selectedRecipes.reduce(function (s, r) {
-          return s + (portionsPerRecipe[r.id] != null ? portionsPerRecipe[r.id] : guestCount);
+          return s + targetOf(r);
         }, 0);
       }
       PCD.$('#pcPrint', resultEl).addEventListener('click', function () {
@@ -288,7 +332,7 @@
       let totalPortions = 0;
 
       selectedRecipes.forEach(function (r) {
-        const targetPortions = portionsPerRecipe[r.id] != null ? portionsPerRecipe[r.id] : guestCount;
+        const targetPortions = targetOf(r);
         totalPortions += targetPortions;
         const baseServings = r.servings || 1;
         const factor = targetPortions / baseServings;
@@ -300,7 +344,7 @@
         const costEl = resultEl.querySelector('[data-recipe-cost="' + r.id + '"]');
         if (costEl) costEl.textContent = PCD.fmtMoney(scaledCost);
         const factorEl = resultEl.querySelector('[data-recipe-factor="' + r.id + '"]');
-        if (factorEl) factorEl.textContent = t('pc_factor_from_base', { factor: factor.toFixed(2), n: baseServings });
+        if (factorEl) factorEl.textContent = scaleCaption(r, targetPortions, factor, baseServings);
 
         // v2.8.69 — Cells read base amount + unit from data attributes
         // (already set during buildResult flatten). Recompute scaledAmt.
@@ -343,7 +387,7 @@
       const listEl = resultEl.querySelector('#pcConsList');
       if (listEl) listEl.innerHTML = renderGroupsHtml(groupRows(res.rows, viewMode, t), viewMode);
       let totalPortions = 0;
-      selectedRecipes.forEach(function (r) { totalPortions += (portionsPerRecipe[r.id] != null ? portionsPerRecipe[r.id] : guestCount); });
+      selectedRecipes.forEach(function (r) { totalPortions += targetOf(r); });
       const sr = resultEl.querySelector('[data-stat-recipes]'); if (sr) sr.textContent = selectedRecipes.length;
       const stp = resultEl.querySelector('[data-stat-total-portions]'); if (stp) stp.textContent = totalPortions;
       const stc = resultEl.querySelector('[data-stat-total-cost]'); if (stc) stc.textContent = PCD.fmtMoney(res.total);
@@ -381,8 +425,15 @@
       const rid = this.getAttribute('data-rid');
       if (this.checked) {
         selected.add(rid);
-        // Initialize override to current guestCount so it stays in sync
-        if (portionsPerRecipe[rid] == null) portionsPerRecipe[rid] = guestCount;
+        // Initialize override to current guestCount so it stays in sync.
+        // v2.44.168 — prep/alt-tarif porsiyonla değil BATCH'le ölçeklendiği için
+        // başlangıç değeri 1 batch (50 batch = 50× verim, canlı testte 5 kg'lık
+        // ragù 125 kg'lık föy basmıştı). pickTarget aynı kuralı print/Excel/paylaşım
+        // yollarında da uygular.
+        if (portionsPerRecipe[rid] == null) {
+          const _r = recipes.find(function (x) { return x.id === rid; });
+          portionsPerRecipe[rid] = pickTarget(_r || { id: rid }, null, guestCount);
+        }
       } else {
         selected.delete(rid);
         delete portionsPerRecipe[rid];
@@ -406,7 +457,7 @@
     recipes.forEach(function (r) {
       // v2.8.92 — Fallback 50 (eski guestCount default'u). portionsMap[r.id]
       // her tarif için kullanıcı override'ı, override edilmemişse 50 portion.
-      const target = portionsMap[r.id] || 50;
+      const target = pickTarget(r, portionsMap, 50);
       const factor = target / (r.servings || 1);
       const baseCost = PCD.recipes.computeFoodCost(r, ingMap);
       const scaledCost = baseCost * factor;
@@ -492,7 +543,7 @@
       // v2.8.92 — Her tarif kendi portionsMap[r.id] override'ını kullanır.
       // Fallback: 50 portion (eski guestCount default'u). Genelde her tarif
       // override edildiği için fallback'e nadiren düşülür.
-      const target = portionsMap[r.id] || 50;
+      const target = pickTarget(r, portionsMap, 50);
       const factor = target / (r.servings || 1);
       const baseCost = PCD.recipes.computeFoodCost(r, ingMap);
       totalCost += baseCost * factor;
@@ -558,7 +609,7 @@
   function consolidateRows(selectedRecipes, portionsMap, defaultPortions, ingMap, recipeMap) {
     const merged = {};
     selectedRecipes.forEach(function (r) {
-      const target = portionsMap[r.id] != null ? portionsMap[r.id] : defaultPortions;
+      const target = pickTarget(r, portionsMap, defaultPortions);
       const factor = target / (r.servings || 1);
       const flat = PCD.recipes.flattenIngredients(r, ingMap, recipeMap, { scale: factor });
       flat.forEach(function (item) {
@@ -624,7 +675,7 @@
     const t = PCD.i18n.t;
     const res = consolidateRows(selectedRecipes, portionsMap, defaultPortions, ingMap, recipeMap);
     const groups = groupRows(res.rows, groupBy, t);
-    const totalPortions = selectedRecipes.reduce(function (s, r) { return s + (portionsMap[r.id] != null ? portionsMap[r.id] : defaultPortions); }, 0);
+    const totalPortions = selectedRecipes.reduce(function (s, r) { return s + pickTarget(r, portionsMap, defaultPortions); }, 0);
     const groupsHtml = Object.keys(groups).sort().map(function (g) {
       const rows = groups[g].map(function (c) {
         return '<tr><td>' + PCD.escapeHtml(c.ingredient.name) + '</td><td class="a">' + PCD.fmtNumber(c.totalAmount) + ' ' + PCD.escapeHtml(c.unit) + '</td><td class="a">' + PCD.fmtMoney(c.totalCost) + '</td></tr>';
@@ -681,7 +732,7 @@
 
   function _doExportPortionXLSX(selectedRecipes, portionsMap, defaultPortions, ingMap, recipeMap, viewMode) {
     const t = PCD.i18n.t;
-    const totalPortions = selectedRecipes.reduce(function (s, r) { return s + (portionsMap[r.id] != null ? portionsMap[r.id] : defaultPortions); }, 0);
+    const totalPortions = selectedRecipes.reduce(function (s, r) { return s + pickTarget(r, portionsMap, defaultPortions); }, 0);
     const dateStr = new Date().toLocaleDateString((PCD.i18n && PCD.i18n.currentLocale) || 'en');
     const subtitle = totalPortions + ' ' + (t('portion_total_portions_label') || 'total portions') + ' · ' +
       selectedRecipes.length + ' ' + (t('portion_recipes_label') || 'recipes') + ' · ' + dateStr;
@@ -693,7 +744,7 @@
       const rows = [];
       let total = 0;
       selectedRecipes.forEach(function (r) {
-        const target = portionsMap[r.id] != null ? portionsMap[r.id] : defaultPortions;
+        const target = pickTarget(r, portionsMap, defaultPortions);
         const factor = target / (r.servings || 1);
         const flat = PCD.recipes.flattenIngredients(r, ingMap, recipeMap, { scale: factor });
         flat.forEach(function (item) {

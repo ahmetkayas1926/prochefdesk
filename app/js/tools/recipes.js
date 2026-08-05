@@ -1327,6 +1327,25 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
   }
 
   // PDF: minimal, professional, image-free
+  // v2.44.168 — Rapor BAŞLIĞINDAKİ hedef food cost % artık sabit 30 değil.
+  // Satırlar zaten tarifin kendi `targetFoodCostPct`'ini kullanıyordu (v2.44.113),
+  // ama başlık modül sabitini basıyordu: hedefi %28 olan tek tarifin raporunda
+  // üstte "Hedef yemek maliyeti 30%", hemen altındaki satırda "%28" yazıyordu —
+  // aynı belge kendiyle çelişiyordu. Tek tarif/aynı hedef → o hedef; karışıksa
+  // aralık ("24–30"). Prep'lerin hedefi yok, hesaba katılmaz.
+  function reportTargetLabel(items, fallbackPct) {
+    const vals = [];
+    (items || []).forEach(function (it) {
+      if (it && it.recipe && PCD.recipes.isPrep && PCD.recipes.isPrep(it.recipe)) return;
+      const v = Number(it && it.target) || Number(fallbackPct) || 0;
+      if (v > 0 && vals.indexOf(v) < 0) vals.push(v);
+    });
+    if (vals.length === 0) return String(fallbackPct);
+    if (vals.length === 1) return String(vals[0]);
+    vals.sort(function (a, b) { return a - b; });
+    return vals[0] + '–' + vals[vals.length - 1];
+  }
+
   function exportCostReportPDF(items, targetPct, detailed) {
     const t = PCD.i18n.t;
     const ingMap = currentIngMap();
@@ -1451,7 +1470,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
       '<div class="report-header">' +
         '<div>' +
           '<h1>' + t('cr_title') + '</h1>' +
-          '<div class="sub">' + recipesText + ' · ' + t('cr_target_food_cost') + ' ' + targetPct + '%</div>' +
+          '<div class="sub">' + recipesText + ' · ' + t('cr_target_food_cost') + ' ' + reportTargetLabel(items, targetPct) + '%</div>' +
         '</div>' +
         '<div class="meta">' + dateStr + (wsName ? ' · ' + PCD.escapeHtml(wsName) : '') + '</div>' +
       '</div>' +
@@ -1682,7 +1701,7 @@ if (visible.length === 0 && !filter && activeTab === 'all') {
     const summaryWs = {};
     setCell(summaryWs, 'A1', t('cr_title') + ' · ' + t('cr_summary'), titleStyle);
     setCell(summaryWs, 'A2', t('cr_generated') + ': ' + new Date().toLocaleString((PCD.i18n && PCD.i18n.currentLocale) || 'en'), subtitleStyle);
-    setCell(summaryWs, 'A3', t('cr_target_food_cost') + ': ' + targetPct + '%', subtitleStyle);
+    setCell(summaryWs, 'A3', t('cr_target_food_cost') + ': ' + reportTargetLabel(items, targetPct) + '%', subtitleStyle);
 
     // Row 5: header
     const sumHeaderRow = 5;

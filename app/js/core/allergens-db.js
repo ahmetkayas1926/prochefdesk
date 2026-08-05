@@ -60,6 +60,31 @@
     return detected;
   }
 
+  // v2.44.168 — ALT-TARİFE ŞEFİN İŞARETLEDİĞİ ALERJENLER DE ÜST TARİFE ÇIKAR.
+  // v2.8.69'daki cascade yalnız `ingredient.allergens`'i zincirliyordu. Şef bir
+  // hazırlığa (ör. ragù) "kereviz + sülfit" işaretlediğinde bu bilgi tarifin
+  // KENDİ `allergens` alanında durur — malzemede değil. Sonuç: o ragù'yu kullanan
+  // Tagliatelle'de alerjen görünmüyordu (canlı testte birebir üretildi). Artık
+  // alt-tariflerin kendi işaretleri de toplanıyor; her alt-tarifin kendi
+  // `allergensExcluded`'ı kendi seviyesinde uygulanır, döngü koruması var.
+  function collectSubRecipeAllergens(recipe, recipeMap, set, seen) {
+    if (!recipe || !recipe.ingredients || !recipeMap) return;
+    recipe.ingredients.forEach(function (ri) {
+      if (!ri || ri.separator || !ri.recipeId) return;
+      if (seen[ri.recipeId]) return;
+      seen[ri.recipeId] = true;
+      const sub = recipeMap[ri.recipeId];
+      if (!sub) return;
+      const own = {};
+      (sub.allergens || []).forEach(function (k) {
+        if (ALLERGENS.find(function (a) { return a.key === k; })) own[k] = true;
+      });
+      (sub.allergensExcluded || []).forEach(function (k) { delete own[k]; });
+      Object.keys(own).forEach(function (k) { set[k] = true; });
+      collectSubRecipeAllergens(sub, recipeMap, set, seen);
+    });
+  }
+
   // Get recipe's allergen set (union of all ingredient allergens)
   // Accepts ingredients as array OR map keyed by id — tolerant API.
   function recipeAllergens(recipe, ingredients) {
@@ -79,8 +104,9 @@
     // v2.8.69 — Sub-recipe allergen cascade. Önceden marinade'de süt
     // olsa bile parent recipe'in allergen listesinde gözükmüyordu.
     // flattenIngredients ile sub-recipe ingredient'lar dahil olur.
+    const recipeMap = (PCD.recipes && PCD.recipes.buildRecipeMap) ? PCD.recipes.buildRecipeMap() : null;
     const flat = (PCD.recipes && PCD.recipes.flattenIngredients)
-      ? PCD.recipes.flattenIngredients(recipe, ingMap, PCD.recipes.buildRecipeMap())
+      ? PCD.recipes.flattenIngredients(recipe, ingMap, recipeMap)
       : recipe.ingredients.map(function (ri) {
           if (ri && ri.separator) return { ingredient: null };
           return { ingredient: ingMap[ri.ingredientId] };
@@ -93,6 +119,9 @@
       const tags = (ing.allergens && ing.allergens.length) ? ing.allergens : [];
       tags.forEach(function (k) { set[k] = true; });
     });
+
+    // v2.44.168 — alt-tariflerin şef-işaretli alerjenleri (malzeme seviyesi değil).
+    collectSubRecipeAllergens(recipe, recipeMap, set, {});
 
     // Also include explicit recipe-level allergens
     if (recipe.allergens) {

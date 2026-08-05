@@ -3960,3 +3960,11 @@ window.PCD.i18n.register('tr', {
 window.PCD.i18n.register('tr', {
   share_mode_cost: "Maliyet görünümü — özel",
 });
+
+// v2.44.168 — Batch Hesaplayıcı: prep/alt-tarif "1 porsiyon" değildir, verimi
+// vardır. Prep'ler artık batch olarak ölçekleniyor ve verim açıkça yazılıyor.
+window.PCD.i18n.register('tr', {
+  pc_batches: "batch",
+  pc_batch_yield_ingredients: "1 batch = {y} · {i} malzeme",
+  pc_batch_total: "{n} × {y} = {total}",
+});

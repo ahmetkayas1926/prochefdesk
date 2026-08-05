@@ -24,7 +24,7 @@
     { name: 'Shallot',                unit: 'g',  pricePerUnit: 0.009, category: 'cat_produce', supplier: 'Provencale Produce' },
     { name: 'Garlic',                 unit: 'g',  pricePerUnit: 0.012, category: 'cat_produce', supplier: 'Provencale Produce' },
     { name: 'Carrot',                 unit: 'g',  pricePerUnit: 0.003, category: 'cat_produce', supplier: 'Provencale Produce' },
-    { name: 'Celery',                 unit: 'g',  pricePerUnit: 0.004, category: 'cat_produce', supplier: 'Provencale Produce' },
+    { name: 'Celery',                 unit: 'g',  pricePerUnit: 0.004, category: 'cat_produce', supplier: 'Provencale Produce', allergens: ['celery'] },
     { name: 'Leek',                   unit: 'g',  pricePerUnit: 0.006, category: 'cat_produce', supplier: 'Provencale Produce' },
     { name: 'Fennel',                 unit: 'g',  pricePerUnit: 0.007, category: 'cat_produce', supplier: 'Provencale Produce' },
     { name: 'Roma tomato',            unit: 'g',  pricePerUnit: 0.005, category: 'cat_produce', supplier: 'Provencale Produce' },
@@ -35,16 +35,16 @@
     { name: 'Button mushrooms',       unit: 'g',  pricePerUnit: 0.012, category: 'cat_produce', supplier: 'Provencale Produce' },
     { name: 'Fresh thyme',            unit: 'g',  pricePerUnit: 0.060, category: 'cat_produce', supplier: 'Provencale Produce' },
     { name: 'Fresh parsley',          unit: 'g',  pricePerUnit: 0.045, category: 'cat_produce', supplier: 'Provencale Produce' },
-    { name: 'Walnuts',                unit: 'g',  pricePerUnit: 0.032, category: 'cat_dry_goods', supplier: 'Maison Dry Goods' },
+    { name: 'Walnuts',                unit: 'g',  pricePerUnit: 0.032, category: 'cat_dry_goods', supplier: 'Maison Dry Goods', allergens: ['nuts'] },
     { name: 'Mixed berries',          unit: 'g',  pricePerUnit: 0.024, category: 'cat_produce', supplier: 'Provencale Produce' },
     // Dairy & eggs
-    { name: 'Butter (unsalted)',      unit: 'g',  pricePerUnit: 0.013, category: 'cat_dairy',  supplier: 'Laiterie Dairy' },
-    { name: 'Pouring cream',          unit: 'ml', pricePerUnit: 0.008, category: 'cat_dairy',  supplier: 'Laiterie Dairy' },
-    { name: 'Egg yolks',              unit: 'pcs',pricePerUnit: 0.45,  category: 'cat_dairy',  supplier: 'Laiterie Dairy' },
-    { name: 'Eggs (free-range)',      unit: 'pcs',pricePerUnit: 0.50,  category: 'cat_dairy',  supplier: 'Laiterie Dairy' },
-    { name: 'Gruyere',                unit: 'g',  pricePerUnit: 0.038, category: 'cat_dairy',  supplier: 'Laiterie Dairy' },
-    { name: 'Goat cheese (chevre)',   unit: 'g',  pricePerUnit: 0.030, category: 'cat_dairy',  supplier: 'Laiterie Dairy' },
-    { name: 'Milk',                   unit: 'ml', pricePerUnit: 0.002, category: 'cat_dairy',  supplier: 'Laiterie Dairy' },
+    { name: 'Butter (unsalted)',      unit: 'g',  pricePerUnit: 0.013, category: 'cat_dairy',  supplier: 'Laiterie Dairy', allergens: ['dairy'] },
+    { name: 'Pouring cream',          unit: 'ml', pricePerUnit: 0.008, category: 'cat_dairy',  supplier: 'Laiterie Dairy', allergens: ['dairy'] },
+    { name: 'Egg yolks',              unit: 'pcs',pricePerUnit: 0.45,  category: 'cat_dairy',  supplier: 'Laiterie Dairy', allergens: ['eggs'] },
+    { name: 'Eggs (free-range)',      unit: 'pcs',pricePerUnit: 0.50,  category: 'cat_dairy',  supplier: 'Laiterie Dairy', allergens: ['eggs'] },
+    { name: 'Gruyere',                unit: 'g',  pricePerUnit: 0.038, category: 'cat_dairy',  supplier: 'Laiterie Dairy', allergens: ['dairy'] },
+    { name: 'Goat cheese (chevre)',   unit: 'g',  pricePerUnit: 0.030, category: 'cat_dairy',  supplier: 'Laiterie Dairy', allergens: ['dairy'] },
+    { name: 'Milk',                   unit: 'ml', pricePerUnit: 0.002, category: 'cat_dairy',  supplier: 'Laiterie Dairy', allergens: ['dairy'] },
     // Meat & poultry
     { name: 'Beef eye fillet',        unit: 'g',  pricePerUnit: 0.058, category: 'cat_meat',    supplier: 'Boucherie Meats', yieldPercent: 92 },
     { name: 'Beef tenderloin (lean)', unit: 'g',  pricePerUnit: 0.052, category: 'cat_meat',    supplier: 'Boucherie Meats', yieldPercent: 95 },
@@ -54,19 +54,19 @@
     { name: 'Foie gras',              unit: 'g',  pricePerUnit: 0.190, category: 'cat_meat',    supplier: 'Boucherie Meats' },
     { name: 'Bacon lardons',          unit: 'g',  pricePerUnit: 0.026, category: 'cat_meat',    supplier: 'Boucherie Meats' },
     // Seafood
-    { name: 'Scallops',               unit: 'g',  pricePerUnit: 0.095, category: 'cat_seafood', supplier: 'Marseille Seafood', yieldPercent: 90 },
-    { name: 'Sole fillet',            unit: 'g',  pricePerUnit: 0.048, category: 'cat_seafood', supplier: 'Marseille Seafood', yieldPercent: 88 },
-    { name: 'Mussels',                unit: 'g',  pricePerUnit: 0.012, category: 'cat_seafood', supplier: 'Marseille Seafood', yieldPercent: 40 },
-    { name: 'Prawns',                 unit: 'g',  pricePerUnit: 0.042, category: 'cat_seafood', supplier: 'Marseille Seafood', yieldPercent: 55 },
-    { name: 'Snapper fillet',         unit: 'g',  pricePerUnit: 0.038, category: 'cat_seafood', supplier: 'Marseille Seafood', yieldPercent: 85 },
+    { name: 'Scallops',               unit: 'g',  pricePerUnit: 0.095, category: 'cat_seafood', supplier: 'Marseille Seafood', yieldPercent: 90, allergens: ['molluscs'] },
+    { name: 'Sole fillet',            unit: 'g',  pricePerUnit: 0.048, category: 'cat_seafood', supplier: 'Marseille Seafood', yieldPercent: 88, allergens: ['fish'] },
+    { name: 'Mussels',                unit: 'g',  pricePerUnit: 0.012, category: 'cat_seafood', supplier: 'Marseille Seafood', yieldPercent: 40, allergens: ['molluscs'] },
+    { name: 'Prawns',                 unit: 'g',  pricePerUnit: 0.042, category: 'cat_seafood', supplier: 'Marseille Seafood', yieldPercent: 55, allergens: ['crustaceans'] },
+    { name: 'Snapper fillet',         unit: 'g',  pricePerUnit: 0.038, category: 'cat_seafood', supplier: 'Marseille Seafood', yieldPercent: 85, allergens: ['fish'] },
     { name: 'Saffron threads',        unit: 'g',  pricePerUnit: 4.00,  category: 'cat_spices',  supplier: 'Maison Dry Goods' },
     // Pantry / baking
-    { name: 'Baguette',               unit: 'g',  pricePerUnit: 0.005, category: 'cat_baking',  supplier: 'Boulangerie Wholesale' },
-    { name: 'Plain flour',            unit: 'g',  pricePerUnit: 0.003, category: 'cat_baking',  supplier: 'Boulangerie Wholesale' },
+    { name: 'Baguette',               unit: 'g',  pricePerUnit: 0.005, category: 'cat_baking',  supplier: 'Boulangerie Wholesale', allergens: ['gluten'] },
+    { name: 'Plain flour',            unit: 'g',  pricePerUnit: 0.003, category: 'cat_baking',  supplier: 'Boulangerie Wholesale', allergens: ['gluten'] },
     { name: 'Caster sugar',           unit: 'g',  pricePerUnit: 0.002, category: 'cat_baking',  supplier: 'Boulangerie Wholesale' },
-    { name: 'Dark chocolate 70%',     unit: 'g',  pricePerUnit: 0.028, category: 'cat_baking',  supplier: 'Maison Dry Goods' },
+    { name: 'Dark chocolate 70%',     unit: 'g',  pricePerUnit: 0.028, category: 'cat_baking',  supplier: 'Maison Dry Goods', allergens: ['soybeans'] },
     { name: 'Vanilla bean',           unit: 'pcs',pricePerUnit: 1.20,  category: 'cat_spices',  supplier: 'Maison Dry Goods' },
-    { name: 'Dijon mustard',          unit: 'g',  pricePerUnit: 0.012, category: 'cat_spices',  supplier: 'Maison Dry Goods' },
+    { name: 'Dijon mustard',          unit: 'g',  pricePerUnit: 0.012, category: 'cat_spices',  supplier: 'Maison Dry Goods', allergens: ['mustard'] },
     { name: 'Capers',                 unit: 'g',  pricePerUnit: 0.022, category: 'cat_produce', supplier: 'Maison Dry Goods' },
     { name: 'Cornichons',             unit: 'g',  pricePerUnit: 0.016, category: 'cat_produce', supplier: 'Maison Dry Goods' },
     { name: 'Green peppercorns',      unit: 'g',  pricePerUnit: 0.045, category: 'cat_spices',  supplier: 'Maison Dry Goods' },
@@ -74,11 +74,11 @@
     { name: 'Sea salt',               unit: 'g',  pricePerUnit: 0.003, category: 'cat_spices',  supplier: 'Maison Dry Goods' },
     { name: 'Honey',                  unit: 'g',  pricePerUnit: 0.014, category: 'cat_produce', supplier: 'Maison Dry Goods' },
     { name: 'Olive oil',              unit: 'ml', pricePerUnit: 0.012, category: 'cat_oils',    supplier: 'Maison Dry Goods' },
-    { name: 'Red wine',               unit: 'ml', pricePerUnit: 0.006, category: 'cat_beverages', supplier: 'Maison Dry Goods' },
-    { name: 'White wine',             unit: 'ml', pricePerUnit: 0.007, category: 'cat_beverages', supplier: 'Maison Dry Goods' },
+    { name: 'Red wine',               unit: 'ml', pricePerUnit: 0.006, category: 'cat_beverages', supplier: 'Maison Dry Goods', allergens: ['sulphites'] },
+    { name: 'White wine',             unit: 'ml', pricePerUnit: 0.007, category: 'cat_beverages', supplier: 'Maison Dry Goods', allergens: ['sulphites'] },
     { name: 'Cognac',                 unit: 'ml', pricePerUnit: 0.022, category: 'cat_beverages', supplier: 'Maison Dry Goods' },
     { name: 'Beef stock',             unit: 'ml', pricePerUnit: 0.004, category: 'cat_dry_goods', supplier: 'Maison Dry Goods' },
-    { name: 'Fish stock',             unit: 'ml', pricePerUnit: 0.005, category: 'cat_dry_goods', supplier: 'Marseille Seafood' },
+    { name: 'Fish stock',             unit: 'ml', pricePerUnit: 0.005, category: 'cat_dry_goods', supplier: 'Marseille Seafood', allergens: ['fish'] },
   ];
 
   function findId(list, name) {
@@ -96,6 +96,11 @@
         category: ing.category, supplier: ing.supplier || '', _demo: true,
       };
       if (ing.yieldPercent != null) obj.yieldPercent = ing.yieldPercent;
+      // v2.44.168 — malzeme alerjenleri de aktarılır. Önceden hiçbir demo
+      // malzemesinde `allergens` yoktu; alerjen tespiti YALNIZ ingredient.allergens'e
+      // baktığı için (v2.8.37) örnek veriyle yeni bir tarif kuran şef editörde tek
+      // bir alerjen çipi bile otomatik yanmıyordu — özellik bozuk sanılıyordu.
+      if (ing.allergens && ing.allergens.length) obj.allergens = ing.allergens.slice();
       return PCD.store.upsertIngredient(obj);
     });
     const I = function (n) { return findId(upserted, n); };

@@ -829,7 +829,14 @@
     const sub = (data.venue && data.name ? data.name + '  ·  ' : '') + weekRange(data);
     const fp = fontPx(data);
     const wt = data.bold ? '700' : '400';
-    const cb = 'border:1px solid #d6d3d1;padding:5px 7px;font-size:' + fp + 'px;text-align:center;vertical-align:middle;line-height:1.3;';
+    // v2.44.168 — `color` ARTIK AÇIKÇA YAZILIYOR. Tablo beyaz A4 kâğıdı taklit
+    // ediyor ama hücreler rengi miras alıyordu: uygulama içi canlı önizleme koyu
+    // temada `--text-1` (beyaza yakın) devralıp beyaz kâğıt üzerinde personel adı /
+    // vardiya saatleri / toplam sütununu okunmaz hale getiriyordu (rol ve OFF gibi
+    // kendi rengini yazan hücreler okunuyordu — o yüzden gözden kaçmış). Print,
+    // Excel ve JPEG zaten kendi belgesinde siyah basıyordu, yani çıktı DEĞİŞMEZ;
+    // bu satır yalnızca önizlemeyi çıktıyla aynı hale getirir (Deep Pine metin).
+    const cb = 'border:1px solid #d6d3d1;padding:5px 7px;font-size:' + fp + 'px;text-align:center;vertical-align:middle;line-height:1.3;color:#1c1917;';
     const hd = 'border:1px solid #d6d3d1;padding:5px 7px;font-size:' + (fp - 1) + 'px;text-align:center;vertical-align:middle;line-height:1.3;background:#16433a;color:#fff;font-weight:700;text-transform:uppercase;';
     // v2.41 — html2canvas 1.4.1 td/th `vertical-align:middle`'ı DOĞRU uyguluyor.
     // Eski flex-wrapper `align-items:center`'ı UYGULAMIYORDU → notlu (2-satırlık)

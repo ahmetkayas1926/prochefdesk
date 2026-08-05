@@ -3796,3 +3796,11 @@ window.PCD.i18n.register('fr', {
 window.PCD.i18n.register('fr', {
   share_mode_cost: "Vue des coûts — privé",
 });
+
+// v2.44.168 — Calculateur de lots : une prep/sous-recette n'est pas « 1 portion »,
+// elle a un rendement. Les preps sont désormais mises à l'échelle en lots.
+window.PCD.i18n.register('fr', {
+  pc_batches: "lots",
+  pc_batch_yield_ingredients: "1 lot = {y} · {i} ingrédients",
+  pc_batch_total: "{n} × {y} = {total}",
+});
