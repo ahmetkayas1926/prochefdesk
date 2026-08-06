@@ -4,6 +4,18 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.172 — Şef profili çıkış→giriş yolunda hâlâ sızıyordu · 2026-08-05
+
+Operatör gerçek iki hesapla test etti ve buldu: workspace/veri ayrımı doğru çalışıyordu ama **şef profili** (ad · unvan · konum · iş yeri · biyografi) diğer hesapta görünüyordu.
+
+v2.44.171'in kaçırdığı yol: `signOut` → `clearUserData` yerel `user`'ı siler ama `prefs.profile`'ı **bilerek korur** (v2.44.119: aynı hesapta profilin her girişte sıfırlanması bug'ıydı). Sonraki girişte artık "önceki kullanıcı" kaydı olmadığı için `!sameUser && prev.id` koşulu tetiklenmiyor → önceki şefin profili yeni hesaba geçiyordu. Bulutta o hesabın profili yoksa pull da düzeltmiyor (`prefs` merge'i yereli korur), ve kullanıcı o ekranda bir şey kaydederse yanlış profil buluta yazılıyordu.
+
+Çözüm: profil artık **sahibiyle damgalanıyor** (`prefs.profileOwnerId`, `clearUserData`'nın koruma listesinde). `_setUser`'da damga yeni kullanıcıdan farklıysa profil sıfırlanır, doğrusu buluttan gelir; aynı hesapta damga eşleşir ve hiçbir şey değişmez — v2.44.119'daki davranış korunur.
+
+Doğrulama (yerel, gerçek kod yolu): A profili → çıkış (profil + damga korunuyor) → B girişi → profil boş ✔ · aynı hesapla çıkış→giriş → profil korunuyor ✔
+
+---
+
 ## v2.44.171 — Hesap değişimi korumasının sağlamlaştırılması + profil sızıntısı · 2026-08-05
 
 v2.44.170'in gözden geçirmesinde iki eksik çıktı:

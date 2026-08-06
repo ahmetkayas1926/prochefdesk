@@ -149,6 +149,23 @@
         // Hesap değiştiyse profili de sıfırla; doğrusu buluttan gelir.
         try { PCD.store.set('prefs.profile', {}); } catch (e) { /* best-effort */ }
       }
+      // v2.44.172 — Profil SAHİP DAMGASI. Yukarıdaki kontrol yalnız "doğrudan
+      // hesap geçişi" durumunu yakalıyor; ÇIKIŞ YAPIP başka hesapla girme yolunu
+      // kaçırıyordu: signOut → clearUserData yerel user'ı siler ama prefs.profile'ı
+      // bilerek KORUR (v2.44.119) → sonraki girişte prev.id olmadığı için kontrol
+      // tetiklenmez → önceki şefin adı/rolü/işyeri/bio'su yeni hesapta görünür.
+      // Canlı testte doğrulandı (operatörün iki hesabı arasında sızdı).
+      // Profilin kime ait olduğunu ayrı tuttuğumuz için çıkış yapılsa da bilgi
+      // kaybolmuyor: sahip ≠ yeni kullanıcı → profil sıfırlanır, doğrusu
+      // buluttan gelir. Aynı hesap → damga eşleşir → hiçbir şey değişmez
+      // (v2.44.119'daki "profil her girişte sıfırlanıyor" bug'ı geri gelmez).
+      try {
+        const _profOwner = PCD.store.get('prefs.profileOwnerId');
+        if (_profOwner && _profOwner !== supaUser.id) {
+          PCD.store.set('prefs.profile', {});
+        }
+        PCD.store.set('prefs.profileOwnerId', supaUser.id);
+      } catch (e) { /* best-effort */ }
       const base = sameUser ? prev : {};
       const metaName = (supaUser.user_metadata && (supaUser.user_metadata.full_name || supaUser.user_metadata.name)) || '';
       const user = Object.assign({}, base, {

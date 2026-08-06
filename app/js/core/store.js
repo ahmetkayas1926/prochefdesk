@@ -1898,7 +1898,10 @@
       // profil "her girişte default'a dönüyor" bug'ı. İsim Google'dan tazelendiği
       // için hayatta kalıyordu, diğer alanlar uçuyordu.
       const savedPrefs = {};
-      const prefKeys = ['prefs.theme', 'prefs.locale', 'prefs.currency', 'prefs.haccpTempUnit', 'prefs.haccpCurrentLogId', 'prefs.profile'];
+      // v2.44.172 — profileOwnerId de korunur: profilin KİME ait olduğu bilgisi
+      // profille birlikte hayatta kalmazsa, çıkış sonrası farklı hesapla girişte
+      // damga kaybolur ve önceki şefin profili yeni hesaba sızar (auth.js _setUser).
+      const prefKeys = ['prefs.theme', 'prefs.locale', 'prefs.currency', 'prefs.haccpTempUnit', 'prefs.haccpCurrentLogId', 'prefs.profile', 'prefs.profileOwnerId'];
       prefKeys.forEach(function (k) {
         const v = state.prefs && state.prefs[k.replace('prefs.', '')];
         if (v !== undefined) savedPrefs[k] = v;
