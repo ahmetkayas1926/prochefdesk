@@ -41,21 +41,6 @@
           }
 
           if (session && session.user) {
-            // v2.44.170 — HESAP DEĞİŞİMİ: önceki hesabın yerel verisi temizlenmeli.
-            // Yukarıdaki temizlik yalnız "misafir demo → ilk giriş" durumunu
-            // kapsıyordu (seeded && !hasUser). A hesabından B hesabına geçişte
-            // hasUser DOLU olduğu için temizlik atlanıyor, A'nın workspace'leri
-            // ve kayıtları yerelde kalıyordu; ardından pull sonrası drift
-            // self-heal bunları B'nin user_id'siyle buluta yazıyordu.
-            // Gerçek sonuç (denetimde bulundu): bir hesabın workspace'i altında
-            // BAŞKA bir hesabın 386 satırı — parent bir kullanıcıda, çocuklar
-            // diğerinde, ikisi de o veriyi göremiyor.
-            // TOKEN_REFRESHED / INITIAL_SESSION'da id aynı olduğu için tetiklenmez.
-            const _prevUser = PCD.store && PCD.store.get && PCD.store.get('user');
-            if (_prevUser && _prevUser.id && _prevUser.id !== session.user.id) {
-              PCD.log && PCD.log('auth: different account detected (' + _prevUser.id.slice(0, 8) + ' → ' + session.user.id.slice(0, 8) + ') — clearing previous account local data');
-              if (PCD.store.clearUserData) PCD.store.clearUserData();
-            }
             auth._setUser(session.user);
           }
           // BUG FIX (v2.6.9): On a fresh sign-in (history was cleared, etc.)
@@ -140,6 +125,30 @@
       // never inherits the previous user's profile.
       const prev = PCD.store.get('user') || {};
       const sameUser = !!(prev && (prev.id === supaUser.id || (prev.email && prev.email === supaUser.email)));
+      // v2.44.170 — HESAP DEĞİŞİMİ: önceki hesabın yerel verisi temizlenmeli.
+      // Eskiden temizlik yalnız "misafir demo → ilk giriş" durumunu kapsıyordu
+      // (auth.js SIGNED_IN: seeded && !hasUser). A hesabından B hesabına geçişte
+      // hasUser DOLU olduğu için temizlik atlanıyor, A'nın workspace'leri ve
+      // kayıtları yerelde kalıyordu; ardından pull sonrası drift self-heal
+      // bunları B'nin user_id'siyle buluta yazıyordu. Denetimde bulunan gerçek
+      // sonuç: bir hesabın workspace'i altında BAŞKA bir hesabın 386 satırı —
+      // parent bir kullanıcıda, çocuklar diğerinde, ikisi de veriyi göremiyor.
+      //
+      // Kontrol BİLEREK _setUser içinde: oturum iki ayrı yoldan yükleniyor
+      // (onAuthStateChange olayları + init'teki getSession) ve ikisi de buradan
+      // geçiyor. Tek noktada tutmak, yeni bir giriş yolu eklendiğinde de korur.
+      // Aynı hesap (id VEYA e-posta eşleşmesi) → sameUser true → tetiklenmez;
+      // token yenileme ve oturum geri yükleme etkilenmez.
+      if (!sameUser && prev && prev.id) {
+        PCD.log && PCD.log('auth: different account (' + String(prev.id).slice(0, 8) + ' → ' + String(supaUser.id).slice(0, 8) + ') — clearing previous account local data');
+        if (PCD.store.clearUserData) PCD.store.clearUserData();
+        // clearUserData `prefs.profile`'ı bilerek korur (v2.44.119: aynı hesapta
+        // her girişte profilin sıfırlanması bug'ıydı). Ama FARKLI hesaba geçişte
+        // korumak, önceki şefin adı/rolü/işyeri/bio'sunun yeni hesapta görünmesi
+        // demek — pull gelene kadar, pull başarısız olursa kalıcı olarak.
+        // Hesap değiştiyse profili de sıfırla; doğrusu buluttan gelir.
+        try { PCD.store.set('prefs.profile', {}); } catch (e) { /* best-effort */ }
+      }
       const base = sameUser ? prev : {};
       const metaName = (supaUser.user_metadata && (supaUser.user_metadata.full_name || supaUser.user_metadata.name)) || '';
       const user = Object.assign({}, base, {

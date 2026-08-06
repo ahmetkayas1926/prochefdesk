@@ -4,6 +4,17 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.171 — Hesap değişimi korumasının sağlamlaştırılması + profil sızıntısı · 2026-08-05
+
+v2.44.170'in gözden geçirmesinde iki eksik çıktı:
+
+- **Koruma tek kod yolundaydı.** Kontrol `onAuthStateChange` içindeydi; oysa oturum iki ayrı yoldan yükleniyor (auth olayları **ve** `init()` içindeki `getSession()`). İkisi de `_setUser`'dan geçtiği için kontrol oraya taşındı — yeni bir giriş yolu eklense de koruma devrede kalır. Aynı hesap tespiti artık id **veya** e-posta eşleşmesiyle (mevcut `sameUser` mantığı), yani token yenileme ve oturum geri yükleme etkilenmiyor.
+- **Şef profili farklı hesaba sızıyordu.** `clearUserData` `prefs.profile`'ı bilerek korur (v2.44.119: aynı hesapta her girişte profilin sıfırlanması bug'ıydı). Ama hesap DEĞİŞTİĞİNDE korumak, önceki şefin adı/rolü/işyeri/bio'sunun yeni hesapta görünmesi demekti — bulut çekimi gelene kadar, çekim başarısız olursa kalıcı olarak. Hesap değiştiyse profil de sıfırlanıyor.
+
+Doğrulama (yerel kurulumda, gerçek kod yolu): A hesabı 19 tarif + profil → B girişi → tarif 0, profil boş, A'nın kaydı görünmüyor; aynı hesapla yeniden giriş → hiçbir şey silinmiyor.
+
+---
+
 ## v2.44.170 — Hesap değişiminde önceki hesabın verisi temizlenmiyordu · 2026-08-05
 
 v2.44.169 denetiminde bulunan "sahipsiz 386 satır"ın kök nedeni. `auth.js`'teki yerel veri temizliği yalnız **"misafir demo → ilk giriş"** durumunu kapsıyordu (`seeded && !hasUser`). Bir hesaptan diğerine geçişte `hasUser` dolu olduğu için temizlik atlanıyor, önceki hesabın workspace'leri ve kayıtları yerelde kalıyordu; ardından pull sonrası drift self-heal bunları **yeni hesabın user_id'siyle** buluta yazıyordu.
