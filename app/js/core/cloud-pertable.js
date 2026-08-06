@@ -84,8 +84,44 @@
   const QUEUE_PERSIST_DELAY_MS = 250;
   let _queuePersistTimer = null;
 
+  // v2.44.173 — SENKRON ACİL YEDEK (localStorage).
+  // IndexedDB yazımı da fetch de ASENKRON: sekme kapanırken tarayıcı ikisini de
+  // iptal eder. v2.44.169'da eklenen pagehide/visibilitychange flush'ı bu yüzden
+  // işe yaramıyordu — denetimde üç ayrı kurguyla (iki sekme, tek sekme, iframe
+  // yıkımı + 1500 ms kontrol grubu) ölçüldü: kaydettikten 120 ms sonra sekme
+  // kapanınca kayıt ne IDB'ye, ne kuyruğa, ne buluta ulaşıyordu — tamamen
+  // kayboluyordu (700 ms'de sağlamdı). localStorage TEK senkron depo: yazım
+  // sayfa yıkılmadan önce garanti tamamlanır. Boot'ta bu yedek kuyruğa
+  // geri yüklenir ve buluta gider.
+  const QUEUE_LS_KEY = 'pcd_pertable_queue_emergency';
+
+  function _writeQueueToLS() {
+    try {
+      if (queue.length === 0) { localStorage.removeItem(QUEUE_LS_KEY); return; }
+      localStorage.setItem(QUEUE_LS_KEY, JSON.stringify(queue));
+    } catch (e) {
+      // Quota/private mode — IDB yolu zaten devam ediyor, sessiz geç.
+    }
+  }
+
+  function _readQueueFromLS() {
+    try {
+      const raw = localStorage.getItem(QUEUE_LS_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : null;
+    } catch (e) { return null; }
+  }
+
+  function _clearQueueLS() {
+    try { localStorage.removeItem(QUEUE_LS_KEY); } catch (e) {}
+  }
+
   function _persistQueueNow() {
     _queuePersistTimer = null;
+    // v2.44.173 — Senkron ayna ÖNCE: IDB yolu düşse veya sayfa yıkılsa bile
+    // kuyruk diskte kalsın.
+    _writeQueueToLS();
     if (!PCD.idb || !PCD.idb.put) return;
     // Snapshot al — queue arada mutate olabilir
     const snapshot = queue.slice();
@@ -100,8 +136,9 @@
   }
 
   function _clearPersistedQueue() {
-    if (!PCD.idb || !PCD.idb.delete) return;
     if (_queuePersistTimer) { clearTimeout(_queuePersistTimer); _queuePersistTimer = null; }
+    _clearQueueLS();
+    if (!PCD.idb || !PCD.idb.delete) return;
     PCD.idb.delete('state', QUEUE_IDB_KEY).catch(function () {});
   }
 
@@ -123,13 +160,17 @@
   }
 
   function _loadPersistedQueue() {
-    if (!PCD.idb || !PCD.idb.get) return Promise.resolve();
-    return PCD.idb.get('state', QUEUE_IDB_KEY).then(function (saved) {
-      if (!saved || !Array.isArray(saved) || saved.length === 0) return;
-      // Persisted item'ları queue'ya ekle. Eğer aynı dedupeKey için canlı
-      // queue'da daha yeni item varsa, persisted'i atla (race koruması).
+    // v2.44.173 — İKİ KAYNAK: IDB (debounce'lu normal persist) + localStorage
+    // (sekme kapanışındaki senkron acil yedek). Sekme kaydettikten hemen sonra
+    // kapandıysa kayıt IDB'ye hiç ulaşamamış, yalnızca LS'de olabilir; bu yüzden
+    // ikisi de yüklenir. dedupeKey aynı kaydın iki kez kuyruğa girmesini önler.
+    const fromLS = _readQueueFromLS() || [];
+
+    // Persisted item'ları queue'ya ekle. Eğer aynı dedupeKey için canlı
+    // queue'da daha yeni item varsa, persisted'i atla (race koruması).
+    function absorb(list) {
       let added = 0;
-      saved.forEach(function (item) {
+      (list || []).forEach(function (item) {
         if (!item || !item.table || !item.id) return;
         const dedupeKey = item.table + ':' + item.id + (item.wsId ? ':' + item.wsId : '');
         if (queueIndex[dedupeKey] !== undefined) return;
@@ -137,6 +178,10 @@
         queue.push(item);
         added++;
       });
+      return added;
+    }
+
+    function finish(added) {
       if (added > 0) {
         PCD.log && PCD.log('cloud-pertable: loaded ' + added + ' persisted queue items');
         // Online + ready ise flush'ı tetikle. Değilse online listener veya bir
@@ -145,8 +190,22 @@
           scheduleFlush();
         }
       }
+      // Birleşik kuyruğu senkron aynala: LS'deki kalıntı temizlenir (kuyruk
+      // boşsa anahtar silinir), böylece aynı yedek her boot'ta tekrar yüklenmez.
+      _writeQueueToLS();
+    }
+
+    if (!PCD.idb || !PCD.idb.get) {
+      finish(absorb(fromLS));
+      return Promise.resolve();
+    }
+    return PCD.idb.get('state', QUEUE_IDB_KEY).then(function (saved) {
+      let added = absorb(Array.isArray(saved) ? saved : []);
+      added += absorb(fromLS);
+      finish(added);
     }).catch(function (e) {
       PCD.warn && PCD.warn('queue load failed:', e && e.message);
+      finish(absorb(fromLS));
     });
   }
 
@@ -503,46 +562,75 @@
   //
   // Tablo bazında paralel fetch, sonra workspace-id'ye göre namespace
   // edilmiş state objesi döner (eski format ile uyumlu).
+  // v2.44.173 — SAYFALAMA. PostgREST tek istekte en fazla 1000 satır döndürür
+  // ve bu sunucu tarafı sert tavandır: .range(0, 1999) istensin, yine 1000
+  // gelir. Sayfalama olmadan 1000 satırı aşan HER tablo sessizce kırpılıyordu.
+  // Denetimde canlı ölçüldü: haccp_readings'in 1105 satırından 105'i hiçbir
+  // cihaza inmiyordu — bir sıcaklık ünitesinin 92 kaydının 92'si de eksikti,
+  // yani o ünite uygulamada "hiç loglanmamış" görünüyordu (HACCP Audit Pack
+  // eksik basıyordu). İkinci etki: yedek yerel state'ten üretildiği için
+  // (account.js exportDataBtn) indirilen JSON'a da o satırlar girmiyordu.
+  // backup-to-r2 Edge Function'ı bu sayfalamayı zaten yapıyor; frontend'de
+  // atlanmıştı. Dönüş şekli { data, error } — çağıran kod değişmiyor.
+  const PULL_PAGE_SIZE = 1000;
+  function fetchAllPages(supabase, table, userId) {
+    const rows = [];
+    function nextPage(from) {
+      return supabase.from(table).select('*').eq('user_id', userId)
+        .range(from, from + PULL_PAGE_SIZE - 1)
+        .then(function (res) {
+          if (res.error) return { data: null, error: res.error };
+          const batch = res.data || [];
+          for (let i = 0; i < batch.length; i++) rows.push(batch[i]);
+          if (batch.length < PULL_PAGE_SIZE) return { data: rows, error: null };
+          return nextPage(from + PULL_PAGE_SIZE);
+        });
+    }
+    return nextPage(0);
+  }
+
   function pullAll() {
     if (!isReady()) return Promise.resolve(null);
     const supabase = PCD.cloud.getClient();
     const user = PCD.store.get('user');
+    const page = function (table) { return fetchAllPages(supabase, table, user.id); };
 
     const fetches = [
-      supabase.from('workspaces').select('*').eq('user_id', user.id),
-      supabase.from('recipes').select('*').eq('user_id', user.id),
-      supabase.from('ingredients').select('*').eq('user_id', user.id),
-      supabase.from('menus').select('*').eq('user_id', user.id),
-      supabase.from('events').select('*').eq('user_id', user.id),
-      supabase.from('suppliers').select('*').eq('user_id', user.id),
-      supabase.from('canvases').select('*').eq('user_id', user.id),
-      supabase.from('shopping_lists').select('*').eq('user_id', user.id),
-      supabase.from('checklist_templates').select('*').eq('user_id', user.id),
-      supabase.from('inventory').select('*').eq('user_id', user.id),
+      page('workspaces'),
+      page('recipes'),
+      page('ingredients'),
+      page('menus'),
+      page('events'),
+      page('suppliers'),
+      page('canvases'),
+      page('shopping_lists'),
+      page('checklist_templates'),
+      page('inventory'),
+      // user_prefs tek satır (PK user_id) — sayfalama gerekmez, maybeSingle korunur.
       supabase.from('user_prefs').select('*').eq('user_id', user.id).maybeSingle(),
       // v2.6.74 — yeni tablolar
-      supabase.from('waste').select('*').eq('user_id', user.id),
-      supabase.from('checklist_sessions').select('*').eq('user_id', user.id),
-      supabase.from('stock_count_history').select('*').eq('user_id', user.id),
-      supabase.from('haccp_logs').select('*').eq('user_id', user.id),
-      supabase.from('haccp_units').select('*').eq('user_id', user.id),
-      supabase.from('haccp_readings').select('*').eq('user_id', user.id),
-      supabase.from('haccp_cook_cool').select('*').eq('user_id', user.id),
+      page('waste'),
+      page('checklist_sessions'),
+      page('stock_count_history'),
+      page('haccp_logs'),
+      page('haccp_units'),
+      page('haccp_readings'),
+      page('haccp_cook_cool'),
       // v2.8.44 — HACCP Receiving + Holding cloud sync
-      supabase.from('haccp_receiving').select('*').eq('user_id', user.id),
-      supabase.from('haccp_holding').select('*').eq('user_id', user.id),
+      page('haccp_receiving'),
+      page('haccp_holding'),
       // v2.15.3 — roster cloud sync
-      supabase.from('rosters').select('*').eq('user_id', user.id),
-      supabase.from('prep_sheets').select('*').eq('user_id', user.id),
-      supabase.from('workspace_tombstones').select('*').eq('user_id', user.id),
+      page('rosters'),
+      page('prep_sheets'),
+      page('workspace_tombstones'),
       // v2.19 — BUG FIX: array tablolar PUSH ediliyordu ama PULL edilmiyordu
       // (whiteboards v2.9.42, buffets/mise/team v2.9.17) → 2. cihaz görmüyordu.
-      supabase.from('whiteboards').select('*').eq('user_id', user.id),
-      supabase.from('buffets').select('*').eq('user_id', user.id),
-      supabase.from('mise_plans').select('*').eq('user_id', user.id),
-      supabase.from('team').select('*').eq('user_id', user.id),
+      page('whiteboards'),
+      page('buffets'),
+      page('mise_plans'),
+      page('team'),
       // v2.44.67 — Sales Log cloud sync
-      supabase.from('sales_log').select('*').eq('user_id', user.id),
+      page('sales_log'),
     ];
 
     return Promise.all(fetches).then(function (results) {

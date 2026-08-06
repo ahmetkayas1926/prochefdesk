@@ -4,6 +4,18 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.173 — Pull 1000 satırda kesiliyordu + sekme kapanışında kayıt kayboluyordu · 2026-08-06
+
+Altyapı denetiminde canlı ölçümle bulunan iki veri sorunu.
+
+**1. Pull 1000 satırda kesiliyordu (sessiz veri erişim kaybı).** `cloud-pertable.js:pullAll()` içindeki 28 sorgunun hiçbirinde sayfalama yoktu. PostgREST tek istekte en fazla 1000 satır döndürür ve bu **sunucu tarafı sert tavandır**: `.range(0, 1999)` istense bile 1000 gelir. Sonuç: 1000 satırı aşan her tablo sessizce kırpılıyordu. Canlı hesapta ölçüldü — `haccp_readings`'in 1105 satırından **105'i hiçbir cihaza inmiyordu**; bir sıcaklık ünitesinin 92 kaydının 92'si de eksikti, yani o ünite uygulamada "hiç loglanmamış" görünüyor, HACCP Audit Pack o ayları eksik basıyordu. İkinci etki: yedek yerel state'ten üretildiği için (`account.js` exportDataBtn) indirilen JSON'a da o satırlar girmiyordu — şef "verimi yedekledim" derken eksik yedek alıyordu. `backup-to-r2` Edge Function'ı bu sayfalamayı zaten yapıyordu; frontend'de atlanmıştı. Çözüm: `fetchAllPages()` yardımcısı, 1000'lik sayfalarla tüm satırları çeker; dönüş şekli `{ data, error }` olduğu için çağıran kod değişmedi. `user_prefs` tek satır olduğu için `maybeSingle()` korundu.
+
+**2. Kaydettikten ~120 ms sonra sekme kapanınca kayıt tamamen kayboluyordu.** v2.44.169'da eklenen `pagehide`/`visibilitychange` flush'ı bu senaryoyu çözmüyordu: çağrılan üç işlemin üçü de (store IDB yazımı, kuyruk IDB persist'i, bulut fetch'i) **asenkron**, tarayıcı sayfa yıkılırken üçünü de iptal ediyor. Denetimde üç ayrı kurguyla (iki sekme · tek sekme · iframe yıkımı + 1500 ms kontrol grubu) ölçüldü: 120 ms'de kayıt ne IDB'ye, ne kuyruğa, ne buluta ulaşıyordu; 700 ms'de sağlamdı. Aynı yıkım anında yapılan karşılaştırmalı testte **localStorage yazımı hayatta kaldı, IndexedDB yazımı kayboldu** — localStorage tek senkron depo. Çözüm: kuyruk artık IDB'ye ek olarak localStorage'a senkron aynalanıyor (`_writeQueueToLS`, `persistNow` üzerinden pagehide'da da çalışır) ve boot'ta `_loadPersistedQueue` iki kaynağı birden (IDB + LS) yükleyip dedupe ediyor; yüklendikten sonra ayna tazelendiği için aynı yedek her boot'ta tekrar işlenmiyor. Kayıt böylece buluta ulaşıyor, sonraki açılışta pull ile geri geliyor.
+
+Doğrulama (canlı, gerçek veri): sayfalama → eski kod 1000 / yeni kod **1105** satır, duplikasyon yok, id'ler benzersiz ✔ · localStorage dayanağı → aynı belge yıkımında LS kaldı, IDB kayboldu ✔
+
+---
+
 ## v2.44.172 — Şef profili çıkış→giriş yolunda hâlâ sızıyordu · 2026-08-05
 
 Operatör gerçek iki hesapla test etti ve buldu: workspace/veri ayrımı doğru çalışıyordu ama **şef profili** (ad · unvan · konum · iş yeri · biyografi) diğer hesapta görünüyordu.
