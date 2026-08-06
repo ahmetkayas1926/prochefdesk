@@ -114,7 +114,9 @@ Tüm limit + gate'ler tek dosyada: `plans.js` (`PLAN_LIMITS`) — özelliği aç
 
 **Supabase-only (frontend yazmaz):** `client_errors` · `discover_view_logs` (rate-limit penceresi) · `public_shares` (paylaşım URL'leri + `share_mode` public/cost) · `recipe_likes` (RLS: yalnız kendi beğenileri).
 
-RLS tüm tablolarda aktif; frontend `anon` key kullanır.
+RLS tüm tablolarda aktif; frontend `anon` key kullanır. **`public_shares` istisnaydı:** 2026-08 denetimine kadar `USING (true)` politikası ayaktaydı, oturumsuz herkes tüm tabloyu (cost-share payload'ları dahil) listeleyebiliyordu; `migrations/v2.44.169-audit-fixes.sql` ile owner-only'ye çekildi. Paylaşılan sayfa görüntüleme bundan etkilenmez — viewer `fetch_share_by_id()` (SECURITY DEFINER, 5 kolon: +`signed_at`) kullanır, görüntülenme sayacı da `increment_share_view()` (SECURITY DEFINER).
+
+**Workspace silme/geri yükleme cascade'i** `workspace_tombstones` üzerindeki iki trigger ile çalışır: **`trg_cascade_workspace_tombstone`** (tombstone eklenince çocukları soft-delete eder) ve **`trg_reverse_cascade_workspace_tombstone`** (tombstone silinince geri getirir). **Repo migration'larındaki `cascade_soft_delete_workspace_data` / `cascade_restore_workspace_data` adları canlıda hiçbir trigger'a bağlı DEĞİL** — yeni ws-scoped tablo eklerken `trg_*` olanları güncelle (bkz. `migrations/v2.44.169b`, CLAUDE.md gotcha). Kalıcı silme ayrı yoldan: `pcd_purge_workspace(text,uuid)` RPC, 25 tabloyu hard-delete eder. 30-gün çöp temizliği `pcd_cleanup_old_deleted()` (cron 03:00 UTC). Sahipsiz satır teşhisi için `pcd_count_orphan_rows()` / `pcd_delete_orphan_rows()` — **her ikisi de yalnız `postgres` rolüne açık** (anon/authenticated REVOKE edildi; SECURITY DEFINER oldukları için kısıtlama şart).
 
 ## Edge Functions (9)
 
@@ -130,7 +132,16 @@ Supabase dashboard'dan elle deploy edilir — **git push yalnız frontend'i gün
 | `rate-limited-view` | — (public) | Discover görüntülenme sayacı, IP başına 60 dk pencere |
 | `delete-account` | açık | hesabı ve tüm verisini kalıcı siler |
 | `backup-to-r2` | cron | gece JSON yedeği → Cloudflare R2 |
-| `cleanup-photos` | cron | sahipsiz Storage fotoğraflarını temizler |
+| `cleanup-photos` | cron | sahipsiz Storage fotoğraflarını temizler — **3 koruma** (v2.44.169): bulutta hiç tarifi olmayan kullanıcının klasörüne dokunmaz (free'de tarif satırı buluta gitmez, fotoğrafı silinirdi) · 7 günden yeni dosyayı silmez · `public_shares.payload.photo` de canlı referans sayılır |
+
+**Zamanlanmış işler (pg_cron, hepsi `postgres` rolüyle, 2026-08-05'te doğrulandı — `SELECT jobname, username, schedule, active FROM cron.job;`):**
+
+| Job | Zamanlama (UTC) | Ne yapar |
+|-----|-----------------|----------|
+| `nightly-backup-to-r2` | `0 3 * * *` | tüm tabloları R2'ye JSONL yedek (30 gün saklama; **fotoğrafların yalnız listesi**, byte'ları değil — bilinçli) |
+| `pcd-cleanup-old-deleted` | `0 3 * * *` | 30 günü geçen soft-delete kayıtlarını fiziksel siler (25 tablo + workspaces + tombstones) |
+| `pcd-cleanup-photos-weekly` | `0 4 * * 0` | `cleanup-photos` Edge Function'ını çağırır (haftalık) |
+| `pcd-cleanup-view-logs` | `0 * * * *` | Discover görüntülenme rate-limit penceresini temizler |
 
 **Dış servis:** Stripe (ödeme) · **Resend** (giden e-posta) · Cloudflare R2 (yedek) · hCaptcha (kayıt formu) · Google OAuth.
 
