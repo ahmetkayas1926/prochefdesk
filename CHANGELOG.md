@@ -4,6 +4,16 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.174 — v2.44.173'ün kurtarma yedeği kendi kendini siliyordu · 2026-08-06
+
+v2.44.173 canlıda test edildi. Sayfalama düzeltmesi çalıştı (aşağıya bak), ama sekme-kapanışı kurtarması **çalışmadı** ve sebebi düzeltmenin kendisindeydi.
+
+`_writeQueueToLS()` boş kuyrukta localStorage anahtarını siliyordu. Yedeği YAZAN bağlam (kapanan sekme) ile onu OKUYAN bağlam (bir sonraki boot) farklı olduğu için bu ölümcül: kapanan sekme yedeği yazıyor, ardından açık olan sayfa herhangi bir sebeple persist ettiğinde — örneğin kendi `pagehide`'ında, kuyruğu boşken — yedeği siliyordu. Canlı testte tam olarak bu görüldü: acil kuyruk LS'ye doğru yazıldı (`recipes:r_B173:upsert`), sonra sayfa yenilendi ve yedek yok oldu; boot'ta "loaded persisted queue items" logu hiç düşmedi, kayıt buluta gitmedi.
+
+Çözüm: yedeği artık yalnızca iki şey silebilir — **flush başarısı** (veri buluta gitti, yedek gereksiz) ve **açık temizleme** (logout/wipe). `_persistQueueNow(allowClear)` parametresi eklendi; flush sonrası `true`, diğer tüm çağrılar (debounce'lu persist ve `pagehide`'daki public `persistNow`) argümansız → boş kuyrukta yedeğe dokunmaz.
+
+---
+
 ## v2.44.173 — Pull 1000 satırda kesiliyordu + sekme kapanışında kayıt kayboluyordu · 2026-08-06
 
 Altyapı denetiminde canlı ölçümle bulunan iki veri sorunu.

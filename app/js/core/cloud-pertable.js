@@ -95,9 +95,19 @@
   // geri yüklenir ve buluta gider.
   const QUEUE_LS_KEY = 'pcd_pertable_queue_emergency';
 
-  function _writeQueueToLS() {
+  // v2.44.174 — allowClear. BOŞ kuyrukla LS'yi SİLMEK yanlıştı: yedeği yazan
+  // bağlam (kapanan sekme) ile onu okuyan bağlam (yeni boot) farklı olabilir.
+  // v2.44.173'te her persist boş kuyrukta anahtarı siliyordu; canlı testte
+  // yakalandı — kapanan sekme yedeği yazıyor, ardından açık olan sayfanın
+  // kendi (boş) kuyruğu persist edilince yedek siliniyor ve kurtarma hiç
+  // çalışmıyordu. Artık yedeği yalnızca iki şey silebilir: flush başarısı
+  // (veri buluta gitti, yedek gereksiz) ve açık temizleme (logout/wipe).
+  function _writeQueueToLS(allowClear) {
     try {
-      if (queue.length === 0) { localStorage.removeItem(QUEUE_LS_KEY); return; }
+      if (queue.length === 0) {
+        if (allowClear) localStorage.removeItem(QUEUE_LS_KEY);
+        return;
+      }
       localStorage.setItem(QUEUE_LS_KEY, JSON.stringify(queue));
     } catch (e) {
       // Quota/private mode — IDB yolu zaten devam ediyor, sessiz geç.
@@ -117,11 +127,14 @@
     try { localStorage.removeItem(QUEUE_LS_KEY); } catch (e) {}
   }
 
-  function _persistQueueNow() {
+  // allowClear yalnızca flush başarısından sonra true geçilir (aşağıda).
+  // Debounce'lu çağrı ve public persistNow (pagehide) argümansız çağırır →
+  // undefined → boş kuyrukta yedeğe DOKUNMAZ.
+  function _persistQueueNow(allowClear) {
     _queuePersistTimer = null;
     // v2.44.173 — Senkron ayna ÖNCE: IDB yolu düşse veya sayfa yıkılsa bile
     // kuyruk diskte kalsın.
-    _writeQueueToLS();
+    _writeQueueToLS(allowClear);
     if (!PCD.idb || !PCD.idb.put) return;
     // Snapshot al — queue arada mutate olabilir
     const snapshot = queue.slice();
@@ -531,7 +544,10 @@
       // yansıt. Splice batch'i çıkardı; bu sırada başka queueUpsert/Delete
       // gelmiş olabilir (yeni item'lar queue'da, eski'ler değil). Persist
       // güncel halini diske yazar.
-      _persistQueueNow();
+      // v2.44.174 — allowClear=true: buraya gelindiyse batch gönderildi, yani
+      // LS'deki acil yedek artık gereksiz. Kuyrukta yeni item varsa zaten
+      // üzerine yazılır; yalnızca gerçekten boşsa anahtar silinir.
+      _persistQueueNow(true);
       // v2.8.33 — Notify UI of final state. Ambient indicator goes
       // from "syncing" to "synced" (or "error" if anything failed
       // even after retries).
