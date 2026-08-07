@@ -1759,17 +1759,30 @@
           state[table] = root;
         }
       });
-      // Ingredients (shared, no wsId scope)
-      const ings = Object.assign({}, state.ingredients);
+      // v2.44.176 — FIX: yorum "shared, no wsId scope" diyordu ama ingredients
+      // v2.6.30'dan beri workspace'e göre iç içe (state.ingredients[wsId][id]).
+      // Object.keys(state.ingredients) malzeme id'si değil WORKSPACE id'si
+      // döndürüyordu; ings[wsId]._deletedAt her zaman undefined olduğu için bu
+      // döngü hiçbir malzemeyi asla yerelden silmiyordu. Sonuç: silinen bir
+      // malzeme cihazda sonsuza kadar kalıyor; sunucu cron'u 30 gün sonra onu
+      // silince, cihaz bir sonraki açılışta "bende var, sunucuda yok" deyip
+      // drift self-heal ile geri yüklüyordu (denetimde canlı doğrulandı).
+      const wsIngs = (state.ingredients && state.ingredients[wsId]) || {};
+      const nextIngs = Object.assign({}, wsIngs);
       let ingsChanged = false;
-      Object.keys(ings).forEach(function (id) {
-        if (ings[id]._deletedAt && new Date(ings[id]._deletedAt).getTime() < cutoff) {
-          delete ings[id];
+      Object.keys(nextIngs).forEach(function (id) {
+        const ing = nextIngs[id];
+        if (ing._deletedAt && new Date(ing._deletedAt).getTime() < cutoff) {
+          delete nextIngs[id];
           ingsChanged = true;
           purged++;
         }
       });
-      if (ingsChanged) state.ingredients = ings;
+      if (ingsChanged) {
+        const ingRoot = Object.assign({}, state.ingredients);
+        ingRoot[wsId] = nextIngs;
+        state.ingredients = ingRoot;
+      }
       if (purged > 0) persist();
       // v2.6.44 — After state has been updated, attempt to clean up
       // orphaned photo blobs. isPhotoStillUsed walks the freshly-mutated

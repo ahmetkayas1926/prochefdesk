@@ -4,6 +4,18 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.176 — Silinen malzemeler yereldeki çöpten hiç otomatik temizlenmiyordu · 2026-08-07
+
+Denetimin üçüncü turunda bulunan, dar kapsamlı ama gerçek bir hata: `autoPurgeOldTrash` (30 günlük yerel çöp temizliği) malzemelerde hiç çalışmıyordu.
+
+`store.js:1762`'deki yorum "Ingredients (shared, no wsId scope)" diyordu, ama malzemeler v2.6.30'dan beri workspace'e göre iç içe (`state.ingredients[wsId][id]`). Kod hâlâ eski düz yapıyı varsayıyordu: `Object.keys(state.ingredients)` malzeme id'si değil **workspace id'si** döndürüyordu, `ings[wsId]._deletedAt` her zaman `undefined` olduğu için döngü hiçbir malzemeyi asla silmiyordu. Tarif/menü/etkinlik/tedarikçi gibi diğer tablolarda aynı fonksiyon doğru çalıştığı için (30 gün dolunca hem cihazdan hem sunucudan temiz gidiyorlardı), sorun yalnızca malzemelerde ve fark edilmeden kalmıştı.
+
+**Somut etki (canlıda ölçüldü):** silinen bir malzeme cihazda süresiz kalıyordu. Sunucu tarafı `pcd-cleanup-old-deleted` cron'u (çalışıyor, doğrulandı) 30 gün sonra malzemeyi gerçekten siliyordu, ama cihazın yerel kopyası hâlâ `_deletedAt` damgasıyla duruyordu; bir sonraki açılışta pull'un drift self-heal'i "bende var, sunucuda yok" deyip malzemeyi **yeniden buluta yazıyordu** — silinen malzeme geri geliyordu. Canlı hesapta 5 Temmuz'da silinmiş bir malzeme (`ZZ-PHchk`) bu döngüyle her açılışta diriliyordu; `created_at` damgası her seferinde o boot'un saatine güncelleniyordu.
+
+Çözüm: döngü artık `state.ingredients[wsId]` üzerinde geziyor (diğer tablolarla aynı desen), yalnız aktif workspace'in malzemelerini kapsıyor — fonksiyonun zaten sahip olduğu mevcut sınırlama (`recipes` vb. de yalnız aktif workspace'i temizliyor), yeni bir kısıtlama eklenmedi. Buluta yazma yok — mevcut davranışla tutarlı, sunucu zaten kendi cron'uyla temizliyor.
+
+---
+
 ## v2.44.175 — Kurtarılan kayıt buluta gidiyor ama ekranda görünmüyordu + çöpteki workspace "0 tarif" diyordu · 2026-08-06
 
 Altyapı denetiminin ikinci turunda canlı ölçümle bulunan iki sorun.
