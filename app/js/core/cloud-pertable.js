@@ -83,6 +83,8 @@
   const QUEUE_IDB_KEY = 'pertable_queue';
   const QUEUE_PERSIST_DELAY_MS = 250;
   let _queuePersistTimer = null;
+  // v2.44.175 — boot'ta kuyruk yüklemesinin promise'i (app.js bunu bekler).
+  let _queueLoadPromise = null;
 
   // v2.44.173 — SENKRON ACİL YEDEK (localStorage).
   // IndexedDB yazımı da fetch de ASENKRON: sekme kapanırken tarayıcı ikisini de
@@ -220,6 +222,83 @@
       PCD.warn && PCD.warn('queue load failed:', e && e.message);
       finish(absorb(fromLS));
     });
+  }
+
+  // v2.44.175 — KURTARILAN KUYRUK STATE'E DE YAZILMALI.
+  // v2.44.173/174 sekme-kapanışı yedeğini çözdü: kayıt localStorage kuyruğunda
+  // hayatta kalıyor ve bir sonraki boot'ta buluta gidiyor. AMA kaydın kendisi
+  // yerel state'e geri yazılmıyordu; o boot'un pull'u da kaydı göremiyor (push
+  // pull bittikten SONRA yapılıyor, flushNow:429). Sonuç: şef kaydediyor,
+  // uygulamayı hemen kapatıyor, tekrar açtığında kaydını GÖREMİYOR — ancak
+  // ikinci açılışta pull ile geliyor. Denetimde 4 kez üretildi (tarif + etkinlik),
+  // iki kontrolle doğrulandı (900 ms bekleyince ve aynı-origin geçişte sorun yok).
+  // Çözüm: kuyruktaki upsert'leri state'e geri uygula. store.set kullanılır —
+  // queueUpsert TETİKLEMEZ, döngü yok (cloud-realtime aynı deseni kullanıyor).
+  // Yalnız eksik veya daha eski kayıtların üzerine yazar (en-yeni-kazanır).
+  function _recTs(rec) {
+    if (!rec || typeof rec !== 'object') return '';
+    return rec._deletedAt || rec.updatedAt || rec.createdAt || '';
+  }
+  function _isNewer(candidate, existing) {
+    if (!existing) return true;
+    return _recTs(candidate) > _recTs(existing);
+  }
+
+  function applyPendingToState() {
+    if (!PCD.store || !PCD.store.get || !queue.length) return 0;
+    let applied = 0;
+    queue.forEach(function (it) {
+      if (!it || it.op !== 'upsert' || !it.data) return;
+      try {
+        if (it.table === 'workspaces') {
+          const all = Object.assign({}, PCD.store.get('workspaces') || {});
+          if (!_isNewer(it.data, all[it.id])) return;
+          all[it.id] = it.data;
+          PCD.store.set('workspaces', all);
+          applied++;
+          return;
+        }
+        if (it.table === 'inventory') {
+          if (!it.wsId) return;
+          const all = Object.assign({}, PCD.store.get('inventory') || {});
+          const wsMap = Object.assign({}, all[it.wsId] || {});
+          if (!_isNewer(it.data, wsMap[it.id])) return;
+          wsMap[it.id] = it.data;
+          all[it.wsId] = wsMap;
+          PCD.store.set('inventory', all);
+          applied++;
+          return;
+        }
+        // user_prefs ve workspace_tombstones bilerek dışarıda: ikisi de state'e
+        // pull tarafından zaten doğru şekilde yazılıyor, kayıt bazlı değiller.
+        const cfg = WORKSPACE_TABLES[it.table];
+        if (!cfg || !it.wsId) return;
+        const root = Object.assign({}, PCD.store.get(cfg.stateKey) || {});
+        if (cfg.isArray) {
+          const arr = Array.isArray(root[it.wsId]) ? root[it.wsId].slice() : [];
+          const idx = arr.findIndex(function (x) { return x && x.id === it.id; });
+          if (idx >= 0) {
+            if (!_isNewer(it.data, arr[idx])) return;
+            arr[idx] = it.data;
+          } else {
+            arr.push(it.data);
+          }
+          root[it.wsId] = arr;
+        } else {
+          const wsMap = Object.assign({}, root[it.wsId] || {});
+          if (!_isNewer(it.data, wsMap[it.id])) return;
+          wsMap[it.id] = it.data;
+          root[it.wsId] = wsMap;
+        }
+        PCD.store.set(cfg.stateKey, root);
+        applied++;
+      } catch (e) {
+        // Tek bir kaydın hatası diğerlerini engellemesin.
+        PCD.warn && PCD.warn('applyPendingToState failed for ' + it.table + ':' + it.id, e && e.message);
+      }
+    });
+    if (applied > 0) PCD.log && PCD.log('cloud-pertable: restored ' + applied + ' pending record(s) into local state');
+    return applied;
   }
 
   function isReady() {
@@ -983,6 +1062,11 @@
     // 250 ms içinde sekme kapanırsa kuyruk diske hiç ulaşmıyordu → kayıt
     // buluta da gitmiyordu (denetimde canlı doğrulandı).
     persistNow: _persistQueueNow,
+    // v2.44.175 — boot'ta diskten kurtarılan kayıtları yerel state'e geri yaz.
+    // app.js store.init'ten hemen sonra whenQueueLoaded().then(applyPendingToState)
+    // çağırır; pull'dan ÖNCE çalışması önemli (kayıt merge'e girsin).
+    whenQueueLoaded: function () { return _queueLoadPromise || Promise.resolve(); },
+    applyPendingToState: applyPendingToState,
     // Re-flush queued items when back online
     onOnline: function () {
       if (queue.length) scheduleFlush();
@@ -998,5 +1082,5 @@
   // beklemiyoruz — yüklenince scheduleFlush kendi başına tetiklenir.
   // Diğer modüller (cloud, store) henüz hazır olmayabilir; flush isReady()
   // koşulunu kontrol ediyor, ready olunca tetiklenecek.
-  _loadPersistedQueue();
+  _queueLoadPromise = _loadPersistedQueue();
 })();

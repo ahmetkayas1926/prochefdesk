@@ -4,6 +4,18 @@ Kronolojik tersine (en son üstte). Her sürüm: tarih + ana değişiklikler.
 
 ---
 
+## v2.44.175 — Kurtarılan kayıt buluta gidiyor ama ekranda görünmüyordu + çöpteki workspace "0 tarif" diyordu · 2026-08-06
+
+Altyapı denetiminin ikinci turunda canlı ölçümle bulunan iki sorun.
+
+**1. Kaydettikten hemen sonra uygulama kapatılırsa kayıt İLK açılışta görünmüyordu.** v2.44.173/174 zinciri kaydı kurtarıyor: yerel yazım iptal olsa bile kayıt localStorage acil kuyruğunda kalıyor ve bir sonraki boot'ta buluta gidiyor. Eksik olan şuydu: kurtarılan kayıt **yerel state'e geri yazılmıyordu**, o boot'un pull'u da onu göremiyordu (push, `flushNow` pull bitene kadar ertelendiği için pull'dan SONRA gerçekleşiyor). Sonuç: şef tarifi kaydediyor, uygulamayı kapatıp tekrar açıyor, tarif listede **yok** — bulutta duruyor ve ancak ikinci açılışta geri geliyor. Denetimde 4 kez üretildi (2 tarif + 1 etkinlik + 1 tarif), iki kontrolle sınırlandı: kayıttan 900 ms sonra kapatınca sorun yok; aynı origin'e geçişte de sorun yok (tarayıcı bekleyen IDB yazımını tamamlayabildiği için). Kaydın kapanış anında yalnızca acil kuyrukta olduğu, uygulamanın çalışmadığı bir sayfadan diske bakılarak doğrulandı (`upsert recipes:…`, sunucuda henüz yok).
+
+Çözüm: `cloud-pertable.js` → `applyPendingToState()`. Boot'ta diskten yüklenen kuyruktaki upsert'ler yerel state'e geri uygulanır (yalnız eksik veya daha eski kayıtların üzerine — en-yeni-kazanır). Yazım `store.set` ile yapılır, `queueUpsert` tetiklemez, döngü yok (cloud-realtime aynı deseni kullanıyor). `app.js` boot'ta `store.init`'ten hemen sonra, `auth.init` içindeki pull'dan **önce** çağırır (kayıt merge'e böyle girer) ve kuyruk yüklemesi 2 sn ile sınırlanır ki boot hiçbir koşulda kilitlenmesin. Array tablolar, inventory ve workspaces da kapsanır; `user_prefs`/`workspace_tombstones` bilerek dışarıda (kayıt bazlı değiller, pull zaten doğru yazıyor).
+
+**2. Çöpteki workspace her zaman "0 tarif · 0 menü" gösteriyordu.** Workspace silinince cascade TÜM çocuklara `_deletedAt` damgalıyor; `workspaceStats` ise silinmişleri eliyordu → Trash bölümündeki her workspace sıfır görünüyordu. Canlı testte 2 tarif + 1 menü içeren workspace ekranda `0 recipes · 0 menus` bastı. 98 tarifli bir workspace yanlışlıkla silindiğinde şef "zaten gitmiş" sanıp geri yüklemeyebilir veya yanındaki "kalıcı sil"e basabilir. Çözüm: `workspaceStats(wsId, includeDeleted)`; Trash listesi `true` geçer, aktif workspace listesi eskisi gibi yalnız canlı kayıtları sayar.
+
+---
+
 ## v2.44.174 — v2.44.173'ün kurtarma yedeği kendi kendini siliyordu · 2026-08-06
 
 v2.44.173 canlıda test edildi. Sayfalama düzeltmesi çalıştı (aşağıya bak), ama sekme-kapanışı kurtarması **çalışmadı** ve sebebi düzeltmenin kendisindeydi.

@@ -30,6 +30,22 @@
     }
     try { PCD.store.autoPurgeOldTrash && PCD.store.autoPurgeOldTrash(30); } catch (e) {}
 
+    // v2.44.175 — Sekme kapanışında kurtarılan kuyruğu yerel state'e geri uygula.
+    // v2.44.173/174 kaydı localStorage yedeğinden buluta ulaştırıyordu ama kaydın
+    // kendisi state'e geri yazılmadığı için kullanıcı uygulamayı tekrar açtığında
+    // kaydını göremiyordu (ancak İKİNCİ açılışta pull ile geliyordu).
+    // auth.init içindeki pull'dan ÖNCE çalışmalı: kayıt böylece merge'e girer.
+    // Yükleme takılırsa boot'u kilitlemesin diye 2 sn ile sınırlı.
+    try {
+      if (PCD.cloudPerTable && PCD.cloudPerTable.whenQueueLoaded) {
+        await Promise.race([
+          Promise.resolve(PCD.cloudPerTable.whenQueueLoaded()),
+          new Promise(function (resolve) { setTimeout(resolve, 2000); })
+        ]);
+        PCD.cloudPerTable.applyPendingToState();
+      }
+    } catch (e) { console.warn('[boot] pending queue restore failed:', e); }
+
     // v2.44.169 — Sekme kapanışında zorunlu flush.
     // Yerel yazım 400 ms, sync kuyruğunun diske yazımı 250 ms debounce'lu.
     // Kaydettikten sonraki bu ilk yarım saniye içinde sekme kapanırsa (mobilde
@@ -605,7 +621,7 @@
       html += '<div style="margin-top:14px;">' +
         '<div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">' + t('ws_deleted_section') + '</div>';
       deleted.forEach(function (w) {
-        const stats = workspaceStats(w.id);
+        const stats = workspaceStats(w.id, true);
         // 30 günlük retention sayacı (DB pcd_cleanup_old_deleted cron'u her gün kontrol eder)
         let daysLeft = '';
         if (w.deletedAt) {
@@ -744,12 +760,17 @@
     });
   }
 
-  function workspaceStats(wsId) {
+  // v2.44.175 — includeDeleted: Trash bölümündeki (silinmiş) workspace için
+  // ZORUNLU. Silinen bir workspace'in TÜM çocukları cascade ile _deletedAt
+  // aldığı için normal sayım her zaman 0 döndürüyordu: 98 tarifli bir
+  // workspace çöpte "0 tarif · 0 menü" görünüyor, şef içeriğin zaten yok
+  // olduğunu sanıp geri yüklemiyor veya "kalıcı sil"e basıyordu.
+  function workspaceStats(wsId, includeDeleted) {
     const r = (PCD.store.get('recipes') || {})[wsId];
     const m = (PCD.store.get('menus') || {})[wsId];
     function liveCount(map) {
       if (!map) return 0;
-      return Object.values(map).filter(function (it) { return !it._deletedAt; }).length;
+      return Object.values(map).filter(function (it) { return includeDeleted || !it._deletedAt; }).length;
     }
     return {
       recipes: liveCount(r),
