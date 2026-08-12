@@ -134,7 +134,7 @@ Supabase dashboard'dan elle deploy edilir — **git push yalnız frontend'i gün
 | `backup-to-r2` | cron | gece JSON yedeği → Cloudflare R2 |
 | `cleanup-photos` | cron | sahipsiz Storage fotoğraflarını temizler — **3 koruma** (v2.44.169): bulutta hiç tarifi olmayan kullanıcının klasörüne dokunmaz (free'de tarif satırı buluta gitmez, fotoğrafı silinirdi) · 7 günden yeni dosyayı silmez · `public_shares.payload.photo` de canlı referans sayılır |
 
-**Zamanlanmış işler (pg_cron, hepsi `postgres` rolüyle, 2026-08-07'de doğrulandı — `SELECT jobname, schedule, active FROM cron.job;` + `SELECT status_code FROM net._http_response ORDER BY created DESC LIMIT 5;` ile `nightly-backup-to-r2`'nin Edge Function'dan gerçekten 200 döndürdüğü, yalnız dispatch değil, teyit edildi):**
+**Zamanlanmış işler (pg_cron, hepsi `postgres` rolüyle, 2026-08-05'te doğrulandı — `SELECT jobname, username, schedule, active FROM cron.job;`):**
 
 | Job | Zamanlama (UTC) | Ne yapar |
 |-----|-----------------|----------|

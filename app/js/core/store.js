@@ -356,80 +356,6 @@
     return out;
   }
 
-  // v2.44.177 — AYNI BİLGİSAYARDA ÇOKLU SEKME KORUMASI.
-  // Sorun: her sekme kendi bellek-içi state kopyasını IDB'ye TAMAMEN yazıyor
-  // (flushSync/persist). İki sekme açıkken, sonradan yazan sekme öbürünün az
-  // önce diske yazdığı değişikliği sessizce eziyordu — cross-tab haberleşme
-  // (BroadcastChannel/storage event) hiç yoktu. Realtime bunu kapatamıyor
-  // çünkü internetten gidiş-dönüş gerektiriyor; yerel disk yazımı ondan
-  // çok daha hızlı bitiyor.
-  // Çözüm: yazmadan hemen önce diskteki (başka bir sekmenin yazmış olabileceği)
-  // en güncel hali oku, kayıt bazlı en-yeni-kazanır (updatedAt/_deletedAt)
-  // ile mevcut state'e birleştir, SONRA yaz. cloud-pertable.js'in
-  // applyPendingToState'inde kullanılan aynı desen — sadece disk↔disk için.
-  const _MERGE_MAP_TABLES = [
-    'recipes', 'ingredients', 'menus', 'events', 'suppliers', 'canvases',
-    'shoppingLists', 'checklistTemplates', 'stockCountHistory', 'rosters',
-    'prepSheets', 'haccpLogs', 'haccpUnits', 'haccpReadings', 'haccpCookCool',
-    'haccpReceiving', 'haccpHolding', 'inventory',
-  ];
-  const _MERGE_ARRAY_TABLES = [
-    'waste', 'checklistSessions', 'buffets', 'misePlans', 'team',
-    'whiteboards', 'salesLog',
-  ];
-  function _mergeRecTs(rec) {
-    if (!rec || typeof rec !== 'object') return '';
-    return rec._deletedAt || rec.updatedAt || rec.createdAt || '';
-  }
-  function _mergeIsNewer(candidate, existing) {
-    if (!existing) return true;
-    if (!candidate) return false;
-    return _mergeRecTs(candidate) > _mergeRecTs(existing);
-  }
-  function _mergeFromDisk(diskState) {
-    if (!diskState || typeof diskState !== 'object') return;
-    // Workspaces: top-level map (wsId -> ws objesi), ws-scoped değil.
-    if (diskState.workspaces && typeof diskState.workspaces === 'object') {
-      const localWsMap = state.workspaces || (state.workspaces = {});
-      Object.keys(diskState.workspaces).forEach(function (wsId) {
-        if (_mergeIsNewer(diskState.workspaces[wsId], localWsMap[wsId])) {
-          localWsMap[wsId] = diskState.workspaces[wsId];
-        }
-      });
-    }
-    _MERGE_MAP_TABLES.forEach(function (tbl) {
-      const diskTbl = diskState[tbl];
-      if (!diskTbl || typeof diskTbl !== 'object') return;
-      const localTbl = state[tbl] || (state[tbl] = {});
-      Object.keys(diskTbl).forEach(function (wsId) {
-        const diskWs = diskTbl[wsId];
-        if (!diskWs || typeof diskWs !== 'object') return;
-        const localWs = localTbl[wsId] || (localTbl[wsId] = {});
-        Object.keys(diskWs).forEach(function (id) {
-          if (_mergeIsNewer(diskWs[id], localWs[id])) {
-            localWs[id] = diskWs[id];
-          }
-        });
-      });
-    });
-    _MERGE_ARRAY_TABLES.forEach(function (tbl) {
-      const diskTbl = diskState[tbl];
-      if (!diskTbl || typeof diskTbl !== 'object') return;
-      const localTbl = state[tbl] || (state[tbl] = {});
-      Object.keys(diskTbl).forEach(function (wsId) {
-        const diskArr = diskTbl[wsId];
-        if (!Array.isArray(diskArr)) return;
-        const localArr = Array.isArray(localTbl[wsId]) ? localTbl[wsId] : [];
-        const byId = {};
-        localArr.forEach(function (it) { if (it && it.id) byId[it.id] = it; });
-        diskArr.forEach(function (it) {
-          if (it && it.id && _mergeIsNewer(it, byId[it.id])) byId[it.id] = it;
-        });
-        localTbl[wsId] = Object.values(byId);
-      });
-    });
-  }
-
   // v2.6.42 — Quota-exceeded modal flag. Without this, every subsequent
   // debounced persist() call after the first quota error would re-open
   // the modal, spamming the user.
@@ -621,12 +547,8 @@
     // v2.6.93 — IDB put Promise'ini döndür → restore akışı await edebilir.
     // Eski sync caller'lar Promise'i discard eder (dönüş değerini truthy
     // boolean olarak kullanıyorlardı; Promise truthy, davranış aynı).
-    // v2.44.177 — Yazmadan önce diskteki en güncel hali oku + birleştir
-    // (bkz. _mergeFromDisk yorumu) — çoklu sekme koruması.
     if (PCD.idb && PCD.idb.put) {
-      return _loadFromIdb().then(_mergeFromDisk).then(function () {
-        return PCD.idb.put('state', 'main', state);
-      }).then(function () {
+      return PCD.idb.put('state', 'main', state).then(function () {
         if (!_migrationDone) _completeMigration();
         return true;
       }).catch(function (e) {
@@ -725,12 +647,8 @@
       }
     }
     // v2.6.89 — IDB write-through. v2.6.92 — Migration tetikle.
-    // v2.44.177 — Yazmadan önce diskteki en güncel hali oku + birleştir
-    // (bkz. _mergeFromDisk yorumu) — çoklu sekme koruması.
     if (PCD.idb && PCD.idb.put) {
-      _loadFromIdb().then(_mergeFromDisk).then(function () {
-        return PCD.idb.put('state', 'main', state);
-      }).then(function () {
+      PCD.idb.put('state', 'main', state).then(function () {
         if (!_migrationDone) _completeMigration();
       }).catch(function (e) {
         console.warn('[store] idb persist failed:', e && e.message);
@@ -2018,12 +1936,8 @@
     },
 
     // Force save immediately (e.g. before navigation)
-    // v2.44.177 — flushSync()'in Promise'ini artık döndürüyor. Önceden
-    // discard ediliyordu; `await store.flush()` diyen çağıranlar aslında
-    // hiç beklemiyordu. Çoklu-sekme birleştirme adımı (bkz. _mergeFromDisk)
-    // gerçek disk yazımını biraz uzattığı için bu artık önemli hale geldi.
     flush: function () {
-      return flushSync();
+      flushSync();
     },
 
     // Mark tool as "seen" for tutorials
